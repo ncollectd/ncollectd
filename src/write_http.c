@@ -281,7 +281,7 @@ static int wh_flush(cdtime_t timeout,
     return 0;
   }
 
-  char const *json = strdup(cb->send_buffer.ptr);
+  char *json = strdup(cb->send_buffer.ptr);
   strbuf_reset(&cb->send_buffer);
   cb->send_buffer_init_time = cdtime();
   pthread_mutex_unlock(&cb->send_buffer_lock);
@@ -290,7 +290,10 @@ static int wh_flush(cdtime_t timeout,
     return ENOMEM;
   }
 
-  return wh_post(cb, json);
+  int status = wh_post(cb, json);
+  free(json);
+
+  return status;
 } /* int wh_flush */
 
 static void wh_callback_free(void *data) {
@@ -314,6 +317,8 @@ static void wh_callback_free(void *data) {
     cb->headers = NULL;
   }
 
+  STRBUF_DESTROY(cb->send_buffer);
+
   sfree(cb->name);
   sfree(cb->location);
   sfree(cb->user);
@@ -334,7 +339,7 @@ static int wh_write_command(metric_family_t const *fam, wh_callback_t *cb) {
 
   int ret = 0;
   for (size_t i = 0; i < fam->metric.num; i++) {
-    metric_t const *m = fam->metric.ptr;
+    metric_t const *m = fam->metric.ptr + i;
 
     int status = cmd_format_putmetric(&cb->send_buffer, m);
     if (status != 0) {

@@ -28,17 +28,20 @@
 #ifndef METRIC_H
 #define METRIC_H 1
 
+#include "distribution.h"
 #include "utils/metadata/meta_data.h"
 #include "utils/strbuf/strbuf.h"
 #include "utils_time.h"
 
 #define VALUE_TYPE_GAUGE 1
 #define VALUE_TYPE_DERIVE 2
+#define VALUE_TYPE_DISTRIBUTION 3
 
 typedef enum {
   METRIC_TYPE_COUNTER = 0,
   METRIC_TYPE_GAUGE = 1,
   METRIC_TYPE_UNTYPED = 2,
+  METRIC_TYPE_DISTRIBUTION = 3,
 } metric_type_t;
 
 typedef uint64_t counter_t;
@@ -49,8 +52,27 @@ union value_u {
   counter_t counter;
   gauge_t gauge;
   derive_t derive;
+  distribution_t *distribution;
 };
 typedef union value_u value_t;
+
+typedef struct {
+  value_t value;
+  metric_type_t type;
+} typed_value_t;
+
+/* return a copy of typed_value_t val
+ * if type is METRIC_TYPE_DISTRIBUTION then distribution will be cloned
+ * that means that it should be freed */
+typed_value_t typed_value_clone(typed_value_t val);
+
+/* create a typed_value_t object from val and type
+ * if type is METRIC_TYPE_DISTRIBUTION then distribution will be cloned
+ * that means that it should be freed */
+typed_value_t typed_value_create(value_t val, metric_type_t type);
+
+/* if type is distribution then it will be freed */
+void typed_value_destroy(typed_value_t val);
 
 /* value_marshal_text prints a text representation of v to buf. */
 int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type);
@@ -115,7 +137,8 @@ int metric_label_set(metric_t *m, char const *name, char const *value);
 char const *metric_label_get(metric_t const *m, char const *name);
 
 /* metric_reset frees all labels and meta data stored in the metric and resets
- * the metric to zero. */
+ * the metric to zero. If the metric is a distribution metric, the function
+ * frees the according distribution.*/
 int metric_reset(metric_t *m);
 
 /* metric_list_t is an unordered list of metrics. */
@@ -164,5 +187,13 @@ void metric_family_free(metric_family_t *fam);
  * errno is set and NULL is returned. The returned pointer must be freed with
  * metric_family_free(). */
 metric_family_t *metric_family_clone(metric_family_t const *fam);
+
+/*The static function metric_list_clone creates a clone of the argument
+ *metric_list_t src. For each metric_t element in the src list it checks if its
+ *value is a distribution metric and if yes, calls the distribution_clone
+ *function for the value and saves the pointer to the returned distribution_t
+ *clone into the metric_list_t dest. If the value is not a distribution_t, it
+ *simply sets the value of the element in the destination list to the value of
+ *the element in the source list. */
 
 #endif

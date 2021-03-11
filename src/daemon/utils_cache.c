@@ -25,10 +25,13 @@
  *   Florian octo Forster <octo at collectd.org>
  *   Sebastian tokkee Harl <sh at tokkee.org>
  *   Manoj Srivastava <srivasta at google.com>
+ *   Barbara bkjg Kaczorowska <bkjg at google.com>
+ *   Svetlana sshmidt Shmidt <sshmidt at google.com>
  **/
 
 #include "collectd.h"
 
+#include "distribution.h"
 #include "plugin.h"
 #include "utils/avltree/avltree.h"
 #include "utils/common/common.h"
@@ -40,8 +43,9 @@
 
 typedef struct cache_entry_s {
   char name[6 * DATA_MAX_NAME_LEN];
+  distribution_t *distribution_increase;
   gauge_t values_gauge;
-  value_t values_raw;
+  typed_value_t values_raw;
   /* Time contained in the package
    * (for calculating rates) */
   cdtime_t last_time;
@@ -66,6 +70,11 @@ typedef struct cache_entry_s {
   gauge_t *history;
   size_t history_index; /* points to the next position to write to. */
   size_t history_length;
+
+  /* The first value and time for the metric when it was received.
+   * When metric is reset the time and value are reset too */
+  typed_value_t start_value;
+  cdtime_t start_time;
 
   meta_data_t *meta;
 
@@ -98,8 +107,9 @@ static cache_entry_t *cache_alloc() {
     return NULL;
   }
 
+  ce->distribution_increase = NULL;
   ce->values_gauge = 0;
-  ce->values_raw = (value_t){.gauge = 0};
+  ce->values_raw = typed_value_create((value_t){.gauge = 0}, METRIC_TYPE_GAUGE);
   ce->history = NULL;
   ce->history_length = 0;
   ce->meta = NULL;
@@ -112,16 +122,16 @@ static void cache_free(cache_entry_t *ce) {
     return;
 
   sfree(ce->history);
-
   meta_data_destroy(ce->meta);
   ce->meta = NULL;
-
+  typed_value_destroy(ce->values_raw);
+  typed_value_destroy(ce->start_value);
+  distribution_destroy(ce->distribution_increase);
   sfree(ce);
 } /* void cache_free */
 
 static int uc_insert(metric_t const *m, char const *key) {
   /* `cache_lock' has been locked by `uc_update' */
-
   char *key_copy = strdup(key);
   if (key_copy == NULL) {
     ERROR("uc_insert: strdup failed.");
@@ -140,17 +150,30 @@ static int uc_insert(metric_t const *m, char const *key) {
   switch (m->family->type) {
   case DS_TYPE_COUNTER:
     ce->values_gauge = NAN;
-    ce->values_raw.counter = m->value.counter;
+    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_COUNTER);
+    ce->distribution_increase = NULL;
+    ce->start_value = typed_value_create(m->value, METRIC_TYPE_COUNTER);
     break;
 
   case DS_TYPE_GAUGE:
     ce->values_gauge = m->value.gauge;
-    ce->values_raw.gauge = m->value.gauge;
+    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_GAUGE);
+    ce->distribution_increase = NULL;
+    ce->start_value = typed_value_create(m->value, METRIC_TYPE_GAUGE);
     break;
 
   case DS_TYPE_DERIVE:
     ce->values_gauge = NAN;
-    ce->values_raw.derive = m->value.derive;
+    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_COUNTER);
+    ce->distribution_increase = NULL;
+    ce->start_value = typed_value_create(m->value, METRIC_TYPE_COUNTER);
+    break;
+
+  case DS_TYPE_DISTRIBUTION:
+    ce->values_gauge = NAN;
+    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_DISTRIBUTION);
+    ce->distribution_increase = distribution_clone(m->value.distribution);
+    ce->start_value = typed_value_create(m->value, METRIC_TYPE_DISTRIBUTION);
     break;
 
   default:
@@ -162,6 +185,7 @@ static int uc_insert(metric_t const *m, char const *key) {
     return -1;
   } /* switch (ds->ds[i].type) */
 
+  ce->start_time = m->time;
   ce->last_time = m->time;
   ce->last_update = cdtime();
   ce->interval = m->interval;
@@ -184,6 +208,22 @@ int uc_init(void) {
 
   return 0;
 } /* int uc_init */
+
+void uc_destroy(void) {
+  void *key;
+  cache_entry_t *ce;
+
+  if (cache_tree == NULL)
+    return;
+
+  while (c_avl_pick(cache_tree, &key, (void **)&ce) == 0) {
+    sfree(key);
+    cache_free(ce);
+  }
+
+  c_avl_destroy(cache_tree);
+  cache_tree = NULL;
+}
 
 int uc_check_timeout(void) {
   struct {
@@ -296,7 +336,6 @@ static int uc_update_metric(metric_t const *m) {
   }
 
   pthread_mutex_lock(&cache_lock);
-
   cache_entry_t *ce = NULL;
   status = c_avl_get(cache_tree, buf.ptr, (void *)&ce);
   if (status != 0) /* entry does not yet exist */
@@ -325,20 +364,46 @@ static int uc_update_metric(metric_t const *m) {
 
   switch (m->family->type) {
   case METRIC_TYPE_COUNTER: {
-    counter_t diff = counter_diff(ce->values_raw.counter, m->value.counter);
+    counter_t diff =
+        counter_diff(ce->values_raw.value.counter, m->value.counter);
     ce->values_gauge =
         ((double)diff) / (CDTIME_T_TO_DOUBLE(m->time - ce->last_time));
-    ce->values_raw.counter = m->value.counter;
+    ce->values_raw.value.counter = m->value.counter;
     break;
   }
 
   case METRIC_TYPE_UNTYPED:
   case METRIC_TYPE_GAUGE: {
-    ce->values_raw.gauge = m->value.gauge;
+    ce->values_raw.value.gauge = m->value.gauge;
     ce->values_gauge = m->value.gauge;
     break;
   }
 
+  case METRIC_TYPE_DISTRIBUTION: {
+    distribution_destroy(ce->distribution_increase);
+    ce->distribution_increase = distribution_clone(m->value.distribution);
+    int status = distribution_sub(ce->distribution_increase,
+                                  ce->values_raw.value.distribution);
+    if (status == ERANGE) {
+      distribution_destroy(ce->distribution_increase);
+      ce->distribution_increase = distribution_clone(m->value.distribution);
+      distribution_destroy(ce->start_value.value.distribution);
+      ce->start_value.value.distribution =
+          distribution_clone(m->value.distribution);
+      ce->start_time = m->time;
+      status = 0;
+    }
+
+    if (status != 0) {
+      pthread_mutex_unlock(&cache_lock);
+      ERROR("uc_update: distribution_sub failed with status %d.", status);
+      return status;
+    }
+    distribution_destroy(ce->values_raw.value.distribution);
+    ce->values_raw.value.distribution =
+        distribution_clone(m->value.distribution);
+    break;
+  }
 #if 0
   case DS_TYPE_DERIVE: { /* TODO(octo): add support for DERIVE */
     derive_t diff = m->value.derive - ce->values_raw.derive;
@@ -388,6 +453,11 @@ static int uc_update_metric(metric_t const *m) {
 } /* int uc_update_metric */
 
 int uc_update(metric_family_t const *fam) {
+  if (fam == NULL) {
+    ERROR("uc_update: uc_update_metric failed: %s", STRERROR(EINVAL));
+    return EINVAL;
+  }
+
   int ret = 0;
   for (size_t i = 0; i < fam->metric.num; i++) {
     int status = uc_update_metric(fam->metric.ptr + i);
@@ -415,6 +485,85 @@ int uc_set_callbacks_mask(const char *name, unsigned long mask) {
   return 0;
 }
 
+int uc_get_percentile_by_name(const char *name, gauge_t *ret_values,
+                              double percent) {
+  if (name == NULL || ret_values == NULL) {
+    ERROR("uc_get_percentile_by_name: Passed null pointer as an argument.");
+    return -1;
+  }
+
+  if (percent < 0 || percent > 100) {
+    ERROR("uc_get_percentile_by_name: Illegal percent %lf.", percent);
+    return -1;
+  }
+
+  cache_entry_t *ce = NULL;
+  int status = 0;
+
+  pthread_mutex_lock(&cache_lock);
+
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+
+    /* remove missing values from getval */
+    if (ce->state == STATE_MISSING) {
+      DEBUG("utils_cache: uc_get_percentile_by_name: requested metric \"%s\" "
+            "is in "
+            "state \"missing\".",
+            name);
+      status = -1;
+    } else {
+      if (ce->values_raw.type !=
+          METRIC_TYPE_DISTRIBUTION) { /* check if the cache entry is not the
+                                         distribution */
+        pthread_mutex_unlock(&cache_lock);
+        ERROR("uc_get_percentile: Don't know how to handle data source type "
+              "that is not the distribution.");
+        return -1;
+      }
+
+      *ret_values = distribution_percentile(ce->distribution_increase, percent);
+    }
+  } else {
+    DEBUG("utils_cache: uc_get_percentile_by_name: No such value: %s", name);
+    status = -1;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+
+  return status;
+} /* gauge_t *uc_get_percentile_by_name */
+
+int uc_get_percentile(metric_t const *m, gauge_t *ret, double percent) {
+  if (m == NULL || ret == NULL) {
+    ERROR("uc_get_percentile: Passed null pointer as an argument.");
+    return -1;
+  }
+
+  if (m->family->type != METRIC_TYPE_DISTRIBUTION) {
+    ERROR("uc_get_percentile: Don't know how to handle data source type %i.",
+          m->family->type);
+    return -1;
+  }
+
+  if (percent < 0 || percent > 100) {
+    ERROR("uc_get_percentile: Illegal percent %lf.", percent);
+    return -1;
+  }
+
+  strbuf_t buf = STRBUF_CREATE;
+  int status = metric_identity(&buf, m);
+  if (status != 0) {
+    ERROR("uc_get_percentile: metric_identity failed with status %d.", status);
+    STRBUF_DESTROY(buf);
+    return status;
+  }
+
+  status = uc_get_percentile_by_name(buf.ptr, ret, percent);
+  STRBUF_DESTROY(buf);
+  return status;
+}
+
 int uc_get_rate_by_name(const char *name, gauge_t *ret_values) {
   cache_entry_t *ce = NULL;
   int status = 0;
@@ -431,7 +580,16 @@ int uc_get_rate_by_name(const char *name, gauge_t *ret_values) {
             name);
       status = -1;
     } else {
-      *ret_values = ce->values_gauge;
+
+      if (ce->values_raw.type !=
+          METRIC_TYPE_DISTRIBUTION) { /* check if the cache entry is not the
+                                         distribution */
+        *ret_values = ce->values_gauge;
+      } else { /* in case where metric is a distribution, we
+                                     assume that the rate is the middle value */
+        pthread_mutex_unlock(&cache_lock);
+        status = uc_get_percentile_by_name(name, ret_values, 50.0);
+      }
     }
   } else {
     DEBUG("utils_cache: uc_get_rate_by_name: No such value: %s", name);
@@ -452,7 +610,14 @@ int uc_get_rate(metric_t const *m, gauge_t *ret) {
     return status;
   }
 
-  status = uc_get_rate_by_name(buf.ptr, ret);
+  if (m->family->type ==
+      METRIC_TYPE_DISTRIBUTION) { /* in case where metric is a distribution, we
+                                     assume that the rate is the middle value */
+    status = uc_get_percentile_by_name(buf.ptr, ret, 50.0);
+  } else {
+    status = uc_get_rate_by_name(buf.ptr, ret);
+  }
+
   STRBUF_DESTROY(buf);
   return status;
 } /* gauge_t *uc_get_rate */
@@ -498,7 +663,7 @@ int uc_get_value_by_name(const char *name, value_t *ret_values) {
     if (ce->state == STATE_MISSING) {
       status = -1;
     } else {
-      *ret_values = ce->values_raw;
+      *ret_values = typed_value_clone(ce->values_raw).value;
     }
   } else {
     DEBUG("utils_cache: uc_get_value_by_name: No such value: %s", name);
@@ -523,6 +688,48 @@ int uc_get_value(metric_t const *m, value_t *ret) {
   STRBUF_DESTROY(buf);
   return status;
 } /* value_t *uc_get_value */
+
+int uc_get_start_value_by_name(const char *name, value_t *ret_start_value,
+                               cdtime_t *ret_start_time) {
+  pthread_mutex_lock(&cache_lock);
+
+  cache_entry_t *ce = NULL;
+  int status = 0;
+  if (c_avl_get(cache_tree, name, (void *)&ce) != 0) {
+    DEBUG("utils_cache: uc_get_start_value_by_name: No such value: %s", name);
+    status = -1;
+    pthread_mutex_unlock(&cache_lock);
+    return status;
+  }
+  assert(ce != NULL);
+
+  /* remove missing values from getval */
+  if (ce->state == STATE_MISSING) {
+    status = -1;
+  } else {
+    *ret_start_value = typed_value_clone(ce->start_value).value;
+    *ret_start_time = ce->start_time;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+
+  return status;
+}
+
+int uc_get_start_value(metric_t const *m, value_t *ret_start_value,
+                       cdtime_t *ret_start_time) {
+  strbuf_t buf = STRBUF_CREATE;
+  int status = metric_identity(&buf, m);
+  if (status != 0) {
+    ERROR("uc_get_start_value: metric_identity failed with status %d.", status);
+    STRBUF_DESTROY(buf);
+    return status;
+  }
+
+  status = uc_get_start_value_by_name(buf.ptr, ret_start_value, ret_start_time);
+  STRBUF_DESTROY(buf);
+  return status;
+}
 
 size_t uc_get_size(void) {
   size_t size_arrays = 0;
@@ -802,6 +1009,55 @@ int uc_inc_hits(metric_t const *m, int step) {
   return ret;
 } /* int uc_inc_hits */
 
+int uc_get_last_time(char *name, cdtime_t *ret_value) {
+  cache_entry_t *ce = NULL;
+
+  pthread_mutex_lock(&cache_lock);
+
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+
+    /* remove missing values from getval */
+    if (ce->state == STATE_MISSING) {
+      pthread_mutex_unlock(&cache_lock);
+      return -1;
+    } else {
+      *ret_value = ce->last_time;
+    }
+  } else {
+    DEBUG("utils_cache: uc_get_time_of_last_time: No such value: %s", name);
+    pthread_mutex_unlock(&cache_lock);
+    return -1;
+  }
+  pthread_mutex_unlock(&cache_lock);
+  return 0;
+}
+
+int uc_get_last_update(char *name, cdtime_t *ret_value) {
+  cache_entry_t *ce = NULL;
+
+  pthread_mutex_lock(&cache_lock);
+
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+
+    /* remove missing values from getval */
+    if (ce->state == STATE_MISSING) {
+      pthread_mutex_unlock(&cache_lock);
+      return -1;
+    } else {
+      *ret_value = ce->last_update;
+    }
+  } else {
+    DEBUG("utils_cache: uc_get_time_of_last_update: No such value: %s", name);
+    pthread_mutex_unlock(&cache_lock);
+    return -1;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+  return 0;
+}
+
 /*
  * Iterator interface
  */
@@ -868,7 +1124,7 @@ int uc_iterator_get_values(uc_iter_t *iter, value_t *ret_values) {
   if ((iter == NULL) || (iter->entry == NULL) || (ret_values == NULL))
     return -1;
 
-  *ret_values = iter->entry->values_raw;
+  *ret_values = typed_value_clone(iter->entry->values_raw).value;
   return 0;
 } /* int uc_iterator_get_values */
 

@@ -26,9 +26,37 @@
  **/
 
 #include "collectd.h"
-
+#include "distribution.h"
 #include "metric.h"
 #include "plugin.h"
+
+typed_value_t typed_value_clone(typed_value_t val) {
+  typed_value_t copy = {
+      .value = val.value,
+      .type = val.type,
+  };
+  if (val.type == METRIC_TYPE_DISTRIBUTION) {
+    copy.value.distribution = distribution_clone(val.value.distribution);
+  }
+  return copy;
+}
+
+typed_value_t typed_value_create(value_t val, metric_type_t type) {
+  typed_value_t tval = {
+      .value = val,
+      .type = type,
+  };
+  if (type == METRIC_TYPE_DISTRIBUTION) {
+    tval.value.distribution = distribution_clone(val.distribution);
+  }
+  return tval;
+}
+
+void typed_value_destroy(typed_value_t val) {
+  if (val.type == METRIC_TYPE_DISTRIBUTION) {
+    distribution_destroy(val.value.distribution);
+  }
+}
 
 /* Label names must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. Label names
  * beginning with __ are reserved for internal use.
@@ -49,6 +77,9 @@ int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type) {
     return strbuf_printf(buf, GAUGE_FORMAT, v.gauge);
   case METRIC_TYPE_COUNTER:
     return strbuf_printf(buf, "%" PRIu64, v.counter);
+  case METRIC_TYPE_DISTRIBUTION:
+    ERROR("Distribution metrics are not to be represented as text.");
+    return EINVAL;
   default:
     ERROR("Unknown metric value type: %d", (int)type);
     return EINVAL;
@@ -209,6 +240,10 @@ int metric_reset(metric_t *m) {
   label_set_reset(&m->label);
   meta_data_destroy(m->meta);
 
+  if (m->family != NULL && m->family->type == METRIC_TYPE_DISTRIBUTION) {
+    distribution_destroy(m->value.distribution);
+  }
+
   memset(m, 0, sizeof(*m));
 
   return 0;
@@ -348,12 +383,19 @@ static int metric_list_clone(metric_list_t *dest, metric_list_t src,
   }
 
   for (size_t i = 0; i < src.num; i++) {
+
     ret.ptr[i] = (metric_t){
         .family = fam,
-        .value = src.ptr[i].value,
         .time = src.ptr[i].time,
         .interval = src.ptr[i].interval,
     };
+
+    if (src.ptr[i].family->type == METRIC_TYPE_DISTRIBUTION) {
+      ret.ptr[i].value.distribution =
+          distribution_clone(src.ptr[i].value.distribution);
+    } else {
+      ret.ptr[i].value = src.ptr[i].value;
+    }
 
     int status = label_set_clone(&ret.ptr[i].label, src.ptr[i].label);
     if (status != 0) {

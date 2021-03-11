@@ -25,6 +25,8 @@
  *   Florian octo Forster <octo at collectd.org>
  *   Sebastian tokkee Harl <sh at tokkee.org>
  *   Manoj Srivastava <srivasta at google.com>
+ *   Barbara bkjg Kaczorowska <bkjg at google.com>
+ *   Svetlana sshmidt Shmidt <sshmidt at google.com>
  **/
 
 #ifndef UTILS_CACHE_H
@@ -41,16 +43,24 @@
 int uc_init(void);
 int uc_check_timeout(void);
 int uc_update(metric_family_t const *fam);
+void uc_destroy(void);
 
 gauge_t *uc_get_rate_vl(const data_set_t *ds, const value_list_t *vl);
 int uc_get_value_by_name_vl(const char *name, value_t **ret_values,
                             size_t *ret_values_num);
 value_t *uc_get_value_vl(const data_set_t *ds, const value_list_t *vl);
 
+int uc_get_percentile_by_name(const char *name, gauge_t *ret_value,
+                              double percent);
+int uc_get_percentile(metric_t const *m, gauge_t *ret_value, double percent);
 int uc_get_rate_by_name(const char *name, gauge_t *ret_value);
 int uc_get_rate(metric_t const *m, gauge_t *ret_value);
 int uc_get_value_by_name(const char *name, value_t *ret_value);
 int uc_get_value(metric_t const *m, value_t *ret_value);
+int uc_get_start_value_by_name(const char *name, value_t *ret_start_value,
+                               cdtime_t *ret_start_time);
+int uc_get_start_value(metric_t const *m, value_t *ret_start_value,
+                       cdtime_t *ret_start_time);
 
 size_t uc_get_size(void);
 int uc_get_names(char ***ret_names, cdtime_t **ret_times, size_t *ret_number);
@@ -67,6 +77,10 @@ int uc_set_callbacks_mask(const char *name, unsigned long callbacks_mask);
 int uc_get_history(metric_t const *m, gauge_t *ret_history, size_t num_steps);
 int uc_get_history_by_name(const char *name, gauge_t *ret_history,
                            size_t num_steps);
+
+/* functions for tests purposes */
+int uc_get_last_time(char *name, cdtime_t *ret_value);
+int uc_get_last_update(char *name, cdtime_t *ret_value);
 
 /*
  * Iterator interface

@@ -1,6 +1,8 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 
+SUBDIRS = distbench # Benchmark for distribution_t.
+
 if BUILD_WIN32
 cpkgdatadir=$(datadir)
 cpkglibdir=$(libdir)/plugins
@@ -125,7 +127,7 @@ sbin_PROGRAMS = \
 bin_PROGRAMS = \
 	collectd-nagios \
 	collectd-tg \
-	collectdctl
+	collectdctl 
 endif # BUILD_WIN32
 
 
@@ -151,7 +153,9 @@ check_LTLIBRARIES = \
 
 
 check_PROGRAMS = \
+	test_utils_cache \
 	test_common \
+	test_distribution \
 	test_format_graphite \
 	test_meta_data \
 	test_metric \
@@ -344,6 +348,14 @@ if BUILD_AIX
 collectd_tg_LDADD += -lm
 endif
 
+test_utils_cache_SOURCES = \
+    src/daemon/utils_cache.c \
+    src/daemon/utils_cache.h \
+    src/daemon/utils_cache_test.c \
+    src/daemon/globals.c \
+    src/daemon/globals.h \
+    src/testing.h
+test_utils_cache_LDADD = libavltree.la libmetric.la libplugin_mock.la
 
 test_common_SOURCES = \
 	src/utils/common/common_test.c \
@@ -354,6 +366,11 @@ test_meta_data_SOURCES = \
 	src/utils/metadata/meta_data_test.c \
 	src/testing.h
 test_meta_data_LDADD = libmetadata.la libplugin_mock.la
+
+test_distribution_SOURCES = \
+	src/daemon/distribution_test.c \
+	src/testing.h
+test_distribution_LDADD = libmetric.la libplugin_mock.la
 
 test_metric_SOURCES = \
 	src/daemon/metric_test.c \
@@ -425,9 +442,11 @@ libmetadata_la_SOURCES = \
 	src/utils/metadata/meta_data.h
 
 libmetric_la_SOURCES = \
+		       src/daemon/distribution.c \
+		       src/daemon/distribution.h \
 		       src/daemon/metric.c \
 		       src/daemon/metric.h
-libmetric_la_LIBADD = libmetadata.la $(COMMON_LIBS)
+libmetric_la_LIBADD = libmetadata.la $(COMMON_LIBS) -lm
 
 libplugin_mock_la_SOURCES = \
 	src/daemon/plugin_mock.c \
