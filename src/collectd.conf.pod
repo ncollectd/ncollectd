@@ -8728,50 +8728,6 @@ Please note what reported timer values less than 0.001 are ignored in all B<Time
 
 =back
 
-=head2 Plugin C<swap>
-
-The I<Swap plugin> collects information about used and available swap space. On
-I<Linux> and I<Solaris>, the following options are available:
-
-=over 4
-
-=item B<ReportByDevice> B<false>|B<true>
-
-Configures how to report physical swap devices. If set to B<false> (the
-default), the summary over all swap devices is reported only, i.e. the globally
-used and available space over all devices. If B<true> is configured, the used
-and available space of each device will be reported separately.
-
-This option is only available if the I<Swap plugin> can read C</proc/swaps>
-(under Linux) or use the L<swapctl(2)> mechanism (under I<Solaris>).
-
-=item B<ReportBytes> B<false>|B<true>
-
-When enabled, the I<swap I/O> is reported in bytes. When disabled, the default,
-I<swap I/O> is reported in pages. This option is available under Linux only.
-
-=item B<ValuesAbsolute> B<true>|B<false>
-
-Enables or disables reporting of absolute swap metrics, i.e. number of I<bytes>
-available and used. Defaults to B<true>.
-
-=item B<ValuesPercentage> B<false>|B<true>
-
-Enables or disables reporting of relative swap metrics, i.e. I<percent>
-available and free. Defaults to B<false>.
-
-This is useful for deploying I<collectd> in a heterogeneous environment, where
-swap sizes differ and you want to specify generic thresholds or similar.
-
-=item B<ReportIO> B<true>|B<false>
-
-Enables or disables reporting swap IO. Defaults to B<true>.
-
-This is useful for the cases when swap IO is not neccessary, is not available,
-or is not reliable.
-
-=back
-
 =head2 Plugin C<sysevent>
 
 The I<sysevent> plugin monitors rsyslog messages.
