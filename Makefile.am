@@ -1096,7 +1096,7 @@ endif
 
 if BUILD_PLUGIN_FHCOUNT
 pkglib_LTLIBRARIES += fhcount.la
-fhcount_la_SOURCES = src/fhcount.c
+fhcount_la_SOURCES = src/plugins/fhcount/fhcount.c
 fhcount_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
