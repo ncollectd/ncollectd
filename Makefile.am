@@ -996,7 +996,7 @@ endif
 
 if BUILD_PLUGIN_DISK
 pkglib_LTLIBRARIES += disk.la
-disk_la_SOURCES = src/disk.c
+disk_la_SOURCES = src/plugins/disk/disk.c
 disk_la_CFLAGS = $(AM_CFLAGS)
 disk_la_CPPFLAGS = $(AM_CPPFLAGS)
 disk_la_LDFLAGS = $(PLUGIN_LDFLAGS)

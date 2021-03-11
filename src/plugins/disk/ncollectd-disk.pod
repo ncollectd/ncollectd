@@ -1,0 +1,68 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-disk - Documentation of ncollectd's C<Cpu disk>
+
+=head2 Plugin C<disk>
+
+The C<disk> plugin collects information about the usage of physical disks and
+logical disks (partitions). Values collected are the number of octets written
+to and read from a disk or partition, the number of read/write operations
+issued to the disk and a rather complex "time" it took for these commands to be
+issued.
+
+Using the following two options you can ignore some disks or configure the
+collection only of specific disks.
+
+=over 4
+
+=item B<Disk> I<Name>
+
+Select the disk I<Name>. Whether it is collected or ignored depends on the
+B<IgnoreSelected> setting, see below. As with other plugins that use the
+daemon's ignorelist functionality, a string that starts and ends with a slash
+is interpreted as a regular expression. Examples:
+
+  Disk "sdd"
+  Disk "/hda[34]/"
+
+See F</"IGNORELISTS"> for details.
+
+=item B<IgnoreSelected> B<true>|B<false>
+
+Sets whether selected disks, i.E<nbsp>e. the ones matches by any of the B<Disk>
+statements, are ignored or if all other disks are ignored. The behavior
+(hopefully) is intuitive: If no B<Disk> option is configured, all disks are
+collected. If at least one B<Disk> option is given and no B<IgnoreSelected> or
+set to B<false>, B<only> matching disks will be collected. If B<IgnoreSelected>
+is set to B<true>, all disks are collected B<except> the ones matched.
+
+=item B<UseBSDName> B<true>|B<false>
+
+Whether to use the device's "BSD Name", on MacE<nbsp>OSE<nbsp>X, instead of the
+default major/minor numbers. Requires collectd to be built with Apple's
+IOKitLib support.
+
+=item B<UdevNameAttr> I<Attribute>
+
+Attempt to override disk instance name with the value of a specified udev
+attribute when built with B<libudev>.  If the attribute is not defined for the
+given device, the default name is used. Example:
+
+  UdevNameAttr "DM_NAME"
+
+Please note that using an attribute that does not differentiate between the
+whole disk and its particular partitions (like B<ID_SERIAL>) will result in
+data about the whole disk and each partition being mixed together incorrectly.
+In this case, you can use B<ID_COLLECTD> attribute that is provided by
+I<contrib/99-storage-collectd.rules> udev rule file instead.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
