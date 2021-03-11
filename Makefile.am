@@ -1216,7 +1216,7 @@ endif
 
 if BUILD_PLUGIN_INTERFACE
 pkglib_LTLIBRARIES += interface.la
-interface_la_SOURCES = src/interface.c
+interface_la_SOURCES = src/plugins/interface/interface.c
 interface_la_CFLAGS = $(AM_CFLAGS)
 interface_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 interface_la_LIBADD = libignorelist.la
