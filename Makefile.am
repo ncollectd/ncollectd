@@ -2170,7 +2170,7 @@ endif
 
 if BUILD_PLUGIN_UPTIME
 pkglib_LTLIBRARIES += uptime.la
-uptime_la_SOURCES = src/uptime.c
+uptime_la_SOURCES = src/plugins/uptime/uptime.c
 uptime_la_CFLAGS = $(AM_CFLAGS)
 uptime_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 uptime_la_LIBADD =
