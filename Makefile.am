@@ -1,8 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 
-SUBDIRS = distbench # Benchmark for distribution_t.
-
 if BUILD_WIN32
 cpkgdatadir=$(datadir)
 cpkglibdir=$(libdir)/plugins
