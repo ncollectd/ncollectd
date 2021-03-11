@@ -193,7 +193,7 @@ typedef int uid_t;
 #endif
 
 #ifndef PACKAGE_NAME
-#define PACKAGE_NAME "collectd"
+#define PACKAGE_NAME "ncollectd"
 #endif
 
 #ifndef PREFIX
@@ -205,7 +205,7 @@ typedef int uid_t;
 #endif
 
 #ifndef CONFIGFILE
-#define CONFIGFILE SYSCONFDIR "/collectd.conf"
+#define CONFIGFILE SYSCONFDIR "/ncollectd.conf"
 #endif
 
 #ifndef LOCALSTATEDIR
@@ -229,7 +229,7 @@ typedef int uid_t;
 #endif
 
 #ifndef COLLECTD_GRP_NAME
-#define COLLECTD_GRP_NAME "collectd"
+#define COLLECTD_GRP_NAME "ncollectd"
 #endif
 
 #ifndef COLLECTD_DEFAULT_INTERVAL
