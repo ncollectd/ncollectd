@@ -885,7 +885,7 @@ endif
 
 if BUILD_PLUGIN_CPU
 pkglib_LTLIBRARIES += cpu.la
-cpu_la_SOURCES = src/cpu.c
+cpu_la_SOURCES = src/plugins/cpu/cpu.c
 cpu_la_CFLAGS = $(AM_CFLAGS)
 cpu_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 cpu_la_LIBADD =
