@@ -912,7 +912,7 @@ endif
 
 if BUILD_PLUGIN_CPUSLEEP
 pkglib_LTLIBRARIES += cpusleep.la
-cpusleep_la_SOURCES = src/cpusleep.c
+cpusleep_la_SOURCES = src/plugins/cpusleep/cpusleep.c
 cpusleep_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
@@ -1815,7 +1815,7 @@ endif
 
 if BUILD_PLUGIN_PROCESSES
 pkglib_LTLIBRARIES += processes.la
-processes_la_SOURCES = src/processes.c
+processes_la_SOURCES = src/plugins/processes/processes.c
 processes_la_CPPFLAGS = $(AM_CPPFLAGS)
 processes_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 processes_la_LIBADD =

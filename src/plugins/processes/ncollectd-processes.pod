@@ -1,0 +1,107 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-processes - Documentation of ncollectd's C<Processes plugin>
+
+=head2 Plugin C<processes>
+
+Collects information about processes of local system.
+
+By default, with no process matches configured, only general statistics is
+collected: the number of processes in each state and fork rate.
+
+Process matches can be configured by B<Process> and B<ProcessMatch> options.
+These may also be a block in which further options may be specified.
+
+The statistics collected for matched processes are:
+ - size of the resident segment size (RSS)
+ - user- and system-time used
+ - number of processes
+ - number of threads
+ - number of open files (under Linux)
+ - number of memory mapped files (under Linux)
+ - io data (where available)
+ - context switches (under Linux)
+ - minor and major pagefaults
+ - Delay Accounting information (Linux only, requires libmnl)
+
+B<Synopsis:>
+
+ <Plugin processes>
+   CollectFileDescriptor  true
+   CollectContextSwitch   true
+   CollectDelayAccounting false
+   Process "name"
+   ProcessMatch "name" "regex"
+   <Process "collectd">
+     CollectFileDescriptor  false
+     CollectContextSwitch   false
+     CollectDelayAccounting true
+   </Process>
+   <ProcessMatch "name" "regex">
+     CollectFileDescriptor false
+     CollectContextSwitch true
+   </ProcessMatch>
+ </Plugin>
+
+=over 4
+
+=item B<Process> I<Name>
+
+Select more detailed statistics of processes matching this name.
+
+Some platforms have a limit on the length of process names.
+I<Name> must stay below this limit.
+
+=item B<ProcessMatch> I<name> I<regex>
+
+Select more detailed statistics of processes matching the specified I<regex>
+(see L<regex(7)> for details). The statistics of all matching processes are
+summed up and dispatched to the daemon using the specified I<name> as an
+identifier. This allows one to "group" several processes together.
+I<name> must not contain slashes.
+
+=item B<CollectContextSwitch> I<Boolean>
+
+Collect the number of context switches for matched processes.
+Disabled by default.
+
+=item B<CollectDelayAccounting> I<Boolean>
+
+If enabled, collect Linux Delay Accounding information for matching processes.
+Delay Accounting provides the time processes wait for the CPU to become
+available, for I/O operations to finish, for pages to be swapped in and for
+freed pages to be reclaimed. The metrics are reported as "seconds per second"
+using the C<delay_rate> type, e.g. C<delay_rate-delay-cpu>.
+Disabled by default.
+
+This option is only available on Linux, requires the C<libmnl> library and
+requires the C<CAP_NET_ADMIN> capability at runtime.
+
+=item B<CollectFileDescriptor> I<Boolean>
+
+Collect number of file descriptors of matched processes.
+Disabled by default.
+
+=item B<CollectMemoryMaps> I<Boolean>
+
+Collect the number of memory mapped files of the process.
+The limit for this number is configured via F</proc/sys/vm/max_map_count> in
+the Linux kernel.
+
+=back
+
+The B<CollectContextSwitch>, B<CollectDelayAccounting>,
+B<CollectFileDescriptor> and B<CollectMemoryMaps> options may be used inside
+B<Process> and B<ProcessMatch> blocks. When used there, these options affect
+reporting the corresponding processes only. Outside of B<Process> and
+B<ProcessMatch> blocks these options set the default value for subsequent
+matches.
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
