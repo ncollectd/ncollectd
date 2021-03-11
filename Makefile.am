@@ -869,7 +869,7 @@ endif
 
 if BUILD_PLUGIN_CONNTRACK
 pkglib_LTLIBRARIES += conntrack.la
-conntrack_la_SOURCES = src/conntrack.c
+conntrack_la_SOURCES = src/plugins/conntrack/conntrack.c
 conntrack_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
@@ -1077,7 +1077,7 @@ endif
 
 if BUILD_PLUGIN_ENTROPY
 pkglib_LTLIBRARIES += entropy.la
-entropy_la_SOURCES = src/entropy.c
+entropy_la_SOURCES = src/plugins/entropy/entropy.c
 entropy_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
@@ -1910,7 +1910,7 @@ endif
 
 if BUILD_PLUGIN_SERIAL
 pkglib_LTLIBRARIES += serial.la
-serial_la_SOURCES = src/serial.c
+serial_la_SOURCES = src/plugins/serial/serial.c
 serial_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
@@ -2102,7 +2102,7 @@ endif
 
 if BUILD_PLUGIN_TCPCONNS
 pkglib_LTLIBRARIES += tcpconns.la
-tcpconns_la_SOURCES = src/tcpconns.c
+tcpconns_la_SOURCES = src/plugins/tcpconns/tcpconns.c
 tcpconns_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 tcpconns_la_LIBADD =
 if BUILD_WITH_LIBKVM_NLIST
