@@ -2184,7 +2184,7 @@ endif
 
 if BUILD_PLUGIN_USERS
 pkglib_LTLIBRARIES += users.la
-users_la_SOURCES = src/users.c
+users_la_SOURCES = src/plugins/users/users.c
 users_la_CFLAGS = $(AM_CFLAGS)
 users_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 users_la_LIBADD =
