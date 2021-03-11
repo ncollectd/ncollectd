@@ -1,5 +1,5 @@
 /**
- * collectd - src/collectdmon.c
+ * ncollectd - src/ncollectd/ncollectdmon.c
  * Copyright (C) 2007       Sebastian Harl
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -63,9 +63,9 @@
 #define LOCALSTATEDIR PREFIX "/var"
 #endif
 
-#ifndef COLLECTDMON_PIDFILE
-#define COLLECTDMON_PIDFILE LOCALSTATEDIR "/run/collectdmon.pid"
-#endif /* ! COLLECTDMON_PIDFILE */
+#ifndef NCOLLECTDMON_PIDFILE
+#define NCOLLECTDMON_PIDFILE LOCALSTATEDIR "/run/ncollectdmon.pid"
+#endif /* ! NCOLLECTDMON_PIDFILE */
 
 #ifndef WCOREDUMP
 #define WCOREDUMP(s) 0
@@ -75,21 +75,16 @@ static int loop;
 static int restart;
 
 static const char *pidfile;
-static pid_t collectd_pid;
+static pid_t ncollectd_pid;
 
 __attribute__((noreturn)) static void exit_usage(const char *name) {
-  printf("Usage: %s <options> [-- <collectd options>]\n"
-
+  printf("Usage: %s <options> [-- <ncollectd options>]\n"
          "\nAvailable options:\n"
          "  -h         Display this help and exit.\n"
-         "  -c <path>  Path to the collectd binary.\n"
+         "  -c <path>  Path to the ncollectd binary.\n"
          "  -P <file>  PID-file.\n"
-
-         "\nFor <collectd options> see collectd.conf(5).\n"
-
-         "\n" PACKAGE_NAME " " PACKAGE_VERSION ", http://collectd.org/\n"
-         "by Florian octo Forster <octo@collectd.org>\n"
-         "for contributions see `AUTHORS'\n",
+         "\nFor <ncollectd options> see ncollectd.conf(5).\n"
+         "\n" PACKAGE_NAME " " PACKAGE_VERSION "\n",
          name);
   exit(0);
 } /* exit_usage */
@@ -98,7 +93,7 @@ static int pidfile_create(void) {
   FILE *file;
 
   if (pidfile == NULL)
-    pidfile = COLLECTDMON_PIDFILE;
+    pidfile = NCOLLECTDMON_PIDFILE;
 
   if ((file = fopen(pidfile, "w")) == NULL) {
     syslog(LOG_ERR, "Error: couldn't open PID-file (%s) for writing: %s",
@@ -187,32 +182,32 @@ static int daemonize(void) {
   return 0;
 } /* daemonize */
 
-static int collectd_start(char **argv) {
+static int ncollectd_start(char **argv) {
   pid_t pid = fork();
 
   if (pid < 0) {
     syslog(LOG_ERR, "Error: fork() failed: %s", strerror(errno));
     return -1;
   } else if (pid != 0) {
-    collectd_pid = pid;
+    ncollectd_pid = pid;
     return 0;
   }
 
   execvp(argv[0], argv);
   syslog(LOG_ERR, "Error: execvp(%s) failed: %s", argv[0], strerror(errno));
   exit(-1);
-} /* collectd_start */
+} /* ncollectd_start */
 
-static int collectd_stop(void) {
-  if (collectd_pid == 0)
+static int ncollectd_stop(void) {
+  if (ncollectd_pid == 0)
     return 0;
 
-  if (kill(collectd_pid, SIGTERM) != 0) {
+  if (kill(ncollectd_pid, SIGTERM) != 0) {
     syslog(LOG_ERR, "Error: kill() failed: %s", strerror(errno));
     return -1;
   }
   return 0;
-} /* collectd_stop */
+} /* ncollectd_stop */
 
 static void sig_int_term_handler(int __attribute__((unused)) signo) {
   ++loop;
@@ -227,13 +222,13 @@ static void sig_hup_handler(int __attribute__((unused)) signo) {
 static void log_status(int status) {
   if (WIFEXITED(status)) {
     if (WEXITSTATUS(status) == 0)
-      syslog(LOG_INFO, "Info: collectd terminated with exit status %i",
+      syslog(LOG_INFO, "Info: ncollectd terminated with exit status %i",
              WEXITSTATUS(status));
     else
-      syslog(LOG_WARNING, "Warning: collectd terminated with exit status %i",
+      syslog(LOG_WARNING, "Warning: ncollectd terminated with exit status %i",
              WEXITSTATUS(status));
   } else if (WIFSIGNALED(status)) {
-    syslog(LOG_WARNING, "Warning: collectd was terminated by signal %i%s",
+    syslog(LOG_WARNING, "Warning: ncollectd was terminated by signal %i%s",
            WTERMSIG(status), WCOREDUMP(status) ? " (core dumped)" : "");
   }
   return;
@@ -256,7 +251,7 @@ static void check_respawn(void) {
     unsigned int time_left = 300;
 
     syslog(LOG_ERR,
-           "Error: collectd is respawning too fast - "
+           "Error: ncollectd is respawning too fast - "
            "disabled for %i seconds",
            time_left);
 
@@ -267,9 +262,9 @@ static void check_respawn(void) {
 } /* check_respawn */
 
 int main(int argc, char **argv) {
-  int collectd_argc = 0;
-  char *collectd = NULL;
-  char **collectd_argv = NULL;
+  int ncollectd_argc = 0;
+  char *ncollectd = NULL;
+  char **ncollectd_argv = NULL;
 
   int i = 0;
 
@@ -282,7 +277,7 @@ int main(int argc, char **argv) {
 
     switch (c) {
     case 'c':
-      collectd = optarg;
+      ncollectd = optarg;
       break;
     case 'P':
       pidfile = optarg;
@@ -298,28 +293,28 @@ int main(int argc, char **argv) {
       break;
 
   /* i < argc => -f already present */
-  collectd_argc = 1 + argc - optind + ((i < argc) ? 0 : 1);
-  collectd_argv = calloc(collectd_argc + 1, sizeof(*collectd_argv));
+  ncollectd_argc = 1 + argc - optind + ((i < argc) ? 0 : 1);
+  ncollectd_argv = calloc(ncollectd_argc + 1, sizeof(*ncollectd_argv));
 
-  if (collectd_argv == NULL) {
+  if (ncollectd_argv == NULL) {
     fprintf(stderr, "Out of memory.");
     return 3;
   }
 
-  collectd_argv[0] = (collectd == NULL) ? "collectd" : collectd;
+  ncollectd_argv[0] = (ncollectd == NULL) ? "ncollectd" : ncollectd;
 
   if (i == argc)
-    collectd_argv[collectd_argc - 1] = "-f";
+    ncollectd_argv[ncollectd_argc - 1] = "-f";
 
   for (i = optind; i < argc; ++i)
-    collectd_argv[i - optind + 1] = argv[i];
+    ncollectd_argv[i - optind + 1] = argv[i];
 
-  collectd_argv[collectd_argc] = NULL;
+  ncollectd_argv[ncollectd_argc] = NULL;
 
-  openlog("collectdmon", LOG_CONS | LOG_PID, LOG_DAEMON);
+  openlog("ncollectdmon", LOG_CONS | LOG_PID, LOG_DAEMON);
 
   if (daemonize() == -1) {
-    free(collectd_argv);
+    free(ncollectd_argv);
     return 1;
   }
 
@@ -331,13 +326,13 @@ int main(int argc, char **argv) {
 
   if (sigaction(SIGINT, &sa, NULL) != 0) {
     syslog(LOG_ERR, "Error: sigaction() failed: %s", strerror(errno));
-    free(collectd_argv);
+    free(ncollectd_argv);
     return 1;
   }
 
   if (sigaction(SIGTERM, &sa, NULL) != 0) {
     syslog(LOG_ERR, "Error: sigaction() failed: %s", strerror(errno));
-    free(collectd_argv);
+    free(ncollectd_argv);
     return 1;
   }
 
@@ -345,41 +340,41 @@ int main(int argc, char **argv) {
 
   if (sigaction(SIGHUP, &sa, NULL) != 0) {
     syslog(LOG_ERR, "Error: sigaction() failed: %s", strerror(errno));
-    free(collectd_argv);
+    free(ncollectd_argv);
     return 1;
   }
 
   while (loop == 0) {
     int status = 0;
 
-    if (collectd_start(collectd_argv) != 0) {
-      syslog(LOG_ERR, "Error: failed to start collectd.");
+    if (ncollectd_start(ncollectd_argv) != 0) {
+      syslog(LOG_ERR, "Error: failed to start ncollectd.");
       break;
     }
 
-    assert(collectd_pid >= 0);
-    while ((collectd_pid != waitpid(collectd_pid, &status, 0)) &&
+    assert(ncollectd_pid >= 0);
+    while ((ncollectd_pid != waitpid(ncollectd_pid, &status, 0)) &&
            errno == EINTR)
       if (loop != 0 || restart != 0)
-        collectd_stop();
+        ncollectd_stop();
 
-    collectd_pid = 0;
+    ncollectd_pid = 0;
 
     log_status(status);
     check_respawn();
 
     if (restart != 0) {
-      syslog(LOG_INFO, "Info: restarting collectd");
+      syslog(LOG_INFO, "Info: restarting ncollectd");
       restart = 0;
     } else if (loop == 0)
-      syslog(LOG_WARNING, "Warning: restarting collectd");
+      syslog(LOG_WARNING, "Warning: restarting ncollectd");
   }
 
-  syslog(LOG_INFO, "Info: shutting down collectdmon");
+  syslog(LOG_INFO, "Info: shutting down ncollectdmon");
 
   pidfile_delete();
   closelog();
 
-  free(collectd_argv);
+  free(ncollectd_argv);
   return 0;
 } /* main */
