@@ -1838,7 +1838,7 @@ endif
 
 if BUILD_PLUGIN_PROTOCOLS
 pkglib_LTLIBRARIES += protocols.la
-protocols_la_SOURCES = src/protocols.c
+protocols_la_SOURCES = src/plugins/protocols.c
 protocols_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 protocols_la_LIBADD = libignorelist.la
 endif
