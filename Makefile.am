@@ -68,7 +68,7 @@ EXTRA_DIST = \
 	src/collectd.conf.pod \
 	src/collectd.pod \
 	src/collectdctl.pod \
-	src/collectdmon.pod \
+	src/collectdmon/collectdmon.pod \
 	src/pinba.proto \
 	src/postgresql_default.conf \
 	src/types.db \
@@ -87,7 +87,7 @@ dist_man_MANS = \
 	src/collectdctl.1 \
 	src/collectd-java.5 \
 	src/collectd-lua.5 \
-	src/collectdmon.1 \
+	src/collectdmon/collectdmon.1 \
 	src/collectd-nagios.1 \
 	src/collectd-perl.5 \
 	src/collectd-python.5 \
@@ -301,7 +301,7 @@ if BUILD_WIN32
 collectd_LDFLAGS += -Wl,--out-implib,libcollectd.a
 endif
 
-collectdmon_SOURCES = src/collectdmon.c
+collectdmon_SOURCES = src/collectdmon/collectdmon.c
 
 
 collectd_nagios_SOURCES = src/collectd-nagios.c
