@@ -1460,7 +1460,7 @@ endif
 
 if BUILD_PLUGIN_MEMORY
 pkglib_LTLIBRARIES += memory.la
-memory_la_SOURCES = src/memory.c
+memory_la_SOURCES = src/plugins/memory/memory.c
 memory_la_CFLAGS = $(AM_CFLAGS)
 memory_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 memory_la_LIBADD =
