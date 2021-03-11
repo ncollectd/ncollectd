@@ -799,7 +799,7 @@ endif
 
 if BUILD_PLUGIN_BUDDYINFO
 pkglib_LTLIBRARIES += buddyinfo.la
-buddyinfo_la_SOURCES = src/buddyinfo.c
+buddyinfo_la_SOURCES = src/plugins/buddyinfo.c
 buddyinfo_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 buddyinfo_la_LIBADD = libignorelist.la
 endif

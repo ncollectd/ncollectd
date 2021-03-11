@@ -1,0 +1,26 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-buddyinfo - Documentation of ncollectd's C<buddyinfo plugin>
+
+=head2 Plugin C<buddyinfo>
+
+The B<buddyinfo> plugin collects information by reading "/proc/buddyinfo".
+This file contains information about the number of available contagious
+physical pages at the moment.
+
+=over 4
+
+=item B<Zone> I<ZoneName>
+
+Zone to collect info about. Will collect all zones by default.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
