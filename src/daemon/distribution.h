@@ -82,7 +82,7 @@ distribution_t *distribution_new_custom(size_t array_size,
                                         double *custom_buckets_boundaries);
 
 /** add new value to a distribution **/
-void distribution_update(distribution_t *dist, double gauge);
+int distribution_update(distribution_t *dist, double gauge);
 
 /**
  * @param percent - should be in (0; 100] range
@@ -114,7 +114,13 @@ double distribution_total_sum(distribution_t *dist);
 
 uint64_t distribution_total_counter(distribution_t *dist);
 
+double distribution_squares_sum(distribution_t *dist);
+
+/** @return - sum of squared deviation (needed for stackdriver format **/
 double distribution_squared_deviation_sum(distribution_t *dist);
+
+/** @return - standart deviation **/
+double distribution_stddev(distribution_t *dist);
 
 void destroy_buckets_array(buckets_array_t buckets_array);
 
@@ -122,6 +128,8 @@ void destroy_buckets_array(buckets_array_t buckets_array);
  * This function holds both mutexes for d1 and d2. Be sure that you call the
  * function with the same order of arguments everytime **/
 bool distribution_equals(distribution_t *d1, distribution_t *d2);
+
+int distribution_reset(distribution_t *dist);
 
 /** This function subtracts d2 from d1 if arguments are correct
  *  if arguments are NULL pointers or the structure of distributions is
@@ -131,4 +139,7 @@ bool distribution_equals(distribution_t *d1, distribution_t *d2);
  *  This function holds both mutexes for d1 and d2. Be sure that you call the
  * function with the same order of arguments everytime **/
 int distribution_sub(distribution_t *d1, distribution_t *d2);
+
+#define DISTRIBUTION_DEFAULT_TIME distribution_new_custom(7, (double[]){0.05, 0.1, 0.2, 0.5, 1, 10, 100})
+
 #endif // COLLECTD_DISTRIBUTION_H
