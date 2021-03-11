@@ -1288,7 +1288,7 @@ endif
 
 if BUILD_PLUGIN_LOAD
 pkglib_LTLIBRARIES += load.la
-load_la_SOURCES = src/load.c
+load_la_SOURCES = src/plugins/load/load.c
 load_la_CFLAGS = $(AM_CFLAGS)
 load_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 load_la_LIBADD =
