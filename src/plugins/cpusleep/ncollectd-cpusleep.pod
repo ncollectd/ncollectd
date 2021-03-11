@@ -1,0 +1,22 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-cpusleep - Documentation of ncollectd's C<CpuSleep plugin>
+
+=head2 Plugin C<cpusleep>
+
+This plugin doesn't have any options. It reads CLOCK_BOOTTIME and
+CLOCK_MONOTONIC and reports the difference between these clocks. Since
+BOOTTIME clock increments while device is suspended and MONOTONIC
+clock does not, the derivative of the difference between these clocks
+gives the relative amount of time the device has spent in suspend
+state. The recorded value is in milliseconds of sleep per seconds of
+wall clock.
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut

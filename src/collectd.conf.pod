@@ -1703,16 +1703,6 @@ On FreeBSD the plugin checks the success of sysctl dev.cpu.0.freq and
 unregisters the plugin when this fails.  A message will be logged to indicate
 this.
 
-=head2 Plugin C<cpusleep>
-
-This plugin doesn't have any options. It reads CLOCK_BOOTTIME and
-CLOCK_MONOTONIC and reports the difference between these clocks. Since
-BOOTTIME clock increments while device is suspended and MONOTONIC
-clock does not, the derivative of the difference between these clocks
-gives the relative amount of time the device has spent in suspend
-state. The recorded value is in milliseconds of sleep per seconds of
-wall clock.
-
 =head2 Plugin C<csv>
 
 =over 4
