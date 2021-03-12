@@ -132,6 +132,7 @@ noinst_LTLIBRARIES = \
 	libcmds.la \
 	libcommon.la \
 	libformat_graphite.la \
+	libformat_openmetrics.la \
 	libheap.la \
 	libignorelist.la \
 	liblatency.la \
@@ -475,6 +476,11 @@ test_format_graphite_LDADD = \
 	libplugin_mock.la \
 	libstrbuf.la \
 	-lm
+
+libformat_openmetrics_la_SOURCES = \
+	src/utils/format_openmetrics/format_openmetrics.c \
+	src/utils/format_openmetrics/format_openmetrics.h
+libformat_openmetrics_la_LIBADD = $(COMMON_LIBS)
 
 if BUILD_WITH_LIBYAJL
 noinst_LTLIBRARIES += libformat_json.la
@@ -2255,9 +2261,9 @@ endif
 
 if BUILD_PLUGIN_WRITE_LOG
 pkglib_LTLIBRARIES += write_log.la
-write_log_la_SOURCES = src/write_log.c
+write_log_la_SOURCES = src/plugins/write_log/write_log.c
 write_log_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-write_log_la_LIBADD = libformat_graphite.la libformat_json.la
+write_log_la_LIBADD = libformat_graphite.la libformat_json.la libformat_openmetrics.la
 endif
 
 if BUILD_PLUGIN_WRITE_MONGODB

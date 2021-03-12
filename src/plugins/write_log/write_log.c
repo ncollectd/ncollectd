@@ -32,17 +32,21 @@
 
 #include "utils/format_graphite/format_graphite.h"
 #include "utils/format_json/format_json.h"
+#include "utils/format_openmetrics/format_openmetrics.h"
 #include "utils/strbuf/strbuf.h"
 
 #include <netdb.h>
 
-#define WL_FORMAT_GRAPHITE 1
-#define WL_FORMAT_JSON 2
+typedef enum {
+  WL_FORMAT_OPENMETRICS = 0,
+  WL_FORMAT_GRAPHITE,
+  WL_FORMAT_JSON,
+} wl_format_e;
 
-/* Plugin:WriteLog has to also operate without a config, so use a global. */
-int wl_format = WL_FORMAT_GRAPHITE;
+wl_format_e wl_format;
 
-static int wl_write_graphite(metric_family_t const *fam) {
+static int wl_write_graphite(metric_family_t const *fam)
+{
   char const *prefix = "";
   char const *suffix = "";
   char escape_char = '_';
@@ -64,9 +68,10 @@ static int wl_write_graphite(metric_family_t const *fam) {
 
   STRBUF_DESTROY(buf);
   return 0;
-} /* int wl_write_graphite */
+}
 
-static int wl_write_json(metric_family_t const *fam) {
+static int wl_write_json(metric_family_t const *fam)
+{
   strbuf_t buf = STRBUF_CREATE;
 
   int status = format_json_metric_family(&buf, fam, /* store rates = */ false);
@@ -78,20 +83,39 @@ static int wl_write_json(metric_family_t const *fam) {
 
   STRBUF_DESTROY(buf);
   return 0;
-} /* int wl_write_json */
+}
+
+static int wl_write_openmetrics(metric_family_t const *fam)
+{
+  strbuf_t buf = STRBUF_CREATE;
+
+  int status = format_openmetrics_metric_family(&buf, fam);
+  if (status != 0) {
+    ERROR("write_log plugin: format_json_metric_family failed: %d", status);
+  } else {
+    INFO("write_log values:\n%s", buf.ptr);
+  }
+
+  STRBUF_DESTROY(buf);
+  return 0;
+}
 
 static int wl_write(metric_family_t const *fam,
-                    __attribute__((unused)) user_data_t *user_data) {
-  if (wl_format == WL_FORMAT_GRAPHITE) {
-    return wl_write_graphite(fam);
-  } else if (wl_format == WL_FORMAT_JSON) {
-    return wl_write_json(fam);
+                    __attribute__((unused)) user_data_t *user_data)
+{
+  switch (wl_format) {
+    case WL_FORMAT_GRAPHITE:
+      return wl_write_graphite(fam);
+    case WL_FORMAT_JSON:
+      return wl_write_json(fam);
+    case WL_FORMAT_OPENMETRICS:
+      return wl_write_openmetrics(fam);
   }
 
   return EIO;
 }
 
-static int wl_config(oconfig_item_t *ci) /* {{{ */
+static int wl_config(oconfig_item_t *ci)
 {
   bool format_seen = false;
 
@@ -113,6 +137,8 @@ static int wl_config(oconfig_item_t *ci) /* {{{ */
         wl_format = WL_FORMAT_GRAPHITE;
       else if (strcasecmp("JSON", str) == 0)
         wl_format = WL_FORMAT_JSON;
+      else if (strcasecmp("OpenMetrics", str) == 0)
+        wl_format = WL_FORMAT_OPENMETRICS;
       else {
         ERROR("write_log plugin: Unknown format `%s' for option `%s'.", str,
               child->key);
@@ -126,10 +152,10 @@ static int wl_config(oconfig_item_t *ci) /* {{{ */
   }
 
   return 0;
-} /* }}} int wl_config */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_complex_config("write_log", wl_config);
-  /* If config is supplied, the global wl_format will be set. */
   plugin_register_write("write_log", wl_write, NULL);
 }
