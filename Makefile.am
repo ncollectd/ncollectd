@@ -2392,25 +2392,6 @@ prometheus.pb-c.c prometheus.pb-c.h: $(srcdir)/proto/prometheus.proto
 	$(AM_V_PROTOC_C)$(PROTOC_C) -I$(srcdir)/proto --c_out=$(builddir) $(srcdir)/proto/prometheus.proto
 endif
 
-if HAVE_PROTOC3
-if HAVE_GRPC_CPP
-BUILT_SOURCES += collectd.grpc.pb.cc types.grpc.pb.cc collectd.pb.cc types.pb.cc
-
-collectd.grpc.pb.cc types.grpc.pb.cc: $(srcdir)/proto/collectd.proto $(srcdir)/proto/types.proto
-	$(V_PROTOC)$(PROTOC) -I$(srcdir)/proto \
-		--grpc_out=$(builddir) --plugin=protoc-gen-grpc=$(GRPC_CPP_PLUGIN) \
-	$(srcdir)/proto/collectd.proto $(srcdir)/proto/types.proto
-
-collectd.pb.cc: $(srcdir)/proto/collectd.proto $(srcdir)/proto/types.proto
-	$(V_PROTOC)$(PROTOC) -I$(srcdir)/proto --cpp_out=$(builddir) \
-	$(srcdir)/proto/collectd.proto $(srcdir)/proto/types.proto
-
-types.pb.cc: $(srcdir)/proto/types.proto
-	$(V_PROTOC)$(PROTOC) -I$(srcdir)/proto --cpp_out=$(builddir) \
-	$(srcdir)/proto/types.proto
-endif
-endif
-
 install-exec-hook:
 	$(mkinstalldirs) $(DESTDIR)$(localstatedir)/run
 	$(mkinstalldirs) $(DESTDIR)$(localstatedir)/lib/$(PACKAGE_NAME)
