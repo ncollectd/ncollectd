@@ -89,7 +89,8 @@ typedef struct {
 static ip_chain_t **chain_list;
 static int chain_num;
 
-static int iptables_config(const char *key, const char *value) {
+static int iptables_config(const char *key, const char *value)
+{
   /* int ip_value; */
   protocol_version_t ip_version = 0;
 
@@ -199,13 +200,14 @@ static int iptables_config(const char *key, const char *value) {
         final->chain);
 
   return 0;
-} /* int iptables_config */
+}
 
 static int submit6_match(const struct ip6t_entry_match *match,
                          const struct ip6t_entry *entry,
                          const ip_chain_t *chain, int rule_num,
                          metric_family_t *fam_ip6t_bytes,
-                         metric_family_t *fam_ip6t_packets) {
+                         metric_family_t *fam_ip6t_packets)
+{
   /* Select the rules to collect */
   if (chain->rule_type == RTYPE_NUM) {
     if (chain->rule.num != rule_num)
@@ -236,21 +238,22 @@ static int submit6_match(const struct ip6t_entry_match *match,
   metric_label_set(&m, "chain", chain->chain);
   metric_label_set(&m, "rule", rule);
 
-  m.value.gauge = (counter_t)entry->counters.bcnt;
+  m.value.counter = (counter_t)entry->counters.bcnt;
   metric_family_metric_append(fam_ip6t_bytes, m);
 
-  m.value.gauge = (counter_t)entry->counters.pcnt;
+  m.value.counter = (counter_t)entry->counters.pcnt;
   metric_family_metric_append(fam_ip6t_packets, m);
 
   metric_reset(&m);
   return 0;
-} /* int submit6_match */
+}
 
 /* This needs to return `int' for IPT_MATCH_ITERATE to work. */
 static int submit_match(const struct ipt_entry_match *match,
                         const struct ipt_entry *entry, const ip_chain_t *chain,
                         int rule_num, metric_family_t *fam_ipt_bytes,
-                        metric_family_t *fam_ipt_packets) {
+                        metric_family_t *fam_ipt_packets)
+{
   /* Select the rules to collect */
   if (chain->rule_type == RTYPE_NUM) {
     if (chain->rule.num != rule_num)
@@ -281,20 +284,21 @@ static int submit_match(const struct ipt_entry_match *match,
   metric_label_set(&m, "chain", chain->chain);
   metric_label_set(&m, "rule", rule);
 
-  m.value.gauge = (counter_t)entry->counters.bcnt;
+  m.value.counter = (counter_t)entry->counters.bcnt;
   metric_family_metric_append(fam_ipt_bytes, m);
 
-  m.value.gauge = (counter_t)entry->counters.pcnt;
+  m.value.counter = (counter_t)entry->counters.pcnt;
   metric_family_metric_append(fam_ipt_packets, m);
 
   metric_reset(&m);
   return 0;
-} /* int submit_match */
+}
 
 /* ipv6 submit_chain */
 static void submit6_chain(ip6tc_handle_t *handle, ip_chain_t *chain,
                           metric_family_t *fam_ip6t_bytes,
-                          metric_family_t *fam_ip6t_packets) {
+                          metric_family_t *fam_ip6t_packets)
+{
   const struct ip6t_entry *entry;
   int rule_num;
 
@@ -323,7 +327,8 @@ static void submit6_chain(ip6tc_handle_t *handle, ip_chain_t *chain,
 /* ipv4 submit_chain */
 static void submit_chain(iptc_handle_t *handle, ip_chain_t *chain,
                          metric_family_t *fam_ipt_bytes,
-                         metric_family_t *fam_ipt_packets) {
+                         metric_family_t *fam_ipt_packets)
+{
   const struct ipt_entry *entry;
   int rule_num;
 
@@ -349,24 +354,25 @@ static void submit_chain(iptc_handle_t *handle, ip_chain_t *chain,
   } /* while (entry) */
 }
 
-static int iptables_read(void) {
+static int iptables_read(void)
+{
   int num_failures = 0;
   ip_chain_t *chain;
   metric_family_t fam_ipt_bytes = {
-      .name = "iptables_bytes_total",
-      .type = METRIC_TYPE_GAUGE,
+      .name = "host_iptables_bytes_total",
+      .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_ipt_packets = {
-      .name = "iptables_packets_total",
-      .type = METRIC_TYPE_GAUGE,
+      .name = "host_iptables_packets_total",
+      .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_ip6t_bytes = {
-      .name = "ip6tables_bytes_total",
-      .type = METRIC_TYPE_GAUGE,
+      .name = "host_ip6tables_bytes_total",
+      .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_ip6t_packets = {
-      .name = "ip6tables_packets_total",
-      .type = METRIC_TYPE_GAUGE,
+      .name = "host_ip6tables_packets_total",
+      .type = METRIC_TYPE_COUNTER,
   };
 
   metric_family_t *fams[] = {&fam_ipt_bytes, &fam_ipt_packets, &fam_ip6t_bytes,
@@ -437,9 +443,10 @@ static int iptables_read(void) {
   }
 
   return (num_failures < chain_num) ? 0 : -1;
-} /* int iptables_read */
+}
 
-static int iptables_shutdown(void) {
+static int iptables_shutdown(void)
+{
   for (int i = 0; i < chain_num; i++) {
     if ((chain_list[i] != NULL) && (chain_list[i]->rule_type == RTYPE_COMMENT))
       sfree(chain_list[i]->rule.comment);
@@ -448,9 +455,10 @@ static int iptables_shutdown(void) {
   sfree(chain_list);
 
   return 0;
-} /* int iptables_shutdown */
+} 
 
-static int iptables_init(void) {
+static int iptables_init(void)
+{
 #if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_NET_ADMIN)
   if (check_capability(CAP_NET_ADMIN) != 0) {
     if (getuid() == 0)
@@ -465,12 +473,13 @@ static int iptables_init(void) {
   }
 #endif
   return 0;
-} /* int iptables_init */
+} 
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("iptables", iptables_config, config_keys,
                          config_keys_num);
   plugin_register_init("iptables", iptables_init);
   plugin_register_read("iptables", iptables_read);
   plugin_register_shutdown("iptables", iptables_shutdown);
-} /* void module_register */
+}
