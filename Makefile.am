@@ -966,17 +966,6 @@ curl_xml_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 curl_xml_la_LIBADD = $(BUILD_WITH_LIBCURL_LIBS) $(BUILD_WITH_LIBXML2_LIBS)
 endif
 
-if BUILD_PLUGIN_DBI
-pkglib_LTLIBRARIES += dbi.la
-dbi_la_SOURCES = \
-	src/dbi.c \
-	src/utils/db_query/db_query.c \
-	src/utils/db_query/db_query.h
-dbi_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBDBI_CPPFLAGS)
-dbi_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBDBI_LDFLAGS)
-dbi_la_LIBADD = $(BUILD_WITH_LIBDBI_LIBS)
-endif
-
 if BUILD_PLUGIN_DCPMM
 pkglib_LTLIBRARIES += dcpmm.la
 dcpmm_la_SOURCES = src/dcpmm.c
@@ -1686,17 +1675,6 @@ if BUILD_PLUGIN_OPENVPN
 pkglib_LTLIBRARIES += openvpn.la
 openvpn_la_SOURCES = src/openvpn.c
 openvpn_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-endif
-
-if BUILD_PLUGIN_ORACLE
-pkglib_LTLIBRARIES += oracle.la
-oracle_la_SOURCES = \
-	src/oracle.c \
-	src/utils/db_query/db_query.c \
-	src/utils/db_query/db_query.h
-oracle_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_ORACLE_CPPFLAGS)
-oracle_la_LIBADD = $(BUILD_WITH_ORACLE_LIBS)
-oracle_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_OVS_EVENTS

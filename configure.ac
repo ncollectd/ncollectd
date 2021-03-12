@@ -2382,53 +2382,6 @@ AC_SUBST(BUILD_WITH_LIBCURL_LIBS)
 AM_CONDITIONAL([BUILD_WITH_LIBCURL], [test "x$with_libcurl" = "xyes"])
 # }}}
 
-# --with-libdbi {{{
-AC_ARG_WITH([libdbi],
-  [AS_HELP_STRING([--with-libdbi@<:@=PREFIX@:>@], [Path to libdbi.])],
-  [
-    if test "x$withval" != "xno" && test "x$withval" != "xyes"; then
-      with_libdbi_cppflags="-I$withval/include"
-      with_libdbi_ldflags="-L$withval/lib"
-      with_libdbi="yes"
-    else
-      with_libdbi="$withval"
-    fi
-  ],
-  [with_libdbi="yes"]
-)
-
-if test "x$with_libdbi" = "xyes"; then
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $with_libdbi_cppflags"
-
-  AC_CHECK_HEADERS([dbi/dbi.h],
-    [with_libdbi="yes"],
-    [with_libdbi="no (dbi/dbi.h not found)"]
-  )
-
-  CPPFLAGS="$SAVE_CPPFLAGS"
-fi
-
-if test "x$with_libdbi" = "xyes"; then
-  SAVE_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS $with_libdbi_ldflags"
-
-  AC_CHECK_LIB([dbi], [dbi_initialize],
-    [with_libdbi="yes"],
-    [with_libdbi="no (Symbol 'dbi_initialize' not found)"]
-  )
-
-  LDFLAGS="$SAVE_LDFLAGS"
-fi
-
-BUILD_WITH_LIBDBI_CPPFLAGS="$with_libdbi_cppflags"
-BUILD_WITH_LIBDBI_LDFLAGS="$with_libdbi_ldflags"
-BUILD_WITH_LIBDBI_LIBS="-ldbi"
-AC_SUBST(BUILD_WITH_LIBDBI_CPPFLAGS)
-AC_SUBST(BUILD_WITH_LIBDBI_LDFLAGS)
-AC_SUBST(BUILD_WITH_LIBDBI_LIBS)
-# }}}
-
 # --with-libdpdk {{{
 AC_ARG_VAR([LIBDPDK_CPPFLAGS], [Preprocessor flags for libdpdk])
 AC_ARG_VAR([LIBDPDK_CFLAGS], [Compiler flags for libdpdk])
@@ -4049,75 +4002,6 @@ AC_SUBST([BUILD_WITH_LIBOPING_CPPFLAGS])
 AC_SUBST([BUILD_WITH_LIBOPING_LDFLAGS])
 # }}}
 
-# --with-oracle {{{
-AC_ARG_WITH([oracle],
-  [AS_HELP_STRING([--with-oracle@<:@=ORACLE_HOME@:>@], [Path to Oracle.])],
-  [
-    if test "x$withval" = "xyes"; then
-      if test "x$ORACLE_HOME" = "x"; then
-        AC_MSG_WARN([Use of the Oracle library has been forced, but the environment variable ORACLE_HOME is not set.])
-      fi
-      with_oracle="yes"
-    else if test "x$withval" = "xno"; then
-      with_oracle="no"
-    else
-      with_oracle="yes"
-      ORACLE_HOME="$withval"
-    fi; fi
-  ],
-  [
-    if test "x$ORACLE_HOME" = "x"; then
-      with_oracle="no (ORACLE_HOME is not set)"
-    else
-      with_oracle="yes"
-    fi
-  ]
-)
-
-if test "x$ORACLE_HOME" != "x"; then
-  with_oracle_cppflags="-I$ORACLE_HOME/rdbms/public"
-  if test -e "$ORACLE_HOME/lib/ldflags"; then
-    with_oracle_libs=`cat "$ORACLE_HOME/lib/ldflags"`
-  fi
-  with_oracle_libs="-L$ORACLE_HOME/lib -lclntsh"
-fi
-
-if test "x$with_oracle" = "xyes"; then
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $with_oracle_cppflags"
-
-  AC_CHECK_HEADERS([oci.h],
-    [with_oracle="yes"],
-    [with_oracle="no (oci.h not found)"]
-  )
-
-  CPPFLAGS="$SAVE_CPPFLAGS"
-fi
-
-if test "x$with_oracle" = "xyes"; then
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  SAVE_LIBS="$LIBS"
-  CPPFLAGS="$CPPFLAGS $with_oracle_cppflags"
-  LIBS="$LIBS $with_oracle_libs"
-
-  AC_CHECK_FUNC([OCIEnvCreate],
-    [with_oracle="yes"],
-    [with_oracle="no (Symbol 'OCIEnvCreate' not found)"]
-  )
-
-  CPPFLAGS="$SAVE_CPPFLAGS"
-  LIBS="$SAVE_LIBS"
-fi
-
-if test "x$with_oracle" = "xyes"; then
-  BUILD_WITH_ORACLE_CPPFLAGS="$with_oracle_cppflags"
-  BUILD_WITH_ORACLE_LIBS="$with_oracle_libs"
-fi
-
-AC_SUBST([BUILD_WITH_ORACLE_CPPFLAGS])
-AC_SUBST([BUILD_WITH_ORACLE_LIBS])
-# }}}
-
 # --with-libowcapi {{{
 AC_ARG_WITH([libowcapi],
   [AS_HELP_STRING([--with-libowcapi@<:@=PREFIX@:>@], [Path to libowcapi.])],
@@ -4415,7 +4299,6 @@ AC_SUBST([PERL_CFLAGS])
 AC_SUBST([PERL_LIBS])
 
 # }}}
-
 
 # --with-libpmwapi {{{
 AC_ARG_WITH([libpmwapi],
@@ -7038,7 +6921,6 @@ AC_PLUGIN([csv],                 [yes],                       [CSV output plugin
 AC_PLUGIN([curl],                [$with_libcurl],             [CURL generic web statistics])
 AC_PLUGIN([curl_json],           [$plugin_curl_json],         [CouchDB statistics])
 AC_PLUGIN([curl_xml],            [$plugin_curl_xml],          [CURL generic xml statistics])
-AC_PLUGIN([dbi],                 [$with_libdbi],              [General database statistics])
 AC_PLUGIN([dcpmm],               [$with_libpmwapi],           [Intel(R) Optane(TM) DC Persistent Memory performance and health statistics])
 AC_PLUGIN([df],                  [$plugin_df],                [Filesystem usage statistics])
 AC_PLUGIN([disk],                [$plugin_disk],              [Disk usage statistics])
@@ -7112,7 +6994,6 @@ AC_PLUGIN([olsrd],               [yes],                       [olsrd statistics]
 AC_PLUGIN([onewire],             [$with_libowcapi],           [OneWire sensor statistics])
 AC_PLUGIN([openldap],            [$with_libldap],             [OpenLDAP statistics])
 AC_PLUGIN([openvpn],             [yes],                       [OpenVPN client statistics])
-AC_PLUGIN([oracle],              [$with_oracle],              [Oracle plugin])
 AC_PLUGIN([ovs_events],          [$plugin_ovs_events],        [OVS events plugin])
 AC_PLUGIN([ovs_stats],           [$plugin_ovs_stats],         [OVS statistics plugin])
 AC_PLUGIN([pcie_errors],         [$plugin_pcie_errors],       [PCIe errors plugin])
@@ -7384,7 +7265,6 @@ AC_MSG_RESULT([    intel mic . . . . . . $with_mic])
 AC_MSG_RESULT([    libaquaero5 . . . . . $with_libaquaero5])
 AC_MSG_RESULT([    libatasmart . . . . . $with_libatasmart])
 AC_MSG_RESULT([    libcurl . . . . . . . $with_libcurl])
-AC_MSG_RESULT([    libdbi  . . . . . . . $with_libdbi])
 AC_MSG_RESULT([    libdpdk . . . . . . . $with_libdpdk])
 AC_MSG_RESULT([    libesmtp  . . . . . . $with_libesmtp])
 AC_MSG_RESULT([    libganglia  . . . . . $with_libganglia])
@@ -7445,7 +7325,6 @@ AC_MSG_RESULT([    libvirt . . . . . . . $with_libvirt])
 AC_MSG_RESULT([    libxenctrl  . . . . . $with_libxenctrl])
 AC_MSG_RESULT([    libxml2 . . . . . . . $with_libxml2])
 AC_MSG_RESULT([    libyajl . . . . . . . $with_libyajl])
-AC_MSG_RESULT([    oracle  . . . . . . . $with_oracle])
 AC_MSG_RESULT([    protobuf-c  . . . . . $have_protoc_c])
 AC_MSG_RESULT([    protoc 3  . . . . . . $have_protoc3])
 AC_MSG_RESULT([    unixodbc .. . . . . . $with_unixodbc])
@@ -7484,7 +7363,6 @@ AC_MSG_RESULT([    csv . . . . . . . . . $enable_csv])
 AC_MSG_RESULT([    curl  . . . . . . . . $enable_curl])
 AC_MSG_RESULT([    curl_json . . . . . . $enable_curl_json])
 AC_MSG_RESULT([    curl_xml  . . . . . . $enable_curl_xml])
-AC_MSG_RESULT([    dbi . . . . . . . . . $enable_dbi])
 AC_MSG_RESULT([    dcpmm  . . . . . .  . $enable_dcpmm])
 AC_MSG_RESULT([    df  . . . . . . . . . $enable_df])
 AC_MSG_RESULT([    disk  . . . . . . . . $enable_disk])
@@ -7558,7 +7436,6 @@ AC_MSG_RESULT([    olsrd . . . . . . . . $enable_olsrd])
 AC_MSG_RESULT([    onewire . . . . . . . $enable_onewire])
 AC_MSG_RESULT([    openldap  . . . . . . $enable_openldap])
 AC_MSG_RESULT([    openvpn . . . . . . . $enable_openvpn])
-AC_MSG_RESULT([    oracle  . . . . . . . $enable_oracle])
 AC_MSG_RESULT([    ovs_events  . . . . . $enable_ovs_events])
 AC_MSG_RESULT([    ovs_stats . . . . . . $enable_ovs_stats])
 AC_MSG_RESULT([    pcie_errors . . . . . $enable_pcie_errors])
