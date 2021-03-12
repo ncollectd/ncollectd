@@ -91,7 +91,7 @@ static int label_pair_compare(void const *a, void const *b) {
                 ((label_pair_t const *)b)->name);
 }
 
-static label_pair_t *label_set_read(label_set_t labels, char const *name) {
+label_pair_t *label_set_read(label_set_t labels, char const *name) {
   if (name == NULL) {
     errno = EINVAL;
     return NULL;
@@ -114,8 +114,7 @@ static label_pair_t *label_set_read(label_set_t labels, char const *name) {
   return ret;
 }
 
-static int label_set_create(label_set_t *labels, char const *name,
-                            char const *value) {
+int label_set_create(label_set_t *labels, char const *name, char const *value) {
   if ((labels == NULL) || (name == NULL) || (value == NULL)) {
     return EINVAL;
   }
@@ -163,7 +162,7 @@ static int label_set_create(label_set_t *labels, char const *name,
   return 0;
 }
 
-static int label_set_delete(label_set_t *labels, label_pair_t *elem) {
+int label_set_delete(label_set_t *labels, label_pair_t *elem) {
   if ((labels == NULL) || (elem == NULL)) {
     return EINVAL;
   }
@@ -192,7 +191,7 @@ static int label_set_delete(label_set_t *labels, label_pair_t *elem) {
   return 0;
 }
 
-static void label_set_reset(label_set_t *labels) {
+void label_set_reset(label_set_t *labels) {
   if (labels == NULL) {
     return;
   }
@@ -206,7 +205,7 @@ static void label_set_reset(label_set_t *labels) {
   labels->num = 0;
 }
 
-static int label_set_clone(label_set_t *dest, label_set_t src) {
+int label_set_clone(label_set_t *dest, label_set_t src) {
   if (src.num == 0) {
     return 0;
   }
