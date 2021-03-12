@@ -2674,102 +2674,6 @@ AC_SUBST([BUILD_WITH_LIBGPS_LIBS])
 
 # }}}
 
-# --with-libgrpc++ {{{
-AC_ARG_WITH([libgrpc++],
-  [AS_HELP_STRING([--with-libgrpc++@<:@=PREFIX@:>@], [Path to libgrpc++.])],
-  [
-    with_grpcpp="$withval"
-    if test "x$withval" != "xno" && test "x$withval" != "xyes"; then
-      with_libgrpcpp_cppflags="-I$withval/include"
-      with_libgrpcpp_ldflags="-L$withval/lib"
-      with_libgrpcpp_bin="$withval/bin"
-      with_libgrpcpp="yes"
-    fi
-    if test "x$withval" = "xno"; then
-      with_libgrpcpp="no (disabled on command line)"
-    fi
-  ],
-  [withval="yes"]
-)
-if test "x$withval" = "xyes"; then
-PKG_CHECK_MODULES([GRPCPP], [grpc++],
-  [with_libgrpcpp="yes"],
-  [with_libgrpcpp="no (pkg-config could not find libgrpc++)"]
-)
-fi
-
-if test "x$withval" != "xno"; then
-  AC_MSG_CHECKING([whether $CXX accepts -std=c++11])
-  if test_cxx_flags -std=c++11; then
-    AC_MSG_RESULT([yes])
-  else
-    AC_MSG_RESULT([no])
-    with_libgrpcpp="no (requires C++11 support)"
-    with_libprotobuf="no (<google/protobuf/util/time_util.h> requires C++11 support)"
-  fi
-fi
-
-if test "x$with_libgrpcpp" = "xyes"; then
-  AC_LANG_PUSH(C++)
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="-std=c++11 $with_libgrpcpp_cppflags $GRPCPP_CFLAGS $CPPFLAGS"
-  AC_CHECK_HEADERS([grpc++/grpc++.h],
-    [with_libgrpcpp="yes"],
-    [with_libgrpcpp="no (<grpc++/grpc++.h> not found)"]
-  )
-  CPPFLAGS="$SAVE_CPPFLAGS"
-  AC_LANG_POP(C++)
-fi
-
-if test "x$with_libgrpcpp" = "xyes"; then
-  AC_LANG_PUSH(C++)
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  SAVE_LDFLAGS="$LDFLAGS"
-  SAVE_LIBS="$LIBS"
-  CPPFLAGS="-std=c++11 $with_libgrpcpp_cppflags $GRPCPP_CFLAGS $CPPFLAGS"
-  LDFLAGS="$with_libgrpcpp_ldflags"
-  if test "x$GRPCPP_LIBS" = "x"; then
-    LIBS="-lgrpc++"
-  else
-    LIBS="$GRPCPP_LIBS"
-  fi
-  AC_LINK_IFELSE(
-    [
-      AC_LANG_PROGRAM(
-        [[#include <grpc++/grpc++.h>]],
-        [[grpc::ServerBuilder sb;]]
-      )
-    ],
-    [
-      with_libgrpcpp="yes"
-      if test "x$GRPCPP_LIBS" = "x"; then
-        GRPCPP_LIBS="-lgrpc++"
-      fi
-    ],
-    [with_libgrpcpp="no (libgrpc++ not found)"]
-  )
-  CPPFLAGS="$SAVE_CPPFLAGS"
-  LDFLAGS="$SAVE_LDFLAGS"
-  LIBS="$SAVE_LIBS"
-  AC_LANG_POP(C++)
-fi
-
-BUILD_WITH_LIBGRPCPP_CPPFLAGS="-std=c++11 $with_libgrpcpp_cppflags $GRPCPP_CFLAGS"
-BUILD_WITH_LIBGRPCPP_LDFLAGS="$with_libgrpcpp_ldflags"
-BUILD_WITH_LIBGRPCPP_LIBS="$GRPCPP_LIBS"
-AC_SUBST([BUILD_WITH_LIBGRPCPP_CPPFLAGS])
-AC_SUBST([BUILD_WITH_LIBGRPCPP_LDFLAGS])
-AC_SUBST([BUILD_WITH_LIBGRPCPP_LIBS])
-# }}}
-
-AC_ARG_VAR([GRPC_CPP_PLUGIN], [path to the grpc_cpp_plugin binary])
-if test "x$with_libgrpcpp_bin" = "x"; then
-  AC_PATH_PROG([GRPC_CPP_PLUGIN], [grpc_cpp_plugin])
-else
-  AC_PATH_PROG([GRPC_CPP_PLUGIN], [grpc_cpp_plugin], [], "$with_libgrpcpp_bin:$PATH")
-fi
-AM_CONDITIONAL([HAVE_GRPC_CPP], [test "x$GRPC_CPP_PLUGIN" != "x"])
-
 # --with-libiptc {{{
 AC_ARG_WITH([libiptc],
   [AS_HELP_STRING([--with-libiptc@<:@=PREFIX@:>@], [Path to libiptc.])],
@@ -6402,7 +6306,6 @@ plugin_fhcount="no"
 plugin_fscache="no"
 plugin_gps="no"
 plugin_gpu_nvidia="no"
-plugin_grpc="no"
 plugin_hugepages="no"
 plugin_infiniband="no"
 plugin_intel_pmu="no"
@@ -6692,20 +6595,6 @@ if test "x$with_libgps" = "xyes"; then
   plugin_gps="yes"
 fi
 
-plugin_grpc="yes"
-if test "x$GRPC_CPP_PLUGIN" = "x"; then
-  plugin_grpc="no (grpc_cpp_plugin not found)"
-fi
-if test "x$have_protoc3" != "xyes"; then
-  plugin_grpc="no (protoc3 not found)"
-fi
-if test "x$with_libprotobuf" != "xyes"; then
-  plugin_grpc="no (libprotobuf not found)"
-fi
-if test "x$with_libgrpcpp" != "xyes"; then
-  plugin_grpc="no (libgrpc++ not found)"
-fi
-
 if test "x$have_getifaddrs" = "xyes"; then
   plugin_interface="yes"
 fi
@@ -6858,7 +6747,6 @@ AC_PLUGIN([fscache],             [$plugin_fscache],           [fscache statistic
 AC_PLUGIN([gmond],               [$with_libganglia],          [Ganglia plugin])
 AC_PLUGIN([gps],                 [$plugin_gps],               [GPS plugin])
 AC_PLUGIN([gpu_nvidia],          [$with_cuda],                [NVIDIA GPU plugin])
-AC_PLUGIN([grpc],                [$plugin_grpc],              [gRPC plugin])
 AC_PLUGIN([hddtemp],             [yes],                       [Query hddtempd])
 AC_PLUGIN([hugepages],           [$plugin_hugepages],         [Hugepages statistics])
 AC_PLUGIN([infiniband],          [$plugin_infiniband],        [Infiniband statistics])
@@ -7187,7 +7075,6 @@ AC_MSG_RESULT([    libesmtp  . . . . . . $with_libesmtp])
 AC_MSG_RESULT([    libganglia  . . . . . $with_libganglia])
 AC_MSG_RESULT([    libgcrypt . . . . . . $with_libgcrypt])
 AC_MSG_RESULT([    libgps  . . . . . . . $with_libgps])
-AC_MSG_RESULT([    libgrpc++ . . . . . . $with_libgrpcpp])
 AC_MSG_RESULT([    libhiredis  . . . . . $with_libhiredis])
 AC_MSG_RESULT([    libi2c-dev  . . . . . $with_libi2c])
 AC_MSG_RESULT([    libiokit  . . . . . . $with_libiokit])
@@ -7297,7 +7184,6 @@ AC_MSG_RESULT([    fscache . . . . . . . $enable_fscache])
 AC_MSG_RESULT([    gmond . . . . . . . . $enable_gmond])
 AC_MSG_RESULT([    gps . . . . . . . . . $enable_gps])
 AC_MSG_RESULT([    gpu_nvidia  . . . . . $enable_gpu_nvidia])
-AC_MSG_RESULT([    grpc  . . . . . . . . $enable_grpc])
 AC_MSG_RESULT([    hddtemp . . . . . . . $enable_hddtemp])
 AC_MSG_RESULT([    hugepages . . . . . . $enable_hugepages])
 AC_MSG_RESULT([    infiniband  . . . . . $enable_infiniband])
