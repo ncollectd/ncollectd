@@ -59,8 +59,7 @@ struct hostlist_s {
   uint32_t pkg_recv;
   uint32_t pkg_missed;
 
-  double latency_total;
-  double latency_squared;
+  distribution_t *dist_latency;
 
   struct hostlist_s *next;
 };
@@ -81,6 +80,7 @@ static int ping_ttl = PING_DEF_TTL;
 static double ping_interval = 1.0;
 static double ping_timeout = 0.9;
 static int ping_max_missed = -1;
+static size_t num_buckets = 100;
 
 static pthread_mutex_t ping_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t ping_cond = PTHREAD_COND_INITIALIZER;
@@ -187,13 +187,15 @@ static int ping_dispatch_all(pingobj_t *pingobj) /* {{{ */
     hl->pkg_sent++;
     if (latency >= 0.0) {
       hl->pkg_recv++;
-      hl->latency_total += latency;
-      hl->latency_squared += (latency * latency);
-
+      status = distribution_update(hl->dist_latency, latency);
+      if (status != 0) {
+        WARNING("ping plugin: distribution_update failed: %s",STRERROR(status));
+      }
       /* reset missed packages counter */
       hl->pkg_missed = 0;
     } else
       hl->pkg_missed++;
+
 
     /* if the host did not answer our last N packages, trigger a resolv. */
     if ((ping_max_missed >= 0) &&
@@ -460,9 +462,17 @@ static int ping_config(const char *key, const char *value) /* {{{ */
       return 1;
     }
 
+    hl->dist_latency = distribution_new_linear(num_buckets, ping_timeout / num_buckets);
+    if (hl->dist_latency == NULL) {
+      sfree(hl);
+      ERROR("ping plugin: Cannot create a distribution for latency");
+      return 1;
+    }
+
     host = strdup(value);
     if (host == NULL) {
       sfree(hl);
+      distribution_destroy(hl->dist_latency);
       ERROR("ping plugin: strdup failed: %s", STRERRNO);
       return 1;
     }
@@ -471,8 +481,7 @@ static int ping_config(const char *key, const char *value) /* {{{ */
     hl->pkg_sent = 0;
     hl->pkg_recv = 0;
     hl->pkg_missed = 0;
-    hl->latency_total = 0.0;
-    hl->latency_squared = 0.0;
+
     hl->next = hostlist_head;
     hostlist_head = hl;
   } else if (strcasecmp(key, "AddressFamily") == 0) {
@@ -567,20 +576,16 @@ static int ping_config(const char *key, const char *value) /* {{{ */
 
 static int ping_read(void) /* {{{ */
 {
-  metric_family_t fam_ping_latency = {
-      .name = "ping_latency_seconds",
-      .type = METRIC_TYPE_GAUGE,
-  };
-  metric_family_t fam_ping_latency_stddev = {
-      .name = "ping_latency_stddev_seconds",
-      .type = METRIC_TYPE_GAUGE,
-  };
   metric_family_t fam_ping_droprate = {
       .name = "ping_droprate",
       .type = METRIC_TYPE_GAUGE,
   };
-  metric_family_t *fams[] = {&fam_ping_latency, &fam_ping_latency_stddev,
-                             &fam_ping_droprate, NULL};
+  metric_family_t fam_ping_distribution_latency = {
+      .name = "ping_distribution_latency",
+      .type = METRIC_TYPE_DISTRIBUTION,
+  };
+
+  metric_family_t *fams[] = {&fam_ping_distribution_latency, &fam_ping_droprate, NULL};
 
   if (ping_thread_error != 0) {
     ERROR("ping plugin: The ping thread had a problem. Restarting it.");
@@ -590,8 +595,7 @@ static int ping_read(void) /* {{{ */
     for (hostlist_t *hl = hostlist_head; hl != NULL; hl = hl->next) {
       hl->pkg_sent = 0;
       hl->pkg_recv = 0;
-      hl->latency_total = 0.0;
-      hl->latency_squared = 0.0;
+      distribution_reset(hl->dist_latency);
     }
 
     start_thread();
@@ -617,13 +621,9 @@ static int ping_read(void) /* {{{ */
 
     pkg_sent = hl->pkg_sent;
     pkg_recv = hl->pkg_recv;
-    latency_total = hl->latency_total;
-    latency_squared = hl->latency_squared;
 
     hl->pkg_sent = 0;
     hl->pkg_recv = 0;
-    hl->latency_total = 0.0;
-    hl->latency_squared = 0.0;
 
     pthread_mutex_unlock(&ping_lock);
 
@@ -633,33 +633,20 @@ static int ping_read(void) /* {{{ */
       continue;
     }
 
-    /* Calculate average. Beware of division by zero. */
-    if (pkg_recv == 0)
-      latency_average = NAN;
-    else
-      latency_average = latency_total / ((double)pkg_recv);
-
-    /* Calculate standard deviation. Beware even more of division by zero. */
-    if (pkg_recv == 0)
-      latency_stddev = NAN;
-    else if (pkg_recv == 1)
-      latency_stddev = 0.0;
-    else
-      latency_stddev = sqrt(((((double)pkg_recv) * latency_squared) -
-                             (latency_total * latency_total)) /
-                            ((double)(pkg_recv * (pkg_recv - 1))));
-
     /* Calculate drop rate. */
     droprate = ((double)(pkg_sent - pkg_recv)) / ((double)pkg_sent);
 
     metric_t m = {0};
+    metric_label_set(&m, "source", hostname_g);
     metric_label_set(&m, "destination", hl->host);
 
-    m.value.gauge = latency_average / 1000.0;
-    metric_family_metric_append(&fam_ping_latency, m);
-
-    m.value.gauge = latency_stddev / 1000.0;
-    metric_family_metric_append(&fam_ping_latency_stddev, m);
+    distribution_t *dist_latency = distribution_clone(hl->dist_latency);
+    if (dist_latency == NULL) {
+      ERROR("ping plugin: distribution_clone failed for host %s.", hl->host);
+    } else {
+      m.value.distribution = dist_latency;
+      metric_family_metric_append(&fam_ping_distribution_latency, m);
+    }
 
     m.value.gauge = droprate;
     metric_family_metric_append(&fam_ping_droprate, m);
@@ -696,6 +683,7 @@ static int ping_shutdown(void) /* {{{ */
     hl_next = hl->next;
 
     sfree(hl->host);
+    distribution_destroy(hl->dist_latency);
     sfree(hl);
 
     hl = hl_next;
