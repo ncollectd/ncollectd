@@ -43,10 +43,12 @@
 /* #endif HAVE_UTMP_H */
 #endif
 
-static void users_submit(gauge_t value) {
+static void users_submit(gauge_t value)
+{
   metric_family_t fam = {
-      .name = "users",
+      .name = "host_users",
       .type = METRIC_TYPE_GAUGE,
+      .help = "Number of users currently logged into the system"
   };
 
   metric_family_metric_append(&fam, (metric_t){
@@ -62,7 +64,8 @@ static void users_submit(gauge_t value) {
   metric_family_metric_reset(&fam);
 }
 
-static int users_read(void) {
+static int users_read(void)
+{
 #if HAVE_GETUTXENT
   unsigned int users = 0;
   struct utmpx *entry = NULL;
@@ -72,9 +75,8 @@ static int users_read(void) {
   setutxent();
 
   while (NULL != (entry = getutxent())) {
-    if (USER_PROCESS == entry->ut_type) {
+    if (USER_PROCESS == entry->ut_type)
       ++users;
-    }
   }
   endutxent();
 
@@ -90,9 +92,8 @@ static int users_read(void) {
   setutent();
 
   while (NULL != (entry = getutent())) {
-    if (USER_PROCESS == entry->ut_type) {
+    if (USER_PROCESS == entry->ut_type)
       ++users;
-    }
   }
   endutent();
 
@@ -124,8 +125,9 @@ static int users_read(void) {
 #endif
 
   return 0;
-} /* int users_read */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("users", users_read);
-} /* void module_register(void) */
+}

@@ -83,7 +83,8 @@ static void nginx_free(void *arg) {
 }
 
 static size_t nginx_curl_callback(void *buf, size_t size, size_t nmemb,
-                                  void *user_data) {
+                                  void *user_data)
+{
   nginx_t *st = user_data;
   if (st == NULL) {
     ERROR("nginx plugin: nginx_curl_callback: "
@@ -109,7 +110,8 @@ static size_t nginx_curl_callback(void *buf, size_t size, size_t nmemb,
   return len;
 }
 
-static int init_host(nginx_t *st) {
+static int init_host(nginx_t *st)
+{
   if (st->curl != NULL)
     curl_easy_cleanup(st->curl);
 
@@ -163,9 +165,10 @@ static int init_host(nginx_t *st) {
 #endif
 
   return 0;
-} /* void init */
+}
 
-static int nginx_read_host(user_data_t *user_data) {
+static int nginx_read_host(user_data_t *user_data)
+{
   char *ptr;
   char *lines[16];
   int lines_num = 0;
@@ -313,7 +316,7 @@ static int nginx_read_host(user_data_t *user_data) {
   }
 
   return 0;
-} /* int nginx_read */
+}
 
 /* Configuration handling functiions
  * <Plugin nginx>
@@ -323,7 +326,8 @@ static int nginx_read_host(user_data_t *user_data) {
  *   URL ...
  * </Plugin>
  */
-static int config_add(oconfig_item_t *ci) {
+static int config_add(oconfig_item_t *ci)
+{
   nginx_t *st = calloc(1, sizeof(*st));
   if (st == NULL) {
     ERROR("nginx plugin: calloc failed.");
@@ -395,9 +399,10 @@ static int config_add(oconfig_item_t *ci) {
           .data = st,
           .free_func = nginx_free,
       });
-} /* int config_add */
+}
 
-static int config(oconfig_item_t *ci) {
+static int config(oconfig_item_t *ci)
+{
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
 
@@ -412,16 +417,18 @@ static int config(oconfig_item_t *ci) {
   } /* for (ci->children) */
 
   return 0;
-} /* int config */
+}
 
-static int init(void) {
+static int init(void)
+{
   /* Call this while collectd is still single-threaded to avoid
    * initialization issues in libgcrypt. */
   curl_global_init(CURL_GLOBAL_SSL);
   return 0;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_complex_config("nginx", config);
   plugin_register_init("nginx", init);
-} /* void module_register */
+}

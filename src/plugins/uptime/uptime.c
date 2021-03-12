@@ -61,10 +61,12 @@
 extern kstat_ctl_t *kc;
 #endif /* #endif HAVE_LIBKSTAT */
 
-static void uptime_submit(gauge_t value) {
+static void uptime_submit(gauge_t value)
+{
   metric_family_t fam = {
-      .name = "uptime_seconds",
+      .name = "host_uptime_seconds",
       .type = METRIC_TYPE_GAUGE,
+      .help = "System uptime",
   };
 
   metric_family_metric_append(&fam, (metric_t){
@@ -90,7 +92,8 @@ static void uptime_submit(gauge_t value) {
  * the boot time, the plugin is unregistered and there is no chance to
  * try again later. Nevertheless, this is very unlikely to happen.
  */
-static time_t uptime_get_sys(void) { /* {{{ */
+static time_t uptime_get_sys(void)
+{
   time_t result;
 #if KERNEL_LINUX
   struct sysinfo info;
@@ -189,9 +192,10 @@ static time_t uptime_get_sys(void) { /* {{{ */
 #endif /* HAVE_PERFSTAT */
 
   return result;
-} /* }}} int uptime_get_sys */
+}
 
-static int uptime_read(void) {
+static int uptime_read(void)
+{
   gauge_t uptime;
   time_t elapsed;
 
@@ -205,6 +209,7 @@ static int uptime_read(void) {
   return 0;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("uptime", uptime_read);
-} /* void module_register */
+}

@@ -30,7 +30,8 @@
 #error "No applicable input method."
 #endif
 
-static int serial_read(void) {
+static int serial_read(void)
+{
   FILE *fh;
   char buffer[1024];
   metric_family_t fam_serial_read = {
@@ -116,8 +117,9 @@ static int serial_read(void) {
 
   fclose(fh);
   return 0;
-} /* int serial_read */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("serial", serial_read);
-} /* void module_register */
+}

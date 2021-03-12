@@ -277,10 +277,12 @@ static uint32_t sequence_number;
 static enum { SRC_DUNNO, SRC_NETLINK, SRC_PROC } linux_source = SRC_DUNNO;
 #endif
 
-static void conn_submit_all(void) {
+static void conn_submit_all(void)
+{
   metric_family_t fam = {
-      .name = "tcp_connections",
+      .name = "host_tcp_connections",
       .type = METRIC_TYPE_GAUGE,
+      .help = "Number of TCP connections",
   };
 
   if (port_collect_total) {
@@ -329,9 +331,10 @@ static void conn_submit_all(void) {
   }
 
   metric_family_metric_reset(&fam);
-} /* void conn_submit_all */
+}
 
-static port_entry_t *conn_get_port_entry(uint16_t port, int create) {
+static port_entry_t *conn_get_port_entry(uint16_t port, int create)
+{
   port_entry_t *ret;
 
   ret = port_list_head;
@@ -352,11 +355,12 @@ static port_entry_t *conn_get_port_entry(uint16_t port, int create) {
   }
 
   return ret;
-} /* port_entry_t *conn_get_port_entry */
+}
 
 /* Removes ports that were added automatically due to the `ListeningPorts'
  * setting but which are no longer listening. */
-static void conn_reset_port_entry(void) {
+static void conn_reset_port_entry(void)
+{
   port_entry_t *prev = NULL;
   port_entry_t *pe = port_list_head;
 
@@ -365,8 +369,7 @@ static void conn_reset_port_entry(void) {
   while (pe != NULL) {
     /* If this entry was created while reading the files (ant not when handling
      * the configuration) remove it now. */
-    if ((pe->flags &
-         (PORT_COLLECT_LOCAL | PORT_COLLECT_REMOTE | PORT_IS_LISTENING)) == 0) {
+    if ((pe->flags & (PORT_COLLECT_LOCAL | PORT_COLLECT_REMOTE | PORT_IS_LISTENING)) == 0) {
       port_entry_t *next = pe->next;
 
       DEBUG("tcpconns plugin: Removing temporary entry "
@@ -394,7 +397,8 @@ static void conn_reset_port_entry(void) {
 } /* void conn_reset_port_entry */
 
 static int conn_handle_ports(uint16_t port_local, uint16_t port_remote,
-                             uint8_t state) {
+                             uint8_t state)
+{
   port_entry_t *pe = NULL;
 
   if ((state > TCP_STATE_MAX)
@@ -429,12 +433,13 @@ static int conn_handle_ports(uint16_t port_local, uint16_t port_remote,
     pe->count_remote[state]++;
 
   return 0;
-} /* int conn_handle_ports */
+}
 
 #if KERNEL_LINUX
 /* Returns zero on success, less than zero on socket error and greater than
  * zero on other errors. */
-static int conn_read_netlink(void) {
+static int conn_read_netlink(void)
+{
 #if HAVE_STRUCT_LINUX_INET_DIAG_REQ
   int fd;
   struct inet_diag_msg *r;
@@ -546,9 +551,10 @@ static int conn_read_netlink(void) {
 #else
   return 1;
 #endif /* HAVE_STRUCT_LINUX_INET_DIAG_REQ */
-} /* int conn_read_netlink */
+}
 
-static int conn_handle_line(char *buffer) {
+static int conn_handle_line(char *buffer)
+{
   char *fields[32];
   int fields_len;
 
@@ -600,9 +606,10 @@ static int conn_handle_line(char *buffer) {
     return -1;
 
   return conn_handle_ports(port_local, port_remote, state);
-} /* int conn_handle_line */
+}
 
-static int conn_read_file(const char *file) {
+static int conn_read_file(const char *file)
+{
   FILE *fh;
   char buffer[1024];
 
@@ -617,7 +624,7 @@ static int conn_read_file(const char *file) {
   fclose(fh);
 
   return 0;
-} /* int conn_read_file */
+}
 /* #endif KERNEL_LINUX */
 
 #elif HAVE_SYSCTLBYNAME
@@ -626,7 +633,8 @@ static int conn_read_file(const char *file) {
 #elif HAVE_LIBKVM_NLIST
 #endif /* HAVE_LIBKVM_NLIST */
 
-static int conn_config(const char *key, const char *value) {
+static int conn_config(const char *key, const char *value)
+{
   if (strcasecmp(key, "ListeningPorts") == 0) {
     if (IS_TRUE(value))
       port_collect_listening = 1;
@@ -662,17 +670,19 @@ static int conn_config(const char *key, const char *value) {
   }
 
   return 0;
-} /* int conn_config */
+}
 
 #if KERNEL_LINUX
-static int conn_init(void) {
+static int conn_init(void)
+{
   if (port_collect_total == 0 && port_list_head == NULL)
     port_collect_listening = 1;
 
   return 0;
 } /* int conn_init */
 
-static int conn_read(void) {
+static int conn_read(void)
+{
   int status;
 
   conn_reset_port_entry();
@@ -716,11 +726,12 @@ static int conn_read(void) {
     return status;
 
   return 0;
-} /* int conn_read */
+}
 /* #endif KERNEL_LINUX */
 
 #elif HAVE_SYSCTLBYNAME
-static int conn_read(void) {
+static int conn_read(void)
+{
   int status;
   char *buffer;
   size_t buffer_len;
@@ -794,12 +805,13 @@ static int conn_read(void) {
   conn_submit_all();
 
   return 0;
-} /* int conn_read */
-  /* #endif HAVE_SYSCTLBYNAME */
+}
+/* #endif HAVE_SYSCTLBYNAME */
 
 #elif HAVE_KVM_GETFILES
 
-static int conn_init(void) {
+static int conn_init(void)
+{
   char buf[_POSIX2_LINE_MAX];
 
   kvmd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, buf);
@@ -811,7 +823,8 @@ static int conn_init(void) {
   return 0;
 } /* int conn_init */
 
-static int conn_read(void) {
+static int conn_read(void)
+{
   struct kinfo_file *kf;
   int i, fcnt;
 
@@ -840,7 +853,8 @@ static int conn_read(void) {
 /* #endif HAVE_KVM_GETFILES */
 
 #elif HAVE_LIBKVM_NLIST
-static int kread(u_long addr, void *buf, int size) {
+static int kread(u_long addr, void *buf, int size)
+{
   int status;
 
   status = kvm_read(kvmd, addr, buf, size);
@@ -852,7 +866,8 @@ static int kread(u_long addr, void *buf, int size) {
   return 0;
 } /* int kread */
 
-static int conn_init(void) {
+static int conn_init(void)
+{
   char buf[_POSIX2_LINE_MAX];
   struct nlist nl[] = {
 #define N_TCBTABLE 0
@@ -883,7 +898,8 @@ static int conn_init(void) {
   return 0;
 } /* int conn_init */
 
-static int conn_read(void) {
+static int conn_read(void)
+{
   struct inpcbtable table;
 #if !defined(__OpenBSD__) &&                                                   \
     (defined(__NetBSD_Version__) && __NetBSD_Version__ <= 699002700)
@@ -958,7 +974,8 @@ static int conn_read(void) {
 
 #elif KERNEL_AIX
 
-static int conn_read(void) {
+static int conn_read(void)
+{
   int size;
   int nconn;
   void *data;
@@ -1009,7 +1026,8 @@ static int conn_read(void) {
 }
 #endif /* KERNEL_AIX */
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("tcpconns", conn_config, config_keys, config_keys_num);
 #if KERNEL_LINUX
   plugin_register_init("tcpconns", conn_init);
@@ -1021,4 +1039,4 @@ void module_register(void) {
 /* no initialization */
 #endif
   plugin_register_read("tcpconns", conn_read);
-} /* void module_register */
+}

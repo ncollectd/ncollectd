@@ -152,22 +152,22 @@ static int md_read(void) {
   metric_family_t fams[FAM_MD_MAX] = {
       [FAM_MD_ACTIVE] =
           {
-              .name = "md_active",
+              .name = "host_md_active",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_MD_FAILED] =
           {
-              .name = "md_failed",
+              .name = "host_md_failed",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_MD_SPARE] =
           {
-              .name = "md_spare",
+              .name = "host_md_spare",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_MD_MISSING] =
           {
-              .name = "md_missing",
+              .name = "host_md_missing",
               .type = METRIC_TYPE_GAUGE,
           },
   };

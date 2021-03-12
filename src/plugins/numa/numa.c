@@ -49,7 +49,7 @@ enum {
   FAM_NUMA_MAX
 };
 
-static int numa_read_node(metric_family_t *fams, int node) /* {{{ */
+static int numa_read_node(metric_family_t *fams, int node)
 {
   char path[PATH_MAX];
   FILE *fh;
@@ -114,9 +114,9 @@ static int numa_read_node(metric_family_t *fams, int node) /* {{{ */
 
   fclose(fh);
   return success ? 0 : -1;
-} /* }}} int numa_read_node */
+}
 
-static int numa_read(void) /* {{{ */
+static int numa_read(void)
 {
   metric_family_t fams[FAM_NUMA_MAX] = {
       [FAM_NUMA_HIT] =
@@ -177,9 +177,9 @@ static int numa_read(void) /* {{{ */
   }
 
   return success ? 0 : -1;
-} /* }}} int numa_read */
+}
 
-static int numa_init(void) /* {{{ */
+static int numa_init(void)
 {
   /* Determine the number of nodes on this machine. */
   while (42) {
@@ -204,9 +204,10 @@ static int numa_init(void) /* {{{ */
 
   DEBUG("numa plugin: Found %i nodes.", max_node + 1);
   return 0;
-} /* }}} int numa_init */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_init("numa", numa_init);
   plugin_register_read("numa", numa_read);
-} /* void module_register */
+}

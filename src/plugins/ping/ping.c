@@ -100,7 +100,7 @@ static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
  * Private functions
  */
 /* Assure that `ts->tv_nsec' is in the range 0 .. 999999999 */
-static void time_normalize(struct timespec *ts) /* {{{ */
+static void time_normalize(struct timespec *ts)
 {
   while (ts->tv_nsec < 0) {
     if (ts->tv_sec == 0) {
@@ -116,14 +116,15 @@ static void time_normalize(struct timespec *ts) /* {{{ */
     ts->tv_sec += 1;
     ts->tv_nsec -= 1000000000;
   }
-} /* }}} void time_normalize */
+}
 
 /* Add `ts_int' to `tv_begin' and store the result in `ts_dest'. If the result
  * is larger than `tv_end', copy `tv_end' to `ts_dest' instead. */
-static void time_calc(struct timespec *ts_dest, /* {{{ */
+static void time_calc(struct timespec *ts_dest,
                       const struct timespec *ts_int,
                       const struct timeval *tv_begin,
-                      const struct timeval *tv_end) {
+                      const struct timeval *tv_end)
+{
   ts_dest->tv_sec = tv_begin->tv_sec + ts_int->tv_sec;
   ts_dest->tv_nsec = (tv_begin->tv_usec * 1000) + ts_int->tv_nsec;
   time_normalize(ts_dest);
@@ -139,9 +140,9 @@ static void time_calc(struct timespec *ts_dest, /* {{{ */
   }
 
   time_normalize(ts_dest);
-} /* }}} void time_calc */
+}
 
-static int ping_dispatch_all(pingobj_t *pingobj) /* {{{ */
+static int ping_dispatch_all(pingobj_t *pingobj)
 {
   hostlist_t *hl;
   int status;
@@ -223,9 +224,9 @@ static int ping_dispatch_all(pingobj_t *pingobj) /* {{{ */
   }   /* }}} for (iter) */
 
   return 0;
-} /* }}} int ping_dispatch_all */
+}
 
-static void *ping_thread(void *arg) /* {{{ */
+static void *ping_thread(void *arg)
 {
   struct timeval tv_begin;
   struct timeval tv_end;
@@ -346,9 +347,9 @@ static void *ping_thread(void *arg) /* {{{ */
   ping_destroy(pingobj);
 
   return (void *)0;
-} /* }}} void *ping_thread */
+}
 
-static int start_thread(void) /* {{{ */
+static int start_thread(void)
 {
   int status;
 
@@ -372,9 +373,9 @@ static int start_thread(void) /* {{{ */
 
   pthread_mutex_unlock(&ping_lock);
   return 0;
-} /* }}} int start_thread */
+}
 
-static int stop_thread(void) /* {{{ */
+static int stop_thread(void)
 {
   int status;
 
@@ -401,9 +402,9 @@ static int stop_thread(void) /* {{{ */
   pthread_mutex_unlock(&ping_lock);
 
   return status;
-} /* }}} int stop_thread */
+}
 
-static int ping_init(void) /* {{{ */
+static int ping_init(void)
 {
   if (hostlist_head == NULL) {
     NOTICE("ping plugin: No hosts have been configured.");
@@ -431,10 +432,11 @@ static int ping_init(void) /* {{{ */
 #endif
 
   return start_thread();
-} /* }}} int ping_init */
+}
 
-static int config_set_string(const char *name, /* {{{ */
-                             char **var, const char *value) {
+static int config_set_string(const char *name,
+                             char **var, const char *value)
+{
   char *tmp;
 
   tmp = strdup(value);
@@ -448,9 +450,9 @@ static int config_set_string(const char *name, /* {{{ */
     free(*var);
   *var = tmp;
   return 0;
-} /* }}} int config_set_string */
+}
 
-static int ping_config(const char *key, const char *value) /* {{{ */
+static int ping_config(const char *key, const char *value)
 {
   if (strcasecmp(key, "Host") == 0) {
     hostlist_t *hl;
@@ -572,9 +574,9 @@ static int ping_config(const char *key, const char *value) /* {{{ */
   }
 
   return 0;
-} /* }}} int ping_config */
+}
 
-static int ping_read(void) /* {{{ */
+static int ping_read(void)
 {
   metric_family_t fam_ping_droprate = {
       .name = "ping_droprate",
@@ -666,9 +668,9 @@ static int ping_read(void) /* {{{ */
   }
 
   return 0;
-} /* }}} int ping_read */
+}
 
-static int ping_shutdown(void) /* {{{ */
+static int ping_shutdown(void)
 {
   hostlist_t *hl;
 
@@ -695,11 +697,12 @@ static int ping_shutdown(void) /* {{{ */
   }
 
   return 0;
-} /* }}} int ping_shutdown */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("ping", ping_config, config_keys, config_keys_num);
   plugin_register_init("ping", ping_init);
   plugin_register_read("ping", ping_read);
   plugin_register_shutdown("ping", ping_shutdown);
-} /* void module_register */
+}

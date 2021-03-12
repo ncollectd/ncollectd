@@ -401,7 +401,8 @@ static char const *proc_state_name[PROC_STATE_MAX] = {
 /* put name of process from config to list_head_g tree
  * list_head_g is a list of 'procstat_t' structs with
  * processes names we want to watch */
-static procstat_t *ps_list_register(const char *name, const char *regexp) {
+static procstat_t *ps_list_register(const char *name, const char *regexp)
+{
   procstat_t *new;
   procstat_t *ptr;
   int status;
@@ -483,11 +484,11 @@ static procstat_t *ps_list_register(const char *name, const char *regexp) {
     ptr->next = new;
 
   return new;
-} /* void ps_list_register */
+}
 
 /* try to match name against entry, returns 1 if success */
-static int ps_list_match(const char *name, const char *cmdline,
-                         procstat_t *ps) {
+static int ps_list_match(const char *name, const char *cmdline, procstat_t *ps)
+{
 #if HAVE_REGEX_H
   if (ps->re != NULL) {
     int status;
@@ -511,10 +512,11 @@ static int ps_list_match(const char *name, const char *cmdline,
     return 1;
 
   return 0;
-} /* int ps_list_match */
+}
 
 static void ps_update_counter(derive_t *group_counter, derive_t *curr_counter,
-                              derive_t new_counter) {
+                              derive_t new_counter)
+{
   unsigned long curr_value;
 
   if (want_init) {
@@ -537,7 +539,8 @@ static void ps_update_counter(derive_t *group_counter, derive_t *curr_counter,
 #if HAVE_LIBTASKSTATS
 static void ps_update_delay_one(gauge_t *out_rate_sum,
                                 value_to_rate_state_t *state, uint64_t cnt,
-                                cdtime_t t) {
+                                cdtime_t t)
+{
   gauge_t rate = NAN;
   int status = value_to_rate(&rate, (value_t){.counter = (counter_t)cnt},
                              DS_TYPE_COUNTER, t, state);
@@ -553,7 +556,8 @@ static void ps_update_delay_one(gauge_t *out_rate_sum,
 }
 
 static void ps_update_delay(procstat_t *out, procstat_entry_t *prev,
-                            process_entry_t *curr) {
+                            process_entry_t *curr)
+{
   cdtime_t now = cdtime();
 
   ps_update_delay_one(&out->delay_cpu, &prev->delay_cpu, curr->delay.cpu_ns,
@@ -569,7 +573,8 @@ static void ps_update_delay(procstat_t *out, procstat_entry_t *prev,
 
 /* add process entry to 'instances' of process 'name' (or refresh it) */
 static void ps_list_add(const char *name, const char *cmdline,
-                        process_entry_t *entry) {
+                        process_entry_t *entry)
+{
   procstat_entry_t *pse;
 
   if (entry->id == 0)
@@ -655,7 +660,8 @@ static void ps_list_add(const char *name, const char *cmdline,
 }
 
 /* remove old entries from instances of processes in list_head_g */
-static void ps_list_reset(void) {
+static void ps_list_reset(void)
+{
   procstat_entry_t *pse;
   procstat_entry_t *pse_prev;
 
@@ -701,7 +707,8 @@ static void ps_list_reset(void) {
   }   /* for (ps = list_head_g; ps != NULL; ps = ps->next) */
 }
 
-static void ps_tune_instance(oconfig_item_t *ci, procstat_t *ps) {
+static void ps_tune_instance(oconfig_item_t *ci, procstat_t *ps)
+{
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *c = ci->children + i;
 
@@ -722,10 +729,11 @@ static void ps_tune_instance(oconfig_item_t *ci, procstat_t *ps) {
       ERROR("processes plugin: Option \"%s\" not allowed here.", c->key);
     }
   } /* for (ci->children) */
-} /* void ps_tune_instance */
+}
 
 /* put all pre-defined 'Process' names from config to list_head_g tree */
-static int ps_config(oconfig_item_t *ci) {
+static int ps_config(oconfig_item_t *ci)
+{
 #if KERNEL_LINUX
   const size_t max_procname_len = 15;
 #elif KERNEL_SOLARIS || KERNEL_FREEBSD
@@ -797,7 +805,8 @@ static int ps_config(oconfig_item_t *ci) {
   return 0;
 }
 
-static int ps_init(void) {
+static int ps_init(void)
+{
 #if HAVE_THREAD_INFO
   kern_return_t status;
 
@@ -857,9 +866,10 @@ static int ps_init(void) {
 #endif /* HAVE_PROCINFO_H */
 
   return 0;
-} /* int ps_init */
+}
 
-static void ps_submit_forks(counter_t value) {
+static void ps_submit_forks(counter_t value)
+{
   metric_family_t fam = {
       .name = "processes_forks_total",
       .type = METRIC_TYPE_COUNTER,
@@ -879,7 +889,8 @@ static void ps_submit_forks(counter_t value) {
 }
 
 /* submit global state (e.g.: qty of zombies, running, etc..) */
-static void ps_submit_state(gauge_t *proc_state) {
+static void ps_submit_state(gauge_t *proc_state)
+{
   metric_family_t fam = {
       .name = "processes_state",
       .type = METRIC_TYPE_GAUGE,
@@ -906,7 +917,8 @@ static void ps_submit_state(gauge_t *proc_state) {
 
 /* submit info about specific process (e.g.: memory taken, cpu usage, etc..) */
 static void ps_metric_append_proc_list(metric_family_t *fams_proc,
-                                       procstat_t *ps) {
+                                       procstat_t *ps)
+{
   metric_t m = {0};
 
   metric_label_set(&m, "name", ps->name);
@@ -1028,11 +1040,12 @@ static void ps_metric_append_proc_list(metric_family_t *fams_proc,
       ps->cswitch_invol, ps->delay_cpu, ps->delay_blkio, ps->delay_swapin,
       ps->delay_freepages);
 
-} /* void ps_metric_append_proc_list */
+}
 
 /* ------- additional functions for KERNEL_LINUX/HAVE_THREAD_INFO ------- */
 #if KERNEL_LINUX
-static int ps_read_tasks_status(process_entry_t *ps) {
+static int ps_read_tasks_status(process_entry_t *ps)
+{
   char dirname[64];
   DIR *dh;
   char filename[64];
@@ -1106,10 +1119,11 @@ static int ps_read_tasks_status(process_entry_t *ps) {
   ps->cswitch_invol = cswitch_invol;
 
   return 0;
-} /* int *ps_read_tasks_status */
+}
 
 /* Read data from /proc/pid/status */
-static int ps_read_status(long pid, process_entry_t *ps) {
+static int ps_read_status(long pid, process_entry_t *ps)
+{
   FILE *fh;
   char buffer[1024];
   char filename[64];
@@ -1162,9 +1176,10 @@ static int ps_read_status(long pid, process_entry_t *ps) {
     ps->num_lwp = threads;
 
   return 0;
-} /* int *ps_read_status */
+}
 
-static int ps_read_io(process_entry_t *ps) {
+static int ps_read_io(process_entry_t *ps)
+{
   FILE *fh;
   char buffer[1024];
   char filename[64];
@@ -1216,9 +1231,10 @@ static int ps_read_io(process_entry_t *ps) {
     WARNING("processes: fclose: %s", STRERRNO);
   }
   return 0;
-} /* int ps_read_io (...) */
+}
 
-static int ps_count_maps(pid_t pid) {
+static int ps_count_maps(pid_t pid)
+{
   FILE *fh;
   char buffer[1024];
   char filename[64];
@@ -1240,9 +1256,10 @@ static int ps_count_maps(pid_t pid) {
     WARNING("processes: fclose: %s", STRERRNO);
   }
   return count;
-} /* int ps_count_maps (...) */
+}
 
-static int ps_count_fd(int pid) {
+static int ps_count_fd(int pid)
+{
   char dirname[64];
   DIR *dh;
   struct dirent *ent;
@@ -1263,10 +1280,11 @@ static int ps_count_fd(int pid) {
   closedir(dh);
 
   return (count >= 1) ? count : 1;
-} /* int ps_count_fd (pid) */
+}
 
 #if HAVE_LIBTASKSTATS
-static int ps_delay(process_entry_t *ps) {
+static int ps_delay(process_entry_t *ps)
+{
   if (taskstats_handle == NULL) {
     return ENOTCONN;
   }
@@ -1316,7 +1334,8 @@ static int ps_delay(process_entry_t *ps) {
 }
 #endif
 
-static void ps_fill_details(const procstat_t *ps, process_entry_t *entry) {
+static void ps_fill_details(const procstat_t *ps, process_entry_t *entry)
+{
   if (entry->has_io == false) {
     ps_read_io(entry);
     entry->has_io = true;
@@ -1352,10 +1371,11 @@ static void ps_fill_details(const procstat_t *ps, process_entry_t *entry) {
     }
   }
 #endif
-} /* void ps_fill_details (...) */
+}
 
 /* ps_read_process reads process counters on Linux. */
-static int ps_read_process(long pid, process_entry_t *ps, char *state) {
+static int ps_read_process(long pid, process_entry_t *ps, char *state)
+{
   char filename[64];
   char buffer[1024];
 
@@ -1489,9 +1509,10 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state) {
 
   /* success */
   return 0;
-} /* int ps_read_process (...) */
+}
 
-static int procs_running(void) {
+static int procs_running(void) 
+{
   char buffer[65536] = {};
   char id[] = "procs_running "; /* white space terminated */
   char *running;
@@ -1526,7 +1547,8 @@ static int procs_running(void) {
   return -1;
 }
 
-static char *ps_get_cmdline(long pid, char *name, char *buf, size_t buf_len) {
+static char *ps_get_cmdline(long pid, char *name, char *buf, size_t buf_len)
+{
   char *buf_ptr;
   size_t len;
 
@@ -1614,9 +1636,10 @@ static char *ps_get_cmdline(long pid, char *name, char *buf, size_t buf_len) {
     --n;
   }
   return buf;
-} /* char *ps_get_cmdline (...) */
+}
 
-static int read_fork_rate(void) {
+static int read_fork_rate(void)
+{
   FILE *proc_stat;
   char buffer[1024];
   value_t value;
@@ -1658,8 +1681,9 @@ static int read_fork_rate(void) {
 
 #if KERNEL_SOLARIS
 static char *ps_get_cmdline(long pid,
-                            char *name __attribute__((unused)), /* {{{ */
-                            char *buffer, size_t buffer_size) {
+                            char *name __attribute__((unused)),
+                            char *buffer, size_t buffer_size)
+{
   char path[PATH_MAX];
   psinfo_t info;
   ssize_t status;
@@ -1678,7 +1702,7 @@ static char *ps_get_cmdline(long pid,
   sstrncpy(buffer, info.pr_psargs, buffer_size);
 
   return buffer;
-} /* }}} int ps_get_cmdline */
+}
 
 /*
  * Reads process information on the Solaris OS. The information comes mainly
@@ -1687,7 +1711,8 @@ static char *ps_get_cmdline(long pid,
  * The values for input and ouput chars are calculated "by hand"
  * Added a few "solaris" specific process states as well
  */
-static int ps_read_process(long pid, process_entry_t *ps, char *state) {
+static int ps_read_process(long pid, process_entry_t *ps, char *state)
+{
   char filename[64];
   char f_psinfo[64], f_usage[64];
   char *buffer;
@@ -1812,7 +1837,8 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state) {
  * are retrieved from kstat (module cpu, name sys, class misc, stat nthreads).
  * The result is the sum for all the threads created on each cpu
  */
-static int read_fork_rate(void) {
+static int read_fork_rate(void)
+{
   extern kstat_ctl_t *kc;
   counter_t result = 0;
 
@@ -1841,7 +1867,8 @@ static int read_fork_rate(void) {
 
 #if HAVE_THREAD_INFO
 static int mach_get_task_name(task_t t, int *pid, char *name,
-                              size_t name_max_len) {
+                              size_t name_max_len)
+{
   int mib[4];
 
   struct kinfo_proc kp;
@@ -1877,7 +1904,8 @@ static int mach_get_task_name(task_t t, int *pid, char *name,
 /* end of additional functions for KERNEL_LINUX/HAVE_THREAD_INFO */
 
 /* do actual readings from kernel */
-static int ps_read(void) {
+static int ps_read(void)
+{
   metric_family_t fams_proc[FAM_PROC_MAX] = {
       [FAM_PROC_VMEM_SIZE] =
           {
@@ -3078,10 +3106,11 @@ static int ps_read(void) {
   }
 
   return 0;
-} /* int ps_read */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_complex_config("processes", ps_config);
   plugin_register_init("processes", ps_init);
   plugin_register_read("processes", ps_read);
-} /* void module_register */
+}

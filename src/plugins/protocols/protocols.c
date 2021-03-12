@@ -52,7 +52,8 @@ static ignorelist_t *values_list;
  * Functions
  */
 static void submit(const char *protocol_name, const char *str_key,
-                   const char *str_value) {
+                   const char *str_value)
+{
   char fam_name[128];
   ssnprintf(fam_name, sizeof(fam_name), "protocols_%s_%s_total", protocol_name,
             str_key);
@@ -79,9 +80,10 @@ static void submit(const char *protocol_name, const char *str_key,
   }
 
   metric_family_metric_reset(&fam);
-} /* void submit */
+}
 
-static int read_file(const char *path) {
+static int read_file(const char *path)
+{
   FILE *fh;
   char key_buffer[4096];
   char value_buffer[4096];
@@ -178,9 +180,10 @@ static int read_file(const char *path) {
   fclose(fh);
 
   return status;
-} /* int read_file */
+}
 
-static int protocols_read(void) {
+static int protocols_read(void)
+{
   int status;
   int success = 0;
 
@@ -196,9 +199,10 @@ static int protocols_read(void) {
     return -1;
 
   return 0;
-} /* int protocols_read */
+}
 
-static int protocols_config(const char *key, const char *value) {
+static int protocols_config(const char *key, const char *value)
+{
   if (values_list == NULL)
     values_list = ignorelist_create(/* invert = */ 1);
 
@@ -214,10 +218,11 @@ static int protocols_config(const char *key, const char *value) {
   }
 
   return 0;
-} /* int protocols_config */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("protocols", protocols_config, config_keys,
                          config_keys_num);
   plugin_register_read("protocols", protocols_read);
-} /* void module_register */
+}
