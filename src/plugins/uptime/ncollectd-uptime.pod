@@ -1,0 +1,21 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-md - Documentation of ncollectd's C<Uptime plugin>
+
+=head2 Plugin C<uptime>
+
+The C<uptime plugin> keeps track of the system uptime, providing
+informations such as the average running time or the maximum reached
+uptime over a certain period of time. It can be useful especially 
+on Linux based routers/firewalls.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
