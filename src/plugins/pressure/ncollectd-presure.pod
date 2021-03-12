@@ -1,0 +1,20 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-presure - Documentation of ncollectd's C<Pressure plugin>
+
+=head2 Plugin C<pressure>
+
+The I<pressure> plugin monitors the pressure stall information (PSI) for cpu,
+io and memory. Avaliable for Linux since kernel 4.20. This provides visibility
+into how resource-constrained the system is.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
