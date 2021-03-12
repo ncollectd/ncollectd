@@ -2297,282 +2297,6 @@ This option is required.
 
 =back
 
-=head2 Plugin C<dbi>
-
-This plugin uses the B<dbi> library (L<http://libdbi.sourceforge.net/>) to
-connect to various databases, execute I<SQL> statements and read back the
-results. I<dbi> is an acronym for "database interface" in case you were
-wondering about the name. You can configure how each column is to be
-interpreted and the plugin will generate one or more data sets from each row
-returned according to these rules.
-
-Because the plugin is very generic, the configuration is a little more complex
-than those of other plugins. It usually looks something like this:
-
-  <Plugin dbi>
-    <Query "out_of_stock">
-      Statement "SELECT category, COUNT(*) AS value FROM products WHERE in_stock = 0 GROUP BY category"
-      # Use with MySQL 5.0.0 or later
-      MinVersion 50000
-      <Result>
-        Type "gauge"
-        InstancePrefix "out_of_stock"
-        InstancesFrom "category"
-        ValuesFrom "value"
-      </Result>
-    </Query>
-    <Database "product_information">
-      #Plugin "warehouse"
-      Driver "mysql"
-      Interval 120
-      DriverOption "host" "localhost"
-      DriverOption "username" "collectd"
-      DriverOption "password" "aZo6daiw"
-      DriverOption "dbname" "prod_info"
-      SelectDB "prod_info"
-      Query "out_of_stock"
-    </Database>
-  </Plugin>
-
-The configuration above defines one query with one result and one database. The
-query is then linked to the database with the B<Query> option I<within> the
-B<E<lt>DatabaseE<gt>> block. You can have any number of queries and databases
-and you can also use the B<Include> statement to split up the configuration
-file in multiple, smaller files. However, the B<E<lt>QueryE<gt>> block I<must>
-precede the B<E<lt>DatabaseE<gt>> blocks, because the file is interpreted from
-top to bottom!
-
-The following is a complete list of options:
-
-=head3 B<Query> blocks
-
-Query blocks define I<SQL> statements and how the returned data should be
-interpreted. They are identified by the name that is given in the opening line
-of the block. Thus the name needs to be unique. Other than that, the name is
-not used in collectd.
-
-In each B<Query> block, there is one or more B<Result> blocks. B<Result> blocks
-define which column holds which value or instance information. You can use
-multiple B<Result> blocks to create multiple values from one returned row. This
-is especially useful, when queries take a long time and sending almost the same
-query again and again is not desirable.
-
-Example:
-
-  <Query "environment">
-    Statement "select station, temperature, humidity from environment"
-    <Result>
-      Type "temperature"
-      # InstancePrefix "foo"
-      InstancesFrom "station"
-      ValuesFrom "temperature"
-    </Result>
-    <Result>
-      Type "humidity"
-      InstancesFrom "station"
-      ValuesFrom "humidity"
-    </Result>
-  </Query>
-
-The following options are accepted:
-
-=over 4
-
-=item B<Statement> I<SQL>
-
-Sets the statement that should be executed on the server. This is B<not>
-interpreted by collectd, but simply passed to the database server. Therefore,
-the SQL dialect that's used depends on the server collectd is connected to.
-
-The query has to return at least two columns, one for the instance and one
-value. You cannot omit the instance, even if the statement is guaranteed to
-always return exactly one line. In that case, you can usually specify something
-like this:
-
-  Statement "SELECT \"instance\", COUNT(*) AS value FROM table"
-
-(That works with MySQL but may not be valid SQL according to the spec. If you
-use a more strict database server, you may have to select from a dummy table or
-something.)
-
-Please note that some databases, for example B<Oracle>, will fail if you
-include a semicolon at the end of the statement.
-
-=item B<MinVersion> I<Version>
-
-=item B<MaxVersion> I<Value>
-
-Only use this query for the specified database version. You can use these
-options to provide multiple queries with the same name but with a slightly
-different syntax. The plugin will use only those queries, where the specified
-minimum and maximum versions fit the version of the database in use.
-
-The database version is determined by C<dbi_conn_get_engine_version>, see the
-L<libdbi documentation|http://libdbi.sourceforge.net/docs/programmers-guide/reference-conn.html#DBI-CONN-GET-ENGINE-VERSION>
-for details. Basically, each part of the version is assumed to be in the range
-from B<00> to B<99> and all dots are removed. So version "4.1.2" becomes
-"40102", version "5.0.42" becomes "50042".
-
-B<Warning:> The plugin will use B<all> matching queries, so if you specify
-multiple queries with the same name and B<overlapping> ranges, weird stuff will
-happen. Don't to it! A valid example would be something along these lines:
-
-  MinVersion 40000
-  MaxVersion 49999
-  ...
-  MinVersion 50000
-  MaxVersion 50099
-  ...
-  MinVersion 50100
-  # No maximum
-
-In the above example, there are three ranges that don't overlap. The last one
-goes from version "5.1.0" to infinity, meaning "all later versions". Versions
-before "4.0.0" are not specified.
-
-=item B<Type> I<Type>
-
-The B<type> that's used for each line returned. See L<types.db(5)> for more
-details on how types are defined. In short: A type is a predefined layout of
-data and the number of values and type of values has to match the type
-definition.
-
-If you specify "temperature" here, you need exactly one gauge column. If you
-specify "if_octets", you will need two counter columns. See the B<ValuesFrom>
-setting below.
-
-There must be exactly one B<Type> option inside each B<Result> block.
-
-=item B<InstancePrefix> I<prefix>
-
-Prepends I<prefix> to the type instance. If B<InstancesFrom> (see below) is not
-given, the string is simply copied. If B<InstancesFrom> is given, I<prefix> and
-all strings returned in the appropriate columns are concatenated together,
-separated by dashes I<("-")>.
-
-=item B<InstancesFrom> I<column0> [I<column1> ...]
-
-Specifies the columns whose values will be used to create the "type-instance"
-for each row. If you specify more than one column, the value of all columns
-will be joined together with dashes I<("-")> as separation characters.
-
-The plugin itself does not check whether or not all built instances are
-different. It's your responsibility to assure that each is unique. This is
-especially true, if you do not specify B<InstancesFrom>: B<You> have to make
-sure that only one row is returned in this case.
-
-If neither B<InstancePrefix> nor B<InstancesFrom> is given, the type-instance
-will be empty.
-
-=item B<ValuesFrom> I<column0> [I<column1> ...]
-
-Names the columns whose content is used as the actual data for the data sets
-that are dispatched to the daemon. How many such columns you need is determined
-by the B<Type> setting above. If you specify too many or not enough columns,
-the plugin will complain about that and no data will be submitted to the
-daemon.
-
-The actual data type in the columns is not that important. The plugin will
-automatically cast the values to the right type if it know how to do that. So
-it should be able to handle integer an floating point types, as well as strings
-(if they include a number at the beginning).
-
-There must be at least one B<ValuesFrom> option inside each B<Result> block.
-
-=item B<MetadataFrom> [I<column0> I<column1> ...]
-
-Names the columns whose content is used as metadata for the data sets
-that are dispatched to the daemon.
-
-The actual data type in the columns is not that important. The plugin will
-automatically cast the values to the right type if it know how to do that. So
-it should be able to handle integer an floating point types, as well as strings
-(if they include a number at the beginning).
-
-=back
-
-=head3 B<Database> blocks
-
-Database blocks define a connection to a database and which queries should be
-sent to that database. Since the used "dbi" library can handle a wide variety
-of databases, the configuration is very generic. If in doubt, refer to libdbi's
-documentationE<nbsp>- we stick as close to the terminology used there.
-
-Each database needs a "name" as string argument in the starting tag of the
-block. This name will be used as "PluginInstance" in the values submitted to
-the daemon. Other than that, that name is not used.
-
-=over 4
-
-=item B<Plugin> I<Plugin>
-
-Use I<Plugin> as the plugin name when submitting query results from
-this B<Database>. Defaults to C<dbi>.
-
-=item B<Interval> I<Interval>
-
-Sets the interval (in seconds) in which the values will be collected from this
-database. By default the global B<Interval> setting will be used.
-
-=item B<Driver> I<Driver>
-
-Specifies the driver to use to connect to the database. In many cases those
-drivers are named after the database they can connect to, but this is not a
-technical necessity. These drivers are sometimes referred to as "DBD",
-B<D>ataB<B>ase B<D>river, and some distributions ship them in separate
-packages. Drivers for the "dbi" library are developed by the B<libdbi-drivers>
-project at L<http://libdbi-drivers.sourceforge.net/>.
-
-You need to give the driver name as expected by the "dbi" library here. You
-should be able to find that in the documentation for each driver. If you
-mistype the driver name, the plugin will dump a list of all known driver names
-to the log.
-
-=item B<DriverOption> I<Key> I<Value>
-
-Sets driver-specific options. What option a driver supports can be found in the
-documentation for each driver, somewhere at
-L<http://libdbi-drivers.sourceforge.net/>. However, the options "host",
-"username", "password", and "dbname" seem to be deE<nbsp>facto standards.
-
-DBDs can register two types of options: String options and numeric options. The
-plugin will use the C<dbi_conn_set_option> function when the configuration
-provides a string and the C<dbi_conn_require_option_numeric> function when the
-configuration provides a number. So these two lines will actually result in
-different calls being used:
-
-  DriverOption "Port" 1234      # numeric
-  DriverOption "Port" "1234"    # string
-
-Unfortunately, drivers are not too keen to report errors when an unknown option
-is passed to them, so invalid settings here may go unnoticed. This is not the
-plugin's fault, it will report errors if it gets them from the libraryE<nbsp>/
-the driver. If a driver complains about an option, the plugin will dump a
-complete list of all options understood by that driver to the log. There is no
-way to programmatically find out if an option expects a string or a numeric
-argument, so you will have to refer to the appropriate DBD's documentation to
-find this out. Sorry.
-
-=item B<SelectDB> I<Database>
-
-In some cases, the database name you connect with is not the database name you
-want to use for querying data. If this option is set, the plugin will "select"
-(switch to) that database after the connection is established.
-
-=item B<Query> I<QueryName>
-
-Associates the query named I<QueryName> with this database connection. The
-query needs to be defined I<before> this statement, i.E<nbsp>e. all query
-blocks you want to refer to must be placed above the database block you want to
-refer to them from.
-
-=item B<Host> I<Hostname>
-
-Sets the B<host> field of I<value lists> to I<Hostname> when dispatching
-values. Defaults to the global hostname setting.
-
-=back
-
 =head2 Plugin C<dcpmm>
 
 The I<dcpmm plugin> will collect Intel(R) Optane(TM) DC Persistent Memory related performance statistics.
@@ -6270,79 +5994,6 @@ can be configured independently from that option. Defaults to B<false>.
 
 =back
 
-=head2 Plugin C<oracle>
-
-The "oracle" plugin uses the Oracle® Call Interface I<(OCI)> to connect to an
-Oracle® Database and lets you execute SQL statements there. It is very similar
-to the "dbi" plugin, because it was written around the same time. See the "dbi"
-plugin's documentation above for details.
-
-  <Plugin oracle>
-    <Query "out_of_stock">
-      Statement "SELECT category, COUNT(*) AS value FROM products WHERE in_stock = 0 GROUP BY category"
-      <Result>
-        Type "gauge"
-        # InstancePrefix "foo"
-        InstancesFrom "category"
-        ValuesFrom "value"
-      </Result>
-    </Query>
-    <Database "product_information">
-      #Plugin "warehouse"
-      ConnectID "db01"
-      Username "oracle"
-      Password "secret"
-      Query "out_of_stock"
-    </Database>
-  </Plugin>
-
-=head3 B<Query> blocks
-
-The Query blocks are handled identically to the Query blocks of the "dbi"
-plugin. Please see its documentation above for details on how to specify
-queries.
-
-=head3 B<Database> blocks
-
-Database blocks define a connection to a database and which queries should be
-sent to that database. Each database needs a "name" as string argument in the
-starting tag of the block. This name will be used as "PluginInstance" in the
-values submitted to the daemon. Other than that, that name is not used.
-
-=over 4
-
-=item B<Plugin> I<Plugin>
-
-Use I<Plugin> as the plugin name when submitting query results from
-this B<Database>. Defaults to C<oracle>.
-
-=item B<ConnectID> I<ID>
-
-Defines the "database alias" or "service name" to connect to. Usually, these
-names are defined in the file named C<$ORACLE_HOME/network/admin/tnsnames.ora>.
-
-=item B<Host> I<Host>
-
-Hostname to use when dispatching values for this database. Defaults to using
-the global hostname of the I<collectd> instance.
-
-=item B<Username> I<Username>
-
-Username used for authentication.
-
-=item B<Password> I<Password>
-
-Password used for authentication.
-
-=item B<Query> I<QueryName>
-
-Associates the query named I<QueryName> with this database connection. The
-query needs to be defined I<before> this statement, i.E<nbsp>e. all query
-blocks you want to refer to must be placed above the database block you want to
-refer to them from.
-
-=back
-
 =head2 Plugin C<ovs_events>
 
 The I<ovs_events> plugin monitors the link status of I<Open vSwitch> (OVS)
@@ -6630,8 +6281,8 @@ L<http://www.postgresql.org/docs/manuals/>.
       Param hostname
       <Result>
         Type gauge
-        InstancePrefix "magic"
-        ValuesFrom magic
+        Metric "magic"
+        ValueFrom magic
       </Result>
     </Query>
 
@@ -6644,14 +6295,14 @@ L<http://www.postgresql.org/docs/manuals/>.
                         GROUP BY type;"
       <Result>
         Type counter
-        InstancePrefix "rt36_tickets"
-        InstancesFrom "type"
-        ValuesFrom "count"
+        Metric "rt36_tickets"
+        LabelsFrom "type"
+        ValueFrom "count"
       </Result>
     </Query>
 
     <Writer sqlstore>
-      Statement "SELECT collectd_insert($1, $2, $3, $4, $5, $6, $7, $8, $9);"
+      Statement "SELECT collectd_insert($1, $2, $3, $4, $5);"
       StoreRates true
     </Writer>
 
@@ -6744,11 +6395,14 @@ specific or global B<Interval> options).
 Please note that parameters are only supported by PostgreSQL's protocol
 version 3 and above which was introduced in version 7.4 of PostgreSQL.
 
-=item B<PluginInstanceFrom> I<column>
+=item B<MetricPrefix> I<prefix>
 
-Specify how to create the "PluginInstance" for reporting this query results.
-Only one column is supported. You may concatenate fields and string values in
-the query statement to get the required results.
+Prepends I<prefix> to the metric name in the B<Result>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Statement> block.
 
 =item B<MinVersion> I<version>
 
@@ -6772,38 +6426,52 @@ the daemon.
 
 =over 4
 
-=item B<Type> I<type>
+=item B<Type> I<gauge>|I<counter>|I<untyped>
 
-The I<type> name to be used when dispatching the values. The type describes
-how to handle the data and where to store it. See L<types.db(5)> for more
-details on types and their configuration. The number and type of values (as
-selected by the B<ValuesFrom> option) has to match the type of the given name.
+The B<type> that's used for each line returned. Must be I<gauge>, I<counter> or I<untyped>.
+If not set is I<untyped>.
+There must be exactly one B<Type> option inside each B<Result> block.
 
-This option is mandatory.
+=item B<TypeFrom> I<column>
 
-=item B<InstancePrefix> I<prefix>
+Read the type from B<column>. It must be B<gauge>, B<counter> or B<untyped>.
 
-=item B<InstancesFrom> I<column0> [I<column1> ...]
+=item B<Help> I<help>
 
-Specify how to create the "TypeInstance" for each data set (i.E<nbsp>e. line).
-B<InstancePrefix> defines a static prefix that will be prepended to all type
-instances. B<InstancesFrom> defines the column names whose values will be used
-to create the type instance. Multiple values will be joined together using the
-hyphen (C<->) as separation character.
+Set the B<help> text for the metric.
 
-The plugin itself does not check whether or not all built instances are
-different. It is your responsibility to assure that each is unique.
+=item B<HelpFrom> I<column>
 
-Both options are optional. If none is specified, the type instance will be
-empty.
+Read the B<help> text for the the metric from the named column.
 
-=item B<ValuesFrom> I<column0> [I<column1> ...]
+=item B<Metric> I<metric>
 
-Names the columns whose content is used as the actual data for the data sets
-that are dispatched to the daemon. How many such columns you need is
-determined by the B<Type> setting as explained above. If you specify too many
-or not enough columns, the plugin will complain about that and no data will be
-submitted to the daemon.
+Set the metric name.
+
+=item B<MetricFrom> I<column>
+
+Read the metric name from the named column.
+
+There must be at least one B<Metric> or B<MetricFrom> option inside each B<Result> block.
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Result>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Result> block.
+
+=item B<LabelsFrom> I<column0> [I<column1> ...]
+
+Specifies the columns whose names and values will be used to create the labels.
+You can specify more than one column.
+
+=item B<ValueFrom> I<column>
+
+Name of the column whose content is used as the actual data for the metric
+that are dispatched to the daemon.
 
 The actual data type, as seen by PostgreSQL, is not that important as long as
 it represents numbers. The plugin will automatically cast the values to the
@@ -6811,9 +6479,8 @@ right type if it know how to do that. For that, it uses the L<strtoll(3)> and
 L<strtod(3)> functions, so anything supported by those functions is supported
 by the plugin as well.
 
-This option is required inside a B<Result> block and may be specified multiple
-times. If multiple B<ValuesFrom> options are specified, the columns are read
-in the given order.
+This option is required inside a B<Result> block and must be specified only
+once.
 
 =back
 
@@ -6900,42 +6567,19 @@ The timestamp of the queried value as an RFC 3339-formatted local time.
 
 =item B<$2>
 
-The hostname of the queried value.
+The metric name of the queried value.
 
 =item B<$3>
 
-The plugin name of the queried value.
+The labels of the queried value as an array of pairs of key, value.
 
 =item B<$4>
 
-The plugin instance of the queried value. This value may be B<NULL> if there
-is no plugin instance.
+The type of the queried metric: I<GAUGE>, I<COUNTER> or I<UNTYPED>
 
 =item B<$5>
 
-The type of the queried value (cf. L<types.db(5)>).
-
-=item B<$6>
-
-The type instance of the queried value. This value may be B<NULL> if there is
-no type instance.
-
-=item B<$7>
-
-An array of names for the submitted values (i.E<nbsp>e., the name of the data
-sources of the submitted value-list).
-
-=item B<$8>
-
-An array of types for the submitted values (i.E<nbsp>e., the type of the data
-sources of the submitted value-list; C<counter>, C<gauge>, ...). Note, that if
-B<StoreRates> is enabled (which is the default, see below), all types will be
-C<gauge>.
-
-=item B<$9>
-
-An array of the submitted values. The dimensions of the value name and value
-arrays match.
+The submitted value.
 
 =back
 
@@ -6978,19 +6622,14 @@ activating this option. The draw-back is, that data covering the specified
 amount of time will be lost, for example, if a single statement within the
 transaction fails or if the database server crashes.
 
-=item B<Plugin> I<Plugin>
+=item B<MetricPrefix> I<prefix>
 
-Use I<Plugin> as the plugin name when submitting query results from
-this B<Database>. Defaults to C<postgresql>.
+Prepends I<prefix> to the metric name in the B<Result>.
 
-=item B<Instance> I<name>
+=item B<Label> I<key> I<value>
 
-Specify the plugin instance name that should be used instead of the database
-name (which is the default, if this option has not been specified). This
-allows one to query multiple databases of the same name on the same host (e.g.
-when running multiple database server versions in parallel).
-The plugin instance name can also be set from the query result using
-the B<PluginInstanceFrom> option in B<Query> block.
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Database> block.
 
 =item B<Host> I<hostname>
 
@@ -7045,13 +6684,6 @@ First, try to connect using SSL. If that fails, try without using SSL.
 Use SSL only.
 
 =back
-
-=item B<Instance> I<name>
-
-Specify the plugin instance name that should be used instead of the database
-name (which is the default, if this option has not been specified). This
-allows one to query multiple databases of the same name on the same host (e.g.
-when running multiple database server versions in parallel).
 
 =item B<KRBSrvName> I<kerberos_service_name>
 

@@ -1,0 +1,312 @@
+=head2 Plugin C<odbc>
+
+This plugin uses the B<unixodbc> library (L<http://www.unixodbc.org>) to
+connect to various databases, execute I<SQL> statements and read back the
+results. You can configure how each column is to be interpreted and the
+plugin will generate one or more data sets from each row returned according
+to these rules.
+
+Because the plugin is very generic, the configuration is a little more complex
+than those of other plugins. It usually looks something like this:
+
+  <Plugin odbc>
+    <Query "out_of_stock">
+      Statement "SELECT category, COUNT(*) AS value FROM products WHERE in_stock = 0 GROUP BY category"
+      <Result>
+        Type "gauge"
+        Metric "out_of_stock"
+        LabelsFrom "category"
+        ValueFrom "value"
+      </Result>
+    </Query>
+    <Database "product_information">
+      Interval 120
+      Connection "Driver=PostgreSQL;Server=localhost;Port=1234;Database=prod_info;Uid=collectd;Pwd=aZo6daiw;"
+      PingQuery "SELECT 1"
+      Query "out_of_stock"
+    </Database>
+  </Plugin>
+
+=head3 B<Database> blocks
+
+Database blocks define a connection to a database and which queries should be
+sent to that database. Since the used "unixODBC" library can handle a wide variety
+of databases, the configuration is very generic. If in doubt, refer to unixODBC's
+documentation.
+
+Each database needs a "name" as string argument in the starting tag of the
+block. This name will be used as "PluginInstance" in the values submitted to
+the daemon. Other than that, that name is not used.
+
+=over 4
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Result>
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Database> block.
+
+=item B<Interval> I<Interval>
+
+Sets the interval (in seconds) in which the values will be collected from this
+database. By default the global B<Interval> setting will be used.
+
+=item B<DSN> I<dsn>
+Specifies the  I<dsn> (Data Source Name) that you configure in unixODBC.
+
+=item B<User> I<User>
+User to connecto to database
+
+=item B<Password> I<Password>
+User password to connecto to database
+
+=item B<Connection> I<Connection>
+
+Specifies the connection string to use to connect to the database. A connection
+string consists of a series of keyword value pairs separated by semicolons (;).
+The equal sign (=) connects each keyword and its value.
+
+=item B<PingQuery> I<PingQuery>
+
+Specifies a query to test the connection to the databbase.
+
+=item B<Query> I<QueryName>
+
+Associates the query named I<QueryName> with this database connection. The
+query needs to be defined I<before> this statement, i.E<nbsp>e. all query
+blocks you want to refer to must be placed above the database block you want to
+refer to them from.
+
+=head3 B<Query> blocks
+
+Query blocks define I<SQL> statements and how the returned data should be
+interpreted. They are identified by the name that is given in the opening line
+of the block. Thus the name needs to be unique. Other than that, the name is
+not used in collectd.
+
+In each B<Query> block, there is one or more B<Result> blocks. B<Result> blocks
+define which column holds which value or instance information. You can use
+multiple B<Result> blocks to create multiple values from one returned row. This
+is especially useful, when queries take a long time and sending almost the same
+query again and again is not desirable.
+
+Example:
+
+  <Query "environment">
+    Statement "select station, temperature, humidity from environment"
+    <Result>
+      Type "gauge"
+      Metric "temperature"
+      LabelsFrom "station"
+      ValueFrom "temperature"
+    </Result>
+    <Result>
+      Type "gauge"
+      Metric "humidity"
+      LabelsFrom "station"
+      ValueFrom "humidity"
+    </Result>
+  </Query>
+
+The following options are accepted:
+
+=over 4
+
+=item B<Statement> I<SQL>
+
+Sets the statement that should be executed on the server. This is B<not>
+interpreted by collectd, but simply passed to the database server. Therefore,
+the SQL dialect that's used depends on the server collectd is connected to.
+
+The query has to return at least two columns, one for the instance and one
+value. You cannot omit the instance, even if the statement is guaranteed to
+always return exactly one line. In that case, you can usually specify something
+like this:
+
+  Statement "SELECT \"instance\", COUNT(*) AS value FROM table"
+
+(That works with MySQL but may not be valid SQL according to the spec. If you
+use a more strict database server, you may have to select from a dummy table or
+something.)
+
+Please note that some databases, for example B<Oracle>, will fail if you
+include a semicolon at the end of the statement.
+
+=item B<MinVersion> I<Version>
+
+=item B<MaxVersion> I<Value>
+
+Only use this query for the specified database version. You can use these
+options to provide multiple queries with the same name but with a slightly
+different syntax. The plugin will use only those queries, where the specified
+minimum and maximum versions fit the version of the database in use.
+
+The database version is determined by C<dbi_conn_get_engine_version>, see the
+L<libdbi documentation|http://libdbi.sourceforge.net/docs/programmers-guide/reference-conn.html#DBI-CONN-GET-ENGINE-VERSION>
+for details. Basically, each part of the version is assumed to be in the range
+from B<00> to B<99> and all dots are removed. So version "4.1.2" becomes
+"40102", version "5.0.42" becomes "50042".
+
+B<Warning:> The plugin will use B<all> matching queries, so if you specify
+multiple queries with the same name and B<overlapping> ranges, weird stuff will
+happen. Don't to it! A valid example would be something along these lines:
+
+  MinVersion 40000
+  MaxVersion 49999
+  ...
+  MinVersion 50000
+  MaxVersion 50099
+  ...
+  MinVersion 50100
+  # No maximum
+
+In the above example, there are three ranges that don't overlap. The last one
+goes from version "5.1.0" to infinity, meaning "all later versions". Versions
+before "4.0.0" are not specified.
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Result>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Query> block.
+
+Inside the B<Result> block, the following options are recognized:
+
+=item B<Type> I<gauge>|I<counter>|I<untyped>
+
+The B<type> that's used for each line returned. Must be I<gauge>, I<counter> or I<untyped>.
+If not set is I<untyped>.
+There must be exactly one B<Type> option inside each B<Result> block.
+
+=item B<TypeFrom> I<column>
+
+Read the type from B<column>. It must be B<gauge>, B<counter> or B<untyped>.
+
+=item B<Help> I<help>
+
+Set the B<help> text for the metric.
+
+=item B<HelpFrom> I<column>
+
+Read the B<help> text for the the metric from the named column.
+
+=item B<Metric> I<metric>
+
+Set the metric name.
+
+=item B<MetricFrom> I<column>
+
+Read the metric name from the named column.
+
+There must be at least one B<Metric> or B<MetricFrom> option inside each B<Result> block.
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Result>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Result> block.
+
+=item B<LabelsFrom> I<column0> [I<column1> ...]
+
+Specifies the columns whose names and values will be used to create the labels.
+You can specify more than one column.
+
+=item B<ValueFrom> I<column>
+
+Name of the column whose content is used as the actual data for the metric
+that are dispatched to the daemon.
+
+There must be only one B<ValueFrom> option inside each B<Result> block.
+
+=back
+
+=head3 B<Database> blocks
+
+Database blocks define a connection to a database and which queries should be
+sent to that database. Since the used "dbi" library can handle a wide variety
+of databases, the configuration is very generic. If in doubt, refer to libdbi's
+documentationE<nbsp>- we stick as close to the terminology used there.
+
+Each database needs a "name" as string argument in the starting tag of the
+block. This name will be used as "PluginInstance" in the values submitted to
+the daemon. Other than that, that name is not used.
+
+=over 4
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the  B<Result>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Database> block.
+
+=item B<Interval> I<Interval>
+
+Sets the interval (in seconds) in which the values will be collected from this
+database. By default the global B<Interval> setting will be used.
+
+=item B<Driver> I<Driver>
+
+Specifies the driver to use to connect to the database. In many cases those
+drivers are named after the database they can connect to, but this is not a
+technical necessity. These drivers are sometimes referred to as "DBD",
+B<D>ataB<B>ase B<D>river, and some distributions ship them in separate
+packages. Drivers for the "dbi" library are developed by the B<libdbi-drivers>
+project at L<http://libdbi-drivers.sourceforge.net/>.
+
+You need to give the driver name as expected by the "dbi" library here. You
+should be able to find that in the documentation for each driver. If you
+mistype the driver name, the plugin will dump a list of all known driver names
+to the log.
+
+=item B<DriverOption> I<Key> I<Value>
+
+Sets driver-specific options. What option a driver supports can be found in the
+documentation for each driver, somewhere at
+L<http://libdbi-drivers.sourceforge.net/>. However, the options "host",
+"username", "password", and "dbname" seem to be deE<nbsp>facto standards.
+
+DBDs can register two types of options: String options and numeric options. The
+plugin will use the C<dbi_conn_set_option> function when the configuration
+provides a string and the C<dbi_conn_require_option_numeric> function when the
+configuration provides a number. So these two lines will actually result in
+different calls being used:
+
+  DriverOption "Port" 1234      # numeric
+  DriverOption "Port" "1234"    # string
+
+Unfortunately, drivers are not too keen to report errors when an unknown option
+is passed to them, so invalid settings here may go unnoticed. This is not the
+plugin's fault, it will report errors if it gets them from the libraryE<nbsp>/
+the driver. If a driver complains about an option, the plugin will dump a
+complete list of all options understood by that driver to the log. There is no
+way to programmatically find out if an option expects a string or a numeric
+argument, so you will have to refer to the appropriate DBD's documentation to
+find this out. Sorry.
+
+=item B<SelectDB> I<Database>
+
+In some cases, the database name you connect with is not the database name you
+want to use for querying data. If this option is set, the plugin will "select"
+(switch to) that database after the connection is established.
+
+=item B<Query> I<QueryName>
+
+Associates the query named I<QueryName> with this database connection. The
+query needs to be defined I<before> this statement, i.E<nbsp>e. all query
+blocks you want to refer to must be placed above the database block you want to
+refer to them from.
+
+=back
+
