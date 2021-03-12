@@ -3939,29 +3939,6 @@ following configuration:
     ip6fragment true
   </Plugin>
 
-=head2 Plugin C<iptables>
-
-=over 4
-
-=item B<Chain> I<Table> I<Chain> [I<Comment|Number> [I<Name>]]
-
-=item B<Chain6> I<Table> I<Chain> [I<Comment|Number> [I<Name>]]
-
-Select the iptables/ip6tables filter rules to count packets and bytes from.
-
-If only I<Table> and I<Chain> are given, this plugin will collect the counters
-of all rules which have a comment-match. The comment is then used as
-type-instance.
-
-If I<Comment> or I<Number> is given, only the rule with the matching comment or
-the I<n>th rule will be collected. Again, the comment (or the number) will be
-used as the type-instance.
-
-If I<Name> is supplied, it will be used as the type-instance instead of the
-comment or the number.
-
-=back
-
 =head2 Plugin C<irq>
 
 =over 4
