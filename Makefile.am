@@ -2109,12 +2109,6 @@ tcpconns_la_LIBADD += -lkvm
 endif
 endif
 
-if BUILD_PLUGIN_TEAMSPEAK2
-pkglib_LTLIBRARIES += teamspeak2.la
-teamspeak2_la_SOURCES = src/teamspeak2.c
-teamspeak2_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-endif
-
 if BUILD_PLUGIN_TED
 pkglib_LTLIBRARIES += ted.la
 ted_la_SOURCES = src/ted.c
