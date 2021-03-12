@@ -49,9 +49,7 @@ EXTRA_DIST = \
 	bindings/perl/lib/Collectd/Unixsock.pm \
 	bindings/perl/uninstall_mod.pl \
 	contrib \
-	proto/collectd.proto \
 	proto/prometheus.proto \
-	proto/types.proto \
 	src/collectd-email.pod \
 	src/collectd-exec.pod \
 	src/collectd-java.pod \
