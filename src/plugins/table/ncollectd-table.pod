@@ -1,0 +1,80 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-table - Documentation of ncollectd's C<Table plugin>
+
+=head2 Plugin C<table>
+
+The C<table plugin> provides generic means to parse tabular data and dispatch
+user specified values. Values are selected based on column numbers. For
+example, this plugin may be used to get values from the Linux L<proc(5)>
+filesystem or CSV (comma separated values) files.
+
+  <Plugin table>
+    <Table "/proc/slabinfo">
+      MetricPrefix "slabinfo_"
+      SkipLines 2
+      Separator " "
+      <Result>
+        Type gauge
+        MetricPrefix "activeobjs_"
+        MetricFrom 0
+        ValueFrom 1
+      </Result>
+      <Result>
+        Type gauge
+        MetricPrefix "objperslab_"
+        MetricFrom 0
+        ValueFrom 4
+      </Result>
+    </Table>
+  </Plugin>
+
+The configuration consists of one or more B<Table> blocks, each of which
+configures one file to parse. Within each B<Table> block, there are one or
+more B<Result> blocks, which configure which data to select and how to
+interpret it.
+
+The following options are available inside a B<Table> block:
+
+=over 4
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Result> block.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Table> block.
+
+=item B<Separator> I<string>
+
+Any character of I<string> is interpreted as a delimiter between the different
+columns of the table. A sequence of two or more contiguous delimiters in the
+table is considered to be a single delimiter, i.E<nbsp>e. there cannot be any
+empty columns. The plugin uses the L<strtok_r(3)> function to parse the lines
+of a table - see its documentation for more details. This option is mandatory.
+
+A horizontal tab, newline and carriage return may be specified by C<\\t>,
+C<\\n> and C<\\r> respectively. Please note that the double backslashes are
+required because of collectd's config parsing.
+
+=item B<SkipLines> I<lines>
+
+Skip the number of I<lines> at the beginning of the file.
+
+=item B<Interval> I<seconds>
+
+The B<Interval> option allows you to define the length of time between reads. If
+this is not set, the default Interval will be used.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
