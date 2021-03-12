@@ -93,6 +93,11 @@ timeout.
 
 Append the label I<Key>=I<Value> to the submitting metrics.
 
+=item B<Interval> I<Interval>
+
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global B<Interval> setting will be used.
+
 =back
 
 =head1 SEE ALSO

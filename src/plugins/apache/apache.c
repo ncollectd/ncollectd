@@ -176,6 +176,7 @@ static int config_add(oconfig_item_t *ci) {
   }
   assert(st->name != NULL);
 
+  cdtime_t interval = 0;
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
 
@@ -199,6 +200,8 @@ static int config_add(oconfig_item_t *ci) {
       status = cf_util_get_int(child, &st->timeout);
     else if (strcasecmp("Label", child->key) == 0)
       status = cf_util_get_label(child, &st->labels);
+    else if (strcasecmp("Interval", child->key) == 0)
+      status = cf_util_get_cdtime(child, &interval);
     else {
       WARNING("apache plugin: Option `%s' not allowed here.", child->key);
       status = -1;
@@ -230,7 +233,7 @@ static int config_add(oconfig_item_t *ci) {
       /* group = */ NULL,
       /* name      = */ callback_name,
       /* callback  = */ apache_read_host,
-      /* interval  = */ 0,
+      /* interval  = */ interval,
       &(user_data_t){
           .data = st,
           .free_func = apache_free,
