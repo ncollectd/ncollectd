@@ -1509,14 +1509,6 @@ mysql_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 mysql_la_LIBADD = $(BUILD_WITH_LIBMYSQL_LIBS)
 endif
 
-if BUILD_PLUGIN_NETAPP
-pkglib_LTLIBRARIES += netapp.la
-netapp_la_SOURCES = src/netapp.c
-netapp_la_CPPFLAGS = $(AM_CPPFLAGS) $(LIBNETAPP_CPPFLAGS)
-netapp_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(LIBNETAPP_LDFLAGS)
-netapp_la_LIBADD = libignorelist.la $(LIBNETAPP_LIBS)
-endif
-
 if BUILD_PLUGIN_NETLINK
 pkglib_LTLIBRARIES += netlink.la
 netlink_la_SOURCES = src/netlink.c

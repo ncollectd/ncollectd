@@ -3707,58 +3707,6 @@ AC_SUBST([BUILD_WITH_LIBMNL_LIBS])
 AM_CONDITIONAL([HAVE_LIBMNL], [test "x$with_libmnl" = "xyes"])
 # }}}
 
-# --with-libnetapp {{{
-AC_ARG_VAR([LIBNETAPP_CPPFLAGS], [C preprocessor flags required to build with libnetapp])
-AC_ARG_VAR([LIBNETAPP_LDFLAGS],  [Linker flags required to build with libnetapp])
-AC_ARG_VAR([LIBNETAPP_LIBS],     [Other libraries required to link against libnetapp])
-AC_ARG_WITH([libnetapp],
-  [AS_HELP_STRING([--with-libnetapp@<:@=PREFIX@:>@], [Path to libnetapp.])],
-  [
-   if test -d "$withval"; then
-     LIBNETAPP_CPPFLAGS="$LIBNETAPP_CPPFLAGS -I$withval/include"
-     LIBNETAPP_LDFLAGS="$LIBNETAPP_LDFLAGS -L$withval/lib"
-     with_libnetapp="yes"
-   else
-     with_libnetapp="$withval"
-   fi
-  ],
-  [with_libnetapp="yes"]
-)
-
-SAVE_CPPFLAGS="$CPPFLAGS"
-SAVE_LDFLAGS="$LDFLAGS"
-CPPFLAGS="$CPPFLAGS $LIBNETAPP_CPPFLAGS"
-LDFLAGS="$LDFLAGS $LIBNETAPP_LDFLAGS"
-
-if test "x$with_libnetapp" = "xyes"; then
-  AC_CHECK_HEADERS([netapp_api.h],
-    [with_libnetapp="yes"],
-    [with_libnetapp="no (netapp_api.h not found)"]
-  )
-fi
-
-if test "x$with_libnetapp" = "xyes"; then
-  if test "x$LIBNETAPP_LIBS" = "x"; then
-    LIBNETAPP_LIBS="$PTHREAD_LIBS -lxml -ladt -lssl -lm -lcrypto -lz"
-  fi
-
-  AC_CHECK_LIB([netapp], [na_server_invoke_elem],
-    [with_libnetapp="yes"],
-    [with_libnetapp="no (symbol na_server_invoke_elem not found)"],
-    [$LIBNETAPP_LIBS]
-  )
-
-  LIBNETAPP_LIBS="-lnetapp $LIBNETAPP_LIBS"
-fi
-
-CPPFLAGS="$SAVE_CPPFLAGS"
-LDFLAGS="$SAVE_LDFLAGS"
-
-AC_SUBST([LIBNETAPP_CPPFLAGS])
-AC_SUBST([LIBNETAPP_LDFLAGS])
-AC_SUBST([LIBNETAPP_LIBS])
-# }}}
-
 # --with-libnetsnmp {{{
 AC_ARG_WITH([libnetsnmp],
   [AS_HELP_STRING([--with-libnetsnmp@<:@=PREFIX@:>@], [Path to libnetsnmp.])],
@@ -6979,7 +6927,6 @@ AC_PLUGIN([modbus],              [$with_libmodbus],           [Modbus plugin])
 AC_PLUGIN([mqtt],                [$with_libmosquitto],        [MQTT output plugin])
 AC_PLUGIN([multimeter],          [$plugin_multimeter],        [Read multimeter values])
 AC_PLUGIN([mysql],               [$with_libmysql],            [MySQL statistics])
-AC_PLUGIN([netapp],              [$with_libnetapp],           [NetApp plugin])
 AC_PLUGIN([netlink],             [$with_libmnl],              [Enhanced Linux network statistics])
 AC_PLUGIN([netstat_udp],         [$plugin_netstat_udp],       [UDP network statistics])
 AC_PLUGIN([network],             [yes],                       [Network communication plugin])
@@ -7291,7 +7238,6 @@ AC_MSG_RESULT([    libmodbus . . . . . . $with_libmodbus])
 AC_MSG_RESULT([    libmongoc . . . . . . $with_libmongoc])
 AC_MSG_RESULT([    libmosquitto  . . . . $with_libmosquitto])
 AC_MSG_RESULT([    libmysql  . . . . . . $with_libmysql])
-AC_MSG_RESULT([    libnetapp . . . . . . $with_libnetapp])
 AC_MSG_RESULT([    libnetsnmp  . . . . . $with_libnetsnmp])
 AC_MSG_RESULT([    libnetsnmpagent . . . $with_libnetsnmpagent])
 AC_MSG_RESULT([    libnotify . . . . . . $with_libnotify])
@@ -7421,7 +7367,6 @@ AC_MSG_RESULT([    modbus  . . . . . . . $enable_modbus])
 AC_MSG_RESULT([    mqtt  . . . . . . . . $enable_mqtt])
 AC_MSG_RESULT([    multimeter  . . . . . $enable_multimeter])
 AC_MSG_RESULT([    mysql . . . . . . . . $enable_mysql])
-AC_MSG_RESULT([    netapp  . . . . . . . $enable_netapp])
 AC_MSG_RESULT([    netlink . . . . . . . $enable_netlink])
 AC_MSG_RESULT([    netstat_udp . . . . . $enable_netstat_udp])
 AC_MSG_RESULT([    network . . . . . . . $enable_network])
