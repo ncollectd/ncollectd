@@ -1236,7 +1236,7 @@ endif # BUILD_PLUGIN_INTERFACE
 
 if BUILD_PLUGIN_IPC
 pkglib_LTLIBRARIES += ipc.la
-ipc_la_SOURCES = src/ipc.c
+ipc_la_SOURCES = src/plugins/ipc/ipc.c
 ipc_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
