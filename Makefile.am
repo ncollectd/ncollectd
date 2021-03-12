@@ -61,7 +61,7 @@ EXTRA_DIST = \
 	src/collectd-python.pod \
 	src/collectd-snmp.pod \
 	src/collectd-tg.pod \
-	src/collectd-threshold.pod \
+	src/plugins/threshold/ncollectd-threshold.pod \
 	src/collectd-unixsock.pod \
 	src/collectd.conf.pod \
 	src/collectd.pod \
@@ -91,7 +91,7 @@ dist_man_MANS = \
 	src/collectd-python.5 \
 	src/collectd-snmp.5 \
 	src/collectd-tg.1 \
-	src/collectd-threshold.5 \
+	src/plugins/threshold/ncollectd-threshold.5 \
 	src/collectd-unixsock.5 \
 	src/types.db.5
 
@@ -443,7 +443,12 @@ libmetric_la_SOURCES = \
 		       src/daemon/distribution.c \
 		       src/daemon/distribution.h \
 		       src/daemon/metric.c \
-		       src/daemon/metric.h
+               src/daemon/metric.h \
+               src/daemon/notification.c \
+               src/daemon/notification.h \
+               src/daemon/label_set.c \
+               src/daemon/label_set.h
+
 libmetric_la_LIBADD = libmetadata.la $(COMMON_LIBS) -lm
 
 libplugin_mock_la_SOURCES = \
@@ -797,7 +802,7 @@ endif
 
 if BUILD_PLUGIN_BUDDYINFO
 pkglib_LTLIBRARIES += buddyinfo.la
-buddyinfo_la_SOURCES = src/plugins/buddyinfo.c
+buddyinfo_la_SOURCES = src/plugins/buddyinfo/buddyinfo.c
 buddyinfo_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 buddyinfo_la_LIBADD = libignorelist.la
 endif
@@ -1832,7 +1837,7 @@ endif
 
 if BUILD_PLUGIN_PROTOCOLS
 pkglib_LTLIBRARIES += protocols.la
-protocols_la_SOURCES = src/plugins/protocols.c
+protocols_la_SOURCES = src/plugins/protocols/protocols.c
 protocols_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 protocols_la_LIBADD = libignorelist.la
 endif
@@ -1985,7 +1990,7 @@ endif
 
 if BUILD_PLUGIN_SWAP
 pkglib_LTLIBRARIES += swap.la
-swap_la_SOURCES = src/swap.c
+swap_la_SOURCES = src/plugins/swap/swap.c
 swap_la_CFLAGS = $(AM_CFLAGS)
 swap_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 swap_la_LIBADD =
@@ -2125,7 +2130,7 @@ endif
 
 if BUILD_PLUGIN_THRESHOLD
 pkglib_LTLIBRARIES += threshold.la
-threshold_la_SOURCES = src/threshold.c
+threshold_la_SOURCES = src/plugins/threshold/threshold.c
 threshold_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 

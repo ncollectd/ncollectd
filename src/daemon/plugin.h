@@ -33,6 +33,7 @@
 
 #include "configfile.h"
 #include "metric.h"
+#include "notification.h"
 #include "utils/metadata/meta_data.h"
 #include "utils_time.h"
 
@@ -65,12 +66,6 @@
 #ifndef LOG_DEBUG
 #define LOG_DEBUG 7
 #endif
-
-#define NOTIF_MAX_MSG_LEN 256
-
-#define NOTIF_FAILURE 1
-#define NOTIF_WARNING 2
-#define NOTIF_OKAY 4
 
 #define plugin_interval (plugin_get_ctx().interval)
 
@@ -117,39 +112,6 @@ struct data_set_s {
   data_source_t *ds;
 };
 typedef struct data_set_s data_set_t;
-
-enum notification_meta_type_e {
-  NM_TYPE_STRING,
-  NM_TYPE_SIGNED_INT,
-  NM_TYPE_UNSIGNED_INT,
-  NM_TYPE_DOUBLE,
-  NM_TYPE_BOOLEAN
-};
-
-typedef struct notification_meta_s {
-  char name[DATA_MAX_NAME_LEN];
-  enum notification_meta_type_e type;
-  union {
-    const char *nm_string;
-    int64_t nm_signed_int;
-    uint64_t nm_unsigned_int;
-    double nm_double;
-    bool nm_boolean;
-  } nm_value;
-  struct notification_meta_s *next;
-} notification_meta_t;
-
-typedef struct notification_s {
-  int severity;
-  cdtime_t time;
-  char message[NOTIF_MAX_MSG_LEN];
-  char host[DATA_MAX_NAME_LEN];
-  char plugin[DATA_MAX_NAME_LEN];
-  char plugin_instance[DATA_MAX_NAME_LEN];
-  char type[DATA_MAX_NAME_LEN];
-  char type_instance[DATA_MAX_NAME_LEN];
-  notification_meta_t *meta;
-} notification_t;
 
 struct user_data_s {
   void *data;
@@ -429,22 +391,6 @@ void daemon_log(int level, const char *format, ...)
 #define P_INFO(...) daemon_log(LOG_INFO, __VA_ARGS__)
 
 const data_set_t *plugin_get_ds(const char *name);
-
-int plugin_notification_meta_add_string(notification_t *n, const char *name,
-                                        const char *value);
-int plugin_notification_meta_add_signed_int(notification_t *n, const char *name,
-                                            int64_t value);
-int plugin_notification_meta_add_unsigned_int(notification_t *n,
-                                              const char *name, uint64_t value);
-int plugin_notification_meta_add_double(notification_t *n, const char *name,
-                                        double value);
-int plugin_notification_meta_add_boolean(notification_t *n, const char *name,
-                                         bool value);
-
-int plugin_notification_meta_copy(notification_t *dst,
-                                  const notification_t *src);
-
-int plugin_notification_meta_free(notification_meta_t *n);
 
 /*
  * Plugin context management.

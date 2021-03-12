@@ -140,7 +140,8 @@ int cf_util_get_cdtime(const oconfig_item_t *ci, cdtime_t *ret_value);
 
 int cf_util_get_label(const oconfig_item_t *ci, label_set_t *labels);
 
-int cf_util_get_metric_type(const oconfig_item_t *ci,
-                            metric_type_t *ret_metric);
+int cf_util_get_metric_type(const oconfig_item_t *ci, metric_type_t *ret_metric);
+
+int cf_util_get_severity(const oconfig_item_t *ci, int *ret_severity);
 
 #endif /* defined(CONFIGFILE_H) */

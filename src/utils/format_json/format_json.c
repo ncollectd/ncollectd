@@ -62,48 +62,6 @@ static int json_add_string(yajl_gen g, char const *str) /* {{{ */
     }                                                                          \
   } while (0)
 
-static int format_json_meta(yajl_gen g, notification_meta_t *meta) /* {{{ */
-{
-  if (meta == NULL)
-    return 0;
-
-  CHECK(json_add_string(g, meta->name));
-  switch (meta->type) {
-  case NM_TYPE_STRING:
-    CHECK(json_add_string(g, meta->nm_value.nm_string));
-    break;
-  case NM_TYPE_SIGNED_INT: {
-    char buffer[64] = "";
-    snprintf(buffer, sizeof(buffer), "%" PRIi64, meta->nm_value.nm_signed_int);
-    CHECK(json_add_string(g, buffer));
-    break;
-  }
-  case NM_TYPE_UNSIGNED_INT: {
-    char buffer[64] = "";
-    snprintf(buffer, sizeof(buffer), "%" PRIu64,
-             meta->nm_value.nm_unsigned_int);
-    CHECK(json_add_string(g, buffer));
-    break;
-  }
-  case NM_TYPE_DOUBLE: {
-    char buffer[64] = "";
-    snprintf(buffer, sizeof(buffer), JSON_GAUGE_FORMAT,
-             meta->nm_value.nm_double);
-    CHECK(json_add_string(g, buffer));
-    break;
-  }
-  case NM_TYPE_BOOLEAN:
-    CHECK(json_add_string(g, meta->nm_value.nm_boolean ? "true" : "false"));
-    break;
-  default:
-    ERROR("format_json_meta: unknown meta data type %d (name \"%s\")",
-          meta->type, meta->name);
-    CHECK(yajl_gen_null(g));
-  }
-
-  return format_json_meta(g, meta->next);
-} /* }}} int format_json_meta */
-
 static int format_time(yajl_gen g, cdtime_t t) /* {{{ */
 {
   char buffer[RFC3339NANO_SIZE] = "";
@@ -344,31 +302,18 @@ static int format_alert(yajl_gen g, notification_t const *n) /* {{{ */
   CHECK(yajl_gen_map_open(g)); /* BEGIN labels */
 
   CHECK(json_add_string(g, "alertname"));
-  strbuf_t buf = STRBUF_CREATE;
-  strbuf_print(&buf, "collectd_");
-  if (strcmp(n->plugin, n->type) != 0) {
-    strbuf_print(&buf, n->plugin);
-    strbuf_print(&buf, "_");
-  }
-  strbuf_print(&buf, n->type);
-  CHECK(json_add_string(g, buf.ptr));
-  STRBUF_DESTROY(buf);
+  CHECK(json_add_string(g, n->name));
 
-  CHECK(json_add_string(g, "instance"));
-  CHECK(json_add_string(g, n->host));
-
-  /* mangling of plugin instance and type instance into labels is copied from
-   * the Prometheus collectd exporter. */
-  if (strlen(n->plugin_instance) > 0) {
-    CHECK(json_add_string(g, n->plugin));
-    CHECK(json_add_string(g, n->plugin_instance));
-  }
-  if (strlen(n->type_instance) > 0) {
-    if (strlen(n->plugin_instance) > 0)
-      CHECK(json_add_string(g, "type"));
-    else
-      CHECK(json_add_string(g, n->plugin));
-    CHECK(json_add_string(g, n->type_instance));
+  for (size_t i = 0; i < n->label.num; i++) {
+    label_pair_t *l = n->label.ptr + i;
+    if (strcmp(l->name, "alertname") == 0)
+      continue;
+    if (strcmp(l->name, "service") == 0)
+      continue;
+    if (strcmp(l->name, "severity") == 0)
+      continue;
+    CHECK(json_add_string(g, l->name));
+    CHECK(json_add_string(g, l->value));
   }
 
   CHECK(json_add_string(g, "severity"));
@@ -390,11 +335,10 @@ static int format_alert(yajl_gen g, notification_t const *n) /* {{{ */
   CHECK(json_add_string(g, "annotations"));
   CHECK(yajl_gen_map_open(g)); /* BEGIN annotations */
 
-  CHECK(json_add_string(g, "summary"));
-  CHECK(json_add_string(g, n->message));
-
-  if (format_json_meta(g, n->meta) != 0) {
-    return -1;
+  for (size_t i = 0; i < n->annotation.num; i++) {
+    label_pair_t *l = n->annotation.ptr + i;
+    CHECK(json_add_string(g, l->name));
+    CHECK(json_add_string(g, l->value));
   }
 
   CHECK(yajl_gen_map_close(g)); /* END annotations */
@@ -406,7 +350,6 @@ static int format_alert(yajl_gen g, notification_t const *n) /* {{{ */
 
   CHECK(yajl_gen_map_close(g));   /* END alert */
   CHECK(yajl_gen_array_close(g)); /* END array */
-
   return 0;
 } /* }}} format_alert */
 

@@ -28,9 +28,9 @@
 
 #include "plugin.h"
 #include "utils/common/common.h"
-#include "utils/db_query/db_query.h"
 #include "utils/strbuf/strbuf.h"
 
+#include "odbc_query.h"
 /*
  * Data types
  */

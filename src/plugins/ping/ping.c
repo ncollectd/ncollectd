@@ -609,12 +609,6 @@ static int ping_read(void)
   {
     uint32_t pkg_sent;
     uint32_t pkg_recv;
-    double latency_total;
-    double latency_squared;
-
-    double latency_average;
-    double latency_stddev;
-
     double droprate;
 
     /* Locking here works, because the structure of the linked list is only

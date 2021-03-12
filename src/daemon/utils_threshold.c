@@ -36,7 +36,6 @@
  * Exported symbols
  * {{{ */
 c_avl_tree_t *threshold_tree = NULL;
-pthread_mutex_t threshold_lock = PTHREAD_MUTEX_INITIALIZER;
 /* }}} */
 
 /*
@@ -46,66 +45,12 @@ pthread_mutex_t threshold_lock = PTHREAD_MUTEX_INITIALIZER;
  * matching a metric_t, see "threshold_search" below. Returns NULL if the
  * specified threshold doesn't exist.
  */
-threshold_t *threshold_get(const char *hostname, const char *plugin,
-                           const char *type,
-                           const char *data_source) { /* {{{ */
-  char name[5 * DATA_MAX_NAME_LEN];
+threshold_t *threshold_get(const char *metric_name) { /* {{{ */
   threshold_t *th = NULL;
 
-  (void)snprintf(name, sizeof(name), "%s/%s/%s/%s",
-                 (hostname == NULL) ? "" : hostname,
-                 (plugin == NULL) ? "" : plugin, (type == NULL) ? "" : type,
-                 (data_source == NULL) ? "" : data_source);
-  name[sizeof(name) - 1] = '\0';
-
-  if (c_avl_get(threshold_tree, name, (void *)&th) == 0)
+  if (c_avl_get(threshold_tree, metric_name, (void *)&th) == 0)
     return th;
   else
     return NULL;
 } /* }}} threshold_t *threshold_get */
 
-/*
- * threshold_t *threshold_search
- *
- * Searches for a threshold configuration using all the possible variations of
- * "Host", "Plugin", "Type", "Data Source" values. Returns NULL if no threshold
- * could be found.
- *
- * TODO(octo): threshold_search only searches by host name right now; should
- * also search by metric name and possibly other labels.
- */
-static threshold_t *threshold_search(metric_t const *m) { /* {{{ */
-  if (m == NULL) {
-    return NULL;
-  }
-
-  char const *instance = metric_label_get(m, "instance");
-  if (instance == NULL) {
-    return NULL;
-  }
-
-  return threshold_get(instance, NULL, NULL, NULL);
-} /* }}} threshold_t *threshold_search */
-
-int ut_search_threshold(metric_t const *m, /* {{{ */
-                        threshold_t *ret_threshold) {
-  threshold_t *t;
-
-  if (m == NULL)
-    return EINVAL;
-
-  /* Is this lock really necessary? */
-  pthread_mutex_lock(&threshold_lock);
-  t = threshold_search(m);
-  if (t == NULL) {
-    pthread_mutex_unlock(&threshold_lock);
-    return ENOENT;
-  }
-
-  memcpy(ret_threshold, t, sizeof(*ret_threshold));
-  pthread_mutex_unlock(&threshold_lock);
-
-  ret_threshold->next = NULL;
-
-  return 0;
-} /* }}} int ut_search_threshold */

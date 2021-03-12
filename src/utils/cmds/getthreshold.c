@@ -60,7 +60,7 @@ int handle_getthreshold(FILE *fh, char *buffer) {
     print_to_socket(fh, "-1 Unexpected command: `%s'.\n", command);
     return -1;
   }
-
+#if 0 //FIXME
   char *identifier = NULL;
   status = parse_string(&buffer, &identifier);
   if (status != 0) {
@@ -140,6 +140,6 @@ int handle_getthreshold(FILE *fh, char *buffer) {
     print_to_socket(fh, "Hysteresis: %g\n", threshold.hysteresis);
   if (threshold.hits > 1)
     print_to_socket(fh, "Hits: %i\n", threshold.hits);
-
+#endif
   return 0;
 } /* int handle_getthreshold */

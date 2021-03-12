@@ -29,16 +29,12 @@
 
 #define UT_FLAG_INVERT 0x01
 #define UT_FLAG_PERSIST 0x02
-#define UT_FLAG_PERCENTAGE 0x04
-#define UT_FLAG_INTERESTING 0x08
-#define UT_FLAG_PERSIST_OK 0x10
+#define UT_FLAG_INTERESTING 0x04
+#define UT_FLAG_PERSIST_OK 0x08
+
 typedef struct threshold_s {
-  char host[DATA_MAX_NAME_LEN];
-  char plugin[DATA_MAX_NAME_LEN];
-  char plugin_instance[DATA_MAX_NAME_LEN];
-  char type[DATA_MAX_NAME_LEN];
-  char type_instance[DATA_MAX_NAME_LEN];
-  char data_source[DATA_MAX_NAME_LEN];
+  char *name;
+  label_set_t labels;
   gauge_t warning_min;
   gauge_t warning_max;
   gauge_t failure_min;
@@ -50,14 +46,7 @@ typedef struct threshold_s {
 } threshold_t;
 
 extern c_avl_tree_t *threshold_tree;
-extern pthread_mutex_t threshold_lock;
 
-threshold_t *threshold_get(const char *hostname, const char *plugin,
-                           const char *type, const char *data_source);
-
-/* Use ut_search_threshold instead of threshold_search. */
-/* threshold_t *threshold_search(metric_t const *m); */
-
-int ut_search_threshold(metric_t const *m, threshold_t *ret_threshold);
+threshold_t *threshold_get(const char *metric_name);
 
 #endif /* UTILS_THRESHOLD_H */

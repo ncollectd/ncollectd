@@ -32,6 +32,7 @@
 #include "utils/metadata/meta_data.h"
 #include "utils/strbuf/strbuf.h"
 #include "utils_time.h"
+#include "label_set.h"
 
 #define VALUE_TYPE_GAUGE 1
 #define VALUE_TYPE_DERIVE 2
@@ -76,21 +77,6 @@ void typed_value_destroy(typed_value_t val);
 
 /* value_marshal_text prints a text representation of v to buf. */
 int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type);
-
-/*
- * Labels
- */
-/* label_pair_t represents a label, i.e. a key/value pair. */
-typedef struct {
-  char *name;
-  char *value;
-} label_pair_t;
-
-/* label_set_t is a sorted set of labels. */
-typedef struct {
-  label_pair_t *ptr;
-  size_t num;
-} label_set_t;
 
 /*
  * Metric
@@ -195,19 +181,5 @@ metric_family_t *metric_family_clone(metric_family_t const *fam);
  *clone into the metric_list_t dest. If the value is not a distribution_t, it
  *simply sets the value of the element in the destination list to the value of
  *the element in the source list. */
-
-/*
- * Label set
- */
-
-label_pair_t *label_set_read(label_set_t labels, char const *name);
-
-int label_set_create(label_set_t *labels, char const *name, char const *value);
-
-int label_set_delete(label_set_t *labels, label_pair_t *elem);
-
-void label_set_reset(label_set_t *labels);
-
-int label_set_clone(label_set_t *dest, label_set_t src);
 
 #endif

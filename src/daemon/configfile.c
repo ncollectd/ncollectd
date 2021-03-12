@@ -1297,4 +1297,29 @@ int cf_util_get_metric_type(const oconfig_item_t *ci,
   }
 
   return 0;
-} /* }}} int cf_util_get_metric_type */
+}
+
+int cf_util_get_severity(const oconfig_item_t *ci, int *ret_severity)
+{
+  if ((ci == NULL) || (ret_severity == NULL))
+    return EINVAL;
+
+  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
+    P_ERROR("The `%s' option requires exactly one string argument.", ci->key);
+    return -1;
+  }
+
+  if (strcasecmp("OK", ci->values[0].value.string) == 0)
+    *ret_severity = NOTIF_OKAY;
+  else if (strcasecmp("WARNING", ci->values[0].value.string) == 0)
+    *ret_severity = NOTIF_WARNING;
+  else if (strcasecmp("FAILURE", ci->values[0].value.string) == 0)
+    *ret_severity = NOTIF_FAILURE;
+  else {
+    P_ERROR("The `%s' option must be: `ok', `warning' or `failure' ",
+            ci->key);
+    return -1;
+  }
+
+  return 0;
+}

@@ -821,7 +821,23 @@ int uc_get_names(char ***ret_names, cdtime_t **ret_times, size_t *ret_number) {
   return 0;
 } /* int uc_get_names */
 
-int uc_get_state(metric_t const *m) {
+int uc_get_state_by_name(const char *name)
+{
+  pthread_mutex_lock(&cache_lock);
+
+  cache_entry_t *ce = NULL;
+  int ret = STATE_ERROR;
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+    ret = ce->state;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+  return ret;
+}
+
+int uc_get_state(metric_t const *m)
+{
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -830,22 +846,30 @@ int uc_get_state(metric_t const *m) {
     return status;
   }
 
-  pthread_mutex_lock(&cache_lock);
-
-  cache_entry_t *ce = NULL;
-  int ret = STATE_ERROR;
-  if (c_avl_get(cache_tree, buf.ptr, (void *)&ce) == 0) {
-    assert(ce != NULL);
-    ret = ce->state;
-  }
-
-  pthread_mutex_unlock(&cache_lock);
+  int ret = uc_get_state_by_name(buf.ptr);
 
   STRBUF_DESTROY(buf);
   return ret;
-} /* int uc_get_state */
+}
 
-int uc_set_state(metric_t const *m, int state) {
+int uc_set_state_by_name(const char *name, int state)
+{
+  pthread_mutex_lock(&cache_lock);
+
+  cache_entry_t *ce = NULL;
+  int ret = -1;
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+    ret = ce->state;
+    ce->state = state;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+  return ret;
+}
+
+int uc_set_state(metric_t const *m, int state)
+{
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -854,24 +878,15 @@ int uc_set_state(metric_t const *m, int state) {
     return status;
   }
 
-  pthread_mutex_lock(&cache_lock);
-
-  cache_entry_t *ce = NULL;
-  int ret = -1;
-  if (c_avl_get(cache_tree, buf.ptr, (void *)&ce) == 0) {
-    assert(ce != NULL);
-    ret = ce->state;
-    ce->state = state;
-  }
-
-  pthread_mutex_unlock(&cache_lock);
+  int ret = uc_set_state_by_name(buf.ptr, state);
 
   STRBUF_DESTROY(buf);
   return ret;
-} /* int uc_set_state */
+}
 
 int uc_get_history_by_name(const char *name, gauge_t *ret_history,
-                           size_t num_steps) {
+                           size_t num_steps)
+{
   cache_entry_t *ce = NULL;
   int status = 0;
 
@@ -919,9 +934,10 @@ int uc_get_history_by_name(const char *name, gauge_t *ret_history,
   pthread_mutex_unlock(&cache_lock);
 
   return 0;
-} /* int uc_get_history_by_name */
+}
 
-int uc_get_history(metric_t const *m, gauge_t *ret_history, size_t num_steps) {
+int uc_get_history(metric_t const *m, gauge_t *ret_history, size_t num_steps)
+{
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -933,9 +949,25 @@ int uc_get_history(metric_t const *m, gauge_t *ret_history, size_t num_steps) {
   int ret = uc_get_history_by_name(buf.ptr, ret_history, num_steps);
   STRBUF_DESTROY(buf);
   return ret;
-} /* int uc_get_history */
+}
 
-int uc_get_hits(metric_t const *m) {
+int uc_get_hits_by_name(const char *name)
+{
+  pthread_mutex_lock(&cache_lock);
+
+  cache_entry_t *ce = NULL;
+  int ret = STATE_ERROR;
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+    ret = ce->hits;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+  return ret;
+}
+
+int uc_get_hits(metric_t const *m)
+{
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -944,22 +976,30 @@ int uc_get_hits(metric_t const *m) {
     return status;
   }
 
-  pthread_mutex_lock(&cache_lock);
-
-  cache_entry_t *ce = NULL;
-  int ret = STATE_ERROR;
-  if (c_avl_get(cache_tree, buf.ptr, (void *)&ce) == 0) {
-    assert(ce != NULL);
-    ret = ce->hits;
-  }
-
-  pthread_mutex_unlock(&cache_lock);
+  int ret = uc_get_hits_by_name(buf.ptr);
 
   STRBUF_DESTROY(buf);
   return ret;
-} /* int uc_get_hits */
+}
 
-int uc_set_hits(metric_t const *m, int hits) {
+int uc_set_hits_by_name(const char *name, int hits)
+{
+  pthread_mutex_lock(&cache_lock);
+
+  cache_entry_t *ce = NULL;
+  int ret = -1;
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
+    assert(ce != NULL);
+    ret = ce->hits;
+    ce->hits = hits;
+  }
+
+  pthread_mutex_unlock(&cache_lock);
+  return ret;
+}
+
+int uc_set_hits(metric_t const *m, int hits)
+{
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -968,23 +1008,30 @@ int uc_set_hits(metric_t const *m, int hits) {
     return status;
   }
 
+  int ret = uc_set_hits_by_name(buf.ptr, hits);
+
+  STRBUF_DESTROY(buf);
+  return ret;
+}
+
+int uc_inc_hits_by_name(const char *name, int step)
+{
   pthread_mutex_lock(&cache_lock);
 
   cache_entry_t *ce = NULL;
   int ret = -1;
-  if (c_avl_get(cache_tree, buf.ptr, (void *)&ce) == 0) {
+  if (c_avl_get(cache_tree, name, (void *)&ce) == 0) {
     assert(ce != NULL);
     ret = ce->hits;
-    ce->hits = hits;
+    ce->hits += step;
   }
 
   pthread_mutex_unlock(&cache_lock);
-
-  STRBUF_DESTROY(buf);
   return ret;
-} /* int uc_set_hits */
+}
 
-int uc_inc_hits(metric_t const *m, int step) {
+int uc_inc_hits(metric_t const *m, int step)
+{
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -993,21 +1040,11 @@ int uc_inc_hits(metric_t const *m, int step) {
     return status;
   }
 
-  pthread_mutex_lock(&cache_lock);
-
-  cache_entry_t *ce = NULL;
-  int ret = -1;
-  if (c_avl_get(cache_tree, buf.ptr, (void *)&ce) == 0) {
-    assert(ce != NULL);
-    ret = ce->hits;
-    ce->hits += step;
-  }
-
-  pthread_mutex_unlock(&cache_lock);
+  int ret = uc_inc_hits_by_name(buf.ptr, step);
 
   STRBUF_DESTROY(buf);
   return ret;
-} /* int uc_inc_hits */
+}
 
 int uc_get_last_time(char *name, cdtime_t *ret_value) {
   cache_entry_t *ce = NULL;

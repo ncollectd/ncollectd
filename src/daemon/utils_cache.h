@@ -65,11 +65,16 @@ int uc_get_start_value(metric_t const *m, value_t *ret_start_value,
 size_t uc_get_size(void);
 int uc_get_names(char ***ret_names, cdtime_t **ret_times, size_t *ret_number);
 
+int uc_get_state_by_name(const char *name);
 int uc_get_state(metric_t const *m);
+int uc_set_state_by_name(const char *name, int state);
 int uc_set_state(metric_t const *m, int state);
 
+int uc_get_hits_by_name(const char *name);
 int uc_get_hits(metric_t const *m);
+int uc_set_hits_by_name(const char *name, int hits);
 int uc_set_hits(metric_t const *m, int hits);
+int uc_inc_hits_by_name(const char *name, int step);
 int uc_inc_hits(metric_t const *m, int step);
 
 int uc_set_callbacks_mask(const char *name, unsigned long callbacks_mask);
