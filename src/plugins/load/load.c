@@ -55,71 +55,49 @@
 #include <sys/protosw.h>
 #endif /* HAVE_PERFSTAT */
 
-static bool report_relative_load;
+enum {
+  FAM_LOAD_1MIN = 0,
+  FAM_LOAD_5MIN,
+  FAM_LOAD_15MIN,
+  FAM_LOAD_MAX
+};
 
-static const char *config_keys[] = {"ReportRelative"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
-
-static int load_config(const char *key, const char *value) {
-  if (strcasecmp(key, "ReportRelative") == 0) {
-#ifdef _SC_NPROCESSORS_ONLN
-    report_relative_load = IS_TRUE(value);
-#else
-    WARNING("load plugin: The \"ReportRelative\" configuration "
-            "is not available, because I can't determine the "
-            "number of CPUS on this system. Sorry.");
-#endif
-    return 0;
-  }
-  return -1;
-}
-
-static void load_submit_gauge(char *fam_name, gauge_t value) {
-  metric_family_t fam = {
-      .name = fam_name,
+static void load_submit(gauge_t snum, gauge_t mnum, gauge_t lnum)
+{
+  metric_family_t fams[FAM_LOAD_MAX] = {
+    [FAM_LOAD_1MIN] = {
+      .name = "host_load1",
       .type = METRIC_TYPE_GAUGE,
+      .help = "1m load average",
+    },
+    [FAM_LOAD_5MIN] = {
+      .name = "host_load5",
+      .type = METRIC_TYPE_GAUGE,
+      .help = "5m load average",
+    },
+    [FAM_LOAD_15MIN] = {
+      .name = "host_load15",
+      .type = METRIC_TYPE_GAUGE,
+      .help = "15m load average",
+    },
   };
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.gauge = value,
-                                    });
+  metric_family_metric_append(&fams[FAM_LOAD_1MIN], (metric_t){.value.gauge = snum,});
+  metric_family_metric_append(&fams[FAM_LOAD_5MIN], (metric_t){.value.gauge = mnum,});
+  metric_family_metric_append(&fams[FAM_LOAD_15MIN], (metric_t){.value.gauge = lnum,});
 
-  int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("load plugin: plugin_dispatch_metric_family failed: %s",
+  for (size_t i=0; i < FAM_LOAD_MAX; i++) {
+    int status = plugin_dispatch_metric_family(&fams[i]);
+    if (status != 0) {
+      ERROR("load plugin: plugin_dispatch_metric_family failed: %s",
           STRERROR(status));
-  }
-
-  metric_family_metric_reset(&fam);
-}
-
-static void load_submit(gauge_t snum, gauge_t mnum, gauge_t lnum) {
-  int cores = 0;
-
-#ifdef _SC_NPROCESSORS_ONLN
-  if (report_relative_load) {
-    if ((cores = sysconf(_SC_NPROCESSORS_ONLN)) < 1) {
-      WARNING("load: sysconf failed : %s", STRERRNO);
     }
-  }
-#endif
-
-  if (cores > 0) {
-    snum /= cores;
-    mnum /= cores;
-    lnum /= cores;
-
-    load_submit_gauge("load1_relative", snum);
-    load_submit_gauge("load5_relative", mnum);
-    load_submit_gauge("load15_relative", lnum);
-  } else {
-    load_submit_gauge("load1", snum);
-    load_submit_gauge("load5", mnum);
-    load_submit_gauge("load15", lnum);
+    metric_family_metric_reset(&fams[i]);
   }
 }
 
-static int load_read(void) {
+static int load_read(void)
+{
 #if defined(HAVE_GETLOADAVG)
   double load[3];
 
@@ -163,8 +141,8 @@ static int load_read(void) {
   lnum = atof(fields[2]);
 
   load_submit(snum, mnum, lnum);
-  /* #endif KERNEL_LINUX */
 
+/* #endif KERNEL_LINUX */
 #elif HAVE_LIBSTATGRAB
   gauge_t snum, mnum, lnum;
   sg_load_stats *ls;
@@ -175,9 +153,10 @@ static int load_read(void) {
   snum = ls->min1;
   mnum = ls->min5;
   lnum = ls->min15;
-  load_submit(snum, mnum, lnum);
-  /* #endif HAVE_LIBSTATGRAB */
 
+  load_submit(snum, mnum, lnum);
+
+/* #endif HAVE_LIBSTATGRAB */
 #elif HAVE_PERFSTAT
   gauge_t snum, mnum, lnum;
   perfstat_cpu_total_t cputotal;
@@ -191,9 +170,10 @@ static int load_read(void) {
   snum = (float)cputotal.loadavg[0] / (float)(1 << SBITS);
   mnum = (float)cputotal.loadavg[1] / (float)(1 << SBITS);
   lnum = (float)cputotal.loadavg[2] / (float)(1 << SBITS);
-  load_submit(snum, mnum, lnum);
-  /* #endif HAVE_PERFSTAT */
 
+  load_submit(snum, mnum, lnum);
+
+/* #endif HAVE_PERFSTAT */
 #else
 #error "No applicable input method."
 #endif
@@ -201,7 +181,7 @@ static int load_read(void) {
   return 0;
 }
 
-void module_register(void) {
-  plugin_register_config("load", load_config, config_keys, config_keys_num);
+void module_register(void)
+{
   plugin_register_read("load", load_read);
-} /* void module_register */
+}
