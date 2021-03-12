@@ -845,7 +845,7 @@ endif
 
 if BUILD_PLUGIN_CHRONY
 pkglib_LTLIBRARIES += chrony.la
-chrony_la_SOURCES = src/chrony.c
+chrony_la_SOURCES = src/plugins/chrony/chrony.c
 chrony_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 chrony_la_LIBADD = -lm
 endif
@@ -1100,7 +1100,7 @@ endif
 
 if BUILD_PLUGIN_FILECOUNT
 pkglib_LTLIBRARIES += filecount.la
-filecount_la_SOURCES = src/filecount.c
+filecount_la_SOURCES = src/plugins/filecount/filecount.c
 filecount_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
