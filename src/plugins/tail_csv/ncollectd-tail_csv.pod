@@ -1,0 +1,135 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-tail_csv - Documentation of ncollectd's C<tail_csv plugin>
+
+=head2 Plugin C<tail_csv>
+
+The I<tail_csv plugin> reads files in the CSV format, e.g. the statistics file
+written by I<Snort>.
+
+B<Synopsis:>
+
+ <Plugin "tail_csv">
+   <Metric "snort-dropped">
+       Type "gauge"
+       Metric "dropped_precent"
+       ValueFrom 1
+   </Metric>
+   <File "/var/log/snort/snort.stats">
+       MetricPrefix "snort_"
+       Label "interface" "eth0"
+       Interval 600
+       Collect "snort-dropped"
+       FieldSeparator ","
+       #TimeFrom 0
+   </File>
+ </Plugin>
+
+The configuration consists of one or more B<Metric> blocks that define an index
+into the line of the CSV file and how this value is mapped to I<collectd's>
+internal representation. These are followed by one or more B<Instance> blocks
+which configure which file to read, in which interval and which metrics to
+extract.
+
+=over 4
+
+=item E<lt>B<Metric> I<Name>E<gt>
+
+The B<Metric> block configures a new metric to be extracted from the statistics
+file and how it is mapped on I<collectd's> data model. The string I<Name> is
+only used inside the B<Instance> blocks to refer to this block, so you can use
+one B<Metric> block for multiple CSV files.
+
+=over 4
+
+=item B<Type> I<gauge>|I<counter>|I<untyped>
+
+Configures which I<Type> to use when dispatching this metric. Must be
+I<gauge>, I<counter> or I<untyped>.  If not set is I<untyped>.
+There must be exactly one B<Type> option inside each B<Metric> block.
+
+=item B<Help> I<help>
+
+Set the B<help> text for the metric.
+
+=item B<Metric> I<metric>
+
+Set the metric name.
+
+=item B<MetricFrom> I<Index>
+
+Read the metric name from the field with the zero-based index I<Index> .
+
+There must be at least one B<Metric> or B<MetricFrom> option inside each B<Metric> block.
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Metric> block.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Result> block.
+
+=item B<LabelFrom> I<key> I<Index>
+
+Specifies the column number whose value will be used to create a label.
+
+=item B<ValueFrom> I<Index>
+
+Configure to read the value from the field with the zero-based index I<Index>.
+If the value is parsed as unsigned integer or double depends on the B<Type>
+ setting, see above.
+
+=back
+
+=item E<lt>B<File> I<Path>E<gt>
+
+Each B<File> block represents one CSV file to read. There must be at least one
+I<File> block but there can be multiple if you have multiple CSV files.
+
+=over 4
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the B<Metric> block.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<File> block.
+
+=item B<Collect> I<Metric>
+
+Specifies which I<Metric> to collect. This option must be specified at least
+once, and you can use this option multiple times to specify more than one
+metric to be extracted from this statistic file.
+
+=item B<Interval> I<Seconds>
+
+Configures the interval in which to read values from this instance / file.
+Defaults to the plugin's default interval.
+
+=item B<TimeFrom> I<Index>
+
+Rather than using the local time when dispatching a value, read the timestamp
+from the field with the zero-based index I<Index>. The value is interpreted as
+seconds since epoch. The value is parsed as a double and may be factional.
+
+=item B<FieldSeparator> I<Character>
+
+Specify the character to use as field separator while parsing the CSV.
+Defaults to ',' if not specified. The value can only be a single character.
+
+=back
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut

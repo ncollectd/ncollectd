@@ -2028,7 +2028,7 @@ endif
 if BUILD_PLUGIN_TAIL_CSV
 pkglib_LTLIBRARIES += tail_csv.la
 tail_csv_la_SOURCES = \
-	src/tail_csv.c \
+	src/plugins/tail_csv/tail_csv.c \
 	src/utils/tail/tail.c \
 	src/utils/tail/tail.h
 tail_csv_la_LDFLAGS = $(PLUGIN_LDFLAGS)
