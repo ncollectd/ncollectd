@@ -1495,12 +1495,6 @@ mqtt_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBMOSQUITTO_LDFLAGS)
 mqtt_la_LIBADD = $(BUILD_WITH_LIBMOSQUITTO_LIBS)
 endif
 
-if BUILD_PLUGIN_MULTIMETER
-pkglib_LTLIBRARIES += multimeter.la
-multimeter_la_SOURCES = src/multimeter.c
-multimeter_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-endif
-
 if BUILD_PLUGIN_MYSQL
 pkglib_LTLIBRARIES += mysql.la
 mysql_la_SOURCES = src/mysql.c

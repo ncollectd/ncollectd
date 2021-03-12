@@ -691,33 +691,6 @@ AC_CHECK_HEADERS([net/pfvar.h],
   ]]
 )
 
-# For the multimeter plugin
-AC_CHECK_HEADERS([termios.h],
-  [have_termios_h="yes"],
-  [have_termios_h="no"]
-)
-
-# For cpusleep plugin
-AC_CACHE_CHECK([whether clock_boottime and clock_monotonic are supported],
-  [c_cv_have_clock_boottime_monotonic],
-  [
-    AC_COMPILE_IFELSE(
-      [AC_LANG_PROGRAM(
-        [[#include <time.h>]],
-        [[
-          struct timespec b, m;
-          clock_gettime(CLOCK_BOOTTIME, &b );
-          clock_gettime(CLOCK_MONOTONIC, &m );
-        ]]
-      )
-      ],
-      [c_cv_have_clock_boottime_monotonic="yes"],
-      [c_cv_have_clock_boottime_monotonic="no"]
-    )
-  ]
-)
-
-
 #
 # Checks for typedefs, structures, and compiler characteristics.
 #
@@ -6445,7 +6418,6 @@ plugin_log_logstash="no"
 plugin_mcelog="no"
 plugin_mdevents="no"
 plugin_memory="no"
-plugin_multimeter="no"
 plugin_netstat_udp="no"
 plugin_nfs="no"
 plugin_numa="no"
@@ -6759,9 +6731,6 @@ if test "x$have_host_statistics" = "xyes"; then
 fi
 
 if test "x$have_termios_h" = "xyes"; then
-  if test "x$ac_system" != "xAIX"; then
-    plugin_multimeter="yes"
-  fi
   plugin_ted="yes"
 fi
 
@@ -6925,7 +6894,6 @@ AC_PLUGIN([memory],              [$plugin_memory],            [Memory usage])
 AC_PLUGIN([mic],                 [$with_mic],                 [Intel Many Integrated Core stats])
 AC_PLUGIN([modbus],              [$with_libmodbus],           [Modbus plugin])
 AC_PLUGIN([mqtt],                [$with_libmosquitto],        [MQTT output plugin])
-AC_PLUGIN([multimeter],          [$plugin_multimeter],        [Read multimeter values])
 AC_PLUGIN([mysql],               [$with_libmysql],            [MySQL statistics])
 AC_PLUGIN([netlink],             [$with_libmnl],              [Enhanced Linux network statistics])
 AC_PLUGIN([netstat_udp],         [$plugin_netstat_udp],       [UDP network statistics])
@@ -7365,7 +7333,6 @@ AC_MSG_RESULT([    memory  . . . . . . . $enable_memory])
 AC_MSG_RESULT([    mic . . . . . . . . . $enable_mic])
 AC_MSG_RESULT([    modbus  . . . . . . . $enable_modbus])
 AC_MSG_RESULT([    mqtt  . . . . . . . . $enable_mqtt])
-AC_MSG_RESULT([    multimeter  . . . . . $enable_multimeter])
 AC_MSG_RESULT([    mysql . . . . . . . . $enable_mysql])
 AC_MSG_RESULT([    netlink . . . . . . . $enable_netlink])
 AC_MSG_RESULT([    netstat_udp . . . . . $enable_netstat_udp])
