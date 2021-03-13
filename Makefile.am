@@ -1020,17 +1020,6 @@ disk_la_LIBADD += -lperfstat
 endif
 endif
 
-if BUILD_PLUGIN_DNS
-pkglib_LTLIBRARIES += dns.la
-dns_la_SOURCES = \
-	src/dns.c \
-	src/utils/dns/dns.c \
-	src/utils/dns/dns.h
-dns_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBPCAP_CPPFLAGS)
-dns_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBPCAP_LDFLAGS)
-dns_la_LIBADD = $(BUILD_WITH_LIBPCAP_LIBS)
-endif
-
 if BUILD_PLUGIN_DPDKEVENTS
 pkglib_LTLIBRARIES += dpdkevents.la
 dpdkevents_la_SOURCES = src/dpdkevents.c src/utils/dpdk/dpdk.c src/utils/dpdk/dpdk.h

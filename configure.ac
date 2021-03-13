@@ -3877,81 +3877,6 @@ AC_SUBST([BUILD_WITH_LIBOWCAPI_LDFLAGS])
 AC_SUBST([BUILD_WITH_LIBOWCAPI_LIBS])
 # }}}
 
-# --with-libpcap {{{
-AC_ARG_WITH([libpcap],
-  [AS_HELP_STRING([--with-libpcap@<:@=PREFIX@:>@], [Path to libpcap.])],
-  [
-    if test "x$withval" != "xno" && test "x$withval" != "xyes"; then
-      with_libpcap_cppflags="-I$withval/include"
-      with_libpcap_ldflags="$LDFLAGS -L$withval/lib"
-      with_libpcap="yes"
-    else
-      with_libpcap="$withval"
-    fi
-  ],
-  [with_libpcap="yes"]
-)
-
-if test "x$with_libpcap" = "xyes"; then
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $with_libpcap_cppflags"
-
-  AC_CHECK_HEADERS([pcap.h],
-    [with_libpcap="yes"],
-    [with_libpcap="no (pcap.h not found)"]
-  )
-
-  CPPFLAGS="$SAVE_CPPFLAGS"
-fi
-
-if test "x$with_libpcap" = "xyes"; then
-  SAVE_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS $with_libpcap_ldflags"
-
-  AC_CHECK_LIB([pcap], [pcap_open_live],
-    [with_libpcap="yes"],
-    [with_libpcap="no (libpcap not found)"]
-  )
-
-  LDFLAGS="$SAVE_LDFLAGS"
-fi
-
-if test "x$with_libpcap" = "xyes"; then
-  AC_CACHE_CHECK([whether libpcap has PCAP_ERROR_IFACE_NOT_UP],
-    [c_cv_libpcap_have_pcap_error_iface_not_up],
-    [
-      AC_COMPILE_IFELSE(
-        [
-          AC_LANG_PROGRAM(
-            [[#include <pcap.h>]],
-            [[
-              int val = PCAP_ERROR_IFACE_NOT_UP;
-              return val;
-            ]]
-          )
-        ],
-        [c_cv_libpcap_have_pcap_error_iface_not_up="yes"],
-        [c_cv_libpcap_have_pcap_error_iface_not_up="no"]
-      )
-    ]
-  )
-fi
-
-if test "x$c_cv_libpcap_have_pcap_error_iface_not_up" != "xyes"; then
-  with_libpcap="no (pcap.h misses PCAP_ERROR_IFACE_NOT_UP)"
-fi
-
-if test "x$with_libpcap" = "xyes"; then
-  BUILD_WITH_LIBPCAP_CPPFLAGS="$with_libpcap_cppflags"
-  BUILD_WITH_LIBPCAP_LDFLAGS="$with_libpcap_ldflags"
-  BUILD_WITH_LIBPCAP_LIBS="-lpcap"
-fi
-
-AC_SUBST([BUILD_WITH_LIBPCAP_CPPFLAGS])
-AC_SUBST([BUILD_WITH_LIBPCAP_LDFLAGS])
-AC_SUBST([BUILD_WITH_LIBPCAP_LIBS])
-# }}}
-
 # --with-libperl {{{
 AC_ARG_WITH([libperl],
   [AS_HELP_STRING([--with-libperl@<:@=PREFIX@:>@], [Path to libperl.])],
@@ -6729,7 +6654,6 @@ AC_PLUGIN([curl_xml],            [$plugin_curl_xml],          [CURL generic xml 
 AC_PLUGIN([dcpmm],               [$with_libpmwapi],           [Intel(R) Optane(TM) DC Persistent Memory performance and health statistics])
 AC_PLUGIN([df],                  [$plugin_df],                [Filesystem usage statistics])
 AC_PLUGIN([disk],                [$plugin_disk],              [Disk usage statistics])
-AC_PLUGIN([dns],                 [$with_libpcap],             [DNS traffic analysis])
 AC_PLUGIN([dpdkevents],          [$plugin_dpdkevents],        [Events from DPDK])
 AC_PLUGIN([dpdkstat],            [$plugin_dpdkstat],          [Stats from DPDK])
 AC_PLUGIN([dpdk_telemetry],      [$plugin_dpdk_telemetry],    [Metrics from DPDK Telemetry])
@@ -7164,7 +7088,6 @@ AC_MSG_RESULT([    curl_xml  . . . . . . $enable_curl_xml])
 AC_MSG_RESULT([    dcpmm  . . . . . .  . $enable_dcpmm])
 AC_MSG_RESULT([    df  . . . . . . . . . $enable_df])
 AC_MSG_RESULT([    disk  . . . . . . . . $enable_disk])
-AC_MSG_RESULT([    dns . . . . . . . . . $enable_dns])
 AC_MSG_RESULT([    dpdkevents. . . . . . $enable_dpdkevents])
 AC_MSG_RESULT([    dpdkstat  . . . . . . $enable_dpdkstat])
 AC_MSG_RESULT([    dpdk_telemetry. . . . $enable_dpdk_telemetry])
