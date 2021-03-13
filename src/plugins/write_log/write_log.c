@@ -32,7 +32,6 @@
 
 #include "utils/format_graphite/format_graphite.h"
 #include "utils/format_json/format_json.h"
-#include "utils/format_openmetrics/format_openmetrics.h"
 #include "utils/strbuf/strbuf.h"
 
 #include <netdb.h>
@@ -87,13 +86,30 @@ static int wl_write_json(metric_family_t const *fam)
 
 static int wl_write_openmetrics(metric_family_t const *fam)
 {
+  if (fam->metric.num == 0)
+   return 0;
+
   strbuf_t buf = STRBUF_CREATE;
 
-  int status = format_openmetrics_metric_family(&buf, fam);
-  if (status != 0) {
-    ERROR("write_log plugin: format_json_metric_family failed: %d", status);
-  } else {
-    INFO("write_log values:\n%s", buf.ptr);
+  for (size_t i = 0; i < fam->metric.num; i++) {
+    metric_t *m = &fam->metric.ptr[i];
+
+    int status = metric_identity(&buf, m);
+
+    if (fam->type == METRIC_TYPE_COUNTER)
+      status = status | strbuf_printf(&buf, " %" PRIu64, m->value.counter);
+    else if ((fam->type == METRIC_TYPE_GAUGE) || (fam->type == METRIC_TYPE_UNTYPED))
+      status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.gauge);
+
+    if (m->time > 0)
+      status = status | strbuf_printf(&buf, " %" PRIi64, CDTIME_T_TO_MS(m->time));
+
+    if (status != 0) {
+      ERROR("write_log plugin: format_json_metric_family failed: %d", status);
+      continue;
+    }
+    INFO("%s", buf.ptr);
+    strbuf_reset(&buf);
   }
 
   STRBUF_DESTROY(buf);
