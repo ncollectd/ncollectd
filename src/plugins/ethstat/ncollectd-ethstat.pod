@@ -1,0 +1,33 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-ethstat - Documentation of ncollectd's C<ethstat plugin>
+
+=head2 Plugin C<ethstat>
+
+The I<ethstat plugin> collects information about network interface cards (NICs)
+by talking directly with the underlying kernel driver using L<ioctl(2)>.
+
+B<Synopsis:>
+
+ <Plugin "ethstat">
+   Interface "eth0"
+ </Plugin>
+
+B<Options:>
+
+=over 4
+
+=item B<Interface> I<Name>
+
+Collect statistical information about interface I<Name>.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut

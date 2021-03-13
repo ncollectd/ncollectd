@@ -2650,41 +2650,6 @@ at most B<16384> to prevent typos and dumb mistakes.
 
 =back
 
-=head2 Plugin C<ethstat>
-
-The I<ethstat plugin> collects information about network interface cards (NICs)
-by talking directly with the underlying kernel driver using L<ioctl(2)>.
-
-B<Synopsis:>
-
- <Plugin "ethstat">
-   Interface "eth0"
-   Map "rx_csum_offload_errors" "if_rx_errors" "checksum_offload"
-   Map "multicast" "if_multicast"
- </Plugin>
-
-B<Options:>
-
-=over 4
-
-=item B<Interface> I<Name>
-
-Collect statistical information about interface I<Name>.
-
-=item B<Map> I<Name> I<Type> [I<TypeInstance>]
-
-By default, the plugin will submit values as type C<derive> and I<type
-instance> set to I<Name>, the name of the metric as reported by the driver. If
-an appropriate B<Map> option exists, the given I<Type> and, optionally,
-I<TypeInstance> will be used.
-
-=item B<MappedOnly> B<true>|B<false>
-
-When set to B<true>, only metrics that can be mapped to a I<type> will be
-collected, all other metrics will be ignored. Defaults to B<false>.
-
-=back
-
 =head2 Plugin C<exec>
 
 Please make sure to read L<collectd-exec(5)> before using this plugin. It
@@ -3442,29 +3407,6 @@ following configuration:
     ip4fragment true
     ip6fragment true
   </Plugin>
-
-=head2 Plugin C<irq>
-
-=over 4
-
-=item B<Irq> I<Irq>
-
-Select this irq. By default these irqs will then be collected. For a more
-detailed description see B<IgnoreSelected> below.
-
-See F</"IGNORELISTS"> for details.
-
-=item B<IgnoreSelected> I<true>|I<false>
-
-If no configuration if given, the B<irq>-plugin will collect data from all
-irqs. This may not be practical, especially if no interrupts happen. Thus, you
-can use the B<Irq>-option to pick the interrupt you're interested in.
-Sometimes, however, it's easier/preferred to collect all interrupts I<except> a
-few ones. This option enables you to do that: By setting B<IgnoreSelected> to
-I<true> the effect of B<Irq> is inverted: All selected interrupts are ignored
-and all other interrupts are collected.
-
-=back
 
 =head2 Plugin C<java>
 
