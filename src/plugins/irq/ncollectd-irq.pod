@@ -1,0 +1,35 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-irq - Documentation of ncollectd's C<irq plugin>
+
+=head2 Plugin C<irq>
+
+=over 4
+
+=item B<Irq> I<Irq>
+
+Select this irq. By default these irqs will then be collected. For a more
+detailed description see B<IgnoreSelected> below.
+
+See F</"IGNORELISTS"> for details.
+
+=item B<IgnoreSelected> I<true>|I<false>
+
+If no configuration if given, the B<irq>-plugin will collect data from all
+irqs. This may not be practical, especially if no interrupts happen. Thus, you
+can use the B<Irq>-option to pick the interrupt you're interested in.
+Sometimes, however, it's easier/preferred to collect all interrupts I<except> a
+few ones. This option enables you to do that: By setting B<IgnoreSelected> to
+I<true> the effect of B<Irq> is inverted: All selected interrupts are ignored
+and all other interrupts are collected.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
