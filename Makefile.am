@@ -1388,16 +1388,6 @@ match_value_la_SOURCES = src/match_value.c
 match_value_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
-if BUILD_PLUGIN_MBMON
-pkglib_LTLIBRARIES += mbmon.la
-mbmon_la_SOURCES = src/mbmon.c
-mbmon_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-mbmon_la_LIBADD =
-if BUILD_WITH_LIBSOCKET
-mbmon_la_LIBADD += -lsocket
-endif
-endif
-
 if BUILD_PLUGIN_MCELOG
 pkglib_LTLIBRARIES += mcelog.la
 mcelog_la_SOURCES = src/mcelog.c
