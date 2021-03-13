@@ -1,0 +1,18 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-fscache - Documentation of ncollectd's C<fscache plugin>
+
+=head2 Plugin C<users>
+
+The C<fscache plugin> collects information about the file-system based caching infrastructure for network file-systems and other slow media. The cache was introduced into the Linux kernel in version 2.6.30. 
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
