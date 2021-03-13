@@ -192,6 +192,19 @@ typedef struct cpu_state_s cpu_state_t;
 static cpu_state_t *cpu_states;
 static size_t cpu_states_num; /* #cpu_states allocated */
 
+#if defined(KERNEL_LINUX)
+typedef struct {
+  char node[8];
+  char socket[8];
+  char core[8];
+  char drawer[8];
+  char book[8];
+} cpu_topology_t;
+
+static cpu_topology_t *cpu_topology;
+static size_t cpu_topology_num;
+#endif
+
 /* Highest CPU number in the current iteration. Used by the dispatch logic to
  * determine how many CPUs there were. Reset to 0 by cpu_reset(). */
 static size_t global_cpu_num;
@@ -201,14 +214,16 @@ static bool report_by_state = true;
 static bool report_percent;
 static bool report_num_cpu;
 static bool report_guest;
+static bool report_topology;
 static bool subtract_guest = true;
 
 static const char *config_keys[] = {"ReportByCpu",      "ReportByState",
                                     "ReportNumCpu",     "ValuesPercentage",
-                                    "ReportGuestState", "SubtractGuestState"};
+                                    "ReportGuestState", "SubtractGuestState",
+                                    "ReportTopology"};
 static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
-static int cpu_config(char const *key, char const *value) /* {{{ */
+static int cpu_config(char const *key, char const *value)
 {
   if (strcasecmp(key, "ReportByCpu") == 0)
     report_by_cpu = IS_TRUE(value);
@@ -220,13 +235,203 @@ static int cpu_config(char const *key, char const *value) /* {{{ */
     report_num_cpu = IS_TRUE(value);
   else if (strcasecmp(key, "ReportGuestState") == 0)
     report_guest = IS_TRUE(value);
+  else if (strcasecmp(key, "ReportTopology") == 0)
+    report_topology = IS_TRUE(value);
   else if (strcasecmp(key, "SubtractGuestState") == 0)
     subtract_guest = IS_TRUE(value);
   else
     return -1;
 
   return 0;
-} /* }}} int cpu_config */
+}
+
+#if defined(KERNEL_LINUX)
+
+#ifndef CPU_ROOT_DIR
+#define CPU_ROOT_DIR "/sys/devices/system/cpu"
+#endif
+
+#ifndef NUMA_ROOT_DIR
+#define NUMA_ROOT_DIR "/sys/devices/system/node"
+#endif
+
+static int cpu_topology_alloc(size_t cpu_num)
+{
+  cpu_topology_t *tmp;
+
+  size_t size = (size_t)cpu_num + 1;
+  assert(size > 0);
+
+  if (cpu_topology_num >= size)
+    return 0;
+
+  tmp = realloc(cpu_topology, size * sizeof(*cpu_topology));
+  if (tmp == NULL) {
+    ERROR("cpu plugin: realloc failed.");
+    return ENOMEM;
+  }
+  cpu_topology = tmp;
+
+  memset(cpu_topology + cpu_topology_num, 0,
+         (size - cpu_topology_num) * sizeof(*cpu_topology));
+  cpu_topology_num = size;
+  return 0;
+}
+
+static cpu_topology_t *get_cpu_topology(size_t cpu_num)
+{
+  if (cpu_num >= cpu_topology_num) {
+    cpu_topology_alloc(cpu_num);
+    if (cpu_num >= cpu_topology_num)
+      return NULL;
+  }
+  return &cpu_topology[cpu_num];
+}
+
+static int cpu_topology_id (char const *cpu, char const *id, char *buffer, size_t size)
+{
+  char path[PATH_MAX];
+  ssnprintf(path, sizeof(path), CPU_ROOT_DIR "/%s/topology/%s", cpu, id);
+
+  int rsize = read_file_contents(path, buffer, size);
+  if (rsize <= 0) {
+    buffer[0] = '\0';
+    return -1;
+  }
+  if (rsize > 8)
+    rsize = 8;
+  buffer[rsize - 1] = '\0';
+
+  size_t len = strlen(buffer);
+  if ((len > 0) && (buffer[len -1] == '\n'))
+    buffer[len -1] = '\0';
+  return 0;
+}
+
+static int cpu_topology_id_callback (char const *dir, char const *cpu, void *user_data)
+{
+  if (strncmp(cpu, "cpu", 3) != 0)
+    return 0;
+  if (!isdigit(cpu[3]))
+    return 0;
+
+  int cpu_num = atoi(cpu + 3);
+
+  int status = cpu_topology_alloc(cpu_num);
+  if (status != 0)
+    return status;
+
+  cpu_topology_t *t = get_cpu_topology(cpu_num);
+  if (t == NULL)
+    return 0;
+
+  cpu_topology_id(cpu, "core_id", t->core, sizeof(t->core));
+  cpu_topology_id(cpu, "physical_package_id", t->socket, sizeof(t->socket));
+  cpu_topology_id(cpu, "book_id", t->book, sizeof(t->book));
+  cpu_topology_id(cpu, "drawer_id", t->drawer, sizeof(t->drawer));
+  return 0;
+}
+
+static void cpu_topology_set_node(int ncpu, char const *node, int set)
+{
+  cpu_topology_t *t = get_cpu_topology(ncpu);
+  if (t == NULL)
+    return;
+  if (set)
+    sstrncpy(t->node, node, sizeof(t->node));
+  else
+    t->node[0] = '\0';
+}
+
+static inline int hex_to_int(char c)
+{
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  c = tolower(c);
+  if (c >= 'a' && c <= 'f')
+    return (c - 'a') + 10;
+  return -1;
+}
+
+static int cpu_topology_node_callback (char const *dir, char const *node,
+                                       void *user_data)
+{
+  if (strncmp(node, "node", 4) != 0)
+    return 0;
+  if (!isdigit(node[4]))
+    return 0;
+
+  char path[PATH_MAX];
+  ssnprintf(path, sizeof(path), NUMA_ROOT_DIR "/%s/cpumap", node);
+
+  char buffer[64];
+  ssize_t rsize = read_file_contents(path, buffer, sizeof(buffer));
+  if (rsize <= 0) {
+    buffer[0] = '\0';
+    return -1;
+  }
+  if (rsize > sizeof(buffer))
+    rsize = sizeof(buffer);
+  buffer[rsize - 1] = '\0';
+
+  size_t len = strlen(buffer);
+  if ((len > 0) && (buffer[len -1] == '\n'))
+    buffer[len -1] = '\0';
+
+  int ncpu = 0;
+  for (char *c = buffer + strlen(buffer) - 1;  c >= buffer; c--) {
+    if (*c == 'x')
+      break;
+    if (*c == ',')
+      c--;
+
+    int set = hex_to_int(*c);
+    if (set < 0)
+      continue;
+
+    cpu_topology_set_node(ncpu, node + 4, set & 1);
+    cpu_topology_set_node(ncpu+1, node + 4, set & 2);
+    cpu_topology_set_node(ncpu+2, node + 4, set & 4);
+    cpu_topology_set_node(ncpu+3, node + 4, set & 8);
+    ncpu += 4;
+  }
+
+  return 0;
+}
+
+static int cpu_topology_set_labels(int ncpu, metric_t *m)
+{
+  cpu_topology_t *t = get_cpu_topology(ncpu);
+  if (t == NULL)
+    return 0;
+
+  if (t->core[0] != '\0')
+    metric_label_set(m, "core", t->core);
+  if (t->socket[0] != '\0')
+    metric_label_set(m, "socket", t->socket);
+  if (t->book[0] != '\0')
+    metric_label_set(m, "book", t->book);
+  if (t->drawer[0] != '\0')
+    metric_label_set(m, "drawer", t->drawer);
+  if (t->node[0] != '\0')
+    metric_label_set(m, "node", t->node);
+
+  return 0;
+}
+
+static int cpu_topology_scan(void)
+{
+  if (cpu_topology_num > 0)
+    memset(cpu_topology, 0, cpu_topology_num * sizeof(*cpu_topology));
+
+  walk_directory(CPU_ROOT_DIR, cpu_topology_id_callback, NULL, 0);
+
+  walk_directory(NUMA_ROOT_DIR, cpu_topology_node_callback, NULL, 0);
+
+  return 0;
+}
+
+#endif /* defined(KERNEL_LINUX) */
 
 static int init(void) {
 #if PROCESSOR_CPU_LOAD_INFO
@@ -319,7 +524,11 @@ static int init(void) {
 
 #elif defined(HAVE_PERFSTAT)
 /* nothing to initialize */
-#endif /* HAVE_PERFSTAT */
+/* #endif HAVE_PERFSTAT */
+
+#elif defined(KERNEL_LINUX)
+  cpu_topology_scan();
+#endif /* KERNEL_LINUX */
 
   return 0;
 } /* int init */
@@ -349,9 +558,9 @@ static int cpu_states_alloc(size_t cpu_num) /* {{{ */
   memset(tmp, 0, (sz - cpu_states_num) * sizeof(*cpu_states));
   cpu_states_num = sz;
   return 0;
-} /* }}} cpu_states_alloc */
+}
 
-static cpu_state_t *get_cpu_state(size_t cpu_num, size_t state) /* {{{ */
+static cpu_state_t *get_cpu_state(size_t cpu_num, size_t state)
 {
   size_t index = ((cpu_num * COLLECTD_CPU_STATE_MAX) + state);
 
@@ -364,7 +573,8 @@ static cpu_state_t *get_cpu_state(size_t cpu_num, size_t state) /* {{{ */
 #if defined(HAVE_PERFSTAT) /* {{{ */
 /* populate global aggregate cpu rate */
 static int total_rate(gauge_t *sum_by_state, size_t state, derive_t d,
-                      value_to_rate_state_t *conv, cdtime_t now) {
+                      value_to_rate_state_t *conv, cdtime_t now)
+{
   gauge_t rate = NAN;
   int status =
       value_to_rate(&rate, (value_t){.derive = d}, DS_TYPE_DERIVE, now, conv);
@@ -382,7 +592,7 @@ static int total_rate(gauge_t *sum_by_state, size_t state, derive_t d,
 /* Populates the per-CPU COLLECTD_CPU_STATE_ACTIVE rate and the global
  * rate_by_state
  * array. */
-static void aggregate(gauge_t *sum_by_state) /* {{{ */
+static void aggregate(gauge_t *sum_by_state)
 {
   for (size_t state = 0; state < COLLECTD_CPU_STATE_MAX; state++)
     sum_by_state[state] = NAN;
@@ -431,7 +641,7 @@ static void aggregate(gauge_t *sum_by_state) /* {{{ */
   total_rate(sum_by_state, COLLECTD_CPU_STATE_WAIT, (derive_t)cputotal.pwait,
              &total_conv[TOTAL_WAIT], now);
 #endif /* }}} HAVE_PERFSTAT */
-} /* }}} void aggregate */
+}
 
 /* Commits (dispatches) the values for one CPU or the global aggregation.
  * cpu_num is the index of the CPU to be committed or -1 in case of the global
@@ -440,9 +650,10 @@ static void aggregate(gauge_t *sum_by_state) /* {{{ */
  * current rate; each rate may be NAN. Calculates the percentage of each state
  * and dispatches the metric. */
 static void cpu_commit_one(int cpu_num, /* {{{ */
-                           gauge_t rates[static COLLECTD_CPU_STATE_MAX]) {
+                           gauge_t rates[static COLLECTD_CPU_STATE_MAX])
+{
   metric_family_t fam = {
-      .name = "cpu_usage_percent",
+      .name = "host_cpu_usage_percent",
       .type = METRIC_TYPE_GAUGE,
   };
 
@@ -453,6 +664,13 @@ static void cpu_commit_one(int cpu_num, /* {{{ */
     char cpu_num_str[16];
     snprintf(cpu_num_str, sizeof(cpu_num_str), "%d", cpu_num);
     metric_label_set(&m, "cpu", cpu_num_str);
+#if defined(KERNEL_LINUX)
+    if (report_topology) {
+      if ((cpu_topology_num * COLLECTD_CPU_STATE_MAX) != cpu_states_num)
+        cpu_topology_scan();
+      cpu_topology_set_labels(cpu_num, &m);
+    }
+#endif
   }
 
   gauge_t sum = rates[COLLECTD_CPU_STATE_ACTIVE];
@@ -479,13 +697,13 @@ static void cpu_commit_one(int cpu_num, /* {{{ */
   metric_reset(&m);
   metric_family_metric_reset(&fam);
   return;
-} /* }}} void cpu_commit_one */
+}
 
 /* Commits the number of cores */
 static void cpu_commit_num_cpu(gauge_t value) /* {{{ */
 {
   metric_family_t fam = {
-      .name = "cpu_count",
+      .name = "host_cpu_count",
       .type = METRIC_TYPE_GAUGE,
   };
   metric_family_metric_append(&fam, (metric_t){
@@ -515,11 +733,17 @@ static void cpu_reset(void) /* {{{ */
 static void cpu_commit_without_aggregation(void) /* {{{ */
 {
   metric_family_t fam = {
-      .name = "cpu_usage_total",
+      .name = "host_cpu_usage_total",
       .type = METRIC_TYPE_COUNTER,
   };
 
   metric_t m = {0};
+#if defined(KERNEL_LINUX)
+  if (report_topology) {
+    if ((cpu_topology_num * COLLECTD_CPU_STATE_MAX) != cpu_states_num)
+      cpu_topology_scan();
+  }
+#endif
 
   for (int state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
     metric_label_set(&m, "state", cpu_state_names[state]);
@@ -534,11 +758,18 @@ static void cpu_commit_without_aggregation(void) /* {{{ */
       snprintf(cpu_num_str, sizeof(cpu_num_str), "%zu", cpu_num);
       metric_label_set(&m, "cpu", cpu_num_str);
 
+#if defined(KERNEL_LINUX)
+      if (report_topology)
+        cpu_topology_set_labels(cpu_num, &m);
+#endif
       m.value.derive = s->conv.last_value.derive;
 
       metric_family_metric_append(&fam, m);
     }
   }
+
+  if (fam.metric.num == 0)
+    return;
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
