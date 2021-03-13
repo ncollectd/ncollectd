@@ -6348,7 +6348,6 @@ plugin_uptime="no"
 plugin_users="no"
 plugin_virt="no"
 plugin_vmem="no"
-plugin_vserver="no"
 plugin_wireless="no"
 plugin_write_log="no"
 plugin_write_prometheus="no"
@@ -6394,7 +6393,6 @@ if test "x$ac_system" = "xLinux"; then
   plugin_ubi="yes"
   plugin_uptime="yes"
   plugin_vmem="yes"
-  plugin_vserver="yes"
   plugin_wireless="yes"
   plugin_zfs_arc="yes"
 
@@ -6853,7 +6851,6 @@ AC_PLUGIN([uuid],                [yes],                       [UUID as hostname 
 AC_PLUGIN([varnish],             [$with_libvarnish],          [Varnish cache statistics])
 AC_PLUGIN([virt],                [$plugin_virt],              [Virtual machine statistics])
 AC_PLUGIN([vmem],                [$plugin_vmem],              [Virtual memory statistics])
-AC_PLUGIN([vserver],             [$plugin_vserver],           [Linux VServer statistics])
 AC_PLUGIN([wireless],            [$plugin_wireless],          [Wireless statistics])
 AC_PLUGIN([write_graphite],      [yes],                       [Graphite / Carbon output plugin])
 AC_PLUGIN([write_http],          [$with_libcurl],             [HTTP output plugin])
@@ -7289,7 +7286,6 @@ AC_MSG_RESULT([    uuid  . . . . . . . . $enable_uuid])
 AC_MSG_RESULT([    varnish . . . . . . . $enable_varnish])
 AC_MSG_RESULT([    virt  . . . . . . . . $enable_virt])
 AC_MSG_RESULT([    vmem  . . . . . . . . $enable_vmem])
-AC_MSG_RESULT([    vserver . . . . . . . $enable_vserver])
 AC_MSG_RESULT([    wireless  . . . . . . $enable_wireless])
 AC_MSG_RESULT([    write_graphite  . . . $enable_write_graphite])
 AC_MSG_RESULT([    write_http  . . . . . $enable_write_http])

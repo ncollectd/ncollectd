@@ -2203,12 +2203,6 @@ vmem_la_SOURCES = src/vmem.c
 vmem_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
-if BUILD_PLUGIN_VSERVER
-pkglib_LTLIBRARIES += vserver.la
-vserver_la_SOURCES = src/vserver.c
-vserver_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-endif
-
 if BUILD_PLUGIN_WIRELESS
 pkglib_LTLIBRARIES += wireless.la
 wireless_la_SOURCES = src/wireless.c
