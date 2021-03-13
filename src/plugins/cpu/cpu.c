@@ -643,6 +643,45 @@ static void aggregate(gauge_t *sum_by_state)
 #endif /* }}} HAVE_PERFSTAT */
 }
 
+static void cpu_commit_metric(metric_family_t *fam, metric_t *m,
+                              gauge_t rates[static COLLECTD_CPU_STATE_MAX])
+{
+  gauge_t sum = rates[COLLECTD_CPU_STATE_ACTIVE];
+  RATE_ADD(sum, rates[COLLECTD_CPU_STATE_IDLE]);
+
+  if (!report_by_state) {
+    m->value.gauge = 100.0 * rates[COLLECTD_CPU_STATE_ACTIVE] / sum;
+    metric_label_set(m, "state", cpu_state_names[COLLECTD_CPU_STATE_ACTIVE]);
+    metric_family_metric_append(fam, *m);
+  } else {
+    for (size_t state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
+      m->value.gauge = 100.0 * rates[state] / sum;
+      metric_label_set(m, "state", cpu_state_names[state]);
+      metric_family_metric_append(fam, *m);
+    }
+  }
+
+  int status = plugin_dispatch_metric_family(fam);
+  if (status != 0) {
+    ERROR("cpu plugin: plugin_dispatch_metric_family failed: %s",
+          STRERROR(status));
+  }
+
+  metric_reset(m);
+  metric_family_metric_reset(fam);
+}
+
+static void cpu_commit_all(gauge_t rates[static COLLECTD_CPU_STATE_MAX])
+{
+  metric_family_t fam = {
+      .name = "host_cpu_all_usage_percent",
+      .type = METRIC_TYPE_GAUGE,
+  };
+
+  metric_t m = {0};
+  cpu_commit_metric(&fam, &m, rates);
+}
+
 /* Commits (dispatches) the values for one CPU or the global aggregation.
  * cpu_num is the index of the CPU to be committed or -1 in case of the global
  * aggregation. rates is a pointer to COLLECTD_CPU_STATE_MAX gauge_t values
@@ -658,45 +697,18 @@ static void cpu_commit_one(int cpu_num, /* {{{ */
   };
 
   metric_t m = {0};
-  if (cpu_num == -1) {
-    metric_label_set(&m, "cpu", "total");
-  } else {
-    char cpu_num_str[16];
-    snprintf(cpu_num_str, sizeof(cpu_num_str), "%d", cpu_num);
-    metric_label_set(&m, "cpu", cpu_num_str);
+  char cpu_num_str[16];
+  snprintf(cpu_num_str, sizeof(cpu_num_str), "%d", cpu_num);
+  metric_label_set(&m, "cpu", cpu_num_str);
 #if defined(KERNEL_LINUX)
-    if (report_topology) {
-      if ((cpu_topology_num * COLLECTD_CPU_STATE_MAX) != cpu_states_num)
-        cpu_topology_scan();
-      cpu_topology_set_labels(cpu_num, &m);
-    }
+  if (report_topology) {
+    if ((cpu_topology_num * COLLECTD_CPU_STATE_MAX) != cpu_states_num)
+      cpu_topology_scan();
+    cpu_topology_set_labels(cpu_num, &m);
+  }
 #endif
-  }
 
-  gauge_t sum = rates[COLLECTD_CPU_STATE_ACTIVE];
-  RATE_ADD(sum, rates[COLLECTD_CPU_STATE_IDLE]);
-
-  if (!report_by_state) {
-    m.value.gauge = 100.0 * rates[COLLECTD_CPU_STATE_ACTIVE] / sum;
-    metric_label_set(&m, "state", cpu_state_names[COLLECTD_CPU_STATE_ACTIVE]);
-    metric_family_metric_append(&fam, m);
-  } else {
-    for (size_t state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
-      m.value.gauge = 100.0 * rates[state] / sum;
-      metric_label_set(&m, "state", cpu_state_names[state]);
-      metric_family_metric_append(&fam, m);
-    }
-  }
-
-  int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("cpu plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
-
-  metric_reset(&m);
-  metric_family_metric_reset(&fam);
-  return;
+  cpu_commit_metric(&fam, &m, rates);
 }
 
 /* Commits the number of cores */
@@ -729,8 +741,44 @@ static void cpu_reset(void) /* {{{ */
   global_cpu_num = 0;
 } /* }}} void cpu_reset */
 
-/* Legacy behavior: Dispatches the raw derive values without any aggregation. */
-static void cpu_commit_without_aggregation(void) /* {{{ */
+
+static void cpu_commit_all_without_aggregation(void)
+{
+  metric_family_t fam = {
+      .name = "host_cpu_all_usage_total",
+      .type = METRIC_TYPE_COUNTER,
+  };
+
+  metric_t m = {0};
+
+  derive_t values[COLLECTD_CPU_STATE_ACTIVE] = {0};
+  for (int state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
+    for (size_t cpu_num = 0; cpu_num < global_cpu_num; cpu_num++) {
+      cpu_state_t *s = get_cpu_state(cpu_num, state);
+      if (s == NULL)
+        continue;
+      if (!s->has_value)
+        continue;
+      values[state] += s->conv.last_value.derive;
+    }
+  }
+
+  for (int state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
+    metric_label_set(&m, "state", cpu_state_names[state]);
+    m.value.derive = values[state];
+    metric_family_metric_append(&fam, m);
+  }
+
+  int status = plugin_dispatch_metric_family(&fam);
+  if (status != 0) {
+    ERROR("plugin_dispatch_metric_family failed: %s", STRERROR(status));
+  }
+
+  metric_reset(&m);
+  metric_family_metric_reset(&fam);
+}
+
+static void cpu_commit_without_aggregation(void)
 {
   metric_family_t fam = {
       .name = "host_cpu_usage_total",
@@ -778,7 +826,7 @@ static void cpu_commit_without_aggregation(void) /* {{{ */
 
   metric_reset(&m);
   metric_family_metric_reset(&fam);
-} /* }}} void cpu_commit_without_aggregation */
+}
 
 /* Aggregates the internal state and dispatches the metrics. */
 static void cpu_commit(void) /* {{{ */
@@ -790,17 +838,18 @@ static void cpu_commit(void) /* {{{ */
   if (report_num_cpu)
     cpu_commit_num_cpu((gauge_t)global_cpu_num);
 
-  if (report_by_state && report_by_cpu && !report_percent) {
-    cpu_commit_without_aggregation();
+  if (!report_percent) {
+    cpu_commit_all_without_aggregation();
+    if (report_by_cpu)
+      cpu_commit_without_aggregation();
     return;
   }
 
   aggregate(global_rates);
 
-  if (!report_by_cpu) {
-    cpu_commit_one(-1, global_rates);
+  cpu_commit_all(global_rates);
+  if (!report_by_cpu)
     return;
-  }
 
   for (size_t cpu_num = 0; cpu_num < global_cpu_num; cpu_num++) {
     cpu_state_t *this_cpu_states = get_cpu_state(cpu_num, 0);
