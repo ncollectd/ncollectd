@@ -1,0 +1,224 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-modbus - Documentation of ncollectd's C<modbus plugin>
+
+=head2 Plugin C<modbus>
+
+The B<modbus plugin> connects to a Modbus "slave" via Modbus/TCP or Modbus/RTU and
+reads register values. It supports reading single registers (unsigned 16E<nbsp>bit
+values), large integer values (unsigned 32E<nbsp>bit and 64E<nbsp>bit values) and
+floating point values (two registers interpreted as IEEE floats in big endian
+notation).
+
+B<Synopsis:>
+
+ <Data "voltage-input-1">
+   RegisterBase 0
+   RegisterType float
+   RegisterCmd ReadHolding
+   Metric voltage
+   Label "input" "1"
+   #Scale 1.0
+   #Shift 0.0
+ </Data>
+
+ <Data "voltage-input-2">
+   RegisterBase 2
+   RegisterType float
+   RegisterCmd ReadHolding
+   Metric voltage
+   Label "input" "2"
+ </Data>
+
+ <Data "supply-temperature-1">
+   RegisterBase 0
+   RegisterType Int16
+   RegisterCmd ReadHolding
+   Metric temperature
+   Label "temp" "1"
+ </Data>
+
+ <Host "modbus.example.com">
+   Address "192.168.0.42"
+   Port    "502"
+   Interval 60
+
+   <Slave 1>
+     MetricPrefix "power_supply_"
+     Collect  "voltage-input-1"
+     Collect  "voltage-input-2"
+   </Slave>
+ </Host>
+
+ <Host "localhost">
+   Device "/dev/ttyUSB0"
+   Baudrate 38400
+   Interval 20
+
+   <Slave 1>
+     Collect  "supply-temperature-1"
+   </Slave>
+ </Host>
+
+=over 4
+
+=item E<lt>B<Data> I<Name>E<gt> blocks
+
+Data blocks define a mapping between register numbers and the "types" used by
+I<collectd>.
+
+Within E<lt>DataE<nbsp>/E<gt> blocks, the following options are allowed:
+
+=over 4
+
+=item B<RegisterBase> I<Number>
+
+Configures the base register to read from the device. If the option
+B<RegisterType> has been set to B<Uint32> or B<Float>, this and the next
+register will be read (the register number is increased by one).
+
+=item B<RegisterType> B<Int16>|B<Int32>|B<Int64>|B<Uint16>|B<Uint32>|B<UInt64>|B<Float>|B<Int32LE>|B<Uint32LE>|B<FloatLE>
+
+Specifies what kind of data is returned by the device. This defaults to
+B<Uint16>.  If the type is B<Int32>, B<Int32LE>, B<Uint32>, B<Uint32LE>,
+B<Float> or B<FloatLE>, two 16E<nbsp>bit registers at B<RegisterBase>
+and B<RegisterBase+1> will be read and the data is combined into one
+32E<nbsp>value. For B<Int32>, B<Uint32> and B<Float> the most significant
+16E<nbsp>bits are in the register at B<RegisterBase> and the least
+significant 16E<nbsp>bits are in the register at B<RegisterBase+1>.
+For B<Int32LE>, B<Uint32LE>, or B<Float32LE>, the high and low order
+registers are swapped with the most significant 16E<nbsp>bits in
+the B<RegisterBase+1> and the least significant 16E<nbsp>bits in
+B<RegisterBase>. If the type is B<Int64> or B<UInt64>, four 16E<nbsp>bit
+registers at B<RegisterBase>, B<RegisterBase+1>, B<RegisterBase+2> and
+B<RegisterBase+3> will be read and the data combined into one
+64E<nbsp>value.
+
+=item B<RegisterCmd> B<ReadHolding>|B<ReadInput>
+
+Specifies register type to be collected from device. Works only with libmodbus
+2.9.2 or higher. Defaults to B<ReadHolding>.
+
+=item B<Metric> I<metric>
+
+Set the metric name.
+
+=item B<Help> I<help>
+
+Set the B<help> text for the metric.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Data> block.
+
+=item B<Type> I<gauge>|I<counter>|I<untyped>
+
+The B<type> for the metric. Must be I<gauge>, I<counter> or I<untyped>.
+If not set is I<untyped>.
+There must be exactly one B<Type> option inside each B<Data> block.
+
+=item B<Scale> I<Value>
+
+The values taken from device are multiplied by I<Value>. The field is optional
+and the default is B<1.0>.
+
+=item B<Shift> I<Value>
+
+I<Value> is added to values from device after they have been multiplied by
+B<Scale> value. The field is optional and the default value is B<0.0>.
+
+=back
+
+=item E<lt>B<Host> I<Name>E<gt> blocks
+
+Host blocks are used to specify to which hosts to connect and what data to read
+from their "slaves". The string argument I<Name> is used as hostname when
+dispatching the values to I<collectd>.
+
+Within E<lt>HostE<nbsp>/E<gt> blocks, the following options are allowed:
+
+=over 4
+
+=item B<Address> I<Hostname>
+
+For Modbus/TCP, specifies the node name (the actual network address) used to
+connect to the host. This may be an IP address or a hostname. Please note that
+the used I<libmodbus> library only supports IPv4 at the moment.
+
+=item B<Port> I<Service>
+
+for Modbus/TCP, specifies the port used to connect to the host. The port can
+either be given as a number or as a service name. Please note that the
+I<Service> argument must be a string, even if ports are given in their numerical
+form. Defaults to "502".
+
+=item B<Device> I<Devicenode>
+
+For Modbus/RTU, specifies the path to the serial device being used.
+
+=item B<Baudrate> I<Baudrate>
+
+For Modbus/RTU, specifies the baud rate of the serial device.
+Note, connections currently support only 8/N/1.
+
+=item B<UARTType> I<UARTType>
+
+For Modbus/RTU, specifies the type of the serial device.
+RS232, RS422 and RS485 are supported. Defaults to RS232.
+Available only on Linux systems with libmodbus>=2.9.4.
+
+=item B<Interval> I<Interval>
+
+Sets the interval (in seconds) in which the values will be collected from this
+host. By default the global B<Interval> setting will be used.
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the  B<Data>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Host> block.
+
+=item E<lt>B<Slave> I<ID>E<gt>
+
+Over each connection, multiple Modbus devices may be reached. The slave ID
+is used to specify which device should be addressed. For each device you want
+to query, one B<Slave> block must be given.
+
+Within E<lt>SlaveE<nbsp>/E<gt> blocks, the following options are allowed:
+
+=over 4
+
+=item B<MetricPrefix> I<prefix>
+
+Prepends I<prefix> to the metric name in the  B<Data>.
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple times in the B<Slave> block.
+
+=item B<Collect> I<DataName>
+
+Specifies which data to retrieve from the device. I<DataName> must be the same
+string as the I<Name> argument passed to a B<Data> block. You can specify this
+option multiple times to collect more than one value from a slave. At least one
+B<Collect> option is mandatory.
+
+=back
+
+=back
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
