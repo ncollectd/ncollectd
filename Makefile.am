@@ -2042,13 +2042,6 @@ tail_csv_la_SOURCES = \
 tail_csv_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
-if BUILD_PLUGIN_TAPE
-pkglib_LTLIBRARIES += tape.la
-tape_la_SOURCES = src/tape.c
-tape_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-tape_la_LIBADD = -lkstat -ldevinfo
-endif
-
 if BUILD_PLUGIN_TARGET_NOTIFICATION
 pkglib_LTLIBRARIES += target_notification.la
 target_notification_la_SOURCES = src/target_notification.c

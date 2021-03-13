@@ -6339,7 +6339,6 @@ plugin_smart="no"
 plugin_swap="no"
 plugin_synproxy="no"
 plugin_sysevent="no"
-plugin_tape="no"
 plugin_tcpconns="no"
 plugin_ted="no"
 plugin_thermal="no"
@@ -6495,7 +6494,6 @@ if test "x$with_devinfo" = "xyes" && test "x$with_kstat" = "xyes"; then
   plugin_disk="yes"
   plugin_interface="yes"
   plugin_memory="yes"
-  plugin_tape="yes"
 fi
 
 if test "x$with_libi2c" = "xyes"; then
@@ -6834,7 +6832,6 @@ AC_PLUGIN([syslog],              [$have_syslog],              [Syslog logging pl
 AC_PLUGIN([table],               [yes],                       [Parsing of tabular data])
 AC_PLUGIN([tail],                [yes],                       [Parsing of logfiles])
 AC_PLUGIN([tail_csv],            [yes],                       [Parsing of CSV files])
-AC_PLUGIN([tape],                [$plugin_tape],              [Tape drive statistics])
 AC_PLUGIN([target_notification], [yes],                       [The notification target])
 AC_PLUGIN([target_replace],      [yes],                       [The replace target])
 AC_PLUGIN([target_scale],        [yes],                       [The scale target])
@@ -7270,7 +7267,6 @@ AC_MSG_RESULT([    syslog  . . . . . . . $enable_syslog])
 AC_MSG_RESULT([    table . . . . . . . . $enable_table])
 AC_MSG_RESULT([    tail_csv  . . . . . . $enable_tail_csv])
 AC_MSG_RESULT([    tail  . . . . . . . . $enable_tail])
-AC_MSG_RESULT([    tape  . . . . . . . . $enable_tape])
 AC_MSG_RESULT([    target_notification . $enable_target_notification])
 AC_MSG_RESULT([    target_replace  . . . $enable_target_replace])
 AC_MSG_RESULT([    target_scale  . . . . $enable_target_scale])
