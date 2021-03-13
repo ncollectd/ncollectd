@@ -73,19 +73,21 @@ static void format_text(strbuf_t *buf)
 
     char *type = NULL;
     switch (prom_fam->type) {
-    case METRIC_TYPE_GAUGE:
-      type = "gauge";
-      break;
-    case METRIC_TYPE_COUNTER:
-      type = "counter";
-      break;
-    case METRIC_TYPE_UNTYPED:
-      type = "untyped";
-      break;
+      case METRIC_TYPE_GAUGE:
+        type = "gauge";
+        break;
+      case METRIC_TYPE_COUNTER:
+        type = "counter";
+        break;
+      case METRIC_TYPE_UNTYPED:
+        type = "untyped";
+        break;
+      case METRIC_TYPE_DISTRIBUTION:
+        // FIXME
+        break;
     }
-    if (type == NULL) {
+    if (type == NULL)
       continue;
-    }
 
     if (prom_fam->help == NULL)
       strbuf_printf(buf, "# HELP %s\n", prom_fam->name);
