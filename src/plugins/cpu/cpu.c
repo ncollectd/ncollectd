@@ -298,8 +298,8 @@ static int cpu_topology_id (char const *cpu, char const *id, char *buffer, size_
     buffer[0] = '\0';
     return -1;
   }
-  if (rsize > 8)
-    rsize = 8;
+  if (rsize > size)
+    rsize = size;
   buffer[rsize - 1] = '\0';
 
   size_t len = strlen(buffer);
@@ -364,7 +364,7 @@ static int cpu_topology_node_callback (char const *dir, char const *node,
   char path[PATH_MAX];
   ssnprintf(path, sizeof(path), NUMA_ROOT_DIR "/%s/cpumap", node);
 
-  char buffer[64];
+  char buffer[8096];
   ssize_t rsize = read_file_contents(path, buffer, sizeof(buffer));
   if (rsize <= 0) {
     buffer[0] = '\0';

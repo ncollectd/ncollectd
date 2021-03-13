@@ -61,6 +61,11 @@ Defaults to B<false>.
 When set to B<true>, reports the "guest" and "guest_nice" CPU states.
 Defaults to B<false>.
 
+=item B<ReportTopology> B<false>|B<true>
+When set to B<true> in Linux, reports the cpu topology as labels:
+I<node>, I<code>, I<socket>, I<book> and I<drawer>.
+Defaults to B<false>.
+
 =item B<SubtractGuestState> B<false>|B<true>
 
 This option is only considered when B<ReportGuestState> is set to B<true>.
