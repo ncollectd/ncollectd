@@ -1063,16 +1063,6 @@ gpu_nvidia_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_CUDA_LDFLAGS)
 gpu_nvidia_la_LIBADD = $(BUILD_WITH_CUDA_LIBS)
 endif
 
-if BUILD_PLUGIN_HDDTEMP
-pkglib_LTLIBRARIES += hddtemp.la
-hddtemp_la_SOURCES = src/hddtemp.c
-hddtemp_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-hddtemp_la_LIBADD =
-if BUILD_WITH_LIBSOCKET
-hddtemp_la_LIBADD += -lsocket
-endif
-endif
-
 if BUILD_PLUGIN_HUGEPAGES
 pkglib_LTLIBRARIES += hugepages.la
 hugepages_la_SOURCES = src/hugepages.c

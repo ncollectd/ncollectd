@@ -420,9 +420,6 @@ AC_CHECK_HEADERS([net/if.h], [], [],
 )
 
 if test "x$ac_system" = "xLinux"; then
-  # For hddtemp module
-  AC_CHECK_HEADERS([linux/major.h])
-
   # For md module (Linux only)
   AC_CHECK_HEADERS([linux/raid/md_u.h],
     [have_linux_raid_md_u_h="yes"],
@@ -6517,7 +6514,6 @@ AC_PLUGIN([fscache],             [$plugin_fscache],           [fscache statistic
 AC_PLUGIN([gmond],               [$with_libganglia],          [Ganglia plugin])
 AC_PLUGIN([gps],                 [$plugin_gps],               [GPS plugin])
 AC_PLUGIN([gpu_nvidia],          [$with_cuda],                [NVIDIA GPU plugin])
-AC_PLUGIN([hddtemp],             [yes],                       [Query hddtempd])
 AC_PLUGIN([hugepages],           [$plugin_hugepages],         [Hugepages statistics])
 AC_PLUGIN([infiniband],          [$plugin_infiniband],        [Infiniband statistics])
 AC_PLUGIN([info],                [yes],                       [Define static Metrics])
@@ -6943,7 +6939,6 @@ AC_MSG_RESULT([    fscache . . . . . . . $enable_fscache])
 AC_MSG_RESULT([    gmond . . . . . . . . $enable_gmond])
 AC_MSG_RESULT([    gps . . . . . . . . . $enable_gps])
 AC_MSG_RESULT([    gpu_nvidia  . . . . . $enable_gpu_nvidia])
-AC_MSG_RESULT([    hddtemp . . . . . . . $enable_hddtemp])
 AC_MSG_RESULT([    hugepages . . . . . . $enable_hugepages])
 AC_MSG_RESULT([    infiniband  . . . . . $enable_infiniband])
 AC_MSG_RESULT([    info  . . . . . . . . $enable_info])
