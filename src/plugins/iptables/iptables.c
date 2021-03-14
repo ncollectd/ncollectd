@@ -56,10 +56,6 @@ typedef struct ip6tc_handle ip6tc_handle_t;
 #endif
 
 /*
- * (Module-)Global variables
- */
-
-/*
  * Config format should be `Chain table chainname',
  * e. g. `Chain mangle incoming'
  */
@@ -359,20 +355,20 @@ static int iptables_read(void)
   int num_failures = 0;
   ip_chain_t *chain;
   metric_family_t fam_ipt_bytes = {
-      .name = "host_iptables_bytes_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_iptables_bytes_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_ipt_packets = {
-      .name = "host_iptables_packets_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_iptables_packets_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_ip6t_bytes = {
-      .name = "host_ip6tables_bytes_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_ip6tables_bytes_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_ip6t_packets = {
-      .name = "host_ip6tables_packets_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_ip6tables_packets_total",
+    .type = METRIC_TYPE_COUNTER,
   };
 
   metric_family_t *fams[] = {&fam_ipt_bytes, &fam_ipt_packets, &fam_ip6t_bytes,
@@ -455,7 +451,7 @@ static int iptables_shutdown(void)
   sfree(chain_list);
 
   return 0;
-} 
+}
 
 static int iptables_init(void)
 {
@@ -473,12 +469,11 @@ static int iptables_init(void)
   }
 #endif
   return 0;
-} 
+}
 
 void module_register(void)
 {
-  plugin_register_config("iptables", iptables_config, config_keys,
-                         config_keys_num);
+  plugin_register_config("iptables", iptables_config, config_keys, config_keys_num);
   plugin_register_init("iptables", iptables_init);
   plugin_register_read("iptables", iptables_read);
   plugin_register_shutdown("iptables", iptables_shutdown);
