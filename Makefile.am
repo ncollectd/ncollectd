@@ -2056,12 +2056,6 @@ tcpconns_la_LIBADD += -lkvm
 endif
 endif
 
-if BUILD_PLUGIN_TED
-pkglib_LTLIBRARIES += ted.la
-ted_la_SOURCES = src/ted.c
-ted_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-endif
-
 if BUILD_PLUGIN_THERMAL
 pkglib_LTLIBRARIES += thermal.la
 thermal_la_SOURCES = src/plugins/thermal/thermal.c

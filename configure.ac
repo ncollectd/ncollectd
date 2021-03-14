@@ -6159,7 +6159,6 @@ plugin_swap="no"
 plugin_synproxy="no"
 plugin_sysevent="no"
 plugin_tcpconns="no"
-plugin_ted="no"
 plugin_thermal="no"
 plugin_turbostat="no"
 plugin_ubi="no"
@@ -6435,10 +6434,6 @@ if test "x$have_host_statistics" = "xyes"; then
   plugin_memory="yes"
 fi
 
-if test "x$have_termios_h" = "xyes"; then
-  plugin_ted="yes"
-fi
-
 if test "x$have_thread_info" = "xyes"; then
   plugin_processes="yes"
 fi
@@ -6654,7 +6649,6 @@ AC_PLUGIN([target_scale],        [yes],                       [The scale target]
 AC_PLUGIN([target_set],          [yes],                       [The set target])
 AC_PLUGIN([target_v5upgrade],    [yes],                       [The v5upgrade target])
 AC_PLUGIN([tcpconns],            [$plugin_tcpconns],          [TCP connection statistics])
-AC_PLUGIN([ted],                 [$plugin_ted],               [Read The Energy Detective values])
 AC_PLUGIN([thermal],             [$plugin_thermal],           [Linux ACPI thermal zone statistics])
 AC_PLUGIN([threshold],           [yes],                       [Threshold checking plugin])
 AC_PLUGIN([turbostat],           [$plugin_turbostat],         [Advanced statistic on Intel cpu states])
