@@ -162,7 +162,8 @@ static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
 static ignorelist_t *ignorelist;
 
-static int disk_config(const char *key, const char *value) {
+static int disk_config(const char *key, const char *value)
+{
   if (ignorelist == NULL)
     ignorelist = ignorelist_create(/* invert = */ 1);
   if (ignorelist == NULL)
@@ -201,7 +202,8 @@ static int disk_config(const char *key, const char *value) {
   return 0;
 } /* int disk_config */
 
-static int disk_init(void) {
+static int disk_init(void)
+{
 #if HAVE_IOKIT_IOKITLIB_H
   kern_return_t status;
 
@@ -290,9 +292,10 @@ static int disk_init(void) {
 #endif /* HAVE_SYSCTL && KERNEL_NETBSD */
 
   return 0;
-} /* int disk_init */
+}
 
-static int disk_shutdown(void) {
+static int disk_shutdown(void)
+{
 #if KERNEL_LINUX
 #if HAVE_LIBUDEV_H
   if (handle_udev != NULL)
@@ -300,11 +303,12 @@ static int disk_shutdown(void) {
 #endif /* HAVE_LIBUDEV_H */
 #endif /* KERNEL_LINUX */
   return 0;
-} /* int disk_shutdown */
+}
 
 #if KERNEL_LINUX
 static counter_t disk_calc_time_incr(counter_t delta_time,
-                                     counter_t delta_ops) {
+                                     counter_t delta_ops)
+{
   double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
   double avg_time = ((double)delta_time) / ((double)delta_ops);
   double avg_time_incr = interval * avg_time;
@@ -322,7 +326,8 @@ static counter_t disk_calc_time_incr(counter_t delta_time,
  */
 
 static char *disk_udev_attr_name(struct udev *udev, char *disk_name,
-                                 const char *attr) {
+                                 const char *attr)
+{
   struct udev_device *dev;
   const char *prop;
   char *output = NULL;
@@ -341,7 +346,8 @@ static char *disk_udev_attr_name(struct udev *udev, char *disk_name,
 #endif
 
 #if HAVE_IOKIT_IOKITLIB_H
-static signed long long dict_get_value(CFDictionaryRef dict, const char *key) {
+static signed long long dict_get_value(CFDictionaryRef dict, const char *key)
+{
   signed long long val_int;
   CFNumberRef val_obj;
   CFStringRef key_obj;
@@ -373,50 +379,51 @@ static signed long long dict_get_value(CFDictionaryRef dict, const char *key) {
 }
 #endif /* HAVE_IOKIT_IOKITLIB_H */
 
-static int disk_read(void) {
+static int disk_read(void)
+{
   metric_family_t fam_disk_read_bytes = {
-      .name = "disk_read_bytes_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_read_bytes_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_read_merged = {
-      .name = "disk_read_merged_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_read_merged_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_read_ops = {
-      .name = "disk_read_ops_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_read_ops_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_read_time = {
-      .name = "disk_read_time_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_read_time_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_write_bytes = {
-      .name = "disk_write_bytes_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_write_bytes_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_write_merged = {
-      .name = "disk_write_merged_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_write_merged_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_write_ops = {
-      .name = "disk_write_ops_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_write_ops_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_write_time = {
-      .name = "disk_write_time_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_write_time_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_io_time = {
-      .name = "disk_io_time_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_io_time_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_io_weighted_time = {
-      .name = "disk_io_weighted_time_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_disk_io_weighted_time_total",
+    .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_disk_pending_operations = {
-      .name = "disk_pending_operations",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_disk_pending_operations",
+    .type = METRIC_TYPE_GAUGE,
   };
 
   metric_family_t *fams[] = {&fam_disk_read_bytes,
@@ -475,8 +482,7 @@ static int disk_read(void) {
             disk_child, (CFMutableDictionaryRef *)&child_dict,
             kCFAllocatorDefault, kNilOptions) != kIOReturnSuccess ||
         child_dict == NULL) {
-      ERROR("disk plugin: IORegistryEntryCreateCFProperties (disk_child) "
-            "failed.");
+      ERROR("disk plugin: IORegistryEntryCreateCFProperties (disk_child) failed.");
       IOObjectRelease(disk_child);
       IOObjectRelease(disk);
       continue;
@@ -488,8 +494,7 @@ static int disk_read(void) {
         (CFStringRef)CFDictionaryGetValue(child_dict, CFSTR(kIOBSDNameKey));
     if (tmp_cf_string_ref) {
       assert(CFGetTypeID(tmp_cf_string_ref) == CFStringGetTypeID());
-      CFStringGetCString(tmp_cf_string_ref, child_disk_name_bsd,
-                         sizeof(child_disk_name_bsd), kCFStringEncodingUTF8);
+      CFStringGetCString(tmp_cf_string_ref, child_disk_name_bsd, sizeof(child_disk_name_bsd), kCFStringEncodingUTF8);
     }
     disk_major = (int)dict_get_value(child_dict, kIOBSDMajorKey);
     disk_minor = (int)dict_get_value(child_dict, kIOBSDMinorKey);
@@ -514,14 +519,12 @@ static int disk_read(void) {
         (CFStringRef)CFDictionaryGetValue(props_dict, CFSTR(kIOBSDNameKey));
     if (tmp_cf_string_ref) {
       assert(CFGetTypeID(tmp_cf_string_ref) == CFStringGetTypeID());
-      CFStringGetCString(tmp_cf_string_ref, props_disk_name_bsd,
-                         sizeof(props_disk_name_bsd), kCFStringEncodingUTF8);
+      CFStringGetCString(tmp_cf_string_ref, props_disk_name_bsd, sizeof(props_disk_name_bsd), kCFStringEncodingUTF8);
     }
     stats_dict = (CFDictionaryRef)CFDictionaryGetValue(
         props_dict, CFSTR(kIOBlockStorageDriverStatisticsKey));
     if (stats_dict == NULL) {
-      ERROR("disk plugin: CFDictionaryGetValue (%s) failed.",
-            kIOBlockStorageDriverStatisticsKey);
+      ERROR("disk plugin: CFDictionaryGetValue (%s) failed.", kIOBlockStorageDriverStatisticsKey);
       CFRelease(props_dict);
       IOObjectRelease(disk);
       continue;
@@ -536,8 +539,7 @@ static int disk_read(void) {
         sstrncpy(disk_name, props_disk_name_bsd, sizeof(disk_name));
       else {
         ERROR("disk plugin: can't find bsd disk name.");
-        ssnprintf(disk_name, sizeof(disk_name), "%i-%i", disk_major,
-                  disk_minor);
+        ssnprintf(disk_name, sizeof(disk_name), "%i-%i", disk_major, disk_minor);
       }
     } else
       ssnprintf(disk_name, sizeof(disk_name), "%i-%i", disk_major, disk_minor);
@@ -552,18 +554,12 @@ static int disk_read(void) {
     }
 
     /* extract the stats */
-    read_ops =
-        dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsReadsKey);
-    read_byt =
-        dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsBytesReadKey);
-    read_tme = dict_get_value(stats_dict,
-                              kIOBlockStorageDriverStatisticsTotalReadTimeKey);
-    write_ops =
-        dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsWritesKey);
-    write_byt = dict_get_value(stats_dict,
-                               kIOBlockStorageDriverStatisticsBytesWrittenKey);
-    write_tme = dict_get_value(
-        stats_dict, kIOBlockStorageDriverStatisticsTotalWriteTimeKey);
+    read_ops = dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsReadsKey);
+    read_byt = dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsBytesReadKey);
+    read_tme = dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsTotalReadTimeKey);
+    write_ops = dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsWritesKey);
+    write_byt = dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsBytesWrittenKey);
+    write_tme = dict_get_value(stats_dict, kIOBlockStorageDriverStatisticsTotalWriteTimeKey);
     CFRelease(props_dict);
     IOObjectRelease(disk);
 
@@ -1099,8 +1095,7 @@ static int disk_read(void) {
 
   for (int counter = 0; counter < disks; counter++) {
     strncpy(name, ds->disk_name, sizeof(name));
-    name[sizeof(name) - 1] =
-        '\0'; /* strncpy doesn't terminate longer strings */
+    name[sizeof(name) - 1] = '\0'; /* strncpy doesn't terminate longer strings */
 
     if (ignorelist_match(ignorelist, name) != 0) {
       ds++;
@@ -1264,11 +1259,12 @@ static int disk_read(void) {
   }
 
   return 0;
-} /* int disk_read */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("disk", disk_config, config_keys, config_keys_num);
   plugin_register_init("disk", disk_init);
   plugin_register_shutdown("disk", disk_shutdown);
   plugin_register_read("disk", disk_read);
-} /* void module_register */
+}
