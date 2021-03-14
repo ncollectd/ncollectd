@@ -1281,15 +1281,6 @@ lua_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 lua_la_LIBADD = $(BUILD_WITH_LIBLUA_LIBS)
 endif
 
-if BUILD_PLUGIN_MADWIFI
-pkglib_LTLIBRARIES += madwifi.la
-madwifi_la_SOURCES = \
-	src/madwifi.c \
-	src/madwifi.h
-madwifi_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-madwifi_la_LIBADD = libignorelist.la
-endif
-
 if BUILD_PLUGIN_MATCH_EMPTY_COUNTER
 pkglib_LTLIBRARIES += match_empty_counter.la
 match_empty_counter_la_SOURCES = src/match_empty_counter.c
