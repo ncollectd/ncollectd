@@ -35,11 +35,11 @@ static int serial_read(void)
   FILE *fh;
   char buffer[1024];
   metric_family_t fam_serial_read = {
-      .name = "serial_read_bytes_total",
+      .name = "host_serial_read_bytes_total",
       .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t fam_serial_write = {
-      .name = "serial_write_bytes_total",
+      .name = "host_serial_write_bytes_total",
       .type = METRIC_TYPE_COUNTER,
   };
   metric_family_t *fams[] = {&fam_serial_read, &fam_serial_write, NULL};
