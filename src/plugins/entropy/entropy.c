@@ -39,7 +39,8 @@ static int entropy_read(void);
 #if KERNEL_LINUX
 #define ENTROPY_FILE "/proc/sys/kernel/random/entropy_avail"
 
-static int entropy_read(void) {
+static int entropy_read(void)
+{
   value_t v;
   if (parse_value_file(ENTROPY_FILE, &v, DS_TYPE_GAUGE) != 0) {
     ERROR("entropy plugin: Reading \"" ENTROPY_FILE "\" failed.");
@@ -69,7 +70,8 @@ static int entropy_read(void) {
 #endif
 #include <paths.h>
 
-static int entropy_read(void) {
+static int entropy_read(void)
+{
   value_t v;
   rndpoolstat_t rs;
   static int fd;
@@ -101,15 +103,14 @@ static int entropy_read(void) {
 
 #endif /* KERNEL_NETBSD */
 
-static void entropy_submit(gauge_t value) {
+static void entropy_submit(gauge_t value)
+{
   metric_family_t fam = {
-      .name = "entropy_available_bits",
+      .name = "host_entropy_available_bits",
       .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.gauge = value,
-                                    });
+  metric_family_metric_append(&fam, (metric_t){ .value.gauge = value, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
@@ -120,6 +121,7 @@ static void entropy_submit(gauge_t value) {
   metric_family_metric_reset(&fam);
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("entropy", entropy_read);
-} /* void module_register */
+}
