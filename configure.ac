@@ -1863,29 +1863,6 @@ if test "x$have_ip6_ext" = "xno"; then
   fi
 fi
 
-# libi2c-dev
-if test "x$ac_system" = "xLinux"; then
-  with_libi2c_libs=""
-  AC_CHECK_HEADERS([i2c/smbus.h],
-    [with_libi2c_libs="-li2c"]
-  )
-  AC_CHECK_DECL([i2c_smbus_read_i2c_block_data],
-    [with_libi2c="yes"],
-    [with_libi2c="no (symbol i2c_smbus_read_i2c_block_data not found - have you installed libi2c-dev ?)"],
-    [[
-      #include <stdlib.h>
-      #include <linux/i2c-dev.h>
-      #if HAVE_I2C_SMBUS_H
-      # include <i2c/smbus.h>
-      #endif
-    ]]
-  )
-  BUILD_WITH_LIBI2C_LIBS="$with_libi2c_libs"
-  AC_SUBST([BUILD_WITH_LIBI2C_LIBS])
-else
-  with_libi2c="no (Linux only)"
-fi
-
 #
 # Checks for libraries begin here
 #
@@ -6098,7 +6075,6 @@ AC_COLLECTD([werror],    [disable], [feature], [building with -Werror])
 dependency_warning="no"
 dependency_error="no"
 
-plugin_barometer="no"
 plugin_battery="no"
 plugin_bind="no"
 plugin_buddyinfo="no"
@@ -6312,11 +6288,6 @@ if test "x$with_devinfo" = "xyes" && test "x$with_kstat" = "xyes"; then
   plugin_memory="yes"
 fi
 
-if test "x$with_libi2c" = "xyes"; then
-  plugin_barometer="yes"
-fi
-
-
 # libstatgrab
 if test "x$with_libstatgrab" = "xyes"; then
   plugin_cpu="yes"
@@ -6520,7 +6491,6 @@ AC_PLUGIN([amqp1],               [$with_libqpid_proton],      [AMQP 1.0 output p
 AC_PLUGIN([apache],              [$with_libcurl],             [Apache httpd statistics])
 AC_PLUGIN([apcups],              [yes],                       [Statistics of UPSes by APC])
 AC_PLUGIN([apple_sensors],       [$with_libiokit],            [Apple hardware sensors])
-AC_PLUGIN([barometer],           [$plugin_barometer],         [Barometer sensor on I2C])
 AC_PLUGIN([battery],             [$plugin_battery],           [Battery statistics])
 AC_PLUGIN([bind],                [$plugin_bind],              [ISC Bind nameserver statistics])
 AC_PLUGIN([buddyinfo],           [$plugin_buddyinfo],         [buddyinfo statistics])
@@ -6880,7 +6850,6 @@ AC_MSG_RESULT([    libganglia  . . . . . $with_libganglia])
 AC_MSG_RESULT([    libgcrypt . . . . . . $with_libgcrypt])
 AC_MSG_RESULT([    libgps  . . . . . . . $with_libgps])
 AC_MSG_RESULT([    libhiredis  . . . . . $with_libhiredis])
-AC_MSG_RESULT([    libi2c-dev  . . . . . $with_libi2c])
 AC_MSG_RESULT([    libiokit  . . . . . . $with_libiokit])
 AC_MSG_RESULT([    libiptc . . . . . . . $with_libiptc])
 AC_MSG_RESULT([    libjansson  . . . . . $with_libjansson])
@@ -6949,7 +6918,6 @@ AC_MSG_RESULT([    amqp1   . . . . . . . $enable_amqp1])
 AC_MSG_RESULT([    apache  . . . . . . . $enable_apache])
 AC_MSG_RESULT([    apcups  . . . . . . . $enable_apcups])
 AC_MSG_RESULT([    apple_sensors . . . . $enable_apple_sensors])
-AC_MSG_RESULT([    barometer . . . . . . $enable_barometer])
 AC_MSG_RESULT([    battery . . . . . . . $enable_battery])
 AC_MSG_RESULT([    bind  . . . . . . . . $enable_bind])
 AC_MSG_RESULT([    buddyinfo . . . . . . $enable_buddyinfo])

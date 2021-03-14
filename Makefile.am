@@ -766,13 +766,6 @@ apple_sensors_la_SOURCES = src/apple_sensors.c
 apple_sensors_la_LDFLAGS = $(PLUGIN_LDFLAGS) -framework IOKit
 endif
 
-if BUILD_PLUGIN_BAROMETER
-pkglib_LTLIBRARIES += barometer.la
-barometer_la_SOURCES = src/barometer.c
-barometer_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-barometer_la_LIBADD = -lm $(BUILD_WITH_LIBI2C_LIBS)
-endif
-
 if BUILD_PLUGIN_BATTERY
 pkglib_LTLIBRARIES += battery.la
 battery_la_SOURCES = \
