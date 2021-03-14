@@ -144,7 +144,7 @@ static int pagesize;
 static bool values_absolute = true;
 static bool values_percentage;
 
-static int memory_config(oconfig_item_t *ci) /* {{{ */
+static int memory_config(oconfig_item_t *ci)
 {
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
@@ -159,9 +159,10 @@ static int memory_config(oconfig_item_t *ci) /* {{{ */
   return 0;
 } /* }}} int memory_config */
 
-static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX]) {
+static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
+{
   metric_family_t fam_absolute = {
-      .name = "memory_usage",
+      .name = "host_memory_usage",
       .type = METRIC_TYPE_GAUGE,
   };
   gauge_t total = 0;
@@ -199,7 +200,7 @@ static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX]) {
   }
 
   metric_family_t fam_percent = {
-      .name = "memory_usage_percent",
+      .name = "host_memory_usage_percent",
       .type = METRIC_TYPE_GAUGE,
   };
   for (size_t i = 0; i < COLLECTD_MEMORY_TYPE_MAX; i++) {
@@ -222,7 +223,8 @@ static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX]) {
   return ret;
 }
 
-static int memory_init(void) {
+static int memory_init(void)
+{
 #if HAVE_HOST_STATISTICS
   port_host = mach_host_self();
   host_page_size(port_host, &pagesize);
@@ -271,9 +273,10 @@ static int memory_init(void) {
   pagesize = getpagesize();
 #endif /* HAVE_PERFSTAT */
   return 0;
-} /* int memory_init */
+}
 
-static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX]) {
+static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
+{
 #if HAVE_HOST_STATISTICS
   if (!port_host || !pagesize) {
     return EINVAL;
@@ -571,7 +574,7 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX]) {
 #endif /* HAVE_PERFSTAT */
 
   return 0;
-} /* }}} int memory_read_internal */
+}
 
 static int memory_read(void) /* {{{ */
 {
@@ -586,7 +589,7 @@ static int memory_read(void) /* {{{ */
   }
 
   return memory_dispatch(values);
-} /* }}} int memory_read */
+}
 
 void module_register(void) {
   plugin_register_complex_config("memory", memory_config);
