@@ -56,7 +56,8 @@ enum {
 };
 
 static int thermal_sysfs_device_read(const char __attribute__((unused)) * dir,
-                                     const char *name, void *user_data) {
+                                     const char *name, void *user_data)
+{
   char filename[PATH_MAX];
   bool success = false;
   value_t value;
@@ -92,7 +93,8 @@ static int thermal_sysfs_device_read(const char __attribute__((unused)) * dir,
 }
 
 static int thermal_procfs_device_read(const char __attribute__((unused)) * dir,
-                                      const char *name, void *user_data) {
+                                      const char *name, void *user_data)
+{
   const char str_temp[] = "temperature:";
   char filename[256];
   char data[1024];
@@ -152,7 +154,8 @@ static int thermal_procfs_device_read(const char __attribute__((unused)) * dir,
   return -1;
 }
 
-static int thermal_config(const char *key, const char *value) {
+static int thermal_config(const char *key, const char *value)
+{
   if (device_list == NULL)
     device_list = ignorelist_create(1);
 
@@ -177,21 +180,22 @@ static int thermal_config(const char *key, const char *value) {
   return 0;
 }
 
-static int thermal_read(void) {
+static int thermal_read(void)
+{
   metric_family_t fams[FAM_THERMAL_MAX] = {
       [FAM_COOLING_DEVICE_MAX_STATE] =
           {
-              .name = "cooling_device_max_state",
+              .name = "host_cooling_device_max_state",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_COOLING_DEVICE_CUR_STATE] =
           {
-              .name = "cooling_device_cur_state",
+              .name = "host_cooling_device_cur_state",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_THERMAL_ZONE_CELSIUS] =
           {
-              .name = "thermal_zone_celsius",
+              .name = "host_thermal_zone_celsius",
               .type = METRIC_TYPE_GAUGE,
           },
   };
@@ -216,7 +220,8 @@ static int thermal_read(void) {
   return 0;
 }
 
-static int thermal_init(void) {
+static int thermal_init(void)
+{
   int ret = -1;
 
   if (!force_procfs && access(dirname_sysfs, R_OK | X_OK) == 0) {
@@ -230,15 +235,16 @@ static int thermal_init(void) {
   return ret;
 }
 
-static int thermal_shutdown(void) {
+static int thermal_shutdown(void)
+{
   ignorelist_free(device_list);
 
   return 0;
 }
 
-void module_register(void) {
-  plugin_register_config("thermal", thermal_config, config_keys,
-                         STATIC_ARRAY_SIZE(config_keys));
+void module_register(void)
+{
+  plugin_register_config("thermal", thermal_config, config_keys, STATIC_ARRAY_SIZE(config_keys));
   plugin_register_init("thermal", thermal_init);
   plugin_register_shutdown("thermal", thermal_shutdown);
 }
