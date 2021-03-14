@@ -40,11 +40,12 @@
 see /proc/fs/fscache/stats
 see Documentation/filesystems/caching/fscache.txt in linux kernel >= 2.6.30
 */
-static void fscache_submit(const struct fscache_metric *m, counter_t value) {
+static void fscache_submit(const struct fscache_metric *m, counter_t value)
+{
   metric_family_t fam = {
-      .name = m->name,
-      .type = m->type,
-      .help = m->help,
+    .name = m->name,
+    .type = m->type,
+    .help = m->help,
   };
 
   metric_t metric = {0};
@@ -57,15 +58,14 @@ static void fscache_submit(const struct fscache_metric *m, counter_t value) {
   metric_family_metric_append(&fam, metric);
 
   int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("fscache plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+  if (status != 0)
+    ERROR("fscache plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
 
   metric_family_metric_reset(&fam);
 }
 
-static void fscache_read_stats_file(FILE *fh) {
+static void fscache_read_stats_file(FILE *fh)
+{
   char linebuffer[BUFSIZE];
   /*
    *  cat /proc/fs/fscache/stats
@@ -139,27 +139,25 @@ static void fscache_read_stats_file(FILE *fh) {
       size_t field_name_len = field_value_str - field_name;
       field_value_str++;
 
-      sstrncpy(section + section_len, field_name,
-               sizeof(section) - section_len);
+      sstrncpy(section + section_len, field_name, sizeof(section) - section_len);
       const struct fscache_metric *m =
           fscache_get_key(section, section_len + field_name_len);
       if (m != NULL) {
 
-        status =
-            parse_value(field_value_str, &field_value_cnt, DS_TYPE_COUNTER);
+        status = parse_value(field_value_str, &field_value_cnt, DS_TYPE_COUNTER);
         if (status != 0)
           continue;
 
         fscache_submit(m, field_value_cnt.counter);
       } else {
-        DEBUG("fscache plugin: metric not found for: %.*s %s", (int)section_len,
-              section, field_name);
+        DEBUG("fscache plugin: metric not found for: %.*s %s", (int)section_len, section, field_name);
       }
     }
   } /* while (fgets) */
-} /* void fscache_read_stats_file */
+}
 
-static int fscache_read(void) {
+static int fscache_read(void)
+{
   FILE *fh;
   fh = fopen("/proc/fs/fscache/stats", "r");
   if (fh != NULL) {
@@ -172,6 +170,7 @@ static int fscache_read(void) {
   return 0;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("fscache", fscache_read);
-} /* void module_register */
+}
