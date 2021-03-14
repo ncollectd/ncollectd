@@ -37,9 +37,6 @@
 #define SNMP_FILE "/proc/net/snmp"
 #define NETSTAT_FILE "/proc/net/netstat"
 
-/*
- * Global variables
- */
 static const char *config_keys[] = {
     "Value",
     "IgnoreSelected",
@@ -48,15 +45,10 @@ static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
 static ignorelist_t *values_list;
 
-/*
- * Functions
- */
-static void submit(const char *protocol_name, const char *str_key,
-                   const char *str_value)
+static void submit(const char *protocol_name, const char *str_key, const char *str_value)
 {
   char fam_name[128];
-  ssnprintf(fam_name, sizeof(fam_name), "protocols_%s_%s_total", protocol_name,
-            str_key);
+  ssnprintf(fam_name, sizeof(fam_name), "host_protocols_%s_%s_total", protocol_name, str_key);
 
   metric_family_t fam = {
       .name = fam_name,
@@ -69,9 +61,7 @@ static void submit(const char *protocol_name, const char *str_key,
     return;
   }
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.counter = value.counter,
-                                    });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter = value.counter, });
 
   status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
@@ -222,7 +212,6 @@ static int protocols_config(const char *key, const char *value)
 
 void module_register(void)
 {
-  plugin_register_config("protocols", protocols_config, config_keys,
-                         config_keys_num);
+  plugin_register_config("protocols", protocols_config, config_keys, config_keys_num);
   plugin_register_read("protocols", protocols_read);
 }
