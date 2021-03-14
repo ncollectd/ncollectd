@@ -62,7 +62,8 @@ static bool values_absolute = true;
 static bool values_percentage;
 static bool log_once;
 
-static int df_init(void) {
+static int df_init(void)
+{
   if (il_device == NULL)
     il_device = ignorelist_create(1);
   if (il_mountpoint == NULL)
@@ -75,7 +76,8 @@ static int df_init(void) {
   return 0;
 }
 
-static int df_config(const char *key, const char *value) {
+static int df_config(const char *key, const char *value)
+{
   df_init();
 
   if (strcasecmp(key, "Device") == 0) {
@@ -137,59 +139,60 @@ static int df_config(const char *key, const char *value) {
   return -1;
 }
 
-static int df_read(void) {
+static int df_read(void)
+{
 #if HAVE_STATVFS
   struct statvfs statbuf;
 #elif HAVE_STATFS
   struct statfs statbuf;
 #endif
   metric_family_t fam_fs_free = {
-      .name = "filesystem_free_bytes",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_free_bytes",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_reserved = {
-      .name = "filesystem_reserved_bytes",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_reserved_bytes",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_used = {
-      .name = "filesystem_used_bytes",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_used_bytes",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_free_pct = {
-      .name = "filesystem_free_percent",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_free_percent",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_reserved_pct = {
-      .name = "filesystem_reserved_percent",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_reserved_percent",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_used_pct = {
-      .name = "filesystem_used_percent",
-      .type = METRIC_TYPE_GAUGE,
-  };
-  metric_family_t fam_fs_inodes_free_pct = {
-      .name = "filesystem_inodes_free_percent",
-      .type = METRIC_TYPE_GAUGE,
-  };
-  metric_family_t fam_fs_inodes_reserved_pct = {
-      .name = "filesystem_inodes_reserved_percent",
-      .type = METRIC_TYPE_GAUGE,
-  };
-  metric_family_t fam_fs_inodes_used_pct = {
-      .name = "filesystem_inodes_used_percent",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_used_percent",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_inodes_free = {
-      .name = "filesystem_inodes_free",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_inodes_free",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_inodes_reserved = {
-      .name = "filesystem_inodes_reserved",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_inodes_reserved",
+    .type = METRIC_TYPE_GAUGE,
   };
   metric_family_t fam_fs_inodes_used = {
-      .name = "filesystem_inodes_used",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_filesystem_inodes_used",
+    .type = METRIC_TYPE_GAUGE,
+  };
+  metric_family_t fam_fs_inodes_free_pct = {
+    .name = "host_filesystem_inodes_free_percent",
+    .type = METRIC_TYPE_GAUGE,
+  };
+  metric_family_t fam_fs_inodes_reserved_pct = {
+    .name = "host_filesystem_inodes_reserved_percent",
+    .type = METRIC_TYPE_GAUGE,
+  };
+  metric_family_t fam_fs_inodes_used_pct = {
+    .name = "host_filesystem_inodes_used_percent",
+    .type = METRIC_TYPE_GAUGE,
   };
 
   metric_family_t *fams[] = {&fam_fs_free,
@@ -300,8 +303,7 @@ static int df_read(void) {
         m.value.gauge = (gauge_t)((float_t)(blk_free) / statbuf.f_blocks * 100);
         metric_family_metric_append(&fam_fs_free_pct, m);
 
-        m.value.gauge =
-            (gauge_t)((float_t)(blk_reserved) / statbuf.f_blocks * 100);
+        m.value.gauge = (gauge_t)((float_t)(blk_reserved) / statbuf.f_blocks * 100);
         metric_family_metric_append(&fam_fs_reserved_pct, m);
 
         m.value.gauge = (gauge_t)((float_t)(blk_used) / statbuf.f_blocks * 100);
@@ -331,16 +333,13 @@ static int df_read(void) {
 
       if (values_percentage) {
         if (statbuf.f_files > 0) {
-          m.value.gauge =
-              (gauge_t)((float_t)(inode_free) / statbuf.f_files * 100);
+          m.value.gauge = (gauge_t)((float_t)(inode_free) / statbuf.f_files * 100);
           metric_family_metric_append(&fam_fs_inodes_free_pct, m);
 
-          m.value.gauge =
-              (gauge_t)((float_t)(inode_reserved) / statbuf.f_files * 100);
+          m.value.gauge = (gauge_t)((float_t)(inode_reserved) / statbuf.f_files * 100);
           metric_family_metric_append(&fam_fs_inodes_reserved_pct, m);
 
-          m.value.gauge =
-              (gauge_t)((float_t)(inode_used) / statbuf.f_files * 100);
+          m.value.gauge = (gauge_t)((float_t)(inode_used) / statbuf.f_files * 100);
           metric_family_metric_append(&fam_fs_inodes_used_pct, m);
         } else {
           metric_reset(&m);
@@ -376,9 +375,10 @@ static int df_read(void) {
   }
 
   return retval;
-} /* int df_read */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("df", df_config, config_keys, config_keys_num);
   plugin_register_init("df", df_init);
   plugin_register_read("df", df_read);
