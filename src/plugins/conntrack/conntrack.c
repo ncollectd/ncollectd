@@ -43,33 +43,32 @@ static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
 static int old_files;
 
-static int conntrack_config(const char *key, const char *value) {
+static int conntrack_config(const char *key, const char *value)
+{
   if (strcmp(key, "OldFiles") == 0)
     old_files = 1;
 
   return 0;
 }
 
-static void conntrack_submit(char *fam_name, gauge_t value) {
+static void conntrack_submit(char *fam_name, gauge_t value)
+{
   metric_family_t fam = {
       .name = fam_name,
       .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.gauge = value,
-                                    });
+  metric_family_metric_append(&fam, (metric_t){ .value.gauge = value, });
 
   int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("conntrack plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+  if (status != 0)
+    ERROR("conntrack plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
 
   metric_family_metric_reset(&fam);
-} /* static void conntrack_submit */
+}
 
-static int conntrack_read(void) {
+static int conntrack_read(void)
+{
   value_t conntrack, conntrack_max, conntrack_pct;
 
   char const *path = old_files ? CONNTRACK_FILE_OLD : CONNTRACK_FILE;
@@ -86,15 +85,15 @@ static int conntrack_read(void) {
 
   conntrack_pct.gauge = (conntrack.gauge / conntrack_max.gauge) * 100;
 
-  conntrack_submit("conntrack_used", conntrack.gauge);
-  conntrack_submit("conntrack_max", conntrack_max.gauge);
-  conntrack_submit("conntrack_used_percent", conntrack_pct.gauge);
+  conntrack_submit("host_conntrack_used", conntrack.gauge);
+  conntrack_submit("host_conntrack_max", conntrack_max.gauge);
+  conntrack_submit("host_conntrack_used_percent", conntrack_pct.gauge);
 
   return 0;
-} /* static int conntrack_read */
+}
 
-void module_register(void) {
-  plugin_register_config("conntrack", conntrack_config, config_keys,
-                         config_keys_num);
+void module_register(void)
+{
+  plugin_register_config("conntrack", conntrack_config, config_keys, config_keys_num);
   plugin_register_read("conntrack", conntrack_read);
-} /* void module_register */
+}
