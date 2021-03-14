@@ -36,7 +36,8 @@ enum {
 
 static int pressure_read_file(const char *filename,
                               metric_family_t *fam_waiting,
-                              metric_family_t *fam_stalled) {
+                              metric_family_t *fam_stalled)
+{
   FILE *fh = fopen(filename, "r");
   if (fh == NULL) {
     ERROR("pressure plugin: fopen(\"%s\") failed: %s", filename, STRERRNO);
@@ -69,39 +70,39 @@ static int pressure_read_file(const char *filename,
   return 0;
 }
 
-static int pressure_read(void) {
+static int pressure_read(void)
+{
   metric_family_t fams[FAM_PRESSURE_MAX] = {
       [FAM_PRESSURE_CPU_WAITING] =
           {
-              .name = "pressure_cpu_waiting_total",
+              .name = "host_pressure_cpu_waiting_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PRESSURE_IO_WAITING] =
           {
-              .name = "pressure_io_waiting_total",
+              .name = "host_pressure_io_waiting_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PRESSURE_IO_STALLED] =
           {
-              .name = "pressure_io_stalled_total",
+              .name = "host_pressure_io_stalled_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PRESSURE_MEMORY_WAITING] =
           {
-              .name = "pressure_memory_waiting_total",
+              .name = "host_pressure_memory_waiting_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PRESSURE_MEMORY_STALLED] =
           {
-              .name = "pressure_memory_stalled_total",
+              .name = "host_pressure_memory_stalled_total",
               .type = METRIC_TYPE_COUNTER,
           },
   };
 
   int status = 0;
 
-  if (pressure_read_file(PRESSURE_CPU, &fams[FAM_PRESSURE_CPU_WAITING], NULL) <
-      0)
+  if (pressure_read_file(PRESSURE_CPU, &fams[FAM_PRESSURE_CPU_WAITING], NULL) < 0)
     status++;
 
   if (pressure_read_file(PRESSURE_IO, &fams[FAM_PRESSURE_IO_WAITING],
@@ -126,4 +127,7 @@ static int pressure_read(void) {
   return status == 3 ? -1 : 0;
 }
 
-void module_register(void) { plugin_register_read("pressure", pressure_read); }
+void module_register(void)
+{
+  plugin_register_read("pressure", pressure_read);
+}
