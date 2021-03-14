@@ -39,18 +39,13 @@
 #include <sys/types.h>
 #endif /* KERNEL_NETBSD */
 
-/*
- * (Module-)Global variables
- */
 static const char *config_keys[] = {"Irq", "IgnoreSelected"};
 static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
 static ignorelist_t *ignorelist;
 
-/*
- * Private functions
- */
-static int irq_config(const char *key, const char *value) {
+static int irq_config(const char *key, const char *value)
+{
   if (ignorelist == NULL)
     ignorelist = ignorelist_create(/* invert = */ 1);
 
@@ -69,7 +64,8 @@ static int irq_config(const char *key, const char *value) {
 }
 
 #if KERNEL_LINUX
-static int irq_read_data(metric_family_t *fam) {
+static int irq_read_data(metric_family_t *fam)
+{
   /*
    * Example content:
    *         CPU0       CPU1       CPU2       CPU3
@@ -157,11 +153,12 @@ static int irq_read_data(metric_family_t *fam) {
   fclose(fh);
 
   return 0;
-} /* int irq_read */
+}
 #endif /* KERNEL_LINUX */
 
 #if KERNEL_NETBSD
-static int irq_read_data(metric_family_t *fam) {
+static int irq_read_data(metric_family_t *fam)
+{
   const int mib[4] = {CTL_KERN, KERN_EVCNT, EVCNT_TYPE_INTR,
                       KERN_EVCNT_COUNT_NONZERO};
   size_t buflen = 0;
@@ -214,10 +211,11 @@ static int irq_read_data(metric_family_t *fam) {
 }
 #endif /* KERNEL_NETBSD */
 
-static int irq_read(void) {
+static int irq_read(void)
+{
   metric_family_t fam = {
-      .name = "interrupts_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_interrupts_total",
+    .type = METRIC_TYPE_COUNTER,
   };
 
   int ret = irq_read_data(&fam);
@@ -225,8 +223,7 @@ static int irq_read(void) {
   if (fam.metric.num > 0) {
     int status = plugin_dispatch_metric_family(&fam);
     if (status != 0) {
-      ERROR("irq plugin: plugin_dispatch_metric_family failed: %s",
-            STRERROR(status));
+      ERROR("irq plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
       ret = -1;
     }
     metric_family_metric_reset(&fam);
@@ -235,7 +232,8 @@ static int irq_read(void) {
   return ret;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("irq", irq_config, config_keys, config_keys_num);
   plugin_register_read("irq", irq_read);
-} /* void module_register */
+}
