@@ -41,9 +41,10 @@ struct web_match_s /* {{{ */
   char *regex;
   char *exclude_regex;
   int dstype;
-  char *type;
-  char *instance;
-
+  char *metric;
+  char *help;
+  label_set_t labels;
+  metric_t tmpl;
   cu_match_t *match;
 
   web_match_t *next;
@@ -53,8 +54,12 @@ struct web_page_s;
 typedef struct web_page_s web_page_t;
 struct web_page_s /* {{{ */
 {
-  char *plugin_name;
   char *instance;
+  char *metric_prefix;
+  label_set_t labels;
+  metric_t tmpl;
+  char *metric_response_time;
+  char *metric_response_code;
 
   char *url;
   int address_family;
@@ -126,8 +131,11 @@ static void cc_web_match_free(web_match_t *wm) /* {{{ */
     return;
 
   sfree(wm->regex);
-  sfree(wm->type);
-  sfree(wm->instance);
+  sfree(wm->exclude_regex);
+  sfree(wm->metric);
+  sfree(wm->help);
+  label_set_reset(&wm->labels);
+  metric_reset(&wm->tmpl);
   match_destroy(wm->match);
   cc_web_match_free(wm->next);
   sfree(wm);
@@ -143,9 +151,11 @@ static void cc_web_page_free(void *arg) /* {{{ */
     curl_easy_cleanup(wp->curl);
   wp->curl = NULL;
 
-  sfree(wp->plugin_name);
-  sfree(wp->instance);
-
+  sfree(wp->metric_prefix);
+  label_set_reset(&wp->labels);
+  metric_reset(&wp->tmpl);
+  sfree(wp->metric_response_time);
+  sfree(wp->metric_response_code);
   sfree(wp->url);
   sfree(wp->user);
   sfree(wp->pass);
@@ -252,7 +262,6 @@ static int cc_config_add_match(web_page_t *page, /* {{{ */
     ERROR("curl plugin: calloc failed.");
     return -1;
   }
-
   status = 0;
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
@@ -263,10 +272,12 @@ static int cc_config_add_match(web_page_t *page, /* {{{ */
       status = cf_util_get_string(child, &match->exclude_regex);
     else if (strcasecmp("DSType", child->key) == 0)
       status = cc_config_add_match_dstype(&match->dstype, child);
-    else if (strcasecmp("Type", child->key) == 0)
-      status = cf_util_get_string(child, &match->type);
-    else if (strcasecmp("Instance", child->key) == 0)
-      status = cf_util_get_string(child, &match->instance);
+    else if (strcasecmp("Metric", child->key) == 0)
+      status = cf_util_get_string(child, &match->metric);
+    else if (strcasecmp("Help", child->key) == 0)
+      status = cf_util_get_string(child, &match->help);
+    else if (strcasecmp("Label", child->key) == 0)
+      status = cf_util_get_label(child, &match->labels);
     else {
       WARNING("curl plugin: Option `%s' not allowed here.", child->key);
       status = -1;
@@ -282,8 +293,8 @@ static int cc_config_add_match(web_page_t *page, /* {{{ */
       status = -1;
     }
 
-    if (match->type == NULL) {
-      WARNING("curl plugin: `Type' missing in `Match' block.");
+    if (match->metric == NULL) {
+      WARNING("curl plugin: `Metric' missing in `Match' block.");
       status = -1;
     }
 
@@ -402,18 +413,13 @@ static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
     ERROR("curl plugin: calloc failed.");
     return -1;
   }
-  page->plugin_name = NULL;
-  page->url = NULL;
   page->address_family = CURL_IPRESOLVE_WHATEVER;
-  page->user = NULL;
-  page->pass = NULL;
   page->digest = false;
   page->verify_peer = true;
   page->verify_host = true;
   page->response_time = false;
   page->response_code = false;
   page->timeout = -1;
-  page->stats = NULL;
 
   page->instance = strdup(ci->values[0].value.string);
   if (page->instance == NULL) {
@@ -427,8 +433,10 @@ static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
 
-    if (strcasecmp("Plugin", child->key) == 0)
-      status = cf_util_get_string(child, &page->plugin_name);
+    if (strcasecmp("MetricPrefix", child->key) == 0)
+      status = cf_util_get_string(child, &page->metric_prefix);
+    else if (strcasecmp("Label", child->key) == 0)
+      status = cf_util_get_label(child, &page->labels);
     else if (strcasecmp("URL", child->key) == 0)
       status = cf_util_get_string(child, &page->url);
     else if (strcasecmp("AddressFamily", child->key) == 0) {
@@ -516,6 +524,29 @@ static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
       status = -1;
     }
 
+    if (page->response_time) {
+      if (page->metric_prefix == NULL)
+        page->metric_response_time = strdup("curl_response_time_seconds");
+      else
+        page->metric_response_time = ssnprintf_alloc("%s__response_time_seconds", page->metric_prefix);
+
+      if (page->metric_response_time == NULL) {
+        ERROR("curl plugin: alloc metric response time string failed.");
+        status = -1;
+      }
+    }
+    if (page->response_code) {
+      if (page->metric_prefix == NULL)
+        page->metric_response_code = strdup("curl_response_code");
+      else
+        page->metric_response_code = ssnprintf_alloc("%s__response_code", page->metric_prefix);
+
+      if (page->metric_response_code == NULL) {
+        ERROR("curl plugin: alloc metric response code string failed.");
+        status = -1;
+      }
+    }
+
     if (status == 0)
       status = cc_page_init_curl(page);
 
@@ -525,6 +556,41 @@ static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
   if (status != 0) {
     cc_web_page_free(page);
     return status;
+  }
+
+  if (page->matches != NULL) {
+    web_match_t *wm = page->matches;
+    while (wm != NULL) {
+      if (page->metric_prefix != NULL) {
+        char *metric = ssnprintf_alloc("%s%s", page->metric_prefix, wm->metric);
+        if (metric == NULL) {
+          ERROR("curl plugin: alloc metric string failed.");
+          cc_web_page_free(page);
+          return -1;
+        }
+        sfree(wm->metric);
+        wm->metric = metric;
+      }
+
+      if (page->instance != NULL)
+        metric_label_set(&wm->tmpl, "instance", page->instance);
+
+      for (size_t i = 0; i < page->labels.num; i++)
+        metric_label_set(&wm->tmpl, page->labels.ptr[i].name, page->labels.ptr[i].value);
+
+      for (size_t i = 0; i < wm->labels.num; i++)
+        metric_label_set(&wm->tmpl, wm->labels.ptr[i].name, wm->labels.ptr[i].value);
+
+      wm = wm->next;
+    }
+  }
+
+  if (page->response_time || (page->stats != NULL) || page->response_code) {
+    if (page->instance != NULL)
+      metric_label_set(&page->tmpl, "instance", page->instance);
+
+    for (size_t i = 0; i < page->labels.num; i++)
+      metric_label_set(&page->tmpl, page->labels.ptr[i].name, page->labels.ptr[i].value);
   }
 
   /* If all went well, register this page for reading */
@@ -581,47 +647,49 @@ static int cc_init(void) /* {{{ */
 
 static void cc_submit(const web_page_t *wp, const web_match_t *wm, /* {{{ */
                       value_t value) {
-  value_list_t vl = VALUE_LIST_INIT;
+  metric_family_t fam = {0};
+  value_t mvalue;
 
-  vl.values = &value;
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, (wp->plugin_name != NULL) ? wp->plugin_name : "curl",
-           sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, wp->instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, wm->type, sizeof(vl.type));
-  if (wm->instance != NULL)
-    sstrncpy(vl.type_instance, wm->instance, sizeof(vl.type_instance));
+  if (wm->dstype & UTILS_MATCH_DS_TYPE_GAUGE) {
+    fam.type = METRIC_TYPE_GAUGE;
+    mvalue.gauge = value.gauge;
+  } else if (wm->dstype & UTILS_MATCH_DS_TYPE_COUNTER) {
+    fam.type = METRIC_TYPE_COUNTER;
+    mvalue.counter = value.counter;
+  } else if (wm->dstype & UTILS_MATCH_DS_TYPE_DERIVE) {
+    fam.type = METRIC_TYPE_COUNTER;
+    mvalue.counter = value.derive;
+  } else {
+    return;
+  }
 
-  plugin_dispatch_values(&vl);
+  fam.name = wm->metric;
+  fam.help = wm->help;
+
+  metric_family_append(&fam, NULL,NULL, mvalue, &wm->tmpl);
+
+  int status = plugin_dispatch_metric_family(&fam);
+  if (status != 0) {
+    ERROR("curl plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
+  }
+  metric_family_metric_reset(&fam);
 } /* }}} void cc_submit */
 
-static void cc_submit_response_code(const web_page_t *wp, long code) /* {{{ */
+static void cc_submit_gauge(char *metric, gauge_t value, metric_t *tmpl) /* {{{ */
 {
-  value_list_t vl = VALUE_LIST_INIT;
+  metric_family_t fam = {
+   .name = metric,
+   .type = METRIC_TYPE_GAUGE,
+  };
 
-  vl.values = &(value_t){.gauge = (gauge_t)code};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, (wp->plugin_name != NULL) ? wp->plugin_name : "curl",
-           sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, wp->instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, "response_code", sizeof(vl.type));
+  metric_family_append(&fam, NULL, NULL, (value_t){.gauge = value}, tmpl);
 
-  plugin_dispatch_values(&vl);
-} /* }}} void cc_submit_response_code */
-
-static void cc_submit_response_time(const web_page_t *wp, /* {{{ */
-                                    gauge_t response_time) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = response_time};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, (wp->plugin_name != NULL) ? wp->plugin_name : "curl",
-           sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, wp->instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, "response_time", sizeof(vl.type));
-
-  plugin_dispatch_values(&vl);
-} /* }}} void cc_submit_response_time */
+  int status = plugin_dispatch_metric_family(&fam);
+  if (status != 0) {
+    ERROR("curl plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
+  }
+  metric_family_metric_reset(&fam);
+} /* }}} void cc_submit_gauge */
 
 static int cc_read_page(user_data_t *ud) /* {{{ */
 {
@@ -651,19 +719,19 @@ static int cc_read_page(user_data_t *ud) /* {{{ */
   }
 
   if (wp->response_time)
-    cc_submit_response_time(wp, CDTIME_T_TO_DOUBLE(cdtime() - start));
+    cc_submit_gauge(wp->metric_response_time, CDTIME_T_TO_DOUBLE(cdtime() - start), &wp->tmpl);
+
   if (wp->stats != NULL)
-    curl_stats_dispatch(wp->stats, wp->curl, NULL, "curl", wp->instance);
+    curl_stats_dispatch(wp->stats, wp->curl, &wp->tmpl);
 
   if (wp->response_code) {
     long response_code = 0;
-    status =
-        curl_easy_getinfo(wp->curl, CURLINFO_RESPONSE_CODE, &response_code);
+    status = curl_easy_getinfo(wp->curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (status != CURLE_OK) {
       ERROR("curl plugin: Fetching response code failed with status %i: %s",
             status, wp->curl_errbuf);
     } else {
-      cc_submit_response_code(wp, response_code);
+      cc_submit_gauge(wp->metric_response_code, (gauge_t) response_code, &wp->tmpl);
     }
   }
 

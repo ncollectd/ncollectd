@@ -929,7 +929,7 @@ endif
 if BUILD_PLUGIN_CURL
 pkglib_LTLIBRARIES += curl.la
 curl_la_SOURCES = \
-	src/curl.c \
+	src/plugins/curl/curl.c \
 	src/utils/curl_stats/curl_stats.c \
 	src/utils/curl_stats/curl_stats.h \
 	src/utils/match/match.c \

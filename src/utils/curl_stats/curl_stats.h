@@ -50,7 +50,6 @@ void curl_stats_destroy(curl_stats_t *s);
  * curl_stats_dispatch dispatches performance values from the the specified
  * cURL session to the daemon.
  */
-int curl_stats_dispatch(curl_stats_t *s, CURL *curl, const char *hostname,
-                        const char *plugin, const char *plugin_instance);
+int curl_stats_dispatch(curl_stats_t *s, CURL *curl, metric_t *tmpl);
 
 #endif /* UTILS_CURL_STATS_H */

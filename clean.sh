@@ -25,6 +25,7 @@ true \
 && rm -f -r src/.libs \
 && rm -f src/*.o \
 && rm -f src/*.la \
+&& rm -f *.la \
 && rm -f src/*.lo \
 && rm -f src/collectd.1 \
 && rm -f src/collectd.conf \
