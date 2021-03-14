@@ -36,23 +36,23 @@ static void synproxy_submit(value_t *results)
 {
   metric_family_t fams[SYNPROXY_FIELDS - 1] = {
       {
-          .name = "synproxy_connections_syn_received_total",
+          .name = "host_synproxy_connections_syn_received_total",
           .type = METRIC_TYPE_COUNTER,
       },
       {
-          .name = "synproxy_cookies_invalid_total",
+          .name = "host_synproxy_cookies_invalid_total",
           .type = METRIC_TYPE_COUNTER,
       },
       {
-          .name = "synproxy_cookies_valid_total",
+          .name = "host_synproxy_cookies_valid_total",
           .type = METRIC_TYPE_COUNTER,
       },
       {
-          .name = "synproxy_cookies_retransmission_total",
+          .name = "host_synproxy_cookies_retransmission_total",
           .type = METRIC_TYPE_COUNTER,
       },
       {
-          .name = "synproxy_connections_reopened_total",
+          .name = "host_synproxy_connections_reopened_total",
           .type = METRIC_TYPE_COUNTER,
       },
   };
