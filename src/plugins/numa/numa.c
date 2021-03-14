@@ -119,36 +119,30 @@ static int numa_read_node(metric_family_t *fams, int node)
 static int numa_read(void)
 {
   metric_family_t fams[FAM_NUMA_MAX] = {
-      [FAM_NUMA_HIT] =
-          {
-              .name = "numa_hit_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_NUMA_MISS] =
-          {
-              .name = "numa_miss_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_NUMA_FOREIGN] =
-          {
-              .name = "numa_foreign_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_NUMA_LOCAL_NODE] =
-          {
-              .name = "numa_local_node_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_NUMA_OTHER_NODE] =
-          {
-              .name = "numa_other_node_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_NUMA_INTERLEAVE_HIT] =
-          {
-              .name = "numa_interleave_hit_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
+    [FAM_NUMA_HIT] = {
+      .name = "host_numa_hit_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NUMA_MISS] = {
+      .name = "host_numa_miss_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NUMA_FOREIGN] = {
+      .name = "host_numa_foreign_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NUMA_LOCAL_NODE] = {
+      .name = "host_numa_local_node_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NUMA_OTHER_NODE] = {
+      .name = "host_numa_other_node_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NUMA_INTERLEAVE_HIT] = {
+      .name = "host_numa_interleave_hit_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
   };
 
   if (max_node < 0) {
