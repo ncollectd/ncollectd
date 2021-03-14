@@ -1909,127 +1909,127 @@ static int ps_read(void)
   metric_family_t fams_proc[FAM_PROC_MAX] = {
       [FAM_PROC_VMEM_SIZE] =
           {
-              .name = "processes_vmem_size_bytes",
+              .name = "host_processes_vmem_size_bytes",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_VMEM_RSS] =
           {
-              .name = "processes_vmem_rss_bytes",
+              .name = "host_processes_vmem_rss_bytes",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_VMEM_DATA] =
           {
-              .name = "processes_vmem_data_bytes",
+              .name = "host_processes_vmem_data_bytes",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_VMEM_CODE] =
           {
-              .name = "processes_vmem_code_bytes",
+              .name = "host_processes_vmem_code_bytes",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_VMEM_STACK] =
           {
-              .name = "processes_vmem_stack_bytes",
+              .name = "host_processes_vmem_stack_bytes",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_CPU_USER] =
           {
-              .name = "processes_cpu_user_total",
+              .name = "host_processes_cpu_user_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_CPU_SYSTEM] =
           {
-              .name = "processes_cpu_system_total",
+              .name = "host_processes_cpu_system_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_NUM_PROCESSS] =
           {
-              .name = "processes_num_processs",
+              .name = "host_processes_num_processs",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_NUM_THREADS] =
           {
-              .name = "processes_num_threads",
+              .name = "host_processes_num_threads",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_VMEM_MINFLT] =
           {
-              .name = "processes_vmem_minflt_total",
+              .name = "host_processes_vmem_minflt_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_VMEM_MAJFLT] =
           {
-              .name = "processes_vmem_majflt_total",
+              .name = "host_processes_vmem_majflt_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_IO_RCHAR] =
           {
-              .name = "processes_io_rchar_bytes",
+              .name = "host_processes_io_rchar_bytes",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_IO_WCHAR] =
           {
-              .name = "processes_io_wchar_bytes",
+              .name = "host_processes_io_wchar_bytes",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_IO_SYSCR] =
           {
-              .name = "processes_io_syscr_total",
+              .name = "host_processes_io_syscr_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_IO_SYSCW] =
           {
-              .name = "processes_io_syscw_total",
+              .name = "host_processes_io_syscw_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_IO_DISKR] =
           {
-              .name = "processes_io_diskr_bytes",
+              .name = "host_processes_io_diskr_bytes",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_IO_DISKW] =
           {
-              .name = "processes_io_diskw_bytes",
+              .name = "host_processes_io_diskw_bytes",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_FILE_HANDLES] =
           {
-              .name = "processes_file_handles",
+              .name = "host_processes_file_handles",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_FILE_HANDLES_MAPPED] =
           {
-              .name = "processes_file_handles_mapped",
+              .name = "host_processes_file_handles_mapped",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_CTX_VOLUNTARY] =
           {
-              .name = "processes_contextswitch_voluntary_total",
+              .name = "host_processes_contextswitch_voluntary_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_CTX_INVOLUNTARY] =
           {
-              .name = "processes_contextswitch_involuntary_total",
+              .name = "host_processes_contextswitch_involuntary_total",
               .type = METRIC_TYPE_COUNTER,
           },
       [FAM_PROC_DELAY_CPU] =
           {
-              .name = "processes_delay_cpu_seconds",
+              .name = "host_processes_delay_cpu_seconds",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_DELAY_BLKIO] =
           {
-              .name = "processes_delay_blkio_seconds",
+              .name = "host_processes_delay_blkio_seconds",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_DELAY_SWAPIN] =
           {
-              .name = "processes_delay_swapin_seconds",
+              .name = "host_processes_delay_swapin_seconds",
               .type = METRIC_TYPE_GAUGE,
           },
       [FAM_PROC_DELAY_FREEPAGES] =
           {
-              .name = "processes_delay_freepages_seconds",
+              .name = "host_processes_delay_freepages_seconds",
               .type = METRIC_TYPE_GAUGE,
           },
   };
