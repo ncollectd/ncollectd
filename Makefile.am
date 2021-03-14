@@ -766,14 +766,6 @@ apple_sensors_la_SOURCES = src/apple_sensors.c
 apple_sensors_la_LDFLAGS = $(PLUGIN_LDFLAGS) -framework IOKit
 endif
 
-if BUILD_PLUGIN_AQUAERO
-pkglib_LTLIBRARIES += aquaero.la
-aquaero_la_SOURCES = src/aquaero.c
-aquaero_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBAQUAERO5_CFLAGS)
-aquaero_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBAQUAERO5_LDFLAGS)
-aquaero_la_LIBADD = -laquaero5
-endif
-
 if BUILD_PLUGIN_BAROMETER
 pkglib_LTLIBRARIES += barometer.la
 barometer_la_SOURCES = src/barometer.c
