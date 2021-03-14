@@ -43,7 +43,7 @@
 static char **interfaces;
 static size_t interfaces_num;
 
-static int ethstat_add_interface(const oconfig_item_t *ci) /* {{{ */
+static int ethstat_add_interface(const oconfig_item_t *ci)
 {
   char **tmp;
   int status;
@@ -59,13 +59,12 @@ static int ethstat_add_interface(const oconfig_item_t *ci) /* {{{ */
     return status;
 
   interfaces_num++;
-  INFO("ethstat plugin: Registered interface %s",
-       interfaces[interfaces_num - 1]);
+  INFO("ethstat plugin: Registered interface %s", interfaces[interfaces_num - 1]);
 
   return 0;
-} /* }}} int ethstat_add_interface */
+}
 
-static int ethstat_config(oconfig_item_t *ci) /* {{{ */
+static int ethstat_config(oconfig_item_t *ci)
 {
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
@@ -73,37 +72,34 @@ static int ethstat_config(oconfig_item_t *ci) /* {{{ */
     if (strcasecmp("Interface", child->key) == 0)
       ethstat_add_interface(child);
     else
-      WARNING("ethstat plugin: The config option \"%s\" is unknown.",
-              child->key);
+      WARNING("ethstat plugin: The config option \"%s\" is unknown.", child->key);
   }
 
   return 0;
-} /* }}} */
+}
 
 static void ethstat_submit_value(const char *device, const char *name,
-                                 counter_t value) {
-
+                                 counter_t value)
+{
   char fam_name[256];
-  ssnprintf(fam_name, sizeof(fam_name), "ethstat_%s_total", name);
+  ssnprintf(fam_name, sizeof(fam_name), "host_ethstat_%s_total", name);
 
   metric_family_t fam = {
-      .name = fam_name,
-      .type = METRIC_TYPE_COUNTER,
+    .name = fam_name,
+    .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_append(&fam, "device", device, (value_t){.counter = value},
-                       NULL);
+  metric_family_append(&fam, "device", device, (value_t){.counter = value}, NULL);
 
   int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("ethstat plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+  if (status != 0)
+    ERROR("ethstat plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
 
   metric_family_metric_reset(&fam);
 }
 
-static int ethstat_read_interface(char *device) {
+static int ethstat_read_interface(char *device)
+{
   int fd;
   struct ethtool_gstrings *strings;
   struct ethtool_stats *stats;
@@ -197,16 +193,18 @@ static int ethstat_read_interface(char *device) {
   sfree(stats);
 
   return 0;
-} /* }}} ethstat_read_interface */
+}
 
-static int ethstat_read(void) {
+static int ethstat_read(void)
+{
   for (size_t i = 0; i < interfaces_num; i++)
     ethstat_read_interface(interfaces[i]);
 
   return 0;
 }
 
-static int ethstat_shutdown(void) {
+static int ethstat_shutdown(void)
+{
   if (interfaces == NULL)
     return 0;
 
@@ -217,7 +215,8 @@ static int ethstat_shutdown(void) {
   return 0;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_complex_config("ethstat", ethstat_config);
   plugin_register_read("ethstat", ethstat_read);
   plugin_register_shutdown("ethstat", ethstat_shutdown);
