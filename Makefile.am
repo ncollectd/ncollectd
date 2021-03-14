@@ -2083,17 +2083,6 @@ threshold_la_SOURCES = src/plugins/threshold/threshold.c
 threshold_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
-if BUILD_PLUGIN_TOKYOTYRANT
-pkglib_LTLIBRARIES += tokyotyrant.la
-tokyotyrant_la_SOURCES = src/tokyotyrant.c
-tokyotyrant_la_CPPFLAGS  = $(AM_CPPFLAGS) $(BUILD_WITH_LIBTOKYOTYRANT_CPPFLAGS)
-tokyotyrant_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBTOKYOTYRANT_LDFLAGS)
-tokyotyrant_la_LIBADD  = $(BUILD_WITH_LIBTOKYOTYRANT_LIBS)
-if BUILD_WITH_LIBSOCKET
-tokyotyrant_la_LIBADD += -lsocket
-endif
-endif
-
 if BUILD_PLUGIN_TURBOSTAT
 pkglib_LTLIBRARIES += turbostat.la
 turbostat_la_SOURCES = \
@@ -2144,7 +2133,7 @@ endif
 
 if BUILD_PLUGIN_UUID
 pkglib_LTLIBRARIES += uuid.la
-uuid_la_SOURCES = src/uuid.c
+uuid_la_SOURCES = src/plugins/uuid/uuid.c
 uuid_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 

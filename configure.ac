@@ -5220,65 +5220,6 @@ AC_SUBST([BUILD_WITH_LIBSTATGRAB_CFLAGS])
 AC_SUBST([BUILD_WITH_LIBSTATGRAB_LDFLAGS])
 # }}}
 
-# --with-libtokyotyrant {{{
-AC_ARG_WITH([libtokyotyrant],
-  [AS_HELP_STRING([--with-libtokyotyrant@<:@=PREFIX@:>@], [Path to libtokyotyrant.])],
-  [
-    if test "x$withval" = "xno" || test "x$withval" = "xyes"; then
-      with_libtokyotyrant="$withval"
-    else
-      with_libtokyotyrant_cppflags="-I$withval/include"
-      with_libtokyotyrant_ldflags="-L$withval/lib"
-      with_libtokyotyrant_libs="-ltokyotyrant"
-      with_libtokyotyrant="yes"
-    fi
-  ],
-  [with_libtokyotyrant="yes"]
-)
-
-if test "x$with_libtokyotyrant" = "xyes"; then
-  if $PKG_CONFIG --exists tokyotyrant; then
-    with_libtokyotyrant_cppflags="$with_libtokyotyrant_cppflags `$PKG_CONFIG --cflags tokyotyrant`"
-    with_libtokyotyrant_ldflags="$with_libtokyotyrant_ldflags `$PKG_CONFIG --libs-only-L tokyotyrant`"
-    with_libtokyotyrant_libs="$with_libtokyotyrant_libs `$PKG_CONFIG --libs-only-l tokyotyrant`"
-  fi
-fi
-
-if test "x$with_libtokyotyrant" = "xyes"; then
-  SAVE_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $with_libtokyotyrant_cppflags"
-
-  AC_CHECK_HEADERS([tcrdb.h],
-    [with_libtokyotyrant="yes"],
-    [with_libtokyotyrant="no (tcrdb.h not found)"]
-  )
-
-  CPPFLAGS="$SAVE_CPPFLAGS"
-fi
-
-if test "x$with_libtokyotyrant" = "xyes"; then
-  SAVE_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS $with_libtokyotyrant_ldflags"
-
-  AC_CHECK_LIB([tokyotyrant], [tcrdbrnum],
-    [with_libtokyotyrant="yes"],
-    [with_libtokyotyrant="no (symbol tcrdbrnum not found)"],
-    [$with_libtokyotyrant_libs]
-  )
-
-  LDFLAGS="$SAVE_LDFLAGS"
-fi
-
-if test "x$with_libtokyotyrant" = "xyes"; then
-  BUILD_WITH_LIBTOKYOTYRANT_CPPFLAGS="$with_libtokyotyrant_cppflags"
-  BUILD_WITH_LIBTOKYOTYRANT_LDFLAGS="$with_libtokyotyrant_ldflags"
-  BUILD_WITH_LIBTOKYOTYRANT_LIBS="$with_libtokyotyrant_libs"
-fi
-AC_SUBST([BUILD_WITH_LIBTOKYOTYRANT_CPPFLAGS])
-AC_SUBST([BUILD_WITH_LIBTOKYOTYRANT_LDFLAGS])
-AC_SUBST([BUILD_WITH_LIBTOKYOTYRANT_LIBS])
-# }}}
-
 # --with-libudev {{{
 AC_ARG_WITH([libudev],
   [AS_HELP_STRING([--with-libudev@<:@=PREFIX@:>@], [Path to libudev.])],
@@ -6764,7 +6705,6 @@ AC_PLUGIN([tcpconns],            [$plugin_tcpconns],          [TCP connection st
 AC_PLUGIN([ted],                 [$plugin_ted],               [Read The Energy Detective values])
 AC_PLUGIN([thermal],             [$plugin_thermal],           [Linux ACPI thermal zone statistics])
 AC_PLUGIN([threshold],           [yes],                       [Threshold checking plugin])
-AC_PLUGIN([tokyotyrant],         [$with_libtokyotyrant],      [TokyoTyrant database statistics])
 AC_PLUGIN([turbostat],           [$plugin_turbostat],         [Advanced statistic on Intel cpu states])
 AC_PLUGIN([ubi],                 [$plugin_ubi],               [UBIFS statistics])
 AC_PLUGIN([unixsock],            [yes],                       [Unixsock communication plugin])
@@ -7039,7 +6979,6 @@ AC_MSG_RESULT([    libsigrok   . . . . . $with_libsigrok])
 AC_MSG_RESULT([    libssl  . . . . . . . $with_libssl])
 AC_MSG_RESULT([    libslurm .  . . . . . $with_libslurm])
 AC_MSG_RESULT([    libstatgrab . . . . . $with_libstatgrab])
-AC_MSG_RESULT([    libtokyotyrant  . . . $with_libtokyotyrant])
 AC_MSG_RESULT([    libudev . . . . . . . $with_libudev])
 AC_MSG_RESULT([    libupsclient  . . . . $with_libupsclient])
 AC_MSG_RESULT([    libvarnish  . . . . . $with_libvarnish])
@@ -7197,7 +7136,6 @@ AC_MSG_RESULT([    tcpconns  . . . . . . $enable_tcpconns])
 AC_MSG_RESULT([    ted . . . . . . . . . $enable_ted])
 AC_MSG_RESULT([    thermal . . . . . . . $enable_thermal])
 AC_MSG_RESULT([    threshold . . . . . . $enable_threshold])
-AC_MSG_RESULT([    tokyotyrant . . . . . $enable_tokyotyrant])
 AC_MSG_RESULT([    turbostat . . . . . . $enable_turbostat])
 AC_MSG_RESULT([    ubi . . . . . . . . . $enable_ubi])
 AC_MSG_RESULT([    unixsock  . . . . . . $enable_unixsock])
