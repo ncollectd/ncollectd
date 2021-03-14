@@ -41,7 +41,8 @@ static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
 static ignorelist_t *ignorelist;
 
-static int buddyinfo_config(const char *key, const char *value) {
+static int buddyinfo_config(const char *key, const char *value)
+{
   if (ignorelist == NULL) {
     ignorelist = ignorelist_create(1);
     if (ignorelist == NULL) {
@@ -63,15 +64,16 @@ static int buddyinfo_config(const char *key, const char *value) {
   return 0;
 }
 
-static int buddyinfo_read(void) {
+static int buddyinfo_read(void)
+{
   FILE *fh;
   char buffer[1024], pagesize_kb[8], node_name[16];
   char *dummy, *zone;
   char *fields[BUDDYINFO_FIELDS];
   int node_num, numfields, pagesize = getpagesize();
   metric_family_t fam = {
-      .name = "buddyinfo_freepages",
-      .type = METRIC_TYPE_GAUGE,
+    .name = "host_buddyinfo_freepages",
+    .type = METRIC_TYPE_GAUGE,
   };
 
   if ((fh = fopen("/proc/buddyinfo", "r")) == NULL) {
@@ -87,8 +89,7 @@ static int buddyinfo_read(void) {
 
     numfields = strsplit(dummy, fields, BUDDYINFO_FIELDS);
     if (numfields != BUDDYINFO_FIELDS) {
-      WARNING("line %s doesn't contain %d orders, skipping...", buffer,
-              MAX_ORDER);
+      WARNING("line %s doesn't contain %d orders, skipping...", buffer, MAX_ORDER);
       continue;
     }
 
@@ -103,8 +104,7 @@ static int buddyinfo_read(void) {
     metric_label_set(&m, "zone", zone);
 
     for (int i = 1; i <= MAX_ORDER; i++) {
-      ssnprintf(pagesize_kb, sizeof(pagesize_kb), "%d",
-                NUM_OF_KB(pagesize, i - 1));
+      ssnprintf(pagesize_kb, sizeof(pagesize_kb), "%d", NUM_OF_KB(pagesize, i - 1));
       metric_label_set(&m, "pagesize_kb", pagesize_kb);
 
       m.value.gauge = atoi(fields[i + 3]);
@@ -115,10 +115,8 @@ static int buddyinfo_read(void) {
   metric_reset(&m);
 
   int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("buddyinfo plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+  if (status != 0)
+    ERROR("buddyinfo plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
 
   metric_family_metric_reset(&fam);
 
@@ -126,16 +124,16 @@ static int buddyinfo_read(void) {
   return 0;
 }
 
-static int buddyinfo_shutdown(void) {
+static int buddyinfo_shutdown(void)
+{
   ignorelist_free(ignorelist);
 
   return 0;
 }
 
-void module_register(void) {
-
-  plugin_register_config("buddyinfo", buddyinfo_config, config_keys,
-                         config_keys_num);
+void module_register(void)
+{
+  plugin_register_config("buddyinfo", buddyinfo_config, config_keys, config_keys_num);
   plugin_register_read("buddyinfo", buddyinfo_read);
   plugin_register_shutdown("buddy", buddyinfo_shutdown);
 }
