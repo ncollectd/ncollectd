@@ -28,7 +28,8 @@ static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 static bool values_absolute = true;
 static bool values_percentage;
 
-static int fhcount_config(const char *key, const char *value) {
+static int fhcount_config(const char *key, const char *value)
+{
   int ret = -1;
 
   if (strcasecmp(key, "ValuesAbsolute") == 0) {
@@ -52,7 +53,8 @@ static int fhcount_config(const char *key, const char *value) {
   return ret;
 }
 
-static void fhcount_submit(char *fam_name, gauge_t value) {
+static void fhcount_submit(char *fam_name, gauge_t value)
+{
   metric_family_t fam = {
       .name = fam_name,
       .type = METRIC_TYPE_GAUGE,
@@ -71,7 +73,8 @@ static void fhcount_submit(char *fam_name, gauge_t value) {
   metric_family_metric_reset(&fam);
 }
 
-static int fhcount_read(void) {
+static int fhcount_read(void)
+{
   int numfields = 0;
   int buffer_len = 60;
   gauge_t used, unused, max;
@@ -110,20 +113,20 @@ static int fhcount_read(void) {
 
   // Submit values
   if (values_absolute) {
-    fhcount_submit("file_handles_used", (gauge_t)used);
-    fhcount_submit("file_handles_unused", (gauge_t)unused);
-    fhcount_submit("file_handles_max", (gauge_t)max);
+    fhcount_submit("host_file_handles_used", (gauge_t)used);
+    fhcount_submit("host_file_handles_unused", (gauge_t)unused);
+    fhcount_submit("host_file_handles_max", (gauge_t)max);
   }
   if (values_percentage) {
-    fhcount_submit("file_handles_used_percent", (gauge_t)prc_used);
-    fhcount_submit("file_handles_unused_percent", (gauge_t)prc_unused);
+    fhcount_submit("host_file_handles_used_percent", (gauge_t)prc_used);
+    fhcount_submit("host_file_handles_unused_percent", (gauge_t)prc_unused);
   }
 
   return 0;
 }
 
-void module_register(void) {
-  plugin_register_config("fhcount", fhcount_config, config_keys,
-                         config_keys_num);
+void module_register(void)
+{
+  plugin_register_config("fhcount", fhcount_config, config_keys, config_keys_num);
   plugin_register_read("fhcount", fhcount_read);
 }
