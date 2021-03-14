@@ -36,26 +36,24 @@
 #include "utils/common/common.h"
 #include <time.h>
 
-static void cpusleep_submit(counter_t cpu_sleep) {
+static void cpusleep_submit(counter_t cpu_sleep)
+{
   metric_family_t fam = {
-      .name = "cpusleep_milliseconds_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_cpusleep_milliseconds_total",
+    .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.counter = cpu_sleep,
-                                    });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter = cpu_sleep, });
 
   int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("cpusleep plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+  if (status != 0)
+    ERROR("cpusleep plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
 
   metric_family_metric_reset(&fam);
 }
 
-static int cpusleep_read(void) {
+static int cpusleep_read(void)
+{
   struct timespec b, m;
   if (clock_gettime(CLOCK_BOOTTIME, &b) < 0) {
     ERROR("cpusleep plugin: clock_boottime failed");
@@ -78,6 +76,7 @@ static int cpusleep_read(void) {
   return 0;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("cpusleep", cpusleep_read);
-} /* void module_register */
+}
