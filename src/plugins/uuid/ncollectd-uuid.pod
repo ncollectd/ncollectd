@@ -1,0 +1,49 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-md - Documentation of ncollectd's C<uuid plugin>
+
+=head2 Plugin C<uuid>
+
+This plugin, if loaded, causes the Hostname to be taken from the machine's
+UUID. The UUID is a universally unique designation for the machine, usually
+taken from the machine's BIOS. This is most useful if the machine is running in
+a virtual environment such as Xen, in which case the UUID is preserved across
+shutdowns and migration.
+
+The following methods are used to find the machine's UUID, in order:
+
+=over 4
+
+=item *
+
+Check I</etc/uuid> (or I<UUIDFile>).
+
+=item *
+
+Check for UUID from HAL (L<http://www.freedesktop.org/wiki/Software/hal>) if
+present.
+
+=item *
+
+Check for UUID from Xen hypervisor.
+
+=back
+
+If no UUID can be found then the hostname is not modified.
+
+=over 4
+
+=item B<UUIDFile> I<Path>
+
+Take the UUID from the given file (default I</etc/uuid>).
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut

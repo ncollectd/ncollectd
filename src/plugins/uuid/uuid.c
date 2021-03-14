@@ -86,19 +86,6 @@ static char *uuid_parse_dmidecode(FILE *file) {
   return NULL;
 }
 
-static char *uuid_get_from_dmidecode(void) {
-  FILE *dmidecode = popen("dmidecode -t system 2>/dev/null", "r");
-  char *uuid;
-
-  if (!dmidecode)
-    return NULL;
-
-  uuid = uuid_parse_dmidecode(dmidecode);
-
-  pclose(dmidecode);
-  return uuid;
-}
-
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 static char *uuid_get_from_sysctlbyname(const char *name) {
   char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
@@ -162,12 +149,6 @@ static char *uuid_get_local(void) {
 #elif defined(__linux__)
   if ((uuid = uuid_get_from_file("/sys/class/dmi/id/product_uuid")) != NULL)
     return uuid;
-#endif
-
-  if ((uuid = uuid_get_from_dmidecode()) != NULL)
-    return uuid;
-
-#if defined(__linux__)
   if ((uuid = uuid_get_from_file("/sys/hypervisor/uuid")) != NULL)
     return uuid;
 #endif
@@ -202,7 +183,6 @@ static int uuid_init(void) {
 }
 
 void module_register(void) {
-  plugin_register_config("uuid", uuid_config, config_keys,
-                         STATIC_ARRAY_SIZE(config_keys));
+  plugin_register_config("uuid", uuid_config, config_keys, STATIC_ARRAY_SIZE(config_keys));
   plugin_register_init("uuid", uuid_init);
 }
