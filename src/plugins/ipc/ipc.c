@@ -121,14 +121,8 @@ static int ipc_read_sem(metric_family_t *fams)
     return -1;
   }
 
-  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS],
-                              (metric_t){
-                                  .value.gauge = seminfo.semusz,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES],
-                              (metric_t){
-                                  .value.gauge = seminfo.semaem,
-                              });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS], (metric_t){ .value.gauge = seminfo.semusz, });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES], (metric_t){ .value.gauge = seminfo.semaem, });
 
   return 0;
 }
@@ -146,22 +140,10 @@ static int ipc_read_shm(metric_family_t *fams)
     return -1;
   }
 
-  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS],
-                              (metric_t){
-                                  .value.gauge = shm_info.used_ids,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL],
-                              (metric_t){
-                                  .value.gauge = shm_info.shm_tot * pagesize_g,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_RSS],
-                              (metric_t){
-                                  .value.gauge = shm_info.shm_rss * pagesize_g,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_SWAPPED],
-                              (metric_t){
-                                  .value.gauge = shm_info.shm_swp * pagesize_g,
-                              });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS], (metric_t){ .value.gauge = shm_info.used_ids, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL], (metric_t){ .value.gauge = shm_info.shm_tot * pagesize_g, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_RSS], (metric_t){ .value.gauge = shm_info.shm_rss * pagesize_g, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_SWAPPED], (metric_t){ .value.gauge = shm_info.shm_swp * pagesize_g, });
 
   return 0;
 }
@@ -175,18 +157,9 @@ static int ipc_read_msg(metric_family_t *fams)
     return -1;
   }
 
-  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES],
-                              (metric_t){
-                                  .value.gauge = msginfo.msgpool,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES],
-                              (metric_t){
-                                  .value.gauge = msginfo.msgmap,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES],
-                              (metric_t){
-                                  .value.gauge = msginfo.msgtql,
-                              });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES], (metric_t){ .value.gauge = msginfo.msgpool,});
+  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES], (metric_t){ .value.gauge = msginfo.msgmap,});
+  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES], (metric_t){ .value.gauge = msginfo.msgtql,});
 
   return 0;
 }
@@ -254,14 +227,8 @@ static int ipc_read_sem(metric_family_t *fams)
   }
   free(ipcinfo_sem);
 
-  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS],
-                              (metric_t){
-                                  .value.gauge = sem_nsems,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES],
-                              (metric_t){
-                                  .value.gauge = sems,
-                              });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS], (metric_t){ .value.gauge = sem_nsems, });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES], (metric_t){ .value.gauge = sems, });
 
   return 0;
 }
@@ -285,14 +252,8 @@ static int ipc_read_shm(metric_family_t *fams)
   }
   free(ipcinfo_shm);
 
-  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS],
-                              (metric_t){
-                                  .value.gauge = shm_segments,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL],
-                              (metric_t){
-                                  .value.gauge = shm_bytes,
-                              });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS], (metric_t){ .value.gauge = shm_segments, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL], (metric_t){ .value.gauge = shm_bytes, });
 
   return 0;
 }
@@ -317,18 +278,9 @@ static int ipc_read_msg(metric_family_t *fams)
   }
   free(ipcinfo_msg);
 
-  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES],
-                              (metric_t){
-                                  .value.gauge = msg_alloc_queues,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES],
-                              (metric_t){
-                                  .value.gauge = msg_qnum,
-                              });
-  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES],
-                              (metric_t){
-                                  .value.gauge = msg_used_space,
-                              });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES], (metric_t){ .value.gauge = msg_alloc_queues, });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES], (metric_t){ .value.gauge = msg_qnum, });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES], (metric_t){ .value.gauge = msg_used_space, });
 
   return 0;
 }
@@ -338,51 +290,42 @@ static int ipc_read(void)
 {
   int status = 0;
   metric_family_t fams[FAM_IPC_MAX] = {
-      [FAM_IPC_SEM_ARRAYS] =
-          {
-              .name = "ipc_sem_arrays",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_SEM_SEMAPHORES] =
-          {
-              .name = "ipc_sem_semaphores",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_SHM_SEGMENTS] =
-          {
-              .name = "ipc_shm_segments",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_SHM_TOTAL] =
-          {
-              .name = "ipc_shm_total_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_SHM_RSS] =
-          {
-              .name = "ipc_shm_rss_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_SHM_SWAPPED] =
-          {
-              .name = "ipc_shm_swapped_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_MSG_QUEUES] =
-          {
-              .name = "ipc_msg_queues",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_MSG_MESSAGES] =
-          {
-              .name = "ipc_msg_messages",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_IPC_MSG_BYTES] =
-          {
-              .name = "ipc_msg_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
+    [FAM_IPC_SEM_ARRAYS] = {
+      .name = "host_ipc_sem_arrays",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_SEM_SEMAPHORES] = {
+      .name = "host_ipc_sem_semaphores",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_SHM_SEGMENTS] = {
+      .name = "host_ipc_shm_segments",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_SHM_TOTAL] = {
+      .name = "host_ipc_shm_total_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_SHM_RSS] = {
+      .name = "host_ipc_shm_rss_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_SHM_SWAPPED] = {
+      .name = "host_ipc_shm_swapped_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_MSG_QUEUES] = {
+      .name = "host_ipc_msg_queues",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_MSG_MESSAGES] = {
+      .name = "host_ipc_msg_messages",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_IPC_MSG_BYTES] = {
+      .name = "host_ipc_msg_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
   };
 
   status |= ipc_read_shm(fams);
@@ -392,10 +335,8 @@ static int ipc_read(void)
   for (size_t i = 0; i < FAM_IPC_MAX; i++) {
     if (fams[i].metric.num > 0) {
       int status = plugin_dispatch_metric_family(&fams[i]);
-      if (status != 0) {
-        ERROR("ipc plugin: plugin_dispatch_metric_family failed: %s",
-              STRERROR(status));
-      }
+      if (status != 0)
+        ERROR("ipc plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
       metric_family_metric_reset(&fams[i]);
     }
   }
