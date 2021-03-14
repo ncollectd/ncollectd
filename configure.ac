@@ -99,10 +99,6 @@ case $host_os in
     AC_DEFINE([KERNEL_SOLARIS], [1], [True if program is to be compiled for a Solaris kernel])
     ac_system="Solaris"
     ;;
-  *mingw32*)
-    AC_DEFINE([KERNEL_WIN32], [1], [True if program is to be compiled for a Windows kernel])
-    ac_system="Windows"
-    ;;
   *)
     ac_system="unknown"
     ;;
@@ -116,7 +112,6 @@ AM_CONDITIONAL([BUILD_LINUX], [test "x$ac_system" = "xLinux"])
 AM_CONDITIONAL([BUILD_OPENBSD], [test "x$ac_system" = "xOpenBSD"])
 AM_CONDITIONAL([BUILD_NETBSD], [test "x$ac_system" = "xNetBSD"])
 AM_CONDITIONAL([BUILD_SOLARIS], [test "x$ac_system" = "xSolaris"])
-AM_CONDITIONAL([BUILD_WIN32], [test "x$ac_system" = "xWindows"])
 
 if test "x$ac_system" = "xSolaris"; then
   AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Define to enforce POSIX thread semantics under Solaris.])
@@ -734,10 +729,6 @@ if test "x$GCC" = "xyes"; then
 fi
 SAVE_LDFLAGS="$LDFLAGS"
 LDFLAGS=""
-if test "x$ac_system" = "xWindows"; then
-  # This is exported from build.sh
-  LDFLAGS="$LDFLAGS -L${GNULIB_DIR}"
-fi
 
 AC_CACHE_CHECK([for strtok_r],
   [c_cv_have_strtok_r_default],

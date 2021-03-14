@@ -1,15 +1,9 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 
-if BUILD_WIN32
-cpkgdatadir=$(datadir)
-cpkglibdir=$(libdir)/plugins
-cpkglocalstatedir=${localstatedir}
-else
 cpkgdatadir=$(pkgdatadir)
 cpkglibdir=$(pkglibdir)
 cpkglocalstatedir=${localstatedir}/lib/${PACKAGE_NAME}
-endif
 
 BUILT_SOURCES = \
 	src/libcollectdclient/collectd/lcc_features.h \
@@ -105,24 +99,14 @@ pkginclude_HEADERS = \
 
 lib_LTLIBRARIES = libcollectdclient.la
 
-if BUILD_WIN32
-# TODO: Build all executables on Windows as well.
-sbin_PROGRAMS = \
-        collectd
-
-bin_PROGRAMS =
-else
 sbin_PROGRAMS = \
 	collectd \
 	ncollectdmon
-
 
 bin_PROGRAMS = \
 	collectd-nagios \
 	collectd-tg \
 	collectdctl 
-endif # BUILD_WIN32
-
 
 noinst_LTLIBRARIES = \
 	libavltree.la \
@@ -181,10 +165,6 @@ PLUGIN_LDFLAGS = \
 	-module \
 	-avoid-version \
 	-export-symbols-regex '\<module_register\>'
-if BUILD_WIN32
-PLUGIN_LDFLAGS += -shared -no-undefined -lcollectd -L.
-endif
-
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src -I$(top_srcdir)/src/daemon \
@@ -194,20 +174,11 @@ AM_CPPFLAGS = \
 	-DPKGLOCALSTATEDIR='"${cpkglocalstatedir}"' \
 	-DPLUGINDIR='"${cpkglibdir}"' \
 	-DPKGDATADIR='"${cpkgdatadir}"'
-if BUILD_WIN32
-AM_CPPFLAGS += -DNOGDI
-endif
 
 COMMON_DEPS =
-if BUILD_WIN32
-COMMON_DEPS += collectd.exe
-endif
 
 # Link to these libraries..
 COMMON_LIBS = $(PTHREAD_LIBS)
-if BUILD_WIN32
-COMMON_LIBS += -lws2_32
-endif
 if BUILD_WITH_GNULIB
 COMMON_LIBS += -lgnu
 endif
@@ -273,12 +244,7 @@ collectd_LDADD = \
 	$(COMMON_LIBS) \
 	$(DLOPEN_LIBS)
 
-if BUILD_WIN32
-collectd_SOURCES += src/daemon/cmd_windows.c
-collectd_LDFLAGS += -ldl -Wl,--out-implib,libcollectd.a
-else
 collectd_SOURCES += src/daemon/cmd.c
-endif
 
 if BUILD_FEATURE_DAEMON
 collectd_CPPFLAGS += -DPIDFILE='"${localstatedir}/run/${PACKAGE_NAME}.pid"'
@@ -289,10 +255,6 @@ endif
 if BUILD_WITH_LIBSTATGRAB
 collectd_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
 collectd_LDADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif
-
-if BUILD_WIN32
-collectd_LDFLAGS += -Wl,--out-implib,libcollectd.a
 endif
 
 ncollectdmon_SOURCES = src/ncollectdmon/ncollectdmon.c
@@ -609,10 +571,6 @@ libcollectdclient_la_CPPFLAGS = \
 	-I$(srcdir)/src/daemon
 libcollectdclient_la_LDFLAGS = -version-info 2:0:1
 libcollectdclient_la_LIBADD = -lm
-if BUILD_WIN32
-libcollectdclient_la_LDFLAGS += -shared -no-undefined
-libcollectdclient_la_LIBADD += -lgnu -lws2_32 -liphlpapi
-endif
 if BUILD_WITH_LIBGCRYPT
 libcollectdclient_la_CPPFLAGS += $(GCRYPT_CPPFLAGS)
 libcollectdclient_la_LDFLAGS += $(GCRYPT_LDFLAGS)
