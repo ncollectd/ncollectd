@@ -44,26 +44,24 @@
 #error "No applicable input method."
 #endif
 
-static void cs_submit(derive_t context_switches) {
+static void cs_submit(derive_t context_switches)
+{
   metric_family_t fam = {
-      .name = "context_switches_total",
-      .type = METRIC_TYPE_COUNTER,
+    .name = "host_context_switches_total",
+    .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.counter = context_switches,
-                                    });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter = context_switches, });
 
   int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("contextswitch plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+  if (status != 0)
+    ERROR("contextswitch plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
 
   metric_family_metric_reset(&fam);
 }
 
-static int cs_read(void) {
+static int cs_read(void)
+{
 #if HAVE_SYSCTLBYNAME
   int value = 0;
   size_t value_len = sizeof(value);
@@ -141,6 +139,7 @@ static int cs_read(void) {
   return status;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_read("contextswitch", cs_read);
-} /* void module_register */
+}
