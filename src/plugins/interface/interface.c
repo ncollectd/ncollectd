@@ -98,48 +98,49 @@ static bool unique_name;
 #endif /* HAVE_LIBKSTAT */
 
 metric_family_t receive_bytes = {
-    .name = "node_network_receive_bytes_total",
+    .name = "host_network_receive_bytes_total",
     .help = "Network device statistic receive_bytes.",
     .type = METRIC_TYPE_COUNTER,
 };
 metric_family_t receive_drop = {
-    .name = "node_network_receive_drop_total",
+    .name = "host_network_receive_drop_total",
     .help = "Network device statistic receive_drop.",
     .type = METRIC_TYPE_COUNTER,
 };
 metric_family_t receive_errs = {
-    .name = "node_network_receive_errs_total",
+    .name = "host_network_receive_errs_total",
     .help = "Network device statistic receive_errs.",
     .type = METRIC_TYPE_COUNTER,
 };
 metric_family_t receive_packets = {
-    .name = "node_network_receive_packets_total",
+    .name = "host_network_receive_packets_total",
     .help = "Network device statistic receive_packets.",
     .type = METRIC_TYPE_COUNTER,
 };
 
 metric_family_t transmit_bytes = {
-    .name = "node_network_transmit_bytes_total",
+    .name = "host_network_transmit_bytes_total",
     .help = "Network device statistic transmit_bytes.",
     .type = METRIC_TYPE_COUNTER,
 };
 metric_family_t transmit_drop = {
-    .name = "node_network_transmit_drop_total",
+    .name = "host_network_transmit_drop_total",
     .help = "Network device statistic transmit_drop.",
     .type = METRIC_TYPE_COUNTER,
 };
 metric_family_t transmit_errs = {
-    .name = "node_network_transmit_errs_total",
+    .name = "host_network_transmit_errs_total",
     .help = "Network device statistic transmit_errs.",
     .type = METRIC_TYPE_COUNTER,
 };
 metric_family_t transmit_packets = {
-    .name = "node_network_transmit_packets_total",
+    .name = "host_network_transmit_packets_total",
     .help = "Network device statistic transmit_packets.",
     .type = METRIC_TYPE_COUNTER,
 };
 
-static int interface_config(const char *key, const char *value) {
+static int interface_config(const char *key, const char *value)
+{
   if (ignorelist == NULL)
     ignorelist = ignorelist_create(/* invert = */ 1);
 
@@ -168,7 +169,8 @@ static int interface_config(const char *key, const char *value) {
 }
 
 #if HAVE_LIBKSTAT
-static int interface_init(void) {
+static int interface_init(void)
+{
   kstat_t *ksp_chain;
 
   numif = 0;
@@ -191,10 +193,11 @@ static int interface_init(void) {
   }
 
   return 0;
-} /* int interface_init */
+}
 #endif /* HAVE_LIBKSTAT */
 
-static int if_read_internal(void) {
+static int if_read_internal(void)
+{
 #if KERNEL_LINUX
   FILE *fh = fopen("/proc/net/dev", "r");
   if (fh == NULL) {
@@ -440,9 +443,10 @@ static int if_read_internal(void) {
 #endif /* HAVE_PERFSTAT */
 
   return 0;
-} /* int if_read_internal */
+}
 
-static int if_read(void) {
+static int if_read(void)
+{
   metric_family_t *families[] = {
       &receive_bytes,  &receive_drop,  &receive_errs,  &receive_packets,
       &transmit_bytes, &transmit_drop, &transmit_errs, &transmit_packets,
@@ -461,11 +465,12 @@ static int if_read(void) {
   return status;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("interface", interface_config, config_keys,
                          config_keys_num);
 #if HAVE_LIBKSTAT
   plugin_register_init("interface", interface_init);
 #endif
   plugin_register_read("interface", if_read);
-} /* void module_register */
+}
