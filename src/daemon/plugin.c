@@ -43,6 +43,8 @@
 #include "utils_random.h"
 #include "utils_time.h"
 
+#include <time.h>
+
 #ifdef WIN32
 #define EXPORT __declspec(dllexport)
 #include <sys/stat.h>
@@ -167,52 +169,72 @@ static bool record_statistics;
  */
 static int plugin_dispatch_metric_internal(metric_family_t *fam);
 
-static const char *plugin_get_dir(void) {
+static const char *plugin_get_dir(void)
+{
   if (plugindir == NULL)
     return PLUGINDIR;
   else
     return plugindir;
 }
 
-static int plugin_update_internal_statistics(void) { /* {{{ */
-  gauge_t copy_write_queue_length = (gauge_t)write_queue_length;
+static int plugin_update_internal_statistics(void)
+{
+  enum {
+    FAM_NCOLLECTD_UPTIME = 0,
+    FAM_NCOLLECTD_WRITE_QUEUE_LENGTH,
+    FAM_NCOLLECTD_WRITE_QUEUE_DROPPED,
+    FAM_NCOLLECTD_CACHE_SIZE,
+    FAM_NCOLLECTD_MAX,
+  };
+  metric_family_t fams[FAM_NCOLLECTD_MAX] = {
+    [FAM_NCOLLECTD_UPTIME] = {
+      .name = "ncollectd_uptime_seconds",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NCOLLECTD_WRITE_QUEUE_LENGTH] = {
+      .name = "ncollectd_write_queue_length",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_NCOLLECTD_WRITE_QUEUE_DROPPED] = {
+      .name = "ncollectd_write_queue_dropped",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NCOLLECTD_CACHE_SIZE] = {
+      .name = "ncollectd_cache_size",
+      .type = METRIC_TYPE_GAUGE,
+    },
+  };
+  static time_t ncollectd_uptime = 0;
 
-  /* Initialize `vl' */
-  value_list_t vl = VALUE_LIST_INIT;
-  sstrncpy(vl.plugin, "collectd", sizeof(vl.plugin));
-  vl.interval = plugin_get_interval();
+  if (ncollectd_uptime == 0)
+    ncollectd_uptime = time(NULL);
 
-  /* Write queue */
-  sstrncpy(vl.plugin_instance, "write_queue", sizeof(vl.plugin_instance));
+  metric_t m = {0};
 
-  /* Write queue : queue length */
-  vl.values = &(value_t){.gauge = copy_write_queue_length};
-  vl.values_len = 1;
-  sstrncpy(vl.type, "queue_length", sizeof(vl.type));
-  vl.type_instance[0] = 0;
-  plugin_dispatch_values(&vl);
+  m.value.counter = (counter_t)(time(NULL) - ncollectd_uptime);
+  metric_family_metric_append(&fams[FAM_NCOLLECTD_UPTIME], m);
 
-  /* Write queue : Values dropped (queue length > low limit) */
-  vl.values = &(value_t){.gauge = (gauge_t)stats_values_dropped};
-  vl.values_len = 1;
-  sstrncpy(vl.type, "derive", sizeof(vl.type));
-  sstrncpy(vl.type_instance, "dropped", sizeof(vl.type_instance));
-  plugin_dispatch_values(&vl);
+  m.value.gauge = (gauge_t)write_queue_length;
+  metric_family_metric_append(&fams[FAM_NCOLLECTD_WRITE_QUEUE_LENGTH], m);
 
-  /* Cache */
-  sstrncpy(vl.plugin_instance, "cache", sizeof(vl.plugin_instance));
+  m.value.counter = (counter_t)stats_values_dropped;
+  metric_family_metric_append(&fams[FAM_NCOLLECTD_WRITE_QUEUE_DROPPED], m);
 
-  /* Cache : Nb entry in cache tree */
-  vl.values = &(value_t){.gauge = (gauge_t)uc_get_size()};
-  vl.values_len = 1;
-  sstrncpy(vl.type, "cache_size", sizeof(vl.type));
-  vl.type_instance[0] = 0;
-  plugin_dispatch_values(&vl);
+  m.value.gauge = (gauge_t)uc_get_size();
+  metric_family_metric_append(&fams[FAM_NCOLLECTD_CACHE_SIZE], m);
+
+  for (size_t i = 0; i < FAM_NCOLLECTD_MAX ; i++) {
+    int status = plugin_dispatch_metric_family(&fams[i]);
+    if (status != 0) {
+      ERROR("info plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
+    }
+    metric_family_metric_reset(&fams[i]);
+  }
 
   return 0;
-} /* }}} int plugin_update_internal_statistics */
+}
 
-static void free_userdata(user_data_t const *ud) /* {{{ */
+static void free_userdata(user_data_t const *ud)
 {
   if (ud == NULL)
     return;
@@ -220,17 +242,17 @@ static void free_userdata(user_data_t const *ud) /* {{{ */
   if ((ud->data != NULL) && (ud->free_func != NULL)) {
     ud->free_func(ud->data);
   }
-} /* }}} void free_userdata */
+}
 
-static void destroy_callback(callback_func_t *cf) /* {{{ */
+static void destroy_callback(callback_func_t *cf)
 {
   if (cf == NULL)
     return;
   free_userdata(&cf->cf_udata);
   sfree(cf);
-} /* }}} void destroy_callback */
+}
 
-static void destroy_all_callbacks(llist_t **list) /* {{{ */
+static void destroy_all_callbacks(llist_t **list)
 {
   llentry_t *le;
 
@@ -252,9 +274,9 @@ static void destroy_all_callbacks(llist_t **list) /* {{{ */
 
   llist_destroy(*list);
   *list = NULL;
-} /* }}} void destroy_all_callbacks */
+}
 
-static void destroy_read_heap(void) /* {{{ */
+static void destroy_read_heap(void)
 {
   if (read_heap == NULL)
     return;
@@ -271,10 +293,9 @@ static void destroy_read_heap(void) /* {{{ */
 
   c_heap_destroy(read_heap);
   read_heap = NULL;
-} /* }}} void destroy_read_heap */
+}
 
-static int register_callback(llist_t **list, /* {{{ */
-                             const char *name, callback_func_t *cf) {
+static int register_callback(llist_t **list, const char *name, callback_func_t *cf) {
 
   if (*list == NULL) {
     *list = llist_create();
@@ -319,10 +340,9 @@ static int register_callback(llist_t **list, /* {{{ */
   }
 
   return 0;
-} /* }}} int register_callback */
+}
 
-static void log_list_callbacks(llist_t **list, /* {{{ */
-                               const char *comment) {
+static void log_list_callbacks(llist_t **list, const char *comment) {
   char *str;
   int len;
   int i;
@@ -355,12 +375,11 @@ static void log_list_callbacks(llist_t **list, /* {{{ */
     sfree(str);
   }
   sfree(keys);
-} /* }}} void log_list_callbacks */
+}
 
-static int create_register_callback(llist_t **list, /* {{{ */
-                                    const char *name, void *callback,
-                                    user_data_t const *ud) {
-
+static int create_register_callback(llist_t **list, const char *name, void *callback,
+                                    user_data_t const *ud)
+{
   if (name == NULL || callback == NULL)
     return EINVAL;
 
@@ -384,9 +403,9 @@ static int create_register_callback(llist_t **list, /* {{{ */
   cf->cf_ctx = plugin_get_ctx();
 
   return register_callback(list, name, cf);
-} /* }}} int create_register_callback */
+}
 
-static int plugin_unregister(llist_t *list, const char *name) /* {{{ */
+static int plugin_unregister(llist_t *list, const char *name)
 {
   llentry_t *e;
 
@@ -405,11 +424,12 @@ static int plugin_unregister(llist_t *list, const char *name) /* {{{ */
   llentry_destroy(e);
 
   return 0;
-} /* }}} int plugin_unregister */
+}
 
 /* plugin_load_file loads the shared object "file" and calls its
  * "module_register" function. Returns zero on success, non-zero otherwise. */
-static int plugin_load_file(char const *file, bool global) {
+static int plugin_load_file(char const *file, bool global)
+{
   int flags = RTLD_NOW;
   if (global)
     flags |= RTLD_GLOBAL;
@@ -448,7 +468,8 @@ static int plugin_load_file(char const *file, bool global) {
   return 0;
 }
 
-static void *plugin_read_thread(void __attribute__((unused)) * args) {
+static void *plugin_read_thread(void __attribute__((unused)) * args)
+{
   while (read_loop != 0) {
     read_func_t *rf;
     plugin_ctx_t old_ctx;
@@ -598,7 +619,7 @@ static void *plugin_read_thread(void __attribute__((unused)) * args) {
 
   pthread_exit(NULL);
   return (void *)0;
-} /* void *plugin_read_thread */
+}
 
 #ifdef PTHREAD_MAX_NAMELEN_NP
 #define THREAD_NAME_MAX PTHREAD_MAX_NAMELEN_NP
@@ -606,7 +627,8 @@ static void *plugin_read_thread(void __attribute__((unused)) * args) {
 #define THREAD_NAME_MAX 16
 #endif
 
-static void set_thread_name(pthread_t tid, char const *name) {
+static void set_thread_name(pthread_t tid, char const *name)
+{
 #if defined(HAVE_PTHREAD_SETNAME_NP) || defined(HAVE_PTHREAD_SET_NAME_NP)
 
   /* glibc limits the length of the name and fails if the passed string
@@ -628,7 +650,7 @@ static void set_thread_name(pthread_t tid, char const *name) {
 #endif
 }
 
-static void start_read_threads(size_t num) /* {{{ */
+static void start_read_threads(size_t num)
 {
   if (read_threads != NULL)
     return;
@@ -658,9 +680,10 @@ static void start_read_threads(size_t num) /* {{{ */
 
     read_threads_num++;
   } /* for (i) */
-} /* }}} void start_read_threads */
+}
 
-static void stop_read_threads(void) {
+static void stop_read_threads(void)
+{
   if (read_threads == NULL)
     return;
 
@@ -680,9 +703,9 @@ static void stop_read_threads(void) {
   }
   sfree(read_threads);
   read_threads_num = 0;
-} /* void stop_read_threads */
+}
 
-static void plugin_value_list_free(value_list_t *vl) /* {{{ */
+static void plugin_value_list_free(value_list_t *vl)
 {
   if (vl == NULL)
     return;
@@ -690,10 +713,9 @@ static void plugin_value_list_free(value_list_t *vl) /* {{{ */
   meta_data_destroy(vl->meta);
   sfree(vl->values);
   sfree(vl);
-} /* }}} void plugin_value_list_free */
+}
 
-static value_list_t *
-plugin_value_list_clone(value_list_t const *vl_orig) /* {{{ */
+static value_list_t * plugin_value_list_clone(value_list_t const *vl_orig)
 {
   value_list_t *vl;
 
@@ -730,9 +752,10 @@ plugin_value_list_clone(value_list_t const *vl_orig) /* {{{ */
     vl->interval = plugin_get_interval();
 
   return vl;
-} /* }}} value_list_t *plugin_value_list_clone */
+}
 
-static void write_queue_enqueue(write_queue_t *head) {
+static void write_queue_enqueue(write_queue_t *head)
+{
   write_queue_t *tail = NULL;
   long num = 0;
 
@@ -762,7 +785,8 @@ static void write_queue_enqueue(write_queue_t *head) {
 }
 
 /* enqueue_metric_family enqueues the metric family to write_queue. */
-static int enqueue_metric_family(metric_family_t const *fam) { /* {{{ */
+static int enqueue_metric_family(metric_family_t const *fam)
+{
   metric_family_t *fam_copy = metric_family_clone(fam);
   if (fam_copy == NULL) {
     int status = errno;
@@ -795,9 +819,9 @@ static int enqueue_metric_family(metric_family_t const *fam) { /* {{{ */
   };
   write_queue_enqueue(q);
   return 0;
-} /* }}} int enqueue_metric_family */
+}
 
-static metric_family_t *plugin_write_dequeue(void) /* {{{ */
+static metric_family_t *plugin_write_dequeue(void)
 {
   write_queue_t *q;
 
@@ -826,9 +850,9 @@ static metric_family_t *plugin_write_dequeue(void) /* {{{ */
   metric_family_t *fam = q->family;
   sfree(q);
   return fam;
-} /* }}} metric_family_t *plugin_write_dequeue */
+}
 
-static void *plugin_write_thread(void __attribute__((unused)) * args) /* {{{ */
+static void *plugin_write_thread(void __attribute__((unused)) * args)
 {
   while (write_loop) {
     metric_family_t *fam = plugin_write_dequeue();
@@ -841,9 +865,9 @@ static void *plugin_write_thread(void __attribute__((unused)) * args) /* {{{ */
 
   pthread_exit(NULL);
   return (void *)0;
-} /* }}} void *plugin_write_thread */
+}
 
-static void start_write_threads(size_t num) /* {{{ */
+static void start_write_threads(size_t num)
 {
   if (write_threads != NULL)
     return;
@@ -873,9 +897,9 @@ static void start_write_threads(size_t num) /* {{{ */
 
     write_threads_num++;
   } /* for (i) */
-} /* }}} void start_write_threads */
+}
 
-static void stop_write_threads(void) /* {{{ */
+static void stop_write_threads(void)
 {
   write_queue_t *q;
   size_t i;
@@ -919,12 +943,13 @@ static void stop_write_threads(void) /* {{{ */
             "the write threads.",
             i, (i == 1) ? " was" : "s were");
   }
-} /* }}} void stop_write_threads */
+}
 
 /*
  * Public functions
  */
-void plugin_set_dir(const char *dir) {
+void plugin_set_dir(const char *dir)
+{
   sfree(plugindir);
 
   if (dir == NULL) {
@@ -937,7 +962,8 @@ void plugin_set_dir(const char *dir) {
     ERROR("plugin_set_dir: strdup(\"%s\") failed", dir);
 }
 
-bool plugin_is_loaded(char const *name) {
+bool plugin_is_loaded(char const *name)
+{
   if (plugins_loaded == NULL)
     plugins_loaded =
         c_avl_create((int (*)(const void *, const void *))strcasecmp);
@@ -947,7 +973,8 @@ bool plugin_is_loaded(char const *name) {
   return status == 0;
 }
 
-static int plugin_mark_loaded(char const *name) {
+static int plugin_mark_loaded(char const *name)
+{
   char *name_copy;
   int status;
 
@@ -960,7 +987,8 @@ static int plugin_mark_loaded(char const *name) {
   return status;
 }
 
-static void plugin_free_loaded(void) {
+static void plugin_free_loaded(void)
+{
   void *key;
   void *value;
 
@@ -982,7 +1010,8 @@ static void plugin_free_loaded(void) {
 #else
 #define SHLIB_SUFFIX ".so"
 #endif
-int plugin_load(char const *plugin_name, bool global) {
+int plugin_load(char const *plugin_name, bool global)
+{
   DIR *dh;
   const char *dir;
   char filename[BUFSIZE] = "";
@@ -1077,23 +1106,26 @@ int plugin_load(char const *plugin_name, bool global) {
  * The `register_*' functions follow
  */
 EXPORT int plugin_register_config(const char *name,
-                                  int (*callback)(const char *key,
-                                                  const char *val),
-                                  const char **keys, int keys_num) {
+                                  int (*callback)(const char *key, const char *val),
+                                  const char **keys, int keys_num)
+{
   cf_register(name, callback, keys, keys_num);
   return 0;
-} /* int plugin_register_config */
+}
 
 EXPORT int plugin_register_complex_config(const char *type,
-                                          int (*callback)(oconfig_item_t *)) {
+                                          int (*callback)(oconfig_item_t *))
+{
   return cf_register_complex(type, callback);
-} /* int plugin_register_complex_config */
+}
 
-EXPORT int plugin_register_init(const char *name, int (*callback)(void)) {
+EXPORT int plugin_register_init(const char *name, int (*callback)(void))
+{
   return create_register_callback(&list_init, name, (void *)callback, NULL);
-} /* plugin_register_init */
+}
 
-static int plugin_compare_read_func(const void *arg0, const void *arg1) {
+static int plugin_compare_read_func(const void *arg0, const void *arg1)
+{
   const read_func_t *rf0;
   const read_func_t *rf1;
 
@@ -1106,12 +1138,13 @@ static int plugin_compare_read_func(const void *arg0, const void *arg1) {
     return 1;
   else
     return 0;
-} /* int plugin_compare_read_func */
+}
 
 /* Add a read function to both, the heap and a linked list. The linked list if
  * used to look-up read functions, especially for the remove function. The heap
  * is used to determine which plugin to read next. */
-static int plugin_insert_read(read_func_t *rf) {
+static int plugin_insert_read(read_func_t *rf)
+{
   int status;
   llentry_t *le;
 
@@ -1169,9 +1202,10 @@ static int plugin_insert_read(read_func_t *rf) {
   pthread_cond_broadcast(&read_cond);
   pthread_mutex_unlock(&read_lock);
   return 0;
-} /* int plugin_insert_read */
+}
 
-EXPORT int plugin_register_read(const char *name, int (*callback)(void)) {
+EXPORT int plugin_register_read(const char *name, int (*callback)(void))
+{
   read_func_t *rf;
   int status;
 
@@ -1198,12 +1232,13 @@ EXPORT int plugin_register_read(const char *name, int (*callback)(void)) {
   }
 
   return status;
-} /* int plugin_register_read */
+}
 
 EXPORT int plugin_register_complex_read(const char *group, const char *name,
                                         plugin_read_cb callback,
                                         cdtime_t interval,
-                                        user_data_t const *user_data) {
+                                        user_data_t const *user_data)
+{
   read_func_t *rf;
   int status;
 
@@ -1242,20 +1277,22 @@ EXPORT int plugin_register_complex_read(const char *group, const char *name,
   }
 
   return status;
-} /* int plugin_register_complex_read */
+}
 
-EXPORT int plugin_register_write(const char *name, plugin_write_cb callback,
-                                 user_data_t const *ud) {
+EXPORT int plugin_register_write(const char *name, plugin_write_cb callback, user_data_t const *ud)
+{
   return create_register_callback(&list_write, name, (void *)callback, ud);
-} /* int plugin_register_write */
+}
 
-static int plugin_flush_timeout_callback(user_data_t *ud) {
+static int plugin_flush_timeout_callback(user_data_t *ud)
+{
   flush_callback_t *cb = ud->data;
 
   return plugin_flush(cb->name, cb->timeout, NULL);
-} /* static int plugin_flush_callback */
+}
 
-static void plugin_flush_timeout_callback_free(void *data) {
+static void plugin_flush_timeout_callback_free(void *data)
+{
   flush_callback_t *cb = data;
 
   if (cb == NULL)
@@ -1263,9 +1300,10 @@ static void plugin_flush_timeout_callback_free(void *data) {
 
   sfree(cb->name);
   sfree(cb);
-} /* static void plugin_flush_callback_free */
+}
 
-static char *plugin_flush_callback_name(const char *name) {
+static char *plugin_flush_callback_name(const char *name)
+{
   const char *flush_prefix = "flush/";
   size_t prefix_size;
   char *flush_name;
@@ -1284,10 +1322,10 @@ static char *plugin_flush_callback_name(const char *name) {
   sstrncpy(flush_name + prefix_size, name, name_size + 1);
 
   return flush_name;
-} /* static char *plugin_flush_callback_name */
+}
 
-EXPORT int plugin_register_flush(const char *name, plugin_flush_cb callback,
-                                 user_data_t const *ud) {
+EXPORT int plugin_register_flush(const char *name, plugin_flush_cb callback, user_data_t const *ud)
+{
   plugin_ctx_t ctx = plugin_get_ctx();
 
   int status =
@@ -1334,16 +1372,18 @@ EXPORT int plugin_register_flush(const char *name, plugin_flush_cb callback,
 
   sfree(flush_name);
   return status;
-} /* int plugin_register_flush */
+}
 
 EXPORT int plugin_register_missing(const char *name, plugin_missing_cb callback,
-                                   user_data_t const *ud) {
+                                   user_data_t const *ud)
+{
   return create_register_callback(&list_missing, name, (void *)callback, ud);
-} /* int plugin_register_missing */
+}
 
 EXPORT int plugin_register_cache_event(const char *name,
                                        plugin_cache_event_cb callback,
-                                       user_data_t const *ud) {
+                                       user_data_t const *ud)
+{
 
   if (name == NULL || callback == NULL)
     return EINVAL;
@@ -1394,13 +1434,15 @@ EXPORT int plugin_register_cache_event(const char *name,
   list_cache_event_num++;
 
   return 0;
-} /* int plugin_register_cache_event */
+}
 
-EXPORT int plugin_register_shutdown(const char *name, int (*callback)(void)) {
+EXPORT int plugin_register_shutdown(const char *name, int (*callback)(void))
+{
   return create_register_callback(&list_shutdown, name, (void *)callback, NULL);
-} /* int plugin_register_shutdown */
+}
 
-static void plugin_free_data_sets(void) {
+static void plugin_free_data_sets(void)
+{
   void *key;
   void *value;
 
@@ -1417,9 +1459,10 @@ static void plugin_free_data_sets(void) {
 
   c_avl_destroy(data_sets);
   data_sets = NULL;
-} /* void plugin_free_data_sets */
+}
 
-EXPORT int plugin_register_data_set(const data_set_t *ds) {
+EXPORT int plugin_register_data_set(const data_set_t *ds)
+{
   data_set_t *ds_copy;
 
   if ((data_sets != NULL) && (c_avl_get(data_sets, ds->type, NULL) == 0)) {
@@ -1446,35 +1489,40 @@ EXPORT int plugin_register_data_set(const data_set_t *ds) {
     memcpy(ds_copy->ds + i, ds->ds + i, sizeof(data_source_t));
 
   return c_avl_insert(data_sets, (void *)ds_copy->type, (void *)ds_copy);
-} /* int plugin_register_data_set */
+}
 
 EXPORT int plugin_register_log(const char *name, plugin_log_cb callback,
-                               user_data_t const *ud) {
+                               user_data_t const *ud)
+{
   return create_register_callback(&list_log, name, (void *)callback, ud);
-} /* int plugin_register_log */
+}
 
 EXPORT int plugin_register_notification(const char *name,
                                         plugin_notification_cb callback,
-                                        user_data_t const *ud) {
+                                        user_data_t const *ud)
+{
   return create_register_callback(&list_notification, name, (void *)callback,
                                   ud);
-} /* int plugin_register_log */
+}
 
-EXPORT int plugin_unregister_config(const char *name) {
+EXPORT int plugin_unregister_config(const char *name)
+{
   cf_unregister(name);
   return 0;
-} /* int plugin_unregister_config */
+}
 
-EXPORT int plugin_unregister_complex_config(const char *name) {
+EXPORT int plugin_unregister_complex_config(const char *name)
+{
   cf_unregister_complex(name);
   return 0;
-} /* int plugin_unregister_complex_config */
+}
 
-EXPORT int plugin_unregister_init(const char *name) {
+EXPORT int plugin_unregister_init(const char *name)
+{
   return plugin_unregister(list_init, name);
 }
 
-EXPORT int plugin_unregister_read(const char *name) /* {{{ */
+EXPORT int plugin_unregister_read(const char *name)
 {
   llentry_t *le;
   read_func_t *rf;
@@ -1509,21 +1557,22 @@ EXPORT int plugin_unregister_read(const char *name) /* {{{ */
   DEBUG("plugin_unregister_read: Marked `%s' for removal.", name);
 
   return 0;
-} /* }}} int plugin_unregister_read */
+}
 
-EXPORT void plugin_log_available_writers(void) {
+EXPORT void plugin_log_available_writers(void)
+{
   log_list_callbacks(&list_write, "Available write targets:");
 }
 
-static int compare_read_func_group(llentry_t *e, void *ud) /* {{{ */
+static int compare_read_func_group(llentry_t *e, void *ud)
 {
   read_func_t *rf = e->value;
   char *group = ud;
 
   return strcmp(rf->rf_group, (const char *)group);
-} /* }}} int compare_read_func_group */
+}
 
-EXPORT int plugin_unregister_read_group(const char *group) /* {{{ */
+EXPORT int plugin_unregister_read_group(const char *group)
 {
   llentry_t *le;
   read_func_t *rf;
@@ -1571,13 +1620,15 @@ EXPORT int plugin_unregister_read_group(const char *group) /* {{{ */
   }
 
   return 0;
-} /* }}} int plugin_unregister_read_group */
+}
 
-EXPORT int plugin_unregister_write(const char *name) {
+EXPORT int plugin_unregister_write(const char *name)
+{
   return plugin_unregister(list_write, name);
 }
 
-EXPORT int plugin_unregister_flush(const char *name) {
+EXPORT int plugin_unregister_flush(const char *name)
+{
   plugin_ctx_t ctx = plugin_get_ctx();
 
   if (ctx.flush_interval != 0) {
@@ -1593,11 +1644,13 @@ EXPORT int plugin_unregister_flush(const char *name) {
   return plugin_unregister(list_flush, name);
 }
 
-EXPORT int plugin_unregister_missing(const char *name) {
+EXPORT int plugin_unregister_missing(const char *name)
+{
   return plugin_unregister(list_missing, name);
 }
 
-EXPORT int plugin_unregister_cache_event(const char *name) {
+EXPORT int plugin_unregister_cache_event(const char *name)
+{
   for (size_t i = 0; i < list_cache_event_num; i++) {
     cache_event_func_t *cef = &list_cache_event[i];
     if (!cef->callback)
@@ -1612,7 +1665,8 @@ EXPORT int plugin_unregister_cache_event(const char *name) {
   return 0;
 }
 
-static void destroy_cache_event_callbacks() {
+static void destroy_cache_event_callbacks()
+{
   for (size_t i = 0; i < list_cache_event_num; i++) {
     cache_event_func_t *cef = &list_cache_event[i];
     if (!cef->callback)
@@ -1623,11 +1677,13 @@ static void destroy_cache_event_callbacks() {
   }
 }
 
-EXPORT int plugin_unregister_shutdown(const char *name) {
+EXPORT int plugin_unregister_shutdown(const char *name)
+{
   return plugin_unregister(list_shutdown, name);
 }
 
-EXPORT int plugin_unregister_data_set(const char *name) {
+EXPORT int plugin_unregister_data_set(const char *name)
+{
   data_set_t *ds;
 
   if (data_sets == NULL)
@@ -1640,17 +1696,20 @@ EXPORT int plugin_unregister_data_set(const char *name) {
   sfree(ds);
 
   return 0;
-} /* int plugin_unregister_data_set */
+}
 
-EXPORT int plugin_unregister_log(const char *name) {
+EXPORT int plugin_unregister_log(const char *name)
+{
   return plugin_unregister(list_log, name);
 }
 
-EXPORT int plugin_unregister_notification(const char *name) {
+EXPORT int plugin_unregister_notification(const char *name)
+{
   return plugin_unregister(list_notification, name);
 }
 
-EXPORT int plugin_init_all(void) {
+EXPORT int plugin_init_all(void)
+{
   char const *chain_name;
   llentry_t *le;
   int status;
@@ -1742,17 +1801,19 @@ EXPORT int plugin_init_all(void) {
       start_read_threads((num > 0) ? ((size_t)num) : 5);
   }
   return ret;
-} /* void plugin_init_all */
+}
 
 /* TODO: Rename this function. */
-EXPORT void plugin_read_all(void) {
+EXPORT void plugin_read_all(void)
+{
   uc_check_timeout();
 
   return;
 } /* void plugin_read_all */
 
 /* Read function called when the `-T' command line argument is given. */
-EXPORT int plugin_read_all_once(void) {
+EXPORT int plugin_read_all_once(void)
+{
   int status;
   int return_status = 0;
 
@@ -1791,10 +1852,10 @@ EXPORT int plugin_read_all_once(void) {
   }
 
   return return_status;
-} /* int plugin_read_all_once */
+}
 
-EXPORT int plugin_write(const char *plugin, /* {{{ */
-                        metric_family_t const *fam) {
+EXPORT int plugin_write(const char *plugin, metric_family_t const *fam)
+{
   llentry_t *le;
   int status;
 
@@ -1859,10 +1920,11 @@ EXPORT int plugin_write(const char *plugin, /* {{{ */
   }
 
   return status;
-} /* }}} int plugin_write */
+}
 
 EXPORT int plugin_flush(const char *plugin, cdtime_t timeout,
-                        const char *identifier) {
+                        const char *identifier)
+{
   llentry_t *le;
 
   if (list_flush == NULL)
@@ -1886,9 +1948,10 @@ EXPORT int plugin_flush(const char *plugin, cdtime_t timeout,
     le = le->next;
   }
   return 0;
-} /* int plugin_flush */
+}
 
-EXPORT int plugin_shutdown_all(void) {
+EXPORT int plugin_shutdown_all(void)
+{
   llentry_t *le;
   int ret = 0; // Assume success.
 
@@ -1949,9 +2012,9 @@ EXPORT int plugin_shutdown_all(void) {
   plugin_free_loaded();
   plugin_free_data_sets();
   return ret;
-} /* void plugin_shutdown_all */
+}
 
-EXPORT int plugin_dispatch_missing(metric_family_t const *fam) /* {{{ */
+EXPORT int plugin_dispatch_missing(metric_family_t const *fam)
 {
   if (list_missing == NULL)
     return 0;
@@ -1978,11 +2041,12 @@ EXPORT int plugin_dispatch_missing(metric_family_t const *fam) /* {{{ */
     le = le->next;
   }
   return 0;
-} /* int }}} plugin_dispatch_missing */
+}
 
 void plugin_dispatch_cache_event(enum cache_event_type_e event_type,
                                  unsigned long callbacks_mask, const char *name,
-                                 metric_t const *m) {
+                                 metric_t const *m)
+{
   switch (event_type) {
   case CE_VALUE_NEW:
     callbacks_mask = 0;
@@ -2060,7 +2124,8 @@ void plugin_dispatch_cache_event(enum cache_event_type_e event_type,
   return;
 }
 
-static int plugin_dispatch_metric_internal(metric_family_t *fam) {
+static int plugin_dispatch_metric_internal(metric_family_t *fam)
+{
   static c_complain_t no_write_complaint = C_COMPLAIN_INIT_STATIC;
   if (fam == NULL) {
     return EINVAL;
@@ -2100,9 +2165,9 @@ static int plugin_dispatch_metric_internal(metric_family_t *fam) {
     fc_default_action(fam);
 
   return 0;
-} /* int plugin_dispatch_values_internal */
+}
 
-static double get_drop_probability(void) /* {{{ */
+static double get_drop_probability(void)
 {
   long pos;
   long size;
@@ -2121,9 +2186,9 @@ static double get_drop_probability(void) /* {{{ */
   size = 1 + write_limit_high - write_limit_low;
 
   return (double)pos / (double)size;
-} /* }}} double get_drop_probability */
+}
 
-static bool check_drop_value(void) /* {{{ */
+static bool check_drop_value(void)
 {
   static cdtime_t last_message_time;
   static pthread_mutex_t last_message_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -2161,9 +2226,10 @@ static bool check_drop_value(void) /* {{{ */
     return true;
   else
     return false;
-} /* }}} bool check_drop_value */
+}
 
-EXPORT int plugin_dispatch_metric_family(metric_family_t const *fam) {
+EXPORT int plugin_dispatch_metric_family(metric_family_t const *fam)
+{
   if ((fam == NULL) || (fam->metric.num == 0)) {
     return EINVAL;
   }
@@ -2186,7 +2252,8 @@ EXPORT int plugin_dispatch_metric_family(metric_family_t const *fam) {
   return status;
 }
 
-EXPORT int plugin_dispatch_values(value_list_t const *vl) {
+EXPORT int plugin_dispatch_values(value_list_t const *vl)
+{
   data_set_t const *ds = plugin_get_ds(vl->type);
   if (ds == NULL) {
     return EINVAL;
@@ -2213,8 +2280,9 @@ EXPORT int plugin_dispatch_values(value_list_t const *vl) {
 }
 
 __attribute__((sentinel)) int
-plugin_dispatch_multivalue(value_list_t const *template, /* {{{ */
-                           bool store_percentage, int store_type, ...) {
+plugin_dispatch_multivalue(value_list_t const *template,
+                           bool store_percentage, int store_type, ...)
+{
   value_list_t *vl;
   int failed = 0;
   gauge_t sum = 0.0;
@@ -2291,9 +2359,10 @@ plugin_dispatch_multivalue(value_list_t const *template, /* {{{ */
 
   plugin_value_list_free(vl);
   return failed;
-} /* }}} int plugin_dispatch_multivalue */
+}
 
-EXPORT int plugin_dispatch_notification(const notification_t *notif) {
+EXPORT int plugin_dispatch_notification(const notification_t *notif)
+{
   llentry_t *le;
   /* Possible TODO: Add flap detection here */
 
@@ -2328,9 +2397,10 @@ EXPORT int plugin_dispatch_notification(const notification_t *notif) {
   }
 
   return 0;
-} /* int plugin_dispatch_notification */
+}
 
-EXPORT void plugin_log(int level, const char *format, ...) {
+EXPORT void plugin_log(int level, const char *format, ...)
+{
   char msg[1024];
   va_list ap;
   llentry_t *le;
@@ -2362,9 +2432,10 @@ EXPORT void plugin_log(int level, const char *format, ...) {
 
     le = le->next;
   }
-} /* void plugin_log */
+}
 
-void daemon_log(int level, const char *format, ...) {
+void daemon_log(int level, const char *format, ...)
+{
   char msg[1024] = ""; // Size inherits from plugin_log()
 
   char const *name = plugin_get_ctx().name;
@@ -2377,9 +2448,10 @@ void daemon_log(int level, const char *format, ...) {
   va_end(ap);
 
   plugin_log(level, "%s plugin: %s", name, msg);
-} /* void daemon_log */
+}
 
-int parse_log_severity(const char *severity) {
+int parse_log_severity(const char *severity)
+{
   int log_level = -1;
 
   if ((0 == strcasecmp(severity, "emerg")) ||
@@ -2398,9 +2470,10 @@ int parse_log_severity(const char *severity) {
 #endif /* COLLECT_DEBUG */
 
   return log_level;
-} /* int parse_log_severity */
+}
 
-EXPORT int parse_notif_severity(const char *severity) {
+EXPORT int parse_notif_severity(const char *severity)
+{
   int notif_severity = -1;
 
   if (strcasecmp(severity, "FAILURE") == 0)
@@ -2412,9 +2485,10 @@ EXPORT int parse_notif_severity(const char *severity) {
     notif_severity = NOTIF_WARNING;
 
   return notif_severity;
-} /* int parse_notif_severity */
+}
 
-EXPORT const data_set_t *plugin_get_ds(const char *name) {
+EXPORT const data_set_t *plugin_get_ds(const char *name)
+{
   data_set_t *ds;
 
   if (data_sets == NULL) {
@@ -2428,15 +2502,17 @@ EXPORT const data_set_t *plugin_get_ds(const char *name) {
   }
 
   return ds;
-} /* data_set_t *plugin_get_ds */
+}
 
-static void plugin_ctx_destructor(void *ctx) {
+static void plugin_ctx_destructor(void *ctx)
+{
   sfree(ctx);
-} /* void plugin_ctx_destructor */
+}
 
 static plugin_ctx_t ctx_init = {/* interval = */ 0};
 
-static plugin_ctx_t *plugin_ctx_create(void) {
+static plugin_ctx_t *plugin_ctx_create(void)
+{
   plugin_ctx_t *ctx;
 
   ctx = malloc(sizeof(*ctx));
@@ -2450,14 +2526,16 @@ static plugin_ctx_t *plugin_ctx_create(void) {
   pthread_setspecific(plugin_ctx_key, ctx);
   DEBUG("Created new plugin context.");
   return ctx;
-} /* int plugin_ctx_create */
+}
 
-EXPORT void plugin_init_ctx(void) {
+EXPORT void plugin_init_ctx(void)
+{
   pthread_key_create(&plugin_ctx_key, plugin_ctx_destructor);
   plugin_ctx_key_initialized = true;
 } /* void plugin_init_ctx */
 
-EXPORT plugin_ctx_t plugin_get_ctx(void) {
+EXPORT plugin_ctx_t plugin_get_ctx(void)
+{
   plugin_ctx_t *ctx;
 
   assert(plugin_ctx_key_initialized);
@@ -2471,9 +2549,10 @@ EXPORT plugin_ctx_t plugin_get_ctx(void) {
   }
 
   return *ctx;
-} /* plugin_ctx_t plugin_get_ctx */
+}
 
-EXPORT plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx) {
+EXPORT plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx)
+{
   plugin_ctx_t *c;
   plugin_ctx_t old;
 
@@ -2491,9 +2570,10 @@ EXPORT plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx) {
   *c = ctx;
 
   return old;
-} /* void plugin_set_ctx */
+}
 
-EXPORT cdtime_t plugin_get_interval(void) {
+EXPORT cdtime_t plugin_get_interval(void)
+{
   cdtime_t interval;
 
   interval = plugin_get_ctx().interval;
@@ -2503,7 +2583,7 @@ EXPORT cdtime_t plugin_get_interval(void) {
   P_ERROR("plugin_get_interval: Unable to determine Interval from context.");
 
   return cf_get_default_interval();
-} /* cdtime_t plugin_get_interval */
+}
 
 typedef struct {
   plugin_ctx_t ctx;
@@ -2511,7 +2591,8 @@ typedef struct {
   void *arg;
 } plugin_thread_t;
 
-static void *plugin_thread_start(void *arg) {
+static void *plugin_thread_start(void *arg)
+{
   plugin_thread_t *plugin_thread = arg;
 
   void *(*start_routine)(void *) = plugin_thread->start_routine;
@@ -2522,10 +2603,11 @@ static void *plugin_thread_start(void *arg) {
   sfree(plugin_thread);
 
   return start_routine(plugin_arg);
-} /* void *plugin_thread_start */
+}
 
 int plugin_thread_create(pthread_t *thread, void *(*start_routine)(void *),
-                         void *arg, char const *name) {
+                         void *arg, char const *name)
+{
   plugin_thread_t *plugin_thread;
 
   plugin_thread = malloc(sizeof(*plugin_thread));
@@ -2546,4 +2628,4 @@ int plugin_thread_create(pthread_t *thread, void *(*start_routine)(void *),
     set_thread_name(*thread, name);
 
   return 0;
-} /* int plugin_thread_create */
+}
