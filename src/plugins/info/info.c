@@ -23,26 +23,28 @@
 #include "plugin.h"
 #include "utils/common/common.h"
 
+#include <sys/utsname.h>
+
 static metric_family_t **info_fams;
 static size_t info_fams_num;
 
-static int info_read(void) {
+static int info_read(void)
+{
   if (info_fams == NULL)
     return 0;
 
   for (size_t i = 0; i < info_fams_num; i++) {
     int status = plugin_dispatch_metric_family(info_fams[i]);
     if (status != 0) {
-      ERROR("info plugin: plugin_dispatch_metric_family failed: %s",
-            STRERROR(status));
+      ERROR("info plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
     }
   }
 
   return 0;
 }
 
-static int info_metric_append(char *name, char *help, metric_type_t type,
-                              metric_t *m) {
+static int info_metric_append(char *name, char *help, metric_type_t type, metric_t *m)
+{
   for (size_t i = 0; i < info_fams_num; i++) {
     metric_family_t *cur_fam = info_fams[i];
     if (strcmp(cur_fam->name, name) == 0) {
@@ -78,7 +80,8 @@ static int info_metric_append(char *name, char *help, metric_type_t type,
   return 0;
 }
 
-static int info_config_metric(oconfig_item_t *ci) {
+static int info_config_metric(oconfig_item_t *ci)
+{
   char *name = NULL;
   char *help = NULL;
   metric_type_t type = METRIC_TYPE_UNTYPED;
@@ -123,7 +126,8 @@ static int info_config_metric(oconfig_item_t *ci) {
   return status;
 }
 
-static int info_config(oconfig_item_t *ci) {
+static int info_config(oconfig_item_t *ci)
+{
   int status = 0;
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
@@ -140,7 +144,8 @@ static int info_config(oconfig_item_t *ci) {
   return status;
 }
 
-static int info_shutdown(void) {
+static int info_shutdown(void)
+{
   if (info_fams == NULL)
     return 0;
 
@@ -151,19 +156,20 @@ static int info_shutdown(void) {
   return 0;
 }
 
-static int info_init(void) {
+static int info_init(void)
+{
   metric_t m = {0};
-  m.value.gauge = 1;
 
+  m.value.gauge = 1;
   metric_label_set(&m, "version", PACKAGE_VERSION);
-  int status =
-      info_metric_append("collectd_info", NULL, METRIC_TYPE_UNTYPED, &m);
+  int status =info_metric_append("ncollectd_info", NULL, METRIC_TYPE_UNTYPED, &m);
   metric_reset(&m);
 
   return status;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_init("info", info_init);
   plugin_register_complex_config("info", info_config);
   plugin_register_read("info", info_read);
