@@ -1873,6 +1873,12 @@ TESTS += test_plugin_snmp_agent
 
 endif
 
+if BUILD_PLUGIN_SOFTNET
+pkglib_LTLIBRARIES += softnet.la
+softnet_la_SOURCES = src/plugins/softnet/softnet.c
+softnet_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+endif
+
 if BUILD_PLUGIN_STATSD
 pkglib_LTLIBRARIES += statsd.la
 statsd_la_SOURCES = src/statsd.c
