@@ -6118,6 +6118,7 @@ plugin_processes="no"
 plugin_procevent="no"
 plugin_protocols="no"
 plugin_python="no"
+plugin_schedstat="no"
 plugin_serial="no"
 plugin_smart="no"
 plugin_softnet="no"
@@ -6170,6 +6171,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_pressure="yes"
   plugin_processes="yes"
   plugin_protocols="yes"
+  plugin_schedstat="yes"
   plugin_serial="yes"
   plugin_softnet="yes"
   plugin_swap="yes"
@@ -6590,6 +6592,7 @@ AC_PLUGIN([routeros],            [$with_librouteros],         [RouterOS plugin])
 AC_PLUGIN([rrdcached],           [$librrd_rrdc_update],       [RRDTool output plugin])
 AC_PLUGIN([rrdtool],             [$with_librrd],              [RRDTool output plugin])
 AC_PLUGIN([sensors],             [$with_libsensors],          [lm_sensors statistics])
+AC_PLUGIN([schedstat],           [$plugin_schedstat],         [schedstat statistics])
 AC_PLUGIN([serial],              [$plugin_serial],            [serial port traffic])
 AC_PLUGIN([softnet],             [$plugin_softnet],           [softnet statistics])
 AC_PLUGIN([sigrok],              [$with_libsigrok],           [sigrok acquisition sources])
@@ -7015,6 +7018,7 @@ AC_MSG_RESULT([    redis . . . . . . . . $enable_redis])
 AC_MSG_RESULT([    routeros  . . . . . . $enable_routeros])
 AC_MSG_RESULT([    rrdcached . . . . . . $enable_rrdcached])
 AC_MSG_RESULT([    rrdtool . . . . . . . $enable_rrdtool])
+AC_MSG_RESULT([    schedstat . . . . . . $enable_schedstat])
 AC_MSG_RESULT([    sensors . . . . . . . $enable_sensors])
 AC_MSG_RESULT([    serial  . . . . . . . $enable_serial])
 AC_MSG_RESULT([    sigrok  . . . . . . . $enable_sigrok])

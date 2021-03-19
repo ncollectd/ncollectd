@@ -1799,6 +1799,12 @@ sensors_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBSENSORS_LDFLAGS)
 sensors_la_LIBADD = libignorelist.la $(BUILD_WITH_LIBSENSORS_LIBS)
 endif
 
+if BUILD_PLUGIN_SCHEDSTAT
+pkglib_LTLIBRARIES += schedstat.la
+schedstat_la_SOURCES = src/plugins/schedstat/schedstat.c
+schedstat_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+endif
+
 if BUILD_PLUGIN_SERIAL
 pkglib_LTLIBRARIES += serial.la
 serial_la_SOURCES = src/plugins/serial/serial.c
