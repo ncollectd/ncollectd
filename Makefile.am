@@ -990,7 +990,7 @@ endif
 
 if BUILD_PLUGIN_DRBD
 pkglib_LTLIBRARIES += drbd.la
-drbd_la_SOURCES = src/drbd.c
+drbd_la_SOURCES = src/plugins/drbd/drbd.c
 drbd_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
