@@ -699,6 +699,12 @@ amqp1_la_LIBADD = \
 	libformat_json.la
 endif
 
+if BUILD_PLUGIN_ARP
+pkglib_LTLIBRARIES += arp.la
+arp_la_SOURCES = src/plugins/arp/arp.c
+arp_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+endif
+
 if BUILD_PLUGIN_APACHE
 pkglib_LTLIBRARIES += apache.la
 apache_la_SOURCES = src/plugins/apache/apache.c

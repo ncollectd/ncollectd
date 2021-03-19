@@ -6063,6 +6063,7 @@ AC_COLLECTD([werror],    [disable], [feature], [building with -Werror])
 dependency_warning="no"
 dependency_error="no"
 
+plugin_arp="no"
 plugin_battery="no"
 plugin_bind="no"
 plugin_buddyinfo="no"
@@ -6141,6 +6142,7 @@ plugin_zookeeper="no"
 
 # Linux
 if test "x$ac_system" = "xLinux"; then
+  plugin_arp="yes"
   plugin_battery="yes"
   plugin_buddyinfo="yes"
   plugin_cgroups="yes"
@@ -6476,6 +6478,7 @@ m4_divert_once([HELP_ENABLE], [])
 AC_PLUGIN([aggregation],         [yes],                       [Aggregation plugin])
 AC_PLUGIN([amqp],                [$with_librabbitmq],         [AMQP output plugin])
 AC_PLUGIN([amqp1],               [$with_libqpid_proton],      [AMQP 1.0 output plugin])
+AC_PLUGIN([arp],                 [$plugin_arp],               [ARP cache statistics])
 AC_PLUGIN([apache],              [$with_libcurl],             [Apache httpd statistics])
 AC_PLUGIN([apcups],              [yes],                       [Statistics of UPSes by APC])
 AC_PLUGIN([apple_sensors],       [$with_libiokit],            [Apple hardware sensors])
@@ -6899,8 +6902,9 @@ AC_MSG_RESULT([    perl  . . . . . . . . $with_perl_bindings])
 AC_MSG_RESULT()
 AC_MSG_RESULT([  Modules:])
 AC_MSG_RESULT([    aggregation . . . . . $enable_aggregation])
-AC_MSG_RESULT([    amqp    . . . . . . . $enable_amqp])
-AC_MSG_RESULT([    amqp1   . . . . . . . $enable_amqp1])
+AC_MSG_RESULT([    amqp  . . . . . . . . $enable_amqp])
+AC_MSG_RESULT([    amqp1 . . . . . . . . $enable_amqp1])
+AC_MSG_RESULT([    arp . . . . . . . . . $enable_arp])
 AC_MSG_RESULT([    apache  . . . . . . . $enable_apache])
 AC_MSG_RESULT([    apcups  . . . . . . . $enable_apcups])
 AC_MSG_RESULT([    apple_sensors . . . . $enable_apple_sensors])
