@@ -29,25 +29,59 @@
 #include "plugin.h"
 #include "utils/common/common.h"
 
-static void entropy_submit(gauge_t value);
 static int entropy_read(void);
 
 #if !KERNEL_LINUX && !KERNEL_NETBSD
 #error "No applicable input method."
 #endif
 
+static void entropy_submit(gauge_t available, gauge_t poolsize)
+{
+  metric_family_t fams[] = {
+    {
+      .name = "host_entropy_available_bits",
+      .help = "Bits of available entropy",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    {
+      .name = "host_entropy_pool_size_bits",
+      .help = "Bits of entropy pool",
+      .type = METRIC_TYPE_GAUGE,
+    },
+  };
+
+  metric_family_metric_append(&fams[0], (metric_t){ .value.gauge = available, });
+  metric_family_metric_append(&fams[1], (metric_t){ .value.gauge = poolsize, });
+
+  for (size_t i = 0; i < STATIC_ARRAY_SIZE(fams); i++) {
+    int status = plugin_dispatch_metric_family(&fams[i]);
+    if (status != 0) {
+      ERROR("entropy plugin: plugin_dispatch_metric_family failed: %s",
+            STRERROR(status));
+    }
+    metric_family_metric_reset(&fams[i]);
+  }
+}
+
 #if KERNEL_LINUX
-#define ENTROPY_FILE "/proc/sys/kernel/random/entropy_avail"
+#define ENTROPY_AVAILABLE_FILE "/proc/sys/kernel/random/entropy_avail"
+#define ENTROPY_POOLSIZE_FILE "/proc/sys/kernel/random/poolsize"
 
 static int entropy_read(void)
 {
-  value_t v;
-  if (parse_value_file(ENTROPY_FILE, &v, DS_TYPE_GAUGE) != 0) {
-    ERROR("entropy plugin: Reading \"" ENTROPY_FILE "\" failed.");
+  value_t available;
+  if (parse_value_file(ENTROPY_AVAILABLE_FILE, &available, DS_TYPE_GAUGE) != 0) {
+    ERROR("entropy plugin: Reading \"" ENTROPY_AVAILABLE_FILE "\" failed.");
+    return -1;
+  }
+ 
+  value_t poolsize;
+  if (parse_value_file(ENTROPY_POOLSIZE_FILE, &poolsize, DS_TYPE_GAUGE) != 0) {
+    ERROR("entropy plugin: Reading \"" ENTROPY_POOLSIZE_FILE "\" failed.");
     return -1;
   }
 
-  entropy_submit(v.gauge);
+  entropy_submit(available.gauge, poolsize.gauge);
   return 0;
 }
 #endif /* KERNEL_LINUX */
@@ -72,10 +106,8 @@ static int entropy_read(void)
 
 static int entropy_read(void)
 {
-  value_t v;
   rndpoolstat_t rs;
-  static int fd;
-  char buf[30];
+  static int fd = 0;
 
   if (fd == 0) {
     fd = open(_PATH_URANDOM, O_RDONLY, 0644);
@@ -90,36 +122,14 @@ static int entropy_read(void)
     fd = 0; /* signal a reopening on next attempt */
     return -1;
   }
-  snprintf(buf, sizeof(buf), "%ju", (uintmax_t)rs.curentropy);
-  if (parse_value(buf, &v, DS_TYPE_GAUGE) != 0) {
-    ERROR("entropy plugin: Parsing \"%s\" failed.", buf);
-    return (-1);
-  }
 
-  entropy_submit(v.gauge);
+  entropy_submit(rs.curentropy, rs.poolsize);
 
   return 0;
 }
 
 #endif /* KERNEL_NETBSD */
 
-static void entropy_submit(gauge_t value)
-{
-  metric_family_t fam = {
-      .name = "host_entropy_available_bits",
-      .type = METRIC_TYPE_GAUGE,
-  };
-
-  metric_family_metric_append(&fam, (metric_t){ .value.gauge = value, });
-
-  int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("entropy plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
-
-  metric_family_metric_reset(&fam);
-}
 
 void module_register(void)
 {
