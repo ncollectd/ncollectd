@@ -700,17 +700,11 @@ amqp1_la_LIBADD = \
 endif
 
 if BUILD_PLUGIN_ARP
-pkglib_LTLIBRARIES += arp.la
-arp_la_SOURCES = src/plugins/arp/arp.c
-arp_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/arp/Makefile.am
 endif
 
 if BUILD_PLUGIN_APACHE
-pkglib_LTLIBRARIES += apache.la
-apache_la_SOURCES = src/plugins/apache/apache.c
-apache_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBCURL_CFLAGS)
-apache_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-apache_la_LIBADD = $(BUILD_WITH_LIBCURL_LIBS)
+include src/plugins/apache/Makefile.am
 endif
 
 
@@ -751,10 +745,7 @@ bind_la_LIBADD = $(BUILD_WITH_LIBCURL_LIBS) $(BUILD_WITH_LIBXML2_LIBS)
 endif
 
 if BUILD_PLUGIN_BUDDYINFO
-pkglib_LTLIBRARIES += buddyinfo.la
-buddyinfo_la_SOURCES = src/plugins/buddyinfo/buddyinfo.c
-buddyinfo_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-buddyinfo_la_LIBADD = libignorelist.la
+include src/plugins/buddyinfo/Makefile.am
 endif
 
 if BUILD_PLUGIN_CAPABILITIES
@@ -799,10 +790,7 @@ cgroups_la_LIBADD = libignorelist.la libmount.la
 endif
 
 if BUILD_PLUGIN_CHRONY
-pkglib_LTLIBRARIES += chrony.la
-chrony_la_SOURCES = src/plugins/chrony/chrony.c
-chrony_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-chrony_la_LIBADD = -lm
+include src/plugins/chrony/Makefile.am
 endif
 
 if BUILD_PLUGIN_CHECK_UPTIME
@@ -821,40 +809,15 @@ connectivity_la_LIBADD = $(BUILD_WITH_LIBYAJL_LIBS) $(BUILD_WITH_LIBMNL_LIBS) li
 endif
 
 if BUILD_PLUGIN_CONNTRACK
-pkglib_LTLIBRARIES += conntrack.la
-conntrack_la_SOURCES = src/plugins/conntrack/conntrack.c
-conntrack_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/conntrack/Makefile.am
 endif
 
 if BUILD_PLUGIN_CONTEXTSWITCH
-pkglib_LTLIBRARIES += contextswitch.la
-contextswitch_la_SOURCES = src/plugins/contextswitch/contextswitch.c
-contextswitch_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-contextswitch_la_LIBADD =
-if BUILD_WITH_PERFSTAT
-contextswitch_la_LIBADD += -lperfstat
-endif
+include src/plugins/contextswitch/Makefile.am
 endif
 
 if BUILD_PLUGIN_CPU
-pkglib_LTLIBRARIES += cpu.la
-cpu_la_SOURCES = src/plugins/cpu/cpu.c
-cpu_la_CFLAGS = $(AM_CFLAGS)
-cpu_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-cpu_la_LIBADD =
-if BUILD_WITH_LIBKSTAT
-cpu_la_LIBADD += -lkstat
-endif
-if BUILD_WITH_LIBDEVINFO
-cpu_la_LIBADD += -ldevinfo
-endif
-if BUILD_WITH_LIBSTATGRAB
-cpu_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-cpu_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif
-if BUILD_WITH_PERFSTAT
-cpu_la_LIBADD += -lperfstat
-endif
+include src/plugins/cpu/Makefile.am
 endif
 
 if BUILD_PLUGIN_CPUFREQ
@@ -864,9 +827,7 @@ cpufreq_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_CPUSLEEP
-pkglib_LTLIBRARIES += cpusleep.la
-cpusleep_la_SOURCES = src/plugins/cpusleep/cpusleep.c
-cpusleep_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/cpusleep/Makefile.am
 endif
 
 if BUILD_PLUGIN_CSV
@@ -876,16 +837,7 @@ csv_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_CURL
-pkglib_LTLIBRARIES += curl.la
-curl_la_SOURCES = \
-	src/plugins/curl/curl.c \
-	src/utils/curl_stats/curl_stats.c \
-	src/utils/curl_stats/curl_stats.h \
-	src/utils/match/match.c \
-	src/utils/match/match.h
-curl_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBCURL_CFLAGS)
-curl_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-curl_la_LIBADD = liblatency.la $(BUILD_WITH_LIBCURL_LIBS)
+include src/plugins/curl/Makefile.am
 endif
 
 if BUILD_PLUGIN_CURL_JSON
@@ -930,43 +882,11 @@ dcpmm_la_LIBADD = -lpmwapi
 endif
 
 if BUILD_PLUGIN_DF
-pkglib_LTLIBRARIES += df.la
-df_la_SOURCES = src/plugins/df/df.c
-df_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-df_la_LIBADD = libignorelist.la libmount.la
+include src/plugins/df/Makefile.am
 endif
 
 if BUILD_PLUGIN_DISK
-pkglib_LTLIBRARIES += disk.la
-disk_la_SOURCES = src/plugins/disk/disk.c
-disk_la_CFLAGS = $(AM_CFLAGS)
-disk_la_CPPFLAGS = $(AM_CPPFLAGS)
-disk_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-disk_la_LIBADD = libignorelist.la
-if BUILD_WITH_LIBKSTAT
-disk_la_LIBADD += -lkstat
-endif
-if BUILD_WITH_LIBDEVINFO
-disk_la_LIBADD += -ldevinfo
-endif
-if BUILD_WITH_LIBIOKIT
-disk_la_LDFLAGS += -framework IOKit
-endif
-if BUILD_WITH_LIBSTATGRAB
-disk_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-disk_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif
-if BUILD_WITH_LIBUDEV
-disk_la_CPPFLAGS += $(BUILD_WITH_LIBUDEV_CPPFLAGS)
-disk_la_LDFLAGS += $(BUILD_WITH_LIBUDEV_LDFLAGS)
-disk_la_LIBADD += $(BUILD_WITH_LIBUDEV_LIBS)
-endif
-if BUILD_FREEBSD
-disk_la_LIBADD += -ldevstat -lgeom
-endif
-if BUILD_WITH_PERFSTAT
-disk_la_LIBADD += -lperfstat
-endif
+include src/plugins/disk/Makefile.am
 endif
 
 if BUILD_PLUGIN_DPDKEVENTS
@@ -995,9 +915,7 @@ dpdk_telemetry_la_LIBADD = $(BUILD_WITH_LIBJANSSON_LIBS)
 endif
 
 if BUILD_PLUGIN_DRBD
-pkglib_LTLIBRARIES += drbd.la
-drbd_la_SOURCES = src/plugins/drbd/drbd.c
-drbd_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/drbd/Makefile.am
 endif
 
 if BUILD_PLUGIN_EMAIL
@@ -1007,9 +925,7 @@ email_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_ENTROPY
-pkglib_LTLIBRARIES += entropy.la
-entropy_la_SOURCES = src/plugins/entropy/entropy.c
-entropy_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/entropy/Makefile.am
 endif
 
 if BUILD_PLUGIN_EXEC
@@ -1020,29 +936,19 @@ exec_la_LIBADD = libcmds.la
 endif
 
 if BUILD_PLUGIN_ETHSTAT
-pkglib_LTLIBRARIES += ethstat.la
-ethstat_la_SOURCES = src/plugins/ethstat/ethstat.c
-ethstat_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/ethstat/Makefile.am
 endif
 
 if BUILD_PLUGIN_FHCOUNT
-pkglib_LTLIBRARIES += fhcount.la
-fhcount_la_SOURCES = src/plugins/fhcount/fhcount.c
-fhcount_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/fhcount/Makefile.am
 endif
 
 if BUILD_PLUGIN_FILECOUNT
-pkglib_LTLIBRARIES += filecount.la
-filecount_la_SOURCES = src/plugins/filecount/filecount.c
-filecount_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/filecount/Makefile.am
 endif
 
 if BUILD_PLUGIN_FSCACHE
-pkglib_LTLIBRARIES += fscache.la
-fscache_la_SOURCES = \
-    src/plugins/fscache/fscache.c \
-    src/plugins/fscache/fscache.h
-fscache_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/fscache/Makefile.am
 endif
 
 if BUILD_PLUGIN_GMOND
@@ -1083,9 +989,7 @@ infiniband_la_LIBADD = libignorelist.la
 endif
 
 if BUILD_PLUGIN_INFO
-pkglib_LTLIBRARIES += info.la
-info_la_SOURCES = src/plugins/info/info.c
-info_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/info/Makefile.am
 endif
 
 if BUILD_PLUGIN_INTEL_PMU
@@ -1132,39 +1036,15 @@ TESTS += test_utils_proc_pids
 endif
 
 if BUILD_PLUGIN_INTERFACE
-pkglib_LTLIBRARIES += interface.la
-interface_la_SOURCES = src/plugins/interface/interface.c
-interface_la_CFLAGS = $(AM_CFLAGS)
-interface_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-interface_la_LIBADD = libignorelist.la
-if BUILD_WITH_LIBSTATGRAB
-interface_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-interface_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-else
-if BUILD_WITH_LIBKSTAT
-interface_la_LIBADD += -lkstat
+include src/plugins/interface/Makefile.am
 endif
-if BUILD_WITH_LIBDEVINFO
-interface_la_LIBADD += -ldevinfo
-endif # BUILD_WITH_LIBDEVINFO
-endif # !BUILD_WITH_LIBSTATGRAB
-if BUILD_WITH_PERFSTAT
-interface_la_LIBADD += -lperfstat
-endif
-endif # BUILD_PLUGIN_INTERFACE
 
 if BUILD_PLUGIN_IPC
-pkglib_LTLIBRARIES += ipc.la
-ipc_la_SOURCES = src/plugins/ipc/ipc.c
-ipc_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/ipc/Makefile.am
 endif
 
 if BUILD_PLUGIN_IPTABLES
-pkglib_LTLIBRARIES += iptables.la
-iptables_la_SOURCES = src/plugins/iptables/iptables.c
-iptables_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBIPTC_CPPFLAGS)
-iptables_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-iptables_la_LIBADD = $(BUILD_WITH_LIBIPTC_LDFLAGS)
+include src/plugins/iptables/Makefile.am
 endif
 
 if BUILD_PLUGIN_IPMI
@@ -1188,10 +1068,7 @@ ipvs_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_IRQ
-pkglib_LTLIBRARIES += irq.la
-irq_la_SOURCES = src/plugins/irq/irq.c
-irq_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-irq_la_LIBADD = libignorelist.la
+include src/plugins/irq/Makefile.am
 endif
 
 if BUILD_PLUGIN_JAVA
@@ -1204,19 +1081,8 @@ java_la_LIBADD = $(JAVA_LIBS)
 endif
 
 if BUILD_PLUGIN_LOAD
-pkglib_LTLIBRARIES += load.la
-load_la_SOURCES = src/plugins/load/load.c
-load_la_CFLAGS = $(AM_CFLAGS)
-load_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-load_la_LIBADD =
-if BUILD_WITH_LIBSTATGRAB
-load_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-load_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif # BUILD_WITH_LIBSTATGRAB
-if BUILD_WITH_PERFSTAT
-load_la_LIBADD += -lperfstat
+include src/plugins/load/Makefile.am
 endif
-endif # BUILD_PLUGIN_LOAD
 
 if BUILD_PLUGIN_LOGFILE
 pkglib_LTLIBRARIES += logfile.la
@@ -1314,10 +1180,7 @@ mcelog_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_MD
-pkglib_LTLIBRARIES += md.la
-md_la_SOURCES = src/plugins/md/md.c
-md_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-md_la_LIBADD = libignorelist.la
+include src/plugins/md/Makefile.am
 endif
 
 if BUILD_PLUGIN_MDEVENTS
@@ -1357,24 +1220,7 @@ endif
 endif
 
 if BUILD_PLUGIN_MEMORY
-pkglib_LTLIBRARIES += memory.la
-memory_la_SOURCES = src/plugins/memory/memory.c
-memory_la_CFLAGS = $(AM_CFLAGS)
-memory_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-memory_la_LIBADD =
-if BUILD_WITH_LIBKSTAT
-memory_la_LIBADD += -lkstat
-endif
-if BUILD_WITH_LIBDEVINFO
-memory_la_LIBADD += -ldevinfo
-endif
-if BUILD_WITH_LIBSTATGRAB
-memory_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-memory_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif
-if BUILD_WITH_PERFSTAT
-memory_la_LIBADD += -lperfstat
-endif
+include src/plugins/memory/Makefile.am
 endif
 
 if BUILD_PLUGIN_MIC
@@ -1386,11 +1232,7 @@ mic_la_LIBADD = libignorelist.la $(BUILD_WITH_MIC_LIBS)
 endif
 
 if BUILD_PLUGIN_MODBUS
-pkglib_LTLIBRARIES += modbus.la
-modbus_la_SOURCES = src/plugins/modbus/modbus.c
-modbus_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBMODBUS_CFLAGS)
-modbus_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-modbus_la_LIBADD = $(BUILD_WITH_LIBMODBUS_LIBS)
+include src/plugins/modbus/Makefile.am
 endif
 
 if BUILD_PLUGIN_MQTT
@@ -1478,11 +1320,7 @@ nfs_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_NGINX
-pkglib_LTLIBRARIES += nginx.la
-nginx_la_SOURCES = src/plugins/nginx/nginx.c
-nginx_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBCURL_CFLAGS)
-nginx_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-nginx_la_LIBADD = $(BUILD_WITH_LIBCURL_LIBS)
+include src/plugins/nginx/Makefile.am
 endif
 
 if BUILD_PLUGIN_NOTIFY_DESKTOP
@@ -1518,9 +1356,7 @@ endif
 endif
 
 if BUILD_PLUGIN_NUMA
-pkglib_LTLIBRARIES += numa.la
-numa_la_SOURCES = src/plugins/numa/numa.c
-numa_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/numa/Makefile.am
 endif
 
 if BUILD_PLUGIN_NUT
@@ -1532,14 +1368,7 @@ nut_la_LIBADD = $(BUILD_WITH_LIBUPSCLIENT_LIBS)
 endif
 
 if BUILD_PLUGIN_ODBC
-pkglib_LTLIBRARIES += odbc.la
-odbc_la_SOURCES = \
-	src/plugins/odbc/odbc.c \
-	src/plugins/odbc/odbc_query.c \
-	src/plugins/odbc/odbc_query.h
-odbc_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_UNIXODBC_CPPFLAGS)
-odbc_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_UNIXODBC_LDFLAGS)
-odbc_la_LIBADD = $(BUILD_WITH_UNIXODBC_LIBS)
+include src/plugins/odbc/Makefile.am
 endif
 
 if BUILD_PLUGIN_OLSRD
@@ -1652,11 +1481,7 @@ pinba_la_LIBADD = $(BUILD_WITH_LIBPROTOBUF_C_LIBS)
 endif
 
 if BUILD_PLUGIN_PING
-pkglib_LTLIBRARIES += ping.la
-ping_la_SOURCES = src/plugins/ping/ping.c
-ping_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBOPING_CPPFLAGS)
-ping_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBOPING_LDFLAGS)
-ping_la_LIBADD = -loping -lm
+include src/plugins/ping/Makefile.am
 endif
 
 if BUILD_PLUGIN_POSTGRESQL
@@ -1698,25 +1523,11 @@ libtaskstats_la_LIBADD = $(BUILD_WITH_LIBMNL_LIBS)
 endif
 
 if BUILD_PLUGIN_PRESSURE
-pkglib_LTLIBRARIES += pressure.la
-pressure_la_SOURCES = src/plugins/pressure/pressure.c
-pressure_la_CPPFLAGS = $(AM_CPPFLAGS)
-pressure_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/pressure/Makefile.am
 endif
 
 if BUILD_PLUGIN_PROCESSES
-pkglib_LTLIBRARIES += processes.la
-processes_la_SOURCES = src/plugins/processes/processes.c
-processes_la_CPPFLAGS = $(AM_CPPFLAGS)
-processes_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-processes_la_LIBADD =
-if BUILD_WITH_LIBKVM_GETPROCS
-processes_la_LIBADD += -lkvm
-endif
-if HAVE_LIBMNL
-processes_la_CPPFLAGS += -DHAVE_LIBTASKSTATS=1
-processes_la_LIBADD += libtaskstats.la
-endif
+include src/plugins/processes/Makefile.am
 endif
 
 if BUILD_PLUGIN_PROCEVENT
@@ -1728,10 +1539,7 @@ procevent_la_LIBADD = $(BUILD_WITH_LIBYAJL_LIBS) libignorelist.la
 endif
 
 if BUILD_PLUGIN_PROTOCOLS
-pkglib_LTLIBRARIES += protocols.la
-protocols_la_SOURCES = src/plugins/protocols/protocols.c
-protocols_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-protocols_la_LIBADD = libignorelist.la
+include src/plugins/protocols/Makefile.am
 endif
 
 if BUILD_PLUGIN_REDFISH
@@ -1800,23 +1608,15 @@ sensors_la_LIBADD = libignorelist.la $(BUILD_WITH_LIBSENSORS_LIBS)
 endif
 
 if BUILD_PLUGIN_SCHEDSTAT
-pkglib_LTLIBRARIES += schedstat.la
-schedstat_la_SOURCES = src/plugins/schedstat/schedstat.c
-schedstat_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/schedstat/Makefile.am
 endif
 
 if BUILD_PLUGIN_SERIAL
-pkglib_LTLIBRARIES += serial.la
-serial_la_SOURCES = src/plugins/serial/serial.c
-serial_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/serial/Makefile.am
 endif
 
 if BUILD_PLUGIN_SIGROK
-pkglib_LTLIBRARIES += sigrok.la
-sigrok_la_SOURCES = src/plugins/sigrok/sigrok.c
-sigrok_la_CFLAGS = $(AM_CFLAGS) $(LIBSIGROK_CFLAGS)
-sigrok_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-sigrok_la_LIBADD = $(LIBSIGROK_LIBS)
+include src/plugins/sigrok/Makefile.am
 endif
 
 if BUILD_PLUGIN_SLURM
@@ -1828,23 +1628,7 @@ slurm_la_LIBADD = $(BUILD_WITH_LIBSLURM_LIBS)
 endif
 
 if BUILD_PLUGIN_SMART
-if BUILD_WITH_LIBUDEV
-pkglib_LTLIBRARIES += smart.la
-smart_la_SOURCES = \
-    src/smart.c \
-    src/nvme.h \
-    src/intel-nvme.h
-smart_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBATASMART_CPPFLAGS) $(BUILD_WITH_LIBUDEV_CPPFLAGS)
-smart_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBATASMART_LDFLAGS) $(BUILD_WITH_LIBUDEV_LDFLAGS)
-smart_la_LIBADD = libignorelist.la $(BUILD_WITH_LIBATASMART_LIBS) $(BUILD_WITH_LIBUDEV_LIBS)
-
-test_plugin_smart_SOURCES = src/smart_test.c
-test_plugin_smart_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBATASMART_CPPFLAGS) $(BUILD_WITH_LIBUDEV_CPPFLAGS)
-test_plugin_smart_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBATASMART_LDFLAGS) $(BUILD_WITH_LIBUDEV_LDFLAGS)
-test_plugin_smart_LDADD = libplugin_mock.la $(BUILD_WITH_LIBATASMART_LIBS) $(BUILD_WITH_LIBUDEV_LIBS)
-check_PROGRAMS += test_plugin_smart
-TESTS += test_plugin_smart
-endif
+include src/plugins/smart/Makefile.am
 endif
 
 if BUILD_PLUGIN_SNMP
@@ -1880,9 +1664,7 @@ TESTS += test_plugin_snmp_agent
 endif
 
 if BUILD_PLUGIN_SOFTNET
-pkglib_LTLIBRARIES += softnet.la
-softnet_la_SOURCES = src/plugins/softnet/softnet.c
-softnet_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/softnet/Makefile.am
 endif
 
 if BUILD_PLUGIN_STATSD
@@ -1893,34 +1675,11 @@ statsd_la_LIBADD = liblatency.la
 endif
 
 if BUILD_PLUGIN_SWAP
-pkglib_LTLIBRARIES += swap.la
-swap_la_SOURCES = src/plugins/swap/swap.c
-swap_la_CFLAGS = $(AM_CFLAGS)
-swap_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-swap_la_LIBADD =
-if BUILD_WITH_LIBKSTAT
-swap_la_LIBADD += -lkstat
-endif
-if BUILD_WITH_LIBDEVINFO
-swap_la_LIBADD += -ldevinfo
-endif
-if BUILD_WITH_LIBKVM_GETSWAPINFO
-swap_la_LIBADD += -lkvm
-endif
-if BUILD_WITH_LIBSTATGRAB
-swap_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-swap_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif
-if BUILD_WITH_PERFSTAT
-swap_la_LIBADD += -lperfstat
-endif
-
+include src/plugins/swap/Makefile.am
 endif
 
 if BUILD_PLUGIN_SYNPROXY
-pkglib_LTLIBRARIES += synproxy.la
-synproxy_la_SOURCES = src/plugins/synproxy/synproxy.c
-synproxy_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/synproxy/Makefile.am
 endif
 
 if BUILD_PLUGIN_SYSEVENT
@@ -1938,9 +1697,7 @@ syslog_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_TABLE
-pkglib_LTLIBRARIES += table.la
-table_la_SOURCES = src/plugins/table/table.c
-table_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/table/Makefile.am
 endif
 
 if BUILD_PLUGIN_TAIL
@@ -1958,12 +1715,7 @@ tail_la_LIBADD = liblatency.la
 endif
 
 if BUILD_PLUGIN_TAIL_CSV
-pkglib_LTLIBRARIES += tail_csv.la
-tail_csv_la_SOURCES = \
-	src/plugins/tail_csv/tail_csv.c \
-	src/utils/tail/tail.c \
-	src/utils/tail/tail.h
-tail_csv_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/tail_csv/Makefile.am
 endif
 
 if BUILD_PLUGIN_TARGET_NOTIFICATION
@@ -1997,26 +1749,15 @@ target_v5upgrade_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_TCPCONNS
-pkglib_LTLIBRARIES += tcpconns.la
-tcpconns_la_SOURCES = src/plugins/tcpconns/tcpconns.c
-tcpconns_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-tcpconns_la_LIBADD =
-if BUILD_WITH_LIBKVM_NLIST
-tcpconns_la_LIBADD += -lkvm
-endif
+include src/plugins/tcpconns/Makefile.am
 endif
 
 if BUILD_PLUGIN_THERMAL
-pkglib_LTLIBRARIES += thermal.la
-thermal_la_SOURCES = src/plugins/thermal/thermal.c
-thermal_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-thermal_la_LIBADD = libignorelist.la
+include src/plugins/thermal/Makefile.am
 endif
 
 if BUILD_PLUGIN_THRESHOLD
-pkglib_LTLIBRARIES += threshold.la
-threshold_la_SOURCES = src/plugins/threshold/threshold.c
-threshold_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/threshold/Makefile.am
 endif
 
 if BUILD_PLUGIN_TURBOSTAT
@@ -2042,35 +1783,15 @@ unixsock_la_LIBADD = libcmds.la
 endif
 
 if BUILD_PLUGIN_UPTIME
-pkglib_LTLIBRARIES += uptime.la
-uptime_la_SOURCES = src/plugins/uptime/uptime.c
-uptime_la_CFLAGS = $(AM_CFLAGS)
-uptime_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-uptime_la_LIBADD =
-if BUILD_WITH_LIBKSTAT
-uptime_la_LIBADD += -lkstat
-endif
-if BUILD_WITH_PERFSTAT
-uptime_la_LIBADD += -lperfstat
-endif
+include src/plugins/uptime/Makefile.am
 endif
 
 if BUILD_PLUGIN_USERS
-pkglib_LTLIBRARIES += users.la
-users_la_SOURCES = src/plugins/users/users.c
-users_la_CFLAGS = $(AM_CFLAGS)
-users_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-users_la_LIBADD =
-if BUILD_WITH_LIBSTATGRAB
-users_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
-users_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
-endif
+include src/plugins/users/Makefile.am
 endif
 
 if BUILD_PLUGIN_UUID
-pkglib_LTLIBRARIES += uuid.la
-uuid_la_SOURCES = src/plugins/uuid/uuid.c
-uuid_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/uuid/Makefile.am
 endif
 
 if BUILD_PLUGIN_VARNISH
@@ -2156,10 +1877,7 @@ write_kafka_la_LIBADD = \
 endif
 
 if BUILD_PLUGIN_WRITE_LOG
-pkglib_LTLIBRARIES += write_log.la
-write_log_la_SOURCES = src/plugins/write_log/write_log.c
-write_log_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-write_log_la_LIBADD = libformat_graphite.la libformat_json.la libformat_openmetrics.la
+include src/plugins/write_log/Makefile.am
 endif
 
 if BUILD_PLUGIN_WRITE_MONGODB
@@ -2171,11 +1889,7 @@ write_mongodb_la_LIBADD = $(BUILD_WITH_LIBMONGOC_LIBS)
 endif
 
 if BUILD_PLUGIN_WRITE_PROMETHEUS
-pkglib_LTLIBRARIES += write_prometheus.la
-write_prometheus_la_SOURCES = src/plugins/write_prometheus/write_prometheus.c
-write_prometheus_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBMICROHTTPD_CPPFLAGS)
-write_prometheus_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBMICROHTTPD_LDFLAGS)
-write_prometheus_la_LIBADD = $(BUILD_WITH_LIBMICROHTTPD_LIBS)
+include src/plugins/write_prometheus/Makefile.am
 endif
 
 if BUILD_PLUGIN_WRITE_REDIS
