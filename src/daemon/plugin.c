@@ -45,14 +45,6 @@
 
 #include <time.h>
 
-#ifdef WIN32
-#define EXPORT __declspec(dllexport)
-#include <sys/stat.h>
-#include <unistd.h>
-#else
-#define EXPORT
-#endif
-
 #if HAVE_PTHREAD_NP_H
 #include <pthread_np.h> /* for pthread_set_name_np(3) */
 #endif
@@ -1005,11 +997,8 @@ static void plugin_free_loaded(void)
 }
 
 #define BUFSIZE 512
-#ifdef WIN32
-#define SHLIB_SUFFIX ".dll"
-#else
 #define SHLIB_SUFFIX ".so"
-#endif
+
 int plugin_load(char const *plugin_name, bool global)
 {
   DIR *dh;
@@ -1105,7 +1094,7 @@ int plugin_load(char const *plugin_name, bool global)
 /*
  * The `register_*' functions follow
  */
-EXPORT int plugin_register_config(const char *name,
+int plugin_register_config(const char *name,
                                   int (*callback)(const char *key, const char *val),
                                   const char **keys, int keys_num)
 {
@@ -1113,13 +1102,13 @@ EXPORT int plugin_register_config(const char *name,
   return 0;
 }
 
-EXPORT int plugin_register_complex_config(const char *type,
+int plugin_register_complex_config(const char *type,
                                           int (*callback)(oconfig_item_t *))
 {
   return cf_register_complex(type, callback);
 }
 
-EXPORT int plugin_register_init(const char *name, int (*callback)(void))
+int plugin_register_init(const char *name, int (*callback)(void))
 {
   return create_register_callback(&list_init, name, (void *)callback, NULL);
 }
@@ -1204,7 +1193,7 @@ static int plugin_insert_read(read_func_t *rf)
   return 0;
 }
 
-EXPORT int plugin_register_read(const char *name, int (*callback)(void))
+int plugin_register_read(const char *name, int (*callback)(void))
 {
   read_func_t *rf;
   int status;
@@ -1234,7 +1223,7 @@ EXPORT int plugin_register_read(const char *name, int (*callback)(void))
   return status;
 }
 
-EXPORT int plugin_register_complex_read(const char *group, const char *name,
+int plugin_register_complex_read(const char *group, const char *name,
                                         plugin_read_cb callback,
                                         cdtime_t interval,
                                         user_data_t const *user_data)
@@ -1279,7 +1268,7 @@ EXPORT int plugin_register_complex_read(const char *group, const char *name,
   return status;
 }
 
-EXPORT int plugin_register_write(const char *name, plugin_write_cb callback, user_data_t const *ud)
+int plugin_register_write(const char *name, plugin_write_cb callback, user_data_t const *ud)
 {
   return create_register_callback(&list_write, name, (void *)callback, ud);
 }
@@ -1324,7 +1313,7 @@ static char *plugin_flush_callback_name(const char *name)
   return flush_name;
 }
 
-EXPORT int plugin_register_flush(const char *name, plugin_flush_cb callback, user_data_t const *ud)
+int plugin_register_flush(const char *name, plugin_flush_cb callback, user_data_t const *ud)
 {
   plugin_ctx_t ctx = plugin_get_ctx();
 
@@ -1374,13 +1363,13 @@ EXPORT int plugin_register_flush(const char *name, plugin_flush_cb callback, use
   return status;
 }
 
-EXPORT int plugin_register_missing(const char *name, plugin_missing_cb callback,
+int plugin_register_missing(const char *name, plugin_missing_cb callback,
                                    user_data_t const *ud)
 {
   return create_register_callback(&list_missing, name, (void *)callback, ud);
 }
 
-EXPORT int plugin_register_cache_event(const char *name,
+int plugin_register_cache_event(const char *name,
                                        plugin_cache_event_cb callback,
                                        user_data_t const *ud)
 {
@@ -1436,7 +1425,7 @@ EXPORT int plugin_register_cache_event(const char *name,
   return 0;
 }
 
-EXPORT int plugin_register_shutdown(const char *name, int (*callback)(void))
+int plugin_register_shutdown(const char *name, int (*callback)(void))
 {
   return create_register_callback(&list_shutdown, name, (void *)callback, NULL);
 }
@@ -1461,7 +1450,7 @@ static void plugin_free_data_sets(void)
   data_sets = NULL;
 }
 
-EXPORT int plugin_register_data_set(const data_set_t *ds)
+int plugin_register_data_set(const data_set_t *ds)
 {
   data_set_t *ds_copy;
 
@@ -1491,13 +1480,13 @@ EXPORT int plugin_register_data_set(const data_set_t *ds)
   return c_avl_insert(data_sets, (void *)ds_copy->type, (void *)ds_copy);
 }
 
-EXPORT int plugin_register_log(const char *name, plugin_log_cb callback,
+int plugin_register_log(const char *name, plugin_log_cb callback,
                                user_data_t const *ud)
 {
   return create_register_callback(&list_log, name, (void *)callback, ud);
 }
 
-EXPORT int plugin_register_notification(const char *name,
+int plugin_register_notification(const char *name,
                                         plugin_notification_cb callback,
                                         user_data_t const *ud)
 {
@@ -1505,24 +1494,24 @@ EXPORT int plugin_register_notification(const char *name,
                                   ud);
 }
 
-EXPORT int plugin_unregister_config(const char *name)
+int plugin_unregister_config(const char *name)
 {
   cf_unregister(name);
   return 0;
 }
 
-EXPORT int plugin_unregister_complex_config(const char *name)
+int plugin_unregister_complex_config(const char *name)
 {
   cf_unregister_complex(name);
   return 0;
 }
 
-EXPORT int plugin_unregister_init(const char *name)
+int plugin_unregister_init(const char *name)
 {
   return plugin_unregister(list_init, name);
 }
 
-EXPORT int plugin_unregister_read(const char *name)
+int plugin_unregister_read(const char *name)
 {
   llentry_t *le;
   read_func_t *rf;
@@ -1559,7 +1548,7 @@ EXPORT int plugin_unregister_read(const char *name)
   return 0;
 }
 
-EXPORT void plugin_log_available_writers(void)
+void plugin_log_available_writers(void)
 {
   log_list_callbacks(&list_write, "Available write targets:");
 }
@@ -1572,7 +1561,7 @@ static int compare_read_func_group(llentry_t *e, void *ud)
   return strcmp(rf->rf_group, (const char *)group);
 }
 
-EXPORT int plugin_unregister_read_group(const char *group)
+int plugin_unregister_read_group(const char *group)
 {
   llentry_t *le;
   read_func_t *rf;
@@ -1622,12 +1611,12 @@ EXPORT int plugin_unregister_read_group(const char *group)
   return 0;
 }
 
-EXPORT int plugin_unregister_write(const char *name)
+int plugin_unregister_write(const char *name)
 {
   return plugin_unregister(list_write, name);
 }
 
-EXPORT int plugin_unregister_flush(const char *name)
+int plugin_unregister_flush(const char *name)
 {
   plugin_ctx_t ctx = plugin_get_ctx();
 
@@ -1644,12 +1633,12 @@ EXPORT int plugin_unregister_flush(const char *name)
   return plugin_unregister(list_flush, name);
 }
 
-EXPORT int plugin_unregister_missing(const char *name)
+int plugin_unregister_missing(const char *name)
 {
   return plugin_unregister(list_missing, name);
 }
 
-EXPORT int plugin_unregister_cache_event(const char *name)
+int plugin_unregister_cache_event(const char *name)
 {
   for (size_t i = 0; i < list_cache_event_num; i++) {
     cache_event_func_t *cef = &list_cache_event[i];
@@ -1677,12 +1666,12 @@ static void destroy_cache_event_callbacks()
   }
 }
 
-EXPORT int plugin_unregister_shutdown(const char *name)
+int plugin_unregister_shutdown(const char *name)
 {
   return plugin_unregister(list_shutdown, name);
 }
 
-EXPORT int plugin_unregister_data_set(const char *name)
+int plugin_unregister_data_set(const char *name)
 {
   data_set_t *ds;
 
@@ -1698,17 +1687,17 @@ EXPORT int plugin_unregister_data_set(const char *name)
   return 0;
 }
 
-EXPORT int plugin_unregister_log(const char *name)
+int plugin_unregister_log(const char *name)
 {
   return plugin_unregister(list_log, name);
 }
 
-EXPORT int plugin_unregister_notification(const char *name)
+int plugin_unregister_notification(const char *name)
 {
   return plugin_unregister(list_notification, name);
 }
 
-EXPORT int plugin_init_all(void)
+int plugin_init_all(void)
 {
   char const *chain_name;
   llentry_t *le;
@@ -1804,7 +1793,7 @@ EXPORT int plugin_init_all(void)
 }
 
 /* TODO: Rename this function. */
-EXPORT void plugin_read_all(void)
+void plugin_read_all(void)
 {
   uc_check_timeout();
 
@@ -1812,7 +1801,7 @@ EXPORT void plugin_read_all(void)
 } /* void plugin_read_all */
 
 /* Read function called when the `-T' command line argument is given. */
-EXPORT int plugin_read_all_once(void)
+int plugin_read_all_once(void)
 {
   int status;
   int return_status = 0;
@@ -1854,7 +1843,7 @@ EXPORT int plugin_read_all_once(void)
   return return_status;
 }
 
-EXPORT int plugin_write(const char *plugin, metric_family_t const *fam)
+int plugin_write(const char *plugin, metric_family_t const *fam)
 {
   llentry_t *le;
   int status;
@@ -1922,7 +1911,7 @@ EXPORT int plugin_write(const char *plugin, metric_family_t const *fam)
   return status;
 }
 
-EXPORT int plugin_flush(const char *plugin, cdtime_t timeout,
+int plugin_flush(const char *plugin, cdtime_t timeout,
                         const char *identifier)
 {
   llentry_t *le;
@@ -1950,7 +1939,7 @@ EXPORT int plugin_flush(const char *plugin, cdtime_t timeout,
   return 0;
 }
 
-EXPORT int plugin_shutdown_all(void)
+int plugin_shutdown_all(void)
 {
   llentry_t *le;
   int ret = 0; // Assume success.
@@ -2014,7 +2003,7 @@ EXPORT int plugin_shutdown_all(void)
   return ret;
 }
 
-EXPORT int plugin_dispatch_missing(metric_family_t const *fam)
+int plugin_dispatch_missing(metric_family_t const *fam)
 {
   if (list_missing == NULL)
     return 0;
@@ -2228,7 +2217,7 @@ static bool check_drop_value(void)
     return false;
 }
 
-EXPORT int plugin_dispatch_metric_family(metric_family_t const *fam)
+int plugin_dispatch_metric_family(metric_family_t const *fam)
 {
   if ((fam == NULL) || (fam->metric.num == 0)) {
     return EINVAL;
@@ -2252,7 +2241,7 @@ EXPORT int plugin_dispatch_metric_family(metric_family_t const *fam)
   return status;
 }
 
-EXPORT int plugin_dispatch_values(value_list_t const *vl)
+int plugin_dispatch_values(value_list_t const *vl)
 {
   data_set_t const *ds = plugin_get_ds(vl->type);
   if (ds == NULL) {
@@ -2361,7 +2350,7 @@ plugin_dispatch_multivalue(value_list_t const *template,
   return failed;
 }
 
-EXPORT int plugin_dispatch_notification(const notification_t *notif)
+int plugin_dispatch_notification(const notification_t *notif)
 {
   llentry_t *le;
   /* Possible TODO: Add flap detection here */
@@ -2375,6 +2364,8 @@ EXPORT int plugin_dispatch_notification(const notification_t *notif)
   if (list_notification == NULL)
     return -1;
 
+  notification_t *n = notification_clone(notif); // FIXME
+
   le = llist_head(list_notification);
   while (le != NULL) {
     callback_func_t *cf;
@@ -2386,7 +2377,7 @@ EXPORT int plugin_dispatch_notification(const notification_t *notif)
 
     cf = le->value;
     callback = cf->cf_callback;
-    status = (*callback)(notif, &cf->cf_udata);
+    status = (*callback)(n, &cf->cf_udata);
     if (status != 0) {
       WARNING("plugin_dispatch_notification: Notification "
               "callback %s returned %i.",
@@ -2399,7 +2390,7 @@ EXPORT int plugin_dispatch_notification(const notification_t *notif)
   return 0;
 }
 
-EXPORT void plugin_log(int level, const char *format, ...)
+void plugin_log(int level, const char *format, ...)
 {
   char msg[1024];
   va_list ap;
@@ -2472,7 +2463,7 @@ int parse_log_severity(const char *severity)
   return log_level;
 }
 
-EXPORT int parse_notif_severity(const char *severity)
+int parse_notif_severity(const char *severity)
 {
   int notif_severity = -1;
 
@@ -2487,7 +2478,7 @@ EXPORT int parse_notif_severity(const char *severity)
   return notif_severity;
 }
 
-EXPORT const data_set_t *plugin_get_ds(const char *name)
+const data_set_t *plugin_get_ds(const char *name)
 {
   data_set_t *ds;
 
@@ -2528,13 +2519,13 @@ static plugin_ctx_t *plugin_ctx_create(void)
   return ctx;
 }
 
-EXPORT void plugin_init_ctx(void)
+void plugin_init_ctx(void)
 {
   pthread_key_create(&plugin_ctx_key, plugin_ctx_destructor);
   plugin_ctx_key_initialized = true;
 } /* void plugin_init_ctx */
 
-EXPORT plugin_ctx_t plugin_get_ctx(void)
+plugin_ctx_t plugin_get_ctx(void)
 {
   plugin_ctx_t *ctx;
 
@@ -2551,7 +2542,7 @@ EXPORT plugin_ctx_t plugin_get_ctx(void)
   return *ctx;
 }
 
-EXPORT plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx)
+plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx)
 {
   plugin_ctx_t *c;
   plugin_ctx_t old;
@@ -2572,7 +2563,7 @@ EXPORT plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx)
   return old;
 }
 
-EXPORT cdtime_t plugin_get_interval(void)
+cdtime_t plugin_get_interval(void)
 {
   cdtime_t interval;
 

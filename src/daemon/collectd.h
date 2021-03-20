@@ -27,11 +27,6 @@
 #ifndef COLLECTD_H
 #define COLLECTD_H
 
-#ifdef WIN32
-typedef int uid_t;
-#include "gnulib_config.h"
-#endif
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
