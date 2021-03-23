@@ -1,23 +1,5 @@
-/**
- * collectd - src/pressure.c
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- **/
-
+// SPDX-License-Identifier: GPL-2.0
 #include "collectd.h"
-
 #include "plugin.h"
 #include "utils/common/common.h"
 
@@ -73,31 +55,26 @@ static int pressure_read_file(const char *filename,
 static int pressure_read(void)
 {
   metric_family_t fams[FAM_PRESSURE_MAX] = {
-      [FAM_PRESSURE_CPU_WAITING] =
-          {
-              .name = "host_pressure_cpu_waiting_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PRESSURE_IO_WAITING] =
-          {
-              .name = "host_pressure_io_waiting_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PRESSURE_IO_STALLED] =
-          {
-              .name = "host_pressure_io_stalled_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PRESSURE_MEMORY_WAITING] =
-          {
-              .name = "host_pressure_memory_waiting_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PRESSURE_MEMORY_STALLED] =
-          {
-              .name = "host_pressure_memory_stalled_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
+    [FAM_PRESSURE_CPU_WAITING] = {
+      .name = "host_pressure_cpu_waiting_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PRESSURE_IO_WAITING] = {
+      .name = "host_pressure_io_waiting_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PRESSURE_IO_STALLED] = {
+      .name = "host_pressure_io_stalled_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PRESSURE_MEMORY_WAITING] = {
+      .name = "host_pressure_memory_waiting_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PRESSURE_MEMORY_STALLED] = {
+      .name = "host_pressure_memory_stalled_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
   };
 
   int status = 0;
@@ -116,10 +93,8 @@ static int pressure_read(void)
   for (size_t i = 0; i < FAM_PRESSURE_MAX; i++) {
     if (fams[i].metric.num > 0) {
       int status = plugin_dispatch_metric_family(&fams[i]);
-      if (status != 0) {
-        ERROR("pressure plugin: plugin_dispatch_metric_family failed: %s",
-              STRERROR(status));
-      }
+      if (status != 0)
+        ERROR("pressure plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
       metric_family_metric_reset(&fams[i]);
     }
   }
