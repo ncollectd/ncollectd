@@ -1,5 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0
 #include "collectd.h"
-
 #include "plugin.h"
 #include "utils/common/common.h"
 
