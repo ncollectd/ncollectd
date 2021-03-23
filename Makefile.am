@@ -1752,6 +1752,10 @@ if BUILD_PLUGIN_TCPCONNS
 include src/plugins/tcpconns/Makefile.am
 endif
 
+if BUILD_PLUGIN_TCPCONNS
+include src/plugins/timex/Makefile.am
+endif
+
 if BUILD_PLUGIN_THERMAL
 include src/plugins/thermal/Makefile.am
 endif

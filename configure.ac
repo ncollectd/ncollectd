@@ -6128,6 +6128,7 @@ plugin_sysevent="no"
 plugin_tcpconns="no"
 plugin_thermal="no"
 plugin_turbostat="no"
+plugin_timex="no"
 plugin_ubi="no"
 plugin_uptime="no"
 plugin_users="no"
@@ -6177,6 +6178,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_swap="yes"
   plugin_synproxy="yes"
   plugin_tcpconns="yes"
+  plugin_timex="yes"
   plugin_thermal="yes"
   plugin_ubi="yes"
   plugin_uptime="yes"
@@ -6614,6 +6616,7 @@ AC_PLUGIN([target_scale],        [yes],                       [The scale target]
 AC_PLUGIN([target_set],          [yes],                       [The set target])
 AC_PLUGIN([target_v5upgrade],    [yes],                       [The v5upgrade target])
 AC_PLUGIN([tcpconns],            [$plugin_tcpconns],          [TCP connection statistics])
+AC_PLUGIN([timex],               [$plugin_timex],             [Host clock statistics])
 AC_PLUGIN([thermal],             [$plugin_thermal],           [Linux ACPI thermal zone statistics])
 AC_PLUGIN([threshold],           [yes],                       [Threshold checking plugin])
 AC_PLUGIN([turbostat],           [$plugin_turbostat],         [Advanced statistic on Intel cpu states])
@@ -7041,6 +7044,7 @@ AC_MSG_RESULT([    target_scale  . . . . $enable_target_scale])
 AC_MSG_RESULT([    target_set  . . . . . $enable_target_set])
 AC_MSG_RESULT([    target_v5upgrade  . . $enable_target_v5upgrade])
 AC_MSG_RESULT([    tcpconns  . . . . . . $enable_tcpconns])
+AC_MSG_RESULT([    timex . . . . . . . . $enable_timex])
 AC_MSG_RESULT([    thermal . . . . . . . $enable_thermal])
 AC_MSG_RESULT([    threshold . . . . . . $enable_threshold])
 AC_MSG_RESULT([    turbostat . . . . . . $enable_turbostat])
