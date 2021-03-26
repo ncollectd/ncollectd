@@ -407,6 +407,7 @@ void set_sock_opts(int sockfd);
 /** Parse a string to a derive_t value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */
 int strtoderive(const char *string, derive_t *ret_value);
+int strtocounter(const char *string, counter_t *ret_value);
 
 /** Parse a string to a gauge_t value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */

@@ -30,38 +30,63 @@
 #error "No applicable input method."
 #endif
 
+
+static const char *proc_serial = "/proc/tty/driver/serial";
+enum {
+  FAM_SERIAL_READ = 0,
+  FAM_SERIAL_WRITE,
+  FAM_SERIAL_FRAMING_ERRORS,
+  FAM_SERIAL_PARITY_ERRORS,
+  FAM_SERIAL_BREAK_CONDITIONS,
+  FAM_SERIAL_OVERRUN_ERRORS,
+  FAM_SERIAL_MAX,
+}
+;
 static int serial_read(void)
 {
-  FILE *fh;
-  char buffer[1024];
-  metric_family_t fam_serial_read = {
+  metric_family_t fams[FAM_SERIAL_MAX] = {
+    [FAM_SERIAL_READ] = {
       .name = "host_serial_read_bytes_total",
       .type = METRIC_TYPE_COUNTER,
-  };
-  metric_family_t fam_serial_write = {
+      .help = "Total bytes read in serial port",
+    },
+    [FAM_SERIAL_WRITE] = {
       .name = "host_serial_write_bytes_total",
       .type = METRIC_TYPE_COUNTER,
+      .help = "Total bytes written in serial port",
+    },
+    [FAM_SERIAL_FRAMING_ERRORS] = {
+      .name = "host_serial_framing_errors_total",
+      .type = METRIC_TYPE_COUNTER,
+      .help = "Total framing errors (stop bit not found) in serial port",
+    },
+    [FAM_SERIAL_PARITY_ERRORS] = {
+      .name = "host_serial_parity_errrors_total",
+      .type = METRIC_TYPE_COUNTER,
+      .help = "Total parity errors in serial port",
+    },
+    [FAM_SERIAL_BREAK_CONDITIONS] = {
+      .name = "host_serial_break_conditions_total",
+      .type = METRIC_TYPE_COUNTER,
+      .help = "Total break conditions in serial port",
+    },
+    [FAM_SERIAL_OVERRUN_ERRORS] = {
+      .name = "host_serial_overrun_errors_total",
+      .type = METRIC_TYPE_COUNTER,
+      .help = "Total receiver overrun errors in serial port",
+    },
   };
-  metric_family_t *fams[] = {&fam_serial_read, &fam_serial_write, NULL};
 
-  /* there are a variety of names for the serial device */
-  if ((fh = fopen("/proc/tty/driver/serial", "r")) == NULL &&
-      (fh = fopen("/proc/tty/driver/ttyS", "r")) == NULL) {
-    WARNING("serial: fopen: %s", STRERRNO);
+  FILE *fh = fopen(proc_serial, "r");
+  if (fh == NULL ) {
+    WARNING("serial: fopeni(%s): %s", proc_serial, STRERRNO);
     return -1;
   }
 
+  char buffer[1024];
   while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-    derive_t rx = 0;
-    derive_t tx = 0;
-    bool have_rx = false;
-    bool have_tx = false;
-    size_t len;
-
     char *fields[16];
-    int numfields;
-
-    numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+    int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
     if (numfields < 6)
       continue;
 
@@ -69,49 +94,90 @@ static int serial_read(void)
      * 0: uart:16550A port:000003F8 irq:4 tx:0 rx:0
      * 1: uart:16550A port:000002F8 irq:3 tx:0 rx:0
      */
-    len = strlen(fields[0]);
+    size_t len = strlen(fields[0]);
     if (len < 2)
       continue;
     if (fields[0][len - 1] != ':')
       continue;
     fields[0][len - 1] = '\0';
 
+    metric_t m = {0};
+    metric_label_set(&m, "line", fields[0]);
+
+    counter_t value = 0;
+
     for (int i = 1; i < numfields; i++) {
       len = strlen(fields[i]);
       if (len < 4)
         continue;
 
-      if (strncmp(fields[i], "tx:", 3) == 0) {
-        if (strtoderive(fields[i] + 3, &tx) == 0)
-          have_tx = true;
-      } else if (strncmp(fields[i], "rx:", 3) == 0) {
-        if (strtoderive(fields[i] + 3, &rx) == 0)
-          have_rx = true;
+      switch (fields[i][0]) {
+        case 'i':
+          if (strncmp(fields[i], "irq:", 4) == 0)
+            metric_label_set(&m, "irq", fields[i]+4);
+          break;
+        case 't':
+          if (strncmp(fields[i], "tx:", 3) == 0) {
+            if (strtocounter(fields[i] + 3, &value) == 0) {
+              m.value.counter = value;
+              metric_family_metric_append(&fams[FAM_SERIAL_READ], m);
+            }
+          }
+          break;
+        case 'r':
+          if (strncmp(fields[i], "rx:", 3) == 0) {
+            if (strtocounter(fields[i] + 3, &value) == 0) {
+               m.value.counter = value;
+               metric_family_metric_append(&fams[FAM_SERIAL_WRITE], m);
+            }
+          }
+          break;
+        case 'f':
+          if (strncmp(fields[i], "fe:", 3) == 0) {
+            if (strtocounter(fields[i] + 3, &value) == 0) {
+              m.value.counter = value;
+              metric_family_metric_append(&fams[FAM_SERIAL_FRAMING_ERRORS], m);
+            }
+          }
+          break;
+        case 'p':
+          if (strncmp(fields[i], "pe:", 3) == 0) {
+            if (strtocounter(fields[i] + 3, &value) == 0) {
+              m.value.counter = value;
+              metric_family_metric_append(&fams[FAM_SERIAL_PARITY_ERRORS], m);
+            }
+          }
+          break;
+        case 'b':
+          if (strncmp(fields[i], "brk:", 4) == 0) {
+            if (strtocounter(fields[i] + 4, &value) == 0) {
+              m.value.counter = value;
+              metric_family_metric_append(&fams[FAM_SERIAL_BREAK_CONDITIONS], m);
+            }
+          }
+          break;
+        case 'o':
+          if (strncmp(fields[i], "oe:", 3) == 0) {
+            if (strtocounter(fields[i] + 3, &value) == 0) {
+              m.value.counter = value;
+              metric_family_metric_append(&fams[FAM_SERIAL_OVERRUN_ERRORS], m); 
+            }
+          }
+          break;
       }
     }
 
-    if (have_rx && have_tx) {
-      metric_t m = {0};
-      metric_label_set(&m, "line", fields[0]);
-
-      m.value.counter = rx;
-      metric_family_metric_append(&fam_serial_read, m);
-
-      m.value.counter = tx;
-      metric_family_metric_append(&fam_serial_write, m);
-
-      metric_reset(&m);
-    }
+    metric_reset(&m);
   }
 
-  for (size_t i = 0; fams[i] != NULL; i++) {
-    if (fams[i]->metric.num > 0) {
-      int status = plugin_dispatch_metric_family(fams[i]);
+  for (size_t i = 0; i < FAM_SERIAL_MAX; i++) {
+    if (fams[i].metric.num > 0) {
+      int status = plugin_dispatch_metric_family(&fams[i]);
       if (status != 0) {
         ERROR("serial plugin: plugin_dispatch_metric_family failed: %s",
               STRERROR(status));
       }
-      metric_family_metric_reset(fams[i]);
+      metric_family_metric_reset(&fams[i]);
     }
   }
 

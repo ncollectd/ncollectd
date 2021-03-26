@@ -1653,6 +1653,21 @@ int strtoderive(const char *string, derive_t *ret_value) /* {{{ */
   return 0;
 } /* }}} int strtoderive */
 
+int strtocounter(const char *string, counter_t *ret_value) 
+{
+  if ((string == NULL) || (ret_value == NULL))
+    return EINVAL;
+
+  errno = 0;
+  char *endptr = NULL;
+  counter_t tmp = (derive_t)strtoull(string, &endptr, /* base = */ 0);
+  if ((endptr == string) || (errno != 0))
+    return -1;
+
+  *ret_value = tmp;
+  return 0;
+} 
+
 int strtogauge(const char *string, gauge_t *ret_value) /* {{{ */
 {
   gauge_t tmp;
