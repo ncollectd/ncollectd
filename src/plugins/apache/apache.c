@@ -51,23 +51,27 @@ struct apache_s {
   size_t apache_buffer_fill;
   int timeout;
   CURL *curl;
-}; /* apache_s */
+};
 
 typedef struct apache_s apache_t;
 
 enum {
   FAM_APACHE_REQUESTS,
   FAM_APACHE_BYTES,
-  FAM_APACHE_CONNECTIONS,
-  FAM_APACHE_IDLE_WORKERS,
+  FAM_APACHE_WORKERS,
   FAM_APACHE_SCOREBOARD,
+  FAM_APACHE_CONNECTIONS,
+  FAM_APACHE_PROCESSES,
+  FAM_APACHE_UPTIME,
+  FAM_APACHE_UP,
   FAM_APACHE_MAX
 };
 
 /* TODO: Remove this prototype */
 static int apache_read_host(user_data_t *user_data);
 
-static void apache_free(void *arg) {
+static void apache_free(void *arg)
+{
   apache_t *st = arg;
 
   if (st == NULL)
@@ -87,14 +91,13 @@ static void apache_free(void *arg) {
     st->curl = NULL;
   }
   sfree(st);
-} /* apache_free */
+}
 
-static size_t apache_curl_callback(void *buf, size_t size, size_t nmemb,
-                                   void *user_data) {
+static size_t apache_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
+{
   apache_t *st = user_data;
   if (st == NULL) {
-    ERROR("apache plugin: apache_curl_callback: "
-          "user_data pointer is NULL.");
+    ERROR("apache plugin: apache_curl_callback: user_data pointer is NULL.");
     return 0;
   }
 
@@ -117,14 +120,13 @@ static size_t apache_curl_callback(void *buf, size_t size, size_t nmemb,
   st->apache_buffer[st->apache_buffer_fill] = 0;
 
   return len;
-} /* int apache_curl_callback */
+}
 
-static size_t apache_header_callback(void *buf, size_t size, size_t nmemb,
-                                     void *user_data) {
+static size_t apache_header_callback(void *buf, size_t size, size_t nmemb, void *user_data)
+{
   apache_t *st = user_data;
   if (st == NULL) {
-    ERROR("apache plugin: apache_header_callback: "
-          "user_data pointer is NULL.");
+    ERROR("apache plugin: apache_header_callback: user_data pointer is NULL.");
     return 0;
   }
 
@@ -150,7 +152,7 @@ static size_t apache_header_callback(void *buf, size_t size, size_t nmemb,
   }
 
   return len;
-} /* apache_header_callback */
+}
 
 /* Configuration handling functiions
  * <Plugin apache>
@@ -160,7 +162,8 @@ static size_t apache_header_callback(void *buf, size_t size, size_t nmemb,
  *   URL ...
  * </Plugin>
  */
-static int config_add(oconfig_item_t *ci) {
+static int config_add(oconfig_item_t *ci)
+{
   apache_t *st = calloc(1, sizeof(*st));
   if (st == NULL) {
     ERROR("apache plugin: calloc failed.");
@@ -238,9 +241,10 @@ static int config_add(oconfig_item_t *ci) {
           .data = st,
           .free_func = apache_free,
       });
-} /* int config_add */
+}
 
-static int config(oconfig_item_t *ci) {
+static int config(oconfig_item_t *ci)
+{
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
 
@@ -252,13 +256,12 @@ static int config(oconfig_item_t *ci) {
               "forget to add an <Instance /> block "
               "around the configuration?",
               child->key);
-  } /* for (ci->children) */
+  }
 
   return 0;
-} /* int config */
-
+}
 /* initialize curl for each host */
-static int init_host(apache_t *st) /* {{{ */
+static int init_host(apache_t *st)
 {
   assert(st->url != NULL);
   /* (Assured by `config_add') */
@@ -343,10 +346,11 @@ static int init_host(apache_t *st) /* {{{ */
 #endif
 
   return 0;
-} /* }}} int init_host */
+}
 
 static void submit_scoreboard(char *buf, apache_t *st,
-                              metric_family_t *fam_scoreboard, metric_t *tmpl) {
+                              metric_family_t *fam_scoreboard, metric_t *tmpl)
+{
   /*
    * Scoreboard Key:
    * "_" Waiting for Connection, "S" Starting up,
@@ -468,35 +472,49 @@ static void submit_scoreboard(char *buf, apache_t *st,
   }
 }
 
-static int apache_read_host(user_data_t *user_data) /* {{{ */
+static int apache_read_host(user_data_t *user_data)
 {
-
   metric_family_t fams[FAM_APACHE_MAX] = {
-      [FAM_APACHE_REQUESTS] =
-          {
-              .name = "apache_requests_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_APACHE_BYTES] =
-          {
-              .name = "apache_bytes_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_APACHE_CONNECTIONS] =
-          {
-              .name = "apache_connections",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_APACHE_IDLE_WORKERS] =
-          {
-              .name = "apache_idle_workers",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_APACHE_SCOREBOARD] =
-          {
-              .name = "apache_scoreboard",
-              .type = METRIC_TYPE_GAUGE,
-          },
+   [FAM_APACHE_REQUESTS] = {
+     .name = "apache_requests_total",
+     .type = METRIC_TYPE_COUNTER,
+     .help = "Apache total requests",
+   },
+   [FAM_APACHE_BYTES] = {
+     .name = "apache_bytes_total",
+     .type = METRIC_TYPE_COUNTER,
+     .help = "Apache total kbytes sent",
+   },
+   [FAM_APACHE_WORKERS] = {
+     .name = "apache_workers",
+     .type = METRIC_TYPE_GAUGE,
+     .help = "Apache workers",
+   },
+   [FAM_APACHE_SCOREBOARD] = {
+     .name = "apache_scoreboard",
+     .type = METRIC_TYPE_GAUGE,
+     .help = "Apache scoreboard statuses",
+   },
+   [FAM_APACHE_CONNECTIONS] = {
+     .name = "apache_connections",
+     .type = METRIC_TYPE_GAUGE,
+     .help = "Apache connections",
+   },
+   [FAM_APACHE_PROCESSES] = {
+     .name = "apache_processes",
+     .type = METRIC_TYPE_GAUGE,
+     .help = "Apache processes",
+   },
+   [FAM_APACHE_UPTIME] = {
+     .name = "apache_uptime_seconds",
+     .type = METRIC_TYPE_GAUGE,
+     .help = "Apache server uptime",
+   },
+   [FAM_APACHE_UP] = {
+     .name = "apache_up",
+     .type = METRIC_TYPE_GAUGE,
+     .help = "Could the apache server be reached",
+   },
   };
 
   apache_t *st = user_data->data;
@@ -512,10 +530,26 @@ static int apache_read_host(user_data_t *user_data) /* {{{ */
 
   st->apache_buffer_fill = 0;
 
+  metric_t tmpl = {0};
+  if (st->name != NULL)
+    metric_label_set(&tmpl, "instance", st->name);
+
+  for (size_t i = 0; i < st->labels.num; i++) {
+    metric_label_set(&tmpl, st->labels.ptr[i].name, st->labels.ptr[i].value);
+  }
+
   curl_easy_setopt(st->curl, CURLOPT_URL, st->url);
 
   if (curl_easy_perform(st->curl) != CURLE_OK) {
     ERROR("apache: curl_easy_perform failed: %s", st->apache_curl_error);
+
+    tmpl.value.gauge = 0;
+    metric_family_metric_append(&fams[FAM_APACHE_UP], tmpl);
+    int status = plugin_dispatch_metric_family(&fams[FAM_APACHE_UP]);
+    if (status != 0)
+      ERROR("apache plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
+    metric_reset(&tmpl);
+
     return -1;
   }
 
@@ -548,14 +582,6 @@ static int apache_read_host(user_data_t *user_data) /* {{{ */
    */
   int apache_connections_submitted = 0, apache_idle_workers_submitted = 0;
 
-  metric_t tmpl = {0};
-  if (st->name != NULL)
-    metric_label_set(&tmpl, "instance", st->name);
-
-  for (size_t i = 0; i < st->labels.num; i++) {
-    metric_label_set(&tmpl, st->labels.ptr[i].name, st->labels.ptr[i].value);
-  }
-
   while ((line = strtok_r(ptr, "\n\r", &saveptr)) != NULL) {
     ptr = NULL;
     char *fields[4];
@@ -573,24 +599,43 @@ static int apache_read_host(user_data_t *user_data) /* {{{ */
         metric_family_metric_append(&fams[FAM_APACHE_BYTES], tmpl);
       }
     } else if (fields_num == 2) {
-      if (strcmp(fields[0], "Scoreboard:") == 0)
+      if (strcmp(fields[0], "Scoreboard:") == 0) {
         submit_scoreboard(fields[1], st, &fams[FAM_APACHE_SCOREBOARD], &tmpl);
-      else if (!apache_connections_submitted &&
+      } else if (!apache_connections_submitted &&
                ((strcmp(fields[0], "BusyServers:") == 0) /* Apache 1.* */
                 || (strcmp(fields[0], "BusyWorkers:") == 0)) /* Apache 2.* */) {
-        tmpl.value.gauge = atol(fields[1]);
-        metric_family_metric_append(&fams[FAM_APACHE_CONNECTIONS], tmpl);
+        metric_family_append(&fams[FAM_APACHE_WORKERS], "state", "busy",
+                             (value_t){.gauge = atol(fields[1])}, &tmpl);
         apache_connections_submitted++;
       } else if (!apache_idle_workers_submitted &&
                  ((strcmp(fields[0], "IdleServers:") == 0) /* Apache 1.x */
-                  ||
-                  (strcmp(fields[0], "IdleWorkers:") == 0)) /* Apache 2.x */) {
-        tmpl.value.gauge = atol(fields[1]);
-        metric_family_metric_append(&fams[FAM_APACHE_IDLE_WORKERS], tmpl);
+                  ||(strcmp(fields[0], "IdleWorkers:") == 0)) /* Apache 2.x */) {
+        metric_family_append(&fams[FAM_APACHE_WORKERS], "state", "idle",
+                             (value_t){.gauge = atol(fields[1])}, &tmpl);
         apache_idle_workers_submitted++;
+      } else if (strcmp(fields[0], "ConnsTotal:") == 0) {
+        metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "total",
+                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+      } else if (strcmp(fields[0], "ConnsAsyncWriting:") == 0) {
+        metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "writting",
+                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+      } else if (strcmp(fields[0], "ConnsAsyncKeepAlive:") == 0) {
+        metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "keepalive",
+                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+      } else if (strcmp(fields[0], "ConnsAsyncClosing:") == 0) {
+        metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "closing",
+                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+      } else if (strcmp(fields[0], "Processes:") == 0) {
+        tmpl.value.gauge = atol(fields[1]);
+        metric_family_metric_append(&fams[FAM_APACHE_PROCESSES], tmpl);
+      } else if (strcmp(fields[0], "ServerUptimeSeconds:") == 0) {
+        tmpl.value.gauge = atol(fields[1]);
+        metric_family_metric_append(&fams[FAM_APACHE_UPTIME], tmpl);
       }
+
     }
   }
+
   metric_reset(&tmpl);
 
   st->apache_buffer_fill = 0;
@@ -607,17 +652,18 @@ static int apache_read_host(user_data_t *user_data) /* {{{ */
   }
 
   return 0;
-} /* }}} int apache_read_host */
+}
 
-static int apache_init(void) /* {{{ */
+static int apache_init(void)
 {
   /* Call this while collectd is still single-threaded to avoid
    * initialization issues in libgcrypt. */
   curl_global_init(CURL_GLOBAL_SSL);
   return 0;
-} /* }}} int apache_init */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_complex_config("apache", config);
   plugin_register_init("apache", apache_init);
-} /* void module_register */
+}
