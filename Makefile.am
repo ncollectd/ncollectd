@@ -918,6 +918,10 @@ if BUILD_PLUGIN_DRBD
 include src/plugins/drbd/Makefile.am
 endif
 
+if BUILD_PLUGIN_DS389
+include src/plugins/ds389/Makefile.am
+endif
+
 if BUILD_PLUGIN_EMAIL
 pkglib_LTLIBRARIES += email.la
 email_la_SOURCES = src/email.c
@@ -976,9 +980,7 @@ gpu_nvidia_la_LIBADD = $(BUILD_WITH_CUDA_LIBS)
 endif
 
 if BUILD_PLUGIN_HUGEPAGES
-pkglib_LTLIBRARIES += hugepages.la
-hugepages_la_SOURCES = src/hugepages.c
-hugepages_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/hugepages/Makefile.am
 endif
 
 if BUILD_PLUGIN_INFINIBAND
@@ -1390,11 +1392,7 @@ onewire_la_LIBADD = libignorelist.la $(BUILD_WITH_LIBOWCAPI_LIBS)
 endif
 
 if BUILD_PLUGIN_OPENLDAP
-pkglib_LTLIBRARIES += openldap.la
-openldap_la_SOURCES = src/openldap.c
-openldap_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBLDAP_CPPFLAGS)
-openldap_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBLDAP_LDFLAGS)
-openldap_la_LIBADD = -lldap
+include src/plugins/openldap/Makefile.am
 endif
 
 if BUILD_PLUGIN_OPENVPN
@@ -1562,11 +1560,7 @@ TESTS += test_plugin_redfish
 endif
 
 if BUILD_PLUGIN_REDIS
-pkglib_LTLIBRARIES += redis.la
-redis_la_SOURCES = src/redis.c
-redis_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBHIREDIS_CPPFLAGS)
-redis_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBHIREDIS_LDFLAGS)
-redis_la_LIBADD = -lhiredis
+include src/plugins/redis/Makefile.am
 endif
 
 if BUILD_PLUGIN_ROUTEROS
