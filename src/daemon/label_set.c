@@ -121,8 +121,12 @@ int label_set_delete(label_set_t *labels, label_pair_t *elem) {
   free(elem->value);
 
   if (index != (labels->num - 1)) {
-    memmove(labels->ptr + index, labels->ptr + (index + 1),
-            labels->num - (index + 1));
+    memmove(labels->ptr + index, labels->ptr + (index + 1), labels->num - (index + 1));
+    label_pair_t *tmp = realloc(labels->ptr, sizeof(*labels->ptr) * (labels->num - 1));
+    if (tmp == NULL) {
+      return errno;
+    }
+    labels->ptr = tmp;
   }
   labels->num--;
 
