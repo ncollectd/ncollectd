@@ -1853,13 +1853,7 @@ write_http_la_LIBADD = libcmds.la libformat_json.la $(BUILD_WITH_LIBCURL_LIBS)
 endif
 
 if BUILD_PLUGIN_WRITE_INFLUXDB_UDP
-pkglib_LTLIBRARIES += write_influxdb_udp.la
-write_influxdb_udp_la_SOURCES = src/write_influxdb_udp.c
-write_influxdb_udp_la_CPPFLAGS = $(AM_CPPFLAGS)
-write_influxdb_udp_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-if BUILD_WITH_LIBSOCKET
-write_influxdb_udp_la_LIBADD = -lsocket
-endif
+include src/plugins/write_influxdb_udp/Makefile.am
 endif
 
 if BUILD_PLUGIN_WRITE_KAFKA
