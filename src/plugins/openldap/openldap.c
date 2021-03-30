@@ -45,6 +45,7 @@ typedef struct {
   char *url;
   bool verifyhost;
   int version;
+  label_set_t labels;
 
   LDAP *ld;
 } openldap_t;
@@ -293,7 +294,13 @@ static int openldap_read_host(user_data_t *ud)
   }
 
   metric_t m = {0};
-  metric_label_set(&m, "instance", st->name);
+  if (st->name != NULL)
+    metric_label_set(&m, "instance", st->name);
+
+  for (size_t i = 0; i < st->labels.num; i++) {
+    metric_label_set(&m, st->labels.ptr[i].name, st->labels.ptr[i].value);
+  }
+
 
   for (LDAPMessage *e = ldap_first_entry(st->ld, result); e != NULL;
        e = ldap_next_entry(st->ld, e)) {
@@ -562,7 +569,7 @@ static int openldap_config_add(oconfig_item_t *ci)
   st->timeout = (long)CDTIME_T_TO_TIME_T(plugin_get_interval());
   st->verifyhost = true;
   st->version = LDAP_VERSION3;
-
+  cdtime_t interval = 0;
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
 
@@ -582,6 +589,10 @@ static int openldap_config_add(oconfig_item_t *ci)
       status = cf_util_get_boolean(child, &st->verifyhost);
     else if (strcasecmp("Version", child->key) == 0)
       status = cf_util_get_int(child, &st->version);
+    else if (strcasecmp("Interval", child->key) == 0)
+      status = cf_util_get_cdtime(child, &interval);
+    else if (strcasecmp("Label", child->key) == 0)
+      status = cf_util_get_label(child, &st->labels);
     else {
       WARNING("openldap plugin: Option `%s' not allowed here.", child->key);
       status = -1;
@@ -623,7 +634,7 @@ static int openldap_config_add(oconfig_item_t *ci)
   return plugin_register_complex_read(/* group = */ NULL,
                                       /* name      = */ callback_name,
                                       /* callback  = */ openldap_read_host,
-                                      /* interval  = */ 0,
+                                      /* interval  = */ interval,
                                       &(user_data_t){
                                           .data = st,
                                           .free_func = openldap_free,
