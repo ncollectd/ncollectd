@@ -29,12 +29,14 @@
 
 #include "label_set.h"
 
-static int label_pair_compare(void const *a, void const *b) {
+static int label_pair_compare(void const *a, void const *b)
+{
   return strcmp(((label_pair_t const *)a)->name,
                 ((label_pair_t const *)b)->name);
 }
 
-label_pair_t *label_set_read(label_set_t labels, char const *name) {
+label_pair_t *label_set_read(label_set_t labels, char const *name)
+{
   if (name == NULL) {
     errno = EINVAL;
     return NULL;
@@ -57,7 +59,8 @@ label_pair_t *label_set_read(label_set_t labels, char const *name) {
   return ret;
 }
 
-int label_set_create(label_set_t *labels, char const *name, char const *value) {
+int label_set_create(label_set_t *labels, char const *name, char const *value)
+{
   if ((labels == NULL) || (name == NULL) || (value == NULL)) {
     return EINVAL;
   }
@@ -105,7 +108,8 @@ int label_set_create(label_set_t *labels, char const *name, char const *value) {
   return 0;
 }
 
-int label_set_delete(label_set_t *labels, label_pair_t *elem) {
+int label_set_delete(label_set_t *labels, label_pair_t *elem)
+{
   if ((labels == NULL) || (elem == NULL)) {
     return EINVAL;
   }
@@ -121,24 +125,28 @@ int label_set_delete(label_set_t *labels, label_pair_t *elem) {
   free(elem->value);
 
   if (index != (labels->num - 1)) {
-    memmove(labels->ptr + index, labels->ptr + (index + 1), labels->num - (index + 1));
-    label_pair_t *tmp = realloc(labels->ptr, sizeof(*labels->ptr) * (labels->num - 1));
-    if (tmp == NULL) {
-      return errno;
-    }
-    labels->ptr = tmp;
+    memmove(labels->ptr + index, labels->ptr + (index + 1),
+            sizeof(*labels->ptr) * (labels->num - (index + 1)));
   }
   labels->num--;
 
   if (labels->num == 0) {
     free(labels->ptr);
     labels->ptr = NULL;
+    return 0;
   }
+
+  label_pair_t *tmp = realloc(labels->ptr, sizeof(*labels->ptr) * labels->num);
+  if (tmp == NULL) {
+    return errno;
+  }
+  labels->ptr = tmp;
 
   return 0;
 }
 
-int label_set_add(label_set_t *labels, char const *name, char const *value) {
+int label_set_add(label_set_t *labels, char const *name, char const *value)
+{
   if ((labels == NULL) || (name == NULL)) {
     return EINVAL;
   }
@@ -171,7 +179,8 @@ int label_set_add(label_set_t *labels, char const *name, char const *value) {
   return 0;
 }
 
-void label_set_reset(label_set_t *labels) {
+void label_set_reset(label_set_t *labels)
+{
   if (labels == NULL) {
     return;
   }
@@ -185,7 +194,8 @@ void label_set_reset(label_set_t *labels) {
   labels->num = 0;
 }
 
-int label_set_clone(label_set_t *dest, label_set_t src) {
+int label_set_clone(label_set_t *dest, label_set_t src)
+{
   if (src.num == 0) {
     return 0;
   }
@@ -215,7 +225,8 @@ int label_set_clone(label_set_t *dest, label_set_t src) {
  * success, inout is updated to point to the character just *after* the label
  * value, i.e. the character *following* the ending quotes - either a comma or
  * closing curlies. */
-static int parse_label_value(strbuf_t *buf, char const **inout) {
+static int parse_label_value(strbuf_t *buf, char const **inout)
+{
   char const *ptr = *inout;
 
   if (ptr[0] != '"') {
