@@ -176,6 +176,13 @@ static int uc_insert(metric_t const *m, char const *key) {
     ce->start_value = typed_value_create(m->value, METRIC_TYPE_DISTRIBUTION);
     break;
 
+  case DS_TYPE_INFO:
+    ce->values_gauge = 1;
+    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_INFO);
+    ce->distribution_increase = NULL;
+    ce->start_value = typed_value_create(m->value, METRIC_TYPE_INFO);
+    break;
+
   default:
     /* This shouldn't happen. */
     ERROR("uc_insert: Don't know how to handle data source type %i.",
@@ -364,20 +371,22 @@ static int uc_update_metric(metric_t const *m) {
 
   switch (m->family->type) {
   case METRIC_TYPE_COUNTER: {
-    counter_t diff =
-        counter_diff(ce->values_raw.value.counter, m->value.counter);
-    ce->values_gauge =
-        ((double)diff) / (CDTIME_T_TO_DOUBLE(m->time - ce->last_time));
+    counter_t diff = counter_diff(ce->values_raw.value.counter, m->value.counter);
+    ce->values_gauge = ((double)diff) / (CDTIME_T_TO_DOUBLE(m->time - ce->last_time));
     ce->values_raw.value.counter = m->value.counter;
     break;
   }
 
   case METRIC_TYPE_UNTYPED:
-  case METRIC_TYPE_GAUGE: {
+  case METRIC_TYPE_GAUGE:
     ce->values_raw.value.gauge = m->value.gauge;
     ce->values_gauge = m->value.gauge;
     break;
-  }
+
+  case METRIC_TYPE_INFO:
+    ce->values_raw.value.gauge = 1;
+    ce->values_gauge = 1;
+    break;
 
   case METRIC_TYPE_DISTRIBUTION: {
     distribution_destroy(ce->distribution_increase);

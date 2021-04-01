@@ -98,7 +98,7 @@ static int wl_write_openmetrics(metric_family_t const *fam)
 
     if (fam->type == METRIC_TYPE_COUNTER)
       status = status | strbuf_printf(&buf, " %" PRIu64, m->value.counter);
-    else if ((fam->type == METRIC_TYPE_GAUGE) || (fam->type == METRIC_TYPE_UNTYPED))
+    else if ((fam->type == METRIC_TYPE_GAUGE) || (fam->type == METRIC_TYPE_UNTYPED) || (fam->type == METRIC_TYPE_INFO))
       status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.gauge);
 
     if (m->time > 0)

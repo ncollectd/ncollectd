@@ -44,6 +44,7 @@
 #define DS_TYPE_GAUGE VALUE_TYPE_GAUGE
 #define DS_TYPE_DERIVE VALUE_TYPE_DERIVE
 #define DS_TYPE_DISTRIBUTION VALUE_TYPE_DISTRIBUTION
+#define DS_TYPE_INFO VALUE_TYPE_INFO
 
 #define DS_TYPE_TO_STRING(t)                                                   \
   (t == DS_TYPE_COUNTER)                                                       \

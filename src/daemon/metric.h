@@ -37,6 +37,7 @@
 #define VALUE_TYPE_GAUGE 1
 #define VALUE_TYPE_DERIVE 2
 #define VALUE_TYPE_DISTRIBUTION 3
+#define VALUE_TYPE_INFO 4
 
 typedef enum {
   METRIC_TYPE_COUNTER = 0,

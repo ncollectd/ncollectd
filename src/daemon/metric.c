@@ -68,6 +68,8 @@ int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type) {
   case METRIC_TYPE_DISTRIBUTION:
     ERROR("Distribution metrics are not to be represented as text.");
     return EINVAL;
+  case METRIC_TYPE_INFO:
+    return strbuf_print(buf, "1");
   default:
     ERROR("Unknown metric value type: %d", (int)type);
     return EINVAL;
