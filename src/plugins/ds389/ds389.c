@@ -21,7 +21,7 @@
 #include <lber.h>
 #include <ldap.h>
 
-#include "ds389-fams.h"
+#include "ds389_fams.h"
 
 typedef struct {
   char *name;
