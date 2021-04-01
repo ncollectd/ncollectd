@@ -163,37 +163,37 @@ static int openldap_read_host(user_data_t *ud)
     [FAM_OPENLDAP_CONNECTIONS_TOTAL] = {
       .name = "openldap_connections_total",
       .type = METRIC_TYPE_COUNTER,
-      .help = "",
+      .help = "Total number of connections",
     },
     [FAM_OPENLDAP_CONNECTIONS] = {
       .name = "openldap_connections",
       .type = METRIC_TYPE_GAUGE,
-      .help = "",
+      .help = "Number of current connections",
     },
     [FAM_OPENLDAP_OPERATIONS_INITIATED_TOTAL] = {
       .name = "openldap_operations_initiated_total",
       .type = METRIC_TYPE_COUNTER,
-      .help = "",
+      .help = "Total number of initiated operations",
     },
     [FAM_OPENLDAP_OPERATIONS_COMPLETED_TOTAL] = {
       .name = "openldap_operations_completed_total",
       .type = METRIC_TYPE_COUNTER,
-      .help = "",
+      .help = "Total number of completed operations",
     },
     [FAM_OPENLDAP_THREADS] = {
       .name = "openldap_threads",
       .type = METRIC_TYPE_GAUGE,
-      .help = "",
+      .help = "Current number of threads by type",
     },
     [FAM_OPENLDAP_WAITERS_READ] = {
       .name = "openldap_waiters_read",
       .type = METRIC_TYPE_GAUGE,
-      .help = "",
+      .help = "Current number of read waiters",
     },
     [FAM_OPENLDAP_WAITERS_WRITE] = {
       .name = "openldap_waiters_write",
       .type = METRIC_TYPE_GAUGE,
-      .help = "",
+      .help = "Current number of write waiters",
     },
     [FAM_OPENLDAP_BDB_ENTRY_CACHE_SIZE] = {
       .name = "openldap_bdb_entry_cache_size",
@@ -566,9 +566,9 @@ static int openldap_config_add(oconfig_item_t *ci)
   }
 
   st->starttls = false;
-  st->timeout = (long)CDTIME_T_TO_TIME_T(plugin_get_interval());
   st->verifyhost = true;
   st->version = LDAP_VERSION3;
+
   cdtime_t interval = 0;
   for (int i = 0; i < ci->children_num; i++) {
     oconfig_item_t *child = ci->children + i;
@@ -626,6 +626,8 @@ static int openldap_config_add(oconfig_item_t *ci)
     openldap_free(st);
     return -1;
   }
+
+  st->timeout = (long)CDTIME_T_TO_TIME_T(interval);
 
   char callback_name[3 * DATA_MAX_NAME_LEN] = {0};
   ssnprintf(callback_name, sizeof(callback_name), "openldap/%s",
