@@ -85,6 +85,9 @@ static void format_text(strbuf_t *buf)
       case METRIC_TYPE_DISTRIBUTION:
         // FIXME
         break;
+      case METRIC_TYPE_INFO:
+        type = "info";
+        break;
     }
     if (type == NULL)
       continue;

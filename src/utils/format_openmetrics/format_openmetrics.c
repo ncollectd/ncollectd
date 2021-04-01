@@ -28,6 +28,9 @@ int format_openmetrics_metric_family(strbuf_t *buf, metric_family_t const *fam)
       break;
     case METRIC_TYPE_DISTRIBUTION: // FIXME
       break;
+    case METRIC_TYPE_INFO: 
+      type = "info";
+      break;
   }
 
   if (type == NULL)

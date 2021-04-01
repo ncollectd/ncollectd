@@ -43,6 +43,7 @@ typedef enum {
   METRIC_TYPE_GAUGE = 1,
   METRIC_TYPE_UNTYPED = 2,
   METRIC_TYPE_DISTRIBUTION = 3,
+  METRIC_TYPE_INFO = 4,
 } metric_type_t;
 
 typedef uint64_t counter_t;
