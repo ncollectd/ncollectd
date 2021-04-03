@@ -528,7 +528,7 @@ static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
       if (page->metric_prefix == NULL)
         page->metric_response_time = strdup("curl_response_time_seconds");
       else
-        page->metric_response_time = ssnprintf_alloc("%s__response_time_seconds", page->metric_prefix);
+        page->metric_response_time = ssnprintf_alloc("%s_response_time_seconds", page->metric_prefix);
 
       if (page->metric_response_time == NULL) {
         ERROR("curl plugin: alloc metric response time string failed.");
@@ -539,7 +539,7 @@ static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
       if (page->metric_prefix == NULL)
         page->metric_response_code = strdup("curl_response_code");
       else
-        page->metric_response_code = ssnprintf_alloc("%s__response_code", page->metric_prefix);
+        page->metric_response_code = ssnprintf_alloc("%s_response_code", page->metric_prefix);
 
       if (page->metric_response_code == NULL) {
         ERROR("curl plugin: alloc metric response code string failed.");
