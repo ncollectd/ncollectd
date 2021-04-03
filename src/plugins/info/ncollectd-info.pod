@@ -30,10 +30,10 @@ The B<Metric> block can contain the following options:
 Append the label I<Key>=I<Value> to the submitting metrics.
 Can appear multiple times.
 
-=item B<Type> I<gauge>|I<counter>|I<untyped>
+=item B<Type> I<gauge>|I<counter>|I<untyped>|I<info>
 
-Defines the metric type, must be I<gauge>, I<counter> or I<untyped>. 
-If not set is I<untyped>.
+Defines the metric type, must be I<gauge>, I<counter>, I<untyped> or I<info>. 
+If not set is I<Info>.
 
 =item B<Help> I<help>
 

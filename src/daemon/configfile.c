@@ -1290,8 +1290,10 @@ int cf_util_get_metric_type(const oconfig_item_t *ci,
     *ret_metric = METRIC_TYPE_UNTYPED;
   else if (!strcasecmp(ci->values[0].value.string, "counter"))
     *ret_metric = METRIC_TYPE_COUNTER;
+  else if (!strcasecmp(ci->values[0].value.string, "info"))
+    *ret_metric = METRIC_TYPE_INFO;
   else {
-    P_ERROR("The `%s' option must be: `gauge', `untyped' or `counter' ",
+    P_ERROR("The `%s' option must be: `gauge', `untyped', `info` or `counter' ",
             ci->key);
     return -1;
   }

@@ -84,7 +84,7 @@ static int info_config_metric(oconfig_item_t *ci)
 {
   char *name = NULL;
   char *help = NULL;
-  metric_type_t type = METRIC_TYPE_UNTYPED;
+  metric_type_t type = METRIC_TYPE_INFO;
   double value = 1;
   metric_t m = {0};
 
@@ -162,7 +162,7 @@ static int info_init(void)
 
   m.value.gauge = 1;
   metric_label_set(&m, "version", PACKAGE_VERSION);
-  int status =info_metric_append("ncollectd_info", NULL, METRIC_TYPE_UNTYPED, &m);
+  int status =info_metric_append("ncollectd_info", NULL, METRIC_TYPE_INFO, &m);
   metric_reset(&m);
 
   return status;
