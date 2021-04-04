@@ -1,0 +1,81 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-squid - Documentation of ncollectd's C<squid plugin>
+
+=head2 Plugin C<squid>
+
+The squid plugin uses the B<libcurl> (L<http://curl.haxx.se/>) to read Squid
+metrics over http. Also can retrive Squid metrics from an unix socket.
+
+  <Plugin squid>
+    <Instance "3128">
+      URL "http://127.0.0.1:3128"
+    </Instance>
+  </Plugin>
+
+In the B<Plugin> block, there may be one or more B<Instance> blocks.
+The following options are valid within B<Instacne> blocks:
+
+=over 4
+
+=item B<Label> I<key> I<value>
+
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Instance> block.
+
+=item B<URL> I<URL>
+
+URL to access the Squid cachemgr.
+
+=item B<User> I<Name>
+
+Username to use if authorization is required to read the url.
+
+=item B<Password> I<Password>
+
+Password to use if authorization is required to read the url.
+
+=item B<Digest> B<true>|B<false>
+
+Enable HTTP digest authentication.
+
+=item B<VerifyPeer> B<true>|B<false>
+
+Enable or disable peer SSL certificate verification. See
+L<http://curl.haxx.se/docs/sslcerts.html> for details. Enabled by default.
+
+=item B<VerifyHost> B<true>|B<false>
+
+Enable or disable peer host name verification. If enabled, the plugin checks if
+the C<Common Name> or a C<Subject Alternate Name> field of the SSL certificate
+matches the host name provided by the B<URL> option. If this identity check
+fails, the connection is aborted. Obviously, only works when connecting to a
+SSL enabled server. Enabled by default.
+
+=item B<CACert> I<file>
+
+File that holds one or more SSL certificates. If you want to use HTTPS you will
+possibly need this option. What CA certificates come bundled with C<libcurl>
+and are checked by default depends on the distribution you use.
+
+=item B<Header> I<Header>
+
+A HTTP header to add to the request. Multiple headers are added if this option
+is specified more than once.
+
+=item B<Interval> I<Interval>
+
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global B<Interval> setting will be used.
+
+
+=back
+
+=head1 SEE ALSO
+
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>
+
+=cut
