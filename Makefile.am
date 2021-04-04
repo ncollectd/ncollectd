@@ -1781,6 +1781,10 @@ ubi_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 ubi_la_LIBADD = libignorelist.la
 endif
 
+if BUILD_PLUGIN_UNAME
+include src/plugins/uname/Makefile.am
+endif
+
 if BUILD_PLUGIN_UNIXSOCK
 pkglib_LTLIBRARIES += unixsock.la
 unixsock_la_SOURCES = src/unixsock.c

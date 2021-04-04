@@ -1,0 +1,19 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-uname - Documentation of ncollectd's C<uname plugin>
+
+=head2 Plugin C<uname>
+
+The C<uname> plugin allow to get the system information info.
+The same that the I<uname> commands returns.
+
+=back
+
+=head1 SEE ALSO
+
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>
+
+=cut

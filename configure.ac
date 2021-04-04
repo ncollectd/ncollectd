@@ -6130,6 +6130,7 @@ plugin_thermal="no"
 plugin_turbostat="no"
 plugin_timex="no"
 plugin_ubi="no"
+plugin_uname="no"
 plugin_uptime="no"
 plugin_users="no"
 plugin_virt="no"
@@ -6181,6 +6182,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_timex="yes"
   plugin_thermal="yes"
   plugin_ubi="yes"
+  plugin_uname="yes"
   plugin_uptime="yes"
   plugin_vmem="yes"
   plugin_wireless="yes"
@@ -6624,6 +6626,7 @@ AC_PLUGIN([thermal],             [$plugin_thermal],           [Linux ACPI therma
 AC_PLUGIN([threshold],           [yes],                       [Threshold checking plugin])
 AC_PLUGIN([turbostat],           [$plugin_turbostat],         [Advanced statistic on Intel cpu states])
 AC_PLUGIN([ubi],                 [$plugin_ubi],               [UBIFS statistics])
+AC_PLUGIN([uname],               [$plugin_uname],             [Get uname info])
 AC_PLUGIN([unixsock],            [yes],                       [Unixsock communication plugin])
 AC_PLUGIN([uptime],              [$plugin_uptime],            [Uptime statistics])
 AC_PLUGIN([users],               [$plugin_users],             [User statistics])
@@ -7055,6 +7058,7 @@ AC_MSG_RESULT([    thermal . . . . . . . $enable_thermal])
 AC_MSG_RESULT([    threshold . . . . . . $enable_threshold])
 AC_MSG_RESULT([    turbostat . . . . . . $enable_turbostat])
 AC_MSG_RESULT([    ubi . . . . . . . . . $enable_ubi])
+AC_MSG_RESULT([    uname . . . . . . . . $enable_uname])
 AC_MSG_RESULT([    unixsock  . . . . . . $enable_unixsock])
 AC_MSG_RESULT([    uptime  . . . . . . . $enable_uptime])
 AC_MSG_RESULT([    users . . . . . . . . $enable_users])
