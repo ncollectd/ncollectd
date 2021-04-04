@@ -979,6 +979,10 @@ gpu_nvidia_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_CUDA_LDFLAGS)
 gpu_nvidia_la_LIBADD = $(BUILD_WITH_CUDA_LIBS)
 endif
 
+if BUILD_PLUGIN_HAPROXY
+include src/plugins/haproxy/Makefile.am
+endif
+
 if BUILD_PLUGIN_HUGEPAGES
 include src/plugins/hugepages/Makefile.am
 endif
@@ -1659,6 +1663,10 @@ endif
 
 if BUILD_PLUGIN_SOFTNET
 include src/plugins/softnet/Makefile.am
+endif
+
+if BUILD_PLUGIN_SQUID
+include src/plugins/squid/Makefile.am
 endif
 
 if BUILD_PLUGIN_STATSD
