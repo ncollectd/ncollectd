@@ -1,840 +1,840 @@
 enum {
-  HAPROXY_FRONTEND_CURRENT_SESSIONS,
-  HAPROXY_FRONTEND_MAX_SESSIONS,
-  HAPROXY_FRONTEND_LIMIT_SESSION,
-  HAPROXY_FRONTEND_SESSIONS_TOTAL,
-  HAPROXY_FRONTEND_BYTES_IN_TOTAL,
-  HAPROXY_FRONTEND_BYTES_OUT_TOTAL,
-  HAPROXY_FRONTEND_REQUESTS_DENIED_TOTAL,
-  HAPROXY_FRONTEND_RESPONSES_DENIED_TOTAL,
-  HAPROXY_FRONTEND_REQUEST_ERRORS_TOTAL,
-  HAPROXY_FRONTEND_STATUS,
-  HAPROXY_FRONTEND_LIMIT_SESSION_RATE,
-  HAPROXY_FRONTEND_MAX_SESSION_RATE,
-  HAPROXY_FRONTEND_HTTP_RESPONSES_TOTAL,
-  HAPROXY_FRONTEND_HTTP_REQUESTS_RATE_MAX,
-  HAPROXY_FRONTEND_HTTP_REQUESTS_TOTAL,
-  HAPROXY_FRONTEND_HTTP_COMP_BYTES_IN_TOTAL,
-  HAPROXY_FRONTEND_HTTP_COMP_BYTES_OUT_TOTAL,
-  HAPROXY_FRONTEND_HTTP_COMP_BYTES_BYPASSED_TOTAL,
-  HAPROXY_FRONTEND_HTTP_COMP_RESPONSES_TOTAL,
-  HAPROXY_FRONTEND_CONNECTIONS_RATE_MAX,
-  HAPROXY_FRONTEND_CONNECTIONS_TOTAL,
-  HAPROXY_FRONTEND_INTERCEPTED_REQUESTS_TOTAL,
-  HAPROXY_FRONTEND_DENIED_CONNECTIONS_TOTAL,
-  HAPROXY_FRONTEND_DENIED_SESSIONS_TOTAL,
-  HAPROXY_FRONTEND_FAILED_HEADER_REWRITING_TOTAL,
-  HAPROXY_FRONTEND_HTTP_CACHE_LOOKUPS_TOTAL,
-  HAPROXY_FRONTEND_HTTP_CACHE_HITS_TOTAL,
-  HAPROXY_FRONTEND_INTERNAL_ERRORS_TOTAL ,         
-  HAPROXY_LISTENER_CURRENT_SESSIONS,
-  HAPROXY_LISTENER_MAX_SESSIONS,
-  HAPROXY_LISTENER_LIMIT_SESSIONS,
-  HAPROXY_LISTENER_SESSIONS_TOTAL,
-  HAPROXY_LISTENER_BYTES_IN_TOTAL,
-  HAPROXY_LISTENER_BYTES_OUT_TOTAL,
-  HAPROXY_LISTENER_REQUESTS_DENIED_TOTAL,
-  HAPROXY_LISTENER_RESPONSES_DENIED_TOTAL,
-  HAPROXY_LISTENER_REQUEST_ERRORS_TOTAL,
-  HAPROXY_LISTENER_STATUS,
-  HAPROXY_LISTENER_DENIED_CONNECTIONS_TOTAL,
-  HAPROXY_LISTENER_DENIED_SESSIONS_TOTAL,
-  HAPROXY_LISTENER_FAILED_HEADER_REWRITING_TOTAL,
-  HAPROXY_LISTENER_INTERNAL_ERRORS_TOTAL,  
-  HAPROXY_BACKEND_CURRENT_QUEUE,
-  HAPROXY_BACKEND_MAX_QUEUE,
-  HAPROXY_BACKEND_CURRENT_SESSIONS,
-  HAPROXY_BACKEND_MAX_SESSIONS,
-  HAPROXY_BACKEND_LIMIT_SESSIONS,
-  HAPROXY_BACKEND_SESSIONS_TOTAL,
-  HAPROXY_BACKEND_BYTES_IN_TOTAL,
-  HAPROXY_BACKEND_BYTES_OUT_TOTAL,
-  HAPROXY_BACKEND_REQUESTS_DENIED_TOTAL,
-  HAPROXY_BACKEND_RESPONSES_DENIED_TOTAL,
-  HAPROXY_BACKEND_CONNECTION_ERRORS_TOTAL,
-  HAPROXY_BACKEND_RESPONSE_ERRORS_TOTAL,
-  HAPROXY_BACKEND_RETRY_WARNINGS_TOTAL,
-  HAPROXY_BACKEND_REDISPATCH_WARNINGS_TOTAL,
-  HAPROXY_BACKEND_STATUS,
-  HAPROXY_BACKEND_WEIGHT,
-  HAPROXY_BACKEND_ACTIVE_SERVERS,
-  HAPROXY_BACKEND_BACKUP_SERVERS,
-  HAPROXY_BACKEND_CHECK_FAILURES_TOTAL,
-  HAPROXY_BACKEND_CHECK_UP_DOWN_TOTAL,
-  HAPROXY_BACKEND_CHECK_LAST_CHANGE_SECONDS,
-  HAPROXY_BACKEND_DOWNTIME_SECONDS_TOTAL,
-  HAPROXY_BACKEND_LOADBALANCED_TOTAL,
-  HAPROXY_BACKEND_MAX_SESSION_RATE,
-  HAPROXY_BACKEND_HTTP_RESPONSES_TOTAL,
-  HAPROXY_BACKEND_HTTP_REQUESTS_TOTAL,
-  HAPROXY_BACKEND_CLIENT_ABORTS_TOTAL,
-  HAPROXY_BACKEND_SERVER_ABORTS_TOTAL,
-  HAPROXY_BACKEND_HTTP_COMP_BYTES_IN_TOTAL,
-  HAPROXY_BACKEND_HTTP_COMP_BYTES_OUT_TOTAL,
-  HAPROXY_BACKEND_HTTP_COMP_BYTES_BYPASSED_TOTAL,
-  HAPROXY_BACKEND_HTTP_COMP_RESPONSES_TOTAL,
-  HAPROXY_BACKEND_LAST_SESSION_SECONDS,
-  HAPROXY_BACKEND_QUEUE_TIME_AVERAGE_SECONDS,
-  HAPROXY_BACKEND_CONNECT_TIME_AVERAGE_SECONDS,
-  HAPROXY_BACKEND_RESPONSE_TIME_AVERAGE_SECONDS,
-  HAPROXY_BACKEND_TOTAL_TIME_AVERAGE_SECONDS,
-  HAPROXY_BACKEND_FAILED_HEADER_REWRITING_TOTAL,
-  HAPROXY_BACKEND_CONNECTION_ATTEMPTS_TOTAL,
-  HAPROXY_BACKEND_CONNECTION_REUSES_TOTAL,
-  HAPROXY_BACKEND_HTTP_CACHE_LOOKUPS_TOTAL,
-  HAPROXY_BACKEND_HTTP_CACHE_HITS_TOTAL,
-  HAPROXY_BACKEND_MAX_QUEUE_TIME_SECONDS,
-  HAPROXY_BACKEND_MAX_CONNECT_TIME_SECONDS,
-  HAPROXY_BACKEND_MAX_RESPONSE_TIME_SECONDS,
-  HAPROXY_BACKEND_MAX_TOTAL_TIME_SECONDS,
-  HAPROXY_BACKEND_INTERNAL_ERRORS_TOTAL,
-  HAPROXY_BACKEND_UWEIGHT,
-  HAPROXY_BACKEND_MAX,
-  HAPROXY_SERVER_CURRENT_QUEUE,
-  HAPROXY_SERVER_MAX_QUEUE,
-  HAPROXY_SERVER_CURRENT_SESSIONS,
-  HAPROXY_SERVER_MAX_SESSIONS,
-  HAPROXY_SERVER_LIMIT_SESSIONS,
-  HAPROXY_SERVER_SESSIONS_TOTAL,
-  HAPROXY_SERVER_BYTES_IN_TOTAL,
-  HAPROXY_SERVER_BYTES_OUT_TOTAL,
-  HAPROXY_SERVER_RESPONSES_DENIED_TOTAL,
-  HAPROXY_SERVER_CONNECTION_ERRORS_TOTAL,
-  HAPROXY_SERVER_RESPONSE_ERRORS_TOTAL,
-  HAPROXY_SERVER_RETRY_WARNINGS_TOTAL,
-  HAPROXY_SERVER_REDISPATCH_WARNINGS_TOTAL,
-  HAPROXY_SERVER_STATUS,
-  HAPROXY_SERVER_WEIGHT,
-  HAPROXY_SERVER_CHECK_FAILURES_TOTAL,
-  HAPROXY_SERVER_CHECK_UP_DOWN_TOTAL,
-  HAPROXY_SERVER_CHECK_LAST_CHANGE_SECONDS,
-  HAPROXY_SERVER_DOWNTIME_SECONDS_TOTAL,
-  HAPROXY_SERVER_QUEUE_LIMIT,
-  HAPROXY_SERVER_CURRENT_THROTTLE,
-  HAPROXY_SERVER_LOADBALANCED_TOTAL,
-  HAPROXY_SERVER_MAX_SESSION_RATE,
-  HAPROXY_SERVER_CHECK_STATUS,
-  HAPROXY_SERVER_CHECK_CODE,
-  HAPROXY_SERVER_CHECK_DURATION_SECONDS,
-  HAPROXY_SERVER_HTTP_RESPONSES_TOTAL,
-  HAPROXY_SERVER_CLIENT_ABORTS_TOTAL,
-  HAPROXY_SERVER_SERVER_ABORTS_TOTAL,
-  HAPROXY_SERVER_LAST_SESSION_SECONDS,
-  HAPROXY_SERVER_QUEUE_TIME_AVERAGE_SECONDS,
-  HAPROXY_SERVER_CONNECT_TIME_AVERAGE_SECONDS,
-  HAPROXY_SERVER_RESPONSE_TIME_AVERAGE_SECONDS,
-  HAPROXY_SERVER_TOTAL_TIME_AVERAGE_SECONDS,
-  HAPROXY_SERVER_FAILED_HEADER_REWRITING_TOTAL,
-  HAPROXY_SERVER_CONNECTION_ATTEMPTS_TOTAL,
-  HAPROXY_SERVER_CONNECTION_REUSES_TOTAL,
-  HAPROXY_SERVER_IDLE_CONNECTIONS_CURRENT,
-  HAPROXY_SERVER_IDLE_CONNECTIONS_LIMIT,
-  HAPROXY_SERVER_MAX_QUEUE_TIME_SECONDS,
-  HAPROXY_SERVER_MAX_CONNECT_TIME_SECONDS,
-  HAPROXY_SERVER_MAX_RESPONSE_TIME_SECONDS,
-  HAPROXY_SERVER_MAX_TOTAL_TIME_SECONDS,
-  HAPROXY_SERVER_INTERNAL_ERRORS_TOTAL,
-  HAPROXY_SERVER_UNSAFE_IDLE_CONNECTIONS_CURRENT,
-  HAPROXY_SERVER_SAFE_IDLE_CONNECTIONS_CURRENT,
-  HAPROXY_SERVER_USED_CONNECTIONS_CURRENT,
-  HAPROXY_SERVER_NEED_CONNECTIONS_CURRENT,
-  HAPROXY_SERVER_UWEIGHT,
-  HAPROXY_STAT_MAX,
+  FAM_HAPROXY_FRONTEND_CURRENT_SESSIONS,
+  FAM_HAPROXY_FRONTEND_MAX_SESSIONS,
+  FAM_HAPROXY_FRONTEND_LIMIT_SESSION,
+  FAM_HAPROXY_FRONTEND_SESSIONS_TOTAL,
+  FAM_HAPROXY_FRONTEND_BYTES_IN_TOTAL,
+  FAM_HAPROXY_FRONTEND_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_FRONTEND_REQUESTS_DENIED_TOTAL,
+  FAM_HAPROXY_FRONTEND_RESPONSES_DENIED_TOTAL,
+  FAM_HAPROXY_FRONTEND_REQUEST_ERRORS_TOTAL,
+  FAM_HAPROXY_FRONTEND_STATUS,
+  FAM_HAPROXY_FRONTEND_LIMIT_SESSION_RATE,
+  FAM_HAPROXY_FRONTEND_MAX_SESSION_RATE,
+  FAM_HAPROXY_FRONTEND_HTTP_RESPONSES_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_REQUESTS_RATE_MAX,
+  FAM_HAPROXY_FRONTEND_HTTP_REQUESTS_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_COMP_BYTES_IN_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_COMP_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_COMP_BYTES_BYPASSED_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_COMP_RESPONSES_TOTAL,
+  FAM_HAPROXY_FRONTEND_CONNECTIONS_RATE_MAX,
+  FAM_HAPROXY_FRONTEND_CONNECTIONS_TOTAL,
+  FAM_HAPROXY_FRONTEND_INTERCEPTED_REQUESTS_TOTAL,
+  FAM_HAPROXY_FRONTEND_DENIED_CONNECTIONS_TOTAL,
+  FAM_HAPROXY_FRONTEND_DENIED_SESSIONS_TOTAL,
+  FAM_HAPROXY_FRONTEND_FAILED_HEADER_REWRITING_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_CACHE_LOOKUPS_TOTAL,
+  FAM_HAPROXY_FRONTEND_HTTP_CACHE_HITS_TOTAL,
+  FAM_HAPROXY_FRONTEND_INTERNAL_ERRORS_TOTAL ,         
+  FAM_HAPROXY_LISTENER_CURRENT_SESSIONS,
+  FAM_HAPROXY_LISTENER_MAX_SESSIONS,
+  FAM_HAPROXY_LISTENER_LIMIT_SESSIONS,
+  FAM_HAPROXY_LISTENER_SESSIONS_TOTAL,
+  FAM_HAPROXY_LISTENER_BYTES_IN_TOTAL,
+  FAM_HAPROXY_LISTENER_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_LISTENER_REQUESTS_DENIED_TOTAL,
+  FAM_HAPROXY_LISTENER_RESPONSES_DENIED_TOTAL,
+  FAM_HAPROXY_LISTENER_REQUEST_ERRORS_TOTAL,
+  FAM_HAPROXY_LISTENER_STATUS,
+  FAM_HAPROXY_LISTENER_DENIED_CONNECTIONS_TOTAL,
+  FAM_HAPROXY_LISTENER_DENIED_SESSIONS_TOTAL,
+  FAM_HAPROXY_LISTENER_FAILED_HEADER_REWRITING_TOTAL,
+  FAM_HAPROXY_LISTENER_INTERNAL_ERRORS_TOTAL,  
+  FAM_HAPROXY_BACKEND_CURRENT_QUEUE,
+  FAM_HAPROXY_BACKEND_MAX_QUEUE,
+  FAM_HAPROXY_BACKEND_CURRENT_SESSIONS,
+  FAM_HAPROXY_BACKEND_MAX_SESSIONS,
+  FAM_HAPROXY_BACKEND_LIMIT_SESSIONS,
+  FAM_HAPROXY_BACKEND_SESSIONS_TOTAL,
+  FAM_HAPROXY_BACKEND_BYTES_IN_TOTAL,
+  FAM_HAPROXY_BACKEND_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_BACKEND_REQUESTS_DENIED_TOTAL,
+  FAM_HAPROXY_BACKEND_RESPONSES_DENIED_TOTAL,
+  FAM_HAPROXY_BACKEND_CONNECTION_ERRORS_TOTAL,
+  FAM_HAPROXY_BACKEND_RESPONSE_ERRORS_TOTAL,
+  FAM_HAPROXY_BACKEND_RETRY_WARNINGS_TOTAL,
+  FAM_HAPROXY_BACKEND_REDISPATCH_WARNINGS_TOTAL,
+  FAM_HAPROXY_BACKEND_STATUS,
+  FAM_HAPROXY_BACKEND_WEIGHT,
+  FAM_HAPROXY_BACKEND_ACTIVE_SERVERS,
+  FAM_HAPROXY_BACKEND_BACKUP_SERVERS,
+  FAM_HAPROXY_BACKEND_CHECK_FAILURES_TOTAL,
+  FAM_HAPROXY_BACKEND_CHECK_UP_DOWN_TOTAL,
+  FAM_HAPROXY_BACKEND_CHECK_LAST_CHANGE_SECONDS,
+  FAM_HAPROXY_BACKEND_DOWNTIME_SECONDS_TOTAL,
+  FAM_HAPROXY_BACKEND_LOADBALANCED_TOTAL,
+  FAM_HAPROXY_BACKEND_MAX_SESSION_RATE,
+  FAM_HAPROXY_BACKEND_HTTP_RESPONSES_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_REQUESTS_TOTAL,
+  FAM_HAPROXY_BACKEND_CLIENT_ABORTS_TOTAL,
+  FAM_HAPROXY_BACKEND_SERVER_ABORTS_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_COMP_BYTES_IN_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_COMP_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_COMP_BYTES_BYPASSED_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_COMP_RESPONSES_TOTAL,
+  FAM_HAPROXY_BACKEND_LAST_SESSION_SECONDS,
+  FAM_HAPROXY_BACKEND_QUEUE_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_BACKEND_CONNECT_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_BACKEND_RESPONSE_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_BACKEND_TOTAL_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_BACKEND_FAILED_HEADER_REWRITING_TOTAL,
+  FAM_HAPROXY_BACKEND_CONNECTION_ATTEMPTS_TOTAL,
+  FAM_HAPROXY_BACKEND_CONNECTION_REUSES_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_CACHE_LOOKUPS_TOTAL,
+  FAM_HAPROXY_BACKEND_HTTP_CACHE_HITS_TOTAL,
+  FAM_HAPROXY_BACKEND_MAX_QUEUE_TIME_SECONDS,
+  FAM_HAPROXY_BACKEND_MAX_CONNECT_TIME_SECONDS,
+  FAM_HAPROXY_BACKEND_MAX_RESPONSE_TIME_SECONDS,
+  FAM_HAPROXY_BACKEND_MAX_TOTAL_TIME_SECONDS,
+  FAM_HAPROXY_BACKEND_INTERNAL_ERRORS_TOTAL,
+  FAM_HAPROXY_BACKEND_UWEIGHT,
+  FAM_HAPROXY_BACKEND_MAX,
+  FAM_HAPROXY_SERVER_CURRENT_QUEUE,
+  FAM_HAPROXY_SERVER_MAX_QUEUE,
+  FAM_HAPROXY_SERVER_CURRENT_SESSIONS,
+  FAM_HAPROXY_SERVER_MAX_SESSIONS,
+  FAM_HAPROXY_SERVER_LIMIT_SESSIONS,
+  FAM_HAPROXY_SERVER_SESSIONS_TOTAL,
+  FAM_HAPROXY_SERVER_BYTES_IN_TOTAL,
+  FAM_HAPROXY_SERVER_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_SERVER_RESPONSES_DENIED_TOTAL,
+  FAM_HAPROXY_SERVER_CONNECTION_ERRORS_TOTAL,
+  FAM_HAPROXY_SERVER_RESPONSE_ERRORS_TOTAL,
+  FAM_HAPROXY_SERVER_RETRY_WARNINGS_TOTAL,
+  FAM_HAPROXY_SERVER_REDISPATCH_WARNINGS_TOTAL,
+  FAM_HAPROXY_SERVER_STATUS,
+  FAM_HAPROXY_SERVER_WEIGHT,
+  FAM_HAPROXY_SERVER_CHECK_FAILURES_TOTAL,
+  FAM_HAPROXY_SERVER_CHECK_UP_DOWN_TOTAL,
+  FAM_HAPROXY_SERVER_CHECK_LAST_CHANGE_SECONDS,
+  FAM_HAPROXY_SERVER_DOWNTIME_SECONDS_TOTAL,
+  FAM_HAPROXY_SERVER_QUEUE_LIMIT,
+  FAM_HAPROXY_SERVER_CURRENT_THROTTLE,
+  FAM_HAPROXY_SERVER_LOADBALANCED_TOTAL,
+  FAM_HAPROXY_SERVER_MAX_SESSION_RATE,
+  FAM_HAPROXY_SERVER_CHECK_STATUS,
+  FAM_HAPROXY_SERVER_CHECK_CODE,
+  FAM_HAPROXY_SERVER_CHECK_DURATION_SECONDS,
+  FAM_HAPROXY_SERVER_HTTP_RESPONSES_TOTAL,
+  FAM_HAPROXY_SERVER_CLIENT_ABORTS_TOTAL,
+  FAM_HAPROXY_SERVER_SERVER_ABORTS_TOTAL,
+  FAM_HAPROXY_SERVER_LAST_SESSION_SECONDS,
+  FAM_HAPROXY_SERVER_QUEUE_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_SERVER_CONNECT_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_SERVER_RESPONSE_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_SERVER_TOTAL_TIME_AVERAGE_SECONDS,
+  FAM_HAPROXY_SERVER_FAILED_HEADER_REWRITING_TOTAL,
+  FAM_HAPROXY_SERVER_CONNECTION_ATTEMPTS_TOTAL,
+  FAM_HAPROXY_SERVER_CONNECTION_REUSES_TOTAL,
+  FAM_HAPROXY_SERVER_IDLE_CONNECTIONS_CURRENT,
+  FAM_HAPROXY_SERVER_IDLE_CONNECTIONS_LIMIT,
+  FAM_HAPROXY_SERVER_MAX_QUEUE_TIME_SECONDS,
+  FAM_HAPROXY_SERVER_MAX_CONNECT_TIME_SECONDS,
+  FAM_HAPROXY_SERVER_MAX_RESPONSE_TIME_SECONDS,
+  FAM_HAPROXY_SERVER_MAX_TOTAL_TIME_SECONDS,
+  FAM_HAPROXY_SERVER_INTERNAL_ERRORS_TOTAL,
+  FAM_HAPROXY_SERVER_UNSAFE_IDLE_CONNECTIONS_CURRENT,
+  FAM_HAPROXY_SERVER_SAFE_IDLE_CONNECTIONS_CURRENT,
+  FAM_HAPROXY_SERVER_USED_CONNECTIONS_CURRENT,
+  FAM_HAPROXY_SERVER_NEED_CONNECTIONS_CURRENT,
+  FAM_HAPROXY_SERVER_UWEIGHT,
+  FAM_HAPROXY_STAT_MAX,
 };
 
 
-static metric_family_t fams_haproxy_stat[HAPROXY_STAT_MAX] = {
-  [HAPROXY_FRONTEND_CURRENT_SESSIONS] = {
+static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
+  [FAM_HAPROXY_FRONTEND_CURRENT_SESSIONS] = {
     .name = "haproxy_frontend_current_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of current sessions on the frontend",
   },
-  [HAPROXY_FRONTEND_MAX_SESSIONS] = {
+  [FAM_HAPROXY_FRONTEND_MAX_SESSIONS] = {
     .name = "haproxy_frontend_max_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of current sessions encountered since process started",
   },
-  [HAPROXY_FRONTEND_LIMIT_SESSION] = {
+  [FAM_HAPROXY_FRONTEND_LIMIT_SESSION] = {
     .name = "haproxy_frontend_limit_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Frontend's maxconn",
   },
-  [HAPROXY_FRONTEND_SESSIONS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_SESSIONS_TOTAL] = {
     .name = "haproxy_frontend_sessions_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of sessions since process started",
   },
-  [HAPROXY_FRONTEND_BYTES_IN_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_BYTES_IN_TOTAL] = {
     .name = "haproxy_frontend_bytes_in_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of request bytes since process started",
   },
-  [HAPROXY_FRONTEND_BYTES_OUT_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_BYTES_OUT_TOTAL] = {
     .name = "haproxy_frontend_bytes_out_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of response bytes since process started",
   },
-  [HAPROXY_FRONTEND_REQUESTS_DENIED_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_REQUESTS_DENIED_TOTAL] = {
     .name = "haproxy_frontend_requests_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied requests since process started",
   },
-  [HAPROXY_FRONTEND_RESPONSES_DENIED_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_RESPONSES_DENIED_TOTAL] = {
     .name = "haproxy_frontend_responses_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied responses since process started",
   },
-  [HAPROXY_FRONTEND_REQUEST_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_REQUEST_ERRORS_TOTAL] = {
     .name = "haproxy_frontend_request_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of invalid requests since process started",
   },
-  [HAPROXY_FRONTEND_STATUS] = {
+  [FAM_HAPROXY_FRONTEND_STATUS] = {
     .name = "haproxy_frontend_status",
     .type = METRIC_TYPE_GAUGE, 
     .help = "Current status of the frontend, per state label value",
   },
-  [HAPROXY_FRONTEND_LIMIT_SESSION_RATE] = {
+  [FAM_HAPROXY_FRONTEND_LIMIT_SESSION_RATE] = {
     .name = "haproxy_frontend_limit_session_rate",
     .type = METRIC_TYPE_GAUGE,
     .help = "Limit on the number of sessions accepted in a second ('rate-limit sessions' setting)",
   },
-  [HAPROXY_FRONTEND_MAX_SESSION_RATE] = {
+  [FAM_HAPROXY_FRONTEND_MAX_SESSION_RATE] = {
     .name = "haproxy_frontend_max_session_rate",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of sessions per second observed since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_RESPONSES_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_RESPONSES_TOTAL] = {
     .name = "haproxy_frontend_http_responses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP responses with status 100-199 returned by this object since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_REQUESTS_RATE_MAX] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_REQUESTS_RATE_MAX] = {
     .name = "haproxy_frontend_http_requests_rate_max",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of http requests observed since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_REQUESTS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_REQUESTS_TOTAL] = {
     .name = "haproxy_frontend_http_requests_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP requests processed by this object since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_COMP_BYTES_IN_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_COMP_BYTES_IN_TOTAL] = {
     .name = "haproxy_frontend_http_comp_bytes_in_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes submitted to the HTTP compressor for this object since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_COMP_BYTES_OUT_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_COMP_BYTES_OUT_TOTAL] = {
     .name = "haproxy_frontend_http_comp_bytes_out_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes emitted by the HTTP compressor for this object since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_COMP_BYTES_BYPASSED_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_COMP_BYTES_BYPASSED_TOTAL] = {
     .name = "haproxy_frontend_http_comp_bytes_bypassed_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes that bypassed HTTP compression for this object since the worker process started (CPU/memory/bandwidth limitation)",
   },
-  [HAPROXY_FRONTEND_HTTP_COMP_RESPONSES_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_COMP_RESPONSES_TOTAL] = {
     .name = "haproxy_frontend_http_comp_responses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP responses that were compressed for this object since the worker process started",
   },
-  [HAPROXY_FRONTEND_CONNECTIONS_RATE_MAX] = {
+  [FAM_HAPROXY_FRONTEND_CONNECTIONS_RATE_MAX] = {
     .name = "haproxy_frontend_connections_rate_max",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of connections per second observed since the worker process started",
   },
-  [HAPROXY_FRONTEND_CONNECTIONS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_CONNECTIONS_TOTAL] = {
     .name = "haproxy_frontend_connections_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of new connections accepted on this frontend since the worker process started",
   },
-  [HAPROXY_FRONTEND_INTERCEPTED_REQUESTS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_INTERCEPTED_REQUESTS_TOTAL] = {
     .name = "haproxy_frontend_intercepted_requests_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP requests intercepted on the frontend (redirects/stats/services) since the worker process started",
   },
-  [HAPROXY_FRONTEND_DENIED_CONNECTIONS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_DENIED_CONNECTIONS_TOTAL] = {
     .name = "haproxy_frontend_denied_connections_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of incoming connections blocked on a frontend by a tcp-request connection rule since the worker process started",
   },
-  [HAPROXY_FRONTEND_DENIED_SESSIONS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_DENIED_SESSIONS_TOTAL] = {
     .name = "haproxy_frontend_denied_sessions_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of incoming sessions blocked on a frontend by a tcp-request connection rule since the worker process started",
   },
-  [HAPROXY_FRONTEND_FAILED_HEADER_REWRITING_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_FAILED_HEADER_REWRITING_TOTAL] = {
     .name = "haproxy_frontend_failed_header_rewriting_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed HTTP header rewrites since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_CACHE_LOOKUPS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_CACHE_LOOKUPS_TOTAL] = {
     .name = "haproxy_frontend_http_cache_lookups_total",
     .type = METRIC_TYPE_COUNTER, 
     .help = "Total number of HTTP requests looked up in the cache on this frontend since the worker process started",
   },
-  [HAPROXY_FRONTEND_HTTP_CACHE_HITS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_HTTP_CACHE_HITS_TOTAL] = {
     .name = "haproxy_frontend_http_cache_hits_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP requests not found in the cache on this frontend since the worker process started",
   },
-  [HAPROXY_FRONTEND_INTERNAL_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_FRONTEND_INTERNAL_ERRORS_TOTAL] = {
     .name = "haproxy_frontend_internal_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of internal errors since process started",
   },
-  [HAPROXY_LISTENER_CURRENT_SESSIONS] = {
+  [FAM_HAPROXY_LISTENER_CURRENT_SESSIONS] = {
     .name = "haproxy_listener_current_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of current sessions on the listener",
   },
-  [HAPROXY_LISTENER_MAX_SESSIONS]  = {
+  [FAM_HAPROXY_LISTENER_MAX_SESSIONS]  = {
     .name = "haproxy_listener_max_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of current sessions encountered since process started",
   },
-  [HAPROXY_LISTENER_LIMIT_SESSIONS] = {
+  [FAM_HAPROXY_LISTENER_LIMIT_SESSIONS] = {
     .name = "haproxy_listener_limit_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Listener's maxconn",
   },
-  [HAPROXY_LISTENER_SESSIONS_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_SESSIONS_TOTAL] = {
     .name = "haproxy_listener_sessions_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of sessions since process started",
   },
-  [HAPROXY_LISTENER_BYTES_IN_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_BYTES_IN_TOTAL] = {
     .name = "haproxy_listener_bytes_in_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of request bytes since process started",
   },
-  [HAPROXY_LISTENER_BYTES_OUT_TOTAL]  = {
+  [FAM_HAPROXY_LISTENER_BYTES_OUT_TOTAL]  = {
     .name = "haproxy_listener_bytes_out_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of response bytes since process started",
   },
-  [HAPROXY_LISTENER_REQUESTS_DENIED_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_REQUESTS_DENIED_TOTAL] = {
     .name = "haproxy_listener_requests_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied requests since process started",
   },
-  [HAPROXY_LISTENER_RESPONSES_DENIED_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_RESPONSES_DENIED_TOTAL] = {
     .name = "haproxy_listener_responses_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied responses since process started",
   },
-  [HAPROXY_LISTENER_REQUEST_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_REQUEST_ERRORS_TOTAL] = {
     .name = "haproxy_listener_request_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of invalid requests since process started",
   },
-  [HAPROXY_LISTENER_STATUS] = {
+  [FAM_HAPROXY_LISTENER_STATUS] = {
     .name = "haproxy_listener_status",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current status of the listener, per state label value",
   },
-  [HAPROXY_LISTENER_DENIED_CONNECTIONS_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_DENIED_CONNECTIONS_TOTAL] = {
     .name = "haproxy_listener_denied_connections_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of incoming connections blocked on a listener/frontend by a tcp-request connection rule since the worker process started",
   },
-  [HAPROXY_LISTENER_DENIED_SESSIONS_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_DENIED_SESSIONS_TOTAL] = {
     .name = "haproxy_listener_denied_sessions_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of incoming sessions blocked on a listener/frontend by a tcp-request connection rule since the worker process started",
   },
-  [HAPROXY_LISTENER_FAILED_HEADER_REWRITING_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_FAILED_HEADER_REWRITING_TOTAL] = {
     .name = "haproxy_listener_failed_header_rewriting_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed HTTP header rewrites since the worker process started",
   },
-  [HAPROXY_LISTENER_INTERNAL_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_LISTENER_INTERNAL_ERRORS_TOTAL] = {
     .name = "haproxy_listener_internal_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of internal errors since process started",
   },
-  [HAPROXY_BACKEND_CURRENT_QUEUE] = {
+  [FAM_HAPROXY_BACKEND_CURRENT_QUEUE] = {
     .name = "haproxy_backend_current_queue",
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of current queued connections",
   },
-  [HAPROXY_BACKEND_MAX_QUEUE] = {
+  [FAM_HAPROXY_BACKEND_MAX_QUEUE] = {
     .name = "haproxy_backend_max_queue",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of queued connections encountered since process started",
   },
-  [HAPROXY_BACKEND_CURRENT_SESSIONS] = {
+  [FAM_HAPROXY_BACKEND_CURRENT_SESSIONS] = {
     .name = "haproxy_backend_current_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of current sessions on the frontend, backend or server",
   },
-  [HAPROXY_BACKEND_MAX_SESSIONS]  = {
+  [FAM_HAPROXY_BACKEND_MAX_SESSIONS]  = {
     .name = "haproxy_backend_max_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of current sessions encountered since process started",
   },
-  [HAPROXY_BACKEND_LIMIT_SESSIONS] = {
+  [FAM_HAPROXY_BACKEND_LIMIT_SESSIONS] = {
     .name = "haproxy_backend_limit_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Backend's fullconn",
   },
-  [HAPROXY_BACKEND_SESSIONS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_SESSIONS_TOTAL] = {
     .name = "haproxy_backend_sessions_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of sessions since process started",
   },
-  [HAPROXY_BACKEND_BYTES_IN_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_BYTES_IN_TOTAL] = {
     .name = "haproxy_backend_bytes_in_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of request bytes since process started",
   },
-  [HAPROXY_BACKEND_BYTES_OUT_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_BYTES_OUT_TOTAL] = {
     .name = "haproxy_backend_bytes_out_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of response bytes since process started",
   },
-  [HAPROXY_BACKEND_REQUESTS_DENIED_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_REQUESTS_DENIED_TOTAL] = {
     .name = "haproxy_backend_requests_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied requests since process started",
   },
-  [HAPROXY_BACKEND_RESPONSES_DENIED_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_RESPONSES_DENIED_TOTAL] = {
     .name = "haproxy_backend_responses_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied responses since process started",
   },
-  [HAPROXY_BACKEND_CONNECTION_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_CONNECTION_ERRORS_TOTAL] = {
     .name = "haproxy_backend_connection_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed connections to server since the worker process started",
   },
-  [HAPROXY_BACKEND_RESPONSE_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_RESPONSE_ERRORS_TOTAL] = {
     .name = "haproxy_backend_response_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of invalid responses since the worker process started",
   },
-  [HAPROXY_BACKEND_RETRY_WARNINGS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_RETRY_WARNINGS_TOTAL] = {
     .name = "haproxy_backend_retry_warnings_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of server connection retries since the worker process started",
   },
-  [HAPROXY_BACKEND_REDISPATCH_WARNINGS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_REDISPATCH_WARNINGS_TOTAL] = {
     .name = "haproxy_backend_redispatch_warnings_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of server redispatches due to connection failures since the worker process started",
   },
-  [HAPROXY_BACKEND_STATUS] = {
+  [FAM_HAPROXY_BACKEND_STATUS] = {
     .name = "haproxy_backend_status",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current status of the backend, per state label value",
   },
-  [HAPROXY_BACKEND_WEIGHT] = {
+  [FAM_HAPROXY_BACKEND_WEIGHT] = {
     .name = "haproxy_backend_weight",
     .type = METRIC_TYPE_GAUGE,
     .help = "Server's effective weight, or sum of active servers' effective weights for a backend",
   },
-  [HAPROXY_BACKEND_ACTIVE_SERVERS] = {
+  [FAM_HAPROXY_BACKEND_ACTIVE_SERVERS] = {
     .name = "haproxy_backend_active_servers",
     .type = METRIC_TYPE_GAUGE,
     .help = "Total number of active UP servers with a non-zero weight",
   },
-  [HAPROXY_BACKEND_BACKUP_SERVERS] = {
+  [FAM_HAPROXY_BACKEND_BACKUP_SERVERS] = {
     .name = "haproxy_backend_backup_servers",
     .type = METRIC_TYPE_GAUGE,
     .help = "Total number of backup UP servers with a non-zero weight",
   },
-  [HAPROXY_BACKEND_CHECK_FAILURES_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_CHECK_FAILURES_TOTAL] = {
     .name = "haproxy_backend_check_failures_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed individual health checks per server/backend, since the worker process started",
   },
-  [HAPROXY_BACKEND_CHECK_UP_DOWN_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_CHECK_UP_DOWN_TOTAL] = {
     .name = "haproxy_backend_check_up_down_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed checks causing UP to DOWN server transitions, per server/backend, since the worker process started",
   },
-  [HAPROXY_BACKEND_CHECK_LAST_CHANGE_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_CHECK_LAST_CHANGE_SECONDS] = {
     .name = "haproxy_backend_check_last_change_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "How long ago the last server state changed, in seconds",
   },
-  [HAPROXY_BACKEND_DOWNTIME_SECONDS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_DOWNTIME_SECONDS_TOTAL] = {
     .name = "haproxy_backend_downtime_seconds_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total time spent in DOWN state, for server or backend",
   },
-  [HAPROXY_BACKEND_LOADBALANCED_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_LOADBALANCED_TOTAL] = {
     .name = "haproxy_backend_loadbalanced_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests routed by load balancing since the worker process started (ignores queue pop and stickiness)",
   },
-  [HAPROXY_BACKEND_MAX_SESSION_RATE] = {
+  [FAM_HAPROXY_BACKEND_MAX_SESSION_RATE] = {
     .name = "haproxy_backend_max_session_rate",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of sessions per second observed since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_RESPONSES_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_RESPONSES_TOTAL] = {
     .name = "haproxy_backend_http_responses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP responses with status 100-199 returned by this object since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_REQUESTS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_REQUESTS_TOTAL] = {
     .name = "haproxy_backend_http_requests_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP requests processed by this object since the worker process started",
   },
-  [HAPROXY_BACKEND_CLIENT_ABORTS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_CLIENT_ABORTS_TOTAL] = {
     .name = "haproxy_backend_client_aborts_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests or connections aborted by the client since the worker process started",
   },
-  [HAPROXY_BACKEND_SERVER_ABORTS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_SERVER_ABORTS_TOTAL] = {
     .name = "haproxy_backend_server_aborts_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests or connections aborted by the server since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_COMP_BYTES_IN_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_COMP_BYTES_IN_TOTAL] = {
     .name = "haproxy_backend_http_comp_bytes_in_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes submitted to the HTTP compressor for this object since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_COMP_BYTES_OUT_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_COMP_BYTES_OUT_TOTAL] = {
     .name = "haproxy_backend_http_comp_bytes_out_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes emitted by the HTTP compressor for this object since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_COMP_BYTES_BYPASSED_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_COMP_BYTES_BYPASSED_TOTAL] = {
     .name = "haproxy_backend_http_comp_bytes_bypassed_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes that bypassed HTTP compression for this object since the worker process started (CPU/memory/bandwidth limitation)",
   },
-  [HAPROXY_BACKEND_HTTP_COMP_RESPONSES_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_COMP_RESPONSES_TOTAL] = {
     .name = "haproxy_backend_http_comp_responses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP responses that were compressed for this object since the worker process started",
   },
-  [HAPROXY_BACKEND_LAST_SESSION_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_LAST_SESSION_SECONDS] = {
     .name = "haproxy_backend_last_session_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "How long ago some traffic was seen on this object on this worker process, in seconds",
   },
-  [HAPROXY_BACKEND_QUEUE_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_QUEUE_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_backend_queue_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Time spent in the queue, in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_BACKEND_CONNECT_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_CONNECT_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_backend_connect_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Time spent waiting for a connection to complete, in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_BACKEND_RESPONSE_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_RESPONSE_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_backend_response_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Time spent waiting for a server response, in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_BACKEND_TOTAL_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_TOTAL_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_backend_total_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Total request+response time (request+queue+connect+response+processing), in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_BACKEND_FAILED_HEADER_REWRITING_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_FAILED_HEADER_REWRITING_TOTAL] = {
     .name = "haproxy_backend_failed_header_rewriting_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed HTTP header rewrites since the worker process started",
   },
-  [HAPROXY_BACKEND_CONNECTION_ATTEMPTS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_CONNECTION_ATTEMPTS_TOTAL] = {
     .name = "haproxy_backend_connection_attempts_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of outgoing connection attempts on this backend/server since the worker process started",
   },
-  [HAPROXY_BACKEND_CONNECTION_REUSES_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_CONNECTION_REUSES_TOTAL] = {
     .name = "haproxy_backend_connection_reuses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of reused connection on this backend/server since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_CACHE_LOOKUPS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_CACHE_LOOKUPS_TOTAL] = {
     .name = "haproxy_backend_http_cache_lookups_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP requests looked up in the cache on this frontend/backend since the worker process started",
   },
-  [HAPROXY_BACKEND_HTTP_CACHE_HITS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_HTTP_CACHE_HITS_TOTAL] = {
     .name = "haproxy_backend_http_cache_hits_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP requests not found in the cache on this frontend/backend since the worker process started",
   },
-  [HAPROXY_BACKEND_MAX_QUEUE_TIME_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_MAX_QUEUE_TIME_SECONDS] = {
     .name = "haproxy_backend_max_queue_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed time spent in the queue, in seconds",
   },
-  [HAPROXY_BACKEND_MAX_CONNECT_TIME_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_MAX_CONNECT_TIME_SECONDS] = {
     .name = "haproxy_backend_max_connect_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed time spent waiting for a connection to complete, in seconds",
   },
-  [HAPROXY_BACKEND_MAX_RESPONSE_TIME_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_MAX_RESPONSE_TIME_SECONDS] = {
     .name = "haproxy_backend_max_response_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed time spent waiting for a server response, in seconds",
   },
-  [HAPROXY_BACKEND_MAX_TOTAL_TIME_SECONDS] = {
+  [FAM_HAPROXY_BACKEND_MAX_TOTAL_TIME_SECONDS] = {
     .name = "haproxy_backend_max_total_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed total request+response time (request+queue+connect+response+processing), in seconds",
   },
-  [HAPROXY_BACKEND_INTERNAL_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_BACKEND_INTERNAL_ERRORS_TOTAL] = {
     .name = "haproxy_backend_internal_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of internal errors since process started",
   },
-  [HAPROXY_BACKEND_UWEIGHT] = {
+  [FAM_HAPROXY_BACKEND_UWEIGHT] = {
     .name = "haproxy_backend_uweight",
     .type = METRIC_TYPE_GAUGE,
     .help = "Server's user weight, or sum of active servers' user weights for a backend",
   },
-  [HAPROXY_SERVER_CURRENT_QUEUE] = {
+  [FAM_HAPROXY_SERVER_CURRENT_QUEUE] = {
     .name = "haproxy_server_current_queue",
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of current queued connections",
   },
-  [HAPROXY_SERVER_MAX_QUEUE] = {
+  [FAM_HAPROXY_SERVER_MAX_QUEUE] = {
     .name = "haproxy_server_max_queue",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of queued connections encountered since process started",
   },
-  [HAPROXY_SERVER_CURRENT_SESSIONS] = {
+  [FAM_HAPROXY_SERVER_CURRENT_SESSIONS] = {
     .name = "haproxy_server_current_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of current sessions on the frontend, backend or server",
   },
-  [HAPROXY_SERVER_MAX_SESSIONS] = {
+  [FAM_HAPROXY_SERVER_MAX_SESSIONS] = {
     .name = "haproxy_server_max_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of current sessions encountered since process started",
   },
-  [HAPROXY_SERVER_LIMIT_SESSIONS] = {
+  [FAM_HAPROXY_SERVER_LIMIT_SESSIONS] = {
     .name = "haproxy_server_limit_sessions",
     .type = METRIC_TYPE_GAUGE,
     .help = "Server's maxconn",
   },
-  [HAPROXY_SERVER_SESSIONS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_SESSIONS_TOTAL] = {
     .name = "haproxy_server_sessions_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of sessions since process started",
   },
-  [HAPROXY_SERVER_BYTES_IN_TOTAL] = {
+  [FAM_HAPROXY_SERVER_BYTES_IN_TOTAL] = {
     .name = "haproxy_server_bytes_in_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of request bytes since process started",
   },
-  [HAPROXY_SERVER_BYTES_OUT_TOTAL] = {
+  [FAM_HAPROXY_SERVER_BYTES_OUT_TOTAL] = {
     .name = "haproxy_server_bytes_out_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of response bytes since process started",
   },
-  [HAPROXY_SERVER_RESPONSES_DENIED_TOTAL] = {
+  [FAM_HAPROXY_SERVER_RESPONSES_DENIED_TOTAL] = {
     .name = "haproxy_server_responses_denied_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of denied responses since process started",
   },
-  [HAPROXY_SERVER_CONNECTION_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_CONNECTION_ERRORS_TOTAL] = {
     .name = "haproxy_server_connection_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed connections to server since the worker process started",
   },
-  [HAPROXY_SERVER_RESPONSE_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_RESPONSE_ERRORS_TOTAL] = {
     .name = "haproxy_server_response_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of invalid responses since the worker process started",
   },
-  [HAPROXY_SERVER_RETRY_WARNINGS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_RETRY_WARNINGS_TOTAL] = {
     .name = "haproxy_server_retry_warnings_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of server connection retries since the worker process started",
   },
-  [HAPROXY_SERVER_REDISPATCH_WARNINGS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_REDISPATCH_WARNINGS_TOTAL] = {
     .name = "haproxy_server_redispatch_warnings_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of server redispatches due to connection failures since the worker process started",
   },
-  [HAPROXY_SERVER_STATUS] = {
+  [FAM_HAPROXY_SERVER_STATUS] = {
     .name = "haproxy_server_status",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current status of the server, per state label value",
   },
-  [HAPROXY_SERVER_WEIGHT] = {
+  [FAM_HAPROXY_SERVER_WEIGHT] = {
     .name = "haproxy_server_weight",
     .type = METRIC_TYPE_GAUGE,
     .help = "Server's effective weight, or sum of active servers' effective weights for a backend",
   },
-  [HAPROXY_SERVER_CHECK_FAILURES_TOTAL] = {
+  [FAM_HAPROXY_SERVER_CHECK_FAILURES_TOTAL] = {
     .name = "haproxy_server_check_failures_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed individual health checks per server/backend, since the worker process started",
   },
-  [HAPROXY_SERVER_CHECK_UP_DOWN_TOTAL] = {
+  [FAM_HAPROXY_SERVER_CHECK_UP_DOWN_TOTAL] = {
     .name = "haproxy_server_check_up_down_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed checks causing UP to DOWN server transitions, per server/backend, since the worker process started",
   },
-  [HAPROXY_SERVER_CHECK_LAST_CHANGE_SECONDS] = {
+  [FAM_HAPROXY_SERVER_CHECK_LAST_CHANGE_SECONDS] = {
     .name = "haproxy_server_check_last_change_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "How long ago the last server state changed, in seconds",
   },
-  [HAPROXY_SERVER_DOWNTIME_SECONDS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_DOWNTIME_SECONDS_TOTAL] = {
     .name = "haproxy_server_downtime_seconds_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total time spent in DOWN state",
   },
-  [HAPROXY_SERVER_QUEUE_LIMIT] = {
+  [FAM_HAPROXY_SERVER_QUEUE_LIMIT] = {
     .name = "haproxy_server_queue_limit",
     .type = METRIC_TYPE_GAUGE,
     .help = "Limit on the number of connections in queue, for servers only (maxqueue argument)",
   },
-  [HAPROXY_SERVER_CURRENT_THROTTLE] = {
+  [FAM_HAPROXY_SERVER_CURRENT_THROTTLE] = {
     .name = "haproxy_server_current_throttle",
     .type = METRIC_TYPE_GAUGE,
     .help = "Throttling ratio applied to a server's maxconn and weight during the slowstart period (0 to 100%)",
   },
-  [HAPROXY_SERVER_LOADBALANCED_TOTAL] = {
+  [FAM_HAPROXY_SERVER_LOADBALANCED_TOTAL] = {
     .name = "haproxy_server_loadbalanced_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests routed by load balancing since the worker process started (ignores queue pop and stickiness)",
   },
-  [HAPROXY_SERVER_MAX_SESSION_RATE] = {
+  [FAM_HAPROXY_SERVER_MAX_SESSION_RATE] = {
     .name = "haproxy_server_max_session_rate",
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest value of sessions per second observed since the worker process started",
   },
-  [HAPROXY_SERVER_CHECK_STATUS] = {
+  [FAM_HAPROXY_SERVER_CHECK_STATUS] = {
     .name = "haproxy_server_check_status",
     .type = METRIC_TYPE_GAUGE,
     .help = "Status report of the server's latest health check, per state label value",
   },
-  [HAPROXY_SERVER_CHECK_CODE] = {
+  [FAM_HAPROXY_SERVER_CHECK_CODE] = {
     .name = "haproxy_server_check_code",
     .type = METRIC_TYPE_GAUGE,
     .help = "HTTP/SMTP/LDAP status code reported by the latest server health check",
   },
-  [HAPROXY_SERVER_CHECK_DURATION_SECONDS] = {
+  [FAM_HAPROXY_SERVER_CHECK_DURATION_SECONDS] = {
     .name = "haproxy_server_check_duration_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Total duration of the latest server health check, in seconds",
   },
-  [HAPROXY_SERVER_HTTP_RESPONSES_TOTAL] = {
+  [FAM_HAPROXY_SERVER_HTTP_RESPONSES_TOTAL] = {
     .name = "haproxy_server_http_responses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of HTTP responses with status 100-199 returned by this object since the worker process started",
   },
-  [HAPROXY_SERVER_CLIENT_ABORTS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_CLIENT_ABORTS_TOTAL] = {
     .name = "haproxy_server_client_aborts_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests or connections aborted by the client since the worker process started",
   },
-  [HAPROXY_SERVER_SERVER_ABORTS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_SERVER_ABORTS_TOTAL] = {
     .name = "haproxy_server_server_aborts_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests or connections aborted by the server since the worker process started",
   },
-  [HAPROXY_SERVER_LAST_SESSION_SECONDS] = {
+  [FAM_HAPROXY_SERVER_LAST_SESSION_SECONDS] = {
     .name = "haproxy_server_last_session_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "How long ago some traffic was seen on this object on this worker process, in seconds",
   },
-  [HAPROXY_SERVER_QUEUE_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_SERVER_QUEUE_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_server_queue_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Time spent in the queue, in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_SERVER_CONNECT_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_SERVER_CONNECT_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_server_connect_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Time spent waiting for a connection to complete, in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_SERVER_RESPONSE_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_SERVER_RESPONSE_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_server_response_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Time spent waiting for a server response, in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_SERVER_TOTAL_TIME_AVERAGE_SECONDS] = {
+  [FAM_HAPROXY_SERVER_TOTAL_TIME_AVERAGE_SECONDS] = {
     .name = "haproxy_server_total_time_average_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Total request+response time (request+queue+connect+response+processing), in seconds, averaged over the 1024 last requests",
   },
-  [HAPROXY_SERVER_FAILED_HEADER_REWRITING_TOTAL] = {
+  [FAM_HAPROXY_SERVER_FAILED_HEADER_REWRITING_TOTAL] = {
     .name = "haproxy_server_failed_header_rewriting_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed HTTP header rewrites since the worker process started",
   },
-  [HAPROXY_SERVER_CONNECTION_ATTEMPTS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_CONNECTION_ATTEMPTS_TOTAL] = {
     .name = "haproxy_server_connection_attempts_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of outgoing connection attempts on this backend/server since the worker process started",
   },
-  [HAPROXY_SERVER_CONNECTION_REUSES_TOTAL] = {
+  [FAM_HAPROXY_SERVER_CONNECTION_REUSES_TOTAL] = {
     .name = "haproxy_server_connection_reuses_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of reused connection on this backend/server since the worker process started",
   },
-  [HAPROXY_SERVER_IDLE_CONNECTIONS_CURRENT] = {
+  [FAM_HAPROXY_SERVER_IDLE_CONNECTIONS_CURRENT] = {
     .name = "haproxy_server_idle_connections_current",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of idle connections available for reuse on this server",
   },
-  [HAPROXY_SERVER_IDLE_CONNECTIONS_LIMIT] = {
+  [FAM_HAPROXY_SERVER_IDLE_CONNECTIONS_LIMIT] = {
     .name = "haproxy_server_idle_connections_limit",
     .type = METRIC_TYPE_GAUGE,
     .help = "Limit on the number of available idle connections on this server (server 'pool_max_conn' directive)",
   },
-  [HAPROXY_SERVER_MAX_QUEUE_TIME_SECONDS] = {
+  [FAM_HAPROXY_SERVER_MAX_QUEUE_TIME_SECONDS] = {
     .name = "haproxy_server_max_queue_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed time spent in the queue, in seconds",
   },
-  [HAPROXY_SERVER_MAX_CONNECT_TIME_SECONDS] = {
+  [FAM_HAPROXY_SERVER_MAX_CONNECT_TIME_SECONDS] = {
     .name = "haproxy_server_max_connect_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed time spent waiting for a connection to complete, in seconds",
   },
-  [HAPROXY_SERVER_MAX_RESPONSE_TIME_SECONDS] = {
+  [FAM_HAPROXY_SERVER_MAX_RESPONSE_TIME_SECONDS] = {
     .name = "haproxy_server_max_response_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed time spent waiting for a server response, in seconds",
   },
-  [HAPROXY_SERVER_MAX_TOTAL_TIME_SECONDS] = {
+  [FAM_HAPROXY_SERVER_MAX_TOTAL_TIME_SECONDS] = {
     .name = "haproxy_server_max_total_time_seconds",
     .type = METRIC_TYPE_GAUGE,
     .help = "Maximum observed total request+response time (request+queue+connect+response+processing), in seconds",
   },
-  [HAPROXY_SERVER_INTERNAL_ERRORS_TOTAL] = {
+  [FAM_HAPROXY_SERVER_INTERNAL_ERRORS_TOTAL] = {
     .name = "haproxy_server_internal_errors_total",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of internal errors since process started",
   },
-  [HAPROXY_SERVER_UNSAFE_IDLE_CONNECTIONS_CURRENT] = {
+  [FAM_HAPROXY_SERVER_UNSAFE_IDLE_CONNECTIONS_CURRENT] = {
     .name = "haproxy_server_unsafe_idle_connections_current",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of unsafe idle connections",
   },
-  [HAPROXY_SERVER_SAFE_IDLE_CONNECTIONS_CURRENT] = {
+  [FAM_HAPROXY_SERVER_SAFE_IDLE_CONNECTIONS_CURRENT] = {
     .name = "haproxy_server_safe_idle_connections_current",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of safe idle connections",
   },
-  [HAPROXY_SERVER_USED_CONNECTIONS_CURRENT] = {
+  [FAM_HAPROXY_SERVER_USED_CONNECTIONS_CURRENT] = {
     .name = "haproxy_server_used_connections_current",
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of connections in use",
   },
-  [HAPROXY_SERVER_NEED_CONNECTIONS_CURRENT] = {
+  [FAM_HAPROXY_SERVER_NEED_CONNECTIONS_CURRENT] = {
     .name = "haproxy_server_need_connections_current",
     .type = METRIC_TYPE_GAUGE,
     .help = "Estimated needed number of connections",
   },
-  [HAPROXY_SERVER_UWEIGHT] = {
+  [FAM_HAPROXY_SERVER_UWEIGHT] = {
     .name = "haproxy_server_uweight",
     .type = METRIC_TYPE_GAUGE,
     .help = "Server's user weight, or sum of active servers' user weights for a backend",
