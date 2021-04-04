@@ -1,9 +1,3 @@
-//  INF_BUILD_INFO,
-//  INF_MEMMAX_BYTES,
-//  INF_POOL_ALLOC_BYTES,
-//  INF_POOL_USED_BYTES,
-//  INF_START_TIME_SEC,
-
 #include "collectd.h"
 #include "plugin.h"
 #include "utils/common/common.h"
