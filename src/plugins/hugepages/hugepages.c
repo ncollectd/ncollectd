@@ -257,7 +257,7 @@ static int hp_read_node(const char *path, const char *entry, void *ud)
 
   char npath[PATH_MAX];
   ssnprintf(npath, sizeof(npath), "%s/%s/hugepages", path, entry);
-fprintf(stderr, "[%s] [%s]\n", npath, node);
+
   return walk_directory(npath, hp_read_hugepages, node, 0);
 }
 
