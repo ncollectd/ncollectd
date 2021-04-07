@@ -133,18 +133,6 @@ static metric_family_t fams[FAM_HOST_HUGEPAGES_MAX] = {
   },
 };
 
-
-struct entry_info {
-  char *d_name;
-  const char *node;
-  size_t page_size_kb;
-
-  gauge_t nr;
-  gauge_t surplus;
-  gauge_t free;
-  uint8_t flags;
-};
-
 static int hp_config(oconfig_item_t *ci)
 {
   for (int i = 0; i < ci->children_num; i++) {
