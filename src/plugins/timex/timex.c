@@ -32,96 +32,96 @@ enum {
   FAM_TIMEX_MAX,
 };
 
+static metric_family_t fams[FAM_TIMEX_MAX] = {
+  [FAM_TIMEX_SYNC_STATUS] = {
+    .name = "host_timex_sync_status",
+    .help = "Is clock synchronized to a reliable server (1 = yes, 0 = no).",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_OFFSET_SECONDS] = {
+    .name = "host_timex_offset_seconds",
+    .help = "Time offset in between local system and reference clock.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_FREQUENCY_ADJUSTMENT_RATIO] = {
+    .name = "host_timex_frequency_adjustment_ratio",
+    .help = "Local clock frequency adjustment.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_MAXERROR_SECONDS] = {
+    .name = "host_timex_maxerror_seconds",
+    .help = "Maximum error in seconds.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_ESTIMATED_ERROR_SECONDS] = {
+    .name = "host_timex_estimated_error_seconds",
+    .help = "Estimated error in seconds.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_STATUS] = {
+    .name = "host_timex_status",
+    .help = "Value of the status array bits.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_LOOP_TIME_CONSTANT] = {
+    .name = "host_timex_loop_time_constant",
+    .help = "Phase-locked loop time constant.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_TICK_SECONDS] = {
+    .name = "host_timex_tick_seconds",
+    .help = "Seconds between clock ticks.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_PPS_FREQUENCY_HERTZ] = {
+    .name = "host_timex_pps_frequency_hertz",
+    .help = "Pulse per second frequency.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_PPS_JITTER_SECONDS] = {
+    .name = "host_timex_pps_jitter_seconds",
+    .help = "Pulse per second jitter.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_PPS_SHIFT_SECONDS] = {
+    .name = "host_timex_pps_shift_seconds",
+    .help = "Pulse per second interval duration.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_PPS_STABILITY_HERTZ] = {
+    .name = "host_timex_pps_stability_hertz",
+    .help = "Pulse per second stability, average of recent frequency changes.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_TIMEX_PPS_JITTER_TOTAL] = {
+    .name = "host_timex_pps_jitter_total",
+    .help = "Pulse per second count of jitter limit exceeded events.",
+    .type = METRIC_TYPE_COUNTER,
+  },
+  [FAM_TIMEX_PPS_CALIBRATION_TOTAL] = {
+    .name = "host_timex_pps_calibration_total",
+    .help = "Pulse per second count of calibration intervals.",
+    .type = METRIC_TYPE_COUNTER,
+  },
+  [FAM_TIMEX_PPS_ERROR_TOTAL] = {
+    .name = "host_timex_pps_error_total",
+    .help = "Pulse per second count of calibration errors.",
+    .type = METRIC_TYPE_COUNTER,
+  },
+  [FAM_TIMEX_PPS_STABILITY_EXCEEDED_TOTAL] = {
+    .name = "host_timex_pps_stability_exceeded_total",
+    .help = "Pulse per second count of stability limit exceeded events.",
+    .type = METRIC_TYPE_COUNTER,
+  },
+  [FAM_TIMEX_TAI_OFFSET_SECONDS] = {
+    .name = "host_timex_tai_offset_seconds",
+    .help = "International Atomic Time (TAI) offset.",
+    .type = METRIC_TYPE_GAUGE,
+  },
+};
+
 static int timex_read(void)
 {
-  metric_family_t fams[FAM_TIMEX_MAX] = {
-    [FAM_TIMEX_SYNC_STATUS] = {
-      .name = "host_timex_sync_status",
-      .help = "Is clock synchronized to a reliable server (1 = yes, 0 = no).",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_OFFSET_SECONDS] = {
-      .name = "host_timex_offset_seconds",
-      .help = "Time offset in between local system and reference clock.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_FREQUENCY_ADJUSTMENT_RATIO] = {
-      .name = "host_timex_frequency_adjustment_ratio",
-      .help = "Local clock frequency adjustment.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_MAXERROR_SECONDS] = {
-      .name = "host_timex_maxerror_seconds",
-      .help = "Maximum error in seconds.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_ESTIMATED_ERROR_SECONDS] = {
-      .name = "host_timex_estimated_error_seconds",
-      .help = "Estimated error in seconds.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_STATUS] = {
-      .name = "host_timex_status",
-      .help = "Value of the status array bits.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_LOOP_TIME_CONSTANT] = {
-      .name = "host_timex_loop_time_constant",
-      .help = "Phase-locked loop time constant.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_TICK_SECONDS] = {
-      .name = "host_timex_tick_seconds",
-      .help = "Seconds between clock ticks.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_PPS_FREQUENCY_HERTZ] = {
-      .name = "host_timex_pps_frequency_hertz",
-      .help = "Pulse per second frequency.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_PPS_JITTER_SECONDS] = {
-      .name = "host_timex_pps_jitter_seconds",
-      .help = "Pulse per second jitter.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_PPS_SHIFT_SECONDS] = {
-      .name = "host_timex_pps_shift_seconds",
-      .help = "Pulse per second interval duration.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_PPS_STABILITY_HERTZ] = {
-      .name = "host_timex_pps_stability_hertz",
-      .help = "Pulse per second stability, average of recent frequency changes.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_TIMEX_PPS_JITTER_TOTAL] = {
-      .name = "host_timex_pps_jitter_total",
-      .help = "Pulse per second count of jitter limit exceeded events.",
-      .type = METRIC_TYPE_COUNTER,
-    },
-    [FAM_TIMEX_PPS_CALIBRATION_TOTAL] = {
-      .name = "host_timex_pps_calibration_total",
-      .help = "Pulse per second count of calibration intervals.",
-      .type = METRIC_TYPE_COUNTER,
-    },
-    [FAM_TIMEX_PPS_ERROR_TOTAL] = {
-      .name = "host_timex_pps_error_total",
-      .help = "Pulse per second count of calibration errors.",
-      .type = METRIC_TYPE_COUNTER,
-    },
-    [FAM_TIMEX_PPS_STABILITY_EXCEEDED_TOTAL] = {
-      .name = "host_timex_pps_stability_exceeded_total",
-      .help = "Pulse per second count of stability limit exceeded events.",
-      .type = METRIC_TYPE_COUNTER,
-    },
-    [FAM_TIMEX_TAI_OFFSET_SECONDS] = {
-      .name = "host_timex_tai_offset_seconds",
-      .help = "International Atomic Time (TAI) offset.",
-      .type = METRIC_TYPE_GAUGE,
-    },
-  };
-
   struct timex timex = {0};
 
   int status = adjtimex(&timex);
