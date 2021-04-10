@@ -2,16 +2,16 @@
 
 =head1 NAME
 
-collectd-unixsock - Documentation of collectd's C<unixsock plugin>
+ncollectd-unixsock - Documentation of ncollectd's C<unixsock plugin>
 
 =head1 SYNOPSIS
 
-  # See collectd.conf(5)
+  # See ncollectd.conf(5)
   LoadPlugin unixsock
   # ...
   <Plugin unixsock>
     SocketFile "/path/to/socket"
-    SocketGroup "collectd"
+    SocketGroup "ncollectd"
     SocketPerms "0770"
     DeleteSocket false
   </Plugin>
@@ -19,11 +19,11 @@ collectd-unixsock - Documentation of collectd's C<unixsock plugin>
 =head1 DESCRIPTION
 
 The C<unixsock plugin> opens an UNIX-socket over which one can interact with
-the daemon. This can be used to use the values collected by collectd in other
+the daemon. This can be used to use the values collected by ncollectd in other
 applications, such as monitoring solutions, or submit externally collected
-values to collectd.
+values to ncollectd.
 
-For example, this plugin is used by L<collectd-nagios(1)> to check if some
+For example, this plugin is used by L<ncollectd-nagios(1)> to check if some
 value is in a certain range and exit with a Nagios-compatible exit code.
 
 =head1 COMMANDS
@@ -91,8 +91,8 @@ C<I<host>B</>I<plugin>B<->I<instance>B</>I<type>B<->I<instance>> with both
 I<instance>-parts being optional. If they're omitted the hyphen must be
 omitted, too. I<plugin> and each I<instance>-part may be chosen freely as long
 as the tuple (plugin, plugin instance, type instance) uniquely identifies the
-plugin within collectd. I<type> identifies the type and number of values
-(i.E<nbsp>e. data-set) passed to collectd. A large list of predefined
+plugin within ncollectd. I<type> identifies the type and number of values
+(i.E<nbsp>e. data-set) passed to ncollectd. A large list of predefined
 data-sets is available in the B<types.db> file.
 
 The I<OptionList> is an optional list of I<Options>, where each option is a
@@ -127,7 +127,7 @@ Add meta data with the key B<key> and the value I<value>.
 =back
 
 Please note that this is the same format as used in the B<exec plugin>, see
-L<collectd-exec(5)>.
+L<ncollectd-exec(5)>.
 
 Example:
   -> | PUTVAL testhost/interface/if_octets-test0 interval=10 1179574444:123:456
@@ -197,7 +197,7 @@ The current supported types are:
 =back
 
 Please note that this is the same format as used in the B<exec plugin>, see
-L<collectd-exec(5)>.
+L<ncollectd-exec(5)>.
 
 Example:
   -> | PUTNOTIF type=temperature severity=warning time=1201094702 message=The roof is on fire!
@@ -244,7 +244,7 @@ some examples:
 
 =head1 ABSTRACTION LAYER
 
-B<collectd> ships the Perl-Module L<Collectd::Unixsock> which
+B<ncollectd> ships the Perl-Module L<Collectd::Unixsock> which
 provides an abstraction layer over the actual socket connection. It can be
 found in the directory F<bindings/perl/> in the source distribution or
 (usually) somewhere near F</usr/share/perl5/> if you're using a package. If
@@ -253,13 +253,13 @@ and expand this module.
 
 =head1 SEE ALSO
 
-L<collectd(1)>,
-L<collectd.conf(5)>,
-L<collectd-nagios(1)>,
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>,
+L<ncollectd-nagios(1)>,
 L<unix(7)>
 
 =head1 AUTHOR
 
-Florian Forster E<lt>octo@collectd.orgE<gt>
+Florian Forster E<lt>octo@ncollectd.orgE<gt>
 
 =cut

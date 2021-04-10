@@ -69,7 +69,8 @@ static pthread_t listen_thread = (pthread_t)0;
 /*
  * Functions
  */
-static int us_open_socket(void) {
+static int us_open_socket(void)
+{
   struct sockaddr_un sa = {0};
   int status;
 
@@ -156,9 +157,10 @@ static int us_open_socket(void) {
   } while (0);
 
   return 0;
-} /* int us_open_socket */
+}
 
-static void *us_handle_client(void *arg) {
+static void *us_handle_client(void *arg)
+{
   int fdin;
   int fdout;
   FILE *fhin, *fhout;
@@ -268,9 +270,10 @@ static void *us_handle_client(void *arg) {
 
   pthread_exit((void *)0);
   return (void *)0;
-} /* void *us_handle_client */
+}
 
-static void *us_server_thread(void __attribute__((unused)) * arg) {
+static void *us_server_thread(void __attribute__((unused)) * arg)
+{
   int status;
   int *remote_fd;
   pthread_t th;
@@ -324,9 +327,10 @@ static void *us_server_thread(void __attribute__((unused)) * arg) {
   }
 
   return (void *)0;
-} /* void *us_server_thread */
+}
 
-static int us_config(const char *key, const char *val) {
+static int us_config(const char *key, const char *val)
+{
   if (strcasecmp(key, "SocketFile") == 0) {
     char *new_sock_file = strdup(val);
     if (new_sock_file == NULL)
@@ -353,9 +357,10 @@ static int us_config(const char *key, const char *val) {
   }
 
   return 0;
-} /* int us_config */
+}
 
-static int us_init(void) {
+static int us_init(void)
+{
   static int have_init;
 
   int status;
@@ -375,9 +380,10 @@ static int us_init(void) {
   }
 
   return 0;
-} /* int us_init */
+}
 
-static int us_shutdown(void) {
+static int us_shutdown(void)
+{
   void *ret;
 
   loop = 0;
@@ -392,10 +398,11 @@ static int us_shutdown(void) {
   plugin_unregister_shutdown("unixsock");
 
   return 0;
-} /* int us_shutdown */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("unixsock", us_config, config_keys, config_keys_num);
   plugin_register_init("unixsock", us_init);
   plugin_register_shutdown("unixsock", us_shutdown);
-} /* void module_register (void) */
+}

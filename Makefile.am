@@ -51,7 +51,7 @@ EXTRA_DIST = \
 	src/collectd-snmp.pod \
 	src/collectd-tg.pod \
 	src/plugins/threshold/ncollectd-threshold.pod \
-	src/collectd-unixsock.pod \
+	src/plugins/unixsock/ncollectd-unixsock.pod \
 	src/collectd.conf.pod \
 	src/collectd.pod \
 	src/collectdctl.pod \
@@ -81,7 +81,7 @@ dist_man_MANS = \
 	src/collectd-snmp.5 \
 	src/collectd-tg.1 \
 	src/plugins/threshold/ncollectd-threshold.5 \
-	src/collectd-unixsock.5 \
+	src/plugins/unixsock/ncollectd-unixsock.5 \
 	src/types.db.5
 
 
@@ -1781,10 +1781,7 @@ include src/plugins/uname/Makefile.am
 endif
 
 if BUILD_PLUGIN_UNIXSOCK
-pkglib_LTLIBRARIES += unixsock.la
-unixsock_la_SOURCES = src/unixsock.c
-unixsock_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-unixsock_la_LIBADD = libcmds.la
+include src/plugins/unixsock/Makefile.am
 endif
 
 if BUILD_PLUGIN_UPTIME
