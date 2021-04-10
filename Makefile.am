@@ -42,7 +42,7 @@ EXTRA_DIST = \
 	bindings/perl/uninstall_mod.pl \
 	contrib \
 	src/collectd-email.pod \
-	src/collectd-exec.pod \
+	src/plugins/exec/ncollectd-exec.pod \
 	src/collectd-java.pod \
 	src/collectd-lua.pod \
 	src/collectd-nagios.pod \
@@ -70,7 +70,7 @@ dist_man_MANS = \
 	src/collectd.1 \
 	src/collectd.conf.5 \
 	src/collectd-email.5 \
-	src/collectd-exec.5 \
+	src/plugins/exec/ncollectd-exec.5 \
 	src/collectdctl.1 \
 	src/collectd-java.5 \
 	src/collectd-lua.5 \
@@ -933,10 +933,7 @@ include src/plugins/entropy/Makefile.am
 endif
 
 if BUILD_PLUGIN_EXEC
-pkglib_LTLIBRARIES += exec.la
-exec_la_SOURCES = src/exec.c
-exec_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-exec_la_LIBADD = libcmds.la
+include src/plugins/exec/Makefile.am
 endif
 
 if BUILD_PLUGIN_ETHSTAT
@@ -1068,9 +1065,7 @@ ipstats_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_IPVS
-pkglib_LTLIBRARIES += ipvs.la
-ipvs_la_SOURCES = src/ipvs.c
-ipvs_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/ipvs/Makefile.am
 endif
 
 if BUILD_PLUGIN_IRQ
@@ -1805,11 +1800,7 @@ include src/plugins/uuid/Makefile.am
 endif
 
 if BUILD_PLUGIN_VARNISH
-pkglib_LTLIBRARIES += varnish.la
-varnish_la_SOURCES = src/varnish.c
-varnish_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBVARNISH_CFLAGS)
-varnish_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-varnish_la_LIBADD = $(BUILD_WITH_LIBVARNISH_LIBS)
+include src/plugins/varnish/Makefile.am
 endif
 
 if BUILD_PLUGIN_VIRT

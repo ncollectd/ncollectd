@@ -2812,47 +2812,6 @@ TCP-Port to connect to. Defaults to B<7634>.
 
 =back
 
-=head2 Plugin C<hugepages>
-
-To collect B<hugepages> information, collectd reads directories
-"/sys/devices/system/node/*/hugepages" and
-"/sys/kernel/mm/hugepages".
-Reading of these directories can be disabled by the following
-options (default is enabled).
-
-=over 4
-
-=item B<ReportPerNodeHP> B<true>|B<false>
-
-If enabled, information will be collected from the hugepage
-counters in "/sys/devices/system/node/*/hugepages".
-This is used to check the per-node hugepage statistics on
-a NUMA system.
-
-=item B<ReportRootHP> B<true>|B<false>
-
-If enabled, information will be collected from the hugepage
-counters in "/sys/kernel/mm/hugepages".
-This can be used on both NUMA and non-NUMA systems to check
-the overall hugepage statistics.
-
-=item B<ValuesPages> B<true>|B<false>
-
-Whether to report hugepages metrics in number of pages.
-Defaults to B<true>.
-
-=item B<ValuesBytes> B<false>|B<true>
-
-Whether to report hugepages metrics in bytes.
-Defaults to B<false>.
-
-=item B<ValuesPercentage> B<false>|B<true>
-
-Whether to report hugepages metrics as percentage.
-Defaults to B<false>.
-
-=back
-
 =head2 Plugin C<infiniband>
 
 The C<infiniband> plugin collects information about IB ports. Metrics are
@@ -5459,81 +5418,6 @@ short: If it works for you: Great! But keep in mind that the config I<might>
 change, though this is unlikely. Oh, and if you want to help improving this
 plugin, just send a short notice to the mailing list. ThanksE<nbsp>:)
 
-=head2 Plugin C<openldap>
-
-To use the C<openldap> plugin you first need to configure the I<OpenLDAP>
-server correctly. The backend database C<monitor> needs to be loaded and
-working. See slapd-monitor(5) for the details.
-
-The configuration of the C<openldap> plugin consists of one or more B<Instance>
-blocks. Each block requires one string argument as the instance name. For
-example:
-
- <Plugin "openldap">
-   <Instance "foo">
-     URL "ldap://localhost/"
-   </Instance>
-   <Instance "bar">
-     URL "ldaps://localhost/"
-   </Instance>
- </Plugin>
-
-The instance name will be used as the I<plugin instance>. To emulate the old
-(versionE<nbsp>4) behavior, you can use an empty string (""). In order for the
-plugin to work correctly, each instance name must be unique. This is not
-enforced by the plugin and it is your responsibility to ensure it is.
-
-The following options are accepted within each B<Instance> block:
-
-=over 4
-
-=item B<URL> I<ldap://host/binddn>
-
-Sets the URL to use to connect to the I<OpenLDAP> server. This option is
-I<mandatory>.
-
-=item B<BindDN> I<BindDN>
-
-Name in the form of an LDAP distinguished name intended to be used for
-authentication. Defaults to empty string to establish an anonymous authorization.
-
-=item B<Password> I<Password>
-
-Password for simple bind authentication. If this option is not set,
-unauthenticated bind operation is used.
-
-=item B<StartTLS> B<true|false>
-
-Defines whether TLS must be used when connecting to the I<OpenLDAP> server.
-Disabled by default.
-
-=item B<VerifyHost> B<true|false>
-
-Enables or disables peer host name verification. If enabled, the plugin checks
-if the C<Common Name> or a C<Subject Alternate Name> field of the SSL
-certificate matches the host name provided by the B<URL> option. If this
-identity check fails, the connection is aborted. Enabled by default.
-
-=item B<CACert> I<File>
-
-File that holds one or more SSL certificates. If you want to use TLS/SSL you
-may possibly need this option. What CA certificates are checked by default
-depends on the distribution you use and can be changed with the usual ldap
-client configuration mechanisms. See ldap.conf(5) for the details.
-
-=item B<Timeout> I<Seconds>
-
-Sets the timeout value for ldap operations, in seconds. By default, the
-configured B<Interval> is used to set the timeout. Use B<-1> to disable
-(infinite timeout).
-
-=item B<Version> I<Version>
-
-An integer which sets the LDAP protocol version number to use when connecting
-to the I<OpenLDAP> server. Defaults to B<3> for using I<LDAPv3>.
-
-=back
-
 =head2 Plugin C<openvpn>
 
 The OpenVPN plugin reads a status file maintained by OpenVPN and gathers
@@ -6678,106 +6562,6 @@ Defaults to B<false>.
 
 =back
 
-=head2 Plugin C<redis>
-
-The I<Redis plugin> connects to one or more Redis servers, gathers
-information about each server's state and executes user-defined queries.
-For each server there is a I<Node> block which configures the connection
-parameters and set of user-defined queries for this node.
-
-  <Plugin redis>
-    <Node "example">
-        Host "localhost"
-        Port "6379"
-        #Socket "/var/run/redis/redis.sock"
-        Timeout 2000
-        ReportCommandStats false
-        ReportCpuUsage true
-        <Query "LLEN myqueue">
-          #Database 0
-          Type "queue_length"
-          Instance "myqueue"
-        </Query>
-    </Node>
-  </Plugin>
-
-=over 4
-
-=item B<Node> I<Nodename>
-
-The B<Node> block identifies a new Redis node, that is a new Redis instance
-running in an specified host and port. The name for node is a canonical
-identifier which is used as I<plugin instance>. It is limited to
-128E<nbsp>characters in length.
-
-When no B<Node> is configured explicitly, plugin connects to "localhost:6379".
-
-=item B<Host> I<Hostname>
-
-The B<Host> option is the hostname or IP-address where the Redis instance is
-running on.
-
-=item B<Port> I<Port>
-
-The B<Port> option is the TCP port on which the Redis instance accepts
-connections. Either a service name of a port number may be given. Please note
-that numerical port numbers must be given as a string, too.
-
-=item B<Socket> I<Path>
-
-Connect to Redis using the UNIX domain socket at I<Path>. If this
-setting is given, the B<Hostname> and B<Port> settings are ignored.
-
-=item B<Password> I<Password>
-
-Use I<Password> to authenticate when connecting to I<Redis>.
-
-=item B<Timeout> I<Milliseconds>
-
-The B<Timeout> option set the socket timeout for node response. Since the Redis
-read function is blocking, you should keep this value as low as possible.
-It is expected what B<Timeout> values should be lower than B<Interval> defined
-globally.
-
-Defaults to 2000 (2 seconds).
-
-=item B<ReportCommandStats> B<false>|B<true>
-
-Enables or disables reporting of statistics based on the command type, including
-rate of command calls and average CPU time consumed by command processing.
-Defaults to B<false>.
-
-=item B<ReportCpuUsage> B<true>|B<false>
-
-Enables or disables reporting of CPU consumption statistics.
-Defaults to B<true>.
-
-=item B<Query> I<Querystring>
-
-The B<Query> block identifies a query to execute against the redis server.
-There may be an arbitrary number of queries to execute. Each query should
-return single string or integer.
-
-=item B<Type> I<Collectd type>
-
-Within a query definition, a valid I<collectd type> to use as when submitting
-the result of the query. When not supplied, will default to B<gauge>.
-
-Currently only types with one datasource are supported.
-See L<types.db(5)> for more details on types and their configuration.
-
-=item B<Instance> I<Type instance>
-
-Within a query definition, an optional type instance to use when submitting
-the result of the query. When not supplied will default to the escaped
-command, up to 128 chars.
-
-=item B<Database> I<Index>
-
-This index selects the Redis logical database to use for query. Defaults
-to C<0>.
-
-=back
 
 =head2 Plugin C<rrdcached>
 
@@ -7076,61 +6860,6 @@ I<sinfo> and I<squeue> commands, i.e. it has a running slurmd and a valid
 slurm.conf.
 Note that this plugin needs the B<Globals> option set to I<true> in order to
 function properly.
-
-=head2 Plugin C<smart>
-
-The C<smart> plugin collects SMART information from physical
-disks. Values collectd include temperature, power cycle count, poweron
-time and bad sectors. Also, all SMART attributes are collected along
-with the normalized current value, the worst value, the threshold and
-a human readable value. The plugin can also collect SMART attributes
-for NVMe disks (present in accordance with NVMe 1.4 spec) and Additional
-SMART Attributes from Intel® NVMe disks.
-
-Using the following two options you can ignore some disks or configure the
-collection only of specific disks.
-
-=over 4
-
-=item B<Disk> I<Name>
-
-Select the disk I<Name>. Whether it is collected or ignored depends on the
-B<IgnoreSelected> setting, see below. As with other plugins that use the
-daemon's ignorelist functionality, a string that starts and ends with a slash
-is interpreted as a regular expression. Examples:
-
-  Disk "sdd"
-  Disk "/hda[34]/"
-  Disk "nvme0n1"
-
-See F</"IGNORELISTS"> for details.
-
-=item B<IgnoreSelected> B<true>|B<false>
-
-Sets whether selected disks, i.E<nbsp>e. the ones matches by any of the B<Disk>
-statements, are ignored or if all other disks are ignored. The behavior
-(hopefully) is intuitive: If no B<Disk> option is configured, all disks are
-collected. If at least one B<Disk> option is given and no B<IgnoreSelected> or
-set to B<false>, B<only> matching disks will be collected. If B<IgnoreSelected>
-is set to B<true>, all disks are collected B<except> the ones matched.
-
-=item B<IgnoreSleepMode> B<true>|B<false>
-
-Normally, the C<smart> plugin will ignore disks that are reported to be asleep.
-This option disables the sleep mode check and allows the plugin to collect data
-from these disks anyway. This is useful in cases where libatasmart mistakenly
-reports disks as asleep because it has not been updated to incorporate support
-for newer idle states in the ATA spec.
-
-=item B<UseSerial> B<true>|B<false>
-
-A disk's kernel name (e.g., sda) can change from one boot to the next. If this
-option is enabled, the C<smart> plugin will use the disk's serial number (e.g.,
-HGST_HUH728080ALE600_2EJ8VH8X) instead of the kernel name as the key for
-storing data. This ensures that the data for a given disk will be kept together
-even if the kernel name changes.
-
-=back
 
 =head2 Plugin C<snmp>
 
@@ -8004,6 +7733,7 @@ left over, preventing the daemon from opening a new socket when restarted.
 Since this is potentially dangerous, this defaults to B<false>.
 
 =back
+
 =head2 Plugin C<varnish>
 
 The I<varnish plugin> collects information about Varnish, an HTTP accelerator.
@@ -9049,48 +8779,6 @@ and the size of B<BufferSize>. The optimal value to set B<Timeout> to is
 slightly below this interval, which you can estimate by monitoring the network
 traffic between collectd and the HTTP server.
 
-
-=back
-
-=head2 Plugin C<write_influxdb_udp>
-
-The write_influxdb_udp plugin sends data to a instance of InfluxDB using the
-"Line Protocol". Each plugin is sent as a measurement with a time precision of
-miliseconds while plugin instance, type and type instance are sent as tags.
-
- <Plugin "write_influxdb_udp">
-   Server "influxdb.internal.tld"
-   StoreRates "yes"
- </Plugin>
-
-=over 4
-
-=item B<E<lt>Server> I<Host> [I<Port>]B<E<gt>>
-
-The B<Server> statement sets the server to send datagrams to.
-
-The argument I<Host> may be a hostname, an IPv4 address or an IPv6 address. The
-optional second argument specifies a port number or a service name. If not
-given, the default, B<8089>, is used.
-
-=item B<TimeToLive> I<1-255>
-
-Set the time-to-live of sent packets. This applies to all, unicast and
-multicast, and IPv4 and IPv6 packets. The default is to not change this value.
-That means that multicast packets will be sent with a TTL of C<1> (one) on most
-operating systems.
-
-=item B<MaxPacketSize> I<1024-65535>
-
-Set the maximum size for datagrams received over the network. Packets larger
-than this will be truncated. Defaults to 1452E<nbsp>bytes, which is the maximum
-payload size that can be transmitted in one Ethernet frame using IPv6E<nbsp>/
-UDP.
-
-=item B<StoreRates> B<true|false>
-
-If set to B<true>, convert absolute, counter and derive values to rates. If set
-to B<false> (the default) absolute, counter and derive values are sent as is.
 
 =back
 
