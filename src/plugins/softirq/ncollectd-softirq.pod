@@ -1,0 +1,35 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-softirq - Documentation of ncollectd's C<softirq plugin>
+
+=head2 Plugin C<softirq>
+
+=over 4
+
+=item B<SoftIrq> I<SoftIrq>
+
+Select this softirq. By default these irqs will then be collected. For a more
+detailed description see B<IgnoreSelected> below.
+
+See F</"IGNORELISTS"> for details.
+
+=item B<IgnoreSelected> I<true>|I<false>
+
+If no configuration if given, the B<softirq>-plugin will collect data from all
+irqs. This may not be practical, especially if no interrupts happen. Thus, you
+can use the B<SoftIrq>-option to pick the interrupt you're interested in.
+Sometimes, however, it's easier/preferred to collect all interrupts I<except> a
+few ones. This option enables you to do that: By setting B<IgnoreSelected> to
+I<true> the effect of B<SoftIrq> is inverted: All selected interrupts are ignored
+and all other interrupts are collected.
+
+=back
+
+=head1 SEE ALSO
+
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>
+
+=cut

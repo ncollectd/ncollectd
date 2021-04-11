@@ -1085,11 +1085,8 @@ if BUILD_PLUGIN_LOAD
 include src/plugins/load/Makefile.am
 endif
 
-if BUILD_PLUGIN_LOGFILE
-pkglib_LTLIBRARIES += logfile.la
-logfile_la_SOURCES = src/logfile.c
-logfile_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-logfile_la_DEPENDENCIES = $(COMMON_DEPS)
+if BUILD_PLUGIN_LOG_FILE
+include src/plugins/log_file/Makefile.am
 endif
 
 if BUILD_PLUGIN_LOGPARSER
@@ -1119,11 +1116,7 @@ TESTS += test_plugin_logparser
 endif
 
 if BUILD_PLUGIN_LOG_LOGSTASH
-pkglib_LTLIBRARIES += log_logstash.la
-log_logstash_la_SOURCES = src/log_logstash.c
-log_logstash_la_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBYAJL_CPPFLAGS)
-log_logstash_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBYAJL_LDFLAGS)
-log_logstash_la_LIBADD = $(BUILD_WITH_LIBYAJL_LIBS)
+include src/plugins/log_logstash/Makefile.am
 endif
 
 if BUILD_PLUGIN_LPAR
@@ -1656,6 +1649,10 @@ TESTS += test_plugin_snmp_agent
 
 endif
 
+if BUILD_PLUGIN_SOFTIRQ
+include src/plugins/softirq/Makefile.am
+endif
+
 if BUILD_PLUGIN_SOFTNET
 include src/plugins/softnet/Makefile.am
 endif
@@ -1687,10 +1684,8 @@ sysevent_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBYAJL_LDFLAGS)
 sysevent_la_LIBADD = $(BUILD_WITH_LIBYAJL_LIBS) libignorelist.la
 endif
 
-if BUILD_PLUGIN_SYSLOG
-pkglib_LTLIBRARIES += syslog.la
-syslog_la_SOURCES = src/syslog.c
-syslog_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+if BUILD_PLUGIN_LOG_SYSLOG
+include src/plugins/log_syslog/Makefile.am
 endif
 
 if BUILD_PLUGIN_TABLE

@@ -6121,6 +6121,7 @@ plugin_python="no"
 plugin_schedstat="no"
 plugin_serial="no"
 plugin_smart="no"
+plugin_softirq="no"
 plugin_softnet="no"
 plugin_swap="no"
 plugin_synproxy="no"
@@ -6175,6 +6176,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_protocols="yes"
   plugin_schedstat="yes"
   plugin_serial="yes"
+  plugin_softirq="yes"
   plugin_softnet="yes"
   plugin_swap="yes"
   plugin_synproxy="yes"
@@ -6601,6 +6603,7 @@ AC_PLUGIN([rrdtool],             [$with_librrd],              [RRDTool output pl
 AC_PLUGIN([sensors],             [$with_libsensors],          [lm_sensors statistics])
 AC_PLUGIN([schedstat],           [$plugin_schedstat],         [schedstat statistics])
 AC_PLUGIN([serial],              [$plugin_serial],            [serial port traffic])
+AC_PLUGIN([softirq],             [$plugin_softirq],           [softirq statistics])
 AC_PLUGIN([softnet],             [$plugin_softnet],           [softnet statistics])
 AC_PLUGIN([sigrok],              [$with_libsigrok],           [sigrok acquisition sources])
 AC_PLUGIN([slurm],               [$with_libslurm],            [SLURM jobs and nodes status])
@@ -7038,6 +7041,7 @@ AC_MSG_RESULT([    slurm . . . . . . . . $enable_slurm])
 AC_MSG_RESULT([    smart . . . . . . . . $enable_smart])
 AC_MSG_RESULT([    snmp  . . . . . . . . $enable_snmp])
 AC_MSG_RESULT([    snmp_agent  . . . . . $enable_snmp_agent])
+AC_MSG_RESULT([    softirq . . . . . . . $enable_softirq])
 AC_MSG_RESULT([    softnet . . . . . . . $enable_softnet])
 AC_MSG_RESULT([    squid . . . . . . . . $enable_squid])
 AC_MSG_RESULT([    statsd  . . . . . . . $enable_statsd])
