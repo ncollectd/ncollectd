@@ -46,6 +46,10 @@ src/stamp-h1
 /collectdmon
 src/*.1
 src/*.5
+src/*/*.5
+src/*/*.1
+src/plugins/*/*.5
+src/plugins/*/*.1
 src/.pod2man.tmp.*
 src/libcollectdclient/collectd/lcc_features.h
 
