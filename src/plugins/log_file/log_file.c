@@ -43,11 +43,14 @@ static char *log_file;
 static int print_timestamp = 1;
 static int print_severity;
 
-static const char *config_keys[] = {"LogLevel", "File", "Timestamp",
+static const char *config_keys[] = {"LogLevel",
+                                    "File",
+                                    "Timestamp",
                                     "PrintSeverity"};
 static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
-static int logfile_config(const char *key, const char *value) {
+static int logfile_config(const char *key, const char *value)
+{
   if (0 == strcasecmp(key, "LogLevel")) {
     log_level = parse_log_severity(value);
     if (log_level < 0) {
@@ -72,10 +75,11 @@ static int logfile_config(const char *key, const char *value) {
     return -1;
   }
   return 0;
-} /* int logfile_config (const char *, const char *) */
+}
 
 static void logfile_print(const char *msg, int severity,
-                          cdtime_t timestamp_time) {
+                          cdtime_t timestamp_time)
+{
   FILE *fh;
   bool do_close = false;
   char timestamp_str[64];
@@ -107,8 +111,7 @@ static void logfile_print(const char *msg, int severity,
     struct tm timestamp_tm;
     localtime_r(&CDTIME_T_TO_TIME_T(timestamp_time), &timestamp_tm);
 
-    strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S",
-             &timestamp_tm);
+    strftime(timestamp_str, sizeof(timestamp_str), "%Y-%m-%d %H:%M:%S", &timestamp_tm);
     timestamp_str[sizeof(timestamp_str) - 1] = '\0';
   }
 
@@ -126,8 +129,7 @@ static void logfile_print(const char *msg, int severity,
   }
 
   if (fh == NULL) {
-    fprintf(stderr, "logfile plugin: fopen (%s) failed: %s\n", log_file,
-            STRERRNO);
+    fprintf(stderr, "logfile plugin: fopen (%s) failed: %s\n", log_file, STRERRNO);
   } else {
     if (print_timestamp)
       fprintf(fh, "[%s] %s%s\n", timestamp_str, level_str, msg);
@@ -144,62 +146,35 @@ static void logfile_print(const char *msg, int severity,
   pthread_mutex_unlock(&file_lock);
 
   return;
-} /* void logfile_print */
+}
 
 static void logfile_log(int severity, const char *msg,
-                        user_data_t __attribute__((unused)) * user_data) {
+                        user_data_t __attribute__((unused)) * user_data)
+{
   if (severity > log_level)
     return;
 
   logfile_print(msg, severity, cdtime());
-} /* void logfile_log (int, const char *) */
+}
 
 static int logfile_notification(const notification_t *n,
-                                user_data_t __attribute__((unused)) *
-                                    user_data) {
-  char buf[1024] = "";
-  char *buf_ptr = buf;
-  int buf_len = sizeof(buf);
-  int status;
+                                user_data_t __attribute__((unused)) * user_data)
+{
+  strbuf_t buf = STRBUF_CREATE;
 
-  status = snprintf(
-      buf_ptr, buf_len, "Notification: severity = %s",
-      (n->severity == NOTIF_FAILURE)
-          ? "FAILURE"
-          : ((n->severity == NOTIF_WARNING)
-                 ? "WARNING"
-                 : ((n->severity == NOTIF_OKAY) ? "OKAY" : "UNKNOWN")));
-  if (status > 0) {
-    buf_ptr += status;
-    buf_len -= status;
-  }
+  strbuf_print(&buf, "Notification: ");
 
-#define APPEND(bufptr, buflen, key, value)                                     \
-  if ((buflen > 0) && (strlen(value) > 0)) {                                   \
-    status = snprintf(bufptr, buflen, ", %s = %s", key, value);                \
-    if (status > 0) {                                                          \
-      bufptr += status;                                                        \
-      buflen -= status;                                                        \
-    }                                                                          \
-  }
-  APPEND(buf_ptr, buf_len, "host", n->host);
-  APPEND(buf_ptr, buf_len, "plugin", n->plugin);
-  APPEND(buf_ptr, buf_len, "plugin_instance", n->plugin_instance);
-  APPEND(buf_ptr, buf_len, "type", n->type);
-  APPEND(buf_ptr, buf_len, "type_instance", n->type_instance);
-  APPEND(buf_ptr, buf_len, "message", n->message);
+  notification_marshal(&buf, n);
 
-  buf[sizeof(buf) - 1] = '\0';
+  logfile_print(buf.ptr, LOG_INFO, (n->time != 0) ? n->time : cdtime());
 
-  logfile_print(buf, LOG_INFO, (n->time != 0) ? n->time : cdtime());
-
+  STRBUF_DESTROY(buf);
   return 0;
-} /* int logfile_notification */
+}
 
-void module_register(void) {
-  plugin_register_config("logfile", logfile_config, config_keys,
-                         config_keys_num);
-  plugin_register_log("logfile", logfile_log, /* user_data = */ NULL);
-  plugin_register_notification("logfile", logfile_notification,
-                               /* user_data = */ NULL);
-} /* void module_register (void) */
+void module_register(void)
+{
+  plugin_register_config("log_file", logfile_config, config_keys, config_keys_num);
+  plugin_register_log("log_file", logfile_log, /* user_data = */ NULL);
+  plugin_register_notification("log_file", logfile_notification, /* user_data = */ NULL);
+}

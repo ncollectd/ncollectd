@@ -1,0 +1,36 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-log_syslog - Documentation of ncollectd's C<log_syslog plugin>
+
+=head2 Plugin C<log_syslog>
+
+=over 4
+
+=item B<LogLevel> B<debug|info|notice|warning|err>
+
+Sets the log-level. If, for example, set to B<notice>, then all events with
+severity B<notice>, B<warning>, or B<err> will be submitted to the
+syslog-daemon.
+
+Please note that B<debug> is only available if collectd has been compiled with
+debugging support.
+
+=item B<NotifyLevel> B<OKAY>|B<WARNING>|B<FAILURE>
+
+Controls which notifications should be sent to syslog. The default behaviour is
+not to send any. Less severe notifications always imply logging more severe
+notifications: Setting this to B<OKAY> means all notifications will be sent to
+syslog, setting this to B<WARNING> will send B<WARNING> and B<FAILURE>
+notifications but will dismiss B<OKAY> notifications. Setting this option to
+B<FAILURE> will only send failures to syslog.
+
+=back
+
+=head1 SEE ALSO
+
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>
+
+=cut

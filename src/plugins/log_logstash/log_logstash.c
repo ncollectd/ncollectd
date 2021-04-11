@@ -54,8 +54,8 @@ static char *log_file;
 static const char *config_keys[] = {"LogLevel", "File"};
 static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
-static int log_logstash_config(const char *key, const char *value) {
-
+static int log_logstash_config(const char *key, const char *value)
+{
   if (0 == strcasecmp(key, "LogLevel")) {
     log_level = parse_log_severity(value);
     if (log_level < 0) {
@@ -70,10 +70,11 @@ static int log_logstash_config(const char *key, const char *value) {
     return -1;
   }
   return 0;
-} /* int log_logstash_config (const char *, const char *) */
+}
 
 static void log_logstash_print(yajl_gen g, int severity,
-                               cdtime_t timestamp_time) {
+                               cdtime_t timestamp_time)
+{ 
   FILE *fh;
   bool do_close = false;
   struct tm timestamp_tm;
@@ -178,10 +179,11 @@ err:
   yajl_gen_free(g);
   fprintf(stderr, "Could not correctly generate JSON message\n");
   return;
-} /* void log_logstash_print */
+}
 
 static void log_logstash_log(int severity, const char *msg,
-                             user_data_t __attribute__((unused)) * user_data) {
+                             user_data_t __attribute__((unused)) * user_data)
+{
   if (severity > log_level)
     return;
 
@@ -210,11 +212,12 @@ err:
   fprintf(stderr, "Could not generate JSON message preamble\n");
   return;
 
-} /* void log_logstash_log (int, const char *) */
+}
 
 static int log_logstash_notification(const notification_t *n,
                                      user_data_t __attribute__((unused)) *
-                                         user_data) {
+                                         user_data)
+{
   yajl_gen g;
 #if HAVE_YAJL_V2
   g = yajl_gen_alloc(NULL);
@@ -232,11 +235,13 @@ static int log_logstash_notification(const notification_t *n,
 
   if (yajl_gen_map_open(g) != yajl_gen_status_ok)
     goto err;
-  if (yajl_gen_string(g, (u_char *)"message", strlen("message")) !=
+
+  if (yajl_gen_string(g, (u_char *)"name", strlen("name")) !=
       yajl_gen_status_ok)
     goto err;
-  if (strlen(n->message) > 0) {
-    if (yajl_gen_string(g, (u_char *)n->message, strlen(n->message)) !=
+
+  if (strlen(n->name) > 0) {
+    if (yajl_gen_string(g, (u_char *)n->name, strlen(n->name)) !=
         yajl_gen_status_ok)
       goto err;
   } else {
@@ -246,72 +251,79 @@ static int log_logstash_notification(const notification_t *n,
       goto err;
   }
 
-  if (strlen(n->host) > 0) {
-    if (yajl_gen_string(g, (u_char *)"host", strlen("host")) !=
-        yajl_gen_status_ok)
-      goto err;
-    if (yajl_gen_string(g, (u_char *)n->host, strlen(n->host)) !=
-        yajl_gen_status_ok)
-      goto err;
-  }
-  if (strlen(n->plugin) > 0) {
-    if (yajl_gen_string(g, (u_char *)"plugin", strlen("plugin")) !=
-        yajl_gen_status_ok)
-      goto err;
-    if (yajl_gen_string(g, (u_char *)n->plugin, strlen(n->plugin)) !=
-        yajl_gen_status_ok)
-      goto err;
-  }
-  if (strlen(n->plugin_instance) > 0) {
-    if (yajl_gen_string(g, (u_char *)"plugin_instance",
-                        strlen("plugin_instance")) != yajl_gen_status_ok)
-      goto err;
-    if (yajl_gen_string(g, (u_char *)n->plugin_instance,
-                        strlen(n->plugin_instance)) != yajl_gen_status_ok)
-      goto err;
-  }
-  if (strlen(n->type) > 0) {
-    if (yajl_gen_string(g, (u_char *)"type", strlen("type")) !=
-        yajl_gen_status_ok)
-      goto err;
-    if (yajl_gen_string(g, (u_char *)n->type, strlen(n->type)) !=
-        yajl_gen_status_ok)
-      goto err;
-  }
-  if (strlen(n->type_instance) > 0) {
-    if (yajl_gen_string(g, (u_char *)"type_instance",
-                        strlen("type_instance")) != yajl_gen_status_ok)
-      goto err;
-    if (yajl_gen_string(g, (u_char *)n->type_instance,
-                        strlen(n->type_instance)) != yajl_gen_status_ok)
-      goto err;
-  }
-
   if (yajl_gen_string(g, (u_char *)"severity", strlen("severity")) !=
       yajl_gen_status_ok)
     goto err;
 
   switch (n->severity) {
-  case NOTIF_FAILURE:
-    if (yajl_gen_string(g, (u_char *)"failure", strlen("failure")) !=
-        yajl_gen_status_ok)
-      goto err;
-    break;
-  case NOTIF_WARNING:
-    if (yajl_gen_string(g, (u_char *)"warning", strlen("warning")) !=
-        yajl_gen_status_ok)
-      goto err;
-    break;
-  case NOTIF_OKAY:
-    if (yajl_gen_string(g, (u_char *)"ok", strlen("ok")) != yajl_gen_status_ok)
-      goto err;
-    break;
-  default:
-    if (yajl_gen_string(g, (u_char *)"unknown", strlen("unknown")) !=
-        yajl_gen_status_ok)
-      goto err;
-    break;
+    case NOTIF_FAILURE:
+      if (yajl_gen_string(g, (u_char *)"failure", strlen("failure")) !=
+          yajl_gen_status_ok)
+        goto err;
+      break;
+    case NOTIF_WARNING:
+      if (yajl_gen_string(g, (u_char *)"warning", strlen("warning")) !=
+          yajl_gen_status_ok)
+        goto err;
+      break;
+    case NOTIF_OKAY:
+      if (yajl_gen_string(g, (u_char *)"ok", strlen("ok")) != yajl_gen_status_ok)
+        goto err;
+      break;
+    default:
+      if (yajl_gen_string(g, (u_char *)"unknown", strlen("unknown")) !=
+          yajl_gen_status_ok)
+        goto err;
+      break;
   }
+
+ 
+  if (yajl_gen_string(g, (u_char *)"labels", strlen("labels")) !=
+      yajl_gen_status_ok)
+    goto err;
+
+  if (yajl_gen_map_open(g) != yajl_gen_status_ok)
+    goto err;
+
+  for (size_t i = 0; i < n->label.num; i++) {
+     label_pair_t *l = n->label.ptr + i;
+
+     if (yajl_gen_string(g, (u_char *)l->name, strlen(l->name)) !=
+         yajl_gen_status_ok)
+       goto err;
+
+     if (yajl_gen_string(g, (u_char *)l->value, strlen(l->value)) !=
+         yajl_gen_status_ok)
+       goto err;
+  }
+
+  if (yajl_gen_map_close(g) != yajl_gen_status_ok)
+    goto err;
+
+
+
+  if (yajl_gen_string(g, (u_char *)"annotations", strlen("annotations")) !=
+      yajl_gen_status_ok)
+    goto err;
+
+  if (yajl_gen_map_open(g) != yajl_gen_status_ok)
+    goto err;
+
+  for (size_t i = 0; i < n->annotation.num; i++) {
+     label_pair_t *l = n->annotation.ptr + i;
+
+     if (yajl_gen_string(g, (u_char *)l->name, strlen(l->name)) !=
+         yajl_gen_status_ok)
+       goto err;
+
+     if (yajl_gen_string(g, (u_char *)l->value, strlen(l->value)) !=
+         yajl_gen_status_ok)
+       goto err;
+  }
+
+  if (yajl_gen_map_close(g) != yajl_gen_status_ok)
+    goto err;
+
 
   log_logstash_print(g, LOG_INFO, (n->time != 0) ? n->time : cdtime());
   return 0;
@@ -320,13 +332,14 @@ err:
   yajl_gen_free(g);
   fprintf(stderr, "Could not correctly generate JSON notification\n");
   return 0;
-} /* int log_logstash_notification */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("log_logstash", log_logstash_config, config_keys,
                          config_keys_num);
   plugin_register_log("log_logstash", log_logstash_log,
                       /* user_data = */ NULL);
   plugin_register_notification("log_logstash", log_logstash_notification,
                                /* user_data = */ NULL);
-} /* void module_register (void) */
+}

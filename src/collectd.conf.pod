@@ -3262,40 +3262,6 @@ independent from the I<JavaClass> argument passed to B<LoadPlugin>.
 =back
 
 
-=head2 Plugin C<logfile>
-
-=over 4
-
-=item B<LogLevel> B<debug|info|notice|warning|err>
-
-Sets the log-level. If, for example, set to B<notice>, then all events with
-severity B<notice>, B<warning>, or B<err> will be written to the logfile.
-
-Please note that B<debug> is only available if collectd has been compiled with
-debugging support.
-
-=item B<File> I<File>
-
-Sets the file to write log messages to. The special strings B<stdout> and
-B<stderr> can be used to write to the standard output and standard error
-channels, respectively. This, of course, only makes much sense when I<collectd>
-is running in foreground- or non-daemon-mode.
-
-=item B<Timestamp> B<true>|B<false>
-
-Prefix all lines printed by the current time. Defaults to B<true>.
-
-=item B<PrintSeverity> B<true>|B<false>
-
-When enabled, all lines are prefixed by the severity of the log message, for
-example "warning". Defaults to B<false>.
-
-=back
-
-B<Note>: There is no need to notify the daemon after moving or removing the
-log file (e.E<nbsp>g. when rotating the logs). The plugin reopens the file
-for each line it writes.
-
 =head2 Plugin C<logparser>
 
 The I<logparser> plugin is used to parse different kinds of logs. Setting proper
@@ -3451,33 +3417,6 @@ Sets notification severity to one of the options: "OK", "WARNING", "FAILURE".
 
 =back
 
-=head2 Plugin C<log_logstash>
-
-The I<log logstash plugin> behaves like the logfile plugin but formats
-messages as JSON events for logstash to parse and input.
-
-=over 4
-
-=item B<LogLevel> B<debug|info|notice|warning|err>
-
-Sets the log-level. If, for example, set to B<notice>, then all events with
-severity B<notice>, B<warning>, or B<err> will be written to the logfile.
-
-Please note that B<debug> is only available if collectd has been compiled with
-debugging support.
-
-=item B<File> I<File>
-
-Sets the file to write log messages to. The special strings B<stdout> and
-B<stderr> can be used to write to the standard output and standard error
-channels, respectively. This, of course, only makes much sense when I<collectd>
-is running in foreground- or non-daemon-mode.
-
-=back
-
-B<Note>: There is no need to notify the daemon after moving or removing the
-log file (e.E<nbsp>g. when rotating the logs). The plugin reopens the file
-for each line it writes.
 
 =head2 Plugin C<lpar>
 
@@ -7171,78 +7110,6 @@ becomes available for storing a new event.
 
 Enumerate a regex filter to apply to all incoming rsyslog messages.  If a
 message matches this filter, it will be published.
-
-=back
-
-=head2 Plugin C<syslog>
-
-=over 4
-
-=item B<LogLevel> B<debug|info|notice|warning|err>
-
-Sets the log-level. If, for example, set to B<notice>, then all events with
-severity B<notice>, B<warning>, or B<err> will be submitted to the
-syslog-daemon.
-
-Please note that B<debug> is only available if collectd has been compiled with
-debugging support.
-
-=item B<NotifyLevel> B<OKAY>|B<WARNING>|B<FAILURE>
-
-Controls which notifications should be sent to syslog. The default behaviour is
-not to send any. Less severe notifications always imply logging more severe
-notifications: Setting this to B<OKAY> means all notifications will be sent to
-syslog, setting this to B<WARNING> will send B<WARNING> and B<FAILURE>
-notifications but will dismiss B<OKAY> notifications. Setting this option to
-B<FAILURE> will only send failures to syslog.
-
-=back
-
-The following options are available inside a B<Result> block:
-
-=over 4
-
-=item B<Type> I<gauge>|I<counter>|I<untyped>
-
-The B<type> that's used for each line returned. Must be I<gauge>, I<counter> or I<untyped>.
-If not set is I<untyped>.
-There must be exactly one B<Type> option inside each B<Result> block.
-
-=item B<Help> I<help>
-
-Set the B<help> text for the metric.
-
-=item B<Metric> I<metric>
-
-Set the metric name.
-
-=item B<MetricFrom> I<column>
-
-Read the metric name from the numbered column (identified by the column numbers starting at zero).
-
-There must be at least one B<Metric> or B<MetricFrom> option inside each B<Result> block.
-
-=item B<MetricPrefix> I<prefix>
-
-Prepends I<prefix> to the metric name in the B<Result>.
-
-=item B<Label> I<key> I<value>
-
-Append the label I<Key>=I<Value> to the submitting metrics. Can appear
-multiple times in the B<Result> block.
-
-=item B<LabelFrom> I<key> I<column>
-
-Specifies the column number whose value will be used to create a label.
-Can appear multiple times in the B<Result> block.
-
-=item B<ValueFrom> I<column>
-
-Specifies the column (identified by the column numbers starting at zero)
-whose content is used as the actual data for the metric are dispatched
-to the daemon.  The plugin uses L<strtoll(3)> and L<strtod(3)> to parse
-counter and gauge values respectively, so anything supported by those 
-functions is supported by the plugin as well. This option is mandatory.
 
 =back
 

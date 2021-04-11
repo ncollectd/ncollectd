@@ -1,0 +1,46 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-log_file - Documentation of ncollectd's C<log_file plugin>
+
+=head2 Plugin C<log_file>
+
+=over 4
+
+=item B<LogLevel> B<debug|info|notice|warning|err>
+
+Sets the log-level. If, for example, set to B<notice>, then all events with
+severity B<notice>, B<warning>, or B<err> will be written to the logfile.
+
+Please note that B<debug> is only available if collectd has been compiled with
+debugging support.
+
+=item B<File> I<File>
+
+Sets the file to write log messages to. The special strings B<stdout> and
+B<stderr> can be used to write to the standard output and standard error
+channels, respectively. This, of course, only makes much sense when I<collectd>
+is running in foreground- or non-daemon-mode.
+
+=item B<Timestamp> B<true>|B<false>
+
+Prefix all lines printed by the current time. Defaults to B<true>.
+
+=item B<PrintSeverity> B<true>|B<false>
+
+When enabled, all lines are prefixed by the severity of the log message, for
+example "warning". Defaults to B<false>.
+
+=back
+
+B<Note>: There is no need to notify the daemon after moving or removing the
+log file (e.E<nbsp>g. when rotating the logs). The plugin reopens the file
+for each line it writes.
+
+=head1 SEE ALSO
+
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>
+
+=cut

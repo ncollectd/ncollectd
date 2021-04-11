@@ -6542,7 +6542,8 @@ AC_PLUGIN([irq],                 [$plugin_irq],               [IRQ statistics])
 AC_PLUGIN([java],                [$with_java],                [Embed the Java Virtual Machine])
 AC_PLUGIN([load],                [$plugin_load],              [System load])
 AC_PLUGIN([log_logstash],        [$plugin_log_logstash],      [Logstash json_event compatible logging])
-AC_PLUGIN([logfile],             [yes],                       [File logging plugin])
+AC_PLUGIN([log_file],            [yes],                       [File logging plugin])
+AC_PLUGIN([log_syslog],          [$have_syslog],              [Syslog logging plugin])
 AC_PLUGIN([logparser],           [yes],                       [Log parsing plugin])
 AC_PLUGIN([lpar],                [$with_perfstat],            [AIX logical partitions statistics])
 AC_PLUGIN([lua],                 [$with_liblua],              [Lua plugin])
@@ -6611,7 +6612,6 @@ AC_PLUGIN([statsd],              [yes],                       [StatsD plugin])
 AC_PLUGIN([swap],                [$plugin_swap],              [Swap usage statistics])
 AC_PLUGIN([synproxy],            [$plugin_synproxy],          [Synproxy stats plugin])
 AC_PLUGIN([sysevent],            [$plugin_sysevent],          [rsyslog events])
-AC_PLUGIN([syslog],              [$have_syslog],              [Syslog logging plugin])
 AC_PLUGIN([table],               [yes],                       [Parsing of tabular data])
 AC_PLUGIN([tail],                [yes],                       [Parsing of logfiles])
 AC_PLUGIN([tail_csv],            [yes],                       [Parsing of CSV files])
@@ -6656,25 +6656,25 @@ AC_PLUGIN([zookeeper],           [yes],                       [Zookeeper statist
 dnl Default configuration file
 # Load either syslog or logfile
 LOAD_PLUGIN_SYSLOG=""
-LOAD_PLUGIN_LOGFILE=""
+LOAD_PLUGIN_LOG_FILE=""
 LOAD_PLUGIN_LOG_LOGSTASH=""
 
 AC_MSG_CHECKING([which default log plugin to load])
 default_log_plugin="none"
-if test "x$enable_syslog" = "xyes"; then
-  default_log_plugin="syslog"
+if test "x$enable_log_syslog" = "xyes"; then
+  default_log_plugin="log_syslog"
 else
   LOAD_PLUGIN_SYSLOG="##"
 fi
 
-if test "x$enable_logfile" = "xyes"; then
+if test "x$enable_log_file" = "xyes"; then
   if test "x$default_log_plugin" = "xnone"; then
-    default_log_plugin="logfile"
+    default_log_plugin="log_file"
   else
     LOAD_PLUGIN_LOGFILE="#"
   fi
 else
-  LOAD_PLUGIN_LOGFILE="##"
+  LOAD_PLUGIN_LOG_FILE="##"
 fi
 
 if test "x$enable_log_logstash" = "xyes"; then
@@ -6686,7 +6686,7 @@ fi
 AC_MSG_RESULT([$default_log_plugin])
 
 AC_SUBST([LOAD_PLUGIN_SYSLOG])
-AC_SUBST([LOAD_PLUGIN_LOGFILE])
+AC_SUBST([LOAD_PLUGIN_LOG_FILE])
 AC_SUBST([LOAD_PLUGIN_LOG_LOGSTASH])
 
 if test "x$enable_debug" = "xyes"; then
@@ -6974,9 +6974,10 @@ AC_MSG_RESULT([    ipvs  . . . . . . . . $enable_ipvs])
 AC_MSG_RESULT([    irq . . . . . . . . . $enable_irq])
 AC_MSG_RESULT([    java  . . . . . . . . $enable_java])
 AC_MSG_RESULT([    load  . . . . . . . . $enable_load])
-AC_MSG_RESULT([    logfile . . . . . . . $enable_logfile])
 AC_MSG_RESULT([    logparser . . . . . . $enable_logparser])
+AC_MSG_RESULT([    log_file . . . . . .  $enable_log_file])
 AC_MSG_RESULT([    log_logstash  . . . . $enable_log_logstash])
+AC_MSG_RESULT([    log_syslog  . . . . . $enable_log_syslog])
 AC_MSG_RESULT([    lpar  . . . . . . . . $enable_lpar])
 AC_MSG_RESULT([    lua . . . . . . . . . $enable_lua])
 AC_MSG_RESULT([    match_empty_counter . $enable_match_empty_counter])
@@ -7043,7 +7044,6 @@ AC_MSG_RESULT([    statsd  . . . . . . . $enable_statsd])
 AC_MSG_RESULT([    swap  . . . . . . . . $enable_swap])
 AC_MSG_RESULT([    synproxy  . . . . . . $enable_synproxy])
 AC_MSG_RESULT([    sysevent. . . . . . . $enable_sysevent])
-AC_MSG_RESULT([    syslog  . . . . . . . $enable_syslog])
 AC_MSG_RESULT([    table . . . . . . . . $enable_table])
 AC_MSG_RESULT([    tail_csv  . . . . . . $enable_tail_csv])
 AC_MSG_RESULT([    tail  . . . . . . . . $enable_tail])
