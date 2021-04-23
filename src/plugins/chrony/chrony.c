@@ -997,76 +997,62 @@ static int chrony_read(void) {
   int rc;
   unsigned int n_sources;
   metric_family_t fams[FAM_CHRONY_MAX] = {
-      [FAM_CHRONY_CLOCK_MODE] =
-          {
-              .name = "chrony_clock_mode",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_CLOCK_LAST_MEAS] =
-          {
-              .name = "chrony_clock_last_measurement_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_CLOCK_LAST_UPDATE] =
-          {
-              .name = "chrony_clock_last_update_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_CLOCK_REACHABILITY] =
-          {
-              .name = "chrony_clock_reachability",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_CLOCK_SKEW] =
-          {
-              .name = "chrony_clock_skew_ppm",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_CLOCK_STATE] =
-          {
-              .name = "chrony_clock_state",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_CLOCK_STRATUM] =
-          {
-              .name = "chrony_clock_stratum",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_FREQUENCY_ERROR] =
-          {
-              .name = "chrony_frequency_error_ppm",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_ROOT_DELAY] =
-          {
-              .name = "chrony_root_delay_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_ROOT_DISPERSION] =
-          {
-              .name = "chrony_root_dispersion_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_TIME_OFFSET_NTP] =
-          {
-              .name = "chrony_time_offset_ntp_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_TIME_OFFSET_RMS] =
-          {
-              .name = "chrony_time_offset_rms_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_TIME_OFFSET] =
-          {
-              .name = "chrony_time_offset_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_CHRONY_TIME_REF] =
-          {
-              .name = "chrony_time_ref_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
+    [FAM_CHRONY_CLOCK_MODE] = {
+      .name = "chrony_clock_mode",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_CLOCK_LAST_MEAS] = {
+      .name = "chrony_clock_last_measurement_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_CLOCK_LAST_UPDATE] = {
+      .name = "chrony_clock_last_update_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_CLOCK_REACHABILITY] = {
+      .name = "chrony_clock_reachability",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_CLOCK_SKEW] = {
+      .name = "chrony_clock_skew_ppm",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_CLOCK_STATE] = {
+      .name = "chrony_clock_state",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_CLOCK_STRATUM] = {
+      .name = "chrony_clock_stratum",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_FREQUENCY_ERROR] = {
+      .name = "chrony_frequency_error_ppm",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_ROOT_DELAY] = {
+      .name = "chrony_root_delay_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_ROOT_DISPERSION] = {
+      .name = "chrony_root_dispersion_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_TIME_OFFSET_NTP] = {
+      .name = "chrony_time_offset_ntp_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_TIME_OFFSET_RMS] = {
+      .name = "chrony_time_offset_rms_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_TIME_OFFSET] = {
+      .name = "chrony_time_offset_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_CHRONY_TIME_REF] = {
+      .name = "chrony_time_ref_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
   };
 
   if (g_chrony_seq_is_initialized == 0) {
@@ -1136,7 +1122,8 @@ static int chrony_shutdown(void) {
   return CHRONY_RC_OK;
 }
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config(PLUGIN_NAME_SHORT, chrony_config, g_config_keys,
                          g_config_keys_num);
   plugin_register_read(PLUGIN_NAME_SHORT, chrony_read);
