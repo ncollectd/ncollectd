@@ -43,7 +43,7 @@ src/stamp-h1
 /collectd-nagios
 /collectd-tg
 /collectdctl
-/collectdmon
+/ncollectdmon
 src/*.1
 src/*.5
 src/*/*.5

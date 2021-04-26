@@ -1308,9 +1308,11 @@ check_PROGRAMS += test_plugin_network
 endif
 
 if BUILD_PLUGIN_NFS
-pkglib_LTLIBRARIES += nfs.la
-nfs_la_SOURCES = src/nfs.c
-nfs_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/nfs/Makefile.am
+endif
+
+if BUILD_PLUGIN_NFSD
+include src/plugins/nfsd/Makefile.am
 endif
 
 if BUILD_PLUGIN_NGINX
@@ -1340,13 +1342,7 @@ notify_nagios_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_NTPD
-pkglib_LTLIBRARIES += ntpd.la
-ntpd_la_SOURCES = src/ntpd.c
-ntpd_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-ntpd_la_LIBADD =
-if BUILD_WITH_LIBSOCKET
-ntpd_la_LIBADD += -lsocket
-endif
+include src/plugins/ntpd/Makefile.am
 endif
 
 if BUILD_PLUGIN_NUMA

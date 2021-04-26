@@ -6107,6 +6107,7 @@ plugin_mdevents="no"
 plugin_memory="no"
 plugin_netstat_udp="no"
 plugin_nfs="no"
+plugin_nfsd="no"
 plugin_numa="no"
 plugin_ovs_events="no"
 plugin_ovs_stats="no"
@@ -6170,6 +6171,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_mdevents="yes"
   plugin_memory="yes"
   plugin_nfs="yes"
+  plugin_nfsd="yes"
   plugin_numa="yes"
   plugin_pressure="yes"
   plugin_processes="yes"
@@ -6567,7 +6569,8 @@ AC_PLUGIN([mysql],               [$with_libmysql],            [MySQL statistics]
 AC_PLUGIN([netlink],             [$with_libmnl],              [Enhanced Linux network statistics])
 AC_PLUGIN([netstat_udp],         [$plugin_netstat_udp],       [UDP network statistics])
 AC_PLUGIN([network],             [yes],                       [Network communication plugin])
-AC_PLUGIN([nfs],                 [$plugin_nfs],               [NFS statistics])
+AC_PLUGIN([nfs],                 [$plugin_nfs],               [NFS client statistics])
+AC_PLUGIN([nfsd],                [$plugin_nfsd],              [NFS server statistics])
 AC_PLUGIN([nginx],               [$with_libcurl],             [nginx statistics])
 AC_PLUGIN([notify_desktop],      [$with_libnotify],           [Desktop notifications])
 AC_PLUGIN([notify_email],        [$with_libesmtp],            [Email notifier])
@@ -7002,6 +7005,7 @@ AC_MSG_RESULT([    netlink . . . . . . . $enable_netlink])
 AC_MSG_RESULT([    netstat_udp . . . . . $enable_netstat_udp])
 AC_MSG_RESULT([    network . . . . . . . $enable_network])
 AC_MSG_RESULT([    nfs . . . . . . . . . $enable_nfs])
+AC_MSG_RESULT([    nfsd  . . . . . . . . $enable_nfsd])
 AC_MSG_RESULT([    nginx . . . . . . . . $enable_nginx])
 AC_MSG_RESULT([    notify_desktop  . . . $enable_notify_desktop])
 AC_MSG_RESULT([    notify_email  . . . . $enable_notify_email])
