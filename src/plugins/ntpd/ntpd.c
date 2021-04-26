@@ -258,7 +258,8 @@ static size_t refclock_names_num = STATIC_ARRAY_SIZE(refclock_names);
  * End of the copied stuff..                                         *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-static int ntpd_config(const char *key, const char *value) {
+static int ntpd_config(const char *key, const char *value)
+{
   if (strcasecmp(key, "Host") == 0) {
     if (ntpd_host != NULL)
       free(ntpd_host);
@@ -287,31 +288,54 @@ static int ntpd_config(const char *key, const char *value) {
   return 0;
 }
 
-static void ntpd_submit(const char *type, const char *type_inst,
-                        gauge_t value) {
-  value_list_t vl = VALUE_LIST_INIT;
+enum {
+  FAM_NTPD_KERNEL_FREQUENCY_OFFSET,
+  FAM_NTPD_KERNEL_OFFSET_LOOP_SECONDS,
+  FAM_NTPD_KERNEL_OFFSET_ERROR_SECONDS,
+  FAM_NTPD_PEER_STRATUM,
+  FAM_NTPD_PEER_DISPERSION_SECONDS,
+  FAM_NTPD_PEER_OFFSET_SECONDS,
+  FAM_NTPD_PEER_DELAY_SECONDS,
+  FAM_NTPD_MAX,
+};
 
-  vl.values = &(value_t){.gauge = value};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, "ntpd", sizeof(vl.plugin));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  sstrncpy(vl.type_instance, type_inst, sizeof(vl.type_instance));
+static metric_family_t fams[FAM_NTPD_MAX] = {
+  [FAM_NTPD_KERNEL_FREQUENCY_OFFSET] = {
+    .name = "ntpd_kernel_frequency_offset",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_NTPD_KERNEL_OFFSET_LOOP_SECONDS] = {
+    .name = "ntpd_kernel_offset_loop_seconds",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_NTPD_KERNEL_OFFSET_ERROR_SECONDS] = {
+    .name = "ntpd_kernel_offset_error_seconds",
+    .type = METRIC_TYPE_GAUGE,
+  },
+  [FAM_NTPD_PEER_STRATUM] = {
+    .name = "ntpd_peer_stratum",
+    .type = METRIC_TYPE_GAUGE,
+	.help = "NTPD stratum",
+  },
+  [FAM_NTPD_PEER_DISPERSION_SECONDS] = {
+    .name = "ntpd_peer_dispersion_seconds",
+    .type = METRIC_TYPE_GAUGE,
+	.help = "NTPD dispersion",
+  },
+  [FAM_NTPD_PEER_OFFSET_SECONDS] = {
+    .name = "ntpd_peer_offset_seconds",
+    .type = METRIC_TYPE_GAUGE,
+	.help = "ClockOffset between NTP and local clock",
+  },
+  [FAM_NTPD_PEER_DELAY_SECONDS] = {
+    .name = "ntpd_peer_delay_seconds",
+    .type = METRIC_TYPE_GAUGE,
+	.help = "NTPD delay",
+  },
+};
 
-  plugin_dispatch_values(&vl);
-}
-
-/* Each time a peer is polled, ntpd shifts the reach register to the left and
- * sets the LSB based on whether the peer was reachable. If the LSB is zero,
- * the values are out of date. */
-static void ntpd_submit_reach(const char *type, const char *type_inst,
-                              uint8_t reach, gauge_t value) {
-  if (!(reach & 1))
-    value = NAN;
-
-  ntpd_submit(type, type_inst, value);
-}
-
-static int ntpd_connect(void) {
+static int ntpd_connect(void)
+{
   const char *host;
   const char *port;
 
@@ -370,7 +394,8 @@ static int ntpd_connect(void) {
 
 /* For a description of the arguments see `ntpd_do_query' below. */
 static int ntpd_receive_response(int *res_items, int *res_size, char **res_data,
-                                 int res_item_size) {
+                                 int res_item_size)
+{
   int sd;
   struct pollfd poll_s;
   struct resp_pkt res;
@@ -514,16 +539,14 @@ static int ntpd_receive_response(int *res_items, int *res_size, char **res_data,
 
     /* Check if the reported items fit in the packet */
     if ((pkt_item_num * pkt_item_len) > (status - RESP_HEADER_SIZE)) {
-      ERROR("ntpd plugin: %i items * %i bytes > "
-            "%i bytes - %i bytes header",
+      ERROR("ntpd plugin: %i items * %i bytes > %i bytes - %i bytes header",
             (int)pkt_item_num, (int)pkt_item_len, (int)status,
             (int)RESP_HEADER_SIZE);
       continue;
     }
 
     if (pkt_item_len > res_item_size) {
-      ERROR("ntpd plugin: (pkt_item_len = %i) "
-            ">= (res_item_size = %i)",
+      ERROR("ntpd plugin: (pkt_item_len = %i) >= (res_item_size = %i)",
             pkt_item_len, res_item_size);
       continue;
     }
@@ -624,11 +647,12 @@ static int ntpd_receive_response(int *res_items, int *res_size, char **res_data,
   } /* while (done == 0) */
 
   return 0;
-} /* int ntpd_receive_response */
+} 
 
 /* For a description of the arguments see `ntpd_do_query' below. */
 static int ntpd_send_request(int req_code, int req_items, int req_size,
-                             char *req_data) {
+                             char *req_data)
+{
   int sd;
   struct req_pkt req = {0};
   size_t req_data_len;
@@ -687,7 +711,8 @@ static int ntpd_send_request(int req_code, int req_items, int req_size,
  */
 static int ntpd_do_query(int req_code, int req_items, int req_size,
                          char *req_data, int *res_items, int *res_size,
-                         char **res_data, int res_item_size) {
+                         char **res_data, int res_item_size)
+{
   int status;
 
   status = ntpd_send_request(req_code, req_items, req_size, req_data);
@@ -698,7 +723,8 @@ static int ntpd_do_query(int req_code, int req_items, int req_size,
   return status;
 }
 
-static double ntpd_read_fp(int32_t val_int) {
+static double ntpd_read_fp(int32_t val_int)
+{
   double val_double;
 
   val_int = ntohl(val_int);
@@ -708,7 +734,8 @@ static double ntpd_read_fp(int32_t val_int) {
 }
 
 static uint32_t
-ntpd_get_refclock_id(struct info_peer_summary const *peer_info) {
+ntpd_get_refclock_id(struct info_peer_summary const *peer_info)
+{
   uint32_t addr = ntohl(peer_info->srcadr);
   uint32_t refclock_id = (addr >> 8) & 0x00FF;
 
@@ -717,7 +744,8 @@ ntpd_get_refclock_id(struct info_peer_summary const *peer_info) {
 
 static int ntpd_get_name_from_address(char *buffer, size_t buffer_size,
                                       struct info_peer_summary const *peer_info,
-                                      bool do_reverse_lookup) {
+                                      bool do_reverse_lookup)
+{
   struct sockaddr_storage sa = {0};
   socklen_t sa_len;
   int flags = 0;
@@ -760,10 +788,11 @@ static int ntpd_get_name_from_address(char *buffer, size_t buffer_size,
   }
 
   return 0;
-} /* ntpd_get_name_from_address */
+}
 
 static int ntpd_get_name_refclock(char *buffer, size_t buffer_size,
-                                  struct info_peer_summary const *peer_info) {
+                                  struct info_peer_summary const *peer_info)
+{
   uint32_t refclock_id = ntpd_get_refclock_id(peer_info);
   uint32_t unit_id = ntohl(peer_info->srcadr) & 0x00FF;
 
@@ -777,39 +806,20 @@ static int ntpd_get_name_refclock(char *buffer, size_t buffer_size,
     sstrncpy(buffer, refclock_names[refclock_id], buffer_size);
 
   return 0;
-} /* int ntpd_get_name_refclock */
+}
 
-static int ntpd_read(void) {
-  struct info_kernel *ik;
-  int ik_num;
-  int ik_size;
+static int ntp_read_kernel(void)
+{
+  struct info_kernel *ik = NULL;
+  int ik_num = 0;
+  int ik_size = 0;
 
-  struct info_peer_summary *ps;
-  int ps_num;
-  int ps_size;
-
-  gauge_t offset_loop;
-  gauge_t freq_loop;
-  gauge_t offset_error;
-
-  int status;
-
-  /* On Linux, if the STA_NANO bit is set in ik->status, then ik->offset
-   * is is nanoseconds, otherwise it's microseconds. */
-  double scale_loop = 1e-6;
-  double scale_error = 1e-6;
-
-  ik = NULL;
-  ik_num = 0;
-  ik_size = 0;
-
-  status = ntpd_do_query(REQ_GET_KERNEL, 0, 0, NULL, /* request data */
+  int status = ntpd_do_query(REQ_GET_KERNEL, 0, 0, NULL, /* request data */
                          &ik_num, &ik_size,
                          (char **)((void *)&ik), /* response data */
                          sizeof(struct info_kernel));
   if (status != 0) {
-    ERROR("ntpd plugin: ntpd_do_query (REQ_GET_KERNEL) failed with status %i",
-          status);
+    ERROR("ntpd plugin: ntpd_do_query (REQ_GET_KERNEL) failed with status %i", status);
     free(ik);
     return status;
   } else if ((ik == NULL) || (ik_num == 0) || (ik_size == 0)) {
@@ -820,15 +830,20 @@ static int ntpd_read(void) {
     return -1;
   }
 
+  /* On Linux, if the STA_NANO bit is set in ik->status, then ik->offset
+   * is is nanoseconds, otherwise it's microseconds. */
+  double scale_loop = 1e-6;
+  double scale_error = 1e-6;
+
   if (ntohs(ik->status) & STA_NANO) {
     scale_loop = 1e-9;
     scale_error = 1e-9;
   }
 
   /* kerninfo -> estimated error */
-  offset_loop = (gauge_t)((int32_t)ntohl(ik->offset) * scale_loop);
-  freq_loop = ntpd_read_fp(ik->freq);
-  offset_error = (gauge_t)((int32_t)ntohl(ik->esterror) * scale_error);
+  gauge_t offset_loop = (gauge_t)((int32_t)ntohl(ik->offset) * scale_loop);
+  gauge_t freq_loop = ntpd_read_fp(ik->freq);
+  gauge_t offset_error = (gauge_t)((int32_t)ntohl(ik->esterror) * scale_error);
 
   DEBUG("info_kernel:\n"
         "  pll offset    = %.8g\n"
@@ -836,21 +851,29 @@ static int ntpd_read(void) {
         "  est error     = %.8g\n",
         offset_loop, freq_loop, offset_error);
 
-  ntpd_submit("frequency_offset", "loop", freq_loop);
-  ntpd_submit("time_offset", "loop", offset_loop);
-  ntpd_submit("time_offset", "error", offset_error);
+  metric_family_metric_append(&fams[FAM_NTPD_KERNEL_FREQUENCY_OFFSET],
+                              (metric_t){ .value.gauge = freq_loop, });
+  metric_family_metric_append(&fams[FAM_NTPD_KERNEL_OFFSET_LOOP_SECONDS],
+                              (metric_t){ .value.gauge = offset_loop, });
+  metric_family_metric_append(&fams[FAM_NTPD_KERNEL_OFFSET_ERROR_SECONDS],
+                              (metric_t){ .value.gauge = offset_error, });
 
   free(ik);
-  ik = NULL;
+  return 0;
+}
 
-  status = ntpd_do_query(REQ_PEER_LIST_SUM, 0, 0, NULL, /* request data */
+static int ntp_read_peer_summary(void)
+{
+  struct info_peer_summary *ps = NULL;
+  int ps_num = 0;
+  int ps_size = 0;
+
+  int status = ntpd_do_query(REQ_PEER_LIST_SUM, 0, 0, NULL, /* request data */
                          &ps_num, &ps_size,
                          (char **)((void *)&ps), /* response data */
                          sizeof(struct info_peer_summary));
   if (status != 0) {
-    ERROR(
-        "ntpd plugin: ntpd_do_query (REQ_PEER_LIST_SUM) failed with status %i",
-        status);
+    ERROR("ntpd plugin: ntpd_do_query (REQ_PEER_LIST_SUM) failed with status %i", status);
     free(ps);
     return status;
   } else if ((ps == NULL) || (ps_num == 0) || (ps_size == 0)) {
@@ -911,25 +934,53 @@ static int ntpd_read(void) {
           ntohl(ptr->offset_int), ntohl(ptr->offset_frc), offset,
           ntpd_read_fp(ptr->dispersion));
 
-    ntpd_submit_reach("time_dispersion", peername, ptr->reach,
-                      ntpd_read_fp(ptr->dispersion));
+    value_t value;
+   
+    value.gauge = ptr->stratum;
+    metric_family_append(&fams[FAM_NTPD_PEER_STRATUM], "peer", peername, value, NULL);
+
+    value.gauge = ptr->reach & 1 ? ntpd_read_fp(ptr->dispersion) : NAN;
+    metric_family_append(&fams[FAM_NTPD_PEER_DISPERSION_SECONDS], "peer", peername, value, NULL);
 
     /* not the system clock (offset will always be zero) */
-    if (!(is_refclock && refclock_id == 1))
-      ntpd_submit_reach("time_offset", peername, ptr->reach, offset);
-
-    if (!is_refclock) /* not a reference clock */
-      ntpd_submit_reach("delay", peername, ptr->reach,
-                        ntpd_read_fp(ptr->delay));
+    if (!(is_refclock && refclock_id == 1)) {
+      value.gauge = ptr->reach & 1 ? offset : NAN;
+      metric_family_append(&fams[FAM_NTPD_PEER_OFFSET_SECONDS], "peer", peername, value, NULL);
+    }
+    /* not a reference clock */
+    if (!is_refclock) {  
+      value.gauge = ptr->reach & 1 ? ntpd_read_fp(ptr->delay) : NAN;
+      metric_family_append(&fams[FAM_NTPD_PEER_DELAY_SECONDS], "peer", peername, value, NULL);
+    }
   }
 
   free(ps);
-  ps = NULL;
+  return 0;
+}
+
+static int ntpd_read(void)
+{
+  int status = ntp_read_kernel();
+  if (status == 0) {
+    ntp_read_peer_summary();
+  }
+
+  for (size_t i = 0; i < FAM_NTPD_MAX; i++) {
+    if (fams[i].metric.num > 0) {
+      int status = plugin_dispatch_metric_family(&fams[i]);
+      if (status != 0) {
+        ERROR("ntpd plugin: plugin_dispatch_metric_family failed: %s",
+              STRERROR(status));
+      }
+      metric_family_metric_reset(&fams[i]);
+    }
+  }
 
   return 0;
-} /* int ntpd_read */
+}
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_config("ntpd", ntpd_config, config_keys, config_keys_num);
   plugin_register_read("ntpd", ntpd_read);
-} /* void module_register */
+}

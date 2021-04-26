@@ -1,0 +1,44 @@
+
+=head2 Plugin C<ntpd>
+
+The C<ntpd> plugin collects per-peer ntp data such as time offset and time
+dispersion.
+
+For talking to B<ntpd>, it mimics what the B<ntpdc> control program does on
+the wire - using B<mode 7> specific requests. This mode is deprecated with
+newer B<ntpd> releases (4.2.7p230 and later). For the C<ntpd> plugin to work
+correctly with them, the ntp daemon must be explicitly configured to
+enable B<mode 7> (which is disabled by default). Refer to the I<ntp.conf(5)>
+manual page for details.
+
+Available configuration options for the C<ntpd> plugin:
+
+=over 4
+
+=item B<Host> I<Hostname>
+
+Hostname of the host running B<ntpd>. Defaults to B<localhost>.
+
+=item B<Port> I<Port>
+
+UDP-Port to connect to. Defaults to B<123>.
+
+=item B<ReverseLookups> B<true>|B<false>
+
+Sets whether or not to perform reverse lookups on peers. Since the name or
+IP-address may be used in a filename it is recommended to disable reverse
+lookups. The default is to do reverse lookups to preserve backwards
+compatibility, though.
+
+=item B<IncludeUnitID> B<true>|B<false>
+
+When a peer is a refclock, include the unit ID in the I<type instance>.
+Defaults to B<false> for backward compatibility.
+
+If two refclock peers use the same driver and this is B<false>, the plugin will
+try to write simultaneous measurements from both to the same type instance.
+This will result in error messages in the log and only one set of measurements
+making it through.
+
+=back
+
