@@ -1,0 +1,18 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-nfsd - Documentation of ncollectd's C<nfsd plugin>
+
+=head2 Plugin C<nfsd>
+
+The I<nfsd plugin> collects information about the server statistics of the Network
+File System (NFS). It counts the number of procedure calls for each procedure,
+grouped by version.
+
+=head1 SEE ALSO
+
+L<ncollectd(1)>,
+L<ncollectd.conf(5)>
+
+=cut
