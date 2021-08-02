@@ -118,7 +118,6 @@ noinst_LTLIBRARIES = \
 	libignorelist.la \
 	liblatency.la \
 	libllist.la \
-	liblookup.la \
 	libmetadata.la \
 	libmetric.la \
 	libmount.la \
@@ -146,7 +145,6 @@ check_PROGRAMS = \
 	test_utils_strbuf \
 	test_utils_subst \
 	test_utils_time \
-	test_utils_vl_lookup \
 	test_libcollectd_network_parse \
 	test_utils_config_cores
 
@@ -214,8 +212,6 @@ collectd_SOURCES = \
 	src/daemon/globals.h \
 	src/daemon/plugin.c \
 	src/daemon/plugin.h \
-	src/daemon/types_list.c \
-	src/daemon/types_list.h \
 	src/daemon/utils_cache.c \
 	src/daemon/utils_cache.h \
 	src/daemon/utils_complain.c \
@@ -519,21 +515,6 @@ test_utils_cmds_LDADD = \
 	libmetric.la \
 	libplugin_mock.la
 
-liblookup_la_SOURCES = \
-	src/utils/lookup/vl_lookup.c \
-	src/utils/lookup/vl_lookup.h
-liblookup_la_LIBADD = libavltree.la
-
-test_utils_vl_lookup_SOURCES = \
-	src/utils/lookup/vl_lookup_test.c \
-	src/testing.h
-test_utils_vl_lookup_LDADD = \
-	liblookup.la \
-	libplugin_mock.la
-if BUILD_WITH_LIBKSTAT
-test_utils_vl_lookup_LDADD += -lkstat
-endif
-
 libmount_la_SOURCES = \
 	src/utils/mount/mount.c \
 	src/utils/mount/mount.h
@@ -666,9 +647,7 @@ endif
 if BUILD_PLUGIN_AGGREGATION
 pkglib_LTLIBRARIES += aggregation.la
 aggregation_la_SOURCES = \
-	src/aggregation.c \
-	src/utils/lookup/vl_lookup.c \
-	src/utils/lookup/vl_lookup.h
+	src/aggregation.c
 aggregation_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 aggregation_la_LIBADD = -lm
 endif
