@@ -23,10 +23,12 @@ int format_openmetrics_metric_family(strbuf_t *buf, metric_family_t const *fam)
     case METRIC_TYPE_COUNTER:
       type = "counter";
       break;
-    case METRIC_TYPE_UNTYPED:
-      type = "untyped";
+    case METRIC_TYPE_UNKNOWN:
+      type = "unknown";
       break;
     case METRIC_TYPE_DISTRIBUTION: // FIXME
+      break;
+    case METRIC_TYPE_STATE_SET:
       break;
     case METRIC_TYPE_INFO: 
       type = "info";

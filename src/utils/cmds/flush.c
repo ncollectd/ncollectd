@@ -60,6 +60,7 @@ cmd_status_t cmd_parse_flush(size_t argc, char **argv, cmd_flush_t *ret_flush,
     if (strcasecmp("plugin", opt_key) == 0) {
       strarray_add(&ret_flush->plugins, &ret_flush->plugins_num, opt_value);
     } else if (strcasecmp("identifier", opt_key) == 0) {
+#if 0
       identifier_t *id =
           realloc(ret_flush->identifiers,
                   (ret_flush->identifiers_num + 1) * sizeof(*id));
@@ -80,6 +81,7 @@ cmd_status_t cmd_parse_flush(size_t argc, char **argv, cmd_flush_t *ret_flush,
         cmd_destroy_flush(ret_flush);
         return CMD_PARSE_ERROR;
       }
+#endif
     } else if (strcasecmp("timeout", opt_key) == 0) {
       char *endptr;
 
@@ -130,6 +132,7 @@ cmd_status_t cmd_handle_flush(FILE *fh, char *buffer) {
   }
 
   for (size_t i = 0; (i == 0) || (i < cmd.cmd.flush.plugins_num); i++) {
+#if 0
     char *plugin = NULL;
 
     if (cmd.cmd.flush.plugins_num != 0)
@@ -157,6 +160,7 @@ cmd_status_t cmd_handle_flush(FILE *fh, char *buffer) {
       else
         error++;
     }
+#endif
   }
 
   cmd_error(CMD_OK, &err, "Done: %i successful, %i errors", success, error);

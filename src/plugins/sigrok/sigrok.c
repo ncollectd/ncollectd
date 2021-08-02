@@ -398,7 +398,7 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
       ERROR("sigrok plugin: sr_analog_to_float failed.");
       return;
     }
-    m.value.gauge = data[0];
+    m.value.gauge.real = data[0];
     sfree(data);
   } else {
     float data;
@@ -406,7 +406,7 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
       ERROR("sigrok plugin: sr_analog_to_float failed.");
       return;
     }
-    m.value.gauge = data;
+    m.value.gauge.real = data;
   }
 
   strbuf_t buf = STRBUF_CREATE;

@@ -48,8 +48,8 @@ static int set_option(metric_t *m, char const *key, char const *value,
       m->family->type = METRIC_TYPE_GAUGE;
     } else if (strcasecmp("COUNTER", value) == 0) {
       m->family->type = METRIC_TYPE_COUNTER;
-    } else if (strcasecmp("UNTYPED", value) == 0) {
-      m->family->type = METRIC_TYPE_UNTYPED;
+    } else if (strcasecmp("UNKNOWN", value) == 0) {
+      m->family->type = METRIC_TYPE_UNKNOWN;
     } else {
       return CMD_ERROR;
     }
@@ -106,7 +106,7 @@ cmd_status_t cmd_parse_putmetric(size_t argc, char **argv,
     cmd_error(CMD_ERROR, errhndl, "calloc failed");
     return CMD_ERROR;
   }
-  fam->type = METRIC_TYPE_UNTYPED;
+  fam->type = METRIC_TYPE_UNKNOWN;
 
   int status = metric_family_metric_append(fam, (metric_t){0});
   if (status != 0) {
@@ -142,6 +142,7 @@ cmd_status_t cmd_parse_putmetric(size_t argc, char **argv,
         next_pos++;
         continue;
       } else if (next_pos == 1) {
+#if 0
         int status = parse_value(argv[i], &m->value, fam->type);
         if (status != 0) {
           cmd_error(CMD_ERROR, errhndl, "parse_value failed");
@@ -150,6 +151,7 @@ cmd_status_t cmd_parse_putmetric(size_t argc, char **argv,
         }
         next_pos++;
         continue;
+#endif
       } else {
         /* error is handled after the loop */
         next_pos++;
@@ -246,7 +248,7 @@ int cmd_format_putmetric(strbuf_t *buf, metric_t const *m) { /* {{{ */
   strbuf_print(buf, "PUTMETRIC ");
   strbuf_print(buf, m->family->name);
   switch (m->family->type) {
-  case METRIC_TYPE_UNTYPED:
+  case METRIC_TYPE_UNKNOWN:
     /* no op */
     break;
   case METRIC_TYPE_COUNTER:

@@ -35,11 +35,11 @@
 typedef struct threshold_s {
   char *name;
   label_set_t labels;
-  gauge_t warning_min;
-  gauge_t warning_max;
-  gauge_t failure_min;
-  gauge_t failure_max;
-  gauge_t hysteresis;
+  double warning_min;
+  double warning_max;
+  double failure_min;
+  double failure_max;
+  double hysteresis;
   unsigned int flags;
   int hits;
   struct threshold_s *next;

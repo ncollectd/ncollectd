@@ -44,7 +44,7 @@
 typedef struct cache_entry_s {
   char name[6 * DATA_MAX_NAME_LEN];
   distribution_t *distribution_increase;
-  gauge_t values_gauge;
+  double values_gauge;
   typed_value_t values_raw;
   /* Time contained in the package
    * (for calculating rates) */
@@ -67,7 +67,7 @@ typedef struct cache_entry_s {
    * !      t = 0      !      t = 1      !      t = 2      ! ...
    * +-----------------+-----------------+-----------------+----
    */
-  gauge_t *history;
+  double *history;
   size_t history_index; /* points to the next position to write to. */
   size_t history_length;
 
@@ -148,41 +148,33 @@ static int uc_insert(metric_t const *m, char const *key) {
   sstrncpy(ce->name, key, sizeof(ce->name));
 
   switch (m->family->type) {
-  case DS_TYPE_COUNTER:
-    ce->values_gauge = NAN;
-    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_COUNTER);
-    ce->distribution_increase = NULL;
-    ce->start_value = typed_value_create(m->value, METRIC_TYPE_COUNTER);
+  case METRIC_TYPE_UNKNOWN:
     break;
-
-  case DS_TYPE_GAUGE:
-    ce->values_gauge = m->value.gauge;
+  case METRIC_TYPE_GAUGE:
+    if (m->value.gauge.type == GAUGE_REAL) {
+      ce->values_gauge = m->value.gauge.real;
+    } else {
+      ce->values_gauge = (double) m->value.gauge.integer;
+    }
     ce->values_raw = typed_value_create(m->value, METRIC_TYPE_GAUGE);
     ce->distribution_increase = NULL;
     ce->start_value = typed_value_create(m->value, METRIC_TYPE_GAUGE);
-    break;
-
-  case DS_TYPE_DERIVE:
+  case METRIC_TYPE_COUNTER:
     ce->values_gauge = NAN;
     ce->values_raw = typed_value_create(m->value, METRIC_TYPE_COUNTER);
     ce->distribution_increase = NULL;
     ce->start_value = typed_value_create(m->value, METRIC_TYPE_COUNTER);
     break;
-
-  case DS_TYPE_DISTRIBUTION:
+  case METRIC_TYPE_STATE_SET:
+    break;
+  case METRIC_TYPE_INFO:
+    break;
+  case METRIC_TYPE_DISTRIBUTION:
     ce->values_gauge = NAN;
     ce->values_raw = typed_value_create(m->value, METRIC_TYPE_DISTRIBUTION);
     ce->distribution_increase = distribution_clone(m->value.distribution);
     ce->start_value = typed_value_create(m->value, METRIC_TYPE_DISTRIBUTION);
     break;
-
-  case DS_TYPE_INFO:
-    ce->values_gauge = 1;
-    ce->values_raw = typed_value_create(m->value, METRIC_TYPE_INFO);
-    ce->distribution_increase = NULL;
-    ce->start_value = typed_value_create(m->value, METRIC_TYPE_INFO);
-    break;
-
   default:
     /* This shouldn't happen. */
     ERROR("uc_insert: Don't know how to handle data source type %i.",
@@ -371,20 +363,24 @@ static int uc_update_metric(metric_t const *m) {
 
   switch (m->family->type) {
   case METRIC_TYPE_COUNTER: {
-    counter_t diff = counter_diff(ce->values_raw.value.counter, m->value.counter);
+    uint64_t diff = counter_diff(ce->values_raw.value.counter.uinteger, m->value.counter.uinteger); // FIXME
     ce->values_gauge = ((double)diff) / (CDTIME_T_TO_DOUBLE(m->time - ce->last_time));
     ce->values_raw.value.counter = m->value.counter;
     break;
   }
 
-  case METRIC_TYPE_UNTYPED:
+  case METRIC_TYPE_UNKNOWN:
   case METRIC_TYPE_GAUGE:
     ce->values_raw.value.gauge = m->value.gauge;
-    ce->values_gauge = m->value.gauge;
+    if (m->value.gauge.type == GAUGE_REAL) {
+      ce->values_gauge = m->value.gauge.real;
+    } else {
+      ce->values_gauge = (double)m->value.gauge.integer;
+    }
     break;
 
   case METRIC_TYPE_INFO:
-    ce->values_raw.value.gauge = 1;
+    /* ce->values_raw.value.info =  // FIXME */
     ce->values_gauge = 1;
     break;
 
@@ -494,7 +490,7 @@ int uc_set_callbacks_mask(const char *name, unsigned long mask) {
   return 0;
 }
 
-int uc_get_percentile_by_name(const char *name, gauge_t *ret_values,
+int uc_get_percentile_by_name(const char *name, double *ret_values,
                               double percent) {
   if (name == NULL || ret_values == NULL) {
     ERROR("uc_get_percentile_by_name: Passed null pointer as an argument.");
@@ -541,9 +537,9 @@ int uc_get_percentile_by_name(const char *name, gauge_t *ret_values,
   pthread_mutex_unlock(&cache_lock);
 
   return status;
-} /* gauge_t *uc_get_percentile_by_name */
+} /* double *uc_get_percentile_by_name */
 
-int uc_get_percentile(metric_t const *m, gauge_t *ret, double percent) {
+int uc_get_percentile(metric_t const *m, double *ret, double percent) {
   if (m == NULL || ret == NULL) {
     ERROR("uc_get_percentile: Passed null pointer as an argument.");
     return -1;
@@ -573,7 +569,7 @@ int uc_get_percentile(metric_t const *m, gauge_t *ret, double percent) {
   return status;
 }
 
-int uc_get_rate_by_name(const char *name, gauge_t *ret_values) {
+int uc_get_rate_by_name(const char *name, double *ret_values) {
   cache_entry_t *ce = NULL;
   int status = 0;
 
@@ -608,9 +604,9 @@ int uc_get_rate_by_name(const char *name, gauge_t *ret_values) {
   pthread_mutex_unlock(&cache_lock);
 
   return status;
-} /* gauge_t *uc_get_rate_by_name */
+} /* double *uc_get_rate_by_name */
 
-int uc_get_rate(metric_t const *m, gauge_t *ret) {
+int uc_get_rate(metric_t const *m, double *ret) {
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
@@ -629,36 +625,7 @@ int uc_get_rate(metric_t const *m, gauge_t *ret) {
 
   STRBUF_DESTROY(buf);
   return status;
-} /* gauge_t *uc_get_rate */
-
-gauge_t *uc_get_rate_vl(const data_set_t *ds, const value_list_t *vl) {
-  gauge_t *ret = calloc(ds->ds_num, sizeof(*ret));
-  if (ret == NULL) {
-    ERROR("uc_get_rate_vl: failed to allocate memory.");
-    return NULL;
-  }
-
-  for (size_t i = 0; i < ds->ds_num; i++) {
-    metric_family_t *fam = plugin_value_list_to_metric_family(vl, ds, i);
-    if (fam == NULL) {
-      int status = errno;
-      free(ret);
-      errno = status;
-      return NULL;
-    }
-
-    int status = uc_get_rate(fam->metric.ptr, ret + i);
-    if (status != 0) {
-      free(ret);
-      errno = status;
-      return NULL;
-    }
-
-    metric_family_free(fam);
-  }
-
-  return ret;
-}
+} /* double *uc_get_rate */
 
 int uc_get_value_by_name(const char *name, value_t *ret_values) {
   pthread_mutex_lock(&cache_lock);
@@ -893,7 +860,7 @@ int uc_set_state(metric_t const *m, int state)
   return ret;
 }
 
-int uc_get_history_by_name(const char *name, gauge_t *ret_history,
+int uc_get_history_by_name(const char *name, double *ret_history,
                            size_t num_steps)
 {
   cache_entry_t *ce = NULL;
@@ -909,7 +876,7 @@ int uc_get_history_by_name(const char *name, gauge_t *ret_history,
   /* Check if there are enough values available. If not, increase the buffer
    * size. */
   if (ce->history_length < num_steps) {
-    gauge_t *tmp;
+    double *tmp;
 
     tmp = realloc(ce->history, sizeof(*ce->history) * num_steps);
     if (tmp == NULL) {
@@ -945,7 +912,7 @@ int uc_get_history_by_name(const char *name, gauge_t *ret_history,
   return 0;
 }
 
-int uc_get_history(metric_t const *m, gauge_t *ret_history, size_t num_steps)
+int uc_get_history(metric_t const *m, double *ret_history, size_t num_steps)
 {
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
@@ -1298,22 +1265,3 @@ int uc_meta_data_get_boolean(metric_t const *m, const char *key, bool *value)
     UC_WRAP(meta_data_get_boolean);
 #undef UC_WRAP
 
-int uc_meta_data_get_signed_int_vl(value_list_t const *vl, char const *key,
-                                   int64_t *value) {
-  return ENOTSUP;
-}
-
-int uc_meta_data_get_unsigned_int_vl(value_list_t const *vl, char const *key,
-                                     uint64_t *value) {
-  return ENOTSUP;
-}
-
-int uc_meta_data_add_signed_int_vl(value_list_t const *vl, char const *key,
-                                   int64_t value) {
-  return ENOTSUP;
-}
-
-int uc_meta_data_add_unsigned_int_vl(value_list_t const *vl, char const *key,
-                                     uint64_t value) {
-  return ENOTSUP;
-}

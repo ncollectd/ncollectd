@@ -192,77 +192,83 @@ static int nfsd_read(void)
     if (fields_num < 2)
       continue;
 
-    value_t value;
-
     if (strcmp(fields[0], "rc") == 0) {
+      uint64_t value;
       if (fields_num < 4)
         continue;
-      if (strtocounter(fields[1], &value.counter) == 0)
+      if (strtouint(fields[1], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_REPLY_CACHE_HITS_TOTAL],
-                                    (metric_t){ .value = value });
-      if (strtocounter(fields[2], &value.counter) == 0)
+                                    (metric_t){ .value.counter.uinteger = value });
+      if (strtouint(fields[2], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_REPLY_CACHE_MISSES_TOTAL],
-                                    (metric_t){ .value = value });
-      if (strtocounter(fields[3], &value.counter) == 0)
+                                    (metric_t){ .value.counter.uinteger = value });
+      if (strtouint(fields[3], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_REPLY_CACHE_NOCACHE_TOTAL],
-                                    (metric_t){ .value = value });
+                                    (metric_t){ .value.counter.uinteger = value });
     } else if (strcmp(fields[0], "fh") == 0) {
+      uint64_t value;
       if (fields_num < 6)
         continue;
-      if (strtocounter(fields[1], &value.counter) == 0)
+      if (strtouint(fields[1], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_FILE_HANDLES_STALE_TOTAL],
-                                    (metric_t){ .value = value });
+                                    (metric_t){ .value.counter.uinteger = value });
     } else if (strcmp(fields[0], "io") == 0) {
+      uint64_t value;
       if (fields_num < 3)
         continue;
-      if (strtocounter(fields[1], &value.counter) == 0)
+      if (strtouint(fields[1], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_DISK_BYTES_READ_TOTAL],
-                                    (metric_t){ .value = value });
-      if (strtocounter(fields[2], &value.counter) == 0)
+                                    (metric_t){ .value.counter.uinteger = value });
+      if (strtouint(fields[2], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_DISK_BYTES_WRITTEN_TOTAL],
-                                    (metric_t){ .value = value });
+                                    (metric_t){ .value.counter.uinteger = value });
     } else if (strcmp(fields[0], "th") == 0) {
+      double value;
       if (fields_num < 2)
         continue;
-      if (strtogauge(fields[1], &value.gauge) == 0)
+      if (strtodouble(fields[1], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_SERVER_THREADS],
-                                    (metric_t){ .value = value });
+                                    (metric_t){ .value.gauge.real = value });
     } else if (strcmp(fields[0], "ra") == 0) {
       if (fields_num < 13)
         continue;
-      if (strtogauge(fields[1], &value.gauge) == 0)
+      double gauge;
+      if (strtodouble(fields[1], &gauge) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_READ_AHEAD_CACHE_SIZE_BLOCKS],
-                                    (metric_t){ .value = value });
-      if (strtocounter(fields[12], &value.counter) == 0)
+                                    (metric_t){ .value.gauge.real = gauge});
+      uint64_t counter;
+      if (strtouint(fields[12], &counter) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_READ_AHEAD_CACHE_NOT_FOUND_TOTAL],
-                                    (metric_t){ .value = value });
+                                    (metric_t){ .value.counter.uinteger = counter});
     } else if (strcmp(fields[0], "net") == 0) {
+      uint64_t value;
       if (fields_num < 5)
         continue;
-      if (strtocounter(fields[2], &value.counter) == 0)
+      if (strtouint(fields[2], &value) == 0)
         metric_family_append(&fams[FAM_HOST_NFSD_PACKETS_TOTAL],
-                             "protocol", "udp", value, NULL);
-      if (strtocounter(fields[3], &value.counter) == 0)
+                             "protocol", "udp", (value_t){.counter.uinteger = value}, NULL);
+      if (strtouint(fields[3], &value) == 0)
         metric_family_append(&fams[FAM_HOST_NFSD_PACKETS_TOTAL],
-                             "protocol", "tcp", value, NULL);
-      if (strtocounter(fields[4], &value.counter) == 0)
+                             "protocol", "tcp", (value_t){.counter.uinteger = value} , NULL);
+      if (strtouint(fields[4], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_CONNECTIONS_TOTAL],
-                                    (metric_t){ .value = value });
+                                    (metric_t){ .value.counter.uinteger = value });
     } else if (strcmp(fields[0], "rpc") == 0) {
+      uint64_t value;
       if (fields_num < 6)
         continue;
-      if (strtocounter(fields[1], &value.counter) == 0)
+      if (strtouint(fields[1], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFSD_SERVER_RPC_CALLS_TOTAL],
-                                    (metric_t){ .value = value });
-      if (strtocounter(fields[3], &value.counter) == 0)
+                                    (metric_t){ .value.counter.uinteger = value });
+      if (strtouint(fields[3], &value) == 0)
         metric_family_append(&fams[FAM_HOST_NFSD_RPC_ERRORS_TOTAL],
-                             "error", "fmt", value, NULL);
-      if (strtocounter(fields[4], &value.counter) == 0)
+                             "error", "fmt", (value_t){.counter.uinteger = value}, NULL);
+      if (strtouint(fields[4], &value) == 0)
         metric_family_append(&fams[FAM_HOST_NFSD_RPC_ERRORS_TOTAL],
-                             "error", "auth", value, NULL);
-      if (strtocounter(fields[5], &value.counter) == 0)
+                             "error", "auth", (value_t){.counter.uinteger = value}, NULL);
+      if (strtouint(fields[5], &value) == 0)
         metric_family_append(&fams[FAM_HOST_NFSD_RPC_ERRORS_TOTAL],
-                             "error", "cInt", value, NULL);
+                             "error", "cInt", (value_t){.counter.uinteger = value}, NULL);
     } if (strncmp(fields[0], "proc", strlen("proc")) == 0) {
       const char **procedures_names;
       int procedures_names_num = 0;
@@ -304,9 +310,10 @@ static int nfsd_read(void)
         fields_num = procedures_names_num;
 
       for (size_t i = 0; i < fields_num; i++) {
-        if (strtocounter(fields[2+i], &value.counter) == 0) {
+        uint64_t value;
+        if (strtouint(fields[2+i], &value) == 0) {
            metric_family_append(&fams[FAM_HOST_NFSD_REQUESTS_TOTAL], 
-                                "method", procedures_names[i], value, &tmpl);
+                                "method", procedures_names[i], (value_t){.counter.uinteger = value}, &tmpl);
         }
       }
 

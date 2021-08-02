@@ -44,14 +44,14 @@
 #error "No applicable input method."
 #endif
 
-static void cs_submit(derive_t context_switches)
+static void cs_submit(uint64_t context_switches)
 {
   metric_family_t fam = {
     .name = "host_context_switches_total",
     .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_metric_append(&fam, (metric_t){ .value.counter = context_switches, });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter.uinteger = context_switches, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0)
@@ -75,7 +75,7 @@ static int cs_read(void)
     return -1;
   }
 
-  cs_submit(value);
+  cs_submit((uint64_t)value);
   /* #endif HAVE_SYSCTLBYNAME */
 
 #elif KERNEL_LINUX
@@ -83,7 +83,7 @@ static int cs_read(void)
   char buffer[64];
   int numfields;
   char *fields[3];
-  derive_t result = 0;
+  uint64_t result = 0;
   int status = -2;
 
   fh = fopen("/proc/stat", "r");
@@ -104,7 +104,7 @@ static int cs_read(void)
 
     errno = 0;
     endptr = NULL;
-    result = (derive_t)strtoll(fields[1], &endptr, /* base = */ 10);
+    result = (uint64_t)strtoll(fields[1], &endptr, /* base = */ 10);
     if ((endptr == fields[1]) || (errno != 0)) {
       ERROR("contextswitch plugin: Cannot parse ctxt value: %s", fields[1]);
       status = -1;
@@ -132,7 +132,7 @@ static int cs_read(void)
     return -1;
   }
 
-  cs_submit(perfcputotal.pswitch);
+  cs_submit((uint64_t)perfcputotal.pswitch);
   status = 0;
 #endif /* defined(HAVE_PERFSTAT) */
 

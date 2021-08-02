@@ -51,7 +51,7 @@ cmd_status_t cmd_parse_getval(size_t argc, char **argv,
                 argv[1]);
     return CMD_PARSE_ERROR;
   }
-
+#if 0
   metric_t *m = parse_legacy_identifier(argv[0]);
   if (m == NULL) {
     DEBUG("cmd_parse_getval: Cannot parse identifier \"%s\": %s", argv[0],
@@ -63,6 +63,7 @@ cmd_status_t cmd_parse_getval(size_t argc, char **argv,
       .raw_identifier = strdup(argv[0]),
       .metric = m,
   };
+#endif
   return CMD_OK;
 } /* cmd_status_t cmd_parse_getval */
 
@@ -95,7 +96,7 @@ cmd_status_t cmd_handle_getval(FILE *fh, char *buffer) {
     cmd_destroy(&cmd);
     return CMD_UNKNOWN_COMMAND;
   }
-
+#if 0
   gauge_t value;
   /* TODO(octo): raw_identifier may need to be upgraded to a metric_t style
    * identifier. */
@@ -110,7 +111,7 @@ cmd_status_t cmd_handle_getval(FILE *fh, char *buffer) {
   print_to_socket(fh, GAUGE_FORMAT "\n", value);
 
   cmd_destroy(&cmd);
-
+#endif
   return CMD_OK;
 } /* cmd_status_t cmd_handle_getval */
 

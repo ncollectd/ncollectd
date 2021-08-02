@@ -106,12 +106,12 @@ static int softirq_read_data(metric_family_t *fam)
 
     for (int i = 1; i <= softirq_values_to_parse; i++) {
       /* Per-CPU value */
-      value_t v;
-      int status = parse_value(fields[i], &v, DS_TYPE_COUNTER);
+      uint64_t v;
+      int status = parse_uinteger(fields[i], &v);
       if (status != 0)
         break;
       metric_label_set(&m, "cpu", cpu_fields[i - 1]);
-      m.value.counter = v.counter;
+      m.value.counter.uinteger = v;
       metric_family_metric_append(fam, m);
     } 
   }

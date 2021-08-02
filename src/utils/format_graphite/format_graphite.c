@@ -35,25 +35,37 @@
 /* Utils functions to format data sets in graphite format.
  * Largely taken from write_graphite.c as it remains the same formatting */
 
-static int gr_format_values(strbuf_t *buf, metric_t const *m, gauge_t rate,
-                            bool store_rate) {
-  if (!store_rate && ((m->family->type == METRIC_TYPE_GAUGE) ||
-                      (m->family->type == METRIC_TYPE_UNTYPED))) {
-    rate = m->value.gauge;
+static int gr_format_values(strbuf_t *buf, metric_t const *m, double rate, bool store_rate)
+{
+#if 0
+  if (m->family->type == METRIC_TYPE_UNKNOWN) 
+    if (m->value.unknown.type == UNKNOWN_DOUBLE) {
+      rate = m->value.unknown.value_double;
+    } else {
+      rate = (double)m->value.unknown.value_int;
+    }
     store_rate = true;
+  } else if (m->family->type == METRIC_TYPE_GAUGE) {
+    if (m->value.gauge.type == GAUGE_DOUBLE) {
+      rate = m->value.gauge.value_double;
+    } else {
+      rate = (double)m->value.gauge.int_double;
+    }
+    store_rate = true;
+  } 
+
+  if (isnan(rate)) {
+    return strbuf_print(buf, "nan");
+  } else {
+    return strbuf_printf(buf, GAUGE_FORMAT, m->value.gauge);
   }
 
-  if (store_rate) {
-    if (isnan(rate)) {
-      return strbuf_print(buf, "nan");
-    } else {
-      return strbuf_printf(buf, GAUGE_FORMAT, m->value.gauge);
-    }
   } else if (m->family->type == METRIC_TYPE_COUNTER) {
     return strbuf_printf(buf, "%" PRIu64, (uint64_t)m->value.counter);
   }
 
   P_ERROR("gr_format_values: Unknown data source type: %d", m->family->type);
+#endif
   return EINVAL;
 }
 
@@ -121,7 +133,7 @@ static int gr_format_name(strbuf_t *buf, metric_t const *m, char const *prefix,
 int format_graphite(strbuf_t *buf, metric_t const *m, char const *prefix,
                     char const *postfix, char const escape_char,
                     unsigned int flags) {
-  gauge_t rate = NAN;
+  double rate = NAN;
   bool store_rate = false;
   if (flags & GRAPHITE_STORE_RATES) {
     int status = uc_get_rate(m, &rate);

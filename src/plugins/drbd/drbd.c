@@ -113,14 +113,14 @@ static int drbd_metrics(metric_family_t *fams, long int resource,
     if (data == NULL)
       return EINVAL;
 
-    value_t value;
-    (void)parse_value(++data, &value, DS_TYPE_COUNTER);
+    uint64_t value;
+    (void)parse_uinteger(++data, &value);
 
     metric_family_t *fam = &fams[drbd_fams[i].fam_num];
     if (fam->type == METRIC_TYPE_COUNTER) {
-      m.value.counter = value.counter;
+      m.value.counter.uinteger = value;
     } else {
-      m.value.gauge = value.gauge;
+      m.value.gauge.real = (double)value;
     }
 
     metric_family_metric_append(fam, m);
@@ -153,9 +153,9 @@ static int drbd_status(metric_family_t *fams, long int resource,
   if (strncmp("cs", fields[1], 2) == 0) {
     char *data = strchr(fields[1], ':');
     if (data != NULL) {
-      m.value.gauge = 0;
+      m.value.gauge.real = 0;
       if (strncmp(data, "Connected", strlen("Connected")) == 0)
-        m.value.gauge = 1;
+        m.value.gauge.real = 1;
       metric_family_metric_append(&fams[FAM_DRBD_CONNECTED], m);
       
     }
@@ -164,9 +164,9 @@ static int drbd_status(metric_family_t *fams, long int resource,
   if (strncmp("ro", fields[2], 2) == 0) {
     char *data = strchr(fields[2], ':');
     if (data != NULL) {
-      m.value.gauge = 0;
+      m.value.gauge.real = 0;
       if (strncmp(data, "Primary", strlen("Primary")) == 0)
-        m.value.gauge = 1;
+        m.value.gauge.real = 1;
       metric_family_metric_append(&fams[FAM_DRDB_NODE_ROLE_IS_PRIMARY], m);
     }
   }
@@ -174,9 +174,9 @@ static int drbd_status(metric_family_t *fams, long int resource,
   if (strncmp("ds", fields[3], 2) == 0) {
     char *data = strchr(fields[3], ':');
     if (data != NULL) {
-      m.value.gauge = 0;
+      m.value.gauge.real = 0;
       if (strncmp(data, "UpToDate", strlen("UpToDate")) == 0)
-        m.value.gauge = 1;
+        m.value.gauge.real = 1;
       metric_family_metric_append(&fams[FAM_DRDB_DISK_STATE_IS_UP_TO_DATE], m);
     }
   }

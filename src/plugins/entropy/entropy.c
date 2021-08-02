@@ -35,7 +35,7 @@ static int entropy_read(void);
 #error "No applicable input method."
 #endif
 
-static void entropy_submit(gauge_t available, gauge_t poolsize)
+static void entropy_submit(double available, double poolsize)
 {
   metric_family_t fams[] = {
     {
@@ -50,8 +50,8 @@ static void entropy_submit(gauge_t available, gauge_t poolsize)
     },
   };
 
-  metric_family_metric_append(&fams[0], (metric_t){ .value.gauge = available, });
-  metric_family_metric_append(&fams[1], (metric_t){ .value.gauge = poolsize, });
+  metric_family_metric_append(&fams[0], (metric_t){ .value.gauge.real = available, });
+  metric_family_metric_append(&fams[1], (metric_t){ .value.gauge.real = poolsize, });
 
   for (size_t i = 0; i < STATIC_ARRAY_SIZE(fams); i++) {
     int status = plugin_dispatch_metric_family(&fams[i]);
@@ -69,19 +69,19 @@ static void entropy_submit(gauge_t available, gauge_t poolsize)
 
 static int entropy_read(void)
 {
-  value_t available;
-  if (parse_value_file(ENTROPY_AVAILABLE_FILE, &available, DS_TYPE_GAUGE) != 0) {
+  double available;
+  if (parse_double_file(ENTROPY_AVAILABLE_FILE, &available) != 0) {
     ERROR("entropy plugin: Reading \"" ENTROPY_AVAILABLE_FILE "\" failed.");
     return -1;
   }
  
-  value_t poolsize;
-  if (parse_value_file(ENTROPY_POOLSIZE_FILE, &poolsize, DS_TYPE_GAUGE) != 0) {
+  double poolsize;
+  if (parse_double_file(ENTROPY_POOLSIZE_FILE, &poolsize) != 0) {
     ERROR("entropy plugin: Reading \"" ENTROPY_POOLSIZE_FILE "\" failed.");
     return -1;
   }
 
-  entropy_submit(available.gauge, poolsize.gauge);
+  entropy_submit(available, poolsize);
   return 0;
 }
 #endif /* KERNEL_LINUX */

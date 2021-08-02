@@ -43,7 +43,7 @@
 /* #endif HAVE_UTMP_H */
 #endif
 
-static void users_submit(gauge_t value)
+static void users_submit(double value)
 {
   metric_family_t fam = {
       .name = "host_users",
@@ -52,7 +52,7 @@ static void users_submit(gauge_t value)
   };
 
   metric_family_metric_append(&fam, (metric_t){
-                                        .value.gauge = value,
+                                        .value.gauge.real = value,
                                     });
 
   int status = plugin_dispatch_metric_family(&fam);

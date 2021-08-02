@@ -40,7 +40,7 @@
 see /proc/fs/fscache/stats
 see Documentation/filesystems/caching/fscache.txt in linux kernel >= 2.6.30
 */
-static void fscache_submit(const struct fscache_metric *m, counter_t value)
+static void fscache_submit(const struct fscache_metric *m, uint64_t value)
 {
   metric_family_t fam = {
     .name = m->name,
@@ -51,9 +51,9 @@ static void fscache_submit(const struct fscache_metric *m, counter_t value)
   metric_t metric = {0};
 
   if (fam.type == METRIC_TYPE_COUNTER)
-    metric.value.counter = value;
+    metric.value.counter.uinteger = value;
   else
-    metric.value.gauge = value;
+    metric.value.gauge.real = (double)value;
 
   metric_family_metric_append(&fam, metric);
 
@@ -126,7 +126,6 @@ static void fscache_read_stats_file(FILE *fh)
     for (int i = 0; i < fields_num; i++) {
       char *field_name;
       char *field_value_str;
-      value_t field_value_cnt;
       int status;
 
       field_name = fields[i];
@@ -143,12 +142,12 @@ static void fscache_read_stats_file(FILE *fh)
       const struct fscache_metric *m =
           fscache_get_key(section, section_len + field_name_len);
       if (m != NULL) {
-
-        status = parse_value(field_value_str, &field_value_cnt, DS_TYPE_COUNTER);
+        uint64_t field_value_cnt;
+        status = parse_uinteger(field_value_str, &field_value_cnt);
         if (status != 0)
           continue;
 
-        fscache_submit(m, field_value_cnt.counter);
+        fscache_submit(m, field_value_cnt);
       } else {
         DEBUG("fscache plugin: metric not found for: %.*s %s", (int)section_len, section, field_name);
       }

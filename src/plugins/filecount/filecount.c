@@ -74,14 +74,14 @@ static void fc_free_dir(fc_directory_conf_t *dir)
   sfree(dir);
 }
 
-static void fc_submit_dir(char *name, metric_t *tmpl, gauge_t value)
+static void fc_submit_dir(char *name, metric_t *tmpl, double value)
 {
   metric_family_t fam = {
       .name = name,
       .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_append(&fam, NULL, NULL, (value_t){.gauge = value}, tmpl);
+  metric_family_append(&fam, NULL, NULL, (value_t){.gauge.real = value}, tmpl);
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
@@ -465,10 +465,10 @@ static int fc_read_dir(fc_directory_conf_t *dir)
   }
 
   if (dir->metric_files_num != NULL) {
-    fc_submit_dir(dir->metric_files_num, &m, (gauge_t)dir->files_num);
+    fc_submit_dir(dir->metric_files_num, &m, (double)dir->files_num);
   }
   if (dir->metric_files_size != NULL) {
-    fc_submit_dir(dir->metric_files_size, &m, (gauge_t)dir->files_size);
+    fc_submit_dir(dir->metric_files_size, &m, (double)dir->files_size);
   }
 
   metric_reset(&m);

@@ -68,11 +68,9 @@ static int ut_threshold_add(threshold_t *th) { /* {{{ */
     th_ptr = th_ptr->next;
 
   int status = 0;
-  if (th_ptr == NULL) /* no such threshold yet */
-  {
+  if (th_ptr == NULL) { /* no such threshold yet */
     status = c_avl_insert(threshold_tree, name_copy, th);
-  } else /* th_ptr points to the last threshold in the list */
-  {
+  } else { /* th_ptr points to the last threshold in the list */
     th_ptr->next = th;
     /* name_copy isn't needed */
     sfree(name_copy);
@@ -176,7 +174,7 @@ static int ut_config_metric(oconfig_item_t *ci) {
  * if appropriate.
  * Does not fail.
  */
-static int ut_report_state(metric_t const *m, const char *name, const threshold_t *th, const gauge_t value, int state) { /* {{{ */
+static int ut_report_state(metric_t const *m, const char *name, const threshold_t *th, const double value, int state) { /* {{{ */
   /* Check if hits matched */
   if ((th->hits != 0)) {
     int hits = uc_get_hits_by_name(name);
@@ -308,7 +306,7 @@ static int ut_report_state(metric_t const *m, const char *name, const threshold_
  */
 static int ut_check_one_threshold(metric_t const *m, const char *name,
                                   const threshold_t *th,
-                                  const gauge_t value) { /* {{{ */
+                                  const double value) { /* {{{ */
   int is_warning = 0;
   int is_failure = 0;
   int prev_state = STATE_OKAY;
@@ -329,7 +327,7 @@ static int ut_check_one_threshold(metric_t const *m, const char *name,
      *
      * There is no hysteresis for the OKAY state.
      * */
-    gauge_t hysteresis_for_warning = 0, hysteresis_for_failure = 0;
+    double hysteresis_for_warning = 0, hysteresis_for_failure = 0;
     switch (prev_state) {
     case STATE_ERROR:
       hysteresis_for_failure = th->hysteresis;
@@ -384,7 +382,7 @@ static int ut_check_metric_threshold(metric_t const *m, threshold_t *th)
   }
   const char *name = buf.ptr;
 
-  gauge_t value;
+  double value;
   status = uc_get_rate_by_name(name, &value);
   if (status != 0) {
     STRBUF_DESTROY(buf);

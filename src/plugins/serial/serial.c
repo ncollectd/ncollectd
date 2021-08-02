@@ -104,7 +104,7 @@ static int serial_read(void)
     metric_t m = {0};
     metric_label_set(&m, "line", fields[0]);
 
-    counter_t value = 0;
+    uint64_t value = 0;
 
     for (int i = 1; i < numfields; i++) {
       len = strlen(fields[i]);
@@ -118,48 +118,48 @@ static int serial_read(void)
           break;
         case 't':
           if (strncmp(fields[i], "tx:", 3) == 0) {
-            if (strtocounter(fields[i] + 3, &value) == 0) {
-              m.value.counter = value;
+            if (strtouint(fields[i] + 3, &value) == 0) {
+              m.value.counter.uinteger = value;
               metric_family_metric_append(&fams[FAM_SERIAL_READ], m);
             }
           }
           break;
         case 'r':
           if (strncmp(fields[i], "rx:", 3) == 0) {
-            if (strtocounter(fields[i] + 3, &value) == 0) {
-               m.value.counter = value;
+            if (strtouint(fields[i] + 3, &value) == 0) {
+               m.value.counter.uinteger = value;
                metric_family_metric_append(&fams[FAM_SERIAL_WRITE], m);
             }
           }
           break;
         case 'f':
           if (strncmp(fields[i], "fe:", 3) == 0) {
-            if (strtocounter(fields[i] + 3, &value) == 0) {
-              m.value.counter = value;
+            if (strtouint(fields[i] + 3, &value) == 0) {
+              m.value.counter.uinteger = value;
               metric_family_metric_append(&fams[FAM_SERIAL_FRAMING_ERRORS], m);
             }
           }
           break;
         case 'p':
           if (strncmp(fields[i], "pe:", 3) == 0) {
-            if (strtocounter(fields[i] + 3, &value) == 0) {
-              m.value.counter = value;
+            if (strtouint(fields[i] + 3, &value) == 0) {
+              m.value.counter.uinteger = value;
               metric_family_metric_append(&fams[FAM_SERIAL_PARITY_ERRORS], m);
             }
           }
           break;
         case 'b':
           if (strncmp(fields[i], "brk:", 4) == 0) {
-            if (strtocounter(fields[i] + 4, &value) == 0) {
-              m.value.counter = value;
+            if (strtouint(fields[i] + 4, &value) == 0) {
+              m.value.counter.uinteger = value;
               metric_family_metric_append(&fams[FAM_SERIAL_BREAK_CONDITIONS], m);
             }
           }
           break;
         case 'o':
           if (strncmp(fields[i], "oe:", 3) == 0) {
-            if (strtocounter(fields[i] + 3, &value) == 0) {
-              m.value.counter = value;
+            if (strtouint(fields[i] + 3, &value) == 0) {
+              m.value.counter.uinteger = value;
               metric_family_metric_append(&fams[FAM_SERIAL_OVERRUN_ERRORS], m); 
             }
           }

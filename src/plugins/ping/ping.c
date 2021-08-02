@@ -644,7 +644,7 @@ static int ping_read(void)
       metric_family_metric_append(&fam_ping_distribution_latency, m);
     }
 
-    m.value.gauge = droprate;
+    m.value.gauge.real = droprate;
     metric_family_metric_append(&fam_ping_droprate, m);
 
     metric_reset(&m);

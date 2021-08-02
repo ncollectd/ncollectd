@@ -34,30 +34,72 @@
 #include "utils_time.h"
 #include "label_set.h"
 
-#define VALUE_TYPE_GAUGE 1
-#define VALUE_TYPE_DERIVE 2
-#define VALUE_TYPE_DISTRIBUTION 3
-#define VALUE_TYPE_INFO 4
-
 typedef enum {
-  METRIC_TYPE_COUNTER = 0,
-  METRIC_TYPE_GAUGE = 1,
-  METRIC_TYPE_UNTYPED = 2,
-  METRIC_TYPE_DISTRIBUTION = 3,
-  METRIC_TYPE_INFO = 4,
+  METRIC_TYPE_UNKNOWN      = 0,
+  METRIC_TYPE_GAUGE        = 1,
+  METRIC_TYPE_COUNTER      = 2,
+  METRIC_TYPE_STATE_SET    = 3,
+  METRIC_TYPE_INFO         = 4,
+  METRIC_TYPE_DISTRIBUTION = 5,
 } metric_type_t;
 
-typedef uint64_t counter_t;
-typedef double gauge_t;
-typedef int64_t derive_t;
+typedef enum {
+  UNKNOWN_REAL    = 0,
+  UNKNOWN_INTEGER = 1,
+} unknown_type_t;
 
-union value_u {
-  counter_t counter;
+typedef struct {
+  unknown_type_t type;
+  union {
+    double real;
+    int64_t integer;
+  };
+} unknown_t;
+
+typedef enum {
+  GAUGE_REAL    = 0,
+  GAUGE_INTEGER = 1,
+} gauge_type_t;
+
+typedef struct {
+  gauge_type_t type;
+  union {
+    double real;
+    int64_t integer;
+  };
+} gauge_t;
+
+typedef enum {
+  COUNTER_UINTEGER = 0,
+  COUNTER_REAL    = 1,
+} counter_type_t;
+
+typedef struct {
+  counter_type_t type;
+  union {
+    double real;
+    uint64_t uinteger;
+  };
+} counter_t;
+
+typedef struct {
+  bool enabled;
+  char *name;
+} state_t;
+
+typedef struct {
+  size_t num;
+  state_t *ptr;
+} state_set_t;
+
+typedef union {
+  unknown_t unknown;
   gauge_t gauge;
-  derive_t derive;
+  counter_t counter;
+  state_set_t state_set;
+  label_set_t info;
   distribution_t *distribution;
-};
-typedef union value_u value_t;
+} value_t;
 
 typedef struct {
   value_t value;

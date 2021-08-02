@@ -39,13 +39,12 @@ static int uname_init(void)
   }
 
   metric_t m = {0};
-  m.value.gauge = 1;
 
-  metric_label_set(&m, "sysname", name.sysname);
-  metric_label_set(&m, "release", name.release);
-  metric_label_set(&m, "machine", name.machine);
-  metric_label_set(&m, "nodename", name.nodename);
-  metric_label_set(&m, "version", name.version);
+  label_set_add(&m.value.info, "sysname", name.sysname);
+  label_set_add(&m.value.info, "release", name.release);
+  label_set_add(&m.value.info, "machine", name.machine);
+  label_set_add(&m.value.info, "nodename", name.nodename);
+  label_set_add(&m.value.info, "version", name.version);
   
   metric_family_metric_append(&fam_uname, m);
   metric_reset(&m);

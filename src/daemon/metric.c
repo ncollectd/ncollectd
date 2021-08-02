@@ -61,7 +61,7 @@ void typed_value_destroy(typed_value_t val) {
 int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type) {
   switch (type) {
   case METRIC_TYPE_GAUGE:
-  case METRIC_TYPE_UNTYPED:
+  case METRIC_TYPE_UNKNOWN:
     return strbuf_printf(buf, GAUGE_FORMAT, v.gauge);
   case METRIC_TYPE_COUNTER:
     return strbuf_printf(buf, "%" PRIu64, v.counter);
@@ -366,7 +366,7 @@ metric_t *metric_parse_identity(char const *buf) {
   if (fam == NULL) {
     return NULL;
   }
-  fam->type = METRIC_TYPE_UNTYPED;
+  fam->type = METRIC_TYPE_UNKNOWN;
 
   int status = metric_list_add(&fam->metric, (metric_t){.family = fam});
   if (status != 0) {

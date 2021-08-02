@@ -78,11 +78,10 @@ static int default_callback(const char __attribute__((unused)) * str,
   cu_match_value_t *data = (cu_match_value_t *)user_data;
 
   if (data->ds_type & UTILS_MATCH_DS_TYPE_GAUGE) {
-    gauge_t value;
     char *endptr = NULL;
 
     if (data->ds_type & UTILS_MATCH_CF_GAUGE_INC) {
-      data->value.gauge = isnan(data->value.gauge) ? 1 : data->value.gauge + 1;
+      data->value.gauge.real = isnan(data->value.gauge.real) ? 1 : data->value.gauge.real + 1;
       data->values_num++;
       return 0;
     }
@@ -90,7 +89,7 @@ static int default_callback(const char __attribute__((unused)) * str,
     if (matches_num < 2)
       return -1;
 
-    value = (gauge_t)strtod(matches[1], &endptr);
+    double value = (double)strtod(matches[1], &endptr);
     if (matches[1] == endptr)
       return -1;
 
@@ -103,18 +102,18 @@ static int default_callback(const char __attribute__((unused)) * str,
     if ((data->values_num == 0) ||
         (data->ds_type & UTILS_MATCH_CF_GAUGE_LAST) ||
         (data->ds_type & UTILS_MATCH_CF_GAUGE_PERSIST)) {
-      data->value.gauge = value;
+      data->value.gauge.real = value;
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_AVERAGE) {
       double f = ((double)data->values_num) / ((double)(data->values_num + 1));
-      data->value.gauge = (data->value.gauge * f) + (value * (1.0 - f));
+      data->value.gauge.real = (data->value.gauge.real * f) + (value * (1.0 - f));
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_MIN) {
-      if (data->value.gauge > value)
-        data->value.gauge = value;
+      if (data->value.gauge.real > value)
+        data->value.gauge.real = value;
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_MAX) {
-      if (data->value.gauge < value)
-        data->value.gauge = value;
+      if (data->value.gauge.real < value)
+        data->value.gauge.real = value;
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_ADD) {
-      data->value.gauge += value;
+      data->value.gauge.real += value;
     } else {
       ERROR("utils_match: default_callback: obj->ds_type is invalid!");
       return -1;
@@ -122,11 +121,10 @@ static int default_callback(const char __attribute__((unused)) * str,
 
     data->values_num++;
   } else if (data->ds_type & UTILS_MATCH_DS_TYPE_COUNTER) {
-    counter_t value;
     char *endptr = NULL;
 
     if (data->ds_type & UTILS_MATCH_CF_COUNTER_INC) {
-      data->value.counter++;
+      data->value.counter.uinteger++;
       data->values_num++;
       return 0;
     }
@@ -134,41 +132,14 @@ static int default_callback(const char __attribute__((unused)) * str,
     if (matches_num < 2)
       return -1;
 
-    value = (counter_t)strtoull(matches[1], &endptr, 0);
+    int64_t value = (int64_t)strtoull(matches[1], &endptr, 0);
     if (matches[1] == endptr)
       return -1;
 
     if (data->ds_type & UTILS_MATCH_CF_COUNTER_SET)
-      data->value.counter = value;
+      data->value.counter.uinteger = value;
     else if (data->ds_type & UTILS_MATCH_CF_COUNTER_ADD)
-      data->value.counter += value;
-    else {
-      ERROR("utils_match: default_callback: obj->ds_type is invalid!");
-      return -1;
-    }
-
-    data->values_num++;
-  } else if (data->ds_type & UTILS_MATCH_DS_TYPE_DERIVE) {
-    derive_t value;
-    char *endptr = NULL;
-
-    if (data->ds_type & UTILS_MATCH_CF_DERIVE_INC) {
-      data->value.derive++;
-      data->values_num++;
-      return 0;
-    }
-
-    if (matches_num < 2)
-      return -1;
-
-    value = (derive_t)strtoll(matches[1], &endptr, 0);
-    if (matches[1] == endptr)
-      return -1;
-
-    if (data->ds_type & UTILS_MATCH_CF_DERIVE_SET)
-      data->value.derive = value;
-    else if (data->ds_type & UTILS_MATCH_CF_DERIVE_ADD)
-      data->value.derive += value;
+      data->value.counter.uinteger += value;
     else {
       ERROR("utils_match: default_callback: obj->ds_type is invalid!");
       return -1;
@@ -275,7 +246,7 @@ void match_value_reset(cu_match_value_t *mv) {
   /* Reset GAUGE metrics only and except GAUGE_PERSIST. */
   if ((mv->ds_type & UTILS_MATCH_DS_TYPE_GAUGE) &&
       !(mv->ds_type & UTILS_MATCH_CF_GAUGE_PERSIST)) {
-    mv->value.gauge = (mv->ds_type & UTILS_MATCH_CF_GAUGE_INC) ? 0 : NAN;
+    mv->value.gauge.real = (mv->ds_type & UTILS_MATCH_CF_GAUGE_INC) ? 0 : NAN;
     mv->values_num = 0;
   }
 } /* }}} void match_value_reset */

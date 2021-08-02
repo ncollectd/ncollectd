@@ -45,16 +45,11 @@ int uc_check_timeout(void);
 int uc_update(metric_family_t const *fam);
 void uc_destroy(void);
 
-gauge_t *uc_get_rate_vl(const data_set_t *ds, const value_list_t *vl);
-int uc_get_value_by_name_vl(const char *name, value_t **ret_values,
-                            size_t *ret_values_num);
-value_t *uc_get_value_vl(const data_set_t *ds, const value_list_t *vl);
-
-int uc_get_percentile_by_name(const char *name, gauge_t *ret_value,
+int uc_get_percentile_by_name(const char *name, double *ret_value,
                               double percent);
-int uc_get_percentile(metric_t const *m, gauge_t *ret_value, double percent);
-int uc_get_rate_by_name(const char *name, gauge_t *ret_value);
-int uc_get_rate(metric_t const *m, gauge_t *ret_value);
+int uc_get_percentile(metric_t const *m, double *ret_value, double percent);
+int uc_get_rate_by_name(const char *name, double *ret_value);
+int uc_get_rate(metric_t const *m, double *ret_value);
 int uc_get_value_by_name(const char *name, value_t *ret_value);
 int uc_get_value(metric_t const *m, value_t *ret_value);
 int uc_get_start_value_by_name(const char *name, value_t *ret_start_value,
@@ -79,8 +74,8 @@ int uc_inc_hits(metric_t const *m, int step);
 
 int uc_set_callbacks_mask(const char *name, unsigned long callbacks_mask);
 
-int uc_get_history(metric_t const *m, gauge_t *ret_history, size_t num_steps);
-int uc_get_history_by_name(const char *name, gauge_t *ret_history,
+int uc_get_history(metric_t const *m, double *ret_history, size_t num_steps);
+int uc_get_history_by_name(const char *name, double *ret_history,
                            size_t num_steps);
 
 /* functions for tests purposes */
@@ -160,16 +155,5 @@ int uc_meta_data_get_unsigned_int(metric_t const *m, const char *key,
                                   uint64_t *value);
 int uc_meta_data_get_double(metric_t const *m, const char *key, double *value);
 int uc_meta_data_get_boolean(metric_t const *m, const char *key, bool *value);
-
-/* TODO(octo): Remove these dummy functions after format_stackdriver has been
- * migrated. */
-int uc_meta_data_get_signed_int_vl(value_list_t const *vl, char const *key,
-                                   int64_t *value);
-int uc_meta_data_get_unsigned_int_vl(value_list_t const *vl, char const *key,
-                                     uint64_t *value);
-int uc_meta_data_add_signed_int_vl(value_list_t const *vl, char const *key,
-                                   int64_t value);
-int uc_meta_data_add_unsigned_int_vl(value_list_t const *vl, char const *key,
-                                     uint64_t value);
 
 #endif /* !UTILS_CACHE_H */

@@ -78,8 +78,7 @@ static int ethstat_config(oconfig_item_t *ci)
   return 0;
 }
 
-static void ethstat_submit_value(const char *device, const char *name,
-                                 counter_t value)
+static void ethstat_submit_value(const char *device, const char *name, uint64_t value)
 {
   char fam_name[256];
   ssnprintf(fam_name, sizeof(fam_name), "host_ethstat_%s_total", name);
@@ -89,7 +88,7 @@ static void ethstat_submit_value(const char *device, const char *name,
     .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_append(&fam, "device", device, (value_t){.counter = value}, NULL);
+  metric_family_append(&fam, "device", device, (value_t){.counter.uinteger = value}, NULL);
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0)
@@ -185,7 +184,7 @@ static int ethstat_read_interface(char *device)
 
     DEBUG("ethstat plugin: device = \"%s\": %s = %" PRIu64, device, stat_name,
           (uint64_t)stats->data[i]);
-    ethstat_submit_value(device, stat_name, (counter_t)stats->data[i]);
+    ethstat_submit_value(device, stat_name, (uint64_t)stats->data[i]);
   }
 
   close(fd);

@@ -241,7 +241,11 @@
 #endif
 
 #ifndef GAUGE_FORMAT
-#define GAUGE_FORMAT "%.15g"
+#define GAUGE_FORMAT "%.17g"
+#endif
+
+#ifndef COUNTER_FORMAT
+#define COUNTER_FORMAT "%" PRIu64
 #endif
 
 #include "globals.h"

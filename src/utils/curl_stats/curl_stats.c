@@ -240,7 +240,7 @@ int curl_stats_dispatch(curl_stats_t *s, CURL *curl, metric_t *tmpl) {
         code = curl_easy_getinfo(curl, field_specs[field].info, &value.gauge);
         if (code != CURLE_OK)
           continue;
-        value.gauge *= 8;
+        value.gauge.real *= 8;
         break;
       case DISPATCH_GAUGE:
         code = curl_easy_getinfo(curl, field_specs[field].info, &value.gauge);
@@ -253,7 +253,7 @@ int curl_stats_dispatch(curl_stats_t *s, CURL *curl, metric_t *tmpl) {
         code = curl_easy_getinfo(curl, field_specs[field].info, &raw);
         if (code != CURLE_OK)
           continue;
-        value.gauge = (double)raw;
+        value.gauge.real = (double)raw;
       }
         break;
     }

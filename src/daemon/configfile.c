@@ -32,7 +32,6 @@
 #include "configfile.h"
 #include "filter_chain.h"
 #include "plugin.h"
-#include "types_list.h"
 #include "utils/common/common.h"
 
 #if HAVE_WORDEXP_H
@@ -83,7 +82,6 @@ typedef struct cf_global_option_s {
 /*
  * Prototypes of callback functions
  */
-static int dispatch_value_typesdb(oconfig_item_t *ci);
 static int dispatch_value_plugindir(oconfig_item_t *ci);
 static int dispatch_loadplugin(oconfig_item_t *ci);
 static int dispatch_block_plugin(oconfig_item_t *ci);
@@ -94,8 +92,7 @@ static int dispatch_block_plugin(oconfig_item_t *ci);
 static cf_callback_t *first_callback;
 static cf_complex_callback_t *complex_callback_head;
 
-static cf_value_map_t cf_value_map[] = {{"TypesDB", dispatch_value_typesdb},
-                                        {"PluginDir", dispatch_value_plugindir},
+static cf_value_map_t cf_value_map[] = {{"PluginDir", dispatch_value_plugindir},
                                         {"LoadPlugin", dispatch_loadplugin},
                                         {"Plugin", dispatch_block_plugin}};
 static int cf_value_map_num = STATIC_ARRAY_SIZE(cf_value_map);
@@ -117,8 +114,6 @@ static cf_global_option_t cf_global_options[] = {
     {"PostCacheChain", NULL, 0, "PostCache"},
     {"MaxReadInterval", NULL, 0, "86400"}};
 static int cf_global_options_num = STATIC_ARRAY_SIZE(cf_global_options);
-
-static int cf_default_typesdb = 1;
 
 /*
  * Functions to handle register/unregister, search, and other plugin related
@@ -231,29 +226,6 @@ static int dispatch_global_option(const oconfig_item_t *ci) {
 
   return -1;
 } /* int dispatch_global_option */
-
-static int dispatch_value_typesdb(oconfig_item_t *ci) {
-  assert(strcasecmp(ci->key, "TypesDB") == 0);
-
-  cf_default_typesdb = 0;
-
-  if (ci->values_num < 1) {
-    ERROR("configfile: `TypesDB' needs at least one argument.");
-    return -1;
-  }
-
-  for (int i = 0; i < ci->values_num; ++i) {
-    if (OCONFIG_TYPE_STRING != ci->values[i].type) {
-      WARNING("configfile: TypesDB: Skipping %i. argument which "
-              "is not a string.",
-              i + 1);
-      continue;
-    }
-
-    read_types_list(ci->values[i].value.string);
-  }
-  return 0;
-} /* int dispatch_value_typesdb */
 
 static int dispatch_value_plugindir(oconfig_item_t *ci) {
   assert(strcasecmp(ci->key, "PluginDir") == 0);
@@ -1032,12 +1004,6 @@ int cf_read(const char *filename) {
 
   oconfig_free(conf);
 
-  /* Read the default types.db if no `TypesDB' option was given. */
-  if (cf_default_typesdb) {
-    if (read_types_list(PKGDATADIR "/types.db") != 0)
-      ret = -1;
-  }
-
   return ret;
 
 } /* int cf_read */
@@ -1286,8 +1252,8 @@ int cf_util_get_metric_type(const oconfig_item_t *ci,
 
   if (!strcasecmp(ci->values[0].value.string, "gauge"))
     *ret_metric = METRIC_TYPE_GAUGE;
-  else if (!strcasecmp(ci->values[0].value.string, "untyped"))
-    *ret_metric = METRIC_TYPE_UNTYPED;
+  else if (!strcasecmp(ci->values[0].value.string, "unknow"))
+    *ret_metric = METRIC_TYPE_UNKNOWN;
   else if (!strcasecmp(ci->values[0].value.string, "counter"))
     *ret_metric = METRIC_TYPE_COUNTER;
   else if (!strcasecmp(ci->values[0].value.string, "info"))

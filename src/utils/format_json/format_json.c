@@ -191,8 +191,8 @@ static int json_metric_family(yajl_gen g, metric_family_t const *fam) {
   case METRIC_TYPE_COUNTER:
     type = "COUNTER";
     break;
-  case METRIC_TYPE_UNTYPED:
-    type = "UNTYPED";
+  case METRIC_TYPE_UNKNOWN:
+    type = "UNKNOWN";
     break;
   case METRIC_TYPE_DISTRIBUTION:
     type = "DISTRIBUTION";

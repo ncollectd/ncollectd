@@ -222,7 +222,7 @@ static int squid_read_counters(squid_t *sq, metric_t *tmpl)
 
     const struct squid_counter *sc;
     if ((sc = squid_counter_get_key(key, key_len))!= NULL) {
-      value_t value;
+      value_t value = {0};
 
       switch(sc->fam) {
         case FAM_SQUID_CLIENT_HTTP_IN_BYTES_TOTAL:
@@ -243,23 +243,32 @@ static int squid_read_counters(squid_t *sq, metric_t *tmpl)
         case FAM_SQUID_ICP_Q_RECV_BYTES_TOTAL:
         case FAM_SQUID_ICP_R_RECV_BYTES_TOTAL:
         case FAM_SQUID_CD_SENT_BYTES_TOTAL:
-        case FAM_SQUID_CD_RECV_BYTES_TOTAL:
-          if (strtocounter(val, &value.counter) < 0) 
+        case FAM_SQUID_CD_RECV_BYTES_TOTAL: {
+          uint64_t counter; 
+          if (strtouint(val, &counter) < 0) 
             continue;
-          value.counter *= 1024;
+          value.counter.uinteger = counter * 1024;
           break;
+        }
         case FAM_SQUID_CPU_TIME_TOTAL:
         case FAM_SQUID_WALL_TIME_TOTAL: {
-          gauge_t gauge;
-          if (strtogauge(val, &gauge) < 0) 
+          double gauge;
+          if (strtodouble(val, &gauge) < 0) 
             continue;
-          value.counter = gauge * 1000000;
+          value.counter.real = gauge * 1000000;
           break;
         }
         default:
-          if (parse_value(val, &value, sq->fams[sc->fam].type) != 0) {
-            WARNING("squid plugin: Unable to parse field `%s'.", key);
-            continue;
+          if (sq->fams[sc->fam].type == METRIC_TYPE_GAUGE) {
+            if (parse_uinteger(val, &value.counter.uinteger) != 0) {
+              WARNING("squid plugin: Unable to parse field `%s'.", key);
+              continue;
+            }
+          } else if (sq->fams[sc->fam].type == METRIC_TYPE_COUNTER) {
+            if (parse_double(val, &value.gauge.real) != 0) {
+              WARNING("squid plugin: Unable to parse field `%s'.", key);
+              continue;
+            }
           }
           break;
       }
@@ -306,7 +315,7 @@ static int squid_read(user_data_t *ud)
   int status = squid_read_counters(sq, &tmpl);
 
   metric_family_append(&fam_up, NULL, NULL,
-                       (value_t){.gauge = status == 0 ? 1 : 0},
+                       (value_t){.gauge.real = status == 0 ? 1 : 0},
                        &tmpl);
 
   status = plugin_dispatch_metric_family(&fam_up);

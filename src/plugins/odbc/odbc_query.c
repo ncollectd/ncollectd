@@ -174,11 +174,9 @@ static int udb_result_submit(udb_result_t *r, /* {{{ */
       fam.type = METRIC_TYPE_GAUGE;
     else if (!strcasecmp(r_area->type_str, "counter"))
       fam.type = METRIC_TYPE_COUNTER;
-    else if (!strcasecmp(r_area->type_str, "untyped"))
-      fam.type = METRIC_TYPE_UNTYPED;
     else {
       P_ERROR("udb_result_submit: Parse type `%s' as `gauge', `counter' "
-              "or `untyped' failed",
+              "failed",
               r_area->type_str);
       return -1;
     }
@@ -230,15 +228,25 @@ static int udb_result_submit(udb_result_t *r, /* {{{ */
 
   int ret = 0;
   char *value_str = r_area->value_str;
-  value_t value;
-  if (0 != parse_value(value_str, &value, fam.type)) {
-    P_ERROR("udb_result_submit: Parsing `%s' as %s failed.", value_str,
-            DS_TYPE_TO_STRING(r->type));
-    errno = EINVAL;
-    ret = -1;
-  } else {
-    m.value = value;
+  if (fam.type == METRIC_TYPE_GAUGE) {
+    double value;
+    if (0 != parse_double(value_str, &value)) {
+      P_ERROR("udb_result_submit: Parsing `%s' as gauge failed.", value_str);
+      errno = EINVAL;
+      ret = -1;
+    }
+    m.value.gauge.real = value;
+  } else if (fam.type == METRIC_TYPE_COUNTER) {
+    uint64_t value;
+    if (0 != parse_uinteger(value_str, &value)) {
+      P_ERROR("udb_result_submit: Parsing `%s' as counter failed.", value_str);
+      errno = EINVAL;
+      ret = -1;
+    }
+    m.value.counter.uinteger = value;
+  }
 
+  if (ret == 0) {
     metric_family_metric_append(&fam, m);
 
     int status = plugin_dispatch_metric_family(&fam);
@@ -452,7 +460,7 @@ static int udb_result_create(const char *query_name, /* {{{ */
     return -1;
   }
 
-  r->type = METRIC_TYPE_UNTYPED;
+  r->type = METRIC_TYPE_UNKNOWN;
   bool type_setted = false;
   /* Fill the `udb_result_t' structure.. */
   int status = 0;

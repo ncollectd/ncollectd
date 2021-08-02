@@ -55,7 +55,7 @@ typedef struct {
 
   char **plugins;
   size_t plugins_num;
-  identifier_t *identifiers;
+  char **identifiers;
   size_t identifiers_num;
 } cmd_flush_t;
 
@@ -72,8 +72,7 @@ typedef struct {
 
   /* An array of the fully parsed identifier and all value lists, and their
    * options as provided by the user. */
-  value_list_t *vl;
-  size_t vl_num;
+  metric_family_t *family;
 } cmd_putval_t;
 
 typedef struct {

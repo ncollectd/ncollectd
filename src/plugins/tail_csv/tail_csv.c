@@ -89,10 +89,21 @@ static int tcsv_read_metric(instance_definition_t *id, metric_definition_t *md,
   if (((size_t)md->value_from) >= fields_num)
     return EINVAL;
 
-  value_t v;
-  int status = parse_value(fields[md->value_from], &v, md->type);
-  if (status != 0)
-    return status;
+  metric_t m = {0};
+
+  if (md->type == METRIC_TYPE_GAUGE) {
+    double gauge;
+    int status = parse_double(fields[md->value_from], &gauge);
+    if (status != 0)
+      return status;
+    m.value.gauge.real = gauge;
+  } else if (md->type == METRIC_TYPE_COUNTER) {
+    uint64_t counter;
+    int status = parse_uinteger(fields[md->value_from], &counter);
+    if (status != 0)
+      return status;
+    m.value.counter.uinteger = counter;
+  }
 
   cdtime_t t = 0;
   if (id->time_from >= 0) {
@@ -122,8 +133,6 @@ static int tcsv_read_metric(instance_definition_t *id, metric_definition_t *md,
 
   fam.name = buf.ptr;
 
-  metric_t m = {0};
-
   for (size_t i = 0; i < id->labels.num; i++) {
     metric_label_set(&m, id->labels.ptr[i].name, id->labels.ptr[i].value);
   }
@@ -140,12 +149,11 @@ static int tcsv_read_metric(instance_definition_t *id, metric_definition_t *md,
     }
   }
 
-  m.value = v;
   m.time = t;
 
   metric_family_metric_append(&fam, m);
 
-  status = plugin_dispatch_metric_family(&fam);
+  int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
     ERROR("table plugin: plugin_dispatch_metric_family failed: %s",
           STRERROR(status));
@@ -388,7 +396,7 @@ static int tcsv_config_add_metric(oconfig_item_t *ci) {
 
   md->metric_from = -1;
   md->value_from = -1;
-  md->type = METRIC_TYPE_UNTYPED;
+  md->type = METRIC_TYPE_UNKNOWN;
 
   status = cf_util_get_string(ci, &md->name);
   if (status != 0) {

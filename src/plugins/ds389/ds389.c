@@ -287,7 +287,7 @@ static int ds389_read_metrics(ds389_t *st, char *filter,
   }
 
   for (size_t i = 0; i < metrics_size; i++) {
-    value_t value;
+    value_t value = {0};
     struct berval **value_list =
         ldap_get_values_len(st->ld, e, metrics[i].attr);
     if (value_list != NULL) {
@@ -295,20 +295,20 @@ static int ds389_read_metrics(ds389_t *st, char *filter,
       metric_family_t *fam = &st->fams[metrics[i].fam];
 
       if (metrics[i].fam == FAM_DS389_VERSION_INFO) {
-        value.gauge = 1;
+        value.gauge.real = 1;
         metric_family_append(fam, "version", value_data.bv_val, value, tmpl);
       } else if (metrics[i].fam == FAM_DS389_START_TIME_SECONDS) {
         struct tm tm = {0};
         if (strptime(value_data.bv_val,"%Y%m%d%H%M%S", &tm) != NULL) {
           time_t start = mktime(&tm);
-          value.gauge = start;
+          value.gauge.real = start;
           metric_family_append(fam, NULL, NULL, value, tmpl);
         }
       } else {
         if (fam->type == METRIC_TYPE_GAUGE)
-          value.gauge = atoll(value_data.bv_val);
+          value.gauge.real = (double)atoll(value_data.bv_val);
         else
-          value.counter = atoll(value_data.bv_val);
+          value.counter.uinteger = (uint64_t)atoll(value_data.bv_val);
 
         metric_family_append(fam, NULL, NULL, value, tmpl);
       }
@@ -345,13 +345,13 @@ static int ds389_read_backend_metrics(ds389_t *st, char *filter, metric_t *tmpl)
     char *attr = ds389_metrics_backend[i].attr;
     struct berval **value_list = ldap_get_values_len(st->ld, e, attr);
     if (value_list != NULL) {
-      value_t value;
+      value_t value = {0};
       struct berval value_data = *value_list[0];
 
       if (fam->type == METRIC_TYPE_GAUGE)
-        value.gauge = atoll(value_data.bv_val);
+        value.gauge.real = (double)atoll(value_data.bv_val);
       else
-        value.counter = atoll(value_data.bv_val);
+        value.counter.uinteger = (uint64_t)atoll(value_data.bv_val);
 
       metric_family_append(fam, NULL, NULL, value, tmpl);
 
@@ -380,34 +380,34 @@ static int ds389_read_backend_metrics(ds389_t *st, char *filter, metric_t *tmpl)
       } else if (strncmp(attr, "dbfilecachehit-", strlen("dbfilecachehit-")) == 0) {
         int num = atoll(attr + strlen("dbfilecachehit-"));
         if (num == current_num) {
-          counter_t value = atoll(value_data.bv_val);
+          uint64_t value = (uint64_t)atoll(value_data.bv_val);
           metric_family_append(&st->fams[FAM_DS389_BACKEND_DBFILE_CACHE_HIT],
                                "filename", current_filename,
-                               (value_t){.counter = value}, tmpl);
+                               (value_t){.counter.uinteger = value}, tmpl);
         }
       } else if (strncmp(attr, "dbfilecachemiss-", strlen("dbfilecachemiss-")) == 0) {
         int num = atoll(attr + strlen("dbfilecachemiss-"));
         if (num == current_num) {
-          counter_t value = atoll(value_data.bv_val);
+          uint64_t value = (uint64_t)atoll(value_data.bv_val);
           metric_family_append(&st->fams[FAM_DS389_BACKEND_DBFILE_CACHE_MISS],
                                "filename", current_filename,
-                               (value_t){.counter = value}, tmpl);
+                               (value_t){.counter.uinteger = value}, tmpl);
         }
       } else if (strncmp(attr, "dbfilepagein-", strlen("dbfilepagein-")) == 0) {
         int num = atoll(attr + strlen("dbfilepagein-"));
         if (num == current_num) {
-          counter_t value = atoll(value_data.bv_val);
+          uint64_t value = (uint64_t)atoll(value_data.bv_val);
           metric_family_append(&st->fams[FAM_DS389_BACKEND_DBFILE_PAGEIN],
                                "filename", current_filename,
-                               (value_t){.counter = value}, tmpl);
+                               (value_t){.counter.uinteger = value}, tmpl);
         }
       } else if (strncmp(attr, "dbfilepageout-", strlen("dbfilepageout-")) == 0) {
         int num = atoll(attr + strlen("dbfilepageout-"));
         if (num == current_num) {
-          counter_t value = atoll(value_data.bv_val);
+          uint64_t value = (uint64_t)atoll(value_data.bv_val);
           metric_family_append(&st->fams[FAM_DS389_BACKEND_DBFILE_PAGEOUT],
                                "filename", current_filename,
-                               (value_t){.counter = value}, tmpl);
+                               (value_t){.counter.uinteger = value}, tmpl);
         }
       }
 
@@ -571,9 +571,9 @@ static int ds389_read_replica(ds389_t *st, char *dn, metric_t *tmpl)
   value_list = ldap_get_values_len(st->ld, e, "nsds5replicaLastUpdateStatus");
   if (value_list != NULL) {
     struct berval value_data = *value_list[0];
-    gauge_t status = strtoll(value_data.bv_val, NULL, 0);
+    double status = strtoll(value_data.bv_val, NULL, 0);
     metric_family_append(&st->fams[FAM_DS389_REPLICA_LAST_UPDATE_STATUS],
-                         NULL, NULL, (value_t){.gauge = status}, tmpl);
+                         NULL, NULL, (value_t){.gauge.real = status}, tmpl);
     ldap_value_free_len(value_list);
   }
 
@@ -584,7 +584,7 @@ static int ds389_read_replica(ds389_t *st, char *dn, metric_t *tmpl)
     if (strptime(value_data.bv_val,"%Y%m%d%H%M%S", &tm) != NULL) {
       time_t start = mktime(&tm);
       metric_family_append(&st->fams[FAM_DS389_REPLICA_LAST_UPDATE_START_SECONDS],
-                           NULL, NULL, (value_t){.gauge = start}, tmpl);
+                           NULL, NULL, (value_t){.gauge.real = start}, tmpl);
     }
     ldap_value_free_len(value_list);
   }
@@ -596,7 +596,7 @@ static int ds389_read_replica(ds389_t *st, char *dn, metric_t *tmpl)
     if (strptime(value_data.bv_val,"%Y%m%d%H%M%S", &tm) != NULL) {
       time_t end = mktime(&tm);
       metric_family_append(&st->fams[FAM_DS389_REPLICA_LAST_UPDATE_END_SECONDS],
-                           NULL, NULL, (value_t){.gauge = end}, tmpl);
+                           NULL, NULL, (value_t){.gauge.real = end}, tmpl);
     }
     ldap_value_free_len(value_list);
   }
@@ -718,7 +718,7 @@ static int ds389_read_host(user_data_t *ud)
       st->ld = NULL;
     }
    
-    tmpl.value.gauge = 0;
+    tmpl.value.gauge.real = 0;
     metric_family_metric_append(&st->fams[FAM_DS389_UP], tmpl);
     status = plugin_dispatch_metric_family(&st->fams[FAM_DS389_UP]);
     if (status != 0)
@@ -728,7 +728,7 @@ static int ds389_read_host(user_data_t *ud)
     return 0;
   }
 
-  tmpl.value.gauge = 1;
+  tmpl.value.gauge.real = 1;
   metric_family_metric_append(&st->fams[FAM_DS389_UP], tmpl);
 
   status = ds389_read_metrics(st, "cn=monitor",

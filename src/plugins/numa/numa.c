@@ -69,7 +69,6 @@ static int numa_read_node(metric_family_t *fams, int node)
   int success = 0;
   while (fgets(buffer, sizeof(buffer), fh) != NULL) {
     char *fields[4];
-    value_t v;
 
     status = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
     if (status != 2) {
@@ -79,13 +78,13 @@ static int numa_read_node(metric_family_t *fams, int node)
       continue;
     }
 
-    v.counter = 0;
-    status = parse_value(fields[1], &v, DS_TYPE_COUNTER);
+    uint64_t v;
+    status = parse_uinteger(fields[1], &v);
     if (status != 0)
       continue;
 
     metric_t m = {0};
-    m.value.counter = v.counter;
+    m.value.counter.uinteger = v;
     snprintf(node_buffer, sizeof(node_buffer), "%i", node);
     metric_label_set(&m, "node", node_buffer);
 

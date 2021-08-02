@@ -127,20 +127,20 @@ static void md_process(metric_family_t *fams, const int minor,
   ssnprintf(minor_buffer, sizeof(minor_buffer), "%i", minor);
   metric_label_set(&m, "minor", minor_buffer);
 
-  m.value.gauge = (gauge_t)array.active_disks;
+  m.value.gauge.real = (double)array.active_disks;
   metric_family_metric_append(&fams[FAM_MD_ACTIVE], m);
 
-  m.value.gauge = (gauge_t)array.failed_disks;
+  m.value.gauge.real = (double)array.failed_disks;
   metric_family_metric_append(&fams[FAM_MD_FAILED], m);
 
-  m.value.gauge = (gauge_t)array.spare_disks;
+  m.value.gauge.real = (double)array.spare_disks;
   metric_family_metric_append(&fams[FAM_MD_SPARE], m);
 
-  gauge_t disks_missing = 0.0;
+  double disks_missing = 0.0;
   if (array.raid_disks > array.nr_disks)
-    disks_missing = (gauge_t)(array.raid_disks - array.nr_disks);
+    disks_missing = (double)(array.raid_disks - array.nr_disks);
 
-  m.value.gauge = disks_missing;
+  m.value.gauge.real = disks_missing;
   metric_family_metric_append(&fams[FAM_MD_MISSING], m);
 
   metric_reset(&m);

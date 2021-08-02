@@ -89,19 +89,19 @@ typedef struct diskstats {
   /* This overflows in roughly 1361 years */
   unsigned int poll_count;
 
-  derive_t read_sectors;
-  derive_t write_sectors;
+  int64_t read_sectors;
+  int64_t write_sectors;
 
-  derive_t read_bytes;
-  derive_t write_bytes;
+  int64_t read_bytes;
+  int64_t write_bytes;
 
-  derive_t read_ops;
-  derive_t write_ops;
-  derive_t read_time;
-  derive_t write_time;
+  int64_t read_ops;
+  int64_t write_ops;
+  int64_t read_time;
+  int64_t write_time;
 
-  derive_t avg_read_time;
-  derive_t avg_write_time;
+  int64_t avg_read_time;
+  int64_t avg_write_time;
 
   bool has_merged;
   bool has_in_progress;
@@ -306,14 +306,14 @@ static int disk_shutdown(void)
 }
 
 #if KERNEL_LINUX
-static counter_t disk_calc_time_incr(counter_t delta_time,
-                                     counter_t delta_ops)
+static int64_t disk_calc_time_incr(int64_t delta_time,
+                                     int64_t delta_ops)
 {
   double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
   double avg_time = ((double)delta_time) / ((double)delta_ops);
   double avg_time_incr = interval * avg_time;
 
-  return (counter_t)(avg_time_incr + .5);
+  return (int64_t)(avg_time_incr + .5);
 }
 #endif
 
@@ -567,24 +567,24 @@ static int disk_read(void)
     metric_t m = {0};
     metric_label_set(&m, "device", disk_name);
     if ((read_byt != -1LL) || (write_byt != -1LL)) {
-      m.value.counter = read_byt;
+      m.value.counter.integer = read_byt;
       metric_family_metric_append(&fam_disk_read_bytes, m);
 
-      m.value.counter = write_byt;
+      m.value.counter.integer = write_byt;
       metric_family_metric_append(&fam_disk_write_bytes, m);
     }
     if ((read_ops != -1LL) || (write_ops != -1LL)) {
-      m.value.counter = read_ops;
+      m.value.counter.integer = read_ops;
       metric_family_metric_append(&fam_disk_read_ops, m);
 
-      m.value.counter = write_ops;
+      m.value.counter.integer = write_ops;
       metric_family_metric_append(&fam_disk_write_ops, m);
     }
     if ((read_tme != -1LL) || (write_tme != -1LL)) {
-      m.value.counter = read_tme / 1000;
+      m.value.counter.integer = read_tme / 1000;
       metric_family_metric_append(&fam_disk_read_time, m);
 
-      m.value.counter = write_tme / 1000;
+      m.value.counter.integer = write_tme / 1000;
       metric_family_metric_append(&fam_disk_write_time, m);
     }
     metric_reset(&m);
@@ -687,19 +687,19 @@ static int disk_read(void)
 
     if ((snap_iter->bytes[DEVSTAT_READ] != 0) ||
         (snap_iter->bytes[DEVSTAT_WRITE] != 0)) {
-      m.value.counter = (counter_t)snap_iter->bytes[DEVSTAT_READ];
+      m.value.counter.integer = (int64_t)snap_iter->bytes[DEVSTAT_READ];
       metric_family_metric_append(&fam_disk_read_bytes, m);
 
-      m.value.counter = (counter_t)snap_iter->bytes[DEVSTAT_WRITE];
+      m.value.counter.integer = (int64_t)snap_iter->bytes[DEVSTAT_WRITE];
       metric_family_metric_append(&fam_disk_write_bytes, m);
     }
 
     if ((snap_iter->operations[DEVSTAT_READ] != 0) ||
         (snap_iter->operations[DEVSTAT_WRITE] != 0)) {
-      m.value.counter = (counter_t)snap_iter->operations[DEVSTAT_READ];
+      m.value.counter.integer = (int64_t)snap_iter->operations[DEVSTAT_READ];
       metric_family_metric_append(&fam_disk_read_ops, m);
 
-      m.value.counter = (counter_t)snap_iter->operations[DEVSTAT_WRITE];
+      m.value.counter.integer = (int64_t)snap_iter->operations[DEVSTAT_WRITE];
       metric_family_metric_append(&fam_disk_write_ops, m);
     }
 
@@ -707,10 +707,10 @@ static int disk_read(void)
     write_time =
         devstat_compute_etime(&snap_iter->duration[DEVSTAT_WRITE], NULL);
     if ((read_time != 0) || (write_time != 0)) {
-      m.value.counter = (counter_t)(read_time * 1000);
+      m.value.counter.integer = (int64_t)(read_time * 1000);
       metric_family_metric_append(&fam_disk_read_time, m);
 
-      m.value.counter = (counter_t)(write_time * 1000);
+      m.value.counter.integer = (int64_t)(write_time * 1000);
       metric_family_metric_append(&fam_disk_write_time, m);
     }
     if (devstat_compute_statistics(snap_iter, NULL, 1.0, DSM_TOTAL_BUSY_TIME,
@@ -719,13 +719,13 @@ static int disk_read(void)
                                    &queue_length, DSM_NONE) != 0) {
       WARNING("%s", devstat_errbuf);
     } else {
-      m.value.counter = (counter_t)busy_time;
+      m.value.counter.integer = (int64_t)busy_time;
       metric_family_metric_append(&fam_disk_io_time, m);
 
-      m.value.counter = (counter_t)total_duration;
+      m.value.counter.integer = (int64_t)total_duration;
       metric_family_metric_append(&fam_disk_io_weighted_time, m);
 
-      m.value.gauge = (gauge_t)queue_length;
+      m.value.gauge.real = (double)queue_length;
       metric_family_metric_append(&fam_disk_pending_operations, m);
     }
     metric_reset(&m);
@@ -739,18 +739,18 @@ static int disk_read(void)
   char *fields[32];
   static unsigned int poll_count = 0;
 
-  derive_t read_sectors = 0;
-  derive_t write_sectors = 0;
+  int64_t read_sectors = 0;
+  int64_t write_sectors = 0;
 
-  derive_t read_ops = 0;
-  derive_t read_merged = 0;
-  derive_t read_time = 0;
-  derive_t write_ops = 0;
-  derive_t write_merged = 0;
-  derive_t write_time = 0;
-  gauge_t in_progress = NAN;
-  derive_t io_time = 0;
-  derive_t weighted_time = 0;
+  int64_t read_ops = 0;
+  int64_t read_merged = 0;
+  int64_t read_time = 0;
+  int64_t write_ops = 0;
+  int64_t write_merged = 0;
+  int64_t write_time = 0;
+  double in_progress = NAN;
+  int64_t io_time = 0;
+  int64_t weighted_time = 0;
   int is_disk = 0;
 
   diskstats_t *ds, *pre_ds;
@@ -818,8 +818,8 @@ static int disk_read(void)
     }
 
     {
-      derive_t diff_read_sectors;
-      derive_t diff_write_sectors;
+      int64_t diff_read_sectors;
+      int64_t diff_write_sectors;
 
       /* If the counter wraps around, it's only 32 bits.. */
       if (read_sectors < ds->read_sectors)
@@ -839,10 +839,10 @@ static int disk_read(void)
 
     /* Calculate the average time an io-op needs to complete */
     if (is_disk) {
-      derive_t diff_read_ops;
-      derive_t diff_write_ops;
-      derive_t diff_read_time;
-      derive_t diff_write_time;
+      int64_t diff_read_ops;
+      int64_t diff_write_ops;
+      int64_t diff_read_time;
+      int64_t diff_write_time;
 
       if (read_ops < ds->read_ops)
         diff_read_ops = 1 + read_ops + (UINT_MAX - ds->read_ops);
@@ -926,46 +926,46 @@ static int disk_read(void)
     metric_label_set(&m, "device", output_name);
 
     if ((ds->read_bytes != 0) || (ds->write_bytes != 0)) {
-      m.value.counter = (counter_t)ds->read_bytes;
+      m.value.counter.uinteger = (uint64_t)ds->read_bytes;
       metric_family_metric_append(&fam_disk_read_bytes, m);
 
-      m.value.counter = (counter_t)ds->write_bytes;
+      m.value.counter.uinteger = (uint64_t)ds->write_bytes;
       metric_family_metric_append(&fam_disk_write_bytes, m);
     }
 
     if ((ds->read_ops != 0) || (ds->write_ops != 0)) {
-      m.value.counter = (counter_t)read_ops;
+      m.value.counter.uinteger = (uint64_t)read_ops;
       metric_family_metric_append(&fam_disk_read_ops, m);
 
-      m.value.counter = (counter_t)write_ops;
+      m.value.counter.uinteger = (uint64_t)write_ops;
       metric_family_metric_append(&fam_disk_write_ops, m);
     }
 
     if ((ds->avg_read_time != 0) || (ds->avg_write_time != 0)) {
-      m.value.counter = (counter_t)ds->avg_read_time;
+      m.value.counter.uinteger = (uint64_t)ds->avg_read_time;
       metric_family_metric_append(&fam_disk_read_time, m);
 
-      m.value.counter = (counter_t)ds->avg_write_time;
+      m.value.counter.uinteger = (uint64_t)ds->avg_write_time;
       metric_family_metric_append(&fam_disk_write_time, m);
     }
 
     if (is_disk) {
       if (ds->has_merged) {
-        m.value.counter = (counter_t)read_merged;
+        m.value.counter.uinteger = (uint64_t)read_merged;
         metric_family_metric_append(&fam_disk_read_merged, m);
 
-        m.value.counter = (counter_t)write_merged;
+        m.value.counter.uinteger = (uint64_t)write_merged;
         metric_family_metric_append(&fam_disk_write_merged, m);
       }
       if (ds->has_in_progress) {
-        m.value.gauge = in_progress;
+        m.value.gauge.real = in_progress;
         metric_family_metric_append(&fam_disk_pending_operations, m);
       }
       if (ds->has_io_time) {
-        m.value.counter = (counter_t)io_time;
+        m.value.counter.uinteger = (uint64_t)io_time;
         metric_family_metric_append(&fam_disk_io_time, m);
       }
-      m.value.counter = (counter_t)weighted_time;
+      m.value.counter.uinteger = (uint64_t)weighted_time;
       metric_family_metric_append(&fam_disk_io_weighted_time, m);
     } /* if (is_disk) */
 
@@ -1037,23 +1037,23 @@ static int disk_read(void)
       metric_t m = {0};
       metric_label_set(&m, "device", ksp[i]->ks_name);
 
-      m.value.counter = kio.KIO_ROCTETS;
+      m.value.counter.integer = kio.KIO_ROCTETS;
       metric_family_metric_append(&fam_disk_read_bytes, m);
 
-      m.value.counter = kio.KIO_WOCTETS;
+      m.value.counter.integer = kio.KIO_WOCTETS;
       metric_family_metric_append(&fam_disk_write_bytes, m);
 
-      m.value.counter = kio.KIO_ROPS;
+      m.value.counter.integer = kio.KIO_ROPS;
       metric_family_metric_append(&fam_disk_read_ops, m);
 
-      m.value.counter = kio.KIO_WOPS;
+      m.value.counter.integer = kio.KIO_WOPS;
       metric_family_metric_append(&fam_disk_write_ops, m);
 
       /* FIXME: Convert this to microseconds if necessary */
-      m.value.counter = kio.KIO_RTIME;
+      m.value.counter.integer = kio.KIO_RTIME;
       metric_family_metric_append(&fam_disk_read_time, m);
 
-      m.value.counter = kio.KIO_WTIME;
+      m.value.counter.integer = kio.KIO_WTIME;
       metric_family_metric_append(&fam_disk_write_time, m);
 
       metric_reset(&m);
@@ -1064,16 +1064,16 @@ static int disk_read(void)
       metric_t m = {0};
       metric_label_set(&m, "device", ksp[i]->ks_name);
 
-      m.value.counter = kio.KIO_ROCTETS;
+      m.value.counter.integer = kio.KIO_ROCTETS;
       metric_family_metric_append(&fam_disk_read_bytes, m);
 
-      m.value.counter = kio.KIO_WOCTETS;
+      m.value.counter.integer = kio.KIO_WOCTETS;
       metric_family_metric_append(&fam_disk_write_bytes, m);
 
-      m.value.counter = kio.KIO_ROPS;
+      m.value.counter.integer = kio.KIO_ROPS;
       metric_family_metric_append(&fam_disk_read_ops, m);
 
-      m.value.counter = kio.KIO_WOPS;
+      m.value.counter.integer = kio.KIO_WOPS;
       metric_family_metric_append(&fam_disk_write_ops, m);
 
       metric_reset(&m);
@@ -1104,10 +1104,10 @@ static int disk_read(void)
     metric_t m = {0};
     metric_label_set(&m, "device", name);
 
-    m.value.counter = ds->read_bytes;
+    m.value.counter.integer = ds->read_bytes;
     metric_family_metric_append(&fam_disk_read_bytes, m);
 
-    m.value.counter = ds->write_bytes;
+    m.value.counter.integer = ds->write_bytes;
     metric_family_metric_append(&fam_disk_write_bytes, m);
 
     metric_reset(&m);
@@ -1116,12 +1116,12 @@ static int disk_read(void)
   /* #endif defined(HAVE_LIBSTATGRAB) */
 
 #elif defined(HAVE_PERFSTAT)
-  derive_t read_sectors;
-  derive_t write_sectors;
-  derive_t read_time;
-  derive_t write_time;
-  derive_t read_ops;
-  derive_t write_ops;
+  int64_t read_sectors;
+  int64_t write_sectors;
+  int64_t read_time;
+  int64_t write_time;
+  int64_t read_ops;
+  int64_t write_ops;
   perfstat_id_t firstpath;
   int rnumdisk;
 
@@ -1150,33 +1150,33 @@ static int disk_read(void)
     metric_label_set(&m, "device", stat_disk[i].name);
 
     read_sectors = stat_disk[i].rblks * stat_disk[i].bsize;
-    m.value.counter = (counter_t)read_sectors;
+    m.value.counter.integer = (int64_t)read_sectors;
     metric_family_metric_append(&fam_disk_read_bytes, m);
 
     write_sectors = stat_disk[i].wblks * stat_disk[i].bsize;
-    m.value.counter = (counter_t)write_sectors;
+    m.value.counter.integer = (int64_t)write_sectors;
     metric_family_metric_append(&fam_disk_write_bytes, m);
 
     read_ops = stat_disk[i].xrate;
-    m.value.counter = (counter_t)read_ops;
+    m.value.counter.integer = (int64_t)read_ops;
     metric_family_metric_append(&fam_disk_read_ops, m);
 
     write_ops = stat_disk[i].xfers - stat_disk[i].xrate;
-    m.value.counter = (counter_t)write_ops;
+    m.value.counter.integer = (int64_t)write_ops;
     metric_family_metric_append(&fam_disk_write_ops, m);
 
     read_time = stat_disk[i].rserv;
     read_time *= ((double)(_system_configuration.Xint) /
                   (double)(_system_configuration.Xfrac)) /
                  1000000.0;
-    m.value.counter = (counter_t)read_time;
+    m.value.counter.integer = (int64_t)read_time;
     metric_family_metric_append(&fam_disk_read_time, m);
 
     write_time = stat_disk[i].wserv;
     write_time *= ((double)(_system_configuration.Xint) /
                    (double)(_system_configuration.Xfrac)) /
                   1000000.0;
-    m.value.counter = (counter_t)write_time;
+    m.value.counter.integer = (int64_t)write_time;
     metric_family_metric_append(&fam_disk_write_time, m);
 
     metric_reset(&m);
@@ -1228,19 +1228,19 @@ static int disk_read(void)
     metric_t m = {0};
     metric_label_set(&m, "device", drives[i].name);
 
-    m.value.counter = drives[i].rbytes;
+    m.value.counter.integer = drives[i].rbytes;
     metric_family_metric_append(&fam_disk_read_bytes, m);
 
-    m.value.counter = drives[i].wbytes;
+    m.value.counter.integer = drives[i].wbytes;
     metric_family_metric_append(&fam_disk_write_bytes, m);
 
-    m.value.counter = drives[i].rxfer;
+    m.value.counter.integer = drives[i].rxfer;
     metric_family_metric_append(&fam_disk_read_ops, m);
 
-    m.value.counter = drives[i].wxfer;
+    m.value.counter.integer = drives[i].wxfer;
     metric_family_metric_append(&fam_disk_write_ops, m);
 
-    m.value.counter = drives[i].time_sec * 1000 + drives[i].time_usec / 1000;
+    m.value.counter.integer = drives[i].time_sec * 1000 + drives[i].time_usec / 1000;
     metric_family_metric_append(&fam_disk_io_time, m);
 
     metric_reset(&m);

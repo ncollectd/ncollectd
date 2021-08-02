@@ -51,14 +51,14 @@ static int conntrack_config(const char *key, const char *value)
   return 0;
 }
 
-static void conntrack_submit(char *fam_name, gauge_t value)
+static void conntrack_submit(char *fam_name, double value)
 {
   metric_family_t fam = {
       .name = fam_name,
       .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_metric_append(&fam, (metric_t){ .value.gauge = value, });
+  metric_family_metric_append(&fam, (metric_t){ .value.gauge.real = value, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0)
@@ -69,25 +69,25 @@ static void conntrack_submit(char *fam_name, gauge_t value)
 
 static int conntrack_read(void)
 {
-  value_t conntrack, conntrack_max, conntrack_pct;
+  double conntrack, conntrack_max, conntrack_pct;
 
   char const *path = old_files ? CONNTRACK_FILE_OLD : CONNTRACK_FILE;
-  if (parse_value_file(path, &conntrack, DS_TYPE_GAUGE) != 0) {
+  if (parse_double_file(path, &conntrack) != 0) {
     ERROR("conntrack plugin: Reading \"%s\" failed.", path);
     return -1;
   }
 
   path = old_files ? CONNTRACK_MAX_FILE_OLD : CONNTRACK_MAX_FILE;
-  if (parse_value_file(path, &conntrack_max, DS_TYPE_GAUGE) != 0) {
+  if (parse_double_file(path, &conntrack_max) != 0) {
     ERROR("conntrack plugin: Reading \"%s\" failed.", path);
     return -1;
   }
 
-  conntrack_pct.gauge = (conntrack.gauge / conntrack_max.gauge) * 100;
+  conntrack_pct = (conntrack / conntrack_max) * 100;
 
-  conntrack_submit("host_conntrack_used", conntrack.gauge);
-  conntrack_submit("host_conntrack_max", conntrack_max.gauge);
-  conntrack_submit("host_conntrack_used_percent", conntrack_pct.gauge);
+  conntrack_submit("host_conntrack_used", conntrack);
+  conntrack_submit("host_conntrack_max", conntrack_max);
+  conntrack_submit("host_conntrack_used_percent", conntrack_pct);
 
   return 0;
 }

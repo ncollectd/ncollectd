@@ -61,7 +61,7 @@
 extern kstat_ctl_t *kc;
 #endif /* #endif HAVE_LIBKSTAT */
 
-static void uptime_submit(gauge_t value)
+static void uptime_submit(double value)
 {
   metric_family_t fam = {
       .name = "host_uptime_seconds",
@@ -70,7 +70,7 @@ static void uptime_submit(gauge_t value)
   };
 
   metric_family_metric_append(&fam, (metric_t){
-                                        .value.gauge = value,
+                                        .value.gauge.real = value,
                                     });
 
   int status = plugin_dispatch_metric_family(&fam);
@@ -196,13 +196,13 @@ static time_t uptime_get_sys(void)
 
 static int uptime_read(void)
 {
-  gauge_t uptime;
+  double uptime;
   time_t elapsed;
 
   /* calculate the amount of time elapsed since boot, AKA uptime */
   elapsed = uptime_get_sys();
 
-  uptime = (gauge_t)elapsed;
+  uptime = (double)elapsed;
 
   uptime_submit(uptime);
 

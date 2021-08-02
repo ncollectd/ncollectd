@@ -864,49 +864,9 @@ double htond(double d) {
 } /* double htond */
 #endif /* FP_LAYOUT_NEED_ENDIANFLIP || FP_LAYOUT_NEED_INTSWAP */
 
-int format_name(char *ret, int ret_len, const char *hostname,
-                const char *plugin, const char *plugin_instance,
-                const char *type, const char *type_instance) {
-  char *buffer;
-  size_t buffer_size;
-
-  buffer = ret;
-  buffer_size = (size_t)ret_len;
-
-#define APPEND(str)                                                            \
-  do {                                                                         \
-    size_t l = strlen(str);                                                    \
-    if (l >= buffer_size)                                                      \
-      return ENOBUFS;                                                          \
-    memcpy(buffer, (str), l);                                                  \
-    buffer += l;                                                               \
-    buffer_size -= l;                                                          \
-  } while (0)
-
-  assert(plugin != NULL);
-  assert(type != NULL);
-
-  APPEND(hostname);
-  APPEND("/");
-  APPEND(plugin);
-  if ((plugin_instance != NULL) && (plugin_instance[0] != 0)) {
-    APPEND("-");
-    APPEND(plugin_instance);
-  }
-  APPEND("/");
-  APPEND(type);
-  if ((type_instance != NULL) && (type_instance[0] != 0)) {
-    APPEND("-");
-    APPEND(type_instance);
-  }
-  assert(buffer_size > 0);
-  buffer[0] = 0;
-
-#undef APPEND
-  return 0;
-} /* int format_name */
-
-int format_values(strbuf_t *buf, metric_t const *m, bool store_rates) {
+#if 0
+int format_values(strbuf_t *buf, metric_t const *m, bool store_rates)
+{
   strbuf_printf(buf, "%.3f", CDTIME_T_TO_DOUBLE(m->time));
 
   if (m->family->type == METRIC_TYPE_GAUGE) {
@@ -918,7 +878,7 @@ int format_values(strbuf_t *buf, metric_t const *m, bool store_rates) {
       strbuf_printf(buf, ":" GAUGE_FORMAT, m->value.gauge);
     }
   } else if (store_rates) {
-    gauge_t rates = NAN;
+    double rates = NAN;
     int status = uc_get_rate(m, &rates);
     if (status != 0) {
       WARNING("format_values: uc_get_rate failed.");
@@ -931,259 +891,17 @@ int format_values(strbuf_t *buf, metric_t const *m, bool store_rates) {
     }
   } else if (m->family->type == METRIC_TYPE_COUNTER) {
     strbuf_printf(buf, ":%" PRIu64, m->value.counter);
-  } else if (m->family->type == DS_TYPE_DERIVE) {
-    strbuf_printf(buf, ":%" PRIi64, m->value.derive);
   } else {
     ERROR("format_values: Unknown metric type: %d", m->family->type);
     return -1;
   }
 
   return 0;
-} /* }}} int format_values */
-
-int parse_identifier(char *str, char **ret_host, char **ret_plugin,
-                     char **ret_type, char **ret_data_source,
-                     char *default_host) {
-  char *fields[5];
-  size_t fields_num = 0;
-
-  do {
-    fields[fields_num] = str;
-    fields_num++;
-
-    char *ptr = strchr(str, '/');
-    if (ptr == NULL) {
-      break;
-    }
-
-    *ptr = 0;
-    str = ptr + 1;
-  } while (fields_num < STATIC_ARRAY_SIZE(fields));
-
-  switch (fields_num) {
-  case 4:
-    *ret_data_source = fields[3];
-    /* fall-through */
-  case 3:
-    *ret_type = fields[2];
-    *ret_plugin = fields[1];
-    *ret_host = fields[0];
-    break;
-  case 2:
-    if ((default_host == NULL) || (strlen(default_host) == 0)) {
-      return EINVAL;
-    }
-    *ret_type = fields[1];
-    *ret_plugin = fields[0];
-    *ret_host = default_host;
-    break;
-  default:
-    return EINVAL;
-  }
-
-  return 0;
-} /* int parse_identifier */
-
-int parse_identifier_vl(const char *str, value_list_t *vl,
-                        char **ret_data_source) {
-  if ((str == NULL) || (vl == NULL))
-    return EINVAL;
-
-  char str_copy[6 * DATA_MAX_NAME_LEN];
-  sstrncpy(str_copy, str, sizeof(str_copy));
-
-  char *default_host = NULL;
-  if (strlen(vl->host) != 0) {
-    default_host = vl->host;
-  }
-
-  char *host = NULL;
-  char *plugin = NULL;
-  char *type = NULL;
-  char *data_source = NULL;
-  int status = parse_identifier(str_copy, &host, &plugin, &type, &data_source,
-                                default_host);
-  if (status != 0) {
-    return status;
-  }
-
-  if (data_source != NULL) {
-    if (ret_data_source == NULL) {
-      return EINVAL;
-    }
-    *ret_data_source = strdup(data_source);
-  }
-
-  char *plugin_instance = strchr(plugin, '-');
-  if (plugin_instance != NULL) {
-    *plugin_instance = 0;
-    plugin_instance++;
-  }
-  char *type_instance = strchr(type, '-');
-  if (type_instance != NULL) {
-    *type_instance = 0;
-    type_instance++;
-  }
-
-  if (host != vl->host) {
-    sstrncpy(vl->host, host, sizeof(vl->host));
-  }
-  sstrncpy(vl->plugin, plugin, sizeof(vl->plugin));
-  if (plugin_instance != NULL) {
-    sstrncpy(vl->plugin_instance, plugin_instance, sizeof(vl->plugin_instance));
-  }
-  sstrncpy(vl->type, type, sizeof(vl->type));
-  if (type_instance != NULL) {
-    sstrncpy(vl->type_instance, type_instance, sizeof(vl->type_instance));
-  }
-
-  return 0;
-} /* }}} int parse_identifier_vl */
-
-metric_t *parse_legacy_identifier(char const *s) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  char *data_source = NULL;
-  int status = parse_identifier_vl(s, &vl, &data_source);
-  if (status != 0) {
-    errno = status;
-    return NULL;
-  }
-
-  data_set_t const *ds = plugin_get_ds(vl.type);
-  if (ds == NULL) {
-    errno = ENOENT;
-    return NULL;
-  }
-
-  if ((ds->ds_num != 1) && (data_source == NULL)) {
-    DEBUG("parse_legacy_identifier: data set \"%s\" has multiple data sources, "
-          "but \"%s\" does not specify a data source",
-          ds->type, s);
-    errno = EINVAL;
-    return NULL;
-  }
-
-  value_t values[ds->ds_num];
-  memset(values, 0, sizeof(values));
-  vl.values = values;
-  vl.values_len = ds->ds_num;
-
-  size_t ds_index = 0;
-  if (data_source != NULL) {
-    bool found = 0;
-    for (size_t i = 0; i < ds->ds_num; i++) {
-      if (strcasecmp(data_source, ds->ds[i].name) == 0) {
-        ds_index = i;
-        found = true;
-      }
-    }
-
-    if (!found) {
-      DEBUG("parse_legacy_identifier: data set \"%s\" does not have a \"%s\" "
-            "data source",
-            ds->type, data_source);
-      free(data_source);
-      errno = EINVAL;
-      return NULL;
-    }
-  }
-  free(data_source);
-  data_source = NULL;
-
-  metric_family_t *fam = plugin_value_list_to_metric_family(&vl, ds, ds_index);
-  if (fam == NULL) {
-    return NULL;
-  }
-
-  return fam->metric.ptr;
 }
+#endif
 
-static int metric_family_name(strbuf_t *buf, value_list_t const *vl,
-                              data_source_t const *dsrc) {
-  int status = strbuf_print(buf, "collectd");
-
-  if (strcmp(vl->plugin, vl->type) != 0) {
-    status = status || strbuf_print(buf, "_");
-    status = status || strbuf_print(buf, vl->plugin);
-  }
-
-  status = status || strbuf_print(buf, "_");
-  status = status || strbuf_print(buf, vl->type);
-
-  if (strcmp("value", dsrc->name) != 0) {
-    status = status || strbuf_print(buf, "_");
-    status = status || strbuf_print(buf, dsrc->name);
-  }
-
-  if ((dsrc->type == DS_TYPE_COUNTER) || (dsrc->type == DS_TYPE_DERIVE)) {
-    status = status || strbuf_print(buf, "_total");
-  }
-
-  return status;
-}
-
-metric_family_t *plugin_value_list_to_metric_family(value_list_t const *vl,
-                                                    data_set_t const *ds,
-                                                    size_t index) {
-  if ((vl == NULL) || (ds == NULL)) {
-    errno = EINVAL;
-    return NULL;
-  }
-
-  metric_family_t *fam = calloc(1, sizeof(*fam));
-  if (fam == NULL) {
-    return NULL;
-  }
-
-  data_source_t const *dsrc = ds->ds + index;
-  strbuf_t name = STRBUF_CREATE;
-  int status = metric_family_name(&name, vl, dsrc);
-  if (status != 0) {
-    STRBUF_DESTROY(name);
-    metric_family_free(fam);
-    errno = status;
-    return NULL;
-  }
-  fam->name = name.ptr;
-  name = (strbuf_t){0};
-
-  fam->type =
-      (dsrc->type == DS_TYPE_GAUGE) ? METRIC_TYPE_GAUGE : METRIC_TYPE_COUNTER;
-
-  metric_t m = {
-      .family = fam,
-      .value = vl->values[index],
-      .time = vl->time,
-      .interval = vl->interval,
-  };
-
-  status = metric_label_set(&m, "instance",
-                            (strlen(vl->host) != 0) ? vl->host : hostname_g);
-  if (strlen(vl->plugin_instance) != 0) {
-    status = status || metric_label_set(&m, vl->plugin, vl->plugin_instance);
-  }
-  if (strlen(vl->type_instance) != 0) {
-    char const *name = "type";
-    if (strlen(vl->plugin_instance) == 0) {
-      name = vl->plugin;
-    }
-    status = status || metric_label_set(&m, name, vl->type_instance);
-  }
-
-  status = status || metric_family_metric_append(fam, m);
-  if (status != 0) {
-    metric_reset(&m);
-    metric_family_free(fam);
-    errno = status;
-    return NULL;
-  }
-
-  metric_reset(&m);
-  return fam;
-}
-
-int parse_value(const char *value_orig, value_t *ret_value, int ds_type) {
+int parse_integer(const char *value_orig, int64_t *ret_value)
+{
   char *value;
   char *endptr = NULL;
   size_t value_len;
@@ -1201,96 +919,23 @@ int parse_value(const char *value_orig, value_t *ret_value, int ds_type) {
     value_len--;
   }
 
-  switch (ds_type) {
-  case DS_TYPE_COUNTER:
-    ret_value->counter = (counter_t)strtoull(value, &endptr, 0);
-    break;
-
-  case DS_TYPE_GAUGE:
-    ret_value->gauge = (gauge_t)strtod(value, &endptr);
-    break;
-
-  case DS_TYPE_DERIVE:
-    ret_value->derive = (derive_t)strtoll(value, &endptr, 0);
-    break;
-
-  default:
-    sfree(value);
-    P_ERROR("parse_value: Invalid data source type: %i.", ds_type);
-    return -1;
-  }
+  *ret_value= (int64_t)strtoull(value, &endptr, 0);
 
   if (value == endptr) {
-    P_ERROR("parse_value: Failed to parse string as %s: \"%s\".",
-            DS_TYPE_TO_STRING(ds_type), value);
+    P_ERROR("parse_integer: Failed to parse string as integer: \"%s\".", value);
     sfree(value);
     return -1;
-  } else if ((NULL != endptr) && ('\0' != *endptr))
-    P_INFO("parse_value: Ignoring trailing garbage \"%s\" after %s value. "
-           "Input string was \"%s\".",
-           endptr, DS_TYPE_TO_STRING(ds_type), value_orig);
+  } else if ((NULL != endptr) && ('\0' != *endptr)) {
+    P_INFO("parse_value: Ignoring trailing garbage \"%s\" after integer value. "
+           "Input string was \"%s\".", endptr, value_orig);
+  }
 
   sfree(value);
   return 0;
-} /* int parse_value */
+}
 
-int parse_values(char *buffer, value_list_t *vl, const data_set_t *ds) {
-  size_t i;
-  char *dummy;
-  char *ptr;
-  char *saveptr;
-
-  if ((buffer == NULL) || (vl == NULL) || (ds == NULL))
-    return EINVAL;
-
-  i = 0;
-  dummy = buffer;
-  saveptr = NULL;
-  vl->time = 0;
-  while ((ptr = strtok_r(dummy, ":", &saveptr)) != NULL) {
-    dummy = NULL;
-
-    if (i >= vl->values_len) {
-      /* Make sure i is invalid. */
-      i = 0;
-      break;
-    }
-
-    if (vl->time == 0) {
-      if (strcmp("N", ptr) == 0)
-        vl->time = cdtime();
-      else {
-        char *endptr = NULL;
-        double tmp;
-
-        errno = 0;
-        tmp = strtod(ptr, &endptr);
-        if ((errno != 0)        /* Overflow */
-            || (endptr == ptr)  /* Invalid string */
-            || (endptr == NULL) /* This should not happen */
-            || (*endptr != 0))  /* Trailing chars */
-          return -1;
-
-        vl->time = DOUBLE_TO_CDTIME_T(tmp);
-      }
-
-      continue;
-    }
-
-    if ((strcmp("U", ptr) == 0) && (ds->ds[i].type == DS_TYPE_GAUGE))
-      vl->values[i].gauge = NAN;
-    else if (0 != parse_value(ptr, &vl->values[i], ds->ds[i].type))
-      return -1;
-
-    i++;
-  } /* while (strtok_r) */
-
-  if ((ptr != NULL) || (i == 0))
-    return -1;
-  return 0;
-} /* int parse_values */
-
-int parse_value_file(char const *path, value_t *ret_value, int ds_type) {
+int parse_integer_file(char const *path, int64_t *ret_value)
+{
   FILE *fh;
   char buffer[256];
 
@@ -1307,8 +952,63 @@ int parse_value_file(char const *path, value_t *ret_value, int ds_type) {
 
   strstripnewline(buffer);
 
-  return parse_value(buffer, ret_value, ds_type);
-} /* int parse_value_file */
+  return parse_integer(buffer, ret_value);
+}
+
+int parse_double(const char *value_orig, double *ret_value)
+{
+  char *value;
+  char *endptr = NULL;
+  size_t value_len;
+
+  if (value_orig == NULL)
+    return EINVAL;
+
+  value = strdup(value_orig);
+  if (value == NULL)
+    return ENOMEM;
+  value_len = strlen(value);
+
+  while ((value_len > 0) && isspace((int)value[value_len - 1])) {
+    value[value_len - 1] = '\0';
+    value_len--;
+  }
+
+  *ret_value = (double)strtod(value, &endptr);
+
+  if (value == endptr) {
+    P_ERROR("parse_double: Failed to parse string as double: \"%s\".", value);
+    sfree(value);
+    return -1;
+  } else if ((NULL != endptr) && ('\0' != *endptr)) {
+    P_INFO("parse_double: Ignoring trailing garbage \"%s\" after double value. "
+           "Input string was \"%s\".", endptr, value_orig);
+  }
+
+  sfree(value);
+  return 0;
+}
+
+int parse_double_file(char const *path, double *ret_value)
+{
+  FILE *fh;
+  char buffer[256];
+
+  fh = fopen(path, "r");
+  if (fh == NULL)
+    return -1;
+
+  if (fgets(buffer, sizeof(buffer), fh) == NULL) {
+    fclose(fh);
+    return -1;
+  }
+
+  fclose(fh);
+
+  strstripnewline(buffer);
+
+  return parse_double(buffer, ret_value);
+}
 
 #if !HAVE_GETPWNAM_R
 int getpwnam_r(const char *name, struct passwd *pwbuf, char *buf, size_t buflen,
@@ -1431,37 +1131,27 @@ ssize_t read_text_file_contents(const char *filename, char *buf,
   return ret + 1;
 }
 
-counter_t counter_diff(counter_t old_value, counter_t new_value) {
-  counter_t diff;
+uint64_t counter_diff(uint64_t old_value, uint64_t new_value)
+{
+  uint64_t diff;
 
   if (old_value > new_value) {
     if (old_value <= 4294967295U)
       diff = (4294967295U - old_value) + new_value + 1;
     else
-      diff = (18446744073709551615ULL - old_value) + new_value + 1;
+    diff = (18446744073709551615ULL - old_value) + new_value + 1;
   } else {
     diff = new_value - old_value;
   }
 
   return diff;
-} /* counter_t counter_diff */
+}
 
-int rate_to_value(value_t *ret_value, gauge_t rate, /* {{{ */
-                  rate_to_value_state_t *state, int ds_type, cdtime_t t) {
-  gauge_t delta_gauge;
-  cdtime_t delta_t;
-
-  if (ds_type == DS_TYPE_GAUGE) {
-    state->last_value.gauge = rate;
-    state->last_time = t;
-
-    *ret_value = state->last_value;
-    return 0;
-  }
-
+int rate_to_counter(uint64_t *ret_value, double rate, cdtime_t t, rate_to_counter_state_t *state)
+{
   /* Counter can't handle negative rates. Reset "last time" to zero, so that
    * the next valid rate will re-initialize the structure. */
-  if ((rate < 0.0) && (ds_type == DS_TYPE_COUNTER)) {
+  if (rate < 0.0) {
     memset(state, 0, sizeof(*state));
     return EINVAL;
   }
@@ -1472,57 +1162,35 @@ int rate_to_value(value_t *ret_value, gauge_t rate, /* {{{ */
     return EINVAL;
   }
 
-  delta_t = t - state->last_time;
-  delta_gauge = (rate * CDTIME_T_TO_DOUBLE(delta_t)) + state->residual;
+  cdtime_t delta_t = t - state->last_time;
+  double delta_gauge = (rate * CDTIME_T_TO_DOUBLE(delta_t)) + state->residual;
 
   /* Previous value is invalid. */
-  if (state->last_time == 0) /* {{{ */
-  {
-    if (ds_type == DS_TYPE_DERIVE) {
-      state->last_value.derive = (derive_t)rate;
-      state->residual = rate - ((gauge_t)state->last_value.derive);
-    } else if (ds_type == DS_TYPE_COUNTER) {
-      state->last_value.counter = (counter_t)rate;
-      state->residual = rate - ((gauge_t)state->last_value.counter);
-    } else {
-      assert(23 == 42);
-    }
-
+  if (state->last_time == 0) {
+    state->last_value = (uint64_t)rate;
+    state->residual = rate - ((double)state->last_value);
     state->last_time = t;
     return EAGAIN;
-  } /* }}} */
-
-  if (ds_type == DS_TYPE_DERIVE) {
-    derive_t delta_derive = (derive_t)delta_gauge;
-
-    state->last_value.derive += delta_derive;
-    state->residual = delta_gauge - ((gauge_t)delta_derive);
-  } else if (ds_type == DS_TYPE_COUNTER) {
-    counter_t delta_counter = (counter_t)delta_gauge;
-
-    state->last_value.counter += delta_counter;
-    state->residual = delta_gauge - ((gauge_t)delta_counter);
-  } else {
-    assert(23 == 42);
   }
 
+  uint64_t delta_counter = (uint64_t)delta_gauge;
+  state->last_value += delta_counter;
+  state->residual = delta_gauge - ((double)delta_counter);
   state->last_time = t;
+
   *ret_value = state->last_value;
   return 0;
-} /* }}} value_t rate_to_value */
+}
 
-int value_to_rate(gauge_t *ret_rate, /* {{{ */
-                  value_t value, int ds_type, cdtime_t t,
-                  value_to_rate_state_t *state) {
-  gauge_t interval;
-
+int counter_to_rate(double *ret_rate, uint64_t value, cdtime_t t, counter_to_rate_state_t *state)
+{
   /* Another invalid state: The time is not increasing. */
   if (t <= state->last_time) {
     memset(state, 0, sizeof(*state));
     return EINVAL;
   }
 
-  interval = CDTIME_T_TO_DOUBLE(t - state->last_time);
+  double interval = CDTIME_T_TO_DOUBLE(t - state->last_time);
 
   /* Previous value is invalid. */
   if (state->last_time == 0) {
@@ -1531,29 +1199,13 @@ int value_to_rate(gauge_t *ret_rate, /* {{{ */
     return EAGAIN;
   }
 
-  switch (ds_type) {
-  case DS_TYPE_DERIVE: {
-    derive_t diff = value.derive - state->last_value.derive;
-    *ret_rate = ((gauge_t)diff) / ((gauge_t)interval);
-    break;
-  }
-  case DS_TYPE_GAUGE: {
-    *ret_rate = value.gauge;
-    break;
-  }
-  case DS_TYPE_COUNTER: {
-    counter_t diff = counter_diff(state->last_value.counter, value.counter);
-    *ret_rate = ((gauge_t)diff) / ((gauge_t)interval);
-    break;
-  }
-  default:
-    return EINVAL;
-  }
-
+  uint64_t diff = counter_diff(state->last_value, value);
+  *ret_rate = (double)diff / interval;
   state->last_value = value;
+
   state->last_time = t;
   return 0;
-} /* }}} value_t rate_to_value */
+}
 
 int service_name_to_port_number(const char *service_name) {
   struct addrinfo *ai_list;
@@ -1635,32 +1287,14 @@ void set_sock_opts(int sockfd) /* {{{ */
   }
 } /* }}} void set_sock_opts */
 
-int strtoderive(const char *string, derive_t *ret_value) /* {{{ */
-{
-  derive_t tmp;
-  char *endptr;
-
-  if ((string == NULL) || (ret_value == NULL))
-    return EINVAL;
-
-  errno = 0;
-  endptr = NULL;
-  tmp = (derive_t)strtoll(string, &endptr, /* base = */ 0);
-  if ((endptr == string) || (errno != 0))
-    return -1;
-
-  *ret_value = tmp;
-  return 0;
-} /* }}} int strtoderive */
-
-int strtocounter(const char *string, counter_t *ret_value) 
+int strtouint(const char *string, uint64_t *ret_value) 
 {
   if ((string == NULL) || (ret_value == NULL))
     return EINVAL;
 
   errno = 0;
   char *endptr = NULL;
-  counter_t tmp = (derive_t)strtoull(string, &endptr, /* base = */ 0);
+  uint64_t tmp = (uint64_t)strtoull(string, &endptr, /* base = */ 0);
   if ((endptr == string) || (errno != 0))
     return -1;
 
@@ -1668,9 +1302,9 @@ int strtocounter(const char *string, counter_t *ret_value)
   return 0;
 } 
 
-int strtogauge(const char *string, gauge_t *ret_value) /* {{{ */
+int strtogauge(const char *string, double *ret_value) 
 {
-  gauge_t tmp;
+  double tmp;
   char *endptr = NULL;
 
   if ((string == NULL) || (ret_value == NULL))
@@ -1678,7 +1312,7 @@ int strtogauge(const char *string, gauge_t *ret_value) /* {{{ */
 
   errno = 0;
   endptr = NULL;
-  tmp = (gauge_t)strtod(string, &endptr);
+  tmp = (double )strtod(string, &endptr);
   if (errno != 0)
     return errno;
   else if ((endptr == NULL) || (*endptr != 0))
@@ -1686,7 +1320,7 @@ int strtogauge(const char *string, gauge_t *ret_value) /* {{{ */
 
   *ret_value = tmp;
   return 0;
-} /* }}} int strtogauge */
+}
 
 int strarray_add(char ***ret_array, size_t *ret_array_len,
                  char const *str) /* {{{ */

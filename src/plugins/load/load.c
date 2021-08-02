@@ -62,7 +62,7 @@ enum {
   FAM_LOAD_MAX
 };
 
-static void load_submit(gauge_t snum, gauge_t mnum, gauge_t lnum)
+static void load_submit(double snum, double mnum, double lnum)
 {
   metric_family_t fams[FAM_LOAD_MAX] = {
     [FAM_LOAD_1MIN] = {
@@ -82,9 +82,9 @@ static void load_submit(gauge_t snum, gauge_t mnum, gauge_t lnum)
     },
   };
 
-  metric_family_metric_append(&fams[FAM_LOAD_1MIN], (metric_t){.value.gauge = snum,});
-  metric_family_metric_append(&fams[FAM_LOAD_5MIN], (metric_t){.value.gauge = mnum,});
-  metric_family_metric_append(&fams[FAM_LOAD_15MIN], (metric_t){.value.gauge = lnum,});
+  metric_family_metric_append(&fams[FAM_LOAD_1MIN], (metric_t){.value.gauge.real = snum,});
+  metric_family_metric_append(&fams[FAM_LOAD_5MIN], (metric_t){.value.gauge.real = mnum,});
+  metric_family_metric_append(&fams[FAM_LOAD_15MIN], (metric_t){.value.gauge.real = lnum,});
 
   for (size_t i=0; i < FAM_LOAD_MAX; i++) {
     int status = plugin_dispatch_metric_family(&fams[i]);
@@ -109,7 +109,7 @@ static int load_read(void)
   /* #endif HAVE_GETLOADAVG */
 
 #elif defined(KERNEL_LINUX)
-  gauge_t snum, mnum, lnum;
+  double snum, mnum, lnum;
   FILE *loadavg;
   char buffer[16];
 
@@ -144,7 +144,7 @@ static int load_read(void)
 
 /* #endif KERNEL_LINUX */
 #elif HAVE_LIBSTATGRAB
-  gauge_t snum, mnum, lnum;
+  double snum, mnum, lnum;
   sg_load_stats *ls;
 
   if ((ls = sg_get_load_stats()) == NULL)
@@ -158,7 +158,7 @@ static int load_read(void)
 
 /* #endif HAVE_LIBSTATGRAB */
 #elif HAVE_PERFSTAT
-  gauge_t snum, mnum, lnum;
+  double snum, mnum, lnum;
   perfstat_cpu_total_t cputotal;
 
   if (perfstat_cpu_total(NULL, &cputotal, sizeof(perfstat_cpu_total_t), 1) <
@@ -167,9 +167,9 @@ static int load_read(void)
     return -1;
   }
 
-  snum = (float)cputotal.loadavg[0] / (float)(1 << SBITS);
-  mnum = (float)cputotal.loadavg[1] / (float)(1 << SBITS);
-  lnum = (float)cputotal.loadavg[2] / (float)(1 << SBITS);
+  snum = (double)cputotal.loadavg[0] / (double)(1 << SBITS);
+  mnum = (double)cputotal.loadavg[1] / (double)(1 << SBITS);
+  lnum = (double)cputotal.loadavg[2] / (double)(1 << SBITS);
 
   load_submit(snum, mnum, lnum);
 

@@ -131,17 +131,28 @@ static int format_gcm_resource(yajl_gen gen, sd_resource_t *res) /* {{{ */
 static int format_typed_value(yajl_gen gen, metric_t const *m,
                               int64_t start_value) {
   char integer[32];
-
+  double real;
   yajl_gen_map_open(gen);
 
   switch (m->family->type) {
-  case METRIC_TYPE_GAUGE:
-  case METRIC_TYPE_UNTYPED: {
+  case METRIC_TYPE_UNKNOWN:
+    if (m->value.unknown.type == UNKNOWN_REAL) {
+      real = m->value.unknown.real;
+    } else {
+      real = (double)m->value.unknown.integer;
+    }
+  case METRIC_TYPE_GAUGE: {
+    if (m->value.gauge.type == GAUGE_REAL) {
+      real = m->value.gauge.real;
+    } else {
+      real = (double)m->value.gauge.integer;
+    }
+
     int status = json_string(gen, "doubleValue");
     if (status != 0)
       return status;
 
-    status = (int)yajl_gen_double(gen, (double)m->value.gauge);
+    status = (int)yajl_gen_double(gen, real);
     if (status != yajl_gen_status_ok)
       return status;
 
@@ -150,8 +161,8 @@ static int format_typed_value(yajl_gen gen, metric_t const *m,
   }
   case METRIC_TYPE_COUNTER: {
     /* Counter resets are handled in format_time_series(). */
-    assert(m->value.counter >= (uint64_t)start_value);
-    uint64_t diff = m->value.counter - (uint64_t)start_value;
+    assert(m->value.counter.uinteger >= (uint64_t)start_value);
+    uint64_t diff = m->value.counter.uinteger - (uint64_t)start_value; // FIXME
     ssnprintf(integer, sizeof(integer), "%" PRIu64, diff);
     break;
   }
@@ -180,7 +191,7 @@ static int format_typed_value(yajl_gen gen, metric_t const *m,
 static int format_metric_kind(yajl_gen gen, metric_t const *m) {
   switch (m->family->type) {
   case METRIC_TYPE_GAUGE:
-  case METRIC_TYPE_UNTYPED:
+  case METRIC_TYPE_UNKNOWN:
     return json_string(gen, "GAUGE");
   case METRIC_TYPE_COUNTER:
     return json_string(gen, "CUMULATIVE");
@@ -200,7 +211,7 @@ static int format_metric_kind(yajl_gen gen, metric_t const *m) {
 static int format_value_type(yajl_gen gen, metric_t const *m) {
   switch (m->family->type) {
   case METRIC_TYPE_GAUGE:
-  case METRIC_TYPE_UNTYPED:
+  case METRIC_TYPE_UNKNOWN:
     return json_string(gen, "DOUBLE");
   case METRIC_TYPE_COUNTER:
     return json_string(gen, "INT64");
@@ -292,12 +303,12 @@ static int read_cumulative_state(metric_t const *m, cdtime_t *ret_start_time,
   int status =
       uc_meta_data_get_signed_int(m, start_value_key, ret_start_value) ||
       uc_meta_data_get_unsigned_int(m, start_time_key, ret_start_time);
-  bool is_reset = *ret_start_value > m->value.counter;
+  bool is_reset = *ret_start_value > m->value.counter.uinteger; // FIXME
   if ((status == 0) && !is_reset) {
     return 0;
   }
 
-  *ret_start_value = (int64_t)m->value.counter;
+  *ret_start_value = m->value.counter.uinteger; // FIXME
   *ret_start_time = m->time;
 
   return uc_meta_data_add_signed_int(m, start_value_key, *ret_start_value) ||
@@ -405,15 +416,20 @@ static int format_time_series(yajl_gen gen, metric_t const *m,
     /* for cumulative metrics, the interval must not be zero. */
     return EAGAIN;
   }
-  if ((type == METRIC_TYPE_GAUGE) || (type == METRIC_TYPE_UNTYPED)) {
-    double d = (double)m->value.gauge;
+
+  if  (type == METRIC_TYPE_UNKNOWN) {
+    double d = (double)m->value.unknown.real; // FIXME
     if (isnan(d) || isinf(d)) {
       return EAGAIN;
     }
-  }
-  if (type == METRIC_TYPE_COUNTER) {
+  } else if (type == METRIC_TYPE_GAUGE) {
+    double d = (double)m->value.gauge.real; // FIXME
+    if (isnan(d) || isinf(d)) {
+      return EAGAIN;
+    }
+  } else if (type == METRIC_TYPE_COUNTER) {
     uint64_t sv = (uint64_t)start_value;
-    if (m->value.counter < sv) {
+    if (m->value.counter.uinteger < sv) { // FIXME
       return EAGAIN;
     }
   }

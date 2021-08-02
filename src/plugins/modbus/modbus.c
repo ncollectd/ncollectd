@@ -433,9 +433,9 @@ static int mb_init_connection(mb_host_t *host) /* {{{ */
 #define CAST_TO_VALUE_T(d, vt, raw, scale, shift)                              \
   do {                                                                         \
     if ((d)->type == METRIC_TYPE_COUNTER)                                      \
-      (vt).counter = (((counter_t)(raw)*scale) + shift);                       \
+      (vt).counter.uinteger = (((uint64_t)(raw)*scale) + shift);                       \
     else                                                                       \
-      (vt).gauge = (((gauge_t)(raw)*scale) + shift);                           \
+      (vt).gauge.real = (((double)(raw)*scale) + shift);                       \
   } while (0)
 
 static int mb_read_data(mb_host_t *host, mb_slave_t *slave, /* {{{ */
@@ -782,7 +782,7 @@ static int mb_config_add_data(oconfig_item_t *ci) /* {{{ */
   data->register_type = REG_TYPE_UINT16;
   data->scale = 1;
   data->shift = 0;
-  data->type = METRIC_TYPE_UNTYPED;
+  data->type = METRIC_TYPE_UNKNOWN;
 
   status = cf_util_get_string(ci, &data->name);
   if (status != 0) {

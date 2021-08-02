@@ -425,50 +425,50 @@ static void submit_scoreboard(char *buf, apache_t *st,
 
   if (st->server_type == APACHE) {
     metric_family_append(fam_scoreboard, "state", "open",
-                         (value_t){.gauge = open}, tmpl);
+                         (value_t){.gauge.real = open}, tmpl);
     metric_family_append(fam_scoreboard, "state", "waiting",
-                         (value_t){.gauge = waiting}, tmpl);
+                         (value_t){.gauge.real = waiting}, tmpl);
     metric_family_append(fam_scoreboard, "state", "starting",
-                         (value_t){.gauge = starting}, tmpl);
+                         (value_t){.gauge.real = starting}, tmpl);
     metric_family_append(fam_scoreboard, "state", "reading",
-                         (value_t){.gauge = reading}, tmpl);
+                         (value_t){.gauge.real = reading}, tmpl);
     metric_family_append(fam_scoreboard, "state", "sending",
-                         (value_t){.gauge = sending}, tmpl);
+                         (value_t){.gauge.real = sending}, tmpl);
     metric_family_append(fam_scoreboard, "state", "keepalive",
-                         (value_t){.gauge = keepalive}, tmpl);
+                         (value_t){.gauge.real = keepalive}, tmpl);
     metric_family_append(fam_scoreboard, "state", "dnslookup",
-                         (value_t){.gauge = dnslookup}, tmpl);
+                         (value_t){.gauge.real = dnslookup}, tmpl);
     metric_family_append(fam_scoreboard, "state", "closing",
-                         (value_t){.gauge = closing}, tmpl);
+                         (value_t){.gauge.real = closing}, tmpl);
     metric_family_append(fam_scoreboard, "state", "logging",
-                         (value_t){.gauge = logging}, tmpl);
+                         (value_t){.gauge.real = logging}, tmpl);
     metric_family_append(fam_scoreboard, "state", "finishing",
-                         (value_t){.gauge = finishing}, tmpl);
+                         (value_t){.gauge.real = finishing}, tmpl);
     metric_family_append(fam_scoreboard, "state", "idle_cleanup",
-                         (value_t){.gauge = idle_cleanup}, tmpl);
+                         (value_t){.gauge.real = idle_cleanup}, tmpl);
   } else {
     metric_family_append(fam_scoreboard, "state", "connect",
-                         (value_t){.gauge = open}, tmpl);
+                         (value_t){.gauge.real = open}, tmpl);
     metric_family_append(fam_scoreboard, "state", "close",
-                         (value_t){.gauge = closing}, tmpl);
+                         (value_t){.gauge.real = closing}, tmpl);
     metric_family_append(fam_scoreboard, "state", "hard_error",
-                         (value_t){.gauge = hard_error}, tmpl);
+                         (value_t){.gauge.real = hard_error}, tmpl);
     metric_family_append(fam_scoreboard, "state", "read",
-                         (value_t){.gauge = lighttpd_read}, tmpl);
+                         (value_t){.gauge.real = lighttpd_read}, tmpl);
     metric_family_append(fam_scoreboard, "state", "read_post",
-                         (value_t){.gauge = reading}, tmpl);
+                         (value_t){.gauge.real = reading}, tmpl);
     metric_family_append(fam_scoreboard, "state", "write",
-                         (value_t){.gauge = sending}, tmpl);
+                         (value_t){.gauge.real = sending}, tmpl);
     metric_family_append(fam_scoreboard, "state", "handle_request",
-                         (value_t){.gauge = handle_request}, tmpl);
+                         (value_t){.gauge.real = handle_request}, tmpl);
     metric_family_append(fam_scoreboard, "state", "request_start",
-                         (value_t){.gauge = request_start}, tmpl);
+                         (value_t){.gauge.real = request_start}, tmpl);
     metric_family_append(fam_scoreboard, "state", "request_end",
-                         (value_t){.gauge = request_end}, tmpl);
+                         (value_t){.gauge.real = request_end}, tmpl);
     metric_family_append(fam_scoreboard, "state", "response_start",
-                         (value_t){.gauge = response_start}, tmpl);
+                         (value_t){.gauge.real = response_start}, tmpl);
     metric_family_append(fam_scoreboard, "state", "response_end",
-                         (value_t){.gauge = response_end}, tmpl);
+                         (value_t){.gauge.real = response_end}, tmpl);
   }
 }
 
@@ -543,7 +543,7 @@ static int apache_read_host(user_data_t *user_data)
   if (curl_easy_perform(st->curl) != CURLE_OK) {
     ERROR("apache: curl_easy_perform failed: %s", st->apache_curl_error);
 
-    tmpl.value.gauge = 0;
+    tmpl.value.gauge.real = 0;
     metric_family_metric_append(&fams[FAM_APACHE_UP], tmpl);
     int status = plugin_dispatch_metric_family(&fams[FAM_APACHE_UP]);
     if (status != 0)
@@ -591,11 +591,11 @@ static int apache_read_host(user_data_t *user_data)
     if (fields_num == 3) {
       if ((strcmp(fields[0], "Total") == 0) &&
           (strcmp(fields[1], "Accesses:") == 0)) {
-        tmpl.value.counter = atoll(fields[2]);
+        tmpl.value.counter.uinteger = (uint64_t)atoll(fields[2]);
         metric_family_metric_append(&fams[FAM_APACHE_REQUESTS], tmpl);
       } else if ((strcmp(fields[0], "Total") == 0) &&
                  (strcmp(fields[1], "kBytes:") == 0)) {
-        tmpl.value.counter = 1024LL * atoll(fields[2]);
+        tmpl.value.counter.uinteger = (uint64_t)(1024LL * atoll(fields[2]));
         metric_family_metric_append(&fams[FAM_APACHE_BYTES], tmpl);
       }
     } else if (fields_num == 2) {
@@ -605,31 +605,31 @@ static int apache_read_host(user_data_t *user_data)
                ((strcmp(fields[0], "BusyServers:") == 0) /* Apache 1.* */
                 || (strcmp(fields[0], "BusyWorkers:") == 0)) /* Apache 2.* */) {
         metric_family_append(&fams[FAM_APACHE_WORKERS], "state", "busy",
-                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+                             (value_t){.gauge.real = atol(fields[1])}, &tmpl);
         apache_connections_submitted++;
       } else if (!apache_idle_workers_submitted &&
                  ((strcmp(fields[0], "IdleServers:") == 0) /* Apache 1.x */
                   ||(strcmp(fields[0], "IdleWorkers:") == 0)) /* Apache 2.x */) {
         metric_family_append(&fams[FAM_APACHE_WORKERS], "state", "idle",
-                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+                             (value_t){.gauge.real = atol(fields[1])}, &tmpl);
         apache_idle_workers_submitted++;
       } else if (strcmp(fields[0], "ConnsTotal:") == 0) {
         metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "total",
-                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+                             (value_t){.gauge.real = atol(fields[1])}, &tmpl);
       } else if (strcmp(fields[0], "ConnsAsyncWriting:") == 0) {
         metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "writting",
-                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+                             (value_t){.gauge.real = atol(fields[1])}, &tmpl);
       } else if (strcmp(fields[0], "ConnsAsyncKeepAlive:") == 0) {
         metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "keepalive",
-                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+                             (value_t){.gauge.real = atol(fields[1])}, &tmpl);
       } else if (strcmp(fields[0], "ConnsAsyncClosing:") == 0) {
         metric_family_append(&fams[FAM_APACHE_CONNECTIONS], "state", "closing",
-                             (value_t){.gauge = atol(fields[1])}, &tmpl);
+                             (value_t){.gauge.real = atol(fields[1])}, &tmpl);
       } else if (strcmp(fields[0], "Processes:") == 0) {
-        tmpl.value.gauge = atol(fields[1]);
+        tmpl.value.gauge.real = atol(fields[1]);
         metric_family_metric_append(&fams[FAM_APACHE_PROCESSES], tmpl);
       } else if (strcmp(fields[0], "ServerUptimeSeconds:") == 0) {
-        tmpl.value.gauge = atol(fields[1]);
+        tmpl.value.gauge.real = atol(fields[1]);
         metric_family_metric_append(&fams[FAM_APACHE_UPTIME], tmpl);
       }
 

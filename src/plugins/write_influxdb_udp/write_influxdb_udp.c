@@ -412,7 +412,7 @@ static int write_influxdb_point(char *buffer, int buffer_len, metric_t metric) {
 
   if (wifxudp_config_store_rates &&
       (metric.family->type == METRIC_TYPE_COUNTER)) {
-    gauge_t rate;
+    double rate;
     if (uc_get_rate(&metric, &rate) != 0) {
       WARNING("write_influxdb_udp plugin: "
               "uc_get_rate failed.");
@@ -424,16 +424,37 @@ static int write_influxdb_point(char *buffer, int buffer_len, metric_t metric) {
     }
   } else {
     switch (metric.family->type) {
+    case METRIC_TYPE_UNKNOWN:
+      if (metric.value.unknown.type == UNKNOWN_REAL) {
+        if (!isnan(metric.value.unknown.real)) {
+          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.unknown.real);
+          have_values = true;
+        }
+      } else if (metric.value.unknown.type == UNKNOWN_INTEGER) {
+        BUFFER_ADD("value=%" PRIi64, metric.value.unknown.integer);
+        have_values = true;
+      }
     case METRIC_TYPE_GAUGE:
-    case METRIC_TYPE_UNTYPED:
-      if (!isnan(metric.value.gauge)) {
-        BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.gauge);
+      if (metric.value.gauge.type == GAUGE_REAL) {
+        if (!isnan(metric.value.gauge.real)) {
+          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.gauge.real);
+          have_values = true;
+        }
+      } else if (metric.value.gauge.type == GAUGE_INTEGER) {
+        BUFFER_ADD("value=%" PRIi64, metric.value.gauge.integer);
         have_values = true;
       }
       break;
     case METRIC_TYPE_COUNTER:
-      BUFFER_ADD("value=%" PRIi64 "i", metric.value.counter);
-      have_values = true;
+      if (metric.value.counter.type == COUNTER_UINTEGER) {
+        BUFFER_ADD("value=" COUNTER_FORMAT, metric.value.counter.uinteger);
+        have_values = true;
+      } else if (metric.value.counter.type == COUNTER_REAL) {
+        if (!isnan(metric.value.counter.real)) {
+          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.counter.real);
+          have_values = true;
+        }
+      }
       break;
     case METRIC_TYPE_DISTRIBUTION:
       // FIXME

@@ -188,24 +188,29 @@ typedef struct process_entry_s {
   unsigned long vmem_code;
   unsigned long stack_size;
 
-  derive_t vmem_minflt_counter;
-  derive_t vmem_majflt_counter;
+  int64_t vmem_minflt_counter;
+  int64_t vmem_majflt_counter;
 
-  derive_t cpu_user_counter;
-  derive_t cpu_system_counter;
+  int64_t cpu_user_counter;
+  int64_t cpu_system_counter;
 
   /* io data */
-  derive_t io_rchar;
-  derive_t io_wchar;
-  derive_t io_syscr;
-  derive_t io_syscw;
-  derive_t io_diskr;
-  derive_t io_diskw;
+  int64_t io_rchar;
+  int64_t io_wchar;
+  int64_t io_syscr;
+  int64_t io_syscw;
+  int64_t io_diskr;
+  int64_t io_diskw;
   bool has_io;
 
-  derive_t cswitch_vol;
-  derive_t cswitch_invol;
+  int64_t cswitch_vol;
+  int64_t cswitch_invol;
   bool has_cswitch;
+
+  int64_t sched_running;
+  int64_t sched_waiting;
+  int64_t sched_timeslices;
+  bool has_sched;
 
 #if HAVE_LIBTASKSTATS
   ts_delay_t delay;
@@ -221,28 +226,32 @@ typedef struct procstat_entry_s {
   unsigned long id;
   unsigned char age;
 
-  derive_t vmem_minflt_counter;
-  derive_t vmem_majflt_counter;
+  int64_t vmem_minflt_counter;
+  int64_t vmem_majflt_counter;
 
-  derive_t cpu_user_counter;
-  derive_t cpu_system_counter;
+  int64_t cpu_user_counter;
+  int64_t cpu_system_counter;
 
   /* io data */
-  derive_t io_rchar;
-  derive_t io_wchar;
-  derive_t io_syscr;
-  derive_t io_syscw;
-  derive_t io_diskr;
-  derive_t io_diskw;
+  int64_t io_rchar;
+  int64_t io_wchar;
+  int64_t io_syscr;
+  int64_t io_syscw;
+  int64_t io_diskr;
+  int64_t io_diskw;
 
-  derive_t cswitch_vol;
-  derive_t cswitch_invol;
+  int64_t cswitch_vol;
+  int64_t cswitch_invol;
+
+  int64_t sched_running;
+  int64_t sched_waiting;
+  int64_t sched_timeslices;
 
 #if HAVE_LIBTASKSTATS
-  value_to_rate_state_t delay_cpu;
-  value_to_rate_state_t delay_blkio;
-  value_to_rate_state_t delay_swapin;
-  value_to_rate_state_t delay_freepages;
+  counter_to_rate_state_t delay_cpu;
+  counter_to_rate_state_t delay_blkio;
+  counter_to_rate_state_t delay_swapin;
+  counter_to_rate_state_t delay_freepages;
 #endif
 
   struct procstat_entry_s *next;
@@ -264,28 +273,32 @@ typedef struct procstat {
   unsigned long vmem_code;
   unsigned long stack_size;
 
-  derive_t vmem_minflt_counter;
-  derive_t vmem_majflt_counter;
+  int64_t vmem_minflt_counter;
+  int64_t vmem_majflt_counter;
 
-  derive_t cpu_user_counter;
-  derive_t cpu_system_counter;
+  int64_t cpu_user_counter;
+  int64_t cpu_system_counter;
 
   /* io data */
-  derive_t io_rchar;
-  derive_t io_wchar;
-  derive_t io_syscr;
-  derive_t io_syscw;
-  derive_t io_diskr;
-  derive_t io_diskw;
+  int64_t io_rchar;
+  int64_t io_wchar;
+  int64_t io_syscr;
+  int64_t io_syscw;
+  int64_t io_diskr;
+  int64_t io_diskw;
 
-  derive_t cswitch_vol;
-  derive_t cswitch_invol;
+  int64_t cswitch_vol;
+  int64_t cswitch_invol;
+
+  int64_t sched_running;
+  int64_t sched_waiting;
+  int64_t sched_timeslices;
 
   /* Linux Delay Accounting. Unit is ns/s. */
-  gauge_t delay_cpu;
-  gauge_t delay_blkio;
-  gauge_t delay_swapin;
-  gauge_t delay_freepages;
+  double delay_cpu;
+  double delay_blkio;
+  double delay_swapin;
+  double delay_freepages;
 
   bool report_fd_num;
   bool report_maps_num;
@@ -372,6 +385,9 @@ enum {
   FAM_PROC_DELAY_BLKIO,
   FAM_PROC_DELAY_SWAPIN,
   FAM_PROC_DELAY_FREEPAGES,
+  FAM_PROC_SCHED_RUNNING,
+  FAM_PROC_SCHED_WAITING,
+  FAM_PROC_SCHED_TIMESLICES,
   FAM_PROC_MAX
 };
 
@@ -422,6 +438,9 @@ static procstat_t *ps_list_register(const char *name, const char *regexp)
   new->io_diskw = -1;
   new->cswitch_vol = -1;
   new->cswitch_invol = -1;
+  new->sched_running = -1;
+  new->sched_waiting = -1;
+  new->sched_timeslices = -1;
 
   new->report_fd_num = report_fd_num;
   new->report_maps_num = report_maps_num;
@@ -514,8 +533,8 @@ static int ps_list_match(const char *name, const char *cmdline, procstat_t *ps)
   return 0;
 }
 
-static void ps_update_counter(derive_t *group_counter, derive_t *curr_counter,
-                              derive_t new_counter)
+static void ps_update_counter(int64_t *group_counter, int64_t *curr_counter,
+                              int64_t new_counter)
 {
   unsigned long curr_value;
 
@@ -537,13 +556,12 @@ static void ps_update_counter(derive_t *group_counter, derive_t *curr_counter,
 }
 
 #if HAVE_LIBTASKSTATS
-static void ps_update_delay_one(gauge_t *out_rate_sum,
-                                value_to_rate_state_t *state, uint64_t cnt,
+static void ps_update_delay_one(double *out_rate_sum,
+                                counter_to_rate_state_t *state, uint64_t cnt,
                                 cdtime_t t)
 {
-  gauge_t rate = NAN;
-  int status = value_to_rate(&rate, (value_t){.counter = (counter_t)cnt},
-                             DS_TYPE_COUNTER, t, state);
+  double rate = NAN;
+  int status = counter_to_rate(&rate, cnt, t, state);
   if ((status != 0) || isnan(rate)) {
     return;
   }
@@ -636,21 +654,22 @@ static void ps_list_add(const char *name, const char *cmdline,
     }
 
     if ((entry->cswitch_vol != -1) && (entry->cswitch_invol != -1)) {
-      ps_update_counter(&ps->cswitch_vol, &pse->cswitch_vol,
-                        entry->cswitch_vol);
-      ps_update_counter(&ps->cswitch_invol, &pse->cswitch_invol,
-                        entry->cswitch_invol);
+      ps_update_counter(&ps->cswitch_vol, &pse->cswitch_vol, entry->cswitch_vol);
+      ps_update_counter(&ps->cswitch_invol, &pse->cswitch_invol, entry->cswitch_invol);
     }
 
-    ps_update_counter(&ps->vmem_minflt_counter, &pse->vmem_minflt_counter,
-                      entry->vmem_minflt_counter);
-    ps_update_counter(&ps->vmem_majflt_counter, &pse->vmem_majflt_counter,
-                      entry->vmem_majflt_counter);
+    if ((entry->sched_running != -1) && (entry->sched_waiting != -1) &&
+        (entry->sched_timeslices != -1)) {
+      ps_update_counter(&ps->sched_running, &pse->sched_running, entry->sched_running);
+      ps_update_counter(&ps->sched_waiting, &pse->sched_waiting, entry->sched_waiting);
+      ps_update_counter(&ps->sched_timeslices, &pse->sched_timeslices, entry->sched_timeslices);
+    }
 
-    ps_update_counter(&ps->cpu_user_counter, &pse->cpu_user_counter,
-                      entry->cpu_user_counter);
-    ps_update_counter(&ps->cpu_system_counter, &pse->cpu_system_counter,
-                      entry->cpu_system_counter);
+    ps_update_counter(&ps->vmem_minflt_counter, &pse->vmem_minflt_counter, entry->vmem_minflt_counter);
+    ps_update_counter(&ps->vmem_majflt_counter, &pse->vmem_majflt_counter, entry->vmem_majflt_counter);
+
+    ps_update_counter(&ps->cpu_user_counter, &pse->cpu_user_counter, entry->cpu_user_counter);
+    ps_update_counter(&ps->cpu_system_counter, &pse->cpu_system_counter, entry->cpu_system_counter);
 
 #if HAVE_LIBTASKSTATS
     if (entry->has_delay)
@@ -868,7 +887,7 @@ static int ps_init(void)
   return 0;
 }
 
-static void ps_submit_forks(counter_t value)
+static void ps_submit_forks(uint64_t value)
 {
   metric_family_t fam = {
       .name = "processes_forks_total",
@@ -876,7 +895,7 @@ static void ps_submit_forks(counter_t value)
   };
 
   metric_family_metric_append(&fam, (metric_t){
-                                        .value.counter = value,
+                                        .value.counter.uinteger = value,
                                     });
 
   int status = plugin_dispatch_metric_family(&fam);
@@ -889,7 +908,7 @@ static void ps_submit_forks(counter_t value)
 }
 
 /* submit global state (e.g.: qty of zombies, running, etc..) */
-static void ps_submit_state(gauge_t *proc_state)
+static void ps_submit_state(double *proc_state)
 {
   metric_family_t fam = {
       .name = "processes_state",
@@ -899,7 +918,7 @@ static void ps_submit_state(gauge_t *proc_state)
 
   for (size_t i = 0; i < PROC_STATE_MAX; i++) {
     if (!isnan(proc_state[i])) {
-      m.value.gauge = proc_state[i];
+      m.value.gauge.real = proc_state[i];
       metric_label_set(&m, "state", proc_state_name[i]);
       metric_family_metric_append(&fam, m);
       metric_reset(&m);
@@ -923,98 +942,110 @@ static void ps_metric_append_proc_list(metric_family_t *fams_proc,
 
   metric_label_set(&m, "name", ps->name);
 
-  m.value.gauge = ps->vmem_size;
+  m.value.gauge.real = ps->vmem_size;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_SIZE], m);
 
-  m.value.gauge = ps->vmem_rss;
+  m.value.gauge.real = ps->vmem_rss;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_RSS], m);
 
-  m.value.gauge = ps->vmem_data;
+  m.value.gauge.real = ps->vmem_data;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_DATA], m);
 
-  m.value.gauge = ps->vmem_code;
+  m.value.gauge.real = ps->vmem_code;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_CODE], m);
 
-  m.value.gauge = ps->stack_size;
+  m.value.gauge.real = ps->stack_size;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_STACK], m);
 
-  m.value.counter = ps->cpu_user_counter;
+  m.value.counter.uinteger = ps->cpu_user_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_CPU_USER], m);
 
-  m.value.counter = ps->cpu_system_counter;
+  m.value.counter.uinteger = ps->cpu_system_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_CPU_SYSTEM], m);
 
-  m.value.gauge = ps->num_proc;
+  m.value.gauge.real = ps->num_proc;
   metric_family_metric_append(&fams_proc[FAM_PROC_NUM_PROCESSS], m);
 
-  m.value.gauge = ps->num_lwp;
+  m.value.gauge.real = ps->num_lwp;
   metric_family_metric_append(&fams_proc[FAM_PROC_NUM_THREADS], m);
 
-  m.value.counter = ps->vmem_minflt_counter;
+  m.value.counter.uinteger = ps->vmem_minflt_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_MINFLT], m);
 
-  m.value.counter = ps->vmem_majflt_counter;
+  m.value.counter.uinteger = ps->vmem_majflt_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_MAJFLT], m);
 
   if (ps->io_rchar != -1) {
-    m.value.counter = ps->io_rchar;
+    m.value.counter.uinteger = ps->io_rchar;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_RCHAR], m);
   }
   if (ps->io_wchar != -1) {
-    m.value.counter = ps->io_wchar;
+    m.value.counter.uinteger = ps->io_wchar;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_WCHAR], m);
   }
   if (ps->io_syscr != -1) {
-    m.value.counter = ps->io_syscr;
+    m.value.counter.uinteger = ps->io_syscr;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_SYSCR], m);
   }
   if (ps->io_syscw != -1) {
-    m.value.counter = ps->io_syscw;
+    m.value.counter.uinteger = ps->io_syscw;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_SYSCW], m);
   }
   if (ps->io_diskr != -1) {
-    m.value.counter = ps->io_diskr;
+    m.value.counter.uinteger = ps->io_diskr;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_DISKR], m);
   }
   if (ps->io_diskw != -1) {
-    m.value.counter = ps->io_diskw;
+    m.value.counter.uinteger = ps->io_diskw;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_DISKW], m);
   }
   if (ps->num_fd > 0) {
-    m.value.gauge = ps->num_fd;
+    m.value.gauge.real = ps->num_fd;
     metric_family_metric_append(&fams_proc[FAM_PROC_FILE_HANDLES], m);
   }
   if (ps->num_maps > 0) {
-    m.value.gauge = ps->num_maps;
+    m.value.gauge.real = ps->num_maps;
     metric_family_metric_append(&fams_proc[FAM_PROC_FILE_HANDLES_MAPPED], m);
   }
   if (ps->cswitch_vol != -1) {
-    m.value.counter = ps->cswitch_vol;
+    m.value.counter.uinteger = ps->cswitch_vol;
     metric_family_metric_append(&fams_proc[FAM_PROC_CTX_VOLUNTARY], m);
   }
   if (ps->cswitch_invol != -1) {
-    m.value.counter = ps->cswitch_invol;
+    m.value.counter.uinteger = ps->cswitch_invol;
     metric_family_metric_append(&fams_proc[FAM_PROC_CTX_INVOLUNTARY], m);
+  }
+  if (ps->sched_running != -1) {
+    m.value.counter.uinteger = ps->sched_running;
+    metric_family_metric_append(&fams_proc[FAM_PROC_SCHED_RUNNING], m);
+  }
+  if (ps->sched_waiting!= -1) {
+    m.value.counter.uinteger = ps->sched_waiting;
+    metric_family_metric_append(&fams_proc[FAM_PROC_SCHED_WAITING], m);
+  }
+  if (ps->sched_timeslices!= -1) {
+    m.value.counter.uinteger = ps->sched_timeslices;
+    metric_family_metric_append(&fams_proc[FAM_PROC_SCHED_TIMESLICES], m);
   }
 
   /* The ps->delay_* metrics are in nanoseconds per second. Convert to seconds
    * per second. */
-  gauge_t const delay_factor = 1000000000.0;
+  double const delay_factor = 1000000000.0;
 
   if (!isnan(ps->delay_cpu)) {
-    m.value.gauge = ps->delay_cpu / delay_factor;
+    m.value.gauge.real = ps->delay_cpu / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_CPU], m);
   }
   if (!isnan(ps->delay_blkio)) {
-    m.value.gauge = ps->delay_blkio / delay_factor;
+    m.value.gauge.real = ps->delay_blkio / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_BLKIO], m);
   }
   if (!isnan(ps->delay_swapin)) {
-    m.value.gauge = ps->delay_swapin / delay_factor;
+    m.value.gauge.real = ps->delay_swapin / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_SWAPIN], m);
   }
   if (!isnan(ps->delay_freepages)) {
-    m.value.gauge = ps->delay_freepages / delay_factor;
+    m.value.gauge.real = ps->delay_freepages / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_FREEPAGES], m);
   }
 
@@ -1030,15 +1061,17 @@ static void ps_metric_append_proc_list(metric_family_t *fams_proc,
       "io_syscr = %" PRIi64 "; io_syscw = %" PRIi64 "; "
       "io_diskr = %" PRIi64 "; io_diskw = %" PRIi64 "; "
       "cswitch_vol = %" PRIi64 "; cswitch_invol = %" PRIi64 "; "
+      "sched_running = %" PRIi64 "; sched_waiting = %" PRIi64 "; sched_timeslices= %" PRIi64 "; "
       "delay_cpu = %g; delay_blkio = %g; "
       "delay_swapin = %g; delay_freepages = %g;",
       ps->name, ps->num_proc, ps->num_lwp, ps->num_fd, ps->num_maps,
       ps->vmem_size, ps->vmem_rss, ps->vmem_data, ps->vmem_code,
-      ps->vmem_minflt_counter, ps->vmem_majflt_counter, ps->cpu_user_counter,
-      ps->cpu_system_counter, ps->io_rchar, ps->io_wchar, ps->io_syscr,
-      ps->io_syscw, ps->io_diskr, ps->io_diskw, ps->cswitch_vol,
-      ps->cswitch_invol, ps->delay_cpu, ps->delay_blkio, ps->delay_swapin,
-      ps->delay_freepages);
+      ps->vmem_minflt_counter, ps->vmem_majflt_counter,
+      ps->cpu_user_counter, ps->cpu_system_counter,
+      ps->io_rchar, ps->io_wchar, ps->io_syscr, ps->io_syscw, ps->io_diskr, ps->io_diskw, 
+      ps->cswitch_vol, ps->cswitch_invol,
+      ps->sched_running, ps->sched_waiting, ps->sched_timeslices,
+      ps->delay_cpu, ps->delay_blkio, ps->delay_swapin, ps->delay_freepages);
 
 }
 
@@ -1051,8 +1084,8 @@ static int ps_read_tasks_status(process_entry_t *ps)
   char filename[64];
   FILE *fh;
   struct dirent *ent;
-  derive_t cswitch_vol = 0;
-  derive_t cswitch_invol = 0;
+  int64_t cswitch_vol = 0;
+  int64_t cswitch_invol = 0;
   char buffer[1024];
   char *fields[8];
   int numfields;
@@ -1085,7 +1118,7 @@ static int ps_read_tasks_status(process_entry_t *ps)
     }
 
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-      derive_t tmp;
+      int64_t tmp;
       char *endptr;
 
       if (strncmp(buffer, "voluntary_ctxt_switches", 23) != 0 &&
@@ -1099,7 +1132,7 @@ static int ps_read_tasks_status(process_entry_t *ps)
 
       errno = 0;
       endptr = NULL;
-      tmp = (derive_t)strtoll(fields[1], &endptr, /* base = */ 10);
+      tmp = (int64_t)strtoll(fields[1], &endptr, /* base = */ 10);
       if ((errno == 0) && (endptr != fields[1])) {
         if (strncmp(buffer, "voluntary_ctxt_switches", 23) == 0) {
           cswitch_vol += tmp;
@@ -1117,6 +1150,29 @@ static int ps_read_tasks_status(process_entry_t *ps)
 
   ps->cswitch_vol = cswitch_vol;
   ps->cswitch_invol = cswitch_invol;
+
+  return 0;
+}
+
+static int ps_read_schedstat(process_entry_t *ps)
+{
+  char filename[64];
+  snprintf(filename, sizeof(filename), "/proc/%li/schedstat", ps->id);
+
+  char buffer[128];
+  ssize_t status = read_file_contents(filename, buffer, sizeof(buffer) - 1);
+  if (status <= 0)
+    return -1;
+
+  char *fields[4];
+  int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+
+  if (numfields < 3)
+   return -1;
+
+  ps->sched_running = strtoul(fields[0], NULL, /* base = */ 10);
+  ps->sched_waiting = strtoul(fields[1], NULL, /* base = */ 10);
+  ps->sched_timeslices = strtoul(fields[2], NULL, /* base = */ 10);
 
   return 0;
 }
@@ -1194,7 +1250,7 @@ static int ps_read_io(process_entry_t *ps)
   }
 
   while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-    derive_t *val = NULL;
+    int64_t *val = NULL;
     long long tmp;
     char *endptr;
 
@@ -1224,7 +1280,7 @@ static int ps_read_io(process_entry_t *ps)
     if ((errno != 0) || (endptr == fields[1]))
       *val = -1;
     else
-      *val = (derive_t)tmp;
+      *val = (int64_t)tmp;
   } /* while (fgets) */
 
   if (fclose(fh)) {
@@ -1341,6 +1397,11 @@ static void ps_fill_details(const procstat_t *ps, process_entry_t *entry)
     entry->has_io = true;
   }
 
+  if (entry->has_sched == false) {
+    ps_read_schedstat(entry);
+    entry->has_sched = true;
+  }
+
   if (ps->report_ctx_switch) {
     if (entry->has_cswitch == false) {
       ps_read_tasks_status(entry);
@@ -1389,8 +1450,8 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
   size_t name_end_pos;
   size_t name_len;
 
-  derive_t cpu_user_counter;
-  derive_t cpu_system_counter;
+  int64_t cpu_user_counter;
+  int64_t cpu_system_counter;
   long long unsigned vmem_size;
   long long unsigned vmem_rss;
   long long unsigned stack_size;
@@ -1507,6 +1568,9 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
   ps->cswitch_vol = -1;
   ps->cswitch_invol = -1;
 
+  ps->sched_running = -1;
+  ps->sched_waiting = -1;
+  ps->sched_timeslices = -1;
   /* success */
   return 0;
 }
@@ -1642,7 +1706,7 @@ static int read_fork_rate(void)
 {
   FILE *proc_stat;
   char buffer[1024];
-  value_t value;
+  uint64_t value;
   bool value_valid = 0;
 
   proc_stat = fopen("/proc/stat", "r");
@@ -1663,7 +1727,7 @@ static int read_fork_rate(void)
     if (strcmp("processes", fields[0]) != 0)
       continue;
 
-    status = parse_value(fields[1], &value, DS_TYPE_COUNTER);
+    status = parse_uinteger(fields[1], &value);
     if (status == 0)
       value_valid = 1;
 
@@ -1674,7 +1738,7 @@ static int read_fork_rate(void)
   if (!value_valid)
     return -1;
 
-  ps_submit_forks(value.counter);
+  ps_submit_forks(value);
   return 0;
 }
 #endif /*KERNEL_LINUX */
@@ -1807,6 +1871,10 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
   ps->cswitch_vol = -1;
   ps->cswitch_invol = -1;
 
+  ps->sched_running = -1;
+  ps->sched_waiting = -1;
+  ps->sched_timeslices = -1;
+
   /*
    * TODO: Find way of setting BLOCKED and PAGING status
    */
@@ -1907,134 +1975,121 @@ static int mach_get_task_name(task_t t, int *pid, char *name,
 static int ps_read(void)
 {
   metric_family_t fams_proc[FAM_PROC_MAX] = {
-      [FAM_PROC_VMEM_SIZE] =
-          {
-              .name = "host_processes_vmem_size_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_VMEM_RSS] =
-          {
-              .name = "host_processes_vmem_rss_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_VMEM_DATA] =
-          {
-              .name = "host_processes_vmem_data_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_VMEM_CODE] =
-          {
-              .name = "host_processes_vmem_code_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_VMEM_STACK] =
-          {
-              .name = "host_processes_vmem_stack_bytes",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_CPU_USER] =
-          {
-              .name = "host_processes_cpu_user_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_CPU_SYSTEM] =
-          {
-              .name = "host_processes_cpu_system_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_NUM_PROCESSS] =
-          {
-              .name = "host_processes_num_processs",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_NUM_THREADS] =
-          {
-              .name = "host_processes_num_threads",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_VMEM_MINFLT] =
-          {
-              .name = "host_processes_vmem_minflt_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_VMEM_MAJFLT] =
-          {
-              .name = "host_processes_vmem_majflt_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_IO_RCHAR] =
-          {
-              .name = "host_processes_io_rchar_bytes",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_IO_WCHAR] =
-          {
-              .name = "host_processes_io_wchar_bytes",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_IO_SYSCR] =
-          {
-              .name = "host_processes_io_syscr_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_IO_SYSCW] =
-          {
-              .name = "host_processes_io_syscw_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_IO_DISKR] =
-          {
-              .name = "host_processes_io_diskr_bytes",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_IO_DISKW] =
-          {
-              .name = "host_processes_io_diskw_bytes",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_FILE_HANDLES] =
-          {
-              .name = "host_processes_file_handles",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_FILE_HANDLES_MAPPED] =
-          {
-              .name = "host_processes_file_handles_mapped",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_CTX_VOLUNTARY] =
-          {
-              .name = "host_processes_contextswitch_voluntary_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_CTX_INVOLUNTARY] =
-          {
-              .name = "host_processes_contextswitch_involuntary_total",
-              .type = METRIC_TYPE_COUNTER,
-          },
-      [FAM_PROC_DELAY_CPU] =
-          {
-              .name = "host_processes_delay_cpu_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_DELAY_BLKIO] =
-          {
-              .name = "host_processes_delay_blkio_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_DELAY_SWAPIN] =
-          {
-              .name = "host_processes_delay_swapin_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
-      [FAM_PROC_DELAY_FREEPAGES] =
-          {
-              .name = "host_processes_delay_freepages_seconds",
-              .type = METRIC_TYPE_GAUGE,
-          },
+    [FAM_PROC_VMEM_SIZE] = {
+      .name = "host_processes_vmem_size_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_VMEM_RSS] = {
+      .name = "host_processes_vmem_rss_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_VMEM_DATA] = {
+      .name = "host_processes_vmem_data_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_VMEM_CODE] = {
+      .name = "host_processes_vmem_code_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_VMEM_STACK] = {
+      .name = "host_processes_vmem_stack_bytes",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_CPU_USER] = {
+      .name = "host_processes_cpu_user_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_CPU_SYSTEM] = {
+      .name = "host_processes_cpu_system_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_NUM_PROCESSS] = {
+      .name = "host_processes_num_processs",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_NUM_THREADS] = {
+      .name = "host_processes_num_threads",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_VMEM_MINFLT] = {
+      .name = "host_processes_vmem_minflt_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_VMEM_MAJFLT] = {
+      .name = "host_processes_vmem_majflt_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_IO_RCHAR] = {
+      .name = "host_processes_io_rchar_bytes",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_IO_WCHAR] = {
+      .name = "host_processes_io_wchar_bytes",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_IO_SYSCR] = {
+      .name = "host_processes_io_syscr_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_IO_SYSCW] = {
+      .name = "host_processes_io_syscw_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_IO_DISKR] = {
+      .name = "host_processes_io_diskr_bytes",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_IO_DISKW] = {
+      .name = "host_processes_io_diskw_bytes",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_FILE_HANDLES] = {
+      .name = "host_processes_file_handles",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_FILE_HANDLES_MAPPED] = {
+      .name = "host_processes_file_handles_mapped",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_CTX_VOLUNTARY] = {
+      .name = "host_processes_contextswitch_voluntary_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_CTX_INVOLUNTARY] = {
+      .name = "host_processes_contextswitch_involuntary_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_DELAY_CPU] = {
+      .name = "host_processes_delay_cpu_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_DELAY_BLKIO] = {
+      .name = "host_processes_delay_blkio_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_DELAY_SWAPIN] = {
+      .name = "host_processes_delay_swapin_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_DELAY_FREEPAGES] = {
+      .name = "host_processes_delay_freepages_seconds",
+      .type = METRIC_TYPE_GAUGE,
+    },
+    [FAM_PROC_SCHED_RUNNING] = {
+      .name = "host_processes_sched_running_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_SCHED_WAITING] = {
+      .name = "host_processes_sched_waiting_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PROC_SCHED_TIMESLICES] = {
+      .name = "host_processes_sched_timeslices_total",
+      .type = METRIC_TYPE_COUNTER,
+    },
   };
 
-  gauge_t proc_state[PROC_STATE_MAX];
+  double proc_state[PROC_STATE_MAX];
 
   for (size_t i = 0; i < PROC_STATE_MAX; i++) {
     proc_state[i] = NAN;
@@ -2167,6 +2222,10 @@ static int ps_read(void)
         /* context switch counters not implemented */
         pse.cswitch_vol = -1;
         pse.cswitch_invol = -1;
+
+        pse.sched_running = -1;
+        pse.sched_waiting = -1;
+        pse.sched_timeslices = -1;
       }
 
       status = task_threads(task_list[task], &thread_list, &thread_list_len);
@@ -2481,6 +2540,10 @@ static int ps_read(void)
       pse.cswitch_vol = -1;
       pse.cswitch_invol = -1;
 
+      pse.sched_running = -1;
+      pse.sched_waiting = -1;
+      pse.sched_timeslices = -1;
+
       ps_list_add(procs[i].ki_comm, have_cmdline ? cmdline : NULL, &pse);
 
       switch (procs[i].ki_stat) {
@@ -2614,6 +2677,10 @@ static int ps_read(void)
       /* context switch counters not implemented */
       pse.cswitch_vol = -1;
       pse.cswitch_invol = -1;
+
+      pse.sched_running = -1;
+      pse.sched_waiting = -1;
+      pse.sched_timeslices = -1;
 
       /*
        * The u-area might be swapped out, and we can't get
@@ -2809,6 +2876,10 @@ static int ps_read(void)
       pse.cswitch_vol = -1;
       pse.cswitch_invol = -1;
 
+      pse.sched_running = -1;
+      pse.sched_waiting = -1;
+      pse.sched_timeslices = -1;
+
       ps_list_add(procs[i].p_comm, have_cmdline ? cmdline : NULL, &pse);
 
       switch (procs[i].p_stat) {
@@ -2973,6 +3044,10 @@ static int ps_read(void)
 
       pse.cswitch_vol = -1;
       pse.cswitch_invol = -1;
+
+      pse.sched_running = -1;
+      pse.sched_waiting = -1;
+      pse.sched_timeslices = -1;
 
       ps_list_add(cmdline, cargs, &pse);
     } /* for (i = 0 .. nprocs) */

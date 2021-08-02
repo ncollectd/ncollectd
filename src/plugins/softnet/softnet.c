@@ -65,35 +65,35 @@ static int softnet_read(void)
     if (fields_num < 6)
       continue;
 
-    value_t value;
+    value_t value = {0};
     char cpu[64];
 
     if (fields_num >= 14) {
       int fcpu =  (int)strtol(fields[12], NULL, 16); 
       ssnprintf(cpu, sizeof(cpu), "%d", fcpu);
 
-      value.counter = (counter_t)strtol(fields[13], NULL, 16); 
+      value.counter.uinteger = (uint64_t)strtol(fields[13], NULL, 16); 
       metric_family_append(&fams[FAM_SOFTNET_BACKLOG_LENGTH], "cpu", cpu, value, NULL);
     } else {
       ssnprintf(cpu, sizeof(cpu), "%d", ncpu);
     }
 
     if (fields_num >= 3) {
-      value.counter = (counter_t)strtol(fields[0], NULL, 16); 
+      value.counter.uinteger = (uint64_t)strtol(fields[0], NULL, 16); 
       metric_family_append(&fams[FAM_SOFTNET_PROCESSED], "cpu", cpu, value, NULL);
 
-      value.counter = (counter_t)strtol(fields[1], NULL, 16); 
+      value.counter.uinteger = (uint64_t)strtol(fields[1], NULL, 16); 
       metric_family_append(&fams[FAM_SOFTNET_DROPPED], "cpu", cpu, value, NULL);
 
-      value.counter = (counter_t)strtol(fields[2], NULL, 16); 
+      value.counter.uinteger = (uint64_t)strtol(fields[2], NULL, 16); 
       metric_family_append(&fams[FAM_SOFTNET_TIMES_SQUEEZED], "cpu", cpu, value, NULL);
 
       if (fields_num >= 10) {
-        value.counter = (counter_t)strtol(fields[9], NULL, 16); 
+        value.counter.uinteger = (uint64_t)strtol(fields[9], NULL, 16); 
         metric_family_append(&fams[FAM_SOFTNET_RECEIVED_RPS], "cpu", cpu, value, NULL);
 
         if (fields_num >= 11) {
-          value.gauge = (gauge_t)strtol(fields[10], NULL, 16); 
+          value.gauge.real = (double)strtol(fields[10], NULL, 16); 
           metric_family_append(&fams[FAM_SOFTNET_BACKLOG_LENGTH], "cpu", cpu, value, NULL);
         }
       }

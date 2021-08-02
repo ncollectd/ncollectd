@@ -34,7 +34,7 @@
 /*
  * private helper functions
  */
-
+#if 0
 static int set_option(value_list_t *vl, char const *key, char const *value,
                       cmd_error_handler_t *errhndl) {
   if ((vl == NULL) || (key == NULL) || (value == NULL)) {
@@ -68,7 +68,7 @@ static int set_option(value_list_t *vl, char const *key, char const *value,
   }
   return CMD_OK;
 } /* int set_option */
-
+#endif
 /*
  * public API
  */
@@ -88,7 +88,7 @@ cmd_status_t cmd_parse_putval(size_t argc, char **argv,
               "Missing identifier and/or value-list.");
     return CMD_PARSE_ERROR;
   }
-
+#if 0
   value_list_t vl = VALUE_LIST_INIT;
   if ((opts != NULL) && (opts->identifier_default_host != NULL)) {
     sstrncpy(vl.host, opts->identifier_default_host, sizeof(vl.host));
@@ -116,9 +116,10 @@ cmd_status_t cmd_parse_putval(size_t argc, char **argv,
     sfree(vl.values);
     return CMD_ERROR;
   }
-
+#endif
   /* All the remaining fields are part of the option list. */
   cmd_status_t result = CMD_OK;
+#if 0
   for (size_t i = 1; i < argc; ++i) {
     value_list_t *tmp;
 
@@ -128,7 +129,6 @@ cmd_status_t cmd_parse_putval(size_t argc, char **argv,
     status = cmd_parse_option(argv[i], &key, &value, errhndl);
     if (status == CMD_OK) {
       int option_err;
-
       assert(key != NULL);
       assert(value != NULL);
       option_err = set_option(&vl, key, value, errhndl);
@@ -187,14 +187,14 @@ cmd_status_t cmd_parse_putval(size_t argc, char **argv,
   if (result != CMD_OK) {
     cmd_destroy_putval(ret_putval);
   }
-
+#endif
   return result;
 } /* cmd_status_t cmd_parse_putval */
 
 void cmd_destroy_putval(cmd_putval_t *putval) {
   if (putval == NULL)
     return;
-
+#if 0
   sfree(putval->raw_identifier);
 
   for (size_t i = 0; i < putval->vl_num; ++i) {
@@ -205,9 +205,11 @@ void cmd_destroy_putval(cmd_putval_t *putval) {
   sfree(putval->vl);
   putval->vl = NULL;
   putval->vl_num = 0;
+#endif
 } /* void cmd_destroy_putval */
 
 cmd_status_t cmd_handle_putval(FILE *fh, char *buffer) {
+#if 0
   cmd_error_handler_t errhndl = {cmd_error_fh, fh};
   cmd_t cmd;
 
@@ -234,5 +236,6 @@ cmd_status_t cmd_handle_putval(FILE *fh, char *buffer) {
               (cmd.cmd.putval.vl_num == 1) ? "value has" : "values have");
 
   cmd_destroy(&cmd);
+#endif
   return CMD_OK;
 } /* int cmd_handle_putval */

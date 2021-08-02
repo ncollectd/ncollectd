@@ -38,7 +38,7 @@ static int pressure_read_file(const char *filename,
     if (strncmp(fields[4], "total=", strlen("total=")) != 0)
       continue;
 
-    m.value.counter = atoll(fields[4] + strlen("total="));
+    m.value.counter.uinteger = atoll(fields[4] + strlen("total="));
 
     if ((strcmp(fields[0], "some") == 0) && (fam_waiting != NULL)) {
       metric_family_metric_append(fam_waiting, m);

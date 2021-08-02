@@ -105,7 +105,7 @@ static int synproxy_read(void)
       char *endptr = NULL;
       errno = 0;
 
-      results[n].counter += strtoull(fields[n], &endprt, 16);
+      results[n].counter.uinteger += (uint64_t)strtoull(fields[n], &endprt, 16);
       if ((endptr == fields[n]) || errno != 0) {
         ERROR("synproxy plugin: unable to parse value: %s", fields[n]);
         fclose(fh);

@@ -51,18 +51,18 @@
   ((strcasecmp("false", (s)) == 0) || (strcasecmp("no", (s)) == 0) ||          \
    (strcasecmp("off", (s)) == 0))
 
-struct rate_to_value_state_s {
-  value_t last_value;
+struct rate_to_counter_state_s {
+  uint64_t last_value;
   cdtime_t last_time;
-  gauge_t residual;
+  double residual;
 };
-typedef struct rate_to_value_state_s rate_to_value_state_t;
+typedef struct rate_to_counter_state_s rate_to_counter_state_t;
 
-struct value_to_rate_state_s {
-  value_t last_value;
+struct counter_to_rate_state_s {
+  uint64_t last_value;
   cdtime_t last_time;
 };
-typedef struct value_to_rate_state_s value_to_rate_state_t;
+typedef struct counter_to_rate_state_s counter_to_rate_state_t;
 
 char *sstrncpy(char *dest, const char *src, size_t n);
 
@@ -321,50 +321,11 @@ double htond(double d);
     "Don't know how to convert between host and network representation of doubles."
 #endif
 
-int format_name(char *ret, int ret_len, const char *hostname,
-                const char *plugin, const char *plugin_instance,
-                const char *type, const char *type_instance);
-#define FORMAT_VL(ret, ret_len, vl)                                            \
-  format_name(ret, ret_len, (vl)->host, (vl)->plugin, (vl)->plugin_instance,   \
-              (vl)->type, (vl)->type_instance)
-int format_values(strbuf_t *buf, metric_t const *m, bool store_rates);
+int parse_uinteger(const char *value_orig, uint64_t *ret_value);
+int parse_double (const char *value_orig, double *ret_value);
 
-int parse_identifier(char *str, char **ret_host, char **ret_plugin,
-                     char **ret_type, char **ret_data_source,
-                     char *default_host);
-
-/* parse_identifier_vl parses an identifier in the form
- * "host/plugin[-inst]/type[-inst]/data_source" and stores the fields in a
- * value_list_t. If vl->host is not empty, then it is used as the default value
- * if a host name is omitted, i.e. the "plugin/type" format is accepted. If
- * ret_data_source is not NULL, a four-part identifier is accepted and a
- * pointer to the data source name is (optionally) stored and needs to be freed
- * by the caller. If the provided format does not fit the provided arguments,
- * e.g. a two-part format but no default host provided, or a four-part format
- * but no ret_data_source pointer, then EINVAL is returned.
- */
-int parse_identifier_vl(const char *str, value_list_t *vl,
-                        char **ret_data_source);
-
-/* parse_legacy_identifier parses a legacy identifier in the form
- * "host/plugin/type" and converts it to a metric_t. */
-metric_t *parse_legacy_identifier(char const *s);
-
-/* plugin_value_list_to_metric_family converts a value in a value_list_t to a
- * metric_family_t. In case of error, errno is set and NULL is returned. The
- * returned pointer must be freed using metric_family_free(). */
-metric_family_t *plugin_value_list_to_metric_family(value_list_t const *vl,
-                                                    data_set_t const *ds,
-                                                    size_t index);
-
-int parse_value(const char *value, value_t *ret_value, int ds_type);
-int parse_values(char *buffer, value_list_t *vl, const data_set_t *ds);
-
-/* parse_value_file reads "path" and parses its content as an integer or
- * floating point, depending on "ds_type". On success, the value is stored in
- * "ret_value" and zero is returned. On failure, a non-zero value is returned.
- */
-int parse_value_file(char const *path, value_t *ret_value, int ds_type);
+int parse_uinteger_file(char const *path, uint64_t *ret_value);
+int parse_double_file(char const *path, double *ret_value);
 
 #if !HAVE_GETPWNAM_R
 struct passwd;
@@ -383,20 +344,13 @@ ssize_t read_file_contents(char const *filename, void *buf, size_t bufsize);
 ssize_t read_text_file_contents(char const *filename, char *buf,
                                 size_t bufsize);
 
-counter_t counter_diff(counter_t old_value, counter_t new_value);
+uint64_t counter_diff(uint64_t old_value, uint64_t new_value);
 
-/* Convert a rate back to a value_t. When converting to a derive_t, counter_t
- * or absolute_t, take fractional residuals into account. This is important
- * when scaling counters, for example.
- * Returns zero on success. Returns EAGAIN when called for the first time; in
- * this case the value_t is invalid and the next call should succeed. Other
- * return values indicate an error. */
-int rate_to_value(value_t *ret_value, gauge_t rate,
-                  rate_to_value_state_t *state, int ds_type, cdtime_t t);
+int rate_to_counter(uint64_t *ret_value, double rate, cdtime_t t,
+                  rate_to_counter_state_t *state);
 
-int value_to_rate(gauge_t *ret_rate, value_t value, int ds_type, cdtime_t t,
-                  value_to_rate_state_t *state);
-
+int counter_to_rate(double *ret_rate, uint64_t value, cdtime_t t,
+                    counter_to_rate_state_t *state);
 /* Converts a service name (a string) to a port number
  * (in the range [1-65535]). Returns less than zero on error. */
 int service_name_to_port_number(const char *service_name);
@@ -404,14 +358,13 @@ int service_name_to_port_number(const char *service_name);
 /* Sets various, non-default, socket options */
 void set_sock_opts(int sockfd);
 
-/** Parse a string to a derive_t value. Returns zero on success or non-zero on
+/** Parse a string to a integer value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */
-int strtoderive(const char *string, derive_t *ret_value);
-int strtocounter(const char *string, counter_t *ret_value);
+int strtouint(const char *string, uint64_t *ret_value);
 
-/** Parse a string to a gauge_t value. Returns zero on success or non-zero on
+/** Parse a string to a double value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */
-int strtogauge(const char *string, gauge_t *ret_value);
+int strtodouble(const char *string, double *ret_value);
 
 int strarray_add(char ***ret_array, size_t *ret_array_len, char const *str);
 void strarray_free(char **array, size_t array_len);

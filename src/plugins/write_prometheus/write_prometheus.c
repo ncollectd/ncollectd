@@ -79,14 +79,16 @@ static void format_text(strbuf_t *buf)
       case METRIC_TYPE_COUNTER:
         type = "counter";
         break;
-      case METRIC_TYPE_UNTYPED:
-        type = "untyped";
+      case METRIC_TYPE_UNKNOWN:
+        type = "unknown";
         break;
       case METRIC_TYPE_DISTRIBUTION:
         // FIXME
         break;
       case METRIC_TYPE_INFO:
         type = "info";
+        break;
+      case METRIC_TYPE_STATE_SET:
         break;
     }
     if (type == NULL)
@@ -104,7 +106,7 @@ static void format_text(strbuf_t *buf)
       metric_identity(buf, m);
 
       if (prom_fam->type == METRIC_TYPE_COUNTER)
-        strbuf_printf(buf, " %" PRIu64, m->value.counter);
+        strbuf_printf(buf, " " COUNTER_FORMAT, m->value.counter);
       else
         strbuf_printf(buf, " " GAUGE_FORMAT, m->value.gauge);
 

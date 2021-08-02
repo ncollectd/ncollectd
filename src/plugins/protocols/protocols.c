@@ -55,13 +55,13 @@ static void submit(const char *protocol_name, const char *str_key, const char *s
       .type = METRIC_TYPE_COUNTER,
   };
 
-  value_t value;
-  int status = parse_value(str_value, &value, DS_TYPE_COUNTER);
+  uint64_t value;
+  int status = parse_uinteger(str_value, &value);
   if (status != 0) {
     return;
   }
 
-  metric_family_metric_append(&fam, (metric_t){ .value.counter = value.counter, });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter.uinteger = value, });
 
   status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {

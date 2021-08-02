@@ -43,7 +43,7 @@ static int info_read(void)
   return 0;
 }
 
-static int info_metric_append(char *name, char *help, metric_type_t type, metric_t *m)
+static int info_metric_append(char *name, char *help, metric_t *m)
 {
   for (size_t i = 0; i < info_fams_num; i++) {
     metric_family_t *cur_fam = info_fams[i];
@@ -56,7 +56,7 @@ static int info_metric_append(char *name, char *help, metric_type_t type, metric
   metric_family_t fam = {
       .name = name,
       .help = help,
-      .type = type,
+      .type = METRIC_TYPE_INFO,
   };
 
   metric_family_t *new_fam = metric_family_clone(&fam);
@@ -84,8 +84,6 @@ static int info_config_metric(oconfig_item_t *ci)
 {
   char *name = NULL;
   char *help = NULL;
-  metric_type_t type = METRIC_TYPE_INFO;
-  double value = 1;
   metric_t m = {0};
 
   int status = cf_util_get_string(ci, &name);
@@ -100,10 +98,8 @@ static int info_config_metric(oconfig_item_t *ci)
       status = cf_util_get_label(item, &m.label);
     else if (!strcasecmp(item->key, "Help"))
       status = cf_util_get_string(item, &help);
-    else if (!strcasecmp(item->key, "Type"))
-      status = cf_util_get_metric_type(item, &type);
-    else if (!strcasecmp(item->key, "Value"))
-      status = cf_util_get_double(item, &value);
+    else if (!strcasecmp(item->key, "Info"))
+      status = cf_util_get_label(item, &m.value.info);
     else {
       ERROR("info plugin: Unknown configuration option: %s", item->key);
       status = -1;
@@ -112,13 +108,8 @@ static int info_config_metric(oconfig_item_t *ci)
       break;
   }
 
-  if (type == METRIC_TYPE_COUNTER)
-    m.value.counter = (counter_t)value;
-  else
-    m.value.gauge = value;
-
   if (status == 0)
-    status = info_metric_append(name, help, type, &m);
+    status = info_metric_append(name, help, &m);
 
   sfree(name);
   sfree(help);
@@ -160,9 +151,8 @@ static int info_init(void)
 {
   metric_t m = {0};
 
-  m.value.gauge = 1;
-  metric_label_set(&m, "version", PACKAGE_VERSION);
-  int status =info_metric_append("ncollectd_info", NULL, METRIC_TYPE_INFO, &m);
+  label_set_add(&m.value.info, "version", PACKAGE_VERSION);
+  int status =info_metric_append("ncollectd_info", NULL, &m);
   metric_reset(&m);
 
   return status;

@@ -68,13 +68,15 @@ typedef struct {
   size_t max_colnum;
 } tbl_t;
 
-static void tbl_result_setup(tbl_result_t *res) {
+static void tbl_result_setup(tbl_result_t *res)
+{
   memset(res, 0, sizeof(*res));
   res->metric_from = -1;
   res->value_from = -1;
 } /* tbl_result_setup */
 
-static void tbl_result_free(tbl_result_t *res) {
+static void tbl_result_free(tbl_result_t *res)
+{
   if (res == NULL)
     return;
 
@@ -89,7 +91,8 @@ static void tbl_result_free(tbl_result_t *res) {
 
 } /* tbl_result_free */
 
-static void tbl_free(void *arg) {
+static void tbl_free(void *arg)
+{
   tbl_t *tbl = arg;
 
   if (tbl == NULL)
@@ -114,8 +117,8 @@ static int tbl_read_table(user_data_t *user_data);
 /*
  * configuration handling
  */
-static int tbl_config_append_label(tbl_label_t **var, size_t *len,
-                                   oconfig_item_t *ci) {
+static int tbl_config_append_label(tbl_label_t **var, size_t *len, oconfig_item_t *ci)
+{
   if (ci->values_num != 2) {
     ERROR("table plugin: \"%s\" expects two arguments.", ci->key);
     return -1;
@@ -144,9 +147,10 @@ static int tbl_config_append_label(tbl_label_t **var, size_t *len,
 
   *len = (*len) + 1;
   return 0;
-} /* tbl_config_append_array_s */
+}
 
-static int tbl_config_result(tbl_t *tbl, oconfig_item_t *ci) {
+static int tbl_config_result(tbl_t *tbl, oconfig_item_t *ci)
+{
   if (ci->values_num != 0) {
     ERROR("table plugin: <Result> does not expect any arguments.");
     return -1;
@@ -229,9 +233,10 @@ static int tbl_config_result(tbl_t *tbl, oconfig_item_t *ci) {
 
   tbl->results_num++;
   return 0;
-} /* tbl_config_result */
+}
 
-static int tbl_config_table(oconfig_item_t *ci) {
+static int tbl_config_table(oconfig_item_t *ci)
+{
   if (ci->values_num != 1 || ci->values[0].type != OCONFIG_TYPE_STRING) {
     ERROR("table plugin: <Table> expects a single string argument.");
     return 1;
@@ -333,9 +338,10 @@ static int tbl_config_table(oconfig_item_t *ci) {
           .data = tbl,
           .free_func = tbl_free,
       });
-} /* tbl_config_table */
+}
 
-static int tbl_config(oconfig_item_t *ci) {
+static int tbl_config(oconfig_item_t *ci)
+{
   for (int i = 0; i < ci->children_num; ++i) {
     oconfig_item_t *c = ci->children + i;
 
@@ -345,14 +351,24 @@ static int tbl_config(oconfig_item_t *ci) {
       WARNING("table plugin: Ignoring unknown config key \"%s\".", c->key);
   }
   return 0;
-} /* tbl_config */
+}
 
-static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
-                               size_t fields_num) {
+static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields, size_t fields_num)
+{
   assert(res->value_from < fields_num);
-  value_t value;
-  if (parse_value(fields[res->value_from], &value, res->type) != 0)
-    return -1;
+  metric_t m = {0};
+
+  if (res->type == METRIC_TYPE_GAUGE) {
+    double gauge;
+    if (parse_double(fields[res->value_from], &gauge) != 0)
+      return -1;
+    m.value.gauge.real = gauge;
+  } else if (res->type == METRIC_TYPE_COUNTER) {
+    uint64_t counter;
+    if (parse_uinteger(fields[res->value_from], &counter) != 0)
+      return -1;
+    m.value.counter.uinteger = counter;
+  }
 
   metric_family_t fam = {0};
 
@@ -375,7 +391,6 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
 
   fam.name = buf.ptr;
 
-  metric_t m = {0};
 
   for (size_t i = 0; i < tbl->labels.num; i++) {
     metric_label_set(&m, tbl->labels.ptr[i].name, tbl->labels.ptr[i].value);
@@ -393,8 +408,6 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
     }
   }
 
-  m.value = value;
-
   metric_family_metric_append(&fam, m);
 
   int status = plugin_dispatch_metric_family(&fam);
@@ -407,9 +420,10 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
   metric_reset(&m);
   metric_family_metric_reset(&fam);
   return 0;
-} /* tbl_result_dispatch */
+}
 
-static int tbl_parse_line(tbl_t *tbl, char *line, size_t len) {
+static int tbl_parse_line(tbl_t *tbl, char *line, size_t len)
+{
   char *fields[tbl->max_colnum + 1];
   size_t i = 0;
 
@@ -438,9 +452,10 @@ static int tbl_parse_line(tbl_t *tbl, char *line, size_t len) {
     }
   }
   return 0;
-} /* tbl_parse_line */
+}
 
-static int tbl_read_table(user_data_t *user_data) {
+static int tbl_read_table(user_data_t *user_data)
+{
   if (user_data == NULL)
     return -1;
 
@@ -482,6 +497,7 @@ static int tbl_read_table(user_data_t *user_data) {
   return 0;
 } /* tbl_read_table */
 
-void module_register(void) {
+void module_register(void)
+{
   plugin_register_complex_config("table", tbl_config);
 } /* module_register */

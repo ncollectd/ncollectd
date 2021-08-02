@@ -159,13 +159,13 @@ static int memory_config(oconfig_item_t *ci)
   return 0;
 } /* }}} int memory_config */
 
-static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
+static int memory_dispatch(double values[COLLECTD_MEMORY_TYPE_MAX])
 {
   metric_family_t fam_absolute = {
       .name = "host_memory_usage",
       .type = METRIC_TYPE_GAUGE,
   };
-  gauge_t total = 0;
+  double total = 0;
 
   for (size_t i = 0; i < COLLECTD_MEMORY_TYPE_MAX; i++) {
     if (isnan(values[i])) {
@@ -176,7 +176,7 @@ static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
 
     if (values_absolute) {
       metric_family_append(&fam_absolute, "type", memory_type_names[i],
-                           (value_t){.gauge = values[i]}, NULL);
+                           (value_t){.gauge.real = values[i]}, NULL);
     }
   }
 
@@ -209,7 +209,7 @@ static int memory_dispatch(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     }
 
     metric_family_append(&fam_percent, "type", memory_type_names[i],
-                         (value_t){.gauge = 100.0 * values[i] / total}, NULL);
+                         (value_t){.gauge.real = 100.0 * values[i] / total}, NULL);
   }
 
   int status = plugin_dispatch_metric_family(&fam_percent);
@@ -275,7 +275,7 @@ static int memory_init(void)
   return 0;
 }
 
-static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
+static int memory_read_internal(double values[COLLECTD_MEMORY_TYPE_MAX])
 {
 #if HAVE_HOST_STATISTICS
   if (!port_host || !pagesize) {
@@ -312,12 +312,12 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
    *   This memory is not being used.
    */
 
-  values[COLLECTD_MEMORY_TYPE_WIRED] = (gauge_t)(vm_data.wire_count * pagesize);
+  values[COLLECTD_MEMORY_TYPE_WIRED] = (double)(vm_data.wire_count * pagesize);
   values[COLLECTD_MEMORY_TYPE_ACTIVE] =
-      (gauge_t)(vm_data.active_count * pagesize);
+      (double)(vm_data.active_count * pagesize);
   values[COLLECTD_MEMORY_TYPE_INACTIVE] =
-      (gauge_t)(vm_data.inactive_count * pagesize);
-  values[COLLECTD_MEMORY_TYPE_FREE] = (gauge_t)(vm_data.free_count * pagesize);
+      (double)(vm_data.inactive_count * pagesize);
+  values[COLLECTD_MEMORY_TYPE_FREE] = (double)(vm_data.free_count * pagesize);
   /* #endif HAVE_HOST_STATISTICS */
 
 #elif HAVE_SYSCTLBYNAME
@@ -335,16 +335,16 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     return errno;
   }
 
-  values[COLLECTD_MEMORY_TYPE_WIRED] = (gauge_t)(uvmexp.wired * pagesize);
-  values[COLLECTD_MEMORY_TYPE_ACTIVE] = (gauge_t)(uvmexp.active * pagesize);
-  values[COLLECTD_MEMORY_TYPE_INACTIVE] = (gauge_t)(uvmexp.inactive * pagesize);
-  values[COLLECTD_MEMORY_TYPE_FREE] = (gauge_t)(uvmexp.free * pagesize);
+  values[COLLECTD_MEMORY_TYPE_WIRED] = (double)(uvmexp.wired * pagesize);
+  values[COLLECTD_MEMORY_TYPE_ACTIVE] = (double)(uvmexp.active * pagesize);
+  values[COLLECTD_MEMORY_TYPE_INACTIVE] = (double)(uvmexp.inactive * pagesize);
+  values[COLLECTD_MEMORY_TYPE_FREE] = (double)(uvmexp.free * pagesize);
 
   int64_t accounted =
       uvmexp.wired + uvmexp.active + uvmexp.inactive + uvmexp.free;
   if (uvmexp.npages > accounted) {
     values[COLLECTD_MEMORY_TYPE_KERNEL] =
-        (gauge_t)((uvmexp.npages - accounted) * pagesize);
+        (double)((uvmexp.npages - accounted) * pagesize);
   }
   /* #endif HAVE_SYSCTL && defined(KERNEL_NETBSD) */
 
@@ -370,7 +370,7 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
       {"vm.stats.vm.v_cache_count", COLLECTD_MEMORY_TYPE_CACHED},
   };
 
-  gauge_t pagesize = 0;
+  double pagesize = 0;
   for (size_t i = 0; i < STATIC_ARRAY_SIZE(metrics); i++) {
     long value = 0;
     size_t value_len = sizeof(value);
@@ -384,11 +384,11 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     }
 
     if (i == 0) {
-      pagesize = (gauge_t)value;
+      pagesize = (double)value;
       continue;
     }
 
-    values[metrics[i].type] = ((gauge_t)value) * pagesize;
+    values[metrics[i].type] = ((double)value) * pagesize;
   } /* for (sysctl_keys) */
 #endif /* HAVE_SYSCTL && KERNEL_NETBSD */
   /* #endif HAVE_SYSCTLBYNAME */
@@ -401,8 +401,8 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     return status;
   }
 
-  gauge_t mem_total = 0;
-  gauge_t mem_not_used = 0;
+  double mem_total = 0;
+  double mem_not_used = 0;
 
   char buffer[256];
   while (fgets(buffer, sizeof(buffer), fh) != NULL) {
@@ -412,7 +412,7 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
       continue;
     }
 
-    gauge_t v = 1024.0 * atof(fields[1]);
+    double v = 1024.0 * atof(fields[1]);
     if (!isfinite(v)) {
       continue;
     }
@@ -508,13 +508,13 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     mem_lock = 0;
   }
 
-  values[COLLECTD_MEMORY_TYPE_USED] = (gauge_t)(mem_used * pagesize);
-  values[COLLECTD_MEMORY_TYPE_FREE] = (gauge_t)(mem_free * pagesize);
-  values[COLLECTD_MEMORY_TYPE_LOCKED] = (gauge_t)(mem_lock * pagesize);
+  values[COLLECTD_MEMORY_TYPE_USED] = (double)(mem_used * pagesize);
+  values[COLLECTD_MEMORY_TYPE_FREE] = (double)(mem_free * pagesize);
+  values[COLLECTD_MEMORY_TYPE_LOCKED] = (double)(mem_lock * pagesize);
   values[COLLECTD_MEMORY_TYPE_KERNEL] =
-      (gauge_t)((mem_kern * pagesize) - arcsize);
-  values[COLLECTD_MEMORY_TYPE_UNUSED] = (gauge_t)(mem_unus * pagesize);
-  values[COLLECTD_MEMORY_TYPE_ARC] = (gauge_t)arcsize;
+      (double)((mem_kern * pagesize) - arcsize);
+  values[COLLECTD_MEMORY_TYPE_UNUSED] = (double)(mem_unus * pagesize);
+  values[COLLECTD_MEMORY_TYPE_ARC] = (double)arcsize;
   /* #endif HAVE_LIBKSTAT */
 
 #elif HAVE_SYSCTL && __OpenBSD__
@@ -531,10 +531,10 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     return errno;
   }
 
-  values[COLLECTD_MEMORY_TYPE_ACTIVE] = (gauge_t)(vmtotal.t_arm * pagesize);
+  values[COLLECTD_MEMORY_TYPE_ACTIVE] = (double)(vmtotal.t_arm * pagesize);
   values[COLLECTD_MEMORY_TYPE_INACTIVE] =
-      (gauge_t)((vmtotal.t_rm - vmtotal.t_arm) * pagesize);
-  values[COLLECTD_MEMORY_TYPE_FREE] = (gauge_t)(vmtotal.t_free * pagesize);
+      (double)((vmtotal.t_rm - vmtotal.t_arm) * pagesize);
+  values[COLLECTD_MEMORY_TYPE_FREE] = (double)(vmtotal.t_free * pagesize);
   /* #endif HAVE_SYSCTL && __OpenBSD__ */
 
 #elif HAVE_LIBSTATGRAB
@@ -543,9 +543,9 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
     return -1;
   }
 
-  values[COLLECTD_MEMORY_TYPE_USED] = (gauge_t)ios->used;
-  values[COLLECTD_MEMORY_TYPE_CACHED] = (gauge_t)ios->cache;
-  values[COLLECTD_MEMORY_TYPE_FREE] = (gauge_t)ios->free;
+  values[COLLECTD_MEMORY_TYPE_USED] = (double)ios->used;
+  values[COLLECTD_MEMORY_TYPE_CACHED] = (double)ios->cache;
+  values[COLLECTD_MEMORY_TYPE_FREE] = (double)ios->free;
   /* #endif HAVE_LIBSTATGRAB */
 
 #elif HAVE_PERFSTAT
@@ -565,12 +565,12 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
    *   real_total = real_free + real_inuse
    *   real_inuse = "active" + real_pinned + numperm
    */
-  values[COLLECTD_MEMORY_TYPE_FREE] = (gauge_t)(pmemory.real_free * pagesize);
-  values[COLLECTD_MEMORY_TYPE_CACHED] = (gauge_t)(pmemory.numperm * pagesize);
+  values[COLLECTD_MEMORY_TYPE_FREE] = (double)(pmemory.real_free * pagesize);
+  values[COLLECTD_MEMORY_TYPE_CACHED] = (double)(pmemory.numperm * pagesize);
   values[COLLECTD_MEMORY_TYPE_KERNEL] =
-      (gauge_t)(pmemory.real_system * pagesize);
+      (double)(pmemory.real_system * pagesize);
   values[COLLECTD_MEMORY_TYPE_USED] =
-      (gauge_t)(pmemory.real_process * pagesize);
+      (double)(pmemory.real_process * pagesize);
 #endif /* HAVE_PERFSTAT */
 
   return 0;
@@ -578,7 +578,7 @@ static int memory_read_internal(gauge_t values[COLLECTD_MEMORY_TYPE_MAX])
 
 static int memory_read(void) /* {{{ */
 {
-  gauge_t values[COLLECTD_MEMORY_TYPE_MAX] = {0};
+  double values[COLLECTD_MEMORY_TYPE_MAX] = {0};
   for (size_t i = 0; i < COLLECTD_MEMORY_TYPE_MAX; i++) {
     values[i] = NAN;
   }

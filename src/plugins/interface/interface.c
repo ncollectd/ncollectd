@@ -229,8 +229,8 @@ static int if_read_internal(void)
       continue;
     }
 
-    counter_t rx = (counter_t)atoll(fields[1]);
-    counter_t tx = (counter_t)atoll(fields[9]);
+    uint64_t rx = (uint64_t)atoll(fields[1]);
+    uint64_t tx = (uint64_t)atoll(fields[9]);
     if (!report_inactive && (rx == 0) && (tx == 0)) {
       continue;
     }
@@ -247,13 +247,13 @@ static int if_read_internal(void)
 
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(metrics); i++) {
       errno = 0;
-      counter_t v = (counter_t)strtoull(metrics[i].value, NULL, 0);
+      uint64_t v = (uint64_t)strtoull(metrics[i].value, NULL, 0);
       if (errno != 0) {
         continue;
       }
 
       metric_family_append(metrics[i].fam, "device", device,
-                           (value_t){.counter = v}, NULL);
+                           (value_t){.counter.uinteger = v}, NULL);
     }
   }
 
@@ -306,19 +306,19 @@ static int if_read_internal(void)
 
     struct {
       metric_family_t *fam;
-      counter_t value;
+      uint64_t value;
     } metrics[] = {
-        {&receive_bytes, (counter_t)if_data->IFA_RX_BYTES},
-        {&receive_packets, (counter_t)if_data->IFA_RX_PACKT},
-        {&receive_errs, (counter_t)if_data->IFA_RX_ERROR},
-        {&transmit_bytes, (counter_t)if_data->IFA_TX_BYTES},
-        {&transmit_packets, (counter_t)if_data->IFA_TX_PACKT},
-        {&transmit_errs, (counter_t)if_data->IFA_TX_ERROR},
+        {&receive_bytes, (uint64_t)if_data->IFA_RX_BYTES},
+        {&receive_packets, (uint64_t)if_data->IFA_RX_PACKT},
+        {&receive_errs, (uint64_t)if_data->IFA_RX_ERROR},
+        {&transmit_bytes, (uint64_t)if_data->IFA_TX_BYTES},
+        {&transmit_packets, (uint64_t)if_data->IFA_TX_PACKT},
+        {&transmit_errs, (uint64_t)if_data->IFA_TX_ERROR},
     };
 
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(metrics); i++) {
       metric_family_append(metrics[i].fam, "device", if_ptr->ifa_name,
-                           (value_t){.counter = metrics[i].value}, NULL);
+                           (value_t){.counter.uinteger = metrics[i].value}, NULL);
     }
   }
 
@@ -365,7 +365,7 @@ static int if_read_internal(void)
         continue;
       }
       metric_family_append(metrics[i].fam, "device", iname,
-                           (value_t){.counter = (counter_t)value}, NULL);
+                           (value_t){.counter.uinteger = (uint64_t)value}, NULL);
     }
   }
   /* #endif HAVE_LIBKSTAT */
@@ -380,9 +380,9 @@ static int if_read_internal(void)
     }
 
     metric_family_append(&receive_bytes, "device", ios[i].interface_name,
-                         (value_t){.counter = (counter_t)ios[i].rx}, NULL);
+                         (value_t){.counter.uinteger = (uint64_t)ios[i].rx}, NULL);
     metric_family_append(&transmit_bytes, "device", ios[i].interface_name,
-                         (value_t){.counter = (counter_t)ios[i].tx}, NULL);
+                         (value_t){.counter.uinteger = (uint64_t)ios[i].tx}, NULL);
   }
   /* #endif HAVE_LIBSTATGRAB */
 
@@ -423,19 +423,19 @@ static int if_read_internal(void)
 
     struct {
       metric_family_t *fam;
-      counter_t value;
+      uint64_t value;
     } metrics[] = {
-        {&receive_bytes, (counter_t)ifstat[i].ibytes},
-        {&receive_packets, (counter_t)ifstat[i].ipackets},
-        {&receive_errs, (counter_t)ifstat[i].ierrors},
-        {&transmit_bytes, (counter_t)ifstat[i].obytes},
-        {&transmit_packets, (counter_t)ifstat[i].opackets},
-        {&transmit_errs, (counter_t)ifstat[i].oerrors},
+        {&receive_bytes, (uint64_t)ifstat[i].ibytes},
+        {&receive_packets, (uint64_t)ifstat[i].ipackets},
+        {&receive_errs, (uint64_t)ifstat[i].ierrors},
+        {&transmit_bytes, (uint64_t)ifstat[i].obytes},
+        {&transmit_packets, (uint64_t)ifstat[i].opackets},
+        {&transmit_errs, (uint64_t)ifstat[i].oerrors},
     };
 
     for (size_t j = 0; j < STATIC_ARRAY_SIZE(metrics); j++) {
       metric_family_append(metrics[j].fam, "device", ifstat[i].name,
-                           (value_t){.counter = metrics[j].value}, NULL);
+                           (value_t){.counter.uinteger = metrics[j].value}, NULL);
     }
   }
 

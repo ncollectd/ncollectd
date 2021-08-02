@@ -221,17 +221,6 @@ static int cc_config_add_match_dstype(int *dstype_ret, /* {{{ */
       dstype |= UTILS_MATCH_CF_COUNTER_INC;
     else
       dstype = 0;
-  } else if (strncasecmp("Derive", ci->values[0].value.string,
-                         strlen("Derive")) == 0) {
-    dstype = UTILS_MATCH_DS_TYPE_DERIVE;
-    if (strcasecmp("DeriveSet", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_DERIVE_SET;
-    else if (strcasecmp("DeriveAdd", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_DERIVE_ADD;
-    else if (strcasecmp("DeriveInc", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_DERIVE_INC;
-    else
-      dstype = 0;
   }
 
   else {
@@ -656,9 +645,6 @@ static void cc_submit(const web_page_t *wp, const web_match_t *wm, /* {{{ */
   } else if (wm->dstype & UTILS_MATCH_DS_TYPE_COUNTER) {
     fam.type = METRIC_TYPE_COUNTER;
     mvalue.counter = value.counter;
-  } else if (wm->dstype & UTILS_MATCH_DS_TYPE_DERIVE) {
-    fam.type = METRIC_TYPE_COUNTER;
-    mvalue.counter = value.derive;
   } else {
     return;
   }
@@ -675,14 +661,14 @@ static void cc_submit(const web_page_t *wp, const web_match_t *wm, /* {{{ */
   metric_family_metric_reset(&fam);
 } /* }}} void cc_submit */
 
-static void cc_submit_gauge(char *metric, gauge_t value, metric_t *tmpl) /* {{{ */
+static void cc_submit_gauge(char *metric, double value, metric_t *tmpl) /* {{{ */
 {
   metric_family_t fam = {
    .name = metric,
    .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_append(&fam, NULL, NULL, (value_t){.gauge = value}, tmpl);
+  metric_family_append(&fam, NULL, NULL, (value_t){.gauge.real = value}, tmpl);
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
@@ -731,7 +717,7 @@ static int cc_read_page(user_data_t *ud) /* {{{ */
       ERROR("curl plugin: Fetching response code failed with status %i: %s",
             status, wp->curl_errbuf);
     } else {
-      cc_submit_gauge(wp->metric_response_code, (gauge_t) response_code, &wp->tmpl);
+      cc_submit_gauge(wp->metric_response_code, (double) response_code, &wp->tmpl);
     }
   }
 

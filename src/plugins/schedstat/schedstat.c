@@ -51,15 +51,15 @@ static int schedstat_read(void)
       continue;
 
     char *ncpu = fields[0] + 3;
-    value_t value; 
+    value_t value = {0}; 
    
-    value.counter = (counter_t)strtol(fields[7], NULL, 10); 
+    value.counter.uinteger = (uint64_t)strtol(fields[7], NULL, 10); 
     metric_family_append(&fams[FAM_SCHEDSTAT_RUNNING], "cpu", ncpu, value, NULL);
 
-    value.counter = (counter_t)strtol(fields[8], NULL, 10); 
+    value.counter.uinteger = (uint64_t)strtol(fields[8], NULL, 10); 
     metric_family_append(&fams[FAM_SCHEDSTAT_WAITING], "cpu", ncpu, value, NULL);
 
-    value.counter = (counter_t)strtol(fields[9], NULL, 10); 
+    value.counter.uinteger = (uint64_t)strtol(fields[9], NULL, 10); 
     metric_family_append(&fams[FAM_SCHEDSTAT_TIMESLICES], "cpu", ncpu, value, NULL);
   }
 
