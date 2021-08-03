@@ -6,7 +6,7 @@
 #include <sys/utsname.h>
 
 static metric_family_t fam_uname = {
-  .name = "host_uname_info",
+  .name = "host_uname",
   .type = METRIC_TYPE_INFO, 
   .help = "Labeled system information as provided by the uname system call.",
 };

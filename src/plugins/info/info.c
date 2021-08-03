@@ -152,7 +152,7 @@ static int info_init(void)
   metric_t m = {0};
 
   label_set_add(&m.value.info, "version", PACKAGE_VERSION);
-  int status =info_metric_append("ncollectd_info", NULL, &m);
+  int status =info_metric_append("ncollectd", NULL, &m);
   metric_reset(&m);
 
   return status;
