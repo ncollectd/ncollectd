@@ -280,7 +280,7 @@ static int nginx_read_host(user_data_t *user_data)
         m.value.counter.uinteger = (uint64_t)atoll(fields[1]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_HANDLED], m);
 
-        m.value.counter.uinteger = (uint64_t)atoll(fields[0]) - atoll(fields[1]);
+        m.value.counter.uinteger = (uint64_t)(atoll(fields[0]) - atoll(fields[1]));
         metric_family_metric_append(&fams[FAM_NGINX_CONN_FAILED], m);
 
         m.value.counter.uinteger = (uint64_t)atoll(fields[2]);
