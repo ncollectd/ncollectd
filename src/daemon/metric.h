@@ -175,6 +175,7 @@ typedef struct {
 struct metric_family_s {
   char *name;
   char *help;
+  char *unit;
   metric_type_t type;
 
   metric_list_t metric;
