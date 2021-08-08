@@ -136,8 +136,6 @@ int uc_iterator_get_meta(uc_iter_t *iter, meta_data_t **ret_meta);
  */
 int uc_meta_data_exists(metric_t const *m, const char *key);
 int uc_meta_data_delete(metric_t const *m, const char *key);
-/* Same API as meta_data_toc. */
-int uc_meta_data_toc(metric_t const *m, char ***toc);
 
 int uc_meta_data_add_string(metric_t const *m, const char *key,
                             const char *value);

@@ -29,7 +29,6 @@
 #ifndef NOTIFICATION_H
 #define NOTIFICATION_H 1
 
-#include "utils/metadata/meta_data.h"
 #include "utils_time.h"
 
 #include "label_set.h"
@@ -48,7 +47,7 @@ typedef struct notification_s {
   char *name;
   label_set_t label;
   label_set_t annotation;
-  meta_data_t *meta;
+  meta_data_t meta;
 } notification_t;
 
 /* notification_init_metric sets the notification severity and the time,

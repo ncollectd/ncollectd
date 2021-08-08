@@ -30,27 +30,28 @@
 #include "utils/common/common.h"
 
 #include "metric.h"
+#include "metric_chars.h"
 #include "notification.h"
 #include "plugin.h"
 
-int notification_identity(strbuf_t *buf, notification_t const *n) {
-  if ((buf == NULL) || (n == NULL)) {
+
+int notification_identity(strbuf_t *buf, notification_t const *n)
+{
+  if ((buf == NULL) || (n == NULL))
     return EINVAL;
-  }
 
   int status = strbuf_print(buf, n->name);
-  if (n->label.num == 0) {
+  if (n->label.num == 0)
     return status;
-  }
 
   status = status || label_set_marshal(buf, n->label);
   return status;
 }
 
-int notification_marshal(strbuf_t *buf, notification_t const *n) {
-  if ((buf == NULL) || (n == NULL)) {
+int notification_marshal(strbuf_t *buf, notification_t const *n)
+{
+  if ((buf == NULL) || (n == NULL))
     return EINVAL;
-  }
 
   int status = strbuf_print(buf, n->name);
 
@@ -69,10 +70,10 @@ int notification_marshal(strbuf_t *buf, notification_t const *n) {
   return status;
 }
 
-int notification_init_metric(notification_t *n, int severity, metric_t const *m) {
-  if ((n == NULL) || (m == NULL)) {
+int notification_init_metric(notification_t *n, int severity, metric_t const *m)
+{
+  if ((n == NULL) || (m == NULL))
     return EINVAL;
-  }
 
   n->name = m->family->name;
   n->severity = severity;
@@ -94,18 +95,16 @@ char const *notification_label_get(notification_t const *n, char const *name)
   }
 
   label_pair_t *set = label_set_read(n->label, name);
-  if (set == NULL) {
+  if (set == NULL)
     return NULL;
-  }
 
   return set->value;
 }
 
 int notification_label_set(notification_t *n, char const *name, char const *value)
 {
-  if ((n == NULL) || (name == NULL)) {
+  if ((n == NULL) || (name == NULL))
     return EINVAL;
-  }
 
   return label_set_add(&n->label, name, value);
 }
@@ -118,31 +117,28 @@ char const *notification_annotation_get(notification_t const *n, char const *nam
   }
 
   label_pair_t *set = label_set_read(n->annotation, name);
-  if (set == NULL) {
+  if (set == NULL)
     return NULL;
-  }
 
   return set->value;
 }
 
 int notification_annotation_set(notification_t *n, char const *name, char const *value)
 {
-  if ((n == NULL) || (name == NULL)) {
+  if ((n == NULL) || (name == NULL))
     return EINVAL;
-  }
 
   return label_set_add(&n->annotation, name, value);
 }
 
 int notification_reset(notification_t *n)
 {
-  if (n == NULL) {
+  if (n == NULL)
     return EINVAL;
-  }
 
   label_set_reset(&n->label);
   label_set_reset(&n->annotation);
-  meta_data_destroy(n->meta);
+  meta_data_reset(&n->meta);
 
   memset(n, 0, sizeof(*n));
 
@@ -151,13 +147,12 @@ int notification_reset(notification_t *n)
 
 void notification_free(notification_t *n)
 {
-  if (n == NULL) {
+  if (n == NULL)
     return;
-  }
 
   label_set_reset(&n->label);
   label_set_reset(&n->annotation);
-  meta_data_destroy(n->meta);
+  meta_data_reset(&n->meta);
   sfree(n->name);
   sfree(n);
 }
@@ -175,18 +170,17 @@ notification_t *notification_clone(notification_t const *src) {
   }
  
   int status = label_set_clone(&dest->label, src->label);
-  if (status != 0) {
+  if (status != 0)
     return NULL;
-  }
 
   status = label_set_clone(&dest->annotation, src->annotation);
   if (status != 0) {
     notification_free(dest);
     return NULL;
   }
-  if (src->meta != NULL) {
-    dest->meta = meta_data_clone(src->meta);
-    if (dest->meta != NULL) {
+  if (src->meta.num != 0) {
+    status = meta_data_clone(&dest->meta, src->meta);
+    if (status != 0) {
       notification_free(dest);
       return NULL;
     }
@@ -206,15 +200,13 @@ notification_t *notification_clone(notification_t const *src) {
 
 int notitication_unmarshal(notification_t *n, char const *buf)
 {
-  if ((n == NULL) || (buf == NULL)) {
+  if ((n == NULL) || (buf == NULL))
     return EINVAL;
-  }
 
   char const *ptr = buf;
-  size_t name_len = strspn(ptr, VALID_NAME_CHARS);
-  if (name_len == 0) {
+  size_t name_len = metric_valid_len(ptr);
+  if (name_len == 0)
     return EINVAL;
-  }
 
   char name[name_len + 1];
   strncpy(name, ptr, name_len);
@@ -222,27 +214,23 @@ int notitication_unmarshal(notification_t *n, char const *buf)
   ptr += name_len;
 
   n->name = strdup(name);
-  if (n->name == NULL) {
+  if (n->name == NULL)
     return ENOMEM;
-  }
 
   char const *end = ptr;
   int ret = label_set_unmarshal(&n->label, &end);
-  if (ret != 0) {
+  if (ret != 0)
     return ret;
-  }
   ptr = end;
 
   end = ptr;
   ret = label_set_unmarshal(&n->annotation, &end);
-  if (ret != 0) {
+  if (ret != 0)
     return ret;
-  }
   ptr = end;
 
-  if ((ptr[0] != '}') || ((ptr[1] != 0) && (ptr[1] != ' '))) {
+  if ((ptr[0] != '}') || ((ptr[1] != 0) && (ptr[1] != ' ')))
     return EINVAL;
-  }
 
   return 0;
 }

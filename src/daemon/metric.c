@@ -29,8 +29,10 @@
 #include "distribution.h"
 #include "metric.h"
 #include "plugin.h"
+#include "metric_chars.h"
 
-typed_value_t typed_value_clone(typed_value_t val) {
+typed_value_t typed_value_clone(typed_value_t val)
+{
   typed_value_t copy = {
       .value = val.value,
       .type = val.type,
@@ -41,7 +43,8 @@ typed_value_t typed_value_clone(typed_value_t val) {
   return copy;
 }
 
-typed_value_t typed_value_create(value_t val, metric_type_t type) {
+typed_value_t typed_value_create(value_t val, metric_type_t type)
+{
   typed_value_t tval = {
       .value = val,
       .type = type,
@@ -52,13 +55,15 @@ typed_value_t typed_value_create(value_t val, metric_type_t type) {
   return tval;
 }
 
-void typed_value_destroy(typed_value_t val) {
+void typed_value_destroy(typed_value_t val)
+{
   if (val.type == METRIC_TYPE_DISTRIBUTION) {
     distribution_destroy(val.value.distribution);
   }
 }
 
-int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type) {
+int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type)
+{
   switch (type) {
   case METRIC_TYPE_GAUGE:
   case METRIC_TYPE_UNKNOWN:
@@ -76,85 +81,123 @@ int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type) {
   }
 }
 
-int metric_reset(metric_t *m) {
-  if (m == NULL) {
+int metric_reset(metric_t *m)
+{
+  if (m == NULL)
     return EINVAL;
-  }
 
   label_set_reset(&m->label);
-  meta_data_destroy(m->meta);
+  meta_data_reset(&m->meta);
 
-  if (m->family != NULL && m->family->type == METRIC_TYPE_DISTRIBUTION) {
-    distribution_destroy(m->value.distribution);
+  if (m->family != NULL) {
+    switch(m->family->type) {
+      case METRIC_TYPE_UNKNOWN:
+      case METRIC_TYPE_GAUGE:
+      case METRIC_TYPE_COUNTER:
+        break;
+      case METRIC_TYPE_STATE_SET:
+        state_set_reset(&m->value.state_set);
+        break;
+      case METRIC_TYPE_INFO:
+        label_set_reset(&m->value.info);
+        break;
+      case METRIC_TYPE_DISTRIBUTION:
+        distribution_destroy(m->value.distribution);
+        break;
+    }
   }
 
   memset(m, 0, sizeof(*m));
-
   return 0;
 }
 
-int metric_identity(strbuf_t *buf, metric_t const *m) {
-  if ((buf == NULL) || (m == NULL) || (m->family == NULL)) {
+int metric_identity(strbuf_t *buf, metric_t const *m)
+{
+  if ((buf == NULL) || (m == NULL) || (m->family == NULL))
     return EINVAL;
-  }
 
   int status = strbuf_print(buf, m->family->name);
-  if (m->label.num == 0) {
+  if (m->label.num == 0)
     return status;
-  }
  
   status = status || label_set_marshal(buf, m->label);
 
   return status;
 }
 
-int metric_label_set(metric_t *m, char const *name, char const *value) {
-  if ((m == NULL) || (name == NULL)) {
+int metric_label_set(metric_t *m, char const *name, char const *value)
+{
+  if ((m == NULL) || (name == NULL))
     return EINVAL;
-  }
 
   return label_set_add(&m->label, name, value);
 }
 
-char const *metric_label_get(metric_t const *m, char const *name) {
+char const *metric_label_get(metric_t const *m, char const *name)
+{
   if ((m == NULL) || (name == NULL)) {
     errno = EINVAL;
     return NULL;
   }
 
   label_pair_t *set = label_set_read(m->label, name);
-  if (set == NULL) {
+  if (set == NULL)
     return NULL;
-  }
 
   return set->value;
 }
 
-static int metric_list_add(metric_list_t *metrics, metric_t m) {
-  if (metrics == NULL) {
+static int metric_list_add(metric_list_t *metrics, metric_t m)
+{
+  if (metrics == NULL)
     return EINVAL;
-  }
 
-  metric_t *tmp =
-      realloc(metrics->ptr, sizeof(*metrics->ptr) * (metrics->num + 1));
-  if (tmp == NULL) {
+  metric_t *tmp = realloc(metrics->ptr, sizeof(*metrics->ptr) * (metrics->num + 1));
+  if (tmp == NULL)
     return errno;
-  }
   metrics->ptr = tmp;
 
   metric_t copy = {
-      .family = m.family,
-      .time = m.time,
-      .interval = m.interval,
-      .meta = meta_data_clone(m.meta),
+    .family = m.family,
+    .time = m.time,
+    .interval = m.interval,
   };
-  copy.value = (m.family->type == METRIC_TYPE_DISTRIBUTION)
-          ? (value_t){.distribution = distribution_clone(m.value.distribution)}
-          : m.value;
+
+  if (m.meta.num != 0) {
+    int status = meta_data_clone(&copy.meta, m.meta);
+    if (status != 0)
+       return ENOMEM;
+  }
+
   int status = label_set_clone(&copy.label, m.label);
-  if (((m.meta != NULL) && (copy.meta == NULL)) || (status != 0)) {
+  if (status != 0) {
     label_set_reset(&copy.label);
-    meta_data_destroy(copy.meta);
+    meta_data_reset(&copy.meta);
+    return status;
+  }
+
+  switch (m.family->type) {
+    case METRIC_TYPE_UNKNOWN:
+    case METRIC_TYPE_GAUGE:
+    case METRIC_TYPE_COUNTER:
+      copy.value = m.value;
+      break;
+    case METRIC_TYPE_STATE_SET:
+      status = state_set_clone(&copy.value.state_set, m.value.state_set);
+      break;
+    case METRIC_TYPE_INFO:
+      status = label_set_clone(&copy.value.info, m.value.info);
+      break;
+    case METRIC_TYPE_DISTRIBUTION:
+      copy.value.distribution = distribution_clone(m.value.distribution);
+      if (copy.value.distribution == NULL)
+        status = ENOMEM;
+      break;
+  }
+
+  if (status != 0) {
+    label_set_reset(&copy.label);
+    meta_data_reset(&copy.meta);
     return status;
   }
 
@@ -164,7 +207,8 @@ static int metric_list_add(metric_list_t *metrics, metric_t m) {
   return 0;
 }
 
-static void metric_list_reset(metric_list_t *metrics) {
+static void metric_list_reset(metric_list_t *metrics)
+{
   if (metrics == NULL) {
     return;
   }
@@ -178,19 +222,17 @@ static void metric_list_reset(metric_list_t *metrics) {
   metrics->num = 0;
 }
 
-static int metric_list_clone(metric_list_t *dest, metric_list_t src,
-                             metric_family_t *fam) {
-  if (src.num == 0) {
+static int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_family_t *fam)
+{
+  if (src.num == 0)
     return 0;
-  }
 
   metric_list_t ret = {
       .ptr = calloc(src.num, sizeof(*ret.ptr)),
       .num = src.num,
   };
-  if (ret.ptr == NULL) {
+  if (ret.ptr == NULL)
     return ENOMEM;
-  }
 
   for (size_t i = 0; i < src.num; i++) {
 
@@ -218,20 +260,20 @@ static int metric_list_clone(metric_list_t *dest, metric_list_t src,
   return 0;
 }
 
-int metric_family_metric_append(metric_family_t *fam, metric_t m) {
-  if (fam == NULL) {
+int metric_family_metric_append(metric_family_t *fam, metric_t m)
+{
+  if (fam == NULL)
     return EINVAL;
-  }
 
   m.family = fam;
   return metric_list_add(&fam->metric, m);
 }
 
 int metric_family_append(metric_family_t *fam, char const *lname,
-                         char const *lvalue, value_t v, metric_t const *templ) {
-  if ((fam == NULL) || ((lname == NULL) != (lvalue == NULL))) {
+                         char const *lvalue, value_t v, metric_t const *templ)
+{
+  if ((fam == NULL) || ((lname == NULL) != (lvalue == NULL)))
     return EINVAL;
-  }
 
   metric_t m = {
       .family = fam,
@@ -239,18 +281,22 @@ int metric_family_append(metric_family_t *fam, char const *lname,
   };
   if (templ != NULL) {
     int status = label_set_clone(&m.label, templ->label);
-    if (status != 0) {
+    if (status != 0)
       return status;
-    }
 
     m.time = templ->time;
     m.interval = templ->interval;
-    m.meta = meta_data_clone(templ->meta);
+    status = meta_data_clone(&m.meta, templ->meta);
+    if (status != 0) {
+      metric_reset(&m);
+      return status;
+    }
   }
 
   if (lname != NULL) {
     int status = metric_label_set(&m, lname, lvalue);
     if (status != 0) {
+      metric_reset(&m);
       return status;
     }
   }
@@ -260,19 +306,19 @@ int metric_family_append(metric_family_t *fam, char const *lname,
   return status;
 }
 
-int metric_family_metric_reset(metric_family_t *fam) {
-  if (fam == NULL) {
+int metric_family_metric_reset(metric_family_t *fam)
+{
+  if (fam == NULL)
     return EINVAL;
-  }
 
   metric_list_reset(&fam->metric);
   return 0;
 }
 
-void metric_family_free(metric_family_t *fam) {
-  if (fam == NULL) {
+void metric_family_free(metric_family_t *fam)
+{
+  if (fam == NULL)
     return;
-  }
 
   free(fam->name);
   free(fam->help);
@@ -280,21 +326,20 @@ void metric_family_free(metric_family_t *fam) {
   free(fam);
 }
 
-metric_family_t *metric_family_clone(metric_family_t const *fam) {
+metric_family_t *metric_family_clone(metric_family_t const *fam)
+{
   if (fam == NULL) {
     errno = EINVAL;
     return NULL;
   }
 
   metric_family_t *ret = calloc(1, sizeof(*ret));
-  if (ret == NULL) {
+  if (ret == NULL)
     return NULL;
-  }
 
   ret->name = strdup(fam->name);
-  if (fam->help != NULL) {
+  if (fam->help != NULL)
     ret->help = strdup(fam->help);
-  }
   ret->type = fam->type;
 
   int status = metric_list_clone(&ret->metric, fam->metric, ret);
@@ -311,17 +356,15 @@ metric_family_t *metric_family_clone(metric_family_t const *fam) {
  * "inout" to point to the first character following the identity. With valid
  * input, this means that "inout" will then point either to a '\0' (null byte)
  * or a ' ' (space). */
-static int metric_family_unmarshal_identity(metric_family_t *fam,
-                                            char const **inout) {
-  if ((fam == NULL) || (inout == NULL) || (*inout == NULL)) {
+static int metric_family_unmarshal_identity(metric_family_t *fam, char const **inout)
+{
+  if ((fam == NULL) || (inout == NULL) || (*inout == NULL))
     return EINVAL;
-  }
 
   char const *ptr = *inout;
-  size_t name_len = strspn(ptr, VALID_NAME_CHARS);
-  if (name_len == 0) {
+  size_t name_len = metric_valid_len(ptr);
+  if (name_len == 0)
     return EINVAL;
-  }
 
   char name[name_len + 1];
   strncpy(name, ptr, name_len);
@@ -329,9 +372,8 @@ static int metric_family_unmarshal_identity(metric_family_t *fam,
   ptr += name_len;
 
   fam->name = strdup(name);
-  if (fam->name == NULL) {
+  if (fam->name == NULL)
     return ENOMEM;
-  }
 
   /* metric name without labels */
   if ((ptr[0] == 0) || (ptr[0] == ' ')) {
@@ -343,29 +385,27 @@ static int metric_family_unmarshal_identity(metric_family_t *fam,
 
   char const *end = ptr;
   int ret = label_set_unmarshal(&m->label, &end);
-  if (ret != 0) {
+  if (ret != 0)
     return ret;
-  }
   ptr = end;
 
-  if ((ptr[0] != '}') || ((ptr[1] != 0) && (ptr[1] != ' '))) {
+  if ((ptr[0] != '}') || ((ptr[1] != 0) && (ptr[1] != ' ')))
     return EINVAL;
-  }
 
   *inout = &ptr[1];
   return 0;
 }
 
-metric_t *metric_parse_identity(char const *buf) {
+metric_t *metric_parse_identity(char const *buf)
+{
   if (buf == NULL) {
     errno = EINVAL;
     return NULL;
   }
 
   metric_family_t *fam = calloc(1, sizeof(*fam));
-  if (fam == NULL) {
+  if (fam == NULL)
     return NULL;
-  }
   fam->type = METRIC_TYPE_UNKNOWN;
 
   int status = metric_list_add(&fam->metric, (metric_t){.family = fam});

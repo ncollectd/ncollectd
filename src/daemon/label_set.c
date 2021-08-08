@@ -28,6 +28,7 @@
 #include "collectd.h"
 
 #include "label_set.h"
+#include "metric_chars.h"
 
 static int label_pair_compare(void const *a, void const *b)
 {
@@ -61,34 +62,24 @@ label_pair_t *label_set_read(label_set_t labels, char const *name)
 
 int label_set_create(label_set_t *labels, char const *name, char const *value)
 {
-  if ((labels == NULL) || (name == NULL) || (value == NULL)) {
+  if ((labels == NULL) || (name == NULL) || (value == NULL))
     return EINVAL;
-  }
 
-  size_t name_len = strlen(name);
-  if (name_len == 0) {
+  if (!label_check_name(name))
     return EINVAL;
-  }
 
-  size_t valid_len = strspn(name, VALID_LABEL_CHARS);
-  if ((valid_len != name_len) || isdigit((int)name[0])) {
-    return EINVAL;
-  }
-
-  if (label_set_read(*labels, name) != NULL) {
+  if (label_set_read(*labels, name) != NULL)
     return EEXIST;
-  }
+
   errno = 0;
 
-  if (strlen(value) == 0) {
+  if (strlen(value) == 0)
     return 0;
-  }
 
   label_pair_t *tmp =
       realloc(labels->ptr, sizeof(*labels->ptr) * (labels->num + 1));
-  if (tmp == NULL) {
+  if (tmp == NULL)
     return errno;
-  }
   labels->ptr = tmp;
 
   label_pair_t pair = {
@@ -110,13 +101,11 @@ int label_set_create(label_set_t *labels, char const *name, char const *value)
 
 int label_set_delete(label_set_t *labels, label_pair_t *elem)
 {
-  if ((labels == NULL) || (elem == NULL)) {
+  if ((labels == NULL) || (elem == NULL))
     return EINVAL;
-  }
 
-  if ((elem < labels->ptr) || (elem > labels->ptr + (labels->num - 1))) {
+  if ((elem < labels->ptr) || (elem > labels->ptr + (labels->num - 1)))
     return ERANGE;
-  }
 
   size_t index = elem - labels->ptr;
   assert(labels->ptr + index == elem);
@@ -124,10 +113,9 @@ int label_set_delete(label_set_t *labels, label_pair_t *elem)
   free(elem->name);
   free(elem->value);
 
-  if (index != (labels->num - 1)) {
+  if (index != (labels->num - 1))
     memmove(labels->ptr + index, labels->ptr + (index + 1),
             sizeof(*labels->ptr) * (labels->num - (index + 1)));
-  }
   labels->num--;
 
   if (labels->num == 0) {
@@ -137,9 +125,8 @@ int label_set_delete(label_set_t *labels, label_pair_t *elem)
   }
 
   label_pair_t *tmp = realloc(labels->ptr, sizeof(*labels->ptr) * labels->num);
-  if (tmp == NULL) {
+  if (tmp == NULL)
     return errno;
-  }
   labels->ptr = tmp;
 
   return 0;
@@ -147,31 +134,26 @@ int label_set_delete(label_set_t *labels, label_pair_t *elem)
 
 int label_set_add(label_set_t *labels, char const *name, char const *value)
 {
-  if ((labels == NULL) || (name == NULL)) {
+  if ((labels == NULL) || (name == NULL))
     return EINVAL;
-  }
 
   label_pair_t *label = label_set_read(*labels, name);
-  if ((label == NULL) && (errno != ENOENT)) {
+  if ((label == NULL) && (errno != ENOENT))
     return errno;
-  }
   errno = 0;
 
   if (label == NULL) {
-    if ((value == NULL) || strlen(value) == 0) {
+    if ((value == NULL) || strlen(value) == 0)
       return 0;
-    }
     return label_set_create(labels, name, value);
   }
 
-  if ((value == NULL) || strlen(value) == 0) {
+  if ((value == NULL) || strlen(value) == 0)
     return label_set_delete(labels, label);
-  }
 
   char *new_value = strdup(value);
-  if (new_value == NULL) {
+  if (new_value == NULL)
     return errno;
-  }
 
   free(label->value);
   label->value = new_value;
@@ -181,9 +163,9 @@ int label_set_add(label_set_t *labels, char const *name, char const *value)
 
 void label_set_reset(label_set_t *labels)
 {
-  if (labels == NULL) {
+  if (labels == NULL)
     return;
-  }
+
   for (size_t i = 0; i < labels->num; i++) {
     free(labels->ptr[i].name);
     free(labels->ptr[i].value);
@@ -196,17 +178,15 @@ void label_set_reset(label_set_t *labels)
 
 int label_set_clone(label_set_t *dest, label_set_t src)
 {
-  if (src.num == 0) {
+  if (src.num == 0)
     return 0;
-  }
 
   label_set_t ret = {
-      .ptr = calloc(src.num, sizeof(*ret.ptr)),
-      .num = src.num,
+    .ptr = calloc(src.num, sizeof(*ret.ptr)),
+    .num = src.num,
   };
-  if (ret.ptr == NULL) {
+  if (ret.ptr == NULL)
     return ENOMEM;
-  }
 
   for (size_t i = 0; i < src.num; i++) {
     ret.ptr[i].name = strdup(src.ptr[i].name);
@@ -229,9 +209,8 @@ static int parse_label_value(strbuf_t *buf, char const **inout)
 {
   char const *ptr = *inout;
 
-  if (ptr[0] != '"') {
+  if (ptr[0] != '"')
     return EINVAL;
-  }
   ptr++;
 
   while (ptr[0] != '"') {
@@ -247,9 +226,8 @@ static int parse_label_value(strbuf_t *buf, char const **inout)
     }
 
     assert(ptr[0] == '\\');
-    if (ptr[1] == 0) {
+    if (ptr[1] == 0)
       return EINVAL;
-    }
 
     char tmp[2] = {ptr[1], 0};
     if (tmp[0] == 'n') {
@@ -276,15 +254,14 @@ int label_set_unmarshal(label_set_t *labels, char const **inout)
   int ret = 0;
   char const *ptr = *inout;
 
-  if (ptr[0] != '{') {
+  if (ptr[0] != '{')
     return EINVAL;
-  }
 
   strbuf_t value = STRBUF_CREATE;
   while ((ptr[0] == '{') || (ptr[0] == ',')) {
     ptr++;
 
-    size_t key_len = strspn(ptr, VALID_LABEL_CHARS);
+    size_t key_len = label_valid_name_len(ptr);
     if (key_len == 0) {
       ret = EINVAL;
       break;
@@ -299,8 +276,8 @@ int label_set_unmarshal(label_set_t *labels, char const **inout)
       break;
     }
     ptr++;
-    
-    strbuf_reset(&value);   
+
+    strbuf_reset(&value);
     int status = parse_label_value(&value, &ptr);
     if (status != 0) {
       ret = status;
@@ -315,13 +292,11 @@ int label_set_unmarshal(label_set_t *labels, char const **inout)
   }
   STRBUF_DESTROY(value);
 
-  if (ret != 0) {
+  if (ret != 0)
     return ret;
-  }
 
-  if (ptr[0] != '}') {
+  if (ptr[0] != '}')
     return EINVAL;
-  }
 
   *inout = &ptr[1];
 
@@ -331,6 +306,7 @@ int label_set_unmarshal(label_set_t *labels, char const **inout)
 int label_set_marshal(strbuf_t *buf, label_set_t labels)
 {
   int status = strbuf_print(buf, "{");
+
   for (size_t i = 0; i < labels.num; i++) {
     if (i != 0) {
       status = status || strbuf_print(buf, ",");

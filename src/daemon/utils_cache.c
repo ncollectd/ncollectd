@@ -35,9 +35,9 @@
 #include "plugin.h"
 #include "utils/avltree/avltree.h"
 #include "utils/common/common.h"
-#include "utils/metadata/meta_data.h"
 #include "utils/strbuf/strbuf.h"
 #include "utils_cache.h"
+#include "meta_data.h"
 
 #include <assert.h>
 
@@ -76,7 +76,7 @@ typedef struct cache_entry_s {
   typed_value_t start_value;
   cdtime_t start_time;
 
-  meta_data_t *meta;
+  meta_data_t meta;
 
   unsigned long callbacks_mask;
 } cache_entry_t;
@@ -112,7 +112,6 @@ static cache_entry_t *cache_alloc() {
   ce->values_raw = typed_value_create((value_t){.gauge = 0}, METRIC_TYPE_GAUGE);
   ce->history = NULL;
   ce->history_length = 0;
-  ce->meta = NULL;
 
   return ce;
 } /* cache_entry_t *cache_alloc */
@@ -122,8 +121,7 @@ static void cache_free(cache_entry_t *ce) {
     return;
 
   sfree(ce->history);
-  meta_data_destroy(ce->meta);
-  ce->meta = NULL;
+  meta_data_reset(&ce->meta);
   typed_value_destroy(ce->values_raw);
   typed_value_destroy(ce->start_value);
   distribution_destroy(ce->distribution_increase);
@@ -1153,9 +1151,7 @@ int uc_iterator_get_meta(uc_iter_t *iter, meta_data_t **ret_meta) {
   if ((iter == NULL) || (iter->entry == NULL) || (ret_meta == NULL))
     return -1;
 
-  *ret_meta = meta_data_clone(iter->entry->meta);
-
-  return 0;
+  return meta_data_clone(*ret_meta, iter->entry->meta);
 } /* int uc_iterator_get_meta */
 
 /*
@@ -1182,11 +1178,7 @@ static meta_data_t *uc_get_meta(metric_t const *m) /* {{{ */
   }
   assert(ce != NULL);
 
-  if (ce->meta == NULL) {
-    ce->meta = meta_data_create();
-  }
-
-  return ce->meta;
+  return &ce->meta;
 } /* }}} meta_data_t *uc_get_meta */
 
 /* Sorry about this preprocessor magic, but it really makes this file much
@@ -1213,7 +1205,6 @@ int uc_meta_data_delete(metric_t const *m, const char *key)
 
 /* The second argument is called `toc` in the API, but the macro expects
  * `key`. */
-int uc_meta_data_toc(metric_t const *m, char ***key) UC_WRAP(meta_data_toc);
 #undef UC_WRAP
 
 /* We need a new version of this macro because the following functions take
@@ -1252,11 +1243,11 @@ int uc_meta_data_get_string(metric_t const *m, const char *key, char **value)
 
 int uc_meta_data_get_signed_int(metric_t const *m, const char *key,
                                 int64_t *value)
-    UC_WRAP(meta_data_get_signed_int);
+    UC_WRAP(meta_data_get_int);
 
 int uc_meta_data_get_unsigned_int(metric_t const *m, const char *key,
                                   uint64_t *value)
-    UC_WRAP(meta_data_get_unsigned_int);
+    UC_WRAP(meta_data_get_uint);
 
 int uc_meta_data_get_double(metric_t const *m, const char *key, double *value)
     UC_WRAP(meta_data_get_double);

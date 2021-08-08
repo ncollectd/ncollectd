@@ -30,19 +30,6 @@
 
 #include "utils/strbuf/strbuf.h"
 
-/* Label names must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. Label names
- *
- * beginning with __ are reserved for internal use.
- *
- * Source:
- * https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels */
-#define VALID_LABEL_CHARS                                                      \
-  "abcdefghijklmnopqrstuvwxyz"                                                 \
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"                                                 \
-  "0123456789_"
-/* Metric names must match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*` */
-#define VALID_NAME_CHARS VALID_LABEL_CHARS ":"
-
 /* label_pair_t represents a label, i.e. a key/value pair. */
 typedef struct {
   char *name;

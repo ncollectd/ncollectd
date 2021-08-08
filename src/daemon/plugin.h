@@ -34,7 +34,6 @@
 #include "configfile.h"
 #include "metric.h"
 #include "notification.h"
-#include "utils/metadata/meta_data.h"
 #include "utils_time.h"
 
 #include <inttypes.h>

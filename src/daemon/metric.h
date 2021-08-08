@@ -29,18 +29,19 @@
 #define METRIC_H 1
 
 #include "distribution.h"
-#include "utils/metadata/meta_data.h"
 #include "utils/strbuf/strbuf.h"
 #include "utils_time.h"
 #include "label_set.h"
+#include "state_set.h"
+#include "meta_data.h"
 
 typedef enum {
-  METRIC_TYPE_UNKNOWN      = 0,
-  METRIC_TYPE_GAUGE        = 1,
-  METRIC_TYPE_COUNTER      = 2,
-  METRIC_TYPE_STATE_SET    = 3,
-  METRIC_TYPE_INFO         = 4,
-  METRIC_TYPE_DISTRIBUTION = 5,
+  METRIC_TYPE_UNKNOWN      = 1,
+  METRIC_TYPE_GAUGE        = 2,
+  METRIC_TYPE_COUNTER      = 3,
+  METRIC_TYPE_STATE_SET    = 4,
+  METRIC_TYPE_INFO         = 5,
+  METRIC_TYPE_DISTRIBUTION = 6,
 } metric_type_t;
 
 typedef enum {
@@ -71,7 +72,7 @@ typedef struct {
 
 typedef enum {
   COUNTER_UINTEGER = 0,
-  COUNTER_REAL    = 1,
+  COUNTER_REAL     = 1,
 } counter_type_t;
 
 typedef struct {
@@ -80,17 +81,8 @@ typedef struct {
     double real;
     uint64_t uinteger;
   };
+  cdtime_t created;
 } counter_t;
-
-typedef struct {
-  bool enabled;
-  char *name;
-} state_t;
-
-typedef struct {
-  size_t num;
-  state_t *ptr;
-} state_set_t;
 
 typedef union {
   unknown_t unknown;
@@ -138,8 +130,7 @@ typedef struct {
   value_t value;
   cdtime_t time; /* TODO(octo): use ms or µs instead? */
   cdtime_t interval;
-  /* TODO(octo): target labels */
-  meta_data_t *meta;
+  meta_data_t meta;
 } metric_t;
 
 /* metric_identity writes the identity of the metric "m" to "buf", using the

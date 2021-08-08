@@ -118,7 +118,6 @@ noinst_LTLIBRARIES = \
 	libignorelist.la \
 	liblatency.la \
 	libllist.la \
-	libmetadata.la \
 	libmetric.la \
 	libmount.la \
 	liboconfig.la \
@@ -233,7 +232,6 @@ collectd_LDADD = \
 	libcommon.la \
 	libheap.la \
 	libllist.la \
-	libmetadata.la \
 	libmetric.la \
 	liboconfig.la \
 	-lm \
@@ -314,11 +312,6 @@ test_common_SOURCES = \
 	src/testing.h
 test_common_LDADD = libmetric.la libplugin_mock.la
 
-test_meta_data_SOURCES = \
-	src/utils/metadata/meta_data_test.c \
-	src/testing.h
-test_meta_data_LDADD = libmetadata.la libplugin_mock.la
-
 test_distribution_SOURCES = \
 	src/daemon/distribution_test.c \
 	src/testing.h
@@ -389,10 +382,6 @@ libllist_la_SOURCES = \
 	src/daemon/utils_llist.c \
 	src/daemon/utils_llist.h
 
-libmetadata_la_SOURCES = \
-	src/utils/metadata/meta_data.c \
-	src/utils/metadata/meta_data.h
-
 libmetric_la_SOURCES = \
 		       src/daemon/distribution.c \
 		       src/daemon/distribution.h \
@@ -401,9 +390,15 @@ libmetric_la_SOURCES = \
                src/daemon/notification.c \
                src/daemon/notification.h \
                src/daemon/label_set.c \
-               src/daemon/label_set.h
+               src/daemon/label_set.h \
+               src/daemon/state_set.c \
+               src/daemon/state_set.h \
+	           src/daemon/meta_data.c \
+	           src/daemon/meta_data.h \
+	           src/daemon/metric_chars.c \
+	           src/daemon/metric_chars.h
 
-libmetric_la_LIBADD = libmetadata.la $(COMMON_LIBS) -lm
+libmetric_la_LIBADD = $(COMMON_LIBS) -lm
 
 libplugin_mock_la_SOURCES = \
 	src/daemon/plugin_mock.c \
@@ -414,7 +409,7 @@ libplugin_mock_la_SOURCES = \
 	src/daemon/utils_time.h
 
 libplugin_mock_la_CPPFLAGS = $(AM_CPPFLAGS) -DMOCK_TIME
-libplugin_mock_la_LIBADD = libcommon.la libignorelist.la libmetadata.la $(COMMON_LIBS)
+libplugin_mock_la_LIBADD = libcommon.la libignorelist.la $(COMMON_LIBS)
 
 libformat_graphite_la_SOURCES = \
 	src/utils/format_graphite/format_graphite.c \
@@ -426,7 +421,6 @@ test_format_graphite_SOURCES = \
 	src/testing.h
 test_format_graphite_LDADD = \
 	libformat_graphite.la \
-	libmetadata.la \
 	libmetric.la \
 	libplugin_mock.la \
 	libstrbuf.la \
@@ -456,7 +450,6 @@ test_format_json_SOURCES = \
 	src/testing.h
 test_format_json_LDADD = \
 	libformat_json.la \
-	libmetadata.la \
 	libplugin_mock.la \
 	-lm
 endif
@@ -1275,7 +1268,6 @@ test_plugin_network_LDADD = \
 	libavltree.la \
 	liboconfig.la \
 	libplugin_mock.la \
-	libmetadata.la \
 	$(GCRYPT_LIBS)
 if BUILD_WITH_LIBSOCKET
 test_plugin_network_LDADD += -lsocket
