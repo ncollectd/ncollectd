@@ -96,13 +96,13 @@ static int tcsv_read_metric(instance_definition_t *id, metric_definition_t *md,
     int status = parse_double(fields[md->value_from], &gauge);
     if (status != 0)
       return status;
-    m.value.gauge.real = gauge;
+    m.value.gauge.float64 = gauge;
   } else if (md->type == METRIC_TYPE_COUNTER) {
     uint64_t counter;
     int status = parse_uinteger(fields[md->value_from], &counter);
     if (status != 0)
       return status;
-    m.value.counter.uinteger = counter;
+    m.value.counter.uint64 = counter;
   }
 
   cdtime_t t = 0;

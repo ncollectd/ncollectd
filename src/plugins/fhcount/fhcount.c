@@ -60,7 +60,7 @@ static void fhcount_submit(char *fam_name, double value)
       .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_metric_append(&fam, (metric_t){ .value.gauge.real = value, });
+  metric_family_metric_append(&fam, (metric_t){ .value.gauge.float64 = value, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {

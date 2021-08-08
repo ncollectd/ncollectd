@@ -43,7 +43,7 @@ static void cpusleep_submit(uint64_t cpu_sleep)
     .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_metric_append(&fam, (metric_t){ .value.counter.uinteger = cpu_sleep, });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter.uint64 = cpu_sleep, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0)

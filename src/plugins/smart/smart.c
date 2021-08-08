@@ -177,13 +177,13 @@ static void handle_attribute(SkDisk *d, const SkSmartAttributeParsedData *a, voi
   metric_label_set(ud->tmpl, "attribute_id", id);
 
   metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_CURRENT], "attribute", a->name,
-                       (value_t){.gauge.real = a->current_value } , ud->tmpl);
+                       (value_t){.gauge.float64 = a->current_value } , ud->tmpl);
   metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_PRETTY], "attribute", a->name,
-                       (value_t){.gauge.real = a->pretty_value } , ud->tmpl);
+                       (value_t){.gauge.float64 = a->pretty_value } , ud->tmpl);
   metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_THRESHOLD], "attribute", a->name,
-                       (value_t){.gauge.real = a->threshold_valid ? a->threshold : 0 } , ud->tmpl);
+                       (value_t){.gauge.float64 = a->threshold_valid ? a->threshold : 0 } , ud->tmpl);
   metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_WORST], "attribute", a->name,
-                       (value_t){.gauge.real = a->worst_value } , ud->tmpl);
+                       (value_t){.gauge.float64 = a->worst_value } , ud->tmpl);
   
   metric_label_set(ud->tmpl, "attribute_id", NULL);
 
@@ -308,103 +308,103 @@ static int smart_read_nvme_disk(const char *dev, char const *name, metric_family
 
   value_t value = {0};
 
-  value.gauge.real = (double)smart_log.data.critical_warning;
+  value.gauge.float64 = (double)smart_log.data.critical_warning;
   metric_family_append(&fams[FAM_SMART_NVME_CRITICAL_WARNING], NULL, NULL, value, tmpl);                  
 
-  value.gauge.real = ((double)(smart_log.data.temperature[1] << 8) + smart_log.data.temperature[0] - 273);
+  value.gauge.float64 = ((double)(smart_log.data.temperature[1] << 8) + smart_log.data.temperature[0] - 273);
   metric_family_append(&fams[FAM_SMART_NVME_TEMPERATURE], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.avail_spare;
+  value.gauge.float64 = (double)smart_log.data.avail_spare;
   metric_family_append(&fams[FAM_SMART_NVME_AVAIL_SPARE], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.spare_thresh;
+  value.gauge.float64 = (double)smart_log.data.spare_thresh;
   metric_family_append(&fams[FAM_SMART_NVME_AVAIL_SPARE_THRESH], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.percent_used;
+  value.gauge.float64 = (double)smart_log.data.percent_used;
   metric_family_append(&fams[FAM_SMART_NVME_PERCENT_USED], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.endu_grp_crit_warn_sumry;
+  value.gauge.float64 = (double)smart_log.data.endu_grp_crit_warn_sumry;
   metric_family_append(&fams[FAM_SMART_NVME_ENDU_GRP_CRIT_WARN_SUMRY], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.data_units_read);
+  value.gauge.float64 = int96_to_double(smart_log.data.data_units_read);
   metric_family_append(&fams[FAM_SMART_NVME_DATA_UNITS_READ], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.data_units_written);
+  value.gauge.float64 = int96_to_double(smart_log.data.data_units_written);
   metric_family_append(&fams[FAM_SMART_NVME_DATA_UNITS_WRITTEN], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.host_commands_read);
+  value.gauge.float64 = int96_to_double(smart_log.data.host_commands_read);
   metric_family_append(&fams[FAM_SMART_NVME_HOST_COMMANDS_READ], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.host_commands_written);
+  value.gauge.float64 = int96_to_double(smart_log.data.host_commands_written);
   metric_family_append(&fams[FAM_SMART_NVME_HOST_COMMANDS_WRITTEN], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.ctrl_busy_time);
+  value.gauge.float64 = int96_to_double(smart_log.data.ctrl_busy_time);
   metric_family_append(&fams[FAM_SMART_NVME_CTRL_BUSY_TIME], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.power_cycles);
+  value.gauge.float64 = int96_to_double(smart_log.data.power_cycles);
   metric_family_append(&fams[FAM_SMART_NVME_POWER_CYCLES], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.power_on_hours);
+  value.gauge.float64 = int96_to_double(smart_log.data.power_on_hours);
   metric_family_append(&fams[FAM_SMART_NVME_POWER_ON_HOURS], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.unsafe_shutdowns);
+  value.gauge.float64 = int96_to_double(smart_log.data.unsafe_shutdowns);
   metric_family_append(&fams[FAM_SMART_NVME_UNSAFE_SHUTDOWNS], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.media_errors);
+  value.gauge.float64 = int96_to_double(smart_log.data.media_errors);
   metric_family_append(&fams[FAM_SMART_NVME_MEDIA_ERRORS], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int96_to_double(smart_log.data.num_err_log_entries);
+  value.gauge.float64 = int96_to_double(smart_log.data.num_err_log_entries);
   metric_family_append(&fams[FAM_SMART_NVME_NUM_ERR_LOG_ENTRIES], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.warning_temp_time;
+  value.gauge.float64 = (double)smart_log.data.warning_temp_time;
   metric_family_append(&fams[FAM_SMART_NVME_WARNING_TEMP_TIME], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.critical_comp_time;
+  value.gauge.float64 = (double)smart_log.data.critical_comp_time;
   metric_family_append(&fams[FAM_SMART_NVME_CRITICAL_COMP_TIME], NULL, NULL, value, tmpl);
 
   if (smart_log.data.temp_sensor[0] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[0] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[0] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "1", value, tmpl);
   }
   if (smart_log.data.temp_sensor[1] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[1] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[1] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "2", value, tmpl);
   }
   if (smart_log.data.temp_sensor[2] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[2] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[2] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "3", value, tmpl);
   }
   if (smart_log.data.temp_sensor[3] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[3] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[3] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "4", value, tmpl);
   }
   if (smart_log.data.temp_sensor[4] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[4] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[4] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "5", value, tmpl);
   }
   if (smart_log.data.temp_sensor[5] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[5] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[5] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "6", value, tmpl);
   }
   if (smart_log.data.temp_sensor[6] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[6] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[6] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "7", value, tmpl);
   }
   if (smart_log.data.temp_sensor[7] > 0) {
-    value.gauge.real = (double)smart_log.data.temp_sensor[7] - 273;  
+    value.gauge.float64 = (double)smart_log.data.temp_sensor[7] - 273;  
     metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], "sensor", "8", value, tmpl);
   }
 
-  value.gauge.real = (double)smart_log.data.thm_temp1_trans_count; 
+  value.gauge.float64 = (double)smart_log.data.thm_temp1_trans_count; 
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TRANSITION_COUNT], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.thm_temp1_total_time;  
+  value.gauge.float64 = (double)smart_log.data.thm_temp1_total_time;  
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TOTAL_TIME], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.thm_temp2_trans_count; 
+  value.gauge.float64 = (double)smart_log.data.thm_temp2_trans_count; 
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TRANSITION_COUNT], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)smart_log.data.thm_temp2_total_time;  
+  value.gauge.float64 = (double)smart_log.data.thm_temp2_total_time;  
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TOTAL_TIME], NULL, NULL, value, tmpl);
 
 
@@ -444,91 +444,91 @@ static int smart_read_nvme_intel_disk(const char *dev, char const *name, metric_
 
   value_t value = {0};
 
-  value.gauge.real = (double)intel_smart_log.program_fail_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.program_fail_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_PROGRAM_FAIL_COUNT_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.program_fail_cnt.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.program_fail_cnt.raw);
   metric_family_append(&fams[FAM_SMART_NVME_PROGRAM_FAIL_COUNT_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.erase_fail_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.erase_fail_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_ERASE_FAIL_COUNT_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.program_fail_cnt.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.program_fail_cnt.raw);
   metric_family_append(&fams[FAM_SMART_NVME_ERASE_FAIL_COUNT_RAW],  NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.wear_leveling_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.wear_leveling_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)le16_to_cpu(intel_smart_log.wear_leveling_cnt.wear_level.min);
+  value.gauge.float64 = (double)le16_to_cpu(intel_smart_log.wear_leveling_cnt.wear_level.min);
   metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_MIN], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)le16_to_cpu(intel_smart_log.wear_leveling_cnt.wear_level.max);
+  value.gauge.float64 = (double)le16_to_cpu(intel_smart_log.wear_leveling_cnt.wear_level.max);
   metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_MAX], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)le16_to_cpu(intel_smart_log.wear_leveling_cnt.wear_level.avg);
+  value.gauge.float64 = (double)le16_to_cpu(intel_smart_log.wear_leveling_cnt.wear_level.avg);
   metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_AVG], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.e2e_err_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.e2e_err_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.e2e_err_cnt.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.e2e_err_cnt.raw);
   metric_family_append(&fams[FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.crc_err_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.crc_err_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_CRC_ERROR_COUNT_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.crc_err_cnt.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.crc_err_cnt.raw);
   metric_family_append(&fams[FAM_SMART_NVME_CRC_ERROR_COUNT_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.timed_workload_media_wear.norm;
+  value.gauge.float64 = (double)intel_smart_log.timed_workload_media_wear.norm;
   metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_NORM],  NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.timed_workload_media_wear.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.timed_workload_media_wear.raw);
   metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_RAW],  NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.timed_workload_host_reads.norm;
+  value.gauge.float64 = (double)intel_smart_log.timed_workload_host_reads.norm;
   metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.timed_workload_host_reads.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.timed_workload_host_reads.raw);
   metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.timed_workload_timer.norm;
+  value.gauge.float64 = (double)intel_smart_log.timed_workload_timer.norm;
   metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.timed_workload_timer.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.timed_workload_timer.raw);
   metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.thermal_throttle_status.norm;
+  value.gauge.float64 = (double)intel_smart_log.thermal_throttle_status.norm;
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.thermal_throttle_status.thermal_throttle.pct;
+  value.gauge.float64 = (double)intel_smart_log.thermal_throttle_status.thermal_throttle.pct;
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_PCT], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.thermal_throttle_status.thermal_throttle.count;
+  value.gauge.float64 = (double)intel_smart_log.thermal_throttle_status.thermal_throttle.count;
   metric_family_append(&fams[FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_COUNT], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.retry_buffer_overflow_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.retry_buffer_overflow_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.retry_buffer_overflow_cnt.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.retry_buffer_overflow_cnt.raw);
   metric_family_append(&fams[FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.pll_lock_loss_cnt.norm;
+  value.gauge.float64 = (double)intel_smart_log.pll_lock_loss_cnt.norm;
   metric_family_append(&fams[FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.pll_lock_loss_cnt.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.pll_lock_loss_cnt.raw);
   metric_family_append(&fams[FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_RAW],  NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.host_bytes_written.norm;
+  value.gauge.float64 = (double)intel_smart_log.host_bytes_written.norm;
   metric_family_append(&fams[FAM_SMART_NVME_NAND_BYTES_WRITTEN_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.host_bytes_written.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.host_bytes_written.raw);
   metric_family_append(&fams[FAM_SMART_NVME_NAND_BYTES_WRITTEN_RAW], NULL, NULL, value, tmpl);
 
-  value.gauge.real = (double)intel_smart_log.host_bytes_written.norm;
+  value.gauge.float64 = (double)intel_smart_log.host_bytes_written.norm;
   metric_family_append(&fams[FAM_SMART_NVME_HOST_BYTES_WRITTEN_NORM], NULL, NULL, value, tmpl);
 
-  value.gauge.real = int48_to_double(intel_smart_log.host_bytes_written.raw);
+  value.gauge.float64 = int48_to_double(intel_smart_log.host_bytes_written.raw);
   metric_family_append(&fams[FAM_SMART_NVME_HOST_BYTES_WRITTEN_RAW], NULL, NULL, value, tmpl);
 
   close(fd);
@@ -567,25 +567,25 @@ static void smart_read_sata_disk(SkDisk *d, char const *name, metric_family_t *f
   uint64_t value;
   if (sk_disk_smart_get_power_on(d, &value) >= 0)
     metric_family_append(&fams[FAM_SMART_POWER_ON], NULL, NULL,
-                         (value_t){.gauge.real = ((double)value) / 1000. } , tmpl);
+                         (value_t){.gauge.float64 = ((double)value) / 1000. } , tmpl);
   else
     DEBUG("smart plugin: unable to get milliseconds since power on for %s.", name);
 
   if (sk_disk_smart_get_power_cycle(d, &value) >= 0) {
     metric_family_append(&fams[FAM_SMART_POWER_CYCLES], NULL, NULL, 
-                         (value_t){.gauge.real = (double)value } , tmpl);
+                         (value_t){.gauge.float64 = (double)value } , tmpl);
   } else
     DEBUG("smart plugin: unable to get number of power cycles for %s.", name);
 
   if (sk_disk_smart_get_bad(d, &value) >= 0)
     metric_family_append(&fams[FAM_SMART_BAD_SECTORS], NULL, NULL,
-                         (value_t){.gauge.real = (double)value } , tmpl);
+                         (value_t){.gauge.float64 = (double)value } , tmpl);
   else
     DEBUG("smart plugin: unable to get number of bad sectors for %s.", name);
 
   if (sk_disk_smart_get_temperature(d, &value) >= 0)
     metric_family_append(&fams[FAM_SMART_TEMPERATURE], NULL, NULL,
-                         (value_t){.gauge.real = ((double)value) / 1000. - 273.15 } , tmpl);
+                         (value_t){.gauge.float64 = ((double)value) / 1000. - 273.15 } , tmpl);
   else
     DEBUG("smart plugin: unable to get temperature for %s.", name);
 

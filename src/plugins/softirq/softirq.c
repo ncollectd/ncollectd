@@ -111,7 +111,7 @@ static int softirq_read_data(metric_family_t *fam)
       if (status != 0)
         break;
       metric_label_set(&m, "cpu", cpu_fields[i - 1]);
-      m.value.counter.uinteger = v;
+      m.value.counter.uint64 = v;
       metric_family_metric_append(fam, m);
     } 
   }

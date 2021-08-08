@@ -852,11 +852,11 @@ static int ntp_read_kernel(void)
         offset_loop, freq_loop, offset_error);
 
   metric_family_metric_append(&fams[FAM_NTPD_KERNEL_FREQUENCY_OFFSET],
-                              (metric_t){ .value.gauge.real = freq_loop, });
+                              (metric_t){ .value.gauge.float64 = freq_loop, });
   metric_family_metric_append(&fams[FAM_NTPD_KERNEL_OFFSET_LOOP_SECONDS],
-                              (metric_t){ .value.gauge.real = offset_loop, });
+                              (metric_t){ .value.gauge.float64 = offset_loop, });
   metric_family_metric_append(&fams[FAM_NTPD_KERNEL_OFFSET_ERROR_SECONDS],
-                              (metric_t){ .value.gauge.real = offset_error, });
+                              (metric_t){ .value.gauge.float64 = offset_error, });
 
   free(ik);
   return 0;
@@ -936,20 +936,20 @@ static int ntp_read_peer_summary(void)
 
     value_t value = {0};
    
-    value.gauge.real = ptr->stratum;
+    value.gauge.float64 = ptr->stratum;
     metric_family_append(&fams[FAM_NTPD_PEER_STRATUM], "peer", peername, value, NULL);
 
-    value.gauge.real = ptr->reach & 1 ? ntpd_read_fp(ptr->dispersion) : NAN;
+    value.gauge.float64 = ptr->reach & 1 ? ntpd_read_fp(ptr->dispersion) : NAN;
     metric_family_append(&fams[FAM_NTPD_PEER_DISPERSION_SECONDS], "peer", peername, value, NULL);
 
     /* not the system clock (offset will always be zero) */
     if (!(is_refclock && refclock_id == 1)) {
-      value.gauge.real = ptr->reach & 1 ? offset : NAN;
+      value.gauge.float64 = ptr->reach & 1 ? offset : NAN;
       metric_family_append(&fams[FAM_NTPD_PEER_OFFSET_SECONDS], "peer", peername, value, NULL);
     }
     /* not a reference clock */
     if (!is_refclock) {  
-      value.gauge.real = ptr->reach & 1 ? ntpd_read_fp(ptr->delay) : NAN;
+      value.gauge.float64 = ptr->reach & 1 ? ntpd_read_fp(ptr->delay) : NAN;
       metric_family_append(&fams[FAM_NTPD_PEER_DELAY_SECONDS], "peer", peername, value, NULL);
     }
   }

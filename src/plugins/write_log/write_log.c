@@ -98,23 +98,23 @@ static int wl_write_openmetrics(metric_family_t const *fam)
 
     switch (fam->type) {
     case METRIC_TYPE_UNKNOWN:
-      if (m->value.unknown.type == UNKNOWN_REAL) {
-        status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.unknown.real);
-      } else if (m->value.unknown.type == UNKNOWN_INTEGER) {
-        status = status | strbuf_printf(&buf, " %" PRIi64, m->value.unknown.integer);
+      if (m->value.unknown.type == UNKNOWN_FLOAT64) {
+        status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.unknown.float64);
+      } else if (m->value.unknown.type == UNKNOWN_INT64) {
+        status = status | strbuf_printf(&buf, " %" PRIi64, m->value.unknown.int64);
       }
     case METRIC_TYPE_GAUGE:
-      if (m->value.gauge.type == GAUGE_REAL) {
-        status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.gauge.real);
-      } else if (m->value.gauge.type == GAUGE_INTEGER) {
-        status = status | strbuf_printf(&buf, " %" PRIi64, m->value.gauge.integer);
+      if (m->value.gauge.type == GAUGE_FLOAT64) {
+        status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.gauge.float64);
+      } else if (m->value.gauge.type == GAUGE_INT64) {
+        status = status | strbuf_printf(&buf, " %" PRIi64, m->value.gauge.int64);
       }
       break;
     case METRIC_TYPE_COUNTER:
-      if (m->value.counter.type == COUNTER_UINTEGER) {
-        status = status | strbuf_printf(&buf, " " COUNTER_FORMAT, m->value.counter.uinteger);
-      } else if (m->value.counter.type == COUNTER_REAL) {
-        status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.counter.real);
+      if (m->value.counter.type == COUNTER_UINT64) {
+        status = status | strbuf_printf(&buf, " " COUNTER_FORMAT, m->value.counter.uint64);
+      } else if (m->value.counter.type == COUNTER_FLOAT64) {
+        status = status | strbuf_printf(&buf, " " GAUGE_FORMAT, m->value.counter.float64);
       }
       break;
     case METRIC_TYPE_STATE_SET:

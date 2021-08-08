@@ -88,7 +88,7 @@ static void ethstat_submit_value(const char *device, const char *name, uint64_t 
     .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_append(&fam, "device", device, (value_t){.counter.uinteger = value}, NULL);
+  metric_family_append(&fam, "device", device, (value_t){.counter.uint64 = value}, NULL);
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0)

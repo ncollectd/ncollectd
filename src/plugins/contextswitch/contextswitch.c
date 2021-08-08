@@ -51,7 +51,7 @@ static void cs_submit(uint64_t context_switches)
     .type = METRIC_TYPE_COUNTER,
   };
 
-  metric_family_metric_append(&fam, (metric_t){ .value.counter.uinteger = context_switches, });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter.uint64 = context_switches, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0)

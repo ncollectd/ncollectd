@@ -221,15 +221,15 @@ static int cipvs_read(void)
 
     struct ip_vs_stats_user sstats = se->stats;
 
-    m.value.counter.uinteger = sstats.conns;
+    m.value.counter.uint64 = sstats.conns;
     metric_family_metric_append(&fams[FAM_HOST_IPVS_SERVICE_CONNECTIONS_TOTAL], m);
-    m.value.counter.uinteger = sstats.inbytes;
+    m.value.counter.uint64 = sstats.inbytes;
     metric_family_metric_append(&fams[FAM_HOST_IPVS_SERVICE_IN_BYTES_TOTAL], m);
-    m.value.counter.uinteger = sstats.outbytes;
+    m.value.counter.uint64 = sstats.outbytes;
     metric_family_metric_append(&fams[FAM_HOST_IPVS_SERVICE_OUT_BYTES_TOTAL], m);
-    m.value.counter.uinteger = sstats.inpkts;
+    m.value.counter.uint64 = sstats.inpkts;
     metric_family_metric_append(&fams[FAM_HOST_IPVS_SERVICE_IN_PACKETS_TOTAL], m);
-    m.value.counter.uinteger = sstats.outpkts;
+    m.value.counter.uint64 = sstats.outpkts;
     metric_family_metric_append(&fams[FAM_HOST_IPVS_SERVICE_OUT_PACKETS_TOTAL], m);
 
     struct ip_vs_get_dests *dests = ipvs_get_dests(se);
@@ -247,24 +247,24 @@ static int cipvs_read(void)
       ssnprintf(buffer, sizeof(buffer), "%u", ntohs(de->port));
       metric_label_set(&m, "rport", buffer);
 
-      m.value.gauge.real = de->activeconns;
+      m.value.gauge.float64 = de->activeconns;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_ACTIVE_CONNECTIONS], m);
-      m.value.gauge.real = de->inactconns;
+      m.value.gauge.float64 = de->inactconns;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_INACTIVE_CONNECTIONS], m);
-      m.value.gauge.real = de->persistconns;
+      m.value.gauge.float64 = de->persistconns;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_PERSISTENT_CONNECTIONS], m);
 
       struct ip_vs_stats_user dstats = de->stats;
 
-      m.value.counter.uinteger = dstats.conns;
+      m.value.counter.uint64 = dstats.conns;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_CONNECTIONS_TOTAL], m);
-      m.value.counter.uinteger = dstats.inbytes;
+      m.value.counter.uint64 = dstats.inbytes;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_IN_BYTES_TOTAL], m);
-      m.value.counter.uinteger = dstats.outbytes;
+      m.value.counter.uint64 = dstats.outbytes;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_OUT_BYTES_TOTAL], m);
-      m.value.counter.uinteger = dstats.inpkts;
+      m.value.counter.uint64 = dstats.inpkts;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_IN_PACKETS_TOTAL], m);
-      m.value.counter.uinteger = dstats.outpkts;
+      m.value.counter.uint64 = dstats.outpkts;
       metric_family_metric_append(&fams[FAM_HOST_IPVS_DESTINATION_OUT_PACKETS_TOTAL], m);
     }
 

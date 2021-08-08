@@ -225,14 +225,14 @@ static void swap_submit_usage(char *device, /* {{{ */
 
   if (values_absolute) {
     if (fam_other != NULL) {
-      m.value.gauge.real = other;
+      m.value.gauge.float64 = other;
       metric_family_metric_append(fam_other, m);
     }
 
-    m.value.gauge.real = used;
+    m.value.gauge.float64 = used;
     metric_family_metric_append(fam_used, m);
 
-    m.value.gauge.real = free;
+    m.value.gauge.float64 = free;
     metric_family_metric_append(fam_free, m);
   }
 
@@ -240,14 +240,14 @@ static void swap_submit_usage(char *device, /* {{{ */
     double total = used + free;
     if (fam_other_pct != NULL) {
       total += other;
-      m.value.gauge.real = 100.0 * other / total;
+      m.value.gauge.float64 = 100.0 * other / total;
       metric_family_metric_append(fam_other_pct, m);
     }
 
-    m.value.gauge.real = 100.0 * used / total;
+    m.value.gauge.float64 = 100.0 * used / total;
     metric_family_metric_append(fam_used_pct, m);
 
-    m.value.gauge.real = 100.0 * free / total;
+    m.value.gauge.float64 = 100.0 * free / total;
     metric_family_metric_append(fam_free_pct, m);
   }
 
@@ -259,10 +259,10 @@ static void swap_submit_io(metric_family_t *fam_in, uint64_t in,
                            metric_family_t *fam_out, uint64_t out)
 {
   metric_family_metric_append(fam_in, (metric_t){
-                                          .value.counter.uinteger = in,
+                                          .value.counter.uint64 = in,
                                       });
   metric_family_metric_append(fam_out, (metric_t){
-                                           .value.counter.uinteger = out,
+                                           .value.counter.uint64 = out,
                                        });
 }
 #endif

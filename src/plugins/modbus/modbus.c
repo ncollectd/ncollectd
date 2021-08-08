@@ -433,9 +433,9 @@ static int mb_init_connection(mb_host_t *host) /* {{{ */
 #define CAST_TO_VALUE_T(d, vt, raw, scale, shift)                              \
   do {                                                                         \
     if ((d)->type == METRIC_TYPE_COUNTER)                                      \
-      (vt).counter.uinteger = (((uint64_t)(raw)*scale) + shift);                       \
+      (vt).counter.uint64 = (((uint64_t)(raw)*scale) + shift);                       \
     else                                                                       \
-      (vt).gauge.real = (((double)(raw)*scale) + shift);                       \
+      (vt).gauge.float64 = (((double)(raw)*scale) + shift);                       \
   } while (0)
 
 static int mb_read_data(mb_host_t *host, mb_slave_t *slave, /* {{{ */

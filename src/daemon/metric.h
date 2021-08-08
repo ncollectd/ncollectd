@@ -45,41 +45,41 @@ typedef enum {
 } metric_type_t;
 
 typedef enum {
-  UNKNOWN_REAL    = 0,
-  UNKNOWN_INTEGER = 1,
+  UNKNOWN_FLOAT64 = 0,
+  UNKNOWN_INT64   = 1,
 } unknown_type_t;
 
 typedef struct {
   unknown_type_t type;
   union {
-    double real;
-    int64_t integer;
+    double float64; 
+    int64_t int64;
   };
 } unknown_t;
 
 typedef enum {
-  GAUGE_REAL    = 0,
-  GAUGE_INTEGER = 1,
+  GAUGE_FLOAT64 = 0,
+  GAUGE_INT64   = 1,
 } gauge_type_t;
 
 typedef struct {
   gauge_type_t type;
   union {
-    double real;
-    int64_t integer;
+    double float64;
+    int64_t int64;
   };
 } gauge_t;
 
 typedef enum {
-  COUNTER_UINTEGER = 0,
-  COUNTER_REAL     = 1,
+  COUNTER_UINT64  = 0,
+  COUNTER_FLOAT64 = 1,
 } counter_type_t;
 
 typedef struct {
   counter_type_t type;
   union {
-    double real;
-    uint64_t uinteger;
+    double float64;
+    uint64_t uint64;
   };
   cdtime_t created;
 } counter_t;

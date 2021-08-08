@@ -136,16 +136,16 @@ static int format_typed_value(yajl_gen gen, metric_t const *m,
 
   switch (m->family->type) {
   case METRIC_TYPE_UNKNOWN:
-    if (m->value.unknown.type == UNKNOWN_REAL) {
-      real = m->value.unknown.real;
+    if (m->value.unknown.type == UNKNOWN_FLOAT64) {
+      real = m->value.unknown.float64;
     } else {
-      real = (double)m->value.unknown.integer;
+      real = (double)m->value.unknown.int64;
     }
   case METRIC_TYPE_GAUGE: {
-    if (m->value.gauge.type == GAUGE_REAL) {
-      real = m->value.gauge.real;
+    if (m->value.gauge.type == GAUGE_FLOAT64) {
+      real = m->value.gauge.float64;
     } else {
-      real = (double)m->value.gauge.integer;
+      real = (double)m->value.gauge.int64;
     }
 
     int status = json_string(gen, "doubleValue");
@@ -161,8 +161,8 @@ static int format_typed_value(yajl_gen gen, metric_t const *m,
   }
   case METRIC_TYPE_COUNTER: {
     /* Counter resets are handled in format_time_series(). */
-    assert(m->value.counter.uinteger >= (uint64_t)start_value);
-    uint64_t diff = m->value.counter.uinteger - (uint64_t)start_value; // FIXME
+    assert(m->value.counter.uint64 >= (uint64_t)start_value);
+    uint64_t diff = m->value.counter.uint64 - (uint64_t)start_value; // FIXME
     ssnprintf(integer, sizeof(integer), "%" PRIu64, diff);
     break;
   }
@@ -303,12 +303,12 @@ static int read_cumulative_state(metric_t const *m, cdtime_t *ret_start_time,
   int status =
       uc_meta_data_get_signed_int(m, start_value_key, ret_start_value) ||
       uc_meta_data_get_unsigned_int(m, start_time_key, ret_start_time);
-  bool is_reset = *ret_start_value > m->value.counter.uinteger; // FIXME
+  bool is_reset = *ret_start_value > m->value.counter.uint64; // FIXME
   if ((status == 0) && !is_reset) {
     return 0;
   }
 
-  *ret_start_value = m->value.counter.uinteger; // FIXME
+  *ret_start_value = m->value.counter.uint64; // FIXME
   *ret_start_time = m->time;
 
   return uc_meta_data_add_signed_int(m, start_value_key, *ret_start_value) ||
@@ -418,18 +418,18 @@ static int format_time_series(yajl_gen gen, metric_t const *m,
   }
 
   if  (type == METRIC_TYPE_UNKNOWN) {
-    double d = (double)m->value.unknown.real; // FIXME
+    double d = (double)m->value.unknown.float64; // FIXME
     if (isnan(d) || isinf(d)) {
       return EAGAIN;
     }
   } else if (type == METRIC_TYPE_GAUGE) {
-    double d = (double)m->value.gauge.real; // FIXME
+    double d = (double)m->value.gauge.float64; // FIXME
     if (isnan(d) || isinf(d)) {
       return EAGAIN;
     }
   } else if (type == METRIC_TYPE_COUNTER) {
     uint64_t sv = (uint64_t)start_value;
-    if (m->value.counter.uinteger < sv) { // FIXME
+    if (m->value.counter.uint64 < sv) { // FIXME
       return EAGAIN;
     }
   }

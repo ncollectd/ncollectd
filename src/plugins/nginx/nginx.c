@@ -268,35 +268,35 @@ static int nginx_read_host(user_data_t *user_data)
     if (fields_num == 3) {
       if ((strcmp(fields[0], "Active") == 0) &&
           (strcmp(fields[1], "connections:") == 0)) {
-        m.value.gauge.real = (double)atoll(fields[2]);
+        m.value.gauge.float64 = (double)atoll(fields[2]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_ACTIVE], m);
       } else if ((atoll(fields[0]) != 0) && (atoll(fields[1]) != 0) &&
                  (atoll(fields[2]) != 0)) {
-        m.value.counter.uinteger = (uint64_t)atoll(fields[0]);
+        m.value.counter.uint64 = (uint64_t)atoll(fields[0]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_ACCEPTED], m);
         /* TODO: The legacy metric "handled", which is the sum of "accepted" and
          * "failed", is reported for backwards compatibility only. Remove in the
          * next major version. */
-        m.value.counter.uinteger = (uint64_t)atoll(fields[1]);
+        m.value.counter.uint64 = (uint64_t)atoll(fields[1]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_HANDLED], m);
 
-        m.value.counter.uinteger = (uint64_t)(atoll(fields[0]) - atoll(fields[1]));
+        m.value.counter.uint64 = (uint64_t)(atoll(fields[0]) - atoll(fields[1]));
         metric_family_metric_append(&fams[FAM_NGINX_CONN_FAILED], m);
 
-        m.value.counter.uinteger = (uint64_t)atoll(fields[2]);
+        m.value.counter.uint64 = (uint64_t)atoll(fields[2]);
         metric_family_metric_append(&fams[FAM_NGINX_HTTP_REQUESTS], m);
       }
     } else if (fields_num == 6) {
       if ((strcmp(fields[0], "Reading:") == 0) &&
           (strcmp(fields[2], "Writing:") == 0) &&
           (strcmp(fields[4], "Waiting:") == 0)) {
-        m.value.gauge.real = (double)atoll(fields[1]);
+        m.value.gauge.float64 = (double)atoll(fields[1]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_READING], m);
 
-        m.value.gauge.real = (double)atoll(fields[3]);
+        m.value.gauge.float64 = (double)atoll(fields[3]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_WRITING], m);
 
-        m.value.gauge.real = (double)atoll(fields[5]);
+        m.value.gauge.float64 = (double)atoll(fields[5]);
         metric_family_metric_append(&fams[FAM_NGINX_CONN_WAITING], m);
       }
     }

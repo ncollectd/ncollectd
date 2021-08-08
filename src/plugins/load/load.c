@@ -82,9 +82,9 @@ static void load_submit(double snum, double mnum, double lnum)
     },
   };
 
-  metric_family_metric_append(&fams[FAM_LOAD_1MIN], (metric_t){.value.gauge.real = snum,});
-  metric_family_metric_append(&fams[FAM_LOAD_5MIN], (metric_t){.value.gauge.real = mnum,});
-  metric_family_metric_append(&fams[FAM_LOAD_15MIN], (metric_t){.value.gauge.real = lnum,});
+  metric_family_metric_append(&fams[FAM_LOAD_1MIN], (metric_t){.value.gauge.float64 = snum,});
+  metric_family_metric_append(&fams[FAM_LOAD_5MIN], (metric_t){.value.gauge.float64 = mnum,});
+  metric_family_metric_append(&fams[FAM_LOAD_15MIN], (metric_t){.value.gauge.float64 = lnum,});
 
   for (size_t i=0; i < FAM_LOAD_MAX; i++) {
     int status = plugin_dispatch_metric_family(&fams[i]);

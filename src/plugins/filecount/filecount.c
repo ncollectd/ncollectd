@@ -81,7 +81,7 @@ static void fc_submit_dir(char *name, metric_t *tmpl, double value)
       .type = METRIC_TYPE_GAUGE,
   };
 
-  metric_family_append(&fam, NULL, NULL, (value_t){.gauge.real = value}, tmpl);
+  metric_family_append(&fam, NULL, NULL, (value_t){.gauge.float64 = value}, tmpl);
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {

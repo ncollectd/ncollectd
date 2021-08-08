@@ -425,33 +425,33 @@ static int write_influxdb_point(char *buffer, int buffer_len, metric_t metric) {
   } else {
     switch (metric.family->type) {
     case METRIC_TYPE_UNKNOWN:
-      if (metric.value.unknown.type == UNKNOWN_REAL) {
-        if (!isnan(metric.value.unknown.real)) {
-          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.unknown.real);
+      if (metric.value.unknown.type == UNKNOWN_FLOAT64) {
+        if (!isnan(metric.value.unknown.float64)) {
+          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.unknown.float64);
           have_values = true;
         }
-      } else if (metric.value.unknown.type == UNKNOWN_INTEGER) {
-        BUFFER_ADD("value=%" PRIi64, metric.value.unknown.integer);
+      } else if (metric.value.unknown.type == UNKNOWN_INT64) {
+        BUFFER_ADD("value=%" PRIi64, metric.value.unknown.int64);
         have_values = true;
       }
     case METRIC_TYPE_GAUGE:
-      if (metric.value.gauge.type == GAUGE_REAL) {
-        if (!isnan(metric.value.gauge.real)) {
-          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.gauge.real);
+      if (metric.value.gauge.type == GAUGE_FLOAT64) {
+        if (!isnan(metric.value.gauge.float64)) {
+          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.gauge.float64);
           have_values = true;
         }
-      } else if (metric.value.gauge.type == GAUGE_INTEGER) {
-        BUFFER_ADD("value=%" PRIi64, metric.value.gauge.integer);
+      } else if (metric.value.gauge.type == GAUGE_INT64) {
+        BUFFER_ADD("value=%" PRIi64, metric.value.gauge.int64);
         have_values = true;
       }
       break;
     case METRIC_TYPE_COUNTER:
-      if (metric.value.counter.type == COUNTER_UINTEGER) {
-        BUFFER_ADD("value=" COUNTER_FORMAT, metric.value.counter.uinteger);
+      if (metric.value.counter.type == COUNTER_UINT64) {
+        BUFFER_ADD("value=" COUNTER_FORMAT, metric.value.counter.uint64);
         have_values = true;
-      } else if (metric.value.counter.type == COUNTER_REAL) {
-        if (!isnan(metric.value.counter.real)) {
-          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.counter.real);
+      } else if (metric.value.counter.type == COUNTER_FLOAT64) {
+        if (!isnan(metric.value.counter.float64)) {
+          BUFFER_ADD("value=" GAUGE_FORMAT, metric.value.counter.float64);
           have_values = true;
         }
       }

@@ -576,7 +576,7 @@ static int total_rate(double *sum_by_state, size_t state, uint64_t d,
 {
   double rate = NAN;
   int status =
-      value_to_rate(&rate, (value_t){.counter.uinteger = d}, now, conv);
+      value_to_rate(&rate, (value_t){.counter.uint64 = d}, now, conv);
   if (status != 0)
     return status;
 
@@ -649,12 +649,12 @@ static void cpu_commit_metric(metric_family_t *fam, metric_t *m,
   RATE_ADD(sum, rates[COLLECTD_CPU_STATE_IDLE]);
 
   if (!report_by_state) {
-    m->value.gauge.real = 100.0 * rates[COLLECTD_CPU_STATE_ACTIVE] / sum;
+    m->value.gauge.float64 = 100.0 * rates[COLLECTD_CPU_STATE_ACTIVE] / sum;
     metric_label_set(m, "state", cpu_state_names[COLLECTD_CPU_STATE_ACTIVE]);
     metric_family_metric_append(fam, *m);
   } else {
     for (size_t state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
-      m->value.gauge.real = 100.0 * rates[state] / sum;
+      m->value.gauge.float64 = 100.0 * rates[state] / sum;
       metric_label_set(m, "state", cpu_state_names[state]);
       metric_family_metric_append(fam, *m);
     }
@@ -717,7 +717,7 @@ static void cpu_commit_num_cpu(double value) /* {{{ */
       .name = "host_cpu_count",
       .type = METRIC_TYPE_GAUGE,
   };
-  metric_family_metric_append(&fam, (metric_t){ .value.gauge.real = value, });
+  metric_family_metric_append(&fam, (metric_t){ .value.gauge.float64 = value, });
 
   int status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {
@@ -762,7 +762,7 @@ static void cpu_commit_all_without_aggregation(void)
 
   for (size_t state = 0; state < COLLECTD_CPU_STATE_ACTIVE; state++) {
     metric_label_set(&m, "state", cpu_state_names[state]);
-    m.value.counter.uinteger = values[state];
+    m.value.counter.uint64 = values[state];
     metric_family_metric_append(&fam, m);
   }
 
@@ -807,7 +807,7 @@ static void cpu_commit_without_aggregation(void)
       if (report_topology)
         cpu_topology_set_labels(cpu_num, &m);
 #endif
-      m.value.counter.uinteger = s->conv.last_value;
+      m.value.counter.uint64 = s->conv.last_value;
 
       metric_family_metric_append(&fam, m);
     }

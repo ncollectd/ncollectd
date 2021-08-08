@@ -895,7 +895,7 @@ static void ps_submit_forks(uint64_t value)
   };
 
   metric_family_metric_append(&fam, (metric_t){
-                                        .value.counter.uinteger = value,
+                                        .value.counter.uint64 = value,
                                     });
 
   int status = plugin_dispatch_metric_family(&fam);
@@ -918,7 +918,7 @@ static void ps_submit_state(double *proc_state)
 
   for (size_t i = 0; i < PROC_STATE_MAX; i++) {
     if (!isnan(proc_state[i])) {
-      m.value.gauge.real = proc_state[i];
+      m.value.gauge.float64 = proc_state[i];
       metric_label_set(&m, "state", proc_state_name[i]);
       metric_family_metric_append(&fam, m);
       metric_reset(&m);
@@ -942,89 +942,89 @@ static void ps_metric_append_proc_list(metric_family_t *fams_proc,
 
   metric_label_set(&m, "name", ps->name);
 
-  m.value.gauge.real = ps->vmem_size;
+  m.value.gauge.float64 = ps->vmem_size;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_SIZE], m);
 
-  m.value.gauge.real = ps->vmem_rss;
+  m.value.gauge.float64 = ps->vmem_rss;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_RSS], m);
 
-  m.value.gauge.real = ps->vmem_data;
+  m.value.gauge.float64 = ps->vmem_data;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_DATA], m);
 
-  m.value.gauge.real = ps->vmem_code;
+  m.value.gauge.float64 = ps->vmem_code;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_CODE], m);
 
-  m.value.gauge.real = ps->stack_size;
+  m.value.gauge.float64 = ps->stack_size;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_STACK], m);
 
-  m.value.counter.uinteger = ps->cpu_user_counter;
+  m.value.counter.uint64 = ps->cpu_user_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_CPU_USER], m);
 
-  m.value.counter.uinteger = ps->cpu_system_counter;
+  m.value.counter.uint64 = ps->cpu_system_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_CPU_SYSTEM], m);
 
-  m.value.gauge.real = ps->num_proc;
+  m.value.gauge.float64 = ps->num_proc;
   metric_family_metric_append(&fams_proc[FAM_PROC_NUM_PROCESSS], m);
 
-  m.value.gauge.real = ps->num_lwp;
+  m.value.gauge.float64 = ps->num_lwp;
   metric_family_metric_append(&fams_proc[FAM_PROC_NUM_THREADS], m);
 
-  m.value.counter.uinteger = ps->vmem_minflt_counter;
+  m.value.counter.uint64 = ps->vmem_minflt_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_MINFLT], m);
 
-  m.value.counter.uinteger = ps->vmem_majflt_counter;
+  m.value.counter.uint64 = ps->vmem_majflt_counter;
   metric_family_metric_append(&fams_proc[FAM_PROC_VMEM_MAJFLT], m);
 
   if (ps->io_rchar != -1) {
-    m.value.counter.uinteger = ps->io_rchar;
+    m.value.counter.uint64 = ps->io_rchar;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_RCHAR], m);
   }
   if (ps->io_wchar != -1) {
-    m.value.counter.uinteger = ps->io_wchar;
+    m.value.counter.uint64 = ps->io_wchar;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_WCHAR], m);
   }
   if (ps->io_syscr != -1) {
-    m.value.counter.uinteger = ps->io_syscr;
+    m.value.counter.uint64 = ps->io_syscr;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_SYSCR], m);
   }
   if (ps->io_syscw != -1) {
-    m.value.counter.uinteger = ps->io_syscw;
+    m.value.counter.uint64 = ps->io_syscw;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_SYSCW], m);
   }
   if (ps->io_diskr != -1) {
-    m.value.counter.uinteger = ps->io_diskr;
+    m.value.counter.uint64 = ps->io_diskr;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_DISKR], m);
   }
   if (ps->io_diskw != -1) {
-    m.value.counter.uinteger = ps->io_diskw;
+    m.value.counter.uint64 = ps->io_diskw;
     metric_family_metric_append(&fams_proc[FAM_PROC_IO_DISKW], m);
   }
   if (ps->num_fd > 0) {
-    m.value.gauge.real = ps->num_fd;
+    m.value.gauge.float64 = ps->num_fd;
     metric_family_metric_append(&fams_proc[FAM_PROC_FILE_HANDLES], m);
   }
   if (ps->num_maps > 0) {
-    m.value.gauge.real = ps->num_maps;
+    m.value.gauge.float64 = ps->num_maps;
     metric_family_metric_append(&fams_proc[FAM_PROC_FILE_HANDLES_MAPPED], m);
   }
   if (ps->cswitch_vol != -1) {
-    m.value.counter.uinteger = ps->cswitch_vol;
+    m.value.counter.uint64 = ps->cswitch_vol;
     metric_family_metric_append(&fams_proc[FAM_PROC_CTX_VOLUNTARY], m);
   }
   if (ps->cswitch_invol != -1) {
-    m.value.counter.uinteger = ps->cswitch_invol;
+    m.value.counter.uint64 = ps->cswitch_invol;
     metric_family_metric_append(&fams_proc[FAM_PROC_CTX_INVOLUNTARY], m);
   }
   if (ps->sched_running != -1) {
-    m.value.counter.uinteger = ps->sched_running;
+    m.value.counter.uint64 = ps->sched_running;
     metric_family_metric_append(&fams_proc[FAM_PROC_SCHED_RUNNING], m);
   }
   if (ps->sched_waiting!= -1) {
-    m.value.counter.uinteger = ps->sched_waiting;
+    m.value.counter.uint64 = ps->sched_waiting;
     metric_family_metric_append(&fams_proc[FAM_PROC_SCHED_WAITING], m);
   }
   if (ps->sched_timeslices!= -1) {
-    m.value.counter.uinteger = ps->sched_timeslices;
+    m.value.counter.uint64 = ps->sched_timeslices;
     metric_family_metric_append(&fams_proc[FAM_PROC_SCHED_TIMESLICES], m);
   }
 
@@ -1033,19 +1033,19 @@ static void ps_metric_append_proc_list(metric_family_t *fams_proc,
   double const delay_factor = 1000000000.0;
 
   if (!isnan(ps->delay_cpu)) {
-    m.value.gauge.real = ps->delay_cpu / delay_factor;
+    m.value.gauge.float64 = ps->delay_cpu / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_CPU], m);
   }
   if (!isnan(ps->delay_blkio)) {
-    m.value.gauge.real = ps->delay_blkio / delay_factor;
+    m.value.gauge.float64 = ps->delay_blkio / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_BLKIO], m);
   }
   if (!isnan(ps->delay_swapin)) {
-    m.value.gauge.real = ps->delay_swapin / delay_factor;
+    m.value.gauge.float64 = ps->delay_swapin / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_SWAPIN], m);
   }
   if (!isnan(ps->delay_freepages)) {
-    m.value.gauge.real = ps->delay_freepages / delay_factor;
+    m.value.gauge.float64 = ps->delay_freepages / delay_factor;
     metric_family_metric_append(&fams_proc[FAM_PROC_DELAY_FREEPAGES], m);
   }
 

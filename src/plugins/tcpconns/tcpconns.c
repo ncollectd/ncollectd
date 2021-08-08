@@ -290,7 +290,7 @@ static void conn_submit_all(void)
       metric_t m = {0};
       metric_label_set(&m, "port", "all");
       metric_label_set(&m, "state", tcp_state[i]);
-      m.value.gauge.real = count_total[i];
+      m.value.gauge.float64 = count_total[i];
       metric_family_metric_append(&fam, m);
     }
   }
@@ -305,7 +305,7 @@ static void conn_submit_all(void)
         metric_t m = {0};
         metric_label_set(&m, "port", port);
         metric_label_set(&m, "state", tcp_state[i]);
-        m.value.gauge.real = pe->count_local[i];
+        m.value.gauge.float64 = pe->count_local[i];
         metric_family_metric_append(&fam, m);
       }
     }
@@ -318,7 +318,7 @@ static void conn_submit_all(void)
         metric_t m = {0};
         metric_label_set(&m, "port", port);
         metric_label_set(&m, "state", tcp_state[i]);
-        m.value.gauge.real = pe->count_remote[i];
+        m.value.gauge.float64 = pe->count_remote[i];
         metric_family_metric_append(&fam, m);
       }
     }

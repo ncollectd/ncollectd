@@ -787,44 +787,44 @@ static int chrony_request_daemon_stats(metric_family_t *fams) {
   metric_t m = {0};
   metric_label_set(&m, "source", DAEMON_NAME);
 
-  m.value.gauge.real = ntohs(chrony_resp.body.tracking.f_stratum);
+  m.value.gauge.float64 = ntohs(chrony_resp.body.tracking.f_stratum);
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_STRATUM], m);
 
-  m.value.gauge.real = time_ref; /* unit: s */
+  m.value.gauge.float64 = time_ref; /* unit: s */
   metric_family_metric_append(&fams[FAM_CHRONY_TIME_REF], m);
 
-  m.value.gauge.real = ntohf(chrony_resp.body.tracking
+  m.value.gauge.float64 = ntohf(chrony_resp.body.tracking
                             .f_current_correction); /* Offset between system
                                                        time and NTP, unit: s */
   metric_family_metric_append(&fams[FAM_CHRONY_TIME_OFFSET_NTP], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       ntohf(chrony_resp.body.tracking
                 .f_last_offset); /* Estimated Offset of the NTP time, unit: s */
   metric_family_metric_append(&fams[FAM_CHRONY_TIME_OFFSET], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       ntohf(chrony_resp.body.tracking
                 .f_rms_offset); /* averaged value of the above, unit: s */
   metric_family_metric_append(&fams[FAM_CHRONY_TIME_OFFSET_RMS], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       ntohf(chrony_resp.body.tracking
                 .f_freq_ppm); /* Frequency error of the local osc, unit: ppm */
   metric_family_metric_append(&fams[FAM_CHRONY_FREQUENCY_ERROR], m);
 
-  m.value.gauge.real = ntohf(chrony_resp.body.tracking.f_skew_ppm);
+  m.value.gauge.float64 = ntohf(chrony_resp.body.tracking.f_skew_ppm);
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_SKEW], m);
 
-  m.value.gauge.real = ntohf(chrony_resp.body.tracking
+  m.value.gauge.float64 = ntohf(chrony_resp.body.tracking
                             .f_root_delay); /* Network latency between local
                                                daemon and the current source */
   metric_family_metric_append(&fams[FAM_CHRONY_ROOT_DELAY], m);
 
-  m.value.gauge.real = ntohf(chrony_resp.body.tracking.f_root_dispersion);
+  m.value.gauge.float64 = ntohf(chrony_resp.body.tracking.f_root_dispersion);
   metric_family_metric_append(&fams[FAM_CHRONY_ROOT_DISPERSION], m);
 
-  m.value.gauge.real = ntohf(chrony_resp.body.tracking.f_last_update_interval);
+  m.value.gauge.float64 = ntohf(chrony_resp.body.tracking.f_last_update_interval);
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_LAST_UPDATE], m);
 
   metric_reset(&m);
@@ -902,27 +902,27 @@ static int chrony_request_source_data(metric_family_t *fams, int p_src_idx,
   metric_t m = {0};
   metric_label_set(&m, "source", src_addr);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       is_reachable ? ntohs(chrony_resp.body.source_data.f_stratum) : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_STRATUM], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       is_reachable ? ntohs(chrony_resp.body.source_data.f_state) : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_STATE], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       is_reachable ? ntohs(chrony_resp.body.source_data.f_mode) : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_MODE], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       is_reachable ? ntohs(chrony_resp.body.source_data.f_reachability) : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_REACHABILITY], m);
 
-  m.value.gauge.real =
+  m.value.gauge.float64 =
       is_reachable ? ntohl(chrony_resp.body.source_data.f_since_sample) : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_LAST_MEAS], m);
 
-  m.value.gauge.real = is_reachable
+  m.value.gauge.float64 = is_reachable
                       ? ntohf(chrony_resp.body.source_data.f_origin_latest_meas)
                       : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_TIME_OFFSET], m);
@@ -981,10 +981,10 @@ static int chrony_request_source_stats(metric_family_t *fams, int p_src_idx,
   metric_t m = {0};
   metric_label_set(&m, "source", src_addr);
 
-  m.value.gauge.real = *p_is_reachable ? skew_ppm : NAN;
+  m.value.gauge.float64 = *p_is_reachable ? skew_ppm : NAN;
   metric_family_metric_append(&fams[FAM_CHRONY_CLOCK_SKEW], m);
 
-  m.value.gauge.real = *p_is_reachable ? frequency_error : NAN; /* unit: ppm */
+  m.value.gauge.float64 = *p_is_reachable ? frequency_error : NAN; /* unit: ppm */
   metric_family_metric_append(&fams[FAM_CHRONY_FREQUENCY_ERROR], m);
 
   metric_reset(&m);

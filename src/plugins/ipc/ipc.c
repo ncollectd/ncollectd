@@ -121,8 +121,8 @@ static int ipc_read_sem(metric_family_t *fams)
     return -1;
   }
 
-  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS], (metric_t){ .value.gauge.real = seminfo.semusz, });
-  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES], (metric_t){ .value.gauge.real = seminfo.semaem, });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS], (metric_t){ .value.gauge.float64 = seminfo.semusz, });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES], (metric_t){ .value.gauge.float64 = seminfo.semaem, });
 
   return 0;
 }
@@ -140,10 +140,10 @@ static int ipc_read_shm(metric_family_t *fams)
     return -1;
   }
 
-  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS], (metric_t){ .value.gauge.real = shm_info.used_ids, });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL], (metric_t){ .value.gauge.real = shm_info.shm_tot * pagesize_g, });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_RSS], (metric_t){ .value.gauge.real = shm_info.shm_rss * pagesize_g, });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_SWAPPED], (metric_t){ .value.gauge.real = shm_info.shm_swp * pagesize_g, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS], (metric_t){ .value.gauge.float64 = shm_info.used_ids, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL], (metric_t){ .value.gauge.float64 = shm_info.shm_tot * pagesize_g, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_RSS], (metric_t){ .value.gauge.float64 = shm_info.shm_rss * pagesize_g, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_SWAPPED], (metric_t){ .value.gauge.float64 = shm_info.shm_swp * pagesize_g, });
 
   return 0;
 }
@@ -157,9 +157,9 @@ static int ipc_read_msg(metric_family_t *fams)
     return -1;
   }
 
-  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES], (metric_t){ .value.gauge.real = msginfo.msgpool,});
-  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES], (metric_t){ .value.gauge.real = msginfo.msgmap,});
-  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES], (metric_t){ .value.gauge.real = msginfo.msgtql,});
+  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES], (metric_t){ .value.gauge.float64 = msginfo.msgpool,});
+  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES], (metric_t){ .value.gauge.float64 = msginfo.msgmap,});
+  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES], (metric_t){ .value.gauge.float64 = msginfo.msgtql,});
 
   return 0;
 }
@@ -227,8 +227,8 @@ static int ipc_read_sem(metric_family_t *fams)
   }
   free(ipcinfo_sem);
 
-  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS], (metric_t){ .value.gauge.real = sem_nsems, });
-  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES], (metric_t){ .value.gauge.real = sems, });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_ARRAYS], (metric_t){ .value.gauge.float64 = sem_nsems, });
+  metric_family_metric_append(&fams[FAM_IPC_SEM_SEMAPHORES], (metric_t){ .value.gauge.float64 = sems, });
 
   return 0;
 }
@@ -252,8 +252,8 @@ static int ipc_read_shm(metric_family_t *fams)
   }
   free(ipcinfo_shm);
 
-  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS], (metric_t){ .value.gauge.real = shm_segments, });
-  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL], (metric_t){ .value.gauge.real = shm_bytes, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_SEGMENTS], (metric_t){ .value.gauge.float64 = shm_segments, });
+  metric_family_metric_append(&fams[FAM_IPC_SHM_TOTAL], (metric_t){ .value.gauge.float64 = shm_bytes, });
 
   return 0;
 }
@@ -278,9 +278,9 @@ static int ipc_read_msg(metric_family_t *fams)
   }
   free(ipcinfo_msg);
 
-  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES], (metric_t){ .value.gauge.real = msg_alloc_queues, });
-  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES], (metric_t){ .value.gauge.real = msg_qnum, });
-  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES], (metric_t){ .value.gauge.real = msg_used_space, });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_QUEUES], (metric_t){ .value.gauge.float64 = msg_alloc_queues, });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_MESSAGES], (metric_t){ .value.gauge.float64 = msg_qnum, });
+  metric_family_metric_append(&fams[FAM_IPC_MSG_BYTES], (metric_t){ .value.gauge.float64 = msg_used_space, });
 
   return 0;
 }

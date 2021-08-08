@@ -52,7 +52,7 @@ static int arp_read(void)
     int status = c_avl_get(tree, device, (void *)&arp_device);
     if (status == 0) {
       assert(arp_device != NULL);
-      arp_device->num.gauge.real++;
+      arp_device->num.gauge.float64++;
       continue;
     }
 
@@ -62,7 +62,7 @@ static int arp_read(void)
       // FIXME break
     }
 
-    arp_device->num.gauge.real = 1;
+    arp_device->num.gauge.float64 = 1;
     memcpy(arp_device->device, device, len+1);
     status = c_avl_insert(tree, arp_device->device, arp_device);
     if (status != 0) { 

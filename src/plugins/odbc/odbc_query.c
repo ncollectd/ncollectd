@@ -235,7 +235,7 @@ static int udb_result_submit(udb_result_t *r, /* {{{ */
       errno = EINVAL;
       ret = -1;
     }
-    m.value.gauge.real = value;
+    m.value.gauge.float64 = value;
   } else if (fam.type == METRIC_TYPE_COUNTER) {
     uint64_t value;
     if (0 != parse_uinteger(value_str, &value)) {
@@ -243,7 +243,7 @@ static int udb_result_submit(udb_result_t *r, /* {{{ */
       errno = EINVAL;
       ret = -1;
     }
-    m.value.counter.uinteger = value;
+    m.value.counter.uint64 = value;
   }
 
   if (ret == 0) {

@@ -149,10 +149,10 @@ static int uc_insert(metric_t const *m, char const *key) {
   case METRIC_TYPE_UNKNOWN:
     break;
   case METRIC_TYPE_GAUGE:
-    if (m->value.gauge.type == GAUGE_REAL) {
-      ce->values_gauge = m->value.gauge.real;
+    if (m->value.gauge.type == GAUGE_FLOAT64) {
+      ce->values_gauge = m->value.gauge.float64;
     } else {
-      ce->values_gauge = (double) m->value.gauge.integer;
+      ce->values_gauge = (double) m->value.gauge.int64;
     }
     ce->values_raw = typed_value_create(m->value, METRIC_TYPE_GAUGE);
     ce->distribution_increase = NULL;
@@ -361,7 +361,7 @@ static int uc_update_metric(metric_t const *m) {
 
   switch (m->family->type) {
   case METRIC_TYPE_COUNTER: {
-    uint64_t diff = counter_diff(ce->values_raw.value.counter.uinteger, m->value.counter.uinteger); // FIXME
+    uint64_t diff = counter_diff(ce->values_raw.value.counter.uint64, m->value.counter.uint64); // FIXME
     ce->values_gauge = ((double)diff) / (CDTIME_T_TO_DOUBLE(m->time - ce->last_time));
     ce->values_raw.value.counter = m->value.counter;
     break;
@@ -370,10 +370,10 @@ static int uc_update_metric(metric_t const *m) {
   case METRIC_TYPE_UNKNOWN:
   case METRIC_TYPE_GAUGE:
     ce->values_raw.value.gauge = m->value.gauge;
-    if (m->value.gauge.type == GAUGE_REAL) {
-      ce->values_gauge = m->value.gauge.real;
+    if (m->value.gauge.type == GAUGE_FLOAT64) {
+      ce->values_gauge = m->value.gauge.float64;
     } else {
-      ce->values_gauge = (double)m->value.gauge.integer;
+      ce->values_gauge = (double)m->value.gauge.int64;
     }
     break;
 

@@ -288,25 +288,25 @@ static int df_read(void)
     metric_label_set(&m, "mountpoint", mnt_ptr->dir);
 
     if (values_absolute) {
-      m.value.gauge.real = (double)(blk_free * blocksize);
+      m.value.gauge.float64 = (double)(blk_free * blocksize);
       metric_family_metric_append(&fam_fs_free, m);
 
-      m.value.gauge.real = (double)(blk_reserved * blocksize);
+      m.value.gauge.float64 = (double)(blk_reserved * blocksize);
       metric_family_metric_append(&fam_fs_reserved, m);
 
-      m.value.gauge.real = (double)(blk_used * blocksize);
+      m.value.gauge.float64 = (double)(blk_used * blocksize);
       metric_family_metric_append(&fam_fs_used, m);
     }
 
     if (values_percentage) {
       if (statbuf.f_blocks > 0) {
-        m.value.gauge.real = (double)((float_t)(blk_free) / statbuf.f_blocks * 100);
+        m.value.gauge.float64 = (double)((float_t)(blk_free) / statbuf.f_blocks * 100);
         metric_family_metric_append(&fam_fs_free_pct, m);
 
-        m.value.gauge.real = (double)((float_t)(blk_reserved) / statbuf.f_blocks * 100);
+        m.value.gauge.float64 = (double)((float_t)(blk_reserved) / statbuf.f_blocks * 100);
         metric_family_metric_append(&fam_fs_reserved_pct, m);
 
-        m.value.gauge.real = (double)((float_t)(blk_used) / statbuf.f_blocks * 100);
+        m.value.gauge.float64 = (double)((float_t)(blk_used) / statbuf.f_blocks * 100);
         metric_family_metric_append(&fam_fs_used_pct, m);
       } else {
         metric_reset(&m);
@@ -333,13 +333,13 @@ static int df_read(void)
 
       if (values_percentage) {
         if (statbuf.f_files > 0) {
-          m.value.gauge.real = (double)((float_t)(inode_free) / statbuf.f_files * 100);
+          m.value.gauge.float64 = (double)((float_t)(inode_free) / statbuf.f_files * 100);
           metric_family_metric_append(&fam_fs_inodes_free_pct, m);
 
-          m.value.gauge.real = (double)((float_t)(inode_reserved) / statbuf.f_files * 100);
+          m.value.gauge.float64 = (double)((float_t)(inode_reserved) / statbuf.f_files * 100);
           metric_family_metric_append(&fam_fs_inodes_reserved_pct, m);
 
-          m.value.gauge.real = (double)((float_t)(inode_used) / statbuf.f_files * 100);
+          m.value.gauge.float64 = (double)((float_t)(inode_used) / statbuf.f_files * 100);
           metric_family_metric_append(&fam_fs_inodes_used_pct, m);
         } else {
           metric_reset(&m);
@@ -348,13 +348,13 @@ static int df_read(void)
         }
       }
       if (values_absolute) {
-        m.value.gauge.real = (double)inode_free;
+        m.value.gauge.float64 = (double)inode_free;
         metric_family_metric_append(&fam_fs_inodes_free, m);
 
-        m.value.gauge.real = (double)inode_reserved;
+        m.value.gauge.float64 = (double)inode_reserved;
         metric_family_metric_append(&fam_fs_inodes_reserved, m);
 
-        m.value.gauge.real = (double)inode_used;
+        m.value.gauge.float64 = (double)inode_used;
         metric_family_metric_append(&fam_fs_inodes_used, m);
       }
     }

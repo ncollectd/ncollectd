@@ -139,13 +139,13 @@ static int nfs_read(void)
     if (strcmp(fields[0], "rpc") == 0) {
       if (strtouint(fields[1], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFS_RPC_CALLS_TOTAL],
-                                    (metric_t){ .value.counter.uinteger = value });
+                                    (metric_t){ .value.counter.uint64 = value });
       if (strtouint(fields[2], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFS_RPC_RETRANSMISSIONS_TOTAL],
-                                    (metric_t){ .value.counter.uinteger = value });
+                                    (metric_t){ .value.counter.uint64 = value });
       if (strtouint(fields[3], &value) == 0)
         metric_family_metric_append(&fams[FAM_HOST_NFS_RPC_AUTHENTICATION_REFRESHES_TOTAL],
-                                    (metric_t){ .value.counter.uinteger = value });
+                                    (metric_t){ .value.counter.uint64 = value });
     } if (strncmp(fields[0], "proc", strlen("proc")) == 0) {
       const char **procedures_names;
       int procedures_names_num = 0;
@@ -183,7 +183,7 @@ static int nfs_read(void)
       for (size_t i = 0; i < fields_num; i++) {
         if (strtouint(fields[2+i], &value) == 0) {
            metric_family_append(&fams[FAM_HOST_NFS_REQUESTS_TOTAL], 
-                                "method", procedures_names[i], (value_t){.counter.uinteger = value}, &tmpl);
+                                "method", procedures_names[i], (value_t){.counter.uint64 = value}, &tmpl);
         }
       }
 

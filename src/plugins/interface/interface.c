@@ -253,7 +253,7 @@ static int if_read_internal(void)
       }
 
       metric_family_append(metrics[i].fam, "device", device,
-                           (value_t){.counter.uinteger = v}, NULL);
+                           (value_t){.counter.uint64 = v}, NULL);
     }
   }
 
@@ -318,7 +318,7 @@ static int if_read_internal(void)
 
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(metrics); i++) {
       metric_family_append(metrics[i].fam, "device", if_ptr->ifa_name,
-                           (value_t){.counter.uinteger = metrics[i].value}, NULL);
+                           (value_t){.counter.uint64 = metrics[i].value}, NULL);
     }
   }
 
@@ -365,7 +365,7 @@ static int if_read_internal(void)
         continue;
       }
       metric_family_append(metrics[i].fam, "device", iname,
-                           (value_t){.counter.uinteger = (uint64_t)value}, NULL);
+                           (value_t){.counter.uint64 = (uint64_t)value}, NULL);
     }
   }
   /* #endif HAVE_LIBKSTAT */
@@ -380,9 +380,9 @@ static int if_read_internal(void)
     }
 
     metric_family_append(&receive_bytes, "device", ios[i].interface_name,
-                         (value_t){.counter.uinteger = (uint64_t)ios[i].rx}, NULL);
+                         (value_t){.counter.uint64 = (uint64_t)ios[i].rx}, NULL);
     metric_family_append(&transmit_bytes, "device", ios[i].interface_name,
-                         (value_t){.counter.uinteger = (uint64_t)ios[i].tx}, NULL);
+                         (value_t){.counter.uint64 = (uint64_t)ios[i].tx}, NULL);
   }
   /* #endif HAVE_LIBSTATGRAB */
 
@@ -435,7 +435,7 @@ static int if_read_internal(void)
 
     for (size_t j = 0; j < STATIC_ARRAY_SIZE(metrics); j++) {
       metric_family_append(metrics[j].fam, "device", ifstat[i].name,
-                           (value_t){.counter.uinteger = metrics[j].value}, NULL);
+                           (value_t){.counter.uint64 = metrics[j].value}, NULL);
     }
   }
 

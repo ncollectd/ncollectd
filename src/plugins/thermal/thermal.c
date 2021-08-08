@@ -68,22 +68,22 @@ static int thermal_sysfs_device_read(const char __attribute__((unused)) * dir,
   metric_family_t *fams = user_data;
 
   snprintf(filename, sizeof(filename), "%s/%s/temp", dirname_sysfs, name);
-  if (parse_double_file(filename, &value.gauge.real) == 0) {
-    value.gauge.real /= 1000.0;
+  if (parse_double_file(filename, &value.gauge.float64) == 0) {
+    value.gauge.float64 /= 1000.0;
     metric_family_append(&fams[FAM_THERMAL_ZONE_CELSIUS], "zone", name, value,
                          NULL);
     success = true;
   }
 
   snprintf(filename, sizeof(filename), "%s/%s/cur_state", dirname_sysfs, name);
-  if (parse_double_file(filename, &value.gauge.real) == 0) {
+  if (parse_double_file(filename, &value.gauge.float64) == 0) {
     metric_family_append(&fams[FAM_COOLING_DEVICE_CUR_STATE], "device", name,
                          value, NULL);
     success = true;
   }
 
   snprintf(filename, sizeof(filename), "%s/%s/max_state", dirname_sysfs, name);
-  if (parse_double_file(filename, &value.gauge.real) == 0) {
+  if (parse_double_file(filename, &value.gauge.float64) == 0) {
     metric_family_append(&fams[FAM_COOLING_DEVICE_MAX_STATE], "device", name,
                          value, NULL);
     success = true;
@@ -146,7 +146,7 @@ static int thermal_procfs_device_read(const char __attribute__((unused)) * dir,
 
     if (endptr != data + len && errno == 0) {
       metric_family_append(&fams[FAM_THERMAL_ZONE_CELSIUS], "zone", name,
-                           (value_t){.gauge.real = temp}, NULL);
+                           (value_t){.gauge.float64 = temp}, NULL);
       return 0;
     }
   }

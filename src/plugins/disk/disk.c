@@ -725,7 +725,7 @@ static int disk_read(void)
       m.value.counter.integer = (int64_t)total_duration;
       metric_family_metric_append(&fam_disk_io_weighted_time, m);
 
-      m.value.gauge.real = (double)queue_length;
+      m.value.gauge.float64 = (double)queue_length;
       metric_family_metric_append(&fam_disk_pending_operations, m);
     }
     metric_reset(&m);
@@ -926,46 +926,46 @@ static int disk_read(void)
     metric_label_set(&m, "device", output_name);
 
     if ((ds->read_bytes != 0) || (ds->write_bytes != 0)) {
-      m.value.counter.uinteger = (uint64_t)ds->read_bytes;
+      m.value.counter.uint64 = (uint64_t)ds->read_bytes;
       metric_family_metric_append(&fam_disk_read_bytes, m);
 
-      m.value.counter.uinteger = (uint64_t)ds->write_bytes;
+      m.value.counter.uint64 = (uint64_t)ds->write_bytes;
       metric_family_metric_append(&fam_disk_write_bytes, m);
     }
 
     if ((ds->read_ops != 0) || (ds->write_ops != 0)) {
-      m.value.counter.uinteger = (uint64_t)read_ops;
+      m.value.counter.uint64 = (uint64_t)read_ops;
       metric_family_metric_append(&fam_disk_read_ops, m);
 
-      m.value.counter.uinteger = (uint64_t)write_ops;
+      m.value.counter.uint64 = (uint64_t)write_ops;
       metric_family_metric_append(&fam_disk_write_ops, m);
     }
 
     if ((ds->avg_read_time != 0) || (ds->avg_write_time != 0)) {
-      m.value.counter.uinteger = (uint64_t)ds->avg_read_time;
+      m.value.counter.uint64 = (uint64_t)ds->avg_read_time;
       metric_family_metric_append(&fam_disk_read_time, m);
 
-      m.value.counter.uinteger = (uint64_t)ds->avg_write_time;
+      m.value.counter.uint64 = (uint64_t)ds->avg_write_time;
       metric_family_metric_append(&fam_disk_write_time, m);
     }
 
     if (is_disk) {
       if (ds->has_merged) {
-        m.value.counter.uinteger = (uint64_t)read_merged;
+        m.value.counter.uint64 = (uint64_t)read_merged;
         metric_family_metric_append(&fam_disk_read_merged, m);
 
-        m.value.counter.uinteger = (uint64_t)write_merged;
+        m.value.counter.uint64 = (uint64_t)write_merged;
         metric_family_metric_append(&fam_disk_write_merged, m);
       }
       if (ds->has_in_progress) {
-        m.value.gauge.real = in_progress;
+        m.value.gauge.float64 = in_progress;
         metric_family_metric_append(&fam_disk_pending_operations, m);
       }
       if (ds->has_io_time) {
-        m.value.counter.uinteger = (uint64_t)io_time;
+        m.value.counter.uint64 = (uint64_t)io_time;
         metric_family_metric_append(&fam_disk_io_time, m);
       }
-      m.value.counter.uinteger = (uint64_t)weighted_time;
+      m.value.counter.uint64 = (uint64_t)weighted_time;
       metric_family_metric_append(&fam_disk_io_weighted_time, m);
     } /* if (is_disk) */
 

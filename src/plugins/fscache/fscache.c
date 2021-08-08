@@ -51,9 +51,9 @@ static void fscache_submit(const struct fscache_metric *m, uint64_t value)
   metric_t metric = {0};
 
   if (fam.type == METRIC_TYPE_COUNTER)
-    metric.value.counter.uinteger = value;
+    metric.value.counter.uint64 = value;
   else
-    metric.value.gauge.real = (double)value;
+    metric.value.gauge.float64 = (double)value;
 
   metric_family_metric_append(&fam, metric);
 

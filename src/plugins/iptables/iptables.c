@@ -234,10 +234,10 @@ static int submit6_match(const struct ip6t_entry_match *match,
   metric_label_set(&m, "chain", chain->chain);
   metric_label_set(&m, "rule", rule);
 
-  m.value.counter.uinteger = (uint64_t)entry->counters.bcnt;
+  m.value.counter.uint64 = (uint64_t)entry->counters.bcnt;
   metric_family_metric_append(fam_ip6t_bytes, m);
 
-  m.value.counter.uinteger = (uint64_t)entry->counters.pcnt;
+  m.value.counter.uint64 = (uint64_t)entry->counters.pcnt;
   metric_family_metric_append(fam_ip6t_packets, m);
 
   metric_reset(&m);
@@ -280,10 +280,10 @@ static int submit_match(const struct ipt_entry_match *match,
   metric_label_set(&m, "chain", chain->chain);
   metric_label_set(&m, "rule", rule);
 
-  m.value.counter.uinteger = (uint64_t)entry->counters.bcnt;
+  m.value.counter.uint64 = (uint64_t)entry->counters.bcnt;
   metric_family_metric_append(fam_ipt_bytes, m);
 
-  m.value.counter.uinteger = (uint64_t)entry->counters.pcnt;
+  m.value.counter.uint64 = (uint64_t)entry->counters.pcnt;
   metric_family_metric_append(fam_ipt_packets, m);
 
   metric_reset(&m);

@@ -50,8 +50,8 @@ static void entropy_submit(double available, double poolsize)
     },
   };
 
-  metric_family_metric_append(&fams[0], (metric_t){ .value.gauge.real = available, });
-  metric_family_metric_append(&fams[1], (metric_t){ .value.gauge.real = poolsize, });
+  metric_family_metric_append(&fams[0], (metric_t){ .value.gauge.float64 = available, });
+  metric_family_metric_append(&fams[1], (metric_t){ .value.gauge.float64 = poolsize, });
 
   for (size_t i = 0; i < STATIC_ARRAY_SIZE(fams); i++) {
     int status = plugin_dispatch_metric_family(&fams[i]);

@@ -119,7 +119,7 @@ static int serial_read(void)
         case 't':
           if (strncmp(fields[i], "tx:", 3) == 0) {
             if (strtouint(fields[i] + 3, &value) == 0) {
-              m.value.counter.uinteger = value;
+              m.value.counter.uint64 = value;
               metric_family_metric_append(&fams[FAM_SERIAL_READ], m);
             }
           }
@@ -127,7 +127,7 @@ static int serial_read(void)
         case 'r':
           if (strncmp(fields[i], "rx:", 3) == 0) {
             if (strtouint(fields[i] + 3, &value) == 0) {
-               m.value.counter.uinteger = value;
+               m.value.counter.uint64 = value;
                metric_family_metric_append(&fams[FAM_SERIAL_WRITE], m);
             }
           }
@@ -135,7 +135,7 @@ static int serial_read(void)
         case 'f':
           if (strncmp(fields[i], "fe:", 3) == 0) {
             if (strtouint(fields[i] + 3, &value) == 0) {
-              m.value.counter.uinteger = value;
+              m.value.counter.uint64 = value;
               metric_family_metric_append(&fams[FAM_SERIAL_FRAMING_ERRORS], m);
             }
           }
@@ -143,7 +143,7 @@ static int serial_read(void)
         case 'p':
           if (strncmp(fields[i], "pe:", 3) == 0) {
             if (strtouint(fields[i] + 3, &value) == 0) {
-              m.value.counter.uinteger = value;
+              m.value.counter.uint64 = value;
               metric_family_metric_append(&fams[FAM_SERIAL_PARITY_ERRORS], m);
             }
           }
@@ -151,7 +151,7 @@ static int serial_read(void)
         case 'b':
           if (strncmp(fields[i], "brk:", 4) == 0) {
             if (strtouint(fields[i] + 4, &value) == 0) {
-              m.value.counter.uinteger = value;
+              m.value.counter.uint64 = value;
               metric_family_metric_append(&fams[FAM_SERIAL_BREAK_CONDITIONS], m);
             }
           }
@@ -159,7 +159,7 @@ static int serial_read(void)
         case 'o':
           if (strncmp(fields[i], "oe:", 3) == 0) {
             if (strtouint(fields[i] + 3, &value) == 0) {
-              m.value.counter.uinteger = value;
+              m.value.counter.uint64 = value;
               metric_family_metric_append(&fams[FAM_SERIAL_OVERRUN_ERRORS], m); 
             }
           }

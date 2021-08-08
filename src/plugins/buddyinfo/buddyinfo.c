@@ -107,7 +107,7 @@ static int buddyinfo_read(void)
       ssnprintf(pagesize_kb, sizeof(pagesize_kb), "%d", NUM_OF_KB(pagesize, i - 1));
       metric_label_set(&m, "pagesize_kb", pagesize_kb);
 
-      m.value.gauge.real = atoi(fields[i + 3]);
+      m.value.gauge.float64 = atoi(fields[i + 3]);
       metric_family_metric_append(&fam, m);
     }
   }

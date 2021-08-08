@@ -84,7 +84,7 @@ static int numa_read_node(metric_family_t *fams, int node)
       continue;
 
     metric_t m = {0};
-    m.value.counter.uinteger = v;
+    m.value.counter.uint64 = v;
     snprintf(node_buffer, sizeof(node_buffer), "%i", node);
     metric_label_set(&m, "node", node_buffer);
 

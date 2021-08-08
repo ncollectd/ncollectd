@@ -362,12 +362,12 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields, siz
     double gauge;
     if (parse_double(fields[res->value_from], &gauge) != 0)
       return -1;
-    m.value.gauge.real = gauge;
+    m.value.gauge.float64 = gauge;
   } else if (res->type == METRIC_TYPE_COUNTER) {
     uint64_t counter;
     if (parse_uinteger(fields[res->value_from], &counter) != 0)
       return -1;
-    m.value.counter.uinteger = counter;
+    m.value.counter.uint64 = counter;
   }
 
   metric_family_t fam = {0};

@@ -409,10 +409,10 @@ static int haproxy_read_stat_line(haproxy_t *ha, metric_t *tmpl, char *line)
     value_t value = {0};
     switch (fam->type) {
       case METRIC_TYPE_COUNTER:
-        value.counter.uinteger = (uint64_t)atoll(str);
+        value.counter.uint64 = (uint64_t)atoll(str);
         break;
       case METRIC_TYPE_GAUGE:
-        value.gauge.real = (double)atoll(str);
+        value.gauge.float64 = (double)atoll(str);
         break;
       default:
         continue;
@@ -423,72 +423,72 @@ static int haproxy_read_stat_line(haproxy_t *ha, metric_t *tmpl, char *line)
       case HA_STAT_STATUS:
         switch(ha_type) {
           case HA_TYPE_FRONTEND:
-            value.gauge.real = strncmp("STOP", str, strlen("STOP")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("STOP", str, strlen("STOP")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "DOWN", value, tmpl);
-            value.gauge.real = strncmp("OPEN", str, strlen("OPEN")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("OPEN", str, strlen("OPEN")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "UP", value, tmpl);
             break;
           case HA_TYPE_BACKEND:
-            value.gauge.real = strncmp("DOWN", str, strlen("DOWN")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("DOWN", str, strlen("DOWN")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "DOWN", value, tmpl);
-            value.gauge.real = strncmp("UP", str, strlen("UP")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("UP", str, strlen("UP")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "UP", value, tmpl);
             break;
           case HA_TYPE_SERVER:
-            value.gauge.real = strncmp("DOWN", str, strlen("DOWN")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("DOWN", str, strlen("DOWN")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "DOWN", value, tmpl);
-            value.gauge.real = strncmp("UP", str, strlen("UP")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("UP", str, strlen("UP")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "UP", value, tmpl);
-            value.gauge.real = strncmp("MAINT", str, strlen("MAINT")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("MAINT", str, strlen("MAINT")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "MAINT", value, tmpl);
-            value.gauge.real = strncmp("DRAIN", str, strlen("DRAIN")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("DRAIN", str, strlen("DRAIN")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "DRAIN", value, tmpl);
-            value.gauge.real = strncmp("NOLB", str, strlen("NOLB")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("NOLB", str, strlen("NOLB")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "NOLB", value, tmpl);
             // "no check" FIXME
             break;
           case HA_TYPE_LISTENER:
-            value.gauge.real = strncmp("WAITING", str, strlen("WAITING")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("WAITING", str, strlen("WAITING")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "WAITING", value, tmpl);
-            value.gauge.real = strncmp("OPEN", str, strlen("OPEN")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("OPEN", str, strlen("OPEN")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "OPEN", value, tmpl);
-            value.gauge.real = strncmp("FULL", str, strlen("FULL")) == 0 ? 1 : 0;
+            value.gauge.float64 = strncmp("FULL", str, strlen("FULL")) == 0 ? 1 : 0;
             metric_family_append(fam, "state", "FULL", value, tmpl);
             break;
         }
         break;
       case HA_STAT_CHECK_STATUS:
-        value.gauge.real = strncmp("HANA", str, strlen("HANA")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("HANA", str, strlen("HANA")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "HANA", value, tmpl);
-        value.gauge.real = strncmp("SOCKERR", str, strlen("SOCKERR")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("SOCKERR", str, strlen("SOCKERR")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "SOCKERR",  value, tmpl);
-        value.gauge.real = strncmp("L4OK", str, strlen("L4OK")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L4OK", str, strlen("L4OK")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L4OK",  value, tmpl);
-        value.gauge.real = strncmp("L4TOUT", str, strlen("L4TOUT")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L4TOUT", str, strlen("L4TOUT")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L4TOUT",  value, tmpl);
-        value.gauge.real = strncmp("L4CON", str, strlen("L4CON")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L4CON", str, strlen("L4CON")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L4CON", value, tmpl);
-        value.gauge.real = strncmp("L6OK", str, strlen("L6OK")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L6OK", str, strlen("L6OK")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L6OK",  value, tmpl);
-        value.gauge.real = strncmp("L6TOUT", str, strlen("L6TOUT")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L6TOUT", str, strlen("L6TOUT")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L6TOUT", value, tmpl);
-        value.gauge.real = strncmp("L6RSP", str, strlen("L6RSP")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L6RSP", str, strlen("L6RSP")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L6RSP", value, tmpl);
-        value.gauge.real = strncmp("L7TOUT", str, strlen("L7TOUT")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L7TOUT", str, strlen("L7TOUT")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L7TOUT",  value, tmpl);
-        value.gauge.real = strncmp("L7RSP", str, strlen("L7RSP")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L7RSP", str, strlen("L7RSP")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L7RSP",  value, tmpl);
-        value.gauge.real = strncmp("L7OK", str, strlen("L7OK")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L7OK", str, strlen("L7OK")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L7OK",  value, tmpl);
-        value.gauge.real = strncmp("L7OKC", str, strlen("L7OKC")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L7OKC", str, strlen("L7OKC")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L7OKC", value, tmpl);
-        value.gauge.real = strncmp("L7STS", str, strlen("L7STS")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("L7STS", str, strlen("L7STS")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "L7STS",  value, tmpl);
-        value.gauge.real = strncmp("PROCERR", str, strlen("PROCERR")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("PROCERR", str, strlen("PROCERR")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "PROCERR", value, tmpl);
-        value.gauge.real = strncmp("PROCTOUT", str, strlen("PROCTOUT")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("PROCTOUT", str, strlen("PROCTOUT")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "PROCTOUT",  value, tmpl);
-        value.gauge.real = strncmp("PROCOK", str, strlen("PROCOK")) == 0 ? 1 : 0;
+        value.gauge.float64 = strncmp("PROCOK", str, strlen("PROCOK")) == 0 ? 1 : 0;
         metric_family_append(fam, "state", "PROCOK",  value, tmpl);
         break;
       case HA_STAT_HRSP_1XX:
@@ -536,7 +536,7 @@ static int haproxy_read_stat_line(haproxy_t *ha, metric_t *tmpl, char *line)
       case HA_STAT_CT_MAX:
       case HA_STAT_RT_MAX:
       case HA_STAT_TT_MAX:
-        value.gauge.real /= 1000.0;
+        value.gauge.float64 /= 1000.0;
         metric_family_append(fam, NULL, NULL, value, tmpl);
         break;
       default:
@@ -652,13 +652,13 @@ static int haproxy_read_cmd_info(haproxy_t *ha, metric_t *tmpl)
     metric_family_t *fam = &ha->fams_process[hm->fam];
     value_t value = {0};
     if (hm->fam == FAM_HAPROXY_PROCESS_BUILD_INFO) {
-      value.gauge.real = 1.0;
+      value.gauge.float64 = 1.0;
       metric_family_append(fam, "version", val, value, tmpl);
     } else {
       if (fam->type == METRIC_TYPE_GAUGE)
-        value.gauge.real = (double)atoll(val);
+        value.gauge.float64 = (double)atoll(val);
       else
-        value.counter.uinteger = (uint64_t)atoll(val);
+        value.counter.uint64 = (uint64_t)atoll(val);
      
       metric_family_append(fam, NULL, NULL, value, tmpl);
     }
@@ -709,7 +709,7 @@ static int haproxy_read_cmd_table(haproxy_t *ha, metric_t *tmpl)
         fields[5][size_len-1] = '\0';
 
       value_t value = {0};
-      if (strtodouble(fields[5] + strlen("size:"), &value.gauge.real) == 0)
+      if (strtodouble(fields[5] + strlen("size:"), &value.gauge.float64) == 0)
         metric_family_append(&ha->fams_sticktable[FAM_HAPROXY_STICKTABLE_SIZE],
                              "table", table,
                              value, tmpl);
@@ -717,7 +717,7 @@ static int haproxy_read_cmd_table(haproxy_t *ha, metric_t *tmpl)
 
     if (strncmp(fields[6], "used:", strlen("used:")) == 0) {
       value_t value = {0};
-      if (strtodouble(fields[6] + strlen("used:"), &value.gauge.real) == 0)
+      if (strtodouble(fields[6] + strlen("used:"), &value.gauge.float64) == 0)
         metric_family_append(&ha->fams_sticktable[FAM_HAPROXY_STICKTABLE_USED],
                              "table", table,
                               value, tmpl);
@@ -805,7 +805,7 @@ static int haproxy_read (user_data_t *ud)
   }
 
   metric_family_append(&fam_up, NULL, NULL,
-                       (value_t){.gauge.real = status == 0 ? 1 : 0},
+                       (value_t){.gauge.float64 = status == 0 ? 1 : 0},
                        &tmpl);
   status = plugin_dispatch_metric_family(&fam_up);
   if (status != 0)

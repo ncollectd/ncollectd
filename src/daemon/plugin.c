@@ -201,16 +201,16 @@ static int plugin_update_internal_statistics(void)
 
   metric_t m = {0};
 
-  m.value.counter.uinteger = (uint64_t)(time(NULL) - ncollectd_uptime);
+  m.value.counter.uint64 = (uint64_t)(time(NULL) - ncollectd_uptime);
   metric_family_metric_append(&fams[FAM_NCOLLECTD_UPTIME], m);
 
-  m.value.gauge.real = write_queue_length;
+  m.value.gauge.float64 = write_queue_length;
   metric_family_metric_append(&fams[FAM_NCOLLECTD_WRITE_QUEUE_LENGTH], m);
 
-  m.value.counter.uinteger = stats_values_dropped;
+  m.value.counter.uint64 = stats_values_dropped;
   metric_family_metric_append(&fams[FAM_NCOLLECTD_WRITE_QUEUE_DROPPED], m);
 
-  m.value.gauge.real = uc_get_size();
+  m.value.gauge.float64 = uc_get_size();
   metric_family_metric_append(&fams[FAM_NCOLLECTD_CACHE_SIZE], m);
 
   for (size_t i = 0; i < FAM_NCOLLECTD_MAX ; i++) {

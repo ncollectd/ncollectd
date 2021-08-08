@@ -61,7 +61,7 @@ static void submit(const char *protocol_name, const char *str_key, const char *s
     return;
   }
 
-  metric_family_metric_append(&fam, (metric_t){ .value.counter.uinteger = value, });
+  metric_family_metric_append(&fam, (metric_t){ .value.counter.uint64 = value, });
 
   status = plugin_dispatch_metric_family(&fam);
   if (status != 0) {

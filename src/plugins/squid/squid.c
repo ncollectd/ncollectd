@@ -247,7 +247,7 @@ static int squid_read_counters(squid_t *sq, metric_t *tmpl)
           uint64_t counter; 
           if (strtouint(val, &counter) < 0) 
             continue;
-          value.counter.uinteger = counter * 1024;
+          value.counter.uint64 = counter * 1024;
           break;
         }
         case FAM_SQUID_CPU_TIME_TOTAL:
@@ -255,17 +255,17 @@ static int squid_read_counters(squid_t *sq, metric_t *tmpl)
           double gauge;
           if (strtodouble(val, &gauge) < 0) 
             continue;
-          value.counter.real = gauge * 1000000;
+          value.counter.uint64 = gauge * 1000000; // FIXME
           break;
         }
         default:
           if (sq->fams[sc->fam].type == METRIC_TYPE_GAUGE) {
-            if (parse_uinteger(val, &value.counter.uinteger) != 0) {
+            if (parse_uinteger(val, &value.counter.uint64) != 0) {
               WARNING("squid plugin: Unable to parse field `%s'.", key);
               continue;
             }
           } else if (sq->fams[sc->fam].type == METRIC_TYPE_COUNTER) {
-            if (parse_double(val, &value.gauge.real) != 0) {
+            if (parse_double(val, &value.gauge.float64) != 0) {
               WARNING("squid plugin: Unable to parse field `%s'.", key);
               continue;
             }
@@ -315,7 +315,7 @@ static int squid_read(user_data_t *ud)
   int status = squid_read_counters(sq, &tmpl);
 
   metric_family_append(&fam_up, NULL, NULL,
-                       (value_t){.gauge.real = status == 0 ? 1 : 0},
+                       (value_t){.gauge.float64 = status == 0 ? 1 : 0},
                        &tmpl);
 
   status = plugin_dispatch_metric_family(&fam_up);

@@ -81,7 +81,7 @@ static int default_callback(const char __attribute__((unused)) * str,
     char *endptr = NULL;
 
     if (data->ds_type & UTILS_MATCH_CF_GAUGE_INC) {
-      data->value.gauge.real = isnan(data->value.gauge.real) ? 1 : data->value.gauge.real + 1;
+      data->value.gauge.float64 = isnan(data->value.gauge.float64) ? 1 : data->value.gauge.float64 + 1;
       data->values_num++;
       return 0;
     }
@@ -102,18 +102,18 @@ static int default_callback(const char __attribute__((unused)) * str,
     if ((data->values_num == 0) ||
         (data->ds_type & UTILS_MATCH_CF_GAUGE_LAST) ||
         (data->ds_type & UTILS_MATCH_CF_GAUGE_PERSIST)) {
-      data->value.gauge.real = value;
+      data->value.gauge.float64 = value;
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_AVERAGE) {
       double f = ((double)data->values_num) / ((double)(data->values_num + 1));
-      data->value.gauge.real = (data->value.gauge.real * f) + (value * (1.0 - f));
+      data->value.gauge.float64 = (data->value.gauge.float64 * f) + (value * (1.0 - f));
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_MIN) {
-      if (data->value.gauge.real > value)
-        data->value.gauge.real = value;
+      if (data->value.gauge.float64 > value)
+        data->value.gauge.float64 = value;
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_MAX) {
-      if (data->value.gauge.real < value)
-        data->value.gauge.real = value;
+      if (data->value.gauge.float64 < value)
+        data->value.gauge.float64 = value;
     } else if (data->ds_type & UTILS_MATCH_CF_GAUGE_ADD) {
-      data->value.gauge.real += value;
+      data->value.gauge.float64 += value;
     } else {
       ERROR("utils_match: default_callback: obj->ds_type is invalid!");
       return -1;
@@ -124,7 +124,7 @@ static int default_callback(const char __attribute__((unused)) * str,
     char *endptr = NULL;
 
     if (data->ds_type & UTILS_MATCH_CF_COUNTER_INC) {
-      data->value.counter.uinteger++;
+      data->value.counter.uint64++;
       data->values_num++;
       return 0;
     }
@@ -137,9 +137,9 @@ static int default_callback(const char __attribute__((unused)) * str,
       return -1;
 
     if (data->ds_type & UTILS_MATCH_CF_COUNTER_SET)
-      data->value.counter.uinteger = value;
+      data->value.counter.uint64 = value;
     else if (data->ds_type & UTILS_MATCH_CF_COUNTER_ADD)
-      data->value.counter.uinteger += value;
+      data->value.counter.uint64 += value;
     else {
       ERROR("utils_match: default_callback: obj->ds_type is invalid!");
       return -1;
@@ -246,7 +246,7 @@ void match_value_reset(cu_match_value_t *mv) {
   /* Reset GAUGE metrics only and except GAUGE_PERSIST. */
   if ((mv->ds_type & UTILS_MATCH_DS_TYPE_GAUGE) &&
       !(mv->ds_type & UTILS_MATCH_CF_GAUGE_PERSIST)) {
-    mv->value.gauge.real = (mv->ds_type & UTILS_MATCH_CF_GAUGE_INC) ? 0 : NAN;
+    mv->value.gauge.float64 = (mv->ds_type & UTILS_MATCH_CF_GAUGE_INC) ? 0 : NAN;
     mv->values_num = 0;
   }
 } /* }}} void match_value_reset */

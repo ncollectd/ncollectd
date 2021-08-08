@@ -132,55 +132,55 @@ static int timex_read(void)
 
   metric_t m = {0};
 
-  m.value.gauge.real = status == TIME_ERROR ? 0 : 1;
+  m.value.gauge.float64 = status == TIME_ERROR ? 0 : 1;
   metric_family_metric_append(&fams[FAM_TIMEX_SYNC_STATUS], m);
 
-  m.value.gauge.real = (double)timex.offset / (timex.status & ADJ_NANO ? 1000000000L : 1000000L);
+  m.value.gauge.float64 = (double)timex.offset / (timex.status & ADJ_NANO ? 1000000000L : 1000000L);
   metric_family_metric_append(&fams[FAM_TIMEX_OFFSET_SECONDS], m);
 
-  m.value.gauge.real = (double)timex.freq / 65536000000L;
+  m.value.gauge.float64 = (double)timex.freq / 65536000000L;
   metric_family_metric_append(&fams[FAM_TIMEX_FREQUENCY_ADJUSTMENT_RATIO], m);
 
-  m.value.gauge.real = (double)timex.maxerror / 1000000L;
+  m.value.gauge.float64 = (double)timex.maxerror / 1000000L;
   metric_family_metric_append(&fams[FAM_TIMEX_MAXERROR_SECONDS], m);
 
-  m.value.gauge.real = (double)timex.esterror / 1000000L;
+  m.value.gauge.float64 = (double)timex.esterror / 1000000L;
   metric_family_metric_append(&fams[FAM_TIMEX_ESTIMATED_ERROR_SECONDS], m);
 
-  m.value.gauge.real = timex.status;
+  m.value.gauge.float64 = timex.status;
   metric_family_metric_append(&fams[FAM_TIMEX_STATUS], m);
  
-  m.value.gauge.real = timex.constant;
+  m.value.gauge.float64 = timex.constant;
   metric_family_metric_append(&fams[FAM_TIMEX_LOOP_TIME_CONSTANT], m);
 
-  m.value.gauge.real = (double)timex.tick / 1000000L;
+  m.value.gauge.float64 = (double)timex.tick / 1000000L;
   metric_family_metric_append(&fams[FAM_TIMEX_TICK_SECONDS], m);
 
-  m.value.gauge.real = (double)timex.ppsfreq / 65536000000L;
+  m.value.gauge.float64 = (double)timex.ppsfreq / 65536000000L;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_FREQUENCY_HERTZ], m);
 
-  m.value.gauge.real = (double)timex.jitter / (timex.status & ADJ_NANO ? 1000000000L : 1000000L);
+  m.value.gauge.float64 = (double)timex.jitter / (timex.status & ADJ_NANO ? 1000000000L : 1000000L);
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_JITTER_SECONDS], m);
 
-  m.value.gauge.real = timex.shift;
+  m.value.gauge.float64 = timex.shift;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_SHIFT_SECONDS], m);
 
-  m.value.gauge.real = (double)timex.stabil / 65536000000L;
+  m.value.gauge.float64 = (double)timex.stabil / 65536000000L;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_STABILITY_HERTZ], m);
 
-  m.value.counter.uinteger = timex.jitcnt;
+  m.value.counter.uint64 = timex.jitcnt;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_JITTER_TOTAL], m);
 
-  m.value.counter.uinteger = timex.calcnt;
+  m.value.counter.uint64 = timex.calcnt;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_CALIBRATION_TOTAL], m);
 
-  m.value.counter.uinteger = timex.errcnt;
+  m.value.counter.uint64 = timex.errcnt;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_ERROR_TOTAL], m);
 
-  m.value.counter.uinteger = timex.stbcnt;
+  m.value.counter.uint64 = timex.stbcnt;
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_STABILITY_EXCEEDED_TOTAL], m);
 
-  m.value.gauge.real = timex.tai;
+  m.value.gauge.float64 = timex.tai;
   metric_family_metric_append(&fams[FAM_TIMEX_TAI_OFFSET_SECONDS], m);
 
   for (size_t i = 0; i < FAM_TIMEX_MAX; i++) {

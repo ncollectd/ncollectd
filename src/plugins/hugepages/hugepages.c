@@ -170,9 +170,9 @@ static int hp_read_hugepages(const char *path, const char *entry, void *ud)
   char hpath[PATH_MAX];
 
   ssnprintf(hpath, sizeof(hpath), "%s/%s/nr_hugepages", path, entry);
-  if (parse_double_file(hpath, &m.value.gauge.real) == 0) {
+  if (parse_double_file(hpath, &m.value.gauge.float64) == 0) {
     if (values_bytes)
-      m.value.gauge.real *= hpage_size * 1024;
+      m.value.gauge.float64 *= hpage_size * 1024;
     if (node == NULL) {
       if (values_pages)
         metric_family_metric_append(&fams[FAM_HOST_HUGEPAGES_NR], m);
@@ -187,9 +187,9 @@ static int hp_read_hugepages(const char *path, const char *entry, void *ud)
   }
 
   ssnprintf(hpath, sizeof(hpath), "%s/%s/free_hugepages", path, entry);
-  if (parse_double_file(hpath, &m.value.gauge.real) == 0) {
+  if (parse_double_file(hpath, &m.value.gauge.float64) == 0) {
     if (values_bytes)
-      m.value.gauge.real *= hpage_size * 1024;
+      m.value.gauge.float64 *= hpage_size * 1024;
     if (node == NULL) {
       if (values_pages)
         metric_family_metric_append(&fams[FAM_HOST_HUGEPAGES_FREE], m);
@@ -204,9 +204,9 @@ static int hp_read_hugepages(const char *path, const char *entry, void *ud)
   }
 
   ssnprintf(hpath, sizeof(hpath), "%s/%s/surplus_hugepages", path, entry);
-  if (parse_double_file(hpath, &m.value.gauge.real) == 0) {
+  if (parse_double_file(hpath, &m.value.gauge.float64) == 0) {
     if (values_bytes)
-      m.value.gauge.real *= hpage_size * 1024;
+      m.value.gauge.float64 *= hpage_size * 1024;
     if (node == NULL) {
       if (values_pages)
         metric_family_metric_append(&fams[FAM_HOST_HUGEPAGES_SURPLUS], m);
@@ -222,11 +222,11 @@ static int hp_read_hugepages(const char *path, const char *entry, void *ud)
 
   if (node == NULL) {
     ssnprintf(hpath, sizeof(hpath), "%s/%s/resv_hugepages", path, entry);
-    if (parse_double_file(hpath, &m.value.gauge.real) == 0) {
+    if (parse_double_file(hpath, &m.value.gauge.float64) == 0) {
       if (values_pages)
         metric_family_metric_append(&fams[FAM_HOST_HUGEPAGES_RESERVED], m);
       if (values_bytes) {
-        m.value.gauge.real *= hpage_size * 1024;
+        m.value.gauge.float64 *= hpage_size * 1024;
         metric_family_metric_append(&fams[FAM_HOST_HUGEPAGES_RESERVED_BYTES], m);
       }
     }
