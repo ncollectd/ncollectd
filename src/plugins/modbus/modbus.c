@@ -284,7 +284,7 @@ static int mb_submit(mb_host_t *host, mb_slave_t *slave, /* {{{ */
 
   metric_reset(&m);
   metric_family_metric_reset(&fam);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 } /* }}} int mb_submit */
 

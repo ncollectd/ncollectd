@@ -108,7 +108,7 @@ static int sl_notification(const notification_t *n,
 
   sl_log(log_severity, buf.ptr, NULL);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 }
 

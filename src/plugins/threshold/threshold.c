@@ -251,7 +251,7 @@ static int ut_report_state(metric_t const *m, const char *name, const threshold_
   } else if (state == STATE_UNKNOWN) {
     ERROR("ut_report_state: metric transition to UNKNOWN from a different "
           "state. This shouldn't happen.");
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return 0;
   } else {
     double min;
@@ -280,7 +280,7 @@ static int ut_report_state(metric_t const *m, const char *name, const threshold_
   }
 
   notification_annotation_set(&n, "summary", buf.ptr);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
 
   plugin_dispatch_notification(&n);
   notification_reset(&n);
@@ -377,7 +377,7 @@ static int ut_check_metric_threshold(metric_t const *m, threshold_t *th)
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
   const char *name = buf.ptr;
@@ -385,7 +385,7 @@ static int ut_check_metric_threshold(metric_t const *m, threshold_t *th)
   double value;
   status = uc_get_rate_by_name(name, &value);
   if (status != 0) {
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return 0;
   }
 
@@ -411,7 +411,7 @@ static int ut_check_metric_threshold(metric_t const *m, threshold_t *th)
       status = ut_check_one_threshold(m, name, th, value);
       if (status < 0) {
         ERROR("ut_check_metric_threshold: ut_check_one_threshold failed.");
-        STRBUF_DESTROY(buf);
+        strbuf_destroy(&buf);
         return -1;
       }
 
@@ -429,12 +429,12 @@ static int ut_check_metric_threshold(metric_t const *m, threshold_t *th)
     status = ut_report_state(m, name, worst_th, value, worst_state);
     if (status != 0) {
       ERROR("ut_check_metric_threshold: ut_report_state failed.");
-      STRBUF_DESTROY(buf);
+      strbuf_destroy(&buf);
       return -1;
     }
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 } /* }}} ut_check_metric_threshold */
 
@@ -502,7 +502,7 @@ static void ut_metric_missing(metric_t const *m, threshold_t *th) {  /* }}} */
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_identity(&buf, m);
   if (status != 0) {
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return;
   }
   const char *name = buf.ptr;
@@ -519,8 +519,8 @@ static void ut_metric_missing(metric_t const *m, threshold_t *th) {  /* }}} */
   plugin_dispatch_notification(&n);
   notification_reset(&n);
 
-  STRBUF_DESTROY(buf);
-  STRBUF_DESTROY(buf_summary);
+  strbuf_destroy(&buf);
+  strbuf_destroy(&buf_summary);
 } /* }}} void ut_metric_missing */
 
 /*

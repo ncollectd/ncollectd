@@ -106,7 +106,7 @@ static int format_metric_distribution(strbuf_t buf, yajl_gen g,
 
   CHECK(json_add_string(g, "sum"));
   CHECK(json_add_string(g, buf.ptr));
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   destroy_buckets_array(buckets);
   return 0;
 }
@@ -141,19 +141,19 @@ static int format_metric(yajl_gen g, metric_t const *m) {
 
   if (m->family != NULL && m->family->type == METRIC_TYPE_DISTRIBUTION) {
     format_metric_distribution(buf, g, m);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     CHECK(yajl_gen_map_close(g)); /* END metric */
     return 0;
   }
 
   int status = value_marshal_text(&buf, m->value, m->family->type);
   if (status != 0) {
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
   CHECK(json_add_string(g, "value"));
   CHECK(json_add_string(g, buf.ptr));
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
 
   CHECK(yajl_gen_map_close(g)); /* END metric */
 
@@ -262,15 +262,6 @@ int format_json_metric_family(strbuf_t *buf, metric_family_t const *fam,
     yajl_gen_clear(g);
     yajl_gen_free(g);
     return -1;
-  }
-
-  if (buf->fixed) {
-    size_t avail = (buf->size == 0) ? 0 : buf->size - (buf->pos + 1);
-    if (avail < out_len) {
-      yajl_gen_clear(g);
-      yajl_gen_free(g);
-      return ENOBUFS;
-    }
   }
 
   /* If the buffer is not empty, append by converting the closing ']' of "buf"

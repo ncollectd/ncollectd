@@ -479,7 +479,7 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
   cfdev->last_dispatch = cdtime();
   metric_family_metric_reset(&fam);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
 }
 
 static void sigrok_free_drvopts(struct sr_config *src) {

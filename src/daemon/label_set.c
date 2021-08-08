@@ -290,7 +290,7 @@ int label_set_unmarshal(label_set_t *labels, char const **inout)
       break;
     }
   }
-  STRBUF_DESTROY(value);
+  strbuf_destroy(&value);
 
   if (ret != 0)
     return ret;

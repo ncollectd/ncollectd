@@ -328,7 +328,7 @@ static int uc_update_metric(metric_t const *m) {
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_update: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
@@ -344,7 +344,7 @@ static int uc_update_metric(metric_t const *m) {
       plugin_dispatch_cache_event(CE_VALUE_NEW, 0 /* mask */, buf.ptr, m);
     }
 
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
@@ -355,7 +355,7 @@ static int uc_update_metric(metric_t const *m) {
            "last cache update = %.3f;",
            buf.ptr, CDTIME_T_TO_DOUBLE(m->time),
            CDTIME_T_TO_DOUBLE(ce->last_time));
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return -1;
   }
 
@@ -422,7 +422,7 @@ static int uc_update_metric(metric_t const *m) {
     pthread_mutex_unlock(&cache_lock);
     ERROR("uc_update: Don't know how to handle data source type %i.",
           m->family->type);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return -1;
   }
   } /* switch (m->family->type) */
@@ -451,7 +451,7 @@ static int uc_update_metric(metric_t const *m) {
     plugin_dispatch_cache_event(CE_VALUE_UPDATE, callbacks_mask, buf.ptr, m);
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 } /* int uc_update_metric */
 
@@ -558,12 +558,12 @@ int uc_get_percentile(metric_t const *m, double *ret, double percent) {
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_get_percentile: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   status = uc_get_percentile_by_name(buf.ptr, ret, percent);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return status;
 }
 
@@ -609,7 +609,7 @@ int uc_get_rate(metric_t const *m, double *ret) {
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_get_rate: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
@@ -621,7 +621,7 @@ int uc_get_rate(metric_t const *m, double *ret) {
     status = uc_get_rate_by_name(buf.ptr, ret);
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return status;
 } /* double *uc_get_rate */
 
@@ -654,12 +654,12 @@ int uc_get_value(metric_t const *m, value_t *ret) {
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_get_value: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   status = uc_get_value_by_name(buf.ptr, ret);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return status;
 } /* value_t *uc_get_value */
 
@@ -696,12 +696,12 @@ int uc_get_start_value(metric_t const *m, value_t *ret_start_value,
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_get_start_value: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   status = uc_get_start_value_by_name(buf.ptr, ret_start_value, ret_start_time);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return status;
 }
 
@@ -816,13 +816,13 @@ int uc_get_state(metric_t const *m)
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_get_state: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   int ret = uc_get_state_by_name(buf.ptr);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 }
 
@@ -848,13 +848,13 @@ int uc_set_state(metric_t const *m, int state)
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_set_state: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   int ret = uc_set_state_by_name(buf.ptr, state);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 }
 
@@ -916,12 +916,12 @@ int uc_get_history(metric_t const *m, double *ret_history, size_t num_steps)
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_update: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   int ret = uc_get_history_by_name(buf.ptr, ret_history, num_steps);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 }
 
@@ -946,13 +946,13 @@ int uc_get_hits(metric_t const *m)
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_update: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   int ret = uc_get_hits_by_name(buf.ptr);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 }
 
@@ -978,13 +978,13 @@ int uc_set_hits(metric_t const *m, int hits)
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_set_hits: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   int ret = uc_set_hits_by_name(buf.ptr, hits);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 }
 
@@ -1010,13 +1010,13 @@ int uc_inc_hits(metric_t const *m, int step)
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_inc_hits: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   int ret = uc_inc_hits_by_name(buf.ptr, step);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 }
 
@@ -1164,14 +1164,14 @@ static meta_data_t *uc_get_meta(metric_t const *m) /* {{{ */
   int status = metric_identity(&buf, m);
   if (status != 0) {
     ERROR("uc_update: metric_identity failed with status %d.", status);
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     errno = status;
     return NULL;
   }
 
   cache_entry_t *ce = NULL;
   status = c_avl_get(cache_tree, buf.ptr, (void *)&ce);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   if (status != 0) {
     errno = status;
     return NULL;

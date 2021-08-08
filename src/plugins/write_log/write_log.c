@@ -65,7 +65,7 @@ static int wl_write_graphite(metric_family_t const *fam)
     strbuf_reset(&buf);
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 }
 
@@ -80,7 +80,7 @@ static int wl_write_json(metric_family_t const *fam)
     INFO("write_log values:\n%s", buf.ptr);
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 }
 
@@ -136,7 +136,7 @@ static int wl_write_openmetrics(metric_family_t const *fam)
     strbuf_reset(&buf);
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 }
 

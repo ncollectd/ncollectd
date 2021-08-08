@@ -396,7 +396,9 @@ libmetric_la_SOURCES = \
 	           src/daemon/meta_data.c \
 	           src/daemon/meta_data.h \
 	           src/daemon/metric_chars.c \
-	           src/daemon/metric_chars.h
+	           src/daemon/metric_chars.h \
+	           src/daemon/metric_match.c \
+	           src/daemon/metric_match.h
 
 libmetric_la_LIBADD = $(COMMON_LIBS) -lm
 

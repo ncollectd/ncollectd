@@ -159,7 +159,7 @@ static int tcsv_read_metric(instance_definition_t *id, metric_definition_t *md,
           STRERROR(status));
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   metric_reset(&m);
   metric_family_metric_reset(&fam);
 

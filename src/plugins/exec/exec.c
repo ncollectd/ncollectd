@@ -744,7 +744,7 @@ static void *exec_notification_one(void *arg)
   notification_marshal(&buf, n);
 
   fputs(buf.ptr, fh);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
 
   fflush(fh);
   fclose(fh);

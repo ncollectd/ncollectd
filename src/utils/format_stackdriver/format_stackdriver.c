@@ -256,7 +256,7 @@ static int format_metric_type(yajl_gen gen, metric_t const *m) {
 
   int status = metric_type(&buf, m) || json_string(gen, buf.ptr);
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return status;
 } /* }}} int format_metric_type */
 
@@ -566,17 +566,17 @@ int sd_output_add(sd_output_t *out, metric_t const *m) {
   strbuf_t mtype = STRBUF_CREATE;
   int status = metric_type(&mtype, m);
   if (status != 0) {
-    STRBUF_DESTROY(mtype);
+    strbuf_destroy(&mtype);
     return status;
   }
 
   /* first, check that the metric descriptor exists. */
   status = c_avl_get(out->metric_descriptors, mtype.ptr, NULL);
   if (status != 0) {
-    STRBUF_DESTROY(mtype);
+    strbuf_destroy(&mtype);
     return ENOENT;
   }
-  STRBUF_DESTROY(mtype);
+  strbuf_destroy(&mtype);
 
   strbuf_t id = STRBUF_CREATE;
   status = metric_identity(&id, m);
@@ -586,7 +586,7 @@ int sd_output_add(sd_output_t *out, metric_t const *m) {
   }
 
   if (c_avl_get(out->staged, id.ptr, NULL) == 0) {
-    STRBUF_DESTROY(id);
+    strbuf_destroy(&id);
     return EEXIST;
   }
 
@@ -594,14 +594,14 @@ int sd_output_add(sd_output_t *out, metric_t const *m) {
   status = format_time_series(out->gen, m, out->res);
   if ((status != 0) && (status != EAGAIN)) {
     ERROR("sd_output_add: format_time_series failed with status %d.", status);
-    STRBUF_DESTROY(id);
+    strbuf_destroy(&id);
     return status;
   }
 
   if (status == 0) {
     c_avl_insert(out->staged, strdup(id.ptr), NULL);
   }
-  STRBUF_DESTROY(id);
+  strbuf_destroy(&id);
 
   size_t json_buffer_size = 0;
   yajl_gen_get_buf(out->gen, &(unsigned char const *){NULL}, &json_buffer_size);
@@ -616,16 +616,16 @@ int sd_output_register_metric(sd_output_t *out, metric_t const *m) {
   strbuf_t buf = STRBUF_CREATE;
   int status = metric_type(&buf, m);
   if (status != 0) {
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return status;
   }
 
   char *key = strdup(buf.ptr);
   if (key == NULL) {
-    STRBUF_DESTROY(buf);
+    strbuf_destroy(&buf);
     return ENOMEM;
   }
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
 
   status = c_avl_insert(out->metric_descriptors, key, NULL);
   if (status != 0) {

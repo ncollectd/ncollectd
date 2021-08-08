@@ -153,7 +153,7 @@ static MHD_RESULT http_handler(void *cls, struct MHD_Connection *connection,
   struct MHD_Response *res = MHD_create_response_from_data(
       buf.pos, buf.ptr, /* must_free = */ 0, /* must_copy = */ 1);
 #endif
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
 
   MHD_add_response_header(res, MHD_HTTP_HEADER_CONTENT_TYPE, CONTENT_TYPE_TEXT);
 

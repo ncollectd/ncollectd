@@ -258,7 +258,7 @@ static int udb_result_submit(udb_result_t *r, /* {{{ */
 
   metric_reset(&m);
   metric_family_metric_reset(&fam);
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return ret;
 } /* }}} void udb_result_submit */
 

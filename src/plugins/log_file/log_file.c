@@ -168,7 +168,7 @@ static int logfile_notification(const notification_t *n,
 
   logfile_print(buf.ptr, LOG_INFO, (n->time != 0) ? n->time : cdtime());
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   return 0;
 }
 

@@ -416,7 +416,7 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields, siz
           STRERROR(status));
   }
 
-  STRBUF_DESTROY(buf);
+  strbuf_destroy(&buf);
   metric_reset(&m);
   metric_family_metric_reset(&fam);
   return 0;

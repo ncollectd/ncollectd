@@ -230,7 +230,7 @@ int metric_match_unmarshal(metric_match_t *match, char const *str)
       }
     }
   }
-  STRBUF_DESTROY(value);
+  strbuf_destroy(&value);
 
   if (ret != 0)
     return ret;
