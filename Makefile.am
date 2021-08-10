@@ -164,7 +164,7 @@ PLUGIN_LDFLAGS = \
 	-export-symbols-regex '\<module_register\>'
 
 AM_CPPFLAGS = \
-	-I$(top_srcdir)/src -I$(top_srcdir)/src/daemon \
+	-I$(top_srcdir)/src -I$(top_srcdir)/src/ncollectd \
 	-DPREFIX='"${prefix}"' \
 	-DCONFIGFILE='"${sysconfdir}/${PACKAGE_NAME}.conf"' \
 	-DLOCALSTATEDIR='"${localstatedir}"' \
@@ -200,29 +200,29 @@ endif
 
 
 collectd_SOURCES = \
-	src/daemon/cmd.h \
-	src/daemon/collectd.c \
-	src/daemon/collectd.h \
-	src/daemon/configfile.c \
-	src/daemon/configfile.h \
-	src/daemon/filter_chain.c \
-	src/daemon/filter_chain.h \
-	src/daemon/globals.c \
-	src/daemon/globals.h \
-	src/daemon/plugin.c \
-	src/daemon/plugin.h \
-	src/daemon/utils_cache.c \
-	src/daemon/utils_cache.h \
-	src/daemon/utils_complain.c \
-	src/daemon/utils_complain.h \
-	src/daemon/utils_random.c \
-	src/daemon/utils_random.h \
-	src/daemon/utils_subst.c \
-	src/daemon/utils_subst.h \
-	src/daemon/utils_threshold.c \
-	src/daemon/utils_threshold.h \
-	src/daemon/utils_time.c \
-	src/daemon/utils_time.h
+	src/ncollectd/cmd.h \
+	src/ncollectd/collectd.c \
+	src/ncollectd/collectd.h \
+	src/ncollectd/configfile.c \
+	src/ncollectd/configfile.h \
+	src/ncollectd/filter_chain.c \
+	src/ncollectd/filter_chain.h \
+	src/ncollectd/globals.c \
+	src/ncollectd/globals.h \
+	src/ncollectd/plugin.c \
+	src/ncollectd/plugin.h \
+	src/ncollectd/utils_cache.c \
+	src/ncollectd/utils_cache.h \
+	src/ncollectd/utils_complain.c \
+	src/ncollectd/utils_complain.h \
+	src/ncollectd/utils_random.c \
+	src/ncollectd/utils_random.h \
+	src/ncollectd/utils_subst.c \
+	src/ncollectd/utils_subst.h \
+	src/ncollectd/utils_threshold.c \
+	src/ncollectd/utils_threshold.h \
+	src/ncollectd/utils_time.c \
+	src/ncollectd/utils_time.h
 
 collectd_CFLAGS = $(AM_CFLAGS)
 collectd_CPPFLAGS = $(AM_CPPFLAGS)
@@ -238,7 +238,7 @@ collectd_LDADD = \
 	$(COMMON_LIBS) \
 	$(DLOPEN_LIBS)
 
-collectd_SOURCES += src/daemon/cmd.c
+collectd_SOURCES += src/ncollectd/cmd.c
 
 if BUILD_FEATURE_DAEMON
 collectd_CPPFLAGS += -DPIDFILE='"${localstatedir}/run/${PACKAGE_NAME}.pid"'
@@ -299,11 +299,11 @@ collectd_tg_LDADD += -lm
 endif
 
 test_utils_cache_SOURCES = \
-    src/daemon/utils_cache.c \
-    src/daemon/utils_cache.h \
-    src/daemon/utils_cache_test.c \
-    src/daemon/globals.c \
-    src/daemon/globals.h \
+    src/ncollectd/utils_cache.c \
+    src/ncollectd/utils_cache.h \
+    src/ncollectd/utils_cache_test.c \
+    src/ncollectd/globals.c \
+    src/ncollectd/globals.h \
     src/testing.h
 test_utils_cache_LDADD = libavltree.la libmetric.la libplugin_mock.la
 
@@ -313,12 +313,12 @@ test_common_SOURCES = \
 test_common_LDADD = libmetric.la libplugin_mock.la
 
 test_distribution_SOURCES = \
-	src/daemon/distribution_test.c \
+	src/ncollectd/distribution_test.c \
 	src/testing.h
 test_distribution_LDADD = libmetric.la libplugin_mock.la
 
 test_metric_SOURCES = \
-	src/daemon/metric_test.c \
+	src/ncollectd/metric_test.c \
 	src/testing.h
 test_metric_LDADD = libmetric.la libplugin_mock.la
 
@@ -335,8 +335,8 @@ test_utils_heap_LDADD = libheap.la $(COMMON_LIBS)
 test_utils_message_parser_SOURCES = \
 	src/utils/message_parser/message_parser_test.c \
 	src/testing.h \
-	src/daemon/configfile.c \
-	src/daemon/types_list.c \
+	src/ncollectd/configfile.c \
+	src/ncollectd/types_list.c \
 	src/utils_tail_match.c src/utils_tail_match.h \
 	src/utils/tail/tail.c src/utils/tail/tail.h \
 	src/utils/match/match.c src/utils/match/match.h \
@@ -346,14 +346,14 @@ test_utils_message_parser_CPPFLAGS = $(AM_CPPFLAGS)
 test_utils_message_parser_LDADD = liboconfig.la libplugin_mock.la -lm
 
 test_utils_time_SOURCES = \
-	src/daemon/utils_time_test.c \
+	src/ncollectd/utils_time_test.c \
 	src/testing.h
 
 test_utils_subst_SOURCES = \
-	src/daemon/utils_subst_test.c \
+	src/ncollectd/utils_subst_test.c \
 	src/testing.h \
-	src/daemon/utils_subst.c \
-	src/daemon/utils_subst.h
+	src/ncollectd/utils_subst.c \
+	src/ncollectd/utils_subst.h
 test_utils_subst_LDADD = libplugin_mock.la
 
 test_utils_config_cores_SOURCES = \
@@ -379,36 +379,36 @@ libignorelist_la_SOURCES = \
 	src/utils/ignorelist/ignorelist.h
 
 libllist_la_SOURCES = \
-	src/daemon/utils_llist.c \
-	src/daemon/utils_llist.h
+	src/ncollectd/utils_llist.c \
+	src/ncollectd/utils_llist.h
 
 libmetric_la_SOURCES = \
-		       src/daemon/distribution.c \
-		       src/daemon/distribution.h \
-		       src/daemon/metric.c \
-               src/daemon/metric.h \
-               src/daemon/notification.c \
-               src/daemon/notification.h \
-               src/daemon/label_set.c \
-               src/daemon/label_set.h \
-               src/daemon/state_set.c \
-               src/daemon/state_set.h \
-	           src/daemon/meta_data.c \
-	           src/daemon/meta_data.h \
-	           src/daemon/metric_chars.c \
-	           src/daemon/metric_chars.h \
-	           src/daemon/metric_match.c \
-	           src/daemon/metric_match.h
+		       src/ncollectd/distribution.c \
+		       src/ncollectd/distribution.h \
+		       src/ncollectd/metric.c \
+               src/ncollectd/metric.h \
+               src/ncollectd/notification.c \
+               src/ncollectd/notification.h \
+               src/ncollectd/label_set.c \
+               src/ncollectd/label_set.h \
+               src/ncollectd/state_set.c \
+               src/ncollectd/state_set.h \
+	           src/ncollectd/meta_data.c \
+	           src/ncollectd/meta_data.h \
+	           src/ncollectd/metric_chars.c \
+	           src/ncollectd/metric_chars.h \
+	           src/ncollectd/metric_match.c \
+	           src/ncollectd/metric_match.h
 
 libmetric_la_LIBADD = $(COMMON_LIBS) -lm
 
 libplugin_mock_la_SOURCES = \
-	src/daemon/plugin_mock.c \
-	src/daemon/utils_cache_mock.c \
-	src/daemon/utils_complain.c \
-	src/daemon/utils_complain.h \
-	src/daemon/utils_time.c \
-	src/daemon/utils_time.h
+	src/ncollectd/plugin_mock.c \
+	src/ncollectd/utils_cache_mock.c \
+	src/ncollectd/utils_complain.c \
+	src/ncollectd/utils_complain.h \
+	src/ncollectd/utils_time.c \
+	src/ncollectd/utils_time.h
 
 libplugin_mock_la_CPPFLAGS = $(AM_CPPFLAGS) -DMOCK_TIME
 libplugin_mock_la_LIBADD = libcommon.la libignorelist.la $(COMMON_LIBS)
@@ -544,7 +544,7 @@ libcollectdclient_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(srcdir)/src/libcollectdclient \
 	-I$(top_builddir)/src/libcollectdclient \
-	-I$(srcdir)/src/daemon
+	-I$(srcdir)/src/ncollectd
 libcollectdclient_la_LDFLAGS = -version-info 2:0:1
 libcollectdclient_la_LIBADD = -lm
 if BUILD_WITH_LIBGCRYPT
@@ -736,8 +736,8 @@ capabilities_la_LIBADD = $(BUILD_WITH_LIBMICROHTTPD_LIBS) \
 
 test_plugin_capabilities_SOURCES = \
         src/capabilities_test.c \
-        src/daemon/configfile.c \
-        src/daemon/types_list.c
+        src/ncollectd/configfile.c \
+        src/ncollectd/types_list.c
 test_plugin_capabilities_CPPFLAGS = $(AM_CPPFLAGS) \
         $(BUILD_WITH_LIBJANSSON_CPPFLAGS)
 test_plugin_capabilities_LDFLAGS = $(PLUGIN_LDFLAGS) \
@@ -827,8 +827,8 @@ curl_json_la_LIBADD = $(BUILD_WITH_LIBCURL_LIBS) $(BUILD_WITH_LIBYAJL_LIBS)
 
 test_plugin_curl_json_SOURCES = src/curl_json_test.c \
 				src/utils/curl_stats/curl_stats.c \
-				src/daemon/configfile.c \
-				src/daemon/types_list.c
+				src/ncollectd/configfile.c \
+				src/ncollectd/types_list.c
 test_plugin_curl_json_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBYAJL_CPPFLAGS)
 test_plugin_curl_json_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBYAJL_LDFLAGS)
 test_plugin_curl_json_LDADD = libavltree.la liboconfig.la libplugin_mock.la $(BUILD_WITH_LIBCURL_LIBS) $(BUILD_WITH_LIBYAJL_LIBS)
@@ -996,8 +996,8 @@ test_plugin_intel_rdt_SOURCES = \
 	src/intel_rdt_test.c \
 	src/utils/config_cores/config_cores.c \
 	src/utils/proc_pids/proc_pids.c \
-	src/daemon/configfile.c \
-	src/daemon/types_list.c
+	src/ncollectd/configfile.c \
+	src/ncollectd/types_list.c
 test_plugin_intel_rdt_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBPQOS_CPPFLAGS)
 test_plugin_intel_rdt_LDFLAGS = $(AM_LDFLAGS) $(BUILD_WITH_LIBPQOS_LDFLAGS)
 test_plugin_intel_rdt_LDADD = liboconfig.la libplugin_mock.la $(BUILD_WITH_LIBPQOS_LIBS)
@@ -1080,8 +1080,8 @@ test_plugin_logparser_SOURCES = src/logparser_test.c \
        src/utils_tail_match.c src/utils_tail_match.h \
        src/utils/tail/tail.c src/utils/tail/tail.h \
        src/utils/match/match.c src/utils/match/match.h \
-       src/daemon/configfile.c \
-       src/daemon/types_list.c
+       src/ncollectd/configfile.c \
+       src/ncollectd/types_list.c
 test_plugin_logparser_CPPFLAGS = $(AM_CPPFLAGS)
 test_plugin_logparser_LDFLAGS = $(PLUGIN_LDFLAGS)
 test_plugin_logparser_LDADD = liboconfig.la libplugin_mock.la liblatency.la
@@ -1228,8 +1228,8 @@ netlink_la_LIBADD = $(BUILD_WITH_LIBMNL_LIBS)
 
 test_plugin_netlink_SOURCES = \
 	src/netlink_test.c \
-	src/daemon/configfile.c \
-	src/daemon/types_list.c
+	src/ncollectd/configfile.c \
+	src/ncollectd/types_list.c
 test_plugin_netlink_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBMNL_CFLAGS)
 test_plugin_netlink_LDFLAGS = $(PLUGIN_LDFLAGS)
 test_plugin_netlink_LDADD = \
@@ -1262,8 +1262,8 @@ endif
 test_plugin_network_SOURCES = \
 	src/network_test.c \
 	src/utils_fbhash.c \
-	src/daemon/configfile.c \
-	src/daemon/types_list.c
+	src/ncollectd/configfile.c \
+	src/ncollectd/types_list.c
 test_plugin_network_CPPFLAGS = $(AM_CPPFLAGS) $(GCRYPT_CPPFLAGS)
 test_plugin_network_LDFLAGS = $(PLUGIN_LDFLAGS) $(GCRYPT_LDFLAGS)
 test_plugin_network_LDADD = \
@@ -1392,9 +1392,9 @@ pcie_errors_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 
 test_plugin_pcie_errors_SOURCES = \
 	src/pcie_errors_test.c \
-	src/daemon/utils_llist.c \
-	src/daemon/configfile.c \
-	src/daemon/types_list.c
+	src/ncollectd/utils_llist.c \
+	src/ncollectd/configfile.c \
+	src/ncollectd/types_list.c
 test_plugin_pcie_errors_CPPFLAGS = $(AM_CPPFLAGS)
 test_plugin_pcie_errors_LDFLAGS = $(PLUGIN_LDFLAGS)
 test_plugin_pcie_errors_LDADD = \
@@ -1510,8 +1510,8 @@ redfish_la_LIBADD = $(BUILD_WITH_LIBREDFISH_LIBS) -lredfish
 
 test_plugin_redfish_SOURCES = src/redfish_test.c \
                               src/utils/avltree/avltree.c \
-                              src/daemon/configfile.c \
-                              src/daemon/types_list.c
+                              src/ncollectd/configfile.c \
+                              src/ncollectd/types_list.c
 test_plugin_redfish_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBREDFISH_CPPFLAGS)
 test_plugin_redfish_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBREDFISH_LDFLAGS)
 test_plugin_redfish_LDADD = liboconfig.la libplugin_mock.la libllist.la \
@@ -1603,8 +1603,8 @@ snmp_agent_la_LIBADD = $(BUILD_WITH_LIBNETSNMPAGENT_LIBS)
 
 test_plugin_snmp_agent_SOURCES = src/snmp_agent_test.c \
                                  src/utils/avltree/avltree.c \
-                                 src/daemon/configfile.c \
-                                 src/daemon/types_list.c
+                                 src/ncollectd/configfile.c \
+                                 src/ncollectd/types_list.c
 test_plugin_snmp_agent_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(BUILD_WITH_LIBNETSNMPAGENT_CPPFLAGS)
 test_plugin_snmp_agent_LDFLAGS = $(PLUGIN_LDFLAGS) \
@@ -1772,8 +1772,8 @@ virt_la_CFLAGS = $(AM_CFLAGS) \
 virt_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 virt_la_LIBADD = libignorelist.la $(BUILD_WITH_LIBVIRT_LIBS) $(BUILD_WITH_LIBXML2_LIBS)
 
-test_plugin_virt_SOURCES = src/virt_test.c src/daemon/configfile.c \
-	src/daemon/types_list.c
+test_plugin_virt_SOURCES = src/virt_test.c src/ncollectd/configfile.c \
+	src/ncollectd/types_list.c
 test_plugin_virt_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(BUILD_WITH_LIBVIRT_CPPFLAGS) $(BUILD_WITH_LIBXML2_CFLAGS)
 test_plugin_virt_LDFLAGS = $(PLUGIN_LDFLAGS) \

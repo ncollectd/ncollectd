@@ -1,0 +1,136 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT      */
+/* Copyright (C) 2007       Florian octo Forster     */
+/* Copyright (C) 2016       Sebastian tokkee Harl    */
+/* Authors:                                          */
+/*   Florian octo Forster <octo at collectd.org>     */
+/*   Sebastian tokkee Harl <sh at tokkee.org>        */
+/*   Manoj Srivastava <srivasta at google.com>       */
+/*   Barbara bkjg Kaczorowska <bkjg at google.com>   */
+/*   Svetlana sshmidt Shmidt <sshmidt at google.com> */
+
+#ifndef UTILS_CACHE_H
+#define UTILS_CACHE_H 1
+
+#include "plugin.h"
+
+#define STATE_UNKNOWN 0
+#define STATE_OKAY 1
+#define STATE_WARNING 2
+#define STATE_ERROR 3
+#define STATE_MISSING 15
+
+int uc_init(void);
+int uc_check_timeout(void);
+int uc_update(metric_family_t const *fam);
+void uc_destroy(void);
+
+int uc_get_percentile_by_name(const char *name, double *ret_value,
+                              double percent);
+int uc_get_percentile(metric_t const *m, double *ret_value, double percent);
+int uc_get_rate_by_name(const char *name, double *ret_value);
+int uc_get_rate(metric_t const *m, double *ret_value);
+int uc_get_value_by_name(const char *name, value_t *ret_value);
+int uc_get_value(metric_t const *m, value_t *ret_value);
+int uc_get_start_value_by_name(const char *name, value_t *ret_start_value,
+                               cdtime_t *ret_start_time);
+int uc_get_start_value(metric_t const *m, value_t *ret_start_value,
+                       cdtime_t *ret_start_time);
+
+size_t uc_get_size(void);
+int uc_get_names(char ***ret_names, cdtime_t **ret_times, size_t *ret_number);
+
+int uc_get_state_by_name(const char *name);
+int uc_get_state(metric_t const *m);
+int uc_set_state_by_name(const char *name, int state);
+int uc_set_state(metric_t const *m, int state);
+
+int uc_get_hits_by_name(const char *name);
+int uc_get_hits(metric_t const *m);
+int uc_set_hits_by_name(const char *name, int hits);
+int uc_set_hits(metric_t const *m, int hits);
+int uc_inc_hits_by_name(const char *name, int step);
+int uc_inc_hits(metric_t const *m, int step);
+
+int uc_set_callbacks_mask(const char *name, unsigned long callbacks_mask);
+
+int uc_get_history(metric_t const *m, double *ret_history, size_t num_steps);
+int uc_get_history_by_name(const char *name, double *ret_history,
+                           size_t num_steps);
+
+/* functions for tests purposes */
+int uc_get_last_time(char *name, cdtime_t *ret_value);
+int uc_get_last_update(char *name, cdtime_t *ret_value);
+
+/*
+ * Iterator interface
+ */
+struct uc_iter_s;
+typedef struct uc_iter_s uc_iter_t;
+
+/*
+ * NAME
+ *   uc_get_iterator
+ *
+ * DESCRIPTION
+ *   Create an iterator for the cache. It will hold the cache lock until it's
+ *   destroyed.
+ *
+ * RETURN VALUE
+ *   An iterator object on success or NULL else.
+ */
+uc_iter_t *uc_get_iterator(void);
+
+/*
+ * NAME
+ *   uc_iterator_next
+ *
+ * DESCRIPTION
+ *   Advance the iterator to the next positiion and (optionally) returns the
+ *   name of the entry.
+ *
+ * PARAMETERS
+ *   `iter'     The iterator object to advance.
+ *   `ret_name' Optional pointer to a string where to store the name. If not
+ *              NULL, the returned value is a copy of the value and has to be
+ *              freed by the caller.
+ *
+ * RETURN VALUE
+ *   Zero upon success or non-zero if the iterator ie NULL or no further
+ *   values are available.
+ */
+int uc_iterator_next(uc_iter_t *iter, char **ret_name);
+void uc_iterator_destroy(uc_iter_t *iter);
+
+/* Return the timestamp of the value at the current position. */
+int uc_iterator_get_time(uc_iter_t *iter, cdtime_t *ret_time);
+/* Return the (raw) value at the current position. */
+int uc_iterator_get_values(uc_iter_t *iter, value_t *ret_value);
+/* Return the interval of the value at the current position. */
+int uc_iterator_get_interval(uc_iter_t *iter, cdtime_t *ret_interval);
+/* Return the metadata for the value at the current position. */
+int uc_iterator_get_meta(uc_iter_t *iter, meta_data_t **ret_meta);
+
+/*
+ * Meta data interface
+ */
+int uc_meta_data_exists(metric_t const *m, const char *key);
+int uc_meta_data_delete(metric_t const *m, const char *key);
+
+int uc_meta_data_add_string(metric_t const *m, const char *key,
+                            const char *value);
+int uc_meta_data_add_signed_int(metric_t const *m, const char *key,
+                                int64_t value);
+int uc_meta_data_add_unsigned_int(metric_t const *m, const char *key,
+                                  uint64_t value);
+int uc_meta_data_add_double(metric_t const *m, const char *key, double value);
+int uc_meta_data_add_boolean(metric_t const *m, const char *key, bool value);
+
+int uc_meta_data_get_string(metric_t const *m, const char *key, char **value);
+int uc_meta_data_get_signed_int(metric_t const *m, const char *key,
+                                int64_t *value);
+int uc_meta_data_get_unsigned_int(metric_t const *m, const char *key,
+                                  uint64_t *value);
+int uc_meta_data_get_double(metric_t const *m, const char *key, double *value);
+int uc_meta_data_get_boolean(metric_t const *m, const char *key, bool *value);
+
+#endif /* !UTILS_CACHE_H */
