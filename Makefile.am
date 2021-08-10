@@ -45,7 +45,7 @@ EXTRA_DIST = \
 	src/plugins/exec/ncollectd-exec.pod \
 	src/collectd-java.pod \
 	src/collectd-lua.pod \
-	src/collectd-nagios.pod \
+	src/ncollectd-nagios/ncollectd-nagios.pod \
 	src/collectd-perl.pod \
 	src/collectd-python.pod \
 	src/collectd-snmp.pod \
@@ -75,7 +75,7 @@ dist_man_MANS = \
 	src/collectd-java.5 \
 	src/collectd-lua.5 \
 	src/ncollectdmon/ncollectdmon.1 \
-	src/collectd-nagios.1 \
+	src/ncollectd-nagios/ncollectd-nagios.1 \
 	src/collectd-perl.5 \
 	src/collectd-python.5 \
 	src/collectd-snmp.5 \
@@ -104,7 +104,7 @@ sbin_PROGRAMS = \
 	ncollectdmon
 
 bin_PROGRAMS = \
-	collectd-nagios \
+	ncollectd-nagios \
 	ncollectdtg \
 	ncollectdctl 
 
@@ -254,16 +254,16 @@ endif
 ncollectdmon_SOURCES = src/ncollectdmon/ncollectdmon.c
 
 
-collectd_nagios_SOURCES = src/collectd-nagios.c
-collectd_nagios_CPPFLAGS = $(AM_CPPFLAGS) \
+ncollectd_nagios_SOURCES = src/ncollectd-nagios/ncollectd-nagios.c
+ncollectd_nagios_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/libcollectdclient \
 	-I$(top_builddir)/src/libcollectdclient
-collectd_nagios_LDADD = libcollectdclient.la
+ncollectd_nagios_LDADD = libcollectdclient.la
 if BUILD_WITH_LIBSOCKET
-collectd_nagios_LDADD += -lsocket
+ncollectd_nagios_LDADD += -lsocket
 endif
 if BUILD_AIX
-collectd_nagios_LDADD += -lm
+ncollectd_nagios_LDADD += -lm
 endif
 
 
