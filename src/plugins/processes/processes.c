@@ -1,40 +1,23 @@
-/**
- * collectd - src/processes.c
- * Copyright (C) 2005       Lyonel Vincent
- * Copyright (C) 2006-2017  Florian octo Forster
- * Copyright (C) 2008       Oleg King
- * Copyright (C) 2009       Sebastian Harl
- * Copyright (C) 2009       Andrés J. Díaz
- * Copyright (C) 2009       Manuel Sanmartin
- * Copyright (C) 2010       Clément Stenac
- * Copyright (C) 2012       Cosmin Ioiart
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Lyonel Vincent <lyonel at ezix.org>
- *   Florian octo Forster <octo at collectd.org>
- *   Oleg King <king2 at kaluga.ru>
- *   Sebastian Harl <sh at tokkee.org>
- *   Andrés J. Díaz <ajdiaz at connectical.com>
- *   Manuel Sanmartin
- *   Clément Stenac <clement.stenac at diwi.org>
- *   Cosmin Ioiart <cioiart at gmail.com>
- *   Pavel Rochnyack <pavel2000 at ngs.ru>
- *   Wilfried Goesgens <dothebart at citadel.org>
- **/
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright (C) 2005       Lyonel Vincent
+// Copyright (C) 2006-2017  Florian octo Forster
+// Copyright (C) 2008       Oleg King
+// Copyright (C) 2009       Sebastian Harl
+// Copyright (C) 2009       Andrés J. Díaz
+// Copyright (C) 2009       Manuel Sanmartin
+// Copyright (C) 2010       Clément Stenac
+// Copyright (C) 2012       Cosmin Ioiart
+// Authors:
+//   Lyonel Vincent <lyonel at ezix.org>
+//   Florian octo Forster <octo at collectd.org>
+//   Oleg King <king2 at kaluga.ru>
+//   Sebastian Harl <sh at tokkee.org>
+//   Andrés J. Díaz <ajdiaz at connectical.com>
+//   Manuel Sanmartin
+//   Clément Stenac <clement.stenac at diwi.org>
+//   Cosmin Ioiart <cioiart at gmail.com>
+//   Pavel Rochnyack <pavel2000 at ngs.ru>
+//   Wilfried Goesgens <dothebart at citadel.org>
 
 #include "collectd.h"
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
 #include "config.h"
 
 #if STRPTIME_NEEDS_STANDARDS

@@ -1,24 +1,7 @@
-/**
- * collectd - src/redis.c, based on src/memcached.c
- * Copyright (C) 2010       Andrés J. Díaz <ajdiaz@connectical.com>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Andrés J. Díaz <ajdiaz@connectical.com>
- **/
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright (C) 2010       Andrés J. Díaz <ajdiaz@connectical.com>
+// Authors:
+//   Andrés J. Díaz <ajdiaz@connectical.com>
 
 #include "collectd.h"
 
@@ -302,20 +285,20 @@ static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
   switch (rr->type) {
   case REDIS_REPLY_INTEGER:
     if (rr->type == METRIC_TYPE_COUNTER) {
-      val.counter.uinteger = (uint64_t)rr->integer;
+      val.counter.uint64 = (uint64_t)rr->integer;
     } else {
-      val.gauge.real = (double)rr->integer;
+      val.gauge.float64 = (double)rr->integer;
     }
     break;
   case REDIS_REPLY_STRING:
     if (rr->type == METRIC_TYPE_GAUGE) {
-      if (parse_double(rr->str, &val.gauge.real) == -1) {
+      if (parse_double(rr->str, &val.gauge.float64) == -1) {
         WARNING("redis plugin: Query `%s': Unable to parse value.", rq->query);
         freeReplyObject(rr);
         return -1;
       }
     } else if (rr->type == METRIC_TYPE_COUNTER) {
-      if (parse_uinteger(rr->str, &val.counter.uinteger) == -1) {
+      if (parse_uinteger(rr->str, &val.counter.uint64) == -1) {
         WARNING("redis plugin: Query `%s': Unable to parse value.", rq->query);
         freeReplyObject(rr);
         return -1;
@@ -406,7 +389,7 @@ static int redis_read_info_errorstat(redis_node_t *rn, metric_t *tmpl, char *key
   char *counts = value + strlen("count=");
 
   value_t val = {0};
-  val.counter.uinteger = atoll(counts);
+  val.counter.uint64 = atoll(counts);
   metric_family_append(&rn->fams[FAM_REDIS_ERRORS_TOTAL], "error", error, val, tmpl);
 
   return 0;
@@ -459,19 +442,19 @@ static int redis_read_info_master(redis_node_t *rn, metric_t *tmpl, char *key, c
   metric_label_set(tmpl, "master_address", master_address);
 
   value_t val = {0};
-  val.gauge.real = strcmp(master_status, "ok") == 0 ? 1 : 0;
+  val.gauge.float64 = strcmp(master_status, "ok") == 0 ? 1 : 0;
   metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_STATUS], "master_status", "ok", val, tmpl);
 
-  val.gauge.real = strcmp(master_status, "odown") == 0 ? 1 : 0;
+  val.gauge.float64 = strcmp(master_status, "odown") == 0 ? 1 : 0;
   metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_STATUS], "master_status", "odown", val, tmpl);
 
-  val.gauge.real = strcmp(master_status, "sdown") == 0 ? 1 : 0;
+  val.gauge.float64 = strcmp(master_status, "sdown") == 0 ? 1 : 0;
   metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_STATUS], "master_status", "sdown", val, tmpl);
 
-  val.gauge.real = atoll(master_slaves);
+  val.gauge.float64 = atoll(master_slaves);
   metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_SLAVES], NULL, NULL, val, tmpl);
 
-  val.gauge.real = atoll(master_sentinels);
+  val.gauge.float64 = atoll(master_sentinels);
   metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_SENTINELS], NULL, NULL, val, tmpl);
 
   metric_label_set(tmpl, "master_name", NULL);
@@ -528,19 +511,19 @@ static int redis_read_info_slave(redis_node_t *rn, metric_t *tmpl, char *key, ch
   metric_label_set(tmpl, "slave_address", address);
  
   value_t val = {0};
-  val.gauge.real = strcmp(slave_state, "wait_bgsave") == 0 ? 1 : 0;
+  val.gauge.float64 = strcmp(slave_state, "wait_bgsave") == 0 ? 1 : 0;
   metric_family_append(&rn->fams[FAM_REDIS_SLAVE_STATE], "slave_state", "wait_bgsave", val, tmpl);
 
-  val.gauge.real = strcmp(slave_state, "send_bulk") == 0 ? 1 : 0;
+  val.gauge.float64 = strcmp(slave_state, "send_bulk") == 0 ? 1 : 0;
   metric_family_append(&rn->fams[FAM_REDIS_SLAVE_STATE], "slave_state", "send_bulk", val, tmpl);
 
-  val.gauge.real = strcmp(slave_state, "online") == 0 ? 1 : 0;
+  val.gauge.float64 = strcmp(slave_state, "online") == 0 ? 1 : 0;
   metric_family_append(&rn->fams[FAM_REDIS_SLAVE_STATE], "slave_state", "online", val, tmpl);
 
-  val.gauge.real = atoll(slave_lag);
+  val.gauge.float64 = atoll(slave_lag);
   metric_family_append(&rn->fams[FAM_REDIS_SLAVE_LAG], NULL, NULL, val, tmpl);
 
-  val.gauge.real = atoll(slave_offset);
+  val.gauge.float64 = atoll(slave_offset);
   metric_family_append(&rn->fams[FAM_REDIS_SLAVE_OFFSET], NULL, NULL, val, tmpl);
 
   metric_label_set(tmpl, "slave_address", NULL);
@@ -571,10 +554,10 @@ static int redis_read_info_cmdstat(redis_node_t *rn, metric_t *tmpl, char *key, 
   *end = '\0';
 
   value_t val = {0};
-  val.counter.uinteger = atoll(command_calls);
+  val.counter.uint64 = atoll(command_calls);
   metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_TOTAL], "cmd", command, val, tmpl);
 
-  val.counter.uinteger = atoll(command_usec);
+  val.counter.uint64 = atoll(command_usec);
   metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_DURATION_USECONDS_TOTAL], "cmd", command, val, tmpl);
 
   return 0;
@@ -604,10 +587,10 @@ static int redis_read_info_db(redis_node_t *rn, metric_t *tmpl, char *key, char 
   *end = '\0';
 
   value_t val = {0};
-  val.gauge.real = (double)atoll(db_keys);
+  val.gauge.float64 = (double)atoll(db_keys);
   metric_family_append(&rn->fams[FAM_REDIS_DB_KEYS], "db", db, val, tmpl);
 
-  val.gauge.real = (double)atoll(db_expires);
+  val.gauge.float64 = (double)atoll(db_expires);
   metric_family_append(&rn->fams[FAM_REDIS_DB_KEYS_EXPIRING], "db", db, val, tmpl);
 
   return 0;
@@ -647,18 +630,18 @@ static void redis_read_info(redis_node_t *rn)
       value_t value = {0};
 
       if (strcmp(val, "ok") == 0) {
-        value.gauge.real = 1;
+        value.gauge.float64 = 1;
       } else if (strcmp(val, "true") == 0) {
-        value.gauge.real = 1;
+        value.gauge.float64 = 1;
       } else if (strcmp(val, "err") == 0) {
-        value.gauge.real = 0;
+        value.gauge.float64 = 0;
       } else if ((strcmp(val, "fail") == 0) ||
                  (strcmp(val, "false") == 0)) {
-        value.gauge.real = 0;
+        value.gauge.float64 = 0;
       } else if (strcmp(val, "up") == 0) {
-        value.gauge.real = 1;
+        value.gauge.float64 = 1;
       } else if (strcmp(val, "down") == 0) {
-        value.gauge.real = 0;
+        value.gauge.float64 = 0;
       } else {
 
 //used_cpu_sys_children,  RTYPE_SECTOUSEC, FAM_REDIS_CPU_SYS_CHILDREN_USECONDS_TOTAL
@@ -666,13 +649,13 @@ static void redis_read_info(redis_node_t *rn)
 //used_cpu_user_children, RTYPE_SECTOUSEC, FAM_REDIS_CPU_USER_CHILDREN_USECONDS_TOTAL
 //used_cpu_user,          RTYPE_SECTOUSEC, FAM_REDIS_CPU_USER_USECONDS_TOTAL
         if (rn->fams[ri->fam].type == METRIC_TYPE_GAUGE) {
-          if (parse_double(val, &value.gauge.real) != 0) {
+          if (parse_double(val, &value.gauge.float64) != 0) {
             WARNING("redis plugin: Unable to parse field `%s'.", key);
             fprintf(stderr,"### [%s] [%s]\n", key, val);
             continue;
           }
         } else if (rn->fams[ri->fam].type == METRIC_TYPE_COUNTER) {
-          if (parse_uinteger(val, &value.counter.uinteger) != 0) {
+          if (parse_uinteger(val, &value.counter.uint64) != 0) {
             WARNING("redis plugin: Unable to parse field `%s'.", key);
             fprintf(stderr,"### [%s] [%s]\n", key, val);
             continue;

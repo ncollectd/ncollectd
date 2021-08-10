@@ -1,31 +1,15 @@
-/**
- * collectd - src/cpu.c
- * Copyright (C) 2005-2014  Florian octo Forster
- * Copyright (C) 2008       Oleg King
- * Copyright (C) 2009       Simon Kuhnle
- * Copyright (C) 2009       Manuel Sanmartin
- * Copyright (C) 2013-2014  Pierre-Yves Ritschard
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Oleg King <king2 at kaluga.ru>
- *   Simon Kuhnle <simon at blarzwurst.de>
- *   Manuel Sanmartin
- *   Pierre-Yves Ritschard <pyr at spootnik.org>
- **/
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (C) 2005-2014  Florian octo Forster
+// Copyright (C) 2008       Oleg King
+// Copyright (C) 2009       Simon Kuhnle
+// Copyright (C) 2009       Manuel Sanmartin
+// Copyright (C) 2013-2014  Pierre-Yves Ritschard
+// Authors:
+//   Florian octo Forster <octo at collectd.org>
+//   Oleg King <king2 at kaluga.ru>
+//   Simon Kuhnle <simon at blarzwurst.de>
+//   Manuel Sanmartin
+//   Pierre-Yves Ritschard <pyr at spootnik.org>
 
 #include "collectd.h"
 

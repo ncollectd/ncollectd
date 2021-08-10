@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+
+#pragma once
+
 enum {
   FAM_HAPROXY_FRONTEND_CURRENT_SESSIONS,
   FAM_HAPROXY_FRONTEND_MAX_SESSIONS,

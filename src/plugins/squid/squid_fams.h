@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+
+#pragma once
+
 enum {
   FAM_SQUID_CLIENT_HTTP_REQUESTS_TOTAL,
   FAM_SQUID_CLIENT_HTTP_HITS_TOTAL,

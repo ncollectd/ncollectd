@@ -1,26 +1,10 @@
-/**
- * collectd - src/nfs.c
- * Copyright (C) 2005,2006  Jason Pepas
- * Copyright (C) 2012,2013  Florian Forster
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Jason Pepas <cell at ices.utexas.edu>
- *   Florian octo Forster <octo at collectd.org>
- *   Cosmin Ioiart <cioiart at gmail.com>
- **/
+// SPDX-License-Identifier: GPL-2.0-only
+// Copyright (C) 2005,2006  Jason Pepas
+// Copyright (C) 2012,2013  Florian Forster
+// Authors:
+//   Jason Pepas <cell at ices.utexas.edu>
+//   Florian octo Forster <octo at collectd.org>
+//   Cosmin Ioiart <cioiart at gmail.com>
 
 #include "collectd.h"
 
