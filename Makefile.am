@@ -54,7 +54,7 @@ EXTRA_DIST = \
 	src/plugins/unixsock/ncollectd-unixsock.pod \
 	src/collectd.conf.pod \
 	src/collectd.pod \
-	src/collectdctl.pod \
+	src/ncollectdctl/ncollectdctl.pod \
 	src/ncollectdmon/ncollectdmon.pod \
 	src/pinba.proto \
 	src/postgresql_default.conf \
@@ -71,7 +71,7 @@ dist_man_MANS = \
 	src/collectd.conf.5 \
 	src/collectd-email.5 \
 	src/plugins/exec/ncollectd-exec.5 \
-	src/collectdctl.1 \
+	src/ncollectdctl/ncollectdctl.1 \
 	src/collectd-java.5 \
 	src/collectd-lua.5 \
 	src/ncollectdmon/ncollectdmon.1 \
@@ -106,7 +106,7 @@ sbin_PROGRAMS = \
 bin_PROGRAMS = \
 	collectd-nagios \
 	collectd-tg \
-	collectdctl 
+	ncollectdctl 
 
 noinst_LTLIBRARIES = \
 	libavltree.la \
@@ -267,16 +267,16 @@ collectd_nagios_LDADD += -lm
 endif
 
 
-collectdctl_SOURCES = src/collectdctl.c
-collectdctl_CPPFLAGS = $(AM_CPPFLAGS) \
+ncollectdctl_SOURCES = src/ncollectdctl/ncollectdctl.c
+ncollectdctl_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/libcollectdclient \
 	-I$(top_builddir)/src/libcollectdclient
-collectdctl_LDADD = libcollectdclient.la
+ncollectdctl_LDADD = libcollectdclient.la
 if BUILD_WITH_LIBSOCKET
-collectdctl_LDADD += -lsocket
+ncollectdctl_LDADD += -lsocket
 endif
 if BUILD_AIX
-collectdctl_LDADD += -lm
+ncollectdctl_LDADD += -lm
 endif
 
 
