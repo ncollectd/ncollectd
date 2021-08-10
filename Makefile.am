@@ -49,7 +49,7 @@ EXTRA_DIST = \
 	src/collectd-perl.pod \
 	src/collectd-python.pod \
 	src/collectd-snmp.pod \
-	src/collectd-tg.pod \
+	src/ncollectdtg/ncollectdtg.pod \
 	src/plugins/threshold/ncollectd-threshold.pod \
 	src/plugins/unixsock/ncollectd-unixsock.pod \
 	src/collectd.conf.pod \
@@ -79,7 +79,7 @@ dist_man_MANS = \
 	src/collectd-perl.5 \
 	src/collectd-python.5 \
 	src/collectd-snmp.5 \
-	src/collectd-tg.1 \
+	src/ncollectdtg/ncollectdtg.1 \
 	src/plugins/threshold/ncollectd-threshold.5 \
 	src/plugins/unixsock/ncollectd-unixsock.5 \
 	src/types.db.5
@@ -105,7 +105,7 @@ sbin_PROGRAMS = \
 
 bin_PROGRAMS = \
 	collectd-nagios \
-	collectd-tg \
+	ncollectdtg \
 	ncollectdctl 
 
 noinst_LTLIBRARIES = \
@@ -280,22 +280,22 @@ ncollectdctl_LDADD += -lm
 endif
 
 
-collectd_tg_SOURCES = src/collectd-tg.c
-collectd_tg_CPPFLAGS = $(AM_CPPFLAGS) \
+ncollectdtg_SOURCES = src/ncollectdtg/ncollectdtg.c
+ncollectdtg_CPPFLAGS = $(AM_CPPFLAGS) \
 	-I$(srcdir)/src/libcollectdclient \
 	-I$(top_builddir)/src/libcollectdclient
-collectd_tg_LDADD = \
+ncollectdtg_LDADD = \
 	$(PTHREAD_LIBS) \
 	libheap.la \
 	libcollectdclient.la
 if BUILD_WITH_LIBSOCKET
-collectd_tg_LDADD += -lsocket
+ncollectdtg_LDADD += -lsocket
 endif
 if BUILD_WITH_LIBRT
-collectd_tg_LDADD += -lrt
+ncollectdtg_LDADD += -lrt
 endif
 if BUILD_AIX
-collectd_tg_LDADD += -lm
+ncollectdtg_LDADD += -lm
 endif
 
 test_utils_cache_SOURCES = \
