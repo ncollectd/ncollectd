@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+
 #ifndef METRIC_MATCH
 #define METRIC_MATCH 1
 

@@ -1,5 +1,4 @@
-/**
- **/
+// SPDX-License-Identifier: GPL-2.0-only
 
 #include "collectd.h"
 #include "state_set.h"

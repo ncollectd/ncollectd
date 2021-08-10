@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+
 #ifndef STATE_SET_H
 #define STATE_SET_H 1
 

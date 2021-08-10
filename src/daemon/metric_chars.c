@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-only
 
 const char valid_label_chars[256] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

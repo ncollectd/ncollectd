@@ -1,3 +1,5 @@
+ /* SPDX-License-Identifier: GPL-2.0-only */
+
 #ifndef METRIC_CHARS_H
 #define METRIC_CHARS_H 1
 
