@@ -460,12 +460,12 @@ static int apache_read_host(user_data_t *user_data)
 {
   metric_family_t fams[FAM_APACHE_MAX] = {
    [FAM_APACHE_REQUESTS] = {
-     .name = "apache_requests_total",
+     .name = "apache_requests",
      .type = METRIC_TYPE_COUNTER,
      .help = "Apache total requests",
    },
    [FAM_APACHE_BYTES] = {
-     .name = "apache_bytes_total",
+     .name = "apache_bytes",
      .type = METRIC_TYPE_COUNTER,
      .help = "Apache total kbytes sent",
    },
