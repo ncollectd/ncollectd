@@ -21,27 +21,27 @@ static int softnet_read(void)
 {
   metric_family_t fams[FAM_SOFTNET_MAX]= {
     [FAM_SOFTNET_PROCESSED] = {
-      .name = "host_softnet_processed_total",
+      .name = "host_softnet_processed",
       .help = "Number of processed packets",
       .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SOFTNET_DROPPED] = {
-      .name = "host_softnet_dropped_total",
+      .name = "host_softnet_dropped",
       .help = "Number of dropped packets",
       .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SOFTNET_TIMES_SQUEEZED] = {
-      .name = "host_softnet_times_squeezed_total",
+      .name = "host_softnet_times_squeezed",
       .help = "Number of times processing packets ran out of quota",
       .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SOFTNET_RECEIVED_RPS] = {
-      .name = "host_softnet_received_rps_total",
+      .name = "host_softnet_received_rps",
       .help = "Number of steering packets received",
       .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SOFTNET_FLOW_LIMIT] = {
-      .name = "host_softnet_flow_limit_total",
+      .name = "host_softnet_flow_limit",
       .help = "Number of times processing packets hit flow limit",
       .type = METRIC_TYPE_COUNTER,
     },
