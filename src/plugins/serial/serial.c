@@ -29,32 +29,32 @@ static int serial_read(void)
 {
   metric_family_t fams[FAM_SERIAL_MAX] = {
     [FAM_SERIAL_READ] = {
-      .name = "host_serial_read_bytes_total",
+      .name = "host_serial_read_bytes",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total bytes read in serial port",
     },
     [FAM_SERIAL_WRITE] = {
-      .name = "host_serial_write_bytes_total",
+      .name = "host_serial_write_bytes",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total bytes written in serial port",
     },
     [FAM_SERIAL_FRAMING_ERRORS] = {
-      .name = "host_serial_framing_errors_total",
+      .name = "host_serial_framing_errors",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total framing errors (stop bit not found) in serial port",
     },
     [FAM_SERIAL_PARITY_ERRORS] = {
-      .name = "host_serial_parity_errors_total",
+      .name = "host_serial_parity_errors",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total parity errors in serial port",
     },
     [FAM_SERIAL_BREAK_CONDITIONS] = {
-      .name = "host_serial_break_conditions_total",
+      .name = "host_serial_break_conditions",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total break conditions in serial port",
     },
     [FAM_SERIAL_OVERRUN_ERRORS] = {
-      .name = "host_serial_overrun_errors_total",
+      .name = "host_serial_overrun_errors",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total receiver overrun errors in serial port",
     },
