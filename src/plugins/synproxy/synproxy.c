@@ -19,26 +19,26 @@ static const char *synproxy_stat_path = "/proc/net/stat/synproxy";
 static void synproxy_submit(value_t *results)
 {
   metric_family_t fams[SYNPROXY_FIELDS - 1] = {
-      {
-          .name = "host_synproxy_connections_syn_received_total",
-          .type = METRIC_TYPE_COUNTER,
-      },
-      {
-          .name = "host_synproxy_cookies_invalid_total",
-          .type = METRIC_TYPE_COUNTER,
-      },
-      {
-          .name = "host_synproxy_cookies_valid_total",
-          .type = METRIC_TYPE_COUNTER,
-      },
-      {
-          .name = "host_synproxy_cookies_retransmission_total",
-          .type = METRIC_TYPE_COUNTER,
-      },
-      {
-          .name = "host_synproxy_connections_reopened_total",
-          .type = METRIC_TYPE_COUNTER,
-      },
+    {
+      .name = "host_synproxy_connections_syn_received",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    {
+      .name = "host_synproxy_cookies_invalid",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    {
+      .name = "host_synproxy_cookies_valid",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    {
+      .name = "host_synproxy_cookies_retransmission",
+      .type = METRIC_TYPE_COUNTER,
+    },
+    {
+      .name = "host_synproxy_connections_reopened",
+      .type = METRIC_TYPE_COUNTER,
+    },
   };
 
   metric_t m = {0};
