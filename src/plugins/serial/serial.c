@@ -44,7 +44,7 @@ static int serial_read(void)
       .help = "Total framing errors (stop bit not found) in serial port",
     },
     [FAM_SERIAL_PARITY_ERRORS] = {
-      .name = "host_serial_parity_errrors_total",
+      .name = "host_serial_parity_errors_total",
       .type = METRIC_TYPE_COUNTER,
       .help = "Total parity errors in serial port",
     },
