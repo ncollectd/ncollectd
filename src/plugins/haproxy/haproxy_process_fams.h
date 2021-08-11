@@ -11,20 +11,20 @@ enum {
   FAM_HAPROXY_PROCESS_MAX_MEMORY_BYTES,
   FAM_HAPROXY_PROCESS_POOL_ALLOCATED_BYTES,
   FAM_HAPROXY_PROCESS_POOL_USED_BYTES,
-  FAM_HAPROXY_PROCESS_POOL_FAILURES_TOTAL,
+  FAM_HAPROXY_PROCESS_POOL_FAILURES,
   FAM_HAPROXY_PROCESS_MAX_FDS,
   FAM_HAPROXY_PROCESS_MAX_SOCKETS,
   FAM_HAPROXY_PROCESS_MAX_CONNECTIONS,
   FAM_HAPROXY_PROCESS_HARD_MAX_CONNECTIONS,
   FAM_HAPROXY_PROCESS_CURRENT_CONNECTIONS,
-  FAM_HAPROXY_PROCESS_CONNECTIONS_TOTAL,
-  FAM_HAPROXY_PROCESS_REQUESTS_TOTAL,
+  FAM_HAPROXY_PROCESS_CONNECTIONS,
+  FAM_HAPROXY_PROCESS_REQUESTS,
   FAM_HAPROXY_PROCESS_MAX_SSL_CONNECTIONS,
   FAM_HAPROXY_PROCESS_CURRENT_SSL_CONNECTIONS,
-  FAM_HAPROXY_PROCESS_SSL_CONNECTIONS_TOTAL,
+  FAM_HAPROXY_PROCESS_SSL_CONNECTIONS,
   FAM_HAPROXY_PROCESS_MAX_PIPES,
-  FAM_HAPROXY_PROCESS_PIPES_USED_TOTAL,
-  FAM_HAPROXY_PROCESS_PIPES_FREE_TOTAL,
+  FAM_HAPROXY_PROCESS_PIPES_USED,
+  FAM_HAPROXY_PROCESS_PIPES_FREE,
   FAM_HAPROXY_PROCESS_CURRENT_CONNECTION_RATE,
   FAM_HAPROXY_PROCESS_LIMIT_CONNECTION_RATE,
   FAM_HAPROXY_PROCESS_MAX_CONNECTION_RATE,
@@ -39,10 +39,10 @@ enum {
   FAM_HAPROXY_PROCESS_FRONTEND_SSL_REUSE,
   FAM_HAPROXY_PROCESS_CURRENT_BACKEND_SSL_KEY_RATE,
   FAM_HAPROXY_PROCESS_MAX_BACKEND_SSL_KEY_RATE,
-  FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS_TOTAL,
-  FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES_TOTAL,
-  FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN_TOTAL,
-  FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS,
+  FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES,
+  FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN,
+  FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT,
   FAM_HAPROXY_PROCESS_LIMIT_HTTP_COMP,
   FAM_HAPROXY_PROCESS_CURRENT_ZLIB_MEMORY,
   FAM_HAPROXY_PROCESS_MAX_ZLIB_MEMORY,
@@ -55,13 +55,13 @@ enum {
   FAM_HAPROXY_PROCESS_LISTENERS,
   FAM_HAPROXY_PROCESS_ACTIVE_PEERS,
   FAM_HAPROXY_PROCESS_CONNECTED_PEERS,
-  FAM_HAPROXY_PROCESS_DROPPED_LOGS_TOTAL,
+  FAM_HAPROXY_PROCESS_DROPPED_LOGS,
   FAM_HAPROXY_PROCESS_BUSY_POLLING_ENABLED,
   FAM_HAPROXY_PROCESS_FAILED_RESOLUTIONS,
-  FAM_HAPROXY_PROCESS_BYTES_OUT_TOTAL,
-  FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT_TOTAL,
+  FAM_HAPROXY_PROCESS_BYTES_OUT,
+  FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT,
   FAM_HAPROXY_PROCESS_BYTES_OUT_RATE,
-  FAM_HAPROXY_PROCESS_RECV_LOGS_TOTAL,
+  FAM_HAPROXY_PROCESS_RECV_LOGS,
   FAM_HAPROXY_PROCESS_BUILD_INFO,
   FAM_HAPROXY_PROCESS_MAX,
 };
@@ -107,8 +107,8 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Amount of pool memory currently used (in bytes)",
   },
-  [FAM_HAPROXY_PROCESS_POOL_FAILURES_TOTAL] = {
-    .name = "haproxy_process_pool_failures_total",
+  [FAM_HAPROXY_PROCESS_POOL_FAILURES] = {
+    .name = "haproxy_process_pool_failures",
     .type = METRIC_TYPE_COUNTER,
     .help = "Number of failed pool allocations since this worker was started",
   },
@@ -137,13 +137,13 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of connections on this worker process",
   },
-  [FAM_HAPROXY_PROCESS_CONNECTIONS_TOTAL] = {
-    .name = "haproxy_process_connections_total",
+  [FAM_HAPROXY_PROCESS_CONNECTIONS] = {
+    .name = "haproxy_process_connections",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of connections on this worker process since started",
   },
-  [FAM_HAPROXY_PROCESS_REQUESTS_TOTAL] = {
-    .name = "haproxy_process_requests_total",
+  [FAM_HAPROXY_PROCESS_REQUESTS] = {
+    .name = "haproxy_process_requests",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of requests on this worker process since started",
   },
@@ -157,8 +157,8 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of SSL endpoints on this worker process (front+back)",
   },
-  [FAM_HAPROXY_PROCESS_SSL_CONNECTIONS_TOTAL] = {
-    .name = "haproxy_process_ssl_connections_total",
+  [FAM_HAPROXY_PROCESS_SSL_CONNECTIONS] = {
+    .name = "haproxy_process_ssl_connections",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of SSL endpoints on this worker process since started (front+back)",
   },
@@ -167,13 +167,13 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Hard limit on the number of pipes for splicing",
   },
-  [FAM_HAPROXY_PROCESS_PIPES_USED_TOTAL] = {
-    .name = "haproxy_process_pipes_used_total",
+  [FAM_HAPROXY_PROCESS_PIPES_USED] = {
+    .name = "haproxy_process_pipes_used",
     .type = METRIC_TYPE_COUNTER,
     .help = "Current number of pipes in use in this worker process",
   },
-  [FAM_HAPROXY_PROCESS_PIPES_FREE_TOTAL] = {
-    .name = "haproxy_process_pipes_free_total",
+  [FAM_HAPROXY_PROCESS_PIPES_FREE] = {
+    .name = "haproxy_process_pipes_free",
     .type = METRIC_TYPE_COUNTER,
     .help = "Current number of allocated and available pipes in this worker process",
   },
@@ -247,23 +247,23 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Highest SslBackendKeyRate reached on this worker process since started (in SSL keys per second)",
   },
-  [FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS_TOTAL] = {
-    .name = "haproxy_process_ssl_cache_lookups_total",
+  [FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS] = {
+    .name = "haproxy_process_ssl_cache_lookups",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of SSL session ID lookups in the SSL session cache on this worker since started",
   },
-  [FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES_TOTAL] = {
-    .name = "haproxy_process_ssl_cache_misses_total",
+  [FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES] = {
+    .name = "haproxy_process_ssl_cache_misses",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of SSL session ID lookups that didn't find a session in the SSL session cache on this worker since started",
   },
-  [FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN_TOTAL] = {
-    .name = "haproxy_process_http_comp_bytes_in_total",
+  [FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN] = {
+    .name = "haproxy_process_http_comp_bytes_in",
     .type = METRIC_TYPE_COUNTER,
     .help = "Number of bytes submitted to the HTTP compressor in this worker process over the last second",
   },
-  [FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT_TOTAL] = {
-    .name = "haproxy_process_http_comp_bytes_out_total",
+  [FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT] = {
+    .name = "haproxy_process_http_comp_bytes_out",
     .type = METRIC_TYPE_COUNTER,
     .help = "Number of bytes emitted by the HTTP compressor in this worker process over the last second",
   },
@@ -327,8 +327,8 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Current number of peers having passed the connection step on the current worker process",
   },
-  [FAM_HAPROXY_PROCESS_DROPPED_LOGS_TOTAL] = {
-    .name = "haproxy_process_dropped_logs_total",
+  [FAM_HAPROXY_PROCESS_DROPPED_LOGS] = {
+    .name = "haproxy_process_dropped_logs",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of dropped logs for current worker process since started",
   },
@@ -342,13 +342,13 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of failed DNS resolutions in current worker process since started",
   },
-  [FAM_HAPROXY_PROCESS_BYTES_OUT_TOTAL] = {
-    .name = "haproxy_process_bytes_out_total",
+  [FAM_HAPROXY_PROCESS_BYTES_OUT] = {
+    .name = "haproxy_process_bytes_out",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes emitted by current worker process since started",
   },
-  [FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT_TOTAL] = {
-    .name = "haproxy_process_spliced_bytes_out_total",
+  [FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT] = {
+    .name = "haproxy_process_spliced_bytes_out",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of bytes emitted by current worker process through a kernel pipe since started",
   },
@@ -357,8 +357,8 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     .type = METRIC_TYPE_GAUGE,
     .help = "Number of bytes emitted by current worker process over the last second",
   },
-  [FAM_HAPROXY_PROCESS_RECV_LOGS_TOTAL] = {
-    .name = "haproxy_process_recv_logs_total",
+  [FAM_HAPROXY_PROCESS_RECV_LOGS] = {
+    .name = "haproxy_process_recv_logs",
     .type = METRIC_TYPE_COUNTER,
     .help = "Total number of log messages received by log-forwarding listeners on this worker process since started",
   },

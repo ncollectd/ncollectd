@@ -134,11 +134,11 @@ hainfo_get_key (register const char *str, register size_t len)
 #line 39 "haproxy_info.gperf"
       {"SessRateLimit", FAM_HAPROXY_PROCESS_LIMIT_SESSION_RATE},
 #line 50 "haproxy_info.gperf"
-      {"SslCacheMisses", FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES_TOTAL},
+      {"SslCacheMisses", FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES},
 #line 49 "haproxy_info.gperf"
-      {"SslCacheLookups", FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS_TOTAL},
+      {"SslCacheLookups", FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS},
 #line 28 "haproxy_info.gperf"
-      {"CumReq", FAM_HAPROXY_PROCESS_REQUESTS_TOTAL},
+      {"CumReq", FAM_HAPROXY_PROCESS_REQUESTS},
 #line 47 "haproxy_info.gperf"
       {"SslBackendKeyRate", FAM_HAPROXY_PROCESS_CURRENT_BACKEND_SSL_KEY_RATE},
 #line 35 "haproxy_info.gperf"
@@ -148,7 +148,7 @@ hainfo_get_key (register const char *str, register size_t len)
 #line 48 "haproxy_info.gperf"
       {"SslBackendMaxKeyRate", FAM_HAPROXY_PROCESS_MAX_BACKEND_SSL_KEY_RATE},
 #line 71 "haproxy_info.gperf"
-      {"CumRecvLogs", FAM_HAPROXY_PROCESS_RECV_LOGS_TOTAL},
+      {"CumRecvLogs", FAM_HAPROXY_PROCESS_RECV_LOGS},
 #line 30 "haproxy_info.gperf"
       {"CurrSslConns", FAM_HAPROXY_PROCESS_CURRENT_SSL_CONNECTIONS},
 #line 36 "haproxy_info.gperf"
@@ -172,21 +172,21 @@ hainfo_get_key (register const char *str, register size_t len)
 #line 54 "haproxy_info.gperf"
       {"ZlibMemUsage", FAM_HAPROXY_PROCESS_CURRENT_ZLIB_MEMORY},
 #line 51 "haproxy_info.gperf"
-      {"CompressBpsIn", FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN_TOTAL},
+      {"CompressBpsIn", FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN},
 #line 52 "haproxy_info.gperf"
-      {"CompressBpsOut", FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT_TOTAL},
+      {"CompressBpsOut", FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT},
 #line 56 "haproxy_info.gperf"
       {"Tasks", FAM_HAPROXY_PROCESS_CURRENT_TASKS},
 #line 31 "haproxy_info.gperf"
-      {"CumSslConns", FAM_HAPROXY_PROCESS_SSL_CONNECTIONS_TOTAL},
+      {"CumSslConns", FAM_HAPROXY_PROCESS_SSL_CONNECTIONS},
 #line 46 "haproxy_info.gperf"
       {"SslFrontendSessionReuse_pct", FAM_HAPROXY_PROCESS_FRONTEND_SSL_REUSE},
 #line 53 "haproxy_info.gperf"
       {"CompressBpsRateLim", FAM_HAPROXY_PROCESS_LIMIT_HTTP_COMP},
 #line 34 "haproxy_info.gperf"
-      {"PipesFree", FAM_HAPROXY_PROCESS_PIPES_FREE_TOTAL},
+      {"PipesFree", FAM_HAPROXY_PROCESS_PIPES_FREE},
 #line 21 "haproxy_info.gperf"
-      {"PoolFailed", FAM_HAPROXY_PROCESS_POOL_FAILURES_TOTAL},
+      {"PoolFailed", FAM_HAPROXY_PROCESS_POOL_FAILURES},
 #line 15 "haproxy_info.gperf"
       {"Process_num", FAM_HAPROXY_PROCESS_RELATIVE_PROCESS_ID},
 #line 41 "haproxy_info.gperf"
@@ -203,10 +203,10 @@ hainfo_get_key (register const char *str, register size_t len)
 #line 59 "haproxy_info.gperf"
       {"Stopping", FAM_HAPROXY_PROCESS_STOPPING},
 #line 33 "haproxy_info.gperf"
-      {"PipesUsed", FAM_HAPROXY_PROCESS_PIPES_USED_TOTAL},
+      {"PipesUsed", FAM_HAPROXY_PROCESS_PIPES_USED},
       {""},
 #line 69 "haproxy_info.gperf"
-      {"TotalSplicdedBytesOut", FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT_TOTAL},
+      {"TotalSplicdedBytesOut", FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT},
 #line 24 "haproxy_info.gperf"
       {"Maxconn", FAM_HAPROXY_PROCESS_MAX_CONNECTIONS},
 #line 22 "haproxy_info.gperf"
@@ -229,7 +229,7 @@ hainfo_get_key (register const char *str, register size_t len)
 #line 25 "haproxy_info.gperf"
       {"Hard_maxconn", FAM_HAPROXY_PROCESS_HARD_MAX_CONNECTIONS},
 #line 27 "haproxy_info.gperf"
-      {"CumConns", FAM_HAPROXY_PROCESS_CONNECTIONS_TOTAL},
+      {"CumConns", FAM_HAPROXY_PROCESS_CONNECTIONS},
       {""},
 #line 72 "haproxy_info.gperf"
       {"Build info", FAM_HAPROXY_PROCESS_BUILD_INFO                 },
@@ -240,14 +240,14 @@ hainfo_get_key (register const char *str, register size_t len)
       {"Idle_pct", FAM_HAPROXY_PROCESS_IDLE_TIME_PERCENT},
       {""}, {""},
 #line 65 "haproxy_info.gperf"
-      {"DroppedLogs", FAM_HAPROXY_PROCESS_DROPPED_LOGS_TOTAL},
+      {"DroppedLogs", FAM_HAPROXY_PROCESS_DROPPED_LOGS},
       {""}, {""}, {""}, {""},
 #line 63 "haproxy_info.gperf"
       {"ActivePeers", FAM_HAPROXY_PROCESS_ACTIVE_PEERS},
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
       {""}, {""},
 #line 68 "haproxy_info.gperf"
-      {"TotalBytesOut", FAM_HAPROXY_PROCESS_BYTES_OUT_TOTAL}
+      {"TotalBytesOut", FAM_HAPROXY_PROCESS_BYTES_OUT}
     };
 
   if (len <= HAINFO_MAX_WORD_LENGTH && len >= HAINFO_MIN_WORD_LENGTH)
