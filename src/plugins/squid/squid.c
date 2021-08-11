@@ -227,37 +227,38 @@ static int squid_read_counters(squid_t *sq, metric_t *tmpl)
       value_t value = {0};
 
       switch(sc->fam) {
-        case FAM_SQUID_CLIENT_HTTP_IN_BYTES_TOTAL:
-        case FAM_SQUID_CLIENT_HTTP_OUT_BYTES_TOTAL:
-        case FAM_SQUID_CLIENT_HTTP_HIT_OUT_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_ALL_IN_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_ALL_OUT_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_HTTP_IN_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_HTTP_OUT_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_FTP_IN_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_FTP_OUT_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_OTHER_IN_BYTES_TOTAL:
-        case FAM_SQUID_SERVER_OTHER_OUT_BYTES_TOTAL:
-        case FAM_SQUID_ICP_SENT_BYTES_TOTAL:
-        case FAM_SQUID_ICP_RECV_BYTES_TOTAL:
-        case FAM_SQUID_ICP_Q_SENT_BYTES_TOTAL:
-        case FAM_SQUID_ICP_R_SENT_BYTES_TOTAL:
-        case FAM_SQUID_ICP_Q_RECV_BYTES_TOTAL:
-        case FAM_SQUID_ICP_R_RECV_BYTES_TOTAL:
-        case FAM_SQUID_CD_SENT_BYTES_TOTAL:
-        case FAM_SQUID_CD_RECV_BYTES_TOTAL: {
+        case FAM_SQUID_CLIENT_HTTP_IN_BYTES:
+        case FAM_SQUID_CLIENT_HTTP_OUT_BYTES:
+        case FAM_SQUID_CLIENT_HTTP_HIT_OUT_BYTES:
+        case FAM_SQUID_SERVER_ALL_IN_BYTES:
+        case FAM_SQUID_SERVER_ALL_OUT_BYTES:
+        case FAM_SQUID_SERVER_HTTP_IN_BYTES:
+        case FAM_SQUID_SERVER_HTTP_OUT_BYTES:
+        case FAM_SQUID_SERVER_FTP_IN_BYTES:
+        case FAM_SQUID_SERVER_FTP_OUT_BYTES:
+        case FAM_SQUID_SERVER_OTHER_IN_BYTES:
+        case FAM_SQUID_SERVER_OTHER_OUT_BYTES:
+        case FAM_SQUID_ICP_SENT_BYTES:
+        case FAM_SQUID_ICP_RECV_BYTES:
+        case FAM_SQUID_ICP_Q_SENT_BYTES:
+        case FAM_SQUID_ICP_R_SENT_BYTES:
+        case FAM_SQUID_ICP_Q_RECV_BYTES:
+        case FAM_SQUID_ICP_R_RECV_BYTES:
+        case FAM_SQUID_CD_SENT_BYTES:
+        case FAM_SQUID_CD_RECV_BYTES: {
           uint64_t counter; 
           if (strtouint(val, &counter) < 0) 
             continue;
           value.counter.uint64 = counter * 1024;
           break;
         }
-        case FAM_SQUID_CPU_TIME_TOTAL:
-        case FAM_SQUID_WALL_TIME_TOTAL: {
+        case FAM_SQUID_CPU_SECONDS:
+        case FAM_SQUID_WALL_SECONDS: {
           double gauge;
           if (strtodouble(val, &gauge) < 0) 
             continue;
-          value.counter.uint64 = gauge * 1000000; // FIXME
+          value.counter.type = COUNTER_FLOAT64;
+          value.counter.float64 = gauge;
           break;
         }
         default:

@@ -104,129 +104,129 @@ squid_counter_get_key (register const char *str, register size_t len)
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
       {""}, {""}, {""}, {""},
 #line 63 "squid_counters.gperf"
-      {"swap.ins", FAM_SQUID_SWAP_INS_TOTAL},
+      {"swap.ins", FAM_SQUID_SWAP_INS},
 #line 62 "squid_counters.gperf"
-      {"swap.outs", FAM_SQUID_SWAP_OUTS_TOTAL},
+      {"swap.outs", FAM_SQUID_SWAP_OUTS},
 #line 57 "squid_counters.gperf"
-      {"unlink.requests", FAM_SQUID_UNLINK_REQUESTS_TOTAL},
+      {"unlink.requests", FAM_SQUID_UNLINK_REQUESTS},
       {""},
 #line 46 "squid_counters.gperf"
-      {"icp.r_kbytes_sent", FAM_SQUID_ICP_R_SENT_BYTES_TOTAL},
+      {"icp.r_kbytes_sent", FAM_SQUID_ICP_R_SENT_BYTES},
       {""},
 #line 53 "squid_counters.gperf"
-      {"cd.memory", FAM_SQUID_CD_MEMORY_TOTAL},
+      {"cd.memory", FAM_SQUID_CD_MEMORY},
       {""},
 #line 14 "squid_counters.gperf"
-      {"client_http.hits", FAM_SQUID_CLIENT_HTTP_HITS_TOTAL},
+      {"client_http.hits", FAM_SQUID_CLIENT_HTTP_HITS},
 #line 48 "squid_counters.gperf"
-      {"icp.r_kbytes_recv", FAM_SQUID_ICP_R_RECV_BYTES_TOTAL},
+      {"icp.r_kbytes_recv", FAM_SQUID_ICP_R_RECV_BYTES},
 #line 15 "squid_counters.gperf"
-      {"client_http.errors", FAM_SQUID_CLIENT_HTTP_ERRORS_TOTAL},
+      {"client_http.errors", FAM_SQUID_CLIENT_HTTP_ERRORS},
 #line 55 "squid_counters.gperf"
-      {"cd.kbytes_sent", FAM_SQUID_CD_SENT_BYTES_TOTAL},
+      {"cd.kbytes_sent", FAM_SQUID_CD_SENT_BYTES},
 #line 13 "squid_counters.gperf"
-      {"client_http.requests", FAM_SQUID_CLIENT_HTTP_REQUESTS_TOTAL},
+      {"client_http.requests", FAM_SQUID_CLIENT_HTTP_REQUESTS},
 #line 16 "squid_counters.gperf"
-      {"client_http.kbytes_in", FAM_SQUID_CLIENT_HTTP_IN_BYTES_TOTAL},
+      {"client_http.kbytes_in", FAM_SQUID_CLIENT_HTTP_IN_BYTES},
 #line 17 "squid_counters.gperf"
-      {"client_http.kbytes_out", FAM_SQUID_CLIENT_HTTP_OUT_BYTES_TOTAL},
+      {"client_http.kbytes_out", FAM_SQUID_CLIENT_HTTP_OUT_BYTES},
 #line 60 "squid_counters.gperf"
-      {"cpu_time", FAM_SQUID_CPU_TIME_TOTAL},
+      {"cpu_time", FAM_SQUID_CPU_SECONDS},
 #line 56 "squid_counters.gperf"
-      {"cd.kbytes_recv", FAM_SQUID_CD_RECV_BYTES_TOTAL},
+      {"cd.kbytes_recv", FAM_SQUID_CD_RECV_BYTES},
       {""},
 #line 18 "squid_counters.gperf"
-      {"client_http.hit_kbytes_out", FAM_SQUID_CLIENT_HTTP_HIT_OUT_BYTES_TOTAL},
+      {"client_http.hit_kbytes_out", FAM_SQUID_CLIENT_HTTP_HIT_OUT_BYTES},
       {""},
 #line 24 "squid_counters.gperf"
-      {"server.http.errors", FAM_SQUID_SERVER_HTTP_ERRORS_TOTAL},
+      {"server.http.errors", FAM_SQUID_SERVER_HTTP_ERRORS},
 #line 49 "squid_counters.gperf"
-      {"icp.times_used", FAM_SQUID_ICP_TIMES_USED_TOTAL},
+      {"icp.times_used", FAM_SQUID_ICP_TIMES_USED},
 #line 23 "squid_counters.gperf"
-      {"server.http.requests", FAM_SQUID_SERVER_HTTP_REQUESTS_TOTAL},
+      {"server.http.requests", FAM_SQUID_SERVER_HTTP_REQUESTS},
 #line 25 "squid_counters.gperf"
-      {"server.http.kbytes_in", FAM_SQUID_SERVER_HTTP_IN_BYTES_TOTAL},
+      {"server.http.kbytes_in", FAM_SQUID_SERVER_HTTP_IN_BYTES},
 #line 26 "squid_counters.gperf"
-      {"server.http.kbytes_out", FAM_SQUID_SERVER_HTTP_OUT_BYTES_TOTAL},
+      {"server.http.kbytes_out", FAM_SQUID_SERVER_HTTP_OUT_BYTES},
 #line 50 "squid_counters.gperf"
-      {"cd.times_used", FAM_SQUID_CD_TIMES_USED_TOTAL},
+      {"cd.times_used", FAM_SQUID_CD_TIMES_USED},
       {""},
 #line 43 "squid_counters.gperf"
-      {"icp.kbytes_sent", FAM_SQUID_ICP_SENT_BYTES_TOTAL},
+      {"icp.kbytes_sent", FAM_SQUID_ICP_SENT_BYTES},
 #line 37 "squid_counters.gperf"
-      {"icp.queries_sent", FAM_SQUID_ICP_SENT_QUERIES_TOTAL},
+      {"icp.queries_sent", FAM_SQUID_ICP_SENT_QUERIES},
 #line 45 "squid_counters.gperf"
-      {"icp.q_kbytes_sent", FAM_SQUID_ICP_Q_SENT_BYTES_TOTAL},
+      {"icp.q_kbytes_sent", FAM_SQUID_ICP_Q_SENT_BYTES},
 #line 41 "squid_counters.gperf"
-      {"icp.query_timeouts", FAM_SQUID_ICP_QUERY_TIMEOUTS_TOTAL},
+      {"icp.query_timeouts", FAM_SQUID_ICP_QUERY_TIMEOUTS},
       {""},
 #line 44 "squid_counters.gperf"
-      {"icp.kbytes_recv", FAM_SQUID_ICP_RECV_BYTES_TOTAL},
+      {"icp.kbytes_recv", FAM_SQUID_ICP_RECV_BYTES},
 #line 39 "squid_counters.gperf"
-      {"icp.queries_recv", FAM_SQUID_ICP_RECV_QUERIES_TOTAL},
+      {"icp.queries_recv", FAM_SQUID_ICP_RECV_QUERIES},
 #line 47 "squid_counters.gperf"
-      {"icp.q_kbytes_recv", FAM_SQUID_ICP_Q_RECV_BYTES_TOTAL},
+      {"icp.q_kbytes_recv", FAM_SQUID_ICP_Q_RECV_BYTES},
       {""},
 #line 32 "squid_counters.gperf"
-      {"server.other.errors", FAM_SQUID_SERVER_OTHER_ERRORS_TOTAL},
+      {"server.other.errors", FAM_SQUID_SERVER_OTHER_ERRORS},
       {""},
 #line 31 "squid_counters.gperf"
-      {"server.other.requests", FAM_SQUID_SERVER_OTHER_REQUESTS_TOTAL},
+      {"server.other.requests", FAM_SQUID_SERVER_OTHER_REQUESTS},
 #line 33 "squid_counters.gperf"
-      {"server.other.kbytes_in", FAM_SQUID_SERVER_OTHER_IN_BYTES_TOTAL},
+      {"server.other.kbytes_in", FAM_SQUID_SERVER_OTHER_IN_BYTES},
 #line 34 "squid_counters.gperf"
-      {"server.other.kbytes_out", FAM_SQUID_SERVER_OTHER_OUT_BYTES_TOTAL},
+      {"server.other.kbytes_out", FAM_SQUID_SERVER_OTHER_OUT_BYTES},
       {""}, {""}, {""},
 #line 28 "squid_counters.gperf"
-      {"server.ftp.errors", FAM_SQUID_SERVER_FTP_ERRORS_TOTAL},
+      {"server.ftp.errors", FAM_SQUID_SERVER_FTP_ERRORS},
 #line 35 "squid_counters.gperf"
-      {"icp.pkts_sent", FAM_SQUID_ICP_SENT_PKTS_TOTAL},
+      {"icp.pkts_sent", FAM_SQUID_ICP_SENT_PKTS},
 #line 27 "squid_counters.gperf"
-      {"server.ftp.requests", FAM_SQUID_SERVER_FTP_REQUESTS_TOTAL},
+      {"server.ftp.requests", FAM_SQUID_SERVER_FTP_REQUESTS},
 #line 29 "squid_counters.gperf"
-      {"server.ftp.kbytes_in", FAM_SQUID_SERVER_FTP_IN_BYTES_TOTAL},
+      {"server.ftp.kbytes_in", FAM_SQUID_SERVER_FTP_IN_BYTES},
 #line 30 "squid_counters.gperf"
-      {"server.ftp.kbytes_out", FAM_SQUID_SERVER_FTP_OUT_BYTES_TOTAL},
+      {"server.ftp.kbytes_out", FAM_SQUID_SERVER_FTP_OUT_BYTES},
 #line 20 "squid_counters.gperf"
-      {"server.all.errors", FAM_SQUID_SERVER_ALL_ERRORS_TOTAL},
+      {"server.all.errors", FAM_SQUID_SERVER_ALL_ERRORS},
 #line 36 "squid_counters.gperf"
-      {"icp.pkts_recv", FAM_SQUID_ICP_RECV_PKTS_TOTAL},
+      {"icp.pkts_recv", FAM_SQUID_ICP_RECV_PKTS},
 #line 19 "squid_counters.gperf"
-      {"server.all.requests", FAM_SQUID_SERVER_ALL_REQUESTS_TOTAL},
+      {"server.all.requests", FAM_SQUID_SERVER_ALL_REQUESTS},
 #line 21 "squid_counters.gperf"
-      {"server.all.kbytes_in", FAM_SQUID_SERVER_ALL_IN_BYTES_TOTAL},
+      {"server.all.kbytes_in", FAM_SQUID_SERVER_ALL_IN_BYTES},
 #line 22 "squid_counters.gperf"
-      {"server.all.kbytes_out", FAM_SQUID_SERVER_ALL_OUT_BYTES_TOTAL},
+      {"server.all.kbytes_out", FAM_SQUID_SERVER_ALL_OUT_BYTES},
 #line 51 "squid_counters.gperf"
-      {"cd.msgs_sent", FAM_SQUID_CD_SENT_MSGS_TOTAL},
+      {"cd.msgs_sent", FAM_SQUID_CD_SENT_MSGS},
       {""}, {""}, {""},
 #line 65 "squid_counters.gperf"
-      {"aborted_requests", FAM_SQUID_ABORTED_REQUESTS_TOTAL},
+      {"aborted_requests", FAM_SQUID_ABORTED_REQUESTS},
 #line 52 "squid_counters.gperf"
-      {"cd.msgs_recv", FAM_SQUID_CD_RECV_MSGS_TOTAL},
+      {"cd.msgs_recv", FAM_SQUID_CD_RECV_MSGS},
       {""},
 #line 61 "squid_counters.gperf"
-      {"wall_time", FAM_SQUID_WALL_TIME_TOTAL},
+      {"wall_time", FAM_SQUID_WALL_SECONDS},
       {""},
 #line 38 "squid_counters.gperf"
-      {"icp.replies_sent", FAM_SQUID_ICP_SENT_REPLIES_TOTAL},
+      {"icp.replies_sent", FAM_SQUID_ICP_SENT_REPLIES},
 #line 59 "squid_counters.gperf"
-      {"select_loops", FAM_SQUID_SELECT_LOOPS_TOTAL},
+      {"select_loops", FAM_SQUID_SELECT_LOOPS},
       {""}, {""}, {""},
 #line 40 "squid_counters.gperf"
-      {"icp.replies_recv", FAM_SQUID_ICP_RECV_REPLIES_TOTAL},
+      {"icp.replies_recv", FAM_SQUID_ICP_RECV_REPLIES},
       {""}, {""}, {""}, {""},
 #line 58 "squid_counters.gperf"
-      {"page_faults", FAM_SQUID_PAGE_FAULTS_TOTAL},
+      {"page_faults", FAM_SQUID_PAGE_FAULTS},
       {""},
 #line 42 "squid_counters.gperf"
-      {"icp.replies_queued", FAM_SQUID_ICP_REPLIES_QUEUED_TOTAL},
+      {"icp.replies_queued", FAM_SQUID_ICP_REPLIES_QUEUED},
       {""}, {""}, {""}, {""},
 #line 64 "squid_counters.gperf"
-      {"swap.files_cleaned", FAM_SQUID_SWAP_FILES_CLEANED_TOTAL},
+      {"swap.files_cleaned", FAM_SQUID_SWAP_FILES_CLEANED},
       {""},
 #line 54 "squid_counters.gperf"
-      {"cd.local_memory", FAM_SQUID_CD_LOCAL_MEMORY_TOTAL}
+      {"cd.local_memory", FAM_SQUID_CD_LOCAL_MEMORY}
     };
 
   if (len <= FAM_SQUID_COUNTER_MAX_WORD_LENGTH && len >= FAM_SQUID_COUNTER_MIN_WORD_LENGTH)
