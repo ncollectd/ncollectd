@@ -13,8 +13,8 @@
 #error "No applicable input method."
 #endif
 
-
 static const char *proc_serial = "/proc/tty/driver/serial";
+
 enum {
   FAM_SERIAL_READ = 0,
   FAM_SERIAL_WRITE,
@@ -23,8 +23,8 @@ enum {
   FAM_SERIAL_BREAK_CONDITIONS,
   FAM_SERIAL_OVERRUN_ERRORS,
   FAM_SERIAL_MAX,
-}
-;
+};
+
 static int serial_read(void)
 {
   metric_family_t fams[FAM_SERIAL_MAX] = {
