@@ -25,10 +25,10 @@ enum {
   FAM_TIMEX_PPS_JITTER_SECONDS,
   FAM_TIMEX_PPS_SHIFT_SECONDS,
   FAM_TIMEX_PPS_STABILITY_HERTZ,
-  FAM_TIMEX_PPS_JITTER_TOTAL,
-  FAM_TIMEX_PPS_CALIBRATION_TOTAL,
-  FAM_TIMEX_PPS_ERROR_TOTAL,
-  FAM_TIMEX_PPS_STABILITY_EXCEEDED_TOTAL,
+  FAM_TIMEX_PPS_JITTER,
+  FAM_TIMEX_PPS_CALIBRATION,
+  FAM_TIMEX_PPS_ERROR,
+  FAM_TIMEX_PPS_STABILITY_EXCEEDED,
   FAM_TIMEX_TAI_OFFSET_SECONDS,
   FAM_TIMEX_MAX,
 };
@@ -94,23 +94,23 @@ static metric_family_t fams[FAM_TIMEX_MAX] = {
     .help = "Pulse per second stability, average of recent frequency changes.",
     .type = METRIC_TYPE_GAUGE,
   },
-  [FAM_TIMEX_PPS_JITTER_TOTAL] = {
-    .name = "host_timex_pps_jitter_total",
+  [FAM_TIMEX_PPS_JITTER] = {
+    .name = "host_timex_pps_jitter",
     .help = "Pulse per second count of jitter limit exceeded events.",
     .type = METRIC_TYPE_COUNTER,
   },
-  [FAM_TIMEX_PPS_CALIBRATION_TOTAL] = {
-    .name = "host_timex_pps_calibration_total",
+  [FAM_TIMEX_PPS_CALIBRATION] = {
+    .name = "host_timex_pps_calibration",
     .help = "Pulse per second count of calibration intervals.",
     .type = METRIC_TYPE_COUNTER,
   },
-  [FAM_TIMEX_PPS_ERROR_TOTAL] = {
-    .name = "host_timex_pps_error_total",
+  [FAM_TIMEX_PPS_ERROR] = {
+    .name = "host_timex_pps_error",
     .help = "Pulse per second count of calibration errors.",
     .type = METRIC_TYPE_COUNTER,
   },
-  [FAM_TIMEX_PPS_STABILITY_EXCEEDED_TOTAL] = {
-    .name = "host_timex_pps_stability_exceeded_total",
+  [FAM_TIMEX_PPS_STABILITY_EXCEEDED] = {
+    .name = "host_timex_pps_stability_exceeded",
     .help = "Pulse per second count of stability limit exceeded events.",
     .type = METRIC_TYPE_COUNTER,
   },
@@ -170,16 +170,16 @@ static int timex_read(void)
   metric_family_metric_append(&fams[FAM_TIMEX_PPS_STABILITY_HERTZ], m);
 
   m.value.counter.uint64 = timex.jitcnt;
-  metric_family_metric_append(&fams[FAM_TIMEX_PPS_JITTER_TOTAL], m);
+  metric_family_metric_append(&fams[FAM_TIMEX_PPS_JITTER], m);
 
   m.value.counter.uint64 = timex.calcnt;
-  metric_family_metric_append(&fams[FAM_TIMEX_PPS_CALIBRATION_TOTAL], m);
+  metric_family_metric_append(&fams[FAM_TIMEX_PPS_CALIBRATION], m);
 
   m.value.counter.uint64 = timex.errcnt;
-  metric_family_metric_append(&fams[FAM_TIMEX_PPS_ERROR_TOTAL], m);
+  metric_family_metric_append(&fams[FAM_TIMEX_PPS_ERROR], m);
 
   m.value.counter.uint64 = timex.stbcnt;
-  metric_family_metric_append(&fams[FAM_TIMEX_PPS_STABILITY_EXCEEDED_TOTAL], m);
+  metric_family_metric_append(&fams[FAM_TIMEX_PPS_STABILITY_EXCEEDED], m);
 
   m.value.gauge.float64 = timex.tai;
   metric_family_metric_append(&fams[FAM_TIMEX_TAI_OFFSET_SECONDS], m);
