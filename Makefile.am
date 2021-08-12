@@ -1094,10 +1094,7 @@ include src/plugins/log_logstash/Makefile.am
 endif
 
 if BUILD_PLUGIN_LPAR
-pkglib_LTLIBRARIES += lpar.la
-lpar_la_SOURCES = src/lpar.c
-lpar_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-lpar_la_LIBADD = -lperfstat
+include src/plugins/lpar/Makefile.am
 endif
 
 if BUILD_PLUGIN_LUA

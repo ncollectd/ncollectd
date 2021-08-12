@@ -3418,33 +3418,6 @@ Sets notification severity to one of the options: "OK", "WARNING", "FAILURE".
 =back
 
 
-=head2 Plugin C<lpar>
-
-The I<LPAR plugin> reads CPU statistics of I<Logical Partitions>, a
-virtualization technique for IBM POWER processors. It takes into account CPU
-time stolen from or donated to a partition, in addition to the usual user,
-system, I/O statistics.
-
-The following configuration options are available:
-
-=over 4
-
-=item B<CpuPoolStats> B<false>|B<true>
-
-When enabled, statistics about the processor pool are read, too. The partition
-needs to have pool authority in order to be able to acquire this information.
-Defaults to false.
-
-=item B<ReportBySerial> B<false>|B<true>
-
-If enabled, the serial of the physical machine the partition is currently
-running on is reported as I<hostname> and the logical hostname of the machine
-is reported in the I<plugin instance>. Otherwise, the logical hostname will be
-used (just like other plugins) and the I<plugin instance> will be empty.
-Defaults to false.
-
-=back
-
 =head2 Plugin C<lua>
 
 This plugin embeds a Lua interpreter into collectd and provides an interface
