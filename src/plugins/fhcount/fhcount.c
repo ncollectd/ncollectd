@@ -59,7 +59,6 @@ static int fhcount_read(void)
 {
   int numfields = 0;
   int buffer_len = 60;
-  double used, unused, max;
   int prc_used, prc_unused;
   char *fields[3];
   char buffer[buffer_len];
@@ -87,8 +86,11 @@ static int fhcount_read(void)
   }
 
   // Define the values
+  double used = 0;
   strtodouble(fields[0], &used);
+  double unused = 0;
   strtodouble(fields[1], &unused);
+  double max = 0;
   strtodouble(fields[2], &max);
   prc_used = used / max * 100;
   prc_unused = unused / max * 100;
