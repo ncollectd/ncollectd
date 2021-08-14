@@ -193,10 +193,16 @@ int metric_match_unmarshal(metric_match_t *match, char const *str)
         ptr++;
       }
     } else if (ptr[0] == '!') {
-      op = METRIC_MATCH_OP_NEQ;
+      ptr++;
       if (ptr[0] == '~') {
         op = METRIC_MATCH_OP_NEQ_REGEX;
         ptr++;
+      } else if (ptr[0] == '=') {
+        op = METRIC_MATCH_OP_NEQ;
+        ptr++;
+      } else {
+        ret = EINVAL;
+        break;
       }
     } else {
       ret = EINVAL;
