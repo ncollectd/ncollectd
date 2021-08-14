@@ -28,12 +28,18 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include "config.h"
 #include "collectd.h"
-
 #include "plugin.h"
+
+#include <string.h>
 
 #if HAVE_PWD_H
 #include <pwd.h>
+#endif
+
+#if HAVE_ARPA_INET_H
+#include <arpa/inet.h>
 #endif
 
 #define sfree(ptr)                                                             \
@@ -64,21 +70,71 @@ struct counter_to_rate_state_s {
 };
 typedef struct counter_to_rate_state_s counter_to_rate_state_t;
 
-char *sstrncpy(char *dest, const char *src, size_t n);
-
 __attribute__((format(printf, 3, 4))) int ssnprintf(char *str, size_t size,
                                                     char const *format, ...);
 
 __attribute__((format(printf, 1, 2))) char *ssnprintf_alloc(char const *format,
                                                             ...);
 
-char *sstrdup(const char *s);
-
 #if !HAVE_STRNLEN
-size_t strnlen(const char *s, size_t maxlen);
+static inline size_t strnlen(const char *s, size_t maxlen)
+{
+  for (size_t i = 0; i < maxlen; i++) {
+    if (s[i] == 0) {
+      return i;
+    }
+  }
+  return maxlen;
+}
 #endif
 
-char *sstrndup(const char *s, size_t n);
+static inline char *sstrncpy(char *dest, const char *src, size_t n)
+{
+  size_t len  = strnlen(src, n - 1);
+  memcpy(dest, src, len);
+  dest[len] = '\0';
+/*
+  strncpy(dest, src, n-1);
+  dest[n - 1] = '\0';
+*/
+  return dest;
+}
+
+static inline char *sstrdup(const char *s)
+{
+  if (s == NULL)
+    return NULL;
+
+  /* Do not use `strdup' here, because it's not specified in POSIX. It's
+   * ``only'' an XSI extension. */
+  size_t sz = strlen(s) + 1;
+  char *r = malloc(sz);
+  if (r == NULL) {
+    ERROR("sstrdup: Out of memory.");
+    exit(3);
+  }
+  memcpy(r, s, sz);
+
+  return r;
+}
+
+static inline char *sstrndup(const char *s, size_t n)
+{
+  if (s == NULL)
+    return NULL;
+
+  size_t sz = strnlen(s, n);
+  char *r = malloc(sz + 1);
+  if (r == NULL) {
+    ERROR("sstrndup: Out of memory.");
+    exit(3);
+  }
+  memcpy(r, s, sz);
+  r[sz] = '\0';
+
+  return r;
+}
+
 void *smalloc(size_t size);
 char *sstrerror(int errnum, char *buf, size_t buflen);
 
@@ -106,7 +162,33 @@ char *sstrerror(int errnum, char *buf, size_t buflen);
  *   Zero upon success or non-zero if an error occurred. `errno' is set in this
  *   case.
  */
-int sread(int fd, void *buf, size_t count);
+static inline int sread(int fd, void *buf, size_t count)
+{
+  char *ptr = (char *)buf;
+  size_t nleft = count;
+
+  while (nleft > 0) {
+    ssize_t status = read(fd, (void *)ptr, nleft);
+
+    if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR)))
+      continue;
+
+    if (status < 0)
+      return status;
+
+    if (status == 0) {
+      DEBUG("Received EOF from fd %i. ", fd);
+      return -1;
+    }
+
+    assert((0 > status) || (nleft >= (size_t)status));
+
+    nleft = nleft - ((size_t)status);
+    ptr = ptr + ((size_t)status);
+  }
+
+  return 0;
+}
 
 /*
  * NAME
@@ -126,7 +208,6 @@ int sread(int fd, void *buf, size_t count);
  *   case.
  */
 int swrite(int fd, const void *buf, size_t count);
-
 /*
  * NAME
  *   strsplit
@@ -306,20 +387,95 @@ long long get_kstat_value(kstat_t *ksp, char *name);
 #endif
 
 #ifndef HAVE_HTONLL
-unsigned long long ntohll(unsigned long long n);
-unsigned long long htonll(unsigned long long n);
+static inline unsigned long long ntohll(unsigned long long n)
+{
+#if BYTE_ORDER == BIG_ENDIAN
+  return n;
+#else
+  return (((unsigned long long)ntohl(n)) << 32) + ntohl(n >> 32);
 #endif
+}
+
+static inline unsigned long long htonll(unsigned long long n)
+{
+#if BYTE_ORDER == BIG_ENDIAN
+  return n;
+#else
+  return (((unsigned long long)htonl(n)) << 32) + htonl(n >> 32);
+#endif
+}
+#endif /* HAVE_HTONLL */
 
 #if FP_LAYOUT_NEED_NOTHING
-#define ntohd(d) (d)
-#define htond(d) (d)
+/* Well, we need nothing.. */
+/* #endif FP_LAYOUT_NEED_NOTHING */
 #elif FP_LAYOUT_NEED_ENDIANFLIP || FP_LAYOUT_NEED_INTSWAP
-double ntohd(double d);
-double htond(double d);
+#if FP_LAYOUT_NEED_ENDIANFLIP
+#define FP_CONVERT(A)                                                          \
+  ((((uint64_t)(A)&0xff00000000000000LL) >> 56) |                              \
+   (((uint64_t)(A)&0x00ff000000000000LL) >> 40) |                              \
+   (((uint64_t)(A)&0x0000ff0000000000LL) >> 24) |                              \
+   (((uint64_t)(A)&0x000000ff00000000LL) >> 8) |                               \
+   (((uint64_t)(A)&0x00000000ff000000LL) << 8) |                               \
+   (((uint64_t)(A)&0x0000000000ff0000LL) << 24) |                              \
+   (((uint64_t)(A)&0x000000000000ff00LL) << 40) |                              \
+   (((uint64_t)(A)&0x00000000000000ffLL) << 56))
 #else
-#error                                                                         \
-    "Don't know how to convert between host and network representation of doubles."
+#define FP_CONVERT(A)                                                          \
+  ((((uint64_t)(A)&0xffffffff00000000LL) >> 32) |                              \
+   (((uint64_t)(A)&0x00000000ffffffffLL) << 32))
 #endif
+
+static inline double ntohd(double d)
+{
+  union {
+    uint8_t byte[8];
+    uint64_t integer;
+    double floating;
+  } ret;
+
+  ret.floating = d;
+
+  /* NAN in x86 byte order */
+  if ((ret.byte[0] == 0x00) && (ret.byte[1] == 0x00) && (ret.byte[2] == 0x00) &&
+      (ret.byte[3] == 0x00) && (ret.byte[4] == 0x00) && (ret.byte[5] == 0x00) &&
+      (ret.byte[6] == 0xf8) && (ret.byte[7] == 0x7f)) {
+    return NAN;
+  } else {
+    uint64_t tmp;
+
+    tmp = ret.integer;
+    ret.integer = FP_CONVERT(tmp);
+    return ret.floating;
+  }
+}
+
+static inline double htond(double d)
+{
+  union {
+    uint8_t byte[8];
+    uint64_t integer;
+    double floating;
+  } ret;
+
+  if (isnan(d)) {
+    ret.byte[0] = ret.byte[1] = ret.byte[2] = ret.byte[3] = 0x00;
+    ret.byte[4] = ret.byte[5] = 0x00;
+    ret.byte[6] = 0xf8;
+    ret.byte[7] = 0x7f;
+    return ret.floating;
+  } else {
+    uint64_t tmp;
+
+    ret.floating = d;
+    tmp = FP_CONVERT(ret.integer);
+    ret.integer = tmp;
+    return ret.floating;
+  }
+}
+#else
+#error "Don't know how to convert between host and network representation of doubles."
+#endif /* FP_LAYOUT_NEED_ENDIANFLIP || FP_LAYOUT_NEED_INTSWAP */
 
 int parse_uinteger(const char *value_orig, uint64_t *ret_value);
 int parse_double (const char *value_orig, double *ret_value);
@@ -360,11 +516,54 @@ void set_sock_opts(int sockfd);
 
 /** Parse a string to a integer value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */
-int strtouint(const char *string, uint64_t *ret_value);
+static inline int strtouint(const char *string, uint64_t *ret_value)
+{
+  if ((string == NULL) || (ret_value == NULL))
+    return EINVAL;
+
+  errno = 0;
+  char *endptr = NULL;
+  uint64_t tmp = (uint64_t)strtoull(string, &endptr, /* base = */ 0);
+  if ((endptr == string) || (errno != 0))
+    return -1;
+
+  *ret_value = tmp;
+  return 0;
+}
 
 /** Parse a string to a double value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */
-int strtodouble(const char *string, double *ret_value);
+static inline int strtodouble(const char *string, double *ret_value) 
+{
+  if ((string == NULL) || (ret_value == NULL))
+    return EINVAL;
+
+  errno = 0;
+  char *endptr = NULL;
+  double tmp = (double )strtod(string, &endptr);
+  if (errno != 0)
+    return errno;
+  else if ((endptr == NULL) || (*endptr != 0))
+    return EINVAL;
+
+  *ret_value = tmp;
+  return 0;
+}
+
+int filetodouble_at(int dirfd, char const *pathname, double *ret_value);
+
+static inline int filetodouble(char const *pathname, double *ret_value)
+{
+  return filetodouble_at(AT_FDCWD, pathname, ret_value);
+}
+
+int filetouint_at(int dirfd, char const *pathname, uint64_t *ret_value);
+
+static inline int filetouint(int dirfd, char const *pathname, uint64_t *ret_value)
+{
+  return filetouint_at(AT_FDCWD, pathname, ret_value);
+}
+
 
 int strarray_add(char ***ret_array, size_t *ret_array_len, char const *str);
 void strarray_free(char **array, size_t array_len);

@@ -84,15 +84,9 @@ static pthread_mutex_t getpwnam_r_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t strerror_r_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
-char *sstrncpy(char *dest, const char *src, size_t n) {
-  strncpy(dest, src, n);
-  dest[n - 1] = '\0';
-
-  return dest;
-} /* char *sstrncpy */
-
 /* ssnprintf returns result from vsnprintf conistent with snprintf */
-int ssnprintf(char *str, size_t sz, const char *format, ...) {
+int ssnprintf(char *str, size_t sz, const char *format, ...)
+{
   va_list ap;
   va_start(ap, format);
 
@@ -103,7 +97,7 @@ int ssnprintf(char *str, size_t sz, const char *format, ...) {
   return ret;
 } /* int ssnprintf */
 
-char *ssnprintf_alloc(char const *format, ...) /* {{{ */
+char *ssnprintf_alloc(char const *format, ...)
 {
   char static_buffer[1024] = "";
   char *alloc_buffer;
@@ -140,62 +134,13 @@ char *ssnprintf_alloc(char const *format, ...) /* {{{ */
   }
 
   return alloc_buffer;
-} /* }}} char *ssnprintf_alloc */
-
-char *sstrdup(const char *s) {
-  char *r;
-  size_t sz;
-
-  if (s == NULL)
-    return NULL;
-
-  /* Do not use `strdup' here, because it's not specified in POSIX. It's
-   * ``only'' an XSI extension. */
-  sz = strlen(s) + 1;
-  r = malloc(sz);
-  if (r == NULL) {
-    ERROR("sstrdup: Out of memory.");
-    exit(3);
-  }
-  memcpy(r, s, sz);
-
-  return r;
-} /* char *sstrdup */
-
-#if !HAVE_STRNLEN
-size_t strnlen(const char *s, size_t maxlen) {
-  for (size_t i = 0; i < maxlen; i++) {
-    if (s[i] == 0) {
-      return i;
-    }
-  }
-  return maxlen;
 }
-#endif
-
-char *sstrndup(const char *s, size_t n) {
-  char *r;
-  size_t sz;
-
-  if (s == NULL)
-    return NULL;
-
-  sz = strnlen(s, n);
-  r = malloc(sz + 1);
-  if (r == NULL) {
-    ERROR("sstrndup: Out of memory.");
-    exit(3);
-  }
-  memcpy(r, s, sz);
-  r[sz] = '\0';
-
-  return r;
-} /* char *sstrndup */
 
 /* Even though Posix requires "strerror_r" to return an "int",
  * some systems (e.g. the GNU libc) return a "char *" _and_
  * ignore the second argument ... -tokkee */
-char *sstrerror(int errnum, char *buf, size_t buflen) {
+char *sstrerror(int errnum, char *buf, size_t buflen)
+{
   buf[0] = '\0';
 
 #if !HAVE_STRERROR_R
@@ -237,9 +182,10 @@ char *sstrerror(int errnum, char *buf, size_t buflen) {
 #endif /* STRERROR_R_CHAR_P */
 
   return buf;
-} /* char *sstrerror */
+}
 
-void *smalloc(size_t size) {
+void *smalloc(size_t size)
+{
   void *r;
 
   if ((r = malloc(size)) == NULL) {
@@ -248,104 +194,13 @@ void *smalloc(size_t size) {
   }
 
   return r;
-} /* void *smalloc */
+}
 
-#if 0
-void sfree (void **ptr)
+int strsplit(char *string, char **fields, size_t size)
 {
-	if (ptr == NULL)
-		return;
-
-	if (*ptr != NULL)
-		free (*ptr);
-
-	*ptr = NULL;
-}
-#endif
-
-int sread(int fd, void *buf, size_t count) {
-  char *ptr;
-  size_t nleft;
-  ssize_t status;
-
-  ptr = (char *)buf;
-  nleft = count;
-
-  while (nleft > 0) {
-    status = read(fd, (void *)ptr, nleft);
-
-    if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR)))
-      continue;
-
-    if (status < 0)
-      return status;
-
-    if (status == 0) {
-      DEBUG("Received EOF from fd %i. ", fd);
-      return -1;
-    }
-
-    assert((0 > status) || (nleft >= (size_t)status));
-
-    nleft = nleft - ((size_t)status);
-    ptr = ptr + ((size_t)status);
-  }
-
-  return 0;
-}
-
-int swrite(int fd, const void *buf, size_t count) {
-  const char *ptr;
-  size_t nleft;
-  ssize_t status;
-  struct pollfd pfd;
-
-  ptr = (const char *)buf;
-  nleft = count;
-
-  if (fd < 0) {
-    errno = EINVAL;
-    return errno;
-  }
-
-  /* checking for closed peer connection */
-  pfd.fd = fd;
-  pfd.events = POLLIN | POLLHUP;
-  pfd.revents = 0;
-  if (poll(&pfd, 1, 0) > 0) {
-    char buffer[32];
-    if (recv(fd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) {
-      /* if recv returns zero (even though poll() said there is data to be
-       * read), that means the connection has been closed */
-      errno = ECONNRESET;
-      return -1;
-    }
-  }
-
-  while (nleft > 0) {
-    status = write(fd, (const void *)ptr, nleft);
-
-    if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR)))
-      continue;
-
-    if (status < 0)
-      return errno ? errno : status;
-
-    nleft = nleft - ((size_t)status);
-    ptr = ptr + ((size_t)status);
-  }
-
-  return 0;
-}
-
-int strsplit(char *string, char **fields, size_t size) {
-  size_t i;
-  char *ptr;
-  char *saveptr;
-
-  i = 0;
-  ptr = string;
-  saveptr = NULL;
+  size_t i = 0;
+  char *ptr = string;
+  char *saveptr = NULL;
   while ((fields[i] = strtok_r(ptr, " \t\r\n", &saveptr)) != NULL) {
     ptr = NULL;
     i++;
@@ -358,7 +213,8 @@ int strsplit(char *string, char **fields, size_t size) {
 }
 
 int strjoin(char *buffer, size_t buffer_size, char **fields, size_t fields_num,
-            const char *sep) {
+            const char *sep)
+{
   size_t avail = 0;
   char *ptr = buffer;
   size_t sep_len = 0;
@@ -416,7 +272,8 @@ int strjoin(char *buffer, size_t buffer_size, char **fields, size_t fields_num,
   return (int)buffer_req;
 }
 
-int escape_string(char *buffer, size_t buffer_size) {
+int escape_string(char *buffer, size_t buffer_size)
+{
   char *temp;
   size_t j;
 
@@ -461,7 +318,8 @@ int escape_string(char *buffer, size_t buffer_size) {
   return 0;
 } /* int escape_string */
 
-int strunescape(char *buf, size_t buf_len) {
+int strunescape(char *buf, size_t buf_len)
+{
   for (size_t i = 0; (i < buf_len) && (buf[i] != '\0'); ++i) {
     if (buf[i] != '\\')
       continue;
@@ -494,9 +352,10 @@ int strunescape(char *buf, size_t buf_len) {
     buf[buf_len - 1] = '\0';
   }
   return 0;
-} /* int strunescape */
+}
 
-size_t strstripnewline(char *buffer) {
+size_t strstripnewline(char *buffer)
+{
   size_t buffer_len = strlen(buffer);
 
   while (buffer_len > 0) {
@@ -507,9 +366,10 @@ size_t strstripnewline(char *buffer) {
   }
 
   return buffer_len;
-} /* size_t strstripnewline */
+}
 
-int escape_slashes(char *buffer, size_t buffer_size) {
+int escape_slashes(char *buffer, size_t buffer_size)
+{
   size_t buffer_len;
 
   buffer_len = strlen(buffer);
@@ -535,18 +395,20 @@ int escape_slashes(char *buffer, size_t buffer_size) {
   }
 
   return 0;
-} /* int escape_slashes */
+}
 
-void replace_special(char *buffer, size_t buffer_size) {
+void replace_special(char *buffer, size_t buffer_size)
+{
   for (size_t i = 0; i < buffer_size; i++) {
     if (buffer[i] == 0)
       return;
     if ((!isalnum((int)buffer[i])) && (buffer[i] != '-'))
       buffer[i] = '_';
   }
-} /* void replace_special */
+}
 
-int timeval_cmp(struct timeval tv0, struct timeval tv1, struct timeval *delta) {
+int timeval_cmp(struct timeval tv0, struct timeval tv1, struct timeval *delta)
+{
   struct timeval *larger;
   struct timeval *smaller;
 
@@ -589,9 +451,10 @@ int timeval_cmp(struct timeval tv0, struct timeval tv1, struct timeval *delta) {
          ((0 <= delta->tv_usec) && (delta->tv_usec < 1000000)));
 
   return status;
-} /* int timeval_cmp */
+}
 
-int check_create_dir(const char *file_orig) {
+int check_create_dir(const char *file_orig)
+{
   struct stat statbuf;
 
   char file_copy[PATH_MAX];
@@ -702,10 +565,11 @@ int check_create_dir(const char *file_orig) {
   }
 
   return 0;
-} /* check_create_dir */
+}
 
 #ifdef HAVE_LIBKSTAT
-int get_kstat(kstat_t **ksp_ptr, char *module, int instance, char *name) {
+int get_kstat(kstat_t **ksp_ptr, char *module, int instance, char *name)
+{
   char ident[128];
 
   *ksp_ptr = NULL;
@@ -745,7 +609,8 @@ int get_kstat(kstat_t **ksp_ptr, char *module, int instance, char *name) {
   return 0;
 }
 
-long long get_kstat_value(kstat_t *ksp, char *name) {
+long long get_kstat_value(kstat_t *ksp, char *name)
+{
   kstat_named_t *kn;
   long long retval = -1LL;
 
@@ -778,91 +643,46 @@ long long get_kstat_value(kstat_t *ksp, char *name) {
 }
 #endif /* HAVE_LIBKSTAT */
 
-#ifndef HAVE_HTONLL
-unsigned long long ntohll(unsigned long long n) {
-#if BYTE_ORDER == BIG_ENDIAN
-  return n;
-#else
-  return (((unsigned long long)ntohl(n)) << 32) + ntohl(n >> 32);
-#endif
-} /* unsigned long long ntohll */
+int swrite(int fd, const void *buf, size_t count)
+{
+  const char *ptr = (const char *)buf;
+  size_t nleft = count;
 
-unsigned long long htonll(unsigned long long n) {
-#if BYTE_ORDER == BIG_ENDIAN
-  return n;
-#else
-  return (((unsigned long long)htonl(n)) << 32) + htonl(n >> 32);
-#endif
-} /* unsigned long long htonll */
-#endif /* HAVE_HTONLL */
-
-#if FP_LAYOUT_NEED_NOTHING
-/* Well, we need nothing.. */
-/* #endif FP_LAYOUT_NEED_NOTHING */
-
-#elif FP_LAYOUT_NEED_ENDIANFLIP || FP_LAYOUT_NEED_INTSWAP
-#if FP_LAYOUT_NEED_ENDIANFLIP
-#define FP_CONVERT(A)                                                          \
-  ((((uint64_t)(A)&0xff00000000000000LL) >> 56) |                              \
-   (((uint64_t)(A)&0x00ff000000000000LL) >> 40) |                              \
-   (((uint64_t)(A)&0x0000ff0000000000LL) >> 24) |                              \
-   (((uint64_t)(A)&0x000000ff00000000LL) >> 8) |                               \
-   (((uint64_t)(A)&0x00000000ff000000LL) << 8) |                               \
-   (((uint64_t)(A)&0x0000000000ff0000LL) << 24) |                              \
-   (((uint64_t)(A)&0x000000000000ff00LL) << 40) |                              \
-   (((uint64_t)(A)&0x00000000000000ffLL) << 56))
-#else
-#define FP_CONVERT(A)                                                          \
-  ((((uint64_t)(A)&0xffffffff00000000LL) >> 32) |                              \
-   (((uint64_t)(A)&0x00000000ffffffffLL) << 32))
-#endif
-
-double ntohd(double d) {
-  union {
-    uint8_t byte[8];
-    uint64_t integer;
-    double floating;
-  } ret;
-
-  ret.floating = d;
-
-  /* NAN in x86 byte order */
-  if ((ret.byte[0] == 0x00) && (ret.byte[1] == 0x00) && (ret.byte[2] == 0x00) &&
-      (ret.byte[3] == 0x00) && (ret.byte[4] == 0x00) && (ret.byte[5] == 0x00) &&
-      (ret.byte[6] == 0xf8) && (ret.byte[7] == 0x7f)) {
-    return NAN;
-  } else {
-    uint64_t tmp;
-
-    tmp = ret.integer;
-    ret.integer = FP_CONVERT(tmp);
-    return ret.floating;
+  if (fd < 0) {
+    errno = EINVAL;
+    return errno;
   }
-} /* double ntohd */
 
-double htond(double d) {
-  union {
-    uint8_t byte[8];
-    uint64_t integer;
-    double floating;
-  } ret;
-
-  if (isnan(d)) {
-    ret.byte[0] = ret.byte[1] = ret.byte[2] = ret.byte[3] = 0x00;
-    ret.byte[4] = ret.byte[5] = 0x00;
-    ret.byte[6] = 0xf8;
-    ret.byte[7] = 0x7f;
-    return ret.floating;
-  } else {
-    uint64_t tmp;
-
-    ret.floating = d;
-    tmp = FP_CONVERT(ret.integer);
-    ret.integer = tmp;
-    return ret.floating;
+  /* checking for closed peer connection */
+  struct pollfd pfd;
+  pfd.fd = fd;
+  pfd.events = POLLIN | POLLHUP;
+  pfd.revents = 0;
+  if (poll(&pfd, 1, 0) > 0) {
+    char buffer[32];
+    if (recv(fd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) {
+      /* if recv returns zero (even though poll() said there is data to be
+       * read), that means the connection has been closed */
+      errno = ECONNRESET;
+      return -1;
+    }
   }
-} /* double htond */
-#endif /* FP_LAYOUT_NEED_ENDIANFLIP || FP_LAYOUT_NEED_INTSWAP */
+
+  while (nleft > 0) {
+    ssize_t status = write(fd, (const void *)ptr, nleft);
+
+    if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR)))
+      continue;
+
+    if (status < 0)
+      return errno ? errno : status;
+
+    nleft = nleft - ((size_t)status);
+    ptr = ptr + ((size_t)status);
+  }
+
+  return 0;
+}
 
 #if 0
 int format_values(strbuf_t *buf, metric_t const *m, bool store_rates)
@@ -1010,9 +830,70 @@ int parse_double_file(char const *path, double *ret_value)
   return parse_double(buffer, ret_value);
 }
 
+static inline ssize_t read_file_at(int dirfd, char const *pathname, char *buf, size_t count)
+{
+  int fd = openat(dirfd, pathname, O_RDONLY);
+  if (fd < 0)
+    return -1;
+
+  ssize_t size = read(fd, buf, count-1);
+  if (size < 0) {
+    close(fd);
+    return -errno;
+  }
+
+  buf[size] = '\0';
+  close(fd);
+  return size+1;
+}
+
+static inline char *strntrim(char *s, size_t n)
+{
+  while (n > 0) {
+    if ((s[0] == ' ')  || (s[0] == '\t') ||
+        (s[0] == '\n') || (s[0] == '\r')) {
+      s++;
+      n--;
+    } else {
+      break;
+    }
+  }
+
+  while (n > 0) {
+    if ((s[n - 1] == '\n') || (s[n -1] == '\r') ||
+        (s[n - 1] == ' ')  || (s[n -1] == '\t')) {
+      n--;
+      s[n] = '\0';
+    } else {
+      break;
+    }
+  }
+
+  return s;
+}
+
+int filetodouble_at(int dirfd, char const *pathname, double *ret_value)
+{
+  char buf[256];
+  ssize_t len = read_file_at(dirfd, pathname, buf, sizeof(buf));
+  if (len < 0)
+    return len;
+  return strtodouble(strntrim(buf, len), ret_value);
+}
+
+int filetouint_at(int dirfd, char const *pathname, uint64_t *ret_value)
+{
+  char buf[256];
+  ssize_t len = read_file_at(dirfd, pathname, buf, sizeof(buf));
+  if (len < 0)
+    return len;
+  return strtouint(strntrim(buf, len), ret_value);
+}
+
 #if !HAVE_GETPWNAM_R
 int getpwnam_r(const char *name, struct passwd *pwbuf, char *buf, size_t buflen,
-               struct passwd **pwbufp) {
+               struct passwd **pwbufp)
+{
 #ifndef HAVE_GETPWNAM
   return -1;
 #else
@@ -1059,11 +940,12 @@ int getpwnam_r(const char *name, struct passwd *pwbuf, char *buf, size_t buflen,
 
   return status;
 #endif /* HAVE_GETPWNAM */
-} /* int getpwnam_r */
+}
 #endif /* !HAVE_GETPWNAM_R */
 
 int walk_directory(const char *dir, dirwalk_callback_f callback,
-                   void *user_data, int include_hidden) {
+                   void *user_data, int include_hidden)
+{
   struct dirent *ent;
   DIR *dh;
   int success;
@@ -1103,7 +985,8 @@ int walk_directory(const char *dir, dirwalk_callback_f callback,
   return 0;
 }
 
-ssize_t read_file_contents(const char *filename, void *buf, size_t bufsize) {
+ssize_t read_file_contents(const char *filename, void *buf, size_t bufsize)
+{
   FILE *fh;
   ssize_t ret;
 
@@ -1122,7 +1005,8 @@ ssize_t read_file_contents(const char *filename, void *buf, size_t bufsize) {
 }
 
 ssize_t read_text_file_contents(const char *filename, char *buf,
-                                size_t bufsize) {
+                                size_t bufsize)
+{
   ssize_t ret = read_file_contents(filename, buf, bufsize - 1);
   if (ret < 0)
     return ret;
@@ -1207,7 +1091,8 @@ int counter_to_rate(double *ret_rate, uint64_t value, cdtime_t t, counter_to_rat
   return 0;
 }
 
-int service_name_to_port_number(const char *service_name) {
+int service_name_to_port_number(const char *service_name)
+{ 
   struct addrinfo *ai_list;
   int status;
   int service_number;
@@ -1248,9 +1133,9 @@ int service_name_to_port_number(const char *service_name) {
   if (service_number > 0)
     return service_number;
   return -1;
-} /* int service_name_to_port_number */
+}
 
-void set_sock_opts(int sockfd) /* {{{ */
+void set_sock_opts(int sockfd)
 {
   int status;
   int socktype;
@@ -1285,45 +1170,11 @@ void set_sock_opts(int sockfd) /* {{{ */
       P_WARNING("set_sock_opts: failed to set socket tcp keepalive interval");
 #endif
   }
-} /* }}} void set_sock_opts */
-
-int strtouint(const char *string, uint64_t *ret_value) 
-{
-  if ((string == NULL) || (ret_value == NULL))
-    return EINVAL;
-
-  errno = 0;
-  char *endptr = NULL;
-  uint64_t tmp = (uint64_t)strtoull(string, &endptr, /* base = */ 0);
-  if ((endptr == string) || (errno != 0))
-    return -1;
-
-  *ret_value = tmp;
-  return 0;
-} 
-
-int strtogauge(const char *string, double *ret_value) 
-{
-  double tmp;
-  char *endptr = NULL;
-
-  if ((string == NULL) || (ret_value == NULL))
-    return EINVAL;
-
-  errno = 0;
-  endptr = NULL;
-  tmp = (double )strtod(string, &endptr);
-  if (errno != 0)
-    return errno;
-  else if ((endptr == NULL) || (*endptr != 0))
-    return EINVAL;
-
-  *ret_value = tmp;
-  return 0;
 }
 
+
 int strarray_add(char ***ret_array, size_t *ret_array_len,
-                 char const *str) /* {{{ */
+                 char const *str)
 {
   char **array;
   size_t array_len = *ret_array_len;
@@ -1343,17 +1194,17 @@ int strarray_add(char ***ret_array, size_t *ret_array_len,
   array_len++;
   *ret_array_len = array_len;
   return 0;
-} /* }}} int strarray_add */
+}
 
-void strarray_free(char **array, size_t array_len) /* {{{ */
+void strarray_free(char **array, size_t array_len)
 {
   for (size_t i = 0; i < array_len; i++)
     sfree(array[i]);
   sfree(array);
-} /* }}} void strarray_free */
+}
 
 #if HAVE_CAPABILITY
-int check_capability(int arg) /* {{{ */
+int check_capability(int arg)
 {
   cap_value_t cap_value = (cap_value_t)arg;
   cap_t cap;
@@ -1375,12 +1226,12 @@ int check_capability(int arg) /* {{{ */
   cap_free(cap);
 
   return cap_flag_value != CAP_SET;
-} /* }}} int check_capability */
+}
 #else
-int check_capability(__attribute__((unused)) int arg) /* {{{ */
+int check_capability(__attribute__((unused)) int arg)
 {
   P_WARNING("check_capability: unsupported capability implementation. "
             "Some plugin(s) may require elevated privileges to work properly.");
   return 0;
-} /* }}} int check_capability */
+}
 #endif /* HAVE_CAPABILITY */
