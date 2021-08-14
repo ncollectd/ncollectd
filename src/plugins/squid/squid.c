@@ -246,16 +246,16 @@ static int squid_read_counters(squid_t *sq, metric_t *tmpl)
         case FAM_SQUID_ICP_R_RECV_BYTES:
         case FAM_SQUID_CD_SENT_BYTES:
         case FAM_SQUID_CD_RECV_BYTES: {
-          uint64_t counter; 
-          if (strtouint(val, &counter) < 0) 
+          uint64_t counter = 0;
+          if (strtouint(val, &counter) != 0)
             continue;
           value.counter.uint64 = counter * 1024;
           break;
         }
         case FAM_SQUID_CPU_SECONDS:
         case FAM_SQUID_WALL_SECONDS: {
-          double gauge;
-          if (strtodouble(val, &gauge) < 0) 
+          double gauge = 0;
+          if (strtodouble(val, &gauge) != 0)
             continue;
           value.counter.type = COUNTER_FLOAT64;
           value.counter.float64 = gauge;
