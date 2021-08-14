@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-
+//
 #include "config.h"
 
 #if STRPTIME_NEEDS_STANDARDS
@@ -7,7 +7,7 @@
 #define _ISOC99_SOURCE 1
 #endif
 #ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 200809L
 #endif
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
@@ -18,10 +18,10 @@
 #include "plugin.h"
 #include "utils/common/common.h"
 
-#include <time.h>
-
 #include <lber.h>
 #include <ldap.h>
+
+#include <time.h>
 
 #include "ds389_fams.h"
 
