@@ -955,6 +955,7 @@ int walk_directory_at(int dirfd_at, const char *dir, dirwalk_callback_f callback
   DIR *dh = fdopendir(dirfd);
   if (dh == NULL) {
     P_ERROR("walk_directory: Cannot open '%s': %s", dir, STRERRNO);
+    close(dirfd);
     return -1;
   }
 
@@ -966,10 +967,8 @@ int walk_directory_at(int dirfd_at, const char *dir, dirwalk_callback_f callback
     if (include_hidden) {
       if ((strcmp(".", ent->d_name) == 0) || (strcmp("..", ent->d_name) == 0))
         continue;
-    } else /* if (!include_hidden) */
-    {
-      if (ent->d_name[0] == '.')
-        continue;
+    } else if (ent->d_name[0] == '.') {
+      continue;
     }
 
     int status = (*callback)(dirfd, dir, ent->d_name, user_data);
