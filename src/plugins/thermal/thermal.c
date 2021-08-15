@@ -39,7 +39,7 @@ enum {
   FAM_THERMAL_MAX,
 };
 
-static int thermal_sysfs_device_read(const char __attribute__((unused)) * dir,
+static int thermal_sysfs_device_read(int dirfd, const char __attribute__((unused)) * dir,
                                      const char *name, void *user_data)
 {
   char filename[PATH_MAX];
@@ -76,7 +76,7 @@ static int thermal_sysfs_device_read(const char __attribute__((unused)) * dir,
   return success ? 0 : -1;
 }
 
-static int thermal_procfs_device_read(const char __attribute__((unused)) * dir,
+static int thermal_procfs_device_read(int dirfd, const char __attribute__((unused)) * dir,
                                       const char *name, void *user_data)
 {
   const char str_temp[] = "temperature:";

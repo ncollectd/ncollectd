@@ -129,7 +129,7 @@ static int hp_config(oconfig_item_t *ci)
   return 0;
 }
 
-static int hp_read_hugepages(const char *path, const char *entry, void *ud)
+static int hp_read_hugepages(int dirfd, const char *path, const char *entry, void *ud)
 {
   if (strncmp("hugepages-", entry, strlen("hugepages-")) != 0)
     return 0;
@@ -214,7 +214,7 @@ static int hp_read_hugepages(const char *path, const char *entry, void *ud)
   return 0;
 }
 
-static int hp_read_node(const char *path, const char *entry, void *ud)
+static int hp_read_node(int dirfd, const char *path, const char *entry, void *ud)
 {
   if (strncmp(entry, "node", strlen("node")) != 0)
     return 0;

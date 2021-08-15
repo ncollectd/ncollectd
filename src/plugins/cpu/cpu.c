@@ -291,7 +291,8 @@ static int cpu_topology_id (char const *cpu, char const *id, char *buffer, size_
   return 0;
 }
 
-static int cpu_topology_id_callback (char const *dir, char const *cpu, void *user_data)
+static int cpu_topology_id_callback (int dirfd, char const *dir, char const *cpu,
+                                     void *user_data)
 {
   if (strncmp(cpu, "cpu", 3) != 0)
     return 0;
@@ -336,7 +337,7 @@ static inline int hex_to_int(char c)
   return -1;
 }
 
-static int cpu_topology_node_callback (char const *dir, char const *node,
+static int cpu_topology_node_callback (int dirfd, char const *dir, char const *node,
                                        void *user_data)
 {
   if (strncmp(node, "node", 4) != 0)

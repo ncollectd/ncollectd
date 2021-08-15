@@ -353,7 +353,7 @@ static int fc_init(void)
   return 0;
 }
 
-static int fc_read_dir_callback(const char *dirname, const char *filename,
+static int fc_read_dir_callback(int dirfd, const char *dirname, const char *filename,
                                 void *user_data)
 {
   fc_directory_conf_t *dir = user_data;

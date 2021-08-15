@@ -943,25 +943,26 @@ int getpwnam_r(const char *name, struct passwd *pwbuf, char *buf, size_t buflen,
 }
 #endif /* !HAVE_GETPWNAM_R */
 
-int walk_directory(const char *dir, dirwalk_callback_f callback,
-                   void *user_data, int include_hidden)
+int walk_directory_at(int dirfd_at, const char *dir, dirwalk_callback_f callback,
+                      void *user_data, int include_hidden)
 {
-  struct dirent *ent;
-  DIR *dh;
-  int success;
-  int failure;
-
-  success = 0;
-  failure = 0;
-
-  if ((dh = opendir(dir)) == NULL) {
+  int dirfd = openat(dirfd_at, dir, O_RDONLY | O_DIRECTORY);
+  if (dirfd < 0) {
     P_ERROR("walk_directory: Cannot open '%s': %s", dir, STRERRNO);
     return -1;
   }
 
-  while ((ent = readdir(dh)) != NULL) {
-    int status;
+  DIR *dh = fdopendir(dirfd);
+  if (dh == NULL) {
+    P_ERROR("walk_directory: Cannot open '%s': %s", dir, STRERRNO);
+    return -1;
+  }
 
+  int success = 0;
+  int failure = 0;
+
+  struct dirent *ent;
+  while ((ent = readdir(dh)) != NULL) {
     if (include_hidden) {
       if ((strcmp(".", ent->d_name) == 0) || (strcmp("..", ent->d_name) == 0))
         continue;
@@ -971,7 +972,7 @@ int walk_directory(const char *dir, dirwalk_callback_f callback,
         continue;
     }
 
-    status = (*callback)(dir, ent->d_name, user_data);
+    int status = (*callback)(dirfd, dir, ent->d_name, user_data);
     if (status != 0)
       failure++;
     else

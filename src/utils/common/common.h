@@ -489,10 +489,18 @@ int getpwnam_r(const char *name, struct passwd *pwbuf, char *buf, size_t buflen,
                struct passwd **pwbufp);
 #endif
 
-typedef int (*dirwalk_callback_f)(const char *dirname, const char *filename,
+typedef int (*dirwalk_callback_f)(int dirfd, const char *dirname, const char *filename,
                                   void *user_data);
-int walk_directory(const char *dir, dirwalk_callback_f callback,
-                   void *user_data, int hidden);
+
+int walk_directory_at(int dirfd_at, const char *dir, dirwalk_callback_f callback,
+                      void *user_data, int include_hidden);
+
+static inline int walk_directory(const char *dir, dirwalk_callback_f callback,
+                                 void *user_data, int hidden)
+{
+  return walk_directory_at(AT_FDCWD, dir, callback, user_data, hidden);
+}
+
 /* Returns the number of bytes read or negative on error. */
 ssize_t read_file_contents(char const *filename, void *buf, size_t bufsize);
 /* Writes the contents of the file into the buffer with a trailing NUL.
