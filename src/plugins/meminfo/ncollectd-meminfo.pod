@@ -1,0 +1,19 @@
+=encoding UTF-8
+
+=head1 NAME
+
+ncollectd-meminfo - Documentation of ncollectd's C<meminfo plugin>
+
+=head2 Plugin C<memory>
+
+The I<meminfo plugin> reports /proc/meminfo metrics.
+
+=back
+
+=head1 SEE ALSO
+
+L<collectd(1)>,
+L<collectd.conf(5)>
+
+=cut
+
