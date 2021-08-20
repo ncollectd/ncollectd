@@ -225,7 +225,7 @@ static metric_family_t fams[FAM_MEMINFO_MAX] = {
   [FAM_MEMINFO_VMALLOC_CHUNCK_BYTES] = {
     .name = "host_meminfo_vmalloc_chunck_bytes",
     .type = METRIC_TYPE_GAUGE,
-    .help = "Largest contiguous block of vmalloc area which is free.,
+    .help = "Largest contiguous block of vmalloc area which is free.",
   },
   [FAM_MEMINFO_PERCPU_BYTES] = {
     .name = "host_meminfo_percpu_bytes",
