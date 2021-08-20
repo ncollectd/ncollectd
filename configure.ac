@@ -608,18 +608,18 @@ AC_CHECK_HEADERS([sys/mount.h], [], [],
   ]]
 )
 
-# --enable-xfs {{{
-AC_ARG_ENABLE([xfs],
-  [AS_HELP_STRING([--enable-xfs], [xfs support in df plugin @<:@default=yes@:>@])],
+# --enable-df-xfs {{{
+AC_ARG_ENABLE([df-xfs],
+  [AS_HELP_STRING([--enable-df-xfs], [xfs support in df plugin @<:@default=yes@:>@])],
   [],
-  [enable_xfs="auto"]
+  [enable_df_xfs="auto"]
 )
 
-if test "x$enable_xfs" != "xno"; then
+if test "x$enable_df_xfs" != "xno"; then
   AC_CHECK_HEADERS([xfs/xqm.h],
     [],
     [
-      if test "x$enable_xfs" = "xyes"; then
+      if test "x$enable_df_xfs" = "xyes"; then
         AC_MSG_ERROR([xfs/xqm.h not found])
       fi
     ],
@@ -6100,10 +6100,13 @@ plugin_ipmi="no"
 plugin_ipstats="no"
 plugin_ipvs="no"
 plugin_irq="no"
+plugin_ksm="no"
 plugin_load="no"
+plugin_locks="no"
 plugin_log_logstash="no"
 plugin_mcelog="no"
 plugin_mdevents="no"
+plugin_meminfo="no"
 plugin_memory="no"
 plugin_netstat_udp="no"
 plugin_nfs="no"
@@ -6142,6 +6145,7 @@ plugin_write_log="no"
 plugin_write_prometheus="no"
 plugin_write_stackdriver="no"
 plugin_xencpu="no"
+plugin_xfs="no"
 plugin_zfs_arc="no"
 plugin_zone="no"
 plugin_zookeeper="no"
@@ -6166,9 +6170,12 @@ if test "x$ac_system" = "xLinux"; then
   plugin_interface="yes"
   plugin_ipc="yes"
   plugin_irq="yes"
+  plugin_ksm="yes"
   plugin_load="yes"
+  plugin_locks="yes"
   plugin_mcelog="yes"
   plugin_mdevents="yes"
+  plugin_meminfo="yes"
   plugin_memory="yes"
   plugin_nfs="yes"
   plugin_nfsd="yes"
@@ -6191,6 +6198,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_vmem="yes"
   plugin_wireless="yes"
   plugin_zfs_arc="yes"
+  plugin_xfs="yes"
 
   if test "x$ac_cv_header_linux_ip_vs_h" = "xyes"; then
     plugin_ipvs="yes"
@@ -6544,7 +6552,9 @@ AC_PLUGIN([ipstats],             [$plugin_ipstats],           [IP packet statist
 AC_PLUGIN([ipvs],                [$plugin_ipvs],              [IPVS connection statistics])
 AC_PLUGIN([irq],                 [$plugin_irq],               [IRQ statistics])
 AC_PLUGIN([java],                [$with_java],                [Embed the Java Virtual Machine])
+AC_PLUGIN([ksm],                 [$plugin_ksm],               [kernel same-page merging statistics])
 AC_PLUGIN([load],                [$plugin_load],              [System load])
+AC_PLUGIN([locks],               [$plugin_locks],             [Locked file statistics])
 AC_PLUGIN([log_logstash],        [$plugin_log_logstash],      [Logstash json_event compatible logging])
 AC_PLUGIN([log_file],            [yes],                       [File logging plugin])
 AC_PLUGIN([log_syslog],          [$have_syslog],              [Syslog logging plugin])
@@ -6561,6 +6571,7 @@ AC_PLUGIN([md],                  [$have_linux_raid_md_u_h],   [md (Linux softwar
 AC_PLUGIN([mdevents],            [$plugin_mdevents],          [Events from md (Linux Software RAID) devices])
 AC_PLUGIN([memcachec],           [$with_libmemcached],        [memcachec statistics])
 AC_PLUGIN([memcached],           [yes],                       [memcached statistics])
+AC_PLUGIN([meminfo],             [$plugin_meminfo],           [System memory statistics])
 AC_PLUGIN([memory],              [$plugin_memory],            [Memory usage])
 AC_PLUGIN([mic],                 [$with_mic],                 [Intel Many Integrated Core stats])
 AC_PLUGIN([modbus],              [$with_libmodbus],           [Modbus plugin])
@@ -6655,6 +6666,7 @@ AC_PLUGIN([write_stackdriver],   [$plugin_write_stackdriver], [Google Stackdrive
 AC_PLUGIN([write_syslog],        [yes],                       [Syslog output plugin])
 AC_PLUGIN([write_tsdb],          [yes],                       [TSDB output plugin])
 AC_PLUGIN([xencpu],              [$plugin_xencpu],            [Xen Host CPU usage])
+AC_PLUGIN([xfs],                 [$plugin_xfs],               [XFS filesytem statistics])
 AC_PLUGIN([zfs_arc],             [$plugin_zfs_arc],           [ZFS ARC statistics])
 AC_PLUGIN([zone],                [$plugin_zone],              [Solaris container statistics])
 AC_PLUGIN([zookeeper],           [yes],                       [Zookeeper statistics])
@@ -6979,7 +6991,9 @@ AC_MSG_RESULT([    ipstats . . . . . . . $enable_ipstats])
 AC_MSG_RESULT([    ipvs  . . . . . . . . $enable_ipvs])
 AC_MSG_RESULT([    irq . . . . . . . . . $enable_irq])
 AC_MSG_RESULT([    java  . . . . . . . . $enable_java])
+AC_MSG_RESULT([    ksm . . . . . . . . . $enable_ksm])
 AC_MSG_RESULT([    load  . . . . . . . . $enable_load])
+AC_MSG_RESULT([    locks . . . . . . . . $enable_locks])
 AC_MSG_RESULT([    logparser . . . . . . $enable_logparser])
 AC_MSG_RESULT([    log_file . . . . . .  $enable_log_file])
 AC_MSG_RESULT([    log_logstash  . . . . $enable_log_logstash])
@@ -6996,6 +7010,7 @@ AC_MSG_RESULT([    md  . . . . . . . . . $enable_md])
 AC_MSG_RESULT([    mdevents  . . . . . . $enable_mdevents])
 AC_MSG_RESULT([    memcachec . . . . . . $enable_memcachec])
 AC_MSG_RESULT([    memcached . . . . . . $enable_memcached])
+AC_MSG_RESULT([    meminfo . . . . . . . $enable_meminfo])
 AC_MSG_RESULT([    memory  . . . . . . . $enable_memory])
 AC_MSG_RESULT([    mic . . . . . . . . . $enable_mic])
 AC_MSG_RESULT([    modbus  . . . . . . . $enable_modbus])
@@ -7089,6 +7104,7 @@ AC_MSG_RESULT([    write_stackdriver . . $enable_write_stackdriver])
 AC_MSG_RESULT([    write_syslog . .  . . $enable_write_syslog])
 AC_MSG_RESULT([    write_tsdb  . . . . . $enable_write_tsdb])
 AC_MSG_RESULT([    xencpu  . . . . . . . $enable_xencpu])
+AC_MSG_RESULT([    xfs . . . . . . . . . $enable_xfs])
 AC_MSG_RESULT([    zfs_arc . . . . . . . $enable_zfs_arc])
 AC_MSG_RESULT([    zone  . . . . . . . . $enable_zone])
 AC_MSG_RESULT([    zookeeper . . . . . . $enable_zookeeper])

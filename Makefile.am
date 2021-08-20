@@ -205,6 +205,8 @@ collectd_SOURCES = \
 	src/ncollectd/collectd.h \
 	src/ncollectd/configfile.c \
 	src/ncollectd/configfile.h \
+	src/ncollectd/select_list.c \
+	src/ncollectd/select_list.h \
 	src/ncollectd/filter_chain.c \
 	src/ncollectd/filter_chain.h \
 	src/ncollectd/globals.c \
@@ -1055,8 +1057,16 @@ java_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(JAVA_LDFLAGS)
 java_la_LIBADD = $(JAVA_LIBS)
 endif
 
+if BUILD_PLUGIN_KSM
+include src/plugins/ksm/Makefile.am
+endif
+
 if BUILD_PLUGIN_LOAD
 include src/plugins/load/Makefile.am
+endif
+
+if BUILD_PLUGIN_LOCKS
+include src/plugins/locks/Makefile.am
 endif
 
 if BUILD_PLUGIN_LOG_FILE
@@ -1184,9 +1194,14 @@ memcached_la_LIBADD += -lsocket
 endif
 endif
 
+if BUILD_PLUGIN_MEMINFO
+include src/plugins/meminfo/Makefile.am
+endif
+
 if BUILD_PLUGIN_MEMORY
 include src/plugins/memory/Makefile.am
 endif
+
 
 if BUILD_PLUGIN_MIC
 pkglib_LTLIBRARIES += mic.la
@@ -1910,10 +1925,12 @@ zfs_arc_la_LIBADD = -lkstat
 endif
 endif
 
+if BUILD_PLUGIN_XFS
+include src/plugins/xfs/Makefile.am
+endif
+
 if BUILD_PLUGIN_ZOOKEEPER
-pkglib_LTLIBRARIES += zookeeper.la
-zookeeper_la_SOURCES = src/zookeeper.c
-zookeeper_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/zookeeper/Makefile.am
 endif
 
 if BUILD_PLUGIN_ZONE
