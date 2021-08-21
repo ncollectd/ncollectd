@@ -724,6 +724,10 @@ bind_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 bind_la_LIBADD = $(BUILD_WITH_LIBCURL_LIBS) $(BUILD_WITH_LIBXML2_LIBS)
 endif
 
+if BUILD_PLUGIN_BTRFS
+include src/plugins/btrfs/Makefile.am
+endif
+
 if BUILD_PLUGIN_BUDDYINFO
 include src/plugins/buddyinfo/Makefile.am
 endif

@@ -6067,6 +6067,7 @@ plugin_arp="no"
 plugin_avccache="no"
 plugin_battery="no"
 plugin_bind="no"
+plugin_btrfs="no"
 plugin_buddyinfo="no"
 plugin_capabilities="no"
 plugin_ceph="no"
@@ -6157,6 +6158,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_arp="yes"
   plugin_avccache="yes"
   plugin_battery="yes"
+  plugin_btrfs="yes"
   plugin_buddyinfo="yes"
   plugin_cgroups="yes"
   plugin_conntrack="yes"
@@ -6509,6 +6511,7 @@ AC_PLUGIN([apple_sensors],       [$with_libiokit],            [Apple hardware se
 AC_PLUGIN([avccache],            [$plugin_avccache],          [AVC cache statistics])
 AC_PLUGIN([battery],             [$plugin_battery],           [Battery statistics])
 AC_PLUGIN([bind],                [$plugin_bind],              [ISC Bind nameserver statistics])
+AC_PLUGIN([btrfs],               [$plugin_btrfs],             [Btrfs statistics])
 AC_PLUGIN([buddyinfo],           [$plugin_buddyinfo],         [buddyinfo statistics])
 AC_PLUGIN([capabilities],        [$plugin_capabilities],      [Platform static capabilities])
 AC_PLUGIN([ceph],                [$plugin_ceph],              [Ceph daemon statistics])
@@ -6950,6 +6953,7 @@ AC_MSG_RESULT([    apple_sensors . . . . $enable_apple_sensors])
 AC_MSG_RESULT([    avccache  . . . . . . $enable_avccache])
 AC_MSG_RESULT([    battery . . . . . . . $enable_battery])
 AC_MSG_RESULT([    bind  . . . . . . . . $enable_bind])
+AC_MSG_RESULT([    btrfs . . . . . . . . $enable_btrfs])
 AC_MSG_RESULT([    buddyinfo . . . . . . $enable_buddyinfo])
 AC_MSG_RESULT([    capabilities  . . . . $enable_capabilities])
 AC_MSG_RESULT([    ceph  . . . . . . . . $enable_ceph])
