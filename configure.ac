@@ -6125,6 +6125,7 @@ plugin_python="no"
 plugin_schedstat="no"
 plugin_serial="no"
 plugin_smart="no"
+plugin_slabinfo="no"
 plugin_softirq="no"
 plugin_softnet="no"
 plugin_swap="no"
@@ -6185,6 +6186,7 @@ if test "x$ac_system" = "xLinux"; then
   plugin_protocols="yes"
   plugin_schedstat="yes"
   plugin_serial="yes"
+  plugin_slabinfo="yes"
   plugin_softirq="yes"
   plugin_softnet="yes"
   plugin_swap="yes"
@@ -6620,6 +6622,7 @@ AC_PLUGIN([serial],              [$plugin_serial],            [serial port traff
 AC_PLUGIN([softirq],             [$plugin_softirq],           [softirq statistics])
 AC_PLUGIN([softnet],             [$plugin_softnet],           [softnet statistics])
 AC_PLUGIN([sigrok],              [$with_libsigrok],           [sigrok acquisition sources])
+AC_PLUGIN([slabinfo],            [$plugin_slabinfo],          [Slab statistics])
 AC_PLUGIN([slurm],               [$with_libslurm],            [SLURM jobs and nodes status])
 AC_PLUGIN([smart],               [$plugin_smart],             [SMART statistics])
 AC_PLUGIN([snmp],                [$with_libnetsnmp],          [SNMP querying plugin])
@@ -7056,6 +7059,7 @@ AC_MSG_RESULT([    schedstat . . . . . . $enable_schedstat])
 AC_MSG_RESULT([    sensors . . . . . . . $enable_sensors])
 AC_MSG_RESULT([    serial  . . . . . . . $enable_serial])
 AC_MSG_RESULT([    sigrok  . . . . . . . $enable_sigrok])
+AC_MSG_RESULT([    slabinfo  . . . . . . $enable_slabinfo])
 AC_MSG_RESULT([    slurm . . . . . . . . $enable_slurm])
 AC_MSG_RESULT([    smart . . . . . . . . $enable_smart])
 AC_MSG_RESULT([    snmp  . . . . . . . . $enable_snmp])

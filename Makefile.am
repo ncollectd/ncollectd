@@ -1586,6 +1586,10 @@ if BUILD_PLUGIN_SIGROK
 include src/plugins/sigrok/Makefile.am
 endif
 
+if BUILD_PLUGIN_SLABINFO
+include src/plugins/slabinfo/Makefile.am
+endif
+
 if BUILD_PLUGIN_SLURM
 pkglib_LTLIBRARIES += slurm.la
 slurm_la_SOURCES = src/slurm.c
