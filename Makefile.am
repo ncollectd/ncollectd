@@ -694,6 +694,10 @@ apcups_la_LIBADD += -lsocket
 endif
 endif
 
+if BUILD_PLUGIN_AVCCACHE
+include src/plugins/avccache/Makefile.am
+endif
+
 if BUILD_PLUGIN_APPLE_SENSORS
 pkglib_LTLIBRARIES += apple_sensors.la
 apple_sensors_la_SOURCES = src/apple_sensors.c

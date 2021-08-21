@@ -6064,6 +6064,7 @@ dependency_warning="no"
 dependency_error="no"
 
 plugin_arp="no"
+plugin_avccache="no"
 plugin_battery="no"
 plugin_bind="no"
 plugin_buddyinfo="no"
@@ -6154,6 +6155,7 @@ plugin_zookeeper="no"
 # Linux
 if test "x$ac_system" = "xLinux"; then
   plugin_arp="yes"
+  plugin_avccache="yes"
   plugin_battery="yes"
   plugin_buddyinfo="yes"
   plugin_cgroups="yes"
@@ -6504,6 +6506,7 @@ AC_PLUGIN([arp],                 [$plugin_arp],               [ARP cache statist
 AC_PLUGIN([apache],              [$with_libcurl],             [Apache httpd statistics])
 AC_PLUGIN([apcups],              [yes],                       [Statistics of UPSes by APC])
 AC_PLUGIN([apple_sensors],       [$with_libiokit],            [Apple hardware sensors])
+AC_PLUGIN([avccache],            [$plugin_avccache],          [AVC cache statistics])
 AC_PLUGIN([battery],             [$plugin_battery],           [Battery statistics])
 AC_PLUGIN([bind],                [$plugin_bind],              [ISC Bind nameserver statistics])
 AC_PLUGIN([buddyinfo],           [$plugin_buddyinfo],         [buddyinfo statistics])
@@ -6944,6 +6947,7 @@ AC_MSG_RESULT([    arp . . . . . . . . . $enable_arp])
 AC_MSG_RESULT([    apache  . . . . . . . $enable_apache])
 AC_MSG_RESULT([    apcups  . . . . . . . $enable_apcups])
 AC_MSG_RESULT([    apple_sensors . . . . $enable_apple_sensors])
+AC_MSG_RESULT([    avccache  . . . . . . $enable_avccache])
 AC_MSG_RESULT([    battery . . . . . . . $enable_battery])
 AC_MSG_RESULT([    bind  . . . . . . . . $enable_bind])
 AC_MSG_RESULT([    buddyinfo . . . . . . $enable_buddyinfo])
