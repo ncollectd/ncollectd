@@ -1815,9 +1815,7 @@ vmem_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_WIRELESS
-pkglib_LTLIBRARIES += wireless.la
-wireless_la_SOURCES = src/wireless.c
-wireless_la_LDFLAGS = $(PLUGIN_LDFLAGS)
+include src/plugins/wireless/Makefile.am
 endif
 
 if BUILD_PLUGIN_WRITE_GRAPHITE
@@ -1950,6 +1948,11 @@ pkglib_LTLIBRARIES += zone.la
 zone_la_SOURCES = src/zone.c
 zone_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
+
+if BUILD_PLUGIN_ZSWAP
+include src/plugins/zswap/Makefile.am
+endif
+
 
 AM_V_POD2MAN_C = $(am__v_POD2MAN_C_@AM_V@)
 am__v_POD2MAN_C_ = $(am__v_POD2MAN_C_@AM_DEFAULT_V@)

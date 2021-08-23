@@ -6152,6 +6152,7 @@ plugin_xfs="no"
 plugin_zfs_arc="no"
 plugin_zone="no"
 plugin_zookeeper="no"
+plugin_zswap="no"
 
 # Linux
 if test "x$ac_system" = "xLinux"; then
@@ -6203,8 +6204,9 @@ if test "x$ac_system" = "xLinux"; then
   plugin_uptime="yes"
   plugin_vmem="yes"
   plugin_wireless="yes"
-  plugin_zfs_arc="yes"
   plugin_xfs="yes"
+  plugin_zfs_arc="yes"
+  plugin_zswap="yes"
 
   if test "x$ac_cv_header_linux_ip_vs_h" = "xyes"; then
     plugin_ipvs="yes"
@@ -6679,6 +6681,7 @@ AC_PLUGIN([xfs],                 [$plugin_xfs],               [XFS filesytem sta
 AC_PLUGIN([zfs_arc],             [$plugin_zfs_arc],           [ZFS ARC statistics])
 AC_PLUGIN([zone],                [$plugin_zone],              [Solaris container statistics])
 AC_PLUGIN([zookeeper],           [yes],                       [Zookeeper statistics])
+AC_PLUGIN([zswap],               [$plugin_zswap],             [ZSwap statistics])
 
 dnl Default configuration file
 # Load either syslog or logfile
@@ -7120,6 +7123,7 @@ AC_MSG_RESULT([    xfs . . . . . . . . . $enable_xfs])
 AC_MSG_RESULT([    zfs_arc . . . . . . . $enable_zfs_arc])
 AC_MSG_RESULT([    zone  . . . . . . . . $enable_zone])
 AC_MSG_RESULT([    zookeeper . . . . . . $enable_zookeeper])
+AC_MSG_RESULT([    zswap . . . . . . . . $enable_zswap])
 AC_MSG_RESULT()
 
 if test "x$dependency_error" = "xyes"; then
