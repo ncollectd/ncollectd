@@ -87,7 +87,7 @@ static int locks_read(void)
     }
 
     size_t type;
-	if (!strcmp(lock_class, "POSIX") ||
+    if (!strcmp(lock_class, "POSIX") ||
         !strcmp(lock_class, "ACCESS") ||
         !strcmp(lock_class, "OFDLCK")) {
       type = LOCK_CLASS_POSIX;
@@ -100,11 +100,11 @@ static int locks_read(void)
       continue;
     }
 
-	if (!strcmp(lock_type, "READ")) {
+    if (!strcmp(lock_type, "READ")) {
        counter[kind][type][LOCK_TYPE_READ]++;
-	} else if (!strcmp(lock_type, "WRITE")) {
+    } else if (!strcmp(lock_type, "WRITE")) {
        counter[kind][type][LOCK_TYPE_WRITE]++;
-	} else if (!strcmp(lock_type, "RW")) {
+    } else if (!strcmp(lock_type, "RW")) {
        counter[kind][type][LOCK_TYPE_READ]++;
        counter[kind][type][LOCK_TYPE_WRITE]++;
     }
