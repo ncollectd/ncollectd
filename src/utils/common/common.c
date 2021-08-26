@@ -844,7 +844,7 @@ static inline ssize_t read_file_at(int dirfd, char const *pathname, char *buf, s
 
   buf[size] = '\0';
   close(fd);
-  return size+1;
+  return size;
 }
 
 static inline char *strntrim(char *s, size_t n)
