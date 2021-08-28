@@ -12,14 +12,14 @@ typedef struct {
   char device[];
 } arp_device_t;
 
+static metric_family_t fam_arp = {
+  .name = "host_arp_entries",
+  .help = "ARP entries by device",
+  .type = METRIC_TYPE_GAUGE,
+};
+
 static int arp_read(void)
 {
-  metric_family_t fam_arp = {
-    .name = "host_arp_entries",
-    .help = "ARP entries by device",
-    .type = METRIC_TYPE_GAUGE,
-  };
-
   FILE *fh = fopen(proc_arp, "r");
   if (fh == NULL) {
     WARNING("arp plugin: Unable to open %s", proc_arp);
@@ -59,10 +59,8 @@ static int arp_read(void)
     }
 
     arp_device = calloc(1, sizeof(*arp_device)+len+1);
-    if (arp_device == NULL) {
-      return -1;
-      // FIXME break
-    }
+    if (arp_device == NULL)
+      continue;
 
     arp_device->num.gauge.float64 = 1;
     memcpy(arp_device->device, device, len+1);
@@ -86,11 +84,7 @@ static int arp_read(void)
 
   c_avl_destroy(tree);
 
-  int status = plugin_dispatch_metric_family(&fam_arp);
-  if (status != 0) {
-    ERROR("arp plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
-  }
-  metric_family_metric_reset(&fam_arp);
+  plugin_dispatch_metric_family(&fam_arp);
 
   fclose(fh);
   return 0;
