@@ -48,6 +48,10 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
   sstrncpy(buffer, pt->name, sizeof(buffer));
 
   char *ptr = buffer;
+
+  tokens[tokens_num] = ptr;
+  tokens_num++;
+
   char *end = NULL;
   int sep = '.';
   while ((end = strchr(ptr, sep)) != NULL) {
@@ -70,7 +74,7 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
   }
 
   if ((tokens_num < 2) || (tokens_num > STATIC_ARRAY_SIZE(tokens))) {
-    return EINVAL;
+    return 0;
   }
 
 #elif HAVE_VARNISH_V4
@@ -284,16 +288,7 @@ static int varnish_read(user_data_t *ud)
   metric_family_metric_append(&conf->fams[FAM_VARNISH_UP], m);
   metric_reset(&m);
 
-  for (int i = 0; i < FAM_VARNISH_MAX; i++) {
-    if (conf->fams[i].metric.num > 0) {
-      int status = plugin_dispatch_metric_family(&conf->fams[i]);
-      if (status != 0) {
-        ERROR("varnish plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
-      }
-      metric_family_metric_reset(&conf->fams[i]);
-    }
-  }
-
+  plugin_dispatch_metric_family_array(conf->fams, FAM_VARNISH_MAX);
   return 0;
 }
 
