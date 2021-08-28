@@ -549,10 +549,11 @@ static inline int strtodouble(const char *string, double *ret_value)
   errno = 0;
   char *endptr = NULL;
   double tmp = (double )strtod(string, &endptr);
-  if (errno != 0)
+  if (errno != 0) {
     return errno;
-  else if ((endptr == NULL) || (*endptr != 0))
+  } else if ((endptr != NULL) && (*endptr != '\0')) {
     return EINVAL;
+  }
 
   *ret_value = tmp;
   return 0;
