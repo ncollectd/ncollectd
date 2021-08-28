@@ -69,6 +69,7 @@ static int avccache_read(void)
   char *fields[8];
 
   if (fgets(buffer, sizeof(buffer), fh) == NULL) {
+    fclose(fh);
     return 0;
   }
 
@@ -99,15 +100,7 @@ static int avccache_read(void)
   metric_family_metric_append(&fams[FAM_AVC_CACHE_FREES],
                               (metric_t){.value.counter.uint64 = total_frees});
 
-  for(size_t i = 0; i < FAM_AVC_CACHE_MAX; i++) {
-    if (fams[i].metric.num > 0) {
-      int status = plugin_dispatch_metric_family(&fams[i]);
-      if (status != 0) {
-        ERROR("avccache plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
-      }
-      metric_family_metric_reset(&fams[i]);
-    }
-  }
+  plugin_dispatch_metric_family_array(fams, FAM_AVC_CACHE_MAX);
 
   fclose(fh);
   return 0;
