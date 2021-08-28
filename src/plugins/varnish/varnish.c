@@ -37,28 +37,39 @@ typedef struct {
 
 static int varnish_monitor(void *priv, const struct VSC_point *const pt)
 {
-  char *tokens[4] = {NULL};
+  char *tokens[12] = {NULL};
   size_t tokens_num = 0;
 
   if (pt == NULL)
     return 0;
 
 #if HAVE_VARNISH_V6 | HAVE_VARNISH_V5
-  char *buffer = strdup(pt->name);
-  char *ptr = buffer;
-  char *saveptr = NULL;
-  char *token = NULL;
+  char buffer[1024];
+  sstrncpy(buffer, pt->name, sizeof(buffer));
 
-  while ((token = strtok_r(ptr, ".", &saveptr)) != NULL) {
-    ptr = NULL;
-    if (tokens_num < STATIC_ARRAY_SIZE(tokens)) {
-      tokens[tokens_num] = token;
+  char *ptr = buffer;
+  char *end = NULL;
+  int sep = '.';
+  while ((end = strchr(ptr, sep)) != NULL) {
+    *(end++) = '\0';
+    if ((sep == ')') && (*end == '.')) end++;
+    ptr = end;
+    if (*ptr == '(') {
+      sep = ')';
+      if (tokens_num < STATIC_ARRAY_SIZE(tokens)) {
+        tokens[tokens_num] = ++ptr;
+        tokens_num++;
+      }
+    } else {
+      sep = '.';
+      if (tokens_num < STATIC_ARRAY_SIZE(tokens)) {
+         tokens[tokens_num] = ptr;
+          tokens_num++;
+      }
     }
-    tokens_num++;
   }
 
   if ((tokens_num < 2) || (tokens_num > STATIC_ARRAY_SIZE(tokens))) {
-    free(buffer);
     return EINVAL;
   }
 
@@ -103,11 +114,26 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
   if (vsh_metric != NULL) {
     metric_family_t *fam = &(conf->fams[vsh_metric->fam]);
 
+    /* special cases */
+    if ((strcmp(tokens[0], "VBE") == 0) &&
+        (strcmp(tokens[2], "goto") == 0) && (tokens_num >= 7)) {
+      tokens[2] = tokens[4];
+      tokens[3] = tokens[5];
+    } else if ((strcmp(tokens[0], "LCK") == 0) && (tokens_num >= 4)) {
+      char *swap = tokens[1];
+      tokens[1] = tokens[2];
+      tokens[2] = swap;
+    }
+
     metric_t m = {0};
-    if (fam->type == METRIC_TYPE_GAUGE)
-      m.value.gauge.float64 = (double)val;
-    else
-      m.value.counter.uint64 = val;
+    if (vsh_metric->fam == FAM_VARNISH_BACKEND_UP) {
+      m.value.gauge.float64 = val & 1;
+    } else {
+      if (fam->type == METRIC_TYPE_GAUGE)
+        m.value.gauge.float64 = (double)val;
+      else
+        m.value.counter.uint64 = val;
+    }
   
     metric_label_set(&m, "instance", conf->instance);
 
@@ -127,13 +153,7 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
     metric_family_metric_append(fam, m);
 
     metric_reset(&m);
-  } else {
-    printf ("[%s] %s %s %s %s %d\n", pt->name, tokens[0], tokens[1],  tokens[2], tokens[3],  (int)val);
   }
-
-#if HAVE_VARNISH_V6 | HAVE_VARNISH_V5
-  free(buffer);
-#endif
 
   return 0;
 }
