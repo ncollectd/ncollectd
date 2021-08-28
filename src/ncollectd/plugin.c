@@ -705,7 +705,7 @@ static void write_queue_enqueue(write_queue_t *head)
 }
 
 /* enqueue_metric_family enqueues the metric family to write_queue. */
-static int enqueue_metric_family(metric_family_t const *fam)
+static int enqueue_metric_family(metric_family_t const *fam, cdtime_t time, cdtime_t interval)
 {
   metric_family_t *fam_copy = metric_family_clone(fam);
   if (fam_copy == NULL) {
@@ -714,9 +714,6 @@ static int enqueue_metric_family(metric_family_t const *fam)
           STRERROR(status));
     return status;
   }
-
-  cdtime_t time = cdtime();
-  cdtime_t interval = plugin_get_interval();
 
   for (size_t i = 0; i < fam_copy->metric.num; i++) {
     if (fam_copy->metric.ptr[i].time == 0) {
@@ -2078,28 +2075,43 @@ static bool check_drop_value(void)
     return false;
 }
 
-int plugin_dispatch_metric_family(metric_family_t const *fam)
+int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size)
 {
-  if ((fam == NULL) || (fam->metric.num == 0)) {
+  if ((fams == NULL) || (size == 0))
     return EINVAL;
-  }
 
-  if (check_drop_value()) {
-    if (record_statistics) {
-      pthread_mutex_lock(&statistics_lock);
-      stats_values_dropped++;
-      pthread_mutex_unlock(&statistics_lock);
+  cdtime_t time = cdtime();
+  cdtime_t interval = plugin_get_interval();
+
+  for (size_t i=0; i < size; i++) {
+    if (fams[i].metric.num == 0)
+      continue;
+
+    if (fams[i].name == NULL) {
+      metric_family_metric_reset(&fams[i]);
+      continue;
     }
-    return 0;
+
+    if ((write_limit_high != 0) && check_drop_value()) {
+      if (record_statistics) {
+        pthread_mutex_lock(&statistics_lock);
+        stats_values_dropped++;
+        pthread_mutex_unlock(&statistics_lock);
+      }
+      metric_family_metric_reset(&fams[i]);
+      continue;
+    }
+
+    int status = enqueue_metric_family(&fams[i], time, interval);
+    if (status != 0) {
+      ERROR("plugin_dispatch_values: plugin_write_enqueue_metric_list failed "
+            "with status %i (%s).",
+            status, STRERROR(status));
+    }
+    metric_family_metric_reset(&fams[i]);
   }
 
-  int status = enqueue_metric_family(fam);
-  if (status != 0) {
-    ERROR("plugin_dispatch_values: plugin_write_enqueue_metric_list failed "
-          "with status %i (%s).",
-          status, STRERROR(status));
-  }
-  return status;
+  return 0;
 }
 
 int plugin_dispatch_notification(const notification_t *notif)

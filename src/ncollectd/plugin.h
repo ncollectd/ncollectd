@@ -216,8 +216,11 @@ int plugin_unregister_notification(const char *name);
  */
 void plugin_log_available_writers(void);
 
-int plugin_dispatch_metric_family(metric_family_t const *fam);
-
+int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size);
+static inline int plugin_dispatch_metric_family(metric_family_t *fam)
+{
+  return plugin_dispatch_metric_family_array(fam, 1);
+}
 
 int plugin_dispatch_missing(metric_family_t const *fam);
 void plugin_dispatch_cache_event(enum cache_event_type_e event_type,
