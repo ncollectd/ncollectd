@@ -146,16 +146,7 @@ static int ksm_read(void)
      metric_family_metric_append(fam, (metric_t){.value = value});
   }
 
-  for (size_t i = 0; i < FAM_KSM_MAX; i++) {
-    if (fams[i].metric.num > 0) {
-      int status = plugin_dispatch_metric_family(&fams[i]);
-      if (status != 0) {
-        ERROR("plugin ksm: plugin_dispatch_metric_family failed: %s",
-              STRERROR(status));
-      }
-      metric_family_metric_reset(&fams[i]);
-    }
-  }
+  plugin_dispatch_metric_family_array(fams, FAM_KSM_MAX);
 
   close(ksm_dir);
   return 0;
