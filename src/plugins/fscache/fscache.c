@@ -4,15 +4,13 @@
 //   Edward "Koko" Konetzko <konetzed at quixoticagony.com>
 
 #include "collectd.h"
-
 #include "plugin.h"
 #include "utils/common/common.h"
+
 #include <stdio.h>  /* a header needed for FILE */
 #include <stdlib.h> /* used for atoi */
 #include <string.h> /* a header needed for scanf function */
 
-/* generated form fscache.gperf */
-#include "fscache.h"
 
 #if !KERNEL_LINUX
 #error "This module only supports the Linux implementation of fscache"
@@ -24,32 +22,631 @@
 see /proc/fs/fscache/stats
 see Documentation/filesystems/caching/fscache.txt in linux kernel >= 2.6.30
 */
-static void fscache_submit(const struct fscache_metric *m, uint64_t value)
+
+enum {
+  FAM_FSCACHE_COOKIE_INDEX,
+  FAM_FSCACHE_COOKIE_DATA,
+  FAM_FSCACHE_COOKIE_SPECIAL,
+  FAM_FSCACHE_OBJECT_ALLOC,
+  FAM_FSCACHE_OBJECT_NO_ALLOC,
+  FAM_FSCACHE_OBJECT_AVAIL,
+  FAM_FSCACHE_OBJECT_DEAD,
+  FAM_FSCACHE_CHECKAUX_NONE,
+  FAM_FSCACHE_CHECKAUX_OKAY,
+  FAM_FSCACHE_CHECKAUX_UPDATE,
+  FAM_FSCACHE_CHECKAUX_OBSOLETE,
+  FAM_FSCACHE_MARKS,
+  FAM_FSCACHE_UNCACHES,
+  FAM_FSCACHE_ACQUIRES,
+  FAM_FSCACHE_ACQUIRES_NULL,
+  FAM_FSCACHE_ACQUIRES_NO_CACHE,
+  FAM_FSCACHE_ACQUIRES_OK,
+  FAM_FSCACHE_ACQUIRES_NOBUFS,
+  FAM_FSCACHE_ACQUIRES_OOM,
+  FAM_FSCACHE_OBJECT_LOOKUPS,
+  FAM_FSCACHE_OBJECT_LOOKUPS_NEGATIVE,
+  FAM_FSCACHE_OBJECT_LOOKUPS_POSITIVE,
+  FAM_FSCACHE_OBJECT_CREATED,
+  FAM_FSCACHE_OBJECT_LOOKUPS_TIMED_OUT,
+  FAM_FSCACHE_INVALIDATES,
+  FAM_FSCACHE_INVALIDATES_RUN,
+  FAM_FSCACHE_UPDATES,
+  FAM_FSCACHE_UPDATES_NULL,
+  FAM_FSCACHE_UPDATES_RUN,
+  FAM_FSCACHE_RELINQUISHES,
+  FAM_FSCACHE_RELINQUISHES_NULL,
+  FAM_FSCACHE_RELINQUISHES_WAITCRT,
+  FAM_FSCACHE_RELINQUISHES_RETIRE,
+  FAM_FSCACHE_ATTR_CHANGED,
+  FAM_FSCACHE_ATTR_CHANGED_OK,
+  FAM_FSCACHE_ATTR_CHANGED_NOBUFS,
+  FAM_FSCACHE_ATTR_CHANGED_NOMEM,
+  FAM_FSCACHE_ATTR_CHANGED_CALLS,
+  FAM_FSCACHE_ALLOCS,
+  FAM_FSCACHE_ALLOCS_OK,
+  FAM_FSCACHE_ALLOCS_WAIT,
+  FAM_FSCACHE_ALLOCS_NOBUFS,
+  FAM_FSCACHE_ALLOCS_INTR,
+  FAM_FSCACHE_ALLOC_OPS,
+  FAM_FSCACHE_ALLOC_OP_WAITS,
+  FAM_FSCACHE_ALLOCS_OBJECT_DEAD,
+  FAM_FSCACHE_RETRIEVALS,
+  FAM_FSCACHE_RETRIEVALS_OK,
+  FAM_FSCACHE_RETRIEVALS_WAIT,
+  FAM_FSCACHE_RETRIEVALS_NODATA,
+  FAM_FSCACHE_RETRIEVALS_NOBUFS,
+  FAM_FSCACHE_RETRIEVALS_INTR,
+  FAM_FSCACHE_RETRIEVALS_NOMEM,
+  FAM_FSCACHE_RETRIEVAL_OPS,
+  FAM_FSCACHE_RETRIEVAL_OP_WAITS,
+  FAM_FSCACHE_RETRIEVALS_OBJECT_DEAD,
+  FAM_FSCACHE_STORE,
+  FAM_FSCACHE_STORE_OK,
+  FAM_FSCACHE_STORE_AGAIN,
+  FAM_FSCACHE_STORE_NOBUFS,
+  FAM_FSCACHE_STORE_OOM,
+  FAM_FSCACHE_STORE_OPS,
+  FAM_FSCACHE_STORE_CALLS,
+  FAM_FSCACHE_STORE_PAGES,
+  FAM_FSCACHE_STORE_RADIX_DELETES,
+  FAM_FSCACHE_STORE_PAGES_OVER_LIMIT,
+  FAM_FSCACHE_STORE_VMSCAN_NOT_STORING,
+  FAM_FSCACHE_STORE_VMSCAN_GONE,
+  FAM_FSCACHE_STORE_VMSCAN_BUSY,
+  FAM_FSCACHE_STORE_VMSCAN_CANCELLED,
+  FAM_FSCACHE_STORE_VMSCAN_WAIT,
+  FAM_FSCACHE_OP_PENDING,
+  FAM_FSCACHE_OP_RUN,
+  FAM_FSCACHE_OP_ENQUEUE,
+  FAM_FSCACHE_OP_CANCELLED,
+  FAM_FSCACHE_OP_REJECTED,
+  FAM_FSCACHE_OP_INITIALISED,
+  FAM_FSCACHE_OP_DEFERRED_RELEASE,
+  FAM_FSCACHE_OP_RELEASE,
+  FAM_FSCACHE_OP_GC,
+  FAM_FSCACHE_CACHEOP_ALLOC_OBJECT,
+  FAM_FSCACHE_CACHEOP_LOOKUP_OBJECT,
+  FAM_FSCACHE_CACHEOP_LOOKUP_COMPLETE,
+  FAM_FSCACHE_CACHEOP_GRAB_OBJECT,
+  FAM_FSCACHE_CACHEOP_INVALIDATE_OBJECT,
+  FAM_FSCACHE_CACHEOP_UPDATE_OBJECT,
+  FAM_FSCACHE_CACHEOP_DROP_OBJECT,
+  FAM_FSCACHE_CACHEOP_PUT_OBJECT,
+  FAM_FSCACHE_CACHEOP_SYNC_CACHE,
+  FAM_FSCACHE_CACHEOP_ATTR_CHANGED,
+  FAM_FSCACHE_CACHEOP_READ_OR_ALLOC_PAGE,
+  FAM_FSCACHE_CACHEOP_READ_OR_ALLOC_PAGES,
+  FAM_FSCACHE_CACHEOP_ALLOCATE_PAGE,
+  FAM_FSCACHE_CACHEOP_ALLOCATE_PAGES,
+  FAM_FSCACHE_CACHEOP_WRITE_PAGE,
+  FAM_FSCACHE_CACHEOP_UNCACHE_PAGE,
+  FAM_FSCACHE_CACHEOP_DISSOCIATE_PAGES,
+  FAM_FSCACHE_CACHE_NO_SPACE_REJECT,
+  FAM_FSCACHE_CACHE_STALE_OBJECTS,
+  FAM_FSCACHE_CACHE_RETIRED_OBJECTS,
+  FAM_FSCACHE_CACHE_CULLED_OBJECTS,
+  FAM_FSCACHE_MAX,
+};
+
+static metric_family_t fams[FAM_FSCACHE_MAX] = {
+  [FAM_FSCACHE_COOKIE_INDEX] = {
+    .name = "host_fscache_cookie_index",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of index cookies allocated.",
+  },
+  [FAM_FSCACHE_COOKIE_DATA] = {
+    .name = "host_fscache_cookie_data",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of data storage cookies allocated.",
+  },
+  [FAM_FSCACHE_COOKIE_SPECIAL] = {
+    .name = "host_fscache_cookie_special",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of special cookies allocated.",
+  },
+  [FAM_FSCACHE_OBJECT_ALLOC] = {
+    .name = "host_fscache_object_alloc",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects allocated.",
+  },
+  [FAM_FSCACHE_OBJECT_NO_ALLOC] = {
+    .name = "host_fscache_object_no_alloc",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of object allocation failures.",
+  },
+  [FAM_FSCACHE_OBJECT_AVAIL] = {
+    .name = "host_fscache_object_avail",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects that reached the available state.",
+  },
+  [FAM_FSCACHE_OBJECT_DEAD] = {
+    .name = "host_fscache_object_dead",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total mumber of objects that reached the dead state.",
+  },
+  [FAM_FSCACHE_CHECKAUX_NONE] = {
+    .name = "host_fscache_checkaux_none",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects that didn't have a coherency check.",
+  },
+  [FAM_FSCACHE_CHECKAUX_OKAY] = {
+    .name = "host_fscache_checkaux_okay",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects that passed a coherency check.",
+  },
+  [FAM_FSCACHE_CHECKAUX_UPDATE] = {
+    .name = "host_fscache_checkaux_update",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects that needed a coherency data update.",
+  },
+  [FAM_FSCACHE_CHECKAUX_OBSOLETE] = {
+    .name = "host_fscache_checkaux_obsolete",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects that were declared obsolete.",
+  },
+  [FAM_FSCACHE_MARKS] = {
+    .name = "host_fscache_marks",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of pages marked as being cached.",
+  },
+  [FAM_FSCACHE_UNCACHES] = {
+    .name = "host_fscache_uncaches",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of uncache page requests seen.",
+  },
+  [FAM_FSCACHE_ACQUIRES] = {
+    .name = "host_fscache_acquires",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of acquire cookie requests seen.",
+  },
+  [FAM_FSCACHE_ACQUIRES_NULL] = {
+    .name = "host_fscache_acquires_null",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of acquire requests given a NULL parent.",
+  },
+  [FAM_FSCACHE_ACQUIRES_NO_CACHE] = {
+    .name = "host_fscache_acquires_no_cache",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of acquire requests rejected due to no cache available.",
+  },
+  [FAM_FSCACHE_ACQUIRES_OK] = {
+    .name = "host_fscache_acquires_ok",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of acquire requests succeeded.",
+  },
+  [FAM_FSCACHE_ACQUIRES_NOBUFS] = {
+    .name = "host_fscache_acquires_nobufs",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of acquire requests rejected due to error.",
+  },
+  [FAM_FSCACHE_ACQUIRES_OOM] = {
+    .name = "host_fscache_acquires_oom",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of acquire requests failed on ENOMEM.",
+  },
+  [FAM_FSCACHE_OBJECT_LOOKUPS] = {
+    .name = "host_fscache_object_lookups",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of lookup calls made on cache backends.",
+  },
+  [FAM_FSCACHE_OBJECT_LOOKUPS_NEGATIVE] = {
+    .name = "host_fscache_object_lookups_negative",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of negative lookups made.",
+  },
+  [FAM_FSCACHE_OBJECT_LOOKUPS_POSITIVE] = {
+    .name = "host_fscache_object_lookups_positive",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of positive lookups made.",
+  },
+  [FAM_FSCACHE_OBJECT_CREATED] = {
+    .name = "host_fscache_object_created",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects created by lookup.",
+  },
+  [FAM_FSCACHE_OBJECT_LOOKUPS_TIMED_OUT] = {
+    .name = "host_fscache_object_lookups_timed_out",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of lookups timed out and requeued.",
+  },
+  [FAM_FSCACHE_INVALIDATES] = {
+    .name = "host_fscache_invalidates",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of invalidations.",
+  },
+  [FAM_FSCACHE_INVALIDATES_RUN] = {
+    .name = "host_fscache_invalidates_run",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of invalidations granted CPU time.",
+  },
+  [FAM_FSCACHE_UPDATES] = {
+    .name = "host_fscache_updates",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of update cookie requests seen.",
+  },
+  [FAM_FSCACHE_UPDATES_NULL] = {
+    .name = "host_fscache_updates_null",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of update requests given a NULL parent.",
+  },
+  [FAM_FSCACHE_UPDATES_RUN] = {
+    .name = "host_fscache_updates_run",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of update requests granted CPU time.",
+  },
+  [FAM_FSCACHE_RELINQUISHES] = {
+    .name = "host_fscache_relinquishes",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of relinquish cookie requests seen.",
+  },
+  [FAM_FSCACHE_RELINQUISHES_NULL] = {
+    .name = "host_fscache_relinquishes_null",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of relinquish cookie given a NULL parent.",
+  },
+  [FAM_FSCACHE_RELINQUISHES_WAITCRT] = {
+    .name = "host_fscache_relinquishes_waitcrt",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of relinquish cookie waited on completion of creation.",
+  },
+  [FAM_FSCACHE_RELINQUISHES_RETIRE] = {
+    .name = "host_fscache_relinquishes_retire",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of relinquish retries.",
+  },
+  [FAM_FSCACHE_ATTR_CHANGED] = {
+    .name = "host_fscache_attr_changed",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of attribute changed requests seen.",
+  },
+  [FAM_FSCACHE_ATTR_CHANGED_OK] = {
+    .name = "host_fscache_attr_changed_ok",
+    .type = METRIC_TYPE_COUNTER,
+    .help =  "Total number of attribute changed requests queued.",
+  },
+  [FAM_FSCACHE_ATTR_CHANGED_NOBUFS] = {
+    .name = "host_fscache_attr_changed_nobufs",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of attribute changed rejected -ENOBUFS.",
+  },
+  [FAM_FSCACHE_ATTR_CHANGED_NOMEM] = {
+    .name = "host_fscache_attr_changed_nomem",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of attribute changed failed -ENOMEM.",
+  },
+  [FAM_FSCACHE_ATTR_CHANGED_CALLS] = {
+    .name = "host_fscache_attr_changed_calls",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of attribute changed ops given CPU time.",
+  },
+  [FAM_FSCACHE_ALLOCS] = {
+    .name = "host_fscache_allocs",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests seen.",
+  },
+  [FAM_FSCACHE_ALLOCS_OK] = {
+    .name = "host_fscache_allocs_ok",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of successful allocation requests.",
+  },
+  [FAM_FSCACHE_ALLOCS_WAIT] = {
+    .name = "host_fscache_allocs_wait",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests that waited on lookup completion.",
+  },
+  [FAM_FSCACHE_ALLOCS_NOBUFS] = {
+    .name = "host_fscache_allocs_nobufs",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests rejected -ENOBUFS.",
+  },
+  [FAM_FSCACHE_ALLOCS_INTR] = {
+    .name = "host_fscache_allocs_intr",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests aborted -ERESTARTSYS.",
+  },
+  [FAM_FSCACHE_ALLOC_OPS] = {
+    .name = "host_fscache_alloc_ops",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests submitted.",
+  },
+  [FAM_FSCACHE_ALLOC_OP_WAITS] = {
+    .name = "host_fscache_alloc_op_waits",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests waited for CPU time.",
+  },
+  [FAM_FSCACHE_ALLOCS_OBJECT_DEAD] = {
+    .name = "host_fscache_allocs_object_dead",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of allocation requests aborted due to object death.",
+  },
+  [FAM_FSCACHE_RETRIEVALS] = {
+    .name = "host_fscache_retrievals",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval (read) requests seen.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_OK] = {
+    .name = "host_fscache_retrievals_ok",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of successful retrieval requests.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_WAIT] = {
+    .name = "host_fscache_retrievals_wait",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests that waited on lookup completion.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_NODATA] = {
+    .name = "host_fscache_retrievals_nodata",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests returned -ENODATA.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_NOBUFS] = {
+    .name = "host_fscache_retrievals_nobufs",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests rejected -ENOBUFS.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_INTR] = {
+    .name = "host_fscache_retrievals_intr",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests aborted -ERESTARTSYS.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_NOMEM] = {
+    .name = "host_fscache_retrievals_nomem",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests failed -ENOMEM.",
+  },
+  [FAM_FSCACHE_RETRIEVAL_OPS] = {
+    .name = "host_fscache_retrieval_ops",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests submitted.",
+  },
+  [FAM_FSCACHE_RETRIEVAL_OP_WAITS] = {
+    .name = "host_fscache_retrieval_op_waits",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests waited for CPU time.",
+  },
+  [FAM_FSCACHE_RETRIEVALS_OBJECT_DEAD] = {
+    .name = "host_fscache_retrievals_object_dead",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of retrieval requests aborted due to object death.",
+  },
+  [FAM_FSCACHE_STORE] = {
+    .name = "host_fscache_store",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of storage (write) requests seen.",
+  },
+  [FAM_FSCACHE_STORE_OK] = {
+    .name = "host_fscache_store_ok",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of successful store requests.",
+  },
+  [FAM_FSCACHE_STORE_AGAIN] = {
+    .name = "host_fscache_store_again",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests on a page already pending storage.",
+  },
+  [FAM_FSCACHE_STORE_NOBUFS] = {
+    .name = "host_fscache_store_nobufs",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests rejected -ENOBUFS.",
+  },
+  [FAM_FSCACHE_STORE_OOM] = {
+    .name = "host_fscache_store_oom",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests failed -ENOMEM.",
+  },
+  [FAM_FSCACHE_STORE_OPS] = {
+    .name = "host_fscache_store_ops",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests submitted.",
+  },
+  [FAM_FSCACHE_STORE_CALLS] = {
+    .name = "host_fscache_store_calls",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests granted CPU time.",
+  },
+  [FAM_FSCACHE_STORE_PAGES] = {
+    .name = "host_fscache_store_pages",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of pages given store requests processing time.",
+  },
+  [FAM_FSCACHE_STORE_RADIX_DELETES] = {
+    .name = "host_fscache_store_radix_deletes",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests deleted from tracking tree.",
+  },
+  [FAM_FSCACHE_STORE_PAGES_OVER_LIMIT] = {
+    .name = "host_fscache_store_pages_over_limit",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of store requests over store limit.",
+  },
+  [FAM_FSCACHE_STORE_VMSCAN_NOT_STORING] = {
+    .name = "host_fscache_store_vmscan_not_storing",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of release requests against pages with no pending store.",
+  },
+  [FAM_FSCACHE_STORE_VMSCAN_GONE] = {
+    .name = "host_fscache_store_vmscan_gone",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of release requests against pages stored by time lock granted.",
+  },
+  [FAM_FSCACHE_STORE_VMSCAN_BUSY] = {
+    .name = "host_fscache_store_vmscan_busy",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of release requests ignored due to in-progress store.",
+  },
+  [FAM_FSCACHE_STORE_VMSCAN_CANCELLED] = {
+    .name = "host_fscache_store_vmscan_cancelled",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of page stores cancelled due to release request.",
+  },
+  [FAM_FSCACHE_STORE_VMSCAN_WAIT] = {
+    .name = "host_fscache_store_vmscan_wait",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of page stores waited for CPU time.",
+  },
+  [FAM_FSCACHE_OP_PENDING] = {
+    .name = "host_fscache_op_pending",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of times async ops added to pending queues.",
+  },
+  [FAM_FSCACHE_OP_RUN] = {
+    .name = "host_fscache_op_run",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of times async ops given CPU time.",
+  },
+  [FAM_FSCACHE_OP_ENQUEUE] = {
+    .name = "host_fscache_op_enqueue",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of times async ops queued for processing.",
+  },
+  [FAM_FSCACHE_OP_CANCELLED] = {
+    .name = "host_fscache_op_cancelled",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of async ops cancelled.",
+  },
+  [FAM_FSCACHE_OP_REJECTED] = {
+    .name = "host_fscache_op_rejected",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of async ops rejected due to object lookup/create failure.",
+  },
+  [FAM_FSCACHE_OP_INITIALISED] = {
+    .name = "host_fscache_op_initialised",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of async ops initialised.",
+  },
+  [FAM_FSCACHE_OP_DEFERRED_RELEASE] = {
+    .name = "host_fscache_op_deferred_release",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of async ops queued for deferred release.",
+  },
+  [FAM_FSCACHE_OP_RELEASE] = {
+    .name = "host_fscache_op_release",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of async ops released (should equal ini=N when idle).",
+  },
+  [FAM_FSCACHE_OP_GC] = {
+    .name = "host_fscache_op_gc",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of deferred-release async ops garbage collected.",
+  },
+  [FAM_FSCACHE_CACHEOP_ALLOC_OBJECT] = {
+    .name = "host_fscache_cacheop_alloc_object",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress alloc_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_LOOKUP_OBJECT] = {
+    .name = "host_fscache_cacheop_lookup_object",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress lookup_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_LOOKUP_COMPLETE] = {
+    .name = "host_fscache_cacheop_lookup_complete",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress lookup_complete() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_GRAB_OBJECT] = {
+    .name = "host_fscache_cacheop_grab_object",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress grab_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_INVALIDATE_OBJECT] = {
+    .name = "host_fscache_cacheop_invalidate_object" ,
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress invalidate_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_UPDATE_OBJECT] = {
+    .name = "host_fscache_cacheop_update_object",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress update_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_DROP_OBJECT] = {
+    .name = "host_fscache_cacheop_drop_object",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress drop_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_PUT_OBJECT] = {
+    .name = "host_fscache_cacheop_put_object",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress put_object() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_SYNC_CACHE] = {
+    .name = "host_fscache_cacheop_sync_cache",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress sync_cache() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_ATTR_CHANGED] = {
+    .name = "host_fscache_cacheop_attr_changed",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress attr_changed() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_READ_OR_ALLOC_PAGE] = {
+    .name = "host_fscache_cacheop_read_or_alloc_page",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress read_or_alloc_page() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_READ_OR_ALLOC_PAGES] = {
+    .name = "host_fscache_cacheop_read_or_alloc_pages",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress read_or_alloc_pages() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_ALLOCATE_PAGE] = {
+    .name = "host_fscache_cacheop_allocate_page",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress allocate_page() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_ALLOCATE_PAGES] = {
+    .name = "host_fscache_cacheop_allocate_pages",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress allocate_pages() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_WRITE_PAGE] = {
+    .name = "host_fscache_cacheop_write_page",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress write_page() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_UNCACHE_PAGE] = {
+    .name = "host_fscache_cacheop_uncache_page",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress uncache_page() cache ops.",
+  },
+  [FAM_FSCACHE_CACHEOP_DISSOCIATE_PAGES] = {
+    .name = "host_fscache_cacheop_dissociate_pages",
+    .type = METRIC_TYPE_GAUGE,
+    .help = "Number of in-progress dissociate_pages() cache ops.",
+  },
+  [FAM_FSCACHE_CACHE_NO_SPACE_REJECT] = {
+    .name = "host_fscache_cache_no_space_reject",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of object lookups/creations rejected due to lack of space.",
+  },
+  [FAM_FSCACHE_CACHE_STALE_OBJECTS] = {
+    .name = "host_fscache_cache_stale_objects",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of stale objects deleted.",
+  },
+  [FAM_FSCACHE_CACHE_RETIRED_OBJECTS] = {
+    .name = "host_fscache_cache_retired_objects",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects retired when relinquished.",
+  },
+  [FAM_FSCACHE_CACHE_CULLED_OBJECTS] = {
+    .name = "host_fscache_cache_culled_objects",
+    .type = METRIC_TYPE_COUNTER,
+    .help = "Total number of objects culled.",
+  },
+};
+
+#include "fscache.h"
+
+static int fscache_read(void)
 {
-  metric_family_t fam = {
-    .name = m->name,
-    .type = m->type,
-    .help = m->help,
-  };
+  FILE *fh;
+  fh = fopen("/proc/fs/fscache/stats", "r");
+  if (fh == NULL) {
+    ERROR("fscache plugin: cant open file /proc/fs/fscache/stats");
+    return -1;
+  }
 
-  metric_t metric = {0};
-
-  if (fam.type == METRIC_TYPE_COUNTER)
-    metric.value.counter.uint64 = value;
-  else
-    metric.value.gauge.float64 = (double)value;
-
-  metric_family_metric_append(&fam, metric);
-
-  int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0)
-    ERROR("fscache plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
-
-  metric_family_metric_reset(&fam);
-}
-
-static void fscache_read_stats_file(FILE *fh)
-{
   char linebuffer[BUFSIZE];
   /*
    *  cat /proc/fs/fscache/stats
@@ -79,7 +676,6 @@ static void fscache_read_stats_file(FILE *fh)
    *      CacheEv: nsp=0 stl=0 rtr=0 cul=0
    */
 
-  /* Read file line by line */
   while (fgets(linebuffer, sizeof(linebuffer), fh) != NULL) {
     char section[DATA_MAX_NAME_LEN];
     char *lineptr;
@@ -123,33 +719,37 @@ static void fscache_read_stats_file(FILE *fh)
       field_value_str++;
 
       sstrncpy(section + section_len, field_name, sizeof(section) - section_len);
-      const struct fscache_metric *m =
-          fscache_get_key(section, section_len + field_name_len);
-      if (m != NULL) {
-        uint64_t field_value_cnt;
-        status = parse_uinteger(field_value_str, &field_value_cnt);
+
+      const struct fscache_metric *fsm = fscache_get_key(section, section_len + field_name_len);
+      if (fsm != NULL) {
+        uint64_t value;
+        status = strtouint(field_value_str, &value);
         if (status != 0)
           continue;
 
-        fscache_submit(m, field_value_cnt);
+        metric_family_t *fam = &fams[fsm->fam];
+
+        metric_t metric = {0};
+        if (fam->type == METRIC_TYPE_COUNTER) {
+          metric.value.counter.uint64 = value;
+        } else if (fam->type == METRIC_TYPE_GAUGE) {
+          metric.value.gauge.float64 = (double)value;
+        } else {
+          continue;
+        }
+
+        metric_family_metric_append(fam, metric);
+
       } else {
         DEBUG("fscache plugin: metric not found for: %.*s %s", (int)section_len, section, field_name);
       }
     }
-  } /* while (fgets) */
-}
-
-static int fscache_read(void)
-{
-  FILE *fh;
-  fh = fopen("/proc/fs/fscache/stats", "r");
-  if (fh != NULL) {
-    fscache_read_stats_file(fh);
-    fclose(fh);
-  } else {
-    ERROR("fscache plugin: cant open file /proc/fs/fscache/stats");
-    return -1;
   }
+
+  plugin_dispatch_metric_family_array(fams, FAM_FSCACHE_MAX);
+
+  fclose(fh);
+
   return 0;
 }
 

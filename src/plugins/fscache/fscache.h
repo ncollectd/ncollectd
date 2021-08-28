@@ -32,7 +32,7 @@
 #line 9 "fscache.gperf"
 
 #line 11 "fscache.gperf"
-struct fscache_metric { char *key; char *name; metric_type_t type; char *help; };
+struct fscache_metric { char *key; int fam;};
 /* maximum key range = 233, duplicates = 0 */
 
 #ifdef __GNUC__
@@ -127,262 +127,262 @@ fscache_get_key (register const char *str, register size_t len)
     {
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
 #line 42 "fscache.gperf"
-      {"Relinqsn", "host_fscache_relinquishes_total", METRIC_TYPE_COUNTER, "Total number of relinquish cookie requests seen"},
+      {"Relinqsn", FAM_FSCACHE_RELINQUISHES},
       {""}, {""},
 #line 87 "fscache.gperf"
-      {"Opscan", "host_fscache_op_cancelled_total", METRIC_TYPE_COUNTER, "Total number of async ops cancelled"},
+      {"Opscan", FAM_FSCACHE_OP_CANCELLED},
 #line 69 "fscache.gperf"
-      {"Storesn", "host_fscache_stores_total", METRIC_TYPE_COUNTER, "Total number of storage (write) requests seen"},
+      {"Storesn", FAM_FSCACHE_STORE},
 #line 88 "fscache.gperf"
-      {"Opsrej", "host_fscache_op_rejected_total", METRIC_TYPE_COUNTER, "Total number of async ops rejected due to object lookup/create failure"},
+      {"Opsrej", FAM_FSCACHE_OP_REJECTED},
       {""}, {""}, {""},
 #line 51 "fscache.gperf"
-      {"Allocsn", "host_fscache_allocs_total", METRIC_TYPE_COUNTER, "Total number of allocation requests seen"},
+      {"Allocsn", FAM_FSCACHE_ALLOCS},
       {""}, {""},
 #line 99 "fscache.gperf"
-      {"CacheOpdro", "host_fscache_cacheop_drop_object", METRIC_TYPE_GAUGE, "Number of in-progress drop_object() cache ops"},
+      {"CacheOpdro", FAM_FSCACHE_CACHEOP_DROP_OBJECT},
       {""}, {""}, {""}, {""},
 #line 92 "fscache.gperf"
-      {"Opsgc", "host_fscache_op_gc_total", METRIC_TYPE_COUNTER, "Total number of deferred-release async ops garbage collected"},
+      {"Opsgc", FAM_FSCACHE_OP_GC},
       {""},
 #line 37 "fscache.gperf"
-      {"Invalsn", "host_fscache_invalidates_total", METRIC_TYPE_COUNTER, "Total number of invalidations"},
+      {"Invalsn", FAM_FSCACHE_INVALIDATES},
 #line 39 "fscache.gperf"
-      {"Updatesn", "host_fscache_updates_total", METRIC_TYPE_COUNTER, "Total number of update cookie requests seen"},
+      {"Updatesn", FAM_FSCACHE_UPDATES},
       {""},
 #line 43 "fscache.gperf"
-      {"Relinqsnul", "host_fscache_relinquishes_null_total", METRIC_TYPE_COUNTER, "Total number of relinquish cookie given a NULL parent"},
+      {"Relinqsnul", FAM_FSCACHE_RELINQUISHES_NULL},
 #line 91 "fscache.gperf"
-      {"Opsrel", "host_fscache_op_release_total", METRIC_TYPE_COUNTER, "Total number of async ops released (should equal ini=N when idle)"},
+      {"Opsrel", FAM_FSCACHE_OP_RELEASE},
       {""}, {""},
 #line 81 "fscache.gperf"
-      {"VmScanbsy", "host_fscache_store_vmscan_busy_total", METRIC_TYPE_COUNTER, "Total number of release requests ignored due to in-progress store"},
+      {"VmScanbsy", FAM_FSCACHE_STORE_VMSCAN_BUSY},
 #line 101 "fscache.gperf"
-      {"CacheOpsyn", "host_fscache_cacheop_sync_cache", METRIC_TYPE_GAUGE, "Number of in-progress sync_cache() cache ops"},
+      {"CacheOpsyn", FAM_FSCACHE_CACHEOP_SYNC_CACHE},
       {""}, {""},
 #line 59 "fscache.gperf"
-      {"Retrvlsn", "host_fscache_retrievals_total", METRIC_TYPE_COUNTER, "Total number of retrieval (read) requests seen"},
+      {"Retrvlsn", FAM_FSCACHE_RETRIEVALS},
 #line 55 "fscache.gperf"
-      {"Allocsint", "host_fscache_allocs_intr_total", METRIC_TYPE_COUNTER, "Total number of allocation requests aborted -ERESTARTSYS"},
+      {"Allocsint", FAM_FSCACHE_ALLOCS_INTR},
 #line 17 "fscache.gperf"
-      {"Objectsnal", "host_fscache_object_no_alloc_total", METRIC_TYPE_COUNTER, "Total number of object allocation failures"},
+      {"Objectsnal", FAM_FSCACHE_OBJECT_NO_ALLOC},
       {""},
 #line 94 "fscache.gperf"
-      {"CacheOpluo", "host_fscache_cacheop_lookup_object", METRIC_TYPE_GAUGE, "Number of in-progress lookup_object() cache ops"},
+      {"CacheOpluo", FAM_FSCACHE_CACHEOP_LOOKUP_OBJECT},
       {""},
 #line 75 "fscache.gperf"
-      {"Storesrun", "host_fscache_store_calls_total", METRIC_TYPE_COUNTER, "Total number of store requests granted CPU time"},
+      {"Storesrun", FAM_FSCACHE_STORE_CALLS},
 #line 98 "fscache.gperf"
-      {"CacheOpupo", "host_fscache_cacheop_update_object", METRIC_TYPE_GAUGE, "Number of in-progress update_object() cache ops"},
+      {"CacheOpupo", FAM_FSCACHE_CACHEOP_UPDATE_OBJECT},
       {""},
 #line 97 "fscache.gperf"
-      {"CacheOpinv", "host_fscache_cacheop_invalidate_object" , METRIC_TYPE_GAUGE, "Number of in-progress invalidate_object() cache ops"},
+      {"CacheOpinv", FAM_FSCACHE_CACHEOP_INVALIDATE_OBJECT},
 #line 70 "fscache.gperf"
-      {"Storesok", "host_fscache_stores_ok_total", METRIC_TYPE_COUNTER, "Total number of successful store requests"},
+      {"Storesok", FAM_FSCACHE_STORE_OK},
 #line 58 "fscache.gperf"
-      {"Allocsabt", "host_fscache_allocs_object_dead_total", METRIC_TYPE_COUNTER, "Total number of allocation requests aborted due to object death"},
+      {"Allocsabt", FAM_FSCACHE_ALLOCS_OBJECT_DEAD},
 #line 40 "fscache.gperf"
-      {"Updatesnul", "host_fscache_updates_null_total", METRIC_TYPE_COUNTER, "Total number of update requests given a NULL parent"},
+      {"Updatesnul", FAM_FSCACHE_UPDATES_NULL},
       {""},
 #line 95 "fscache.gperf"
-      {"CacheOpluc", "host_fscache_cacheop_lookup_complete", METRIC_TYPE_GAUGE, "Number of in-progress lookup_complete() cache ops"},
+      {"CacheOpluc", FAM_FSCACHE_CACHEOP_LOOKUP_COMPLETE},
 #line 52 "fscache.gperf"
-      {"Allocsok", "host_fscache_allocs_ok_total", METRIC_TYPE_COUNTER, "Total number of successful allocation requests"},
+      {"Allocsok", FAM_FSCACHE_ALLOCS_OK},
       {""},
 #line 111 "fscache.gperf"
-      {"CacheEvstl", "host_fscache_cache_stale_objects_total", METRIC_TYPE_COUNTER, "Total number of stale objects deleted"},
+      {"CacheEvstl", FAM_FSCACHE_CACHE_STALE_OBJECTS},
       {""}, {""},
 #line 89 "fscache.gperf"
-      {"Opsini", "host_fscache_op_initialised_total", METRIC_TYPE_COUNTER, "Total number of async ops initialised"},
+      {"Opsini", FAM_FSCACHE_OP_INITIALISED},
 #line 38 "fscache.gperf"
-      {"Invalsrun", "host_fscache_invalidates_run_total", METRIC_TYPE_COUNTER, "Total number of invalidations granted CPU time"},
+      {"Invalsrun", FAM_FSCACHE_INVALIDATES_RUN},
 #line 26 "fscache.gperf"
-      {"Acquiren", "host_fscache_acquires_total", METRIC_TYPE_COUNTER, "Total number of acquire cookie requests seen"},
+      {"Acquiren", FAM_FSCACHE_ACQUIRES},
 #line 85 "fscache.gperf"
-      {"Opsrun", "host_fscache_op_run_total", METRIC_TYPE_COUNTER, "Total number of times async ops given CPU time"},
+      {"Opsrun", FAM_FSCACHE_OP_RUN},
 #line 64 "fscache.gperf"
-      {"Retrvlsint", "host_fscache_retrievals_intr_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests aborted -ERESTARTSYS"},
+      {"Retrvlsint", FAM_FSCACHE_RETRIEVALS_INTR},
 #line 32 "fscache.gperf"
-      {"Lookupsn", "host_fscache_object_lookups_total", METRIC_TYPE_COUNTER, "Total number of lookup calls made on cache backends"},
+      {"Lookupsn", FAM_FSCACHE_OBJECT_LOOKUPS},
 #line 82 "fscache.gperf"
-      {"VmScancan", "host_fscache_store_vmscan_cancelled_total", METRIC_TYPE_COUNTER, "Total number of page stores cancelled due to release request"},
+      {"VmScancan", FAM_FSCACHE_STORE_VMSCAN_CANCELLED},
 #line 93 "fscache.gperf"
-      {"CacheOpalo", "host_fscache_cacheop_alloc_object", METRIC_TYPE_GAUGE, "Number of in-progress alloc_object() cache ops"},
+      {"CacheOpalo", FAM_FSCACHE_CACHEOP_ALLOC_OBJECT},
       {""}, {""},
 #line 78 "fscache.gperf"
-      {"Storesolm", "host_fscache_store_pages_over_limit_total", METRIC_TYPE_COUNTER, "Total number of store requests over store limit"},
+      {"Storesolm", FAM_FSCACHE_STORE_PAGES_OVER_LIMIT},
 #line 71 "fscache.gperf"
-      {"Storesagn", "host_fscache_stores_again_total", METRIC_TYPE_COUNTER, "Total number of store requests on a page already pending storage"},
+      {"Storesagn", FAM_FSCACHE_STORE_AGAIN},
 #line 96 "fscache.gperf"
-      {"CacheOpgro", "host_fscache_cacheop_grab_object", METRIC_TYPE_GAUGE, "Number of in-progress grab_object() cache ops"},
+      {"CacheOpgro", FAM_FSCACHE_CACHEOP_GRAB_OBJECT},
       {""},
 #line 28 "fscache.gperf"
-      {"Acquirenoc", "host_fscache_acquires_no_cache_total", METRIC_TYPE_COUNTER, "Total number of acquire requests rejected due to no cache available"},
+      {"Acquirenoc", FAM_FSCACHE_ACQUIRES_NO_CACHE},
       {""}, {""},
 #line 102 "fscache.gperf"
-      {"CacheOpatc", "host_fscache_cacheop_attr_changed", METRIC_TYPE_GAUGE, "Number of in-progress attr_changed() cache ops"},
+      {"CacheOpatc", FAM_FSCACHE_CACHEOP_ATTR_CHANGED},
       {""},
 #line 44 "fscache.gperf"
-      {"Relinqswcr", "host_fscache_relinquishes_waitcrt_total", METRIC_TYPE_COUNTER, "Total number of relinquish cookie waited on completion of creation"},
+      {"Relinqswcr", FAM_FSCACHE_RELINQUISHES_WAITCRT},
 #line 46 "fscache.gperf"
-      {"AttrChgn", "host_fscache_attr_changed_total", METRIC_TYPE_COUNTER, "Total number of attribute changed requests seen"},
+      {"AttrChgn", FAM_FSCACHE_ATTR_CHANGED},
 #line 57 "fscache.gperf"
-      {"Allocsowt", "host_fscache_alloc_op_waits_total", METRIC_TYPE_COUNTER, "Total number of allocation requests waited for CPU time"},
+      {"Allocsowt", FAM_FSCACHE_ALLOC_OP_WAITS},
 #line 16 "fscache.gperf"
-      {"Objectsalc", "host_fscache_object_alloc_total", METRIC_TYPE_COUNTER, "Total number of objects allocated"},
+      {"Objectsalc", FAM_FSCACHE_OBJECT_ALLOC},
       {""},
 #line 27 "fscache.gperf"
-      {"Acquirenul", "host_fscache_acquires_null_total", METRIC_TYPE_COUNTER, "Total number of acquire requests given a NULL parent"},
+      {"Acquirenul", FAM_FSCACHE_ACQUIRES_NULL},
       {""},
 #line 84 "fscache.gperf"
-      {"Opspend", "host_fscache_op_pending_total", METRIC_TYPE_COUNTER, "Total number of times async ops added to pending queues"},
+      {"Opspend", FAM_FSCACHE_OP_PENDING},
 #line 33 "fscache.gperf"
-      {"Lookupsneg", "host_fscache_object_lookups_negative_total", METRIC_TYPE_COUNTER, "Total number of negative lookups made"},
+      {"Lookupsneg", FAM_FSCACHE_OBJECT_LOOKUPS_NEGATIVE},
 #line 77 "fscache.gperf"
-      {"Storesrxd", "host_fscache_store_radix_deletes_total", METRIC_TYPE_COUNTER, "Total number of store requests deleted from tracking tree"},
+      {"Storesrxd", FAM_FSCACHE_STORE_RADIX_DELETES},
 #line 14 "fscache.gperf"
-      {"Cookiesdat", "host_fscache_cookie_data_total", METRIC_TYPE_COUNTER, "Total number of data storage cookies allocated"},
+      {"Cookiesdat", FAM_FSCACHE_COOKIE_DATA},
 #line 83 "fscache.gperf"
-      {"VmScanwt", "host_fscache_store_vmscan_wait_total", METRIC_TYPE_COUNTER, "Total number of page stores waited for CPU time"},
+      {"VmScanwt", FAM_FSCACHE_STORE_VMSCAN_WAIT},
       {""},
 #line 18 "fscache.gperf"
-      {"Objectsavl", "host_fscache_object_avail_total", METRIC_TYPE_COUNTER, "Total number of objects that reached the available state"},
+      {"Objectsavl", FAM_FSCACHE_OBJECT_AVAIL},
       {""},
 #line 15 "fscache.gperf"
-      {"Cookiesspc", "host_fscache_cookie_special_total", METRIC_TYPE_COUNTER, "Total number of special cookies allocated"},
+      {"Cookiesspc", FAM_FSCACHE_COOKIE_SPECIAL},
 #line 53 "fscache.gperf"
-      {"Allocswt", "host_fscache_allocs_wait_total", METRIC_TYPE_COUNTER, "Total number of allocation requests that waited on lookup completion"},
+      {"Allocswt", FAM_FSCACHE_ALLOCS_WAIT},
 #line 80 "fscache.gperf"
-      {"VmScangon", "host_fscache_store_vmscan_gone_total", METRIC_TYPE_COUNTER, "Total number of release requests against pages stored by time lock granted"},
+      {"VmScangon", FAM_FSCACHE_STORE_VMSCAN_GONE},
 #line 110 "fscache.gperf"
-      {"CacheEvnsp", "host_fscache_cache_no_space_reject_total", METRIC_TYPE_COUNTER, "Total number of object lookups/creations rejected due to lack of space"},
+      {"CacheEvnsp", FAM_FSCACHE_CACHE_NO_SPACE_REJECT},
 #line 86 "fscache.gperf"
-      {"Opsenq", "host_fscache_op_enqueue_total", METRIC_TYPE_COUNTER, "Total number of times async ops queued for processing"},
+      {"Opsenq", FAM_FSCACHE_OP_ENQUEUE},
 #line 19 "fscache.gperf"
-      {"Objectsded", "host_fscache_object_dead_total", METRIC_TYPE_COUNTER, "Total mumber of objects that reached the dead state"},
+      {"Objectsded", FAM_FSCACHE_OBJECT_DEAD},
 #line 21 "fscache.gperf"
-      {"ChkAuxok", "host_fscache_checkaux_okay_total", METRIC_TYPE_COUNTER, "Total number of objects that passed a coherency check"},
+      {"ChkAuxok", FAM_FSCACHE_CHECKAUX_OKAY},
 #line 61 "fscache.gperf"
-      {"Retrvlswt", "host_fscache_retrievals_wait_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests that waited on lookup completion"},
+      {"Retrvlswt", FAM_FSCACHE_RETRIEVALS_WAIT},
 #line 109 "fscache.gperf"
-      {"CacheOpdsp", "host_fscache_cacheop_dissociate_pages", METRIC_TYPE_GAUGE, "Number of in-progress dissociate_pages() cache ops"},
+      {"CacheOpdsp", FAM_FSCACHE_CACHEOP_DISSOCIATE_PAGES},
       {""}, {""}, {""},
 #line 13 "fscache.gperf"
-      {"Cookiesidx", "host_fscache_cookie_index_total", METRIC_TYPE_COUNTER, "Total number of index cookies allocated"},
+      {"Cookiesidx", FAM_FSCACHE_COOKIE_INDEX},
 #line 100 "fscache.gperf"
-      {"CacheOppto", "host_fscache_cacheop_put_object", METRIC_TYPE_GAUGE, "Number of in-progress put_object() cache ops"},
+      {"CacheOppto", FAM_FSCACHE_CACHEOP_PUT_OBJECT},
       {""},
 #line 113 "fscache.gperf"
-      {"CacheEvcul", "host_fscache_cache_culled_objects_total", METRIC_TYPE_COUNTER, "Total number of objects culled"},
+      {"CacheEvcul", FAM_FSCACHE_CACHE_CULLED_OBJECTS},
       {""}, {""},
 #line 68 "fscache.gperf"
-      {"Retrvlsabt", "host_fscache_retrievals_object_dead_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests aborted due to object death"},
+      {"Retrvlsabt", FAM_FSCACHE_RETRIEVALS_OBJECT_DEAD},
       {""},
 #line 62 "fscache.gperf"
-      {"Retrvlsnod", "host_fscache_retrievals_nodata_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests returned -ENODATA"},
+      {"Retrvlsnod", FAM_FSCACHE_RETRIEVALS_NODATA},
       {""},
 #line 72 "fscache.gperf"
-      {"Storesnbf", "host_fscache_stores_nobufs_total", METRIC_TYPE_COUNTER, "Total number of store requests rejected -ENOBUFS"},
+      {"Storesnbf", FAM_FSCACHE_STORE_NOBUFS},
 #line 41 "fscache.gperf"
-      {"Updatesrun", "host_fscache_updates_run_total", METRIC_TYPE_COUNTER, "Total number of update requests granted CPU time"},
+      {"Updatesrun", FAM_FSCACHE_UPDATES_RUN},
       {""}, {""}, {""},
 #line 54 "fscache.gperf"
-      {"Allocsnbf", "host_fscache_allocs_nobufs_total", METRIC_TYPE_COUNTER, "Total number of allocation requests rejected -ENOBUFS"},
+      {"Allocsnbf", FAM_FSCACHE_ALLOCS_NOBUFS},
 #line 36 "fscache.gperf"
-      {"Lookupstmo", "host_fscache_object_lookups_timed_out_total", METRIC_TYPE_COUNTER, "Total number of lookups timed out and requeued"},
+      {"Lookupstmo", FAM_FSCACHE_OBJECT_LOOKUPS_TIMED_OUT},
 #line 73 "fscache.gperf"
-      {"Storesoom", "host_fscache_stores_oom_total", METRIC_TYPE_COUNTER, "Total number of store requests failed -ENOMEM"},
+      {"Storesoom", FAM_FSCACHE_STORE_OOM},
 #line 45 "fscache.gperf"
-      {"Relinqsrtr", "host_fscache_relinquishes_retire_total", METRIC_TYPE_COUNTER, "Total number of relinquish retries"},
+      {"Relinqsrtr", FAM_FSCACHE_RELINQUISHES_RETIRE},
 #line 90 "fscache.gperf"
-      {"Opsdfr", "host_fscache_op_deferred_release_total", METRIC_TYPE_COUNTER, "Total number of async ops queued for deferred release"},
+      {"Opsdfr", FAM_FSCACHE_OP_DEFERRED_RELEASE},
       {""},
 #line 108 "fscache.gperf"
-      {"CacheOpucp", "host_fscache_cacheop_uncache_page", METRIC_TYPE_GAUGE, "Number of in-progress uncache_page() cache ops"},
+      {"CacheOpucp", FAM_FSCACHE_CACHEOP_UNCACHE_PAGE},
       {""},
 #line 112 "fscache.gperf"
-      {"CacheEvrtr", "host_fscache_cache_retired_objects_total", METRIC_TYPE_COUNTER, "Total number of objects retired when relinquished"},
+      {"CacheEvrtr", FAM_FSCACHE_CACHE_RETIRED_OBJECTS},
 #line 24 "fscache.gperf"
-      {"Pagesmrk", "host_fscache_marks_total", METRIC_TYPE_COUNTER, "Total number of pages marked as being cached"},
+      {"Pagesmrk", FAM_FSCACHE_MARKS},
       {""},
 #line 63 "fscache.gperf"
-      {"Retrvlsnbf", "host_fscache_retrievals_nobufs_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests rejected -ENOBUFS"},
+      {"Retrvlsnbf", FAM_FSCACHE_RETRIEVALS_NOBUFS},
       {""}, {""}, {""},
 #line 60 "fscache.gperf"
-      {"Retrvlsok", "host_fscache_retrievals_ok_total", METRIC_TYPE_COUNTER, "Total number of successful retrieval requests"},
+      {"Retrvlsok", FAM_FSCACHE_RETRIEVALS_OK},
 #line 107 "fscache.gperf"
-      {"CacheOpwrp", "host_fscache_cacheop_write_page", METRIC_TYPE_GAUGE, "Number of in-progress write_page() cache ops"},
+      {"CacheOpwrp", FAM_FSCACHE_CACHEOP_WRITE_PAGE},
       {""}, {""}, {""}, {""},
 #line 67 "fscache.gperf"
-      {"Retrvlsowt", "host_fscache_retrieval_op_waits_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests waited for CPU time"},
+      {"Retrvlsowt", FAM_FSCACHE_RETRIEVAL_OP_WAITS},
       {""}, {""}, {""},
 #line 20 "fscache.gperf"
-      {"ChkAuxnon", "host_fscache_checkaux_none_total", METRIC_TYPE_COUNTER, "Total number of objects that didn't have a coherency check"},
+      {"ChkAuxnon", FAM_FSCACHE_CHECKAUX_NONE},
 #line 105 "fscache.gperf"
-      {"CacheOpalp", "host_fscache_cacheop_allocate_page", METRIC_TYPE_GAUGE, "Number of in-progress allocate_page() cache ops"},
+      {"CacheOpalp", FAM_FSCACHE_CACHEOP_ALLOCATE_PAGE},
       {""},
 #line 65 "fscache.gperf"
-      {"Retrvlsoom", "host_fscache_retrievals_nomem_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests failed -ENOMEM"},
+      {"Retrvlsoom", FAM_FSCACHE_RETRIEVALS_NOMEM},
       {""}, {""},
 #line 106 "fscache.gperf"
-      {"CacheOpals", "host_fscache_cacheop_allocate_pages", METRIC_TYPE_GAUGE, "Number of in-progress allocate_pages() cache ops"},
+      {"CacheOpals", FAM_FSCACHE_CACHEOP_ALLOCATE_PAGES},
       {""},
 #line 30 "fscache.gperf"
-      {"Acquirenbf", "host_fscache_acquires_nobufs_total", METRIC_TYPE_COUNTER, "Total number of acquire requests rejected due to error"},
+      {"Acquirenbf", FAM_FSCACHE_ACQUIRES_NOBUFS},
       {""},
 #line 76 "fscache.gperf"
-      {"Storespgs", "host_fscache_store_pages_total", METRIC_TYPE_COUNTER, "Total number of pages given store requests processing time"},
+      {"Storespgs", FAM_FSCACHE_STORE_PAGES},
       {""},
 #line 29 "fscache.gperf"
-      {"Acquireok", "host_fscache_acquires_ok_total", METRIC_TYPE_COUNTER, "Total number of acquire requests succeeded"},
+      {"Acquireok", FAM_FSCACHE_ACQUIRES_OK},
 #line 35 "fscache.gperf"
-      {"Lookupscrt", "host_fscache_object_created_total", METRIC_TYPE_COUNTER, "Total number of objects created by lookup"},
+      {"Lookupscrt", FAM_FSCACHE_OBJECT_CREATED},
       {""},
 #line 23 "fscache.gperf"
-      {"ChkAuxobs", "host_fscache_checkaux_obsolete_total", METRIC_TYPE_COUNTER, "Total number of objects that were declared obsolete"},
+      {"ChkAuxobs", FAM_FSCACHE_CHECKAUX_OBSOLETE},
       {""}, {""}, {""}, {""}, {""},
 #line 50 "fscache.gperf"
-      {"AttrChgrun", "host_fscache_attr_changed_calls_total", METRIC_TYPE_COUNTER, "Total number of attribute changed ops given CPU time"},
+      {"AttrChgrun", FAM_FSCACHE_ATTR_CHANGED_CALLS},
       {""}, {""}, {""},
 #line 31 "fscache.gperf"
-      {"Acquireoom", "host_fscache_acquires_oom_total", METRIC_TYPE_COUNTER, "Total number of acquire requests failed on ENOMEM"},
+      {"Acquireoom", FAM_FSCACHE_ACQUIRES_OOM},
 #line 48 "fscache.gperf"
-      {"AttrChgnbf", "host_fscache_attr_changed_nobufs_total", METRIC_TYPE_COUNTER, "Total number of attribute changed rejected -ENOBUFS"},
+      {"AttrChgnbf", FAM_FSCACHE_ATTR_CHANGED_NOBUFS},
       {""}, {""}, {""},
 #line 47 "fscache.gperf"
-      {"AttrChgok", "host_fscache_attr_changed_ok_total", METRIC_TYPE_COUNTER,  "Total number of attribute changed requests queued"},
+      {"AttrChgok", FAM_FSCACHE_ATTR_CHANGED_OK},
 #line 25 "fscache.gperf"
-      {"Pagesunc", "host_fscache_uncaches_total", METRIC_TYPE_COUNTER, "Total number of uncache page requests seen"},
+      {"Pagesunc", FAM_FSCACHE_UNCACHES},
       {""}, {""}, {""},
 #line 79 "fscache.gperf"
-      {"VmScannos", "host_fscache_store_vmscan_not_storing_total", METRIC_TYPE_COUNTER, "Total number of release requests against pages with no pending store"},
+      {"VmScannos", FAM_FSCACHE_STORE_VMSCAN_NOT_STORING},
 #line 103 "fscache.gperf"
-      {"CacheOprap", "host_fscache_cacheop_read_or_alloc_page", METRIC_TYPE_GAUGE, "Number of in-progress read_or_alloc_page() cache ops"},
+      {"CacheOprap", FAM_FSCACHE_CACHEOP_READ_OR_ALLOC_PAGE},
       {""}, {""}, {""}, {""},
 #line 104 "fscache.gperf"
-      {"CacheOpras", "host_fscache_cacheop_read_or_alloc_pages", METRIC_TYPE_GAUGE, "Number of in-progress read_or_alloc_pages() cache ops"},
+      {"CacheOpras", FAM_FSCACHE_CACHEOP_READ_OR_ALLOC_PAGES},
       {""},
 #line 49 "fscache.gperf"
-      {"AttrChgoom", "host_fscache_attr_changed_nomem_total", METRIC_TYPE_COUNTER, "Total number of attribute changed failed -ENOMEM"},
+      {"AttrChgoom", FAM_FSCACHE_ATTR_CHANGED_NOMEM},
       {""},
 #line 74 "fscache.gperf"
-      {"Storesops", "host_fscache_store_ops_total", METRIC_TYPE_COUNTER, "Total number of store requests submitted"},
+      {"Storesops", FAM_FSCACHE_STORE_OPS},
       {""}, {""}, {""}, {""},
 #line 56 "fscache.gperf"
-      {"Allocsops", "host_fscache_alloc_ops_total", METRIC_TYPE_COUNTER, "Total number of allocation requests submitted"},
+      {"Allocsops", FAM_FSCACHE_ALLOC_OPS},
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
       {""},
 #line 66 "fscache.gperf"
-      {"Retrvlsops", "host_fscache_retrieval_ops_total", METRIC_TYPE_COUNTER, "Total number of retrieval requests submitted"},
+      {"Retrvlsops", FAM_FSCACHE_RETRIEVAL_OPS},
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
       {""}, {""},
 #line 22 "fscache.gperf"
-      {"ChkAuxupd", "host_fscache_checkaux_update_total", METRIC_TYPE_COUNTER, "Total number of objects that needed a coherency data update"},
+      {"ChkAuxupd", FAM_FSCACHE_CHECKAUX_UPDATE},
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
       {""}, {""}, {""}, {""},
 #line 34 "fscache.gperf"
-      {"Lookupspos", "host_fscache_object_lookups_positive_total", METRIC_TYPE_COUNTER, "Total number of positive lookups made"}
+      {"Lookupspos", FAM_FSCACHE_OBJECT_LOOKUPS_POSITIVE}
     };
 
   if (len <= FSCACHE_MAX_WORD_LENGTH && len >= FSCACHE_MIN_WORD_LENGTH)
