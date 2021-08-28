@@ -184,15 +184,7 @@ static int timex_read(void)
   m.value.gauge.float64 = timex.tai;
   metric_family_metric_append(&fams[FAM_TIMEX_TAI_OFFSET_SECONDS], m);
 
-  for (size_t i = 0; i < FAM_TIMEX_MAX; i++) {
-    if (fams[i].metric.num > 0) {
-      int status = plugin_dispatch_metric_family(&fams[i]);
-      if (status != 0)
-        ERROR("timex plugin: plugin_dispatch_metric_family failed: %s", STRERROR(status));
-      metric_family_metric_reset(&fams[i]);
-    }
-  }
-
+  plugin_dispatch_metric_family_array(fams, FAM_TIMEX_MAX);
   return 0;
 }
 
