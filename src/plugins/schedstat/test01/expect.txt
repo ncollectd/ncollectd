@@ -1,0 +1,27 @@
+# TYPE system_schedstat_running counter
+system_schedstat_running_total{cpu="0",hostname="localhost.localdomain"} 1152768003154
+system_schedstat_running_total{cpu="1",hostname="localhost.localdomain"} 1169671685410
+system_schedstat_running_total{cpu="2",hostname="localhost.localdomain"} 1014435197741
+system_schedstat_running_total{cpu="3",hostname="localhost.localdomain"} 956224997332
+system_schedstat_running_total{cpu="4",hostname="localhost.localdomain"} 854637176138
+system_schedstat_running_total{cpu="5",hostname="localhost.localdomain"} 984218972035
+system_schedstat_running_total{cpu="6",hostname="localhost.localdomain"} 936004584413
+system_schedstat_running_total{cpu="7",hostname="localhost.localdomain"} 961722556522
+# TYPE system_schedstat_waiting counter
+system_schedstat_waiting_total{cpu="0",hostname="localhost.localdomain"} 37629017528
+system_schedstat_waiting_total{cpu="1",hostname="localhost.localdomain"} 105643775398
+system_schedstat_waiting_total{cpu="2",hostname="localhost.localdomain"} 35147518600
+system_schedstat_waiting_total{cpu="3",hostname="localhost.localdomain"} 64758254644
+system_schedstat_waiting_total{cpu="4",hostname="localhost.localdomain"} 32501167744
+system_schedstat_waiting_total{cpu="5",hostname="localhost.localdomain"} 39227505541
+system_schedstat_waiting_total{cpu="6",hostname="localhost.localdomain"} 34718820515
+system_schedstat_waiting_total{cpu="7",hostname="localhost.localdomain"} 38858171994
+# TYPE system_schedstat_timeslices counter
+system_schedstat_timeslices_total{cpu="0",hostname="localhost.localdomain"} 3662594
+system_schedstat_timeslices_total{cpu="1",hostname="localhost.localdomain"} 3966463
+system_schedstat_timeslices_total{cpu="2",hostname="localhost.localdomain"} 3686644
+system_schedstat_timeslices_total{cpu="3",hostname="localhost.localdomain"} 4411605
+system_schedstat_timeslices_total{cpu="4",hostname="localhost.localdomain"} 3870389
+system_schedstat_timeslices_total{cpu="5",hostname="localhost.localdomain"} 3803069
+system_schedstat_timeslices_total{cpu="6",hostname="localhost.localdomain"} 3522458
+system_schedstat_timeslices_total{cpu="7",hostname="localhost.localdomain"} 3732001
