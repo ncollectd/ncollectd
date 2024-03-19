@@ -1,0 +1,60 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ntpd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ntpd man page"
+.SH NAME
+ncollectd-ntpd \- Documentation of ncollectd's ntpd plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ntpd
+.br
+\fBplugin\fP ntpd {
+    \fBhost\fP \fIhost\fP
+    \fBport\fP \fIport\fP
+    \fBlabel\fP \fIkey\fP \fIvalue\fP
+    \fBinterval\fP \fIseconds\fP
+    \fBreverse-lookups\fP \fItrue|false\fP
+    \fBinclude-unit-id\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBntpd\fP plugin collects per-peer ntp data such as time offset and time
+dispersion.
+.PP
+For talking to \fBntpd\fP, it mimics what the \fBntpdc\fP control program does on
+the wire - using \fBmode 7\fP specific requests. This mode is deprecated with
+newer \fBntpd\fP releases (4.2.7p230 and later). For the \fBntpd\fP plugin to work
+correctly with them, the ntp daemon must be explicitly configured to
+enable \fBmode 7\fP (which is disabled by default). Refer to the
+.BR ntp.conf (5)
+manual page for details.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.PP
+.TP
+\fBhost\fP \fIhost\fP
+Hostname of the host running \fBntpd\fP. Defaults to \fBlocalhost\fP.
+.TP
+\fBport\fP \fIport\fP
+UDP port to connect to. Defaults to \fB123\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.TP
+\fBreverse-lookups\fP \fItrue|false\fP
+Sets whether or not to perform reverse lookups on peers. Since the name or
+IP-address may be used in a filename it is recommended to disable reverse
+lookups. The default is to do reverse lookups to preserve backwards
+compatibility, though.
+.TP
+\fBinclude-unit-id\fP \fItrue|false\fP
+When a peer is a refclock, include the unit ID in the \fIpeer\fP label.
+Defaults to \fBfalse\fP.
+
+If two refclock peers use the same driver and this is \fBfalse\fP, the plugin will
+try to write simultaneous measurements from both to the same type instance.
+This will result in error messages in the log and only one set of measurements
+making it through.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
