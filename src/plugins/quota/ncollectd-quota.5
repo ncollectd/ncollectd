@@ -1,0 +1,51 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-quota 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd quota man page"
+.SH NAME
+ncollectd-quota \- Documentation of ncollectd's quota plugin
+.SH SYNOPSIS
+\fBload-plugin\fP quota
+\fBplugin\fP quota {
+    \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice-name\fP
+    \fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
+    \fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
+    \fBuser-id\fP [\fIincl|include|excl|exclude\fP]  \fIuid\fP
+    \fBuser-name\fP [\fIincl|include|excl|exclude\fP] \fIusername\fP
+    \fBreport-by-user-name\fP \fItrue|false\fP
+.br
+}
+.br
+.SH DESCRIPTION
+The \fBquota\fP plugin collect metrics of filesystems quota.
+.PP
+The \fBquota\fP plugin supports the following options:
+.TP
+\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevicename\fP
+Select filesystems based on the devicename.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
+Select filesystems based on the mountpoint.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
+Select filesystems based on the filesystem type.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBuser-id\fP [\fIincl|include|excl|exclude\fP]  \fIuid\fP
+Select users quotas based on the uid.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBuser-name\fP [\fIincl|include|excl|exclude\fP] \fIusername\fP
+Select users quotas based on the username.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBreport-by-user-name\fP \fItrue|false\fP
+
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
