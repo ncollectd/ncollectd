@@ -1,0 +1,375 @@
+/* SPDX-License-Identifier: GPL-2.0-only                             */
+/* SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín  */
+/* SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com> */
+
+#pragma once
+
+enum {
+    FAM_SMART_ATTRIBUTE_CURRENT,
+    FAM_SMART_ATTRIBUTE_PRETTY,
+    FAM_SMART_ATTRIBUTE_THRESHOLD,
+    FAM_SMART_ATTRIBUTE_WORST,
+    FAM_SMART_BAD_SECTORS,
+    FAM_SMART_POWER_CYCLES,
+    FAM_SMART_POWER_ON,
+    FAM_SMART_TEMPERATURE,
+
+    FAM_SMART_NVME_CRITICAL_WARNING,
+    FAM_SMART_NVME_TEMPERATURE,
+    FAM_SMART_NVME_AVAIL_SPARE,
+    FAM_SMART_NVME_AVAIL_SPARE_THRESH,
+    FAM_SMART_NVME_PERCENT_USED,
+    FAM_SMART_NVME_ENDU_GRP_CRIT_WARN_SUMRY,
+    FAM_SMART_NVME_DATA_UNITS_READ,
+    FAM_SMART_NVME_DATA_UNITS_WRITTEN,
+    FAM_SMART_NVME_HOST_COMMANDS_READ,
+    FAM_SMART_NVME_HOST_COMMANDS_WRITTEN,
+    FAM_SMART_NVME_CTRL_BUSY_TIME,
+    FAM_SMART_NVME_POWER_CYCLES,
+    FAM_SMART_NVME_POWER_ON_HOURS,
+    FAM_SMART_NVME_UNSAFE_SHUTDOWNS,
+    FAM_SMART_NVME_MEDIA_ERRORS,
+    FAM_SMART_NVME_NUM_ERR_LOG_ENTRIES,
+    FAM_SMART_NVME_WARNING_TEMP_TIME,
+    FAM_SMART_NVME_CRITICAL_COMP_TIME,
+    FAM_SMART_NVME_TEMP_SENSOR,
+    FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TRANSITION_COUNT,
+    FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TOTAL_TIME,
+    FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TRANSITION_COUNT,
+    FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TOTAL_TIME,
+
+    FAM_SMART_NVME_PROGRAM_FAIL_COUNT_NORM,
+    FAM_SMART_NVME_PROGRAM_FAIL_COUNT_RAW,
+    FAM_SMART_NVME_ERASE_FAIL_COUNT_NORM,
+    FAM_SMART_NVME_ERASE_FAIL_COUNT_RAW,
+    FAM_SMART_NVME_WEAR_LEVELING_NORM,
+    FAM_SMART_NVME_WEAR_LEVELING_MIN,
+    FAM_SMART_NVME_WEAR_LEVELING_MAX,
+    FAM_SMART_NVME_WEAR_LEVELING_AVG,
+    FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_NORM,
+    FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_RAW,
+    FAM_SMART_NVME_CRC_ERROR_COUNT_NORM,
+    FAM_SMART_NVME_CRC_ERROR_COUNT_RAW,
+    FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_NORM,
+    FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_RAW,
+    FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_NORM,
+    FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_RAW,
+    FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_NORM,
+    FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_RAW,
+    FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_NORM,
+    FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_PCT,
+    FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_COUNT,
+    FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_NORM,
+    FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_RAW,
+    FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_NORM,
+    FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_RAW,
+    FAM_SMART_NVME_NAND_BYTES_WRITTEN_NORM,
+    FAM_SMART_NVME_NAND_BYTES_WRITTEN_RAW,
+    FAM_SMART_NVME_HOST_BYTES_WRITTEN_NORM,
+    FAM_SMART_NVME_HOST_BYTES_WRITTEN_RAW,
+
+    FAM_SMART_MAX,
+};
+
+static metric_family_t fams_smart[FAM_SMART_MAX] = {
+    [FAM_SMART_ATTRIBUTE_CURRENT] = {
+        .name = "smart_attribute_current",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_ATTRIBUTE_PRETTY] = {
+        .name = "smart_attribute_pretty",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_ATTRIBUTE_THRESHOLD] = {
+        .name = "smart_attribute_threshold",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_ATTRIBUTE_WORST] = {
+        .name = "smart_attribute_worst",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_BAD_SECTORS] = {
+        .name = "smart_bad_sectors",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_POWER_CYCLES] = {
+        .name = "smart_power_cycles",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_POWER_ON] = {
+        .name = "smart_power_on",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_TEMPERATURE] = {
+        .name = "smart_temperature",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_CRITICAL_WARNING] = {
+        .name= "smart_nvme_critical_warning",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TEMPERATURE] = {
+        .name= "smart_nvme_temperature",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_AVAIL_SPARE] = {
+        .name= "smart_nvme_avail_spare",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_AVAIL_SPARE_THRESH] = {
+        .name= "smart_nvme_avail_spare_thresh",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_PERCENT_USED] = {
+        .name= "smart_nvme_percent_used",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_ENDU_GRP_CRIT_WARN_SUMRY] = {
+        .name= "smart_nvme_endu_grp_crit_warn_sumry",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_DATA_UNITS_READ] = {
+        .name= "smart_nvme_data_units_read",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_DATA_UNITS_WRITTEN] = {
+        .name= "smart_nvme_data_units_written",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_HOST_COMMANDS_READ] = {
+        .name= "smart_nvme_host_commands_read",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_HOST_COMMANDS_WRITTEN] = {
+        .name= "smart_nvme_host_commands_written",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_CTRL_BUSY_TIME] = {
+        .name= "smart_nvme_ctrl_busy_time",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_POWER_CYCLES] = {
+        .name= "smart_nvme_power_cycles",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_POWER_ON_HOURS] = {
+        .name= "smart_nvme_power_on_hours",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_UNSAFE_SHUTDOWNS] = {
+        .name= "smart_nvme_unsafe_shutdowns",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_MEDIA_ERRORS] = {
+        .name= "smart_nvme_media_errors",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_NUM_ERR_LOG_ENTRIES] = {
+        .name= "smart_nvme_num_err_log_entries",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_WARNING_TEMP_TIME] = {
+        .name= "smart_nvme_warning_temp_time",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_CRITICAL_COMP_TIME] = {
+        .name= "smart_nvme_critical_comp_time",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TEMP_SENSOR] = {
+        .name= "smart_nvme_temp_sensor",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TRANSITION_COUNT] = {
+        .name= "smart_nvme_thermal_mgmt_temp1_transition_count",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TOTAL_TIME] = {
+        .name= "smart_nvme_thermal_mgmt_temp1_total_time",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TRANSITION_COUNT] = {
+        .name= "smart_nvme_thermal_mgmt_temp2_transition_count",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TOTAL_TIME] = {
+        .name= "smart_nvme_thermal_mgmt_temp2_total_time",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_PROGRAM_FAIL_COUNT_NORM] = {
+        .name = "smart_nvme_program_fail_count_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_PROGRAM_FAIL_COUNT_RAW] = {
+        .name = "smart_nvme_program_fail_count_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_ERASE_FAIL_COUNT_NORM] = {
+        .name = "smart_nvme_erase_fail_count_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_ERASE_FAIL_COUNT_RAW] = {
+        .name = "smart_nvme_erase_fail_count_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_WEAR_LEVELING_NORM] = {
+        .name = "smart_nvme_wear_leveling_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_WEAR_LEVELING_MIN] = {
+        .name = "smart_nvme_wear_leveling_min",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_WEAR_LEVELING_MAX] = {
+        .name = "smart_nvme_wear_leveling_max",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_WEAR_LEVELING_AVG] = {
+        .name = "smart_nvme_wear_leveling_avg",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_NORM] = {
+        .name = "smart_nvme_end_to_end_error_detection_count_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_RAW] = {
+        .name = "smart_nvme_end_to_end_error_detection_count_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_CRC_ERROR_COUNT_NORM] = {
+        .name = "smart_nvme_crc_error_count_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_CRC_ERROR_COUNT_RAW] = {
+        .name = "smart_nvme_crc_error_count_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_NORM] = {
+        .name = "smart_nvme_timed_workload_media_wear_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_RAW] = {
+        .name = "smart_nvme_timed_workload_media_wear_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_NORM] = {
+        .name = "smart_nvme_timed_workload_host_reads_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_RAW] = {
+        .name = "smart_nvme_timed_workload_host_reads_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_NORM] = {
+        .name = "smart_nvme_timed_workload_timer_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_RAW] = {
+        .name = "smart_nvme_timed_workload_timer_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_NORM] = {
+        .name = "smart_nvme_thermal_throttle_status_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_PCT] = {
+        .name = "smart_nvme_thermal_throttle_status_pct",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_COUNT] = {
+        .name = "smart_nvme_thermal_throttle_status_count",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_NORM] = {
+        .name = "smart_nvme_retry_buffer_overflow_count_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_RAW] = {
+        .name = "smart_nvme_retry_buffer_overflow_count_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_NORM] = {
+        .name = "smart_nvme_pll_lock_loss_count_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_RAW] = {
+        .name = "smart_nvme_pll_lock_loss_count_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_NAND_BYTES_WRITTEN_NORM] = {
+        .name = "smart_nvme_nand_bytes_written_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_NAND_BYTES_WRITTEN_RAW] = {
+        .name = "smart_nvme_nand_bytes_written_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_HOST_BYTES_WRITTEN_NORM] = {
+        .name = "smart_nvme_host_bytes_written_norm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_SMART_NVME_HOST_BYTES_WRITTEN_RAW] = {
+        .name = "smart_nvme_host_bytes_written_raw",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+};

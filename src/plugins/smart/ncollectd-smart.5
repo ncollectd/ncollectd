@@ -1,0 +1,49 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-smart 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd smart man page"
+.SH NAME
+ncollectd-smart \- Documentation of ncollectd's smart plugin
+.SH SYNOPSIS
+\fBload-plugin\fP smart
+.br
+\fBplugin\fP smart {
+    \fBdisk\fP [\fIincl|include|excl|exclude\fP] \fBdisk-name\fP
+    \fBignore-sleep-mode\fP \fItrue|false\fP
+    \fBuse-serial\fP \fItrue|false\fP
+}
+.br
+}
+.SH DESCRIPTION
+The \fBsmart\fP plugin collects SMART information from physical
+disks. Values collectd include temperature, power cycle count, poweron
+time and bad sectors. Also, all SMART attributes are collected along
+with the normalized current value, the worst value, the threshold and
+a human readable value. The plugin can also collect SMART attributes
+for NVMe disks (present in accordance with NVMe 1.4 spec) and Additional
+SMART Attributes from Intel® NVMe disks.
+.PP
+Using the following two options you can ignore some disks or configure the
+collection only of specific disks.
+.PP
+.TP
+\fBdisk\fP [\fIincl|include|excl|exclude\fP] \fBdisk-name\fP
+Select the disk \fIdisk-name\fP to collect metrics.
+If no \fBdisk\fP option is configured, all disks are collected.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBignore-sleep-mode\fP \fItrue|false\fP
+Normally, the \fBsmart\fP plugin will ignore disks that are reported to be asleep.
+This option disables the sleep mode check and allows the plugin to collect data
+from these disks anyway. This is useful in cases where libatasmart mistakenly
+reports disks as asleep because it has not been updated to incorporate support
+for newer idle states in the ATA spec.
+.TP
+\fBuse-serial\fP \fItrue|false\fP
+A disk's kernel name (e.g., sda) can change from one boot to the next. If this
+option is enabled, the \fBsmart\fP plugin will use the disk's serial number (e.g.,
+HGST_HUH728080ALE600_2EJ8VH8X) instead of the kernel name as the key for
+storing data. This ensures that the data for a given disk will be kept together
+even if the kernel name changes.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
