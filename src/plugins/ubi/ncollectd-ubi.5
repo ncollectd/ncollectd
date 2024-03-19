@@ -1,0 +1,34 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ubi 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ubi man page"
+.SH NAME
+ncollectd-ubi \- Documentation of ncollectd's ubi plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ubi
+.br
+\fBplugin\fP ubi {
+    \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+.br
+}
+.SH DESCRIPTION
+The \fBubi\fP plugin collects some statistics about the UBI (Unsorted Block Image).
+Values collected are the number of bad physical eraseblocks on the underlying MTD
+(Memory Technology Device) and the maximum erase counter value concerning one volume.
+
+See following links for details:
+.UR http://www.linux-mtd.infradead.org/doc/ubi.html
+.UE
+.UR http://www.linux-mtd.infradead.org/doc/ubifs.html
+.UE
+.UR https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-ubi
+.UE
+
+The plugin has the following options:
+.TP
+\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+Select the device \fIname\fP of the UBI volume.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
