@@ -1,0 +1,12 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-numa 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd numa man page"
+.SH NAME
+ncollectd-numa \- Documentation of ncollectd's numa plugin
+.SH SYNOPSIS
+\fBload-plugin\fP numa
+.SH DESCRIPTION
+The \fBnuma\fP plugin reports statistics of the Non-Uniform Memory Access (NUMA) subsystem of Linux.
+It uses the information reported in \fI/sys/devices/system/node/nodeXY/numastat\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
