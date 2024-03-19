@@ -1,0 +1,14 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-cpusleep 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cpusleep man page"
+.SH NAME
+ncollectd-cpusleep \- Documentation of ncollectd's cpusleep plugin
+.SH DESCRIPTION
+The \fBcpusleep\fP plugin doesn't have any options. It reads \f(CWCLOCK_BOOTTIME\fP and
+\f(CWCLOCK_MONOTONIC\fP and reports the difference between these clocks. Since
+\fBBOOTTIME\fP clock increments while device is suspended and \fBMONOTONIC\fP
+clock does not, the derivative of the difference between these clocks
+gives the relative amount of time the device has spent in suspend
+state.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
