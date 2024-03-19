@@ -1,0 +1,105 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-nginx 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nginx man page"
+.SH NAME
+ncollectd-nginx \- Documentation of ncollectd's nginx plugin
+.SH SYNOPSIS
+\fBload-plugin\fP nginx
+.br
+\fBplugin\fP nginx {
+    \fBinstance\fP "\fIhost\fP" {
+        \fBurl\fP "\fIhttp://host/nginx_status\fP"
+        \fBsocket-path\fP "\fI/path/to/unix/socket\fP"
+        \fBuser\fP "\fIusername\fP"
+        \fBpassword\fP "\fIpassword\fP"
+        \fBverify-peer\fP \fItrue|false\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBca-cert\fP "\fIfile\fP"
+        \fBssl-ciphers\fP "\fIlist of ciphers\fP"
+        \fBtimeout\fP \fImilliseconds\fP
+        \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+        \fBinterval\fP \fIinterval\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBnginx\fP plugin collects the number of connections and requests handled by the
+\fInginx daemon\fP, a HTTP and mail server/proxy.
+It queries the page provided by the \f(CBngx_http_stub_status_module\fP module, which
+isn't compiled by default.
+.PP
+Please refer to
+.UR http://nginx.org/en/docs/http/ngx_http_stub_status_module.html
+.UE
+for more information on how to compile and configure nginx and this module.
+.PP
+The configuration of the \fBnginx\fP plugin consists of one or more \fBinstance\fP blocks.
+Each block requires one string argument as the instance name.  For example:
+.PP
+.EX
+    plugin nginx {
+        instance "www1" {
+            url "http://www1.example.com/nginx_status"
+        }
+        instance "www2" {
+            url "http://www2.example.com/nginx_status"
+        }
+    }
+.EE
+.PP
+The instance name will be used as \fIinstance\fP label in the metrics.
+In order for the plugin to work correctly, each instance name must be unique.
+This is not enforced by the plugin and it is your responsibility to ensure it.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.PP
+.TP
+\fBurl\fP \fIhttp://host/nginx_status\fP
+Sets the URL of the \f/CBngx_http_stub_status_module\fP output.
+.TP
+\fBsocket-path\fP "\fI/path/to/unix/socket\fP"
+Will connect to the Unix domain socket instead of establishing a TCP connection to a host.
+.TP
+\fBuser\fP \fIusername\fP
+Optional user name needed for authentication.
+.TP
+\fBpassword\fP \fIpassword\fP
+Optional password needed for authentication.
+.TP
+\fBverify\-peer\fP \fBtrue|false\fP
+Enable or disable peer SSL certificate verification. See
+.UR http://curl.haxx.se/docs/sslcerts.html
+.UE
+for details. Enabled by default.
+.TP
+\fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification. If enabled, the plugin checks
+if the \fICommon Name\fP or a \fISubject Alternate Name\fP field of the SSL
+certificate matches the host name provided by the \fBURL\fP option. If this
+identity check fails, the connection is aborted. Obviously, only works when
+connecting to a SSL enabled server. Enabled by default.
+.TP
+\fBca-cert\fP \fIfile\fP
+File that holds one or more SSL certificates. If you want to use HTTPS you will
+possibly need this option. What CA certificates come bundled with \fIlibcurl\fP
+and are checked by default depends on the distribution you use.
+.TP
+\fBssl-ciphers\fP \fIlist of ciphers\fP
+Specifies which ciphers to use in the connection. The list of ciphers
+must specify valid ciphers. See
+.UR http://www.openssl.org/docs/apps/ciphers.html
+.UE
+for details.
+.TP
+\fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBURL\fP, in
+seconds. By default, the configured \fBinterval\fP is used to set the timeout.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
