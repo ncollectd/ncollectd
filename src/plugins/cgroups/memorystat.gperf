@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%global-table
+%define constants-prefix MEMORYSTAT_
+%define hash-function-name memorystat_hash
+%define lookup-function-name memorystat_get_key
+%define slot-name key
+%{
+%}
+struct memorystat_metric {
+    char *key;
+    int fam;
+    int numa_fam;
+};
+%%
+anon,                     FAM_CGROUPS_MEMORY_ANONYMOUS_BYTES,                        FAM_CGROUPS_NUMA_ANONYMOUS_BYTES
+file,                     FAM_CGROUPS_MEMORY_PAGE_CACHE_BYTES,                       FAM_CGROUPS_NUMA_PAGE_CACHE_BYTES
+kernel_stack,             FAM_CGROUPS_MEMORY_KERNEL_STACK_BYTES,                     FAM_CGROUPS_NUMA_KERNEL_STACK_BYTES
+pagetables,               FAM_CGROUPS_MEMORY_PAGE_TABLES_BYTES,                      FAM_CGROUPS_NUMA_PAGE_TABLES_BYTES
+percpu,                   FAM_CGROUPS_MEMORY_KERNEL_PERCPU_BYTES,                    -1
+sock,                     FAM_CGROUPS_MEMORY_SOCKET_BYTES,                           -1
+shmem,                    FAM_CGROUPS_MEMORY_SHMEM_BYTES,                            FAM_CGROUPS_NUMA_SHMEM_BYTES
+file_mapped,              FAM_CGROUPS_MEMORY_PAGE_CACHE_MAPPED_BYTES,                FAM_CGROUPS_NUMA_PAGE_CACHE_MAPPED_BYTES
+file_dirty,               FAM_CGROUPS_MEMORY_PAGE_CACHE_DIRTY_BYTES,                 FAM_CGROUPS_NUMA_PAGE_CACHE_DIRTY_BYTES
+file_writeback,           FAM_CGROUPS_MEMORY_PAGE_CACHE_WRITEBACK_BYTES,             FAM_CGROUPS_NUMA_PAGE_CACHE_WRITEBACK_BYTES
+swapcached,               FAM_CGROUPS_MEMORY_SWAP_CACHED_BYTES,                      FAM_CGROUPS_NUMA_SWAP_CACHED_BYTES
+anon_thp,                 FAM_CGROUPS_MEMORY_TRANSPARENT_HUGEPAGES_ANONYMOUS_BYTES,  FAM_CGROUPS_NUMA_TRANSPARENT_HUGEPAGES_ANONYMOUS_BYTES
+file_thp,                 FAM_CGROUPS_MEMORY_TRANSPARENT_HUGEPAGES_PAGE_CACHE_BYTES, FAM_CGROUPS_NUMA_TRANSPARENT_HUGEPAGES_PAGE_CACHE_BYTES
+shmem_thp,                FAM_CGROUPS_MEMORY_TRANSPARENT_HUGEPAGES_SHMEM_BYTES,      FAM_CGROUPS_NUMA_TRANSPARENT_HUGEPAGES_SHMEM_BYTES
+inactive_anon,            FAM_CGROUPS_MEMORY_ANONYMOUS_INACTIVE_BYTES,               FAM_CGROUPS_NUMA_ANONYMOUS_INACTIVE_BYTES
+active_anon,              FAM_CGROUPS_MEMORY_ANONYMOUS_ACTIVE_BYTES,                 FAM_CGROUPS_NUMA_ANONYMOUS_ACTIVE_BYTES
+inactive_file,            FAM_CGROUPS_MEMORY_PAGE_CACHE_INACTIVE_BYTES,              FAM_CGROUPS_NUMA_PAGE_CACHE_INACTIVE_BYTES
+active_file,              FAM_CGROUPS_MEMORY_PAGE_CACHE_ACTIVE_BYTES,                FAM_CGROUPS_NUMA_PAGE_CACHE_ACTIVE_BYTES
+unevictable,              FAM_CGROUPS_MEMORY_UNEVICTABLE_BYTES,                      FAM_CGROUPS_NUMA_UNEVICTABLE_BYTES
+slab_reclaimable,         FAM_CGROUPS_MEMORY_SLAB_RECLAIMABLE_BYTES,                 FAM_CGROUPS_NUMA_SLAB_RECLAIMABLE_BYTES
+slab_unreclaimable,       FAM_CGROUPS_MEMORY_SLAB_UNRECLAIMABLE_BYTES,               FAM_CGROUPS_NUMA_SLAB_UNRECLAIMABLE_BYTES
+slab,                     FAM_CGROUPS_MEMORY_SLAB_BYTES,                             -1
+workingset_refault_anon,  FAM_CGROUPS_MEMORY_WORKINGSET_REFAULT_ANONYMOUS,           FAM_CGROUPS_NUMA_WORKINGSET_REFAULT_ANONYMOUS
+workingset_refault_file,  FAM_CGROUPS_MEMORY_WORKINGSET_REFAULT_FILE,                FAM_CGROUPS_NUMA_WORKINGSET_REFAULT_FILE
+workingset_activate_anon, FAM_CGROUPS_MEMORY_WORKINGSET_ACTIVATE_ANONYMOUS,          FAM_CGROUPS_NUMA_WORKINGSET_ACTIVATE_ANONYMOUS
+workingset_activate_file, FAM_CGROUPS_MEMORY_WORKINGSET_ACTIVATE_FILE,               FAM_CGROUPS_NUMA_WORKINGSET_ACTIVATE_FILE
+workingset_restore_anon,  FAM_CGROUPS_MEMORY_WORKINGSET_RESTORE_ANONYMOUS,           FAM_CGROUPS_NUMA_WORKINGSET_RESTORE_ANONYMOUS
+workingset_restore_file,  FAM_CGROUPS_MEMORY_WORKINGSET_RESTORE_FILE,                FAM_CGROUPS_NUMA_WORKINGSET_RESTORE_FILE
+workingset_nodereclaim,   FAM_CGROUPS_MEMORY_WORKINGSET_NODERECLAIM,                 FAM_CGROUPS_NUMA_WORKINGSET_NODERECLAIM
+pgfault,                  FAM_CGROUPS_MEMORY_TRANSPARENT_HUGEPAGES_FAULT_ALLOC,      -1
+pgmajfault,               FAM_CGROUPS_MEMORY_TRANSPARENT_HUGEPAGES_COLLAPSE_ALLOC,   -1
+pgrefill,                 FAM_CGROUPS_MEMORY_PAGE_FAULTS,                            -1
+pgscan,                   FAM_CGROUPS_MEMORY_PAGE_MAJOR_FAULTS,                      -1
+pgsteal,                  FAM_CGROUPS_MEMORY_PAGE_REFILLS,                           -1
+pgactivate,               FAM_CGROUPS_MEMORY_PAGE_SCANS,                             -1
+pgdeactivate,             FAM_CGROUPS_MEMORY_PAGE_STEALS,                            -1
+pglazyfree,               FAM_CGROUPS_MEMORY_PAGE_ACTIVATES,                         -1
+pglazyfreed,              FAM_CGROUPS_MEMORY_PAGE_DEACTIVATES,                       -1
+thp_fault_alloc,          FAM_CGROUPS_MEMORY_PAGE_LAZY_FREE,                         -1
+thp_collapse_alloc,       FAM_CGROUPS_MEMORY_PAGE_LAZY_FREED,                        -1
+swap,                     FAM_CGROUPS_MEMORY_SWAP_BYTES,                             -1
+cache,                    FAM_CGROUPS_MEMORY_PAGE_CACHE_BYTES,                       -1
+mapped_file,              FAM_CGROUPS_MEMORY_PAGE_CACHE_MAPPED_BYTES,                -1
