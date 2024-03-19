@@ -1,0 +1,51 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-mongodb 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd mongodb man page"
+.SH NAME
+ncollectd-mongodb \- Documentation of ncollectd's mongodb plugin
+.SH SYNOPSIS
+.EX
+\fBload-plugin\fP \fImongodb\fP
+\fBplugin\fP \fImongodb\fP {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBprefer-secondary-query\fP \fItrue|false\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.EE
+.SH DESCRIPTION
+The \fBmongodb\fP plugin will collect stats from \fIMongoDB\fP, a schema-less NoSQL database.
+.PP
+The following options are available:
+.PP
+.TP
+\fBhost\fP \fIhost\fP
+Hostname or address to connect to. Defaults to \f(CWlocalhost\fP.
+.TP
+\fBport\fP \fIport\fP
+Service name or port number to connect to. Defaults to \f(CW27017\fP.
+.TP
+\fBuser\fP \fIuser\fP
+.TP
+\fBpassword\fP \fIpassword\fP
+Sets the information used when authenticating to a \fIMongoDB\fP database. The
+fields are optional (in which case no authentication is attempted), but if you
+want to use authentication all three fields must be set.
+.TP
+\fBprefer-secondary-query\fP \fItrue|false\fP
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple time in the \fBinstance\fP block.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
