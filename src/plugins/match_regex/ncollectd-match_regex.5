@@ -1,0 +1,106 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-match_regex 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd match_regex man page"
+.SH NAME
+ncollectd-match_regex \- Documentation of ncollectd's match_regex plugin
+.SH SYNOPSIS
+\fBmatch\fP regex {
+    \fBmetric-prefix\fP \fIprefix\fP
+    \fBlabel\fP \fIkey\fP \fIvalue\fP
+    \fBmetric\fP {
+        \fBregex\fP \fIregex\fP
+        \fBexclude-regex\fP \fIregexp\fP
+        \fBtype\fP [\fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP] | \fIcounter\fP [\fIset|add|inc\fP]]
+        \fBmetric\fP \fImetric\fP
+        \fBhelp\fP \fIhelp\fP
+        \fBlabel\fP \fIkey\fP \fIindex\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBmetric-from\fP \fIindex\fP
+        \fBlabel-from\fP \fIkey\fP \fIindex\fP
+        \fBvalue-from\fP \fIindex\fP
+        \fBtime-from\fP \fIindex\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmatch_regex\fP plugin parses data matching regular expressions.
+.PP
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+.TP
+\fBmetric\fP
+.RS
+.TP
+\fBregex\fP \fIregex\fP
+Sets the regular expression to use for matching against a line.
+.TP
+\fBexclude-regex\fP \fIregexp\fP
+Sets an optional regular expression to use for excluding lines from the match.
+.TP
+\fBtype\fP [\fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP] | \fIcounter\fP [\fIset|add|inc\fP]]
+.RS
+.TP
+\fBgauge\fP
+The value is a gauge, you must specify also the type of the gauge:
+.RS
+.TP
+\fBaverage\fP
+Calculate the average
+.TP
+\fBmin\fP
+Use the smallest number only.
+.TP
+\fBmax\fP
+Use the greatest number only.
+.TP
+\fBlast\fP
+Use the last number found.
+.TP
+\fBinc\fP
+Increase the internal counter by one.
+.TP
+\fBadd\fP
+Add the matched value to the internal counter.
+.TP
+\fBpersist\fP
+Use the last number found.
+The number is not reset at the end of an interval.
+It is continously reported until another number is matched.
+.RE
+.TP
+\fBcounter\fP
+The value is a counter, you must specify also the type of the counter:
+.RS
+.TP
+\fBset\fP
+Simply sets the internal counter to this value.
+.TP
+\fBadd\fP
+Add the matched value to the internal counter.
+.TP
+\fBinc\fP
+Increase the internal counter by one.
+.RE
+.RE
+.TP
+\fBmetric\fP \fImetric\FP
+.TP
+\fBhelp\fP \fIhelp\fP
+.TP
+\fBlabel\fP \fIkey\fP \fIindex\fP
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+.TP
+\fBmetric-from\fP \fIindex\fP
+.TP
+\fBlabel-from\fP \fIkey\fP \fIindex\fP
+.TP
+\fBvalue-from\fP \fIindex\fP
+.TP
+\fBtime-from\fP \fIindex\fP
+.TP
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
