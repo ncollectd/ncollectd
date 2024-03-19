@@ -1,0 +1,35 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-nginx_vts 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nginx_vts man page"
+.SH NAME
+ncollectd-nginx_vts \- Documentation of ncollectd's nginx_vts plugin
+.SH SYNOPSIS
+\fBload-plugin\fP \fInginx_vts\fP
+.br
+\fBplugin\fP \fInginx_vts\fP
+    \fBinstance\fP \fIinstance\fP {
+        \fBurl\fP  \fIurl\fP
+        \fBlabels\fP \fIkey\fP \fIvalue\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBnginx_vts\fP collect the metrics exposed from the Nginx virtual host traffic status module.
+.TP
+\fBurl\fP  \fIurl\fP
+Sets the URL of the Nginx virtual host traffic status module.
+.TP
+\fBlabels\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBURL\fP, in
+seconds. By default, the configured \fBinterval\fP is used to set the timeout.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
