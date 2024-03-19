@@ -1,0 +1,39 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-cert 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cert man page"
+.SH NAME
+ncollectd-cert \- Documentation of ncollectd's cert plugin
+.SH SYNOPSIS
+\fBload-plugin\fP cert
+.br
+\fBplugin\fP cert {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBserver-name\fP \fIservername\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBcert\fP plugin obtain the date of certification expiration.
+.PP
+The configuration to obtain the certificate expiration data is put in a \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhost\fP
+Hostname to connect.
+.TP
+\fBport\fP \fIport\fP
+Port to connect.
+.TP
+\fBserver-name\fP \fIservername\fP
+Set the server name at the start of the handshaking process in the TLS connection.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
