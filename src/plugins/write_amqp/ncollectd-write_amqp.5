@@ -1,0 +1,133 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-write_amqp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_amqp man page"
+.SH NAME
+ncollectd-write_amqp \- Documentation of ncollectd's write_amqp plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_amqp
+.br
+\fBplugin\fP write_amqp {
+    \fBinstance\fP \fBname\fP {
+        \fBhost\fP \fIhost\fP [\fIhost\fP ...]
+        \fBport\fP \fIport\fP
+        \fBvhost\fP \fIvhost\fP
+        \fBuser\fP \fIusername\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBtls-enabled\fP \fItrue|false\fP
+        \fBtls-verify-peer\fP \fItrue|false\fP
+        \fBtls-verify-hostname\fP \fItrue|false\fP
+        \fBtls-ca-cert\fP \fI/proc/to/ca\fP
+        \fBtls-client-cert\fP \fI/proc/to/cert\fP
+        \fBtls-client-key\fP \fI/proc/to/key\fP
+        \fBexchange\fP \fIexchange\fP
+        \fBexchange-type\fP \fItype\fP
+        \fBrouting-key\fP \fIkey\fP
+        \fBpersistent\fP \fItrue|false\fP
+        \fBconnection-retry-delay\fP \fIseconds\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-notification\fP \fItext|json|protob\fP
+        \fBwrite\fP \fImetrics|notifications\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_amqp\fP plugin can be used to send metrics or notifications
+to an AMQP 0.9.1 message broker.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhost\fP [\fIhost\fP ...]
+Hostname or IP-address of the AMQP broker. Defaults to the default behavior of
+the underlying communications library, \fBrabbitmq-c\fP, which is "localhost".
+
+If multiple hosts are specified, then a random one is chosen at each
+(re)connection attempt. This is useful for failover with a clustered broker.
+.TP
+\fBport\fP \fIport\fP
+Service name or port number on which the AMQP broker accepts connections. This
+argument must be a string, even if the numeric form is used. Defaults to
+"5672".
+.TP
+\fBvhost\fP \fIvhost\fP
+Name of the \fIvirtual host\fP on the AMQP broker to use. Defaults to "/".
+.TP
+\fBuser\fP \fIusername\fP
+.TP
+\fBpassword\fP \fIpassword\fP
+Credentials used to authenticate to the AMQP broker. By default "guest"/"guest" is used.
+.TP
+\fBtls-enabled\fP \fItrue|false\fP
+If set to \fItrue\fP then connect to the broker using a TLS connection.
+If set to \fIfalse\fP (the default), then a plain text connection is used.
+Requires rabbitmq-c >= 0.4.
+.TP
+\fBtls-verify-peer\fP \fItrue|false\fP
+If set to \fItrue\fP (the default) then the server certificate chain is verified.
+Setting this to \fIfalse\fP will skip verification (insecure).
+Requires rabbitmq-c >= 0.8.
+.TP
+\fBtls-verify-hostname\fP \fItrue|false\fP
+If set to \fItrue\fP (the default) then the server host name is verified.
+Setting this to \fIfalse\fP will skip verification (insecure).
+Requires rabbitmq-c >= 0.8.
+.TP
+\fBtls-ca-cert\fP \fI/proc/to/ca\fP
+Path to the CA cert file in PEM format.
+.TP
+\fBtls-client-cert\fP \fI/proc/to/cert\fP
+Path to the client certificate in PEM format.
+If this is set, then \fBtls-client-key\fP must be set as well.
+.TP
+\fBtls-client-key\fP \fI/proc/to/key\fP
+Path to the client key in PEM format.
+If this is set, then \fBtls-client-key\fP must be set as well.
+.TP
+\fBexchange\fP \fIexchange\fP
+This option specifies the \fIexchange\fP to send values to.
+By default, "amq.fanout" will be used.
+.TP
+\fBexchange-type\fP \fItype\fP
+If given, the plugin will try to create the configured \fIexchange\fP with this
+\fItype\fP after connecting. 
+.TP
+\fBrouting-key\fP \fIkey\fP
+This configures the routing key to set on all outgoing messages.
+.TP
+\fBpersistent\fP \fItrue|false\fP
+Selects the \fIdelivery method\fP to use. If set to \fBtrue\fP, the \fIpersistent\fP
+mode will be used, i. e. delivery is guaranteed. If set to \fIfalse\fP (the
+default), the \fItransient\fP delivery mode will be used, i.e. messages may be
+lost due to high load, overflowing queues or similar issues.
+.TP
+\fBconnection-retry-delay\fP \fIseconds\fP
+When the connection to the AMQP broker is lost, defines the time in seconds to
+wait before attempting to reconnect. Defaults to 0, which implies ncollectd will
+attempt to reconnect at each time metric is submited.
+.TP
+\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+Selects the format in which messages are sent to the intermediary. 
+.RS
+.TP
+\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.TP
+\fBgraphite\fP
+.TP
+\fBjson\fP
+.TP
+\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.TP
+\fBopentsdb\fP [telnet|json]
+.TP
+\fBopenmetrics\fP [text|protob]
+.TP
+\fBremote\fP [metadata]
+.RE
+.TP
+\fBformat-notification\fP \fItext|json|protob\fP
+Selects the format in which notifications are sent to the intermediary. 
+.TP
+\fBwrite\fP \fImetrics|notifications\fP
+If set to \fImetrics\fP (the default) the plugin will handle metrics.
+If set to \fInotifications\fP the plugin will handle notifications.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
