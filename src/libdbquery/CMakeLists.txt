@@ -1,0 +1,5 @@
+set(LIBDBQUERY_SRC dbquery.c dbquery.h)
+add_library(libdbquery STATIC ${LIBDBQUERY_SRC})
+set_target_properties(libdbquery PROPERTIES PREFIX "")
+set_target_properties(libdbquery PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# add_dependencies(libdbquery libutils)
