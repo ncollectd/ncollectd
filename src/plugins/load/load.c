@@ -1,35 +1,16 @@
-/**
- * collectd - src/load.c
- * Copyright (C) 2005-2008  Florian octo Forster
- * Copyright (C) 2009       Manuel Sanmartin
- * Copyright (C) 2013       Vedran Bartonicek
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Manuel Sanmartin
- *   Vedran Bartonicek <vbartoni at gmail.com>
- **/
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2005-2008 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileCopyrightText: Copyright (C) 2013 Vedran Bartonicek
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+// SPDX-FileContributor: Vedran Bartonicek <vbartoni at gmail.com>
 
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 
-#include "collectd.h"
-
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
 #include <unistd.h>
 
@@ -37,161 +18,133 @@
 #include <sys/loadavg.h>
 #endif
 
-#if HAVE_STATGRAB_H
-#include <statgrab.h>
-#endif
+#if defined(KERNEL_LINUX)
+static char *path_proc_loadavg;
 
-#ifdef HAVE_GETLOADAVG
+#elif defined(HAVE_GETLOADAVG)
 #if !defined(LOADAVG_1MIN) || !defined(LOADAVG_5MIN) || !defined(LOADAVG_15MIN)
 #define LOADAVG_1MIN 0
 #define LOADAVG_5MIN 1
 #define LOADAVG_15MIN 2
 #endif
-#endif /* defined(HAVE_GETLOADAVG) */
+#endif
 
 #ifdef HAVE_PERFSTAT
 #include <libperfstat.h>
 #include <sys/proc.h> /* AIX 5 */
 #include <sys/protosw.h>
-#endif /* HAVE_PERFSTAT */
-
-static bool report_relative_load;
-
-static const char *config_keys[] = {"ReportRelative"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
-
-static int load_config(const char *key, const char *value) {
-  if (strcasecmp(key, "ReportRelative") == 0) {
-#ifdef _SC_NPROCESSORS_ONLN
-    report_relative_load = IS_TRUE(value);
-#else
-    WARNING("load plugin: The \"ReportRelative\" configuration "
-            "is not available, because I can't determine the "
-            "number of CPUS on this system. Sorry.");
 #endif
-    return 0;
-  }
-  return -1;
-}
-static void load_submit(gauge_t snum, gauge_t mnum, gauge_t lnum) {
-  int cores = 0;
 
-#ifdef _SC_NPROCESSORS_ONLN
-  if (report_relative_load) {
-    if ((cores = sysconf(_SC_NPROCESSORS_ONLN)) < 1) {
-      WARNING("load: sysconf failed : %s", STRERRNO);
+enum {
+    FAM_LOAD_1MIN,
+    FAM_LOAD_5MIN,
+    FAM_LOAD_15MIN,
+    FAM_LOAD_MAX
+};
+
+static metric_family_t fams[FAM_LOAD_MAX] = {
+    [FAM_LOAD_1MIN] = {
+        .name = "system_load_1m",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "System load average for the past 1 minute.",
+    },
+    [FAM_LOAD_5MIN] = {
+        .name = "system_load_5m",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "System load average for the past 5 minutes.",
+    },
+    [FAM_LOAD_15MIN] = {
+        .name = "system_load_15m",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "System load average for the past 15 minutes.",
+    },
+};
+
+static int load_read(void)
+{
+    double snum = 0;
+    double mnum = 0;
+    double lnum = 0;
+
+#if defined(KERNEL_LINUX)
+    char buffer[64];
+    ssize_t size = read_file(path_proc_loadavg, buffer, sizeof(buffer));
+    if (unlikely(size < 0)) {
+        PLUGIN_ERROR("read %s : %s", path_proc_loadavg, STRERRNO);
+        return -1;
     }
-  }
-#endif
-  if (cores > 0) {
-    snum /= cores;
-    mnum /= cores;
-    lnum /= cores;
-  }
 
-  value_list_t vl = VALUE_LIST_INIT;
-  value_t values[] = {
-      {.gauge = snum},
-      {.gauge = mnum},
-      {.gauge = lnum},
-  };
+    char *fields[3];
+    int numfields = strsplit(buffer, fields, 3);
+    if (unlikely(numfields < 3))
+        return -1;
 
-  vl.values = values;
-  vl.values_len = STATIC_ARRAY_SIZE(values);
+    snum = atof(fields[0]);
+    mnum = atof(fields[1]);
+    lnum = atof(fields[2]);
 
-  sstrncpy(vl.plugin, "load", sizeof(vl.plugin));
-  sstrncpy(vl.type, "load", sizeof(vl.type));
+#elif defined(HAVE_GETLOADAVG)
+    double load[3];
+    int num = getloadavg(load, 3);
+    if (unlikely(num != 3)) {
+        PLUGIN_WARNING("getloadavg failed: %s", STRERRNO);
+        return -1;
+    }
 
-  if (cores > 0) {
-    sstrncpy(vl.type_instance, "relative", sizeof(vl.type_instance));
-  }
+    snum = load[LOADAVG_1MIN];
+    mnum = load[LOADAVG_5MIN];
+    lnum = load[LOADAVG_15MIN];
 
-  plugin_dispatch_values(&vl);
-}
+#elif defined(HAVE_PERFSTAT)
+    perfstat_cpu_total_t cputotal;
 
-static int load_read(void) {
-#if defined(HAVE_GETLOADAVG)
-  double load[3];
+    int status = perfstat_cpu_total(NULL, &cputotal, sizeof(perfstat_cpu_total_t), 1);
+    if (status < 0) {
+        PLUGIN_WARNING("perfstat_cpu : %s", STRERRNO);
+        return -1;
+    }
 
-  if (getloadavg(load, 3) == 3)
-    load_submit(load[LOADAVG_1MIN], load[LOADAVG_5MIN], load[LOADAVG_15MIN]);
-  else {
-    WARNING("load: getloadavg failed: %s", STRERRNO);
-  }
-    /* #endif HAVE_GETLOADAVG */
-
-#elif defined(KERNEL_LINUX)
-  gauge_t snum, mnum, lnum;
-  FILE *loadavg;
-  char buffer[16];
-
-  char *fields[8];
-  int numfields;
-
-  if ((loadavg = fopen("/proc/loadavg", "r")) == NULL) {
-    WARNING("load: fopen: %s", STRERRNO);
-    return -1;
-  }
-
-  if (fgets(buffer, 16, loadavg) == NULL) {
-    WARNING("load: fgets: %s", STRERRNO);
-    fclose(loadavg);
-    return -1;
-  }
-
-  if (fclose(loadavg)) {
-    WARNING("load: fclose: %s", STRERRNO);
-  }
-
-  numfields = strsplit(buffer, fields, 8);
-
-  if (numfields < 3)
-    return -1;
-
-  snum = atof(fields[0]);
-  mnum = atof(fields[1]);
-  lnum = atof(fields[2]);
-
-  load_submit(snum, mnum, lnum);
-  /* #endif KERNEL_LINUX */
-
-#elif HAVE_LIBSTATGRAB
-  gauge_t snum, mnum, lnum;
-  sg_load_stats *ls;
-
-  if ((ls = sg_get_load_stats()) == NULL)
-    return;
-
-  snum = ls->min1;
-  mnum = ls->min5;
-  lnum = ls->min15;
-  load_submit(snum, mnum, lnum);
-  /* #endif HAVE_LIBSTATGRAB */
-
-#elif HAVE_PERFSTAT
-  gauge_t snum, mnum, lnum;
-  perfstat_cpu_total_t cputotal;
-
-  if (perfstat_cpu_total(NULL, &cputotal, sizeof(perfstat_cpu_total_t), 1) <
-      0) {
-    WARNING("load: perfstat_cpu : %s", STRERRNO);
-    return -1;
-  }
-
-  snum = (float)cputotal.loadavg[0] / (float)(1 << SBITS);
-  mnum = (float)cputotal.loadavg[1] / (float)(1 << SBITS);
-  lnum = (float)cputotal.loadavg[2] / (float)(1 << SBITS);
-  load_submit(snum, mnum, lnum);
-  /* #endif HAVE_PERFSTAT */
+    snum = (double)cputotal.loadavg[0] / (double)(1 << SBITS);
+    mnum = (double)cputotal.loadavg[1] / (double)(1 << SBITS);
+    lnum = (double)cputotal.loadavg[2] / (double)(1 << SBITS);
 
 #else
 #error "No applicable input method."
 #endif
 
-  return 0;
+    metric_family_append(&fams[FAM_LOAD_1MIN], VALUE_GAUGE(snum), NULL, NULL);
+    metric_family_append(&fams[FAM_LOAD_5MIN], VALUE_GAUGE(mnum), NULL, NULL);
+    metric_family_append(&fams[FAM_LOAD_15MIN], VALUE_GAUGE(lnum), NULL, NULL);
+
+    plugin_dispatch_metric_family_array(fams, FAM_LOAD_MAX, 0);
+
+    return 0;
 }
 
-void module_register(void) {
-  plugin_register_config("load", load_config, config_keys, config_keys_num);
-  plugin_register_read("load", load_read);
-} /* void module_register */
+#ifdef KERNEL_LINUX
+static int load_init(void)
+{
+    path_proc_loadavg = plugin_procpath("loadavg");
+    if (path_proc_loadavg == NULL) {
+        PLUGIN_ERROR("Cannot get proc path.");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int load_shutdown(void)
+{
+    free(path_proc_loadavg);
+    return 0;
+}
+#endif
+
+void module_register(void)
+{
+#ifdef KERNEL_LINUX
+    plugin_register_init("load", load_init);
+    plugin_register_shutdown("load", load_shutdown);
+#endif
+    plugin_register_read("load", load_read);
+}
