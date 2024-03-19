@@ -1,0 +1,106 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-processes 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd processes man page"
+.SH NAME
+ncollectd-processes \- Documentation of ncollectd's processes plugin
+.SH SYNOPSIS
+\fBload-plugin\fP processes
+.br
+\fBplugin\fP processes {
+    \fBcollect\fP \fIflags\fP ...
+    \fBprocess\fP \fIname\fP
+    \fBprocess\fP \fIname\fP {
+        \fBcollect\fP \fIflags\fP ...
+.br
+    }
+.br
+    \fBprocess-match\fP \fIname\fP \fIregex\fP
+    \fBprocess-match\fP \fIname\fP \fIregex\fP {
+        \fBcollect\fP \fIflags\fP ...
+.br
+   }
+.br
+}
+.SH DESCRIPTION
+The \fBprocesses\fP plugin collects information about processes of local system.
+.PP
+By default, with no process matches configured, only general statistics is
+collected: the number of processes in each state and fork rate.
+.PP
+Process matches can be configured by \fBprocess\fP and \fBprocess-match\fP options.
+These may also be a block in which further options may be specified.
+.PP
+The statistics collected for matched processes are:
+.RS
+.IP \(bu 2
+size of the resident segment size (RSS)
+.IP \(bu
+user-time and system-time used
+.IP \(bu
+number of processes
+.IP \(bu
+number of threads
+.IP \(bu
+number of open files (under Linux)
+.IP \(bu
+number of memory mapped files (under Linux)
+.IP \(bu
+io data (where available)
+.IP \(bu
+context switches (under Linux)
+.IP \(bu
+minor and major pagefaults
+.IP \(bu
+delay Accounting information (Linux only, requires libmnl)
+.RE
+.PP
+The \fBprocesses\fP plugin has the following options:
+.TP
+\fBprocess\fP \fIname\fP
+Select more detailed statistics of processes matching this name.
+Some platforms have a limit on the length of process names.
+\fIname\fP must stay below this limit.
+.TP
+\fBprocess-match\fP \fIname\fP \fIregex\fP
+Select more detailed statistics of processes matching the specified \fIregex\fP
+(see.
+.BR regex (7)
+for details). The statistics of all matching processes are
+summed up and dispatched to the daemon using the specified I<name> as an
+identifier. This allows one to "group" several processes together.
+ \fIname\fP must not contain slashes.
+.TP
+\fBcollect\fP \fIflags\fP ...
+See \fBCOLLECT FLAGS\fP from
+.BR ncollectd.conf (5).
+.RS
+.TP
+\fBcontext-switch\fP
+Collect the number of context switches for matched processes. Disabled by default.
+.TP
+\fBdealy-accounting\fP
+If enabled, collect Linux Delay Accounding information for matching processes.
+Delay Accounting provides the time processes wait for the CPU to become
+available, for I/O operations to finish, for pages to be swapped in and for
+freed pages to be reclaimed.
+Disabled by default.
+
+This option is only available on Linux, requires the \fBlibmnl\fP library and
+requires the \f(CWCAP_NET_ADMIN\fP capability at runtime.
+.TP
+\fBfile-descriptor\fP
+Collect number of file descriptors of matched processes.  Disabled by default.
+.TP
+\fBmemory-maps\fP
+Collect the number of memory mapped files of the process.
+The limit for this number is configured via \fI/proc/sys/vm/max_map_count\fP in
+the Linux kernel.
+.RE
+.PP
+The \fBcollect\fP options may be used inside
+\fBprocess\fP and \fBprocess-match\fP blocks. When used there, these options affect
+reporting the corresponding processes only. Outside of \fBprocess\fP and
+\fBprocess-match\fP blocks these options set the default value for subsequent
+matches.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
