@@ -1,0 +1,23 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ethstat 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ethstat man page"
+.SH NAME
+ncollectd-ethstat \- Documentation of ncollectd's ethstat plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ethstat
+.br
+\fBplugin\fP ethstat {
+    \fBinterface\fP \fIname\fP
+.br
+}
+.SH DESCRIPTION
+The \fBethstat\fP plugin collects information about network interface cards (NICs)
+by talking directly with the underlying kernel driver using
+.BR ioctl (2).
+.PP
+The plugin supports the following options:
+.TP
+\fBinterface\fP \fIname\fP
+Collect statistical information about interface \fIname\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
