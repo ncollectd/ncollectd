@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix XFS_STATS_
+%define hash-function-name xfs_stats
+%define lookup-function-name xfs_stats_get_key
+%define slot-name key
+%{
+%}
+struct xfs_stats_metric {
+    char *key;
+    uint64_t collect;
+    const fam_xfs_e *entries;
+    size_t entries_size;
+};
+%%
+extent_alloc, COLLECT_XFS_EXTENT_ALLOC, xfs_stats_extent_alloc, STATIC_ARRAY_SIZE(xfs_stats_extent_alloc)
+abt,          COLLECT_XFS_ABT,          xfs_stats_abt,          STATIC_ARRAY_SIZE(xfs_stats_abt)
+blk_map,      COLLECT_XFS_BLK_MAP,      xfs_stats_blk_map,      STATIC_ARRAY_SIZE(xfs_stats_blk_map)
+bmbt,         COLLECT_XFS_BMBT,         xfs_stats_bmbt,         STATIC_ARRAY_SIZE(xfs_stats_bmbt)
+dir,          COLLECT_XFS_DIR,          xfs_stats_dir,          STATIC_ARRAY_SIZE(xfs_stats_dir)
+trans,        COLLECT_XFS_TRANS,        xfs_stats_trans,        STATIC_ARRAY_SIZE(xfs_stats_trans)
+ig,           COLLECT_XFS_IG,           xfs_stats_ig,           STATIC_ARRAY_SIZE(xfs_stats_ig)
+log,          COLLECT_XFS_LOG,          xfs_stats_log,          STATIC_ARRAY_SIZE(xfs_stats_log)
+push_ail,     COLLECT_XFS_PUSH_AIL,     xfs_stats_push_ail,     STATIC_ARRAY_SIZE(xfs_stats_push_ail)
+xstrat,       COLLECT_XFS_XSTRAT,       xfs_stats_xstrat,       STATIC_ARRAY_SIZE(xfs_stats_xstrat)
+rw,           COLLECT_XFS_RW,           xfs_stats_rw,           STATIC_ARRAY_SIZE(xfs_stats_rw)
+attr,         COLLECT_XFS_ATTR,         xfs_stats_attr,         STATIC_ARRAY_SIZE(xfs_stats_attr)
+icluster,     COLLECT_XFS_ICLUSTER,     xfs_stats_icluster,     STATIC_ARRAY_SIZE(xfs_stats_icluster)
+vnodes,       COLLECT_XFS_VNODES,       xfs_stats_vnodes,       STATIC_ARRAY_SIZE(xfs_stats_vnodes)
+buf,          COLLECT_XFS_BUF,          xfs_stats_buf,          STATIC_ARRAY_SIZE(xfs_stats_buf)
+abtb2,        COLLECT_XFS_ABTB2,        xfs_stats_abtb2,        STATIC_ARRAY_SIZE(xfs_stats_abtb2)
+abtc2,        COLLECT_XFS_ABTC2,        xfs_stats_abtc2,        STATIC_ARRAY_SIZE(xfs_stats_abtc2)
+bmbt2,        COLLECT_XFS_BMBT2,        xfs_stats_bmbt2,        STATIC_ARRAY_SIZE(xfs_stats_bmbt2)
+ibt2,         COLLECT_XFS_IBT2,         xfs_stats_ibt2,         STATIC_ARRAY_SIZE(xfs_stats_ibt2)
+fibt2,        COLLECT_XFS_FIBT2,        xfs_stats_fibt2,        STATIC_ARRAY_SIZE(xfs_stats_fibt2)
+rmapbt,       COLLECT_XFS_RMAPBT,       xfs_stats_rmapbt,       STATIC_ARRAY_SIZE(xfs_stats_rmapbt)
+refcntbt,     COLLECT_XFS_REFCNTBT,     xfs_stats_refcntbt,     STATIC_ARRAY_SIZE(xfs_stats_refcntbt)
+qm,           COLLECT_XFS_QM,           xfs_stats_qm,           STATIC_ARRAY_SIZE(xfs_stats_qm)
+xpc,          COLLECT_XFS_XPC,          xfs_stats_xpc,          STATIC_ARRAY_SIZE(xfs_stats_xpc)
+defer_relog,  COLLECT_XFS_DEFER_RELOG,  xfs_stats_defer_relog,  STATIC_ARRAY_SIZE(xfs_stats_defer_relog)
