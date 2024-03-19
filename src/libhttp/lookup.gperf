@@ -1,0 +1,118 @@
+%struct-type
+%enum
+%compare-strncmp
+%readonly-tables
+%ignore-case
+%define constants-prefix HTTP_HEADER_LOOKUP_
+%define hash-function-name http_header_lookup_hash
+%define lookup-function-name http_header_lookup
+%define slot-name hdr
+%{
+%}
+struct http_header_lookup { char *hdr; http_header_name_t hdr_name;};
+%%
+Accept,                           HTTP_HEADER_ACCEPT
+Accept-CH,                        HTTP_HEADER_ACCEPT_CH
+Accept-Charset,                   HTTP_HEADER_ACCEPT_CHARSET
+Accept-Datetime,                  HTTP_HEADER_ACCEPT_DATETIME
+Accept-Encoding,                  HTTP_HEADER_ACCEPT_ENCODING
+Accept-Language,                  HTTP_HEADER_ACCEPT_LANGUAGE
+Accept-Patch,                     HTTP_HEADER_ACCEPT_PATCH
+Accept-Ranges,                    HTTP_HEADER_ACCEPT_RANGES
+Access-Control-Allow-Credentials, HTTP_HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS
+Access-Control-Allow-Headers,     HTTP_HEADER_ACCESS_CONTROL_ALLOW_HEADERS
+Access-Control-Allow-Methods,     HTTP_HEADER_ACCESS_CONTROL_ALLOW_METHODS
+Access-Control-Allow-Origin,      HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN
+Access-Control-Expose-Headers,    HTTP_HEADER_ACCESS_CONTROL_EXPOSE_HEADERS
+Access-Control-Max-Age,           HTTP_HEADER_ACCESS_CONTROL_MAX_AGE
+Access-Control-Request-Headers,   HTTP_HEADER_ACCESS_CONTROL_REQUEST_HEADERS
+Access-Control-Request-Method,    HTTP_HEADER_ACCESS_CONTROL_REQUEST_METHOD
+Age,                              HTTP_HEADER_AGE
+A-IM,                             HTTP_HEADER_A_IM
+Allow,                            HTTP_HEADER_ALLOW
+Alt-Svc,                          HTTP_HEADER_ALT_SVC
+Authorization,                    HTTP_HEADER_AUTHORIZATION
+Cache-Control,                    HTTP_HEADER_CACHE_CONTROL
+Connection,                       HTTP_HEADER_CONNECTION
+Content-Disposition,              HTTP_HEADER_CONTENT_DISPOSITION
+Content-Encoding,                 HTTP_HEADER_CONTENT_ENCODING
+Content-Language,                 HTTP_HEADER_CONTENT_LANGUAGE
+Content-Length,                   HTTP_HEADER_CONTENT_LENGTH
+Content-Location,                 HTTP_HEADER_CONTENT_LOCATION
+Content-Range,                    HTTP_HEADER_CONTENT_RANGE
+Content-Security-Policy,          HTTP_HEADER_CONTENT_SECURITY_POLICY
+Content-Type,                     HTTP_HEADER_CONTENT_TYPE
+Cookie,                           HTTP_HEADER_COOKIE
+Date,                             HTTP_HEADER_DATE
+Delta-Base,                       HTTP_HEADER_DELTA_BASE
+DNT,                              HTTP_HEADER_DNT
+ETag,                             HTTP_HEADER_ETAG
+Expect,                           HTTP_HEADER_EXPECT
+Expect-CT,                        HTTP_HEADER_EXPECT_CT
+Expires,                          HTTP_HEADER_EXPIRES
+Forwarded,                        HTTP_HEADER_FORWARDED
+From,                             HTTP_HEADER_FROM
+Front-End-Https,                  HTTP_HEADER_FRONT_END_HTTPS
+Host,                             HTTP_HEADER_HOST
+If-Match,                         HTTP_HEADER_IF_MATCH
+If-Modified-Since,                HTTP_HEADER_IF_MODIFIED_SINCE
+If-None-Match,                    HTTP_HEADER_IF_NONE_MATCH
+If-Range,                         HTTP_HEADER_IF_RANGE
+If-Unmodified-Since,              HTTP_HEADER_IF_UNMODIFIED_SINCE
+IM,                               HTTP_HEADER_IM
+Last-Modified,                    HTTP_HEADER_LAST_MODIFIED
+Link,                             HTTP_HEADER_LINK
+Location,                         HTTP_HEADER_LOCATION
+Max-Forwards,                     HTTP_HEADER_MAX_FORWARDS
+NEL,                              HTTP_HEADER_NEL
+Origin,                           HTTP_HEADER_ORIGIN
+P3P,                              HTTP_HEADER_P3P
+Permissions-Policy,               HTTP_HEADER_PERMISSIONS_POLICY
+Pragma,                           HTTP_HEADER_PRAGMA
+Prefer,                           HTTP_HEADER_PREFER
+Preference-Applied,               HTTP_HEADER_PREFERENCE_APPLIED
+Proxy-Authenticate,               HTTP_HEADER_PROXY_AUTHENTICATE
+Proxy-Authorization,              HTTP_HEADER_PROXY_AUTHORIZATION
+Proxy-Connection,                 HTTP_HEADER_PROXY_CONNECTION
+Public-Key-Pins,                  HTTP_HEADER_PUBLIC_KEY_PINS
+Range,                            HTTP_HEADER_RANGE
+Referer,                          HTTP_HEADER_REFERER
+Refresh,                          HTTP_HEADER_REFRESH
+Report-To,                        HTTP_HEADER_REPORT_TO
+Retry-After,                      HTTP_HEADER_RETRY_AFTER
+Save-Data,                        HTTP_HEADER_SAVE_DATA
+Server,                           HTTP_HEADER_SERVER
+Set-Cookie,                       HTTP_HEADER_SET_COOKIE
+Status,                           HTTP_HEADER_STATUS
+Strict-Transport-Security,        HTTP_HEADER_STRICT_TRANSPORT_SECURITY
+TE,                               HTTP_HEADER_TE
+Timing-Allow-Origin,              HTTP_HEADER_TIMING_ALLOW_ORIGIN
+Tk,                               HTTP_HEADER_TK
+Trailer,                          HTTP_HEADER_TRAILER
+Transfer-Encoding,                HTTP_HEADER_TRANSFER_ENCODING
+Upgrade,                          HTTP_HEADER_UPGRADE
+Upgrade-Insecure-Requests,        HTTP_HEADER_UPGRADE_INSECURE_REQUESTS
+User-Agent,                       HTTP_HEADER_USER_AGENT
+Vary,                             HTTP_HEADER_VARY
+Via,                              HTTP_HEADER_VIA
+Warning,                          HTTP_HEADER_WARNING
+WWW-Authenticate,                 HTTP_HEADER_WWW_AUTHENTICATE
+X-ATT-DeviceId,                   HTTP_HEADER_X_ATT_DEVICEID
+X-Content-Duration,               HTTP_HEADER_X_CONTENT_DURATION
+X-Content-Security-Policy,        HTTP_HEADER_X_CONTENT_SECURITY_POLICY
+X-Content-Type-Options,           HTTP_HEADER_X_CONTENT_TYPE_OPTIONS
+X-Correlation-ID,                 HTTP_HEADER_X_CORRELATION_ID
+X-Csrf-Token,                     HTTP_HEADER_X_CSRF_TOKEN
+X-Forwarded-For,                  HTTP_HEADER_X_FORWARDED_FOR
+X-Forwarded-Host,                 HTTP_HEADER_X_FORWARDED_HOST
+X-Forwarded-Proto,                HTTP_HEADER_X_FORWARDED_PROTO
+X-Http-Method-Override,           HTTP_HEADER_X_HTTP_METHOD_OVERRIDE
+X-Powered-By,                     HTTP_HEADER_X_POWERED_BY
+X-Redirect-By,                    HTTP_HEADER_X_REDIRECT_BY
+X-Requested-With,                 HTTP_HEADER_X_REQUESTED_WITH
+X-Request-ID,                     HTTP_HEADER_X_REQUEST_ID
+X-UA-Compatible,                  HTTP_HEADER_X_UA_COMPATIBLE
+X-UIDH,                           HTTP_HEADER_X_UIDH
+X-Wap-Profile,                    HTTP_HEADER_X_WAP_PROFILE
+X-WebKit-CSP,                     HTTP_HEADER_X_WEBKIT_CSP
+X-XSS-Protection,                 HTTP_HEADER_X_XSS_PROTECTION
