@@ -1,0 +1,41 @@
+plugin_option(PLUGIN_WIREGUARD "Wireguard statistics" ON)
+
+include(CheckIncludeFile)
+
+set(BUILD_PLUGIN_WIREGUARD 0)
+
+if(PLUGIN_WIREGUARD)
+    find_package(LibMnl)
+    if(BUILD_LINUX)
+        if(LIBMNL_FOUND)
+            check_include_file(linux/wireguard.h HAVE_LINUX_WIREGUARD_H)
+            if(HAVE_LINUX_WIREGUARD_H)
+                set(BUILD_PLUGIN_WIREGUARD 1)
+            else()
+                set(BUILD_PLUGIN_WIREGUARD_REASON "linux/wireguard.h not found" PARENT_SCOPE)
+            endif()
+        else()
+            set(BUILD_PLUGIN_WIREGUARD_REASON "libmnl not found" PARENT_SCOPE)
+        endif()
+    else()
+        set(BUILD_PLUGIN_WIREGUARD_REASON "Linux only" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_WIREGUARD ${BUILD_PLUGIN_WIREGUARD} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_WIREGUARD)
+    set(PLUGIN_WIREGUARD_SRC wireguard.c)
+    add_library(wireguard MODULE ${PLUGIN_WIREGUARD_SRC})
+    target_link_libraries(wireguard PRIVATE libutils libmetric LibMnl::LibMnl)
+    set_target_properties(wireguard PROPERTIES PREFIX "")
+
+#    add_executable(test_plugin_wireguard EXCLUDE_FROM_ALL wireguard_test.c ${PLUGIN_WIREGUARD_SRC})
+#    target_link_libraries(test_plugin_wireguard libtest libutils libmetric m)
+#    add_dependencies(build_tests test_plugin_wireguard)
+#    add_test(NAME test_plugin_wireguard COMMAND test_plugin_wireguard WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    install(TARGETS wireguard DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-wireguard.5 ncollectd-wireguard.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-wireguard.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
