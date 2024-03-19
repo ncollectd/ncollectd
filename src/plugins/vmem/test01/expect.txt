@@ -1,0 +1,294 @@
+# TYPE system_vm_zone_page_state gauge
+system_vm_zone_page_state{hostname="localhost.localdomain",state="free"} 5682603
+system_vm_zone_page_state{hostname="localhost.localdomain",state="inactive_anon"} 33126
+system_vm_zone_page_state{hostname="localhost.localdomain",state="active_anon"} 772443
+system_vm_zone_page_state{hostname="localhost.localdomain",state="inactive_file"} 905968
+system_vm_zone_page_state{hostname="localhost.localdomain",state="active_file"} 238437
+system_vm_zone_page_state{hostname="localhost.localdomain",state="unevictable"} 250579
+system_vm_zone_page_state{hostname="localhost.localdomain",state="write_pending"} 52
+system_vm_zone_page_state{hostname="localhost.localdomain",state="mlock"} 1442
+system_vm_zone_page_state{hostname="localhost.localdomain",state="bounce"} 0
+system_vm_zone_page_state{hostname="localhost.localdomain",state="zspages"} 3
+system_vm_zone_page_state{hostname="localhost.localdomain",state="free_cma"} 0
+# TYPE system_vm_workingset_nodes gauge
+system_vm_workingset_nodes{hostname="localhost.localdomain"} 0
+# TYPE system_vm_numa_event counter
+system_vm_numa_event_total{event="hit",hostname="localhost.localdomain"} 131088835
+system_vm_numa_event_total{event="miss",hostname="localhost.localdomain"} 0
+system_vm_numa_event_total{event="foreign",hostname="localhost.localdomain"} 0
+system_vm_numa_event_total{event="interleave",hostname="localhost.localdomain"} 1674
+system_vm_numa_event_total{event="local",hostname="localhost.localdomain"} 131088835
+system_vm_numa_event_total{event="other",hostname="localhost.localdomain"} 0
+# TYPE system_vm_foll_pin_acquired counter
+system_vm_foll_pin_acquired_total{hostname="localhost.localdomain"} 1957
+# TYPE system_vm_foll_pin_released counter
+system_vm_foll_pin_released_total{hostname="localhost.localdomain"} 1957
+# TYPE system_vm_pages_throttled_written counter
+system_vm_pages_throttled_written_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_kernel_stack_bytes gauge
+system_vm_kernel_stack_bytes{hostname="localhost.localdomain"} 18399232
+# TYPE system_vm_pages_dirtied counter
+system_vm_pages_dirtied_total{hostname="localhost.localdomain"} 1278730
+# TYPE system_vm_dirty_threshold gauge
+system_vm_dirty_threshold{hostname="localhost.localdomain"} 1351745
+# TYPE system_vm_pages_written counter
+system_vm_pages_written_total{hostname="localhost.localdomain"} 1186570
+# TYPE system_vm_page_out counter
+system_vm_page_out_total{hostname="localhost.localdomain"} 6102077
+# TYPE system_vm_dirty_background_threshold gauge
+system_vm_dirty_background_threshold{hostname="localhost.localdomain"} 675047
+# TYPE system_vm_swap_out counter
+system_vm_swap_out_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_faults counter
+system_vm_page_faults_total{hostname="localhost.localdomain"} 116937691
+# TYPE system_vm_swap_in counter
+system_vm_swap_in_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_node_page_state gauge
+system_vm_node_page_state{hostname="localhost.localdomain",state="inactive_anon"} 33126
+system_vm_node_page_state{hostname="localhost.localdomain",state="active_anon"} 772443
+system_vm_node_page_state{hostname="localhost.localdomain",state="inactive_file"} 905968
+system_vm_node_page_state{hostname="localhost.localdomain",state="active_file"} 238437
+system_vm_node_page_state{hostname="localhost.localdomain",state="unevictable"} 250579
+system_vm_node_page_state{hostname="localhost.localdomain",state="slab_reclaimable"} 173069
+system_vm_node_page_state{hostname="localhost.localdomain",state="slab_unreclaimable"} 44903
+system_vm_node_page_state{hostname="localhost.localdomain",state="isolated_anon"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="isolated_file"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_refault_anon"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_refault_file"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_activate_anon"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_activate_file"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_restore_anon"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_restore_file"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_nodereclaim"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="anon_pages"} 719786
+system_vm_node_page_state{hostname="localhost.localdomain",state="mapped"} 192800
+system_vm_node_page_state{hostname="localhost.localdomain",state="file_pages"} 1480807
+system_vm_node_page_state{hostname="localhost.localdomain",state="dirty"} 52
+system_vm_node_page_state{hostname="localhost.localdomain",state="writeback"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="writeback_temp"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="shmem"} 335090
+system_vm_node_page_state{hostname="localhost.localdomain",state="shmem_hugepages"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="shmem_pmdmapped"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="file_hugepages"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="file_pmdmapped"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="anon_transparent_hugepages"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="vmscan_write"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="vmscan_immediate_reclaim"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="kernel_misc_reclaimable"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="page_table_pages"} 11313
+system_vm_node_page_state{hostname="localhost.localdomain",state="sec_page_table_pages"} 0
+system_vm_node_page_state{hostname="localhost.localdomain",state="swapcached"} 0
+# TYPE system_vm_page_in counter
+system_vm_page_in_total{hostname="localhost.localdomain"} 3593333
+# TYPE system_vm_page_steal_direct counter
+system_vm_page_steal_direct_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_steal_kswapd counter
+system_vm_page_steal_kswapd_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_steal_khugepaged counter
+system_vm_page_steal_khugepaged_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_steal_anon counter
+system_vm_page_steal_anon_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_steal_file counter
+system_vm_page_steal_file_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_alloc counter
+system_vm_page_alloc_total{hostname="localhost.localdomain",zone="dma"} 1024
+system_vm_page_alloc_total{hostname="localhost.localdomain",zone="dma32"} 1025
+system_vm_page_alloc_total{hostname="localhost.localdomain",zone="normal"} 134801446
+system_vm_page_alloc_total{hostname="localhost.localdomain",zone="movable"} 0
+system_vm_page_alloc_total{hostname="localhost.localdomain",zone="device"} 0
+# TYPE system_vm_page_demote_direct counter
+system_vm_page_demote_direct_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_alloc_stall counter
+system_vm_alloc_stall_total{hostname="localhost.localdomain",zone="dma"} 0
+system_vm_alloc_stall_total{hostname="localhost.localdomain",zone="dma32"} 0
+system_vm_alloc_stall_total{hostname="localhost.localdomain",zone="normal"} 0
+system_vm_alloc_stall_total{hostname="localhost.localdomain",zone="movable"} 0
+system_vm_alloc_stall_total{hostname="localhost.localdomain",zone="device"} 0
+# TYPE system_vm_page_skip counter
+system_vm_page_skip_total{hostname="localhost.localdomain",zone="dma"} 0
+system_vm_page_skip_total{hostname="localhost.localdomain",zone="dma32"} 0
+system_vm_page_skip_total{hostname="localhost.localdomain",zone="normal"} 0
+system_vm_page_skip_total{hostname="localhost.localdomain",zone="movable"} 0
+system_vm_page_skip_total{hostname="localhost.localdomain",zone="device"} 0
+# TYPE system_vm_page_demote_khugepaged counter
+system_vm_page_demote_khugepaged_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_demote_kswapd counter
+system_vm_page_demote_kswapd_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_scan_direct_throttle counter
+system_vm_page_scan_direct_throttle_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_scan_anon counter
+system_vm_page_scan_anon_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_scan_file counter
+system_vm_page_scan_file_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_refill counter
+system_vm_page_refill_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_free counter
+system_vm_page_free_total{hostname="localhost.localdomain"} 140496559
+# TYPE system_vm_page_activate counter
+system_vm_page_activate_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_deactivate counter
+system_vm_page_deactivate_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_promote_success counter
+system_vm_page_promote_success_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_promote_candidate counter
+system_vm_page_promote_candidate_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_lazy_free counter
+system_vm_page_lazy_free_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_lazy_freed counter
+system_vm_page_lazy_freed_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_reuse counter
+system_vm_page_reuse_total{hostname="localhost.localdomain"} 7480124
+# TYPE system_vm_page_scan_kswapd counter
+system_vm_page_scan_kswapd_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_major_page_faults counter
+system_vm_major_page_faults_total{hostname="localhost.localdomain"} 7708
+# TYPE system_vm_page_scan_direct counter
+system_vm_page_scan_direct_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_scan_khugepaged counter
+system_vm_page_scan_khugepaged_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_zone_reclaim_failed counter
+system_vm_zone_reclaim_failed_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_kswapd_high_wmark_hit_quickly counter
+system_vm_kswapd_high_wmark_hit_quickly_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_outrun counter
+system_vm_page_outrun_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_slabs_scanned counter
+system_vm_slabs_scanned_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_kswapd_inode_steal counter
+system_vm_kswapd_inode_steal_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_drop_slab counter
+system_vm_drop_slab_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_oom_kill counter
+system_vm_oom_kill_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_numa_pte_updates counter
+system_vm_numa_pte_updates_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_numa_huge_pte_updates counter
+system_vm_numa_huge_pte_updates_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_numa_hint_faults counter
+system_vm_numa_hint_faults_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_numa_hint_faults_local counter
+system_vm_numa_hint_faults_local_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_numa_pages_migrated counter
+system_vm_numa_pages_migrated_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_migrate_success counter
+system_vm_page_migrate_success_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_migrate_fail counter
+system_vm_page_migrate_fail_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_migration_success counter
+system_vm_thp_migration_success_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_migration_fail counter
+system_vm_thp_migration_fail_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_migration_split counter
+system_vm_thp_migration_split_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_migrate_scanned counter
+system_vm_compact_migrate_scanned_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_free_scanned counter
+system_vm_compact_free_scanned_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_isolated counter
+system_vm_compact_isolated_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_stall counter
+system_vm_compact_stall_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_kswapd_low_wmark_hit_quickly counter
+system_vm_kswapd_low_wmark_hit_quickly_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_inode_steal counter
+system_vm_page_inode_steal_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_page_rotated counter
+system_vm_page_rotated_total{hostname="localhost.localdomain"} 80
+# TYPE system_vm_compact_daemon_migrate_scanned counter
+system_vm_compact_daemon_migrate_scanned_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_daemon_free_scanned counter
+system_vm_compact_daemon_free_scanned_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_htlb_buddy_alloc_success counter
+system_vm_htlb_buddy_alloc_success_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_htlb_buddy_alloc_fail counter
+system_vm_htlb_buddy_alloc_fail_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_cma_alloc_success counter
+system_vm_cma_alloc_success_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_drop_pagecache counter
+system_vm_drop_pagecache_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_success counter
+system_vm_compact_success_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_daemon_wake counter
+system_vm_compact_daemon_wake_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_cma_alloc_fail counter
+system_vm_cma_alloc_fail_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_compact_fail counter
+system_vm_compact_fail_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_unevictable_pages_culled counter
+system_vm_unevictable_pages_culled_total{hostname="localhost.localdomain"} 19257712
+# TYPE system_vm_unevictable_pages_scanned counter
+system_vm_unevictable_pages_scanned_total{hostname="localhost.localdomain"} 18714507
+# TYPE system_vm_unevictable_pages_stranded counter
+system_vm_unevictable_pages_stranded_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_fault_alloc counter
+system_vm_thp_fault_alloc_total{hostname="localhost.localdomain"} 1781
+# TYPE system_vm_unevictable_pages_munlocked counter
+system_vm_unevictable_pages_munlocked_total{hostname="localhost.localdomain"} 270715
+# TYPE system_vm_unevictable_pages_cleared counter
+system_vm_unevictable_pages_cleared_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_unevictable_pages_rescued counter
+system_vm_unevictable_pages_rescued_total{hostname="localhost.localdomain"} 18985157
+# TYPE system_vm_unevictable_pages_mlocked counter
+system_vm_unevictable_pages_mlocked_total{hostname="localhost.localdomain"} 272157
+# TYPE system_vm_thp_fault_fallback counter
+system_vm_thp_fault_fallback_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_fault_fallback_charge counter
+system_vm_thp_fault_fallback_charge_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_file_fallback_charge counter
+system_vm_thp_file_fallback_charge_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_file_mapped counter
+system_vm_thp_file_mapped_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_split_page counter
+system_vm_thp_split_page_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_split_page_failed counter
+system_vm_thp_split_page_failed_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_deferred_split_page counter
+system_vm_thp_deferred_split_page_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_split_pmd counter
+system_vm_thp_split_pmd_total{hostname="localhost.localdomain"} 61
+# TYPE system_vm_thp_scan_exceed_none_pte counter
+system_vm_thp_scan_exceed_none_pte_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_file_fallback counter
+system_vm_thp_file_fallback_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_collapse_alloc counter
+system_vm_thp_collapse_alloc_total{hostname="localhost.localdomain"} 3
+# TYPE system_vm_thp_collapse_alloc_failed counter
+system_vm_thp_collapse_alloc_failed_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_zero_page_alloc counter
+system_vm_thp_zero_page_alloc_total{hostname="localhost.localdomain"} 1
+# TYPE system_vm_thp_zero_page_alloc_failed counter
+system_vm_thp_zero_page_alloc_failed_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_swpout counter
+system_vm_thp_swpout_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_swpout_fallback counter
+system_vm_thp_swpout_fallback_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_balloon_inflate counter
+system_vm_balloon_inflate_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_balloon_deflate counter
+system_vm_balloon_deflate_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_balloon_migrate counter
+system_vm_balloon_migrate_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_swap_readahead counter
+system_vm_swap_readahead_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_swap_readahead_hit counter
+system_vm_swap_readahead_hit_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_ksm_swpin_copy counter
+system_vm_ksm_swpin_copy_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_cow_ksm counter
+system_vm_cow_ksm_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_zswap_in counter
+system_vm_zswap_in_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_zswap_out counter
+system_vm_zswap_out_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_scan_exceed_swap_pte counter
+system_vm_thp_scan_exceed_swap_pte_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_scan_exceed_share_pte counter
+system_vm_thp_scan_exceed_share_pte_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_split_pud counter
+system_vm_thp_split_pud_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_thp_file_alloc counter
+system_vm_thp_file_alloc_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_direct_map_level2_splits counter
+system_vm_direct_map_level2_splits_total{hostname="localhost.localdomain"} 105
+# TYPE system_vm_direct_map_level3_splits counter
+system_vm_direct_map_level3_splits_total{hostname="localhost.localdomain"} 1
