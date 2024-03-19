@@ -1,0 +1,20 @@
+[Unit]
+Description=Statistics collection and monitoring daemon
+After=local-fs.target network.target
+Requires=local-fs.target network.target
+ConditionPathExists=/etc/ncollectd/ncollectd.conf
+Documentation=man:ncollectd(1)
+Documentation=man:ncollectd.conf(5)
+Documentation=https://ncollectd.org
+
+[Service]
+Type=notify
+NotifyAccess=main
+EnvironmentFile=-/etc/default/ncollectd
+ExecStartPre=/usr/sbin/ncollectd -t
+ExecStart=/usr/sbin/ncollectd
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

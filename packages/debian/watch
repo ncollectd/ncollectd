@@ -1,0 +1,4 @@
+version=4
+opts="filenamemangle=s%(?:.*?)?v?@ANY_VERSION@(@ARCHIVE_EXT@)%ncollectd-$1$2%" \
+    https://github.com/ncollectd/ncollectd/tags \
+    (?:.*?/)ncollectd-v?@ANY_VERSION@@ARCHIVE_EXT@ debian uupdate

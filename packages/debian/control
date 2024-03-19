@@ -1,0 +1,439 @@
+Source: ncollectd
+Section: utils
+Priority: optional
+Maintainer: ncollectd Team <info@ncollectd.org>
+Uploaders: info@ncollectd.org
+Build-Depends: debhelper-compat (= 12), po-debconf, dh-strip-nondeterminism,
+ bison, flex, cmake, gperf, libltdl-dev, pkg-config,
+ default-libmysqlclient-dev,
+ intel-cmt-cat [amd64 i386],
+ libiptc-dev (>= 1.8.4-2) [linux-any] | libip4tc-dev [linux-any] | iptables-dev [linux-any],
+ libiptc-dev (>= 1.8.4-2) [linux-any] | libip6tc-dev [linux-any] | iptables-dev [linux-any],
+ javahelper,
+ libatasmart-dev [linux-any],
+ libcap-dev [linux-any],
+ libcurl4-gnutls-dev | libcurl4-gnutls-dev (<= 7.18.2-1) | libcurl3-gnutls-dev,
+ libesmtp-dev,
+ libgcrypt20-dev,
+ libglib2.0-dev,
+ libgps-dev,
+ libhiredis-dev,
+ libi2c-dev [!hurd-i386],
+ libldap2-dev,
+ liblua5.3-dev,
+ libmemcached-dev,
+ libmicrohttpd-dev,
+ libmodbus-dev,
+ libmongoc-dev,
+ libmnl-dev [linux-any],
+ libopenipmi-dev,
+ libpcap0.8-dev | libpcap-dev,
+ libperl-dev,
+ libpq-dev,
+ librabbitmq-dev,
+ librdkafka-dev,
+ libriemann-client-dev,
+ libsensors-dev [linux-any],
+ libsnmp-dev | libsnmp-dev | libsnmp9-dev,
+ libsnmp-dev | perl (<< 5.10.1~rc2-1~),
+ libudev-dev [linux-any],
+ libupsclient-dev | libupsclient1-dev,
+ libvarnishapi-dev,
+ libvirt-dev [!sh4 !ia64 !alpha],
+ libxen-dev [amd64 arm64 armhf],
+ libxml2-dev,
+ libyajl-dev,
+ linux-libc-dev [linux-any] | linux-libc-dev (<< 2.6.25-1) [linux-any],
+ default-jdk [!hppa !sparc],
+ python3-dev,
+ riemann-c-client,
+ libqpid-proton11-dev,
+ libmosquitto-dev,
+ libslurm-dev
+Build-Conflicts: libpthread-dev, libhal-dev, python-dev
+Standards-Version: 4.2.1
+Homepage: https://ncollectd.org/
+
+Package: ncollectd
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: statistics collection and monitoring daemon
+ ncollectd is a small daemon which collects system information periodically and
+ provides mechanisms to monitor and store the values in a variety of ways.
+ Since the daemon doesn't need to startup every time it wants to update the
+ values it's very fast and easy on the system. Also, the statistics are very
+ fine grained since the files are updated every 10 seconds by default.
+ .
+ The ncollected information can be used to find current performance bottlenecks
+ (performance analysis) and predict future system load (capacity planning).
+
+Package: ncollectd-apache
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The apache plugin collects data provided by Apache's mod_status.
+
+Package: ncollectd-ats
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The ATS plugin collects data provided by Apache Traffic Server.
+
+Package: ncollectd-bind
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The bind plugin retrieves this information that's encoded in XML and provided
+ via HTTP and submits the values to ncollectd.
+
+Package: ncollectd-cert
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The cert plugin retrieves information of expiration date of certificates.
+
+Package: ncollectd-cups
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The cups plugin collect printer and jobs metrics from a cups server.
+
+Package: ncollectd-dns
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This dns plugin retrives information from dns server responses.
+
+Package: ncollectd-docker
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The docker plugin collect metrics from the contariners running with docker.
+
+Package: ncollectd-ds389
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin reads monitoring information from DS389 server.
+
+Package: ncollectd-gps
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin monitor gps related data through gpsd.
+
+Package: ncollectd-haproxy
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The haproxy plugin collects metrics from a haproxy server.
+
+Package: ncollectd-http
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The http plugin queries a http server and parser the data using the match plugins.
+
+Package: ncollectd-ipmi
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The IPMI plugin uses the OpenIPMI library to read hardware sensors from servers
+ using the Intelligent Platform Management Interface (IPMI).
+
+Package: ncollectd-intel-rdt
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The intel-rdt plugin collects information provided by monitoring features of
+ Intel Resource Director Technology (Intel(R) RDT).
+
+Package: ncollectd-iptables
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The IPtables plugin can gather statistics from your ip_tables based packet
+ filter (aka. firewall) for both the IPv4 and the IPv6 protocol. It can collect
+ the byte- and packet-counters of selected rules and submit them to ncollectd.
+
+Package: ncollectd-java
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin for ncollectd allows plugins to be written in Java and executed
+ in an embedded JVM.
+
+Package: ncollectd-jolokia
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The jolokia plugin collects values from MBeanServevr - servlet engines equipped
+ with the jolokia MBean.
+
+Package: ncollectd-kafka
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The kafka plugin collect metrics fron a kafka broker.
+
+Package: ncollectd-lua
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The Lua plugin embeds a Lua interpreter into ncollectd and exposes the
+ application programming interface (API) to Lua scripts.
+
+Package: ncollectd-match-xpath
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The match_xpath plugin parser data as Extensible Markup Language (XML) using
+ xpath expressions.
+
+Package: ncollectd-modbus
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The modbus plugin collects values from Modbus/TCP enabled devices
+
+Package: ncollectd-mongodb
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The mongodb pluginb provides metrics from a mongodb database.
+
+Package: ncollectd-mosquitto
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The mosquitto plugin ncollectd metrics from a mosquitto broker.
+
+Package: ncollectd-mysql
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: MySQL querying plugin. This plugin provides data of issued commands, called
+ handlers and database traffic.
+
+Package: ncollectd-nftables
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The nftables plugin get counters fron nftables.
+
+Package: ncollectd-nginx
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin gets metrics provided by nginx.
+
+Package: ncollectd-nginx-vts
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin gets metrics provided by the Nginx virtual host traffic status module.
+
+Package: ncollectd-notify-email
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The notify Email plugin uses libESMTP to send notifications to a configured
+ email address.
+
+Package: ncollectd-notify-snmp
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The notify smp plugin send notification as SNMP traps.
+
+Package: ncollectd-nsd
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin collect metrics from the Name Server Daemon (NSD).
+
+Package: ncollectd-nut
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin for ncollectd provides Network UPS Tools support.
+
+Package: ncollectd-odbc
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The odbc plugin uses ODBC, a database abstraction library, to execute SQL
+ statements on a database and read back the result.
+
+Package: ncollectd-openldap
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin reads monitoring information from OpenLDAP's cn=Monitor subtree.
+
+Package: ncollectd-ovs
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This ovs plugin collects statictics of OVS connected bridges and interfaces.
+
+Package: ncollectd-pcap
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The pcap plugin uses libpcap to get a copy of all traffic and generates statistics
+ of some protocols such as DNS.
+
+Package: ncollectd-perl
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The Perl plugin embeds a Perl interpreter into ncollectd and exposes the
+ application programming interface (API) to Perl-scripts.
+
+Package: ncollectd-podman
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The podman plugin collect metrics from the contariners running with podman.
+
+Package: ncollectd-postgresql
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL
+ database.
+
+Package: ncollectd-redfish
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The redfish plugin connects sensor data using REST protocol called Redfish.
+
+Package: ncollectd-redis
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The Redis plugin connects to one or more instances of Redis, a key-value store,
+ and collects usage information using the hiredis library.
+
+Package: ncollectd-scraper
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The scraper plugin queries a http endpoint to get metrics in openmetrics format.
+
+Package: ncollectd-sensors
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin for ncollectd provides querying of sensors supported by lm_sensors.
+
+Package: ncollectd-sigrok
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Uses libsigrok as a backend, allowing any sigrok-supported device to have its
+ measurements fed to ncollectd. This includes multimeters, sound level meters,
+ thermometers, and much more.
+
+Package: ncollectd-slurm
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The slurm plugin collects per-partition SLURM node and job state information, as
+ well as internal health statistics.
+
+Package: ncollectd-smart
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Collect SMART statistics, notably load cycle count, temperature and bad sectors.
+
+Package: ncollectd-snmp
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin for ncollectd allows querying of network equipment using SNMP.
+
+Package: ncollectd-squid
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The squid plugin collects data provided by squid proxy.
+
+Package: ncollectd-unbound
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin collect metrics from the Unbound dns resolver.
+
+Package: ncollectd-varnish
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The Varnish plugin collects information about Varnish, an HTTP accelerator.
+
+Package: ncollectd-virt
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: This plugin collects information from virtualized guests.
+
+Package: ncollectd-write-amqp
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The AMQP 0.9 plugin transmits values collected by ncollectd via the
+ Advanced Message Queuing Protocol v0.9 (AMQP).
+
+Package: ncollectd-write-amqp1
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The AMQP 1.0 plugin transmits values collected by ncollectd via the
+ Advanced Message Queuing Protocol v1.0 (AMQP1).
+
+Package: ncollectd-write-exporter
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The write_exporter plugin exposes ncollected values using an embedded HTTP
+ server, turning the ncollectd daemon into a openmetrics exporter.
+
+Package: ncollectd-write-http
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The write_http plugin sends the values collected by ncollectd to a web-server
+ using HTTP POST requests.
+
+Package: ncollectd-write-kafka
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The write_kafka plugin sends values to kafka, a distributed messaging system.
+
+Package: ncollectd-write-mongodb
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The write_mongodb plugin write values to a mongodb database.
+
+Package: ncollectd-write-mqtt
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The MQTT plugin publishes and subscribes to MQTT topics.
+
+Package: ncollectd-write-postgresql
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The write_postgresql plugin write values to a postgresql database.
+
+Package: ncollectd-xencpu
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The xencpu plugin collects CPU statistics from Xen.

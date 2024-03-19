@@ -1,0 +1,2 @@
+usr/lib/ncollectd/write_kafka.so
+usr/share/man/man5/ncollectd-write_kafka.5

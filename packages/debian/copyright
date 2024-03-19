@@ -1,0 +1,5 @@
+Upstream-Name: ncollectd
+Source: https://ncollectd.org
+
+Files: *
+License: GPL-2.0-only
