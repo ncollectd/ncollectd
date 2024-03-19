@@ -1,0 +1,4 @@
+# TYPE system_bonding_slaves gauge
+system_bonding_slaves{hostname="localhost.localdomain",master="bond0"} 2
+# TYPE system_bonding_active gauge
+system_bonding_active{hostname="localhost.localdomain",master="bond0"} 2
