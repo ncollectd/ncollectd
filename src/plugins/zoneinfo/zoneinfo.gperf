@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix ZONEINFO_
+%define hash-function-name zoneinfo_hash
+%define lookup-function-name zoneinfo_get_key
+%define slot-name key
+%{
+%}
+struct zoneinfo_metric {
+    char *key;
+    int fam;
+};
+%%
+nr_inactive_anon,                  FAM_ZONEINFO_INACTIVE_ANON_PAGES
+nr_active_anon,                    FAM_ZONEINFO_ACTIVE_ANON_PAGES
+nr_inactive_file,                  FAM_ZONEINFO_INACTIVE_FILE_PAGES
+nr_active_file,                    FAM_ZONEINFO_ACTIVE_FILE_PAGES
+nr_unevictable,                    FAM_ZONEINFO_UNEVICTABLE_PAGES
+nr_slab_reclaimable,               FAM_ZONEINFO_SLAB_RECLAIMABLE_PAGES
+nr_slab_unreclaimable,             FAM_ZONEINFO_SLAB_UNRECLAIMABLE_PAGES
+nr_isolated_anon,                  FAM_ZONEINFO_ISOLATED_ANON_PAGES
+nr_isolated_file,                  FAM_ZONEINFO_ISOLATED_FILE_PAGES
+workingset_nodes,                  -1
+workingset_refault_anon,           -1
+workingset_refault_file,           -1
+workingset_activate_anon,          -1
+workingset_activate_file,          -1
+workingset_restore_anon,           -1
+workingset_restore_file,           -1
+workingset_nodereclaim,            -1
+nr_anon_pages,                     FAM_ZONEINFO_ANON_PAGES
+nr_mapped,                         FAM_ZONEINFO_MAPPED_PAGES
+nr_file_pages,                     FAM_ZONEINFO_FILE_PAGES
+nr_dirty,                          FAM_ZONEINFO_DIRTY_PAGES
+nr_writeback,                      FAM_ZONEINFO_WRITEBACK_PAGES
+nr_writeback_temp,                 -1
+nr_shmem,                          FAM_ZONEINFO_SHMEM_PAGES
+nr_shmem_hugepages,                -1
+nr_shmem_pmdmapped,                -1
+nr_file_hugepages,                 -1
+nr_file_pmdmapped,                 -1
+nr_anon_transparent_hugepages,     FAM_ZONEINFO_ANON_TRANSPARENT_HUGEPAGES
+nr_vmscan_write,                   -1
+nr_vmscan_immediate_reclaim,       -1
+nr_dirtied,                        FAM_ZONEINFO_NR_DIRTIED
+nr_written,                        FAM_ZONEINFO_NR_WRITTEN
+nr_throttled_written,              -1
+nr_kernel_misc_reclaimable,        -1
+nr_foll_pin_acquired,              -1
+nr_foll_pin_released,              -1
+nr_kernel_stack,                   FAM_ZONEINFO_KERNEL_STACKS
+nr_page_table_pages,               -1
+nr_swapcached,                     -1
+pgpromote_success,                 -1
+scanned,                           FAM_ZONEINFO_SCANNED_PAGES
+boost,                             -1
+min,                               FAM_ZONEINFO_MIN_PAGES
+low,                               FAM_ZONEINFO_LOW_PAGES
+high,                              FAM_ZONEINFO_HIGH_PAGES
+spanned,                           FAM_ZONEINFO_SPANNED_PAGES
+present,                           FAM_ZONEINFO_PRESENT_PAGES
+managed,                           FAM_ZONEINFO_MANAGED_PAGES
+cma,                               -1
+protection,                        -1
+nr_free_pages,                     FAM_ZONEINFO_FREE_PAGES
+nr_zone_inactive_anon,             -1
+nr_zone_active_anon,               -1
+nr_zone_inactive_file,             -1
+nr_zone_active_file,               -1
+nr_zone_unevictable,               -1
+nr_zone_write_pending,             -1
+nr_mlock,                          -1
+nr_bounce,                         -1
+nr_zspages,                        -1
+nr_free_cma,                       -1
+numa_hit,                          FAM_ZONEINFO_NUMA_HIT
+numa_miss,                         FAM_ZONEINFO_NUMA_MISS
+numa_foreign,                      FAM_ZONEINFO_NUMA_FOREIGN
+numa_interleave,                   FAM_ZONEINFO_NUMA_INTERLEAVE
+numa_local,                        FAM_ZONEINFO_NUMA_LOCAL
+numa_other,                        FAM_ZONEINFO_NUMA_OTHER
