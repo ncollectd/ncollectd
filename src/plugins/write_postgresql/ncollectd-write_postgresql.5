@@ -1,0 +1,150 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-postgresql 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_postgresql man page"
+.SH NAME
+ncollectd-write_postgresql \- Documentation of ncollectd's write postgresql plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write postgresql
+.br
+\fBplugin\fP write_postgresql {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBuser\fP \fIuser\fP
+        \fBdatabase\fP \fIdatabase\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+        \fBkrb-srv-name\fP \fIname\fP
+        \fBservice\fP \fIservice\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBcommit-interval\fP \fIseconds\fP
+        \fBwrite\fP \fImetrics|notifications\fP
+        \fBstatement\fP \fIsql-statement\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_postgresql\fP plugin writes metrics in a PostgreSQL databases. It
+keeps a persistent connection to all configured databases and tries to
+reconnect if the connection has been interrupted. A database is configured by
+specifying a \fBinstance\fP block as described below.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.PP
+.TP
+\fBhost\fP \fIhost\fP
+Specify the hostname or IP of the PostgreSQL server to connect to. If the
+value begins with a slash, it is interpreted as the directory name in which to
+look for the UNIX domain socket.
+.TP
+\fBport\fP \fIport\fP
+Specify the TCP port or the local UNIX domain socket file extension of the
+server.
+.TP
+\fBdatabase\fP \fIdatabase\fP
+Database name to connect.
+.TP
+\fBuser\fP \fIuser\fP
+Specify the username to be used when connecting to the server.
+.TP
+\fBpassword\fP \fIpassword\fP
+Specify the password to be used when connecting to the server.
+.TP
+\fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+Specify whether to use an SSL connection when contacting the server. The
+following modes are supported:
+.RS
+.TP
+\fBdisable\fP
+Do not use SSL at all.
+.TP
+\fBallow\fP
+First, try to connect without using SSL. If that fails, try using SSL.
+.TP
+\fBprefer\fP \fI(default)\fP
+First, try to connect using SSL. If that fails, try without using SSL.
+.TP
+\fBrequire\fP
+Use SSL only.
+.RE
+.TP
+\fBkrb-srv-name\fP \fIname\fP
+Specify the Kerberos service name to use when authenticating with Kerberos 5
+or GSSAPI. See the sections "Kerberos authentication" and "GSSAPI" of the
+\fBPostgreSQL Documentation\fP for details.
+.TP
+\fBservice\fP \fIservice\fP
+Specify the PostgreSQL service name to use for additional parameters. That
+service has to be defined in \fIpg_service.conf\fP and holds additional
+connection parameters. See the section "The Connection Service File" in the
+\fBPostgreSQL Documentation\fP for details.
+.TP
+\fBinterval\fP \fIseconds\fP
+Specify the interval with which the full callback in called to commit the data.
+The default is to use the global \fBinterval\fP setting.
+.TP
+\fBcommit-interval\fP \fIseconds\fP
+This option causes a writer to put several updates into a single transaction.
+This transaction will last for the specified amount of time. By default, each SQL statement
+will be executed in a separate transaction. Each transaction generates a fair amount
+of overhead which can, thus, be reduced by activating this option.
+.TP
+\fBwrite\fP \fImetrics|notifications\fP
+If set to \fImetrics\fP (the default) the plugin will handle metrics.
+If set to \fInotifications\fP the plugin will handle notifications.
+.TP
+\fBstatement\fP \fIsql-statement\fP
+This mandatory option specifies the SQL statement that will be executed for each
+submitted value. A single SQL statement is allowed only. Anything after the first
+semicolon will be ignored.
+.RS
+.TP
+\fBMetrics\fP
+Four parameters will be passed to the statement and should be specified as tokens
+$1, $2, through $4 in the statement string.  In general, it is advisable to create
+and call a custom function in the PostgreSQL database for this purpose.
+
+The following values are made available through those parameters:
+.RS
+.TP
+\fB$1\fP
+The metric name.
+.TP
+\fB$2\fP
+The metric labels as an array of pairs.
+.TP
+\fB$3\fP
+The value of the metric.
+.TP
+\fB$4\fP
+The timestamp of the queried value as an RFC 3339-formatted local time.
+.RE
+.TP
+\fBNotifications\fP
+Five parameters will be passed to the statement and should be specified as tokens
+$1, $2, through $5 in the statement string.  In general, it is advisable to create
+and call a custom function in the PostgreSQL database for this purpose.
+
+The following values are made available through those parameters:
+.RS
+.TP
+\fB$1\fP
+The notification name.
+.TP
+\fB$2\fP
+The notification labels as an array of pairs.
+.TP
+\fB$3\fP
+The notification annotations as an array of pairs.
+.TP
+\fB$4\fP
+The severity of the notification as string: \fIFAILURE\fP, \fIWARNING\fP or \fIOKAY\fP
+.TP
+\fB$5\fP
+The timestamp of the notification as an RFC 3339-formatted local time.
+.RE
+.RE
+.TP
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
