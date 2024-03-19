@@ -1,0 +1,89 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-write_amqp1 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_amqp1 man page"
+.SH NAME
+ncollectd-write_amqp1 \- Documentation of ncollectd's write_amqp1 plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_amqp1
+.br
+\fBplugin\fP write_amqp1 {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBaddress\fP \fIaddress\fP
+        \fBretry-delay\fP \fIretry-delay\fP
+        \fBformat\fP \fIFORMAT\fP
+        \fBpre-settle\fP \fItrue|false\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-notification\fP \fItext|json|protob\fP
+        \fBwrite\fP \fImetrics|notifications\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_amqp1\fP plugin can be used to send metrics or notifications
+using an AMQP 1.0 message intermediary.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhost\fP
+Hostname or IP-address of the AMQP 1.0 intermediary. Defaults to the
+default behavior of the underlying communications library,
+\fIlibqpid-proton\fP, which is "localhost".
+.TP
+\fBport\fP \fIport\fP
+Service name or port number on which the AMQP 1.0 intermediary accepts
+connections. This argument must be a string, even if the numeric form
+is used. Defaults to "5672".
+.TP
+\fBuser\fP \fIuser\fP
+.TP
+\fBpassword\fP \fIpassword\fP
+Credentials used to authenticate to the AMQP 1.0 intermediary. By
+default "guest"/"guest" is used.
+.TP
+\fBaddress\fP \fIaddress\fP
+This option specifies the prefix for the send-to value in the message.
+.TP
+\fBretry-delay\fP \fIretry-delay\fP
+When the AMQP1 connection is lost, defines the time in seconds to wait
+before attempting to reconnect. Defaults to 1, which implies attempt
+to reconnect at 1 second intervals.
+.TP
+\fBpre-settle\fP \fItrue|false\fP
+If set to \fIfalse\fP (the default), the plugin will wait for a message
+acknowledgement from the messaging bus before sending the next
+message. This indicates transfer of ownership to the messaging
+system. If set to \fItrue\fP, the plugin will not wait for a message
+acknowledgement and the message may be dropped prior to transfer of
+ownership.
+.TP
+\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+Selects the format in which messages are sent to the intermediary. 
+.RS
+.TP
+\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.TP
+\fBgraphite\fP
+.TP
+\fBjson\fP
+.TP
+\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.TP
+\fBopentsdb\fP [telnet|json]
+.TP
+\fBopenmetrics\fP [text|protob]
+.TP
+\fBremote\fP [metadata]
+.RE
+.TP
+\fBformat-notification\fP \fItext|json|protob\fP
+Selects the format in which notifications are sent to the intermediary. 
+.TP
+\fBwrite\fP \fImetrics|notifications\fP
+If set to \fImetrics\fP (the default) the plugin will handle metrics.
+If set to \fInotifications\fP the plugin will handle notifications.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
