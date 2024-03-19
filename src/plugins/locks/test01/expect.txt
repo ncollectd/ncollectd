@@ -1,0 +1,14 @@
+# TYPE system_locks_pending gauge
+system_locks_pending{class="POSIX",hostname="localhost.localdomain",type="READ"} 0
+system_locks_pending{class="POSIX",hostname="localhost.localdomain",type="WRITE"} 0
+system_locks_pending{class="FLOCK",hostname="localhost.localdomain",type="READ"} 0
+system_locks_pending{class="FLOCK",hostname="localhost.localdomain",type="WRITE"} 3
+system_locks_pending{class="LEASE",hostname="localhost.localdomain",type="READ"} 0
+system_locks_pending{class="LEASE",hostname="localhost.localdomain",type="WRITE"} 0
+# TYPE system_locks gauge
+system_locks{class="POSIX",hostname="localhost.localdomain",type="READ"} 0
+system_locks{class="POSIX",hostname="localhost.localdomain",type="WRITE"} 14
+system_locks{class="FLOCK",hostname="localhost.localdomain",type="READ"} 0
+system_locks{class="FLOCK",hostname="localhost.localdomain",type="WRITE"} 7
+system_locks{class="LEASE",hostname="localhost.localdomain",type="READ"} 0
+system_locks{class="LEASE",hostname="localhost.localdomain",type="WRITE"} 0
