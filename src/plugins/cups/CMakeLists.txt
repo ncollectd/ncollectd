@@ -1,0 +1,28 @@
+plugin_option(PLUGIN_CUPS "CUPS server statistics" ON)
+
+set(BUILD_PLUGIN_CUPS 0)
+
+if(PLUGIN_CUPS)
+    find_package(LibCups)
+    if (LIBCUPS_FOUND)
+        if (LIBCUPS_VERSION VERSION_GREATER_EQUAL "1.7")
+            set(BUILD_PLUGIN_CUPS 1)
+        else()
+            set(BUILD_PLUGIN_CUPS_REASON "libcups less than 1.7" PARENT_SCOPE)
+        endif()
+    else()
+        set(BUILD_PLUGIN_CUPS_REASON "libcups not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_CUPS ${BUILD_PLUGIN_CUPS} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_CUPS)
+    set(PLUGIN_CUPS_SRC cups.c)
+    add_library(cups MODULE ${PLUGIN_CUPS_SRC})
+    target_link_libraries(cups PRIVATE libutils libmetric LibCups::LibCups)
+    set_target_properties(cups PROPERTIES PREFIX "")
+    install(TARGETS cups DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-cups.5 ncollectd-cups.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-cups.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()

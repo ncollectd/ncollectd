@@ -1,0 +1,41 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-cups 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cups man page"
+.SH NAME
+ncollectd-cups \- Documentation of ncollectd's cups plugin
+.SH SYNOPSIS
+\fBload-plugin\fP cups
+.br
+\fBplugin\fP cups {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBcups\fP plugin collect printer and jobs metrics from a cups server.
+.PP
+The plugin configuration consists of one or more \fBinstance\fP blocks which
+specify one \fIcups\fP connection each. Within the \fBinstance\fP blocks, the
+following options are allowed:
+.PP
+.TP
+\fBhost\fP \fIhost\fP
+Hostname or address to connect to.
+The default server comes from the \f(CWCUPS_SERVER\fP environment variable,
+then the \fI~/.cups/client.conf\fP file, and finally the \fI/etc/cups/client.conf\fP file.
+If not set, the default is the local system - either \f(CWlocalhost\fP or a domain socket path.
+.TP
+\fBport\fP \fIport\fP
+Service name or port number to connect to. Defaults to \f(CW631\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
