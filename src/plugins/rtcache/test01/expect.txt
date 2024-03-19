@@ -1,0 +1,81 @@
+# TYPE system_rt_cache_entries counter
+system_rt_cache_entries_total{cpu="0",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="1",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="2",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="3",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="4",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="5",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="6",hostname="localhost.localdomain"} 21
+system_rt_cache_entries_total{cpu="7",hostname="localhost.localdomain"} 21
+# TYPE system_rt_cache_in_slow_mc counter
+system_rt_cache_in_slow_mc_total{cpu="0",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_mc_total{cpu="1",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_mc_total{cpu="2",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_mc_total{cpu="3",hostname="localhost.localdomain"} 1849
+system_rt_cache_in_slow_mc_total{cpu="4",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_mc_total{cpu="5",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_mc_total{cpu="6",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_mc_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_rt_cache_in_martian_dst counter
+system_rt_cache_in_martian_dst_total{cpu="0",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="1",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="2",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="3",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="4",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="5",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="6",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_dst_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_rt_cache_in_no_route counter
+system_rt_cache_in_no_route_total{cpu="0",hostname="localhost.localdomain"} 0
+system_rt_cache_in_no_route_total{cpu="1",hostname="localhost.localdomain"} 0
+system_rt_cache_in_no_route_total{cpu="2",hostname="localhost.localdomain"} 0
+system_rt_cache_in_no_route_total{cpu="3",hostname="localhost.localdomain"} 9
+system_rt_cache_in_no_route_total{cpu="4",hostname="localhost.localdomain"} 0
+system_rt_cache_in_no_route_total{cpu="5",hostname="localhost.localdomain"} 0
+system_rt_cache_in_no_route_total{cpu="6",hostname="localhost.localdomain"} 0
+system_rt_cache_in_no_route_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_rt_cache_in_slow_tot counter
+system_rt_cache_in_slow_tot_total{cpu="0",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_tot_total{cpu="1",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_tot_total{cpu="2",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_tot_total{cpu="3",hostname="localhost.localdomain"} 273
+system_rt_cache_in_slow_tot_total{cpu="4",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_tot_total{cpu="5",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_tot_total{cpu="6",hostname="localhost.localdomain"} 0
+system_rt_cache_in_slow_tot_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_rt_cache_out_slow_tot counter
+system_rt_cache_out_slow_tot_total{cpu="0",hostname="localhost.localdomain"} 370
+system_rt_cache_out_slow_tot_total{cpu="1",hostname="localhost.localdomain"} 290
+system_rt_cache_out_slow_tot_total{cpu="2",hostname="localhost.localdomain"} 325
+system_rt_cache_out_slow_tot_total{cpu="3",hostname="localhost.localdomain"} 1855
+system_rt_cache_out_slow_tot_total{cpu="4",hostname="localhost.localdomain"} 277
+system_rt_cache_out_slow_tot_total{cpu="5",hostname="localhost.localdomain"} 352
+system_rt_cache_out_slow_tot_total{cpu="6",hostname="localhost.localdomain"} 276
+system_rt_cache_out_slow_tot_total{cpu="7",hostname="localhost.localdomain"} 377
+# TYPE system_rt_cache_in_martian_src counter
+system_rt_cache_in_martian_src_total{cpu="0",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="1",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="2",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="3",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="4",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="5",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="6",hostname="localhost.localdomain"} 0
+system_rt_cache_in_martian_src_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_rt_cache_in_brd counter
+system_rt_cache_in_brd_total{cpu="0",hostname="localhost.localdomain"} 0
+system_rt_cache_in_brd_total{cpu="1",hostname="localhost.localdomain"} 0
+system_rt_cache_in_brd_total{cpu="2",hostname="localhost.localdomain"} 0
+system_rt_cache_in_brd_total{cpu="3",hostname="localhost.localdomain"} 26253
+system_rt_cache_in_brd_total{cpu="4",hostname="localhost.localdomain"} 0
+system_rt_cache_in_brd_total{cpu="5",hostname="localhost.localdomain"} 0
+system_rt_cache_in_brd_total{cpu="6",hostname="localhost.localdomain"} 0
+system_rt_cache_in_brd_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_rt_cache_out_slow_mc counter
+system_rt_cache_out_slow_mc_total{cpu="0",hostname="localhost.localdomain"} 67
+system_rt_cache_out_slow_mc_total{cpu="1",hostname="localhost.localdomain"} 90
+system_rt_cache_out_slow_mc_total{cpu="2",hostname="localhost.localdomain"} 35
+system_rt_cache_out_slow_mc_total{cpu="3",hostname="localhost.localdomain"} 1609
+system_rt_cache_out_slow_mc_total{cpu="4",hostname="localhost.localdomain"} 35
+system_rt_cache_out_slow_mc_total{cpu="5",hostname="localhost.localdomain"} 45
+system_rt_cache_out_slow_mc_total{cpu="6",hostname="localhost.localdomain"} 29
+system_rt_cache_out_slow_mc_total{cpu="7",hostname="localhost.localdomain"} 61
