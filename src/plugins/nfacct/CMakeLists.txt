@@ -1,0 +1,41 @@
+plugin_option(PLUGIN_NFACCT "Netfilter extended accounting infrastructure" ON)
+
+include(CheckEnumExists)
+
+set(BUILD_PLUGIN_NFACCT 0)
+
+if(PLUGIN_NFACCT)
+    find_package(LibMnl)
+    if(BUILD_LINUX)
+        if(LIBMNL_FOUND)
+            check_enum_exists(NFACCT_FILTER "linux/netfilter/nfnetlink_acct.h" HAVE_NFACCT_FILTER)
+            if(HAVE_NFACCT_FILTER)
+                set(BUILD_PLUGIN_NFACCT 1)
+            else()
+                set(BUILD_PLUGIN_NFACCT_REASON "NFACCT_FILTER not found" PARENT_SCOPE)
+            endif()
+        else()
+            set(BUILD_PLUGIN_NFACCT_REASON "libmnl not found" PARENT_SCOPE)
+        endif()
+    else()
+        set(BUILD_PLUGIN_NFACCT_REASON "Linux only" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_NFACCT ${BUILD_PLUGIN_NFACCT} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_NFACCT)
+    set(PLUGIN_NFACCT_SRC nfacct.c)
+    add_library(nfacct MODULE ${PLUGIN_NFACCT_SRC})
+    target_link_libraries(nfacct PRIVATE libutils libmetric LibMnl::LibMnl)
+    set_target_properties(nfacct PROPERTIES PREFIX "")
+
+#    add_executable(test_plugin_nfacct EXCLUDE_FROM_ALL nfacct_test.c ${PLUGIN_NFACCT_SRC})
+#    target_link_libraries(test_plugin_nfacct libtest libutils libmetric m)
+#    add_dependencies(build_tests test_plugin_nfacct)
+#    add_test(NAME test_plugin_nfacct COMMAND test_plugin_nfacct WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    install(TARGETS nfacct DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-nfacct.5 ncollectd-nfacct.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-nfacct.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
