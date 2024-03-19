@@ -1,0 +1,79 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-write_exporter 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_exporter man page"
+.SH NAME
+ncollectd-write_exporter \- Documentation of ncollectd's write_exporter plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_exporter
+.br
+\fBplugin\fP write_exporter {
+    \fBinstance\fP "\fIinstance\fP" {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBstaleness-delta\fP \fIseconds\fP
+        \fBprivate-key\fP \fIfile-path\fP
+        \fBprivate-key-password\fP \fIpassword\fP
+        \fBcertificate\fP
+        \fBtls-priority\fP
+        \fBauth-method\fP \fIbasic|digest\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBrealm\fP \fIrealm\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_exporter\fP plugin implements a tiny webserver that can be scraped.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhost\fP
+Bind to the hostname / address \fIhost\fP. By default, the plugin will bind to the
+"any" address, i.e. accept packets sent to any of the hosts addresses.
+
+This option is supported only for libmicrohttpd newer than 0.9.0.
+.TP
+\fBport\fP \fIport\fP
+Port the embedded webserver should listen on. Defaults to \f(CWB9103\fP.
+.TP
+\fBstaleness-delta\fP \fIseconds\fP
+Time in seconds after considers a metric "stale" if it hasn't seen any update for it.
+It defaults to \f(CW300\fP seconds (5 minutes).
+.TP
+\fBprivate-key\fP \fIfile-path\fP
+.TP
+\fBprivate-key-password\fP \fIpassword\fP
+.TP
+\fBcertificate\fP
+.TP
+\fBtls-priority\fP
+.TP
+\fBauth-method\fP \fIbasic|digest\fP
+.TP
+\fBuser\fP \fIuser\fP
+.TP
+\fBpassword\fP \fIpassword\fP
+.TP
+\fBrealm\fP \fIrealm\fP
+.TP
+\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+Selects the format in which metrics are served.
+.RS
+.TP
+\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.TP
+\fBgraphite\fP
+.TP
+\fBjson\fP
+.TP
+\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.TP
+\fBopentsdb\fP [telnet|json]
+.TP
+\fBopenmetrics\fP [text|protob]
+.TP
+\fBremote\fP [metadata]
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
