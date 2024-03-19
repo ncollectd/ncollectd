@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix FAM_XFRM_STAT_
+%define hash-function-name xfrm_stat_hash
+%define lookup-function-name xfrm_stat_get_key
+%define slot-name key
+%{
+%}
+struct xfrm_stat {
+    char *key;
+    int fam;
+};
+%%
+XfrmInError,             FAM_XFRM_IN_ERROR
+XfrmInBufferError,       FAM_XFRM_IN_BUFFER_ERROR
+XfrmInHdrError,          FAM_XFRM_IN_HEADER_ERROR
+XfrmInNoStates,          FAM_XFRM_IN_NO_STATES
+XfrmInStateProtoError,   FAM_XFRM_IN_STATE_PROTOCOL_ERROR
+XfrmInStateModeError,    FAM_XFRM_IN_STATE_MODE_ERROR
+XfrmInStateSeqError,     FAM_XFRM_IN_STATE_SEQUENCE_ERROR
+XfrmInStateExpired,      FAM_XFRM_IN_STATE_EXPIRED
+XfrmInStateMismatch,     FAM_XFRM_IN_STATE_MISMATCH
+XfrmInStateInvalid,      FAM_XFRM_IN_STATE_INVALID
+XfrmInTmplMismatch,      FAM_XFRM_IN_TEMPLATE_MISMATCH
+XfrmInNoPols,            FAM_XFRM_IN_NO_POLICY
+XfrmInPolBlock,          FAM_XFRM_IN_POLICY_BLOCK
+XfrmInPolError,          FAM_XFRM_IN_POLICY_ERROR
+XfrmOutError,            FAM_XFRM_OUT_ERROR
+XfrmOutBundleGenError,   FAM_XFRM_OUT_BUNDLE_GENERATION_ERROR
+XfrmOutBundleCheckError, FAM_XFRM_OUT_BUNDLE_CHECK_ERROR
+XfrmOutNoStates,         FAM_XFRM_OUT_NO_STATES
+XfrmOutStateProtoError,  FAM_XFRM_OUT_STATE_PROTOCOL_ERROR
+XfrmOutStateModeError,   FAM_XFRM_OUT_STATE_MODE_ERROR
+XfrmOutStateSeqError,    FAM_XFRM_OUT_STATE_SEQUENCE_ERROR
+XfrmOutStateExpired,     FAM_XFRM_OUT_STATE_EXPIRED
+XfrmOutPolBlock,         FAM_XFRM_OUT_POLICY_BLOCK
+XfrmOutPolDead,          FAM_XFRM_OUT_POLICY_DEAD
+XfrmOutPolError,         FAM_XFRM_OUT_POLICY_ERROR
+XfrmFwdHdrError,         FAM_XFRM_FORWARD
+XfrmOutStateInvalid,     FAM_XFRM_OUT_STATE_INVALID
+XfrmAcquireError,        FAM_XFRM_ACQUIRE_ERROR
