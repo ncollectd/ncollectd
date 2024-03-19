@@ -1,162 +1,390 @@
-=encoding UTF-8
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectdctl 1 "DATE" "VERSION" "ncollectdctl man page"
+.SH NAME
+ncollectdctl \- Control interface for ncollectd
+.SH SYNOPSIS
+.B ncollectdctl command [command options]
+.SH DESCRIPTION
+ncollectdctl provides a control interface for ncollectd, which may be used to
+interact with the daemon.
+.SH OPTIONS
+ncollectdctl supports the following commands:
 
-=head1 NAME
-
-collectdctl - Control interface for collectd
-
-=head1 SYNOPSIS
-
-collectdctl I<[options]> I<E<lt>commandE<gt>> I<[command options]>
-
-=head1 DESCRIPTION
-
-collectdctl provides a control interface for collectd, which may be used to
-interact with the daemon using the C<unixsock plugin>.
-
-=head1 OPTIONS
-
-collectdctl supports the following options:
-
-=over 4
-
-=item B<-s> I<socket>
-
-Path to the UNIX socket opened by collectd's C<unixsock plugin>.
-Default: /var/run/collectd-unixsock
-
-=item B<-h>
-
+.TP
+\fBhelp\fP
 Display usage information and exit.
+.TP
+\fBreaders\fP \fB[OPTIONS]\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+Path to the UNIX socket opened by ncollectd.
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display usage information for this command and exit.
+.RE
+.TP
+\fBwriters\fP \fB[OPTIONS]\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+Path to the UNIX socket opened by ncollectd.
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display usage information for this command and exit.
+.RE
+.TP
+\fBloggers\fP \fB[OPTIONS]\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+Path to the UNIX socket opened by ncollectd.
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display usage information for this command and exit.
+.RE
+.TP
+\fBnotifiers\fP \fB[OPTIONS]\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+Path to the UNIX socket opened by ncollectd.
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display usage information for this command and exit.
+.RE
+.TP
+\fBwrite\fP \fB[OPTIONS]\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-d\fR \fI\,FILENAME\/\fR, \fB\-\-data\fR=\fI\,FILENAME\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBread\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+ -s  --start
+ -e  --end
+ -r  --resolution
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBnotification\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-n\fR \fI\,NAME\/\fR, \fB\-\-name\fR=\fI\,NAME\/\fR
+.TP
+\fB\-l\fR \fI\,KEY=VALUE\/\fR, \fB\-\-label\fR=\fI\,KEY=VALUE\/\fR
+.TP
+\fB\-a\fR \fI\,KEY=VALUE\/\fR, \fB\-\-annotation\fR=\fI\,KEY=VALUE\/\fR
+.TP
+\fB\-s\fR \fI\,OKAY|WARNING|FAILURE\/\fR, \fB\-\-severity\fR=\fI\,OKAY|WARNING|FAILURE\/\fR
+.TP
+\fB\-t\fR \fI\,TIMESTAMP\/\fR, \fB\-\-time\fR=\fI\,TIMESTAMP\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBseries\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-m\fR \fI\,MATCH\/\fR, \fB\-\-match\fR=\fI\,MATCH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBfamily-metrics\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-m\fR \fI\,MATCH\/\fR, \fB\-\-match\fR=\fI\,MATCH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBmetrics\fP [\fIOPTIONS\fP]
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBlabels\fP [\fIOPTIONS\fP] \fImetric\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBlabel-values\fP [OPTION] \fImetric\fP \fIlabel\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBquery\fP [\fBoptions\fP] \fBquery\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-t\fR \fI\,TIME\/\fR, \fB\-\-time\fR=\fI\,TIME\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBquery-range\fP [\fBoptions\fP] \fBquery\fP
+.RS
+.TP
+\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.TP
+\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-s\fR \fI\,START\/\fR, \fB\-\-start\fR=\fI\,START\/\fR
+.TP
+\fB\-e\fR \fI\,END\/\fR, \fB\-\-end\fR=\fI\,END\/\fR
+.TP
+\fB\-S\fR \fI\,STEP\/\fR, \fB\-\-step\fR=\fI\,STEP\/\fR
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+.RE
+.TP
+\fBgraph\fP [\fBoptions\fP]
+.RS
+.TP
+\fB\-s\fR \fI\,START\/\fR, \fB\-\-start\fR=\fI\,START\/\fR
+.TP
+\fB\-e\fR \fI\,END\/\fR, \fB\-\-end\fR=\fI\,END\/\fR
+.TP
+\fB\-S\fR \fI\,STEP\/\fR, \fB\-\-step\fR=\fI\,STEP\/\fR
+.TP
+\fB\-t\fR \fI\,TITLE\/\fR, \fB\-\-title\fR=\fI\,TITLE\/\fR
+.TP
+\fB\-v\fR \fI\,LABEL\/\fR, \fB\-\-vertical-label\fR=\fI\,LABEL\/\fR
+.TP
+\fB\-\-right-axis\fR
+.TP
+\fB\-\-right-axis-label\fR
+.TP
+\fB\-\-right-axis-formatter\fR
+.TP
+\fB\-\-right-axis-format\fR
+.TP
+\fB\-w\fR \fI\,WIDTH\/\fR, \fB\-\-width\fR=\fI\,WIDTH\/\fR
+.TP
+\fB\-h\fR \fI\,HEIGHT\/\fR, \fB\-\-height\fR=\fI\,HEIGHT\/\fR
+.TP
+\fB\-j\fR, \fB\-\-only-graph\fR
+.TP
+\fB\-D\fR, \fB\-\-full-size-mode\fR
+.TP
+\fB\-u\fR \fI\,UPPER\/\fR, \fB\-\-upper-limit\fR=\fI\,UPPER\/\fR
+.TP
+\fB\-l\fR \fI\,LOWER\/\fR, \fB\-\-lower-limit\fR=\fI\,LOWER\/\fR
+.TP
+\fB\-r\fR, \fB\-\-rigid\fR
+.TP
+\fB\-\-allow-shrink\fR
+.TP
+\fB\-A\fR, \fB\-\-alt-autoscale\fR
+.TP
+\fB\-J\fR, \fB\-\-alt-autoscale-min\fR
+.TP
+\fB\-M\fR, \fB\-\-alt-autoscale-max\fR
+.TP
+\fB\-N\fR, \fB\-\-no-gridfit\fR
+.TP
+\fB\-x\fR XXX, \fB\-\-x-grid\fR=XXX
+.TP
+\fB\-\-week-fmt\fR \fI\,FORMAT\/\fR 
+.TP
+\fB\-y\fR XXX, \fB\-\-y-grid\fR=XXX
+.TP
+\fB\-\-left-axis-formatter\fR \fI\,FORMAT\/\fR
+.TP
+\fB\-Y\fR  XXX, \fB\-\-alt-y-grid\fR=XXX
+.TP
+\fB\-o\fR  XXX, \fB\-\-logarithmic\fR=XXX
+.TP
+\fB\-X\fR  XXX, \fB\-\-units-exponent\fR=XXX
+.TP
+\fB\-L\fR  XXX, \fB\-\-units-length\fR=XXX
+.TP
+\fB\-\-units\fR
+.TP
+\fB\-c\fR \fI\,COLOR\/\fR, \fB\-\-color\fR=\fI\,COLOR\/\fR
+.TP
+\fB\-\-grid-dash\fR
+.TP
+\fB\-\-border\fR
+.TP
+\fB\-\-dynamic-labels\fR
+.TP
+\fB\-n\fR XXX, \fB\-\-font\fR=XXX
+.TP
+\fB\-\-zoom\fR
+.TP
+\fB\-R\fR XXX, \fB\-\-font-render-mode\fR=XXX
+.TP
+\fB\-B\fR XXX, \fB\-\-font-smoothing-threshold\fR=XXX
+.TP
+\fB\-G\fR XXX, \fB\-\-graph-render-mode\fR=XXX
+.TP
+\fB\-E\fR, \fB\-\-slope-mode\fR
+.TP
+\fB\-g\fR, \fB\-\-no-legend\fR
+.TP
+\fB\-\-legend-position\fR
+.TP
+\fB\-\-legend-direction\fR
+.TP
+\fB\-F\fR XXX, \fB\-\-force-rules-legend\fR=XXX
+.TP
+\fB\-T\fR XXX, \fB\-\-tabwidth\fR=XXX
+.TP
+\fB\-b\fR XXX, \fB\-\-base\fR=XXX
+.TP
+.TP
+\fB\-W\fR \fI\,WATERMARK\/\fR, \fB\-\-watermark\fR=\fI\,WATERMARK\/\fR
+.TP
+\fB\-a\fR \fI\,FORMAT\/\fR, \fB\-\-format\fR=\fI\,FORMAT\/\fR
+.TP
+\fB\-\-line\fR
+.TP
+\fB\-\-area\fR
+.TP
+\fB\-\-vrule\fR
+.TP
+\fB\-\-hrule\fR
+.TP
+\fB\-\-tick\fR
+.TP
+\fB\-H\fR \fB\-\-help\fR
+.RE
 
-=back
 
-=head1 AVAILABLE COMMANDS
+.TP
+\fBtemplate\fP
 
-The following commands are supported:
 
-=over 4
+.SH "OUTPUT FORMAT"
 
-=item B<getval> I<E<lt>identifierE<gt>>
+.TP
+\fBjson\fP
+.TP
+\fBjson-pretty\fP
+.TP
+\fByaml\fP
+.TP
+\fBtext\fP
+.TP
+\fBtxt\fP
+.TP
+\fBtable\fP
+.EX
+┌────────┐
+│ HEADER │
+├────────┤
+│ cell   │
+└────────┘
+.EE
+.TP
+\fBtable-bold\fP
+.EX
+┏━━━━━━━━┓
+┃ HEADER ┃
+┣━━━━━━━━┫
+┃ cell   ┃
+┗━━━━━━━━┛
+.EE
+.TP
+\fBtable-border-bold\fP
+.EX
+┏━━━━━━━━┓
+┃ HEADER ┃
+┠────────┨
+┃ cell   ┃
+┗━━━━━━━━┛
+.EE
+.TP
+\fBtable-double\fP
+.EX
+╔════════╗
+║ HEADER ║
+╠════════╣
+║ cell   ║
+╚════════╝
+.EE
+.TP
+\fBtable-border-double\fP
+.EX
+╔════════╗
+║ HEADER ║
+╟────────╢
+║ cell   ║
+╚════════╝
+.EE
+.TP
+\fBtable-round\fP
+.EX
+╭────────╮
+│ HEADER │
+├────────┤
+│ cell   │
+╰────────╯
+.EE
+.TP
+\fBtable-ascii\fP
+.EX
++--------+
+| HEADER |
++--------+
+| cell   |
++--------+
+.EE
 
-Query the latest collected value identified by the specified
-I<E<lt>identifierE<gt>> (see below). The value-list associated with that
-data-set is returned as a list of key-value-pairs, each on its own line. Keys
-and values are separated by the equal sign (C<=>).
 
-=item B<flush> [B<timeout=>I<E<lt>secondsE<gt>>] [B<plugin=>I<E<lt>nameE<gt>>]
-[B<identifier=>I<E<lt>idE<gt>>]
+.SH ENVIRONMENT
+The behavior of \fBncollectctl\fP is affected by the following environment variables.
+             
+.TP
+\fBNCOLLECTDCTL_UNIX_SOCKET\fP
+.TP
+\fBNCOLLECTDCTL_OUTPUT_FORMAT\fP
 
-Flush the daemon. This is useful, e.E<nbsp>g., to make sure that the latest
-values have been written to the respective RRD file before graphing them or
-copying them to somewhere else.
-
-The following options are supported by the flush command:
-
-=over 4
-
-=item B<timeout=>I<E<lt>secondsE<gt>>
-
-Flush values older than the specified timeout (in seconds) only.
-
-=item B<plugin=>I<E<lt>nameE<gt>>
-
-Flush the specified plugin only. I.E<nbsp>e., data cached by the specified
-plugin is written to disk (or network or whatever), if the plugin supports
-that operation.
-
-Example: B<rrdtool>.
-
-=item B<identifier=>I<E<lt>idE<gt>>
-
-If this option is present, only the data specified by the specified identifier
-(see below) will be flushed. Note that this option is not supported by all
-plugins (e.E<nbsp>g., the C<network> plugin does not support this).
-
-=back
-
-The B<plugin> and B<identifier> options may be specified more than once. In
-that case, all combinations of specified plugins and identifiers will be
-flushed only.
-
-=item B<listval>
-
-Returns a list of all values (by their identifier) available to the
-C<unixsock> plugin. Each value is printed on its own line. I.E<nbsp>e., this
-command returns a list of valid identifiers that may be used with the other
-commands.
-
-=item B<putval> I<E<lt>identifierE<gt>> [B<interval=>I<E<lt>secondsE<gt>>]
-I<E<lt>value-list(s)E<gt>>
-
-Submit one or more values (identified by I<E<lt>identifierE<gt>>, see below)
-to the daemon which will then dispatch them to the write plugins. B<interval>
-specifies the interval (in seconds) used to collect the values following that
-option. It defaults to the default of the running collectd instance receiving
-the data. Multiple I<E<lt>value-list(s)E<gt>> (see below) may be specified.
-Each of them will be submitted to the daemon. The values have to match the
-data-set definition specified by the type as given in the identifier (see
-L<types.db(5)> for details).
-
-=back
-
-=head1 IDENTIFIERS
-
-An identifier has the following format:
-
-[I<hostname>/]I<plugin>[-I<plugin_instance>]/I<type>[-I<type_instance>]
-
-Examples:
- somehost/cpu-0/cpu-idle
- uptime/uptime
- otherhost/memory/memory-used
-
-Hostname defaults to the local (non-fully qualified) hostname if omitted. No
-error is returned if the specified identifier does not exist (this is a
-limitation in the C<libcollectdclient> library).
-
-=head1 VALUE-LIST
-
-A value list describes one data-set as handled by collectd. It is a colon
-(C<:>) separated list of the time and the values. Each value is either given
-as an integer if the data-type is a counter, or as a double if the data-type
-is a gauge value. A literal C<U> is interpreted as an undefined gauge value.
-The number of values and the data-types have to match the type specified in
-the identifier (see L<types.db(5)> for details). The time is specified as
-epoch (i.E<nbsp>e., standard UNIX time) or as a literal C<N> which will be
-interpreted as now.
-
-=head1 EXAMPLES
-
-=over 4
-
-=item C<collectdctl flush plugin=rrdtool identifier=somehost/cpu-0/cpu-wait>
-
-Flushes all CPU wait RRD values of the first CPU of the local host.
-I.E<nbsp>e., writes all pending RRD updates of that data-source to disk.
-
-=item C<for ident in `collectdctl listval | grep users/users`; do
-      collectdctl getval $ident;
-  done>
-
-Query the latest number of logged in users on all hosts known to the local
-collectd instance.
-
-=back
-
-=head1 SEE ALSO
-
-L<collectd(1)>,
-L<collectd.conf(5)>,
-L<collectd-unixsock(5)>,
-L<types.db(5)>
-
-=head1 AUTHOR
-
-collectd has been written by Florian Forster E<lt>octo at collectd.orgE<gt>
-and many contributors (see `AUTHORS').
-
-collectdctl has been written by
-H�kon J Dugstad Johnsen E<lt>hakon-dugstad.johnsenE<nbsp>atE<nbsp>telenor.comE<gt>
-and Sebastian Harl E<lt>sh at tokkee.orgE<gt>.
-
-=cut
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
