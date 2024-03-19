@@ -1,0 +1,189 @@
+policy_module(ncollectd, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+## <desc>
+##	<p>
+##	Determine whether ncollectd can connect
+##	to the network using TCP.
+##	</p>
+## </desc>
+gen_tunable(ncollectd_tcp_network_connect, false)
+
+## <desc>
+##	<p>
+##	Determine whether ncollectd can listen to any
+##	TCP port.
+##	</p>
+## </desc>
+gen_tunable(ncollectd_tcp_network_listen, false)
+
+## <desc>
+## <p>
+## Allow tomcat to use executable memory and executable stack
+## </p>
+## </desc>
+gen_tunable(ncollectd_execmem, false)
+
+type ncollectd_t;
+type ncollectd_exec_t;
+init_daemon_domain(ncollectd_t, ncollectd_exec_t)
+
+type ncollectd_initrc_exec_t;
+init_script_file(ncollectd_initrc_exec_t)
+
+type ncollectd_log_t;
+logging_log_file(ncollectd_log_t)
+
+type ncollectd_var_lib_t;
+files_type(ncollectd_var_lib_t)
+
+type ncollectd_var_run_t;
+files_pid_file(ncollectd_var_run_t)
+
+type ncollectd_unit_file_t;
+systemd_unit_file(ncollectd_unit_file_t)
+
+apache_content_template(ncollectd)
+apache_content_alias_template(ncollectd, ncollectd)
+
+type ncollectd_script_tmp_t alias httpd_ncollectd_script_tmp_t;
+files_tmp_file(ncollectd_script_tmp_t)
+
+########################################
+#
+# Local policy
+#
+
+allow ncollectd_t self:capability { ipc_lock net_raw net_admin sys_nice sys_ptrace dac_read_search  setuid setgid };
+allow ncollectd_t self:process { getsched setsched signal };
+allow ncollectd_t self:fifo_file rw_fifo_file_perms;
+allow ncollectd_t self:packet_socket { create_socket_perms map };
+allow ncollectd_t self:rawip_socket create_socket_perms;
+allow ncollectd_t self:unix_stream_socket { accept listen connectto };
+allow ncollectd_t self:netlink_tcpdiag_socket create_netlink_socket_perms;
+allow ncollectd_t self:netlink_generic_socket create_socket_perms;
+allow ncollectd_t self:netlink_socket create_socket_perms;
+allow ncollectd_t self:netlink_rdma_socket create_socket_perms;
+allow ncollectd_t self:udp_socket create_socket_perms;
+allow ncollectd_t self:rawip_socket create_socket_perms;
+
+manage_dirs_pattern(ncollectd_t, ncollectd_log_t, ncollectd_log_t)
+manage_files_pattern(ncollectd_t, ncollectd_log_t, ncollectd_log_t)
+logging_log_filetrans(ncollectd_t, ncollectd_log_t, { dir file })
+
+manage_dirs_pattern(ncollectd_t, ncollectd_var_lib_t, ncollectd_var_lib_t)
+manage_files_pattern(ncollectd_t, ncollectd_var_lib_t, ncollectd_var_lib_t)
+files_var_lib_filetrans(ncollectd_t, ncollectd_var_lib_t, dir)
+allow ncollectd_t ncollectd_var_lib_t:file map;
+
+manage_files_pattern(ncollectd_t, ncollectd_var_run_t, ncollectd_var_run_t)
+manage_dirs_pattern(ncollectd_t, ncollectd_var_run_t, ncollectd_var_run_t)
+manage_sock_files_pattern(ncollectd_t, ncollectd_var_run_t, ncollectd_var_run_t)
+files_pid_filetrans(ncollectd_t, ncollectd_var_run_t, { dir file sock_file})
+
+kernel_read_all_sysctls(ncollectd_t)
+kernel_read_all_proc(ncollectd_t)
+kernel_list_all_proc(ncollectd_t)
+kernel_read_network_state_symlinks(ncollectd_t)
+kernel_get_sysvipc_info(ncollectd_t)
+
+auth_use_nsswitch(ncollectd_t)
+
+corecmd_exec_bin(ncollectd_t)
+
+corenet_udp_bind_generic_node(ncollectd_t)
+corenet_udp_bind_ncollectd_port(ncollectd_t)
+corenet_tcp_connect_lmtp_port(ncollectd_t)
+corenet_tcp_bind_bacula_port(ncollectd_t)
+
+dev_getattr_infiniband_dev(ncollectd_t)
+dev_read_rand(ncollectd_t)
+dev_read_sysfs(ncollectd_t)
+dev_read_urand(ncollectd_t)
+
+domain_use_interactive_fds(ncollectd_t)
+domain_read_all_domains_state(ncollectd_t)
+
+files_getattr_all_dirs(ncollectd_t)
+
+fs_getattr_all_fs(ncollectd_t)
+fs_getattr_all_dirs(ncollectd_t)
+
+fs_list_cgroup_dirs(ncollectd_t)
+fs_read_cgroup_files(ncollectd_t)
+
+udev_read_db(ncollectd_t)
+
+init_read_utmp(ncollectd_t)
+
+logging_send_syslog_msg(ncollectd_t)
+
+sysnet_dns_name_resolve(ncollectd_t)
+
+varnishd_read_lib_files(ncollectd_t)
+
+tunable_policy(`use_ecryptfs_home_dirs',`
+	fs_manage_ecryptfs_files(ncollectd_t)
+')
+
+tunable_policy(`ncollectd_tcp_network_connect',`
+	corenet_sendrecv_all_client_packets(ncollectd_t)
+	corenet_tcp_connect_all_ports(ncollectd_t)
+	corenet_tcp_sendrecv_all_ports(ncollectd_t)
+')
+
+tunable_policy(`ncollectd_tcp_network_listen',`
+  corenet_tcp_bind_generic_node(ncollectd_t)
+  corenet_tcp_bind_generic_port(ncollectd_t)
+  allow ncollectd_t self:tcp_socket { accept listen };
+')
+
+tunable_policy(`ncollectd_execmem',`
+  allow ncollectd_t self:process { execmem execstack };
+')
+
+optional_policy(`
+    lvm_read_config(ncollectd_t)
+')
+
+optional_policy(`
+	mysql_stream_connect(ncollectd_t)
+')
+
+optional_policy(`
+    netutils_domtrans_ping(ncollectd_t)
+')
+
+optional_policy(`
+	postgresql_stream_connect(ncollectd_t)
+')
+
+optional_policy(`
+    snmp_read_snmp_var_lib_dirs(ncollectd_t)
+')
+
+optional_policy(`
+	virt_read_config(ncollectd_t)
+	virt_stream_connect(ncollectd_t)
+')
+
+########################################
+#
+# Web ncollectd local policy
+#
+
+
+files_search_var_lib(ncollectd_script_t)	
+read_files_pattern(ncollectd_script_t, ncollectd_var_lib_t, ncollectd_var_lib_t)
+list_dirs_pattern(ncollectd_script_t, ncollectd_var_lib_t, ncollectd_var_lib_t)
+miscfiles_setattr_fonts_cache_dirs(ncollectd_script_t)
+
+manage_dirs_pattern(ncollectd_script_t, ncollectd_script_tmp_t, ncollectd_script_tmp_t)
+manage_files_pattern(ncollectd_script_t, ncollectd_script_tmp_t, ncollectd_script_tmp_t)
+files_tmp_filetrans(ncollectd_script_t, ncollectd_script_tmp_t, { file dir })	
+
+auth_read_passwd(ncollectd_script_t)

@@ -1,0 +1,16 @@
+/etc/rc\.d/init\.d/ncollectd	--	gen_context(system_u:object_r:ncollectd_initrc_exec_t,s0)
+
+/usr/lib/systemd/system/ncollectd.*  -- gen_context(system_u:object_r:ncollectd_unit_file_t,s0)
+
+/usr/sbin/ncollectd	--	gen_context(system_u:object_r:ncollectd_exec_t,s0)
+
+/var/lib/ncollectd(/.*)?	gen_context(system_u:object_r:ncollectd_var_lib_t,s0)
+
+/var/log/ncollectd(/.*)?		gen_context(system_u:object_r:ncollectd_log_t,s0)
+/var/log/ncollectd.log   	--	gen_context(system_u:object_r:ncollectd_log_t,s0)
+
+/var/run/ncollectd\.pid	--	gen_context(system_u:object_r:ncollectd_var_run_t,s0)
+/var/run/ncollectd(/.*)?		gen_context(system_u:object_r:ncollectd_var_run_t,s0)
+/var/run/ncollectd-unixsock  -s  gen_context(system_u:object_r:ncollectd_var_run_t,s0)
+
+/usr/share/ncollectd/collection3/bin/.*\.cgi	--	gen_context(system_u:object_r:ncollectd_script_exec_t,s0)
