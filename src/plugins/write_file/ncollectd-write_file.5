@@ -1,0 +1,61 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-write_file 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_file man page"
+.SH NAME
+ncollectd-write_file \- Documentation of ncollectd's write_file plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_file
+.br
+\fBplugin\fP write_file {
+    \fBinstance\fP \fIname\fP {
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-notification\fP \fItext|json|protob\fP
+        \fBwrite\fP \fImetrics|notifications\fP
+        \fBfile\fP "\fIfile-name\fP"
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_file\fP plugin writes the metrics to a file.
+.PP
+The plugin has the following options:
+.TP
+\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+Selects the format in which metrics are written.
+.RS
+.TP
+\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+Format the metrics with the influxdb line format.
+.TP
+\fBgraphite\fP
+Format the metrics with the graphite plaintext format.
+.TP
+\fBjson\fP
+Format the metrics as json message.
+.TP
+\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+Format the metrics with the karirosdb text format or json format.
+.TP
+\fBopentsdb\fP [telnet|json]
+Format the metrics with the opentsdb text format or json format.
+.TP
+\fBopenmetrics\fP [text|protob]
+Format the metrics with the openmetrics text formar.
+.TP
+\fBremote\fP [metadata]
+Format the metrics with the protocol buffer remote format.
+.RE
+.TP
+\fBformat-notification\fP \fItext|json|protob\fP
+Selects the format in which notifications are written.
+.TP
+\fBwrite\fP \fImetrics|notifications\fP
+If set to \fImetrics\fP (the default) the plugin will handle metrics.
+If set to \fInotifications\fP the plugin will handle notifications.
+.TP
+\fBfile\fP "\fIfile-name\fP"
+If the filename is \fIstderr\fP the metrics are send to standard error, if the filename is
+\fIstdout\fP the metrics are send to standard output. If the option \fBfile\fP is not set the
+metrics are send to the standard output.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
