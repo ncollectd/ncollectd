@@ -1,0 +1,28 @@
+plugin_option(PLUGIN_DOCKER "Docker statistics" ON)
+
+set(BUILD_PLUGIN_DOCKER 0)
+
+if(PLUGIN_DOCKER)
+    find_package(LibCurl)
+    if(LIBCURL_FOUND)
+        if (LIBCURL_VERSION VERSION_GREATER_EQUAL "7.66.0")
+            set(BUILD_PLUGIN_DOCKER 1)
+        else()
+            set(BUILD_PLUGIN_DOCKER_REASON "libcurl less than 7.66.0" PARENT_SCOPE)
+        endif()
+    else()
+        set(BUILD_PLUGIN_DOCKER_REASON "libcurl not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_DOCKER ${BUILD_PLUGIN_DOCKER} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_DOCKER)
+    set(PLUGIN_DOCKER_SRC docker.c)
+    add_library(docker MODULE ${PLUGIN_DOCKER_SRC})
+    target_link_libraries(docker PRIVATE libutils libmetric libxson LibCurl::LibCurl)
+    set_target_properties(docker PROPERTIES PREFIX "")
+    install(TARGETS docker DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-docker.5 ncollectd-docker.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-docker.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()

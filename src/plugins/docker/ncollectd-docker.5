@@ -1,0 +1,43 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-docker 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd docker man page"
+.SH NAME
+ncollectd-docker \- Documentation of ncollectd's docker plugin
+.SH SYNOPSIS
+\fBload-plugin\fP docker
+.br
+\fBplugin\fP docker {
+    \fBinterval\fP \fIinterval\fP {
+        \fBurl\fP \fIurl\fP
+        \fBsocket-path\fP \fIpath\fP
+        \fBlabels\fP \fIkey\fP \fIvalue\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBdocker\fP plugin collect statistics from docker running containers.
+.PP
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
+a docker daemon.
+.PP
+The following options are valid within \fBinstance\fP blocks:
+.TP
+\fBurl\fP \fIurl\fP
+.TP
+\fBsocket-path\fP \fIpath\fP
+.TP
+\fBlabels\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple time in the \fBinstance\fP block.
+.TP
+\fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for requests to the docker daemon.
+seconds.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
