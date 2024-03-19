@@ -1,29 +1,12 @@
-/**
- * collectd - src/md.c
- * Copyright (C) 2010,2011  Michael Hanselmann
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Author:
- *   Michael Hanselmann
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2010,2011 Michael Hanselmann
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Michael Hanselmann
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
-#include "utils/ignorelist/ignorelist.h"
+#include "libutils/common.h"
+#include "libutils/exclist.h"
 
 #include <sys/ioctl.h>
 
@@ -34,158 +17,211 @@
 #include <sys/sysmacros.h>
 #endif
 
-#define PROC_DISKSTATS "/proc/diskstats"
+static char *path_proc_diskstats;
+
 #define DEV_DIR "/dev"
 
-static const char *config_keys[] = {"Device", "IgnoreSelected"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
+static exclist_t excl_device;
 
-static ignorelist_t *ignorelist;
+enum {
+    FAM_MD_ACTIVE,
+    FAM_MD_FAILED,
+    FAM_MD_SPARE,
+    FAM_MD_MISSING,
+    FAM_MD_MAX,
+};
 
-static int md_config(const char *key, const char *value) {
-  if (ignorelist == NULL)
-    ignorelist = ignorelist_create(/* invert = */ 1);
-  if (ignorelist == NULL)
-    return 1;
+static metric_family_t fams[FAM_MD_MAX] = {
+    [FAM_MD_ACTIVE] = {
+        .name = "system_md_active",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of active (in sync) disks.",
+    },
+    [FAM_MD_FAILED] = {
+        .name = "system_md_failed",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of failed disks.",
+    },
+    [FAM_MD_SPARE] = {
+        .name = "system_md_spare",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of stand-by disks.",
+    },
+    [FAM_MD_MISSING] = {
+        .name = "system_md_missing",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of missing disks.",
+    },
+};
 
-  if (strcasecmp(key, "Device") == 0) {
-    ignorelist_add(ignorelist, value);
-  } else if (strcasecmp(key, "IgnoreSelected") == 0) {
-    ignorelist_set_invert(ignorelist, IS_TRUE(value) ? 0 : 1);
-  } else {
-    return -1;
-  }
+static void md_process(const int minor, const char *path)
+{
+    int fd;
+    struct stat st;
+    mdu_array_info_t array;
 
-  return 0;
+    fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        PLUGIN_WARNING("open(%s): %s", path, STRERRNO);
+        return;
+    }
+
+    if (fstat(fd, &st) < 0) {
+        PLUGIN_WARNING("Unable to fstat file descriptor for %s: %s", path, STRERRNO);
+        close(fd);
+        return;
+    }
+
+    if (!S_ISBLK(st.st_mode)) {
+        PLUGIN_WARNING("%s is no block device", path);
+        close(fd);
+        return;
+    }
+
+    if (st.st_rdev != makedev(MD_MAJOR, minor)) {
+        PLUGIN_WARNING("Major/minor of %s are %i:%i, should be %i:%i", path,
+                       (int)major(st.st_rdev), (int)minor(st.st_rdev), (int)MD_MAJOR, minor);
+        close(fd);
+        return;
+    }
+
+    /* Retrieve md information */
+    if (ioctl(fd, GET_ARRAY_INFO, &array) < 0) {
+        PLUGIN_WARNING("Unable to retrieve array info from %s: %s", path, STRERRNO);
+        close(fd);
+        return;
+    }
+
+    close(fd);
+
+    /*
+     * The mdu_array_info_t structure contains numbers of disks in the array.
+     * However, disks are accounted for more than once:
+     *
+     * active:  Number of active (in sync) disks.
+     * spare:   Number of stand-by disks.
+     * working: Number of working disks. (active + sync)
+     * failed:  Number of failed disks.
+     * nr:      Number of physically present disks. (working + failed)
+     * raid:    Number of disks in the RAID. This may be larger than "nr" if
+     *                  disks are missing and smaller than "nr" when spare disks are
+     *                  around.
+     */
+    char minor_buffer[21];
+    ssnprintf(minor_buffer, sizeof(minor_buffer), "%i", minor);
+
+    metric_family_append(&fams[FAM_MD_ACTIVE], VALUE_GAUGE(array.active_disks), NULL,
+                         &(label_pair_const_t){.name="device", .value=path},
+                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+
+    metric_family_append(&fams[FAM_MD_FAILED], VALUE_GAUGE(array.failed_disks), NULL,
+                         &(label_pair_const_t){.name="device", .value=path},
+                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+
+    metric_family_append(&fams[FAM_MD_SPARE], VALUE_GAUGE(array.spare_disks), NULL,
+                         &(label_pair_const_t){.name="device", .value=path},
+                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+
+    double disks_missing = 0.0;
+    if (array.raid_disks > array.nr_disks)
+        disks_missing = (double)(array.raid_disks - array.nr_disks);
+
+    metric_family_append(&fams[FAM_MD_MISSING], VALUE_GAUGE(disks_missing), NULL,
+                         &(label_pair_const_t){.name="device", .value=path},
+                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
 }
 
-static void md_submit(const int minor, const char *type_instance,
-                      gauge_t value) {
-  value_list_t vl = VALUE_LIST_INIT;
+static int md_read(void)
+{
+    FILE *fh = fopen(path_proc_diskstats, "r");
+    if (fh == NULL) {
+        PLUGIN_WARNING("Unable to open %s: %s", path_proc_diskstats, STRERRNO);
+        return -1;
+    }
 
-  vl.values = &(value_t){.gauge = value};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, "md", sizeof(vl.plugin));
-  snprintf(vl.plugin_instance, sizeof(vl.plugin_instance), "%i", minor);
-  sstrncpy(vl.type, "md_disks", sizeof(vl.type));
-  sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
+    /* Iterate md devices */
+    char buffer[1024];
+    while (fgets(buffer, sizeof(buffer), fh) != NULL) {
+        char path[PATH_MAX];
+        char *fields[4];
+        char *name;
+        int major, minor;
 
-  plugin_dispatch_values(&vl);
-} /* void md_submit */
+        /* Extract interesting fields */
+        if (strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields)) < 3)
+            continue;
 
-static void md_process(const int minor, const char *path) {
-  int fd;
-  struct stat st;
-  mdu_array_info_t array;
-  gauge_t disks_missing;
+        major = atoi(fields[0]);
 
-  fd = open(path, O_RDONLY);
-  if (fd < 0) {
-    WARNING("md: open(%s): %s", path, STRERRNO);
-    return;
-  }
+        if (major != MD_MAJOR)
+            continue;
 
-  if (fstat(fd, &st) < 0) {
-    WARNING("md: Unable to fstat file descriptor for %s: %s", path, STRERRNO);
-    close(fd);
-    return;
-  }
+        minor = atoi(fields[1]);
+        name = fields[2];
 
-  if (!S_ISBLK(st.st_mode)) {
-    WARNING("md: %s is no block device", path);
-    close(fd);
-    return;
-  }
+        if (!exclist_match(&excl_device, name))
+            continue;
 
-  if (st.st_rdev != makedev(MD_MAJOR, minor)) {
-    WARNING("md: Major/minor of %s are %i:%i, should be %i:%i", path,
-            (int)major(st.st_rdev), (int)minor(st.st_rdev), (int)MD_MAJOR,
-            minor);
-    close(fd);
-    return;
-  }
+        /* FIXME: Don't hardcode path. Walk /dev collecting major,
+         * minor and name, then use lookup table to find device.
+         * Alternatively create a temporary device file with correct
+         * major/minor, but that again can be tricky if the filesystem
+         * with the device file is mounted using the "nodev" option.
+         */
+        snprintf(path, sizeof(path), "%s/%s", DEV_DIR, name);
 
-  /* Retrieve md information */
-  if (ioctl(fd, GET_ARRAY_INFO, &array) < 0) {
-    WARNING("md: Unable to retrieve array info from %s: %s", path, STRERRNO);
-    close(fd);
-    return;
-  }
+        md_process(minor, path);
+    }
 
-  close(fd);
+    fclose(fh);
 
-  /*
-   * The mdu_array_info_t structure contains numbers of disks in the array.
-   * However, disks are accounted for more than once:
-   *
-   * active:  Number of active (in sync) disks.
-   * spare:   Number of stand-by disks.
-   * working: Number of working disks. (active + sync)
-   * failed:  Number of failed disks.
-   * nr:      Number of physically present disks. (working + failed)
-   * raid:    Number of disks in the RAID. This may be larger than "nr" if
-   *          disks are missing and smaller than "nr" when spare disks are
-   *          around.
-   */
-  md_submit(minor, "active", (gauge_t)array.active_disks);
-  md_submit(minor, "failed", (gauge_t)array.failed_disks);
-  md_submit(minor, "spare", (gauge_t)array.spare_disks);
+    plugin_dispatch_metric_family_array(fams, FAM_MD_MAX, 0);
+    return 0;
+}
 
-  disks_missing = 0.0;
-  if (array.raid_disks > array.nr_disks)
-    disks_missing = (gauge_t)(array.raid_disks - array.nr_disks);
-  md_submit(minor, "missing", disks_missing);
-} /* void md_process */
+static int md_config(config_item_t *ci)
+{
+    int status = 0;
 
-static int md_read(void) {
-  FILE *fh;
-  char buffer[1024];
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+        if (strcasecmp(child->key, "device") == 0) {
+            status = cf_util_exclist(child, &excl_device);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
 
-  fh = fopen(PROC_DISKSTATS, "r");
-  if (fh == NULL) {
-    WARNING("md: Unable to open %s: %s", PROC_DISKSTATS, STRERRNO);
-    return -1;
-  }
+        if (status != 0)
+            return -1;
+    }
 
-  /* Iterate md devices */
-  while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-    char path[PATH_MAX];
-    char *fields[4];
-    char *name;
-    int major, minor;
+    return 0;
+}
 
-    /* Extract interesting fields */
-    if (strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields)) < 3)
-      continue;
+static int md_init(void)
+{
+    path_proc_diskstats = plugin_procpath("diskstats");
+    if (path_proc_diskstats == NULL) {
+        PLUGIN_ERROR("Cannot get proc path.");
+        return -1;
+    }
 
-    major = atoi(fields[0]);
+    return 0;
+}
 
-    if (major != MD_MAJOR)
-      continue;
+static int md_shutdown(void)
+{
+    free(path_proc_diskstats);
+    exclist_reset(&excl_device);
+    return 0;
+}
 
-    minor = atoi(fields[1]);
-    name = fields[2];
-
-    if (ignorelist_match(ignorelist, name))
-      continue;
-
-    /* FIXME: Don't hardcode path. Walk /dev collecting major,
-     * minor and name, then use lookup table to find device.
-     * Alternatively create a temporary device file with correct
-     * major/minor, but that again can be tricky if the filesystem
-     * with the device file is mounted using the "nodev" option.
-     */
-    snprintf(path, sizeof(path), "%s/%s", DEV_DIR, name);
-
-    md_process(minor, path);
-  }
-
-  fclose(fh);
-
-  return 0;
-} /* int md_read */
-
-void module_register(void) {
-  plugin_register_config("md", md_config, config_keys, config_keys_num);
-  plugin_register_read("md", md_read);
-} /* void module_register */
+void module_register(void)
+{
+    plugin_register_init("md", md_init);
+    plugin_register_config("md", md_config);
+    plugin_register_read("md", md_read);
+    plugin_register_shutdown("md", md_shutdown);
+}

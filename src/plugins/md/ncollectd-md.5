@@ -1,0 +1,23 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-md 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd md man page"
+.SH NAME
+ncollectd-md \- Documentation of ncollectd's md plugin
+.SH SYNOPSIS
+\fBload-plugin\fP md
+.br
+\fBplugin\fP md {
+    \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice-name\fP
+.br
+}
+.SH DESCRIPTION
+The \fBmd\fP plugin reports the number of disks in various states in Linux software RAID devices.
+.PP
+The plugin support the following option:
+.PP
+.TP
+\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice-name\fP
+Select md devices based on device name. The \fIdevice-name\fP is the basename of
+the device, i. e. the name of the block device without the leading \f(CW/dev/\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
