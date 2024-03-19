@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix NSD_
+%define hash-function-name nsd_hash
+%define lookup-function-name nsd_get_key
+%define slot-name key
+%{
+%}
+struct nsd_metric {
+    char *key;
+    int fam;
+    char *lkey;
+    char *lvalue;
+};
+%%
+num.queries,      FAM_NSD_QUERIES, NULL, NULL
+serverqueries,    FAM_NSD_SERVER_QUERIES, NULL, NULL
+time.boot,        FAM_NSD_UPTIME_SECONDS, NULL, NULL
+size.db.disk,     FAM_NSD_DB_DISK_BYTES, NULL, NULL
+size.db.mem,      FAM_NSD_DB_MEMORY_BYTES, NULL, NULL
+size.xfrd.mem,    FAM_NSD_XFRD_MEMORY_BYTES, NULL, NULL
+size.config.disk, FAM_NSD_CONFIG_DISK_BYTES, NULL, NULL
+size.config.mem,  FAM_NSD_CONFIG_MEMORY_BYTES, NULL, NULL
+num.type,         FAM_NSD_QUERY_TYPE, NULL, NULL
+num.opcode,       FAM_NSD_QUERY_OPCODE, NULL, NULL
+num.class,        FAM_NSD_QUERY_CLASS, NULL, NULL
+num.rcode,        FAM_NSD_ANSWER_RCODE, NULL, NULL
+num.edns,         FAM_NSD_QUERY_EDNS, NULL, NULL
+num.ednserr,      FAM_NSD_QUERY_EDNS_ERROR, NULL, NULL
+num.udp,          FAM_NSD_QUERY_PROTOCOL, "protocol", "udp"
+num.udp6,         FAM_NSD_QUERY_PROTOCOL, "protocol", "udp6"
+num.tcp,          FAM_NSD_QUERY_PROTOCOL, "protocol", "tcp"
+num.tcp6,         FAM_NSD_QUERY_PROTOCOL, "protocol", "tcp6"
+num.tls,          FAM_NSD_QUERY_PROTOCOL, "protocol", "tls"
+num.tls6,         FAM_NSD_QUERY_PROTOCOL, "protocol", "tls6"
+num.answer_wo_aa, FAM_NSD_ANSWER_WITHOUT_AA, NULL, NULL
+num.rxerr,        FAM_NSD_QUERY_RX_ERROR, NULL, NULL
+num.txerr,        FAM_NSD_QUERY_TX_ERROR, NULL, NULL
+num.raxfr,        FAM_NSD_AXFR_REQUEST, NULL, NULL
+num.rixfr,        FAM_NSD_IXFR_REQUEST, NULL, NULL
+num.truncated,    FAM_NSD_ANSWER_TRUNCATED, NULL, NULL
+num.dropped,      FAM_NSD_QUERY_DROPPED, NULL, NULL
+zone.master,      FAM_NSD_ZONE_MASTER, NULL, NULL
+zone.slave,       FAM_NSD_ZONE_SLAVE, NULL, NULL

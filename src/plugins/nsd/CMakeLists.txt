@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_NSD "Name Server Daemon (NSD) statistics" ON)
+
+set(BUILD_PLUGIN_NSD 0)
+
+if(PLUGIN_NSD)
+    find_package(LibSsl)
+    if (LIBSSL_FOUND)
+        set(BUILD_PLUGIN_NSD 1)
+    else()
+        set(BUILD_PLUGIN_NSD_REASON "libssl not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_NSD ${BUILD_PLUGIN_NSD} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_NSD)
+    gperf_generate(nsd.gperf "${CMAKE_CURRENT_BINARY_DIR}/nsd.h" NSD_H)
+    set(PLUGIN_NSD_SRC nsd.c ${NSD_H})
+    add_library(nsd MODULE ${PLUGIN_NSD_SRC})
+    target_link_libraries(nsd PRIVATE libutils libmetric LibSsl::LibSsl)
+    set_target_properties(nsd PROPERTIES PREFIX "")
+    install(TARGETS nsd DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-nsd.5 ncollectd-nsd.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-nsd.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
