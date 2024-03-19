@@ -1,0 +1,36 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-nfs 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nfs man page"
+.SH NAME
+ncollectd-nfs \- Documentation of ncollectd's nfs plugin
+.SH SYNOPSIS
+\fBload-plugin\fP nfs
+.br
+\fBplugin\fP nfs {
+    \fBcollect\fP \fInfs-v2|nfs-v3|nfs-v4|mount-stats\fP
+.br
+}
+.SH DESCRIPTION
+The \fBnfs\fP plugin collects information about the client usage of the Network
+File System (NFS). It counts the number of procedure calls for each procedure,
+grouped by version and collects the statistics per mount point.
+.PP
+The \fBnfs\fP plugin the the following option:
+.TP 8
+\fBcollect\fP \fInfs-v2|nfs-v3|nfs-v4|mount-stats\fP
+The option \fInfs-v2\fP collect NFSv2 procedure call statistics, \fInfs-v3\fP collect NFSv3
+procedure call statistics and \fInfs-v4\fP collect NFSv4 procedure call statistics. The
+option \fImount-stats\fP collect statistics of NFS mounted filesystems.
+With \fIall\fP you can enable all options, and with \fI!all\fP you can disable all.
+Putting up \fB!\fP in front of an option you disable that option, for example: \fI!nfs-v2\fP.
+You can put multiple options in one line for example:
+
+    \fBcollect\fP \fI"!all"\fP \fInfs-v4\fP
+
+You can disable or enable multiple options with glob:
+
+    \fBcollect\fP \fI"!nfs-*"\fP \fImount-stats\fP
+
+By default all options are enabled.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
