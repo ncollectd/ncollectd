@@ -1,0 +1,150 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix REDIS_INFO_
+%define hash-function-name redis_info_hash
+%define lookup-function-name redis_info_get_key
+%define slot-name key
+%{
+%}
+struct redis_info {
+    char *key;
+    int fam;
+};
+%%
+redis_version,                   FAM_REDIS_VERSION_INFO
+redis_mode,                      FAM_REDIS_MODE
+uptime_in_seconds,               FAM_REDIS_UPTIME_SECONDS
+connected_clients,               FAM_REDIS_CLIENTS_CONNECTED
+cluster_connections,             FAM_REDIS_CLUSTER_CONNECTIONS
+maxclients,                      FAM_REDIS_MAX_CLIENTS
+client_longest_output_list,      FAM_REDIS_CLIENT_LONGEST_OUTPUT_LIST
+client_biggest_input_buf,        FAM_REDIS_CLIENT_BIGGEST_INPUT_BUF
+client_recent_max_output_buffer, FAM_REDIS_CLIENT_RECENT_MAX_OUTPUT_BUFFER_BYTES
+client_recent_max_input_buffer,  FAM_REDIS_CLIENT_RECENT_MAX_INPUT_BUFFER_BYTES
+blocked_clients,                 FAM_REDIS_CLIENTS_BLOCKED
+tracking_clients,                FAM_REDIS_CLIENTS_TRACKING
+clients_in_timeout_table,        FAM_REDIS_CLIENTS_IN_TIMEOUT_TABLE
+io_threads_active,               FAM_REDIS_IO_THREADS_ACTIVE
+used_memory,                     FAM_REDIS_MEMORY_USED_BYTES
+used_memory_rss,                 FAM_REDIS_MEMORY_USED_RSS_BYTES
+used_memory_peak,                FAM_REDIS_MEMORY_USED_PEAK_BYTES
+used_memory_peak_perc,           FAM_REDIS_MEMORY_USED_PEAK_RATIO
+used_memory_overhead,            FAM_REDIS_MEMORY_USED_OVERHEAD_BYTES
+used_memory_startup,             FAM_REDIS_MEMORY_USED_STARTUP_BYTES
+used_memory_dataset,             FAM_REDIS_MEMORY_USED_DATASET_BYTES
+used_memory_dataset_perc,        FAM_REDIS_MEMORY_USED_DATASET_RATIO
+used_memory_lua,                 FAM_REDIS_MEMORY_USED_LUA_BYTES
+used_memory_scripts,             FAM_REDIS_MEMORY_USED_SCRIPTS_BYTES
+maxmemory,                       FAM_REDIS_MEMORY_MAX_BYTES
+number_of_cached_scripts,        FAM_REDIS_NUMBER_OF_CACHED_SCRIPTS
+allocator_allocated,             FAM_REDIS_ALLOCATOR_ALLOCATED_BYTES
+allocator_active,                FAM_REDIS_ALLOCATOR_ACTIVE_BYTES
+allocator_resident,              FAM_REDIS_ALLOCATOR_RESIDENT_BYTES
+allocator_frag_ratio,            FAM_REDIS_ALLOCATOR_FRAG_RATIO
+allocator_frag_bytes,            FAM_REDIS_ALLOCATOR_FRAG_BYTES
+allocator_rss_ratio,             FAM_REDIS_ALLOCATOR_RSS_RATIO
+allocator_rss_bytes,             FAM_REDIS_ALLOCATOR_RSS_BYTES
+rss_overhead_ratio,              FAM_REDIS_RSS_OVERHEAD_RATIO
+rss_overhead_bytes,              FAM_REDIS_RSS_OVERHEAD_BYTES
+mem_fragmentation_ratio,         FAM_REDIS_MEMORY_FRAGMENTATION_RATIO
+mem_fragmentation_bytes,         FAM_REDIS_MEMORY_FRAGMENTATION_BYTES
+mem_not_counted_for_evict,       FAM_REDIS_MEMORY_NOT_COUNTED_FOR_EVICT_BYTES
+mem_replication_backlog,         FAM_REDIS_MEMORY_REPLICATION_BACKLOG_BYTES
+mem_clients_slaves,              FAM_REDIS_MEMORY_CLIENTS_SLAVES_BYTES
+mem_clients_normal,              FAM_REDIS_MEMORY_CLIENTS_NORMAL_BYTES
+mem_aof_buffer,                  FAM_REDIS_MEMORY_AOF_BUFFER_BYTES
+active_defrag_running,           FAM_REDIS_ACTIVE_DEFRAG_RUNNING
+lazyfree_pending_objects,        FAM_REDIS_LAZYFREE_PENDING_OBJECTS
+lazyfreed_objects,               FAM_REDIS_LAZYFREED_OBJECTS
+loading,                         FAM_REDIS_LOADING_DUMP_FILE
+rdb_changes_since_last_save,     FAM_REDIS_RDB_CHANGES_SINCE_LAST_SAVE
+rdb_bgsave_in_progress,          FAM_REDIS_RDB_BGSAVE_IN_PROGRESS
+rdb_last_save_time,              FAM_REDIS_RDB_LAST_SAVE_TIME
+rdb_last_bgsave_status,          FAM_REDIS_RDB_LAST_BGSAVE_STATUS
+rdb_last_bgsave_time_sec,        FAM_REDIS_RDB_LAST_BGSAVE_DURATION_SECONDS
+rdb_current_bgsave_time_sec,     FAM_REDIS_RDB_CURRENT_BGSAVE_DURATION_SECONDS
+rdb_last_cow_size,               FAM_REDIS_RDB_LAST_COW_SIZE_BYTES
+aof_enabled,                     FAM_REDIS_AOF_ENABLED
+aof_rewrite_in_progress,         FAM_REDIS_AOF_REWRITE_IN_PROGRESS
+aof_rewrite_scheduled,           FAM_REDIS_AOF_REWRITE_SCHEDULED
+aof_last_rewrite_time_sec,       FAM_REDIS_AOF_LAST_REWRITE_DURATION_SECONDS
+aof_current_rewrite_time_sec,    FAM_REDIS_AOF_CURRENT_REWRITE_DURATION_SECONDS
+aof_last_bgrewrite_status,       FAM_REDIS_AOF_LAST_BGREWRITE_STATUS
+aof_last_write_status,           FAM_REDIS_AOF_LAST_WRITE_STATUS
+aof_last_cow_size,               FAM_REDIS_AOF_LAST_COW_SIZE_BYTES
+aof_current_size,                FAM_REDIS_AOF_CURRENT_SIZE_BYTES
+aof_base_size,                   FAM_REDIS_AOF_BASE_SIZE_BYTES
+aof_pending_rewrite,             FAM_REDIS_AOF_PENDING_REWRITE
+aof_buffer_length,               FAM_REDIS_AOF_BUFFER_LENGTH_BYTES
+aof_rewrite_buffer_length,       FAM_REDIS_AOF_REWRITE_BUFFER_LENGTH_BYTES
+aof_pending_bio_fsync,           FAM_REDIS_AOF_PENDING_BIO_FSYNC
+aof_delayed_fsync,               FAM_REDIS_AOF_DELAYED_FSYNC
+module_fork_in_progress,         FAM_REDIS_MODULE_FORK_IN_PROGRESS
+module_fork_last_cow_size,       FAM_REDIS_MODULE_FORK_LAST_COW_SIZE_BYTES
+total_connections_received,      FAM_REDIS_CONNECTIONS_RECEIVED
+total_commands_processed,        FAM_REDIS_COMMANDS_PROCESSED
+total_net_input_bytes,           FAM_REDIS_INPUT_BYTES
+total_net_output_bytes,          FAM_REDIS_OUTPUT_BYTES
+rejected_connections,            FAM_REDIS_REJECTED_CONNECTIONS
+sync_full,                       FAM_REDIS_REPLICA_RESYNCS_FULL
+sync_partial_ok,                 FAM_REDIS_REPLICA_PARTIAL_RESYNC_ACCEPTED
+sync_partial_err,                FAM_REDIS_REPLICA_PARTIAL_RESYNC_DENIED
+expired_keys,                    FAM_REDIS_EXPIRED_KEYS
+expired_stale_perc,              FAM_REDIS_EXPIRED_STALE_RATIO
+expired_time_cap_reached_count,  FAM_REDIS_EXPIRED_TIME_CAP_REACHED
+expire_cycle_cpu_milliseconds,   FAM_REDIS_EXPIRE_CYCLE_CPU_MSECONDS
+evicted_keys,                    FAM_REDIS_EVICTED_KEYS
+keyspace_hits,                   FAM_REDIS_KEYSPACE_HITS
+keyspace_misses,                 FAM_REDIS_KEYSPACE_MISSES
+pubsub_channels,                 FAM_REDIS_PUBSUB_CHANNELS
+pubsub_patterns,                 FAM_REDIS_PUBSUB_PATTERNS
+latest_fork_usec,                FAM_REDIS_LATEST_FORK_USECECONDS
+total_forks,                     FAM_REDIS_FORKS
+migrate_cached_sockets,          FAM_REDIS_MIGRATE_CACHED_SOCKETS
+slave_expires_tracked_keys,      FAM_REDIS_SLAVE_EXPIRES_TRACKED_KEYS
+active_defrag_hits,              FAM_REDIS_ACTIVE_DEFRAG_HITS
+active_defrag_misses,            FAM_REDIS_ACTIVE_DEFRAG_MISSES
+active_defrag_key_hits,          FAM_REDIS_ACTIVE_DEFRAG_KEY_HITS
+active_defrag_key_misses,        FAM_REDIS_ACTIVE_DEFRAG_KEY_MISSES
+tracking_total_keys,             FAM_REDIS_TRACKING_KEYS
+tracking_total_items,            FAM_REDIS_TRACKING_ITEMS
+tracking_total_prefixes,         FAM_REDIS_TRACKING_PREFIXES
+unexpected_error_replies,        FAM_REDIS_UNEXPECTED_ERROR_REPLIES
+total_error_replies,             FAM_REDIS_ERROR_REPLIES
+total_reads_processed,           FAM_REDIS_READS_PROCESSED
+total_writes_processed,          FAM_REDIS_WRITES_PROCESSED
+io_threaded_reads_processed,     FAM_REDIS_IO_THREADED_READS_PROCESSED
+io_threaded_writes_processed,    FAM_REDIS_IO_THREADED_WRITES_PROCESSED
+used_cpu_sys,                    FAM_REDIS_CPU_SYS_SECONDS
+used_cpu_user,                   FAM_REDIS_CPU_USER_SECONDS
+used_cpu_sys_children,           FAM_REDIS_CPU_SYS_CHILDREN_SECONDS
+used_cpu_user_children,          FAM_REDIS_CPU_USER_CHILDREN_SECONDS
+used_cpu_sys_main_thread,        FAM_REDIS_CPU_SYS_MAIN_THREAD_SECONDS
+used_cpu_user_main_thread,       FAM_REDIS_CPU_USER_MAIN_THREAD_SECONDS
+cluster_enabled,                 FAM_REDIS_CLUSTER_ENABLED
+connected_slaves,                FAM_REDIS_CONNECTED_SLAVES
+min_slaves_good_slaves,          FAM_REDIS_GOOD_SLAVES
+role,                            FAM_REDIS_ROLE
+master_failover_state,           FAM_REDIS_MASTER_FAILOVER_STATE
+master_repl_offset,              FAM_REDIS_MASTER_REPL_OFFSET
+second_repl_offset,              FAM_REDIS_SECOND_REPL_OFFSET
+repl_backlog_active,             FAM_REDIS_REPLICATION_BACKLOG_ACTIVE
+repl_backlog_size,               FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTE
+repl_backlog_first_byte_offset,  FAM_REDIS_REPLICATION_BACKLOG_FIRST_BYTE_OFFSET
+repl_backlog_histlen,            FAM_REDIS_REPLICATION_BACKLOG_HIST_BYTES
+master_link_status,              FAM_REDIS_MASTER_LINK_UP
+master_last_io_seconds_ago,      FAM_REDIS_MASTER_LAST_IO_SECONDS
+master_sync_in_progress,         FAM_REDIS_MASTER_SYNC_IN_PROGRESS
+slave_repl_offset,               FAM_REDIS_SLAVE_REPLICATION_OFFSET
+slave_priority,                  FAM_REDIS_SLAVE_PRIORITY
+slave_read_only,                 FAM_REDIS_SLAVE_READ_ONLY
+sentinel_masters,                FAM_REDIS_SENTINEL_MASTERS
+sentinel_tilt,                   FAM_REDIS_SENTINEL_TILT
+sentinel_running_scripts,        FAM_REDIS_SENTINEL_RUNNING_SCRIPTS
+sentinel_scripts_queue_length,   FAM_REDIS_SENTINEL_SCRIPTS_QUEUE_LENGTH
+sentinel_simulate_failure_flags, FAM_REDIS_SENTINEL_SIMULATE_FAILURE_FLAGS

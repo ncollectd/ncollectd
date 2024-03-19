@@ -1,32 +1,17 @@
-/**
- * collectd - src/redis.c, based on src/memcached.c
- * Copyright (C) 2010       Andrés J. Díaz <ajdiaz@connectical.com>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Andrés J. Díaz <ajdiaz@connectical.com>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-or-late
+// SPDX-FileCopyrightText: Copyright (C) 2010 Andrés J. Díaz
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Andrés J. Díaz <ajdiaz at connectical.com>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
 #include <hiredis/hiredis.h>
 #include <sys/time.h>
+
+#include "plugins/redis/redis_fams.h"
+#include "plugins/redis/redis_info.h"
 
 #define REDIS_DEF_HOST "localhost"
 #define REDIS_DEF_PASSWD ""
@@ -34,781 +19,756 @@
 #define REDIS_DEF_TIMEOUT_SEC 2
 #define REDIS_DEF_DB_COUNT 256
 #define MAX_REDIS_VAL_SIZE 256
-#define MAX_REDIS_QUERY 2048
-
-/* Redis plugin configuration example:
- *
- * <Plugin redis>
- *   <Node "mynode">
- *     Host "localhost"
- *     Port "6379"
- *     Timeout 2
- *     Password "foobar"
- *   </Node>
- * </Plugin>
- */
 
 struct redis_query_s;
 typedef struct redis_query_s redis_query_t;
 struct redis_query_s {
-  char query[MAX_REDIS_QUERY];
-  char type[DATA_MAX_NAME_LEN];
-  char instance[DATA_MAX_NAME_LEN];
-  int database;
-
-  redis_query_t *next;
+    char *query;
+    char *metric;
+    metric_type_t type;
+    label_set_t labels;
+    int database;
+    redis_query_t *next;
 };
 
-struct prev_s {
-  derive_t keyspace_hits;
-  derive_t keyspace_misses;
-};
-typedef struct prev_s prev_t;
+typedef struct {
+    char *name;
+    char *host;
+    int port;
+    char *socket;
+    char *passwd;
+    struct timeval timeout;
+    label_set_t labels;
+    redisContext *redisContext;
+    redis_query_t *queries;
+    metric_family_t fams[FAM_REDIS_MAX];
+} redis_node_t;
 
-struct redis_node_s;
-typedef struct redis_node_s redis_node_t;
-struct redis_node_s {
-  char *name;
-  char *host;
-  char *socket;
-  char *passwd;
-  int port;
-  struct timeval timeout;
-  bool report_command_stats;
-  bool report_cpu_usage;
-  redisContext *redisContext;
-  redis_query_t *queries;
-  prev_t prev;
-
-  redis_node_t *next;
-};
-
-static bool redis_have_instances;
-static int redis_read(user_data_t *user_data);
-
-static void redis_node_free(void *arg) {
-  redis_node_t *rn = arg;
-  if (rn == NULL)
-    return;
-
-  redis_query_t *rq = rn->queries;
-  while (rq != NULL) {
-    redis_query_t *next = rq->next;
-    sfree(rq);
-    rq = next;
-  }
-
-  if (rn->redisContext)
-    redisFree(rn->redisContext);
-  sfree(rn->name);
-  sfree(rn->host);
-  sfree(rn->socket);
-  sfree(rn->passwd);
-  sfree(rn);
-} /* void redis_node_free */
-
-static int redis_node_add(redis_node_t *rn) /* {{{ */
+static void redis_instance_free(void *arg)
 {
-  DEBUG("redis plugin: Adding node \"%s\".", rn->name);
+    redis_node_t *rn = arg;
+    if (rn == NULL)
+        return;
 
-  /* Disable automatic generation of default instance in the init callback. */
-  redis_have_instances = true;
-
-  char cb_name[sizeof("redis/") + DATA_MAX_NAME_LEN];
-  ssnprintf(cb_name, sizeof(cb_name), "redis/%s", rn->name);
-
-  return plugin_register_complex_read(
-      /* group = */ "redis",
-      /* name      = */ cb_name,
-      /* callback  = */ redis_read,
-      /* interval  = */ 0,
-      &(user_data_t){
-          .data = rn,
-          .free_func = redis_node_free,
-      });
-} /* }}} */
-
-static redis_query_t *redis_config_query(oconfig_item_t *ci) /* {{{ */
-{
-  redis_query_t *rq;
-  int status;
-
-  rq = calloc(1, sizeof(*rq));
-  if (rq == NULL) {
-    ERROR("redis plugin: calloc failed adding redis_query.");
-    return NULL;
-  }
-  status = cf_util_get_string_buffer(ci, rq->query, sizeof(rq->query));
-  if (status != 0)
-    goto err;
-
-  /*
-   * Default to a gauge type.
-   */
-  (void)strncpy(rq->type, "gauge", sizeof(rq->type));
-  (void)sstrncpy(rq->instance, rq->query, sizeof(rq->instance));
-  replace_special(rq->instance, sizeof(rq->instance));
-
-  rq->database = 0;
-
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *option = ci->children + i;
-
-    if (strcasecmp("Type", option->key) == 0) {
-      status = cf_util_get_string_buffer(option, rq->type, sizeof(rq->type));
-    } else if (strcasecmp("Instance", option->key) == 0) {
-      status =
-          cf_util_get_string_buffer(option, rq->instance, sizeof(rq->instance));
-    } else if (strcasecmp("Database", option->key) == 0) {
-      status = cf_util_get_int(option, &rq->database);
-      if (rq->database < 0) {
-        WARNING("redis plugin: The \"Database\" option must be positive "
-                "integer or zero");
-        status = -1;
-      }
-    } else {
-      WARNING("redis plugin: unknown configuration option: %s", option->key);
-      status = -1;
-    }
-    if (status != 0)
-      goto err;
-  }
-  return rq;
-err:
-  free(rq);
-  return NULL;
-} /* }}} */
-
-static int redis_config_node(oconfig_item_t *ci) /* {{{ */
-{
-  redis_node_t *rn = calloc(1, sizeof(*rn));
-  if (rn == NULL) {
-    ERROR("redis plugin: calloc failed adding node.");
-    return ENOMEM;
-  }
-
-  rn->port = REDIS_DEF_PORT;
-  rn->timeout.tv_sec = REDIS_DEF_TIMEOUT_SEC;
-  rn->report_cpu_usage = true;
-
-  rn->host = strdup(REDIS_DEF_HOST);
-  if (rn->host == NULL) {
-    ERROR("redis plugin: strdup failed adding node.");
-    sfree(rn);
-    return ENOMEM;
-  }
-
-  int status = cf_util_get_string(ci, &rn->name);
-  if (status != 0) {
-    sfree(rn->host);
-    sfree(rn);
-    return status;
-  }
-
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *option = ci->children + i;
-
-    if (strcasecmp("Host", option->key) == 0)
-      status = cf_util_get_string(option, &rn->host);
-    else if (strcasecmp("Port", option->key) == 0) {
-      status = cf_util_get_port_number(option);
-      if (status > 0) {
-        rn->port = status;
-        status = 0;
-      }
-    } else if (strcasecmp("Socket", option->key) == 0) {
-      status = cf_util_get_string(option, &rn->socket);
-    } else if (strcasecmp("Query", option->key) == 0) {
-      redis_query_t *rq = redis_config_query(option);
-      if (rq == NULL) {
-        status = 1;
-      } else {
-        rq->next = rn->queries;
-        rn->queries = rq;
-      }
-    } else if (strcasecmp("Timeout", option->key) == 0) {
-      int timeout;
-      status = cf_util_get_int(option, &timeout);
-      if (status == 0) {
-        rn->timeout.tv_usec = timeout * 1000;
-        rn->timeout.tv_sec = rn->timeout.tv_usec / 1000000L;
-        rn->timeout.tv_usec %= 1000000L;
-      }
-    } else if (strcasecmp("Password", option->key) == 0)
-      status = cf_util_get_string(option, &rn->passwd);
-    else if (strcasecmp("ReportCommandStats", option->key) == 0)
-      status = cf_util_get_boolean(option, &rn->report_command_stats);
-    else if (strcasecmp("ReportCpuUsage", option->key) == 0)
-      status = cf_util_get_boolean(option, &rn->report_cpu_usage);
-    else
-      WARNING("redis plugin: Option `%s' not allowed inside a `Node' "
-              "block. I'll ignore this option.",
-              option->key);
-
-    if (status != 0)
-      break;
-  }
-
-  if (status != 0) {
-    redis_node_free(rn);
-    return status;
-  }
-
-  return redis_node_add(rn);
-} /* }}} int redis_config_node */
-
-static int redis_config(oconfig_item_t *ci) /* {{{ */
-{
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *option = ci->children + i;
-
-    if (strcasecmp("Node", option->key) == 0)
-      redis_config_node(option);
-    else
-      WARNING("redis plugin: Option `%s' not allowed in redis"
-              " configuration. It will be ignored.",
-              option->key);
-  }
-
-  return 0;
-} /* }}} */
-
-__attribute__((nonnull(2))) static void
-redis_submit(const char *plugin_instance, const char *type,
-             const char *type_instance, value_t value) /* {{{ */
-{
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &value;
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, "redis", sizeof(vl.plugin));
-  if (plugin_instance != NULL)
-    sstrncpy(vl.plugin_instance, plugin_instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  if (type_instance != NULL)
-    sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-} /* }}} */
-
-__attribute__((nonnull(2))) static void
-redis_submit2(const char *plugin_instance, const char *type,
-              const char *type_instance, value_t value0,
-              value_t value1) /* {{{ */
-{
-  value_list_t vl = VALUE_LIST_INIT;
-  value_t values[] = {value0, value1};
-
-  vl.values = values;
-  vl.values_len = STATIC_ARRAY_SIZE(values);
-
-  sstrncpy(vl.plugin, "redis", sizeof(vl.plugin));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-
-  if (plugin_instance != NULL)
-    sstrncpy(vl.plugin_instance, plugin_instance, sizeof(vl.plugin_instance));
-
-  if (type_instance != NULL)
-    sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-} /* }}} */
-
-static int redis_init(void) /* {{{ */
-{
-  if (redis_have_instances)
-    return 0;
-
-  redis_node_t *rn = calloc(1, sizeof(*rn));
-  if (rn == NULL)
-    return ENOMEM;
-
-  rn->port = REDIS_DEF_PORT;
-  rn->timeout.tv_sec = REDIS_DEF_TIMEOUT_SEC;
-
-  rn->name = strdup("default");
-  rn->host = strdup(REDIS_DEF_HOST);
-
-  if (rn->name == NULL || rn->host == NULL) {
-    sfree(rn->name);
-    sfree(rn->host);
-    sfree(rn);
-    return ENOMEM;
-  }
-
-  return redis_node_add(rn);
-} /* }}} int redis_init */
-
-static void *c_redisCommand(redis_node_t *rn, const char *format, ...) {
-  redisContext *c = rn->redisContext;
-
-  if (c == NULL)
-    return NULL;
-
-  va_list ap;
-  va_start(ap, format);
-  void *reply = redisvCommand(c, format, ap);
-  va_end(ap);
-
-  if (reply == NULL) {
-    ERROR("redis plugin: Connection error: %s", c->errstr);
-    redisFree(rn->redisContext);
-    rn->redisContext = NULL;
-  }
-
-  return reply;
-} /* void c_redisCommand */
-
-static int redis_get_info_value(char const *info_line, char const *field_name,
-                                int ds_type, value_t *val) {
-  char *str = strstr(info_line, field_name);
-  static char buf[MAX_REDIS_VAL_SIZE];
-  if (str) {
-    int i;
-
-    str += strlen(field_name) + 1; /* also skip the ':' */
-    for (i = 0; (*str && (isdigit((unsigned char)*str) || *str == '.'));
-         i++, str++)
-      buf[i] = *str;
-    buf[i] = '\0';
-
-    if (parse_value(buf, val, ds_type) == -1) {
-      WARNING("redis plugin: Unable to parse field `%s'.", field_name);
-      return -1;
+    redis_query_t *rq = rn->queries;
+    while (rq != NULL) {
+        redis_query_t *next = rq->next;
+        free(rq->query);
+        free(rq->metric);
+        label_set_reset(&rq->labels);
+        free(rq);
+        rq = next;
     }
 
-    return 0;
-  }
-  return -1;
-} /* int redis_get_info_value */
+    if (rn->redisContext)
+        redisFree(rn->redisContext);
+    free(rn->name);
+    free(rn->host);
+    free(rn->socket);
+    free(rn->passwd);
+    label_set_reset(&rn->labels);
+    free(rn);
+}
 
-static int redis_handle_info(char *node, char const *info_line,
-                             char const *type, char const *type_instance,
-                             char const *field_name, int ds_type) /* {{{ */
+static void *c_redisCommand(redis_node_t *rn, const char *format, ...)
 {
-  value_t val;
-  if (redis_get_info_value(info_line, field_name, ds_type, &val) != 0)
-    return -1;
+    redisContext *c = rn->redisContext;
 
-  redis_submit(node, type, type_instance, val);
-  return 0;
-} /* }}} int redis_handle_info */
+    if (unlikely(c == NULL))
+        return NULL;
 
-static int redis_handle_query(redis_node_t *rn, redis_query_t *rq) /* {{{ */
-{
-  redisReply *rr;
-  const data_set_t *ds;
-  value_t val;
+    va_list ap;
+    va_start(ap, format);
+    void *reply = redisvCommand(c, format, ap);
+    va_end(ap);
 
-  ds = plugin_get_ds(rq->type);
-  if (!ds) {
-    ERROR("redis plugin: DS type `%s' not defined.", rq->type);
-    return -1;
-  }
-
-  if (ds->ds_num != 1) {
-    ERROR("redis plugin: DS type `%s' has too many datasources. This is not "
-          "supported currently.",
-          rq->type);
-    return -1;
-  }
-
-  if ((rr = c_redisCommand(rn, "SELECT %d", rq->database)) == NULL) {
-    WARNING("redis plugin: unable to switch to database `%d' on node `%s'.",
-            rq->database, rn->name);
-    return -1;
-  }
-
-  if ((rr = c_redisCommand(rn, rq->query)) == NULL) {
-    WARNING("redis plugin: unable to carry out query `%s'.", rq->query);
-    return -1;
-  }
-
-  switch (rr->type) {
-  case REDIS_REPLY_INTEGER:
-    switch (ds->ds[0].type) {
-    case DS_TYPE_COUNTER:
-      val.counter = (counter_t)rr->integer;
-      break;
-    case DS_TYPE_GAUGE:
-      val.gauge = (gauge_t)rr->integer;
-      break;
-    case DS_TYPE_DERIVE:
-      val.gauge = (derive_t)rr->integer;
-      break;
-    }
-    break;
-  case REDIS_REPLY_STRING:
-    if (parse_value(rr->str, &val, ds->ds[0].type) == -1) {
-      WARNING("redis plugin: Query `%s': Unable to parse value.", rq->query);
-      freeReplyObject(rr);
-      return -1;
-    }
-    break;
-  case REDIS_REPLY_ERROR:
-    WARNING("redis plugin: Query `%s' failed: %s.", rq->query, rr->str);
-    freeReplyObject(rr);
-    return -1;
-  case REDIS_REPLY_ARRAY:
-    WARNING("redis plugin: Query `%s' should return string or integer. Arrays "
-            "are not supported.",
-            rq->query);
-    freeReplyObject(rr);
-    return -1;
-  default:
-    WARNING("redis plugin: Query `%s': Cannot coerce redis type (%i).",
-            rq->query, rr->type);
-    freeReplyObject(rr);
-    return -1;
-  }
-
-  redis_submit(rn->name, rq->type,
-               (strlen(rq->instance) > 0) ? rq->instance : NULL, val);
-  freeReplyObject(rr);
-  return 0;
-} /* }}} int redis_handle_query */
-
-static int redis_db_stats(const char *node, char const *info_line) /* {{{ */
-{
-  /* redis_db_stats parses and dispatches Redis database statistics,
-   * currently the number of keys for each database.
-   * info_line needs to have the following format:
-   *   db0:keys=4,expires=0,avg_ttl=0
-   */
-
-  for (int db = 0; db < REDIS_DEF_DB_COUNT; db++) {
-    static char buf[MAX_REDIS_VAL_SIZE];
-    static char field_name[12];
-    static char db_id[4];
-    value_t val;
-    char *str;
-    int i;
-
-    ssnprintf(field_name, sizeof(field_name), "db%d:keys=", db);
-
-    str = strstr(info_line, field_name);
-    if (!str)
-      continue;
-
-    str += strlen(field_name);
-    for (i = 0; (*str && isdigit((int)*str)); i++, str++)
-      buf[i] = *str;
-    buf[i] = '\0';
-
-    if (parse_value(buf, &val, DS_TYPE_GAUGE) != 0) {
-      WARNING("redis plugin: Unable to parse field `%s'.", field_name);
-      return -1;
+    if (unlikely(reply == NULL)) {
+        PLUGIN_ERROR("Connection error: %s", c->errstr);
+        redisFree(rn->redisContext);
+        rn->redisContext = NULL;
     }
 
-    ssnprintf(db_id, sizeof(db_id), "%d", db);
-    redis_submit(node, "records", db_id, val);
-  }
-  return 0;
+    return reply;
+}
 
-} /* }}} int redis_db_stats */
-
-static void redis_cpu_usage(const char *node, char const *info_line) {
-  while (42) {
-    value_t rusage_user;
-    value_t rusage_syst;
-
-    if (redis_get_info_value(info_line, "used_cpu_user", DS_TYPE_GAUGE,
-                             &rusage_user) != 0)
-      break;
-
-    if (redis_get_info_value(info_line, "used_cpu_sys", DS_TYPE_GAUGE,
-                             &rusage_syst) != 0)
-      break;
-
-    redis_submit2(node, "ps_cputime", "daemon",
-                  (value_t){.derive = rusage_user.gauge * 1000000},
-                  (value_t){.derive = rusage_syst.gauge * 1000000});
-    break;
-  }
-
-  while (42) {
-    value_t rusage_user;
-    value_t rusage_syst;
-
-    if (redis_get_info_value(info_line, "used_cpu_user_children", DS_TYPE_GAUGE,
-                             &rusage_user) != 0)
-      break;
-
-    if (redis_get_info_value(info_line, "used_cpu_sys_children", DS_TYPE_GAUGE,
-                             &rusage_syst) != 0)
-      break;
-
-    redis_submit2(node, "ps_cputime", "children",
-                  (value_t){.derive = rusage_user.gauge * 1000000},
-                  (value_t){.derive = rusage_syst.gauge * 1000000});
-    break;
-  }
-} /* void redis_cpu_usage */
-
-static gauge_t calculate_ratio_percent(derive_t part1, derive_t part2,
-                                       derive_t *prev1, derive_t *prev2) {
-  if ((*prev1 == 0) || (*prev2 == 0) || (part1 < *prev1) || (part2 < *prev2)) {
-    *prev1 = part1;
-    *prev2 = part2;
-    return NAN;
-  }
-
-  derive_t num = part1 - *prev1;
-  derive_t denom = part2 - *prev2 + num;
-
-  *prev1 = part1;
-  *prev2 = part2;
-
-  if (denom == 0)
-    return NAN;
-
-  if (num == 0)
-    return 0;
-
-  return 100.0 * (gauge_t)num / (gauge_t)denom;
-} /* gauge_t calculate_ratio_percent */
-
-static void redis_keyspace_usage(redis_node_t *rn, char const *info_line) {
-  value_t hits, misses;
-
-  if (redis_get_info_value(info_line, "keyspace_hits", DS_TYPE_DERIVE, &hits) !=
-      0)
-    return;
-
-  if (redis_get_info_value(info_line, "keyspace_misses", DS_TYPE_DERIVE,
-                           &misses) != 0)
-    return;
-
-  redis_submit(rn->name, "cache_result", "hits", hits);
-  redis_submit(rn->name, "cache_result", "misses", misses);
-
-  prev_t *prev = &rn->prev;
-  gauge_t ratio = calculate_ratio_percent(
-      hits.derive, misses.derive, &prev->keyspace_hits, &prev->keyspace_misses);
-  redis_submit(rn->name, "percent", "hitratio", (value_t){.gauge = ratio});
-
-} /* void redis_keyspace_usage */
-
-static void redis_check_connection(redis_node_t *rn) {
-  if (rn->redisContext)
-    return;
-
-  redisContext *rh;
-  if (rn->socket != NULL)
-    rh = redisConnectUnixWithTimeout(rn->socket, rn->timeout);
-  else
-    rh = redisConnectWithTimeout(rn->host, rn->port, rn->timeout);
-
-  if (rh == NULL) {
-    ERROR("redis plugin: can't allocate redis context");
-    return;
-  }
-  if (rh->err) {
-    if (rn->socket)
-      ERROR("redis plugin: unable to connect to node `%s' (%s): %s.", rn->name,
-            rn->socket, rh->errstr);
-    else
-      ERROR("redis plugin: unable to connect to node `%s' (%s:%d): %s.",
-            rn->name, rn->host, rn->port, rh->errstr);
-    redisFree(rh);
-    return;
-  }
-
-  rn->redisContext = rh;
-
-  if (rn->passwd) {
+static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
+{
     redisReply *rr;
-
-    DEBUG("redis plugin: authenticating node `%s' passwd(%s).", rn->name,
-          rn->passwd);
-
-    if ((rr = c_redisCommand(rn, "AUTH %s", rn->passwd)) == NULL) {
-      WARNING("redis plugin: unable to authenticate on node `%s'.", rn->name);
-      return;
+    rr = c_redisCommand(rn, "SELECT %d", rq->database);
+    if (unlikely(rr == NULL)) {
+        PLUGIN_WARNING("unable to switch to database '%d' on node '%s'.",
+                        rq->database, rn->name);
+        return -1;
     }
 
-    if (rr->type != REDIS_REPLY_STATUS) {
-      WARNING("redis plugin: invalid authentication on node `%s'.", rn->name);
-      freeReplyObject(rr);
-      redisFree(rn->redisContext);
-      rn->redisContext = NULL;
-      return;
+    rr = c_redisCommand(rn, rq->query);
+    if (unlikely(rr == NULL)) {
+        PLUGIN_WARNING("unable to carry out query '%s'.", rq->query);
+        return -1;
     }
+
+    value_t value = {0};
+    switch (rr->type) {
+    case REDIS_REPLY_INTEGER:
+        if (rq->type == METRIC_TYPE_COUNTER) {
+            value = VALUE_COUNTER(rr->integer);
+        } else {
+            value = VALUE_GAUGE(rr->integer);
+        }
+        break;
+    case REDIS_REPLY_STRING:
+        if (rq->type == METRIC_TYPE_GAUGE) {
+            double ret_value = 0;
+            if (parse_double(rr->str, &ret_value) == -1) {
+                PLUGIN_WARNING("Query '%s': Unable to parse value.", rq->query);
+                freeReplyObject(rr);
+                return -1;
+            }
+            value = VALUE_GAUGE(ret_value);
+        } else if (rq->type == METRIC_TYPE_COUNTER) {
+            uint64_t ret_value = 0;
+            if (parse_uinteger(rr->str, &ret_value) == -1) {
+                PLUGIN_WARNING("Query '%s': Unable to parse value.", rq->query);
+                freeReplyObject(rr);
+                return -1;
+            }
+            value = VALUE_COUNTER(ret_value);
+        }
+        break;
+    case REDIS_REPLY_ERROR:
+        PLUGIN_WARNING("Query '%s' failed: %s.", rq->query, rr->str);
+        freeReplyObject(rr);
+        return -1;
+    case REDIS_REPLY_ARRAY:
+        PLUGIN_WARNING("Query '%s' should return string or integer. Arrays are not supported.",
+                        rq->query);
+        freeReplyObject(rr);
+        return -1;
+    default:
+        PLUGIN_WARNING("Query '%s': Cannot coerce redis type (%i).", rq->query, rr->type);
+        freeReplyObject(rr);
+        return -1;
+    }
+
+    metric_family_t fam = {
+        .name = rq->metric,
+        .type = rq->type,
+    };
+    metric_family_append(&fam, value, &rq->labels, NULL);
+
+    plugin_dispatch_metric_family(&fam, 0);
 
     freeReplyObject(rr);
-  }
-  return;
-} /* void redis_check_connection */
+    return 0;
+}
 
-static void redis_read_server_info(redis_node_t *rn) {
-  redisReply *rr;
-
-  if ((rr = c_redisCommand(rn, "INFO")) == NULL) {
-    WARNING("redis plugin: unable to get INFO from node `%s'.", rn->name);
-    return;
-  }
-
-  redis_handle_info(rn->name, rr->str, "uptime", NULL, "uptime_in_seconds",
-                    DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "current_connections", "clients",
-                    "connected_clients", DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "blocked_clients", NULL,
-                    "blocked_clients", DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "memory", NULL, "used_memory",
-                    DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "memory_lua", NULL, "used_memory_lua",
-                    DS_TYPE_GAUGE);
-  /* changes_since_last_save: Deprecated in redis version 2.6 and above */
-  redis_handle_info(rn->name, rr->str, "volatile_changes", NULL,
-                    "changes_since_last_save", DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "total_connections", NULL,
-                    "total_connections_received", DS_TYPE_DERIVE);
-  redis_handle_info(rn->name, rr->str, "total_operations", NULL,
-                    "total_commands_processed", DS_TYPE_DERIVE);
-  redis_handle_info(rn->name, rr->str, "expired_keys", NULL, "expired_keys",
-                    DS_TYPE_DERIVE);
-  redis_handle_info(rn->name, rr->str, "evicted_keys", NULL, "evicted_keys",
-                    DS_TYPE_DERIVE);
-  redis_handle_info(rn->name, rr->str, "pubsub", "channels", "pubsub_channels",
-                    DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "pubsub", "patterns", "pubsub_patterns",
-                    DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "current_connections", "slaves",
-                    "connected_slaves", DS_TYPE_GAUGE);
-  redis_handle_info(rn->name, rr->str, "total_bytes", "input",
-                    "total_net_input_bytes", DS_TYPE_DERIVE);
-  redis_handle_info(rn->name, rr->str, "total_bytes", "output",
-                    "total_net_output_bytes", DS_TYPE_DERIVE);
-
-  redis_keyspace_usage(rn, rr->str);
-
-  redis_db_stats(rn->name, rr->str);
-
-  if (rn->report_cpu_usage)
-    redis_cpu_usage(rn->name, rr->str);
-
-  freeReplyObject(rr);
-} /* void redis_read_server_info */
-
-static void redis_read_command_stats(redis_node_t *rn) {
-  redisReply *rr;
-
-  if ((rr = c_redisCommand(rn, "INFO commandstats")) == NULL) {
-    WARNING("redis plugin: node `%s': unable to get `INFO commandstats'.",
-            rn->name);
-    return;
-  }
-
-  if (rr->type != REDIS_REPLY_STRING) {
-    WARNING("redis plugin: node `%s' `INFO commandstats' returned unsupported "
-            "redis type %i.",
-            rn->name, rr->type);
-    freeReplyObject(rr);
-    return;
-  }
-
-  char *command;
-  char *line;
-  char *ptr = rr->str;
-  char *saveptr = NULL;
-  while ((line = strtok_r(ptr, "\n\r", &saveptr)) != NULL) {
-    ptr = NULL;
-
-    if (line[0] == '#')
-      continue;
-
-    /* command name */
-    if (strstr(line, "cmdstat_") != line) {
-      ERROR("redis plugin: not found 'cmdstat_' prefix in line '%s'", line);
-      continue;
-    }
-
-    char *values = strstr(line, ":");
-    if (values == NULL) {
-      ERROR("redis plugin: not found ':' separator in line '%s'", line);
-      continue;
-    }
-
-    /* Null-terminate command token */
-    values[0] = '\0';
-    command = line + strlen("cmdstat_");
-    values++;
-
-    /* parse values */
-    /* cmdstat_publish:calls=20795774,usec=111039258,usec_per_call=5.34 */
-    char *field;
-    char *saveptr_field = NULL;
-    while ((field = strtok_r(values, "=", &saveptr_field)) != NULL) {
-      values = NULL;
-
-      const char *type;
-      /* only these are supported */
-      if (strcmp(field, "calls") == 0)
-        type = "commands";
-      else if (strcmp(field, "usec") == 0)
-        type = "redis_command_cputime";
-      else
-        continue;
-
-      if ((field = strtok_r(NULL, ",", &saveptr_field)) == NULL)
-        continue;
-
-      char *endptr = NULL;
-      errno = 0;
-      derive_t value = strtoll(field, &endptr, 0);
-
-      if ((endptr == field) || (errno != 0))
-        continue;
-
-      redis_submit(rn->name, type, command, (value_t){.derive = value});
-    }
-  }
-  freeReplyObject(rr);
-} /* void redis_read_command_stats */
-
-static int redis_read(user_data_t *user_data) /* {{{ */
+static void redis_check_connection(redis_node_t *rn)
 {
-  redis_node_t *rn = user_data->data;
+    if (rn->redisContext)
+        return;
 
-#if COLLECT_DEBUG
-  if (rn->socket)
-    DEBUG("redis plugin: querying info from node `%s' (%s).", rn->name,
-          rn->socket);
-  else
-    DEBUG("redis plugin: querying info from node `%s' (%s:%d).", rn->name,
-          rn->host, rn->port);
+    redisContext *rh;
+    if (rn->socket != NULL)
+        rh = redisConnectUnixWithTimeout(rn->socket, rn->timeout);
+    else
+        rh = redisConnectWithTimeout(rn->host, rn->port, rn->timeout);
+
+    if (unlikely(rh == NULL)) {
+        PLUGIN_ERROR("can't allocate redis context");
+        return;
+    }
+    if (unlikely(rh->err)) {
+        if (rn->socket)
+            PLUGIN_ERROR("unable to connect to node '%s' (%s): %s.", rn->name,
+                        rn->socket, rh->errstr);
+        else
+            PLUGIN_ERROR("unable to connect to node '%s' (%s:%d): %s.",
+                        rn->name, rn->host, rn->port, rh->errstr);
+        redisFree(rh);
+        return;
+    }
+
+    rn->redisContext = rh;
+
+    if (rn->passwd) {
+        PLUGIN_DEBUG("authenticating node '%s' passwd(%s).", rn->name, rn->passwd);
+
+        redisReply *rr = c_redisCommand(rn, "AUTH %s", rn->passwd);
+        if (unlikely(rr == NULL)) {
+            PLUGIN_WARNING("unable to authenticate on node '%s'.", rn->name);
+            return;
+        }
+
+        if (unlikely(rr->type != REDIS_REPLY_STATUS)) {
+            PLUGIN_WARNING("invalid authentication on node '%s'.", rn->name);
+            freeReplyObject(rr);
+            redisFree(rn->redisContext);
+            rn->redisContext = NULL;
+            return;
+        }
+
+        freeReplyObject(rr);
+    }
+    return;
+}
+
+static int redis_read_info_errorstat(redis_node_t *rn, char *key, char *value)
+{
+    char *error = key + strlen("errorstat_");
+
+    if (strncmp(value, "count=", strlen("count=")) != 0)
+        return -1;
+    char *counts = value + strlen("count=");
+
+    metric_family_append(&rn->fams[FAM_REDIS_ERRORS], VALUE_COUNTER(atoll(counts)), &rn->labels,
+                         &(label_pair_const_t){.name="error", .value=error}, NULL);
+
+    return 0;
+}
+
+static int redis_read_info_master(redis_node_t *rn, char *value)
+{
+/* "master%d:name=%s,status=%s,address=%s:%d,slaves=%lu,sentinels=%lu\r\n" */
+    char *master_name = value;
+    if (unlikely(strncmp(master_name, "name=", strlen("name=")) != 0))
+        return -1;
+    master_name += strlen("name=");
+
+    char *master_status = strchr(master_name, ',');
+    if (unlikely(master_status == NULL))
+        return -1;
+    *(master_status++) = '\0';
+
+    if (unlikely(strncmp(master_status, "status=", strlen("status=")) != 0))
+        return -1;
+    master_status += strlen("status=");
+
+    char *master_address = strchr(master_status, ',');
+    if (unlikely(master_address == NULL))
+        return -1;
+    *(master_address++) = '\0';
+
+    if (unlikely(strncmp(master_address, "address=", strlen("address=")) != 0))
+        return -1;
+    master_address += strlen("address=");
+
+    char *master_slaves = strchr(master_address, ',');
+    if (unlikely(master_slaves == NULL))
+        return -1;
+    *(master_slaves++) = '\0';
+
+    if (unlikely(strncmp(master_slaves, "slaves=", strlen("slaves=")) != 0))
+        return -1;
+    master_slaves += strlen("slaves=");
+
+    char *master_sentinels = strchr(master_slaves, ',');
+    if (unlikely(master_sentinels == NULL))
+        return -1;
+    *(master_sentinels++) = '\0';
+
+    if (unlikely(strncmp(master_sentinels, "sentinels=", strlen("sentinels=")) != 0))
+        return -1;
+    master_sentinels += strlen("sentinels=");
+
+    state_t states[] = {
+        { .name = "ok",     .enabled = false },
+        { .name = "odown",  .enabled = false },
+        { .name = "sdown",  .enabled = false },
+    };
+    state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+    state_set_enable(set, master_status);
+
+    metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_STATUS],
+                         VALUE_STATE_SET(set), &rn->labels,
+                         &(label_pair_const_t){.name="master_address", .value=master_address},
+                         &(label_pair_const_t){.name="master_name", .value=master_name},
+                         NULL);
+
+    metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_SLAVES],
+                         VALUE_GAUGE(atoll(master_slaves)), &rn->labels,
+                         &(label_pair_const_t){.name="master_address", .value=master_address},
+                         &(label_pair_const_t){.name="master_name", .value=master_name},
+                         NULL);
+
+    metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_SENTINELS],
+                         VALUE_GAUGE(atoll(master_sentinels)), &rn->labels,
+                         &(label_pair_const_t){.name="master_address", .value=master_address},
+                         &(label_pair_const_t){.name="master_name", .value=master_name},
+                         NULL);
+
+    return 0;
+}
+
+static int redis_read_info_slave(redis_node_t *rn, char *value)
+{
+    char *slave_ip = value;
+    if (unlikely(strncmp(slave_ip, "ip=", strlen("ip=")) != 0))
+        return -1;
+    slave_ip += strlen("ip=");
+
+    char *slave_port = strchr(slave_ip, ',');
+    if (unlikely(slave_port == NULL))
+        return -1;
+    *(slave_port++) = '\0';
+
+    if (unlikely(strncmp(slave_port, "port=", strlen("port=")) != 0))
+        return -1;
+    slave_port += strlen("port=");
+
+    char *slave_state = strchr(slave_port, ',');
+    if (unlikely(slave_state == NULL))
+        return -1;
+    *(slave_state++) = '\0';
+
+    if (unlikely(strncmp(slave_state, "state=", strlen("state=")) != 0))
+        return -1;
+    slave_state += strlen("state=");
+
+    char *slave_offset = strchr(slave_state, ',');
+    if (unlikely(slave_offset == NULL))
+        return -1;
+    *(slave_offset++) = '\0';
+
+    if (unlikely(strncmp(slave_offset, "offset=", strlen("offset=")) != 0))
+        return -1;
+    slave_offset += strlen("offset=");
+
+    char *slave_lag = strchr(slave_offset, ',');
+    if (unlikely(slave_lag == NULL))
+        return -1;
+    *(slave_lag++) = '\0';
+
+    if (unlikely(strncmp(slave_lag, "lag=", strlen("lag=")) != 0))
+        return -1;
+    slave_lag += strlen("lag=");
+
+    char address[256];
+    ssnprintf(address, sizeof(address), "%s:%s", slave_ip, slave_port);
+
+    state_t states[] = {
+        { .name = "wait_bgsave", .enabled = false },
+        { .name = "send_bulk",   .enabled = false },
+        { .name = "online",      .enabled = false },
+    };
+    state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+    state_set_enable(set, slave_state);
+
+    metric_family_append(&rn->fams[FAM_REDIS_SLAVE_STATE], VALUE_STATE_SET(set), &rn->labels,
+                         &(label_pair_const_t){.name="slave_address", .value=address}, NULL);
+
+    metric_family_append(&rn->fams[FAM_REDIS_SLAVE_LAG],
+                         VALUE_GAUGE(atoll(slave_lag)), &rn->labels,
+                         &(label_pair_const_t){.name="slave_address", .value=address}, NULL);
+
+    metric_family_append(&rn->fams[FAM_REDIS_SLAVE_OFFSET],
+                         VALUE_GAUGE(atoll(slave_offset)), &rn->labels,
+                         &(label_pair_const_t){.name="slave_address", .value=address}, NULL);
+    return 0;
+}
+
+static int redis_read_info_cmdstat(redis_node_t *rn, char *key, char *value)
+{
+    char *command = key + strlen("cmdstat_");
+
+    char *command_calls = value;
+    if (unlikely(strncmp(command_calls, "calls=", strlen("calls=")) != 0))
+        return -1;
+    command_calls += strlen("calls=");
+
+    char *command_usec = strchr(command_calls, ',');
+    if (unlikely(command_usec == NULL))
+        return -1;
+    *(command_usec++) = '\0';
+
+    if (unlikely(strncmp(command_usec, "usec=", strlen("usec=")) != 0))
+        return -1;
+    command_usec += strlen("usec=");
+
+    char *end= strchr(command_usec, ',');
+    if (unlikely(end == NULL))
+        return -1;
+    *end = '\0';
+
+    metric_family_append(&rn->fams[FAM_REDIS_COMMANDS],
+                         VALUE_COUNTER(atoll(command_calls)), &rn->labels,
+                         &(label_pair_const_t){.name="cmd", .value=command}, NULL);
+
+    metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_DURATION_SECONDS],
+                         VALUE_COUNTER_FLOAT64(((double)atoll(command_usec)) / 1000000.0),
+                         &rn->labels,
+                         &(label_pair_const_t){.name="cmd", .value=command}, NULL);
+    return 0;
+}
+
+static int redis_read_info_db(redis_node_t *rn, char *key, char *value)
+{
+    char *db = key + strlen("db");
+
+    char *db_keys = value;
+    if (unlikely(strncmp(db_keys, "keys=", strlen("keys=")) != 0))
+        return -1;
+    db_keys += strlen("keys=");
+
+    char *db_expires = strchr(db_keys, ',');
+    if (unlikely(db_expires == NULL))
+        return -1;
+    *(db_expires ++) = '\0';
+
+    if (unlikely(strncmp(db_expires, "expires=", strlen("expires=")) != 0))
+        return -1;
+    db_expires += strlen("expires=");
+
+    char *end= strchr(db_expires, ',');
+    if (unlikely(end == NULL))
+        return -1;
+    *end = '\0';
+
+    metric_family_append(&rn->fams[FAM_REDIS_DB_KEYS],
+                         VALUE_GAUGE((double)atoll(db_keys)), &rn->labels,
+                         &(label_pair_const_t){.name="db", .value=db}, NULL);
+
+    metric_family_append(&rn->fams[FAM_REDIS_DB_KEYS_EXPIRING],
+                         VALUE_GAUGE((double)atoll(db_expires)), &rn->labels,
+                         &(label_pair_const_t){.name="db", .value=db}, NULL);
+
+    return 0;
+}
+
+static void redis_read_info(redis_node_t *rn)
+{
+    redisReply *rr = c_redisCommand(rn, "INFO ALL");
+    if (unlikely(rr == NULL)) {
+        PLUGIN_WARNING("unable to get INFO from node '%s'.", rn->name);
+        return;
+    }
+
+    char *saveptr = NULL;
+    for (char *key = strtok_r(rr->str, "\r\n", &saveptr);
+             key != NULL;
+             key = strtok_r(NULL, "\r\n", &saveptr)) {
+
+        if (*key == '#') continue;
+
+        char *val = strchr(key, ':');
+        if (val == NULL)
+            continue;
+        *val = '\0';
+        size_t key_len = val - key;
+        val++;
+
+        const struct redis_info *ri = redis_info_get_key(key, key_len);
+        if (ri != NULL) {
+            value_t value = {0};
+
+            switch (ri->fam) {
+            case FAM_REDIS_MODE: {
+                state_set_t set = (state_set_t) {
+                    .num = 3,
+                    .ptr = (state_t []){
+                        {.enabled = false, .name = "cluster"   },
+                        {.enabled = false, .name = "sentinel"  },
+                        {.enabled = false, .name = "standalone"},
+                    }
+                };
+                state_set_enable(set, val);
+                metric_family_append(&rn->fams[ri->fam], VALUE_STATE_SET(set), &rn->labels, NULL);
+                continue;
+            }   break;
+            case FAM_REDIS_ROLE: {
+                state_set_t set = (state_set_t) {
+                    .num = 2,
+                    .ptr = (state_t []){
+                        {.enabled = false, .name = "master"},
+                        {.enabled = false, .name = "slave" },
+                    }
+                };
+                state_set_enable(set, val);
+                metric_family_append(&rn->fams[ri->fam], VALUE_STATE_SET(set), &rn->labels, NULL);
+                continue;
+            }   break;
+            case FAM_REDIS_MASTER_FAILOVER_STATE: {
+                state_set_t set = (state_set_t) {
+                    .num = 3,
+                    .ptr = (state_t []){
+                        {.enabled = false, .name = "no-failover"         },
+                        {.enabled = false, .name = "failover-in-progress"},
+                        {.enabled = false, .name = "waiting-for-sync"    },
+                    }
+                };
+                state_set_enable(set, val);
+                metric_family_append(&rn->fams[ri->fam], VALUE_STATE_SET(set), &rn->labels, NULL);
+                continue;
+            }   break;
+            case FAM_REDIS_MEMORY_USED_DATASET_RATIO:
+            case FAM_REDIS_MEMORY_USED_PEAK_RATIO:
+            {
+                size_t val_len = strlen(val);
+                if (val_len > 0) {
+                    if (val[val_len-1] == '%')
+                        val[val_len-1] = '\0';
+                    double raw = 0;
+                    if (parse_double(val, &raw) != 0) {
+                        PLUGIN_WARNING("Unable to parse field '%s'.", key);
+                        continue;
+                    }
+                    value = VALUE_GAUGE(raw);
+                } else {
+                    continue;
+                }
+                break;
+            }
+            case FAM_REDIS_RDB_LAST_BGSAVE_STATUS:
+            case FAM_REDIS_AOF_LAST_BGREWRITE_STATUS:
+            case FAM_REDIS_AOF_LAST_WRITE_STATUS:
+                if (strcmp(val, "ok") == 0)
+                    value = VALUE_GAUGE(1);
+                else
+                    value = VALUE_GAUGE(0);
+                break;
+            case FAM_REDIS_CPU_SYS_SECONDS:
+            case FAM_REDIS_CPU_USER_SECONDS:
+            case FAM_REDIS_CPU_SYS_CHILDREN_SECONDS:
+            case FAM_REDIS_CPU_USER_CHILDREN_SECONDS:
+            case FAM_REDIS_CPU_SYS_MAIN_THREAD_SECONDS:
+            case FAM_REDIS_CPU_USER_MAIN_THREAD_SECONDS: {
+                double raw = 0;
+                if (parse_double(val, &raw) != 0) {
+                    PLUGIN_WARNING("Unable to parse field '%s'.", key);
+                    continue;
+                }
+                value = VALUE_COUNTER_FLOAT64(raw);
+            }   break;
+            default:
+                if (rn->fams[ri->fam].type == METRIC_TYPE_GAUGE) {
+                    double raw = 0;
+                    if (parse_double(val, &raw) != 0) {
+                        PLUGIN_WARNING("Unable to parse field '%s'.", key);
+                        continue;
+                    }
+                    value = VALUE_GAUGE(raw);
+                } else if (rn->fams[ri->fam].type == METRIC_TYPE_COUNTER) {
+                    uint64_t raw = 0;
+                    if (parse_uinteger(val, &raw) != 0) {
+                        PLUGIN_WARNING("Unable to parse field '%s'.", key);
+                        continue;
+                    }
+                    value = VALUE_COUNTER(raw);
+                }
+            break;
+            }
+            metric_family_append(&rn->fams[ri->fam], value, &rn->labels, NULL);
+        } else {
+            if ((key_len > 10) && (strncmp(key, "errorstat_", strlen("errorstat_")) == 0)) {
+                redis_read_info_errorstat(rn, key, val);
+            } else if ((key_len > 8) && (strncmp(key, "cmdstat_", strlen("cmdstat_")) == 0)) {
+                redis_read_info_cmdstat(rn, key, val);
+            } else if ((key_len > 6) && (strncmp(key, "master", strlen("master")) == 0)) {
+                redis_read_info_master(rn, val);
+            } else if ((key_len > 5) && (strncmp(key, "slave", strlen("slave")) == 0)) {
+                redis_read_info_slave(rn, val);
+            } else if ((key_len > 2) && (strncmp(key, "db", strlen("db")) == 0)) {
+                redis_read_info_db(rn, key, val);
+            /* "cluster_"  */
+            }
+        }
+    }
+
+    freeReplyObject(rr);
+
+    plugin_dispatch_metric_family_array(rn->fams, FAM_REDIS_MAX, 0);
+}
+
+static int redis_read(user_data_t *user_data)
+{
+    redis_node_t *rn = user_data->data;
+
+#ifdef NCOLLECTD_DEBUG
+    if (rn->socket)
+        PLUGIN_DEBUG("querying info from node '%s' (%s).", rn->name, rn->socket);
+    else
+        PLUGIN_DEBUG("querying info from node '%s' (%s:%d).", rn->name, rn->host, rn->port);
 #endif
 
-  redis_check_connection(rn);
+    redis_check_connection(rn);
+    if (!rn->redisContext) { /* no connection */
+        metric_family_append(&rn->fams[FAM_REDIS_UP], VALUE_GAUGE(0), &rn->labels, NULL);
+        plugin_dispatch_metric_family(&rn->fams[FAM_REDIS_UP], 0);
+        return 0;
+    }
 
-  if (!rn->redisContext) /* no connection */
-    return -1;
-
-  redis_read_server_info(rn);
-
-  if (!rn->redisContext) /* connection lost */
-    return -1;
-
-  if (rn->report_command_stats) {
-    redis_read_command_stats(rn);
+    metric_family_append(&rn->fams[FAM_REDIS_UP], VALUE_GAUGE(1), &rn->labels, NULL);
+    redis_read_info(rn);
 
     if (!rn->redisContext) /* connection lost */
-      return -1;
-  }
+        return 0;
 
-  for (redis_query_t *rq = rn->queries; rq != NULL; rq = rq->next) {
-    redis_handle_query(rn, rq);
-    if (!rn->redisContext) /* connection lost */
-      return -1;
-  }
+    for (redis_query_t *rq = rn->queries; rq != NULL; rq = rq->next) {
+        redis_handle_query(rn, rq);
+        if (!rn->redisContext) /* connection lost */
+            return 0;
+    }
 
-  return 0;
+    return 0;
 }
-/* }}} */
 
-void module_register(void) /* {{{ */
+static redis_query_t *redis_config_query(config_item_t *ci)
 {
-  plugin_register_complex_config("redis", redis_config);
-  plugin_register_init("redis", redis_init);
+    redis_query_t *rq = calloc(1, sizeof(*rq));
+    if (rq == NULL) {
+        PLUGIN_ERROR("calloc failed adding redis_query.");
+        return NULL;
+    }
+    int status = cf_util_get_string(ci, &rq->query);
+    if (status != 0) {
+        PLUGIN_ERROR("query missing");
+        free(rq);
+        return NULL;
+    }
+
+    rq->database = 0;
+    rq->type = METRIC_TYPE_UNKNOWN;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *option = ci->children + i;
+
+        if (strcasecmp("metric", option->key) == 0) {
+            status = cf_util_get_string(option, &rq->metric);
+        } else if (strcasecmp("Type", option->key) == 0) {
+            status = cf_util_get_metric_type(option, &rq->type);
+        } else if (strcasecmp("label", option->key) == 0) {
+            status = cf_util_get_label(option, &rq->labels);
+        } else if (strcasecmp("database", option->key) == 0) {
+            status = cf_util_get_int(option, &rq->database);
+            if (rq->database < 0) {
+                PLUGIN_WARNING("The 'Database' option must be positive "
+                                "integer or zero");
+                status = -1;
+            }
+        } else {
+            PLUGIN_WARNING("unknown configuration option: %s", option->key);
+            status = -1;
+        }
+        if (status != 0)
+            goto err;
+    }
+    return rq;
+
+err:
+    free(rq->query);
+    free(rq->metric);
+    label_set_reset(&rq->labels);
+    free(rq);
+    return NULL;
 }
-/* }}} */
+
+static int redis_config_instance(config_item_t *ci)
+{
+    redis_node_t *rn = calloc(1, sizeof(*rn));
+    if (rn == NULL) {
+        PLUGIN_ERROR("calloc failed adding instance.");
+        return ENOMEM;
+    }
+
+    memcpy(rn->fams, fams_redis, FAM_REDIS_MAX * sizeof(fams_redis[0]));
+
+    rn->port = REDIS_DEF_PORT;
+    rn->timeout.tv_sec = REDIS_DEF_TIMEOUT_SEC;
+
+    rn->host = strdup(REDIS_DEF_HOST);
+    if (rn->host == NULL) {
+        PLUGIN_ERROR("strdup failed adding instance.");
+        free(rn);
+        return ENOMEM;
+    }
+
+    int status = cf_util_get_string(ci, &rn->name);
+    if (status != 0) {
+        free(rn->host);
+        free(rn);
+        return status;
+    }
+
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *option = ci->children + i;
+
+        if (strcasecmp("host", option->key) == 0) {
+            status = cf_util_get_string(option, &rn->host);
+        } else if (strcasecmp("port", option->key) == 0) {
+            status = cf_util_get_port_number(option, &rn->port);
+        } else if (strcasecmp("socket", option->key) == 0) {
+            status = cf_util_get_string(option, &rn->socket);
+        } else if (strcasecmp("query", option->key) == 0) {
+            redis_query_t *rq = redis_config_query(option);
+            if (rq == NULL) {
+                status = 1;
+            } else {
+                rq->next = rn->queries;
+                rn->queries = rq;
+            }
+        } else if (strcasecmp("timeout", option->key) == 0) {
+            cdtime_t timeout;
+            status = cf_util_get_cdtime(option, &timeout);
+            if (status == 0)
+                rn->timeout = CDTIME_T_TO_TIMEVAL(timeout);
+        } else if (strcasecmp("password", option->key) == 0) {
+            status = cf_util_get_string(option, &rn->passwd);
+        } else if (strcasecmp("interval", option->key) == 0) {
+            status = cf_util_get_cdtime(option, &interval);
+        } else if (strcasecmp("label", option->key) == 0) {
+            status = cf_util_get_label(option, &rn->labels);
+        }  else {
+            PLUGIN_WARNING("Option '%s' not allowed inside a 'instance' block.", option->key);
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    label_set_add(&rn->labels, false, "instance", rn->name);
+
+    if (status == 0) {
+        redis_query_t *rq = rn->queries;
+        while (rq != NULL) {
+            for (size_t i = 0; i < rn->labels.num; i++) {
+                label_set_add(&rq->labels, false, rn->labels.ptr[i].name, rn->labels.ptr[i].value);
+            }
+            rq = rq->next;
+        }
+    }
+
+    if (status != 0) {
+        redis_instance_free(rn);
+        return status;
+    }
+
+    return plugin_register_complex_read("redis", rn->name, redis_read, interval,
+                                        &(user_data_t){.data=rn, .free_func=redis_instance_free});
+}
+
+static int redis_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *option = ci->children + i;
+
+        if (strcasecmp("instance", option->key) == 0) {
+            status = redis_config_instance(option);
+        } else {
+            PLUGIN_ERROR("Option '%s' not allowed in redis configuration.", option->key);
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+void module_register(void)
+{
+    plugin_register_config("redis", redis_config);
+}

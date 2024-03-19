@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_REDIS "Redis plugin" ON)
+
+set(BUILD_PLUGIN_REDIS 0)
+
+if(PLUGIN_REDIS)
+    find_package(LibHiredis)
+    if (LIBHIREDIS_FOUND)
+        set(BUILD_PLUGIN_REDIS 1)
+    else()
+        set(BUILD_PLUGIN_REDIS_REASON "libhiredis not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_REDIS ${BUILD_PLUGIN_REDIS} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_REDIS)
+    gperf_generate(redis_info.gperf "${CMAKE_CURRENT_BINARY_DIR}/redis_info.h" REDIS_INFO_H)
+    set(PLUGIN_REDIS_SRC redis.c redis_fams.h)
+    add_library(redis MODULE ${PLUGIN_REDIS_SRC} ${REDIS_INFO_H})
+    target_link_libraries(redis PRIVATE libutils libmetric LibHiredis::LibHiredis)
+    set_target_properties(redis PROPERTIES PREFIX "")
+    install(TARGETS redis DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-redis.5 ncollectd-redis.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-redis.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
