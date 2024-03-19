@@ -1,0 +1,48 @@
+Resources in use
+CIFS Session: 2
+Share (unique mount targets): 4
+SMB Request/Response Buffer: 2 Pool size: 6
+SMB Small Req/Resp Buffer: 2 Pool size: 30
+Operations (MIDs): 0
+
+5 session 6 share reconnects
+Total vfs operations: 30372605 maximum at one time: 25
+
+Max requests in flight: 75
+1) \\smb1\share
+SMBs: 45572327
+Bytes read: 0  Bytes written: 0
+Open files: 0 total (local), 0 open on server
+TreeConnects: 2 total 0 failed
+TreeDisconnects: 0 total 0 failed
+Creates: 15190774 total 0 failed
+Closes: 15190774 total 0 failed
+Flushes: 0 total 0 failed
+Reads: 0 total 0 failed
+Writes: 0 total 0 failed
+Locks: 0 total 0 failed
+IOCTLs: 1 total 1 failed
+QueryDirectories: 2 total 0 failed
+ChangeNotifies: 0 total 0 failed
+QueryInfos: 15190774 total 0 failed
+SetInfos: 0 total 0 failed
+OplockBreaks: 0 sent 0 failed
+Max requests in flight: 75
+2) \\smb2\share
+SMBs: 45544707
+Bytes read: 0  Bytes written: 0
+Open files: 0 total (local), 0 open on server
+TreeConnects: 23 total 20 failed
+TreeDisconnects: 0 total 0 failed
+Creates: 15181561 total 0 failed
+Closes: 15181560 total 0 failed
+Flushes: 0 total 0 failed
+Reads: 0 total 0 failed
+Writes: 0 total 0 failed
+Locks: 0 total 0 failed
+IOCTLs: 1 total 0 failed
+QueryDirectories: 0 total 0 failed
+ChangeNotifies: 0 total 0 failed
+QueryInfos: 15181562 total 0 failed
+SetInfos: 0 total 0 failed
+OplockBreaks: 0 sent 0 failed

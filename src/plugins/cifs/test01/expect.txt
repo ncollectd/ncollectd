@@ -1,0 +1,102 @@
+# TYPE system_cifs_smb2_read_bytes counter
+system_cifs_smb2_read_bytes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_read_bytes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_local_opens counter
+system_cifs_smb2_local_opens_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_local_opens_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb_sent counter
+system_cifs_smb_sent_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 45572327
+system_cifs_smb_sent_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 45544707
+# TYPE system_cifs_connected gauge
+system_cifs_connected{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 1
+system_cifs_connected{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 1
+# TYPE system_cifs_smb2_written_bytes counter
+system_cifs_smb2_written_bytes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_written_bytes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_tree_disconnect counter
+system_cifs_smb2_tree_disconnect_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_tree_disconnect_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_create counter
+system_cifs_smb2_create_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 15190774
+system_cifs_smb2_create_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 15181561
+# TYPE system_cifs_smb2_create_fail counter
+system_cifs_smb2_create_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_create_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_close counter
+system_cifs_smb2_close_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 15190774
+system_cifs_smb2_close_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 15181560
+# TYPE system_cifs_smb2_close_fail counter
+system_cifs_smb2_close_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_close_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_flush counter
+system_cifs_smb2_flush_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_flush_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_flush_fail counter
+system_cifs_smb2_flush_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_flush_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_tree_connect_fail counter
+system_cifs_smb2_tree_connect_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_tree_connect_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 20
+# TYPE system_cifs_smb2_read_fail counter
+system_cifs_smb2_read_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_read_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_write counter
+system_cifs_smb2_write_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_write_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_write_fail counter
+system_cifs_smb2_write_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_write_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_lock counter
+system_cifs_smb2_lock_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_lock_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_lock_fail counter
+system_cifs_smb2_lock_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_lock_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_ioctl counter
+system_cifs_smb2_ioctl_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 1
+system_cifs_smb2_ioctl_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 1
+# TYPE system_cifs_smb2_ioctl_fail counter
+system_cifs_smb2_ioctl_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 1
+system_cifs_smb2_ioctl_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_query_directory counter
+system_cifs_smb2_query_directory_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 2
+system_cifs_smb2_query_directory_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_query_directory_fail counter
+system_cifs_smb2_query_directory_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_query_directory_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_change_notify counter
+system_cifs_smb2_change_notify_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_change_notify_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_change_notify_fail counter
+system_cifs_smb2_change_notify_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_change_notify_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_query_info counter
+system_cifs_smb2_query_info_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 15190774
+system_cifs_smb2_query_info_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 15181562
+# TYPE system_cifs_smb2_query_info_fail counter
+system_cifs_smb2_query_info_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_query_info_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_set_info counter
+system_cifs_smb2_set_info_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_set_info_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_set_info_fail counter
+system_cifs_smb2_set_info_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_set_info_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_oplock_break counter
+system_cifs_smb2_oplock_break_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_oplock_break_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_oplock_break_fail counter
+system_cifs_smb2_oplock_break_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_oplock_break_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_remote_opens counter
+system_cifs_smb2_remote_opens_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_remote_opens_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_tree_connect counter
+system_cifs_smb2_tree_connect_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 2
+system_cifs_smb2_tree_connect_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 23
+# TYPE system_cifs_smb2_read counter
+system_cifs_smb2_read_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_read_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_tree_disconnect_fail counter
+system_cifs_smb2_tree_disconnect_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_tree_disconnect_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0

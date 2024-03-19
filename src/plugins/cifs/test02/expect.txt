@@ -1,0 +1,60 @@
+# TYPE system_cifs_smb1_oplock_break counter
+system_cifs_smb1_oplock_break_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_oplock_break_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_read counter
+system_cifs_smb1_read_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_read_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_connected gauge
+system_cifs_connected{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 1
+system_cifs_connected{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 1
+# TYPE system_cifs_smb1_write counter
+system_cifs_smb1_write_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_write_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_read_bytes counter
+system_cifs_smb1_read_bytes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_read_bytes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_write_bytes counter
+system_cifs_smb1_write_bytes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_write_bytes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_locks counter
+system_cifs_smb1_locks_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_locks_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_opens counter
+system_cifs_smb1_opens_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_opens_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_closes counter
+system_cifs_smb1_closes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_closes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_deletes counter
+system_cifs_smb1_deletes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_deletes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_posix_opens counter
+system_cifs_smb1_posix_opens_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_posix_opens_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_posix_mkdirs counter
+system_cifs_smb1_posix_mkdirs_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_posix_mkdirs_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_mkdirs counter
+system_cifs_smb1_mkdirs_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_mkdirs_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_rmdirs counter
+system_cifs_smb1_rmdirs_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_rmdirs_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_renames counter
+system_cifs_smb1_renames_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_renames_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_t2renames counter
+system_cifs_smb1_t2renames_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_t2renames_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_hard_links counter
+system_cifs_smb1_hard_links_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_hard_links_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb_sent counter
+system_cifs_smb_sent_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 312394
+system_cifs_smb_sent_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 312394
+# TYPE system_cifs_smb1_sym_links counter
+system_cifs_smb1_sym_links_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_sym_links_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_flushes counter
+system_cifs_smb1_flushes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_flushes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
