@@ -1,0 +1,12 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-softnet 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd softnet man page"
+.SH NAME
+ncollectd-softnet \- Documentation of ncollectd's softnet plugin
+.SH SYNOPSIS
+\fBload-plugin\fP softnet
+.SH DESCRIPTION
+The \fBsoftnet\fP plugin collect data of the packets recived based on CPU cores,
+reading the file \fI/proc/net/softnet_stat\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
