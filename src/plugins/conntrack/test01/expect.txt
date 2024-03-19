@@ -1,0 +1,4 @@
+# TYPE system_conntrack_max gauge
+system_conntrack_max{hostname="localhost.localdomain"} 262144
+# TYPE system_conntrack_used gauge
+system_conntrack_used{hostname="localhost.localdomain"} 10388
