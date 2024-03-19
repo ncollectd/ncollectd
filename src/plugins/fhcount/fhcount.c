@@ -1,126 +1,99 @@
-/**
- *
- * collectd - src/fhcount.c
- * Copyright (c) 2015, Jiri Tyr <jiri.tyr at gmail.com>
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (c) 2015, Jiri Tyr
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Jiri Tyr <jiri.tyr at gmail.com>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
-static const char *config_keys[] = {"ValuesAbsolute", "ValuesPercentage"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
+enum {
+    FAM_HOST_FILE_HANDLES_USED,
+    FAM_HOST_FILE_HANDLES_UNUSED,
+    FAM_HOST_FILE_HANDLES_MAX,
+    FAM_HOST_FILE_MAX,
+};
 
-static bool values_absolute = true;
-static bool values_percentage;
+static metric_family_t fams[FAM_HOST_FILE_MAX] = {
+    [FAM_HOST_FILE_HANDLES_USED] = {
+        .name = "system_file_handles_used",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_HOST_FILE_HANDLES_UNUSED] = {
+        .name = "system_file_handles_unused",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_HOST_FILE_HANDLES_MAX] = {
+        .name = "system_file_handles_max",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+};
 
-static int fhcount_config(const char *key, const char *value) {
-  int ret = -1;
+static char *path_proc_file_nr;
 
-  if (strcasecmp(key, "ValuesAbsolute") == 0) {
-    if (IS_TRUE(value)) {
-      values_absolute = true;
-    } else {
-      values_absolute = false;
+static int fhcount_read(void)
+{
+    FILE *fp = fopen(path_proc_file_nr, "r");
+    if (fp == NULL) {
+        PLUGIN_ERROR("Cannot open '%s': %s", path_proc_file_nr, STRERRNO);
+        return -1;
     }
 
-    ret = 0;
-  } else if (strcasecmp(key, "ValuesPercentage") == 0) {
-    if (IS_TRUE(value)) {
-      values_percentage = true;
-    } else {
-      values_percentage = false;
+    char buffer[64];
+    if (fgets(buffer, sizeof(buffer), fp) == NULL) {
+        PLUGIN_ERROR("fgets: %s", STRERRNO);
+        fclose(fp);
+        return -1;
     }
-
-    ret = 0;
-  }
-
-  return ret;
-}
-
-static void fhcount_submit(const char *type, const char *type_instance,
-                           gauge_t value) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = value};
-  vl.values_len = 1;
-
-  // Compose the metric
-  sstrncpy(vl.plugin, "fhcount", sizeof(vl.plugin));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  // Dispatch the metric
-  plugin_dispatch_values(&vl);
-}
-
-static int fhcount_read(void) {
-  int numfields = 0;
-  int buffer_len = 60;
-  gauge_t used, unused, max;
-  int prc_used, prc_unused;
-  char *fields[3];
-  char buffer[buffer_len];
-  FILE *fp;
-
-  // Open file
-  fp = fopen("/proc/sys/fs/file-nr", "r");
-  if (fp == NULL) {
-    ERROR("fhcount: fopen: %s", STRERRNO);
-    return EXIT_FAILURE;
-  }
-  if (fgets(buffer, buffer_len, fp) == NULL) {
-    ERROR("fhcount: fgets: %s", STRERRNO);
     fclose(fp);
-    return EXIT_FAILURE;
-  }
-  fclose(fp);
 
-  // Tokenize string
-  numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+    char *fields[3];
+    int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+    if (numfields != 3) {
+        PLUGIN_ERROR("Line doesn't contain 3 fields");
+        return -1;
+    }
 
-  if (numfields != 3) {
-    ERROR("fhcount: Line doesn't contain 3 fields");
-    return EXIT_FAILURE;
-  }
+    // Define the values
+    double used = 0;
+    strtodouble(fields[0], &used);
+    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_USED], VALUE_GAUGE(used), NULL, NULL);
 
-  // Define the values
-  strtogauge(fields[0], &used);
-  strtogauge(fields[1], &unused);
-  strtogauge(fields[2], &max);
-  prc_used = (gauge_t)used / max * 100;
-  prc_unused = (gauge_t)unused / max * 100;
+    double unused = 0;
+    strtodouble(fields[1], &unused);
+    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_UNUSED], VALUE_GAUGE(unused), NULL, NULL);
 
-  // Submit values
-  if (values_absolute) {
-    fhcount_submit("file_handles", "used", (gauge_t)used);
-    fhcount_submit("file_handles", "unused", (gauge_t)unused);
-    fhcount_submit("file_handles", "max", (gauge_t)max);
-  }
-  if (values_percentage) {
-    fhcount_submit("percent", "used", (gauge_t)prc_used);
-    fhcount_submit("percent", "unused", (gauge_t)prc_unused);
-  }
+    double max = 0;
+    strtodouble(fields[2], &max);
+    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_MAX], VALUE_GAUGE(max), NULL, NULL);
 
-  return 0;
+    plugin_dispatch_metric_family_array(fams, FAM_HOST_FILE_MAX, 0);
+    return 0;
 }
 
-void module_register(void) {
-  plugin_register_config("fhcount", fhcount_config, config_keys,
-                         config_keys_num);
-  plugin_register_read("fhcount", fhcount_read);
+static int fhcount_init(void)
+{
+    path_proc_file_nr = plugin_procpath("sys/fs/file-nr");
+    if (path_proc_file_nr == NULL) {
+        PLUGIN_ERROR("Cannot get proc path.");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int fhcount_shutdown(void)
+{
+    free(path_proc_file_nr);
+    return 0;
+}
+
+void module_register(void)
+{
+    plugin_register_init("fhcount", fhcount_init);
+    plugin_register_read("fhcount", fhcount_read);
+    plugin_register_shutdown("fhcount", fhcount_shutdown);
 }
