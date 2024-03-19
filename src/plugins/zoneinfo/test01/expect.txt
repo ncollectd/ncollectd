@@ -1,0 +1,231 @@
+# TYPE system_zoneinfo_free_pages gauge
+system_zoneinfo_free_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 3977
+system_zoneinfo_free_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 470501
+system_zoneinfo_free_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 4745669
+system_zoneinfo_free_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 5166358
+system_zoneinfo_free_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 19524
+system_zoneinfo_free_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 12042
+# TYPE system_zoneinfo_low_pages gauge
+system_zoneinfo_low_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 2
+system_zoneinfo_low_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 538
+system_zoneinfo_low_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 9917
+system_zoneinfo_low_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 10592
+system_zoneinfo_low_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 10592
+system_zoneinfo_low_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 10592
+# TYPE system_zoneinfo_min_pages gauge
+system_zoneinfo_min_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 2
+system_zoneinfo_min_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 431
+system_zoneinfo_min_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 7934
+system_zoneinfo_min_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 8474
+system_zoneinfo_min_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 8474
+system_zoneinfo_min_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 8474
+# TYPE system_zoneinfo_spanned_pages gauge
+system_zoneinfo_spanned_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 4095
+system_zoneinfo_spanned_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 1044480
+system_zoneinfo_spanned_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 11796480
+system_zoneinfo_spanned_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 12582912
+system_zoneinfo_spanned_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 12582912
+system_zoneinfo_spanned_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 12582911
+# TYPE system_zoneinfo_scanned_pages gauge
+system_zoneinfo_scanned_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_scanned_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_scanned_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 0
+system_zoneinfo_scanned_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 0
+system_zoneinfo_scanned_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 0
+system_zoneinfo_scanned_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 0
+# TYPE system_zoneinfo_high_pages gauge
+system_zoneinfo_high_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 3
+system_zoneinfo_high_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 646
+system_zoneinfo_high_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 11901
+system_zoneinfo_high_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 12711
+system_zoneinfo_high_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 12711
+system_zoneinfo_high_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 12711
+# TYPE system_zoneinfo_active_anon_pages gauge
+system_zoneinfo_active_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_active_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 107968
+system_zoneinfo_active_anon_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 406863
+system_zoneinfo_active_anon_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 249014
+system_zoneinfo_active_anon_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 4924871
+system_zoneinfo_active_anon_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 50714
+# TYPE system_zoneinfo_present_pages gauge
+system_zoneinfo_present_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 3999
+system_zoneinfo_present_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 690581
+system_zoneinfo_present_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 11796480
+system_zoneinfo_present_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 12582912
+system_zoneinfo_present_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 12582912
+system_zoneinfo_present_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 12582911
+# TYPE system_zoneinfo_inactive_anon_pages gauge
+system_zoneinfo_inactive_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_inactive_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 51376
+system_zoneinfo_inactive_anon_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 160489
+system_zoneinfo_inactive_anon_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 91502
+system_zoneinfo_inactive_anon_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 387164
+system_zoneinfo_inactive_anon_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 131222
+# TYPE system_zoneinfo_anon_transparent_hugepages gauge
+system_zoneinfo_anon_transparent_hugepages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_anon_transparent_hugepages{hostname="localhost.localdomain",node="0",zone="DMA32"} 297
+system_zoneinfo_anon_transparent_hugepages{hostname="localhost.localdomain",node="0",zone="Normal"} 160
+system_zoneinfo_anon_transparent_hugepages{hostname="localhost.localdomain",node="1",zone="Normal"} 52
+system_zoneinfo_anon_transparent_hugepages{hostname="localhost.localdomain",node="2",zone="Normal"} 14
+system_zoneinfo_anon_transparent_hugepages{hostname="localhost.localdomain",node="3",zone="Normal"} 3
+# TYPE system_zoneinfo_active_file_pages gauge
+system_zoneinfo_active_file_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_active_file_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 2
+system_zoneinfo_active_file_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 2594234
+system_zoneinfo_active_file_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 2473002
+system_zoneinfo_active_file_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 335639
+system_zoneinfo_active_file_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 344768
+# TYPE system_zoneinfo_isolated_file_pages gauge
+system_zoneinfo_isolated_file_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_isolated_file_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_isolated_file_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 0
+system_zoneinfo_isolated_file_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 0
+system_zoneinfo_isolated_file_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 0
+system_zoneinfo_isolated_file_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 0
+# TYPE system_zoneinfo_anon_pages gauge
+system_zoneinfo_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 7280
+system_zoneinfo_anon_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 484856
+system_zoneinfo_anon_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 313558
+system_zoneinfo_anon_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 5304860
+system_zoneinfo_anon_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 180377
+# TYPE system_zoneinfo_isolated_anon_pages gauge
+system_zoneinfo_isolated_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_isolated_anon_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_isolated_anon_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 0
+system_zoneinfo_isolated_anon_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 0
+system_zoneinfo_isolated_anon_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 0
+system_zoneinfo_isolated_anon_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 0
+# TYPE system_zoneinfo_slab_unreclaimable_pages gauge
+system_zoneinfo_slab_unreclaimable_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_slab_unreclaimable_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_slab_unreclaimable_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 155260
+system_zoneinfo_slab_unreclaimable_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 256520
+system_zoneinfo_slab_unreclaimable_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 13906
+system_zoneinfo_slab_unreclaimable_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 544041
+# TYPE system_zoneinfo_managed_pages gauge
+system_zoneinfo_managed_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 3977
+system_zoneinfo_managed_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 629922
+system_zoneinfo_managed_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 11596265
+system_zoneinfo_managed_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 12385777
+system_zoneinfo_managed_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 12385777
+system_zoneinfo_managed_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 12385659
+# TYPE system_zoneinfo_file_pages gauge
+system_zoneinfo_file_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_file_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 24
+system_zoneinfo_file_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 4729297
+system_zoneinfo_file_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 4835390
+system_zoneinfo_file_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 6762133
+system_zoneinfo_file_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 10152924
+# TYPE system_zoneinfo_slab_reclaimable_pages gauge
+system_zoneinfo_slab_reclaimable_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_slab_reclaimable_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_slab_reclaimable_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 658239
+system_zoneinfo_slab_reclaimable_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 1343037
+system_zoneinfo_slab_reclaimable_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 58791
+system_zoneinfo_slab_reclaimable_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 1123170
+# TYPE system_zoneinfo_dirty_pages gauge
+system_zoneinfo_dirty_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_dirty_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_dirty_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 484
+system_zoneinfo_dirty_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 1479
+system_zoneinfo_dirty_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 250050
+system_zoneinfo_dirty_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 792512
+# TYPE system_zoneinfo_writeback_pages gauge
+system_zoneinfo_writeback_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_writeback_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_writeback_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 0
+system_zoneinfo_writeback_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 0
+system_zoneinfo_writeback_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 0
+system_zoneinfo_writeback_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 0
+# TYPE system_zoneinfo_unevictable_pages gauge
+system_zoneinfo_unevictable_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_unevictable_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_unevictable_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 0
+system_zoneinfo_unevictable_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 0
+system_zoneinfo_unevictable_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 0
+system_zoneinfo_unevictable_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 0
+# TYPE system_zoneinfo_shmem_pages gauge
+system_zoneinfo_shmem_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_shmem_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_shmem_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 700
+system_zoneinfo_shmem_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 330
+system_zoneinfo_shmem_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 7
+system_zoneinfo_shmem_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 23
+# TYPE system_zoneinfo_nr_dirtied counter
+system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 515377
+system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="0",zone="Normal"} 3687140384
+system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="1",zone="Normal"} 4365284715
+system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="2",zone="Normal"} 193876419262
+system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="3",zone="Normal"} 515468151841
+# TYPE system_zoneinfo_kernel_stacks gauge
+system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="0",zone="Normal"} 444
+system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="1",zone="Normal"} 249
+system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="2",zone="Normal"} 173
+system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="3",zone="Normal"} 77
+# TYPE system_zoneinfo_mapped_pages gauge
+system_zoneinfo_mapped_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_mapped_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 4
+system_zoneinfo_mapped_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 8066
+system_zoneinfo_mapped_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 9988
+system_zoneinfo_mapped_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 28
+system_zoneinfo_mapped_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 389
+# TYPE system_zoneinfo_nr_written counter
+system_zoneinfo_nr_written_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_nr_written_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 513944
+system_zoneinfo_nr_written_total{hostname="localhost.localdomain",node="0",zone="Normal"} 3658700555
+system_zoneinfo_nr_written_total{hostname="localhost.localdomain",node="1",zone="Normal"} 4336189067
+system_zoneinfo_nr_written_total{hostname="localhost.localdomain",node="2",zone="Normal"} 191662359437
+system_zoneinfo_nr_written_total{hostname="localhost.localdomain",node="3",zone="Normal"} 510729650726
+# TYPE system_zoneinfo_inactive_file_pages gauge
+system_zoneinfo_inactive_file_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_inactive_file_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 22
+system_zoneinfo_inactive_file_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 2134363
+system_zoneinfo_inactive_file_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 2362057
+system_zoneinfo_inactive_file_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 6426607
+system_zoneinfo_inactive_file_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 9808094
+# TYPE system_zoneinfo_numa_hit counter
+system_zoneinfo_numa_hit_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_numa_hit_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 103852471
+system_zoneinfo_numa_hit_total{hostname="localhost.localdomain",node="0",zone="Normal"} 181900375766
+system_zoneinfo_numa_hit_total{hostname="localhost.localdomain",node="1",zone="Normal"} 183268161130
+system_zoneinfo_numa_hit_total{hostname="localhost.localdomain",node="2",zone="Normal"} 1373945154
+system_zoneinfo_numa_hit_total{hostname="localhost.localdomain",node="3",zone="Normal"} 548393490015
+# TYPE system_zoneinfo_numa_miss counter
+system_zoneinfo_numa_miss_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_numa_miss_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 307615
+system_zoneinfo_numa_miss_total{hostname="localhost.localdomain",node="0",zone="Normal"} 4790415515
+system_zoneinfo_numa_miss_total{hostname="localhost.localdomain",node="1",zone="Normal"} 6408413
+system_zoneinfo_numa_miss_total{hostname="localhost.localdomain",node="2",zone="Normal"} 199166549363
+system_zoneinfo_numa_miss_total{hostname="localhost.localdomain",node="3",zone="Normal"} 27873329
+# TYPE system_zoneinfo_numa_foreign counter
+system_zoneinfo_numa_foreign_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_numa_foreign_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_numa_foreign_total{hostname="localhost.localdomain",node="0",zone="Normal"} 6630083
+system_zoneinfo_numa_foreign_total{hostname="localhost.localdomain",node="1",zone="Normal"} 33929711
+system_zoneinfo_numa_foreign_total{hostname="localhost.localdomain",node="2",zone="Normal"} 629357732
+system_zoneinfo_numa_foreign_total{hostname="localhost.localdomain",node="3",zone="Normal"} 203321636970
+# TYPE system_zoneinfo_numa_interleave counter
+system_zoneinfo_numa_interleave_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_numa_interleave_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_numa_interleave_total{hostname="localhost.localdomain",node="0",zone="Normal"} 29720
+system_zoneinfo_numa_interleave_total{hostname="localhost.localdomain",node="1",zone="Normal"} 29611
+system_zoneinfo_numa_interleave_total{hostname="localhost.localdomain",node="2",zone="Normal"} 29701
+system_zoneinfo_numa_interleave_total{hostname="localhost.localdomain",node="3",zone="Normal"} 29621
+# TYPE system_zoneinfo_numa_local counter
+system_zoneinfo_numa_local_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_numa_local_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 103852412
+system_zoneinfo_numa_local_total{hostname="localhost.localdomain",node="0",zone="Normal"} 181901623050
+system_zoneinfo_numa_local_total{hostname="localhost.localdomain",node="1",zone="Normal"} 183267704673
+system_zoneinfo_numa_local_total{hostname="localhost.localdomain",node="2",zone="Normal"} 1373909456
+system_zoneinfo_numa_local_total{hostname="localhost.localdomain",node="3",zone="Normal"} 548393448912
+# TYPE system_zoneinfo_numa_other counter
+system_zoneinfo_numa_other_total{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_numa_other_total{hostname="localhost.localdomain",node="0",zone="DMA32"} 307674
+system_zoneinfo_numa_other_total{hostname="localhost.localdomain",node="0",zone="Normal"} 4789168231
+system_zoneinfo_numa_other_total{hostname="localhost.localdomain",node="1",zone="Normal"} 6864870
+system_zoneinfo_numa_other_total{hostname="localhost.localdomain",node="2",zone="Normal"} 199166585061
+system_zoneinfo_numa_other_total{hostname="localhost.localdomain",node="3",zone="Normal"} 27914432
