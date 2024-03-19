@@ -1,0 +1,74 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-squid 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd squid man page"
+.SH NAME
+ncollectd-squid \- Documentation of ncollectd's squid plugin
+.SH SYNOPSIS
+\fBload-plugin\fP squid
+.br
+\fBplugin\fP squid {
+    \fBinstance\fP \fIname\fP {
+        \fBurl\fP \fIurl\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBdigest\fP \fItrue|false\fP
+        \fBverify-peer\fP \fItrue|false\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBca-cert\fP \fI/path/to/ca\fP
+        \fBheader\fP \fIheader\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBsquid\fP plugin read Squid metrics over http orfrom an unix socket.
+.PP
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks.
+The following options are valid within \fBinstance\fP blocks:
+.PP
+
+.TP
+\fBurl\fP \fIurl\fP
+URL to access the Squid cachemgr.
+.TP
+\fBuser\fP \fIuser\fP
+Username to use if authorization is required to read the url.
+.TP
+\fBpassword\fP \fIpassword\fP
+Password to use if authorization is required to read the url.
+.TP
+\fBdigest\fP \fItrue|false\fP
+Enable HTTP digest authentication.
+.TP
+\fBverify-peer\fP \fItrue|false\fP
+Enable or disable peer SSL certificate verification. See
+.UR http://curl.haxx.se/docs/sslcerts.html
+.UE
+for details. Enabled by default.
+.TP
+\fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification. If enabled, the plugin checks if
+the \f(CWCommon Name\fP or a \f(CWSubject Alternate Name\fP field of the SSL certificate
+matches the host name provided by the \fBurl\fP option. If this identity check
+fails, the connection is aborted. Obviously, only works when connecting to a
+SSL enabled server. Enabled by default.
+.TP
+\fBca-cert\fP \fI/path/to/ca\fP
+File that holds one or more SSL certificates. If you want to use HTTPS you will
+possibly need this option. What CA certificates come bundled with libcurl
+and are checked by default depends on the distribution you use.
+.TP
+\fBheader\fP \fIheader\fP
+A HTTP header to add to the request. Multiple headers are added if this option
+is specified more than once.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label I<Key>=I<Value> to the submitting metrics. Can appear
+multiple time in the B<Instance> block.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

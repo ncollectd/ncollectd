@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_SQUID "Squid statistics" ON)
+
+set(BUILD_PLUGIN_SQUID 0)
+
+if(PLUGIN_SQUID)
+    find_package(LibCurl)
+    if(LIBCURL_FOUND)
+        set(BUILD_PLUGIN_SQUID 1)
+    else()
+        set(BUILD_PLUGIN_SQUID_REASON "libcurl not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_SQUID ${BUILD_PLUGIN_SQUID} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_SQUID)
+    gperf_generate(squid_counters.gperf "${CMAKE_CURRENT_BINARY_DIR}/squid_counters.h" SQUID_COUNTERS_H)
+    set(PLUGIN_SQUID_SRC squid.c squid_fams.h)
+    add_library(squid MODULE ${PLUGIN_SQUID_SRC} ${SQUID_COUNTERS_H})
+    target_link_libraries(squid PRIVATE libutils libmetric LibCurl::LibCurl)
+    set_target_properties(squid PROPERTIES PREFIX "")
+    install(TARGETS squid DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-squid.5 ncollectd-squid.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-squid.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
