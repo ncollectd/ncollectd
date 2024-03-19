@@ -1,1460 +1,1179 @@
-/**
- * collectd - src/ceph.c
- * Copyright (C) 2011  New Dream Network
- * Copyright (C) 2015  Florian octo Forster
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Colin McCabe <cmccabe at alumni.cmu.edu>
- *   Dennis Zou <yunzou at cisco.com>
- *   Dan Ryder <daryder at cisco.com>
- *   Florian octo Forster <octo at collectd.org>
- **/
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2011  New Dream Network
+// SPDX-FileCopyrightText: Copyright (C) 2015  Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Colin McCabe <cmccabe at alumni.cmu.edu>
+// SPDX-FileContributor: Dennis Zou <yunzou at cisco.com>
+// SPDX-FileContributor: Dan Ryder <daryder at cisco.com>
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 
-#include "collectd.h"
-
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
+#include "libutils/avltree.h"
+#include "libxson/json_parse.h"
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <yajl/yajl_parse.h>
-#if HAVE_YAJL_YAJL_VERSION_H
-#include <yajl/yajl_version.h>
-#endif
+#include <poll.h>
+#include <sys/un.h>
+
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
 #endif
 
-#include <inttypes.h>
-#include <limits.h>
-#include <math.h>
-#include <poll.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <unistd.h>
-
 #define RETRY_AVGCOUNT -1
 
-#if defined(YAJL_MAJOR) && (YAJL_MAJOR > 1)
-#define HAVE_YAJL_V2 1
-#endif
-
-#define RETRY_ON_EINTR(ret, expr)                                              \
-  while (1) {                                                                  \
-    ret = expr;                                                                \
-    if (ret >= 0)                                                              \
-      break;                                                                   \
-    ret = -errno;                                                              \
-    if (ret != -EINTR)                                                         \
-      break;                                                                   \
-  }
+#define RETRY_ON_EINTR(ret, expr)    \
+    while (1) {                      \
+        ret = expr;                  \
+        if (ret >= 0)                \
+            break;                   \
+        ret = -errno;                \
+        if (ret != -EINTR)           \
+            break;                   \
+    }
 
 /** Timeout interval in seconds */
 #define CEPH_TIMEOUT_INTERVAL 1
 
-/** Maximum path length for a UNIX domain socket on this system */
-#define UNIX_DOMAIN_SOCK_PATH_MAX (sizeof(((struct sockaddr_un *)0)->sun_path))
+typedef enum {
+    PERF_COUNTER_NONE       = 0x00,
+    PERF_COUNTER_TIME       = 0x01, /* float (measuring seconds) */
+    PERF_COUNTER_U64        = 0x02, /* integer (note: either TIME or U64 *must* be set) */
+    PERF_COUNTER_LONGRUNAVG = 0x04, /* paired counter + sum (time) */
+    PERF_COUNTER_COUNTER    = 0x08, /* counter (vs gauge) */
+    PERF_COUNTER_HISTOGRAM  = 0x10, /* histogram (vector) of values */
+} perf_counter_type_t;
 
-/** Yajl callback returns */
-#define CEPH_CB_CONTINUE 1
-#define CEPH_CB_ABORT 0
+typedef enum {
+    PERF_METRIC_NONE,
+    PERF_METRIC_COUNTER,
+    PERF_METRIC_GAUGE,
+    PERF_METRIC_LONGRUNAVG,
+    PERF_METRIC_HISTOGRAM,
+    PERF_METRIC_XXX // FIXME
+} perf_metric_t;
 
-#if HAVE_YAJL_V2
-typedef size_t yajl_len_t;
-#else
-typedef unsigned int yajl_len_t;
-#endif
+typedef enum {
+    PERF_LONGRUN_NONE     = -1,
+    PERF_LONGRUN_AVGCOUNT =  0,
+    PERF_LONGRUN_SUM      =  1,
+    PERF_LONGRUN_AVGTIME  =  2,
+    PERF_LONGRUN_MAX      =  3
+} perf_logrun_t;
 
-/** Number of types for ceph defined in types.db */
-#define CEPH_DSET_TYPES_NUM 3
-/** ceph types enum */
-enum ceph_dset_type_d {
-  DSET_LATENCY = 0,
-  DSET_BYTES = 1,
-  DSET_RATE = 2,
-  DSET_TYPE_UNFOUND = 1000
-};
+typedef struct {
+    char *name;
+    int type;
+    perf_metric_t perf_metric;
+    char *metric;
+    char *metric_longrun[PERF_LONGRUN_MAX];
+    char *description;
+} perf_value_t;
 
-/** Valid types for ceph defined in types.db */
-static const char *const ceph_dset_types[CEPH_DSET_TYPES_NUM] = {
-    "ceph_latency", "ceph_bytes", "ceph_rate"};
+typedef enum {
+    PERF_VALUE_NONE,
+    PERF_VALUE_TYPE,
+    PERF_VALUE_DESCRIPTION
+} perf_value_type_t;
 
-/******* ceph_daemon *******/
-struct ceph_daemon {
-  /** Version of the admin_socket interface */
-  uint32_t version;
-  /** daemon name **/
-  char name[DATA_MAX_NAME_LEN];
-
-  /** Path to the socket that we use to talk to the ceph daemon */
-  char asok_path[UNIX_DOMAIN_SOCK_PATH_MAX];
-
-  /** Number of counters */
-  int ds_num;
-  /** Track ds types */
-  uint32_t *ds_types;
-  /** Track ds names to match with types */
-  char **ds_names;
-
-  /**
-   * Keep track of last data for latency values so we can calculate rate
-   * since last poll.
-   */
-  struct last_data **last_poll_data;
-  /** index of last poll data */
-  int last_idx;
-};
-
-/******* JSON parsing *******/
-typedef int (*node_handler_t)(void *, const char *, const char *);
+typedef struct {
+    char *name;
+    c_avl_tree_t *tree;
+} perf_key_t;
 
 /** Track state and handler while parsing JSON */
-struct yajl_struct {
-  node_handler_t handler;
-  void *handler_arg;
+typedef struct {
+    c_avl_tree_t *tree;
+    label_set_t *labels;
 
-  char *key;
-  char *stack[YAJL_MAX_DEPTH];
-  size_t depth;
-};
-typedef struct yajl_struct yajl_struct;
+    cdtime_t time;
+    perf_key_t *perf_key;
+    perf_value_t *perf_value;
+    perf_value_type_t perf_value_type;
+    perf_logrun_t perf_longrun;
 
-enum perfcounter_type_d {
-  PERFCOUNTER_LATENCY = 0x4,
-  PERFCOUNTER_DERIVE = 0x8,
-};
+    size_t depth;
+} json_struct_t;
 
-/** Give user option to use default (long run = since daemon started) avg */
-static int long_run_latency_avg;
+typedef struct {
+    uint32_t version; /* version of the admin_socket interface */
+    char *name;       /* daemon name */
+    char *asok_path;  /* path to the socket to talk to the ceph daemon */
+    cdtime_t timeout;
+    label_set_t labels;
+    bool have_schema;
+    c_avl_tree_t *schema;
+} ceph_daemon_t;
 
-/**
- * Give user option to use default type for special cases -
- * filestore.journal_wr_bytes is currently only metric here. Ceph reports the
- * type as a sum/count pair and will calculate it the same as a latency value.
- * All other "bytes" metrics (excluding the used/capacity bytes for the OSD)
- * use the DERIVE type. Unless user specifies to use given type, convert this
- * metric to use DERIVE.
- */
-static int convert_special_metrics = 1;
+typedef enum {
+    CSTATE_UNCONNECTED = 0,
+    CSTATE_WRITE_REQUEST,
+    CSTATE_READ_VERSION,
+    CSTATE_READ_AMT,
+    CSTATE_READ_JSON,
+} cstate_t;
 
-/** Array of daemons to monitor */
-static struct ceph_daemon **g_daemons;
+typedef enum {
+    ASOK_REQ_VERSION = 0,
+    ASOK_REQ_DATA = 1,
+    ASOK_REQ_SCHEMA = 2,
+    ASOK_REQ_NONE = 1000,
+} request_type_t;
 
-/** Number of elements in g_daemons */
-static size_t g_num_daemons;
+typedef struct {
+    ceph_daemon_t *d;         /* The Ceph daemon that we're talking to */
+    uint32_t request_type;    /* Request type */
+    cstate_t state;           /* The connection state */
+    int asok;                 /* The socket we use to talk to this daemon */
+    uint32_t amt;             /* The amount of data remaining to read / write. */
+    uint32_t json_len;        /* Length of the JSON to read */
+    unsigned char *json;      /* Buffer containing JSON data */
+    json_struct_t yajl;       /* Keep data important to yajl processing */
+} ceph_conn_t;
 
-/**
- * A set of data that we build up in memory while parsing the JSON.
- */
-struct values_tmp {
-  /** ceph daemon we are processing data for*/
-  struct ceph_daemon *d;
-  /** track avgcount across counters for avgcount/sum latency pairs */
-  uint64_t avgcount;
-  /** current index of counters - used to get type of counter */
-  int index;
-  /**
-   * similar to index, but current index of latency type counters -
-   * used to get last poll data of counter
-   */
-  int latency_index;
-  /**
-   * values list - maintain across counters since
-   * host/plugin/plugin instance are always the same
-   */
-  value_list_t vlist;
-};
+extern const char valid_metric_chars[256];
 
-/**
- * A set of count/sum pairs to keep track of latency types and get difference
- * between this poll data and last poll data.
- */
-struct last_data {
-  char ds_name[DATA_MAX_NAME_LEN];
-  double last_sum;
-  uint64_t last_count;
-};
+static char *metric_pair(char *prefix, char *suffix)
+{
+    size_t len_prefix = strlen(prefix);
+    size_t len_suffix = strlen(suffix);
 
-/******* network I/O *******/
-enum cstate_t {
-  CSTATE_UNCONNECTED = 0,
-  CSTATE_WRITE_REQUEST,
-  CSTATE_READ_VERSION,
-  CSTATE_READ_AMT,
-  CSTATE_READ_JSON,
-};
+    char *metric = malloc(len_prefix + len_suffix + 2);
+    if (metric == NULL) {
+        PLUGIN_ERROR("malloc failed.");
+        return NULL;
+    }
 
-enum request_type_t {
-  ASOK_REQ_VERSION = 0,
-  ASOK_REQ_DATA = 1,
-  ASOK_REQ_SCHEMA = 2,
-  ASOK_REQ_NONE = 1000,
-};
+    if (valid_metric_chars[(int)prefix[0]] != 1)
+        metric[0] = '_';
+    else
+        metric[0] = prefix[0];
 
-struct cconn {
-  /** The Ceph daemon that we're talking to */
-  struct ceph_daemon *d;
+    for (size_t i=1; i < len_prefix; i++) {
+        if (valid_metric_chars[(int)prefix[i]] == 0)
+            metric[i] = '_';
+        else
+            metric[i] = prefix[i];
+    }
 
-  /** Request type */
-  uint32_t request_type;
+    metric[len_prefix] = '_';
 
-  /** The connection state */
-  enum cstate_t state;
+    for (size_t i=0; i < len_suffix; i++) {
+        if (valid_metric_chars[(int)suffix[i]] == 0)
+            metric[i + len_prefix + 1] = '_';
+        else
+            metric[i + len_prefix + 1] = suffix[i];
+    }
 
-  /** The socket we use to talk to this daemon */
-  int asok;
+    metric[len_prefix + len_suffix + 1] = '\0';
 
-  /** The amount of data remaining to read / write. */
-  uint32_t amt;
-
-  /** Length of the JSON to read */
-  uint32_t json_len;
-
-  /** Buffer containing JSON data */
-  unsigned char *json;
-
-  /** Keep data important to yajl processing */
-  struct yajl_struct yajl;
-};
-
-static int ceph_cb_null(void *ctx) { return CEPH_CB_CONTINUE; }
-
-static int ceph_cb_boolean(void *ctx, int bool_val) { return CEPH_CB_CONTINUE; }
-
-#define BUFFER_ADD(dest, src)                                                  \
-  do {                                                                         \
-    size_t dest_size = sizeof(dest);                                           \
-    size_t dest_len = strlen(dest);                                            \
-    if (dest_size > dest_len) {                                                \
-      sstrncpy((dest) + dest_len, (src), dest_size - dest_len);                \
-    }                                                                          \
-    (dest)[dest_size - 1] = '\0';                                              \
-  } while (0)
-
-static int ceph_cb_number(void *ctx, const char *number_val,
-                          yajl_len_t number_len) {
-  yajl_struct *state = (yajl_struct *)ctx;
-  char buffer[number_len + 1];
-  char key[2 * DATA_MAX_NAME_LEN] = {0};
-  int status;
-
-  memcpy(buffer, number_val, number_len);
-  buffer[sizeof(buffer) - 1] = '\0';
-
-  for (size_t i = 0; i < state->depth; i++) {
-    if (state->stack[i] == NULL)
-      continue;
-
-    if (strlen(key) != 0)
-      BUFFER_ADD(key, ".");
-    BUFFER_ADD(key, state->stack[i]);
-  }
-
-  /* Super-special case for filestore.journal_wr_bytes.avgcount: For
-   * some reason, Ceph schema encodes this as a count/sum pair while all
-   * other "Bytes" data (excluding used/capacity bytes for OSD space) uses
-   * a single "Derive" type. To spare further confusion, keep this KPI as
-   * the same type of other "Bytes". Instead of keeping an "average" or
-   * "rate", use the "sum" in the pair and assign that to the derive
-   * value. */
-  if (convert_special_metrics && (state->depth > 2) &&
-      state->stack[state->depth - 2] &&
-      (strcmp("filestore", state->stack[state->depth - 2]) == 0) &&
-      state->stack[state->depth - 1] &&
-      (strcmp("journal_wr_bytes", state->stack[state->depth - 1]) == 0) &&
-      (strcmp("avgcount", state->key) == 0)) {
-    DEBUG("ceph plugin: Skipping avgcount for filestore.JournalWrBytes");
-    return CEPH_CB_CONTINUE;
-  }
-
-  BUFFER_ADD(key, ".");
-  BUFFER_ADD(key, state->key);
-
-  status = state->handler(state->handler_arg, buffer, key);
-
-  if (status != 0) {
-    ERROR("ceph plugin: JSON handler failed with status %d.", status);
-    return CEPH_CB_ABORT;
-  }
-
-  return CEPH_CB_CONTINUE;
+    return metric;
 }
 
-static int ceph_cb_string(void *ctx, const unsigned char *string_val,
-                          yajl_len_t string_len) {
-  return CEPH_CB_CONTINUE;
+static void ceph_perf_value_free(perf_value_t *perf_value)
+{
+    if (perf_value == NULL)
+        return;
+
+    free(perf_value->name);
+    free(perf_value->metric);
+    for (size_t i=0; i < PERF_LONGRUN_MAX; i++) {
+        free(perf_value->metric_longrun[i]);
+    }
+    free(perf_value->description);
+    free(perf_value);
 }
 
-static int ceph_cb_start_map(void *ctx) {
-  yajl_struct *state = (yajl_struct *)ctx;
+static void ceph_perf_key_free(perf_key_t *perf_key)
+{
+    if (perf_key == NULL)
+        return;
 
-  /* Push key to the stack */
-  if (state->depth == YAJL_MAX_DEPTH)
-    return CEPH_CB_ABORT;
+    if (perf_key->tree != NULL) {
+        while (true) {
+            perf_value_t *perf_value = NULL;
+            char *value = NULL;
+            int status = c_avl_pick(perf_key->tree, (void *)&value, (void *)&perf_value);
+            if (status != 0)
+                break;
+            ceph_perf_value_free(perf_value);
+        }
+        c_avl_destroy(perf_key->tree);
+    }
 
-  state->stack[state->depth] = state->key;
-  state->depth++;
-  state->key = NULL;
-
-  return CEPH_CB_CONTINUE;
+    free(perf_key->name);
+    free(perf_key);
 }
 
-static int ceph_cb_end_map(void *ctx) {
-  yajl_struct *state = (yajl_struct *)ctx;
+static bool ceph_schema_cb_number(void *ctx, const char *number_val, size_t number_len)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
 
-  /* Pop key from the stack */
-  if (state->depth == 0)
-    return CEPH_CB_ABORT;
+    if ((state->depth == 3) && (state->perf_value_type == PERF_VALUE_TYPE)) {
+        if (state->perf_value == NULL) {
+            PLUGIN_ERROR("perf_value is NULL.");
+            return false;
+        }
 
-  sfree(state->key);
-  state->depth--;
-  state->key = state->stack[state->depth];
-  state->stack[state->depth] = NULL;
+        char num[64] = "";
+        if (number_len > sizeof(num)-1)
+            return 1;
+        memcpy(num, number_val, number_len);
+        num[number_len] = '\0';
 
-  return CEPH_CB_CONTINUE;
-}
+        state->perf_value->type = atoi(num);
 
-static int ceph_cb_map_key(void *ctx, const unsigned char *key,
-                           yajl_len_t string_len) {
-  yajl_struct *state = (yajl_struct *)ctx;
-  size_t sz = ((size_t)string_len) + 1;
+        if (state->perf_value->type & PERF_COUNTER_LONGRUNAVG) {
+            state->perf_value->perf_metric = PERF_METRIC_LONGRUNAVG;
+//            if (state->perf_value->type & PERF_COUNTER_TIME) {
+//            f->dump_string("value_type", "real-integer-pair");
+//            } else {
+//            f->dump_string("value_type", "integer-integer-pair");
+//            }
+        } else if (state->perf_value->type & PERF_COUNTER_HISTOGRAM) {
+            state->perf_value->perf_metric = PERF_METRIC_HISTOGRAM;
+//            if (state->perf_value->type & PERF_COUNTER_TIME) {
+//            f->dump_string("value_type", "real-2d-histogram");
+//            } else {
+//            f->dump_string("value_type", "integer-2d-histogram");
+//            }
+        } else {
+            if (state->perf_value->type & PERF_COUNTER_TIME) {
+                state->perf_value->perf_metric = PERF_METRIC_GAUGE;
+            } else {
+                state->perf_value->perf_metric = PERF_METRIC_COUNTER;
+//                if (state->perf_value->type & PERF_COUNTER_COUNTER)
+//                else
+//                    state->perf_value->perf_metric = PERF_METRIC_XXX;
+            }
+        }
+        state->perf_value->metric = metric_pair(state->perf_key->name, state->perf_value->name);
 
-  sfree(state->key);
-  state->key = malloc(sz);
-  if (state->key == NULL) {
-    ERROR("ceph plugin: malloc failed.");
-    return CEPH_CB_ABORT;
-  }
+        if ((state->perf_value->metric != NULL) &&
+            (state->perf_value->perf_metric == PERF_METRIC_LONGRUNAVG)) {
+            state->perf_value->metric_longrun[PERF_LONGRUN_AVGCOUNT] =
+                metric_pair(state->perf_value->metric, "avgcount");
+            state->perf_value->metric_longrun[PERF_LONGRUN_SUM] =
+                metric_pair(state->perf_value->metric, "sum");
+            state->perf_value->metric_longrun[PERF_LONGRUN_AVGTIME] =
+                metric_pair(state->perf_value->metric,  "avgtime");
+        }
 
-  memmove(state->key, key, sz - 1);
-  state->key[sz - 1] = '\0';
+#if 0
 
-  return CEPH_CB_CONTINUE;
-}
+  4 add_u64_counter           PERFCOUNTER_U64 | PERFCOUNTER_COUNTER
+  5 add_u64_avg               PERFCOUNTER_U64 | PERFCOUNTER_LONGRUNAVG
+  6 add_time                  PERFCOUNTER_TIME
+  7 add_time_avg              PERFCOUNTER_TIME | PERFCOUNTER_LONGRUNAVG
+  8 add_u64_counter_histogram PERFCOUNTER_U64 | PERFCOUNTER_HISTOGRAM | PERFCOUNTER_COUNTER
 
-static int ceph_cb_start_array(void *ctx) { return CEPH_CB_CONTINUE; }
+     if (d->type & PERFCOUNTER_COUNTER) {
+       f->dump_string("metric_type", "counter");
+     } else {
+       f->dump_string("metric_type", "gauge");
+     }
 
-static int ceph_cb_end_array(void *ctx) { return CEPH_CB_CONTINUE; }
+     if (d->type & PERFCOUNTER_LONGRUNAVG) {
+       if (d->type & PERFCOUNTER_TIME) {
+         f->dump_string("value_type", "real-integer-pair");
+       } else {
+         f->dump_string("value_type", "integer-integer-pair");
+       }
+     } else if (d->type & PERFCOUNTER_HISTOGRAM) {
+       if (d->type & PERFCOUNTER_TIME) {
+         f->dump_string("value_type", "real-2d-histogram");
+       } else {
+         f->dump_string("value_type", "integer-2d-histogram");
+       }
+     } else {
+       if (d->type & PERFCOUNTER_TIME) {
+         f->dump_string("value_type", "real");
+       } else {
+         f->dump_string("value_type", "integer");
+       }
+     }
+#endif
 
-static yajl_callbacks callbacks = {ceph_cb_null,
-                                   ceph_cb_boolean,
-                                   NULL,
-                                   NULL,
-                                   ceph_cb_number,
-                                   ceph_cb_string,
-                                   ceph_cb_start_map,
-                                   ceph_cb_map_key,
-                                   ceph_cb_end_map,
-                                   ceph_cb_start_array,
-                                   ceph_cb_end_array};
+    }
 
-static void ceph_daemon_print(const struct ceph_daemon *d) {
-  DEBUG("ceph plugin: name=%s, asok_path=%s", d->name, d->asok_path);
-}
-
-static void ceph_daemons_print(void) {
-  for (size_t i = 0; i < g_num_daemons; ++i) {
-    ceph_daemon_print(g_daemons[i]);
-  }
-}
-
-static void ceph_daemon_free(struct ceph_daemon *d) {
-  for (int i = 0; i < d->last_idx; i++) {
-    sfree(d->last_poll_data[i]);
-  }
-  sfree(d->last_poll_data);
-  d->last_poll_data = NULL;
-  d->last_idx = 0;
-
-  for (int i = 0; i < d->ds_num; i++) {
-    sfree(d->ds_names[i]);
-  }
-  sfree(d->ds_types);
-  sfree(d->ds_names);
-  sfree(d);
-}
-
-/* compact_ds_name removed the special characters ":", "_", "-" and "+" from the
- * input string. Characters following these special characters are capitalized.
- * Trailing "+" and "-" characters are replaces with the strings "Plus" and
- * "Minus". */
-static int compact_ds_name(char *buffer, size_t buffer_size, char const *src) {
-  char *src_copy;
-  size_t src_len;
-  char *ptr = buffer;
-  size_t ptr_size = buffer_size;
-  bool append_plus = false;
-  bool append_minus = false;
-
-  if ((buffer == NULL) || (buffer_size <= strlen("Minus")) || (src == NULL))
-    return EINVAL;
-
-  src_copy = strdup(src);
-  src_len = strlen(src);
-
-  /* Remove trailing "+" and "-". */
-  if (src_copy[src_len - 1] == '+') {
-    append_plus = true;
-    src_len--;
-    src_copy[src_len] = 0;
-  } else if (src_copy[src_len - 1] == '-') {
-    append_minus = true;
-    src_len--;
-    src_copy[src_len] = 0;
-  }
-
-  /* Split at special chars, capitalize first character, append to buffer. */
-  char *dummy = src_copy;
-  char *token;
-  char *save_ptr = NULL;
-  while ((token = strtok_r(dummy, ":_-+", &save_ptr)) != NULL) {
-    size_t len;
-
-    dummy = NULL;
-
-    token[0] = toupper((int)token[0]);
-
-    assert(ptr_size > 1);
-
-    len = strlen(token);
-    if (len >= ptr_size)
-      len = ptr_size - 1;
-
-    assert(len > 0);
-    assert(len < ptr_size);
-
-    sstrncpy(ptr, token, len + 1);
-    ptr += len;
-    ptr_size -= len;
-
-    assert(*ptr == 0);
-    if (ptr_size <= 1)
-      break;
-  }
-
-  /* Append "Plus" or "Minus" if "+" or "-" has been stripped above. */
-  if (append_plus || append_minus) {
-    char const *append = "Plus";
-    if (append_minus)
-      append = "Minus";
-
-    size_t offset = buffer_size - (strlen(append) + 1);
-    if (offset > strlen(buffer))
-      offset = strlen(buffer);
-
-    sstrncpy(buffer + offset, append, buffer_size - offset);
-  }
-
-  sfree(src_copy);
-  return 0;
-}
-
-static bool has_suffix(char const *str, char const *suffix) {
-  size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
-  size_t offset;
-
-  if (suffix_len > str_len)
-    return false;
-  offset = str_len - suffix_len;
-
-  if (strcmp(str + offset, suffix) == 0)
     return true;
-
-  return false;
 }
 
-static void cut_suffix(char *buffer, size_t buffer_size, char const *str,
-                       char const *suffix) {
+static bool ceph_schema_cb_string(void *ctx, const char *string_val, size_t string_len)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
 
-  size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
+    if ((state->depth == 3) && (state->perf_value_type == PERF_VALUE_DESCRIPTION)) {
+        if (state->perf_value == NULL) {
+            PLUGIN_ERROR("perf_value is NULL.");
+            return false;
+        }
 
-  size_t offset = str_len - suffix_len + 1;
+        if (state->perf_value->description != NULL)
+            free(state->perf_value->description);
 
-  if (offset > buffer_size) {
-    offset = buffer_size;
-  }
+        state->perf_value->description = strndup((const char *)string_val, string_len);
+        if (state->perf_value->description == NULL) {
+            PLUGIN_ERROR("strndup failed.");
+            return false;
+        }
+    }
 
-  sstrncpy(buffer, str, offset);
+    return true;
 }
 
-/* count_parts returns the number of elements a "foo.bar.baz" style key has. */
-static size_t count_parts(char const *key) {
-  size_t parts_num = 0;
+static bool ceph_schema_cb_start_map(void *ctx)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
 
-  for (const char *ptr = key; ptr != NULL; ptr = strchr(ptr + 1, '.'))
-    parts_num++;
+    /* Push key to the stack */
+    if (state->depth == JSON_MAX_DEPTH)
+        return false;
 
-  return parts_num;
-}
+    state->depth++;
 
-/**
- * Parse key to remove "type" if this is for schema and initiate compaction
- */
-static int parse_keys(char *buffer, size_t buffer_size, const char *key_str) {
-  char tmp[2 * buffer_size];
-  size_t tmp_size = sizeof(tmp);
-  const char *cut_suffixes[] = {".type", ".avgcount", ".sum", ".avgtime"};
-
-  if (buffer == NULL || buffer_size == 0 || key_str == NULL ||
-      strlen(key_str) == 0)
-    return EINVAL;
-
-  sstrncpy(tmp, key_str, tmp_size);
-
-  /* Strip suffix if it is ".type" or one of latency metric suffix. */
-  if (count_parts(key_str) > 2) {
-    for (size_t i = 0; i < STATIC_ARRAY_SIZE(cut_suffixes); i++) {
-      if (has_suffix(key_str, cut_suffixes[i])) {
-        cut_suffix(tmp, tmp_size, key_str, cut_suffixes[i]);
+    switch (state->depth) {
+    case 1:
+        state->perf_key = NULL;
+        state->perf_value = NULL;
+        state->perf_value_type = PERF_VALUE_NONE;
         break;
-      }
-    }
-  }
-
-  return compact_ds_name(buffer, buffer_size, tmp);
-}
-
-/**
- * while parsing ceph admin socket schema, save counter name and type for later
- * data processing
- */
-static int ceph_daemon_add_ds_entry(struct ceph_daemon *d, const char *name,
-                                    int pc_type) {
-  uint32_t type;
-  char ds_name[DATA_MAX_NAME_LEN];
-
-  if (convert_special_metrics) {
-    /**
-     * Special case for filestore:JournalWrBytes. For some reason, Ceph
-     * schema encodes this as a count/sum pair while all other "Bytes" data
-     * (excluding used/capacity bytes for OSD space) uses a single "Derive"
-     * type. To spare further confusion, keep this KPI as the same type of
-     * other "Bytes". Instead of keeping an "average" or "rate", use the
-     * "sum" in the pair and assign that to the derive value.
-     */
-    if ((strcmp(name, "filestore.journal_wr_bytes.type") == 0)) {
-      pc_type = 10;
-    }
-  }
-
-  d->ds_names = realloc(d->ds_names, sizeof(char *) * (d->ds_num + 1));
-  if (!d->ds_names) {
-    return -ENOMEM;
-  }
-
-  d->ds_types = realloc(d->ds_types, sizeof(uint32_t) * (d->ds_num + 1));
-  if (!d->ds_types) {
-    return -ENOMEM;
-  }
-
-  d->ds_names[d->ds_num] = malloc(DATA_MAX_NAME_LEN);
-  if (!d->ds_names[d->ds_num]) {
-    return -ENOMEM;
-  }
-
-  type = (pc_type & PERFCOUNTER_DERIVE)
-             ? DSET_RATE
-             : ((pc_type & PERFCOUNTER_LATENCY) ? DSET_LATENCY : DSET_BYTES);
-  d->ds_types[d->ds_num] = type;
-
-  if (parse_keys(ds_name, sizeof(ds_name), name)) {
-    return 1;
-  }
-
-  sstrncpy(d->ds_names[d->ds_num], ds_name, DATA_MAX_NAME_LEN - 1);
-  d->ds_num = (d->ds_num + 1);
-
-  return 0;
-}
-
-/******* ceph_config *******/
-static int cc_handle_str(struct oconfig_item_s *item, char *dest,
-                         int dest_len) {
-  const char *val;
-  if (item->values_num != 1) {
-    return -ENOTSUP;
-  }
-  if (item->values[0].type != OCONFIG_TYPE_STRING) {
-    return -ENOTSUP;
-  }
-  val = item->values[0].value.string;
-  if (snprintf(dest, dest_len, "%s", val) > (dest_len - 1)) {
-    ERROR("ceph plugin: configuration parameter '%s' is too long.\n",
-          item->key);
-    return -ENAMETOOLONG;
-  }
-  return 0;
-}
-
-static int cc_handle_bool(struct oconfig_item_s *item, int *dest) {
-  if (item->values_num != 1) {
-    return -ENOTSUP;
-  }
-
-  if (item->values[0].type != OCONFIG_TYPE_BOOLEAN) {
-    return -ENOTSUP;
-  }
-
-  *dest = (item->values[0].value.boolean) ? 1 : 0;
-  return 0;
-}
-
-static int cc_add_daemon_config(oconfig_item_t *ci) {
-  int ret;
-  struct ceph_daemon *nd, cd = {0};
-  struct ceph_daemon **tmp;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    WARNING("ceph plugin: `Daemon' blocks need exactly one string "
-            "argument.");
-    return -1;
-  }
-
-  ret = cc_handle_str(ci, cd.name, DATA_MAX_NAME_LEN);
-  if (ret) {
-    return ret;
-  }
-
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("SocketPath", child->key) == 0) {
-      ret = cc_handle_str(child, cd.asok_path, sizeof(cd.asok_path));
-      if (ret) {
-        return ret;
-      }
-    } else {
-      WARNING("ceph plugin: ignoring unknown option %s", child->key);
-    }
-  }
-  if (cd.name[0] == '\0') {
-    ERROR("ceph plugin: you must configure a daemon name.\n");
-    return -EINVAL;
-  } else if (cd.asok_path[0] == '\0') {
-    ERROR("ceph plugin(name=%s): you must configure an administrative "
-          "socket path.\n",
-          cd.name);
-    return -EINVAL;
-  } else if (!((cd.asok_path[0] == '/') ||
-               (cd.asok_path[0] == '.' && cd.asok_path[1] == '/'))) {
-    ERROR("ceph plugin(name=%s): administrative socket paths must begin "
-          "with '/' or './' Can't parse: '%s'\n",
-          cd.name, cd.asok_path);
-    return -EINVAL;
-  }
-
-  tmp = realloc(g_daemons, (g_num_daemons + 1) * sizeof(*g_daemons));
-  if (tmp == NULL) {
-    /* The positive return value here indicates that this is a
-     * runtime error, not a configuration error.  */
-    return ENOMEM;
-  }
-  g_daemons = tmp;
-
-  nd = malloc(sizeof(*nd));
-  if (!nd) {
-    return ENOMEM;
-  }
-  memcpy(nd, &cd, sizeof(*nd));
-  g_daemons[g_num_daemons] = nd;
-  g_num_daemons++;
-  return 0;
-}
-
-static int ceph_config(oconfig_item_t *ci) {
-  int ret;
-
-  for (int i = 0; i < ci->children_num; ++i) {
-    oconfig_item_t *child = ci->children + i;
-    if (strcasecmp("Daemon", child->key) == 0) {
-      ret = cc_add_daemon_config(child);
-      if (ret == ENOMEM) {
-        ERROR("ceph plugin: Couldn't allocate memory");
-        return ret;
-      } else if (ret) {
-        // process other daemons and ignore this one
-        continue;
-      }
-    } else if (strcasecmp("LongRunAvgLatency", child->key) == 0) {
-      ret = cc_handle_bool(child, &long_run_latency_avg);
-      if (ret) {
-        return ret;
-      }
-    } else if (strcasecmp("ConvertSpecialMetricTypes", child->key) == 0) {
-      ret = cc_handle_bool(child, &convert_special_metrics);
-      if (ret) {
-        return ret;
-      }
-    } else {
-      WARNING("ceph plugin: ignoring unknown option %s", child->key);
-    }
-  }
-  return 0;
-}
-
-/**
- * Parse JSON and get error message if present
- */
-static int traverse_json(const unsigned char *json, uint32_t json_len,
-                         yajl_handle hand) {
-  yajl_status status = yajl_parse(hand, json, json_len);
-  unsigned char *msg;
-
-  switch (status) {
-  case yajl_status_error:
-    msg = yajl_get_error(hand, /* verbose = */ 1,
-                         /* jsonText = */ (unsigned char *)json,
-                         (unsigned int)json_len);
-    ERROR("ceph plugin: yajl_parse failed: %s", msg);
-    yajl_free_error(hand, msg);
-    return 1;
-  case yajl_status_client_canceled:
-    return 1;
-  default:
-    return 0;
-  }
-}
-
-/**
- * Add entry for each counter while parsing schema
- */
-static int node_handler_define_schema(void *arg, const char *val,
-                                      const char *key) {
-  struct ceph_daemon *d = (struct ceph_daemon *)arg;
-  int pc_type;
-  pc_type = atoi(val);
-  return ceph_daemon_add_ds_entry(d, key, pc_type);
-}
-
-/**
- * Latency counter does not yet have an entry in last poll data - add it.
- */
-static int add_last(struct ceph_daemon *d, const char *ds_n, double cur_sum,
-                    uint64_t cur_count) {
-  d->last_poll_data[d->last_idx] =
-      malloc(sizeof(*d->last_poll_data[d->last_idx]));
-  if (!d->last_poll_data[d->last_idx]) {
-    return -ENOMEM;
-  }
-  sstrncpy(d->last_poll_data[d->last_idx]->ds_name, ds_n,
-           sizeof(d->last_poll_data[d->last_idx]->ds_name));
-  d->last_poll_data[d->last_idx]->last_sum = cur_sum;
-  d->last_poll_data[d->last_idx]->last_count = cur_count;
-  d->last_idx = (d->last_idx + 1);
-  return 0;
-}
-
-/**
- * Update latency counter or add new entry if it doesn't exist
- */
-static int update_last(struct ceph_daemon *d, const char *ds_n, int index,
-                       double cur_sum, uint64_t cur_count) {
-  if ((d->last_idx > index) &&
-      (strcmp(d->last_poll_data[index]->ds_name, ds_n) == 0)) {
-    d->last_poll_data[index]->last_sum = cur_sum;
-    d->last_poll_data[index]->last_count = cur_count;
-    return 0;
-  }
-
-  if (!d->last_poll_data) {
-    d->last_poll_data = malloc(sizeof(*d->last_poll_data));
-    if (!d->last_poll_data) {
-      return -ENOMEM;
-    }
-  } else {
-    struct last_data **tmp_last = realloc(
-        d->last_poll_data, ((d->last_idx + 1) * sizeof(struct last_data *)));
-    if (!tmp_last) {
-      return -ENOMEM;
-    }
-    d->last_poll_data = tmp_last;
-  }
-  return add_last(d, ds_n, cur_sum, cur_count);
-}
-
-/**
- * If using index guess failed (shouldn't happen, but possible if counters
- * get rearranged), resort to searching for counter name
- */
-static int backup_search_for_last_avg(struct ceph_daemon *d, const char *ds_n) {
-  for (int i = 0; i < d->last_idx; i++) {
-    if (strcmp(d->last_poll_data[i]->ds_name, ds_n) == 0) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-/**
- * Calculate average b/t current data and last poll data
- * if last poll data exists
- */
-static double get_last_avg(struct ceph_daemon *d, const char *ds_n, int index,
-                           double cur_sum, uint64_t cur_count) {
-  double result = -1.1, sum_delt = 0.0;
-  uint64_t count_delt = 0;
-  int tmp_index = 0;
-  if (d->last_idx > index) {
-    if (strcmp(d->last_poll_data[index]->ds_name, ds_n) == 0) {
-      tmp_index = index;
-    }
-    // test previous index
-    else if ((index > 0) &&
-             (strcmp(d->last_poll_data[index - 1]->ds_name, ds_n) == 0)) {
-      tmp_index = (index - 1);
-    } else {
-      tmp_index = backup_search_for_last_avg(d, ds_n);
+    case 2:
+        state->perf_value = NULL;
+        state->perf_value_type = PERF_VALUE_NONE;
+        break;
+    case 3:
+        state->perf_value_type = PERF_VALUE_NONE;
+        break;
     }
 
-    if ((tmp_index > -1) &&
-        (cur_count > d->last_poll_data[tmp_index]->last_count)) {
-      sum_delt = (cur_sum - d->last_poll_data[tmp_index]->last_sum);
-      count_delt = (cur_count - d->last_poll_data[tmp_index]->last_count);
-      result = (sum_delt / count_delt);
-    }
-  }
-
-  if (result == -1.1) {
-    result = NAN;
-  }
-  if (update_last(d, ds_n, tmp_index, cur_sum, cur_count) == -ENOMEM) {
-    return -ENOMEM;
-  }
-  return result;
+    return true;
 }
 
-/**
- * If using index guess failed, resort to searching for counter name
- */
-static uint32_t backup_search_for_type(struct ceph_daemon *d, char *ds_name) {
-  for (int i = 0; i < d->ds_num; i++) {
-    if (strcmp(d->ds_names[i], ds_name) == 0) {
-      return d->ds_types[i];
+static bool ceph_schema_cb_end_map(void *ctx)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
+
+    /* Pop key from the stack */
+    if (state->depth == 0)
+        return false;
+
+    state->depth--;
+
+    switch (state->depth) {
+    case 1:
+        state->perf_key = NULL;
+        state->perf_value = NULL;
+        state->perf_value_type = PERF_VALUE_NONE;
+        break;
+    case 2:
+        state->perf_value = NULL;
+        state->perf_value_type = PERF_VALUE_NONE;
+        break;
+    case 3:
+        state->perf_value_type = PERF_VALUE_NONE;
+        break;
     }
-  }
-  return DSET_TYPE_UNFOUND;
+
+    return true;
 }
 
-/**
- * Process counter data and dispatch values
- */
-static int node_handler_fetch_data(void *arg, const char *val,
-                                   const char *key) {
-  value_t uv;
-  double tmp_d;
-  uint64_t tmp_u;
-  struct values_tmp *vtmp = (struct values_tmp *)arg;
-  uint32_t type = DSET_TYPE_UNFOUND;
-  int index = vtmp->index;
+static bool ceph_schema_cb_map_key(void *ctx, const char *key, size_t string_len)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
 
-  char ds_name[DATA_MAX_NAME_LEN];
+    if (state->tree == NULL) { // FIXME
+        state->tree = c_avl_create((int (*)(const void *, const void *))strcmp);
+        if (state->tree == NULL)
+            return false;
+    }
 
-  if (parse_keys(ds_name, sizeof(ds_name), key)) {
-    return 1;
-  }
+    switch (state->depth) {
+    case 1: {
+        char *name = strndup((const char *)key, string_len);
+        if (name == NULL) {
+            PLUGIN_ERROR("strndup failed.");
+            state->perf_key = NULL;
+            return false;
+        }
 
-  if (index >= vtmp->d->ds_num) {
-    // don't overflow bounds of array
-    index = (vtmp->d->ds_num - 1);
-  }
+        perf_key_t *perf_key = calloc(1, sizeof(*perf_key));
+        if (perf_key == NULL) {
+            PLUGIN_ERROR("calloc failed.");
+            free(name);
+            state->perf_key = NULL;
+            return false;
+        }
 
-  /**
-   * counters should remain in same order we parsed schema... we maintain the
-   * index variable to keep track of current point in list of counters. first
-   * use index to guess point in array for retrieving type. if that doesn't
-   * work, use the old way to get the counter type
-   */
-  if (strcmp(ds_name, vtmp->d->ds_names[index]) == 0) {
-    // found match
-    type = vtmp->d->ds_types[index];
-  } else if ((index > 0) &&
-             (strcmp(ds_name, vtmp->d->ds_names[index - 1]) == 0)) {
-    // try previous key
-    type = vtmp->d->ds_types[index - 1];
-  }
+        perf_key->name = name;
 
-  if (type == DSET_TYPE_UNFOUND) {
-    // couldn't find right type by guessing, check the old way
-    type = backup_search_for_type(vtmp->d, ds_name);
-  }
+        perf_key->tree = c_avl_create((int (*)(const void *, const void *))strcmp);
+        if (perf_key->tree == NULL) {
+            ceph_perf_key_free(perf_key);
+            state->perf_key = NULL;
+            return false;
+        }
+        int status = c_avl_insert(state->tree, perf_key->name, perf_key);
+        if (status != 0) {
+            ceph_perf_key_free(perf_key);
+            state->perf_key = NULL;
+            return false;
+        }
+        state->perf_key = perf_key;
+    }   break;
+    case 2: {
+        if (state->perf_key == NULL) {
+            PLUGIN_ERROR("perf_key is NULL.");
+            state->perf_value = NULL;
+            return false;
+        }
 
-  switch (type) {
-  case DSET_LATENCY:
-    if (has_suffix(key, ".avgcount")) {
-      sscanf(val, "%" PRIu64, &vtmp->avgcount);
-      // return after saving avgcount - don't dispatch value
-      // until latency calculation
-      return 0;
-    } else if (has_suffix(key, ".sum")) {
-      if (vtmp->avgcount == 0) {
-        vtmp->avgcount = 1;
-      }
-      // user wants latency values as long run avg
-      // skip this step
-      if (long_run_latency_avg) {
+        char *name = strndup((const char *)key, string_len);
+        if (name == NULL) {
+            PLUGIN_ERROR("strndup failed.");
+            state->perf_value = NULL;
+            return false;
+        }
+
+        perf_value_t *perf_value = calloc(1, sizeof(*perf_value));
+        if (perf_value == NULL) {
+            PLUGIN_ERROR("calloc failed.");
+            free(name);
+            state->perf_value = NULL;
+            return false;
+        }
+
+        perf_value->name = name;
+
+        int status = c_avl_insert(state->perf_key->tree, perf_value->name, perf_value);
+        if (status != 0) {
+            ceph_perf_value_free(perf_value);
+            state->perf_value = NULL;
+            return false;
+        }
+
+        state->perf_value = perf_value;
+    }   break;
+    case 3:
+        state->perf_value_type = PERF_VALUE_NONE;
+        switch (string_len) {
+        case 4:
+            if (strncmp((const char *)key, "type", string_len) == 0)
+                state->perf_value_type = PERF_VALUE_TYPE;
+            break;
+        case 11:
+            if (strncmp((const char *)key, "description", string_len) == 0)
+                state->perf_value_type = PERF_VALUE_DESCRIPTION;
+            break;
+        }
+        break;
+    }
+
+    return true;
+}
+
+static json_callbacks_t schema_callbacks = {
+    .json_null        = NULL,
+    .json_boolean     = NULL,
+    .json_integer     = NULL,
+    .json_double      = NULL,
+    .json_number      = ceph_schema_cb_number,
+    .json_string      = ceph_schema_cb_string,
+    .json_start_map   = ceph_schema_cb_start_map,
+    .json_map_key     = ceph_schema_cb_map_key,
+    .json_end_map     = ceph_schema_cb_end_map,
+    .json_start_array = NULL,
+    .json_end_array   = NULL,
+};
+
+static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number_len)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
+
+    char num[64] = "";
+    if (number_len > sizeof(num)-1)
+        return true;
+    memcpy(num, number_val, number_len);
+    num[number_len] = '\0';
+
+    switch(state->depth) {
+    case 2:
+        if (state->perf_value != NULL) {
+            if (state->perf_value->perf_metric == PERF_METRIC_GAUGE) {
+                metric_family_t fam = {
+                    .name = state->perf_value->metric,
+                    .type = METRIC_TYPE_GAUGE,
+                    .help = state->perf_value->description,
+                };
+                metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
+                plugin_dispatch_metric_family(&fam, state->time);
+            } else if (state->perf_value->perf_metric == PERF_METRIC_COUNTER) {
+                metric_family_t fam = {
+                    .name = state->perf_value->metric,
+                    .type = METRIC_TYPE_COUNTER,
+                    .help = state->perf_value->description,
+                };
+                metric_family_append(&fam, VALUE_COUNTER(atoi(num)), state->labels, NULL);
+                plugin_dispatch_metric_family(&fam, state->time);
+            }
+        }
+        break;
+    case 3:
+        if (state->perf_value != NULL) {
+            switch (state->perf_longrun) {
+            case PERF_LONGRUN_SUM: {
+                metric_family_t fam = {
+                    .name = state->perf_value->metric_longrun[PERF_LONGRUN_SUM],
+                    .type = METRIC_TYPE_GAUGE,
+                    .help = state->perf_value->description,
+                };
+                metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
+                plugin_dispatch_metric_family(&fam, state->time);
+            }   break;
+            case PERF_LONGRUN_AVGTIME: {
+                metric_family_t fam = {
+                    .name = state->perf_value->metric_longrun[PERF_LONGRUN_AVGTIME],
+                    .type = METRIC_TYPE_GAUGE,
+                    .help = state->perf_value->description,
+                };
+                metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
+                plugin_dispatch_metric_family(&fam, state->time);
+            }   break;
+            case PERF_LONGRUN_AVGCOUNT: {
+                metric_family_t fam = {
+                    .name = state->perf_value->metric_longrun[PERF_LONGRUN_AVGCOUNT],
+                    .type = METRIC_TYPE_GAUGE,
+                    .help = state->perf_value->description,
+                };
+                metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
+                plugin_dispatch_metric_family(&fam, state->time);
+            }   break;
+            default:
+                break;
+            }
+        }
+#if 0
+        fprintf(stderr, "[%s] <%d> %s|%s|%s|%s|%s [%s]\n", state->perf_value->metric,
+                 state->perf_value->type,
+                (state->perf_value->type & PERF_COUNTER_TIME) ?  "tm" : "",
+                (state->perf_value->type & PERF_COUNTER_U64)  ?  "u64" : "",
+                (state->perf_value->type & PERF_COUNTER_LONGRUNAVG) ? "avg": "",
+                (state->perf_value->type & PERF_COUNTER_COUNTER) ? "cnt": "",
+                (state->perf_value->type & PERF_COUNTER_HISTOGRAM) ?  "his": "", num);
+#endif
+        break;
+    }
+
+    return true;
+}
+
+static bool ceph_data_cb_start_map(void *ctx)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
+    /* Push key to the stack */
+    if (state->depth == JSON_MAX_DEPTH)
         return 0;
-      }
-      double sum, result;
-      sscanf(val, "%lf", &sum);
-      result = get_last_avg(vtmp->d, ds_name, vtmp->latency_index, sum,
-                            vtmp->avgcount);
-      if (result == -ENOMEM) {
-        return -ENOMEM;
-      }
-      uv.gauge = result;
-      vtmp->latency_index = (vtmp->latency_index + 1);
-    } else if (has_suffix(key, ".avgtime")) {
 
-      /* The "avgtime" metric reports ("sum" / "avgcount"), i.e. the average
-       * time per request since the start of the Ceph daemon. Report this only
-       * when the user has configured "long running average". Otherwise, use the
-       * rate of "sum" and "avgcount" to calculate the current latency.
-       */
+    state->depth++;
 
-      if (!long_run_latency_avg) {
-        return 0;
-      }
-      double result;
-      sscanf(val, "%lf", &result);
-      uv.gauge = result;
-      vtmp->latency_index = (vtmp->latency_index + 1);
-    } else {
-      WARNING("ceph plugin: ignoring unknown latency metric: %s", key);
-      return 0;
+    switch (state->depth) {
+    case 1:
+        state->perf_key = NULL;
+        state->perf_value = NULL;
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        break;
+    case 2:
+        state->perf_value = NULL;
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        break;
+    case 3:
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        break;
     }
-    break;
-  case DSET_BYTES:
-    sscanf(val, "%lf", &tmp_d);
-    uv.gauge = tmp_d;
-    break;
-  case DSET_RATE:
-    sscanf(val, "%" PRIu64, &tmp_u);
-    uv.derive = tmp_u;
-    break;
-  case DSET_TYPE_UNFOUND:
-  default:
-    ERROR("ceph plugin: ds %s was not properly initialized.", ds_name);
-    return -1;
-  }
 
-  sstrncpy(vtmp->vlist.type, ceph_dset_types[type], sizeof(vtmp->vlist.type));
-  sstrncpy(vtmp->vlist.type_instance, ds_name,
-           sizeof(vtmp->vlist.type_instance));
-  vtmp->vlist.values = &uv;
-  vtmp->vlist.values_len = 1;
-
-  vtmp->index = (vtmp->index + 1);
-  plugin_dispatch_values(&vtmp->vlist);
-
-  return 0;
+    return true;
 }
 
-static int cconn_connect(struct cconn *io) {
-  struct sockaddr_un address = {0};
-  int flags, fd, err;
-  if (io->state != CSTATE_UNCONNECTED) {
-    ERROR("ceph plugin: cconn_connect: io->state != CSTATE_UNCONNECTED");
-    return -EDOM;
-  }
-  fd = socket(PF_UNIX, SOCK_STREAM, 0);
-  if (fd < 0) {
-    err = -errno;
-    ERROR("ceph plugin: cconn_connect: socket(PF_UNIX, SOCK_STREAM, 0) "
-          "failed: error %d",
-          err);
-    return err;
-  }
-  address.sun_family = AF_UNIX;
-  ssnprintf(address.sun_path, sizeof(address.sun_path), "%s", io->d->asok_path);
-  RETRY_ON_EINTR(err, connect(fd, (struct sockaddr *)&address,
-                              sizeof(struct sockaddr_un)));
-  if (err < 0) {
-    ERROR("ceph plugin: cconn_connect: connect(%d) failed: error %d", fd, err);
-    close(fd);
-    return err;
-  }
+static bool ceph_data_cb_end_map(void *ctx)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
 
-  flags = fcntl(fd, F_GETFL, 0);
-  if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
-    err = -errno;
-    ERROR("ceph plugin: cconn_connect: fcntl(%d, O_NONBLOCK) error %d", fd,
-          err);
-    close(fd);
-    return err;
-  }
-  io->asok = fd;
-  io->state = CSTATE_WRITE_REQUEST;
-  io->amt = 0;
-  io->json_len = 0;
-  io->json = NULL;
-  return 0;
+    /* Pop key from the stack */
+    if (state->depth == 0)
+        return false;
+
+    state->depth--;
+
+    switch (state->depth) {
+    case 1:
+        state->perf_key = NULL;
+        state->perf_value = NULL;
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        break;
+    case 2:
+        state->perf_value = NULL;
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        break;
+    case 3:
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        break;
+    }
+
+    return true;
 }
 
-static void cconn_close(struct cconn *io) {
-  io->state = CSTATE_UNCONNECTED;
-  if (io->asok != -1) {
-    int res;
-    RETRY_ON_EINTR(res, close(io->asok));
-  }
-  io->asok = -1;
-  io->amt = 0;
-  io->json_len = 0;
-  sfree(io->json);
-  io->json = NULL;
+static bool ceph_data_cb_map_key(void *ctx, const char *key, size_t string_len)
+{
+    json_struct_t *state = (json_struct_t *)ctx;
+    char name[512];
+
+    if (string_len > sizeof(name)-1)
+        return false;
+
+    switch (state->depth) {
+    case 1: {
+        perf_key_t *perf_key = NULL;
+        memcpy(name, key, string_len);
+        name[string_len] = '\0';
+        int status = c_avl_get(state->tree, name, (void *)&perf_key);
+        if (status == 0)
+            state->perf_key = perf_key;
+    }   break;
+    case 2:
+        if (state->perf_key != NULL) {
+            perf_value_t *perf_value = NULL;
+            memcpy(name, key, string_len);
+            name[string_len] = '\0';
+            int status = c_avl_get(state->perf_key->tree, name, (void *)&perf_value);
+            if (status == 0)
+                state->perf_value = perf_value;
+        }
+        break;
+    case 3:
+        state->perf_longrun = PERF_LONGRUN_NONE;
+        if (state->perf_value != NULL) {
+            switch(string_len) {
+            case 3:
+                if (strncmp("sum", (const char *)key, string_len) == 0)
+                    state->perf_longrun = PERF_LONGRUN_SUM;
+                break;
+            case 7:
+                if (strncmp("avgtime", (const char *)key, string_len) == 0)
+                    state->perf_longrun = PERF_LONGRUN_AVGTIME;
+                break;
+            case 8:
+                if (strncmp("avgcount", (const char *)key, string_len) == 0)
+                    state->perf_longrun = PERF_LONGRUN_AVGCOUNT;
+                break;
+            }
+        }
+        break;
+    }
+
+    return true;
 }
 
-/* Process incoming JSON counter data */
-static int cconn_process_data(struct cconn *io, yajl_struct *yajl,
-                              yajl_handle hand) {
-  int ret;
-  struct values_tmp *vtmp = calloc(1, sizeof(*vtmp));
-  if (!vtmp) {
-    return -ENOMEM;
-  }
+static json_callbacks_t data_callbacks = {
+    .json_null        = NULL,
+    .json_boolean     = NULL,
+    .json_integer     = NULL,
+    .json_double      = NULL,
+    .json_number      = ceph_data_cb_number,
+    .json_string      = NULL,
+    .json_start_map   = ceph_data_cb_start_map,
+    .json_map_key     = ceph_data_cb_map_key,
+    .json_end_map     = ceph_data_cb_end_map,
+    .json_start_array = NULL,
+    .json_end_array   = NULL,
+};
 
-  vtmp->vlist = (value_list_t)VALUE_LIST_INIT;
-  sstrncpy(vtmp->vlist.plugin, "ceph", sizeof(vtmp->vlist.plugin));
-  sstrncpy(vtmp->vlist.plugin_instance, io->d->name,
-           sizeof(vtmp->vlist.plugin_instance));
+static void ceph_daemon_free(void *arg)
+{
+    ceph_daemon_t *cd = arg;
+    if (cd == NULL)
+        return;
 
-  vtmp->d = io->d;
-  vtmp->latency_index = 0;
-  vtmp->index = 0;
-  yajl->handler_arg = vtmp;
-  ret = traverse_json(io->json, io->json_len, hand);
-  sfree(vtmp);
-  return ret;
+    free(cd->name);
+    free(cd->asok_path);
+    label_set_reset(&cd->labels);
+
+    if (cd->schema!= NULL) {
+        while (true) {
+            perf_key_t *perf_key = NULL;
+            char *key = NULL;
+            int status = c_avl_pick(cd->schema, (void *)&key, (void *)&perf_key);
+            if (status != 0)
+                break;
+            ceph_perf_key_free(perf_key);
+        }
+        c_avl_destroy(cd->schema);
+    }
+
+    free(cd);
+}
+
+static int ceph_conn_connect(ceph_conn_t *io)
+{
+    if (io->state != CSTATE_UNCONNECTED) {
+        PLUGIN_ERROR("ceph_conn_connect: io->state != CSTATE_UNCONNECTED");
+        return -EDOM;
+    }
+
+    int fd = socket(PF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        int err = -errno;
+        PLUGIN_ERROR("ceph_conn_connect: socket(PF_UNIX, SOCK_STREAM, 0) failed: error %d", err);
+        return err;
+    }
+
+    struct sockaddr_un address = {0};
+    address.sun_family = AF_UNIX;
+    ssnprintf(address.sun_path, sizeof(address.sun_path), "%s", io->d->asok_path);
+    int err;
+    RETRY_ON_EINTR(err, connect(fd, (struct sockaddr *)&address,
+                                                            sizeof(struct sockaddr_un)));
+    if (err < 0) {
+        PLUGIN_ERROR("ceph_conn_connect: connect(%d) failed: error %d", fd, err);
+        close(fd);
+        return err;
+    }
+
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
+        err = -errno;
+        PLUGIN_ERROR("ceph_conn_connect: fcntl(%d, O_NONBLOCK) error %d", fd, err);
+        close(fd);
+        return err;
+    }
+
+    io->asok = fd;
+    io->state = CSTATE_WRITE_REQUEST;
+    io->amt = 0;
+    io->json_len = 0;
+    io->json = NULL;
+    return 0;
+}
+
+static void ceph_conn_close(ceph_conn_t *io)
+{
+    io->state = CSTATE_UNCONNECTED;
+    if (io->asok != -1) {
+        int res;
+        RETRY_ON_EINTR(res, close(io->asok));
+    }
+    io->asok = -1;
+    io->amt = 0;
+    io->json_len = 0;
+    free(io->json);
+    io->json = NULL;
 }
 
 /**
  * Initiate JSON parsing and print error if one occurs
  */
-static int cconn_process_json(struct cconn *io) {
-  if ((io->request_type != ASOK_REQ_DATA) &&
-      (io->request_type != ASOK_REQ_SCHEMA)) {
-    return -EDOM;
-  }
+static int ceph_conn_process_json(ceph_conn_t *io)
+{
+    if ((io->request_type != ASOK_REQ_DATA) && (io->request_type != ASOK_REQ_SCHEMA))
+        return -EDOM;
 
-  int result = 1;
-  yajl_handle hand;
-  yajl_status status;
+    json_callbacks_t *callbacks = io->request_type == ASOK_REQ_SCHEMA ? &schema_callbacks
+                                                                      : &data_callbacks;
 
-  hand = yajl_alloc(&callbacks,
-#if HAVE_YAJL_V2
-                    /* alloc funcs = */ NULL,
-#else
-                    /* alloc funcs = */ NULL, NULL,
-#endif
-                    /* context = */ (void *)(&io->yajl));
+    json_parser_t handle = {0};
+    json_parser_init(&handle, 0, callbacks, (void *)(&io->yajl));
 
-  if (!hand) {
-    ERROR("ceph plugin: yajl_alloc failed.");
-    return ENOMEM;
-  }
+    io->yajl.depth = 0;
+    io->yajl.time = cdtime();
 
-  io->yajl.depth = 0;
+    if (io->request_type == ASOK_REQ_DATA) {
+        io->yajl.tree = io->d->schema;
+        io->yajl.labels = &io->d->labels;
+    }
 
-  switch (io->request_type) {
-  case ASOK_REQ_DATA:
-    io->yajl.handler = node_handler_fetch_data;
-    result = cconn_process_data(io, &io->yajl, hand);
-    break;
-  case ASOK_REQ_SCHEMA:
-    // init daemon specific variables
-    io->d->ds_num = 0;
-    io->d->last_idx = 0;
-    io->d->last_poll_data = NULL;
-    io->yajl.handler = node_handler_define_schema;
-    io->yajl.handler_arg = io->d;
-    result = traverse_json(io->json, io->json_len, hand);
-    break;
-  }
+    json_status_t status = json_parser_parse(&handle, io->json, io->json_len);
+    switch (status) {
+    case JSON_STATUS_OK: {
+        unsigned char *errmsg = json_parser_get_error(&handle, 1, io->json,
+                                                                  (unsigned int)io->json_len);
+        PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
+        json_parser_free_error(errmsg);
+        json_parser_free(&handle);
+        return 1;
+    }   break;
+    case JSON_STATUS_CLIENT_CANCELED:
+        json_parser_free(&handle);
+        return 1;
+        break;
+    default:
+        break;
+    }
 
-  if (result) {
-    goto done;
-  }
+    status = json_parser_complete(&handle);
+    if (status != JSON_STATUS_OK) {
+        unsigned char *errmsg = json_parser_get_error(&handle, 0, NULL, 0);
+        PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
+        json_parser_free_error(errmsg);
+        json_parser_free(&handle);
+        return 1;
+    }
 
-#if HAVE_YAJL_V2
-  status = yajl_complete_parse(hand);
-#else
-  status = yajl_parse_complete(hand);
-#endif
+    if (io->request_type == ASOK_REQ_SCHEMA)
+        io->d->schema = io->yajl.tree;
 
-  if (status != yajl_status_ok) {
-    unsigned char *errmsg =
-        yajl_get_error(hand, /* verbose = */ 0,
-                       /* jsonText = */ NULL, /* jsonTextLen = */ 0);
-    ERROR("ceph plugin: yajl_parse_complete failed: %s", (char *)errmsg);
-    yajl_free_error(hand, errmsg);
-    yajl_free(hand);
-    return 1;
-  }
-
-done:
-  yajl_free(hand);
-  return result;
+    json_parser_free(&handle);
+    return 0;
 }
 
-static int cconn_validate_revents(struct cconn *io, int revents) {
-  if (revents & POLLERR) {
-    ERROR("ceph plugin: cconn_validate_revents(name=%s): got POLLERR",
-          io->d->name);
-    return -EIO;
-  }
-  switch (io->state) {
-  case CSTATE_WRITE_REQUEST:
-    return (revents & POLLOUT) ? 0 : -EINVAL;
-  case CSTATE_READ_VERSION:
-  case CSTATE_READ_AMT:
-  case CSTATE_READ_JSON:
-    return (revents & POLLIN) ? 0 : -EINVAL;
-  default:
-    ERROR("ceph plugin: cconn_validate_revents(name=%s) got to "
-          "illegal state on line %d",
-          io->d->name, __LINE__);
-    return -EDOM;
-  }
+static int ceph_conn_validate_revents(ceph_conn_t *io, int revents)
+{
+    if (revents & POLLERR) {
+        PLUGIN_ERROR("ceph_conn_validate_revents(name=%s): got POLLERR", io->d->name);
+        return -EIO;
+    }
+
+    switch (io->state) {
+    case CSTATE_WRITE_REQUEST:
+        return (revents & POLLOUT) ? 0 : -EINVAL;
+    case CSTATE_READ_VERSION:
+    case CSTATE_READ_AMT:
+    case CSTATE_READ_JSON:
+        return (revents & POLLIN) ? 0 : -EINVAL;
+    default:
+        PLUGIN_ERROR("ceph_conn_validate_revents(name=%s) got to illegal state.", io->d->name);
+        return -EDOM;
+    }
 }
 
 /** Handle a network event for a connection */
-static ssize_t cconn_handle_event(struct cconn *io) {
-  ssize_t ret;
-  switch (io->state) {
-  case CSTATE_UNCONNECTED:
-    ERROR("ceph plugin: cconn_handle_event(name=%s) got to illegal "
-          "state on line %d",
-          io->d->name, __LINE__);
+static ssize_t ceph_conn_handle_event(ceph_conn_t *io)
+{
+    ssize_t ret = 0;
 
-    return -EDOM;
-  case CSTATE_WRITE_REQUEST: {
-    char cmd[32];
-    ssnprintf(cmd, sizeof(cmd), "%s%d%s", "{ \"prefix\": \"", io->request_type,
-              "\" }\n");
-    size_t cmd_len = strlen(cmd);
-    RETRY_ON_EINTR(
-        ret, write(io->asok, ((char *)&cmd) + io->amt, cmd_len - io->amt));
-    DEBUG("ceph plugin: cconn_handle_event(name=%s,state=%d,amt=%d,ret=%zd)",
-          io->d->name, io->state, io->amt, ret);
-    if (ret < 0) {
-      return ret;
+    switch (io->state) {
+    case CSTATE_UNCONNECTED:
+        PLUGIN_ERROR("ceph_conn_handle_event(name=%s) got to illegal state.", io->d->name);
+        return -EDOM;
+    case CSTATE_WRITE_REQUEST: {
+        char cmd[32];
+        ssnprintf(cmd, sizeof(cmd), "%s%u%s", "{ \"prefix\": \"", io->request_type, "\" }\n");
+        size_t cmd_len = strlen(cmd);
+        RETRY_ON_EINTR(ret, write(io->asok, ((char *)&cmd) + io->amt, cmd_len - io->amt));
+        PLUGIN_DEBUG("ceph_conn_handle_event(name=%s,state=%u,amt=%u,ret=%zd)",
+                     io->d->name, io->state, io->amt, ret);
+        if (ret < 0)
+            return ret;
+
+        io->amt += ret;
+        if (io->amt >= cmd_len) {
+            io->amt = 0;
+            switch (io->request_type) {
+            case ASOK_REQ_VERSION:
+                io->state = CSTATE_READ_VERSION;
+                break;
+            default:
+                io->state = CSTATE_READ_AMT;
+                break;
+            }
+        }
+        return 0;
     }
-    io->amt += ret;
-    if (io->amt >= cmd_len) {
-      io->amt = 0;
-      switch (io->request_type) {
-      case ASOK_REQ_VERSION:
-        io->state = CSTATE_READ_VERSION;
-        break;
-      default:
-        io->state = CSTATE_READ_AMT;
-        break;
-      }
+    case CSTATE_READ_VERSION: {
+        RETRY_ON_EINTR(ret, read(io->asok, ((char *)(&io->d->version)) + io->amt,
+                                           sizeof(io->d->version) - io->amt));
+        PLUGIN_DEBUG("ceph_conn_handle_event(name=%s,state=%u,ret=%zd)",
+                     io->d->name, io->state, ret);
+        if (ret < 0)
+            return ret;
+
+        io->amt += ret;
+        if (io->amt >= sizeof(io->d->version)) {
+            io->d->version = ntohl(io->d->version);
+            if (io->d->version != 1) {
+                PLUGIN_ERROR("ceph_conn_handle_event(name=%s) not expecting version %u!",
+                             io->d->name, io->d->version);
+                return -ENOTSUP;
+            }
+            PLUGIN_DEBUG("ceph_conn_handle_event(name=%s): identified as version %u",
+                         io->d->name, io->d->version);
+            io->amt = 0;
+            ceph_conn_close(io);
+            io->request_type = ASOK_REQ_SCHEMA;
+        }
+        return 0;
     }
-    return 0;
-  }
-  case CSTATE_READ_VERSION: {
-    RETRY_ON_EINTR(ret, read(io->asok, ((char *)(&io->d->version)) + io->amt,
-                             sizeof(io->d->version) - io->amt));
-    DEBUG("ceph plugin: cconn_handle_event(name=%s,state=%d,ret=%zd)",
-          io->d->name, io->state, ret);
-    if (ret < 0) {
-      return ret;
+    case CSTATE_READ_AMT: {
+        size_t count = sizeof(io->json_len) - io->amt;
+        RETRY_ON_EINTR(ret, read(io->asok, ((char *)(&io->json_len)) + io->amt, count));
+        PLUGIN_DEBUG("ceph_conn_handle_event(name=%s,state=%u,ret=%zd)",
+                     io->d->name, io->state, ret);
+        if (ret < 0)
+            return ret;
+        io->amt += ret;
+        if (io->amt >= sizeof(io->json_len)) {
+            io->json_len = ntohl(io->json_len);
+            io->amt = 0;
+            io->state = CSTATE_READ_JSON;
+            io->json = calloc(1, io->json_len + 1);
+            if (!io->json) {
+                PLUGIN_ERROR("error callocing io->json");
+                return -ENOMEM;
+            }
+        }
+        return 0;
     }
-    io->amt += ret;
-    if (io->amt >= sizeof(io->d->version)) {
-      io->d->version = ntohl(io->d->version);
-      if (io->d->version != 1) {
-        ERROR("ceph plugin: cconn_handle_event(name=%s) not "
-              "expecting version %d!",
-              io->d->name, io->d->version);
-        return -ENOTSUP;
-      }
-      DEBUG("ceph plugin: cconn_handle_event(name=%s): identified as "
-            "version %d",
-            io->d->name, io->d->version);
-      io->amt = 0;
-      cconn_close(io);
-      io->request_type = ASOK_REQ_SCHEMA;
+    case CSTATE_READ_JSON: {
+        RETRY_ON_EINTR(ret, read(io->asok, io->json + io->amt, io->json_len - io->amt));
+        PLUGIN_DEBUG("ceph_conn_handle_event(name=%s,state=%u,ret=%zd)",
+                     io->d->name, io->state, ret);
+        if (ret < 0)
+            return ret;
+        io->amt += ret;
+        if (io->amt >= io->json_len) {
+            /* coverity[TAINTED_SCALAR] */
+            ret = ceph_conn_process_json(io);
+            if (ret)
+                return ret;
+            ceph_conn_close(io);
+            io->request_type = ASOK_REQ_NONE;
+        }
+        return 0;
     }
-    return 0;
-  }
-  case CSTATE_READ_AMT: {
-    RETRY_ON_EINTR(ret, read(io->asok, ((char *)(&io->json_len)) + io->amt,
-                             sizeof(io->json_len) - io->amt));
-    DEBUG("ceph plugin: cconn_handle_event(name=%s,state=%d,ret=%zd)",
-          io->d->name, io->state, ret);
-    if (ret < 0) {
-      return ret;
+    default:
+        PLUGIN_ERROR("ceph_conn_handle_event(name=%s) got to illegal state.", io->d->name);
+        return -EDOM;
     }
-    io->amt += ret;
-    if (io->amt >= sizeof(io->json_len)) {
-      io->json_len = ntohl(io->json_len);
-      io->amt = 0;
-      io->state = CSTATE_READ_JSON;
-      io->json = calloc(1, io->json_len + 1);
-      if (!io->json) {
-        ERROR("ceph plugin: error callocing io->json");
-        return -ENOMEM;
-      }
-    }
-    return 0;
-  }
-  case CSTATE_READ_JSON: {
-    RETRY_ON_EINTR(ret,
-                   read(io->asok, io->json + io->amt, io->json_len - io->amt));
-    DEBUG("ceph plugin: cconn_handle_event(name=%s,state=%d,ret=%zd)",
-          io->d->name, io->state, ret);
-    if (ret < 0) {
-      return ret;
-    }
-    io->amt += ret;
-    if (io->amt >= io->json_len) {
-      ret = cconn_process_json(io);
-      if (ret) {
-        return ret;
-      }
-      cconn_close(io);
-      io->request_type = ASOK_REQ_NONE;
-    }
-    return 0;
-  }
-  default:
-    ERROR("ceph plugin: cconn_handle_event(name=%s) got to illegal "
-          "state on line %d",
-          io->d->name, __LINE__);
-    return -EDOM;
-  }
 }
 
-static int cconn_prepare(struct cconn *io, struct pollfd *fds) {
-  int ret;
-  if (io->request_type == ASOK_REQ_NONE) {
-    /* The request has already been serviced. */
-    return 0;
-  } else if ((io->request_type == ASOK_REQ_DATA) && (io->d->ds_num == 0)) {
-    /* If there are no counters to report on, don't bother
-     * connecting */
-    return 0;
-  }
-
-  switch (io->state) {
-  case CSTATE_UNCONNECTED:
-    ret = cconn_connect(io);
-    if (ret > 0) {
-      return -ret;
-    } else if (ret < 0) {
-      return ret;
+static int ceph_conn_prepare(ceph_conn_t *io, struct pollfd *fds)
+{
+    int ret;
+    if (io->request_type == ASOK_REQ_NONE) {
+        /* The request has already been serviced. */
+        return 0;
+    } else if ((io->request_type == ASOK_REQ_DATA) && (io->d->schema == NULL)) { // FIXME ¿?
+        /* If there are no counters to report on, don't bother connecting */
+        return 0;
     }
-    fds->fd = io->asok;
-    fds->events = POLLOUT;
-    return 1;
-  case CSTATE_WRITE_REQUEST:
-    fds->fd = io->asok;
-    fds->events = POLLOUT;
-    return 1;
-  case CSTATE_READ_VERSION:
-  case CSTATE_READ_AMT:
-  case CSTATE_READ_JSON:
-    fds->fd = io->asok;
-    fds->events = POLLIN;
-    return 1;
-  default:
-    ERROR("ceph plugin: cconn_prepare(name=%s) got to illegal state "
-          "on line %d",
-          io->d->name, __LINE__);
-    return -EDOM;
-  }
+
+    switch (io->state) {
+    case CSTATE_UNCONNECTED:
+        ret = ceph_conn_connect(io);
+        if (ret > 0) {
+            return -ret;
+        } else if (ret < 0) {
+            return ret;
+        }
+        fds->fd = io->asok;
+        fds->events = POLLOUT;
+        return 1;
+    case CSTATE_WRITE_REQUEST:
+        fds->fd = io->asok;
+        fds->events = POLLOUT;
+        return 1;
+    case CSTATE_READ_VERSION:
+    case CSTATE_READ_AMT:
+    case CSTATE_READ_JSON:
+        fds->fd = io->asok;
+        fds->events = POLLIN;
+        return 1;
+    default:
+         PLUGIN_ERROR("ceph_conn_prepare(name=%s) got to illegal state.", io->d->name);
+        return -EDOM;
+    }
 }
 
-/** Returns the difference between two struct timevals in milliseconds.
- * On overflow, we return max/min int.
- */
-static int milli_diff(const struct timeval *t1, const struct timeval *t2) {
-  int64_t ret;
-  long sec_diff = t1->tv_sec - t2->tv_sec;
-  long usec_diff = t1->tv_usec - t2->tv_usec;
-  ret = usec_diff / 1000;
-  ret += (sec_diff * 1000);
-  return (ret > INT_MAX) ? INT_MAX : ((ret < INT_MIN) ? INT_MIN : (int)ret);
-}
-
-/** This handles the actual network I/O to talk to the Ceph daemons.
- */
-static ssize_t cconn_main_loop(uint32_t request_type) {
-  int some_unreachable = 0;
-  ssize_t ret;
-  struct timeval end_tv;
-  struct cconn io_array[g_num_daemons];
-
-  DEBUG("ceph plugin: entering cconn_main_loop(request_type = %" PRIu32 ")",
-        request_type);
-
-  if (g_num_daemons < 1) {
-    ERROR("ceph plugin: No daemons configured. See the \"Daemon\" config "
-          "option.");
-    return ENOENT;
-  }
-
-  /* create cconn array */
-  for (size_t i = 0; i < g_num_daemons; i++) {
-    io_array[i] = (struct cconn){
-        .d = g_daemons[i],
+static ssize_t ceph_conn_loop(ceph_daemon_t *cd, uint32_t request_type)
+{
+    PLUGIN_DEBUG("entering ceph_conn_loop(request_type = %" PRIu32 ")", request_type);
+    ceph_conn_t io = {
+        .d = cd,
         .request_type = request_type,
         .state = CSTATE_UNCONNECTED,
         .asok = -1,
     };
-  }
 
-  /** Calculate the time at which we should give up */
-  gettimeofday(&end_tv, NULL);
-  end_tv.tv_sec += CEPH_TIMEOUT_INTERVAL;
+    cdtime_t end = cdtime() + cd->timeout;
 
-  while (1) {
-    int nfds, diff;
-    struct timeval tv;
-    struct cconn *polled_io_array[g_num_daemons];
-    struct pollfd fds[g_num_daemons];
-    memset(fds, 0, sizeof(fds));
-    nfds = 0;
-    for (size_t i = 0; i < g_num_daemons; ++i) {
-      struct cconn *io = io_array + i;
-      ret = cconn_prepare(io, fds + nfds);
-      if (ret < 0) {
-        WARNING("ceph plugin: cconn_prepare(name=%s,i=%" PRIsz ",st=%d)=%zd",
-                io->d->name, i, io->state, ret);
-        cconn_close(io);
-        io->request_type = ASOK_REQ_NONE;
-        some_unreachable = 1;
-      } else if (ret == 1) {
-        polled_io_array[nfds++] = io_array + i;
-      }
-    }
-    if (nfds == 0) {
-      /* finished */
-      ret = 0;
-      goto done;
-    }
-    gettimeofday(&tv, NULL);
-    diff = milli_diff(&end_tv, &tv);
-    if (diff <= 0) {
-      /* Timed out */
-      ret = -ETIMEDOUT;
-      WARNING("ceph plugin: cconn_main_loop: timed out.");
-      goto done;
-    }
-    RETRY_ON_EINTR(ret, poll(fds, nfds, diff));
-    if (ret < 0) {
-      ERROR("ceph plugin: poll(2) error: %zd", ret);
-      goto done;
-    }
-    for (int i = 0; i < nfds; ++i) {
-      struct cconn *io = polled_io_array[i];
-      int revents = fds[i].revents;
-      if (revents == 0) {
-        /* do nothing */
-        continue;
-      } else if (cconn_validate_revents(io, revents)) {
-        WARNING("ceph plugin: cconn(name=%s,i=%d,st=%d): "
-                "revents validation error: "
-                "revents=0x%08x",
-                io->d->name, i, io->state, revents);
-        cconn_close(io);
-        io->request_type = ASOK_REQ_NONE;
-        some_unreachable = 1;
-      } else {
-        ret = cconn_handle_event(io);
-        if (ret) {
-          WARNING("ceph plugin: cconn_handle_event(name=%s,"
-                  "i=%d,st=%d): error %zd",
-                  io->d->name, i, io->state, ret);
-          cconn_close(io);
-          io->request_type = ASOK_REQ_NONE;
-          some_unreachable = 1;
+    ssize_t ret = 0;
+
+    while (1) {
+        struct pollfd fd = {0};
+
+        ret = ceph_conn_prepare(&io, &fd);
+        if (ret < 0) {
+            PLUGIN_WARNING("ceph_conn_prepare(name=%s,st=%u)=%zd", io.d->name, io.state, ret);
+            ceph_conn_close(&io);
+            io.request_type = ASOK_REQ_NONE;
         }
-      }
+        if (ret != 1) {
+            ret = 0;
+            goto done;
+        }
+
+        cdtime_t now = cdtime();
+        if (now > end) {
+            ret = -ETIMEDOUT;
+            PLUGIN_WARNING("ceph_conn_loop: timed out.");
+            goto done;
+        }
+
+        cdtime_t diff = end - now;
+
+        RETRY_ON_EINTR(ret, poll(&fd, 1, CDTIME_T_TO_MS(diff)));
+        if (ret < 0) {
+            PLUGIN_ERROR("poll(2) error: %zd", ret);
+            goto done;
+        }
+
+        if (fd.revents == 0) {
+            /* do nothing */
+            continue;
+        } else if (ceph_conn_validate_revents(&io, fd.revents)) {
+            PLUGIN_WARNING("cconn(name=%s,st=%u): revents validation error: revents=0x%08x",
+                            io.d->name, io.state, (unsigned int)fd.revents);
+            ceph_conn_close(&io);
+            io.request_type = ASOK_REQ_NONE;
+        } else {
+            ret = ceph_conn_handle_event(&io);
+            if (ret) {
+                PLUGIN_WARNING("ceph_conn_handle_event(name=%s,st=%u): error %zd",
+                                io.d->name, io.state, ret);
+                ceph_conn_close(&io);
+                io.request_type = ASOK_REQ_NONE;
+            }
+        }
     }
-  }
 done:
-  for (size_t i = 0; i < g_num_daemons; ++i) {
-    cconn_close(io_array + i);
-  }
-  if (some_unreachable) {
-    DEBUG("ceph plugin: cconn_main_loop: some Ceph daemons were unreachable.");
-  } else {
-    DEBUG("ceph plugin: cconn_main_loop: reached all Ceph daemons :)");
-  }
-  return ret;
+    ceph_conn_close(&io);
+
+    return ret;
 }
 
-static int ceph_read(void) { return (int)cconn_main_loop(ASOK_REQ_DATA); }
+static int ceph_read(user_data_t *user_data)
+{
+    ceph_daemon_t *cd = user_data->data;
+    if (cd == NULL)
+        return -1;
 
-/******* lifecycle *******/
-static int ceph_init(void) {
+    if (cd->have_schema == false) {
+        int status = (int)ceph_conn_loop(cd, ASOK_REQ_VERSION);
+        if (status != 0)
+            return -1;
+        cd->have_schema = true;
+    }
+
+    return (int)ceph_conn_loop(cd, ASOK_REQ_DATA);
+}
+
+static int ceph_config_daemon(config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("'daemon' blocks need exactly one string argument.");
+        return -1;
+    }
+
+    ceph_daemon_t *cd = calloc(1, sizeof(*cd));
+    if (cd == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
+
+    int status = cf_util_get_string(ci, &cd->name);
+    if (status != 0) {
+        ceph_daemon_free(cd);
+        return -1;
+    }
+
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("socket-path", child->key) == 0)
+            status = cf_util_get_string(child, &cd->asok_path);
+        else if (strcasecmp("label", child->key) == 0)
+            status = cf_util_get_label(child, &cd->labels);
+        else if (strcasecmp("timeout", child->key) == 0)
+            status = cf_util_get_cdtime(child, &cd->timeout);
+        else if (strcasecmp("interval", child->key) == 0)
+            status = cf_util_get_cdtime(child, &interval);
+        else {
+            PLUGIN_ERROR("Option `%s' not allowed here.", child->key);
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status == 0) {
+        if (cd->asok_path == NULL) {
+            PLUGIN_ERROR("%s: you must configure an administrative socket path.\n", cd->name);
+            status = -1;
+        } else if (!((cd->asok_path[0] == '/') ||
+                     (cd->asok_path[0] == '.' && cd->asok_path[1] == '/'))) {
+            PLUGIN_ERROR("%s: administrative socket paths must begin "
+                         "with '/' or './' Can't parse: '%s'\n", cd->name, cd->asok_path);
+            status = -1;
+        }
+    }
+
+    if (cd->timeout == 0)
+        cd->timeout = TIME_T_TO_CDTIME_T(CEPH_TIMEOUT_INTERVAL);
+
+    if (status != 0) {
+        ceph_daemon_free(cd);
+        return -1;
+    }
+
+    label_set_add(&cd->labels, true, "daemon", cd->name);
+
+    return plugin_register_complex_read("ceph", cd->name, ceph_read, interval,
+                                        &(user_data_t){.data = cd, .free_func = ceph_daemon_free});
+}
+
+static int ceph_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; ++i) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("daemon", child->key) == 0) {
+            status = ceph_config_daemon(child);
+        } else {
+            PLUGIN_WARNING("ignoring unknown option %s", child->key);
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
+    return 0;
+}
+
+static int ceph_init(void)
+{
 #if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_DAC_OVERRIDE)
-  if (check_capability(CAP_DAC_OVERRIDE) != 0) {
-    if (getuid() == 0)
-      WARNING("ceph plugin: Running collectd as root, but the "
-              "CAP_DAC_OVERRIDE capability is missing. The plugin's read "
-              "function will probably fail. Is your init system dropping "
-              "capabilities?");
-    else
-      WARNING(
-          "ceph plugin: collectd doesn't have the CAP_DAC_OVERRIDE "
-          "capability. If you don't want to run collectd as root, try running "
-          "\"setcap cap_dac_override=ep\" on the collectd binary.");
-  }
+    if (plugin_check_capability(CAP_DAC_OVERRIDE) != 0) {
+        if (getuid() == 0)
+            PLUGIN_WARNING("Running ncollectd as root, but the "
+                           "CAP_DAC_OVERRIDE capability is missing. The plugin's read "
+                           "function will probably fail. Is your init system dropping "
+                           "capabilities?");
+        else
+            PLUGIN_WARNING("ncollectd doesn't have the CAP_DAC_OVERRIDE "
+                           "capability. If you don't want to run ncollectd as root, try running "
+                           "'setcap cap_dac_override=ep' on the ncollectd binary.");
+    }
 #endif
-
-  ceph_daemons_print();
-
-  if (g_num_daemons < 1) {
-    ERROR("ceph plugin: No daemons configured. See the \"Daemon\" config "
-          "option.");
-    return ENOENT;
-  }
-
-  return (int)cconn_main_loop(ASOK_REQ_VERSION);
+    return 0;
 }
 
-static int ceph_shutdown(void) {
-  for (size_t i = 0; i < g_num_daemons; ++i) {
-    ceph_daemon_free(g_daemons[i]);
-  }
-  sfree(g_daemons);
-  g_daemons = NULL;
-  g_num_daemons = 0;
-  DEBUG("ceph plugin: finished ceph_shutdown");
-  return 0;
-}
-
-void module_register(void) {
-  plugin_register_complex_config("ceph", ceph_config);
-  plugin_register_init("ceph", ceph_init);
-  plugin_register_read("ceph", ceph_read);
-  plugin_register_shutdown("ceph", ceph_shutdown);
+void module_register(void)
+{
+    plugin_register_init("ceph", ceph_init);
+    plugin_register_config("ceph", ceph_config);
 }

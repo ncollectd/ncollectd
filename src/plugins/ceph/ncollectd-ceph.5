@@ -1,0 +1,59 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ceph 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ceph man page"
+.SH NAME
+ncollectd-ceph \- Documentation of ncollectd's ceph plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ceph
+.br
+\fBplugin\fP ceph {
+    \fBdaemon\fP \fIdeamon-name\fP {
+        \fBsocket-path\fP \fIadmin-socket\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBceph\fP plugin collects values retrieved from ceph daemon admin sockets.
+.PP
+A separate \fBdaemon\fP block must be configured for each ceph daemon to be
+monitored. The following example will read daemon statistics from four
+separate ceph daemons running on the same device (two OSDs, one MON, one MDS) :
+.EX
+
+    plugin ceph {
+        daemon "osd.0" {
+            socket-path "/var/run/ceph/ceph-osd.0.asok"
+        }
+        daemon "osd.1" {
+            socket-path "/var/run/ceph/ceph-osd.1.asok"
+        }
+        daemon "mon.a" {
+            socket-path "/var/run/ceph/ceph-mon.ceph1.asok"
+        }
+        daemon "mds.a" {
+            socket-path "/var/run/ceph/ceph-mds.ceph1.asok"
+        }
+    }
+
+.EE
+.PP
+Each \fBdaemon\fP block must have a string argument.
+A \fBsocket-path\fP is also required for each \fBdaemon\fP block:
+.PP
+.TP
+\fBsocket-path\fP \fIadmin-socket\fP
+Specifies the path to the UNIX admin socket of the ceph daemon.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBtimeout\fP \fIseconds\fP
+Set the timeout to connect to the admin socket. Default to \fB1\fP.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this daemon.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
