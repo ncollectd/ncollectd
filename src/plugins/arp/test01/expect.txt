@@ -1,0 +1,3 @@
+# TYPE system_arp_entries gauge
+system_arp_entries{device="enp36s0",hostname="localhost.localdomain"} 1
+system_arp_entries{device="enp38s0",hostname="localhost.localdomain"} 8
