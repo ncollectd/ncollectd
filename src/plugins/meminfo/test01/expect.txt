@@ -1,0 +1,110 @@
+# TYPE system_meminfo_memory_total_bytes gauge
+system_meminfo_memory_total_bytes{hostname="localhost.localdomain"} 33490624512
+# TYPE system_meminfo_memory_available_bytes gauge
+system_meminfo_memory_available_bytes{hostname="localhost.localdomain"} 27894935552
+# TYPE system_meminfo_active_bytes gauge
+system_meminfo_active_bytes{hostname="localhost.localdomain"} 4175933440
+# TYPE system_meminfo_swap_cached_bytes gauge
+system_meminfo_swap_cached_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_cached_bytes gauge
+system_meminfo_cached_bytes{hostname="localhost.localdomain"} 4936798208
+# TYPE system_meminfo_memory_free_bytes gauge
+system_meminfo_memory_free_bytes{hostname="localhost.localdomain"} 23016267776
+# TYPE system_meminfo_active_page_cache_bytes gauge
+system_meminfo_active_page_cache_bytes{hostname="localhost.localdomain"} 976384000
+# TYPE system_meminfo_inactive_anonymous_bytes gauge
+system_meminfo_inactive_anonymous_bytes{hostname="localhost.localdomain"} 126275584
+# TYPE system_meminfo_unevictable_bytes gauge
+system_meminfo_unevictable_bytes{hostname="localhost.localdomain"} 1288957952
+# TYPE system_meminfo_mlocked_bytes gauge
+system_meminfo_mlocked_bytes{hostname="localhost.localdomain"} 5906432
+# TYPE system_meminfo_swap_total_bytes gauge
+system_meminfo_swap_total_bytes{hostname="localhost.localdomain"} 42949664768
+# TYPE system_meminfo_swap_free_bytes gauge
+system_meminfo_swap_free_bytes{hostname="localhost.localdomain"} 42949664768
+# TYPE system_meminfo_zswap_total_bytes gauge
+system_meminfo_zswap_total_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_zswap_stored_bytes gauge
+system_meminfo_zswap_stored_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_buffers_bytes gauge
+system_meminfo_buffers_bytes{hostname="localhost.localdomain"} 1356267520
+# TYPE system_meminfo_active_anonymous_bytes gauge
+system_meminfo_active_anonymous_bytes{hostname="localhost.localdomain"} 3199549440
+# TYPE system_meminfo_inactive_bytes gauge
+system_meminfo_inactive_bytes{hostname="localhost.localdomain"} 3802038272
+# TYPE system_meminfo_inactive_page_cache_bytes gauge
+system_meminfo_inactive_page_cache_bytes{hostname="localhost.localdomain"} 3675762688
+# TYPE system_meminfo_shmem_bytes gauge
+system_meminfo_shmem_bytes{hostname="localhost.localdomain"} 1635553280
+# TYPE system_meminfo_kernel_reclaimable_bytes gauge
+system_meminfo_kernel_reclaimable_bytes{hostname="localhost.localdomain"} 704954368
+# TYPE system_meminfo_slab_bytes gauge
+system_meminfo_slab_bytes{hostname="localhost.localdomain"} 888459264
+# TYPE system_meminfo_slab_reclaimable_bytes gauge
+system_meminfo_slab_reclaimable_bytes{hostname="localhost.localdomain"} 704954368
+# TYPE system_meminfo_anonymous_bytes gauge
+system_meminfo_anonymous_bytes{hostname="localhost.localdomain"} 2973937664
+# TYPE system_meminfo_kernel_stack_bytes gauge
+system_meminfo_kernel_stack_bytes{hostname="localhost.localdomain"} 18726912
+# TYPE system_meminfo_page_tables_bytes gauge
+system_meminfo_page_tables_bytes{hostname="localhost.localdomain"} 44265472
+# TYPE system_meminfo_dirty_bytes gauge
+system_meminfo_dirty_bytes{hostname="localhost.localdomain"} 1531904
+# TYPE system_meminfo_secondary_page_tables_bytes gauge
+system_meminfo_secondary_page_tables_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_write_back_tmp_bytes gauge
+system_meminfo_write_back_tmp_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_commit_limit_bytes gauge
+system_meminfo_commit_limit_bytes{hostname="localhost.localdomain"} 59694977024
+# TYPE system_meminfo_slab_unreclaimable_bytes gauge
+system_meminfo_slab_unreclaimable_bytes{hostname="localhost.localdomain"} 183504896
+# TYPE system_meminfo_vmalloc_total_bytes gauge
+system_meminfo_vmalloc_total_bytes{hostname="localhost.localdomain"} 35184372087808
+# TYPE system_meminfo_vmalloc_used_bytes gauge
+system_meminfo_vmalloc_used_bytes{hostname="localhost.localdomain"} 97406976
+# TYPE system_meminfo_mapped_bytes gauge
+system_meminfo_mapped_bytes{hostname="localhost.localdomain"} 799318016
+# TYPE system_meminfo_percpu_bytes gauge
+system_meminfo_percpu_bytes{hostname="localhost.localdomain"} 6389760
+# TYPE system_meminfo_hardware_corrupted_bytes gauge
+system_meminfo_hardware_corrupted_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_writeback_bytes gauge
+system_meminfo_writeback_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_shmem_hugepages_bytes gauge
+system_meminfo_shmem_hugepages_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_shmem_hugepages_pmdmapped_bytes gauge
+system_meminfo_shmem_hugepages_pmdmapped_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_file_hugepages_bytes gauge
+system_meminfo_file_hugepages_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_file_hugepages_pmdmapped_bytes gauge
+system_meminfo_file_hugepages_pmdmapped_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_anonumous_hugepages_bytes gauge
+system_meminfo_anonumous_hugepages_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_cma_free_bytes gauge
+system_meminfo_cma_free_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_hugepages gauge
+system_meminfo_hugepages{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_hugepages_free gauge
+system_meminfo_hugepages_free{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_hugepages_reserved gauge
+system_meminfo_hugepages_reserved{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_hugepages_surpassed gauge
+system_meminfo_hugepages_surpassed{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_hugepage_size_bytes gauge
+system_meminfo_hugepage_size_bytes{hostname="localhost.localdomain"} 2097152
+# TYPE system_meminfo_hugepages_bytes gauge
+system_meminfo_hugepages_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_directmap_4k_bytes gauge
+system_meminfo_directmap_4k_bytes{hostname="localhost.localdomain"} 247046144
+# TYPE system_meminfo_directmap_2M_bytes gauge
+system_meminfo_directmap_2M_bytes{hostname="localhost.localdomain"} 7105150976
+# TYPE system_meminfo_directmap_2G_bytes gauge
+system_meminfo_directmap_2G_bytes{hostname="localhost.localdomain"} 27917287424
+# TYPE system_meminfo_bounce_bytes gauge
+system_meminfo_bounce_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_vmalloc_chunck_bytes gauge
+system_meminfo_vmalloc_chunck_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_cma_total_bytes gauge
+system_meminfo_cma_total_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_meminfo_committed_bytes gauge
+system_meminfo_committed_bytes{hostname="localhost.localdomain"} 11360903168
