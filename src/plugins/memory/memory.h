@@ -1,0 +1,23 @@
+/* SPDX-License-Identifier: GPL-2.0-only                             */
+/* SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín  */
+/* SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com> */
+
+#pragma once
+
+enum {
+    FAM_MEMORY_USED_BYTES,
+    FAM_MEMORY_FREE_BYTES,
+    FAM_MEMORY_BUFFERS_BYTES,
+    FAM_MEMORY_CACHED_BYTES,
+    FAM_MEMORY_SLAB_BYTES,
+    FAM_MEMORY_SLAB_RECLAIMABLE_BYTES,
+    FAM_MEMORY_SLAB_UNRECLAIMABLE_BYTES,
+    FAM_MEMORY_WIRED_BYTES,
+    FAM_MEMORY_ACTIVE_BYTES,
+    FAM_MEMORY_INACTIVE_BYTES,
+    FAM_MEMORY_KERNEL_BYTES,
+    FAM_MEMORY_LOCKED_BYTES,
+    FAM_MEMORY_ARC_BYTES,
+    FAM_MEMORY_UNUSED_BYTES,
+    FAM_MEMORY_MAX,
+};
