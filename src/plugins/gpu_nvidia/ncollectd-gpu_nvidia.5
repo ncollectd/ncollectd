@@ -1,0 +1,32 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-gpu_nvidia 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd gpu_nvidia man page"
+.SH NAME
+ncollectd-gpu_nvidia \- Documentation of ncollectd's gpu_nvidia plugin
+.SH SYNOPSIS
+\fBload-plugin\fP gpu_nvidia
+.br
+\fBplugin\fP gpu_nvidia {
+    \fBgpu-index\fP \fIindex\fP
+    \fBignore-gpu-selected\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBgpu_nvidia\fP plugin efficiently collects various statistics from the
+system's NVIDIA GPUs using the NVML library.
+Currently collected are fan speed, core temperature, percent load, percent memory used,
+compute and memory frequencies, and power consumption.
+.PP
+.TP
+\fBgpu-index\fP \fIindex\fP
+If one or more of these options is specified, only GPUs at that index (as
+determined by nvidia-utils through \fInvidia-smi\fP) have statistics collected.
+If no instance of this option is specified, all GPUs are monitored.
+.TP
+\fBignore-gpu-selected\fP \fItrue|false\fP
+If set to \fBtrue\fP, all detected GPUs \fBexcept\fP the ones at indices specified by
+\fBgpu-index\fP entries are collected. For greater clarity, setting IgnoreSelected
+without any GPUIndex directives will result in \fBno\fP statistics being
+collected.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

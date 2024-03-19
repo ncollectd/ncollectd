@@ -1,242 +1,244 @@
-/*
-Copyright 2018 Evgeny Naumov
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright 2018 Evgeny Naumov
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
+#include "plugin.h"
+#include "libutils/common.h"
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-
-#include "daemon/collectd.h"
-#include "daemon/plugin.h"
-#include "utils/common/common.h"
-
-#include <nvml.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#define PLUGIN_NAME "gpu_nvidia"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include <nvml.h>
 
-static nvmlReturn_t nv_status = NVML_SUCCESS;
-static char *nv_errline = "";
+enum {
+    FAM_GPU_NVIDIA_MEMORY_FREE_BYTES,
+    FAM_GPU_NVIDIA_MEMORY_USED_BYTES,
+    FAM_GPU_NVIDIA_GPU_UTILIZATION_RATIO,
+    FAM_GPU_NVIDIA_FAN_SPEED_RATIO,
+    FAM_GPU_NVIDIA_TEMPERATURE_CELSIUS,
+    FAM_GPU_NVIDIA_MULTIPROCESSOR_FREQUENCY_HZ,
+    FAM_GPU_NVIDIA_MEMORY_FREQUENCY_HZ,
+    FAM_GPU_NVIDIA_POWER_WATTS,
+    FAM_GPU_NVIDIA_MAX,
+};
 
-#define TRY_CATCH(f, catch)                                                    \
-  if ((nv_status = f) != NVML_SUCCESS) {                                       \
-    nv_errline = #f;                                                           \
-    goto catch;                                                                \
-  }
-
-#define TRY_CATCH_OPTIONAL(f, catch)                                           \
-  if ((nv_status = f) != NVML_SUCCESS &&                                       \
-      nv_status != NVML_ERROR_NOT_SUPPORTED) {                                 \
-    nv_errline = #f;                                                           \
-    goto catch;                                                                \
-  }
-
-#define TRY(f) TRY_CATCH(f, catch)
-#define TRYOPT(f) TRY_CATCH_OPTIONAL(f, catch)
-
-#define KEY_GPUINDEX "GPUIndex"
-#define KEY_IGNORESELECTED "IgnoreSelected"
-#define KEY_INSTANCE_BY_GPUINDEX "InstanceByGPUIndex"
-#define KEY_INSTANCE_BY_GPUNAME "InstanceByGPUName"
-
-static const char *config_keys[] = {KEY_GPUINDEX, KEY_IGNORESELECTED,
-                                    KEY_INSTANCE_BY_GPUINDEX,
-                                    KEY_INSTANCE_BY_GPUNAME};
-static const unsigned int n_config_keys = STATIC_ARRAY_SIZE(config_keys);
+static metric_family_t fams[FAM_GPU_NVIDIA_MAX] = {
+    [FAM_GPU_NVIDIA_MEMORY_FREE_BYTES] = {
+        .name = "gpu_nvidia_memory_free_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Unallocated FB memory in bytes",
+    },
+    [FAM_GPU_NVIDIA_MEMORY_USED_BYTES] = {
+        .name = "gpu_nvidia_memory_used_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Allocated FB memory in bytes."
+    },
+    [FAM_GPU_NVIDIA_GPU_UTILIZATION_RATIO] = {
+        .name = "gpu_nvidia_gpu_utilization_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Percent of time over the past sample period "
+                "during which one or more kernels was executing on the GPU."
+    },
+    [FAM_GPU_NVIDIA_FAN_SPEED_RATIO] = {
+        .name = "gpu_nvidia_fan_speed_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The fan speed is expressed as a percentage "
+                "of the product's maximum noise tolerance fan speed."
+    },
+    [FAM_GPU_NVIDIA_TEMPERATURE_CELSIUS] = {
+        .name = "gpu_nvidia_temperature_celsius",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The current temperature readings for the device in celsius degrees."
+    },
+    [FAM_GPU_NVIDIA_MULTIPROCESSOR_FREQUENCY_HZ] = {
+        .name = "gpu_nvidia_multiprocessor_frequency_hz",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The current clock speed for the multiprocessor."
+    },
+    [FAM_GPU_NVIDIA_MEMORY_FREQUENCY_HZ] = {
+        .name = "gpu_nvidia_memory_frequency_hz",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The current clock speed for the memory."
+    },
+    [FAM_GPU_NVIDIA_POWER_WATTS] = {
+        .name = "gpu_nvidia_power_watts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Power usage for this GPU in watts and its associated circuitry."
+    },
+};
 
 // This is a bitflag, necessitating the (extremely conservative) assumption
 // that there are no more than 64 GPUs on this system.
 static uint64_t conf_match_mask = 0;
 static bool conf_mask_is_exclude = 0;
 
-// use GPU index and device name by default
-#define INSTANCE_BY_GPUINDEX (1 << 0)
-#define INSTANCE_BY_GPUNAME (1 << 1)
-static uint8_t instance_by = INSTANCE_BY_GPUINDEX | INSTANCE_BY_GPUNAME;
+static int nvml_read(void)
+{
+    unsigned int device_count = 0;
+    nvmlReturn_t nv_status = nvmlDeviceGetCount(&device_count);
+    if (nv_status != NVML_SUCCESS) {
+        PLUGIN_ERROR("Failed to enumerate NVIDIA GPUs (returned %u)", nv_status);
+        return -1;
+    }
 
-static int nvml_config(const char *key, const char *value) {
-  if (strcasecmp(key, KEY_GPUINDEX) == 0) {
-    char *eptr;
-    unsigned long device_ix = strtoul(value, &eptr, 10);
-    if (eptr == value) {
-      ERROR(PLUGIN_NAME ": Failed to parse GPUIndex value \"%s\"", value);
-      return -1;
-    }
-    if (device_ix >= 64) {
-      ERROR(PLUGIN_NAME
-            ": At most 64 GPUs (0 <= GPUIndex < 64) are supported!");
-      return -2;
-    }
-    conf_match_mask |= (1 << device_ix);
-  } else if (strcasecmp(key, KEY_IGNORESELECTED) == 0) {
-    conf_mask_is_exclude = IS_TRUE(value);
-  } else if (strcasecmp(key, KEY_INSTANCE_BY_GPUINDEX) == 0) {
-    // if KEY_INSTANCE_BY_GPUINDEX is set to false, set bit to 0
-    if (IS_FALSE(value)) {
-      instance_by &= ~INSTANCE_BY_GPUINDEX;
-    }
-  } else if (strcasecmp(key, KEY_INSTANCE_BY_GPUNAME) == 0) {
-    // if KEY_INSTANCE_BY_GPUNAME is set to false, set bit to 0
-    if (IS_FALSE(value)) {
-      instance_by &= ~INSTANCE_BY_GPUNAME;
-    }
-  } else {
-    ERROR(PLUGIN_NAME ": Unrecognized config option %s", key);
-    return -10;
-  }
+    if (device_count > 64)
+        device_count = 64;
 
-  return 0;
+    for (unsigned int idx = 0; idx < device_count; idx++) {
+        unsigned int is_match = ((((uint64_t)1) << idx) & conf_match_mask)
+                                || (conf_match_mask == 0);
+        if (conf_mask_is_exclude == !!is_match)
+            continue;
+
+        nvmlDevice_t dev;
+        nv_status = nvmlDeviceGetHandleByIndex(idx, &dev);
+        if (nv_status != NVML_SUCCESS) {
+            PLUGIN_WARNING("nvmlDeviceGetHandleByIndex failed (%u) at index %u", nv_status, idx);
+            continue;
+        }
+
+        char dev_name[NVML_DEVICE_NAME_BUFFER_SIZE] = {0};
+        nv_status = nvmlDeviceGetName(dev, dev_name, NVML_DEVICE_NAME_BUFFER_SIZE);
+        if (nv_status != NVML_SUCCESS) {
+            PLUGIN_WARNING("nvmlDeviceGetName failed (%u) at index %u", nv_status, idx);
+            continue;
+        }
+
+        char device_index[64];
+        snprintf(device_index, sizeof(device_index), "%u", idx);
+
+        nvmlMemory_t meminfo;
+        nv_status = nvmlDeviceGetMemoryInfo(dev, &meminfo);
+        if (nv_status == NVML_SUCCESS) {
+            metric_family_append(&fams[FAM_GPU_NVIDIA_MEMORY_FREE_BYTES],
+                                 VALUE_GAUGE(meminfo.free), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+            metric_family_append(&fams[FAM_GPU_NVIDIA_MEMORY_USED_BYTES],
+                                 VALUE_GAUGE(meminfo.used), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+        }
+
+        nvmlUtilization_t utilization;
+        nv_status = nvmlDeviceGetUtilizationRates(dev, &utilization);
+        if (nv_status == NVML_SUCCESS)
+            metric_family_append(&fams[FAM_GPU_NVIDIA_GPU_UTILIZATION_RATIO],
+                                 VALUE_GAUGE((double)utilization.gpu / 100.0), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+
+        unsigned int fan_speed;
+        nv_status = nvmlDeviceGetFanSpeed(dev, &fan_speed);
+        if (nv_status == NVML_SUCCESS)
+            metric_family_append(&fams[FAM_GPU_NVIDIA_FAN_SPEED_RATIO],
+                                 VALUE_GAUGE((double)fan_speed / 100.0), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+
+        unsigned int core_temp;
+        nv_status = nvmlDeviceGetTemperature(dev, NVML_TEMPERATURE_GPU, &core_temp);
+        if (nv_status == NVML_SUCCESS)
+            metric_family_append(&fams[FAM_GPU_NVIDIA_TEMPERATURE_CELSIUS],
+                                 VALUE_GAUGE(core_temp), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+
+        unsigned int sm_clk_mhz;
+        nv_status = nvmlDeviceGetClockInfo(dev, NVML_CLOCK_SM, &sm_clk_mhz);
+        if (nv_status == NVML_SUCCESS)
+            metric_family_append(&fams[FAM_GPU_NVIDIA_MULTIPROCESSOR_FREQUENCY_HZ],
+                                 VALUE_GAUGE(1e6 * sm_clk_mhz), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+
+        unsigned int mem_clk_mhz;
+        nv_status = nvmlDeviceGetClockInfo(dev, NVML_CLOCK_MEM, &mem_clk_mhz);
+        if (nv_status == NVML_SUCCESS)
+            metric_family_append(&fams[FAM_GPU_NVIDIA_MEMORY_FREQUENCY_HZ],
+                                 VALUE_GAUGE(1e6 * mem_clk_mhz), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+
+        unsigned int power_mW;
+        nv_status = nvmlDeviceGetPowerUsage(dev, &power_mW);
+        if (nv_status == NVML_SUCCESS)
+            metric_family_append(&fams[FAM_GPU_NVIDIA_POWER_WATTS],
+                                 VALUE_GAUGE(1e-3 * power_mW), NULL,
+                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
+                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 NULL);
+
+    }
+
+    plugin_dispatch_metric_family_array(fams, FAM_GPU_NVIDIA_MAX, 0);
+    return 0;
 }
 
-static int nvml_init(void) {
-  TRY(nvmlInit());
-  return 0;
+static int nvml_config(config_item_t *ci)
+{
+    int status = 0;
 
-  catch : ERROR(PLUGIN_NAME ": NVML init failed with %d", nv_status);
-  return -1;
-}
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+        if (strcasecmp(child->key, "gpu-index") == 0) {
+            unsigned int device_idx = 0;
+            status = cf_util_get_unsigned_int(child, &device_idx);
+            if (status == 0) {
+                if (device_idx >= 64) {
+                    PLUGIN_ERROR("At most 64 GPUs (0 <= GPUIndex < 64) are supported!");
+                    return -1;
+                }
+                conf_match_mask |= (((uint64_t)1) << device_idx);
+            }
+        } else if (strcasecmp(child->key, "ignore-gpu-selected") == 0) {
+            status =  cf_util_get_boolean(child, &conf_mask_is_exclude);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
 
-static int nvml_shutdown(void) {
-  TRY(nvmlShutdown())
-  return 0;
-
-  catch : ERROR(PLUGIN_NAME ": NVML shutdown failed with %d", nv_status);
-  return -1;
-}
-
-static void nvml_submit_gauge(int device_idx, const char *device_name,
-                              const char *type, const char *type_instance,
-                              gauge_t nvml) {
-
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = nvml};
-  vl.values_len = 1;
-
-  sstrncpy(vl.plugin, PLUGIN_NAME, sizeof(vl.plugin));
-
-  // use gpu index and name or either of the two
-  if (instance_by == (INSTANCE_BY_GPUNAME | INSTANCE_BY_GPUINDEX)) {
-    snprintf(vl.plugin_instance, sizeof(vl.plugin_instance), "%i-%s",
-             device_idx, device_name);
-  } else if (instance_by & INSTANCE_BY_GPUINDEX) {
-    snprintf(vl.plugin_instance, sizeof(vl.plugin_instance), "%i", device_idx);
-  } else if (instance_by & INSTANCE_BY_GPUNAME) {
-    sstrncpy(vl.plugin_instance, device_name, sizeof(vl.plugin_instance));
-  }
-
-  sstrncpy(vl.type, type, sizeof(vl.type));
-
-  if (type_instance != NULL) {
-    sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-  }
-
-  plugin_dispatch_values(&vl);
-}
-
-static int nvml_read(void) {
-
-  unsigned int device_count;
-  TRY_CATCH(nvmlDeviceGetCount(&device_count), catch_nocount);
-
-  if (device_count > 64) {
-    device_count = 64;
-  }
-
-  for (unsigned int ix = 0; ix < device_count; ix++) {
-
-    unsigned int is_match =
-        ((1 << ix) & conf_match_mask) || (conf_match_mask == 0);
-    if (conf_mask_is_exclude == !!is_match) {
-      continue;
+        if (status != 0)
+            return -1;
     }
 
-    nvmlDevice_t dev;
-    TRY(nvmlDeviceGetHandleByIndex(ix, &dev));
-
-    char dev_name[NVML_DEVICE_NAME_BUFFER_SIZE] = {0};
-    if (instance_by & INSTANCE_BY_GPUNAME) {
-      TRY(nvmlDeviceGetName(dev, dev_name, NVML_DEVICE_NAME_BUFFER_SIZE));
-    }
-
-    // Try to be as lenient as possible with the variety of devices that are
-    // out there, ignoring any NOT_SUPPORTED errors gently.
-    nvmlMemory_t meminfo;
-    TRYOPT(nvmlDeviceGetMemoryInfo(dev, &meminfo))
-    if (nv_status == NVML_SUCCESS) {
-      nvml_submit_gauge(ix, dev_name, "memory", "used", meminfo.used);
-      nvml_submit_gauge(ix, dev_name, "memory", "free", meminfo.free);
-    }
-
-    nvmlUtilization_t utilization;
-    TRYOPT(nvmlDeviceGetUtilizationRates(dev, &utilization))
-    if (nv_status == NVML_SUCCESS)
-      nvml_submit_gauge(ix, dev_name, "percent", "gpu_used", utilization.gpu);
-
-    unsigned int fan_speed;
-    TRYOPT(nvmlDeviceGetFanSpeed(dev, &fan_speed))
-    if (nv_status == NVML_SUCCESS)
-      nvml_submit_gauge(ix, dev_name, "fanspeed", NULL, fan_speed);
-
-    unsigned int core_temp;
-    TRYOPT(nvmlDeviceGetTemperature(dev, NVML_TEMPERATURE_GPU, &core_temp))
-    if (nv_status == NVML_SUCCESS)
-      nvml_submit_gauge(ix, dev_name, "temperature", "core", core_temp);
-
-    unsigned int sm_clk_mhz;
-    TRYOPT(nvmlDeviceGetClockInfo(dev, NVML_CLOCK_SM, &sm_clk_mhz))
-    if (nv_status == NVML_SUCCESS)
-      nvml_submit_gauge(ix, dev_name, "frequency", "multiprocessor",
-                        1e6 * sm_clk_mhz);
-
-    unsigned int mem_clk_mhz;
-    TRYOPT(nvmlDeviceGetClockInfo(dev, NVML_CLOCK_MEM, &mem_clk_mhz))
-    if (nv_status == NVML_SUCCESS)
-      nvml_submit_gauge(ix, dev_name, "frequency", "memory", 1e6 * mem_clk_mhz);
-
-    unsigned int power_mW;
-    TRYOPT(nvmlDeviceGetPowerUsage(dev, &power_mW))
-    if (nv_status == NVML_SUCCESS)
-      nvml_submit_gauge(ix, dev_name, "power", NULL, 1e-3 * power_mW);
-
-    continue;
-
-    // Failures here indicate transient errors or removal of GPU. In either
-    // case it will either be resolved or the GPU will no longer be enumerated
-    // the next time round.
-    catch : WARNING(PLUGIN_NAME
-                    ": NVML call \"%s\" failed (%d) on dev at index %d!",
-                    nv_errline, nv_status, ix);
-    continue;
-  }
-
-  return 0;
-
-// Failures here indicate serious misconfiguration; we bail out totally.
-catch_nocount:
-  ERROR(PLUGIN_NAME ": Failed to enumerate NVIDIA GPUs (\"%s\" returned %d)",
-        nv_errline, nv_status);
-  return -1;
+    return 0;
 }
 
-void module_register(void) {
-  plugin_register_init(PLUGIN_NAME, nvml_init);
-  plugin_register_config(PLUGIN_NAME, nvml_config, config_keys, n_config_keys);
-  plugin_register_read(PLUGIN_NAME, nvml_read);
-  plugin_register_shutdown(PLUGIN_NAME, nvml_shutdown);
+static int nvml_shutdown(void)
+{
+    nvmlReturn_t nv_status = nvmlShutdown();
+    if (nv_status != NVML_SUCCESS) {
+        PLUGIN_ERROR("nvmlShutdown failed with %u", nv_status);
+        return -1;
+    }
+    return 0;
+}
+
+static int nvml_init(void)
+{
+    nvmlReturn_t nv_status = nvmlInit();
+    if (nv_status != NVML_SUCCESS) {
+        PLUGIN_ERROR("nvmlInit failed with %u", nv_status);
+        return -1;
+    }
+    return 0;
+}
+
+void module_register(void)
+{
+    plugin_register_init("gpu_nvidia", nvml_init);
+    plugin_register_config("gpu_nvidia", nvml_config);
+    plugin_register_read("gpu_nvidia", nvml_read);
+    plugin_register_shutdown("gpu_nvidia", nvml_shutdown);
 }
