@@ -1,0 +1,6 @@
+# TYPE system_load_15m gauge
+system_load_15m{hostname="localhost.localdomain"} 4.75
+# TYPE system_load_5m gauge
+system_load_5m{hostname="localhost.localdomain"} 4.68
+# TYPE system_load_1m gauge
+system_load_1m{hostname="localhost.localdomain"} 3.89
