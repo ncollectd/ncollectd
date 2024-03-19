@@ -1,0 +1,56 @@
+# TYPE system_xfrm_in_error counter
+system_xfrm_in_error_total{hostname="localhost.localdomain"} 284
+# TYPE system_xfrm_in_state_mode_error counter
+system_xfrm_in_state_mode_error_total{hostname="localhost.localdomain"} 35
+# TYPE system_xfrm_in_buffer_error counter
+system_xfrm_in_buffer_error_total{hostname="localhost.localdomain"} 49
+# TYPE system_xfrm_in_no_states counter
+system_xfrm_in_no_states_total{hostname="localhost.localdomain"} 114
+# TYPE system_xfrm_in_state_sequence_error counter
+system_xfrm_in_state_sequence_error_total{hostname="localhost.localdomain"} 314
+# TYPE system_xfrm_in_state_expired counter
+system_xfrm_in_state_expired_total{hostname="localhost.localdomain"} 109
+# TYPE system_xfrm_in_header_error counter
+system_xfrm_in_header_error_total{hostname="localhost.localdomain"} 58
+# TYPE system_xfrm_in_no_policy counter
+system_xfrm_in_no_policy_total{hostname="localhost.localdomain"} 207
+# TYPE system_xfrm_in_state_protocol_error counter
+system_xfrm_in_state_protocol_error_total{hostname="localhost.localdomain"} 365
+# TYPE system_xfrm_in_policy_error counter
+system_xfrm_in_policy_error_total{hostname="localhost.localdomain"} 242
+# TYPE system_xfrm_acquire_error counter
+system_xfrm_acquire_error_total{hostname="localhost.localdomain"} 390
+# TYPE system_xfrm_forward counter
+system_xfrm_forward_total{hostname="localhost.localdomain"} 111
+# TYPE system_xfrm_out_error counter
+system_xfrm_out_error_total{hostname="localhost.localdomain"} 375
+# TYPE system_xfrm_out_bundle_generation_error counter
+system_xfrm_out_bundle_generation_error_total{hostname="localhost.localdomain"} 18
+# TYPE system_xfrm_out_bundle_check_error counter
+system_xfrm_out_bundle_check_error_total{hostname="localhost.localdomain"} 33
+# TYPE system_xfrm_out_no_states counter
+system_xfrm_out_no_states_total{hostname="localhost.localdomain"} 430
+# TYPE system_xfrm_out_state_protocol_error counter
+system_xfrm_out_state_protocol_error_total{hostname="localhost.localdomain"} 40
+# TYPE system_xfrm_out_state_mode_error counter
+system_xfrm_out_state_mode_error_total{hostname="localhost.localdomain"} 407
+# TYPE system_xfrm_out_state_sequence_error counter
+system_xfrm_out_state_sequence_error_total{hostname="localhost.localdomain"} 41
+# TYPE system_xfrm_out_state_expired counter
+system_xfrm_out_state_expired_total{hostname="localhost.localdomain"} 284
+# TYPE system_xfrm_out_policy_block counter
+system_xfrm_out_policy_block_total{hostname="localhost.localdomain"} 466
+# TYPE system_xfrm_out_policy_dead counter
+system_xfrm_out_policy_dead_total{hostname="localhost.localdomain"} 23
+# TYPE system_xfrm_out_policy_error counter
+system_xfrm_out_policy_error_total{hostname="localhost.localdomain"} 455
+# TYPE system_xfrm_out_state_invalid counter
+system_xfrm_out_state_invalid_total{hostname="localhost.localdomain"} 413
+# TYPE system_xfrm_in_policy_block counter
+system_xfrm_in_policy_block_total{hostname="localhost.localdomain"} 50
+# TYPE system_xfrm_in_state_invalid counter
+system_xfrm_in_state_invalid_total{hostname="localhost.localdomain"} 95
+# TYPE system_xfrm_in_template_mismatch counter
+system_xfrm_in_template_mismatch_total{hostname="localhost.localdomain"} 51
+# TYPE system_xfrm_in_state_mismatch counter
+system_xfrm_in_state_mismatch_total{hostname="localhost.localdomain"} 486
