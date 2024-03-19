@@ -1,40 +1,11 @@
-/**
- * collectd - src/daemon/utils_time.h
- * Copyright (C) 2010-2015  Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- **/
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT                         */
+/* SPDX-FileCopyrightText: Copyright (C) 2010-2015 Florian octo Forster */
+/* SPDX-FileContributor: Florian octo Forster <octo at collectd.org>    */
 
-#ifndef UTILS_TIME_H
-#define UTILS_TIME_H 1
+#pragma once
 
-#include "collectd.h"
-
-#ifdef TESTING_H
-/* cdtime_mock is the time returned by cdtime() when build with
- * -DMOCK_TIME */
-extern cdtime_t cdtime_mock;
-#endif
-
+#include <stddef.h>
+#include <stdint.h>
 /*
  * "cdtime_t" is a 64bit unsigned integer. The time is stored at a 2^-30 second
  * resolution, i.e. the most significant 34 bit are used to store the time in
@@ -43,9 +14,8 @@ extern cdtime_t cdtime_mock;
  * manner is that comparing times and calculating differences is as simple as
  * it is with "time_t", i.e. a simple integer comparison / subtraction works.
  */
-/*
- * cdtime_t is defined in "collectd.h" */
-/* typedef uint64_t cdtime_t; */
+
+typedef uint64_t cdtime_t;
 
 /* 2^30 = 1073741824 */
 #define TIME_T_TO_CDTIME_T_STATIC(t) (((cdtime_t)(t)) << 30)
@@ -108,6 +78,9 @@ extern cdtime_t cdtime_mock;
 #define TIMESPEC_TO_CDTIME_T(ts)                                               \
   NS_TO_CDTIME_T(1000000000ULL * (ts)->tv_sec + (ts)->tv_nsec)
 
+#define TIMESPEC_TO_DOUBLE(ts)                                                 \
+  (double) { ((double)(ts)->tv_sec) + ((double)(ts)->tv_nsec)/1000000000.0 }
+
 cdtime_t cdtime(void);
 
 #define RFC3339_SIZE 26     /* 2006-01-02T15:04:05+00:00 */
@@ -128,5 +101,3 @@ int rfc3339_local(char *buffer, size_t buffer_size, cdtime_t t);
 /* rfc3339nano formats a cdtime_t time as local in RFC 3339 format with
  * nanosecond precision, e.g., "2006-01-02T15:04:05.999999999+00:00". */
 int rfc3339nano_local(char *buffer, size_t buffer_size, cdtime_t t);
-
-#endif /* UTILS_TIME_H */

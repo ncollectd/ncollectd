@@ -1,39 +1,23 @@
-/**
- * collectd - src/common.h
- * Copyright (C) 2005-2014  Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Niki W. Waibel <niki.waibel@gmx.net>
- **/
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT                          */
+/* SPDX-FileCopyrightText: Copyright (C) 2005-2014  Florian octo Forster */
+/* SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín      */
+/* SPDX-FileContributor: Florian octo Forster <octo at collectd.org>     */
+/* SPDX-FileContributor: Niki W. Waibel <niki.waibel at gmx.net>         */
+/* SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>     */
 
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
-#include "collectd.h"
+#include "ncollectd.h"
 
-#include "plugin.h"
+#include <string.h>
+#include "libutils/time.h"
 
-#if HAVE_PWD_H
-#include <pwd.h>
+#ifdef HAVE_PWD_H
+#    include <pwd.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#    include <arpa/inet.h>
 #endif
 
 #define sfree(ptr)                                                             \
@@ -51,36 +35,116 @@
   ((strcasecmp("false", (s)) == 0) || (strcasecmp("no", (s)) == 0) ||          \
    (strcasecmp("off", (s)) == 0))
 
-struct rate_to_value_state_s {
-  value_t last_value;
-  cdtime_t last_time;
-  gauge_t residual;
+#define discard_const(ptr) ((void *)((uintptr_t)(ptr)))
+
+struct rate_to_counter_state_s {
+    uint64_t last_value;
+    cdtime_t last_time;
+    double residual;
 };
-typedef struct rate_to_value_state_s rate_to_value_state_t;
+typedef struct rate_to_counter_state_s rate_to_counter_state_t;
 
-struct value_to_rate_state_s {
-  value_t last_value;
-  cdtime_t last_time;
+struct counter_to_rate_state_s {
+    uint64_t last_value;
+    cdtime_t last_time;
 };
-typedef struct value_to_rate_state_s value_to_rate_state_t;
+typedef struct counter_to_rate_state_s counter_to_rate_state_t;
 
-char *sstrncpy(char *dest, const char *src, size_t n);
+__attribute__((format(printf, 3, 4)))
+int ssnprintf(char *str, size_t size, char const *format, ...);
 
-__attribute__((format(printf, 3, 4))) int ssnprintf(char *str, size_t size,
-                                                    char const *format, ...);
+__attribute__((format(printf, 1, 2)))
+char *ssnprintf_alloc(char const *format, ...);
 
-__attribute__((format(printf, 1, 2))) char *ssnprintf_alloc(char const *format,
-                                                            ...);
-
-char *sstrdup(const char *s);
-
-#if !HAVE_STRNLEN
-size_t strnlen(const char *s, size_t maxlen);
+#ifndef HAVE_STRNLEN
+static inline size_t strnlen(const char *s, size_t maxlen)
+{
+    for (size_t i = 0; i < maxlen; i++) {
+        if (s[i] == 0)
+            return i;
+    }
+    return maxlen;
+}
 #endif
 
-char *sstrndup(const char *s, size_t n);
-void *scalloc(size_t nmemb, size_t size);
-void *smalloc(size_t size);
+static inline char *sstrnncpy(char *dest, size_t dest_len, const char *src, size_t src_len)
+{
+    if (src_len > (dest_len - 1))
+        src_len = dest_len - 1;
+    memcpy(dest, src, src_len);
+    dest[src_len] = '\0';
+    return dest;
+}
+
+static inline char *sstrncpy(char *dest, const char *src, size_t n)
+{
+    size_t len = strlen(src);
+    if (len > n - 1)
+        len = n - 1;
+    memcpy(dest, src, len);
+    dest[len] = '\0';
+/*
+  strncpy(dest, src, n-1);
+  dest[n - 1] = '\0';
+*/
+    return dest;
+}
+
+static inline char *sstrdup(const char *s)
+{
+    if (s == NULL)
+        return NULL;
+
+  /* Do not use `strdup' here, because it's not specified in POSIX. It's
+   * ``only'' an XSI extension. */
+    size_t sz = strlen(s) + 1;
+    char *r = malloc(sz);
+    if (r == NULL)
+      return NULL;
+    memcpy(r, s, sz);
+
+    return r;
+}
+
+static inline char *sstrndup(const char *s, size_t len)
+{
+    if (s == NULL)
+        return NULL;
+
+  /* Do not use `strdup' here, because it's not specified in POSIX. It's
+   * ``only'' an XSI extension. */
+    char *r = malloc(len + 1);
+    if (r == NULL)
+        return NULL;
+
+    memcpy(r, s, len);
+    r[len] = '\0';
+
+    return r;
+}
+
+static inline int sstrncmp(const char *s1, size_t n1, const char *s2, size_t n2)
+{
+    if (n1 == n2)
+        return memcmp(s1, s2, n1);
+
+    const unsigned char *a=(const unsigned char*)s1;
+    const unsigned char *b=(const unsigned char*)s2;
+
+    size_t n = 0;
+    while(true) {
+        if (n == n1) {
+            return -b[n];
+        } else if (n == n2) {
+            return a[n];
+        } else if (a[n] != b[n]) {
+            return a[n] - b[n];
+        }
+        n++;
+    }
+    return 0;
+}
+
 char *sstrerror(int errnum, char *buf, size_t buflen);
 
 #ifndef ERRBUF_SIZE
@@ -107,7 +171,31 @@ char *sstrerror(int errnum, char *buf, size_t buflen);
  *   Zero upon success or non-zero if an error occurred. `errno' is set in this
  *   case.
  */
-int sread(int fd, void *buf, size_t count);
+static inline ssize_t sread(int fd, void *buf, size_t count)
+{
+    char *ptr = (char *)buf;
+    size_t nleft = count;
+
+    while (nleft > 0) {
+        ssize_t status = read(fd, (void *)ptr, nleft);
+
+        if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR)))
+            continue;
+
+        if (status < 0)
+            return status;
+
+        if (status == 0)
+            return -1;
+
+        assert((0 > status) || (nleft >= (size_t)status));
+
+        nleft = nleft - ((size_t)status);
+        ptr = ptr + ((size_t)status);
+    }
+
+    return 0;
+}
 
 /*
  * NAME
@@ -126,8 +214,7 @@ int sread(int fd, void *buf, size_t count);
  *   Zero upon success or non-zero if an error occurred. `errno' is set in this
  *   case.
  */
-int swrite(int fd, const void *buf, size_t count);
-
+ssize_t swrite(int fd, const void *buf, size_t count);
 /*
  * NAME
  *   strsplit
@@ -205,7 +292,7 @@ int escape_slashes(char *buffer, size_t buffer_size);
  *   escape_string
  *
  * DESCRIPTION
- *   escape_string quotes and escapes a string to be usable with collectd's
+ *   escape_string quotes and escapes a string to be usable with ncollectd's
  *   plain text protocol. "simple" strings are left as they are, for example if
  *   buffer is 'simple' before the call, it will remain 'simple'. However, if
  *   buffer contains 'more "complex"' before the call, the returned buffer will
@@ -283,111 +370,135 @@ __attribute__((nonnull(1))) size_t strstripnewline(char *buffer);
 int timeval_cmp(struct timeval tv0, struct timeval tv1, struct timeval *delta);
 
 /* make sure tv_usec stores less than a second */
-#define NORMALIZE_TIMEVAL(tv)                                                  \
-  do {                                                                         \
-    (tv).tv_sec += (tv).tv_usec / 1000000;                                     \
-    (tv).tv_usec = (tv).tv_usec % 1000000;                                     \
-  } while (0)
+#define NORMALIZE_TIMEVAL(tv)                        \
+    do {                                             \
+        (tv).tv_sec += (tv).tv_usec / 1000000;       \
+        (tv).tv_usec = (tv).tv_usec % 1000000;       \
+    } while (0)
 
 /* make sure tv_sec stores less than a second */
-#define NORMALIZE_TIMESPEC(tv)                                                 \
-  do {                                                                         \
-    (tv).tv_sec += (tv).tv_nsec / 1000000000;                                  \
-    (tv).tv_nsec = (tv).tv_nsec % 1000000000;                                  \
-  } while (0)
-
-int check_create_dir(const char *file_orig);
-
-#ifdef HAVE_LIBKSTAT
-#if HAVE_KSTAT_H
-#include <kstat.h>
-#endif
-int get_kstat(kstat_t **ksp_ptr, char *module, int instance, char *name);
-long long get_kstat_value(kstat_t *ksp, char *name);
-#endif
+#define NORMALIZE_TIMESPEC(tv)                       \
+    do {                                             \
+        (tv).tv_sec += (tv).tv_nsec / 1000000000;    \
+        (tv).tv_nsec = (tv).tv_nsec % 1000000000;    \
+    } while (0)
 
 #ifndef HAVE_HTONLL
-unsigned long long ntohll(unsigned long long n);
-unsigned long long htonll(unsigned long long n);
-#endif
-
-#if FP_LAYOUT_NEED_NOTHING
-#define ntohd(d) (d)
-#define htond(d) (d)
-#elif FP_LAYOUT_NEED_ENDIANFLIP || FP_LAYOUT_NEED_INTSWAP
-double ntohd(double d);
-double htond(double d);
+static inline unsigned long long ntohll(unsigned long long n)
+{
+#if BYTE_ORDER == BIG_ENDIAN
+  return n;
 #else
-#error                                                                         \
-    "Don't know how to convert between host and network representation of doubles."
+  return (((unsigned long long)ntohl((uint32_t)n)) << 32) + ntohl((uint32_t)(n >> 32));
+#endif
+}
+
+static inline unsigned long long htonll(unsigned long long n)
+{
+#if BYTE_ORDER == BIG_ENDIAN
+  return n;
+#else
+  return (((unsigned long long)htonl((uint32_t)n)) << 32) + htonl((uint32_t)(n >> 32));
+#endif
+}
 #endif
 
-int format_name(char *ret, int ret_len, const char *hostname,
-                const char *plugin, const char *plugin_instance,
-                const char *type, const char *type_instance);
-#define FORMAT_VL(ret, ret_len, vl)                                            \
-  format_name(ret, ret_len, (vl)->host, (vl)->plugin, (vl)->plugin_instance,   \
-              (vl)->type, (vl)->type_instance)
-int format_values(strbuf_t *buf, metric_t const *m, bool store_rates);
+#ifdef FP_LAYOUT_NEED_NOTHING
+#    define ntohd(d) (d)
+#    define htond(d) (d)
+#elif defined(FP_LAYOUT_NEED_ENDIANFLIP) || defined(FP_LAYOUT_NEED_INTSWAP)
 
-int parse_identifier(char *str, char **ret_host, char **ret_plugin,
-                     char **ret_type, char **ret_data_source,
-                     char *default_host);
+#    ifdef FP_LAYOUT_NEED_ENDIANFLIP
+#        define FP_CONVERT(A)                     \
+  ((((uint64_t)(A)&0xff00000000000000LL) >> 56) | \
+   (((uint64_t)(A)&0x00ff000000000000LL) >> 40) | \
+   (((uint64_t)(A)&0x0000ff0000000000LL) >> 24) | \
+   (((uint64_t)(A)&0x000000ff00000000LL) >> 8)  | \
+   (((uint64_t)(A)&0x00000000ff000000LL) << 8)  | \
+   (((uint64_t)(A)&0x0000000000ff0000LL) << 24) | \
+   (((uint64_t)(A)&0x000000000000ff00LL) << 40) | \
+   (((uint64_t)(A)&0x00000000000000ffLL) << 56))
+#    else
+#        define FP_CONVERT(A)                     \
+  ((((uint64_t)(A)&0xffffffff00000000LL) >> 32) | \
+   (((uint64_t)(A)&0x00000000ffffffffLL) << 32))
+#    endif
 
-/* parse_identifier_vl parses an identifier in the form
- * "host/plugin[-inst]/type[-inst]/data_source" and stores the fields in a
- * value_list_t. If vl->host is not empty, then it is used as the default value
- * if a host name is omitted, i.e. the "plugin/type" format is accepted. If
- * ret_data_source is not NULL, a four-part identifier is accepted and a
- * pointer to the data source name is (optionally) stored and needs to be freed
- * by the caller. If the provided format does not fit the provided arguments,
- * e.g. a two-part format but no default host provided, or a four-part format
- * but no ret_data_source pointer, then EINVAL is returned.
- */
-int parse_identifier_vl(const char *str, value_list_t *vl,
-                        char **ret_data_source);
+static inline double ntohd(double d)
+{
+    union {
+        uint8_t byte[8];
+        uint64_t integer;
+        double floating;
+    } ret;
 
-/* parse_legacy_identifier parses a legacy identifier in the form
- * "host/plugin/type" and converts it to a metric_t. */
-metric_t *parse_legacy_identifier(char const *s);
+    ret.floating = d;
 
-/* plugin_value_list_to_metric_family converts a value in a value_list_t to a
- * metric_family_t. In case of error, errno is set and NULL is returned. The
- * returned pointer must be freed using metric_family_free(). */
-metric_family_t *plugin_value_list_to_metric_family(value_list_t const *vl,
-                                                    data_set_t const *ds,
-                                                    size_t index);
+    /* NAN in x86 byte order */
+    if ((ret.byte[0] == 0x00) && (ret.byte[1] == 0x00) && (ret.byte[2] == 0x00) &&
+        (ret.byte[3] == 0x00) && (ret.byte[4] == 0x00) && (ret.byte[5] == 0x00) &&
+        (ret.byte[6] == 0xf8) && (ret.byte[7] == 0x7f)) {
+        return NAN;
+    } else {
+        uint64_t tmp;
 
-int parse_value(const char *value, value_t *ret_value, int ds_type);
-int parse_values(char *buffer, value_list_t *vl, const data_set_t *ds);
+        tmp = ret.integer;
+        ret.integer = FP_CONVERT(tmp);
+        return ret.floating;
+    }
+}
 
-/* parse_value_file reads "path" and parses its content as an integer or
- * floating point, depending on "ds_type". On success, the value is stored in
- * "ret_value" and zero is returned. On failure, a non-zero value is returned.
- */
-int parse_value_file(char const *path, value_t *ret_value, int ds_type);
+static inline double htond(double d)
+{
+    union {
+        uint8_t byte[8];
+        uint64_t integer;
+        double floating;
+    } ret;
 
-#if !HAVE_GETPWNAM_R
+    if (isnan(d)) {
+        ret.byte[0] = ret.byte[1] = ret.byte[2] = ret.byte[3] = 0x00;
+        ret.byte[4] = ret.byte[5] = 0x00;
+        ret.byte[6] = 0xf8;
+        ret.byte[7] = 0x7f;
+        return ret.floating;
+    } else {
+        uint64_t tmp;
+
+        ret.floating = d;
+        tmp = FP_CONVERT(ret.integer);
+        ret.integer = tmp;
+        return ret.floating;
+    }
+}
+#else
+#    error "Don't know how to convert between host and network representation of doubles."
+#endif
+
+int parse_uinteger(const char *value_orig, uint64_t *ret_value);
+int parse_double (const char *value_orig, double *ret_value);
+
+int parse_uinteger_file(char const *path, uint64_t *ret_value);
+int parse_double_file(char const *path, double *ret_value);
+
+#ifndef HAVE_GETPWNAM_R
 struct passwd;
 int getpwnam_r(const char *name, struct passwd *pwbuf, char *buf, size_t buflen,
                struct passwd **pwbufp);
 #endif
 
-int notification_init_metric(notification_t *n, int severity,
-                             const char *message, metric_t const *m);
-
-int notification_init(notification_t *n, int severity, const char *message,
-                      const char *host, const char *plugin,
-                      const char *plugin_instance, const char *type,
-                      const char *type_instance);
-#define NOTIFICATION_INIT_VL(n, vl)                                            \
-  notification_init(n, NOTIF_FAILURE, NULL, (vl)->host, (vl)->plugin,          \
-                    (vl)->plugin_instance, (vl)->type, (vl)->type_instance)
-
-typedef int (*dirwalk_callback_f)(const char *dirname, const char *filename,
+typedef int (*dirwalk_callback_f)(int dir_fd, const char *dirname, const char *filename,
                                   void *user_data);
-int walk_directory(const char *dir, dirwalk_callback_f callback,
-                   void *user_data, int hidden);
+
+int walk_directory_at(int dir_fd_at, const char *dir, dirwalk_callback_f callback,
+                      void *user_data, int include_hidden);
+
+static inline int walk_directory(const char *dir, dirwalk_callback_f callback,
+                                 void *user_data, int hidden)
+{
+  return walk_directory_at(AT_FDCWD, dir, callback, user_data, hidden);
+}
+
 /* Returns the number of bytes read or negative on error. */
 ssize_t read_file_contents(char const *filename, void *buf, size_t bufsize);
 /* Writes the contents of the file into the buffer with a trailing NUL.
@@ -395,42 +506,132 @@ ssize_t read_file_contents(char const *filename, void *buf, size_t bufsize);
 ssize_t read_text_file_contents(char const *filename, char *buf,
                                 size_t bufsize);
 
-counter_t counter_diff(counter_t old_value, counter_t new_value);
+uint64_t counter_diff(uint64_t old_value, uint64_t new_value);
 
-/* Convert a rate back to a value_t. When converting to a derive_t, counter_t
- * or absolute_t, take fractional residuals into account. This is important
- * when scaling counters, for example.
- * Returns zero on success. Returns EAGAIN when called for the first time; in
- * this case the value_t is invalid and the next call should succeed. Other
- * return values indicate an error. */
-int rate_to_value(value_t *ret_value, gauge_t rate,
-                  rate_to_value_state_t *state, int ds_type, cdtime_t t);
+int rate_to_counter(uint64_t *ret_value, double rate, cdtime_t t,
+                  rate_to_counter_state_t *state);
 
-int value_to_rate(gauge_t *ret_rate, value_t value, int ds_type, cdtime_t t,
-                  value_to_rate_state_t *state);
-
+int counter_to_rate(double *ret_rate, uint64_t value, cdtime_t t,
+                    counter_to_rate_state_t *state);
 /* Converts a service name (a string) to a port number
  * (in the range [1-65535]). Returns less than zero on error. */
 int service_name_to_port_number(const char *service_name);
 
-/* Sets various, non-default, socket options */
-void set_sock_opts(int sockfd);
+static inline char *strntrim(char *s, size_t n)
+{
+    while (n > 0) {
+        if ((s[0] == ' ')  || (s[0] == '\t') ||
+            (s[0] == '\n') || (s[0] == '\r')) {
+            s++;
+            n--;
+        } else {
+            break;
+        }
+    }
 
-/** Parse a string to a derive_t value. Returns zero on success or non-zero on
- * failure. If failure is returned, ret_value is not touched. */
-int strtoderive(const char *string, derive_t *ret_value);
+    while (n > 0) {
+        if ((s[n - 1] == '\n') || (s[n -1] == '\r') ||
+            (s[n - 1] == ' ')  || (s[n -1] == '\t')) {
+            n--;
+            s[n] = '\0';
+        } else {
+            break;
+        }
+    }
 
-/** Parse a string to a gauge_t value. Returns zero on success or non-zero on
+    return s;
+}
+
+static inline char *strnrtrim(char *s, size_t n)
+{
+    while (n > 0) {
+        if ((s[n - 1] == '\n') || (s[n -1] == '\r') ||
+            (s[n - 1] == ' ')  || (s[n -1] == '\t')) {
+            n--;
+            s[n] = '\0';
+        } else {
+            break;
+        }
+    }
+
+    return s;
+}
+
+/** Parse a string to a integer value. Returns zero on success or non-zero on
  * failure. If failure is returned, ret_value is not touched. */
-int strtogauge(const char *string, gauge_t *ret_value);
+static inline ssize_t strtouint(const char *string, uint64_t *ret_value)
+{
+    if ((string == NULL) || (ret_value == NULL))
+        return EINVAL;
+
+    errno = 0;
+    char *endptr = NULL;
+    uint64_t tmp = (uint64_t)strtoull(string, &endptr, /* base = */ 0);
+    if ((endptr == string) || (errno != 0))
+        return -1;
+
+    *ret_value = tmp;
+    return 0;
+}
+
+static inline uint64_t atoull(const char *string)
+{
+    if (string == NULL)
+        return 0;
+
+    errno = 0;
+    char *endptr = NULL;
+    uint64_t tmp = (uint64_t)strtoull(string, &endptr, /* base = */ 0);
+    if ((endptr == string) || (errno != 0))
+        return 0;
+
+    return tmp;
+}
+
+/** Parse a string to a double value. Returns zero on success or non-zero on
+ * failure. If failure is returned, ret_value is not touched. */
+static inline ssize_t strtodouble(const char *string, double *ret_value)
+{
+    if ((string == NULL) || (ret_value == NULL))
+        return EINVAL;
+
+    errno = 0;
+    char *endptr = NULL;
+    double tmp = (double )strtod(string, &endptr);
+    if (errno != 0) {
+        return errno;
+    } else if ((endptr != NULL) && (*endptr != '\0')) {
+        return EINVAL;
+    }
+
+    *ret_value = tmp;
+    return 0;
+}
+
+ssize_t read_file_at(int dir_fd, char const *pathname, char *buf, size_t count);
+
+static inline ssize_t read_file(char const *pathname, char *buf, size_t count)
+{
+    return read_file_at(AT_FDCWD, pathname, buf, count);
+}
+
+ssize_t filetodouble_at(int dir_fd, char const *pathname, double *ret_value);
+
+static inline ssize_t filetodouble(char const *pathname, double *ret_value)
+{
+    return filetodouble_at(AT_FDCWD, pathname, ret_value);
+}
+
+ssize_t filetouint_at(int dir_fd, char const *pathname, uint64_t *ret_value);
+
+static inline ssize_t filetouint(char const *pathname, uint64_t *ret_value)
+{
+    return filetouint_at(AT_FDCWD, pathname, ret_value);
+}
 
 int strarray_add(char ***ret_array, size_t *ret_array_len, char const *str);
 void strarray_free(char **array, size_t array_len);
 
-/** Check if the current process benefits from the capability passed in
- * argument. Returns zero if it does, less than zero if it doesn't or on error.
- * See capabilities(7) for the list of possible capabilities.
- * */
-int check_capability(int arg);
+FILE *fopenat(int dir_fd, const char *pathname, const char *mode);
 
-#endif /* COMMON_H */
+DIR *opendirat(int dir_fd, const char *name);

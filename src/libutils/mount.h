@@ -1,68 +1,49 @@
-/**
- * collectd - src/utils/mount/mount.h
- * Copyright (C) 2005,2006  Niki W. Waibel
- *
- * This program is free software; you can redistribute it and/
- * or modify it under the terms of the GNU General Public Li-
- * cence as published by the Free Software Foundation; either
- * version 2 of the Licence, or any later version.
- *
- * This program is distributed in the hope that it will be use-
- * ful, but WITHOUT ANY WARRANTY; without even the implied war-
- * ranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public Licence for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Author:
- *   Niki W. Waibel <niki.waibel@gmx.net>
- **/
+/* SPDX-License-Identifier: GPL-2.0-or-later                       */
+/* SPDX-FileCopyrightText: Copyright (C) 2005,2006  Niki W. Waibel */
+/* SPDX-FileContributor: Niki W. Waibel <niki.waibel at gmx.net>   */
+
+#pragma once
 
 /* See below for instructions how to use the public functions. */
 
-#ifndef COLLECTD_UTILS_MOUNT_H
-#define COLLECTD_UTILS_MOUNT_H 1
-
 #include <stdio.h>
-#if HAVE_FS_INFO_H
+#ifdef HAVE_FS_INFO_H
 #include <fs_info.h>
 #endif
-#if HAVE_FSHELP_H
+#ifdef HAVE_FSHELP_H
 #include <fshelp.h>
 #endif
-#if HAVE_PATHS_H
+#ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif
-#if HAVE_MNTENT_H
+#ifdef HAVE_MNTENT_H
 #include <mntent.h>
 #endif
-#if HAVE_MNTTAB_H
+#ifdef HAVE_MNTTAB_H
 #include <mnttab.h>
 #endif
-#if HAVE_SYS_FSTYP_H
+#ifdef HAVE_SYS_FSTYP_H
 #include <sys/fstyp.h>
 #endif
-#if HAVE_SYS_FS_TYPES_H
+#ifdef HAVE_SYS_FS_TYPES_H
 #include <sys/fs_types.h>
 #endif
-#if HAVE_SYS_MNTENT_H
+#ifdef HAVE_SYS_MNTENT_H
 #include <sys/mntent.h>
 #endif
-#if HAVE_SYS_MNTTAB_H
+#ifdef HAVE_SYS_MNTTAB_H
 #include <sys/mnttab.h>
 #endif
-#if HAVE_SYS_MOUNT_H
+#ifdef HAVE_SYS_MOUNT_H
 #include <sys/mount.h>
 #endif
-#if HAVE_SYS_STATFS_H
+#ifdef HAVE_SYS_STATFS_H
 #include <sys/statfs.h>
 #endif
-#if HAVE_SYS_VFS_H
+#ifdef HAVE_SYS_VFS_H
 #include <sys/vfs.h>
 #endif
-#if HAVE_SYS_VFSTAB_H
+#ifdef HAVE_SYS_VFSTAB_H
 #include <sys/vfstab.h>
 #endif
 
@@ -182,5 +163,3 @@ int cu_mount_type(const char *type);
 
   RETURN VALUE
 */
-
-#endif /* !COLLECTD_UTILS_MOUNT_H */

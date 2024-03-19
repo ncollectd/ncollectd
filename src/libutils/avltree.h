@@ -1,31 +1,8 @@
-/**
- * collectd - src/utils_avltree.h
- * Copyright (C) 2006,2007  Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- **/
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT                          */
+/* SPDX-FileCopyrightText: Copyright (C) 2006,2007  Florian octo Forster */
+/* SPDX-FileContributor: Florian octo Forster <octo at collectd.org>     */
 
-#ifndef UTILS_AVLTREE_H
-#define UTILS_AVLTREE_H 1
+#pragma once
 
 struct c_avl_tree_s;
 typedef struct c_avl_tree_s c_avl_tree_t;
@@ -94,7 +71,7 @@ int c_avl_insert(c_avl_tree_t *t, void *key, void *value);
  *   returned in `rkey' and `rvalue'.
  *
  * PARAMETERS
- *   `t'	AVL-tree to remove key-value-pair from.
+ *   `t'    AVL-tree to remove key-value-pair from.
  *   `key'      Key to identify the entry.
  *   `rkey'     Pointer to a pointer in which to store the key. May be NULL.
  *              Since the `key' pointer is not copied when creating an entry,
@@ -116,7 +93,7 @@ int c_avl_remove(c_avl_tree_t *t, const void *key, void **rkey, void **rvalue);
  *   Retrieve the `value' belonging to `key'.
  *
  * PARAMETERS
- *   `t'	AVL-tree to get the value from.
+ *   `t'    AVL-tree to get the value from.
  *   `key'      Key to identify the entry.
  *   `value'    Pointer to a pointer in which to store the value. May be NULL.
  *
@@ -136,7 +113,7 @@ int c_avl_get(c_avl_tree_t *t, const void *key, void **value);
  *   want to remove all elements, one at a time.
  *
  * PARAMETERS
- *   `t'	AVL-tree to get the value from.
+ *   `t'    AVL-tree to get the value from.
  *   `key'      Pointer to a pointer in which to store the key. Either key or
  *              value, but not both, may be NULL.
  *   `value'    Pointer to a pointer in which to store the value. Either key or
@@ -174,5 +151,3 @@ void c_avl_iterator_destroy(c_avl_iterator_t *iter);
  *   Number of nodes in the tree, 0 if the tree is empty or NULL.
  */
 int c_avl_size(c_avl_tree_t *t);
-
-#endif /* UTILS_AVLTREE_H */
