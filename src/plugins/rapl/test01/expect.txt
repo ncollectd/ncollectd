@@ -1,0 +1,4 @@
+# TYPE system_rapl_energy_joules counter
+system_rapl_energy_joules_total{domain="core",hostname="localhost.localdomain",zone="0:0"} 11483.67574
+system_rapl_energy_joules_total{domain="uncore",hostname="localhost.localdomain",zone="0:1"} 1723.261457
+system_rapl_energy_joules_total{domain="package-0",hostname="localhost.localdomain",zone="0"} 21931.773749
