@@ -1,0 +1,59 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-log_syslog 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd log_syslog man page"
+.SH NAME
+ncollectd-log_syslog \- Documentation of ncollectd's log_syslog plugin
+.SH SYNOPSIS
+\fBload-plugin\fP log_syslog
+.br
+\fBplugin\fP log_syslog {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBlog-level\fP [\fIdebug|info|notice|warning|err\fP]
+        \fBnotify-level\fP [\fIokay|warning|failure\fP]
+        \fBfacility\fP [\fIkern|user|mail|daemon|auth|syslog|lpr|news|uucp|cron|authpriv|ftp|ntp|security|console|local[0-7]\fP]
+        \fBtype\fP [\fIlocal|rfc3164|rfc5424\fP]
+        \fBttl\fP \fIttl\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBlog_syslog\fP plugin receives log messages from the daemon and dispatches
+them to a local
+.BR syslog (3)
+or to a remote syslog.
+
+The \fBlog_syslog\fP plugin can also act as a consumer of notifications
+if the \fBnotify-level\fP option is provided.
+
+.TP
+\fBhost\fP \fIhost\fP
+.TP
+\fBport\fP \fIport\fP
+.TP
+\fBlog-level\fP [\fIdebug|info|notice|warning|err\fP]
+Sets the log-level. If, for example, set to \fInotice\fP, then all events with
+severity \fInotice\fP, \fIwarning\fP, or \fIerr\fP will be submitted to the
+syslog-daemon.
+
+Please note that \fIdebug\fP is only available if ncollectd has been compiled with
+debugging support.
+.TP
+\fBnotify-level\fP [\fIokay|warning|failure\fP]
+Controls which notifications should be sent to syslog. The default behaviour is
+not to send any. Less severe notifications always imply logging more severe
+notifications: Setting this to \fIokay\fP means all notifications will be sent to
+syslog, setting this to \fIwarning\fP will send \fIwarning\fP and \fIfailure\FP
+notifications but will dismiss \fIokay\fP notifications. Setting this option to
+\fIfailure\fP will only send failures to syslog.
+.TP
+\fBfacility\fP [\fIkern|user|mail|daemon|auth|syslog|lpr|news|uucp|cron|authpriv|ftp|ntp|security|console|local[0-7]\fP]
+.TP
+\fBtype\fP [\fIlocal|rfc3164|rfc5424\fP]
+.TP
+\fBttl\fP \fIttl\fP
+
+
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
