@@ -1,0 +1,29 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-swap 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd swap man page"
+.SH NAME
+ncollectd-swap \- Documentation of ncollectd's swap plugin
+.SH SYNOPSIS
+\fBload-plugin\fP swap
+.br
+\fBplugin\fP swap {
+    \fBreport-by-device\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBswap\fP plugin collects information about used and available swap space. On
+\fILinux\fP and \fISolaris\fP, the following options are available:
+.PP
+.TP
+\fBreport-by-device\fP \fItrue|false\fP
+Configures how to report physical swap devices. If set to \fBfalse\fP (the
+default), the summary over all swap devices is reported only, i.e. the globally
+used and available space over all devices. If \fBtrue\fP is configured, the used
+and available space of each device will be reported separately.
+
+This option is only available if the \fBswap\fP plugin can read \fI/proc/swaps\fP
+(under Linux) or use the
+.BR swapctl (2)
+mechanism (under \fISolaris\fP).
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
