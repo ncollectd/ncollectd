@@ -1,0 +1,135 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-match_jsonpath 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd match_jsonpath man page"
+.SH NAME
+ncollectd-match_jsonpath \- Documentation of ncollectd's jsonpath match plugin
+.SH SYNOPSIS
+\fBmatch\fP jsonpath {
+    \fBmetric-prefix\fP \fIprefix\fP
+    \fBlabel\fP \fIkey\fP \fIvalue\fP
+    \fBmetric\fP {
+        \fBpath\fP \fIpath\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBmetric\fP \fImetric\fP
+        \fBmetric-path\fP \fIpath\fP
+        \fBmetric-root-path\fP \fIpath\fP
+        \fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
+        \fBhelp\fP \fIhelp\fP
+        \fBhelp-path\fP \fIpath\fP
+        \fBhelp-root-path\fP \fIpath\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBlabel-path\fP \fIkey\fP \fIpath\fP
+        \fBlabel-root-path\fP \fIkey\fP \fIpath\fP
+        \fBvalue-path\fP \fIpath\fP
+        \fBvalue-root-path\fP \fIpath\fP
+        \fBtime-path\fP \fIpath\fP
+        \fBtime-root-path\fP \fIpath\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmatch_jsonpath\fP plugin parse text in json format using jsonpath selectors.
+.PP
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepend the \fIprefix\fP to the metrics found in the \fBmetric\fP blocks.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBmetric\fP
+.RS
+.TP
+\fBpath\fP \fIpath\fP
+Use the jsonpath selector \fIpath\fP to extract metrics.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepend the \fIprefix\fP to the metrics found.
+.TP
+\fBmetric\fP \fImetric\fP
+Set the metric name.
+.TP
+\fBmetric-path\fP \fIpath\fP
+Set metric value from the jsonpath selector \fIpath\fP in the current node.
+.TP
+\fBmetric-root-path\fP \fIpath\fP
+Set metric value from the jsonpath selector \fIpath\fP in the root node.
+.TP
+\fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
+.RS
+.TP
+\fBgauge\fP
+The value is a gauge, you must specify also the type of the gauge:
+.RS
+.TP
+\fBaverage\fP
+Calculate the average
+.TP
+\fBmin\fP
+Use the smallest number only.
+.TP
+\fBmax\fP
+Use the greatest number only.
+.TP
+\fBlast\fP
+Use the last number found.
+.TP
+\fBinc\fP
+Increase the internal counter by one.
+.TP
+\fBadd\fP
+Add the matched value to the internal counter.
+.TP
+\fBpersist\fP
+Use the last number found.
+The number is not reset at the end of an interval.
+It is continously reported until another number is matched.
+.RE
+.TP
+\fBcounter\fP
+The value is a counter, you must specify also the type of the counter:
+.RS
+.TP
+\fBset\fP
+Simply sets the internal counter to this value.
+.TP
+\fBadd\fP
+Add the matched value to the internal counter.
+.TP
+\fBinc\fP
+Increase the internal counter by one.
+.RE
+.RE
+.TP
+\fBhelp\fP \fIhelp\fP
+Set metric help.
+.TP
+\fBhelp-path\fP \fIpath\fP
+Set metric help from the jsonpath selector \fIpath\fP in the current node.
+.TP
+\fBhelp-root-path\fP \fIpath\fP
+Set metric help from the jsonpath selector \fIpath\fP in the root node.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBlabel-path\fP \fIkey\fP \fIpath\fP
+Set the label \fIkey\fP with the value from the jsonpath selector \fIpath\fP in the current node.
+.TP
+\fBlabel-root-path\fP \fIkey\fP \fIpath\fP
+Set the label \fIkey\fP with the value from the jsonpath selector \fIpath\fP in the root node.
+.TP
+\fBvalue-path\fP \fIpath\fP
+Set metric value from the jsonpath selector \fIpath\fP in the current node.
+.TP
+\fBvalue-root-path\fP \fIpath\fP
+Set metric value from the jsonpath selector \fIpath\fP in the root node.
+.TP
+\fBtime-path\fP \fIpath\fP
+Set metric timestamp in seconds from the jsonpath selector \fIpath\fP in the current node.
+.TP
+\fBtime-root-path\fP \fIpath\fP
+Set metric timestamp in seconds from the jsonpath selector \fIpath\fP in the root node.
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
