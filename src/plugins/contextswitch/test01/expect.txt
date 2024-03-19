@@ -1,0 +1,2 @@
+# TYPE system_context_switches counter
+system_context_switches_total{hostname="localhost.localdomain"} 50427652
