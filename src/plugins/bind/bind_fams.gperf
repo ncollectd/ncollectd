@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix BIND_
+%define hash-function-name bind_hash
+%define lookup-function-name bind_get_key
+%define slot-name key
+%{
+#include <stdint.h>
+#include <string.h>
+#include "plugins/bind/bind_fams.h"
+%}
+struct bind_metric {
+    char *key;
+    int fam;
+    char *lkey;
+    char *lvalue;
+};
+%%
+nsstats:QryUDP,              FAM_BIND_INCOMING_QUERIES_UDP, NULL, NULL
+nsstats:QryTCP,              FAM_BIND_INCOMING_QUERIES_TCP, NULL, NULL
+nsstats:ReqTCP,              FAM_BIND_INCOMING_REQUESTS_TCP, NULL, NULL
+nsstats:QryDuplicate,        FAM_BIND_QUERY_DUPLICATES, NULL, NULL
+nsstats:QryRecursion,        FAM_BIND_QUERY_RECURSIONS, NULL, NULL
+nsstats:QryDropped,          FAM_BIND_QUERY_ERRORS, "error", "dropped"
+nsstats:QryFailure,          FAM_BIND_QUERY_ERRORS, "error", "failure"
+nsstats:RecursClients,       FAM_BIND_RECURSIVE_CLIENTS, NULL, NULL
+nsstats:QrySuccess,          FAM_BIND_RESPONSES, "result", "success"
+nsstats:QryReferral,         FAM_BIND_RESPONSES, "result", "referral"
+nsstats:QryNxrrset,          FAM_BIND_RESPONSES, "result", "nxrrset"
+nsstats:QrySERVFAIL,         FAM_BIND_RESPONSES, "result", "SERVFAIL"
+nsstats:QryFORMERR,          FAM_BIND_RESPONSES, "result", "FORMERR"
+nsstats:QryNXDOMAIN,         FAM_BIND_RESPONSES, "result", "NXDOMAIN"
+nsstats:XfrRej,              FAM_BIND_ZONE_TRANSFER_REJECTED, NULL, NULL
+zonestat:XfrSuccess,         FAM_BIND_ZONE_TRANSFER_SUCCESS, NULL, NULL
+zonestat:XfrFail,            FAM_BIND_ZONE_TRANSFER_FAILURE, NULL, NULL
+resstat:ValAttempt,          FAM_BIND_RESOLVER_DNSSEC_VALIDATION_SUCCESS, "result", "attempt"
+resstat:ValOk,               FAM_BIND_RESOLVER_DNSSEC_VALIDATION_SUCCESS, "result", "ok"
+resstat:ValNegOk,            FAM_BIND_RESOLVER_DNSSEC_VALIDATION_SUCCESS, "result", "negative-ok"
+resstat:ValFail,             FAM_BIND_RESOLVER_DNSSEC_VALIDATION_ERRORS, NULL, NULL
+resstat:QueryAbort,          FAM_BIND_RESOLVER_QUERY_ERRORS, "error", "abort"
+resstat:QuerySockFail,       FAM_BIND_RESOLVER_QUERY_ERRORS, "error", "sockfail"
+resstat:QueryTimeout,        FAM_BIND_RESOLVER_QUERY_ERRORS, "error", "timeout"
+resstat:NXDOMAIN,            FAM_BIND_RESOLVER_RESPONSE_ERRORS, "error", "NXDOMAIN"
+resstat:SERVFAIL,            FAM_BIND_RESOLVER_RESPONSE_ERRORS, "error", "SERVFAIL"
+resstat:FORMERR,             FAM_BIND_RESOLVER_RESPONSE_ERRORS, "error", "FORMERR"
+resstat:OtherError,          FAM_BIND_RESOLVER_RESPONSE_ERRORS, "error", "OtherError"
+resstat:EDNS0Fail,           FAM_BIND_RESOLVER_QUERY_EDNS0_ERRORS, NULL, NULL
+resstat:Mismatch,            FAM_BIND_RESOLVER_RESPONSE_MISMATCH, NULL, NULL
+resstat:Truncated,           FAM_BIND_RESOLVER_RESPONSE_TRUNCATED, NULL, NULL
+resstat:Lame,                FAM_BIND_RESOLVER_RESPONSE_LAME, NULL, NULL
+resstat:Retry,               FAM_BIND_RESOLVER_QUERY_RETRIES, NULL, NULL
+cachestats:CacheHits,        FAM_BIND_RESOLVER_CACHE_HITS, NULL, NULL
+cachestats:CacheMisses,      FAM_BIND_RESOLVER_CACHE_MISSES, NULL, NULL
+cachestats:QueryHits,        FAM_BIND_RESOLVER_CACHE_QUERY_HITS, NULL, NULL
+cachestats:QueryMisses,      FAM_BIND_RESOLVER_CACHE_QUERY_MISSES, NULL, NULL
+memory:TotalUse,             FAM_BIND_MEMORY_TOTAL_USE_BYTES, NULL, NULL
+memory:InUse,                FAM_BIND_MEMORY_IN_USE_BYTES, NULL, NULL
+memory:Malloced,             FAM_BIND_MEMORY_MALLOCED_BYTES , NULL, NULL
+memory:ContextSize,          FAM_BIND_MEMORY_CONTEXT_SIZE_BYTES, NULL, NULL
+memory:Lost,                 FAM_BIND_MEMORY_LOST_BYTES, NULL, NULL
+sockstat:UDP4Open,           FAM_BIND_SOCKET_OPEN, "type", "UDP4"
+sockstat:UDP6Open,           FAM_BIND_SOCKET_OPEN, "type", "UDP6"
+sockstat:TCP4Open,           FAM_BIND_SOCKET_OPEN, "type", "TCP4"
+sockstat:TCP6Open,           FAM_BIND_SOCKET_OPEN, "type", "TCP6"
+sockstat:UnixOpen,           FAM_BIND_SOCKET_OPEN, "type", "Unix"
+sockstat:RawOpen,            FAM_BIND_SOCKET_OPEN, "type", "Raw"
+sockstat:UDP4OpenFail,       FAM_BIND_SOCKET_OPEN_FAIL, "type", "UDP4"
+sockstat:UDP6OpenFail,       FAM_BIND_SOCKET_OPEN_FAIL, "type", "UDP6"
+sockstat:TCP4OpenFail,       FAM_BIND_SOCKET_OPEN_FAIL, "type", "TCP4"
+sockstat:TCP6OpenFail,       FAM_BIND_SOCKET_OPEN_FAIL, "type", "TCP6"
+sockstat:UnixOpenFail,       FAM_BIND_SOCKET_OPEN_FAIL, "type", "Unix"
+sockstat:RawOpenFail,        FAM_BIND_SOCKET_OPEN_FAIL, "type", "Raw"
+sockstat:UDP4Close,          FAM_BIND_SOCKET_CLOSE, "type", "UDP4"
+sockstat:UDP6Close,          FAM_BIND_SOCKET_CLOSE, "type", "UDP6"
+sockstat:TCP4Close,          FAM_BIND_SOCKET_CLOSE, "type", "TCP4"
+sockstat:TCP6Close,          FAM_BIND_SOCKET_CLOSE, "type", "TCP6"
+sockstat:UnixClose,          FAM_BIND_SOCKET_CLOSE, "type", "Unix"
+sockstat:FDWatchClose,       FAM_BIND_SOCKET_CLOSE, "type", "FDwatch"
+sockstat:RawClose,           FAM_BIND_SOCKET_CLOSE, "type",  "Raw"
+sockstat:UDP4BindFail,       FAM_BIND_SOCKET_BIND_FAIL, "type", "UDP4"
+sockstat:UDP6BindFail,       FAM_BIND_SOCKET_BIND_FAIL, "type", "UDP6"
+sockstat:TCP4BindFail,       FAM_BIND_SOCKET_BIND_FAIL, "type", "TCP4"
+sockstat:TCP6BindFail,       FAM_BIND_SOCKET_BIND_FAIL, "type", "TCP6"
+sockstat:UnixBindFail,       FAM_BIND_SOCKET_BIND_FAIL, "type", "Unix"
+sockstat:FdwatchBindFail,    FAM_BIND_SOCKET_BIND_FAIL, "type", "FDwatch"
+sockstat:UDP4ConnFail,       FAM_BIND_SOCKET_CONNECT_FAIL, "type", "UDP4"
+sockstat:UDP6ConnFail,       FAM_BIND_SOCKET_CONNECT_FAIL, "type", "UDP6"
+sockstat:TCP4ConnFail,       FAM_BIND_SOCKET_CONNECT_FAIL, "type", "TCP4"
+sockstat:TCP6ConnFail,       FAM_BIND_SOCKET_CONNECT_FAIL, "type", "TCP6"
+sockstat:UnixConnFail,       FAM_BIND_SOCKET_CONNECT_FAIL, "type", "Unix"
+sockstat:FDwatchConnFail,    FAM_BIND_SOCKET_CONNECT_FAIL, "type", "FDwatch"
+sockstat:UDP4Conn,           FAM_BIND_SOCKET_CONNECT, "type", "UDP4"
+sockstat:UDP6Conn,           FAM_BIND_SOCKET_CONNECT, "type", "UDP6"
+sockstat:TCP4Conn,           FAM_BIND_SOCKET_CONNECT, "type", "TCP4"
+sockstat:TCP6Conn,           FAM_BIND_SOCKET_CONNECT, "type", "TCP6"
+sockstat:UnixConn,           FAM_BIND_SOCKET_CONNECT, "type", "Unix"
+sockstat:FDwatchConn,        FAM_BIND_SOCKET_CONNECT, "type", "FDwatch"
+sockstat:TCP4AcceptFail,     FAM_BIND_SOCKET_ACCEPT_FAIL, "type", "TCP4"
+sockstat:TCP6AcceptFail,     FAM_BIND_SOCKET_ACCEPT_FAIL, "type", "TCP6"
+sockstat:UnixAcceptFail,     FAM_BIND_SOCKET_ACCEPT_FAIL, "type", "Unix"
+sockstat:TCP4Accept,         FAM_BIND_SOCKET_ACCEPT, "type", "TCP4"
+sockstat:TCP6Accept,         FAM_BIND_SOCKET_ACCEPT, "type", "TCP6"
+sockstat:UnixAccept,         FAM_BIND_SOCKET_ACCEPT, "type", "Unix"
+sockstat:UDP4SendErr,        FAM_BIND_SOCKET_SEND_ERROR, "type", "UDP4"
+sockstat:UDP6SendErr,        FAM_BIND_SOCKET_SEND_ERROR, "type", "UDP6"
+sockstat:TCP4SendErr,        FAM_BIND_SOCKET_SEND_ERROR, "type", "TCP4"
+sockstat:TCP6SendErr,        FAM_BIND_SOCKET_SEND_ERROR, "type", "TCP6"
+sockstat:UnixSendErr,        FAM_BIND_SOCKET_SEND_ERROR, "type", "Unix"
+sockstat:FDwatchSendErr,     FAM_BIND_SOCKET_SEND_ERROR, "type", "FDwatch"
+sockstat:UDP4RecvErr,        FAM_BIND_SOCKET_RECV_ERROR, "type", "UDP4"
+sockstat:UDP6RecvErr,        FAM_BIND_SOCKET_RECV_ERROR, "type", "UDP6"
+sockstat:TCP4RecvErr,        FAM_BIND_SOCKET_RECV_ERROR, "type", "TCP4"
+sockstat:TCP6RecvErr,        FAM_BIND_SOCKET_RECV_ERROR, "type", "TCP6"
+sockstat:UnixRecvErr,        FAM_BIND_SOCKET_RECV_ERROR, "type", "Unix"
+sockstat:FDwatchRecvErr,     FAM_BIND_SOCKET_RECV_ERROR, "type", "FDwatch"
+sockstat:RawRecvErr,         FAM_BIND_SOCKET_RECV_ERROR, "type", "Raw"
+sockstat:UDP4Active,         FAM_BIND_SOCKET_ACTIVE, "type", "UDP4"
+sockstat:UDP6Active,         FAM_BIND_SOCKET_ACTIVE, "type", "UDP6"
+sockstat:TCP4Active,         FAM_BIND_SOCKET_ACTIVE, "type", "TCP4"
+sockstat:TCP6Active,         FAM_BIND_SOCKET_ACTIVE, "type", "TCP6"
+sockstat:UnixActive,         FAM_BIND_SOCKET_ACTIVE, "type", "Unix"
+sockstat:RawActive,          FAM_BIND_SOCKET_ACTIVE, "type", "Raw"

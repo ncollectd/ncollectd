@@ -1,0 +1,53 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-bind 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd bind man page"
+.SH NAME
+ncollectd-bind \- Documentation of ncollectd's bind plugin
+.SH SYNOPSIS
+\fBload-plugin\fP bind
+.br
+\fBplugin\fP bind {
+    \fBinstance\fP \fIname\fP {
+        \fBurl\fP "\fIhttp://host/path\fP"
+        \fBtimeout\fP \fIseconds\fP
+        \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+Starting with BIND 9.5.0, it provides extensive statistics about queries, responses and
+lots of other information.
+The \fPbind\fP plugin retrieves this information that's encoded in XML or JSON and provided
+via HTTP and submits the values to ncollectd.
+To use this plugin, you first need to tell BIND to make this information
+available. This is done with the \f(CWstatistics-channels\fP configuration option:
+.PP
+.EX
+statistics-channels {
+    inet localhost port 8053;
+};
+.EE
+.PP
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
+a BIND instance.
+.PP
+The following options are valid within \fBinstance\fP blocks:
+.PP
+.TP
+\fBurl\fP "\fIhttp://host/path\fP"
+URL of the BIND instance to retrieve metrics.
+.TP
+\fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBurl\fP, in
+seconds. By default, the configured \fBinterval\fP is used to set the timeout.
+.TP
+\fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple time in the \fBinstance\fP block.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
