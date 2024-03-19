@@ -1,0 +1,40 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-keepalived 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd keepalived man page"
+.SH NAME
+ncollectd-keepalived \- Documentation of ncollectd's keepalived plugin
+.SH SYNOPSIS
+\fBload-plugin\fP keepalived
+.br
+\fBplugin\fP keepalived {
+    \fBinstance\fP \fIinstance\fP {
+        \fBpid-path\fP \fI/path/to/pid\fP
+        \fBstats-path\fP \fI/path/fo/stats\fP
+        \fBdata-path\fP \fI/path/to/data\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBkeepalived\fP plugin collect metrics from a keepalived process.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.PP
+.TP
+\fBpid-path\fP \fI/path/to/pid\fP
+Use the specified pidfile for the keepalived. Default to \fI/var/run/keepalived.pid\fP.
+.TP
+\fBstats-path\fP \fI/path/to/stats\fP
+Default to \fI/tmp/keepalived.stats\fP
+.TP
+\fBdata-path\fP \fI/path/to/data\fP
+Default to \fI/tmp/keepalived.data\fP
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
