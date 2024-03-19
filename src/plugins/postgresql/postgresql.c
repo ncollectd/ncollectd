@@ -1,1267 +1,1318 @@
-/**
- * collectd - src/postgresql.c
- * Copyright (C) 2008-2012  Sebastian Harl
- * Copyright (C) 2009       Florian Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Sebastian Harl <sh at tokkee.org>
- *   Florian Forster <octo at collectd.org>
- **/
-
-/*
- * This module collects PostgreSQL database statistics.
- */
-
-#include "collectd.h"
-
-#include "utils/common/common.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT/Dockerfile
+// SPDX-FileCopyrightText: Copyright (C) 2008-2012 Sebastian Harl
+// SPDX-FileCopyrightText: Copyright (C) 2009 Florian Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Sebastian Harl <sh at tokkee.org>
+// SPDX-FileContributor: Florian Forster <octo at collectd.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-
-#include "utils/db_query/db_query.h"
-#include "utils_cache.h"
-#include "utils_complain.h"
+#include "libutils/common.h"
+#include "libutils/strbuf.h"
+#include "libutils/complain.h"
+#include "libdbquery/dbquery.h"
 
 #include <libpq-fe.h>
 #include <pg_config_manual.h>
 
-#define log_err(...) ERROR("postgresql: " __VA_ARGS__)
-#define log_warn(...) WARNING("postgresql: " __VA_ARGS__)
-#define log_info(...) INFO("postgresql: " __VA_ARGS__)
-#define log_debug(...) DEBUG("postgresql: " __VA_ARGS__)
+#include "pg_fam.h"
+#include "pg_stats.h"
 
-#ifndef C_PSQL_DEFAULT_CONF
-#define C_PSQL_DEFAULT_CONF PKGDATADIR "/postgresql_default.conf"
-#endif
+static metric_family_t pg_fams[FAM_PG_MAX] = {
+    [FAM_PG_UP] = {
+        .name = "pg_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the PostgreSQL server be reached.",
+    },
+    [FAM_PG_DATABASE_BACKENDS] = {
+        .name = "pg_database_backends",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of backends currently connected to this database.",
+    },
+    [FAM_PG_DATABASE_XACT_COMMIT] = {
+        .name = "pg_database_xact_commit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of transactions in this database that have been committed",
+    },
+    [FAM_PG_DATABASE_XACT_ROLLBACK] = {
+        .name = "pg_database_xact_rollback",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of transactions in this database that have been rolled back.",
+    },
+    [FAM_PG_DATABASE_BLKS_READ] = {
+        .name = "pg_database_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read in this database.",
+    },
+    [FAM_PG_DATABASE_BLKS_HIT] = {
+        .name = "pg_database_blks_hit",
+        .help = "Number of times disk blocks were found already in the buffer cache.",
+        .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_PG_DATABASE_TUP_RETURNED] = {
+        .name = "pg_database_tup_returned",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows returned by queries in this database.",
+    },
+    [FAM_PG_DATABASE_TUP_FETCHED] = {
+        .name = "pg_database_tup_fetched",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows fetched by queries in this database.",
+    },
+    [FAM_PG_DATABASE_TUP_INSERTED] = {
+        .name = "pg_database_tup_inserted",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows inserted by queries in this database.",
+    },
+    [FAM_PG_DATABASE_TUP_UPDATED] = {
+        .name = "pg_database_tup_updated",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows updated by queries in this database.",
+    },
+    [FAM_PG_DATABASE_TUP_DELETED] = {
+        .name = "pg_database_tup_deleted",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows deleted by queries in this database.",
+    },
+    [FAM_PG_DATABASE_CONFLICTS] = {
+        .name = "pg_database_conflicts",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of queries canceled due to conflicts with recovery in this database.",
+    },
+    [FAM_PG_DATABASE_TEMP_FILES] = {
+        .name = "pg_database_temp_files",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of temporary files created by queries in this database.",
+    },
+    [FAM_PG_DATABASE_TEMP_BYTES] = {
+        .name = "pg_database_temp_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total amount of data written to temporary files by queries in this database.",
+    },
+    [FAM_PG_DATABASE_DEADLOCKS] = {
+        .name = "pg_database_deadlocks",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of deadlocks detected in this database.",
+    },
+    [FAM_PG_DATABASE_CHECKSUM_FAILURES] = {
+        .name = "pg_database_checksum_failures",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of data page checksum failures detected in this database",
+    },
+    [FAM_PG_DATABASE_CHECKSUM_LAST_FAILURE] = {
+        .name = "pg_database_checksum_last_failure",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Timestamp with time zone Time at which the last data page checksum failure "
+                "was detected in this database (or on a shared object).",
+    },
+    [FAM_PG_DATABASE_BLK_READ_TIME_SECONDS] = {
+        .name = "pg_database_blk_read_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Time spent reading data file blocks by backends in this database, in seconds.",
+    },
+    [FAM_PG_DATABASE_BLK_WRITE_TIME_SECONDS] = {
+        .name = "pg_database_blk_write_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Time spent writing data file blocks by backends in this database, in seconds."
+    },
+    [FAM_PG_DATABASE_SESSION_TIME_SECONDS] = {
+        .name = "pg_database_session_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Time spent by database sessions in this database, in seconds.",
+    },
+    [FAM_PG_DATABASE_ACTIVE_TIME_SECONDS] = {
+        .name = "pg_database_active_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Time spent executing SQL statements in this database, in seconds.",
+    },
+    [FAM_PG_DATABASE_IDLE_IN_TRANSACTION_TIME_SECONDS] = {
+        .name = "pg_database_idle_in_transaction_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Time spent idling while in a transaction in this database, in seconds.",
+    },
+    [FAM_PG_DATABASE_SESSIONS] = {
+        .name = "pg_database_sessions",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of sessions established to this database.",
+    },
+    [FAM_PG_DATABASE_SESSIONS_ABANDONED ] = {
+        .name = "pg_database_sessions_abandoned",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of database sessions to this database that "
+                "were terminated because connection to the client was lost.",
+    },
+    [FAM_PG_DATABASE_SESSIONS_FATAL] = {
+        .name = "pg_database_ sessions_fatal",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of database sessions to this database that "
+                "were terminated by fatal errors.",
+    },
+    [FAM_PG_DATABASE_SESSIONS_KILLED] = {
+        .name = "pg_database_sessions_killed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of database sessions to this database that "
+                "were terminated by operator intervention",
+    },
+    [FAM_PG_DATABASE_SIZE_BYTES] = {
+        .name = "pg_database_size_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Disk space used by the database.",
+    },
+    [FAM_PG_DATABASE_LOCKS] = {
+        .name = "pg_database_locks",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of locks in the database.",
+    },
+    [FAM_PG_DATABASE_CONFLICTS_TABLESPACE] = {
+        .name = "pg_database_conflicts_tablespace",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of queries in this database that have been canceled "
+                "due to dropped tablespaces.",
+    },
+    [FAM_PG_DATABASE_CONFLICTS_LOCK] = {
+        .name = "pg_database_conflicts_lock",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of queries in this database that have been canceled due to lock timeouts.",
+    },
+    [FAM_PG_DATABASE_CONFLICTS_SNAPSHOT] = {
+        .name = "pg_database_conflicts_snapshot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of queries in this database that have been canceled due to old snapshots.",
+    },
+    [FAM_PG_DATABASE_CONFLICTS_BUFFERPIN] = {
+        .name = "pg_database_conflicts_bufferpin",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of queries in this database that have been canceled due to pinned buffers.",
+    },
+    [FAM_PG_DATABASE_CONFLICTS_DEADLOCK] = {
+        .name = "pg_database_conflicts_deadlock",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of queries in this database that have been canceled due to deadlocks.",
+    },
+    [FAM_PG_TABLE_SEQ_SCAN] = {
+        .name = "pg_table_seq_scan",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of sequential scans initiated on this table.",
+    },
+    [FAM_PG_TABLE_SEQ_TUP_READ] = {
+        .name = "pg_table_seq_tup_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of live rows fetched by sequential scans.",
+    },
+    [FAM_PG_TABLE_IDX_SCAN] = {
+        .name = "pg_table_idx_scan",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of index scans initiated on this table.",
+    },
+    [FAM_PG_TABLE_IDX_TUP_FETCH] = {
+        .name = "pg_table_idx_tup_fetch",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of live rows fetched by index scans.",
+    },
+    [FAM_PG_TABLE_N_TUP_INS] = {
+        .name = "pg_table_n_tup_ins",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows inserted.",
+    },
+    [FAM_PG_TABLE_N_TUP_UPD] = {
+        .name = "pg_table_n_tup_upd",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows updated (includes HOT updated rows).",
+    },
+    [FAM_PG_TABLE_N_TUP_DEL] = {
+        .name = "pg_table_n_tup_del",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows deleted.",
+    },
+    [FAM_PG_TABLE_N_TUP_HOT_UPD] = {
+        .name = "pg_table_n_tup_hot_upd",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows HOT updated (i.e., with no separate index update required).",
+    },
+    [FAM_PG_TABLE_N_LIVE_TUP] = {
+        .name = "pg_table_n_live_tup",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Estimated number of live rows.",
+    },
+    [FAM_PG_TABLE_N_DEAD_TUP] = {
+        .name = "pg_table_n_dead_tup",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Estimated number of dead rows.",
+    },
+    [FAM_PG_TABLE_N_MOD_SINCE_ANALYZE] = {
+        .name = "pg_table_n_mod_since_analyze",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Estimated number of rows modified since this table was last analyzed.",
+    },
+    [FAM_PG_TABLE_N_INS_SINCE_VACUUM] = {
+        .name = "pg_table_n_ins_since_vacuum",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Estimated number of rows inserted since this table was last vacuumed.",
+    },
+    [FAM_PG_TABLE_LAST_VACUUM] = {
+        .name = "pg_table_last_vacuum",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Last time at which this table was manually vacuumed (not counting VACUUM FULL).",
+    },
+    [FAM_PG_TABLE_LAST_AUTOVACUUM] = {
+        .name = "pg_table_last_autovacuum",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Last time at which this table was vacuumed by the autovacuum daemon.",
+    },
+    [FAM_PG_TABLE_LAST_ANALYZE] = {
+        .name = "pg_table_last_analyze",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Last time at which this table was manually analyzed.",
+    },
+    [FAM_PG_TABLE_LAST_AUTOANALYZE] = {
+        .name = "pg_table_last_autoanalyze",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Last time at which this table was analyzed by the autovacuum daemon.",
+    },
+    [FAM_PG_TABLE_VACUUM] = {
+        .name = "pg_table_vacuum",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of times this table has been manually vacuumed (not counting VACUUM FULL).",
+    },
+    [FAM_PG_TABLE_AUTOVACUUM] = {
+        .name = "pg_table_autovacuum",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times this table has been vacuumed by the autovacuum daemon.",
+    },
+    [FAM_PG_TABLE_ANALYZE] = {
+        .name = "pg_table_analyze",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times this table has been manually analyzed.",
+    },
+    [FAM_PG_TABLE_AUTOANALYZE] = {
+        .name = "pg_table_autoanalyze",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times this table has been analyzed by the autovacuum daemon.",
+    },
+    [FAM_PG_TABLE_HEAP_BLKS_READ] = {
+        .name = "pg_table_heap_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read from this table.",
+    },
+    [FAM_PG_TABLE_HEAP_BLKS_HIT] = {
+        .name = "pg_table_heap_blks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffer hits in this table.",
+    },
+    [FAM_PG_TABLE_IDX_BLKS_READ] = {
+        .name = "pg_table_idx_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read from all indexes on this table.",
+    },
+    [FAM_PG_TABLE_IDX_BLKS_HIT] = {
+        .name = "pg_table_idx_blks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffer hits in all indexes on this table.",
+    },
+    [FAM_PG_TABLE_TOAST_BLKS_READ] = {
+        .name = "pg_table_toast_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read from this table's TOAST table (if any).",
+    },
+    [FAM_PG_TABLE_TOAST_BLKS_HIT] = {
+        .name = "pg_table_toast_blks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffer hits in this table's TOAST table (if any).",
+    },
+    [FAM_PG_TABLE_TIDX_BLKS_READ] = {
+        .name = "pg_table_tidx_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read from this table's TOAST table indexes (if any).",
+    },
+    [FAM_PG_TABLE_TIDX_BLKS_HIT] = {
+        .name = "pg_table_tidx_blks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffer hits in this table's TOAST table indexes (if any).",
+    },
+    [FAM_PG_TABLE_LAST_SEQ_SCAN] = {
+        .name = "pg_table_last_seq_scan",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The time of the last sequential scan on this table, "
+                "based on the most recent transaction stop time.",
+    },
+    [FAM_PG_TABLE_LAST_IDX_SCAN] = {
+        .name = "pg_table_last_idx_scan",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The time of the last index scan on this table, "
+                "based on the most recent transaction stop time.",
+    },
+    [FAM_PG_TABLE_N_TUP_NEWPAGE_UPD] = {
+        .name = "pg_table_n_tup_newpage_upd",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of rows updated where the successor version goes onto a new heap page, "
+                "leaving behind an original version with a t_ctid field that points "
+                "to a different heap page. These are always non-HOT updates.",
+    },
+    [FAM_PG_FUNCTION_CALLS] = {
+        .name = "pg_function_calls",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times this function has been called.",
+    },
+    [FAM_PG_FUNCTION_TOTAL_TIME_SECONDS] = {
+        .name = "pg_function_total_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total time spent in this function and all other functions "
+                "called by it, in seconds.",
+    },
+    [FAM_PG_FUNCTION_SELF_TIME_SECONDS] = {
+        .name = "pg_function_self_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total time spent in this function itself, not including other functions "
+                "called by it, in seconds.",
+    },
+    [FAM_PG_INDEX_IDX_SCAN] = {
+        .name = "pg_index_idx_scan",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of index scans initiated on this index.",
+    },
+    [FAM_PG_INDEX_IDX_TUP_READ] = {
+        .name = "pg_index_idx_tup_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of index entries returned by scans on this index.",
+    },
+    [FAM_PG_INDEX_IDX_TUP_FETCH] = {
+        .name = "pg_index_idx_tup_fetch",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of live table rows fetched by simple index scans using this index.",
+    },
+    [FAM_PG_INDEX_IDX_BLKS_READ] = {
+        .name = "pg_index_idx_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read from this index.",
+    },
+    [FAM_PG_INDEX_IDX_BLKS_HIT] = {
+        .name = "pg_index_idx_blks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffer hits in this index.",
+    },
+    [FAM_PG_SEQUENCES_BLKS_READ] = {
+        .name = "pg_sequences_blks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read from this sequence.",
+    },
+    [FAM_PG_SEQUENCES_BLKS_HIT] = {
+        .name = "pg_sequences_blks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffer hits in this sequence.",
+    },
+    [FAM_PG_ACTIVITY_CONNECTIONS] = {
+        .name = "pg_activity_connections",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of connections in this state",
+    },
+    [FAM_PG_ACTIVITY_MAX_TX_SECONDS] = {
+        .name = "pg_activity_max_tx_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Max duration in seconds any active transaction has been running",
+    },
+    [FAM_PG_REPLICATION_CURRENT_WAL_LSN] = {
+        .name = "pg_replication_current_wal_lsn",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "WAL position.",
+    },
+    [FAM_PG_REPLICATION_CURRENT_WAL_LSN_BYTES] = {
+        .name = "pg_replication_current_wal_lsn_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "WAL position in bytes.",
+    },
+    [FAM_PG_REPLICATION_WAL_LSN_DIFF] = {
+        .name = "pg_replication_wal_lsn_diff",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Lag in bytes between master and slave.",
+    },
+    [FAM_PG_REPLICATION_SLOT_ACTIVE] = {
+        .name = "pg_replication_slot_active",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Flag indicating if the slot is active.",
+    },
+    [FAM_PG_REPLICATION_SLOT_WAL_LSN_DIFF_BYTES] = {
+        .name = "pg_replication_slot_wal_lsn_diff_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Replication lag in bytes.",
+    },
+    [FAM_PG_ARCHIVER_ARCHIVED] = {
+        .name = "pg_archiver_archived",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of WAL files that have been successfully archive.",
+    },
+    [FAM_PG_ARCHIVER_FAILED] = {
+        .name = "pg_archiver_failed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of failed attempts for archiving WAL files.",
+    },
+    [FAM_PG_ARCHIVER_LAST_ARCHIVE_AGE_SECONDS] = {
+        .name = "pg_archiver_last_archive_age_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Time in seconds since last WAL segment was successfully archived.",
+    },
+    [FAM_PG_SLRU_BLOCKS_ZEROED] = {
+        .name = "pg_slru_blocks_zeroed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of blocks zeroed during initializations.",
+    },
+    [FAM_PG_SLRU_BLOCKS_HIT] = {
+        .name = "pg_slru_blocks_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times disk blocks were found already in the SLRU.",
+    },
+    [FAM_PG_SLRU_BLOCKS_READ] = {
+        .name = "pg_slru_blocks_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks read for this SLRU.",
+    },
+    [FAM_PG_SLRU_BLOCKS_WRITTEN] = {
+        .name = "pg_slru_blocks_written",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of disk blocks written for this SLRU.",
+    },
+    [FAM_PG_SLRU_BLOCKS_EXISTS] = {
+        .name = "pg_slru_blocks_exists",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of blocks checked for existence for this SLRU.",
+    },
+    [FAM_PG_SLRU_FLUSHES] = {
+        .name = "pg_slru_flushes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of flushes of dirty data for this SLRU.",
+    },
+    [FAM_PG_SLRU_TRUNCATES] = {
+        .name = "pg_slru_truncates",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of truncates for this SLRU.",
+    },
+    [FAM_PG_CHECKPOINTS_TIMED] = {
+        .name = "pg_checkpoints_timed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of scheduled checkpoints that have been performed.",
+    },
+    [FAM_PG_CHECKPOINTS_REQ] = {
+        .name = "pg_checkpoints_req",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of requested checkpoints that have been performed.",
+    },
+    [FAM_PG_CHECKPOINT_WRITE_TIME_SECONDS] = {
+        .name = "pg_checkpoint_write_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total amount of time in seconds that has been spent in the portion "
+                "of checkpoint processing where files are written to disk.",
+    },
+    [FAM_PG_CHECKPOINT_SYNC_TIME_SECONDS] = {
+        .name = "pg_checkpoint_sync_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total amount of in seconds time that has been spent in the portion "
+                "of checkpoint processing where files are synchronized to disk.",
+    },
+    [FAM_PG_CHECKPOINT_BUFFERS] = {
+        .name = "pg_checkpoint_buffers",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffers written during checkpoints.",
+    },
+    [FAM_PG_BGWRITER_BUFFERS_CLEAN] = {
+        .name = "pg_bgwriter_buffers_clean",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffers written by the background writer.",
+    },
+    [FAM_PG_BGWRITER_MAXWRITTEN_CLEAN] = {
+        .name = "pg_bgwriter_maxwritten_clean",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times the background writer stopped a cleaning scan because "
+                "it had written too many buffers.",
+    },
+    [FAM_PG_BGWRITER_BUFFERS_BACKEND] = {
+        .name = "pg_bgwriter_buffers_backend",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffers written directly by a backend.",
+    },
+    [FAM_PG_BGWRITER_BUFFERS_BACKEND_FSYNC] = {
+        .name = "pg_bgwriter_buffers_backend_fsync",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times a backend had to execute its own fsync call "
+                "(normally the background writer handles those even when "
+                "the backend does its own write).",
+    },
+    [FAM_PG_BGWRITER_BUFFERS_ALLOC] = {
+        .name = "pg_bgwriter_buffers_alloc",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of buffers allocated.",
+    },
 
-/* Appends the (parameter, value) pair to the string
- * pointed to by 'buf' suitable to be used as argument
- * for PQconnectdb(). If value equals NULL, the pair
- * is ignored. */
-#define C_PSQL_PAR_APPEND(buf, buf_len, parameter, value)                      \
-  if ((0 < (buf_len)) && (NULL != (value)) && ('\0' != *(value))) {            \
-    int s = ssnprintf(buf, buf_len, " %s = '%s'", parameter, value);           \
-    if (0 < s) {                                                               \
-      buf += s;                                                                \
-      buf_len -= s;                                                            \
-    }                                                                          \
-  }
+};
 
-/* Returns the tuple (major, minor, patchlevel)
- * for the given version number. */
-#define C_PSQL_SERVER_VERSION3(server_version)                                 \
-  (server_version) / 10000,                                                    \
-      (server_version) / 100 - (int)((server_version) / 10000) * 100,          \
-      (server_version) - (int)((server_version) / 100) * 100
+/* Appends the (parameter, value) pair to the string pointed to by 'buf' suitable
+ * to be used as argument for PQconnectdb(). If value equals NULL, the pair is ignored. */
+/* Returns the tuple (major, minor, patchlevel) for the given version number. */
+#define C_PSQL_SERVER_VERSION3(server_version)                               \
+    (server_version) / 10000,                                                \
+            (server_version) / 100 - (int)((server_version) / 10000) * 100,  \
+            (server_version) - (int)((server_version) / 100) * 10
 
-/* Returns true if the given host specifies a
- * UNIX domain socket. */
-#define C_PSQL_IS_UNIX_DOMAIN_SOCKET(host)                                     \
-  ((NULL == (host)) || ('\0' == *(host)) || ('/' == *(host)))
+/* Returns true if the given host specifies a UNIX domain socket. */
+#define C_PSQL_IS_UNIX_DOMAIN_SOCKET(host)                       \
+    (((host) == NULL) || (*(host) == '\0') || (*(host) == '/'))
 
-/* Returns the tuple (host, delimiter, port) for a
- * given (host, port) pair. Depending on the value of
- * 'host' a UNIX domain socket or a TCP socket is
- * assumed. */
-#define C_PSQL_SOCKET3(host, port)                                             \
-  ((NULL == (host)) || ('\0' == *(host))) ? DEFAULT_PGSOCKET_DIR : host,       \
-      C_PSQL_IS_UNIX_DOMAIN_SOCKET(host) ? "/.s.PGSQL." : ":", port
+/* Returns the tuple (host, delimiter, port) for a given (host, port) pair.
+ * Depending on the value of 'host' a UNIX domain socket or a TCP socket is assumed. */
+#define C_PSQL_SOCKET3(host, port)                                          \
+    (((host) == NULL) || (*(host) == '\0')) ? DEFAULT_PGSOCKET_DIR : host,  \
+            C_PSQL_IS_UNIX_DOMAIN_SOCKET(host) ? "/.s.PGSQL." : ":", port
 
 typedef enum {
-  C_PSQL_PARAM_HOST = 1,
-  C_PSQL_PARAM_DB,
-  C_PSQL_PARAM_USER,
-  C_PSQL_PARAM_INTERVAL,
-  C_PSQL_PARAM_INSTANCE,
-} c_psql_param_t;
+    COLLECT_DATABASE          = (1 <<  0),
+    COLLECT_DATABASE_SIZE     = (1 <<  1),
+    COLLECT_DATABASE_LOCKS    = (1 <<  2),
+    COLLECT_TABLE             = (1 <<  3),
+    COLLECT_TABLE_IO          = (1 <<  4),
+    COLLECT_INDEXES           = (1 <<  5),
+    COLLECT_INDEXES_IO        = (1 <<  6),
+    COLLECT_SEQUENCES_IO      = (1 <<  7),
+    COLLECT_FUNCTIONS         = (1 <<  8),
+    COLLECT_ACTIVITY          = (1 <<  9),
+    COLLECT_REPLICATION_SLOTS = (1 <<  10),
+    COLLECT_REPLICATION       = (1 <<  11),
+    COLLECT_ARCHIVER          = (1 <<  12),
+    COLLECT_BGWRITER          = (1 <<  13),
+    COLLECT_SLRU              = (1 <<  14),
+} pg_flag_t;
 
-/* Parameter configuration. Stored as `user data' in the query objects. */
+typedef struct pg_stat_filter {
+    char *arg1;
+    char *arg2;
+    char *arg3;
+    struct pg_stat_filter *next;
+} pg_stat_filter_t;
+
 typedef struct {
-  c_psql_param_t *params;
-  int params_num;
-} c_psql_user_data_t;
-
-typedef struct {
-  char *name;
-  char *statement;
-  bool store_rates;
-} c_psql_writer_t;
-
-typedef struct {
-  PGconn *conn;
-  c_complain_t conn_complaint;
-
-  int proto_version;
-  int server_version;
-
-  int max_params_num;
-
-  /* user configuration */
-  udb_query_preparation_area_t **q_prep_areas;
-  udb_query_t **queries;
-  size_t queries_num;
-
-  c_psql_writer_t **writers;
-  size_t writers_num;
-
-  /* make sure we don't access the database object in parallel */
-  pthread_mutex_t db_lock;
-
-  /* writer "caching" settings */
-  cdtime_t commit_interval;
-  cdtime_t next_commit;
-  cdtime_t expire_delay;
-
-  char *host;
-  char *port;
-  char *database;
-  char *user;
-  char *password;
-
-  char *instance;
-  char *plugin_name;
-
-  char *sslmode;
-
-  char *krbsrvname;
-
-  char *service;
-
-  int ref_cnt;
-} c_psql_database_t;
-
-static const char *const def_queries[] = {
-    "backends",     "transactions", "queries",   "query_plans",
-    "table_states", "disk_io",      "disk_usage"};
-static int def_queries_num = STATIC_ARRAY_SIZE(def_queries);
-
-static c_psql_database_t **databases;
-static size_t databases_num;
-
-static udb_query_t **queries;
-static size_t queries_num;
-
-static c_psql_writer_t *writers;
-static size_t writers_num;
-
-static int c_psql_begin(c_psql_database_t *db) {
-  PGresult *r = PQexec(db->conn, "BEGIN");
-
-  int status = 1;
-
-  if (r != NULL) {
-    if (PGRES_COMMAND_OK == PQresultStatus(r)) {
-      db->next_commit = cdtime() + db->commit_interval;
-      status = 0;
-    } else
-      log_warn("Failed to initiate ('BEGIN') transaction: %s",
-               PQerrorMessage(db->conn));
-    PQclear(r);
-  }
-  return status;
-} /* c_psql_begin */
-
-static int c_psql_commit(c_psql_database_t *db) {
-  PGresult *r = PQexec(db->conn, "COMMIT");
-
-  int status = 1;
-
-  if (r != NULL) {
-    if (PGRES_COMMAND_OK == PQresultStatus(r)) {
-      db->next_commit = 0;
-      log_debug("Successfully committed transaction.");
-      status = 0;
-    } else
-      log_warn("Failed to commit transaction: %s", PQerrorMessage(db->conn));
-    PQclear(r);
-  }
-  return status;
-} /* c_psql_commit */
-
-static c_psql_database_t *c_psql_database_new(const char *name) {
-  c_psql_database_t **tmp;
-  c_psql_database_t *db;
-
-  db = malloc(sizeof(*db));
-  if (NULL == db) {
-    log_err("Out of memory.");
-    return NULL;
-  }
-
-  tmp = realloc(databases, (databases_num + 1) * sizeof(*databases));
-  if (NULL == tmp) {
-    log_err("Out of memory.");
-    sfree(db);
-    return NULL;
-  }
-
-  databases = tmp;
-  databases[databases_num] = db;
-  ++databases_num;
-
-  db->conn = NULL;
-
-  C_COMPLAIN_INIT(&db->conn_complaint);
-
-  db->proto_version = 0;
-  db->server_version = 0;
-
-  db->max_params_num = 0;
-
-  db->q_prep_areas = NULL;
-  db->queries = NULL;
-  db->queries_num = 0;
-
-  db->writers = NULL;
-  db->writers_num = 0;
-
-  pthread_mutex_init(&db->db_lock, /* attrs = */ NULL);
-
-  db->commit_interval = 0;
-  db->next_commit = 0;
-  db->expire_delay = 0;
-
-  db->database = sstrdup(name);
-  db->host = NULL;
-  db->port = NULL;
-  db->user = NULL;
-  db->password = NULL;
-
-  db->instance = sstrdup(name);
-
-  db->plugin_name = NULL;
-
-  db->sslmode = NULL;
-
-  db->krbsrvname = NULL;
-
-  db->service = NULL;
-
-  db->ref_cnt = 0;
-  return db;
-} /* c_psql_database_new */
-
-static void c_psql_database_delete(void *data) {
-  c_psql_database_t *db = data;
-
-  --db->ref_cnt;
-  /* readers and writers may access this database */
-  if (db->ref_cnt > 0)
-    return;
-
-  /* wait for the lock to be released by the last writer */
-  pthread_mutex_lock(&db->db_lock);
-
-  if (db->next_commit > 0)
-    c_psql_commit(db);
-
-  PQfinish(db->conn);
-  db->conn = NULL;
-
-  if (db->q_prep_areas)
-    for (size_t i = 0; i < db->queries_num; ++i)
-      udb_query_delete_preparation_area(db->q_prep_areas[i]);
-  free(db->q_prep_areas);
-
-  sfree(db->queries);
-  db->queries_num = 0;
-
-  sfree(db->writers);
-  db->writers_num = 0;
-
-  pthread_mutex_unlock(&db->db_lock);
-
-  pthread_mutex_destroy(&db->db_lock);
-
-  sfree(db->database);
-  sfree(db->host);
-  sfree(db->port);
-  sfree(db->user);
-  sfree(db->password);
-
-  sfree(db->instance);
-
-  sfree(db->plugin_name);
-
-  sfree(db->sslmode);
-
-  sfree(db->krbsrvname);
-
-  sfree(db->service);
-
-  /* don't care about freeing or reordering the 'databases' array
-   * this is done in 'shutdown'; also, don't free the database instance
-   * object just to make sure that in case anybody accesses it before
-   * shutdown won't segfault */
-  return;
-} /* c_psql_database_delete */
-
-static int c_psql_connect(c_psql_database_t *db) {
-  char conninfo[4096];
-  char *buf = conninfo;
-  int buf_len = sizeof(conninfo);
-  int status;
-
-  if ((!db) || (!db->database))
-    return -1;
-
-  status = ssnprintf(buf, buf_len, "dbname = '%s'", db->database);
-  if (0 < status) {
-    buf += status;
-    buf_len -= status;
-  }
-
-  C_PSQL_PAR_APPEND(buf, buf_len, "host", db->host);
-  C_PSQL_PAR_APPEND(buf, buf_len, "port", db->port);
-  C_PSQL_PAR_APPEND(buf, buf_len, "user", db->user);
-  C_PSQL_PAR_APPEND(buf, buf_len, "password", db->password);
-  C_PSQL_PAR_APPEND(buf, buf_len, "sslmode", db->sslmode);
-  C_PSQL_PAR_APPEND(buf, buf_len, "krbsrvname", db->krbsrvname);
-  C_PSQL_PAR_APPEND(buf, buf_len, "service", db->service);
-  C_PSQL_PAR_APPEND(buf, buf_len, "application_name", "collectd_postgresql");
-
-  db->conn = PQconnectdb(conninfo);
-  db->proto_version = PQprotocolVersion(db->conn);
-  return 0;
-} /* c_psql_connect */
-
-static int c_psql_check_connection(c_psql_database_t *db) {
-  bool init = false;
-
-  if (!db->conn) {
-    init = true;
-
-    /* trigger c_release() */
-    if (0 == db->conn_complaint.interval)
-      db->conn_complaint.interval = 1;
-
-    c_psql_connect(db);
-  }
-
-  if (CONNECTION_OK != PQstatus(db->conn)) {
-    PQreset(db->conn);
-
-    /* trigger c_release() */
-    if (0 == db->conn_complaint.interval)
-      db->conn_complaint.interval = 1;
-
-    if (CONNECTION_OK != PQstatus(db->conn)) {
-      c_complain(LOG_ERR, &db->conn_complaint,
-                 "Failed to connect to database %s (%s): %s", db->database,
-                 db->instance, PQerrorMessage(db->conn));
-      return -1;
-    }
-
-    db->proto_version = PQprotocolVersion(db->conn);
-  }
-
-  db->server_version = PQserverVersion(db->conn);
-
-  if (c_would_release(&db->conn_complaint)) {
-    char *server_host;
+    char *instance;
+
+    PGconn *conn;
+    c_complain_t conn_complaint;
+    int proto_version;
     int server_version;
 
-    server_host = PQhost(db->conn);
-    server_version = PQserverVersion(db->conn);
+    char *host;
+    char *port;
+    char *database;
+    char *user;
+    char *password;
 
-    c_do_release(LOG_INFO, &db->conn_complaint,
-                 "Successfully %sconnected to database %s (user %s) "
-                 "at server %s%s%s (server version: %d.%d.%d, "
-                 "protocol version: %d, pid: %d)",
-                 init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
-                 C_PSQL_SOCKET3(server_host, PQport(db->conn)),
-                 C_PSQL_SERVER_VERSION3(server_version), db->proto_version,
-                 PQbackendPID(db->conn));
+    char *sslmode;
+    char *krbsrvname;
+    char *service;
 
-    if (3 > db->proto_version)
-      log_warn("Protocol version %d does not support parameters.",
-               db->proto_version);
-  }
-  return 0;
-} /* c_psql_check_connection */
+    char *metric_prefix;
+    label_set_t labels;
 
-static PGresult *c_psql_exec_query_noparams(c_psql_database_t *db,
-                                            udb_query_t *q) {
-  return PQexec(db->conn, udb_query_get_statement(q));
-} /* c_psql_exec_query_noparams */
+    uint64_t flags;
+    pg_stat_filter_t *pg_stat_table;
+    pg_stat_filter_t *pg_stat_table_io;
+    pg_stat_filter_t *pg_stat_indexes;
+    pg_stat_filter_t *pg_stat_indexes_io;
+    pg_stat_filter_t *pg_stat_sequence_io;
+    pg_stat_filter_t *pg_stat_function;
 
-static PGresult *c_psql_exec_query_params(c_psql_database_t *db, udb_query_t *q,
-                                          c_psql_user_data_t *data) {
-  const char *params[db->max_params_num];
-  char interval[64];
+    db_query_preparation_area_t **q_prep_areas;
+    db_query_t **queries;
+    size_t queries_num;
 
-  if ((data == NULL) || (data->params_num == 0))
-    return c_psql_exec_query_noparams(db, q);
+    metric_family_t fams[FAM_PG_MAX];
+} psql_database_t;
 
-  assert(db->max_params_num >= data->params_num);
+static db_query_t **queries;
+static size_t queries_num;
 
-  for (int i = 0; i < data->params_num; ++i) {
-    switch (data->params[i]) {
-    case C_PSQL_PARAM_HOST:
-      params[i] =
-          C_PSQL_IS_UNIX_DOMAIN_SOCKET(db->host) ? "localhost" : db->host;
-      break;
-    case C_PSQL_PARAM_DB:
-      params[i] = db->database;
-      break;
-    case C_PSQL_PARAM_USER:
-      params[i] = db->user;
-      break;
-    case C_PSQL_PARAM_INTERVAL:
-      ssnprintf(interval, sizeof(interval), "%.3f",
-                CDTIME_T_TO_DOUBLE(plugin_get_interval()));
-      params[i] = interval;
-      break;
-    case C_PSQL_PARAM_INSTANCE:
-      params[i] = db->instance;
-      break;
-    default:
-      assert(0);
+typedef struct {
+    char *option;
+    uint64_t flag;
+} pg_flags_t;
+
+static pg_flags_t pg_flags[] = {
+    { "database",          COLLECT_DATABASE          },
+    { "database_size",     COLLECT_DATABASE_SIZE     },
+    { "database_locks",    COLLECT_DATABASE_LOCKS    },
+    { "table",             COLLECT_TABLE             },
+    { "table_io",          COLLECT_TABLE_IO          },
+    { "indexes",           COLLECT_INDEXES           },
+    { "indexes_io",        COLLECT_INDEXES_IO        },
+    { "sequences_io",      COLLECT_SEQUENCES_IO      },
+    { "functions",         COLLECT_FUNCTIONS         },
+    { "activity ",         COLLECT_ACTIVITY          },
+    { "replication_slots", COLLECT_REPLICATION_SLOTS },
+    { "replication",       COLLECT_REPLICATION       },
+    { "archiver",          COLLECT_ARCHIVER          },
+    { "bgwriter",          COLLECT_BGWRITER          },
+    { "slru",              COLLECT_SLRU              },
+};
+static size_t pg_flags_size = STATIC_ARRAY_SIZE(pg_flags);
+
+static void pg_stat_filter_free(pg_stat_filter_t *filter)
+{
+    if (filter == NULL)
+        return;
+
+    while (filter != NULL) {
+        free(filter->arg1);
+        free(filter->arg2);
+        free(filter->arg3);
+
+        pg_stat_filter_t *next = filter->next;
+        free(filter);
+        filter = next;
     }
-  }
+}
 
-  return PQexecParams(db->conn, udb_query_get_statement(q), data->params_num,
-                      NULL, (const char *const *)params, NULL, NULL, 0);
-} /* c_psql_exec_query_params */
+static void psql_database_delete(void *data)
+{
+    psql_database_t *db = data;
+    if (data == NULL)
+        return;
 
-/* db->db_lock must be locked when calling this function */
-static int c_psql_exec_query(c_psql_database_t *db, udb_query_t *q,
-                             udb_query_preparation_area_t *prep_area) {
-  PGresult *res;
+    PQfinish(db->conn);
+    db->conn = NULL;
 
-  c_psql_user_data_t *data;
+    free(db->instance);
 
-  const char *host;
+    free(db->database);
+    free(db->host);
+    free(db->port);
+    free(db->user);
+    free(db->password);
 
-  char **column_names;
-  char **column_values;
-  int column_num;
+    free(db->sslmode);
 
-  int rows_num;
-  int status;
+    free(db->krbsrvname);
 
-  /* The user data may hold parameter information, but may be NULL. */
-  data = udb_query_get_user_data(q);
+    free(db->service);
 
-  /* Versions up to `3' don't know how to handle parameters. */
-  if (3 <= db->proto_version)
-    res = c_psql_exec_query_params(db, q, data);
-  else if ((NULL == data) || (0 == data->params_num))
-    res = c_psql_exec_query_noparams(db, q);
-  else {
-    log_err("Connection to database \"%s\" (%s) does not support "
-            "parameters (protocol version %d) - "
-            "cannot execute query \"%s\".",
-            db->database, db->instance, db->proto_version,
-            udb_query_get_name(q));
-    return -1;
-  }
+    free(db->metric_prefix);
+    label_set_reset(&db->labels);
 
-  /* give c_psql_write() a chance to acquire the lock if called recursively
-   * through dispatch_values(); this will happen if, both, queries and
-   * writers are configured for a single connection */
-  pthread_mutex_unlock(&db->db_lock);
+    pg_stat_filter_free(db->pg_stat_table);
+    pg_stat_filter_free(db->pg_stat_table_io);
+    pg_stat_filter_free(db->pg_stat_indexes);
+    pg_stat_filter_free(db->pg_stat_indexes_io);
+    pg_stat_filter_free(db->pg_stat_sequence_io);
+    pg_stat_filter_free(db->pg_stat_function);
 
-  column_names = NULL;
-  column_values = NULL;
+    free(db);
+}
 
-  if (PGRES_TUPLES_OK != PQresultStatus(res)) {
-    pthread_mutex_lock(&db->db_lock);
+static int psql_connect(psql_database_t *db)
+{
+    if ((!db) || (!db->database))
+        return -1;
 
-    if ((CONNECTION_OK != PQstatus(db->conn)) &&
-        (0 == c_psql_check_connection(db))) {
-      PQclear(res);
-      return c_psql_exec_query(db, q, prep_area);
-    }
+    char conninfo[4096];
+    strbuf_t buf = STRBUF_CREATE_STATIC(conninfo);
+    struct {
+        char *param;
+        char *value;
+    } psql_params[] = {
+        { "dbname",           db->database           },
+        { "host",             db->host               },
+        { "port",             db->port               },
+        { "user",             db->user               },
+        { "password",         db->password           },
+        { "sslmode",          db->sslmode            },
+        { "krbsrvname",       db->krbsrvname         },
+        { "service",          db->service            },
+        { "application_name", "ncollectd_postgresql" }
+    };
+    size_t psql_params_size = STATIC_ARRAY_SIZE(psql_params);
 
-    log_err("Failed to execute SQL query: %s", PQerrorMessage(db->conn));
-    log_info("SQL query was: %s", udb_query_get_statement(q));
-    PQclear(res);
-    return -1;
-  }
-
-#define BAIL_OUT(status)                                                       \
-  sfree(column_names);                                                         \
-  sfree(column_values);                                                        \
-  PQclear(res);                                                                \
-  pthread_mutex_lock(&db->db_lock);                                            \
-  return status
-
-  rows_num = PQntuples(res);
-  if (1 > rows_num) {
-    BAIL_OUT(0);
-  }
-
-  column_num = PQnfields(res);
-  column_names = calloc(column_num, sizeof(*column_names));
-  if (column_names == NULL) {
-    log_err("calloc failed.");
-    BAIL_OUT(-1);
-  }
-
-  column_values = calloc(column_num, sizeof(*column_values));
-  if (column_values == NULL) {
-    log_err("calloc failed.");
-    BAIL_OUT(-1);
-  }
-
-  for (int col = 0; col < column_num; ++col) {
-    /* Pointers returned by `PQfname' are freed by `PQclear' via
-     * `BAIL_OUT'. */
-    column_names[col] = PQfname(res, col);
-    if (NULL == column_names[col]) {
-      log_err("Failed to resolve name of column %i.", col);
-      BAIL_OUT(-1);
-    }
-  }
-
-  if (C_PSQL_IS_UNIX_DOMAIN_SOCKET(db->host) ||
-      (0 == strcmp(db->host, "127.0.0.1")) ||
-      (0 == strcmp(db->host, "localhost")))
-    host = hostname_g;
-  else
-    host = db->host;
-
-  status = udb_query_prepare_result(
-      q, prep_area, host,
-      (db->plugin_name != NULL) ? db->plugin_name : "postgresql", db->instance,
-      column_names, (size_t)column_num);
-
-  if (0 != status) {
-    log_err("udb_query_prepare_result failed with status %i.", status);
-    BAIL_OUT(-1);
-  }
-
-  for (int row = 0; row < rows_num; ++row) {
-    int col;
-    for (col = 0; col < column_num; ++col) {
-      /* Pointers returned by `PQgetvalue' are freed by `PQclear' via
-       * `BAIL_OUT'. */
-      column_values[col] = PQgetvalue(res, row, col);
-      if (NULL == column_values[col]) {
-        log_err("Failed to get value at (row = %i, col = %i).", row, col);
-        break;
-      }
+    for (size_t i = 0; i  < psql_params_size; i++) {
+        if ((psql_params[i].value != NULL) && (psql_params[i].value[0] != '\0')) {
+            strbuf_putstr(&buf, psql_params[i].param);
+            strbuf_putstr(&buf, " = '");
+            strbuf_putstr(&buf, psql_params[i].value);
+            strbuf_putstr(&buf, "' ");
+        }
     }
 
-    /* check for an error */
-    if (col < column_num)
-      continue;
+    db->conn = PQconnectdb(conninfo);
+    db->proto_version = PQprotocolVersion(db->conn);
+    return 0;
+}
 
-    status = udb_query_handle_result(q, prep_area, column_values);
+static int psql_check_connection(psql_database_t *db)
+{
+    bool init = false;
+
+    if (!db->conn) {
+        init = true;
+
+        /* trigger c_release() */
+        if (db->conn_complaint.interval == 0)
+            db->conn_complaint.interval = 1;
+
+        psql_connect(db);
+    }
+
+    if (PQstatus(db->conn) != CONNECTION_OK) {
+        PQreset(db->conn);
+
+        /* trigger c_release() */
+        if (db->conn_complaint.interval == 0)
+            db->conn_complaint.interval = 1;
+
+        if (PQstatus(db->conn) != CONNECTION_OK) {
+            c_complain(LOG_ERR, &db->conn_complaint,
+                                "Failed to connect to database %s: %s", db->database,
+                                PQerrorMessage(db->conn));
+            return -1;
+        }
+
+        db->proto_version = PQprotocolVersion(db->conn);
+    }
+
+    db->server_version = PQserverVersion(db->conn);
+
+    if (c_would_release(&db->conn_complaint)) {
+        char *server_host;
+        int server_version;
+
+        server_host = PQhost(db->conn);
+        server_version = PQserverVersion(db->conn);
+
+        c_do_release(LOG_INFO, &db->conn_complaint,
+                                 "Successfully %sconnected to database %s (user %s) "
+                                 "at server %s%s%s (server version: %d.%d.%d, "
+                                 "protocol version: %d, pid: %d)",
+                                 init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
+                                 C_PSQL_SOCKET3(server_host, PQport(db->conn)),
+                                 C_PSQL_SERVER_VERSION3(server_version), db->proto_version,
+                                 PQbackendPID(db->conn));
+
+        if (db->proto_version < 3)
+            PLUGIN_WARNING("Protocol version %d does not support parameters.", db->proto_version);
+    }
+    return 0;
+}
+
+static int psql_exec_query(psql_database_t *db, db_query_t *q, db_query_preparation_area_t *prep_area)
+{
+    char **column_names = NULL;
+    char **column_values = NULL;
+
+    PGresult *res = NULL;
+
+    res = PQexec(db->conn, db_query_get_statement(q));
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        PLUGIN_ERROR("Failed to execute SQL query: %s", PQerrorMessage(db->conn));
+        PLUGIN_INFO("SQL query was: %s", db_query_get_statement(q));
+        PQclear(res);
+        return -1;
+    }
+
+    int status = -1;
+
+    int rows_num = PQntuples(res);
+    if (rows_num < 1)
+        goto error;
+
+    int column_num = PQnfields(res);
+    column_names = calloc(column_num, sizeof(*column_names));
+    if (column_names == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        goto error;
+    }
+
+    column_values = calloc(column_num, sizeof(*column_values));
+    if (column_values == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        goto error;
+    }
+
+    for (int col = 0; col < column_num; ++col) {
+        /* Pointers returned by PQfname are freed by PQclear */
+        column_names[col] = PQfname(res, col);
+        if (column_names[col] == NULL) {
+            PLUGIN_ERROR("Failed to resolve name of column %i.", col);
+            goto error;
+        }
+    }
+
+    status = db_query_prepare_result(q, prep_area, db->metric_prefix, &db->labels,
+                                        db->database, column_names, (size_t)column_num);
+
     if (status != 0) {
-      log_err("udb_query_handle_result failed with status %i.", status);
+        PLUGIN_ERROR("db_query_prepare_result failed with status %i.", status);
+        goto error;
     }
-  } /* for (row = 0; row < rows_num; ++row) */
 
-  udb_query_finish_result(q, prep_area);
+    for (int row = 0; row < rows_num; ++row) {
+        int col;
+        for (col = 0; col < column_num; ++col) {
+            /* Pointers returned by `PQgetvalue' are freed by `PQclear' via
+             * `BAIL_OUT'. */
+            column_values[col] = PQgetvalue(res, row, col);
+            if (column_values[col] == NULL) {
+                PLUGIN_ERROR("Failed to get value at (row = %i, col = %i).", row, col);
+                break;
+            }
+        }
 
-  BAIL_OUT(0);
-#undef BAIL_OUT
-} /* c_psql_exec_query */
+        /* check for an error */
+        if (col < column_num)
+            continue;
 
-static int c_psql_read(user_data_t *ud) {
-  c_psql_database_t *db;
-
-  int success = 0;
-
-  if ((ud == NULL) || (ud->data == NULL)) {
-    log_err("c_psql_read: Invalid user data.");
-    return -1;
-  }
-
-  db = ud->data;
-
-  assert(NULL != db->database);
-  assert(NULL != db->instance);
-  assert(NULL != db->queries);
-
-  pthread_mutex_lock(&db->db_lock);
-
-  if (0 != c_psql_check_connection(db)) {
-    pthread_mutex_unlock(&db->db_lock);
-    return -1;
-  }
-
-  for (size_t i = 0; i < db->queries_num; ++i) {
-    udb_query_preparation_area_t *prep_area;
-    udb_query_t *q;
-
-    prep_area = db->q_prep_areas[i];
-    q = db->queries[i];
-
-    if ((0 != db->server_version) &&
-        (udb_query_check_version(q, db->server_version) <= 0))
-      continue;
-
-    if (0 == c_psql_exec_query(db, q, prep_area))
-      success = 1;
-  }
-
-  pthread_mutex_unlock(&db->db_lock);
-
-  if (!success)
-    return -1;
-  return 0;
-} /* c_psql_read */
-
-static char *values_name_to_sqlarray(const data_set_t *ds, char *string,
-                                     size_t string_len) {
-  char *str_ptr;
-  size_t str_len;
-
-  str_ptr = string;
-  str_len = string_len;
-
-  for (size_t i = 0; i < ds->ds_num; ++i) {
-    int status = ssnprintf(str_ptr, str_len, ",'%s'", ds->ds[i].name);
-
-    if (status < 1)
-      return NULL;
-    else if ((size_t)status >= str_len) {
-      str_len = 0;
-      break;
-    } else {
-      str_ptr += status;
-      str_len -= (size_t)status;
+        status = db_query_handle_result(q, prep_area, column_values);
+        if (status != 0) {
+            PLUGIN_ERROR("db_query_handle_result failed with status %i.", status);
+            goto error;
+        }
     }
-  }
 
-  if (str_len <= 2) {
-    log_err("c_psql_write: Failed to stringify value names");
-    return NULL;
-  }
+    db_query_finish_result(q, prep_area);
 
-  /* overwrite the first comma */
-  string[0] = '{';
-  str_ptr[0] = '}';
-  str_ptr[1] = '\0';
+    status = 0;
 
-  return string;
-} /* values_name_to_sqlarray */
+error:
+    free(column_names);
+    free(column_values);
+    PQclear(res);
 
-static char *values_type_to_sqlarray(const data_set_t *ds, char *string,
-                                     size_t string_len, bool store_rates) {
-  char *str_ptr;
-  size_t str_len;
+    return status;
+}
 
-  str_ptr = string;
-  str_len = string_len;
-
-  for (size_t i = 0; i < ds->ds_num; ++i) {
-    int status;
-
-    if (store_rates)
-      status = ssnprintf(str_ptr, str_len, ",'gauge'");
-    else
-      status = ssnprintf(str_ptr, str_len, ",'%s'",
-                         DS_TYPE_TO_STRING(ds->ds[i].type));
-
-    if (status < 1) {
-      str_len = 0;
-      break;
-    } else if ((size_t)status >= str_len) {
-      str_len = 0;
-      break;
-    } else {
-      str_ptr += status;
-      str_len -= (size_t)status;
+static int psql_read(user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
     }
-  }
 
-  if (str_len <= 2) {
-    log_err("c_psql_write: Failed to stringify value types");
-    return NULL;
-  }
+    psql_database_t *db = ud->data;
 
-  /* overwrite the first comma */
-  string[0] = '{';
-  str_ptr[0] = '}';
-  str_ptr[1] = '\0';
+    assert(NULL != db->database);
 
-  return string;
-} /* values_type_to_sqlarray */
+    if (psql_check_connection(db) != 0) {
+        metric_family_append(&db->fams[FAM_PG_UP], VALUE_GAUGE(0), &db->labels, NULL);
+        plugin_dispatch_metric_family(&db->fams[FAM_PG_UP], 0);
+        return 0;
+    }
 
-static char *values_to_sqlarray(const data_set_t *ds, const value_list_t *vl,
-                                char *string, size_t string_len,
-                                bool store_rates) {
-  char *str_ptr;
-  size_t str_len;
+    metric_family_append(&db->fams[FAM_PG_UP], VALUE_GAUGE(1), &db->labels, NULL);
 
-  gauge_t *rates = NULL;
+    cdtime_t submit = cdtime();
 
-  str_ptr = string;
-  str_len = string_len;
+    if (db->flags & COLLECT_DATABASE)
+        pg_stat_database(db->conn, db->server_version, db->fams, &db->labels, db->database);
+    if (db->flags & COLLECT_DATABASE_SIZE)
+        pg_database_size(db->conn, db->server_version, db->fams, &db->labels, db->database);
+    if (db->flags & COLLECT_DATABASE_LOCKS)
+        pg_database_locks(db->conn, db->server_version, db->fams, &db->labels, db->database);
 
-  for (size_t i = 0; i < vl->values_len; ++i) {
+    if (db->flags & COLLECT_TABLE) {
+        if (db->pg_stat_table == NULL) {
+            pg_stat_user_table(db->conn, db->server_version, db->fams, &db->labels,
+                                         NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_stat_table;
+            while (filter != NULL) {
+                pg_stat_user_table(db->conn, db->server_version, db->fams, &db->labels,
+                                             filter->arg1, filter->arg2);
+                filter = filter->next;
+            }
+        }
+    }
+
+    if (db->flags & COLLECT_TABLE_IO) {
+        if (db->pg_stat_table_io == NULL) {
+            pg_statio_user_tables(db->conn, db->server_version, db->fams, &db->labels,
+                                            NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_stat_table_io;
+            while (filter != NULL) {
+                pg_statio_user_tables(db->conn, db->server_version, db->fams, &db->labels,
+                                                filter->arg1, filter->arg2);
+                filter = filter->next;
+            }
+        }
+    }
+
+    if (db->flags & COLLECT_INDEXES) {
+        if (db->pg_stat_indexes == NULL) {
+            pg_stat_user_indexes(db->conn, db->server_version, db->fams, &db->labels,
+                                           NULL, NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_stat_indexes;
+            while (filter != NULL) {
+                pg_stat_user_indexes(db->conn, db->server_version, db->fams, &db->labels,
+                                               filter->arg1, filter->arg2, filter->arg3);
+                filter = filter->next;
+            }
+        }
+    }
+
+    if (db->flags & COLLECT_INDEXES_IO) {
+        if (db->pg_stat_indexes_io == NULL) {
+            pg_statio_user_indexes(db->conn, db->server_version, db->fams, &db->labels,
+                                             NULL, NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_stat_indexes_io;
+            while (filter != NULL) {
+                pg_statio_user_indexes(db->conn, db->server_version, db->fams, &db->labels,
+                                                 filter->arg1, filter->arg2, filter->arg3);
+                filter = filter->next;
+            }
+        }
+    }
+
+    if (db->flags & COLLECT_SEQUENCES_IO) {
+        if (db->pg_stat_sequence_io == NULL) {
+            pg_statio_user_sequences(db->conn, db->server_version, db->fams, &db->labels,
+                                               NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_stat_sequence_io;
+            while (filter != NULL) {
+                pg_statio_user_sequences(db->conn, db->server_version, db->fams, &db->labels,
+                                                   filter->arg1, filter->arg2);
+                filter = filter->next;
+            }
+        }
+    }
+
+    if (db->flags & COLLECT_FUNCTIONS) {
+        if (db->pg_stat_function == NULL) {
+            pg_stat_user_functions(db->conn, db->server_version, db->fams, &db->labels,
+                                             NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_stat_function;
+            while (filter != NULL) {
+                pg_stat_user_functions(db->conn, db->server_version, db->fams, &db->labels,
+                                                 filter->arg1, filter->arg2);
+                filter = filter->next;
+            }
+        }
+    }
+
+    if (db->flags & COLLECT_ACTIVITY)
+        pg_stat_activity (db->conn, db->server_version, db->fams, &db->labels, db->database);
+    if (db->flags & COLLECT_REPLICATION_SLOTS)
+        pg_replication_slots(db->conn, db->server_version, db->fams, &db->labels, db->database);
+    if (db->flags & COLLECT_REPLICATION)
+        pg_stat_replication(db->conn, db->server_version, db->fams, &db->labels);
+    if (db->flags & COLLECT_ARCHIVER)
+        pg_stat_archiver(db->conn, db->server_version, db->fams, &db->labels);
+    if (db->flags & COLLECT_BGWRITER)
+        pg_stat_bgwriter(db->conn, db->server_version, db->fams, &db->labels);
+    if (db->flags & COLLECT_SLRU)
+        pg_stat_slru(db->conn, db->server_version, db->fams, &db->labels);
+
+    plugin_dispatch_metric_family_array(db->fams, FAM_PG_MAX, submit);
+
+    for (size_t i = 0; i < db->queries_num; i++) {
+        db_query_preparation_area_t *prep_area = db->q_prep_areas[i];
+        db_query_t *q = db->queries[i];
+
+        if ((db->server_version != 0) && (db_query_check_version(q, db->server_version) <= 0))
+            continue;
+
+        psql_exec_query(db, q, prep_area);
+    }
+
+    return 0;
+}
+
+static int psql_config_add_filter(pg_stat_filter_t **stat_filter, char *arg1, size_t arg1_len,
+                                                                  char *arg2, size_t arg2_len,
+                                                                  char *arg3, size_t arg3_len)
+{
+    pg_stat_filter_t *filter = calloc(1, sizeof(*filter));
+    if (filter == NULL) {
+        PLUGIN_ERROR("calloc failed");
+        return -1;
+    }
+
+    if ((arg1 != NULL) && (arg1_len > 0)) {
+        filter->arg1 = strndup(arg1, arg1_len);
+        if (filter->arg1 == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            pg_stat_filter_free(filter);
+            return -1;
+        }
+    }
+
+    if ((arg2 != NULL) && (arg2_len > 0)) {
+        filter->arg2 = strndup(arg2, arg2_len);
+        if (filter->arg2 == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            pg_stat_filter_free(filter);
+            return -1;
+        }
+    }
+
+    if ((arg3 != NULL) && (arg3_len > 0)) {
+        filter->arg3 = strndup(arg3, arg3_len);
+        if (filter->arg3 == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            pg_stat_filter_free(filter);
+            return -1;
+        }
+    }
+
+    pg_stat_filter_t *next = *stat_filter;
+    *stat_filter = filter;
+    filter->next = next;
+
+    return 0;
+}
+
+static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
+{
+    if (ci->values_num == 0) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires one or more arguments.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    for (int i = 0; i < ci->values_num; i++) {
+        if (ci->values[i].type != CONFIG_TYPE_STRING) {
+            PLUGIN_ERROR("The %d argument of '%s' option in %s:%d must be a string.",
+                         i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
+        }
+
+        char *option = ci->values[i].value.string;
+
+        bool negate = false;
+        if (option[0] == '!') {
+            negate = true;
+            option++;
+        }
+
+        if (!strcasecmp("ALL", option)) {
+            if (negate) {
+                db->flags = 0ULL;
+            } else {
+                db->flags = ~0ULL;
+            }
+            continue;
+        }
+
+        char *arg1 = strchr(option, '(');
+        if (arg1 != NULL) {
+            if (negate) {
+                PLUGIN_ERROR("The %d argument of '%s' option in %s:%d cannot be negated.",
+                             i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+                return -1;
+            }
+            arg1++;
+
+            size_t arg1_len = 0;
+            size_t arg2_len = 0;
+            size_t arg3_len = 0;
+            char *arg3 = NULL;
+
+            char *arg2 = strchr(arg1, ',');
+            if (arg2 != NULL) {
+                arg1_len = arg2 - arg1;
+                arg2++;
+                arg3 = strchr(arg2, ',');
+                if (arg3 != NULL) {
+                    arg2_len = arg3 - arg2;
+                    arg3++;
+                    char *end = strchr(arg3, ')');
+                    if (end != NULL) {
+                        PLUGIN_ERROR("Missing end ')' in the %d argument of '%s' option in %s:%d.",
+                                      i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+                        return -1;
+                    }
+                    arg3_len = end - arg3;
+                } else {
+                    char *end = strchr(arg2, ')');
+                    if (end != NULL) {
+                        PLUGIN_ERROR("Missing end ')' in the %d argument of '%s' option in %s:%d.",
+                                      i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+                        return -1;
+                    }
+                    arg2_len = end - arg2;
+                }
+
+            } else {
+                char *end = strchr(arg1, ')');
+                if (end == NULL) {
+                    PLUGIN_ERROR("Missing end ')' in the %d argument of '%s' option in %s:%d.",
+                                  i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+                    return -1;
+                }
+                arg1_len = end - arg1;
+            }
+
+            int status = 0;
+            if (!strcasecmp("table", option)) {
+                db->flags |= COLLECT_TABLE;
+                status = psql_config_add_filter(&db->pg_stat_table, arg1, arg1_len,
+                                                                    arg2, arg2_len,
+                                                                    arg3, arg3_len);
+            } else if (!strcasecmp("table_io", option)) {
+                db->flags |= COLLECT_TABLE_IO;
+                status = psql_config_add_filter(&db->pg_stat_table_io, arg1, arg1_len,
+                                                                       arg2, arg2_len,
+                                                                       arg3, arg3_len);
+            } else if (!strcasecmp("indexes", option)) {
+                db->flags |= COLLECT_INDEXES;
+                status = psql_config_add_filter(&db->pg_stat_indexes, arg1, arg1_len,
+                                                                      arg2, arg2_len,
+                                                                      arg3, arg3_len);
+            } else if (!strcasecmp("indexes_io", option)) {
+                db->flags |= COLLECT_INDEXES_IO;
+                status = psql_config_add_filter(&db->pg_stat_indexes_io, arg1, arg1_len,
+                                                                         arg2, arg2_len,
+                                                                         arg3, arg3_len);
+            } else if (!strcasecmp("sequences_io", option)) {
+                db->flags |= COLLECT_SEQUENCES_IO;
+                status = psql_config_add_filter(&db->pg_stat_sequence_io, arg1, arg1_len,
+                                                                          arg2, arg2_len,
+                                                                          arg3, arg3_len);
+            } else if (!strcasecmp("functions", option)) {
+                db->flags |= COLLECT_FUNCTIONS;
+                status = psql_config_add_filter(&db->pg_stat_function, arg1, arg1_len,
+                                                                       arg2, arg2_len,
+                                                                       arg3, arg3_len);
+            } else {
+                PLUGIN_ERROR("The %d argument of '%s' option in %s:%d doesn't have arguments.",
+                             i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+                return -1;
+            }
+
+            if (status != 0) {
+                PLUGIN_ERROR("Failed to process the %d argument of '%s' option in %s:%d.",
+                             i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+                return -1;
+            }
+
+            continue;
+        }
+
+        for (size_t j = 0; j < pg_flags_size; j++)  {
+            if (!strcasecmp(pg_flags[j].option, option)) {
+                if (negate) {
+                    db->flags &= ~pg_flags[j].flag;
+                } else {
+                    db->flags |= pg_flags[j].flag;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+static int psql_config_database(config_item_t *ci)
+{
+    psql_database_t *db = calloc(1, sizeof(*db));
+    if (db == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
+
+    int status = cf_util_get_string(ci, &db->instance);
+    if (status != 0) {
+        PLUGIN_ERROR("'instance' expects a single string argument.");
+        free(db);
+        return -1;
+    }
+
+    memcpy(db->fams, pg_fams, sizeof(db->fams[0])*FAM_PG_MAX);
+
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp(child->key, "database") == 0) {
+            status = cf_util_get_string(child, &db->database);
+        } else if (strcasecmp(child->key, "host") == 0) {
+            status = cf_util_get_string(child, &db->host);
+        } else if (strcasecmp(child->key, "port") == 0) {
+            status = cf_util_get_service(child, &db->port);
+        } else if (strcasecmp(child->key, "user") == 0) {
+            status = cf_util_get_string(child, &db->user);
+        } else if (strcasecmp(child->key, "password") == 0) {
+            status = cf_util_get_string(child, &db->password);
+        } else if (strcasecmp(child->key, "metric-prefix") == 0) {
+            status = cf_util_get_string(child, &db->metric_prefix);
+        } else if (strcasecmp(child->key, "label") == 0) {
+            status = cf_util_get_label(child, &db->labels);
+        } else if (strcasecmp(child->key, "ssl-mode") == 0) {
+            status = cf_util_get_string(child, &db->sslmode);
+        } else if (strcasecmp(child->key, "krb-srv-name") == 0) {
+            status = cf_util_get_string(child, &db->krbsrvname);
+        } else if (strcasecmp(child->key, "service") == 0) {
+            status = cf_util_get_string(child, &db->service);
+        } else if (strcasecmp(child->key, "query") == 0) {
+            status = db_query_pick_from_list(child, queries, queries_num,
+                                                    &db->queries, &db->queries_num);
+        } else if (strcasecmp(child->key, "collect") == 0) {
+            status = psql_config_collect(child, db);
+        } else if (strcasecmp(child->key, "interval") == 0) {
+            status = cf_util_get_cdtime(child, &interval);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0) {
+        psql_database_delete(db);
+        return -1;
+    }
+
+    if (db->database == NULL) {
+        PLUGIN_ERROR("Instance '%s': No 'database' has been configured.", db->instance);
+        psql_database_delete(db);
+        return -1;
+    }
+
+    label_set_add(&db->labels, true, "instance", db->instance);
+
+    return plugin_register_complex_read("postgresql", db->instance, psql_read, interval,
+                                        &(user_data_t){.data=db, .free_func=psql_database_delete});
+}
+
+static int psql_config(config_item_t *ci)
+{
     int status = 0;
 
-    if ((ds->ds[i].type != DS_TYPE_GAUGE) &&
-        (ds->ds[i].type != DS_TYPE_COUNTER) &&
-        (ds->ds[i].type != DS_TYPE_DERIVE)) {
-      log_err("c_psql_write: Unknown data source type: %i", ds->ds[i].type);
-      sfree(rates);
-      return NULL;
-    }
+    for (int i = 0; i < ci->children_num; ++i) {
+        config_item_t *child = ci->children + i;
 
-    if (ds->ds[i].type == DS_TYPE_GAUGE)
-      status =
-          ssnprintf(str_ptr, str_len, "," GAUGE_FORMAT, vl->values[i].gauge);
-    else if (store_rates) {
-      if (rates == NULL)
-        rates = uc_get_rate_vl(ds, vl);
-      if (rates == NULL) {
-        log_err("c_psql_write: Failed to determine rate");
-        return NULL;
-      }
-
-      status = ssnprintf(str_ptr, str_len, ",%lf", rates[i]);
-    } else if (ds->ds[i].type == DS_TYPE_COUNTER)
-      status = ssnprintf(str_ptr, str_len, ",%" PRIu64,
-                         (uint64_t)vl->values[i].counter);
-    else if (ds->ds[i].type == DS_TYPE_DERIVE)
-      status = ssnprintf(str_ptr, str_len, ",%" PRIi64, vl->values[i].derive);
-
-    if (status < 1) {
-      str_len = 0;
-      break;
-    } else if ((size_t)status >= str_len) {
-      str_len = 0;
-      break;
-    } else {
-      str_ptr += status;
-      str_len -= (size_t)status;
-    }
-  }
-
-  sfree(rates);
-
-  if (str_len <= 2) {
-    log_err("c_psql_write: Failed to stringify value list");
-    return NULL;
-  }
-
-  /* overwrite the first comma */
-  string[0] = '{';
-  str_ptr[0] = '}';
-  str_ptr[1] = '\0';
-
-  return string;
-} /* values_to_sqlarray */
-
-static int c_psql_write(const data_set_t *ds, const value_list_t *vl,
-                        user_data_t *ud) {
-  c_psql_database_t *db;
-
-  char time_str[RFC3339NANO_SIZE];
-  char values_name_str[1024];
-  char values_type_str[1024];
-  char values_str[1024];
-
-  const char *params[9];
-
-  int success = 0;
-
-  if ((ud == NULL) || (ud->data == NULL)) {
-    log_err("c_psql_write: Invalid user data.");
-    return -1;
-  }
-
-  db = ud->data;
-  assert(db->database != NULL);
-  assert(db->writers != NULL);
-
-  if (rfc3339nano_local(time_str, sizeof(time_str), vl->time) != 0) {
-    log_err("c_psql_write: Failed to convert time to RFC 3339 format");
-    return -1;
-  }
-
-  if (values_name_to_sqlarray(ds, values_name_str, sizeof(values_name_str)) ==
-      NULL)
-    return -1;
-
-#define VALUE_OR_NULL(v) ((((v) == NULL) || (*(v) == '\0')) ? NULL : (v))
-
-  params[0] = time_str;
-  params[1] = vl->host;
-  params[2] = vl->plugin;
-  params[3] = VALUE_OR_NULL(vl->plugin_instance);
-  params[4] = vl->type;
-  params[5] = VALUE_OR_NULL(vl->type_instance);
-  params[6] = values_name_str;
-
-#undef VALUE_OR_NULL
-
-  if (db->expire_delay > 0 &&
-      vl->time < (cdtime() - vl->interval - db->expire_delay)) {
-    log_info("c_psql_write: Skipped expired value @ %s - %s/%s-%s/%s-%s/%s",
-             params[0], params[1], params[2], params[3], params[4], params[5],
-             params[6]);
-    return 0;
-  }
-
-  pthread_mutex_lock(&db->db_lock);
-
-  if (0 != c_psql_check_connection(db)) {
-    pthread_mutex_unlock(&db->db_lock);
-    return -1;
-  }
-
-  if ((db->commit_interval > 0) && (db->next_commit == 0))
-    c_psql_begin(db);
-
-  for (size_t i = 0; i < db->writers_num; ++i) {
-    c_psql_writer_t *writer;
-    PGresult *res;
-
-    writer = db->writers[i];
-
-    if (values_type_to_sqlarray(ds, values_type_str, sizeof(values_type_str),
-                                writer->store_rates) == NULL) {
-      pthread_mutex_unlock(&db->db_lock);
-      return -1;
-    }
-
-    if (values_to_sqlarray(ds, vl, values_str, sizeof(values_str),
-                           writer->store_rates) == NULL) {
-      pthread_mutex_unlock(&db->db_lock);
-      return -1;
-    }
-
-    params[7] = values_type_str;
-    params[8] = values_str;
-
-    res = PQexecParams(db->conn, writer->statement, STATIC_ARRAY_SIZE(params),
-                       NULL, (const char *const *)params, NULL, NULL,
-                       /* return text data */ 0);
-
-    if ((PGRES_COMMAND_OK != PQresultStatus(res)) &&
-        (PGRES_TUPLES_OK != PQresultStatus(res))) {
-      PQclear(res);
-
-      if ((CONNECTION_OK != PQstatus(db->conn)) &&
-          (0 == c_psql_check_connection(db))) {
-        /* try again */
-        res = PQexecParams(
-            db->conn, writer->statement, STATIC_ARRAY_SIZE(params), NULL,
-            (const char *const *)params, NULL, NULL, /* return text data */ 0);
-
-        if ((PGRES_COMMAND_OK == PQresultStatus(res)) ||
-            (PGRES_TUPLES_OK == PQresultStatus(res))) {
-          PQclear(res);
-          success = 1;
-          continue;
+        if (strcasecmp(child->key, "instance") == 0) {
+            status = psql_config_database(child);
+        } else if (strcasecmp("query", child->key) == 0) {
+            status = db_query_create(&queries, &queries_num, child, NULL);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
         }
-      }
 
-      log_err("Failed to execute SQL query: %s", PQerrorMessage(db->conn));
-      log_info("SQL query was: '%s', "
-               "params: %s, %s, %s, %s, %s, %s, %s, %s",
-               writer->statement, params[0], params[1], params[2], params[3],
-               params[4], params[5], params[6], params[7]);
-
-      /* this will abort any current transaction -> restart */
-      if (db->next_commit > 0)
-        c_psql_commit(db);
-
-      pthread_mutex_unlock(&db->db_lock);
-      return -1;
+        if (status != 0)
+            return -1;
     }
 
-    PQclear(res);
-    success = 1;
-  }
-
-  if ((db->next_commit > 0) && (cdtime() > db->next_commit))
-    c_psql_commit(db);
-
-  pthread_mutex_unlock(&db->db_lock);
-
-  if (!success)
-    return -1;
-  return 0;
-} /* c_psql_write */
-
-/* We cannot flush single identifiers as all we do is to commit the currently
- * running transaction, thus making sure that all written data is actually
- * visible to everybody. */
-static int c_psql_flush(cdtime_t timeout,
-                        __attribute__((unused)) const char *ident,
-                        user_data_t *ud) {
-  c_psql_database_t **dbs = databases;
-  size_t dbs_num = databases_num;
-
-  if ((ud != NULL) && (ud->data != NULL)) {
-    dbs = (void *)&ud->data;
-    dbs_num = 1;
-  }
-
-  for (size_t i = 0; i < dbs_num; ++i) {
-    c_psql_database_t *db = dbs[i];
-
-    /* don't commit if the timeout is larger than the regular commit
-     * interval as in that case all requested data has already been
-     * committed */
-    if ((db->next_commit > 0) && (db->commit_interval > timeout))
-      c_psql_commit(db);
-  }
-  return 0;
-} /* c_psql_flush */
-
-static int c_psql_shutdown(void) {
-  bool had_flush = false;
-
-  plugin_unregister_read_group("postgresql");
-
-  for (size_t i = 0; i < databases_num; ++i) {
-    c_psql_database_t *db = databases[i];
-
-    if (db->writers_num > 0) {
-      char cb_name[DATA_MAX_NAME_LEN];
-      ssnprintf(cb_name, sizeof(cb_name), "postgresql-%s", db->database);
-
-      if (!had_flush) {
-        plugin_unregister_flush("postgresql");
-        had_flush = true;
-      }
-
-      plugin_unregister_flush(cb_name);
-      plugin_unregister_write(cb_name);
-    }
-
-    sfree(db);
-  }
-
-  udb_query_free(queries, queries_num);
-  queries = NULL;
-  queries_num = 0;
-
-  sfree(writers);
-  writers = NULL;
-  writers_num = 0;
-
-  sfree(databases);
-  databases = NULL;
-  databases_num = 0;
-
-  return 0;
-} /* c_psql_shutdown */
-
-static int config_query_param_add(udb_query_t *q, oconfig_item_t *ci) {
-  c_psql_user_data_t *data;
-  const char *param_str;
-
-  c_psql_param_t *tmp;
-
-  data = udb_query_get_user_data(q);
-  if (data == NULL) {
-    data = calloc(1, sizeof(*data));
-    if (data == NULL) {
-      log_err("Out of memory.");
-      return -1;
-    }
-    data->params = NULL;
-    data->params_num = 0;
-
-    udb_query_set_user_data(q, data);
-  }
-
-  tmp = realloc(data->params, (data->params_num + 1) * sizeof(*data->params));
-  if (tmp == NULL) {
-    log_err("Out of memory.");
-    return -1;
-  }
-  data->params = tmp;
-
-  param_str = ci->values[0].value.string;
-  if (0 == strcasecmp(param_str, "hostname"))
-    data->params[data->params_num] = C_PSQL_PARAM_HOST;
-  else if (0 == strcasecmp(param_str, "database"))
-    data->params[data->params_num] = C_PSQL_PARAM_DB;
-  else if (0 == strcasecmp(param_str, "username"))
-    data->params[data->params_num] = C_PSQL_PARAM_USER;
-  else if (0 == strcasecmp(param_str, "interval"))
-    data->params[data->params_num] = C_PSQL_PARAM_INTERVAL;
-  else if (0 == strcasecmp(param_str, "instance"))
-    data->params[data->params_num] = C_PSQL_PARAM_INSTANCE;
-  else {
-    log_err("Invalid parameter \"%s\".", param_str);
-    return 1;
-  }
-
-  data->params_num++;
-  return 0;
-} /* config_query_param_add */
-
-static int config_query_callback(udb_query_t *q, oconfig_item_t *ci) {
-  if (0 == strcasecmp("Param", ci->key))
-    return config_query_param_add(q, ci);
-
-  log_err("Option not allowed within a Query block: `%s'", ci->key);
-
-  return -1;
-} /* config_query_callback */
-
-static int config_add_writer(oconfig_item_t *ci, c_psql_writer_t *src_writers,
-                             size_t src_writers_num,
-                             c_psql_writer_t ***dst_writers,
-                             size_t *dst_writers_num) {
-  char *name;
-
-  size_t i;
-
-  if ((ci == NULL) || (dst_writers == NULL) || (dst_writers_num == NULL))
-    return -1;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    log_err("`Writer' expects a single string argument.");
-    return 1;
-  }
-
-  name = ci->values[0].value.string;
-
-  for (i = 0; i < src_writers_num; ++i) {
-    c_psql_writer_t **tmp;
-
-    if (strcasecmp(name, src_writers[i].name) != 0)
-      continue;
-
-    tmp = realloc(*dst_writers, sizeof(**dst_writers) * (*dst_writers_num + 1));
-    if (tmp == NULL) {
-      log_err("Out of memory.");
-      return -1;
-    }
-
-    tmp[*dst_writers_num] = src_writers + i;
-
-    *dst_writers = tmp;
-    ++(*dst_writers_num);
-    break;
-  }
-
-  if (i >= src_writers_num) {
-    log_err("No such writer: `%s'", name);
-    return -1;
-  }
-
-  return 0;
-} /* config_add_writer */
-
-static int c_psql_config_writer(oconfig_item_t *ci) {
-  c_psql_writer_t *writer;
-  c_psql_writer_t *tmp;
-
-  int status = 0;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    log_err("<Writer> expects a single string argument.");
-    return 1;
-  }
-
-  tmp = realloc(writers, sizeof(*writers) * (writers_num + 1));
-  if (tmp == NULL) {
-    log_err("Out of memory.");
-    return -1;
-  }
-
-  writers = tmp;
-  writer = writers + writers_num;
-  memset(writer, 0, sizeof(*writer));
-
-  writer->name = sstrdup(ci->values[0].value.string);
-  writer->statement = NULL;
-  writer->store_rates = true;
-
-  for (int i = 0; i < ci->children_num; ++i) {
-    oconfig_item_t *c = ci->children + i;
-
-    if (strcasecmp("Statement", c->key) == 0)
-      status = cf_util_get_string(c, &writer->statement);
-    else if (strcasecmp("StoreRates", c->key) == 0)
-      status = cf_util_get_boolean(c, &writer->store_rates);
-    else
-      log_warn("Ignoring unknown config key \"%s\".", c->key);
-  }
-
-  if (status != 0) {
-    sfree(writer->statement);
-    sfree(writer->name);
-    return status;
-  }
-
-  ++writers_num;
-  return 0;
-} /* c_psql_config_writer */
-
-static int c_psql_config_database(oconfig_item_t *ci) {
-  c_psql_database_t *db;
-
-  cdtime_t interval = 0;
-  char cb_name[DATA_MAX_NAME_LEN];
-  static bool have_flush;
-
-  if ((1 != ci->values_num) || (OCONFIG_TYPE_STRING != ci->values[0].type)) {
-    log_err("<Database> expects a single string argument.");
-    return 1;
-  }
-
-  db = c_psql_database_new(ci->values[0].value.string);
-  if (db == NULL)
-    return -1;
-
-  for (int i = 0; i < ci->children_num; ++i) {
-    oconfig_item_t *c = ci->children + i;
-
-    if (0 == strcasecmp(c->key, "Host"))
-      cf_util_get_string(c, &db->host);
-    else if (0 == strcasecmp(c->key, "Port"))
-      cf_util_get_service(c, &db->port);
-    else if (0 == strcasecmp(c->key, "User"))
-      cf_util_get_string(c, &db->user);
-    else if (0 == strcasecmp(c->key, "Password"))
-      cf_util_get_string(c, &db->password);
-    else if (0 == strcasecmp(c->key, "Instance"))
-      cf_util_get_string(c, &db->instance);
-    else if (0 == strcasecmp(c->key, "Plugin"))
-      cf_util_get_string(c, &db->plugin_name);
-    else if (0 == strcasecmp(c->key, "SSLMode"))
-      cf_util_get_string(c, &db->sslmode);
-    else if (0 == strcasecmp(c->key, "KRBSrvName"))
-      cf_util_get_string(c, &db->krbsrvname);
-    else if (0 == strcasecmp(c->key, "Service"))
-      cf_util_get_string(c, &db->service);
-    else if (0 == strcasecmp(c->key, "Query"))
-      udb_query_pick_from_list(c, queries, queries_num, &db->queries,
-                               &db->queries_num);
-    else if (0 == strcasecmp(c->key, "Writer"))
-      config_add_writer(c, writers, writers_num, &db->writers,
-                        &db->writers_num);
-    else if (0 == strcasecmp(c->key, "Interval"))
-      cf_util_get_cdtime(c, &interval);
-    else if (strcasecmp("CommitInterval", c->key) == 0)
-      cf_util_get_cdtime(c, &db->commit_interval);
-    else if (strcasecmp("ExpireDelay", c->key) == 0)
-      cf_util_get_cdtime(c, &db->expire_delay);
-    else
-      log_warn("Ignoring unknown config key \"%s\".", c->key);
-  }
-
-  /* If no `Query' options were given, add the default queries.. */
-  if ((db->queries_num == 0) && (db->writers_num == 0)) {
-    for (int i = 0; i < def_queries_num; i++)
-      udb_query_pick_from_list_by_name(def_queries[i], queries, queries_num,
-                                       &db->queries, &db->queries_num);
-  }
-
-  if (db->queries_num > 0) {
-    db->q_prep_areas = calloc(db->queries_num, sizeof(*db->q_prep_areas));
-    if (db->q_prep_areas == NULL) {
-      log_err("Out of memory.");
-      c_psql_database_delete(db);
-      return -1;
-    }
-  }
-
-  for (int i = 0; (size_t)i < db->queries_num; ++i) {
-    c_psql_user_data_t *data;
-    data = udb_query_get_user_data(db->queries[i]);
-    if ((data != NULL) && (data->params_num > db->max_params_num))
-      db->max_params_num = data->params_num;
-
-    db->q_prep_areas[i] = udb_query_allocate_preparation_area(db->queries[i]);
-
-    if (db->q_prep_areas[i] == NULL) {
-      log_err("Out of memory.");
-      c_psql_database_delete(db);
-      return -1;
-    }
-  }
-
-  ssnprintf(cb_name, sizeof(cb_name), "postgresql-%s", db->instance);
-
-  user_data_t ud = {.data = db, .free_func = c_psql_database_delete};
-
-  if (db->queries_num > 0) {
-    ++db->ref_cnt;
-    plugin_register_complex_read("postgresql", cb_name, c_psql_read, interval,
-                                 &ud);
-  }
-  if (db->writers_num > 0) {
-    ++db->ref_cnt;
-    plugin_register_write(cb_name, c_psql_write, &ud);
-
-    if (!have_flush) {
-      /* flush all */
-      plugin_register_flush("postgresql", c_psql_flush, /* user data = */ NULL);
-      have_flush = true;
-    }
-
-    /* flush this connection only */
-    ++db->ref_cnt;
-    plugin_register_flush(cb_name, c_psql_flush, &ud);
-  } else if (db->commit_interval > 0) {
-    log_warn("Database '%s': You do not have any writers assigned to "
-             "this database connection. Setting 'CommitInterval' does "
-             "not have any effect.",
-             db->database);
-  }
-  return 0;
-} /* c_psql_config_database */
-
-static int c_psql_config(oconfig_item_t *ci) {
-  static int have_def_config;
-
-  if (0 == have_def_config) {
-    oconfig_item_t *c;
-
-    have_def_config = 1;
-
-    c = oconfig_parse_file(C_PSQL_DEFAULT_CONF);
-    if (NULL == c)
-      log_err("Failed to read default config (" C_PSQL_DEFAULT_CONF ").");
-    else
-      c_psql_config(c);
-
-    if (NULL == queries)
-      log_err("Default config (" C_PSQL_DEFAULT_CONF ") did not define "
-              "any queries - please check your installation.");
-  }
-
-  for (int i = 0; i < ci->children_num; ++i) {
-    oconfig_item_t *c = ci->children + i;
-
-    if (0 == strcasecmp(c->key, "Query"))
-      udb_query_create(&queries, &queries_num, c,
-                       /* callback = */ config_query_callback);
-    else if (0 == strcasecmp(c->key, "Writer"))
-      c_psql_config_writer(c);
-    else if (0 == strcasecmp(c->key, "Database"))
-      c_psql_config_database(c);
-    else
-      log_warn("Ignoring unknown config key \"%s\".", c->key);
-  }
-  return 0;
-} /* c_psql_config */
-
-void module_register(void) {
-  plugin_register_complex_config("postgresql", c_psql_config);
-  plugin_register_shutdown("postgresql", c_psql_shutdown);
-} /* module_register */
+    return 0;
+}
+
+static int psql_shutdown(void)
+{
+    db_query_free(queries, queries_num);
+    queries = NULL;
+    queries_num = 0;
+    return 0;
+}
+
+void module_register(void)
+{
+    plugin_register_config("postgresql", psql_config);
+    plugin_register_shutdown("postgresql", psql_shutdown);
+}
