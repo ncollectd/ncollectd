@@ -1,0 +1,26 @@
+# TYPE system_serial_read_bytes counter
+system_serial_read_bytes_total{hostname="localhost.localdomain",irq="30",line="0"} 2489
+system_serial_read_bytes_total{hostname="localhost.localdomain",irq="31",line="1"} 0
+system_serial_read_bytes_total{hostname="localhost.localdomain",irq="32",line="2"} 8953
+system_serial_read_bytes_total{hostname="localhost.localdomain",irq="33",line="3"} 8931
+system_serial_read_bytes_total{hostname="localhost.localdomain",irq="34",line="4"} 1256
+system_serial_read_bytes_total{hostname="localhost.localdomain",irq="35",line="5"} 0
+# TYPE system_serial_parity_errors counter
+system_serial_parity_errors_total{hostname="localhost.localdomain",irq="32",line="2"} 97
+system_serial_parity_errors_total{hostname="localhost.localdomain",irq="33",line="3"} 98
+system_serial_parity_errors_total{hostname="localhost.localdomain",irq="34",line="4"} 9
+# TYPE system_serial_break_conditions counter
+system_serial_break_conditions_total{hostname="localhost.localdomain",irq="32",line="2"} 3
+system_serial_break_conditions_total{hostname="localhost.localdomain",irq="33",line="3"} 2
+system_serial_break_conditions_total{hostname="localhost.localdomain",irq="34",line="4"} 49
+# TYPE system_serial_write_bytes counter
+system_serial_write_bytes_total{hostname="localhost.localdomain",irq="30",line="0"} 0
+system_serial_write_bytes_total{hostname="localhost.localdomain",irq="31",line="1"} 0
+system_serial_write_bytes_total{hostname="localhost.localdomain",irq="32",line="2"} 9114
+system_serial_write_bytes_total{hostname="localhost.localdomain",irq="33",line="3"} 9136
+system_serial_write_bytes_total{hostname="localhost.localdomain",irq="34",line="4"} 107
+system_serial_write_bytes_total{hostname="localhost.localdomain",irq="35",line="5"} 0
+# TYPE system_serial_framing_errors counter
+system_serial_framing_errors_total{hostname="localhost.localdomain",irq="32",line="2"} 46
+system_serial_framing_errors_total{hostname="localhost.localdomain",irq="33",line="3"} 44
+system_serial_framing_errors_total{hostname="localhost.localdomain",irq="34",line="4"} 6

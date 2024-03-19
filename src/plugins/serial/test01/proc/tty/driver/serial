@@ -1,0 +1,7 @@
+serinfo:1.0 driver revision:
+0: uart:OMAP UART0 mmio:0x44E09000 irq:30 tx:2489 rx:0 RTS|CTS|DTR|DSR
+1: uart:OMAP UART1 mmio:0x48022000 irq:31 tx:0 rx:0 CTS|DSR|CD|RI
+2: uart:OMAP UART2 mmio:0x48024000 irq:32 tx:8953 rx:9114 fe:46 pe:97 brk:3 CTS|DSR
+3: uart:OMAP UART3 mmio:0x481A6000 irq:33 tx:8931 rx:9136 fe:44 pe:98 brk:2 CTS|DSR
+4: uart:OMAP UART4 mmio:0x481A8000 irq:34 tx:1256 rx:107 fe:6 pe:9 brk:49 CTS|DSR
+5: uart:OMAP UART5 mmio:0x481AA000 irq:35 tx:0 rx:0 CTS|DSR
