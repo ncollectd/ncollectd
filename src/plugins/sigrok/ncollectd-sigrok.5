@@ -1,0 +1,78 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-sigrok 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd sigrok man page"
+.SH NAME
+ncollectd-sigrok \- Documentation of ncollectd's sigrok plugin
+.SH SYNOPSIS
+\fBload-plugin\fP sigrok
+.br
+\fBplugin\fP sigrok {
+    \fBlog-level\fP \fIlevel\fP
+    \fBdevice\fP \fIname\fP {
+        \fBdriver\fP \fIdriver\fP
+        \fBconn\fP \fIconnection-spec\fP
+        \fBserial-comm\fP \fIserial-device\fP
+        \fBminimum-interval\fP \fIseconds\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBchannel\fP \fIchannel\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBsigrok\fP plugin uses \fIlibsigrok\fP to retrieve measurements from any device
+supported by the sigrok project.
+.PP
+The plugin supports the following options:
+.TP
+\fBlog-level\fP \fIlevel\fP
+The \fIsigrok\fP logging level to pass on to the ncollectd log, as a number
+between \fB0\fP and \fB5\fP (inclusive). These levels correspond to \fINone\fP,
+\fIErrors\fP, \fIWarnings\fP, \fIInformational\fP, \fIDebug\fP and \fISpew\fP,
+respectively. The default is \fB2\fP (\fIWarnings\fP). The \fIsigrok\fP log
+messages, regardless of their level, are always submitted to ncollectd at its
+INFO log level.
+.TP
+\fBdevice\fP \fIname\fP
+A sigrok-supported device, uniquely identified by this section's options. The
+\fIname\fP is passed to ncollectd as the \fIdevice\fP label.
+.RS
+.TP
+\fBdriver\fP \fIdriver\fP
+The sigrok driver to use for this device.
+.TP
+\fBconn\fP \fIconnection-spec\fP
+If the device cannot be auto-discovered, or more than one might be discovered
+by the driver, \fIconnection-spec\fP specifies the connection string to the device.
+It can be of the form of a device path (e.g. \fI/dev/ttyUSB2\fP), or, in
+case of a non-serial USB-connected device, the USB \fIVendorID\fP\fB.\fP\fIProductID\fP
+separated by a period (e.g. \f(CW0403.6001\fP). A USB device can also be
+specified as \fIBus\fP\fB.\fP\fIAddress\fP (e.g. \f(CW1.41\fP).
+.TP
+\fBserial-comm\fP \fIserial-device\fP
+For serial devices with non-standard port settings, this option can be used
+to specify them in a form understood by \fIsigrok\fP, e.g. \f(CW9600/8n1\fP.
+This should not be necessary; drivers know how to communicate with devices they
+support.
+.TP
+\fBminimum-interval\fP \fIseconds\fP
+Specifies the minimum time between measurement dispatches to ncollectd, in
+seconds. Since some \fIsigrok\fP supported devices can acquire measurements many
+times per second, it may be necessary to throttle these.
+
+The default \fBminimum-interval\fP is \fB0\fP, meaning measurements received from the
+device are always dispatched to ncollectd. When throttled, unused measurements are discarded.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name.
+.TP
+\fBchannel\fP \fIchannel\fP
+Send only metrics for this \fIchannel\fP name. It can appear multiple times.
+By default, it shows all channels if not set.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBdevice\fP block.
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
