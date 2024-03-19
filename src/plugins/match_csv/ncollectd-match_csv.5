@@ -1,0 +1,111 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-match_csv 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd match_csv man page"
+.SH NAME
+ncollectd-match_csv \- Documentation of ncollectd's csv match plugin
+.SH SYNOPSIS
+\fBmatch\fP csv {
+    \fBmetric-prefix\fP \fIprefix\fP
+    \fBlabel\fP \fIkey\fP \fIvalue\fP
+    \fBtime-from\fP \fIindex\fP
+    \fBfield-separator\fP \fIchar\fP
+    \fBmetric\fP {
+        \fBmetric\fP  \fImetric\fP
+        \fBhelp\fP \fIhelp\fP
+        \fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBmetric-from\fP \fIindex\fP
+        \fBlabel-from\fP \fIkey\fP \fIindex\fP
+        \fBvalue-from\fP \fIindex\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmatch_csv\fP plugin parse lines in the CSV format,
+.PP
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepend the \fIprefix\fP to the metrics found in the \fBmetric\fP blocks.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBtime-from\fP \fIindex\fP
+Configure to read the timestamp of the metric from the field with the zero-based index.
+.TP
+\fBfield-separator\fP \fIchar\fP
+Any character a delimiter between the different columns of the table.
+.TP
+\fBmetric\fP
+.RS
+.TP
+\fBmetric\fP \fImetric\fP
+Set metric name.
+.TP
+\fBhelp\fP \fIhelp\fP
+Set metric help.
+.TP
+\fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
+.RS
+.TP
+\fBgauge\fP
+The value is a gauge, you must specify also the type of the gauge:
+.RS
+.TP
+\fBaverage\fP
+Calculate the average
+.TP
+\fBmin\fP
+Use the smallest number only.
+.TP
+\fBmax\fP
+Use the greatest number only.
+.TP
+\fBlast\fP
+Use the last number found.
+.TP
+\fBinc\fP
+Increase the internal counter by one.
+.TP
+\fBadd\fP
+Add the matched value to the internal counter.
+.TP
+\fBpersist\fP
+Use the last number found.
+The number is not reset at the end of an interval.
+It is continously reported until another number is matched.
+.RE
+.TP
+\fBcounter\fP
+The value is a counter, you must specify also the type of the counter:
+.RS
+.TP
+\fBset\fP
+Simply sets the internal counter to this value.
+.TP
+\fBadd\fP
+Add the matched value to the internal counter.
+.TP
+\fBinc\fP
+Increase the internal counter by one.
+.RE
+.RE
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepend the \fIprefix\fP to the metrics found in the \fBmetric-from\fP.
+.TP
+\fBmetric-from\fP \fIindex\fP
+Configure to read the metric from the field with the zero-based index.
+.TP
+\fBlabel-from\fP \fIkey\fP \fIindex\fP
+Set the label \fIkey\fP with the value from the field with the zero-based index.
+.TP
+\fBvalue-from\fP \fIindex\fP
+Configure to read the value from the field with the zero-based index.
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
