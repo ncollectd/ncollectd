@@ -1,0 +1,104 @@
+#!/bin/bash
+#
+# ncollectd    Startup script for the Collectd statistics gathering daemon
+# chkconfig: - 99 01
+# description: Collectd is a statistics gathering daemon used to collect \
+#   system information ie. cpu, memory, disk, network
+# processname: ncollectd
+# config: /etc/ncollectd.conf
+# config: /etc/sysconfig/ncollectd
+# pidfile: /var/run/ncollectd.pid
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+ARGS=""
+prog="ncollectdmon"
+service="ncollectd"
+CONFIG=/etc/ncollectd.conf
+NCOLLECTD=/usr/sbin/ncollectd
+NCOLLECTDMONPIDDIR="/var/run"
+NCOLLECTDMONPID="$NCOLLECTDMONPIDDIR/ncollectdmon.pid"
+
+MAXWAIT=30
+
+if [ -r /etc/sysconfig/$service ]; then
+	. /etc/sysconfig/$service
+fi
+
+if [[ ! -d $NCOLLECTDMONPIDDIR ]]; then
+	mkdir -p $NCOLLECTDMONPIDDIR
+	[ -n "${RUNAS}" ] && chown "${RUNAS}:" "$NCOLLECTDMONPIDDIR"
+fi
+
+check_config() {
+        if test ! -r "$CONFIG"; then
+                return 2
+        fi
+        if ! $NCOLLECTD -t -C "$CONFIG"; then
+                return 1
+        fi
+        return 0
+}
+
+start () {
+	echo -n $"Starting ncollectd: "
+	check_config
+	rc="$?"
+	if test "$rc" -ne 0; then
+		RETVAL=6
+		echo $"not starting due to configuration error"
+		failure $"not starting $service due to configuration error"
+	else
+		daemon --user "${RUNAS:-root}" $prog -P $NCOLLECTDMONPID -c $NCOLLECTD -- -C "$CONFIG" $ARGS
+		RETVAL=$?
+		echo
+		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$service
+	fi
+}
+
+stop () {
+	echo -n $"Stopping ncollectd: "
+	killproc -p $NCOLLECTDMONPID -d $MAXWAIT $prog
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$service
+}
+
+restart () {
+	check_config
+	rc="$?"
+	if test "$rc" -ne 0; then
+		RETVAL=6
+		echo $"not restarting due to configuration error"
+		failure $"not restarting $service due to configuration error"
+	else
+		stop
+		start
+	fi
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	status -p $NCOLLECTDMONPID $prog
+	;;
+  restart|reload)
+	restart
+	;;
+  condrestart)
+	[ -f /var/lock/subsys/$service ] && restart || :
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|reload|condrestart}"
+	exit 1
+esac
+
+exit $?
