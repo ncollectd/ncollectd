@@ -1,0 +1,14 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-contextswitch 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd contextswitch man page"
+.SH NAME
+ncollectd-contextswitch \- Documentation of ncollectd's contextswitch plugin
+.SH SYNOPSIS
+\fBload-plugin\fP contextswitch
+.SH DESCRIPTION
+The \fBcontextswitch\fP plugin collects the number of context switches that occur in the system.
+.PP
+A context switch is described as the kernel suspending execution of one process on the CPU and
+resuming execution of some other process that had previously been suspended.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
