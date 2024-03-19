@@ -1,0 +1,21 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-btrfs 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd btrfs man page"
+.SH NAME
+ncollectd-btrfs \- Documentation of ncollectd's btrfs plugin
+.SH SYNOPSIS
+\fBload-plugin\fP brtfs
+.br
+\fBplugin\fP brtfs {
+    \fBrefresh-mounts\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBbtrfs\fP plugin reports statistics of mounted btrfs filesystems.
+.PP
+The plugin has the following options:
+.TP
+\fBrefresh-mounts\fP \fItrue|false\fP
+Not caching the mount points, refresh in every read.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
