@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix MEMINFO_
+%define hash-function-name meminfo_hash
+%define lookup-function-name meminfo_get_key
+%define slot-name key
+%{
+%}
+struct meminfo_metric {
+    char *key;
+    int fam;
+};
+%%
+MemTotal:,          FAM_MEMINFO_MEMORY_TOTAL_BYTES
+MemFree:,           FAM_MEMINFO_MEMORY_FREE_BYTES
+MemAvailable:,      FAM_MEMINFO_MEMORY_AVAILABLE_BYTES
+Buffers:,           FAM_MEMINFO_BUFFERS_BYTES
+Cached:,            FAM_MEMINFO_CACHED_BYTES
+SwapCached:,        FAM_MEMINFO_SWAP_CACHED_BYTES
+Active:,            FAM_MEMINFO_ACTIVE_BYTES
+Inactive:,          FAM_MEMINFO_INACTIVE_BYTES
+HighTotal:,         FAM_MEMINFO_HIGH_TOTAL_BYTES
+HighFree:,          FAM_MEMINFO_HIGH_FREE_BYTES
+LowTotal:,          FAM_MEMINFO_LOW_TOTAL_BYTES
+LowFree:,           FAM_MEMINFO_LOW_FREE_BYTES
+Active(anon):,      FAM_MEMINFO_ACTIVE_ANONYMOUS_BYTES
+Inactive(anon):,    FAM_MEMINFO_INACTIVE_ANONYMOUS_BYTES
+Active(file):,      FAM_MEMINFO_ACTIVE_PAGE_CACHE_BYTES
+Inactive(file):,    FAM_MEMINFO_INACTIVE_PAGE_CACHE_BYTES
+Unevictable:,       FAM_MEMINFO_UNEVICTABLE_BYTES
+Mlocked:,           FAM_MEMINFO_MLOCKED_BYTES
+SwapTotal:,         FAM_MEMINFO_SWAP_TOTAL_BYTES
+SwapFree:,          FAM_MEMINFO_SWAP_FREE_BYTES
+Zswap:,             FAM_MEMINFO_ZSWAP_TOTAL_BYTES
+Zswapped:,          FAM_MEMINFO_ZSWAP_STORED_BYTES
+Dirty:,             FAM_MEMINFO_DIRTY_BYTES
+Writeback:,         FAM_MEMINFO_WRITEBACK_BYTES
+AnonPages:,         FAM_MEMINFO_ANONYMOUS_BYTES
+Mapped:,            FAM_MEMINFO_MAPPED_BYTES
+Shmem:,             FAM_MEMINFO_SHMEM_BYTES
+KReclaimable:,      FAM_MEMINFO_KERNEL_RECLAIMABLE_BYTES
+Slab:,              FAM_MEMINFO_SLAB_BYTES
+SReclaimable:,      FAM_MEMINFO_SLAB_RECLAIMABLE_BYTES
+SUnreclaim:,        FAM_MEMINFO_SLAB_UNRECLAIMABLE_BYTES
+KernelStack:,       FAM_MEMINFO_KERNEL_STACK_BYTES
+PageTables:,        FAM_MEMINFO_PAGE_TABLES_BYTES
+SecPageTables:,     FAM_MEMINFO_SECONDARY_PAGE_TABLES_BYTES
+Bounce:,            FAM_MEMINFO_BOUNCE_BYTES
+WritebackTmp:,      FAM_MEMINFO_WRITE_BACK_TMP_BYTES
+CommitLimit:,       FAM_MEMINFO_COMMIT_LIMIT_BYTES
+Committed_AS:,      FAM_MEMINFO_COMMITTED_BYTES
+VmallocTotal:,      FAM_MEMINFO_VMALLOC_TOTAL_BYTES
+VmallocUsed:,       FAM_MEMINFO_VMALLOC_USED_BYTES
+VmallocChunk:,      FAM_MEMINFO_VMALLOC_CHUNCK_BYTES
+Percpu:,            FAM_MEMINFO_PERCPU_BYTES
+EarlyMemtestBad:,   FAM_MEMINFO_EARLY_MEMTEST_BAD_BYTES
+HardwareCorrupted:, FAM_MEMINFO_HARDWARE_CORRUPTED_BYTES
+AnonHugePages:,     FAM_MEMINFO_ANONYMOUS_HUGEPAGES_BYTES
+ShmemHugePages:,    FAM_MEMINFO_SHMEM_HUGEPAGES_BYTES
+ShmemPmdMapped:,    FAM_MEMINFO_SHMEM_HUGEPAGES_PMDMAPPED_BYTES
+FileHugePages:,     FAM_MEMINFO_FILE_HUGEPAGES_BYTES
+FilePmdMapped:,     FAM_MEMINFO_FILE_HUGEPAGES_PMDMAPPED_BYTES
+CmaTotal:,          FAM_MEMINFO_CMA_TOTAL_BYTES
+CmaFree:,           FAM_MEMINFO_CMA_FREE_BYTES
+HugePages_Total:,   FAM_MEMINFO_HUGEPAGES
+HugePages_Free:,    FAM_MEMINFO_HUGEPAGES_FREE
+HugePages_Rsvd:,    FAM_MEMINFO_HUGEPAGES_RESERVED
+HugePages_Surp:,    FAM_MEMINFO_HUGEPAGES_SURPASSED
+Hugepagesize:,      FAM_MEMINFO_HUGEPAGE_SIZE_BYTES
+Hugetlb:,           FAM_MEMINFO_HUGEPAGES_BYTES
+DirectMap4k:,       FAM_MEMINFO_DIRECTMAP_4K_BYTES
+DirectMap2M:,       FAM_MEMINFO_DIRECTMAP_2M_BYTES
+DirectMap1G:,       FAM_MEMINFO_DIRECTMAP_2G_BYTES
