@@ -1,135 +1,62 @@
-/**
- * collectd - src/write_log.c
- * Copyright (C) 2015       Pierre-Yves Ritschard
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Pierre-Yves Ritschard <pyr at spootnik.org>
- *
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2015 Pierre-Yves Ritschard
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Pierre-Yves Ritschard <pyr at spootnik.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
+#include "libutils/strbuf.h"
+#include "libformat/format.h"
 
-#include "utils/format_graphite/format_graphite.h"
-#include "utils/format_json/format_json.h"
-#include "utils/strbuf/strbuf.h"
+static format_stream_metric_t wl_format_metric = FORMAT_STREAM_METRIC_OPENMETRICS_TEXT;
 
-#include <netdb.h>
+static int wl_write(metric_family_t const *fam, __attribute__((unused)) user_data_t *user_data)
+{
+    if (fam->metric.num == 0)
+        return 0;
 
-#define WL_FORMAT_GRAPHITE 1
-#define WL_FORMAT_JSON 2
+    strbuf_t buf = STRBUF_CREATE;
+    format_stream_metric_ctx_t ctx = {0};
 
-/* Plugin:WriteLog has to also operate without a config, so use a global. */
-int wl_format = WL_FORMAT_GRAPHITE;
+    int status = format_stream_metric_begin(&ctx, wl_format_metric, &buf);
+    status |= format_stream_metric_family(&ctx, fam);
+    status |= format_stream_metric_end(&ctx);
 
-static int wl_write_graphite(metric_family_t const *fam) {
-  char const *prefix = "";
-  char const *suffix = "";
-  char escape_char = '_';
-  unsigned int flags = 0;
-
-  strbuf_t buf = STRBUF_CREATE;
-
-  for (size_t i = 0; i < fam->metric.num; i++) {
-    metric_t const *m = fam->metric.ptr + i;
-    int status = format_graphite(&buf, m, prefix, suffix, escape_char, flags);
     if (status != 0) {
-      ERROR("write_log plugin: format_graphite failed: %d", status);
+        PLUGIN_ERROR("format metric failed: %d", status);
     } else {
-      INFO("write_log values:\n%s", buf.ptr);
+        plugin_log(LOG_INFO, NULL, 0, NULL, "%s", buf.ptr);
     }
 
-    strbuf_reset(&buf);
-  }
+    strbuf_destroy(&buf);
 
-  STRBUF_DESTROY(buf);
-  return 0;
-} /* int wl_write_graphite */
-
-static int wl_write_json(metric_family_t const *fam) {
-  strbuf_t buf = STRBUF_CREATE;
-
-  int status = format_json_metric_family(&buf, fam, /* store rates = */ false);
-  if (status != 0) {
-    ERROR("write_log plugin: format_json_metric_family failed: %d", status);
-  } else {
-    INFO("write_log values:\n%s", buf.ptr);
-  }
-
-  STRBUF_DESTROY(buf);
-  return 0;
-} /* int wl_write_json */
-
-static int wl_write(metric_family_t const *fam,
-                    __attribute__((unused)) user_data_t *user_data) {
-  if (wl_format == WL_FORMAT_GRAPHITE) {
-    return wl_write_graphite(fam);
-  } else if (wl_format == WL_FORMAT_JSON) {
-    return wl_write_json(fam);
-  }
-
-  return EIO;
+    return 0;
 }
 
-static int wl_config(oconfig_item_t *ci) /* {{{ */
+static int wl_config(config_item_t *ci)
 {
-  bool format_seen = false;
+    int status = 0;
 
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-    if (strcasecmp("Format", child->key) == 0) {
-      char str[16];
+        if (strcasecmp("format-metric", child->key) == 0) {
+            status = config_format_stream_metric(child, &wl_format_metric);
+        } else {
+            PLUGIN_ERROR("Invalid configuration option: `%s'.", child->key);
+            status = -1;
+        }
 
-      if (cf_util_get_string_buffer(child, str, sizeof(str)) != 0)
-        continue;
-
-      if (format_seen) {
-        WARNING("write_log plugin: Redefining option `%s'.", child->key);
-      }
-      format_seen = true;
-
-      if (strcasecmp("Graphite", str) == 0)
-        wl_format = WL_FORMAT_GRAPHITE;
-      else if (strcasecmp("JSON", str) == 0)
-        wl_format = WL_FORMAT_JSON;
-      else {
-        ERROR("write_log plugin: Unknown format `%s' for option `%s'.", str,
-              child->key);
-        return -EINVAL;
-      }
-    } else {
-      ERROR("write_log plugin: Invalid configuration option: `%s'.",
-            child->key);
-      return -EINVAL;
+        if (status != 0)
+            return -1;
     }
-  }
 
-  return 0;
-} /* }}} int wl_config */
+    return 0;
+}
 
-void module_register(void) {
-  plugin_register_complex_config("write_log", wl_config);
-  /* If config is supplied, the global wl_format will be set. */
-  plugin_register_write("write_log", wl_write, NULL);
+void module_register(void)
+{
+    plugin_register_config("write_log", wl_config);
+    plugin_register_write(NULL, "write_log", wl_write, NULL, 0, 0, NULL);
 }
