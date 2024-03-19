@@ -1,223 +1,118 @@
-/**
- * collectd - src/protocols.c
- * Copyright (C) 2009,2010  Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2009,2010  Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor:  Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
-#include "utils/ignorelist/ignorelist.h"
+#include "libutils/common.h"
+#include "libutils/exclist.h"
+#include "plugins/protocols/flags.h"
 
-#if !KERNEL_LINUX
+#ifndef KERNEL_LINUX
 #error "No applicable input method."
 #endif
 
-#define SNMP_FILE "/proc/net/snmp"
-#define NETSTAT_FILE "/proc/net/netstat"
+static exclist_t excl_value;
+static uint64_t protocols_flags =
+    COLLECT_IP  | COLLECT_ICMP  | COLLECT_UDP  | COLLECT_UDPLITE  |
+    COLLECT_IP6 | COLLECT_ICMP6 | COLLECT_UDP6 | COLLECT_UDPLITE6 |
+    COLLECT_TCP | COLLECT_MPTCP | COLLECT_SCTP ;
 
-/*
- * Global variables
- */
-static const char *config_keys[] = {
-    "Value",
-    "IgnoreSelected",
+static cf_flags_t protocols_flags_list[] = {
+    {"ip",       COLLECT_IP       },
+    {"icmp",     COLLECT_ICMP     },
+    {"udp",      COLLECT_UDP      },
+    {"udplite",  COLLECT_UDPLITE  },
+    {"udplite6", COLLECT_UDPLITE6 },
+    {"ip6",      COLLECT_IP6      },
+    {"icmp6",    COLLECT_ICMP6    },
+    {"udp6",     COLLECT_UDP6     },
+    {"tcp",      COLLECT_TCP      },
+    {"mptcp",    COLLECT_MPTCP    },
+    {"sctp",     COLLECT_SCTP     },
 };
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
 
-static ignorelist_t *values_list;
 
-/*
- * Functions
- */
-static void submit(const char *protocol_name, const char *str_key,
-                   const char *str_value) {
-  char fam_name[128];
-  ssnprintf(fam_name, sizeof(fam_name), "protocols_%s_%s_total", protocol_name,
-            str_key);
+int netstat_init(void);
+int netstat_shutdown(void);
+int netstat_read(uint64_t flags, exclist_t *excl_value);
 
-  metric_family_t fam = {
-      .name = fam_name,
-      .type = METRIC_TYPE_COUNTER,
-  };
+int snmp_init(void);
+int snmp_shutdown(void);
+int snmp_read(uint64_t flags, exclist_t *excl_value);
 
-  value_t value;
-  int status = parse_value(str_value, &value, DS_TYPE_COUNTER);
-  if (status != 0) {
-    return;
-  }
+int snmp6_init(void);
+int snmp6_shutdown(void);
+int snmp6_read(uint64_t flags, exclist_t *excl_value);
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.counter = value.counter,
-                                    });
+int sctp_init(void);
+int sctp_shutdown(void);
+int sctp_read(uint64_t flags, exclist_t *excl_value);
 
-  status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("protocols plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
+static int protocols_read(void)
+{
+    netstat_read(protocols_flags, &excl_value);
+    snmp_read(protocols_flags, &excl_value);
+    snmp6_read(protocols_flags, &excl_value);
+    sctp_read(protocols_flags, &excl_value);
 
-  metric_family_metric_reset(&fam);
-} /* void submit */
+    return 0;
+}
 
-static int read_file(const char *path) {
-  FILE *fh;
-  char key_buffer[4096];
-  char value_buffer[4096];
-  char *key_ptr;
-  char *value_ptr;
-  char *key_fields[256];
-  char *value_fields[256];
-  int key_fields_num;
-  int value_fields_num;
-  int status;
-  int i;
+static int protocols_config(config_item_t *ci)
+{
+    int status = 0;
 
-  fh = fopen(path, "r");
-  if (fh == NULL) {
-    ERROR("protocols plugin: fopen (%s) failed: %s.", path, STRERRNO);
-    return -1;
-  }
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+        if (strcasecmp(child->key, "key") == 0) {
+            status = cf_util_exclist(child, &excl_value);
+        } else if (strcasecmp(child->key, "collect") == 0) {
+            status = cf_util_get_flags(child, protocols_flags_list,
+                                       STATIC_ARRAY_SIZE(protocols_flags_list), &protocols_flags);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
 
-  status = -1;
-  while (42) {
-    clearerr(fh);
-    key_ptr = fgets(key_buffer, sizeof(key_buffer), fh);
-    if (key_ptr == NULL) {
-      if (feof(fh) != 0) {
-        status = 0;
-        break;
-      } else if (ferror(fh) != 0) {
-        ERROR("protocols plugin: Reading from %s failed.", path);
-        break;
-      } else {
-        ERROR("protocols plugin: fgets failed for an unknown reason.");
-        break;
-      }
-    } /* if (key_ptr == NULL) */
-
-    value_ptr = fgets(value_buffer, sizeof(value_buffer), fh);
-    if (value_ptr == NULL) {
-      ERROR("protocols plugin: read_file (%s): Could not read values line.",
-            path);
-      break;
+        if (status != 0)
+            break;
     }
 
-    key_ptr = strchr(key_buffer, ':');
-    if (key_ptr == NULL) {
-      ERROR("protocols plugin: Could not find protocol name in keys line.");
-      break;
-    }
-    *key_ptr = 0;
-    key_ptr++;
+    if (status != 0)
+        return -1;
 
-    value_ptr = strchr(value_buffer, ':');
-    if (value_ptr == NULL) {
-      ERROR("protocols plugin: Could not find protocol name "
-            "in values line.");
-      break;
-    }
-    *value_ptr = 0;
-    value_ptr++;
+    return 0;
+}
 
-    if (strcmp(key_buffer, value_buffer) != 0) {
-      ERROR("protocols plugin: Protocol names in keys and values lines "
-            "don't match: `%s' vs. `%s'.",
-            key_buffer, value_buffer);
-      break;
-    }
+static int protocols_init(void)
+{
+    netstat_init();
+    snmp_init();
+    snmp6_init();
+    sctp_init();
 
-    key_fields_num =
-        strsplit(key_ptr, key_fields, STATIC_ARRAY_SIZE(key_fields));
-    value_fields_num =
-        strsplit(value_ptr, value_fields, STATIC_ARRAY_SIZE(value_fields));
+    return 0;
+}
 
-    if (key_fields_num != value_fields_num) {
-      ERROR("protocols plugin: Number of fields in keys and values lines "
-            "don't match: %i vs %i.",
-            key_fields_num, value_fields_num);
-      break;
-    }
+static int protocols_shutdown(void)
+{
+    exclist_reset(&excl_value);
 
-    for (i = 0; i < key_fields_num; i++) {
-      if (values_list != NULL) {
-        char match_name[2 * DATA_MAX_NAME_LEN];
+    netstat_shutdown();
+    snmp_shutdown();
+    snmp6_shutdown();
+    sctp_shutdown();
 
-        ssnprintf(match_name, sizeof(match_name), "%s:%s", key_buffer,
-                  key_fields[i]);
+    return 0;
+}
 
-        if (ignorelist_match(values_list, match_name))
-          continue;
-      } /* if (values_list != NULL) */
-
-      submit(key_buffer, key_fields[i], value_fields[i]);
-    } /* for (i = 0; i < key_fields_num; i++) */
-  }   /* while (42) */
-
-  fclose(fh);
-
-  return status;
-} /* int read_file */
-
-static int protocols_read(void) {
-  int status;
-  int success = 0;
-
-  status = read_file(SNMP_FILE);
-  if (status == 0)
-    success++;
-
-  status = read_file(NETSTAT_FILE);
-  if (status == 0)
-    success++;
-
-  if (success == 0)
-    return -1;
-
-  return 0;
-} /* int protocols_read */
-
-static int protocols_config(const char *key, const char *value) {
-  if (values_list == NULL)
-    values_list = ignorelist_create(/* invert = */ 1);
-
-  if (strcasecmp(key, "Value") == 0) {
-    ignorelist_add(values_list, value);
-  } else if (strcasecmp(key, "IgnoreSelected") == 0) {
-    int invert = 1;
-    if (IS_TRUE(value))
-      invert = 0;
-    ignorelist_set_invert(values_list, invert);
-  } else {
-    return -1;
-  }
-
-  return 0;
-} /* int protocols_config */
-
-void module_register(void) {
-  plugin_register_config("protocols", protocols_config, config_keys,
-                         config_keys_num);
-  plugin_register_read("protocols", protocols_read);
-} /* void module_register */
+void module_register(void)
+{
+    plugin_register_init("protocols", protocols_init);
+    plugin_register_config("protocols", protocols_config);
+    plugin_register_read("protocols", protocols_read);
+    plugin_register_shutdown("protocols", protocols_shutdown);
+}

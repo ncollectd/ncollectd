@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix SNMP6_
+%define hash-function-name snmp6_hash
+%define lookup-function-name snmp6_get_key
+%define slot-name key
+%{
+#include <stdint.h>
+#include <string.h>
+#include "plugins/protocols/snmp6_fam.h"
+#include "plugins/protocols/flags.h"
+%}
+struct snmp_metric {
+    char *key;
+    uint64_t flags;
+    int fam;
+};
+%%
+Ip6InReceives,                  COLLECT_IP6,      FAM_IP6_IN_RECEIVES
+Ip6InHdrErrors,                 COLLECT_IP6,      FAM_IP6_IN_HEADER_ERRORS
+Ip6InTooBigErrors,              COLLECT_IP6,      FAM_IP6_IN_TOO_BIG_ERRORS
+Ip6InNoRoutes,                  COLLECT_IP6,      FAM_IP6_IN_NO_ROUTES
+Ip6InAddrErrors,                COLLECT_IP6,      FAM_IP6_IN_ADDRESS_ERRORS
+Ip6InUnknownProtos,             COLLECT_IP6,      FAM_IP6_IN_UNKNOWN_PROTOCOL
+Ip6InTruncatedPkts,             COLLECT_IP6,      FAM_IP6_IN_TRUNCATE_PACKETS
+Ip6InDiscards,                  COLLECT_IP6,      FAM_IP6_IN_DISCARDS
+Ip6InDelivers,                  COLLECT_IP6,      FAM_IP6_IN_DELIVERS
+Ip6OutForwDatagrams,            COLLECT_IP6,      FAM_IP6_OUT_FORWARDED_DATAGRAMS
+Ip6OutRequests,                 COLLECT_IP6,      FAM_IP6_OUT_REQUESTS
+Ip6OutDiscards,                 COLLECT_IP6,      FAM_IP6_OUT_DISCARDS
+Ip6OutNoRoutes,                 COLLECT_IP6,      FAM_IP6_OUT_NO_ROUTES
+Ip6ReasmTimeout,                COLLECT_IP6,      FAM_IP6_REASSEMBLY_TIMEOUT
+Ip6ReasmReqds,                  COLLECT_IP6,      FAM_IP6_REASSEMBLY_REQUIRED
+Ip6ReasmOKs,                    COLLECT_IP6,      FAM_IP6_REASSEMBLY_OK
+Ip6ReasmFails,                  COLLECT_IP6,      FAM_IP6_REASSEMBLY_FAILS
+Ip6FragOKs,                     COLLECT_IP6,      FAM_IP6_FRAGMENTED_OK
+Ip6FragFails,                   COLLECT_IP6,      FAM_IP6_FRAGMENTED_FAILS
+Ip6FragCreates,                 COLLECT_IP6,      FAM_IP6_FRAGMENTED_CREATES
+Ip6InMcastPkts,                 COLLECT_IP6,      FAM_IP6_IN_MULTICAST_PACKETS
+Ip6OutMcastPkts,                COLLECT_IP6,      FAM_IP6_OUT_MULTICAST_PACKETS
+Ip6InOctets,                    COLLECT_IP6,      FAM_IP6_IN_BYTES
+Ip6OutOctets,                   COLLECT_IP6,      FAM_IP6_OUT_BYTES
+Ip6InMcastOctets,               COLLECT_IP6,      FAM_IP6_IN_MULTICAST_BYTES
+Ip6OutMcastOctets,              COLLECT_IP6,      FAM_IP6_OUT_MULTICAST_BYTES
+Ip6InBcastOctets,               COLLECT_IP6,      FAM_IP6_IN_BROADCAST_BYTES
+Ip6OutBcastOctets,              COLLECT_IP6,      FAM_IP6_OUT_BROADCAST_BYTES
+Ip6InNoECTPkts,                 COLLECT_IP6,      FAM_IP6_IN_NOECT_PACKETS
+Ip6InECT1Pkts,                  COLLECT_IP6,      FAM_IP6_IN_ECT1_PACKETS
+Ip6InECT0Pkts,                  COLLECT_IP6,      FAM_IP6_IN_ECT0_PACKETS
+Ip6InCEPkts,                    COLLECT_IP6,      FAM_IP6_IN_CE_PACKETS
+Icmp6InMsgs,                    COLLECT_ICMP6,    FAM_ICMP6_IN_MESSAGES
+Icmp6InErrors,                  COLLECT_ICMP6,    FAM_ICMP6_IN_ERRORS
+Icmp6OutMsgs,                   COLLECT_ICMP6,    FAM_ICMP6_OUT_MESSAGES
+Icmp6OutErrors,                 COLLECT_ICMP6,    FAM_ICMP6_OUT_ERRORS
+Icmp6InCsumErrors,              COLLECT_ICMP6,    FAM_ICMP6_IN_CSUM_ERROR
+Icmp6InDestUnreachs,            COLLECT_ICMP6,    FAM_ICMP6_IN_DESTINATION_UNREACHABLE
+Icmp6InPktTooBigs,              COLLECT_ICMP6,    FAM_ICMP6_IN_PACKET_TOO_BIG
+Icmp6InTimeExcds,               COLLECT_ICMP6,    FAM_ICMP6_IN_TIME_EXCEEDED
+Icmp6InParmProblems,            COLLECT_ICMP6,    FAM_ICMP6_IN_PARAMETER_PROBLEM
+Icmp6InEchos,                   COLLECT_ICMP6,    FAM_ICMP6_IN_ECHO_REQUEST
+Icmp6InEchoReplies,             COLLECT_ICMP6,    FAM_ICMP6_IN_ECHO_REPLY
+Icmp6InGroupMembQueries,        COLLECT_ICMP6,    FAM_ICMP6_IN_MULTICAST_LISTENER_QUERY
+Icmp6InGroupMembResponses,      COLLECT_ICMP6,    FAM_ICMP6_IN_MULTICAST_LISTENER_REPORT
+Icmp6InGroupMembReductions,     COLLECT_ICMP6,    FAM_ICMP6_IN_MULTICAST_LISTENER_DONE
+Icmp6InRouterSolicits,          COLLECT_ICMP6,    FAM_ICMP6_IN_ROUTER_SOLICITATION
+Icmp6InRouterAdvertisements,    COLLECT_ICMP6,    FAM_ICMP6_IN_ROUTER_ADVERTISEMENT
+Icmp6InNeighborSolicits,        COLLECT_ICMP6,    FAM_ICMP6_IN_NEIGHBOR_SOLICITATION
+Icmp6InNeighborAdvertisements,  COLLECT_ICMP6,    FAM_ICMP6_IN_NEIGHBOR_ADVERTISEMENT
+Icmp6InRedirects,               COLLECT_ICMP6,    FAM_ICMP6_IN_REDIRECT
+Icmp6InMLDv2Reports,            COLLECT_ICMP6,    FAM_ICMP6_IN_MULTICAST_LISTENER_DISCOVERY_REPORTS
+Icmp6OutDestUnreachs,           COLLECT_ICMP6,    FAM_ICMP6_OUT_DESTINATION_UNREACHABLE
+Icmp6OutPktTooBigs,             COLLECT_ICMP6,    FAM_ICMP6_OUT_PACKET_TOO_BIG
+Icmp6OutTimeExcds,              COLLECT_ICMP6,    FAM_ICMP6_OUT_TIME_EXCEEDED
+Icmp6OutParmProblems,           COLLECT_ICMP6,    FAM_ICMP6_OUT_PARAMETER_PROBLEM
+Icmp6OutEchos,                  COLLECT_ICMP6,    FAM_ICMP6_OUT_ECHO_REQUEST
+Icmp6OutEchoReplies,            COLLECT_ICMP6,    FAM_ICMP6_OUT_ECHO_REPLY
+Icmp6OutGroupMembQueries,       COLLECT_ICMP6,    FAM_ICMP6_OUT_MULTICAST_LISTENER_QUERY
+Icmp6OutGroupMembResponses,     COLLECT_ICMP6,    FAM_ICMP6_OUT_MULTICAST_LISTENER_REPORT
+Icmp6OutGroupMembReductions,    COLLECT_ICMP6,    FAM_ICMP6_OUT_MULTICAST_LISTENER_DONE
+Icmp6OutRouterSolicits,         COLLECT_ICMP6,    FAM_ICMP6_OUT_ROUTER_SOLICITATION
+Icmp6OutRouterAdvertisements,   COLLECT_ICMP6,    FAM_ICMP6_OUT_ROUTER_ADVERTISEMENT
+Icmp6OutNeighborSolicits,       COLLECT_ICMP6,    FAM_ICMP6_OUT_NEIGHBOR_SOLICITATION
+Icmp6OutNeighborAdvertisements, COLLECT_ICMP6,    FAM_ICMP6_OUT_NEIGHBOR_ADVERTISEMENT
+Icmp6OutRedirects,              COLLECT_ICMP6,    FAM_ICMP6_OUT_OUT_REDIRECT
+Icmp6OutMLDv2Reports,           COLLECT_ICMP6,    FAM_ICMP6_OUT_MULTICAST_LISTENER_DISCOVERY_REPORTS
+Udp6InDatagrams,                COLLECT_UDP6,     FAM_UDP6_IN_DATAGRAMS
+Udp6NoPorts,                    COLLECT_UDP6,     FAM_UDP6_NO_PORTS
+Udp6InErrors,                   COLLECT_UDP6,     FAM_UDP6_IN_ERRORS
+Udp6OutDatagrams,               COLLECT_UDP6,     FAM_UDP6_OUT_DATAGRAMS
+Udp6RcvbufErrors,               COLLECT_UDP6,     FAM_UDP6_RECV_BUFFER_ERRORS
+Udp6SndbufErrors,               COLLECT_UDP6,     FAM_UDP6_SEND_BUFFER_ERRORS
+Udp6InCsumErrors,               COLLECT_UDP6,     FAM_UDP6_IN_CSUM_ERRORS
+Udp6IgnoredMulti,               COLLECT_UDP6,     FAM_UDP6_IGNORED_MULTI
+Udp6MemErrors,                  COLLECT_UDP6,     FAM_UDP6_MEMORY_ERRORS
+UdpLite6InDatagrams,            COLLECT_UDPLITE6, FAM_UDPLITE6_IN_DATAGRAMS
+UdpLite6NoPorts,                COLLECT_UDPLITE6, FAM_UDPLITE6_NO_PORTS
+UdpLite6InErrors,               COLLECT_UDPLITE6, FAM_UDPLITE6_IN_ERRORS
+UdpLite6OutDatagrams,           COLLECT_UDPLITE6, FAM_UDPLITE6_OUT_DATAGRAMS
+UdpLite6RcvbufErrors,           COLLECT_UDPLITE6, FAM_UDPLITE6_RECV_BUFFER_ERRORS
+UdpLite6SndbufErrors,           COLLECT_UDPLITE6, FAM_UDPLITE6_SEND_BUFFER_ERRORS
+UdpLite6InCsumErrors,           COLLECT_UDPLITE6, FAM_UDPLITE6_IN_CSUM_ERRORS
+UdpLite6MemErrors,              COLLECT_UDPLITE6, FAM_UDPLITE6_MEMORY_ERRORS

@@ -1,0 +1,50 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-protocols 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd protocols man page"
+.SH NAME
+ncollectd-protocols \- Documentation of ncollectd's protocols plugin
+.SH SYNOPSIS
+\fBload-plugin\fP protocols
+.br
+\fBplugin\fP protocols {
+    \fBcollect\fP \fI[ip|icmp|udp|udplite|udplite6|ip6|icmp6|udp6|tcp|mptcp|sctp]\fP
+    \fBkey\fP [\fIincl|include|excl|exclude\fP] \fIkey\fP
+.br
+}
+.SH DESCRIPTION
+The \fBprotocols\fP plugin collects a lot of information about various
+network protocols, such as \fIIP\fP, \fITCP\fP, \fIUDP\fP, etc.
+.PP
+Available configuration options:
+.PP
+.TP
+\fBcollect\fP \fI[ip|icmp|udp|udplite|udplite6|ip6|icmp6|udp6|tcp|mptcp|sctp]\fP
+.RS
+.TP
+\fBip\fP
+.TP
+\fBicmp\fP
+.TP
+\fBudp\fP
+.TP
+\fBudplite\fP
+.TP
+\fBudplite6\fP
+.TP
+\fBip6\fP
+.TP
+\fBicmp6\fP
+.TP
+\fBudp6\fP
+.TP
+\fBtcp\fP
+.TP
+\fBmptcp\fP
+.TP
+\fBsctp\fP
+.RE
+.TP
+\fBkey\fP [\fIincl|include|excl|exclude\fP] \fIkey\fP
+Selects whether or not to select a specific value.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix SCTP_
+%define hash-function-name sctp_hash
+%define lookup-function-name sctp_get_key
+%define slot-name key
+%{
+#include <stdint.h>
+#include <string.h>
+#include "plugins/protocols/sctp_fam.h"
+#include "plugins/protocols/flags.h"
+%}
+struct sctp_metric {
+    char *key;
+    uint64_t flags;
+    int fam;
+};
+%%
+SctpCurrEstab,               COLLECT_SCTP, FAM_SCTP_CURRENT_ESTABLISHED
+SctpActiveEstabs,            COLLECT_SCTP, FAM_SCTP_ACTIVE_ESTABLISHED
+SctpPassiveEstabs,           COLLECT_SCTP, FAM_SCTP_PASSIVE_ESTABLISHED
+SctpAborteds,                COLLECT_SCTP, FAM_SCTP_ABORTEDS
+SctpShutdowns,               COLLECT_SCTP, FAM_SCTP_SHUTDOWNS
+SctpOutOfBlues,              COLLECT_SCTP, FAM_SCTP_OUT_OF_BLUES
+SctpChecksumErrors,          COLLECT_SCTP, FAM_SCTP_CHECKSUM_ERRORS
+SctpOutCtrlChunks,           COLLECT_SCTP, FAM_SCTP_OUT_CTRL_CHUNKS
+SctpOutOrderChunks,          COLLECT_SCTP, FAM_SCTP_OUT_ORDER_CHUNKS
+SctpOutUnorderChunks,        COLLECT_SCTP, FAM_SCTP_OUT_UNORDER_CHUNKS
+SctpInCtrlChunks,            COLLECT_SCTP, FAM_SCTP_IN_CTRL_CHUNKS
+SctpInOrderChunks,           COLLECT_SCTP, FAM_SCTP_IN_ORDER_CHUNKS
+SctpInUnorderChunks,         COLLECT_SCTP, FAM_SCTP_IN_UNORDER_CHUNKS
+SctpFragUsrMsgs,             COLLECT_SCTP, FAM_SCTP_FRAGMENTED_USER_MSGS
+SctpReasmUsrMsgs,            COLLECT_SCTP, FAM_SCTP_OUT_PACKETS
+SctpOutSCTPPacks,            COLLECT_SCTP, FAM_SCTP_REASSEMBLED_USER_MSGS
+SctpInSCTPPacks,             COLLECT_SCTP, FAM_SCTP_IN_PACKETS
+SctpT1InitExpireds,          COLLECT_SCTP, FAM_SCTP_T1_INIT_EXPIREDS
+SctpT1CookieExpireds,        COLLECT_SCTP, FAM_SCTP_T1_COOKIE_EXPIREDS
+SctpT2ShutdownExpireds,      COLLECT_SCTP, FAM_SCTP_T2_SHUTDOWN_EXPIREDS
+SctpT3RtxExpireds,           COLLECT_SCTP, FAM_SCTP_T3_RTX_EXPIREDS
+SctpT4RtoExpireds,           COLLECT_SCTP, FAM_SCTP_T4_RTO_EXPIREDS
+SctpT5ShutdownGuardExpireds, COLLECT_SCTP, FAM_SCTP_T5_SHUTDOWN_GUARD_EXPIREDS
+SctpDelaySackExpireds,       COLLECT_SCTP, FAM_SCTP_DELAY_SACK_EXPIREDS
+SctpAutocloseExpireds,       COLLECT_SCTP, FAM_SCTP_AUTOCLOSE_EXPIREDS
+SctpT3Retransmits,           COLLECT_SCTP, FAM_SCTP_T3_RETRANSMITS
+SctpPmtudRetransmits,        COLLECT_SCTP, FAM_SCTP_PMTUD_RETRANSMITS
+SctpFastRetransmits,         COLLECT_SCTP, FAM_SCTP_FAST_RETRANSMITS
+SctpInPktSoftirq,            COLLECT_SCTP, FAM_SCTP_IN_PKT_SOFTIRQ
+SctpInPktBacklog,            COLLECT_SCTP, FAM_SCTP_IN_PKT_BACKLOG
+SctpInPktDiscards,           COLLECT_SCTP, FAM_SCTP_IN_PKT_DISCARDS
+SctpInDataChunkDiscards,     COLLECT_SCTP, FAM_SCTP_IN_DATA_CHUNK_DISCARDS

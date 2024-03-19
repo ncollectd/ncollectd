@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix SNMP_
+%define hash-function-name snmp_hash
+%define lookup-function-name snmp_get_key
+%define slot-name key
+%{
+#include <stdint.h>
+#include <string.h>
+#include "plugins/protocols/snmp_fam.h"
+#include "plugins/protocols/flags.h"
+%}
+struct snmp_metric {
+    char *key;
+    uint64_t flags;
+    int fam;
+};
+%%
+IpForwarding,               COLLECT_IP,      FAM_IP_FORWARDING
+IpDefaultTTL,               COLLECT_IP,      FAM_IP_DEFAULT_TTL
+IpInReceives,               COLLECT_IP,      FAM_IP_IN_RECEIVES
+IpInHdrErrors,              COLLECT_IP,      FAM_IP_IN_HEADER_ERRORS
+IpInAddrErrors,             COLLECT_IP,      FAM_IP_IN_ADDRESS_ERRORS
+IpForwDatagrams,            COLLECT_IP,      FAM_IP_FORWARD_DATAGRAMS
+IpInUnknownProtos,          COLLECT_IP,      FAM_IP_IN_UNKNOWN_PROTOCOL
+IpInDiscards,               COLLECT_IP,      FAM_IP_IN_DISCARDS
+IpInDelivers,               COLLECT_IP,      FAM_IP_IN_DELIVERS
+IpOutRequests,              COLLECT_IP,      FAM_IP_OUT_REQUESTS
+IpOutDiscards,              COLLECT_IP,      FAM_IP_OUT_DISCARDS
+IpOutNoRoutes,              COLLECT_IP,      FAM_IP_OUT_NO_ROUTES
+IpReasmTimeout,             COLLECT_IP,      FAM_IP_REASSEMBLY_TIMEOUT
+IpReasmReqds,               COLLECT_IP,      FAM_IP_REASSEMBLY_REQUIRED
+IpReasmOKs,                 COLLECT_IP,      FAM_IP_REASSEMBLY_OKS
+IpReasmFails,               COLLECT_IP,      FAM_IP_REASSEMBLY_FAILS
+IpFragOKs,                  COLLECT_IP,      FAM_IP_FRAGMENTED_OKS
+IpFragFails,                COLLECT_IP,      FAM_IP_FRAGMENTED_FAILS
+IpFragCreates,              COLLECT_IP,      FAM_IP_FRAGMENTED_CREATES
+IcmpInMsgs,                 COLLECT_ICMP,    FAM_ICMP_IN_MESSAGES
+IcmpInErrors,               COLLECT_ICMP,    FAM_ICMP_IN_ERRORS
+IcmpInCsumErrors,           COLLECT_ICMP,    FAM_ICMP_IN_CSUM_ERRORS
+IcmpInDestUnreachs,         COLLECT_ICMP,    FAM_ICMP_IN_DESTINATION_UNREACHABLE
+IcmpInTimeExcds,            COLLECT_ICMP,    FAM_ICMP_IN_TIME_EXCEEDED
+IcmpInParmProbs,            COLLECT_ICMP,    FAM_ICMP_IN_PARAMETER_PROBLEM
+IcmpInSrcQuenchs,           COLLECT_ICMP,    FAM_ICMP_IN_SOURCE_QUENCH
+IcmpInRedirects,            COLLECT_ICMP,    FAM_ICMP_IN_REDIRECT
+IcmpInEchos,                COLLECT_ICMP,    FAM_ICMP_IN_ECHO_REQUEST
+IcmpInEchoReps,             COLLECT_ICMP,    FAM_ICMP_IN_ECHO_REPLY
+IcmpInTimestamps,           COLLECT_ICMP,    FAM_ICMP_IN_TIMESTAMP_REQUEST
+IcmpInTimestampReps,        COLLECT_ICMP,    FAM_ICMP_IN_TIMESTAMP_REPLY
+IcmpInAddrMasks,            COLLECT_ICMP,    FAM_ICMP_IN_ADDRESS_MASK_REQUEST
+IcmpInAddrMaskReps,         COLLECT_ICMP,    FAM_ICMP_IN_ADDRESS_MASK_REPLY
+IcmpOutMsgs,                COLLECT_ICMP,    FAM_ICMP_OUT_MESSAGES
+IcmpOutErrors,              COLLECT_ICMP,    FAM_ICMP_OUT_ERRORS
+IcmpOutDestUnreachs,        COLLECT_ICMP,    FAM_ICMP_OUT_DESTINATION_UNREACHABLE
+IcmpOutTimeExcds,           COLLECT_ICMP,    FAM_ICMP_OUT_TIME_EXCEEDED
+IcmpOutParmProbs,           COLLECT_ICMP,    FAM_ICMP_OUT_PARAMETER_PROBLEM
+IcmpOutSrcQuenchs,          COLLECT_ICMP,    FAM_ICMP_OUT_SOURCE_QUENCH
+IcmpOutRedirects,           COLLECT_ICMP,    FAM_ICMP_OUT_REDIRECT
+IcmpOutEchos,               COLLECT_ICMP,    FAM_ICMP_OUT_ECHO_REQUEST
+IcmpOutEchoReps,            COLLECT_ICMP,    FAM_ICMP_OUT_ECHO_REPLY
+IcmpOutTimestamps,          COLLECT_ICMP,    FAM_ICMP_OUT_TIMESTAMP_REQUEST
+IcmpOutTimestampReps,       COLLECT_ICMP,    FAM_ICMP_OUT_TIMESTAMP_REPLY
+IcmpOutAddrMasks,           COLLECT_ICMP,    FAM_ICMP_OUT_ADDRESS_MASK_REQUEST
+IcmpOutAddrMaskReps,        COLLECT_ICMP,    FAM_ICMP_OUT_ADDRESS_MASK_REPLY
+TcpRtoAlgorithm,            COLLECT_TCP,     FAM_TCP_RTO_ALGORITHM
+TcpRtoMin,                  COLLECT_TCP,     FAM_TCP_RTO_MINIMUM
+TcpRtoMax,                  COLLECT_TCP,     FAM_TCP_RTO_MAXIMUM
+TcpMaxConn,                 COLLECT_TCP,     FAM_TCP_MAXIMUM_CONNECTIONS
+TcpActiveOpens,             COLLECT_TCP,     FAM_TCP_ACTIVE_OPENS
+TcpPassiveOpens,            COLLECT_TCP,     FAM_TCP_PASSIVE_OPENS
+TcpAttemptFails,            COLLECT_TCP,     FAM_TCP_ATTEMPT_FAILS
+TcpEstabResets,             COLLECT_TCP,     FAM_TCP_ESTABLISHED_RESETS
+TcpCurrEstab,               COLLECT_TCP,     FAM_TCP_ESTABLISHED
+TcpInSegs,                  COLLECT_TCP,     FAM_TCP_IN_SEGMENTS
+TcpOutSegs,                 COLLECT_TCP,     FAM_TCP_OUT_SEGMENTS
+TcpRetransSegs,             COLLECT_TCP,     FAM_TCP_RETRANS_SEGMENTS
+TcpInErrs,                  COLLECT_TCP,     FAM_TCP_IN_ERRORS
+TcpOutRsts,                 COLLECT_TCP,     FAM_TCP_OUT_RSTS
+TcpInCsumErrors,            COLLECT_TCP,     FAM_TCP_IN_CSUM_ERRORS
+UdpInDatagrams,             COLLECT_UDP,     FAM_UDP_IN_DATAGRAMS
+UdpNoPorts,                 COLLECT_UDP,     FAM_UDP_NO_PORTS
+UdpInErrors,                COLLECT_UDP,     FAM_UDP_IN_ERRORS
+UdpOutDatagrams,            COLLECT_UDP,     FAM_UDP_OUT_DATAGRAMS
+UdpRcvbufErrors,            COLLECT_UDP,     FAM_UDP_RECV_BUFFER_ERRORS
+UdpSndbufErrors,            COLLECT_UDP,     FAM_UDP_SEND_BUFFER_ERRORS
+UdpInCsumErrors,            COLLECT_UDP,     FAM_UDP_IN_CSUM_ERRORS
+UdpIgnoredMulti,            COLLECT_UDP,     FAM_UDP_IGNORED_MULTI
+UdpMemErrors,               COLLECT_UDP,     FAM_UDP_MEMORY_ERRORS
+UdpLiteInDatagrams,         COLLECT_UDPLITE, FAM_UDPLITE_IN_DATAGRAMS
+UdpLiteNoPorts,             COLLECT_UDPLITE, FAM_UDPLITE_NO_PORTS
+UdpLiteInErrors,            COLLECT_UDPLITE, FAM_UDPLITE_IN_ERRORS
+UdpLiteOutDatagrams,        COLLECT_UDPLITE, FAM_UDPLITE_OUT_DATAGRAMS
+UdpLiteRcvbufErrors,        COLLECT_UDPLITE, FAM_UDPLITE_RECV_BUFFER_ERRORS
+UdpLiteSndbufErrors,        COLLECT_UDPLITE, FAM_UDPLITE_SEND_BUFFER_ERRORS
+UdpLiteInCsumErrors,        COLLECT_UDPLITE, FAM_UDPLITE_IN_CSUM_ERRORS
+UdpLiteIgnoredMulti,        COLLECT_UDPLITE, FAM_UDPLITE_IGNORED_MULTI
+UdpLiteMemErrors,           COLLECT_UDPLITE, FAM_UDPLITE_MEMORY_ERRORS
