@@ -1,0 +1,40 @@
+plugin_option(PLUGIN_LPAR "AIX logical partitions statistics" ON)
+
+include(CheckStructHasMember)
+
+set(BUILD_PLUGIN_LPAR 0)
+
+if(PLUGIN_LPAR)
+    if(BUILD_AIX)
+        find_package(LibPerfstat)
+        if(LIBPERFSTAT_FOUND)
+            check_struct_has_member("perfstat_partition_type_t" "b.donate_enabled" "libperfstat.h" PERFSTAT_SUPPORTS_DONATION)
+            set(BUILD_PLUGIN_LPAR 1)
+        else()
+            set(BUILD_PLUGIN_LPAR_REASON "perfstat not found" PARENT_SCOPE)
+        endif()
+    else()
+        set(BUILD_PLUGIN_LPAR_REASON "AIX only" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_LPAR ${BUILD_PLUGIN_LPAR} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_LPAR)
+    set(PLUGIN_LPAR_SRC lpar.c)
+    add_library(lpar MODULE ${PLUGIN_LPAR_SRC})
+    if(PERFSTAT_SUPPORTS_DONATION)
+        target_compile_definitions(lpar PUBLIC PERFSTAT_SUPPORTS_DONATION)
+    endif(PERFSTAT_SUPPORTS_DONATION)
+    target_link_libraries(lpar PRIVATE libutils libmetric LibPerfstat::LibPerfstat)
+    set_target_properties(lpar PROPERTIES PREFIX "")
+
+#    add_executable(test_plugin_lpar EXCLUDE_FROM_ALL lpar_test.c ${PLUGIN_LPAR_SRC})
+#    target_link_libraries(test_plugin_lpar libtest libutils libmetric -lm)
+#    add_dependencies(build_tests test_plugin_lpar)
+#    add_test(NAME test_plugin_lpar COMMAND test_plugin_lpar WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    install(TARGETS lpar DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-lpar.5 ncollectd-lpar.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-lpar.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
