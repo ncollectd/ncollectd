@@ -1,0 +1,88 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-tc 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd tc man page"
+.SH NAME
+ncollectd-tc \- Documentation of ncollectd's tc plugin
+.SH SYNOPSIS
+\fBload-plugin\fP tc
+.br
+\fBplugin\fP tc {
+    \fBinterface\fP \fIInterface\fP
+    \fBqdisc\fP \fIinterface\fP [\fIqdisc\fP]
+    \fBclass\fP \fIinterface\fP [\fIclass\fP]
+    \fBfilter\fP \fIinterface\fP [\fIfiltef\fP]
+    \fBignore-selected\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBtc\fP plugin collect metrics of Traffic Control in the Linux kernel.
+.TP
+\fBinterface\fP \fIinterface\fP
+Instruct the plugin to collect Traffic Control statistics for this interface.
+
+If \fBinterface\fP is \fIall\fP, all interfaces will be selected.
+
+It is possible to use regular expressions to match interface names, if the
+name is surrounded by \fI/.../\fP and collectd was compiled with support for
+regexps. This is useful if there's a need to collect (or ignore) data
+for a group of interfaces that are similarly named, without the need to
+explicitly list all of them (especially useful if the list is dynamic).
+Examples:
+.EX
+
+interface "/^eth/"
+interface "/^ens[1-4]$|^enp[0-3]$/"
+
+.EE
+This will match all interfaces with names starting with \fIeth\fP, all interfaces
+in range \fIens1 - ens4\fP and \fIenp0 - enp3\fP, and for verbose metrics all
+interfaces with names starting with \fIeno\fP followed by at least one digit.
+.TP
+\fBqdisc\fP \fIinterface\fP [\fIqdisc\fP]
+.TP
+\fBclass\fP \fIinterface\fP [\fIclass\fP]
+.TP
+\fBfilter\fP \fIinterface\fP [\fIfiltef\fP]
+Collect the octets and packets that pass a certain qdisc, class or filter.
+
+QDiscs and classes are identified by their type and handle (or classid).
+Filters don't necessarily have a handle, therefore the parent's handle is used.
+The notation used in ncollectd differs from that used in
+.BR tc (1)
+in that it doesn't skip the major or minor number if it's zero and doesn't print special
+ids by their name. So, for example, a qdisc may be identified by
+\f(CBpfifo_fast-1:0\fP even though the minor number of \fBall\fP qdiscs is zero and
+thus not displayed by
+.BR tc (1).
+
+If \fBqdisc\fP, \fBclass\fP, or \fBfilter\fP is given without the second argument,
+i.e. without an identifier, all qdiscs, classes, or filters that are
+associated with that interface will be collected.
+
+Since a filter itself doesn't necessarily have a handle, the parent's handle is
+used. This may lead to problems when more than one filter is attached to a
+qdisc or class. This isn't nice, but we don't know how this could be done any
+better. If you have a idea, please don't hesitate to tell us.
+
+As with the \fBinterface\fP option you can specify \fBall\fP as the interface,
+meaning all interfaces.
+
+Here are some examples to help you understand the above text more easily:
+.EX
+
+plugin tc {
+    qdisc "eth0" "pfifo_fast-1:0"
+    qdisc "ppp0"
+    class "ppp0" "htb-1:10"
+    filter "ppp0" "u32-1:0"
+}
+
+.EE
+.TP
+\fBignore-selected\fP \fItrue|false\fP
+If nothing is selected at all, everything is collected. If some things are selected using the
+options described above, only these statistics are collected. If you set
+\fBignore-selected\fP to \fBtrue\fP, this behavior is inverted, the
+specified statistics will not be collected.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
