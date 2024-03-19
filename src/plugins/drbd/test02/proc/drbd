@@ -1,0 +1,9 @@
+version: 8.4.11-1 (api:1/proto:86-101)
+GIT-hash: 66145a308421e9c124ec391a7848ac20203bb03c build by @buildsystem, 2018-04-26 10:38:05
+ 1: cs:SyncSource ro:Primary/Secondary ds:UpToDate/Inconsistent A r-----
+    ns:972 nr:0 dw:982608540 dr:25295424 al:786 bm:0 lo:0 pe:1 ua:0 ap:0 ep:1 wo:d oos:10688
+        [=====>..............] sync'ed: 33.4% (10688/11140)K
+        finish: 0:00:13 speed: 452 (452) K/sec
+
+10: cs:Connected ro:Primary/Secondary ds:UpToDate/UpToDate C r-----
+    ns:988916026 nr:0 dw:982616276 dr:31608196 al:799 bm:0 lo:0 pe:0 ua:0 ap:0 ep:1 wo:d oos:0

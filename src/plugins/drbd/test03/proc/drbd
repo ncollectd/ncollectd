@@ -1,0 +1,12 @@
+version: 8.3.11 (api:88/proto:86-96)
+srcversion: F937DCB2E5D83C6CCE4A6C9
+ 0: cs:SyncTarget ro:Secondary/Primary ds:Inconsistent/UpToDate B r-----
+    ns:0 nr:748024 dw:716024 dr:0 al:0 bm:42 lo:252 pe:4168 ua:250 ap:0 ep:1 wo:d oos:72684800
+	[>....................] sync'ed:  1.0% (70980/71680)Mfinish: 1:15:55 speed: 15,936 (13,760) want: 30,720 K/sec
+
+ 2: cs:Connected ro:Secondary/Primary ds:UpToDate/UpToDate B r-----
+    ns:0 nr:27316 dw:27316 dr:0 al:0 bm:3 lo:0 pe:0 ua:0 ap:0 ep:1 wo:d oos:0
+ 3: cs:Connected ro:Secondary/Primary ds:UpToDate/UpToDate B r-----
+    ns:0 nr:0 dw:0 dr:0 al:0 bm:0 lo:0 pe:0 ua:0 ap:0 ep:1 wo:d oos:0
+ 4: cs:Connected ro:Secondary/Primary ds:UpToDate/UpToDate B r-----
+    ns:0 nr:0 dw:0 dr:0 al:0 bm:0 lo:0 pe:0 ua:0 ap:0 ep:1 wo:d oos:0

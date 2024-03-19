@@ -1,0 +1,45 @@
+# TYPE system_drbd_connected gauge
+system_drbd_connected{device="r1",hostname="localhost.localdomain"} 0
+system_drbd_connected{device="r10",hostname="localhost.localdomain"} 1
+# TYPE system_drdb_network_sent_bytes counter
+system_drdb_network_sent_bytes_total{device="r1",hostname="localhost.localdomain"} 972
+system_drdb_network_sent_bytes_total{device="r10",hostname="localhost.localdomain"} 988916026
+# TYPE system_drdb_disk_state_is_up_to_date gauge
+system_drdb_disk_state_is_up_to_date{device="r1",hostname="localhost.localdomain"} 1
+system_drdb_disk_state_is_up_to_date{device="r10",hostname="localhost.localdomain"} 1
+# TYPE system_drdb_activitylog_writes counter
+system_drdb_activitylog_writes_total{device="r1",hostname="localhost.localdomain"} 786
+system_drdb_activitylog_writes_total{device="r10",hostname="localhost.localdomain"} 799
+# TYPE system_drdb_bitmap_writes counter
+system_drdb_bitmap_writes_total{device="r1",hostname="localhost.localdomain"} 0
+system_drdb_bitmap_writes_total{device="r10",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_local_pending gauge
+system_drdb_local_pending{device="r1",hostname="localhost.localdomain"} 0
+system_drdb_local_pending{device="r10",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_remote_pending gauge
+system_drdb_remote_pending{device="r1",hostname="localhost.localdomain"} 1
+system_drdb_remote_pending{device="r10",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_remote_unacknowledged gauge
+system_drdb_remote_unacknowledged{device="r1",hostname="localhost.localdomain"} 0
+system_drdb_remote_unacknowledged{device="r10",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_application_pending gauge
+system_drdb_application_pending{device="r1",hostname="localhost.localdomain"} 0
+system_drdb_application_pending{device="r10",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_epochs gauge
+system_drdb_epochs{device="r1",hostname="localhost.localdomain"} 1
+system_drdb_epochs{device="r10",hostname="localhost.localdomain"} 1
+# TYPE system_drdb_out_of_sync_bytes gauge
+system_drdb_out_of_sync_bytes{device="r1",hostname="localhost.localdomain"} 10688
+system_drdb_out_of_sync_bytes{device="r10",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_disk_written_bytes counter
+system_drdb_disk_written_bytes_total{device="r1",hostname="localhost.localdomain"} 982608540
+system_drdb_disk_written_bytes_total{device="r10",hostname="localhost.localdomain"} 982616276
+# TYPE system_drdb_disk_read_bytes counter
+system_drdb_disk_read_bytes_total{device="r1",hostname="localhost.localdomain"} 25295424
+system_drdb_disk_read_bytes_total{device="r10",hostname="localhost.localdomain"} 31608196
+# TYPE system_drdb_node_role_is_primary gauge
+system_drdb_node_role_is_primary{device="r1",hostname="localhost.localdomain"} 1
+system_drdb_node_role_is_primary{device="r10",hostname="localhost.localdomain"} 1
+# TYPE system_drdb_network_received_bytes counter
+system_drdb_network_received_bytes_total{device="r1",hostname="localhost.localdomain"} 0
+system_drdb_network_received_bytes_total{device="r10",hostname="localhost.localdomain"} 0

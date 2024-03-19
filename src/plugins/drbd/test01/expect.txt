@@ -1,0 +1,30 @@
+# TYPE system_drbd_connected gauge
+system_drbd_connected{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_disk_written_bytes counter
+system_drdb_disk_written_bytes_total{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_node_role_is_primary gauge
+system_drdb_node_role_is_primary{device="r0",hostname="localhost.localdomain"} 1
+# TYPE system_drdb_disk_state_is_up_to_date gauge
+system_drdb_disk_state_is_up_to_date{device="r0",hostname="localhost.localdomain"} 1
+# TYPE system_drdb_bitmap_writes counter
+system_drdb_bitmap_writes_total{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_activitylog_writes counter
+system_drdb_activitylog_writes_total{device="r0",hostname="localhost.localdomain"} 8
+# TYPE system_drdb_remote_pending gauge
+system_drdb_remote_pending{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_disk_read_bytes counter
+system_drdb_disk_read_bytes_total{device="r0",hostname="localhost.localdomain"} 10992
+# TYPE system_drdb_remote_unacknowledged gauge
+system_drdb_remote_unacknowledged{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_network_sent_bytes counter
+system_drdb_network_sent_bytes_total{device="r0",hostname="localhost.localdomain"} 10944
+# TYPE system_drdb_application_pending gauge
+system_drdb_application_pending{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_network_received_bytes counter
+system_drdb_network_received_bytes_total{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_local_pending gauge
+system_drdb_local_pending{device="r0",hostname="localhost.localdomain"} 0
+# TYPE system_drdb_out_of_sync_bytes gauge
+system_drdb_out_of_sync_bytes{device="r0",hostname="localhost.localdomain"} 3898301536
+# TYPE system_drdb_epochs gauge
+system_drdb_epochs{device="r0",hostname="localhost.localdomain"} 1

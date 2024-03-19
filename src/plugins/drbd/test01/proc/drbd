@@ -1,0 +1,6 @@
+version: 8.4.10 (api:1/proto:86-101)
+srcversion: 17A0C3A0AF9492ED4B9A418
+ 0: cs:SyncSource ro:Primary/Secondary ds:UpToDate/Inconsistent C r-----
+    ns:10944 nr:0 dw:0 dr:10992 al:8 bm:0 lo:0 pe:0 ua:0 ap:0 ep:1 wo:f oos:3898301536
+    [>....................] sync'ed:  0.1% (3806932/3806944)M
+    finish: 483:25:13 speed: 2,188 (2,188) K/sec
