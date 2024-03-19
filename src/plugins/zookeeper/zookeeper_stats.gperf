@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix ZKSTATS_
+%define hash-function-name zkstats_hash
+%define lookup-function-name zkstats_get_key
+%define slot-name key
+%{
+%}
+struct zkstats_metric {
+    char *key;
+    int fam;
+};
+%%
+zk_version,                                      FAM_ZOOKEEPER_VERSION
+zk_server_state,                                 FAM_ZOOKEEPER_SERVER_STATE
+zk_followers,                                    FAM_ZOOKEEPER_FOLLOWERS
+zk_synced_followers,                             FAM_ZOOKEEPER_SYNCED_FOLLOWERS
+zk_pending_syncs,                                FAM_ZOOKEEPER_PENDING_SYNCS
+zk_ephemerals_count,                             FAM_ZOOKEEPER_EPHEMERALS
+zk_num_alive_connections,                        FAM_ZOOKEEPER_ALIVE_CONNECTIONS
+zk_avg_latency,                                  FAM_ZOOKEEPER_LATENCY_AVG_SECONDS
+zk_outstanding_requests,                         FAM_ZOOKEEPER_OUTSTANDING_REQUESTS
+zk_znode_count,                                  FAM_ZOOKEEPER_ZNODES
+zk_global_sessions,                              FAM_ZOOKEEPER_GLOBAL_SESSIONS
+zk_non_mtls_remote_conn_count,                   FAM_ZOOKEEPER_NON_MTLS_REMOTE_CONN
+zk_packets_sent,                                 FAM_ZOOKEEPER_PACKETS_SENT
+zk_packets_received,                             FAM_ZOOKEEPER_PACKETS_RECEIVED
+zk_connection_drop_probability,                  FAM_ZOOKEEPER_CONNECTION_DROP_PROBABILITY
+zk_watch_count,                                  FAM_ZOOKEEPER_WATCHES
+zk_auth_failed_count,                            FAM_ZOOKEEPER_AUTH_FAILED
+zk_min_latency,                                  FAM_ZOOKEEPER_LATENCY_MIN_SECONDS
+zk_max_file_descriptor_count,                    FAM_ZOOKEEPER_MAX_FILE_DESCRIPTORS
+zk_approximate_data_size,                        FAM_ZOOKEEPER_APPROXIMATE_DATA_SIZE_BYTES
+zk_open_file_descriptor_count,                   FAM_ZOOKEEPER_OPEN_FILE_DESCRIPTOR
+zk_local_sessions,                               FAM_ZOOKEEPER_LOCAL_SESSIONS
+zk_uptime,                                       FAM_ZOOKEEPER_UPTIME_SECONDS
+zk_max_latency,                                  FAM_ZOOKEEPER_LATENCY_MAX_SECONDS
+zk_outstanding_tls_handshake,                    FAM_ZOOKEEPER_OUTSTANDING_TLS_HANDSHAKE
+zk_non_mtls_local_conn_count,                    FAM_ZOOKEEPER_NON_MTLS_LOCAL_CONN
+zk_proposal_count,                               FAM_ZOOKEEPER_PROPOSAL
+zk_watch_bytes,                                  FAM_ZOOKEEPER_WATCH_BYTES
+zk_outstanding_changes_removed,                  FAM_ZOOKEEPER_OUTSTANDING_CHANGES_REMOVED
+zk_throttled_ops,                                FAM_ZOOKEEPER_THROTTLED_OPS
+zk_stale_requests_dropped,                       FAM_ZOOKEEPER_STALE_REQUESTS_DROPPED
+zk_large_requests_rejected,                      FAM_ZOOKEEPER_LARGE_REQUESTS_REJECTED
+zk_insecure_admin_count,                         FAM_ZOOKEEPER_INSECURE_ADMIN
+zk_connection_rejected,                          FAM_ZOOKEEPER_CONNECTION_REJECTED
+zk_cnxn_closed_without_zk_server_running,        FAM_ZOOKEEPER_CNXN_CLOSED_WITHOUT_ZK_SERVER_RUNNING
+zk_sessionless_connections_expired,              FAM_ZOOKEEPER_SESSIONLESS_CONNECTIONS_EXPIRED
+zk_looking_count,                                FAM_ZOOKEEPER_LOOKING
+zk_dead_watchers_queued,                         FAM_ZOOKEEPER_DEAD_WATCHERS_QUEUED
+zk_stale_requests,                               FAM_ZOOKEEPER_STALE_REQUESTS
+zk_connection_drop_count,                        FAM_ZOOKEEPER_CONNECTION_DROP
+zk_learner_proposal_received_count,              FAM_ZOOKEEPER_LEARNER_PROPOSAL_RECEIVED
+zk_digest_mismatches_count,                      FAM_ZOOKEEPER_DIGEST_MISMATCHES
+zk_dead_watchers_cleared,                        FAM_ZOOKEEPER_DEAD_WATCHERS_CLEARED
+zk_response_packet_cache_hits,                   FAM_ZOOKEEPER_RESPONSE_PACKET_CACHE_HITS
+zk_bytes_received_count,                         FAM_ZOOKEEPER_RECEIVED_BYTES
+zk_add_dead_watcher_stall_time,                  FAM_ZOOKEEPER_ADD_DEAD_WATCHER_STALL_TIME
+zk_request_throttle_wait_count,                  FAM_ZOOKEEPER_REQUEST_THROTTLE_WAIT
+zk_requests_not_forwarded_to_commit_processor,   FAM_ZOOKEEPER_REQUESTS_NOT_FORWARDED_TO_COMMIT_PROCESSOR
+zk_response_packet_cache_misses,                 FAM_ZOOKEEPER_RESPONSE_PACKET_CACHE_MISSES
+zk_ensemble_auth_success,                        FAM_ZOOKEEPER_ENSEMBLE_AUTH_SUCCESS
+zk_prep_processor_request_queued,                FAM_ZOOKEEPER_PREP_PROCESSOR_REQUEST_QUEUED
+zk_learner_commit_received_count,                FAM_ZOOKEEPER_LEARNER_COMMIT_RECEIVED
+zk_stale_replies,                                FAM_ZOOKEEPER_STALE_REPLIES
+zk_connection_request_count,                     FAM_ZOOKEEPER_CONNECTION_REQUEST
+zk_response_bytes,                               FAM_ZOOKEEPER_RESPONSE_BYTES
+zk_ensemble_auth_fail,                           FAM_ZOOKEEPER_ENSEMBLE_AUTH_FAIL
+zk_diff_count,                                   FAM_ZOOKEEPER_DIFF
+zk_response_packet_get_children_cache_misses,    FAM_ZOOKEEPER_RESPONSE_PACKET_GET_CHILDREN_CACHE_MISSES
+zk_connection_revalidate_count,                  FAM_ZOOKEEPER_CONNECTION_REVALIDATE
+zk_quit_leading_due_to_disloyal_voter,           FAM_ZOOKEEPER_QUIT_LEADING_DUE_TO_DISLOYAL_VOTER
+zk_snap_count,                                   FAM_ZOOKEEPER_SNAP
+zk_unrecoverable_error_count,                    FAM_ZOOKEEPER_UNRECOVERABLE_ERROR
+zk_unsuccessful_handshake,                       FAM_ZOOKEEPER_UNSUCCESSFUL_HANDSHAKE
+zk_commit_count,                                 FAM_ZOOKEEPER_COMMIT
+zk_stale_sessions_expired,                       FAM_ZOOKEEPER_STALE_SESSIONS_EXPIRED
+zk_response_packet_get_children_cache_hits,      FAM_ZOOKEEPER_RESPONSE_PACKET_GET_CHILDREN_CACHE_HITS
+zk_sync_processor_request_queued,                FAM_ZOOKEEPER_SYNC_PROCESSOR_REQUEST_QUEUED
+zk_outstanding_changes_queued,                   FAM_ZOOKEEPER_OUTSTANDING_CHANGES_QUEUED
+zk_request_commit_queued,                        FAM_ZOOKEEPER_REQUEST_COMMIT_QUEUED
+zk_ensemble_auth_skip,                           FAM_ZOOKEEPER_ENSEMBLE_AUTH_SKIP
+zk_skip_learner_request_to_next_processor_count, FAM_ZOOKEEPER_SKIP_LEARNER_REQUEST_TO_NEXT_PROCESSOR
+zk_tls_handshake_exceeded,                       FAM_ZOOKEEPER_TLS_HANDSHAKE_EXCEEDED
+zk_revalidate_count,                             FAM_ZOOKEEPER_REVALIDATE
