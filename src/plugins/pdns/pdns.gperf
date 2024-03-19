@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix PDNS_
+%define hash-function-name pdns_hash
+%define lookup-function-name pdns_get_key
+%define slot-name key
+%{
+%}
+struct pdns_metric {
+    char *key;
+    int fam;
+};
+%%
+udp-queries,                    FAM_PDNS_UDP_QUERIES
+udp-do-queries,                 FAM_PDNS_UDP_DO_QUERIES
+udp-cookie-queries,             FAM_PDNS_UDP_COOKIE_QUERIES
+udp-answers,                    FAM_PDNS_UDP_ANSWERS
+udp-answers-bytes,              FAM_PDNS_UDP_ANSWERS_BYTES
+udp4-answers-bytes,             FAM_PDNS_UDP4_ANSWERS_BYTES
+udp6-answers-bytes,             FAM_PDNS_UDP6_ANSWERS_BYTES
+udp4-answers,                   FAM_PDNS_UDP4_ANSWERS
+udp4-queries,                   FAM_PDNS_UDP4_QUERIES
+udp6-answers,                   FAM_PDNS_UDP6_ANSWERS
+udp6-queries,                   FAM_PDNS_UDP6_QUERIES
+overload-drops,                 FAM_PDNS_OVERLOAD_DROPS
+rd-queries,                     FAM_PDNS_RD_QUERIES
+recursion-unanswered,           FAM_PDNS_RECURSION_UNANSWERED
+recursing-answers,              FAM_PDNS_RECURSING_ANSWERS
+recursing-questions,            FAM_PDNS_RECURSING_QUESTIONS
+corrupt-packets,                FAM_PDNS_CORRUPT_PACKETS
+signatures,                     FAM_PDNS_SIGNATURES
+tcp-queries,                    FAM_PDNS_TCP_QUERIES
+tcp-cookie-queries,             FAM_PDNS_TCP_COOKIE_QUERIES
+tcp-answers,                    FAM_PDNS_TCP_ANSWERS
+tcp-answers-bytes,              FAM_PDNS_TCP_ANSWERS_BYTES
+tcp4-answers-bytes,             FAM_PDNS_TCP4_ANSWERS_BYTES
+tcp6-answers-bytes,             FAM_PDNS_TCP6_ANSWERS_BYTES
+tcp4-queries,                   FAM_PDNS_TCP4_QUERIES
+tcp4-answers,                   FAM_PDNS_TCP4_ANSWERS
+tcp6-queries,                   FAM_PDNS_TCP6_QUERIES
+tcp6-answers,                   FAM_PDNS_TCP6_ANSWERS
+open-tcp-connections,           FAM_PDNS_OPEN_TCP_CONNECTIONS
+qsize-q,                        FAM_PDNS_QSIZE_Q
+dnsupdate-queries,              FAM_PDNS_DNSUPDATE_QUERIES
+dnsupdate-answers,              FAM_PDNS_DNSUPDATE_ANSWERS
+dnsupdate-refused,              FAM_PDNS_DNSUPDATE_REFUSED
+dnsupdate-changes,              FAM_PDNS_DNSUPDATE_CHANGES
+incoming-notifications,         FAM_PDNS_INCOMING_NOTIFICATIONS
+uptime,                         FAM_PDNS_UPTIME_SECONDS
+real-memory-usage,              FAM_PDNS_REAL_MEMORY_USAGE_BYTES
+special-memory-usage,           FAM_PDNS_SPECIAL_MEMORY_USAGE_BYTES
+fd-usage,                       FAM_PDNS_FD_USAGE
+udp-recvbuf-errors,             FAM_PDNS_UDP_RECVBUF_ERRORS
+udp-sndbuf-errors,              FAM_PDNS_UDP_SNDBUF_ERRORS
+udp-noport-errors,              FAM_PDNS_UDP_NOPORT_ERRORS
+udp-in-errors,                  FAM_PDNS_UDP_IN_ERRORS
+udp-in-csum-errors,             FAM_PDNS_UDP_IN_CSUM_ERRORS
+udp6-in-errors,                 FAM_PDNS_UDP6_IN_ERRORS
+udp6-recvbuf-errors,            FAM_PDNS_UDP6_RECVBUF_ERRORS
+udp6-sndbuf-errors,             FAM_PDNS_UDP6_SNDBUF_ERRORS
+udp6-noport-errors,             FAM_PDNS_UDP6_NOPORT_ERRORS
+udp6-in-csum-errors,            FAM_PDNS_UDP6_IN_CSUM_ERRORS
+sys-msec,                       FAM_PDNS_SYS_MSEC
+user-msec,                      FAM_PDNS_USER_MSEC
+cpu-iowait,                     FAM_PDNS_CPU_IOWAIT
+cpu-steal,                      FAM_PDNS_CPU_STEAL
+meta-cache-size,                FAM_PDNS_META_CACHE_SIZE
+key-cache-size,                 FAM_PDNS_KEY_CACHE_SIZE
+signature-cache-size,           FAM_PDNS_SIGNATURE_CACHE_SIZE
+nxdomain-packets,               FAM_PDNS_NXDOMAIN_PACKETS
+noerror-packets,                FAM_PDNS_NOERROR_PACKETS
+servfail-packets,               FAM_PDNS_SERVFAIL_PACKETS
+unauth-packets,                 FAM_PDNS_UNAUTH_PACKETS
+latency,                        FAM_PDNS_LATENCY
+receive-latency,                FAM_PDNS_RECEIVE_LATENCY
+cache-latency,                  FAM_PDNS_CACHE_LATENCY
+backend-latency,                FAM_PDNS_BACKEND_LATENCY
+send-latency,                   FAM_PDNS_SEND_LATENCY
+timedout-packets,               FAM_PDNS_TIMEDOUT_PACKETS
+security-status,                FAM_PDNS_SECURITY_STATUS
+xfr-queue,                      FAM_PDNS_XFR_QUEUE
+backend-queries,                FAM_PDNS_BACKEND_QUERIES
+query-cache-hit,                FAM_PDNS_QUERY_CACHE_HIT
+query-cache-miss,               FAM_PDNS_QUERY_CACHE_MISS
+query-cache-size,               FAM_PDNS_QUERY_CACHE_SIZE
+deferred-cache-inserts,         FAM_PDNS_DEFERRED_CACHE_INSERTS
+deferred-cache-lookup,          FAM_PDNS_DEFERRED_CACHE_LOOKUP
+packetcache-hit,                FAM_PDNS_PACKETCACHE_HIT
+packetcache-miss,               FAM_PDNS_PACKETCACHE_MISS
+packetcache-size,               FAM_PDNS_PACKETCACHE_SIZE
+deferred-packetcache-inserts,   FAM_PDNS_DEFERRED_PACKETCACHE_INSERTS
+deferred-packetcache-lookup,    FAM_PDNS_DEFERRED_PACKETCACHE_LOOKUP
+zone-cache-hit,                 FAM_PDNS_ZONE_CACHE_HIT
+zone-cache-miss,                FAM_PDNS_ZONE_CACHE_MISS
+zone-cache-size,                FAM_PDNS_ZONE_CACHE_SIZE
+ring-logmessages-capacity,      -1
+ring-logmessages-size,          -1
+ring-noerror-queries-capacity,  -1
+ring-noerror-queries-size,      -1
+ring-nxdomain-queries-capacity, -1
+ring-nxdomain-queries-size,     -1
+ring-queries-capacity,          -1
+ring-queries-size,              -1
+ring-remotes-capacity,          -1
+ring-remotes-corrupt-capacity,  -1
+ring-remotes-corrupt-size,      -1
+ring-remotes-size,              -1
+ring-remotes-unauth-capacity,   -1
+ring-remotes-unauth-size,       -1
+ring-servfail-queries-capacity, -1
+ring-servfail-queries-size,     -1
+ring-unauth-queries-capacity,   -1
+ring-unauth-queries-size,       -1
