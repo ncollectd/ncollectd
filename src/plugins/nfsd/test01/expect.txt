@@ -1,0 +1,129 @@
+# TYPE system_nfsd_reply_cache_hits counter
+system_nfsd_reply_cache_hits_total{hostname="localhost.localdomain"} 21
+# TYPE system_nfsd_reply_cache_nocache counter
+system_nfsd_reply_cache_nocache_total{hostname="localhost.localdomain"} 3906526599
+# TYPE system_nfsd_file_handles_stale counter
+system_nfsd_file_handles_stale_total{hostname="localhost.localdomain"} 0
+# TYPE system_nfsd_server_threads gauge
+system_nfsd_server_threads{hostname="localhost.localdomain"} 8
+# TYPE system_nfsd_disk_bytes_read counter
+system_nfsd_disk_bytes_read_total{hostname="localhost.localdomain"} 3077761681
+# TYPE system_nfsd_packets counter
+system_nfsd_packets_total{hostname="localhost.localdomain",protocol="udp"} 42493796
+system_nfsd_packets_total{hostname="localhost.localdomain",protocol="tcp"} 3876051288
+# TYPE system_nfsd_disk_bytes_written counter
+system_nfsd_disk_bytes_written_total{hostname="localhost.localdomain"} 308935934
+# TYPE system_nfsd_rpc_errors counter
+system_nfsd_rpc_errors_total{error="fmt",hostname="localhost.localdomain"} 423
+system_nfsd_rpc_errors_total{error="auth",hostname="localhost.localdomain"} 26
+system_nfsd_rpc_errors_total{error="cInt",hostname="localhost.localdomain"} 0
+# TYPE system_nfsd_server_rpc_calls counter
+system_nfsd_server_rpc_calls_total{hostname="localhost.localdomain"} 3918544635
+# TYPE system_nfsd_read_ahead_cache_size_blocks gauge
+system_nfsd_read_ahead_cache_size_blocks{hostname="localhost.localdomain"} 32
+# TYPE system_nfsd_connections counter
+system_nfsd_connections_total{hostname="localhost.localdomain"} 9848
+# TYPE system_nfsd_reply_cache_misses counter
+system_nfsd_reply_cache_misses_total{hostname="localhost.localdomain"} 12018015
+# TYPE system_nfsd_read_ahead_cache_not_found gauge
+system_nfsd_read_ahead_cache_not_found{hostname="localhost.localdomain"} 2.9999794e-317
+# TYPE system_nfsd_requests counter
+system_nfsd_requests_total{hostname="localhost.localdomain",method="null",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="getattr",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="setattr",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="root",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="lookup",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readlink",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="read",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="wrcache",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="write",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="create",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="remove",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="rename",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="link",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="symlink",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="mkdir",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="rmdir",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readdir",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="fsstat",proto="2"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="null",proto="3"} 37
+system_nfsd_requests_total{hostname="localhost.localdomain",method="getattr",proto="3"} 3091905636
+system_nfsd_requests_total{hostname="localhost.localdomain",method="setattr",proto="3"} 585483
+system_nfsd_requests_total{hostname="localhost.localdomain",method="lookup",proto="3"} 18113726
+system_nfsd_requests_total{hostname="localhost.localdomain",method="access",proto="3"} 740202860
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readlink",proto="3"} 147
+system_nfsd_requests_total{hostname="localhost.localdomain",method="read",proto="3"} 47897937
+system_nfsd_requests_total{hostname="localhost.localdomain",method="write",proto="3"} 10350907
+system_nfsd_requests_total{hostname="localhost.localdomain",method="create",proto="3"} 549027
+system_nfsd_requests_total{hostname="localhost.localdomain",method="mkdir",proto="3"} 5127
+system_nfsd_requests_total{hostname="localhost.localdomain",method="symlink",proto="3"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="mknod",proto="3"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="remove",proto="3"} 493518
+system_nfsd_requests_total{hostname="localhost.localdomain",method="rmdir",proto="3"} 2406
+system_nfsd_requests_total{hostname="localhost.localdomain",method="rename",proto="3"} 31568
+system_nfsd_requests_total{hostname="localhost.localdomain",method="link",proto="3"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readdir",proto="3"} 4664
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readdirplus",proto="3"} 167697
+system_nfsd_requests_total{hostname="localhost.localdomain",method="fsstat",proto="3"} 7990925
+system_nfsd_requests_total{hostname="localhost.localdomain",method="fsinfo",proto="3"} 34
+system_nfsd_requests_total{hostname="localhost.localdomain",method="pathconf",proto="3"} 17
+system_nfsd_requests_total{hostname="localhost.localdomain",method="commit",proto="3"} 149244
+system_nfsd_requests_total{hostname="localhost.localdomain",method="null",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="compound",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="reserved",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="access",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="close",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="commit",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="create",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="delegpurge",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="delegreturn",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="getattr",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="getfh",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="link",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="lock",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="lockt",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="locku",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="lookup",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="lookupp",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="nverify",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="open",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="openattr",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="open_confirm",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="open_downgrade",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="putfh",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="putpubfh",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="putrootfh",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="read",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readdir",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="readlink",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="remove",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="rename",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="renew",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="restorefh",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="savefh",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="secinfo",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="setattr",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="setclientid",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="setcltid_confirm",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="verify",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="write",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="release_lockowner",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="backchannel_ctl",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="bind_conn_to_session",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="exchange_id",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="create_session",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="destroy_session",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="free_stateid",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="get_dir_delegation",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="getdeviceinfo",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="getdevicelist",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="layoutcommit",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="layoutget",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="layoutreturn",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="secinfo_no_name",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="sequence",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="set_ssv",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="test_stateid",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="want_delegation",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="destroy_clientid",proto="4"} 0
+system_nfsd_requests_total{hostname="localhost.localdomain",method="reclaim_complete",proto="4"} 0
