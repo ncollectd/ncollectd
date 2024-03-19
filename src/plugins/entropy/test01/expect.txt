@@ -1,0 +1,4 @@
+# TYPE system_entropy_pool_size_bits gauge
+system_entropy_pool_size_bits{hostname="localhost.localdomain"} 4096
+# TYPE system_entropy_available_bits gauge
+system_entropy_available_bits{hostname="localhost.localdomain"} 3834
