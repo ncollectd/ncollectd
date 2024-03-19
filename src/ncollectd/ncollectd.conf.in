@@ -1,0 +1,51 @@
+# Config file for ncollectd(1).
+# Please read ncollectd.conf(5) for a list of options.
+
+#hostname       "localhost"
+fqdn-lookup    true
+base-dir    "@CMAKE_INSTALL_FULL_LOCALSTATEDIR@/lib/@CMAKE_PROJECT_NAME@"
+pid-file    "@CMAKE_INSTALL_FULL_LOCALSTATEDIR@/run/@CMAKE_PROJECT_NAME@.pid"
+plugin-dir  "@CMAKE_INSTALL_FULL_LIBDIR@/@CMAKE_PROJECT_NAME@"
+
+auto-load-plugin  true
+
+collect-internal-stats true
+
+interval     10
+
+#max-read-interval    86400
+#timeout              2
+#read-threads         5
+#write-threads        5
+
+#write-queue-limit-high  1000000
+#write-queue-limit-low    800000
+
+#proc-path  "/proc"
+#sys-path   "/sys"
+
+#pre-cache-filter   "pre-cache"
+#post-cache-filter  "post-cache"
+
+#normalize-interval false
+
+#socket-file  "@CMAKE_INSTALL_LOCALSTATEDIR@/run/@CMAKE_PROJECT_NAME@-unixsock"
+#socket-group  ncollectd
+#socket-perms  "0770"
+#socket-delete "false"
+
+#label  "key" "value"
+
+plugin log_file {
+    log-level info
+    file STDOUT
+    format text "!all" message severity timestamp
+}
+
+plugin write_log
+
+plugin cpu
+plugin interface
+plugin load
+plugin memory
+

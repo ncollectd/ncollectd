@@ -1,726 +1,579 @@
-/**
- * collectd - src/configfile.c
- * Copyright (C) 2005-2011  Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Sebastian tokkee Harl <sh at tokkee.org>
- **/
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2005-2011  Florian octo Forster
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Sebastian tokkee Harl <sh at tokkee.org>
 
-#include "collectd.h"
-
-#include "liboconfig/oconfig.h"
-
+#include "ncollectd.h"
+#include "globals.h"
 #include "configfile.h"
-#include "filter_chain.h"
-#include "plugin.h"
-#include "types_list.h"
-#include "utils/common/common.h"
+#include "filter.h"
+#include "plugin_internal.h"
+#include "libutils/common.h"
+#include "libutils/config.h"
+#include "libmetric/label_set.h"
 
-#if HAVE_WORDEXP_H
+#ifdef HAVE_WORDEXP_H
 #include <wordexp.h>
 #endif /* HAVE_WORDEXP_H */
 
-#if HAVE_FNMATCH_H
+#ifdef HAVE_FNMATCH_H
 #include <fnmatch.h>
 #endif /* HAVE_FNMATCH_H */
 
-#if HAVE_LIBGEN_H
+#ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 #endif /* HAVE_LIBGEN_H */
 
 #define ESCAPE_NULL(str) ((str) == NULL ? "(null)" : (str))
 
-/*
- * Private types
- */
-typedef struct cf_callback {
-  const char *type;
-  int (*callback)(const char *, const char *);
-  const char **keys;
-  int keys_num;
-  plugin_ctx_t ctx;
-  struct cf_callback *next;
+typedef struct cf_callback_s {
+    char *type;
+    int (*callback)(config_item_t *);
+    plugin_ctx_t ctx;
+    struct cf_callback_s *next;
 } cf_callback_t;
 
-typedef struct cf_complex_callback_s {
-  char *type;
-  int (*callback)(oconfig_item_t *);
-  plugin_ctx_t ctx;
-  struct cf_complex_callback_s *next;
-} cf_complex_callback_t;
-
 typedef struct cf_value_map_s {
-  const char *key;
-  int (*func)(oconfig_item_t *);
+    const char *key;
+    int (*func)(config_item_t *);
 } cf_value_map_t;
 
 typedef struct cf_global_option_s {
-  const char *key;
-  char *value;
-  bool from_cli; /* value set from CLI */
-  const char *def;
+    const char *key;
+    char *value;
+    bool from_cli; /* value set from CLI */
+    const char *def;
 } cf_global_option_t;
 
-/*
- * Prototypes of callback functions
- */
-static int dispatch_value_typesdb(oconfig_item_t *ci);
-static int dispatch_value_plugindir(oconfig_item_t *ci);
-static int dispatch_loadplugin(oconfig_item_t *ci);
-static int dispatch_block_plugin(oconfig_item_t *ci);
+/* Prototypes of callback functions */
+static int dispatch_value_plugindir(config_item_t *ci);
+static int dispatch_loadplugin(config_item_t *ci);
+static int dispatch_block_plugin(config_item_t *ci);
+static int dispatch_label(config_item_t *ci);
 
-/*
- * Private variables
- */
-static cf_callback_t *first_callback;
-static cf_complex_callback_t *complex_callback_head;
+/* Private variables */
+static cf_callback_t *callback_head;
 
-static cf_value_map_t cf_value_map[] = {{"TypesDB", dispatch_value_typesdb},
-                                        {"PluginDir", dispatch_value_plugindir},
-                                        {"LoadPlugin", dispatch_loadplugin},
-                                        {"Plugin", dispatch_block_plugin}};
+static cf_value_map_t cf_value_map[] = {
+    {"plugin-dir",  dispatch_value_plugindir},
+    {"load-plugin", dispatch_loadplugin     },
+    {"plugin",      dispatch_block_plugin   },
+    {"label",       dispatch_label          }
+};
 static int cf_value_map_num = STATIC_ARRAY_SIZE(cf_value_map);
 
 static cf_global_option_t cf_global_options[] = {
-    {"BaseDir", NULL, 0, PKGLOCALSTATEDIR},
-    {"PIDFile", NULL, 0, PIDFILE},
-    {"Hostname", NULL, 0, NULL},
-    {"FQDNLookup", NULL, 0, "true"},
-    {"Interval", NULL, 0, NULL},
-    {"ReadThreads", NULL, 0, "5"},
-    {"WriteQueueLimitHigh", NULL, 0, NULL},
-    {"WriteQueueLimitLow", NULL, 0, NULL},
-    {"Timeout", NULL, 0, "2"},
-    {"AutoLoadPlugin", NULL, 0, "false"},
-    {"CollectInternalStats", NULL, 0, "false"},
-    {"PreCacheChain", NULL, 0, "PreCache"},
-    {"PostCacheChain", NULL, 0, "PostCache"},
-    {"MaxReadInterval", NULL, 0, "86400"}};
+    {"base-dir",                NULL, 0, PKGLOCALSTATEDIR  },
+    {"pid-file",                NULL, 0, PIDFILE           },
+    {"hostname",                NULL, 0, NULL              },
+    {"fqdn-lookup",             NULL, 0, "true"            },
+    {"interval",                NULL, 0, NULL              },
+    {"read-threads",            NULL, 0, "5"               },
+    {"write-queue-limit-high",  NULL, 0, NULL              },
+    {"write-queue-limit-low",   NULL, 0, NULL              },
+    {"notify-queue-limit-high", NULL, 0, NULL              },
+    {"notify-queue-limit-low",  NULL, 0, NULL              },
+    {"timeout",                 NULL, 0, "2"               },
+    {"auto-load-plugin",        NULL, 0, "false"           },
+    {"collect-internal-stats",  NULL, 0, "false"           },
+    {"pre-cache-filter",        NULL, 0, "pre-cache"       },
+    {"post-cache-filter",       NULL, 0, "post-cache"      },
+    {"max-read-interval",       NULL, 0, "86400"           },
+    {"normalize-interval",      NULL, 0, "false"           },
+    {"socket-file",             NULL, 0, UNIXSOCKETPATH    },
+    {"socket-group",            NULL, 0, NCOLLECTD_GRP_NAME},
+    {"socket-perms",            NULL, 0, "0770"            },
+    {"socket-delete",           NULL, 0, "false"           },
+    {"proc-path",               NULL, 0, "/proc"           },
+    {"sys-path",                NULL, 0, "/sys"            }
+};
 static int cf_global_options_num = STATIC_ARRAY_SIZE(cf_global_options);
 
-static int cf_default_typesdb = 1;
+static int dispatch_global_option(const config_item_t *ci)
+{
+    if (ci->values_num != 1) {
+        ERROR("configfile: Global option '%s' in %s:%d needs exactly one argument.",
+              ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
 
-/*
- * Functions to handle register/unregister, search, and other plugin related
- * stuff
- */
-static cf_callback_t *cf_search(const char *type) {
-  cf_callback_t *cf_cb;
+    if (ci->values[0].type == CONFIG_TYPE_STRING) {
+        return global_option_set(ci->key, ci->values[0].value.string, 0);
+    } else if (ci->values[0].type == CONFIG_TYPE_NUMBER) {
+        char tmp[128];
+        ssnprintf(tmp, sizeof(tmp), "%lf", ci->values[0].value.number);
+        return global_option_set(ci->key, tmp, 0);
+    } else if (ci->values[0].type == CONFIG_TYPE_BOOLEAN) {
+        if (ci->values[0].value.boolean)
+            return global_option_set(ci->key, "true", 0);
+        else
+            return global_option_set(ci->key, "false", 0);
+    }
 
-  if (type == NULL)
-    return NULL;
+    ERROR("configfile: Global option '%s' argument has unknown type in %s:%d.",
+          ci->key, cf_get_file(ci), cf_get_lineno(ci));
 
-  for (cf_cb = first_callback; cf_cb != NULL; cf_cb = cf_cb->next)
-    if (strcasecmp(cf_cb->type, type) == 0)
-      break;
-
-  return cf_cb;
+    return -1;
 }
 
-static int cf_dispatch_option(const cf_callback_t *cf_cb, oconfig_item_t *ci) {
+static int dispatch_value_plugindir(config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "plugin-dir") == 0);
 
-  const char *plugin = cf_cb->type;
-  const char *orig_key = ci->key;
-  if (orig_key == NULL)
-    return EINVAL;
-
-  /* (Re)construct string value for option */
-  char buffer[4096];
-  int buffer_free = sizeof(buffer);
-  char *buffer_ptr = buffer;
-
-  for (int i = 0; i < ci->values_num; i++) {
-    int status = -1;
-
-    if (ci->values[i].type == OCONFIG_TYPE_STRING)
-      status =
-          ssnprintf(buffer_ptr, buffer_free, " %s", ci->values[i].value.string);
-    else if (ci->values[i].type == OCONFIG_TYPE_NUMBER)
-      status = ssnprintf(buffer_ptr, buffer_free, " %lf",
-                         ci->values[i].value.number);
-    else if (ci->values[i].type == OCONFIG_TYPE_BOOLEAN)
-      status = ssnprintf(buffer_ptr, buffer_free, " %s",
-                         ci->values[i].value.boolean ? "true" : "false");
-
-    if ((status < 0) || (status >= buffer_free))
-      return -1;
-    buffer_free -= status;
-    buffer_ptr += status;
-  }
-
-  /* skip the initial space */
-  const char *orig_value = buffer + 1;
-
-  DEBUG("plugin = %s, key = %s, value = %s", ESCAPE_NULL(plugin), orig_key,
-        ESCAPE_NULL(orig_value));
-
-  char *key = strdup(orig_key);
-  if (key == NULL)
-    return 1;
-
-  char *value = strdup(orig_value);
-  if (value == NULL) {
-    free(key);
-    return 2;
-  }
-
-  int ret = -1;
-
-  plugin_ctx_t old_ctx = plugin_set_ctx(cf_cb->ctx);
-
-  int i;
-  for (i = 0; i < cf_cb->keys_num; i++) {
-    if ((cf_cb->keys[i] != NULL) && (strcasecmp(cf_cb->keys[i], key) == 0)) {
-      ret = (*cf_cb->callback)(key, value);
-      break;
-    }
-  }
-
-  plugin_set_ctx(old_ctx);
-
-  if (i >= cf_cb->keys_num)
-    WARNING("Plugin `%s' did not register for value `%s'.", plugin, key);
-
-  free(key);
-  free(value);
-
-  return ret;
-} /* int cf_dispatch_option */
-
-static int dispatch_global_option(const oconfig_item_t *ci) {
-  if (ci->values_num != 1) {
-    ERROR("configfile: Global option `%s' needs exactly one argument.",
-          ci->key);
-    return -1;
-  }
-
-  if (ci->values[0].type == OCONFIG_TYPE_STRING)
-    return global_option_set(ci->key, ci->values[0].value.string, 0);
-  else if (ci->values[0].type == OCONFIG_TYPE_NUMBER) {
-    char tmp[128];
-    ssnprintf(tmp, sizeof(tmp), "%lf", ci->values[0].value.number);
-    return global_option_set(ci->key, tmp, 0);
-  } else if (ci->values[0].type == OCONFIG_TYPE_BOOLEAN) {
-    if (ci->values[0].value.boolean)
-      return global_option_set(ci->key, "true", 0);
-    else
-      return global_option_set(ci->key, "false", 0);
-  }
-
-  ERROR("configfile: Global option `%s' argument has unknown type.", ci->key);
-
-  return -1;
-} /* int dispatch_global_option */
-
-static int dispatch_value_typesdb(oconfig_item_t *ci) {
-  assert(strcasecmp(ci->key, "TypesDB") == 0);
-
-  cf_default_typesdb = 0;
-
-  if (ci->values_num < 1) {
-    ERROR("configfile: `TypesDB' needs at least one argument.");
-    return -1;
-  }
-
-  for (int i = 0; i < ci->values_num; ++i) {
-    if (OCONFIG_TYPE_STRING != ci->values[i].type) {
-      WARNING("configfile: TypesDB: Skipping %i. argument which "
-              "is not a string.",
-              i + 1);
-      continue;
+    if (ci->values_num != 1 || ci->values[0].type != CONFIG_TYPE_STRING) {
+        ERROR("configfile: The 'plugin-dir' option in %s:%d needs exactly one string argument.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
     }
 
-    read_types_list(ci->values[i].value.string);
-  }
-  return 0;
-} /* int dispatch_value_typesdb */
-
-static int dispatch_value_plugindir(oconfig_item_t *ci) {
-  assert(strcasecmp(ci->key, "PluginDir") == 0);
-
-  if (ci->values_num != 1 || ci->values[0].type != OCONFIG_TYPE_STRING) {
-    ERROR("configfile: The `PluginDir' option needs exactly one string "
-          "argument.");
-    return -1;
-  }
-
-  plugin_set_dir(ci->values[0].value.string);
-  return 0;
+    plugin_set_dir(ci->values[0].value.string);
+    return 0;
 }
 
-static int dispatch_loadplugin(oconfig_item_t *ci) {
-  bool global = false;
+static int dispatch_loadplugin(config_item_t *ci)
+{
+    bool global = false;
 
-  assert(strcasecmp(ci->key, "LoadPlugin") == 0);
+    assert(strcasecmp(ci->key, "load-plugin") == 0);
 
-  if (ci->values_num != 1 || ci->values[0].type != OCONFIG_TYPE_STRING) {
-    ERROR("configfile: The `LoadPlugin' block needs exactly one string "
-          "argument.");
-    return -1;
-  }
-
-  const char *name = ci->values[0].value.string;
-  if (strcmp("libvirt", name) == 0)
-    name = "virt";
-
-  /* default to the global interval set before loading this plugin */
-  plugin_ctx_t ctx = {
-      .interval = cf_get_default_interval(),
-      .name = strdup(name),
-  };
-  if (ctx.name == NULL)
-    return ENOMEM;
-
-  for (int i = 0; i < ci->children_num; ++i) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Globals", child->key) == 0)
-      cf_util_get_boolean(child, &global);
-    else if (strcasecmp("Interval", child->key) == 0)
-      cf_util_get_cdtime(child, &ctx.interval);
-    else if (strcasecmp("FlushInterval", child->key) == 0)
-      cf_util_get_cdtime(child, &ctx.flush_interval);
-    else if (strcasecmp("FlushTimeout", child->key) == 0)
-      cf_util_get_cdtime(child, &ctx.flush_timeout);
-    else {
-      WARNING("Ignoring unknown LoadPlugin option \"%s\" "
-              "for plugin \"%s\"",
-              child->key, name);
-    }
-  }
-
-  plugin_ctx_t old_ctx = plugin_set_ctx(ctx);
-  int ret_val = plugin_load(name, global);
-  /* reset to the "global" context */
-  plugin_set_ctx(old_ctx);
-
-  return ret_val;
-} /* int dispatch_value_loadplugin */
-
-static int dispatch_value(oconfig_item_t *ci) {
-  int ret = 0;
-
-  for (int i = 0; i < cf_value_map_num; i++)
-    if (strcasecmp(cf_value_map[i].key, ci->key) == 0) {
-      ret = cf_value_map[i].func(ci);
-      break;
+    if (ci->values_num != 1 || ci->values[0].type != CONFIG_TYPE_STRING) {
+        ERROR("configfile: The 'load-plugin' block in %s:%d needs exactly one string argument.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
     }
 
-  if (ret != 0)
-    return ret;
+    const char *name = ci->values[0].value.string;
 
-  for (int i = 0; i < cf_global_options_num; i++)
-    if (strcasecmp(cf_global_options[i].key, ci->key) == 0) {
-      ret = dispatch_global_option(ci);
-      break;
-    }
-
-  return ret;
-} /* int dispatch_value */
-
-static int dispatch_block_plugin(oconfig_item_t *ci) {
-  assert(strcasecmp(ci->key, "Plugin") == 0);
-
-  if (ci->values_num < 1) {
-    ERROR("configfile: The `Plugin' block requires arguments.");
-    return -1;
-  }
-  if (ci->values[0].type != OCONFIG_TYPE_STRING) {
-    ERROR("configfile: First argument of `Plugin' block should be a string.");
-    return -1;
-  }
-
-  char const *plugin_name = ci->values[0].value.string;
-  bool plugin_loaded = plugin_is_loaded(plugin_name);
-
-  if (!plugin_loaded && IS_TRUE(global_option_get("AutoLoadPlugin"))) {
-    plugin_ctx_t ctx = {0};
+    bool normalize = IS_TRUE(global_option_get("normalize-interval"));
 
     /* default to the global interval set before loading this plugin */
-    ctx.interval = cf_get_default_interval();
-    ctx.name = strdup(plugin_name);
+    plugin_ctx_t ctx = {
+            .interval = cf_get_default_interval(),
+            .name = strdup(name),
+            .normalize_interval = normalize,
+    };
+    if (ctx.name == NULL)
+        return ENOMEM;
+
+    int status = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("globals", child->key) == 0) {
+            status = cf_util_get_boolean(child, &global);
+        } else if (strcasecmp("interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &ctx.interval);
+        } else if (strcasecmp("normalize-interval", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx.normalize_interval);
+        } else {
+            ERROR("Unknown load-plugin option '%s' for plugin '%s' in %s:%d",
+                  child->key, name, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0) {
+        free(ctx.name);
+        return -1;
+    }
 
     plugin_ctx_t old_ctx = plugin_set_ctx(ctx);
-    int status = plugin_load(plugin_name, /* flags = */ false);
+    int ret_val = plugin_load(name, global);
     /* reset to the "global" context */
     plugin_set_ctx(old_ctx);
 
-    if (status != 0) {
-      ERROR("Automatically loading plugin `%s' failed "
-            "with status %i.",
-            plugin_name, status);
-      return status;
-    }
-    plugin_loaded = true;
-  }
-
-  if (!plugin_loaded) {
-    WARNING("There is configuration for the `%s' plugin, but the plugin isn't "
-            "loaded. Please check your configuration.",
-            plugin_name);
-
-    /* Try to be backward-compatible with previous versions */
-    return 0;
-  }
-
-  /* Check for a complex callback first */
-  for (cf_complex_callback_t *cb = complex_callback_head; cb != NULL;
-       cb = cb->next) {
-    if (strcasecmp(plugin_name, cb->type) == 0) {
-      plugin_ctx_t old_ctx = plugin_set_ctx(cb->ctx);
-      int ret_val = (cb->callback(ci));
-      plugin_set_ctx(old_ctx);
-      return ret_val;
-    }
-  }
-
-  /* Try to be backward-compatible with previous versions */
-  if (ci->children_num == 0)
-    return 0;
-
-  /* Hm, no complex plugin found. Dispatch the values one by one */
-  cf_callback_t *cf_cb = cf_search(plugin_name);
-  if (cf_cb == NULL) {
-    WARNING("Found a configuration for the `%s' plugin, but "
-            "the plugin didn't register a configuration callback.",
-            plugin_name);
-    return -1;
-  }
-
-  for (int i = 0; i < ci->children_num; i++) {
-    if (ci->children[i].children == NULL) {
-      oconfig_item_t *child = ci->children + i;
-      int ret = cf_dispatch_option(cf_cb, child);
-      if (ret != 0) {
-        ERROR("Plugin `%s' failed to handle option `%s', return code: %i",
-              plugin_name, child->key, ret);
-        return ret;
-      }
-    } else {
-      WARNING("There is a `%s' block within the "
-              "configuration for the `%s' plugin. "
-              "The plugin only expects \"simple\" configuration options. "
-              "Blocks are not supported. Please check your configuration.",
-              ci->children[i].key, plugin_name);
-    }
-  }
-
-  return 0;
+    return ret_val;
 }
 
-static int dispatch_block(oconfig_item_t *ci) {
-  if (strcasecmp(ci->key, "LoadPlugin") == 0)
-    return dispatch_loadplugin(ci);
-  else if (strcasecmp(ci->key, "Plugin") == 0)
-    return dispatch_block_plugin(ci);
-  else if (strcasecmp(ci->key, "Chain") == 0)
-    return fc_configure(ci);
+static int dispatch_value(config_item_t *ci)
+{
+    for (int i = 0; i < cf_value_map_num; i++) {
+        if (strcasecmp(cf_value_map[i].key, ci->key) == 0) {
+            return cf_value_map[i].func(ci);
+        }
+    }
 
-  return 0;
+    for (int i = 0; i < cf_global_options_num; i++) {
+        if (strcasecmp(cf_global_options[i].key, ci->key) == 0) {
+            return dispatch_global_option(ci);
+        }
+    }
+
+    ERROR("Unknown global option '%s' in %s:%d",
+           ci->key, cf_get_file(ci), cf_get_lineno(ci));
+
+    return -1;
 }
 
-static int cf_ci_replace_child(oconfig_item_t *dst, oconfig_item_t *src,
-                               int offset) {
-  oconfig_item_t *temp;
+static int dispatch_block_plugin(config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "plugin") == 0);
 
-  assert(offset >= 0);
-  assert(dst->children_num > offset);
-
-  /* Free the memory used by the replaced child. Usually that's the
-   * `Include "blah"' statement. */
-  temp = dst->children + offset;
-  for (int i = 0; i < temp->values_num; i++) {
-    if (temp->values[i].type == OCONFIG_TYPE_STRING) {
-      sfree(temp->values[i].value.string);
+    if (ci->values_num < 1) {
+        ERROR("configfile: The 'plugin' block in %s:%d requires arguments.",
+               cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
     }
-  }
-  sfree(temp->values);
-  temp = NULL;
+    if (ci->values[0].type != CONFIG_TYPE_STRING) {
+        ERROR("configfile: First argument of 'plugin' block in %s:%d should be a string.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
 
-  /* If (src->children_num == 0) the array size is decreased. If offset
-   * is _not_ the last element, (offset < (dst->children_num - 1)), then
-   * we need to move the trailing elements before resizing the array. */
-  if ((src->children_num == 0) && (offset < (dst->children_num - 1))) {
-    int nmemb = dst->children_num - (offset + 1);
-    memmove(dst->children + offset, dst->children + offset + 1,
-            sizeof(oconfig_item_t) * nmemb);
-  }
+    char const *plugin_name = ci->values[0].value.string;
+    bool plugin_loaded = plugin_is_loaded(plugin_name);
 
-  /* Resize the memory containing the children to be big enough to hold
-   * all children. */
-  if (dst->children_num + src->children_num - 1 == 0) {
-    dst->children_num = 0;
+    if (!plugin_loaded && IS_TRUE(global_option_get("auto-load-plugin"))) {
+        plugin_ctx_t ctx = {0};
+
+        /* default to the global interval set before loading this plugin */
+        ctx.interval = cf_get_default_interval();
+        ctx.name = strdup(plugin_name);
+        ctx.normalize_interval = IS_TRUE(global_option_get("normalize-interval"));
+
+        plugin_ctx_t old_ctx = plugin_set_ctx(ctx);
+        int status = plugin_load(plugin_name, /* flags = */ false);
+        /* reset to the "global" context */
+        plugin_set_ctx(old_ctx);
+
+        if (status != 0) {
+            ERROR("Automatically loading plugin '%s' failed with status %i.", plugin_name, status);
+            return status;
+        }
+        plugin_loaded = true;
+    }
+
+    if (!plugin_loaded) {
+        WARNING("There is configuration for the '%s' plugin, but the plugin isn't "
+                "loaded. Please check your configuration.", plugin_name);
+        return -1;
+    }
+
+    for (cf_callback_t *cb = callback_head; cb != NULL; cb = cb->next) {
+        if (strcasecmp(plugin_name, cb->type) == 0) {
+            plugin_ctx_t old_ctx = plugin_set_ctx(cb->ctx);
+            int ret_val = (cb->callback(ci));
+            plugin_set_ctx(old_ctx);
+            return ret_val;
+        }
+    }
+
+    if (ci->children_num > 0) {
+        WARNING("Found a configuration for the '%s' plugin, but "
+                "the plugin didn't register a configuration callback.", plugin_name);
+        return -1;
+    }
+
     return 0;
-  }
+}
 
-  temp =
-      realloc(dst->children, sizeof(oconfig_item_t) *
-                                 (dst->children_num + src->children_num - 1));
-  if (temp == NULL) {
-    ERROR("configfile: realloc failed.");
-    return -1;
-  }
-  dst->children = temp;
+static int dispatch_block(config_item_t *ci)
+{
+    if (strcasecmp(ci->key, "load-plugin") == 0)
+        return dispatch_loadplugin(ci);
+    else if (strcasecmp(ci->key, "plugin") == 0)
+        return dispatch_block_plugin(ci);
+    else if (strcasecmp(ci->key, "filter") == 0)
+        return filter_global_configure(ci);
+    else
+        return -1;
 
-  /* If there are children behind the include statement, and they have
-   * not yet been moved because (src->children_num == 0), then move them
-   * to the end of the list, so that the new children have room before
-   * them. */
-  if ((src->children_num > 0) && ((dst->children_num - (offset + 1)) > 0)) {
-    int nmemb = dst->children_num - (offset + 1);
-    int old_offset = offset + 1;
-    int new_offset = offset + src->children_num;
-
-    memmove(dst->children + new_offset, dst->children + old_offset,
-            sizeof(oconfig_item_t) * nmemb);
-  }
-
-  /* Last but not least: If there are new children, copy them to the
-   * memory reserved for them. */
-  if (src->children_num > 0) {
-    memcpy(dst->children + offset, src->children,
-           sizeof(oconfig_item_t) * src->children_num);
-  }
-
-  /* Update the number of children. */
-  dst->children_num += (src->children_num - 1);
-
-  return 0;
-} /* int cf_ci_replace_child */
-
-static int cf_ci_append_children(oconfig_item_t *dst, oconfig_item_t *src) {
-  oconfig_item_t *temp;
-
-  if ((src == NULL) || (src->children_num == 0))
     return 0;
+}
 
-  temp = realloc(dst->children, sizeof(oconfig_item_t) *
-                                    (dst->children_num + src->children_num));
-  if (temp == NULL) {
-    ERROR("configfile: realloc failed.");
-    return -1;
-  }
-  dst->children = temp;
+static int dispatch_label(config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "label") == 0);
 
-  memcpy(dst->children + dst->children_num, src->children,
-         sizeof(oconfig_item_t) * src->children_num);
-  dst->children_num += src->children_num;
+    if (ci->values_num != 2) {
+        ERROR("configfile: The 'label' in %s:%d option requires two arguments.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+    if ((ci->values[0].type != CONFIG_TYPE_STRING) ||
+        (ci->values[1].type != CONFIG_TYPE_STRING)) {
+        ERROR("configfile: The arguments of 'label' option in %s:%d should be strings.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
 
-  return 0;
-} /* int cf_ci_append_children */
+    return label_set_add(&labels_g, true, ci->values[0].value.string, ci->values[1].value.string);
+}
+
+static int cf_ci_replace_child(config_item_t *dst, config_item_t *src, int offset)
+{
+    assert(offset >= 0);
+    assert(dst->children_num > offset);
+
+    /* Free the memory used by the replaced child. Usually that's the
+     * Include "blah"' statement. */
+    config_item_t *temp = dst->children + offset;
+    for (int i = 0; i < temp->values_num; i++) {
+        if (temp->values[i].type == CONFIG_TYPE_STRING) {
+            free(temp->values[i].value.string);
+        }
+    }
+    free(temp->values);
+    temp = NULL;
+
+    /* If (src->children_num == 0) the array size is decreased. If offset
+     * is _not_ the last element, (offset < (dst->children_num - 1)), then
+     * we need to move the trailing elements before resizing the array. */
+    if ((src->children_num == 0) && (offset < (dst->children_num - 1))) {
+        int nmemb = dst->children_num - (offset + 1);
+        memmove(dst->children + offset, dst->children + offset + 1,
+                        sizeof(config_item_t) * nmemb);
+    }
+
+    /* Resize the memory containing the children to be big enough to hold
+     * all children. */
+    if (dst->children_num + src->children_num - 1 == 0) {
+        dst->children_num = 0;
+        return 0;
+    }
+
+    temp = realloc(dst->children, sizeof(config_item_t) *
+                                  (dst->children_num + src->children_num - 1));
+    if (temp == NULL) {
+        ERROR("configfile: realloc failed.");
+        return -1;
+    }
+    dst->children = temp;
+
+    /* If there are children behind the include statement, and they have
+     * not yet been moved because (src->children_num == 0), then move them
+     * to the end of the list, so that the new children have room before
+     * them. */
+    if ((src->children_num > 0) && ((dst->children_num - (offset + 1)) > 0)) {
+        int nmemb = dst->children_num - (offset + 1);
+        int old_offset = offset + 1;
+        int new_offset = offset + src->children_num;
+
+        memmove(dst->children + new_offset, dst->children + old_offset,
+                        sizeof(config_item_t) * nmemb);
+    }
+
+    /* Last but not least: If there are new children, copy them to the
+     * memory reserved for them. */
+    if (src->children_num > 0)
+        memcpy(dst->children + offset, src->children, sizeof(config_item_t) * src->children_num);
+
+    /* Update the number of children. */
+    dst->children_num += (src->children_num - 1);
+
+    return 0;
+}
+
+static int cf_ci_append_children(config_item_t *dst, config_item_t *src)
+{
+    config_item_t *temp;
+
+    if ((src == NULL) || (src->children_num == 0))
+        return 0;
+
+    temp = realloc(dst->children, sizeof(config_item_t) * (dst->children_num + src->children_num));
+    if (temp == NULL) {
+        ERROR("configfile: realloc failed.");
+        return -1;
+    }
+    dst->children = temp;
+
+    memcpy(dst->children + dst->children_num, src->children,
+                                              sizeof(config_item_t) * src->children_num);
+    dst->children_num += src->children_num;
+
+    return 0;
+}
 
 #define CF_MAX_DEPTH 8
-static oconfig_item_t *cf_read_generic(const char *path, const char *pattern,
-                                       int depth);
+static config_item_t *cf_read_generic(const char *path, const char *pattern, int depth);
 
-static int cf_include_all(oconfig_item_t *root, int depth) {
-  for (int i = 0; i < root->children_num; i++) {
-    oconfig_item_t *new;
-    oconfig_item_t *old;
+static int cf_include_all(config_item_t *root, int depth)
+{
+    for (int i = 0; i < root->children_num; i++) {
+        char *pattern = NULL;
 
-    char *pattern = NULL;
+        if (strcasecmp(root->children[i].key, "include") != 0)
+            continue;
 
-    if (strcasecmp(root->children[i].key, "Include") != 0)
-      continue;
+        config_item_t *old = root->children + i;
 
-    old = root->children + i;
+        if ((old->values_num != 1) || (old->values[0].type != CONFIG_TYPE_STRING)) {
+            ERROR("configfile: 'include' in %s:%d needs exactly one string argument.",
+                  cf_get_file(old), cf_get_lineno(old));
+            continue;
+        }
 
-    if ((old->values_num != 1) ||
-        (old->values[0].type != OCONFIG_TYPE_STRING)) {
-      ERROR("configfile: `Include' needs exactly one string argument.");
-      continue;
+        int status = 0;
+        for (int j = 0; j < old->children_num; ++j) {
+            config_item_t *child = old->children + j;
+
+            if (strcasecmp(child->key, "filter") == 0) {
+                status = cf_util_get_string(child, &pattern);
+            } else {
+                ERROR("configfile: option '%s' in %s:%d not allowed in 'include' block.",
+                       child->key, cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
+
+            if (status != 0)
+                break;
+        }
+
+        if (status != 0) {
+            free(pattern);
+            return -1;
+        }
+
+        config_item_t *new = cf_read_generic(old->values[0].value.string, pattern, depth + 1);
+        free(pattern);
+        if (new == NULL)
+            return -1;
+
+        /* Now replace the i'th child in 'root' with 'new'. */
+        if (cf_ci_replace_child(root, new, i) < 0) {
+            free(new->values);
+            free(new);
+            return -1;
+        }
+
+        /* ... and go back to the new i'th child. */
+        --i;
+
+        free(new->values);
+        free(new);
     }
 
-    for (int j = 0; j < old->children_num; ++j) {
-      oconfig_item_t *child = old->children + j;
-
-      if (strcasecmp(child->key, "Filter") == 0)
-        cf_util_get_string(child, &pattern);
-      else
-        ERROR("configfile: Option `%s' not allowed in <Include> block.",
-              child->key);
-    }
-
-    new = cf_read_generic(old->values[0].value.string, pattern, depth + 1);
-    sfree(pattern);
-
-    if (new == NULL)
-      return -1;
-
-    /* Now replace the i'th child in `root' with `new'. */
-    if (cf_ci_replace_child(root, new, i) < 0) {
-      sfree(new->values);
-      sfree(new);
-      return -1;
-    }
-
-    /* ... and go back to the new i'th child. */
-    --i;
-
-    sfree(new->values);
-    sfree(new);
-  } /* for (i = 0; i < root->children_num; i++) */
-
-  return 0;
-} /* int cf_include_all */
-
-static oconfig_item_t *cf_read_file(const char *file, const char *pattern,
-                                    int depth) {
-  oconfig_item_t *root;
-  int status;
-
-  assert(depth < CF_MAX_DEPTH);
-
-  if (pattern != NULL) {
-#if HAVE_FNMATCH_H && HAVE_LIBGEN_H
-    char *tmp = sstrdup(file);
-    char *filename = basename(tmp);
-
-    if ((filename != NULL) && (fnmatch(pattern, filename, 0) != 0)) {
-      DEBUG("configfile: Not including `%s' because it "
-            "does not match pattern `%s'.",
-            filename, pattern);
-      free(tmp);
-      return NULL;
-    }
-
-    free(tmp);
-#else
-    ERROR("configfile: Cannot apply pattern filter '%s' "
-          "to file '%s': functions basename() and / or "
-          "fnmatch() not available.",
-          pattern, file);
-#endif /* HAVE_FNMATCH_H && HAVE_LIBGEN_H */
-  }
-
-  root = oconfig_parse_file(file);
-  if (root == NULL) {
-    ERROR("configfile: Cannot read file `%s'.", file);
-    return NULL;
-  }
-
-  status = cf_include_all(root, depth);
-  if (status != 0) {
-    oconfig_free(root);
-    return NULL;
-  }
-
-  return root;
-} /* oconfig_item_t *cf_read_file */
-
-static int cf_compare_string(const void *p1, const void *p2) {
-  return strcmp(*(const char **)p1, *(const char **)p2);
+    return 0;
 }
 
-static oconfig_item_t *cf_read_dir(const char *dir, const char *pattern,
-                                   int depth) {
-  oconfig_item_t *root = NULL;
-  DIR *dh;
-  struct dirent *de;
-  char **filenames = NULL;
-  int filenames_num = 0;
-  int status;
+static config_item_t *cf_read_file(const char *file, const char *pattern, int depth)
+{
+    assert(depth < CF_MAX_DEPTH);
 
-  assert(depth < CF_MAX_DEPTH);
+    if (pattern != NULL) {
+#if defined(HAVE_FNMATCH_H) && defined(HAVE_LIBGEN_H)
+        char *tmp = sstrdup(file);
+        char *filename = basename(tmp);
 
-  dh = opendir(dir);
-  if (dh == NULL) {
-    ERROR("configfile: opendir failed: %s", STRERRNO);
-    return NULL;
-  }
+        if ((filename != NULL) && (fnmatch(pattern, filename, 0) != 0)) {
+            DEBUG("configfile: Not including '%s' because it does not match pattern '%s'.",
+                  filename, pattern);
+            free(tmp);
+            return NULL;
+        }
 
-  root = calloc(1, sizeof(*root));
-  if (root == NULL) {
-    ERROR("configfile: calloc failed.");
-    closedir(dh);
-    return NULL;
-  }
-
-  while ((de = readdir(dh)) != NULL) {
-    char name[1024];
-    char **tmp;
-
-    if ((de->d_name[0] == '.') || (de->d_name[0] == 0))
-      continue;
-
-    status = ssnprintf(name, sizeof(name), "%s/%s", dir, de->d_name);
-    if ((status < 0) || ((size_t)status >= sizeof(name))) {
-      ERROR("configfile: Not including `%s/%s' because its"
-            " name is too long.",
-            dir, de->d_name);
-      closedir(dh);
-      for (int i = 0; i < filenames_num; ++i)
-        free(filenames[i]);
-      free(filenames);
-      free(root);
-      return NULL;
+        free(tmp);
+#else
+        ERROR("configfile: Cannot apply pattern filter '%s' to file '%s': "
+              "functions basename() and / or fnmatch() not available.", pattern, file);
+#endif
     }
 
-    ++filenames_num;
-    tmp = realloc(filenames, filenames_num * sizeof(*filenames));
-    if (tmp == NULL) {
-      ERROR("configfile: realloc failed.");
-      closedir(dh);
-      for (int i = 0; i < filenames_num - 1; ++i)
-        free(filenames[i]);
-      free(filenames);
-      free(root);
-      return NULL;
+    config_item_t *root = config_parse_file(file);
+    if (root == NULL) {
+        ERROR("configfile: Cannot read file '%s'.", file);
+        return NULL;
     }
-    filenames = tmp;
 
-    filenames[filenames_num - 1] = sstrdup(name);
-  }
+    int status = cf_include_all(root, depth);
+    if (status != 0) {
+        config_free(root);
+        return NULL;
+    }
 
-  if (filenames == NULL) {
-    closedir(dh);
     return root;
-  }
+}
 
-  qsort((void *)filenames, filenames_num, sizeof(*filenames),
-        cf_compare_string);
+static int cf_compare_string(const void *p1, const void *p2)
+{
+    return strcmp((const char *)p1, (const char *)p2);
+}
 
-  for (int i = 0; i < filenames_num; ++i) {
-    oconfig_item_t *temp;
-    char *name = filenames[i];
+static config_item_t *cf_read_dir(const char *dir, const char *pattern, int depth)
+{
+    char **filenames = NULL;
+    int filenames_num = 0;
 
-    temp = cf_read_generic(name, pattern, depth);
-    if (temp == NULL) {
-      /* An error should already have been reported. */
-      sfree(name);
-      continue;
+    assert(depth < CF_MAX_DEPTH);
+
+    DIR *dh = opendir(dir);
+    if (dh == NULL) {
+        ERROR("configfile: opendir failed: %s", STRERRNO);
+        return NULL;
     }
 
-    cf_ci_append_children(root, temp);
-    sfree(temp->children);
-    sfree(temp);
+    config_item_t *root = calloc(1, sizeof(*root));
+    if (root == NULL) {
+        ERROR("configfile: calloc failed.");
+        closedir(dh);
+        return NULL;
+    }
 
-    free(name);
-  }
+    struct dirent *de;
+    while ((de = readdir(dh)) != NULL) {
+        if ((de->d_name[0] == '.') || (de->d_name[0] == 0))
+            continue;
 
-  closedir(dh);
-  free(filenames);
-  return root;
-} /* oconfig_item_t *cf_read_dir */
+        char name[1024];
+        int status = ssnprintf(name, sizeof(name), "%s/%s", dir, de->d_name);
+        if ((status < 0) || ((size_t)status >= sizeof(name))) {
+            ERROR("configfile: Not including '%s/%s' because its name is too long.",
+                   dir, de->d_name);
+            closedir(dh);
+            for (int i = 0; i < filenames_num; ++i)
+                free(filenames[i]);
+            free(filenames);
+            free(root);
+            return NULL;
+        }
+
+        ++filenames_num;
+        char **tmp = realloc(filenames, filenames_num * sizeof(*filenames));
+        if (tmp == NULL) {
+            ERROR("configfile: realloc failed.");
+            closedir(dh);
+            for (int i = 0; i < filenames_num - 1; ++i)
+                free(filenames[i]);
+            free(filenames);
+            free(root);
+            return NULL;
+        }
+        filenames = tmp;
+
+        filenames[filenames_num - 1] = sstrdup(name);
+    }
+
+    if (filenames == NULL) {
+        closedir(dh);
+        return root;
+    }
+
+    qsort((void *)filenames, filenames_num, sizeof(*filenames), cf_compare_string);
+
+    for (int i = 0; i < filenames_num; ++i) {
+        char *name = filenames[i];
+        config_item_t *temp = cf_read_generic(name, pattern, depth);
+        if (temp == NULL) {
+            /* An error should already have been reported. */
+            free(name);
+            continue;
+        }
+
+        cf_ci_append_children(root, temp);
+        free(temp->children);
+        free(temp);
+
+        free(name);
+    }
+
+    closedir(dh);
+    free(filenames);
+    return root;
+}
 
 /*
  * cf_read_generic
@@ -728,534 +581,278 @@ static oconfig_item_t *cf_read_dir(const char *dir, const char *pattern,
  * Path is stat'ed and either cf_read_file or cf_read_dir is called
  * accordingly.
  *
- * There are two versions of this function: If `wordexp' exists shell wildcards
+ * There are two versions of this function: If 'wordexp' exists shell wildcards
  * will be expanded and the function will include all matches found. If
- * `wordexp' (or, more precisely, its header file) is not available the
+ * 'wordexp' (or, more precisely, its header file) is not available the
  * simpler function is used which does not do any such expansion.
  */
-#if HAVE_WORDEXP_H
-static oconfig_item_t *cf_read_generic(const char *path, const char *pattern,
-                                       int depth) {
-  oconfig_item_t *root = NULL;
-  int status;
-  const char *path_ptr;
-  wordexp_t we;
+#ifdef HAVE_WORDEXP_H
+static config_item_t *cf_read_generic(const char *path, const char *pattern, int depth)
+{
+    if (depth >= CF_MAX_DEPTH) {
+        ERROR("configfile: Not including '%s' because the maximum nesting depth has been reached.",
+               path);
+        return NULL;
+    }
 
-  if (depth >= CF_MAX_DEPTH) {
-    ERROR("configfile: Not including `%s' because the maximum "
-          "nesting depth has been reached.",
-          path);
-    return NULL;
-  }
-
-  status = wordexp(path, &we, WRDE_NOCMD);
-  if (status != 0) {
-    ERROR("configfile: wordexp (%s) failed.", path);
-    return NULL;
-  }
-
-  root = calloc(1, sizeof(*root));
-  if (root == NULL) {
-    ERROR("configfile: calloc failed.");
-    return NULL;
-  }
-
-  /* wordexp() might return a sorted list already. That's not
-   * documented though, so let's make sure we get what we want. */
-  qsort((void *)we.we_wordv, we.we_wordc, sizeof(*we.we_wordv),
-        cf_compare_string);
-
-  for (size_t i = 0; i < we.we_wordc; i++) {
-    oconfig_item_t *temp;
-    struct stat statbuf;
-
-    path_ptr = we.we_wordv[i];
-
-    status = stat(path_ptr, &statbuf);
+    wordexp_t we;
+    int status = wordexp(path, &we, WRDE_NOCMD);
     if (status != 0) {
-      WARNING("configfile: stat (%s) failed: %s", path_ptr, STRERRNO);
-      continue;
+        ERROR("configfile: wordexp (%s) failed.", path);
+        return NULL;
+    }
+
+    config_item_t *root = calloc(1, sizeof(*root));
+    if (root == NULL) {
+        ERROR("configfile: calloc failed.");
+        return NULL;
+    }
+
+    /* wordexp() might return a sorted list already. That's not
+     * documented though, so let's make sure we get what we want. */
+    qsort((void *)we.we_wordv, we.we_wordc, sizeof(*we.we_wordv), cf_compare_string);
+
+    for (size_t i = 0; i < we.we_wordc; i++) {
+        config_item_t *temp;
+        struct stat statbuf;
+
+        const char *path_ptr = we.we_wordv[i];
+
+        status = stat(path_ptr, &statbuf);
+        if (status != 0) {
+            WARNING("configfile: stat (%s) failed: %s", path_ptr, STRERRNO);
+            continue;
+        }
+
+        if (S_ISREG(statbuf.st_mode)) {
+            temp = cf_read_file(path_ptr, pattern, depth);
+        } else if (S_ISDIR(statbuf.st_mode)) {
+            temp = cf_read_dir(path_ptr, pattern, depth);
+        } else {
+            WARNING("configfile: %s is neither a file nor a directory.", path);
+            continue;
+        }
+
+        if (temp == NULL) {
+            config_free(root);
+            wordfree(&we);
+            return NULL;
+        }
+
+        cf_ci_append_children(root, temp);
+        free(temp->children);
+        free(temp);
+    }
+
+    wordfree(&we);
+
+    return root;
+}
+#else
+static config_item_t *cf_read_generic(const char *path, const char *pattern, int depth)
+{
+    if (depth >= CF_MAX_DEPTH) {
+        ERROR("configfile: Not including '%s' because the maximum "
+              "nesting depth has been reached.", path);
+        return NULL;
+    }
+
+    struct stat statbuf;
+    int status = stat(path, &statbuf);
+    if (status != 0) {
+        ERROR("configfile: stat (%s) failed: %s", path, STRERRNO);
+        return NULL;
     }
 
     if (S_ISREG(statbuf.st_mode))
-      temp = cf_read_file(path_ptr, pattern, depth);
+        return cf_read_file(path, pattern, depth);
     else if (S_ISDIR(statbuf.st_mode))
-      temp = cf_read_dir(path_ptr, pattern, depth);
-    else {
-      WARNING("configfile: %s is neither a file nor a "
-              "directory.",
-              path);
-      continue;
+        return cf_read_dir(path, pattern, depth);
+
+    ERROR("configfile: %s is neither a file nor a directory.", path);
+    return NULL;
+}
+#endif
+
+int global_option_set(const char *option, const char *value, bool from_cli)
+{
+    DEBUG("option = %s; value = %s;", option, value);
+
+    int i;
+    for (i = 0; i < cf_global_options_num; i++)
+        if (strcasecmp(cf_global_options[i].key, option) == 0)
+            break;
+
+    if (i >= cf_global_options_num) {
+        ERROR("configfile: Cannot set unknown global option '%s'.", option);
+        return -1;
     }
 
-    if (temp == NULL) {
-      oconfig_free(root);
-      return NULL;
+    if (cf_global_options[i].from_cli && (!from_cli)) {
+        DEBUG("configfile: Ignoring %s '%s' option because "
+              "it was overriden by a command-line option.", option, value);
+        return 0;
     }
 
-    cf_ci_append_children(root, temp);
-    sfree(temp->children);
-    sfree(temp);
-  }
+    free(cf_global_options[i].value);
 
-  wordfree(&we);
+    if (value != NULL)
+        cf_global_options[i].value = strdup(value);
+    else
+        cf_global_options[i].value = NULL;
 
-  return root;
-} /* oconfig_item_t *cf_read_generic */
-/* #endif HAVE_WORDEXP_H */
+    cf_global_options[i].from_cli = from_cli;
 
-#else  /* if !HAVE_WORDEXP_H */
-static oconfig_item_t *cf_read_generic(const char *path, const char *pattern,
-                                       int depth) {
-  struct stat statbuf;
-  int status;
-
-  if (depth >= CF_MAX_DEPTH) {
-    ERROR("configfile: Not including `%s' because the maximum "
-          "nesting depth has been reached.",
-          path);
-    return NULL;
-  }
-
-  status = stat(path, &statbuf);
-  if (status != 0) {
-    ERROR("configfile: stat (%s) failed: %s", path, STRERRNO);
-    return NULL;
-  }
-
-  if (S_ISREG(statbuf.st_mode))
-    return cf_read_file(path, pattern, depth);
-  else if (S_ISDIR(statbuf.st_mode))
-    return cf_read_dir(path, pattern, depth);
-
-  ERROR("configfile: %s is neither a file nor a directory.", path);
-  return NULL;
-} /* oconfig_item_t *cf_read_generic */
-#endif /* !HAVE_WORDEXP_H */
-
-/*
- * Public functions
- */
-int global_option_set(const char *option, const char *value, bool from_cli) {
-  int i;
-  DEBUG("option = %s; value = %s;", option, value);
-
-  for (i = 0; i < cf_global_options_num; i++)
-    if (strcasecmp(cf_global_options[i].key, option) == 0)
-      break;
-
-  if (i >= cf_global_options_num) {
-    ERROR("configfile: Cannot set unknown global option `%s'.", option);
-    return -1;
-  }
-
-  if (cf_global_options[i].from_cli && (!from_cli)) {
-    DEBUG("configfile: Ignoring %s `%s' option because "
-          "it was overriden by a command-line option.",
-          option, value);
     return 0;
-  }
-
-  sfree(cf_global_options[i].value);
-
-  if (value != NULL)
-    cf_global_options[i].value = strdup(value);
-  else
-    cf_global_options[i].value = NULL;
-
-  cf_global_options[i].from_cli = from_cli;
-
-  return 0;
 }
 
-const char *global_option_get(const char *option) {
-  int i;
-  for (i = 0; i < cf_global_options_num; i++)
-    if (strcasecmp(cf_global_options[i].key, option) == 0)
-      break;
-
-  if (i >= cf_global_options_num) {
-    ERROR("configfile: Cannot get unknown global option `%s'.", option);
-    return NULL;
-  }
-
-  return (cf_global_options[i].value != NULL) ? cf_global_options[i].value
-                                              : cf_global_options[i].def;
-} /* char *global_option_get */
-
-long global_option_get_long(const char *option, long default_value) {
-  const char *str;
-  long value;
-
-  str = global_option_get(option);
-  if (NULL == str)
-    return default_value;
-
-  errno = 0;
-  value = strtol(str, /* endptr = */ NULL, /* base = */ 0);
-  if (errno != 0)
-    return default_value;
-
-  return value;
-} /* char *global_option_get_long */
-
-cdtime_t global_option_get_time(const char *name, cdtime_t def) /* {{{ */
+const char *global_option_get(const char *option)
 {
-  char const *optstr;
-  char *endptr = NULL;
-  double v;
+    int i;
+    for (i = 0; i < cf_global_options_num; i++)
+        if (strcasecmp(cf_global_options[i].key, option) == 0)
+            break;
 
-  optstr = global_option_get(name);
-  if (optstr == NULL)
-    return def;
+    if (i >= cf_global_options_num) {
+        ERROR("configfile: Cannot get unknown global option '%s'.", option);
+        return NULL;
+    }
 
-  errno = 0;
-  v = strtod(optstr, &endptr);
-  if ((endptr == NULL) || (*endptr != 0) || (errno != 0))
-    return def;
-  else if (v <= 0.0)
-    return def;
-
-  return DOUBLE_TO_CDTIME_T(v);
-} /* }}} cdtime_t global_option_get_time */
-
-cdtime_t cf_get_default_interval(void) {
-  return global_option_get_time("Interval",
-                                DOUBLE_TO_CDTIME_T(COLLECTD_DEFAULT_INTERVAL));
+    return (cf_global_options[i].value != NULL) ? cf_global_options[i].value
+                                                : cf_global_options[i].def;
 }
 
-void cf_unregister(const char *type) {
-  for (cf_callback_t *prev = NULL, *this = first_callback; this != NULL;
-       prev = this, this = this->next)
-    if (strcasecmp(this->type, type) == 0) {
-      if (prev == NULL)
-        first_callback = this->next;
-      else
-        prev->next = this->next;
+long global_option_get_long(const char *option, long default_value)
+{
+    const char *str = global_option_get(option);
+    if (NULL == str)
+        return default_value;
 
-      free(this);
-      break;
+    errno = 0;
+    long value = strtol(str, /* endptr = */ NULL, /* base = */ 0);
+    if (errno != 0)
+        return default_value;
+
+    return value;
+}
+
+cdtime_t global_option_get_time(const char *name, cdtime_t def)
+{
+    char const *optstr = global_option_get(name);
+    if (optstr == NULL)
+        return def;
+
+    errno = 0;
+    char *endptr = NULL;
+    double v = strtod(optstr, &endptr);
+    if ((endptr == NULL) || (*endptr != 0) || (errno != 0))
+        return def;
+    else if (v <= 0.0)
+        return def;
+
+    return DOUBLE_TO_CDTIME_T(v);
+}
+
+cdtime_t cf_get_default_interval(void)
+{
+    return global_option_get_time("interval", DOUBLE_TO_CDTIME_T(NCOLLECTD_DEFAULT_INTERVAL));
+}
+
+void cf_unregister_all(void)
+{
+    cf_callback_t *this = callback_head;
+    while (this != NULL) {
+        cf_callback_t *next = this->next;
+        free(this->type);
+        free(this);
+        this = next;
     }
-} /* void cf_unregister */
+    callback_head = NULL;
+}
 
-void cf_unregister_complex(const char *type) {
-  for (cf_complex_callback_t *prev = NULL, *this = complex_callback_head;
-       this != NULL; prev = this, this = this->next)
-    if (strcasecmp(this->type, type) == 0) {
-      if (prev == NULL)
-        complex_callback_head = this->next;
-      else
-        prev->next = this->next;
+void cf_unregister(const char *type)
+{
+    for (cf_callback_t *prev = NULL, *this = callback_head;
+             this != NULL; prev = this, this = this->next)
+        if (strcasecmp(this->type, type) == 0) {
+            if (prev == NULL)
+                callback_head = this->next;
+            else
+                prev->next = this->next;
 
-      sfree(this->type);
-      sfree(this);
-      break;
+            free(this->type);
+            free(this);
+            break;
+        }
+}
+
+int cf_register(const char *type, int (*callback)(config_item_t *))
+{
+    cf_callback_t *new = malloc(sizeof(*new));
+    if (new == NULL)
+        return -1;
+
+    new->type = strdup(type);
+    if (new->type == NULL) {
+        free(new);
+        return -1;
     }
-} /* void cf_unregister */
 
-void cf_register(const char *type, int (*callback)(const char *, const char *),
-                 const char **keys, int keys_num) {
-  cf_callback_t *cf_cb;
+    new->callback = callback;
+    new->next = NULL;
 
-  /* Remove this module from the list, if it already exists */
-  cf_unregister(type);
+    new->ctx = plugin_get_ctx();
 
-  /* This pointer will be free'd in `cf_unregister' */
-  if ((cf_cb = malloc(sizeof(*cf_cb))) == NULL)
-    return;
-
-  cf_cb->type = type;
-  cf_cb->callback = callback;
-  cf_cb->keys = keys;
-  cf_cb->keys_num = keys_num;
-  cf_cb->ctx = plugin_get_ctx();
-
-  cf_cb->next = first_callback;
-  first_callback = cf_cb;
-} /* void cf_register */
-
-int cf_register_complex(const char *type, int (*callback)(oconfig_item_t *)) {
-  cf_complex_callback_t *new;
-
-  new = malloc(sizeof(*new));
-  if (new == NULL)
-    return -1;
-
-  new->type = strdup(type);
-  if (new->type == NULL) {
-    sfree(new);
-    return -1;
-  }
-
-  new->callback = callback;
-  new->next = NULL;
-
-  new->ctx = plugin_get_ctx();
-
-  if (complex_callback_head == NULL) {
-    complex_callback_head = new;
-  } else {
-    cf_complex_callback_t *last = complex_callback_head;
-    while (last->next != NULL)
-      last = last->next;
-    last->next = new;
-  }
-
-  return 0;
-} /* int cf_register_complex */
-
-int cf_read(const char *filename) {
-  oconfig_item_t *conf;
-  int ret = 0;
-
-  conf = cf_read_generic(filename, /* pattern = */ NULL, /* depth = */ 0);
-  if (conf == NULL) {
-    ERROR("Unable to read config file %s.", filename);
-    return -1;
-  } else if (conf->children_num == 0) {
-    ERROR("Configuration file %s is empty.", filename);
-    oconfig_free(conf);
-    return -1;
-  }
-
-  for (int i = 0; i < conf->children_num; i++) {
-    if (conf->children[i].children == NULL) {
-      if (dispatch_value(conf->children + i) != 0)
-        ret = -1;
+    if (callback_head == NULL) {
+        callback_head = new;
     } else {
-      if (dispatch_block(conf->children + i) != 0)
-        ret = -1;
+        cf_callback_t *last = callback_head;
+        while (last->next != NULL)
+            last = last->next;
+        last->next = new;
     }
-  }
 
-  oconfig_free(conf);
+    return 0;
+}
 
-  /* Read the default types.db if no `TypesDB' option was given. */
-  if (cf_default_typesdb) {
-    if (read_types_list(PKGDATADIR "/types.db") != 0)
-      ret = -1;
-  }
-
-  return ret;
-
-} /* int cf_read */
-
-/* Assures the config option is a string, duplicates it and returns the copy in
- * "ret_string". If necessary "*ret_string" is freed first. Returns zero upon
- * success. */
-int cf_util_get_string(const oconfig_item_t *ci, char **ret_string) /* {{{ */
+int cf_read(const char *filename, bool dump)
 {
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    P_ERROR("The `%s' option requires exactly one string argument.", ci->key);
-    return -1;
-  }
-
-  char *string = strdup(ci->values[0].value.string);
-  if (string == NULL)
-    return -1;
-
-  if (*ret_string != NULL)
-    sfree(*ret_string);
-  *ret_string = string;
-
-  return 0;
-} /* }}} int cf_util_get_string */
-
-/* Assures the config option is a string and copies it to the provided buffer.
- * Assures NUL-termination. */
-int cf_util_get_string_buffer(const oconfig_item_t *ci, char *buffer, /* {{{ */
-                              size_t buffer_size) {
-  if ((ci == NULL) || (buffer == NULL) || (buffer_size < 1))
-    return EINVAL;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    P_ERROR("The `%s' option requires exactly one string argument.", ci->key);
-    return -1;
-  }
-
-  strncpy(buffer, ci->values[0].value.string, buffer_size);
-  buffer[buffer_size - 1] = '\0';
-
-  return 0;
-} /* }}} int cf_util_get_string_buffer */
-
-/* Assures the config option is a number and returns it as an int. */
-int cf_util_get_int(const oconfig_item_t *ci, int *ret_value) /* {{{ */
-{
-  if ((ci == NULL) || (ret_value == NULL))
-    return EINVAL;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_NUMBER)) {
-    P_ERROR("The `%s' option requires exactly one numeric argument.", ci->key);
-    return -1;
-  }
-
-  *ret_value = (int)ci->values[0].value.number;
-
-  return 0;
-} /* }}} int cf_util_get_int */
-
-int cf_util_get_double(const oconfig_item_t *ci, double *ret_value) /* {{{ */
-{
-  if ((ci == NULL) || (ret_value == NULL))
-    return EINVAL;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_NUMBER)) {
-    P_ERROR("The `%s' option requires exactly one numeric argument.", ci->key);
-    return -1;
-  }
-
-  *ret_value = ci->values[0].value.number;
-
-  return 0;
-} /* }}} int cf_util_get_double */
-
-int cf_util_get_boolean(const oconfig_item_t *ci, bool *ret_bool) /* {{{ */
-{
-  if ((ci == NULL) || (ret_bool == NULL))
-    return EINVAL;
-
-  if ((ci->values_num != 1) || ((ci->values[0].type != OCONFIG_TYPE_BOOLEAN) &&
-                                (ci->values[0].type != OCONFIG_TYPE_STRING))) {
-    P_ERROR("The `%s' option requires exactly one boolean argument.", ci->key);
-    return -1;
-  }
-
-  switch (ci->values[0].type) {
-  case OCONFIG_TYPE_BOOLEAN:
-    *ret_bool = ci->values[0].value.boolean ? true : false;
-    break;
-  case OCONFIG_TYPE_STRING:
-    P_WARNING("Using string value `%s' for boolean option `%s' is deprecated "
-              "and will be removed in future releases. Use unquoted true or "
-              "false instead.",
-              ci->values[0].value.string, ci->key);
-
-    if (IS_TRUE(ci->values[0].value.string))
-      *ret_bool = true;
-    else if (IS_FALSE(ci->values[0].value.string))
-      *ret_bool = false;
-    else {
-      P_ERROR("Cannot parse string value `%s' of the `%s' option as a boolean "
-              "value.",
-              ci->values[0].value.string, ci->key);
-      return -1;
+    config_item_t * conf = cf_read_generic(filename, /* pattern = */ NULL, /* depth = */ 0);
+    if (conf == NULL) {
+        ERROR("Unable to read config file %s.", filename);
+        return -1;
+    } else if (conf->children_num == 0) {
+        ERROR("Configuration file %s is empty.", filename);
+        config_free(conf);
+        return -1;
     }
-    break;
-  }
 
-  return 0;
-} /* }}} int cf_util_get_boolean */
+    int status = 0;
+    for (int i = 0; i < conf->children_num; i++) {
+        if (conf->children[i].children == NULL)
+            status = dispatch_value(conf->children + i);
+        else
+            status = dispatch_block(conf->children + i);
 
-int cf_util_get_flag(const oconfig_item_t *ci, /* {{{ */
-                     unsigned int *ret_value, unsigned int flag) {
-  int status;
+        if (status != 0)
+            break;
+    }
 
-  if (ret_value == NULL)
-    return EINVAL;
+    if (dump)
+        config_dump(stdout, conf);
 
-  bool b = false;
-  status = cf_util_get_boolean(ci, &b);
-  if (status != 0)
+    config_free(conf);
+
     return status;
+}
 
-  if (b) {
-    *ret_value |= flag;
-  } else {
-    *ret_value &= ~flag;
-  }
-
-  return 0;
-} /* }}} int cf_util_get_flag */
-
-/* Assures that the config option is a string or a number if the correct range
- * of 1-65535. The string is then converted to a port number using
- * `service_name_to_port_number' and returned.
- * Returns the port number in the range [1-65535] or less than zero upon
- * failure. */
-int cf_util_get_port_number(const oconfig_item_t *ci) /* {{{ */
+void global_options_free (void)
 {
-  int tmp;
+    for (int i = 0; i < cf_global_options_num; i++) {
+        free(cf_global_options[i].value);
+    }
 
-  if ((ci->values_num != 1) || ((ci->values[0].type != OCONFIG_TYPE_STRING) &&
-                                (ci->values[0].type != OCONFIG_TYPE_NUMBER))) {
-    P_ERROR("The `%s' option requires exactly one string argument.", ci->key);
-    return -1;
-  }
+    free(hostname_g);
 
-  if (ci->values[0].type == OCONFIG_TYPE_STRING)
-    return service_name_to_port_number(ci->values[0].value.string);
-
-  assert(ci->values[0].type == OCONFIG_TYPE_NUMBER);
-  tmp = (int)(ci->values[0].value.number + 0.5);
-  if ((tmp < 1) || (tmp > 65535)) {
-    P_ERROR("The `%s' option requires a service name or a port number. The "
-            "number you specified, %i, is not in the valid range of 1-65535.",
-            ci->key, tmp);
-    return -1;
-  }
-
-  return tmp;
-} /* }}} int cf_util_get_port_number */
-
-int cf_util_get_service(const oconfig_item_t *ci, char **ret_string) /* {{{ */
-{
-  int port;
-  char *service;
-  int status;
-
-  if (ci->values_num != 1) {
-    P_ERROR("The `%s` option requires exactly one argument.", ci->key);
-    return -1;
-  }
-
-  if (ci->values[0].type == OCONFIG_TYPE_STRING)
-    return cf_util_get_string(ci, ret_string);
-  if (ci->values[0].type != OCONFIG_TYPE_NUMBER) {
-    P_ERROR("The `%s` option requires exactly one string or numeric argument.",
-            ci->key);
-  }
-
-  port = 0;
-  status = cf_util_get_int(ci, &port);
-  if (status != 0)
-    return status;
-  else if ((port < 1) || (port > 65535)) {
-    P_ERROR("The port number given for the `%s` option is out of range (%i).",
-            ci->key, port);
-    return -1;
-  }
-
-  service = malloc(6);
-  if (service == NULL) {
-    P_ERROR("cf_util_get_service: Out of memory.");
-    return -1;
-  }
-  ssnprintf(service, 6, "%i", port);
-
-  sfree(*ret_string);
-  *ret_string = service;
-
-  return 0;
-} /* }}} int cf_util_get_service */
-
-int cf_util_get_cdtime(const oconfig_item_t *ci, cdtime_t *ret_value) /* {{{ */
-{
-  if ((ci == NULL) || (ret_value == NULL))
-    return EINVAL;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_NUMBER)) {
-    P_ERROR("The `%s' option requires exactly one numeric argument.", ci->key);
-    return -1;
-  }
-
-  if (ci->values[0].value.number < 0.0) {
-    P_ERROR("The numeric argument of the `%s' option must not be negative.",
-            ci->key);
-    return -1;
-  }
-
-  *ret_value = DOUBLE_TO_CDTIME_T(ci->values[0].value.number);
-
-  return 0;
-} /* }}} int cf_util_get_cdtime */
+    label_set_reset(&labels_g);
+}
