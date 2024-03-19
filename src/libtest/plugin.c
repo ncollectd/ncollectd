@@ -1,250 +1,447 @@
-/**
- * collectd - src/tests/mock/plugin.c
- * Copyright (C) 2013       Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- */
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2013-2015 Florian octo Forster
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
 
 #include "plugin.h"
 
-#if HAVE_KSTAT_H
-#include <kstat.h>
-#endif
+#include "libutils/common.h"
+#include "libmetric/metric.h"
+#include "libmetric/label_set.h"
 
-#if HAVE_LIBKSTAT
-kstat_ctl_t *kc = NULL;
-#endif /* HAVE_LIBKSTAT */
+static int (*g_config_cb)(config_item_t *);
+static plugin_init_cb g_init_cb;
+static int (*g_simple_read_cb)(void);
+static plugin_write_cb g_write_cb;
+static plugin_flush_cb g_flush_cb;
+static cdtime_t g_flush_interval;
+static cdtime_t g_flush_timeout;
+static user_data_t g_write_ud;
+static int (*g_complex_read_cb)(user_data_t *);
+static user_data_t g_complex_read_ud;
+static int (*g_shutdown_cb)(void);
+static plugin_notification_cb g_notification_cb;
+static user_data_t g_notification_ud;
+static plugin_log_cb g_log_cb;
+static user_data_t g_log_ud;
 
-char *hostname_g = "example.com";
+static const char *g_procpath;
+static const char *g_syspath;
 
-void plugin_set_dir(const char *dir) { /* nop */
+char *hostname_g = "localhost.localdomain";
+
+void plugin_test_metrics_reset(void);
+int plugin_test_metrics_cmp(const char *filename);
+
+void plugin_set_dir(__attribute__((unused)) const char *dir)
+{
+    /* nop */
 }
 
-int plugin_load(const char *name, bool global) { return ENOTSUP; }
-
-bool plugin_is_loaded(const char *name) { return false; }
-
-int plugin_register_config(const char *name,
-                           int (*callback)(const char *key, const char *val),
-                           const char **keys, int keys_num) {
-  return ENOTSUP;
+int plugin_load(__attribute__((unused)) const char *name, __attribute__((unused)) bool global)
+{
+    return 0;
 }
 
-int plugin_register_complex_config(const char *type,
-                                   int (*callback)(oconfig_item_t *)) {
-  return ENOTSUP;
+bool plugin_is_loaded(__attribute__((unused)) const char *name)
+{
+    return false;
 }
 
-int plugin_register_init(const char *name, plugin_init_cb callback) {
-  return ENOTSUP;
+int plugin_register_config(__attribute__((unused)) const char *name,
+                           int (*callback)(config_item_t *))
+{
+    g_config_cb = callback;
+    return 0;
+}
+
+int plugin_unregister_config(__attribute__((unused)) char const *name)
+{
+    g_config_cb = NULL;
+    return 0;
+}
+
+int plugin_register_init(__attribute__((unused)) const char *name,
+                         plugin_init_cb callback)
+{
+    g_init_cb = callback;
+    return 0;
+}
+
+int plugin_unregister_init(__attribute__((unused)) char const *name)
+{
+    g_init_cb = NULL;
+    return 0;
 }
 
 int plugin_register_read(__attribute__((unused)) const char *name,
-                         __attribute__((unused)) int (*callback)(void)) {
-  return ENOTSUP;
+                         int (*callback)(void))
+{
+    g_simple_read_cb = callback;
+    return 0;
 }
 
-int plugin_register_write(__attribute__((unused)) const char *name,
-                          __attribute__((unused)) plugin_write_cb callback,
-                          __attribute__((unused)) user_data_t const *ud) {
-  return ENOTSUP;
+int plugin_unregister_read(__attribute__((unused)) char const *name)
+{
+    g_simple_read_cb = NULL;
+    return 0;
 }
 
-int plugin_register_flush(__attribute__((unused)) const char *name,
-                          __attribute__((unused)) plugin_flush_cb callback,
-                          __attribute__((unused))
-                          user_data_t const *user_data) {
-  return ENOTSUP;
+int plugin_register_write(__attribute__((unused)) const char *group,
+                          __attribute__((unused)) const char *name,
+                          plugin_write_cb write_cb,
+                          plugin_flush_cb flush_cb, cdtime_t flush_interval, cdtime_t flush_timeout,
+                          user_data_t const *ud)
+{
+    g_write_cb = write_cb;
+    g_flush_cb = flush_cb;
+    g_flush_interval = flush_interval;
+    g_flush_timeout = flush_timeout;
+    if (ud == NULL)
+        memset(&g_write_ud, 0, sizeof(g_write_ud));
+    else
+        memcpy(&g_write_ud, ud, sizeof(g_write_ud));
+    return 0;
 }
 
-int plugin_register_missing(const char *name, plugin_missing_cb callback,
-                            user_data_t const *ud) {
-  return ENOTSUP;
+int plugin_unregister_write(__attribute__((unused)) char const *name)
+{
+    g_write_cb = NULL;
+    g_flush_cb = NULL;
+    g_flush_interval = 0;
+    g_flush_timeout = 0;
+    if (g_write_ud.free_func != NULL)
+        g_write_ud.free_func(g_write_ud.data);
+    memset(&g_write_ud, 0, sizeof(g_write_ud));
+    return 0;
 }
 
-int plugin_register_complex_read(const char *group, const char *name,
+int plugin_register_complex_read(__attribute__((unused)) const char *group,
+                                 __attribute__((unused)) const char *name,
                                  int (*callback)(user_data_t *),
-                                 cdtime_t interval,
-                                 user_data_t const *user_data) {
-  return ENOTSUP;
+                                 __attribute__((unused)) cdtime_t interval,
+                                 user_data_t const *user_data)
+{
+    g_complex_read_cb = callback;
+    if (user_data == NULL)
+        memset(&g_complex_read_ud, 0, sizeof(g_complex_read_ud));
+    else
+        memcpy(&g_complex_read_ud, user_data, sizeof(g_complex_read_ud));
+    return 0;
 }
 
-int plugin_register_shutdown(const char *name, int (*callback)(void)) {
-  return ENOTSUP;
+int plugin_unregister_read_group(__attribute__((unused)) char const *name)
+{
+    g_complex_read_cb = NULL;
+    if (g_complex_read_ud.free_func != NULL)
+        g_complex_read_ud.free_func(g_complex_read_ud.data);
+    memset(&g_complex_read_ud, 0, sizeof(g_complex_read_ud));
+    return 0;
 }
 
-int plugin_register_data_set(const data_set_t *ds) { return ENOTSUP; }
-
-int plugin_register_notification(__attribute__((unused)) const char *name,
-                                 __attribute__((unused))
-                                 plugin_notification_cb callback,
-                                 __attribute__((unused))
-                                 user_data_t const *user_data) {
-  return ENOTSUP;
+int plugin_register_shutdown(__attribute__((unused)) const char *name, int (*callback)(void))
+{
+    g_shutdown_cb = callback;
+    return 0;
 }
 
-#define DECLARE_UNREGISTER(t)                                                  \
-  int plugin_unregister_##t(__attribute__((unused)) char const *name) {        \
-    return ENOTSUP;                                                            \
-  }
-DECLARE_UNREGISTER(config)
-DECLARE_UNREGISTER(complex_config)
-DECLARE_UNREGISTER(init)
-DECLARE_UNREGISTER(read)
-DECLARE_UNREGISTER(read_group)
-DECLARE_UNREGISTER(write)
-DECLARE_UNREGISTER(flush)
-DECLARE_UNREGISTER(missing)
-DECLARE_UNREGISTER(shutdown)
-DECLARE_UNREGISTER(data_set)
-DECLARE_UNREGISTER(log)
-DECLARE_UNREGISTER(notification)
-
-int plugin_dispatch_values(value_list_t const *vl) { return ENOTSUP; }
-
-int plugin_dispatch_metric_family(metric_family_t const *fam) {
-  return ENOTSUP;
+int plugin_unregister_shutdown(__attribute__((unused)) char const *name)
+{
+    g_shutdown_cb = NULL;
+    return 0;
 }
 
-int plugin_dispatch_notification(__attribute__((unused))
-                                 const notification_t *notif) {
-  return ENOTSUP;
+int plugin_register_notification(__attribute__((unused)) const char *group,
+                                 __attribute__((unused)) const char *name,
+                                 plugin_notification_cb callback, user_data_t const *user_data)
+{
+    g_notification_cb = callback;
+    if (user_data == NULL)
+        memset(&g_notification_ud, 0, sizeof(g_notification_ud));
+    else
+        memcpy(&g_notification_ud, user_data, sizeof(g_notification_ud));
+    return 0;
 }
 
-int plugin_notification_meta_add_string(__attribute__((unused))
-                                        notification_t *n,
-                                        __attribute__((unused))
-                                        const char *name,
-                                        __attribute__((unused))
-                                        const char *value) {
-  return ENOTSUP;
+int plugin_unregister_notification(__attribute__((unused)) char const *name)
+{
+    g_notification_cb = NULL;
+    if (g_notification_ud.free_func != NULL)
+        g_notification_ud.free_func(g_notification_ud.data);
+    memset(&g_notification_ud, 0, sizeof(g_notification_ud));
+    return 0;
 }
 
-int plugin_notification_meta_add_signed_int(__attribute__((unused))
-                                            notification_t *n,
-                                            __attribute__((unused))
-                                            const char *name,
-                                            __attribute__((unused))
-                                            int64_t value) {
-  return ENOTSUP;
+int plugin_register_log(__attribute__((unused)) const char *name,
+                        __attribute__((unused)) const char *group,
+                        plugin_log_cb callback, user_data_t const *user_data)
+{
+    g_log_cb = callback;
+    if (user_data == NULL)
+        memset(&g_log_ud, 0, sizeof(g_log_ud));
+    else
+        memcpy(&g_log_ud, user_data, sizeof(g_log_ud));
+    return 0;
 }
 
-int plugin_notification_meta_add_unsigned_int(__attribute__((unused))
-                                              notification_t *n,
-                                              __attribute__((unused))
-                                              const char *name,
-                                              __attribute__((unused))
-                                              uint64_t value) {
-  return ENOTSUP;
+int plugin_unregister_log(__attribute__((unused)) char const *name)
+{
+    g_log_cb = NULL;
+    if (g_log_ud.free_func != NULL)
+        g_log_ud.free_func(g_log_ud.data);
+    memset(&g_log_ud, 0, sizeof(g_log_ud));
+    return 0;
 }
 
-int plugin_notification_meta_add_double(__attribute__((unused))
-                                        notification_t *n,
-                                        __attribute__((unused))
-                                        const char *name,
-                                        __attribute__((unused)) double value) {
-  return ENOTSUP;
+int plugin_dispatch_notification(__attribute__((unused)) const notification_t *notif)
+{
+    return 0;
 }
 
-int plugin_notification_meta_add_boolean(__attribute__((unused))
-                                         notification_t *n,
-                                         __attribute__((unused))
-                                         const char *name,
-                                         __attribute__((unused)) _Bool value) {
-  return ENOTSUP;
+char *plugin_procpath(const char *path)
+{
+    if (g_procpath == NULL)
+        g_procpath = "/proc";
+
+    if (path == NULL)
+        return strdup(g_procpath);
+
+    size_t len = strlen(g_procpath) + strlen(path) + 2;
+    char *rpath = malloc (len);
+    if (rpath == NULL)
+        return NULL;
+
+    ssnprintf(rpath, len, "%s/%s", g_procpath, path);
+    return rpath;
 }
 
-int plugin_notification_meta_copy(__attribute__((unused)) notification_t *dst,
-                                  __attribute__((unused))
-                                  const notification_t *src) {
-  return ENOTSUP;
+char *plugin_syspath(const char *path)
+{
+    if (g_syspath == NULL)
+        g_syspath = "/sys";
+
+    if (path == NULL)
+        return strdup(g_syspath);
+
+    size_t len = strlen(g_syspath) + strlen(path) + 2;
+    char *rpath = malloc (len);
+    if (rpath == NULL)
+        return NULL;
+
+    ssnprintf(rpath, len, "%s/%s", g_syspath, path);
+    return rpath;
 }
 
-int plugin_notification_meta_free(__attribute__((unused))
-                                  notification_meta_t *n) {
-  return ENOTSUP;
+int plugin_test_set_procpath(const char *path)
+{
+    g_procpath = path;
+    return 0;
 }
 
-int plugin_flush(const char *plugin, cdtime_t timeout, const char *identifier) {
-  return ENOTSUP;
+int plugin_test_set_syspath(const char *path)
+{
+    g_syspath = path;
+    return 0;
 }
 
-static data_source_t magic_ds[] = {{"value", DS_TYPE_DERIVE, 0.0, NAN}};
-static data_set_t magic = {"MAGIC", 1, magic_ds};
-const data_set_t *plugin_get_ds(const char *name) {
-  if (strcmp(name, "MAGIC"))
-    return NULL;
-
-  return &magic;
+int plugin_test_config(config_item_t *ci)
+{
+    if (g_config_cb == NULL)
+        return 0;
+    return g_config_cb(ci);
 }
 
-void plugin_log(int level, char const *format, ...) {
-  char buffer[1024];
-  va_list ap;
-
-  va_start(ap, format);
-  vsnprintf(buffer, sizeof(buffer), format, ap);
-  va_end(ap);
-
-  printf("plugin_log (%i, \"%s\");\n", level, buffer);
+int plugin_test_init(void)
+{
+    if (g_init_cb == NULL)
+        return 0;
+    return g_init_cb();
 }
 
-void daemon_log(int level, char const *format, ...) {
-  char buffer[1024];
-  va_list ap;
-
-  va_start(ap, format);
-  vsnprintf(buffer, sizeof(buffer), format, ap);
-  va_end(ap);
-
-  printf("daemon_log (%i, \"%s\");\n", level, buffer);
+int plugin_test_read(void)
+{
+    if (g_simple_read_cb != NULL)
+        return g_simple_read_cb();
+    if (g_complex_read_cb != 0)
+        return g_complex_read_cb(&g_complex_read_ud);
+    return -1;
 }
 
-void plugin_init_ctx(void) { /* nop */
+int plugin_test_write(metric_family_t const *fam)
+{
+    if (g_write_cb == NULL)
+        return 0;
+    return g_write_cb(fam, &g_write_ud);
+}
+
+int plugin_test_notification(const notification_t *n)
+{
+    if (g_notification_cb == NULL)
+        return 0;
+    return g_notification_cb(n, &g_notification_ud);
+}
+
+int plugin_test_shutdown(void)
+{
+    if (g_shutdown_cb == NULL)
+        return 0;
+    return g_shutdown_cb();
+}
+
+void plugin_test_reset(void)
+{
+    g_config_cb = NULL;
+    g_init_cb = NULL;
+    g_simple_read_cb = NULL;
+
+    g_write_cb = NULL;
+    g_flush_cb = NULL;
+    g_flush_interval = 0;
+    g_flush_timeout = 0;
+    if (g_write_ud.free_func != NULL)
+        g_write_ud.free_func(g_write_ud.data);
+    memset(&g_write_ud, 0, sizeof(g_write_ud));
+
+    g_complex_read_cb = NULL;
+    if (g_complex_read_ud.free_func != NULL)
+        g_complex_read_ud.free_func(g_complex_read_ud.data);
+    memset(&g_complex_read_ud, 0, sizeof(g_complex_read_ud));
+
+    g_shutdown_cb = NULL;
+
+    g_notification_cb = NULL;
+    if (g_notification_ud.free_func != NULL)
+        g_notification_ud.free_func(g_notification_ud.data);
+    memset(&g_notification_ud, 0, sizeof(g_notification_ud));
+
+    g_log_cb = NULL;
+    if (g_log_ud.free_func != NULL)
+        g_log_ud.free_func(g_log_ud.data);
+    memset(&g_log_ud, 0, sizeof(g_log_ud));
+
+    g_procpath = NULL;
+    g_syspath = NULL;
+
+    plugin_test_metrics_reset();
+}
+
+void plugin_log(int level, const char *file, int line, const char *func, const char *format, ...)
+{
+    char buffer[1024];
+    va_list ap;
+
+    va_start(ap, format);
+    vsnprintf(buffer, sizeof(buffer), format, ap);
+    va_end(ap);
+
+    printf("plugin_log (%i, %s(%s:%d), \"%s\");\n", level, func, file, line, buffer);
+}
+
+void daemon_log(int level, const char *file, int line, const char *func, const char *format, ...)
+{
+    char buffer[1024];
+    va_list ap;
+
+    va_start(ap, format);
+    vsnprintf(buffer, sizeof(buffer), format, ap);
+    va_end(ap);
+
+    printf("daemon_log (%i, %s(%s:%d), \"%s\");\n", level, func, file, line, buffer);
+}
+
+void plugin_init_ctx(void)
+{
+    /* nop */
 }
 
 plugin_ctx_t mock_context = {
     .interval = TIME_T_TO_CDTIME_T_STATIC(10),
 };
 
-plugin_ctx_t plugin_get_ctx(void) { return mock_context; }
-
-plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx) {
-  plugin_ctx_t prev = mock_context;
-  mock_context = ctx;
-  return prev;
+plugin_ctx_t plugin_get_ctx(void)
+{
+    return mock_context;
 }
 
-cdtime_t plugin_get_interval(void) { return mock_context.interval; }
-
-int plugin_thread_create(__attribute__((unused)) pthread_t *thread,
-                         __attribute__((unused)) void *(*start_routine)(void *),
-                         __attribute__((unused)) void *arg,
-                         __attribute__((unused)) char const *name) {
-  return ENOTSUP;
+plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx)
+{
+    plugin_ctx_t prev = mock_context;
+    mock_context = ctx;
+    return prev;
 }
 
-/* TODO(octo): this function is actually from filter_chain.h, but in order not
- * to tumble down that rabbit hole, we're declaring it here. A better solution
- * would be to hard-code the top-level config keys in daemon/collectd.c to avoid
- * having these references in daemon/configfile.c. */
-int fc_configure(const oconfig_item_t *ci) { return ENOTSUP; }
+cdtime_t plugin_get_interval(void)
+{
+    return mock_context.interval;
+}
+
+int plugin_thread_create(pthread_t *thread, void *(*start_routine)(void *), void *arg,
+                         __attribute__((unused)) char const *name)
+{
+    return pthread_create(thread, NULL, start_routine, arg);
+}
+
+int plugin_test_do_read(char *proc_path, char *sys_path, config_item_t *ci, char *expect)
+{
+    int status = 0;
+
+    if (proc_path != NULL) {
+        status = plugin_test_set_procpath(proc_path);
+        if (status != 0) {
+            fprintf(stderr, "plugin_test_set_procpath failed.\n");
+            plugin_test_metrics_reset();
+            return -1;
+        }
+    }
+
+    if (sys_path != NULL) {
+        status = plugin_test_set_syspath(sys_path);
+        if (status != 0) {
+            fprintf(stderr, "plugin_test_set_syspath failed.\n");
+            plugin_test_metrics_reset();
+            return -1;
+        }
+    }
+
+    if (ci != NULL) {
+        status = plugin_test_config(ci);
+        if (status != 0) {
+            fprintf(stderr, "plugin_test_config  failed.\n");
+            plugin_test_metrics_reset();
+            return -1;
+        }
+    }
+
+    status = plugin_test_init();
+    if (status != 0) {
+        fprintf(stderr, "plugin_test_init failed.\n");
+        plugin_test_metrics_reset();
+        return -1;
+    }
+
+    status = plugin_test_read();
+    if (status != 0) {
+        fprintf(stderr, "plugin_test_read failed.\n");
+        plugin_test_metrics_reset();
+        return -1;
+    }
+
+    status = plugin_test_shutdown();
+    if (status != 0) {
+        fprintf(stderr, "plugin_test_shutdown failed.\n");
+        plugin_test_metrics_reset();
+        return -1;
+    }
+
+    if (expect != NULL) {
+        status = plugin_test_metrics_cmp(expect);
+        if (status != 0) {
+            fprintf(stderr, "plugin_test_metrics_cmp failed.\n");
+            plugin_test_metrics_reset();
+            return -1;
+        }
+    }
+
+    plugin_test_metrics_reset();
+
+    return 0;
+}
