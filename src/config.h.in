@@ -1,0 +1,426 @@
+#cmakedefine NCOLLECTD_DAEMON
+#cmakedefine NCOLLECTD_DEBUG
+#cmakedefine NCOLLECTD_USERAGENT "@NCOLLECTD_USERAGENT@"
+
+#ifndef KERNEL_LINUX
+#cmakedefine KERNEL_LINUX
+#endif
+#ifndef KERNEL_FREEBSD
+#cmakedefine KERNEL_FREEBSD
+#endif
+#ifndef KERNEL_DRAGONFLY
+#cmakedefine KERNEL_DRAGONFLY
+#endif
+#ifndef KERNEL_OPENBSD
+#cmakedefine KERNEL_OPENBSD
+#endif
+#ifndef KERNEL_NETBSD
+#cmakedefine KERNEL_NETBSD
+#endif
+#ifndef KERNEL_AIX
+#cmakedefine KERNEL_AIX
+#endif
+#ifndef KERNEL_SOLARIS
+#cmakedefine KERNEL_SOLARIS
+#endif
+#ifndef KERNEL_DARWIN
+#cmakedefine KERNEL_DARWIN
+#endif
+
+#ifndef HAVE_UNISTD_H
+#cmakedefine HAVE_UNISTD_H
+#endif
+#ifndef HAVE_STRINGS_H
+#cmakedefine HAVE_STRINGS_H
+#endif
+#ifndef HAVE_ARPA_INET_H
+#cmakedefine HAVE_ARPA_INET_H
+#endif
+#ifndef HAVE_DIRENT_H
+#cmakedefine HAVE_DIRENT_H
+#endif
+#ifndef HAVE_ENDIAN_H
+#cmakedefine HAVE_ENDIAN_H
+#endif
+#ifndef HAVE_FNMATCH_H
+#cmakedefine HAVE_FNMATCH_H
+#endif
+#ifndef HAVE_FS_INFO_H
+#cmakedefine HAVE_FS_INFO_H
+#endif
+#ifndef HAVE_FSHELP_H
+#cmakedefine HAVE_FSHELP_H
+#endif
+#ifndef HAVE_KSTAT_H
+#cmakedefine HAVE_KSTAT_H
+#endif
+#ifndef HAVE_KVM_H
+#cmakedefine HAVE_KVM_H
+#endif
+#ifndef HAVE_LIBGEN_H
+#cmakedefine HAVE_LIBGEN_H
+#endif
+#ifndef HAVE_LOCALE_H
+#cmakedefine HAVE_LOCALE_H
+#endif
+#ifndef HAVE_MNTENT_H
+#cmakedefine HAVE_MNTENT_H
+#endif
+#ifndef HAVE_MNTTAB_H
+#cmakedefine HAVE_MNTTAB_H
+#endif
+#ifndef HAVE_DIR_H
+#cmakedefine HAVE_DIR_H
+#endif
+#ifndef HAVE_NDIR_H
+#cmakedefine HAVE_NDIR_H
+#endif
+#ifndef HAVE_NETDB_H
+#cmakedefine HAVE_NETDB_H
+#endif
+#ifndef HAVE_PATHS_H
+#cmakedefine HAVE_PATHS_H
+#endif
+#ifndef HAVE_POLL_H
+#cmakedefine HAVE_POLL_H
+#endif
+#ifndef HAVE_PTHREAD_H
+#cmakedefine HAVE_PTHREAD_H
+#endif
+#ifndef HAVE_PTHREAD_NP_H
+#cmakedefine HAVE_PTHREAD_NP_H
+#endif
+#ifndef HAVE_PTHREAD_SETNAME_NP_TWO_ARGS
+#cmakedefine HAVE_PTHREAD_SETNAME_NP_TWO_ARGS
+#endif
+#ifndef HAVE_PTHREAD_SETNAME_NP_THREE_ARGS
+#cmakedefine HAVE_PTHREAD_SETNAME_NP_THREE_ARGS
+#endif
+#ifndef HAVE_PTHREAD_SETNAME_NP
+#cmakedefine HAVE_PTHREAD_SETNAME_NP
+#endif
+#ifndef HAVE_PTHREAD_SET_NAME_NP
+#cmakedefine HAVE_PTHREAD_SET_NAME_NP
+#endif
+#ifndef HAVE_PWD_H
+#cmakedefine HAVE_PWD_H
+#endif
+#ifndef HAVE_SYS_NDIR_H
+#cmakedefine HAVE_SYS_NDIR_H
+#endif
+#ifndef HAVE_SYS_FS_TYPES_H
+#cmakedefine HAVE_SYS_FS_TYPES_H
+#endif
+#ifndef HAVE_SYS_FSTYP_H
+#cmakedefine HAVE_SYS_FSTYP_H
+#endif
+#ifndef HAVE_SYS_IOCTL_H
+#cmakedefine HAVE_SYS_IOCTL_H
+#endif
+#ifndef HAVE_SYS_ISA_DEFS_H
+#cmakedefine HAVE_SYS_ISA_DEFS_H
+#endif
+#ifndef HAVE_SYS_MNTENT_H
+#cmakedefine HAVE_SYS_MNTENT_H
+#endif
+#ifndef HAVE_SYS_MNTTAB_H
+#cmakedefine HAVE_SYS_MNTTAB_H
+#endif
+#ifndef HAVE_SYS_PARAM_H
+#cmakedefine HAVE_SYS_PARAM_H
+#endif
+#ifndef HAVE_SYS_QUOTA_H
+#cmakedefine HAVE_SYS_QUOTA_H
+#endif
+#ifndef HAVE_SYS_SOCKET_H
+#cmakedefine HAVE_SYS_SOCKET_H
+#endif
+#ifndef HAVE_SYS_STATFS_H
+#cmakedefine HAVE_SYS_STATFS_H
+#endif
+#ifndef HAVE_SYS_STATVFS_H
+#cmakedefine HAVE_SYS_STATVFS_H
+#endif
+#ifndef HAVE_SYS_TIME_H
+#cmakedefine HAVE_SYS_TIME_H
+#endif
+#ifndef HAVE_SYS_TYPES_H
+#cmakedefine HAVE_SYS_TYPES_H
+#endif
+#ifndef HAVE_SYS_UN_H
+#cmakedefine HAVE_SYS_UN_H
+#endif
+#ifndef HAVE_SYS_UCRED_H
+#cmakedefine HAVE_SYS_UCRED_H
+#endif
+#ifndef HAVE_SYS_VFS_H
+#cmakedefine HAVE_SYS_VFS_H
+#endif
+#ifndef HAVE_SYS_VFSTAB_H
+#cmakedefine HAVE_SYS_VFSTAB_H
+#endif
+#ifndef HAVE_SYS_WAIT_H
+#cmakedefine HAVE_SYS_WAIT_H
+#endif
+#ifndef HAVE_WORDEXP_H
+#cmakedefine HAVE_WORDEXP_H
+#endif
+#ifndef HAVE_XFS_XQM_H
+#cmakedefine HAVE_XFS_XQM_H
+#endif
+#ifndef HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_STAT_H
+#endif
+#ifndef HAVE_FCNTL_H
+#cmakedefine HAVE_FCNTL_H
+#endif
+#ifndef HAVE_EXECVPE
+#cmakedefine HAVE_EXECVPE
+#endif
+#ifndef HAVE_GETPWNAM
+#cmakedefine HAVE_GETPWNAM
+#endif
+#ifndef HAVE_GETPWNAM_R
+#cmakedefine HAVE_GETPWNAM_R
+#endif
+#ifndef HAVE_SETGROUPS
+#cmakedefine HAVE_SETGROUPS
+#endif
+#ifndef HAVE_SETLOCALE
+#cmakedefine HAVE_SETLOCALE
+#endif
+#ifndef HAVE_HTONLL
+#cmakedefine HAVE_HTONLL
+#endif
+#ifndef HAVE_STRERROR_R
+#cmakedefine HAVE_STRERROR_R
+#endif
+#ifndef HAVE_STRERROR_R_CHAR_P
+#cmakedefine HAVE_STRERROR_R_CHAR_P
+#endif
+#ifndef HAVE_GETFSSTAT
+#cmakedefine HAVE_GETFSSTAT
+#endif
+#ifndef HAVE_GETVFSSTAT
+#cmakedefine HAVE_GETVFSSTAT
+#endif
+#ifndef HAVE_LISTMNTENT
+#cmakedefine HAVE_LISTMNTENT
+#endif
+#ifndef HAVE_GETMNTENT_R
+#cmakedefine HAVE_GETMNTENT_R
+#endif
+#ifndef HAVE_GETMNTENT
+#cmakedefine HAVE_GETMNTENT
+#endif
+#ifndef HAVE_TWO_GETMNTENT
+#cmakedefine HAVE_TWO_GETMNTENT
+#endif
+#ifndef HAVE_ONE_GETMNTENT
+#cmakedefine HAVE_ONE_GETMNTENT
+#endif
+#ifndef HAVE_SUN_GETMNTENT
+#cmakedefine HAVE_SUN_GETMNTENT
+#endif
+#ifndef HAVE_GEN_GETMNTENT
+#cmakedefine HAVE_GEN_GETMNTENT
+#endif
+#ifndef HAVE_STATFS
+#cmakedefine HAVE_STATFS
+#endif
+#ifndef HAVE_STATVFS
+#cmakedefine HAVE_STATVFS
+#endif
+#ifndef HAVE_STRNLEN
+#cmakedefine HAVE_STRNLEN
+#endif
+#ifndef HAVE_SYSCTL
+#cmakedefine HAVE_SYSCTL
+#endif
+#ifndef HAVE_SYSCTLBYNAME
+#cmakedefine HAVE_SYSCTLBYNAME
+#endif
+#ifndef HAVE_CLOSE_RANGE
+#cmakedefine HAVE_CLOSE_RANGE
+#endif
+#ifndef HAVE_CLOSEFROM
+#cmakedefine HAVE_CLOSEFROM
+#endif
+#ifndef HAVE_FCNTL_CLOSEM
+#cmakedefine HAVE_FCNTL_CLOSEM
+#endif
+
+#ifndef HAVE_CLOCK_GETTIME
+#cmakedefine HAVE_CLOCK_GETTIME
+#endif
+#ifndef HAVE_TIMEGM
+#cmakedefine HAVE_TIMEGM
+#endif
+#ifndef TIMEGM_NEEDS_DEFAULT
+#cmakedefine TIMEGM_NEEDS_DEFAULT
+#endif
+#ifndef TIMEGM_NEEDS_BSD
+#cmakedefine TIMEGM_NEEDS_BSD
+#endif
+
+#ifndef HAVE_MACH_MACH_INIT_H
+#cmakedefine HAVE_MACH_MACH_INIT_H
+#endif
+#ifndef HAVE_MACH_HOST_PRIV_H
+#cmakedefine HAVE_MACH_HOST_PRIV_H
+#endif
+#ifndef HAVE_MACH_MACH_ERROR_H
+#cmakedefine HAVE_MACH_MACH_ERROR_H
+#endif
+#ifndef HAVE_MACH_MACH_HOST_H
+#cmakedefine HAVE_MACH_MACH_HOST_H
+#endif
+#ifndef HAVE_MACH_MACH_PORT_H
+#cmakedefine HAVE_MACH_MACH_PORT_H
+#endif
+#ifndef HAVE_MACH_MACH_TYPES_H
+#cmakedefine HAVE_MACH_MACH_TYPES_H
+#endif
+#ifndef HAVE_MACH_MESSAGE_H
+#cmakedefine HAVE_MACH_MESSAGE_H
+#endif
+#ifndef HAVE_MACH_PROCESSOR_SET_H
+#cmakedefine HAVE_MACH_PROCESSOR_SET_H
+#endif
+#ifndef HAVE_MACH_PROCESSOR_H
+#cmakedefine HAVE_MACH_PROCESSOR_H
+#endif
+#ifndef HAVE_MACH_PROCESSOR_INFO_H
+#cmakedefine HAVE_MACH_PROCESSOR_INFO_H
+#endif
+#ifndef HAVE_MACH_TASK_H
+#cmakedefine HAVE_MACH_TASK_H
+#endif
+#ifndef HAVE_MACH_THREAD_ACT_H
+#cmakedefine HAVE_MACH_THREAD_ACT_H
+#endif
+#ifndef HAVE_MACH_VM_REGION_H
+#cmakedefine HAVE_MACH_VM_REGION_H
+#endif
+#ifndef HAVE_MACH_VM_MAP_H
+#cmakedefine HAVE_MACH_VM_MAP_H
+#endif
+#ifndef HAVE_MACH_VM_PROT_H
+#cmakedefine HAVE_MACH_VM_PROT_H
+#endif
+#ifndef HAVE_MACH_VM_STATISTICS_H
+#cmakedefine HAVE_MACH_VM_STATISTICS_H
+#endif
+#ifndef HAVE_MACH_KERN_RETURN_H
+#cmakedefine HAVE_MACH_KERN_RETURN_H
+#endif
+#ifndef HAVE_COREFOUNDATION_COREFOUNDATION_H
+#cmakedefine HAVE_COREFOUNDATION_COREFOUNDATION_H
+#endif
+#ifndef HAVE_IOKIT_IOKITLIB_H
+#cmakedefine HAVE_IOKIT_IOKITLIB_H
+#endif
+#ifndef HAVE_IOKIT_IOTYPES_H
+#cmakedefine HAVE_IOKIT_IOTYPES_H
+#endif
+#ifndef HAVE_IOKIT_PS_IOPSKEYS_H
+#cmakedefine HAVE_IOKIT_PS_IOPSKEYS_H
+#endif
+#ifndef HAVE_IOKIT_IOBSD_H
+#cmakedefine HAVE_IOKIT_IOBSD_H
+#endif
+#ifndef HAVE_IOKIT_STORAGE_IOBLOCKSTORAGEDRIVER_H
+#cmakedefine HAVE_IOKIT_STORAGE_IOBLOCKSTORAGEDRIVER_H
+#endif
+#ifndef HAVE_IOKIT_PS_IOPOWERSOURCES_H
+#cmakedefine HAVE_IOKIT_PS_IOPOWERSOURCES_H
+#endif
+
+#ifndef HAVE_NETINET_IN_SYSTM_H
+#cmakedefine HAVE_NETINET_IN_SYSTM_H
+#endif
+#ifndef HAVE_NETINET_IN_H
+#cmakedefine HAVE_NETINET_IN_H
+#endif
+#ifndef HAVE_NETINET_IP_H
+#cmakedefine HAVE_NETINET_IP_H
+#endif
+#ifndef HAVE_NETINET_IP_ICMP_H
+#cmakedefine HAVE_NETINET_IP_ICMP_H
+#endif
+#ifndef HAVE_NETINET_IP_VAR_H
+#cmakedefine HAVE_NETINET_IP_VAR_H
+#endif
+#ifndef HAVE_NETINET_IP6_H
+#cmakedefine HAVE_NETINET_IP6_H
+#endif
+#ifndef HAVE_NETINET_ICMP6_H
+#cmakedefine HAVE_NETINET_ICMP6_H
+#endif
+#ifndef HAVE_NETINET_TCP_H
+#cmakedefine HAVE_NETINET_TCP_H
+#endif
+#ifndef HAVE_NETINET_UDP_H
+#cmakedefine HAVE_NETINET_UDP_H
+#endif
+#ifndef HAVE_SYS_SYSCTL_H
+#cmakedefine HAVE_SYS_SYSCTL_H
+#endif
+#ifndef HAVE_NET_IF_H
+#cmakedefine HAVE_NET_IF_H
+#endif
+#ifndef HAVE_SYS_MOUNT_H
+#cmakedefine HAVE_SYS_MOUNT_H
+#endif
+#ifndef HAVE_NET_IF_ARP_H
+#cmakedefine HAVE_NET_IF_ARP_H
+#endif
+#ifndef HAVE_NET_PPP_DEFS_H
+#cmakedefine HAVE_NET_PPP_DEFS_H
+#endif
+#ifndef HAVE_NET_IF_PPP_H
+#cmakedefine HAVE_NET_IF_PPP_H
+#endif
+#ifndef HAVE_NETINET_IF_ETHER_H
+#cmakedefine HAVE_NETINET_IF_ETHER_H
+#endif
+#ifndef HAVE_SYS_SYSMACROS_H
+#cmakedefine HAVE_SYS_SYSMACROS_H
+#endif
+
+#ifndef HAVE_GETOPT_H
+#cmakedefine HAVE_GETOPT_H
+#endif
+#ifndef HAVE_GETOPT_LONG
+#cmakedefine HAVE_GETOPT_LONG
+#endif
+
+#ifndef HAVE_STRPTIME
+#cmakedefine HAVE_STRPTIME
+#endif
+#ifndef HAVE_STRPTIME_DEFAULT
+#cmakedefine HAVE_STRPTIME_DEFAULT
+#endif
+#ifndef HAVE_STRPTIME_STANDARDS
+#cmakedefine HAVE_STRPTIME_STANDARDS
+#endif
+
+#ifndef NAN_STATIC_DEFAULT
+#cmakedefine NAN_STATIC_DEFAULT
+#endif
+#ifndef NAN_STATIC_ISOC
+#cmakedefine NAN_STATIC_ISOC
+#endif
+#ifndef NAN_ZERO_ZERO
+#cmakedefine NAN_ZERO_ZERO
+#endif
+
+#ifndef FP_LAYOUT_NEED_NOTHING
+#cmakedefine FP_LAYOUT_NEED_NOTHING
+#endif
+#ifndef FP_LAYOUT_NEED_ENDIANFLIP
+#cmakedefine FP_LAYOUT_NEED_ENDIANFLIP
+#endif
+#ifndef FP_LAYOUT_NEED_INTSWAP
+#cmakedefine FP_LAYOUT_NEED_INTSWAP
+#endif
