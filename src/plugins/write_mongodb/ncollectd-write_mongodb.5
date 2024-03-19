@@ -1,0 +1,71 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-mongodb 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_mongodb man page"
+.SH NAME
+ncollectd-write_mongodb \- Documentation of ncollectd's write mongodb plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_mongodb
+.br
+\fBplugin\fP write_mongodb {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBdatabase\fP \fIdatabase\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpasswrod\fP
+        \fBstore-rates\fP \fItrue|false\fP
+        \fBcollection\fP \fIcollection-name\fP
+        \fBtimestamp-field\fP \fItimestamp-field-name\fP
+        \fBmetadata-field\fP \fImetadata-field-name\fP
+        \fBvalue-field\fP \fIvalue-field-name\fP
+        \fBttl\fP \fIseconds\fP
+        \fBbulk-size\fP \fIsize\fP
+    }
+.br
+}
+.EE
+.SH DESCRIPTION
+The \fBwrite_mongodb\fP plugin will insert metrics in a \fIMongoDB\fP, a schema-less NoSQL database.
+.PP
+Within each \fBinstance\fP block, the following options are available:
+.PP
+.TP
+\fBhost\fP \fIhost\fP
+Hostname or address to connect to. Defaults to \f(CWlocalhost\fP.
+.TP
+\fBport\fP \fIport\fP
+Service name or port number to connect to. Defaults to \f(CW27017\fP.
+.TP
+\fBdatabase\fP \fIdatabase\fP
+.TP
+\fBuser\fP \fIuser\fP
+.TP
+\fBpassword\fP \fIpasswrod\fP
+Sets the information used when authenticating to a \fIMongoDB\fP database. The
+fields are optional (in which case no authentication is attempted), but if you
+want to use authentication all three fields must be set.
+.TP
+\fBstore-rates\fP \fItrue|false\fP
+.TP
+\fBcollection\fP \fIcollection-name\fP
+The collection name to write the metrics. The default name is "metrics".
+.TP
+\fBtimestamp-field\fP \fItimestamp-field-name\fP
+The name of the field which contains the date in each time series document.
+The default name is "timestamp".
+.TP
+\fBmetadata-field\fP \fImetadata-field-name\fP
+The name of the field which contains the labels in each time series document.
+The default name is "metadata".
+.TP
+\fBvalue-field\fP \fIvalue-field-name\fP
+The name of the filed witch contains the value in each time series document.
+The default name is "value".
+.TP
+\fBttl\fP \fIseconds\fP
+Automatic removal of metrics older than a specified number of seconds.
+.TP
+\fBbulk-size\fP \fIsize\fP
+The number of inserts in the bulk operation. The default number is 512.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
