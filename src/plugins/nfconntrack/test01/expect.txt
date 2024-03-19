@@ -1,0 +1,153 @@
+# TYPE system_nf_conntrack_entries counter
+system_nf_conntrack_entries_total{cpu="0",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="1",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="2",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="3",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="4",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="5",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="6",hostname="localhost.localdomain"} 67
+system_nf_conntrack_entries_total{cpu="7",hostname="localhost.localdomain"} 67
+# TYPE system_nf_conntrack_searched counter
+system_nf_conntrack_searched_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_searched_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_searched_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_searched_total{cpu="3",hostname="localhost.localdomain"} 46
+system_nf_conntrack_searched_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_searched_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_searched_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_searched_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_invalid counter
+system_nf_conntrack_invalid_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_invalid_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_invalid_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_invalid_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_invalid_total{cpu="4",hostname="localhost.localdomain"} 1
+system_nf_conntrack_invalid_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_invalid_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_invalid_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_ignore counter
+system_nf_conntrack_ignore_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_ignore_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_new counter
+system_nf_conntrack_new_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_new_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_insert_failed counter
+system_nf_conntrack_insert_failed_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_failed_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_drop counter
+system_nf_conntrack_drop_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_drop_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_early_drop counter
+system_nf_conntrack_early_drop_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_early_drop_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_insert counter
+system_nf_conntrack_insert_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_insert_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_found counter
+system_nf_conntrack_found_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_found_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_expect_new counter
+system_nf_conntrack_expect_new_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_new_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_expect_delete counter
+system_nf_conntrack_expect_delete_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_delete_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_search_restart counter
+system_nf_conntrack_search_restart_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_search_restart_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_icmp_error counter
+system_nf_conntrack_icmp_error_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_icmp_error_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_delete counter
+system_nf_conntrack_delete_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_expect_create counter
+system_nf_conntrack_expect_create_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_expect_create_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_nf_conntrack_delete_list counter
+system_nf_conntrack_delete_list_total{cpu="0",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="1",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="2",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="3",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="4",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="5",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="6",hostname="localhost.localdomain"} 0
+system_nf_conntrack_delete_list_total{cpu="7",hostname="localhost.localdomain"} 0
