@@ -1,0 +1,39 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-olsrd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd olsrd man page"
+.SH NAME
+ncollectd-olsrd \- Documentation of ncollectd's olsrd plugin
+.SH SYNOPSIS
+\fBload-plugin\fP olsrd
+.br
+\fBplugin\fP olsrd {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhostname\fP
+        \fBport\fP \fIport\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBolsrd\fP plugin connects to the TCP port opened
+by the \fItxtinfo\fP plugin of the Optimized Link State Routing daemon and reads
+information about the current state of the meshed network.
+
+The following configuration options are understood:
+
+.TP
+\fBhost\fP \fIhostname\fP
+Connect to \fIhost\fP. Defaults to \fBlocalhost\fP.
+.TP
+\fBport\fP \fIport\fP
+Specifies the port to connect to. This must be a string, even if you give the
+port as a number rather than a service name. Defaults to \f(CW2006\fP.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
