@@ -1,238 +1,485 @@
-/**
- * collectd - src/ipstats.c
- * Copyright (C) 2019  Marco van Tol
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to
- * deal in the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
- *
- * Authors:
- *   Marco van Tol <marco at tols.org>
- **/
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2019  Marco van Tol
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Marco van Tol <marco at tols.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
-#include "collectd.h"
 #include "plugin.h"
-#include "utils/common/common.h"
 
-#if KERNEL_FREEBSD
 #include <sys/sysctl.h>
 #include <sys/types.h>
-
 #include <netinet/in.h>
 #include <netinet/ip_var.h>
 #include <netinet6/ip6_var.h>
+
+#ifndef KERNEL_FREEBSD
+    #error "No applicable input method."
 #endif
 
-/**
- * Offset at which IPv6 values start in:
- * - config_keys
- * - config_vals
- * - value_keys
- * - value_vals
- **/
-static const int v6_config_offset = 29;
+enum {
+    FAM_IP_PACKETS,
+    FAM_IP_BADSUM_PACKETS,
+    FAM_IP_TOOSHORT_PACKETS,
+    FAM_IP_TOOSMALL_PACKETS,
+    FAM_IP_BADHLEN_PACKETS,
+    FAM_IP_BADLEN_PACKETS,
+    FAM_IP_FRAGMENTS_PACKETS,
+    FAM_IP_FRAGDROPPED_PACKETS,
+    FAM_IP_FRAGTIMEOUT_PACKETS,
+    FAM_IP_FORWARD_PACKETS,
+    FAM_IP_FASTFORWARD_PACKETS,
+    FAM_IP_CANTFORWARD_PACKETS,
+    FAM_IP_REDIRECTSENT_PACKETS,
+    FAM_IP_NOPROTO_PACKETS,
+    FAM_IP_DELIVERED_PACKETS,
+    FAM_IP_LOCALOUT_PACKETS,
+    FAM_IP_ODROPPED_PACKETS,
+    FAM_IP_REASSEMBLED_PACKETS,
+    FAM_IP_FRAGMENTED_PACKETS,
+    FAM_IP_OFRAGMENTS_PACKETS,
+    FAM_IP_CANTFRAG_PACKETS,
+    FAM_IP_BADOPTIONS_PACKETS,
+    FAM_IP_NOROUTE_PACKETS,
+    FAM_IP_BADVERS_PACKETS,
+    FAM_IP_RAWOUT_PACKETS,
+    FAM_IP_TOOLONG_PACKETS,
+    FAM_IP_NOTMEMBER_PACKETS,
+    FAM_IP_NOGIF_PACKETS,
+    FAM_IP_BADADDR_PACKETS,
+    FAM_IP6_PACKETS,
+    FAM_IP6_TOOSHORT_PACKETS,
+    FAM_IP6_TOOSMALL_PACKETS,
+    FAM_IP6_FRAGMENTS_PACKETS,
+    FAM_IP6_FRAGDROPPED_PACKETS,
+    FAM_IP6_FRAGTIMEOUT_PACKETS,
+    FAM_IP6_FRAGOVERFLOW_PACKETS,
+    FAM_IP6_FORWARD_PACKETS,
+    FAM_IP6_CANTFORWARD_PACKETS,
+    FAM_IP6_REDIRECTSENT_PACKETS,
+    FAM_IP6_DELIVERED_PACKETS,
+    FAM_IP6_LOCALOUT_PACKETS,
+    FAM_IP6_ODROPPED_PACKETS,
+    FAM_IP6_REASSEMBLED_PACKETS,
+    FAM_IP6_FRAGMENTED_PACKETS,
+    FAM_IP6_OFRAGMENTS_PACKETS,
+    FAM_IP6_CANTFRAG_PACKETS,
+    FAM_IP6_BADOPTIONS_PACKETS,
+    FAM_IP6_NOROUTE_PACKETS,
+    FAM_IP6_BADVERS_PACKETS,
+    FAM_IP6_RAWOUT_PACKETS,
+    FAM_IP6_BADSCOPE_PACKETS,
+    FAM_FAMIP6_NOTMEMBER_PACKETS,
+    FAM_IP6_NOGIF_PACKETS,
+    FAM_IP6_TOOMANYHDR_PACKETS,
+    FAM_IP_MAX
+};
 
-static const char *config_keys[] = {
-    "ip4receive",      "ip4badsum",      "ip4tooshort",     "ip4toosmall",
-    "ip4badhlen",      "ip4badlen",      "ip4fragment",     "ip4fragdrop",
-    "ip4fragtimeout",  "ip4forward",     "ip4fastforward",  "ip4cantforward",
-    "ip4redirectsent", "ip4noproto",     "ip4deliver",      "ip4transmit",
-    "ip4odrop",        "ip4reassemble",  "ip4fragmented",   "ip4ofragment",
-    "ip4cantfrag",     "ip4badoptions",  "ip4noroute",      "ip4badvers",
-    "ip4rawout",       "ip4toolong",     "ip4notmember",    "ip4nogif",
-    "ip4badaddr",      "ip6receive",     "ip6tooshort",     "ip6toosmall",
-    "ip6fragment",     "ip6fragdrop",    "ip6fragtimeout",  "ip6fragoverflow",
-    "ip6forward",      "ip6cantforward", "ip6redirectsent", "ip6deliver",
-    "ip6transmit",     "ip6odrop",       "ip6reassemble",   "ip6fragmented",
-    "ip6ofragment",    "ip6cantfrag",    "ip6badoptions",   "ip6noroute",
-    "ip6badvers",      "ip6rawout",      "ip6badscope",     "ip6notmember",
-    "ip6nogif",        "ip6toomanyhdr"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
+static metric_family_t fams[FAM_IP_MAX] = {
+    [FAM_IP_PACKETS] = {
+        .name = "system_ip_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_BADSUM_PACKETS] = {
+        .name = "system_ip_badsum_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_TOOSHORT_PACKETS] = {
+        .name = "system_ip_tooshort_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_TOOSMALL_PACKETS] = {
+        .name = "system_ip_toosmall_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_BADHLEN_PACKETS] = {
+        .name = "system_ip_badhlen_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_BADLEN_PACKETS] = {
+        .name = "system_ip_badlen_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_FRAGMENTS_PACKETS] = {
+        .name = "system_ip_fragments_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_FRAGDROPPED_PACKETS] = {
+        .name = "system_ip_fragdropped_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_FRAGTIMEOUT_PACKETS] = {
+        .name = "system_ip_fragtimeout_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_FORWARD_PACKETS] = {
+        .name = "system_ip_forward_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_FASTFORWARD_PACKETS] = {
+        .name = "system_ip_fastforward_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_CANTFORWARD_PACKETS] = {
+        .name = "system_ip_cantforward_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_REDIRECTSENT_PACKETS] = {
+        .name = "system_ip_redirectsent_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_NOPROTO_PACKETS] = {
+        .name = "system_ip_noproto_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_DELIVERED_PACKETS] = {
+        .name = "system_ip_delivered_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_LOCALOUT_PACKETS] = {
+        .name = "system_ip_localout_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_ODROPPED_PACKETS] = {
+        .name = "system_ip_odropped_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_REASSEMBLED_PACKETS] = {
+        .name = "system_ip_reassembled_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_FRAGMENTED_PACKETS] = {
+        .name = "system_ip_fragmented_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_OFRAGMENTS_PACKETS] = {
+        .name = "system_ip_ofragments_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_CANTFRAG_PACKETS] = {
+        .name = "system_ip_cantfrag_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_BADOPTIONS_PACKETS] = {
+        .name = "system_ip_badoptions_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_NOROUTE_PACKETS] = {
+        .name = "system_ip_noroute_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_BADVERS_PACKETS] = {
+        .name = "system_ip_badvers_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_RAWOUT_PACKETS] = {
+        .name = "system_ip_rawout_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_TOOLONG_PACKETS] = {
+        .name = "system_ip_toolong_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_NOTMEMBER_PACKETS] = {
+        .name = "system_ip_notmember_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_NOGIF_PACKETS] = {
+        .name = "system_ip_nogif_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP_BADADDR_PACKETS] = {
+        .name = "system_ip_badaddr_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_PACKETS] = {
+        .name = "system_ip6_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_TOOSHORT_PACKETS] = {
+        .name = "system_ip6_tooshort_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_TOOSMALL_PACKETS] = {
+        .name = "system_ip6_toosmall_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_FRAGMENTS_PACKETS] = {
+        .name = "system_ip6_fragments_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_FRAGDROPPED_PACKETS] = {
+        .name = "system_ip6_fragdropped_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_FRAGTIMEOUT_PACKETS] = {
+        .name = "system_ip6_fragtimeout_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_FRAGOVERFLOW_PACKETS] = {
+        .name = "system_ip6_fragoverflow_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_FORWARD_PACKETS] = {
+        .name = "system_ip6_forward_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_CANTFORWARD_PACKETS] = {
+        .name = "system_ip6_cantforward_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_REDIRECTSENT_PACKETS] = {
+        .name = "system_ip6_redirectsent_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_DELIVERED_PACKETS] = {
+        .name = "system_ip6_delivered_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_LOCALOUT_PACKETS] = {
+        .name = "system_ip6_localout_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_ODROPPED_PACKETS] = {
+        .name = "system_ip6_odropped_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_REASSEMBLED_PACKETS] = {
+        .name = "system_ip6_reassembled_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_FRAGMENTED_PACKETS] = {
+        .name = "system_ip6_fragmented_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_OFRAGMENTS_PACKETS] = {
+        .name = "system_ip6_ofragments_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_CANTFRAG_PACKETS] = {
+        .name = "system_ip6_cantfrag_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_BADOPTIONS_PACKETS] = {
+        .name = "system_ip6_badoptions_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_NOROUTE_PACKETS] = {
+        .name = "system_ip6_noroute_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_BADVERS_PACKETS] = {
+        .name = "system_ip6_badvers_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_RAWOUT_PACKETS] = {
+        .name = "system_ip6_rawout_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_BADSCOPE_PACKETS] = {
+        .name = "system_ip6_badscope_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_FAMIP6_NOTMEMBER_PACKETS] = {
+        .name = "system_ip6_notmember_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_NOGIF_PACKETS] = {
+        .name = "system_ip6_nogif_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_IP6_TOOMANYHDR_PACKETS] = {
+        .name = "system_ip6_toomanyhdr_packets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    }
+};
 
-static bool config_vals[] = {
-    true,  false, false, false, false, false, false, false, false, true,  false,
-    false, false, false, false, true,  false, false, false, false, false, false,
-    false, false, false, false, false, false, false, true,  false, false, false,
-    false, false, false, true,  false, false, false, true,  false, false, false,
-    false, false, false, false, false, false, false, false, false, false};
-static int config_vals_num = STATIC_ARRAY_SIZE(config_vals);
+static int ipstats_read(void)
+{
+    struct ipstat ipstat;
+    size_t ipslen = sizeof(ipstat);
+    char mib[] = "net.inet.ip.stats";
 
-static const char *value_keys[] = {
-    "receive",      "badsum",      "tooshort",     "toosmall",
-    "badhlen",      "badlen",      "fragment",     "fragdrop",
-    "fragtimeout",  "forward",     "fastforward",  "cantforward",
-    "redirectsent", "noproto",     "deliver",      "transmit",
-    "odrop",        "reassemble",  "fragmented",   "ofragment",
-    "cantfrag",     "badoptions",  "noroute",      "badvers",
-    "rawout",       "toolong",     "notmember",    "nogif",
-    "badaddr",      "receive",     "tooshort",     "toosmall",
-    "fragment",     "fragdrop",    "fragtimeout",  "fragoverflow",
-    "forward",      "cantforward", "redirectsent", "deliver",
-    "transmit",     "odrop",       "reassemble",   "fragmented",
-    "ofragment",    "cantfrag",    "badoptions",   "noroute",
-    "badvers",      "rawout",      "badscope",     "notmember",
-    "nogif",        "toomanyhdr"};
-static int value_keys_num = STATIC_ARRAY_SIZE(value_keys);
+    if (sysctlbyname(mib, &ipstat, &ipslen, NULL, 0) != 0) {
+        PLUGIN_WARNING("ipstats plugin: sysctl \"%s\" failed.", mib);
+    } else {
+        metric_family_append(&fams[FAM_IP_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_total), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_BADSUM_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_badsum), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_TOOSHORT_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_tooshort), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_TOOSMALL_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_toosmall), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_BADHLEN_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_badhlen), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_BADLEN_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_badlen), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_FRAGMENTS_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_fragments), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_FRAGDROPPED_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_fragdropped), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_FRAGTIMEOUT_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_fragtimeout), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_FORWARD_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_forward), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_FASTFORWARD_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_fastforward), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_CANTFORWARD_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_cantforward), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_REDIRECTSENT_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_redirectsent), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_NOPROTO_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_noproto), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_DELIVERED_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_delivered), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_LOCALOUT_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_localout), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_ODROPPED_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_odropped), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_REASSEMBLED_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_reassembled), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_FRAGMENTED_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_fragmented), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_OFRAGMENTS_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_ofragments), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_CANTFRAG_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_cantfrag), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_BADOPTIONS_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_badoptions), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_NOROUTE_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_noroute), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_BADVERS_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_badvers), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_RAWOUT_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_rawout), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_TOOLONG_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_toolong), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_NOTMEMBER_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_notmember), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_NOGIF_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_nogif), NULL, NULL);
+        metric_family_append(&fams[FAM_IP_BADADDR_PACKETS],
+                             VALUE_COUNTER(ipstat.ips_badaddr), NULL, NULL);
+    }
 
-static uint64_t value_vals[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static int value_vals_num = STATIC_ARRAY_SIZE(value_vals);
+    struct ip6stat ip6stat;
+    size_t ip6slen = sizeof(ip6stat);
+    char mib6[] = "net.inet6.ip6.stats";
 
-static int ipstats_init(void) {
-  if (config_keys_num != config_vals_num) {
-    ERROR("config_keys must be same size as config_vals");
-    return -1;
-  }
+    if (sysctlbyname(mib6, &ip6stat, &ip6slen, NULL, 0) != 0) {
+        PLUGIN_WARNING("ipstats plugin: sysctl \"%s\" failed.", mib6);
+    } else {
+        metric_family_append(&fams[FAM_IP6_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_total), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_TOOSHORT_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_tooshort), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_TOOSMALL_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_toosmall), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_FRAGMENTS_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_fragments), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_FRAGDROPPED_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_fragdropped), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_FRAGTIMEOUT_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_fragtimeout), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_FRAGOVERFLOW_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_fragoverflow), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_FORWARD_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_forward), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_CANTFORWARD_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_cantforward), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_REDIRECTSENT_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_redirectsent), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_DELIVERED_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_delivered), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_LOCALOUT_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_localout), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_ODROPPED_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_odropped), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_REASSEMBLED_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_reassembled), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_FRAGMENTED_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_fragmented), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_OFRAGMENTS_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_ofragments), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_CANTFRAG_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_cantfrag), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_BADOPTIONS_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_badoptions), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_NOROUTE_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_noroute), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_BADVERS_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_badvers), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_RAWOUT_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_rawout), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_BADSCOPE_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_badscope), NULL, NULL);
+        metric_family_append(&fams[FAM_FAMIP6_NOTMEMBER_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_notmember), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_NOGIF_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_nogif), NULL, NULL);
+        metric_family_append(&fams[FAM_IP6_TOOMANYHDR_PACKETS],
+                             VALUE_COUNTER(ip6stat.ip6s_toomanyhdr), NULL, NULL);
+    }
 
-  if (value_keys_num != config_keys_num) {
-    ERROR("value_keys must be same size as config_keys");
-    return -1;
-  }
-
-  if (value_keys_num != value_vals_num) {
-    ERROR("value_keys must be same size as value_vals");
-    return -1;
-  }
-
-  return 0;
+    plugin_dispatch_metric_family_array(fams, FAM_IP_MAX, 0);
+    return 0;
 }
 
-static int ipstats_config(char const *key, char const *value) {
-  for (int i = 0; i < config_keys_num; i++)
-    if (strcasecmp(key, config_keys[i]) == 0) {
-      config_vals[i] = true;
-      return 0;
-    }
-
-  WARNING("ipstats plugin: invalid config key: %s", key);
-  return -1;
-} /* int ipstats_config */
-
-#if KERNEL_FREEBSD
-static void ipstats_submit(const struct ipstat *ipstat_p,
-                           const struct ip6stat *ip6stat_p) {
-  value_list_t vl = VALUE_LIST_INIT;
-  vl.values_len = 1;
-
-  int i = 0;
-  value_vals[i++] = ipstat_p->ips_total;
-  value_vals[i++] = ipstat_p->ips_badsum;
-  value_vals[i++] = ipstat_p->ips_tooshort;
-  value_vals[i++] = ipstat_p->ips_toosmall;
-  value_vals[i++] = ipstat_p->ips_badhlen;
-  value_vals[i++] = ipstat_p->ips_badlen;
-  value_vals[i++] = ipstat_p->ips_fragments;
-  value_vals[i++] = ipstat_p->ips_fragdropped;
-  value_vals[i++] = ipstat_p->ips_fragtimeout;
-  value_vals[i++] = ipstat_p->ips_forward;
-  value_vals[i++] = ipstat_p->ips_fastforward;
-  value_vals[i++] = ipstat_p->ips_cantforward;
-  value_vals[i++] = ipstat_p->ips_redirectsent;
-  value_vals[i++] = ipstat_p->ips_noproto;
-  value_vals[i++] = ipstat_p->ips_delivered;
-  value_vals[i++] = ipstat_p->ips_localout;
-  value_vals[i++] = ipstat_p->ips_odropped;
-  value_vals[i++] = ipstat_p->ips_reassembled;
-  value_vals[i++] = ipstat_p->ips_fragmented;
-  value_vals[i++] = ipstat_p->ips_ofragments;
-  value_vals[i++] = ipstat_p->ips_cantfrag;
-  value_vals[i++] = ipstat_p->ips_badoptions;
-  value_vals[i++] = ipstat_p->ips_noroute;
-  value_vals[i++] = ipstat_p->ips_badvers;
-  value_vals[i++] = ipstat_p->ips_rawout;
-  value_vals[i++] = ipstat_p->ips_toolong;
-  value_vals[i++] = ipstat_p->ips_notmember;
-  value_vals[i++] = ipstat_p->ips_nogif;
-  value_vals[i++] = ipstat_p->ips_badaddr;
-
-  value_vals[i++] = ip6stat_p->ip6s_total;
-  value_vals[i++] = ip6stat_p->ip6s_tooshort;
-  value_vals[i++] = ip6stat_p->ip6s_toosmall;
-  value_vals[i++] = ip6stat_p->ip6s_fragments;
-  value_vals[i++] = ip6stat_p->ip6s_fragdropped;
-  value_vals[i++] = ip6stat_p->ip6s_fragtimeout;
-  value_vals[i++] = ip6stat_p->ip6s_fragoverflow;
-  value_vals[i++] = ip6stat_p->ip6s_forward;
-  value_vals[i++] = ip6stat_p->ip6s_cantforward;
-  value_vals[i++] = ip6stat_p->ip6s_redirectsent;
-  value_vals[i++] = ip6stat_p->ip6s_delivered;
-  value_vals[i++] = ip6stat_p->ip6s_localout;
-  value_vals[i++] = ip6stat_p->ip6s_odropped;
-  value_vals[i++] = ip6stat_p->ip6s_reassembled;
-  value_vals[i++] = ip6stat_p->ip6s_fragmented;
-  value_vals[i++] = ip6stat_p->ip6s_ofragments;
-  value_vals[i++] = ip6stat_p->ip6s_cantfrag;
-  value_vals[i++] = ip6stat_p->ip6s_badoptions;
-  value_vals[i++] = ip6stat_p->ip6s_noroute;
-  value_vals[i++] = ip6stat_p->ip6s_badvers;
-  value_vals[i++] = ip6stat_p->ip6s_rawout;
-  value_vals[i++] = ip6stat_p->ip6s_badscope;
-  value_vals[i++] = ip6stat_p->ip6s_notmember;
-  value_vals[i++] = ip6stat_p->ip6s_nogif;
-  value_vals[i++] = ip6stat_p->ip6s_toomanyhdr;
-
-  sstrncpy(vl.plugin, "ipstats", sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, "ipv4", sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, "packets", sizeof(vl.type));
-
-  for (int i = 0; i < config_vals_num; i++) {
-    if (i == v6_config_offset)
-      sstrncpy(vl.plugin_instance, "ipv6", sizeof(vl.plugin_instance));
-
-    if (config_vals[i] == true) {
-      sstrncpy(vl.type_instance, value_keys[i], sizeof(vl.type_instance));
-      vl.values = &(value_t){.derive = value_vals[i]};
-      plugin_dispatch_values(&vl);
-    }
-  }
-} /* void ipstats_submit */
-#endif
-
-static int ipstats_read(void) {
-#if KERNEL_FREEBSD
-  struct ipstat ipstat;
-  size_t ipslen = sizeof(ipstat);
-  char mib[] = "net.inet.ip.stats";
-
-  if (sysctlbyname(mib, &ipstat, &ipslen, NULL, 0) != 0) {
-    WARNING("ipstats plugin: sysctl \"%s\" failed.", mib);
-    return -1;
-  }
-
-  struct ip6stat ip6stat;
-  size_t ip6slen = sizeof(ip6stat);
-  char mib6[] = "net.inet6.ip6.stats";
-
-  if (sysctlbyname(mib6, &ip6stat, &ip6slen, NULL, 0) != 0) {
-    WARNING("ipstats plugin: sysctl \"%s\" failed.", mib6);
-    return -1;
-  }
-
-  ipstats_submit(&ipstat, &ip6stat);
-#endif
-
-  return 0;
-} /* int ipstats_read */
-
-void module_register(void) {
-  plugin_register_init("ipstats", ipstats_init);
-  plugin_register_read("ipstats", ipstats_read);
-  plugin_register_config("ipstats", ipstats_config, config_keys,
-                         config_keys_num);
+void module_register(void)
+{
+    plugin_register_read("ipstats", ipstats_read);
 }
