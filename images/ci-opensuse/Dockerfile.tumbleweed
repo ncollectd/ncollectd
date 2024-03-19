@@ -1,0 +1,12 @@
+FROM opensuse/tumbleweed:latest
+RUN zypper -n install gcc cpp make cmake flex bison gperf pkgconf \
+                      c-ares-devel libcurl-devel gpsd-devel hiredis-devel java-17-openjdk-devel \
+                      libatasmart-devel libesmtp-devel ipmctl-devel libmicrohttpd-devel \
+                      libmodbus-devel libnftnl-devel libpcap-devel librabbitmq-devel \
+                      librdkafka-devel libvirt-devel libxml2-devel libsensors4-devel lua54-devel \
+                      libmariadb-devel mosquitto-devel net-snmp-devel nut-devel OpenIPMI-devel \
+                      openldap2-devel libopenssl-devel postgresql-devel qpid-proton-devel \
+                      slurm-devel unixODBC-devel varnish-devel xen-devel xfsprogs-devel \
+                      libyajl-devel cups-devel systemd-devel libsigrok-devel libbtrfs-devel \
+                      libmemcached-devel && \
+    zypper clean -a

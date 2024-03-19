@@ -1,0 +1,21 @@
+FROM centos:centos7
+RUN ulimit -n 1024000 && \
+    yum install -y epel-release centos-release-scl && \
+    yum upgrade -y && \
+    yum install -y devtoolset-9-gcc make cmake3 flex bison gperf kernel-headers pkgconfig \
+                   c-ares-devel curl-devel  iptables-devel java-devel jpackage-utils \
+                   libatasmart-devel libmicrohttpd-devel libnftnl-devel libpcap-devel \
+                   librabbitmq-devel librdkafka-devel libvirt-devel libxml2-devel \
+                   lm_sensors-devel lua-devel varnish-libs-devel net-snmp-devel OpenIPMI-devel \
+                   openldap-devel openldap-devel openssl-devel openssl-devel openssl-devel \
+                   postgresql-devel postgresql-devel unixODBC-devel varnish-libs-devel \
+                   xfsprogs-devel yajl-devel cups-devel systemd-devel libesmtp-devel \
+                   libipmctl-devel hiredis-devel libmodbus-devel mongo-c-driver-devel \
+                   mosquitto-devel nut-devel gpsd-devel libmemcached-devel qpid-proton-c-devel \
+                   slurm-devel libmnl-devel && \
+    yum clean all && \
+    rm -rf /var/cache/yum
+
+COPY entrypoint-centos7.sh /usr/bin/entrypoint.sh
+RUN chmod +x /usr/bin/entrypoint.sh
+ENTRYPOINT [ "/usr/bin/entrypoint.sh" ]

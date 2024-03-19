@@ -1,0 +1,23 @@
+FROM centos:centos6
+RUN ulimit -n 1024000 && \
+    sed -i -r '/^mirrorlist=.*$/d;s/^#baseurl=http:\/\/mirror.centos.org\/centos\/\$releasever\/(.*)$/baseurl=http:\/\/vault.centos.org\/6.10\/\1/' /etc/yum.repos.d/CentOS-Base.repo && \
+    yum clean all && \
+    rm -fr /var/cache/yum/* && \
+    yum install -y centos-release-scl && \
+    rm -f rm  /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
+    sed -i -r '/^mirrorlist=.*$/d;s/^#baseurl=http:\/\/mirror.centos.org\/centos\/6\/(.*)$/baseurl=http:\/\/vault.centos.org\/6.10\/\1/' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    yum install -y scl-utils scl-utils-build epel-release && \
+    yum install -y xz devtoolset-9-gcc make cmake3 flex bison gperf pkgconfig \
+                   kernel-headers c-ares-devel curl-devel iptables-devel java-devel jpackage-utils \
+                   libatasmart-devel libmicrohttpd-devel libpcap-devel librabbitmq-devel \
+                   libvirt-devel libxml2-devel lm_sensors-devel lua-devel varnish-libs-devel \
+                   net-snmp-devel OpenIPMI-devel openldap-devel openldap-devel openssl-devel \
+                   openssl-devel openssl-devel postgresql-devel postgresql-devel unixODBC-devel \
+                   varnish-libs-devel xfsprogs-devel yajl-devel cups-devel libesmtp-devel \
+                   libmodbus-devel nut-devel libmemcached-devel qpid-proton-c-devel libmnl-devel && \
+    yum clean all && \
+    rm -fr /var/cache/yum/*
+
+COPY entrypoint-centos6.sh /usr/bin/entrypoint.sh
+RUN chmod +x /usr/bin/entrypoint.sh
+ENTRYPOINT [ "/usr/bin/entrypoint.sh" ]

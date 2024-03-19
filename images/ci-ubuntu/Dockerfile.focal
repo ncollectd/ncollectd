@@ -1,0 +1,17 @@
+FROM ubuntu:focal
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends \
+        gcc cpp make cmake flex bison gperf pkgconf libc-ares-dev \
+        libcurl4-openssl-dev default-jdk libatasmart-dev libmicrohttpd-dev \
+        libnftnl-dev libpcap-dev librabbitmq-dev librdkafka-dev libvirt-dev \
+        libxml2-dev libsensors4-dev liblua5.3-dev libmysqlclient-dev libsnmp-dev \
+        libopenipmi-dev libldap2-dev libssl-dev libpq-dev unixodbc-dev \
+        libvarnishapi-dev xfslibs-dev libyajl-dev libcups2-dev libsystemd-dev \
+        libesmtp-dev libmosquitto-dev libmongoc-dev libqpid-proton11-dev \
+        libsigrok-dev libmodbus-dev libgps-dev libhiredis-dev libnutclient-dev \
+        libiptc-dev libmnl-dev libipmctl-dev libupsclient-dev libbtrfs-dev \
+        libxen-dev libmemcached-dev && \
+    apt-get clean autoclean && \
+    rm -rf /var/lib/apt/lists/*
+

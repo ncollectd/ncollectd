@@ -1,0 +1,9 @@
+FROM archlinux:base-devel
+RUN pacman -Sy && \
+    pacman -S --noconfirm cmake gperf pkgconf c-ares libcurl-compat jdk-openjdk libatasmart \
+                          libmicrohttpd libnftnl libpcap librabbitmq-c librdkafka libvirt \
+                          libxml2 lm_sensors lua mariadb-libs net-snmp openipmi libldap openssl \
+                          postgresql-libs unixodbc varnish xfsprogs yajl libcups systemd-libs \
+                          libatasmart libesmtp mosquitto mongo-c-driver libsigrok gpsd hiredis \
+                          nut iptables libmnl btrfs-progs libmemcached-awesome && \
+    find /var/cache/pacman/ -type f -delete

@@ -1,0 +1,16 @@
+FROM quay.io/centos/centos:stream9
+RUN dnf install -y dnf-plugins-core epel-release epel-next-release && \
+    dnf config-manager --set-enabled crb && \
+    dnf install -y rpm-build xz gcc cpp make cmake flex bison gperf kernel-headers \
+                   pkgconf-pkg-config c-ares-devel curl-devel java-devel \
+                   jpackage-utils libatasmart-devel libmicrohttpd-devel libnftnl-devel \
+                   libpcap-devel librabbitmq-devel librdkafka-devel libvirt-devel libxml2-devel \
+                   lm_sensors-devel lua-devel mariadb-connector-c-devel net-snmp-devel \
+                   OpenIPMI-devel openldap-devel openssl-devel postgresql-devel unixODBC-devel \
+                   varnish-libs-devel xfsprogs-devel yajl-devel cups-devel systemd-devel \
+                   libesmtp-devel libipmctl-devel hiredis-devel libmodbus-devel \
+                   mongo-c-driver-devel mosquitto-devel nut-devel gpsd-devel \
+                   libmemcached-awesome-devel qpid-proton-c-devel slurm-devel \
+                   perl-ExtUtils-Embed python3-devel && \
+    dnf clean all && \
+    rm -rf /var/cache/yum
