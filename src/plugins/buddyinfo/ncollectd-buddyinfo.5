@@ -1,0 +1,23 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-buddyinfo 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd buddyinfo man page"
+.SH NAME
+ncollectd-buddyinfo \- Documentation of ncollectd's buddyinfo plugin
+.SH SYNOPSIS
+\fBload-plugin\fP buddyinfo
+.br
+\fBplugin\fP buddyinfo {
+    \fBzone\fP \fIzone-name\fP
+.br
+}
+.SH DESCRIPTION
+The \fBbuddyinfo\fP plugin collects information by reading \fI/proc/buddyinfo\fP.
+This file contains information about the number of available contagious
+physical pages at the moment.
+
+The plugin has de following options:
+.TP
+\fBzone\fP \fIzone-name\fP
+Zone to collect info about. Will collect all zones by default.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
