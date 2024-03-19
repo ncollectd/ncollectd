@@ -1,0 +1,146 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-vanish 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd vanish man page"
+.SH NAME
+ncollectd-vanish \- Documentation of ncollectd's vanish plugin
+.SH SYNOPSIS
+\fBload-plugin\fP varnish
+.br
+\fBplugin\fP varnish {
+    \fBinstance\fP \fIname\fP {
+        \fBvsh-instance\fP \fIvsh-name\fP
+        \fBcollect\fP \fIflags\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBvanish\fP plugin collects information about Varnish, an HTTP accelerator.
+.PP
+The configuration consists of one or more \fBinstance\fP blocks. Inside each
+\fBinstance\fP blocks, the following options are recognized:
+.PP
+.TP
+\fBvhs-instance\fP \fIvsh-instanace-name\fP
+The \fIvsh-instanace-name\fP is the parameter passed to "varnishd -n".
+If left empty, it will collectd statistics from the default "varnishd" instance
+(this should work fine in most cases).
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+.TP
+\fBinterval\fP \fIseconds\fP
+.TP
+\fBcollect\fP \fIflags\fP
+.RS
+.TP
+\fBbackend\fP
+Back-end connection statistics, such as successful, reused,
+and closed connections. True by default.
+.TP
+\fBcache\fP
+Cache hits and misses. True by default.
+.TP
+\fBconnections\fP
+Number of client connections received, accepted and dropped. True by default.
+.TP
+\fBdirdns\fP
+DNS director lookup cache statistics. Only available with Varnish 3.x. False by default.
+.TP
+\fBesi\fP
+Edge Side Includes (ESI) parse statistics. False by default.
+.TP
+\fBfetch\fP
+Statistics about fetches (HTTP requests sent to the backend). False by default.
+.TP
+\fBhcb\fP
+Inserts and look-ups in the crit bit tree based hash. Look-ups are
+divided into locked and unlocked look-ups. False by default.
+.TP
+\fBobjects\fP
+Statistics on cached objects: number of objects expired, nuked (prematurely
+expired), saved, moved, etc. False by default.
+.TP
+\fBban\fP
+Statistics about ban operations, such as number of bans added, retired, and
+number of objects tested against ban operations. False by default.
+.TP
+\fBsession\fP
+Client session statistics. Number of past and current sessions, session herd and
+linger counters, etc. False by default.
+.TP
+\fBshm\fP
+Statistics about the shared memory log, a memory region to store
+log messages which is flushed to disk when full. True by default.
+.TP
+\fBsma\fP
+Malloc or umem (
+.BR umem_alloc (3MALLOC)
+based) storage statistics.
+The umem storage component is Solaris specific.
+Note: SMA, SMF and MSE share counters, enable only the one used by the Varnish instance.
+False by default.
+.TP
+\fBsms\fP
+Synth (synthetic content) storage statistics. This storage
+component is used internally only. False by default.
+.TP
+\fBstruct\fP
+Current varnish internal state statistics. Number of current sessions, objects
+in cache store etc. False by default.
+.TP
+\fBtotals\fP
+Collects overview counters, such as the number of sessions created,
+the number of requests and bytes transferred. False by default.
+.TP
+\fBuptime\fP
+Varnish uptime. False by default.
+.TP
+\fBvcl\fP
+Number of total (available + discarded) VCL (config files). False by default.
+.TP
+\fBworkers\fP
+Collect statistics about worker threads. False by default.
+.TP
+\fBvsm\fP
+Collect statistics about Varnish's shared memory usage (used by the logging and
+statistics subsystems). Only available with Varnish 4.x. False by default.
+.TP
+\fBlck\fP
+Lock counters. False by default.
+.TP
+\fBmempool\fP
+Memory pool counters. False by default.
+.TP
+\fBmgt\fP
+Management process counters. False by default.
+.TP
+\fBsmf\fP
+File (memory mapped file) storage statistics.
+Note: SMA, SMF and MSE share counters, enable only the one used by the Varnish instance.
+.TP
+\fBvbe\fP
+Backend counters. Only available with Varnish 4.x and above. False by default.
+.TP
+\fBmse\fP
+Varnish Massive Storage Engine 2.0 (MSE2) is an improved storage backend for
+Varnish, replacing the traditional malloc and file storages.
+Only available with Varnish-Plus 4.x and above.
+Note: SMA, SMF and MSE share counters, enable only the one used by the Varnish instance.
+False by default.
+.TP
+\fBgoto\fP
+vmod-goto counters. Only available with Varnish Plus 6.x. False by default.
+.TP
+\fBsmu\fP
+.TP
+\fBbrotli\fP
+.TP
+\fBaccg_diag\fP
+.TP
+\fBaccg\fP
+.TP
+\fBworkspace\fP
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
