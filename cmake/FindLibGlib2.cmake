@@ -1,0 +1,32 @@
+include(FindPackageHandleStandardArgs)
+
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBGLIB2 QUIET "glib-2.0")
+
+find_path(LIBGLIB2_INCLUDE_DIR NAMES "glib.h"
+          HINTS ${PC_LIBGLIB2_INCLUDEDIR} ${PC_LIBGLIB2_INCLUDE_DIRS})
+find_library(LIBGLIB2_LIBRARIES NAMES "glib-2.0"
+             HINTS ${PC_LIBGLIB2_LIBDIR} ${PC_LIBGLIB2_LIBRARY_DIRS})
+
+get_filename_component(LIBGLIB2_LIBDIR "${LIBGLIB2_LIBRARIES}" PATH)
+
+find_path(LIBGLIB2_INTERNAL_INCLUDE_DIR glibconfig.h
+          PATH_SUFFIXES glib-2.0/include
+          HINTS ${PC_LIBGLIB2_LIBDIR} "${LIBGLIB2_LIBDIR}" ${CMAKE_SYSTEM_LIBRARY_PATH})
+if(LIBGLIB2_INTERNAL_INCLUDE_DIR)
+    list(APPEND LIBGLIB2_INCLUDE_DIR "${LIBGLIB2_INTERNAL_INCLUDE_DIR}")
+endif()
+
+find_package_handle_standard_args(LibGlib2 DEFAULT_MSG LIBGLIB2_LIBRARIES LIBGLIB2_INCLUDE_DIR)
+
+mark_as_advanced(LIBGLIB2_INCLUDE_DIR LIBGLIB2_LIBRARIES)
+
+if(LIBGLIB2_FOUND AND NOT TARGET LibGlib2::LibGlib2)
+    set(LIBGLIB2_INCLUDE_DIRS "${LIBGLIB2_INCLUDE_DIR}")
+    set(LIBGLIB2_CFLAGS ${PC_LIBGLIB2_CFLAGS_OTHER})
+    add_library(LibGlib2::LibGlib2 INTERFACE IMPORTED)
+    set_target_properties(LibGlib2::LibGlib2 PROPERTIES
+                          INTERFACE_COMPILE_OPTIONS     "${LIBGLIB2_CFLAGS}"
+                          INTERFACE_INCLUDE_DIRECTORIES "${LIBGLIB2_INCLUDE_DIRS}"
+                          INTERFACE_LINK_LIBRARIES      "${LIBGLIB2_LIBRARIES}")
+endif()

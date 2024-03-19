@@ -1,0 +1,23 @@
+include(FindPackageHandleStandardArgs)
+
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBXENCTRL QUIET xencontrol)
+
+find_path(LIBXENCTRL_INCLUDE_DIR NAMES xenctrl.h
+          HINTS ${PC_LIBXENCTRL_INCLUDEDIR} ${PC_LIBXENCTRL_INCLUDE_DIRS})
+find_library(LIBXENCTRL_LIBRARIES NAMES xenctrl
+             HINTS ${PC_LIBXENCTRL_LIBDIR} ${PC_LIBXENCTRL_LIBRARY_DIRS})
+
+find_package_handle_standard_args(LibXenctrl DEFAULT_MSG LIBXENCTRL_LIBRARIES LIBXENCTRL_INCLUDE_DIR)
+
+mark_as_advanced(LIBXENCTRL_INCLUDE_DIR LIBXENCTRL_LIBRARIES)
+
+if(LIBXENCTRL_FOUND AND NOT TARGET LibXenctrl::LibXenctrl)
+    set(LIBXENCTRL_INCLUDE_DIRS "${LIBXENCTRL_INCLUDE_DIR}")
+    set(LIBXENCTRL_DEFINITIONS ${PC_LIBXENCTRL_CFLAGS_OTHER})
+    add_library(LibXenctrl::LibXenctrl INTERFACE IMPORTED)
+    set_target_properties(LibXenctrl::LibXenctrl PROPERTIES
+                          INTERFACE_COMPILE_OPTIONS     "${LIBXENCTRL_DEFINITIONS}"
+                          INTERFACE_INCLUDE_DIRECTORIES "${LIBXENCTRL_INCLUDE_DIRS}"
+                          INTERFACE_LINK_LIBRARIES      "${LIBXENCTRL_LIBRARIES}")
+endif()

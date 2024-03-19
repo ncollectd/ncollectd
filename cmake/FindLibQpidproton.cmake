@@ -1,0 +1,23 @@
+include(FindPackageHandleStandardArgs)
+
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBQPIDPROTON QUIET libqpid-proton)
+
+find_path(LIBQPIDPROTON_INCLUDE_DIR NAMES proton/proactor.h
+          HINTS ${PC_LIBQPIDPROTON_INCLUDEDIR} ${PC_LIBQPIDPROTON_INCLUDE_DIRS})
+find_library(LIBQPIDPROTON_LIBRARIES NAMES qpid-proton
+             HINTS ${PC_LIBQPIDPROTON_LIBDIR} ${PC_LIBQPIDPROTON_LIBRARY_DIRS})
+
+find_package_handle_standard_args(LibQpidproton DEFAULT_MSG LIBQPIDPROTON_LIBRARIES LIBQPIDPROTON_INCLUDE_DIR)
+
+mark_as_advanced(LIBQPIDPROTON_INCLUDE_DIR LIBQPIDPROTON_LIBRARIES)
+
+if(LIBQPIDPROTON_FOUND AND NOT TARGET LibQpidproton::LibQpidproton)
+    set(LIBQPIDPROTON_INCLUDE_DIRS "${LIBQPIDPROTON_INCLUDE_DIR}")
+    set(LIBQPIDPROTON_DEFINITIONS ${PC_LIBQPIDPROTON_CFLAGS_OTHER})
+    add_library(LibQpidproton::LibQpidproton INTERFACE IMPORTED)
+    set_target_properties(LibQpidproton::LibQpidproton PROPERTIES
+                          INTERFACE_COMPILE_OPTIONS     "${LIBQPIDPROTON_DEFINITIONS}"
+                          INTERFACE_INCLUDE_DIRECTORIES "${LIBQPIDPROTON_INCLUDE_DIRS}"
+                          INTERFACE_LINK_LIBRARIES      "${LIBQPIDPROTON_LIBRARIES}")
+endif()

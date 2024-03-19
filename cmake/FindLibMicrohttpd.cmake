@@ -1,0 +1,23 @@
+include(FindPackageHandleStandardArgs)
+
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBMICROHTTPD QUIET libmicrohttpd)
+
+find_path(LIBMICROHTTPD_INCLUDE_DIR NAMES microhttpd.h
+          HINTS ${PC_LIBMICROHTTPD_INCLUDEDIR} ${PC_LIBMICROHTTPD_INCLUDE_DIRS})
+find_library(LIBMICROHTTPD_LIBRARIES NAMES microhttpd
+             HINTS ${PC_LIBMICROHTTPD_LIBDIR} ${PC_LIBMICROHTTPD_LIBRARY_DIRS})
+
+find_package_handle_standard_args(LibMicrohttpd DEFAULT_MSG LIBMICROHTTPD_LIBRARIES LIBMICROHTTPD_INCLUDE_DIR)
+
+mark_as_advanced(LIBMICROHTTPD_INCLUDE_DIR LIBMICROHTTPD_LIBRARIES)
+
+if(LIBMICROHTTPD_FOUND AND NOT TARGET LibMicrohttpd::LibMicrohttpd)
+    set(LIBMICROHTTPD_INCLUDE_DIRS "${LIBMICROHTTPD_INCLUDE_DIR}")
+    set(LIBMICROHTTPD_DEFINITIONS ${PC_LIBMICROHTTPD_CFLAGS_OTHER})
+    add_library(LibMicrohttpd::LibMicrohttpd INTERFACE IMPORTED)
+    set_target_properties(LibMicrohttpd::LibMicrohttpd PROPERTIES
+                          INTERFACE_COMPILE_OPTIONS     "${LIBMICROHTTPD_DEFINITIONS}"
+                          INTERFACE_INCLUDE_DIRECTORIES "${LIBMICROHTTPD_INCLUDE_DIRS}"
+                          INTERFACE_LINK_LIBRARIES      "${LIBMICROHTTPD_LIBRARIES}")
+endif()
