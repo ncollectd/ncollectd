@@ -1,0 +1,103 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-mosquitto 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd mosquitto man page"
+.SH NAME
+ncollectd-mosquitto \- Documentation of ncollectd's mosquitto plugin
+.SH SYNOPSIS
+\fBload-plugin\fP mosquitto
+\fBplugin\fP mosquitto {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhostname\fP
+        \fBport\fP \fIport\fP
+        \fBqos\fP \fIqos\fP
+        \fBclient-id\fP [\fI0-2\fP]
+        \fBuser\fP \fIusername\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBclean-session\fP \fItrue|false\fP
+        \fBca-cert\fP \fI/path/to/ca\fP
+        \fBcertificate-file\fP \fI/path/to/cert\fP
+        \fBcertificate-key-file\fP \fI/path/to/key\fP
+        \fBtls-protocol\fP \fIprotocol\fP
+        \fBcipher-suite\fP \fIciphersuite\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmosquitto\fP plugin collect metrics from a Mosquitto server.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.PP
+.TP
+\fBhost\fP \fIhostname\fP
+Hostname of the Mosquitto broker to connect to.
+.TP
+\fBport\fP \fIport\fP
+Port number or service name of the Mosquitto broker to connect to.
+.TP
+\fBqos\fP [\fI0-2\fP]
+Sets the \fIQuality of Service\fP, with the values \fB0\fP, \fB1\fP and \fB2\fP meaning:
+.RS
+.TP
+\fB0\fP
+At most once
+.TP
+\fB1\fP
+At least once
+.TP
+\fB2\fP
+Exactly once
+.RE
+.TP
+\fBclient-id\fP \fIncollectd\fP
+MQTT client ID to use. Defaults to the hostname used by ncollectd.
+.TP
+\fBuser\fP \fIusername\fP
+Username used when authenticating to the Mosquitto broker.
+.TP
+\fBpassword\fP \fIpassword\fP
+Password used when authenticating to the Mosquitto broker.
+.TP
+\fBclean-session\fP \fItrue|false\fP
+Controls whether the MQTT "cleans" the session up after the subscriber
+disconnects or if it maintains the subscriber's subscriptions and all messages
+that arrive while the subscriber is disconnected. Defaults to \fBtrue\fP.
+.TP
+\fBca-cert\fP \fI/path/to/ca\fP
+Path to the PEM-encoded CA certificate file. Setting this option enables TLS
+communication with the MQTT broker, and as such, \fIport\fP should be the TLS-enabled
+port of the MQTT broker.
+This option enables the use of TLS.
+.TP
+\fBcertificate-file\fP \fI/path/to/cert\fP
+Path to the PEM-encoded certificate file to use as client certificate when
+connecting to the MQTT broker.
+Only valid if \fBca-cert\fP and \fBcertificate-key-file\fP are also set.
+.TP
+\fBcertificate-key-file\fP \fI/path/to/key\fP
+Path to the unencrypted PEM-encoded key file corresponding to \fBcertificate-file\fP
+Only valid if \fBca-cert\fP and \fBcertificate-file\fP are also set.
+.TP
+\fBtls-protocol\fP \fIprotocol\fP
+If configured, this specifies the string protocol version (e.g. \fItlsv1\fP,
+\fItlsv1.2\fP) to use for the TLS connection to the broker. If not set a default
+version is used which depends on the version of OpenSSL the Mosquitto library
+was linked against.
+Only valid if \fBca-cert\fP is set.
+.TP
+\fBcipher-suite\fP \fIciphersuite\fP
+A string describing the ciphers available for use. See
+.BR ciphers (1)
+and the \fIopenssl ciphers\fP utility for more information.
+If unset, the default ciphers will be used.
+Only valid if \fBca-cert\fP is set.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this Mosquitto
+broker.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
