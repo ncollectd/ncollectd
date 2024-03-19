@@ -1,38 +1,18 @@
-/**
- * collectd - src/uuid.c
- * Copyright (C) 2007  Red Hat Inc.
- * Copyright (C) 2015  Ruben Kerkhof
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Dan Berrange <berrange@redhat.com>
- *   Richard W.M. Jones <rjones@redhat.com>
- *
- * Derived from UUID detection code by Dan Berrange <berrange@redhat.com>
- * http://hg.et.redhat.com/virt/daemons/spectre--devel?f=f6e3a1b06433;file=lib/uuid.c
- **/
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2007 Red Hat Inc.
+// SPDX-FileCopyrightText: Copyright (C) 2015 Ruben Kerkhof
+// SPDX-FileContributor: Dan Berrange <berrange at redhat.com>
+// SPDX-FileContributor: Richard W.M. Jones <rjones at redhat.com>
 
-#include "collectd.h"
+// Derived from UUID detection code by Dan Berrange <berrange@redhat.com>
+// http://hg.et.redhat.com/virt/daemons/spectre--devel?f=f6e3a1b06433;file=lib/uuid.c
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
-#if defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTLBYNAME) ||                \
-    defined(__OpenBSD__)
+#if (defined(HAVE_SYS_SYSCTL_H) && defined(HAVE_SYSCTLBYNAME)) || defined(KERNEL_OPENBSD)
 /* Implies have BSD variant */
-#include <sys/sysctl.h>
+#    include <sys/sysctl.h>
 #endif
 
 #define UUID_RAW_LENGTH 16
@@ -41,168 +21,127 @@
 
 static char *uuidfile;
 
-static const char *config_keys[] = {"UUIDFile"};
-
-static int looks_like_a_uuid(const char *uuid) {
-  if (!uuid)
-    return 0;
-
-  size_t len = strlen(uuid);
-  if (len < UUID_PRINTABLE_COMPACT_LENGTH)
-    return 0;
-
-  while (*uuid) {
-    if (!isxdigit((int)*uuid) && *uuid != '-')
-      return 0;
-    uuid++;
-  }
-  return 1;
+#if defined(KERNEL_DARWIN) || defined(KERNEL_FREEBSD) || defined(KERNEL_NETBSD)
+static char *uuid_get_from_sysctlbyname(const char *name)
+{
+    char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
+    size_t len = sizeof(uuid);
+    if (sysctlbyname(name, &uuid, &len, NULL, 0) == -1)
+        return NULL;
+    return strdup(uuid);
 }
+#elif defined(KERNEL_OPENBSD)
+static char *uuid_get_from_sysctl(void)
+{
+    char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
+    size_t len = sizeof(uuid);
+    int mib[2] = { CTL_HW, HW_UUID};
 
-static char *uuid_parse_dmidecode(FILE *file) {
-  char line[1024];
-
-  while (fgets(line, sizeof(line), file) != NULL) {
-    char *fields[4];
-    int fields_num;
-
-    strstripnewline(line);
-
-    /* Look for a line reading:
-     *   UUID: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-     */
-    fields_num = strsplit(line, fields, STATIC_ARRAY_SIZE(fields));
-    if (fields_num != 2)
-      continue;
-
-    if (strcmp("UUID:", fields[0]) != 0)
-      continue;
-
-    if (!looks_like_a_uuid(fields[1]))
-      continue;
-
-    return strdup(fields[1]);
-  }
-  return NULL;
-}
-
-static char *uuid_get_from_dmidecode(void) {
-  FILE *dmidecode = popen("dmidecode -t system 2>/dev/null", "r");
-  char *uuid;
-
-  if (!dmidecode)
-    return NULL;
-
-  uuid = uuid_parse_dmidecode(dmidecode);
-
-  pclose(dmidecode);
-  return uuid;
-}
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
-static char *uuid_get_from_sysctlbyname(const char *name) {
-  char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
-  size_t len = sizeof(uuid);
-  if (sysctlbyname(name, &uuid, &len, NULL, 0) == -1)
-    return NULL;
-  return strdup(uuid);
-}
-#elif defined(__OpenBSD__)
-static char *uuid_get_from_sysctl(void) {
-  char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
-  size_t len = sizeof(uuid);
-  int mib[2];
-
-  mib[0] = CTL_HW;
-  mib[1] = HW_UUID;
-
-  if (sysctl(mib, 2, uuid, &len, NULL, 0) == -1)
-    return NULL;
-  return strdup(uuid);
+    if (sysctl(mib, 2, uuid, &len, NULL, 0) == -1)
+        return NULL;
+    return strdup(uuid);
 }
 #endif
 
-static char *uuid_get_from_file(const char *path) {
-  FILE *file;
-  char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1] = "";
+static char *uuid_get_from_file(const char *path)
+{
+    FILE *file = fopen(path, "r");
+    if (file == NULL)
+        return NULL;
 
-  file = fopen(path, "r");
-  if (file == NULL)
-    return NULL;
-
-  if (!fgets(uuid, sizeof(uuid), file)) {
+    char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1] = "";
+    if (!fgets(uuid, sizeof(uuid), file)) {
+        fclose(file);
+        return NULL;
+    }
     fclose(file);
+    strstripnewline(uuid);
+
+    return strdup(uuid);
+}
+
+#if defined(KERNEL_LINUX)
+static char *uuid_get_from_sys_file(const char *path)
+{
+    char *path_sys = plugin_syspath(path);
+    if (path_sys == NULL)
+        return NULL;
+
+    char *uuid =  uuid_get_from_file(path_sys);
+
+    free(path_sys);
+
+    return uuid;
+}
+#endif
+
+static char *uuid_get_local(void)
+{
+    char *uuid;
+
+    /* Check /etc/uuid / UUIDFile before any other method. */
+    if ((uuid = uuid_get_from_file(uuidfile ? uuidfile : "/etc/uuid")) != NULL)
+        return uuid;
+
+#if defined(KERNEL_DARWIN)
+    if ((uuid = uuid_get_from_sysctlbyname("kern.uuid")) != NULL)
+        return uuid;
+#elif defined(KERNEL_FREEBSD)
+    if ((uuid = uuid_get_from_sysctlbyname("kern.hostuuid")) != NULL)
+        return uuid;
+#elif defined(KERNEL_NETBSD)
+    if ((uuid = uuid_get_from_sysctlbyname("machdep.dmi.system-uuid")) != NULL)
+        return uuid;
+#elif defined(KERNEL_OPENBSD)
+    if ((uuid = uuid_get_from_sysctl()) != NULL)
+        return uuid;
+#elif defined(KERNEL_LINUX)
+    if ((uuid = uuid_get_from_sys_file("class/dmi/id/product_uuid")) != NULL)
+        return uuid;
+    if ((uuid = uuid_get_from_sys_file("hypervisor/uuid")) != NULL)
+        return uuid;
+#endif
+
     return NULL;
-  }
-  fclose(file);
-  strstripnewline(uuid);
-
-  return strdup(uuid);
 }
 
-static char *uuid_get_local(void) {
-  char *uuid;
+static int uuid_config(config_item_t *ci)
+{
+    int status = 0;
 
-  /* Check /etc/uuid / UUIDFile before any other method. */
-  if ((uuid = uuid_get_from_file(uuidfile ? uuidfile : "/etc/uuid")) != NULL)
-    return uuid;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+        if (strcasecmp(child->key, "uuid-file") == 0) {
+            status = cf_util_get_string(child, &uuidfile);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
 
-#if defined(__APPLE__)
-  if ((uuid = uuid_get_from_sysctlbyname("kern.uuid")) != NULL)
-    return uuid;
-#elif defined(__FreeBSD__)
-  if ((uuid = uuid_get_from_sysctlbyname("kern.hostuuid")) != NULL)
-    return uuid;
-#elif defined(__NetBSD__)
-  if ((uuid = uuid_get_from_sysctlbyname("machdep.dmi.system-uuid")) != NULL)
-    return uuid;
-#elif defined(__OpenBSD__)
-  if ((uuid = uuid_get_from_sysctl()) != NULL)
-    return uuid;
-#elif defined(__linux__)
-  if ((uuid = uuid_get_from_file("/sys/class/dmi/id/product_uuid")) != NULL)
-    return uuid;
-#endif
+        if (status != 0)
+            return -1;
+    }
 
-  if ((uuid = uuid_get_from_dmidecode()) != NULL)
-    return uuid;
-
-#if defined(__linux__)
-  if ((uuid = uuid_get_from_file("/sys/hypervisor/uuid")) != NULL)
-    return uuid;
-#endif
-
-  return NULL;
-}
-
-static int uuid_config(const char *key, const char *value) {
-  if (strcasecmp(key, "UUIDFile") == 0) {
-    char *tmp = strdup(value);
-    if (tmp == NULL)
-      return -1;
-    sfree(uuidfile);
-    uuidfile = tmp;
     return 0;
-  }
-
-  return 1;
 }
 
-static int uuid_init(void) {
-  char *uuid = uuid_get_local();
+static int uuid_init(void)
+{
+    char *uuid = uuid_get_local();
 
-  if (uuid) {
-    hostname_set(uuid);
-    sfree(uuid);
+    if (uuid) {
+        plugin_set_hostname(uuid);
+        free(uuid);
+        return 0;
+    }
+
+    PLUGIN_WARNING("could not read UUID using any known method");
     return 0;
-  }
-
-  WARNING("uuid: could not read UUID using any known method");
-  return 0;
 }
 
-void module_register(void) {
-  plugin_register_config("uuid", uuid_config, config_keys,
-                         STATIC_ARRAY_SIZE(config_keys));
-  plugin_register_init("uuid", uuid_init);
+void module_register(void)
+{
+    plugin_register_config("uuid", uuid_config);
+    plugin_register_init("uuid", uuid_init);
 }
