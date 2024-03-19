@@ -1,0 +1,33 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-kafka 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd kafka man page"
+.SH NAME
+ncollectd-kafka \- Documentation of ncollectd's kafka plugin
+.SH SYNOPSIS
+\fBload-plugin\fP kafka
+.br
+\fBplugin\fP kafka {
+    \fBinstance\fP \fIinstance\fP {
+        \fBproperty\fP \fIkey\fP \fIvalue\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBkafka\fP plugin collect metrics from a kafka cluster.
+.PP
+The plugin support the following options:
+.PP
+.TP
+\fBproperty\fP \fIkey\fP \fIvalue\fP
+Configure the kafka client through properties, you almost always will
+want to set \fBmetadata.broker.list\fP to your Kafka broker list.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
