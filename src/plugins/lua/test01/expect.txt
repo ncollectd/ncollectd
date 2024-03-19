@@ -1,0 +1,8 @@
+# TYPE metric_counter counter
+# UNIT metric_counter some counter
+metric_counter_total{hostname="localhost.localdomain",labela="keya",labelb="keyb"} 99
+metric_counter_total{hostname="localhost.localdomain",labelc="keyc",labeld="keyd"} 999
+# TYPE metric_gauge gauge
+# UNIT metric_gauge some gauge
+metric_gauge{hostname="localhost.localdomain",labela="keya",labelb="keyb"} 3.1415
+metric_gauge{hostname="localhost.localdomain",labelc="keyc",labeld="keyd"} 2.7182
