@@ -1,0 +1,41 @@
+# TYPE system_edac_mc_uncorrectable_errors counter
+system_edac_mc_uncorrectable_errors_total{controller="3",hostname="localhost.localdomain"} 0
+system_edac_mc_uncorrectable_errors_total{controller="2",hostname="localhost.localdomain"} 0
+system_edac_mc_uncorrectable_errors_total{controller="1",hostname="localhost.localdomain"} 0
+system_edac_mc_uncorrectable_errors_total{controller="0",hostname="localhost.localdomain"} 0
+# TYPE system_edac_channel_correctable_errors counter
+system_edac_channel_correctable_errors_total{channel="2",controller="3",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="1",controller="3",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="0",controller="3",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="2",controller="2",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="1",controller="2",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="0",controller="2",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="2",controller="1",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="1",controller="1",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="0",controller="1",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="2",controller="0",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="1",controller="0",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_channel_correctable_errors_total{channel="0",controller="0",csrow="0",hostname="localhost.localdomain"} 0
+# TYPE system_edac_mc_correctable_errors counter
+system_edac_mc_correctable_errors_total{controller="3",hostname="localhost.localdomain"} 0
+system_edac_mc_correctable_errors_total{controller="2",hostname="localhost.localdomain"} 0
+system_edac_mc_correctable_errors_total{controller="1",hostname="localhost.localdomain"} 0
+system_edac_mc_correctable_errors_total{controller="0",hostname="localhost.localdomain"} 0
+# TYPE system_edac_csrow_correctable_errors counter
+system_edac_csrow_correctable_errors_total{controller="3",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="3",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="2",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="2",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="1",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="1",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="0",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_correctable_errors_total{controller="0",csrow="0",hostname="localhost.localdomain"} 0
+# TYPE system_edac_csrow_uncorrectable_errors counter
+system_edac_csrow_uncorrectable_errors_total{controller="3",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="3",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="2",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="2",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="1",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="1",csrow="0",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="0",csrow="unknown",hostname="localhost.localdomain"} 0
+system_edac_csrow_uncorrectable_errors_total{controller="0",csrow="0",hostname="localhost.localdomain"} 0
