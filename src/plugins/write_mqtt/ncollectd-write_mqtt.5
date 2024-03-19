@@ -1,0 +1,137 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-write_mqtt 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_mqtt man page"
+.SH NAME
+ncollectd-write_mqtt \- Documentation of ncollectd's write_mqtt plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_mqtt
+.br
+\fBplugin\fP write_mqtt {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhostname\fP
+        \fBport\fP \fIport\fP
+        \fBtopic\fP \fItopic\fP
+        \fBclient-id\fP \fIclient-id\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIuser\fP
+        \fBqos\fP \fI0|1|2\fP
+        \fBstore-rates\fP \fItrue|flase\fP
+        \fBretain\fP \fItrue|flase\fP
+        \fBca-cert\fP \fIfile\fP
+        \fBcertificate-file\fP \fIfile\fP
+        \fBcertificate-key-file\fP \fIfile\fP
+        \fBtls-protocol\fP \fIprotocol\fP
+        \fBcipher-suite\fP \fIciper-suite\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-notification\fP \fItext|json|protob\fP
+        \fBwrite\fP \fImetrics|notifications\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_mqtt\fP plugin can send metrics or notifications to a MQTT Broker.
+.PP
+Within each \fBinstance\fP block, the following options are available:
+.TP
+\fBhost\fP \fIhostname\fP
+Hostname of the MQTT broker to connect to.
+.TP
+\fBport\fP \fIport\fP
+Port number or service name of the MQTT broker to connect to.
+.TP
+\fBtopic\fP \fItopic\fP
+Configures the topic to publish the messages.
+.TP
+\fBclient-id\fP \fIclient-id\fP
+MQTT client ID to use. Defaults to the hostname used by \fBncollectd\fP.
+.TP
+\fBuser\fP \fIuser\fP
+Username used when authenticating to the MQTT broker.
+.TP
+\fBpassword\fP \fIuser\fP
+Password used when authenticating to the MQTT broker.
+.TP
+\fBqos\fP \fI0|1|2\fP
+Sets the \fIQuality of Service\fP, with the values \fI0\fP, \fI1\fP and \fI2\fP meaning:
+.RS
+.TP
+\fB0\fP
+At most once
+.TP
+\fB1\fP
+At least once
+.TP
+\fB2\fP
+Exactly once
+.RE
+.TP
+\fBstore-rates\fP \fItrue|flase\fP
+.TP
+\fBretain\fP \fItrue|flase\fP
+Controls whether the MQTT broker will retain (keep a copy of) the last message
+sent to each topic and deliver it to new subscribers. Defaults to \fIfalse\fP.
+.TP
+\fBca-cert\fP \fIfile\fP
+Path to the PEM-encoded CA certificate file. Setting this option enables TLS
+communication with the MQTT broker, and as such, \fBport\fP should be the TLS-enabled
+port of the MQTT broker.
+This option enables the use of TLS.
+.TP
+\fBcertificate-file\fP \fIfile\fP
+Path to the PEM-encoded certificate file to use as client certificate when
+connecting to the MQTT broker.
+Only valid if \fBca-cert\fP and \fBcertificate-key-file\fP are also set.
+.TP
+\fBcertificate-key-file\fP \fIfile\fP
+Path to the unencrypted PEM-encoded key file corresponding to \fBcertificate-file\fP.
+Only valid if \fBca-cert\fP and \fBcertificate-file\fP are also set.
+.TP
+\fBtls-protocol\fP \fIprotocol\fP
+If configured, this specifies the string protocol version (e.g. \f(CWtlsv1\fP,
+\f(CWtlsv1.2\fP) to use for the TLS connection to the broker. If not set a default
+version is used which depends on the version of OpenSSL the Mosquitto library
+was linked against.
+Only valid if \fBca-cert\fP is set.
+.TP
+\fBcipher-suite\fP \fIciper-suite\fP
+A string describing the ciphers available for use. See 
+.BR ciphers(1)
+and the 
+\f(CWopenssl ciphers\fP utility for more information. If unset, the default ciphers
+will be used.
+Only valid if \fBca-cert\fP is set.
+.TP
+\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+Selects the format in which metrics are written.
+.RS
+.TP
+\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+Format the metrics with the influxdb line format.
+.TP
+\fBgraphite\fP
+Format the metrics with the graphite plaintext format.
+.TP
+\fBjson\fP
+Format the metrics as json message.
+.TP
+\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+Format the metrics with the karirosdb text format or json format.
+.TP
+\fBopentsdb\fP [telnet|json]
+Format the metrics with the opentsdb text format or json format.
+.TP
+\fBopenmetrics\fP [text|protob]
+Format the metrics with the openmetrics text formar.
+.TP
+\fBremote\fP [metadata]
+Format the metrics with the protocol buffer remote format.
+.RE
+.TP
+\fBformat-notification\fP \fItext|json|protob\fP
+Selects the format in which notifications are written.
+.TP
+\fBwrite\fP \fImetrics|notifications\fP
+If set to \fImetrics\fP (the default) the plugin will handle metrics.
+If set to \fInotifications\fP the plugin will handle notifications.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
