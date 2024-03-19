@@ -1,0 +1,40 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-openvpn 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd openvpn man page"
+.SH NAME
+ncollectd-openvpn \- Documentation of ncollectd's openvpn plugin
+.SH SYNOPSIS
+\fBload-plugin\fP openvpn
+.br
+\fBplugin\fP openvpn {
+    \fBinstance\fP \fIname\fP {
+        \fBstatus-file\fP \fI/path/to/status\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBopenvpn\fP plugin reads a status file maintained by OpenVPN and gathers
+traffic statistics about connected clients.
+.PP
+To set up OpenVPN to write to the status file periodically, use the
+\f(CW--status\fP option of OpenVPN.  So, in a nutshell you need:
+.EX
+
+openvpn $OTHER_OPTIONS --status "/var/run/openvpn-status" 10
+
+.EE
+The plugin has the following options:
+.PP
+.TP
+\fBstatus-file\fP \fI/path/to/status\fP
+Specifies the location of the status file.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
