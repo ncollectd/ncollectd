@@ -1,0 +1,25 @@
+# TYPE system_interrupts counter
+system_interrupts_total{cpu="0",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="1",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="2",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="3",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="4",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="5",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="6",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="7",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="8",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="9",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="10",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="11",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="12",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="13",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="14",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="15",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="16",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="17",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="18",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="19",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="20",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="21",hostname="localhost.localdomain",irq="144"} 7791184
+system_interrupts_total{cpu="22",hostname="localhost.localdomain",irq="144"} 0
+system_interrupts_total{cpu="23",hostname="localhost.localdomain",irq="144"} 0
