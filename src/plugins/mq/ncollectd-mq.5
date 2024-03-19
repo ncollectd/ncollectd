@@ -1,0 +1,52 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-mq 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd mq man page"
+.SH NAME
+ncollectd-mq \- Documentation of ncollectd's mq plugin
+.SH SYNOPSIS
+\fBload-plugin\fP mq
+.br
+\fBplugin\fP mq {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhostname\fP
+        \fBport\fP \fIport\fP
+        \fBusername\fP \fIusername\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBqueue-manager\fP \fImanager\fP
+        \fBconnection-channel\fP \fIchannel\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmq\fP plugin collect metrics from a MQ server.
+.PP
+The \fBinstance\fP block support the following options.
+.PP
+.TP
+\fBhost\fP \fIhostname\fP
+Hostname of the MQ server to connect to.
+.TP
+\fBport\fP \fIport\fP
+Port number or service name of the MQ server to connect to.
+.TP
+\fBusername\fP \fIusername\fP
+Username used when authenticating to the MQ server.
+.TP
+\fBpassword\fP \fIpassword\fP
+Password used when authenticating to the MQ server.
+.TP
+\fBqueue-manager\fP \fImanager\fP
+Sets the \fIqueue-manger\fP name to connect.
+.TP
+\fBconnection-channel\fP \fIchannel\fP
+Sets the \fIclient connection channel\fP to connect.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
