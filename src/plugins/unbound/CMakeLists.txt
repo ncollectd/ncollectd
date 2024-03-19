@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_UNBOUND "Name Server Daemon (NSD) statistics" ON)
+
+set(BUILD_PLUGIN_UNBOUND 0)
+
+if(PLUGIN_UNBOUND)
+    find_package(LibSsl)
+    if (LIBSSL_FOUND)
+        set(BUILD_PLUGIN_UNBOUND 1)
+    else()
+        set(BUILD_PLUGIN_UNBOUND_REASON "libssl not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_UNBOUND ${BUILD_PLUGIN_UNBOUND} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_UNBOUND)
+    gperf_generate(unbound.gperf "${CMAKE_CURRENT_BINARY_DIR}/unbound.h" UNBOUND_H)
+    set(PLUGIN_UNBOUND_SRC unbound.c ${UNBOUND_H})
+    add_library(unbound MODULE ${PLUGIN_UNBOUND_SRC})
+    target_link_libraries(unbound PRIVATE libutils libmetric LibSsl::LibSsl)
+    set_target_properties(unbound PROPERTIES PREFIX "")
+    install(TARGETS unbound DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-unbound.5 ncollectd-unbound.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-unbound.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()

@@ -1,0 +1,37 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-unbound 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd unbound man page"
+.SH NAME
+ncollectd-unbound \- Documentation of ncollectd's unbound plugin
+.SH SYNOPSIS
+\fBload-plugin\fP unbound
+.br
+\fBplugin\fP unbound {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBunbound\fP plugin obtain the date of unboundification expiration.
+.PP
+The configuration to obtain the unboundificate expiration data is put in a \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhost\fP
+Hostname to connect.
+.TP
+\fBport\fP \fIport\fP
+Port to connect.
+.TP
+\fBserver-name\fP \fIservername\fP
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

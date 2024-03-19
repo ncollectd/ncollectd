@@ -1,0 +1,108 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix UNBOUND_
+%define hash-function-name unbound_hash
+%define lookup-function-name unbound_get_key
+%define slot-name key
+%{
+%}
+struct unbound_metric {
+    char *key;
+    int fam;
+};
+%%
+thread.num.queries,                         FAM_UNBOUND_THREAD_QUERIES
+thread.num.queries_ip_ratelimited,          FAM_UNBOUND_THREAD_QUERIES_IP_RATELIMITED
+thread.num.cachehits,                       FAM_UNBOUND_THREAD_CACHE_HITS
+thread.num.cachemiss,                       FAM_UNBOUND_THREAD_CACHE_MISS
+thread.num.dnscrypt.crypted,                FAM_UNBOUND_THREAD_DNSCRYPT_CRYPTED
+thread.num.dnscrypt.cert,                   FAM_UNBOUND_THREAD_DNSCRYPT_CERT
+thread.num.dnscrypt.cleartext,              FAM_UNBOUND_THREAD_DNSCRYPT_CLEARTEXT
+thread.num.dnscrypt.malformed,              FAM_UNBOUND_THREAD_DNSCRYPT_MALFORMED
+thread.num.prefetch,                        FAM_UNBOUND_THREAD_PREFETCH
+thread.num.expired,                         FAM_UNBOUND_THREAD_EXPIRED
+thread.num.recursivereplies,                FAM_UNBOUND_THREAD_RECURSIVE_REPLIES
+thread.requestlist.avg,                     -1
+thread.requestlist.max,                     FAM_UNBOUND_THREAD_REQUESTLIST_MAX
+thread.requestlist.overwritten,             FAM_UNBOUND_THREAD_REQUESTLIST_OVERWRITTEN
+thread.requestlist.exceeded,                FAM_UNBOUND_THREAD_REQUESTLIST_EXCEEDED
+thread.requestlist.current.all,             FAM_UNBOUND_THREAD_REQUESTLIST_CURRENT_ALL
+thread.requestlist.current.user,            FAM_UNBOUND_THREAD_REQUESTLIST_CURRENT_USER
+thread.recursion.time.avg,                  FAM_UNBOUND_THREAD_RECURSION_TIME_AVG
+thread.recursion.time.median,               FAM_UNBOUND_THREAD_RECURSION_TIME_MEDIAN
+thread.tcpusage,                            FAM_UNBOUND_THREAD_TCP_BUFFERS_USAGE
+total.num.queries,                          FAM_UNBOUND_QUERIES
+total.num.queries_ip_ratelimited,           FAM_UNBOUND_QUERIES_IP_RATELIMITED
+total.num.cachehits,                        FAM_UNBOUND_CACHE_HITS
+total.num.cachemiss,                        FAM_UNBOUND_CACHE_MISS
+total.num.dnscrypt.crypted,                 FAM_UNBOUND_DNSCRYPT_CRYPTED
+total.num.dnscrypt.cert,                    FAM_UNBOUND_DNSCRYPT_CERT
+total.num.dnscrypt.cleartext,               FAM_UNBOUND_DNSCRYPT_CLEARTEXT
+total.num.dnscrypt.malformed,               FAM_UNBOUND_DNSCRYPT_MALFORMED
+total.num.prefetch,                         FAM_UNBOUND_PREFETCH
+total.num.expired,                          FAM_UNBOUND_EXPIRED
+total.num.recursivereplies,                 FAM_UNBOUND_RECURSIVE_REPLIES
+total.requestlist.avg,                      -1
+total.requestlist.max,                      FAM_UNBOUND_REQUESTLIST_MAX
+total.requestlist.overwritten,              FAM_UNBOUND_REQUESTLIST_OVERWRITTEN
+total.requestlist.exceeded,                 FAM_UNBOUND_REQUESTLIST_EXCEEDED
+total.requestlist.current.all,              FAM_UNBOUND_REQUESTLIST_CURRENT_ALL
+total.requestlist.current.user,             FAM_UNBOUND_REQUESTLIST_CURRENT_USER
+total.recursion.time.avg,                   FAM_UNBOUND_RECURSION_TIME_AVG
+total.recursion.time.median,                FAM_UNBOUND_RECURSION_TIME_MEDIAN
+total.tcpusage,                             FAM_UNBOUND_TCP_BUFFERS_USAGE
+time.up,                                    FAM_UNBOUND_UPTIME_SECONDS
+time.now,                                   -1
+time.elapsed,                               -1
+mem.cache.rrset,                            FAM_UNBOUND_CACHE_RRSET_BYTES
+mem.cache.message,                          FAM_UNBOUND_CACHE_MESSAGE_BYTES
+mem.cache.dnscrypt_shared_secret,           FAM_UNBOUND_CACHE_DNSCRYPT_SHARED_SECRET_BYTES
+mem.cache.dnscrypt_nonce,                   FAM_UNBOUND_CACHE_DNSCRYPT_NONCE_BYTES
+mem.mod.iterator,                           FAM_UNBOUND_MOD_ITERATOR_BYTES
+mem.mod.validator,                          FAM_UNBOUND_MOD_VALIDATOR_BYTES
+mem.mod.respip,                             FAM_UNBOUND_MOD_RESPIP_BYTES
+mem.mod.subnet,                             FAM_UNBOUND_MOD_SUBNET_BYTES
+mem.mod.ipsecmod,                           FAM_UNBOUND_MOD_IPSEC_BYTES
+mem.streamwait,                             FAM_UNBOUND_STREAM_WAIT_BYTES
+mem.http.query_buffer,                      FAM_UNBOUND_HTTP_QUERY_BUFFER_BYTES
+mem.http.response_buffer,                   FAM_UNBOUND_HTTP_RESPONSE_BUFFER_BYTES
+num.query.type,                             FAM_UNBOUND_QUERY_TYPE,
+num.query.class,                            FAM_UNBOUND_QUERY_OPCODE
+num.query.opcode,                           FAM_UNBOUND_QUERY_CLASS
+num.query.tcp,                              FAM_UNBOUND_QUERY_TCP
+num.query.tcpout,                           FAM_UNBOUND_QUERY_TCP_OUT
+num.query.udpout,                           FAM_UNBOUND_QUERY_UDP_OUT
+num.query.tls,                              FAM_UNBOUND_QUERY_TLS
+num.query.tls.resume,                       FAM_UNBOUND_QUERY_TLS_RESUME
+num.query.https,                            FAM_UNBOUND_QUERY_HTTPS
+num.query.ipv6,                             FAM_UNBOUND_QUERY_IPV6
+num.query.flags,                            FAM_UNBOUND_QUERY_FLAG
+num.query.edns.present,                     FAM_UNBOUND_QUERY_EDNS_PRESENT
+num.query.edns.DO,                          FAM_UNBOUND_QUERY_EDNS_DO
+num.query.ratelimited,                      FAM_UNBOUND_QUERY_RATELIMITED
+num.query.dnscrypt.shared_secret.cachemiss, FAM_UNBOUND_QUERY_DNSCRYPT_SHARED_SECRET_CACHE_MISS
+num.query.dnscrypt.replay,                  FAM_UNBOUND_QUERY_DNSCRYPT_REPLAY
+num.answer.rcode,                           FAM_UNBOUND_ANSWER_RCODE
+num.answer.secure,                          FAM_UNBOUND_ANSWER_SECURE
+num.answer.bogus,                           FAM_UNBOUND_ANSWER_BOGUS
+num.rrset.bogus,                            FAM_UNBOUND_RRSET_BOGUS
+unwanted.queries,                           FAM_UNBOUND_UNWANTED_QUERIES
+unwanted.replies,                           FAM_UNBOUND_UNWANTED_REPLIES
+msg.cache.count,                            FAM_UNBOUND_MESAGE_CACHE_SIZE
+rrset.cache.count,                          FAM_UNBOUND_RRSET_CACHE_SIZE
+infra.cache.count,                          FAM_UNBOUND_INFRA_CACHE_SIZE
+key.cache.count,                            FAM_UNBOUND_KEY_CACHE_SIZE
+dnscrypt_shared_secret.cache.count,         FAM_UNBOUND_DNSCRYPT_SHARED_SECRET_CACHE_SIZE
+dnscrypt_nonce.cache.count,                 FAM_UNBOUND_DNSCRYPT_NONCE_CACHE_SIZE
+num.query.authzone.up,                      FAM_UNBOUND_QUERY_AUTHZONE_UP
+num.query.authzone.down,                    FAM_UNBOUND_QUERY_AUTHZONE_DOWN
+num.query.aggressive.NOERROR,               FAM_UNBOUND_QUERY_AGGRESSIVE_NOERROR
+num.query.aggressive.NXDOMAIN,              FAM_UNBOUND_QUERY_AGGRESSIVE_NXDOMAIN
+num.query.subnet,                           FAM_UNBOUND_QUERY_SUBNET
+num.query.subnet_cache,                     FAM_UNBOUND_QUERY_SUBNET_CACHE
+num.rpz.action,                             FAM_UNBOUND_RPZ_ACTION
