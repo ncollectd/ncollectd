@@ -1,54 +1,35 @@
-/**
- * collectd - src/apple_sensors.c
- * Copyright (C) 2006,2007  Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2006-2007 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
+#include "libutils/exclist.h"
+#include "sensor.h"
 
-#if HAVE_MACH_MACH_TYPES_H
-#include <mach/mach_types.h>
+
+#ifdef HAVE_MACH_MACH_TYPES_H
+#        include <mach/mach_types.h>
 #endif
-#if HAVE_MACH_MACH_INIT_H
-#include <mach/mach_init.h>
+#ifdef HAVE_MACH_MACH_INIT_H
+#        include <mach/mach_init.h>
 #endif
-#if HAVE_MACH_MACH_ERROR_H
-#include <mach/mach_error.h>
+#ifdef HAVE_MACH_MACH_ERROR_H
+#        include <mach/mach_error.h>
 #endif
-#if HAVE_MACH_MACH_PORT_H
-#include <mach/mach_port.h>
+#ifdef HAVE_MACH_MACH_PORT_H
+#        include <mach/mach_port.h>
 #endif
-#if HAVE_COREFOUNDATION_COREFOUNDATION_H
-#include <CoreFoundation/CoreFoundation.h>
+#ifdef HAVE_COREFOUNDATION_COREFOUNDATION_H
+#        include <CoreFoundation/CoreFoundation.h>
 #endif
-#if HAVE_IOKIT_IOKITLIB_H
-#include <IOKit/IOKitLib.h>
+#ifdef HAVE_IOKIT_IOKITLIB_H
+#        include <IOKit/IOKitLib.h>
 #endif
-#if HAVE_IOKIT_IOTYPES_H
-#include <IOKit/IOTypes.h>
+#ifdef HAVE_IOKIT_IOTYPES_H
+#        include <IOKit/IOTypes.h>
 #endif
 
 #if (MAC_OS_X_VERSION_MIN_REQUIRED < 120000) // Before macOS 12 Monterey
@@ -57,141 +38,119 @@
 
 static mach_port_t io_main_port = MACH_PORT_NULL;
 
-static int as_init(void) {
-  kern_return_t status;
+extern exclist_t excl_sensor;
+extern metric_family_t fams[FAM_SENSOR_MAX];
 
-  if (io_main_port != MACH_PORT_NULL) {
-    mach_port_deallocate(mach_task_self(), io_main_port);
-    io_main_port = MACH_PORT_NULL;
-  }
+int sensors_read(void)
+{
+    if (!io_main_port || (io_main_port == MACH_PORT_NULL))
+        return -1;
 
-  status = IOMainPort(MACH_PORT_NULL, &io_main_port);
-  if (status != kIOReturnSuccess) {
-    ERROR("IOMainPort failed: %s", mach_error_string(status));
-    io_main_port = MACH_PORT_NULL;
-    return -1;
-  }
-
-  return 0;
-}
-
-static void as_submit(const char *type, const char *type_instance, double val) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = val};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, "apple_sensors", sizeof(vl.plugin));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-}
-
-static int as_read(void) {
-  kern_return_t status;
-  io_iterator_t iterator;
-  io_object_t io_obj;
-  CFMutableDictionaryRef prop_dict;
-  CFTypeRef property;
-
-  char type[128];
-  char inst[128];
-  int value_int;
-  double value_double;
-  if (!io_main_port || (io_main_port == MACH_PORT_NULL))
-    return -1;
-
-  status = IOServiceGetMatchingServices(
-      io_main_port, IOServiceNameMatching("IOHWSensor"), &iterator);
-  if (status != kIOReturnSuccess) {
-    ERROR("IOServiceGetMatchingServices failed: %s", mach_error_string(status));
-    return -1;
-  }
-
-  while ((io_obj = IOIteratorNext(iterator))) {
-    prop_dict = NULL;
-    status = IORegistryEntryCreateCFProperties(
-        io_obj, &prop_dict, kCFAllocatorDefault, kNilOptions);
+    io_iterator_t iterator;
+    kern_return_t status = IOServiceGetMatchingServices(io_main_port,
+                                                        IOServiceNameMatching("IOHWSensor"),
+                                                        &iterator);
     if (status != kIOReturnSuccess) {
-      DEBUG("IORegistryEntryCreateCFProperties failed: %s",
-            mach_error_string(status));
-      continue;
+        PLUGIN_ERROR("IOServiceGetMatchingServices failed: %s", mach_error_string(status));
+        return -1;
     }
 
-    /* Copy the sensor type. */
-    property = NULL;
-    if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("type"), &property))
-      continue;
-    if (CFGetTypeID(property) != CFStringGetTypeID())
-      continue;
-    if (!CFStringGetCString(property, type, sizeof(type),
-                            kCFStringEncodingASCII))
-      continue;
-    type[sizeof(type) - 1] = '\0';
+    io_object_t io_obj;
+    while ((io_obj = IOIteratorNext(iterator))) {
+        CFMutableDictionaryRef prop_dict = NULL;
+        status = IORegistryEntryCreateCFProperties(io_obj, &prop_dict, kCFAllocatorDefault,
+                                                   kNilOptions);
+        if (status != kIOReturnSuccess) {
+            PLUGIN_DEBUG("IORegistryEntryCreateCFProperties failed: %s", mach_error_string(status));
+            continue;
+        }
 
-    /* Copy the sensor location. This will be used as `instance'. */
-    property = NULL;
-    if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("location"), &property))
-      continue;
-    if (CFGetTypeID(property) != CFStringGetTypeID())
-      continue;
-    if (!CFStringGetCString(property, inst, sizeof(inst),
-                            kCFStringEncodingASCII))
-      continue;
-    inst[sizeof(inst) - 1] = '\0';
-    for (int i = 0; i < 128; i++) {
-      if (inst[i] == '\0')
-        break;
-      else if (isalnum(inst[i]))
-        inst[i] = (char)tolower(inst[i]);
-      else
-        inst[i] = '_';
+        /* Copy the sensor type. */
+        CFTypeRef property = NULL;
+        char type[256];
+        if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("type"), &property))
+            continue;
+        if (CFGetTypeID(property) != CFStringGetTypeID())
+            continue;
+        if (!CFStringGetCString(property, type, sizeof(type), kCFStringEncodingASCII))
+            continue;
+        type[sizeof(type) - 1] = '\0';
+
+        /* Copy the sensor location. This will be used as `instance'. */
+        property = NULL;
+        char location[256];
+        if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("location"), &property))
+            continue;
+        if (CFGetTypeID(property) != CFStringGetTypeID())
+            continue;
+        if (!CFStringGetCString(property, location, sizeof(location), kCFStringEncodingASCII))
+            continue;
+
+        /* Get the actual value. Some computation, based on the `type' is neccessary. */
+        property = NULL;
+        int value_int = 0;
+        if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("current-value"), &property))
+            continue;
+        if (CFGetTypeID(property) != CFNumberGetTypeID())
+            continue;
+        if (!CFNumberGetValue(property, kCFNumberIntType, &value_int))
+            continue;
+
+        int fam = -1;
+        double value_double = 0;
+        if (strcmp(type, "temperature") == 0) {
+            value_double = ((double)value_int) / 65536.0;
+            fam = FAM_SENSOR_TEMPERATURE_CELSIUS;
+        } else if (strcmp(type, "temp") == 0) {
+            value_double = ((double)value_int) / 10.0;
+            fam = FAM_SENSOR_TEMPERATURE_CELSIUS;
+        } else if (strcmp(type, "fanspeed") == 0) {
+            value_double = ((double)value_int) / 65536.0;
+            fam = FAM_SENSOR_FAN_SPEED_RPM;
+        } else if (strcmp(type, "voltage") == 0) {
+            value_double = ((double)value_int) / 65536.0;
+            fam = FAM_SENSOR_VOLTAGE_VOLTS;
+            value_double = ((double)value_int) / 10.0;
+            fam = FAM_SENSOR_FAN_SPEED_RPM;
+        } else {
+            PLUGIN_DEBUG("Read unknown sensor type: %s", type);
+        }
+
+        if (fam >= 0) {
+            metric_family_append(&fams[fam], VALUE_GAUGE(value_double), NULL,
+                                 &(label_pair_const_t){.name="location", .value=location}, NULL);
+        }
+
+        CFRelease(prop_dict);
+        IOObjectRelease(io_obj);
     }
 
-    /* Get the actual value. Some computation, based on the `type'
-     * is neccessary. */
-    property = NULL;
-    if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("current-value"),
-                                       &property))
-      continue;
-    if (CFGetTypeID(property) != CFNumberGetTypeID())
-      continue;
-    if (!CFNumberGetValue(property, kCFNumberIntType, &value_int))
-      continue;
+    IOObjectRelease(iterator);
 
-    /* Found e.g. in the 1.5GHz PowerBooks */
-    if (strcmp(type, "temperature") == 0) {
-      value_double = ((double)value_int) / 65536.0;
-      sstrncpy(type, "temperature", sizeof(type));
-    } else if (strcmp(type, "temp") == 0) {
-      value_double = ((double)value_int) / 10.0;
-      sstrncpy(type, "temperature", sizeof(type));
-    } else if (strcmp(type, "fanspeed") == 0) {
-      value_double = ((double)value_int) / 65536.0;
-      sstrncpy(type, "fanspeed", sizeof(type));
-    } else if (strcmp(type, "voltage") == 0) {
-      /* Leave this to the battery plugin. */
-      continue;
-    } else if (strcmp(type, "adc") == 0) {
-      value_double = ((double)value_int) / 10.0;
-      sstrncpy(type, "fanspeed", sizeof(type));
-    } else {
-      DEBUG("apple_sensors: Read unknown sensor type: %s", type);
-      value_double = (double)value_int;
+    plugin_dispatch_metric_family_array(fams, FAM_SENSOR_MAX, 0);
+
+    return 0;
+}
+
+int sensors_init(void)
+{
+    if (io_main_port != MACH_PORT_NULL) {
+        mach_port_deallocate(mach_task_self(), io_main_port);
+        io_main_port = MACH_PORT_NULL;
     }
 
-    as_submit(type, inst, value_double);
+    kern_return_t status = IOMainPort(MACH_PORT_NULL, &io_main_port);
+    if (status != kIOReturnSuccess) {
+        PLUGIN_ERROR("IOMainPort failed: %s", mach_error_string(status));
+        io_main_port = MACH_PORT_NULL;
+        return -1;
+    }
 
-    CFRelease(prop_dict);
-    IOObjectRelease(io_obj);
-  } /* while (iterator) */
+    return 0;
+}
 
-  IOObjectRelease(iterator);
-
-  return 0;
-} /* int as_read */
-
-void module_register(void) {
-  plugin_register_init("apple_sensors", as_init);
-  plugin_register_read("apple_sensors", as_read);
-} /* void module_register */
+int sensors_shutdown(void)
+{
+    exclist_reset(&excl_sensor);
+    return 0;
+}
