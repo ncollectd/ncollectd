@@ -1,48 +1,19 @@
-/**
- * collectd - src/liboconfig/scanner.l
- * Copyright (C) 2007  Florian Forster
- * Copyright (C) 2008  Sebastian Harl
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian Forster <octo at collectd.org>
- *   Sebastian Harl <sh at tokkee.org>
- */
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT                  */
+/* SPDX-FileCopyrightText: Copyright (C) 2007  Florian Forster   */
+/* SPDX-FileCopyrightText: Copyright (C) 2008  Sebastian Harl    */
+/* SPDX-FileContributor: Florian Forster <octo at collectd.org>  */
+/* SPDX-FileContributor: Sebastian Harl <sh at tokkee.org>       */
 
 %{
-#ifdef WIN32
-#include "gnulib_config.h"
-#include "config.h"
-#endif
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 
 #include <stdlib.h>
 #include <string.h>
-#include "oconfig.h"
-#include "aux_types.h"
-#include "parser.h"
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
-#endif
-
+#include "libconfig/config.h"
+#include "libconfig/aux_types.h"
+#include "libconfig/parser.h"
 
 /* multiline string buffer */
 static char *ml_buffer;
@@ -51,25 +22,43 @@ static size_t ml_len;
 
 #define ml_free (ml_len - ml_pos)
 
-static void ml_append (char *);
+static void ml_append (yyscan_t yyscanner, char *string);
+
+#define YYSTYPE    CONFIG_YYSTYPE
+#define YYLTYPE    CONFIG_YYLTYPE
 
 #ifdef yyterminate
 # undef yyterminate
 #endif
 #define yyterminate() \
-	do { free (ml_buffer); ml_buffer = NULL; ml_pos = 0; ml_len = 0; \
-		return YY_NULL; } while (0)
+    do { free (ml_buffer); ml_buffer = NULL; ml_pos = 0; ml_len = 0; \
+        return YY_NULL; } while (0)
 %}
-%option yylineno
+
+%option bison-bridge
+%option bison-locations
 %option noyywrap
 %option noinput
 %option nounput
-%x ML
+%option nostdinit
+%option never-interactive
+%option reentrant
+%option yylineno
+
+%option prefix="config_yy"
+
+%x DQUOTED_ML
+%x SQUOTED_ML
+%x HEREDOC_ML
+
 WHITE_SPACE [\ \t\b]
 NON_WHITE_SPACE [^\ \t\b]
 EOL (\r\n|\n)
-QUOTED_STRING ([^\\"]+|\\.)*
-UNQUOTED_STRING [0-9A-Za-z_]+
+REGEX ([^/]+|\\.)*
+HEREDOC_STRING ([^']|'([^']|'[^']))*
+DQUOTED_STRING ([^\\"]+|\\.)*
+SQUOTED_STRING ([^']+|\\.)*
+UNQUOTED_STRING [A-Za-z][0-9A-Za-z_-]*
 HEX_NUMBER 0[xX][0-9a-fA-F]+
 OCT_NUMBER 0[0-7]+
 DEC_NUMBER [\+\-]?[0-9]+
@@ -94,81 +83,142 @@ IPV6_BASE ({HEX16}:){6}{V6_PART}|::({HEX16}:){5}{V6_PART}|({HEX16})?::({HEX16}:)
 IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 
 %%
-{WHITE_SPACE}		|
-{COMMENT}		{/* ignore */}
+{WHITE_SPACE}       |
+{COMMENT}           {/* ignore */}
 
-\\{EOL}			{/* continue line */}
+\\{EOL}             {/* continue line */}
 
-{EOL}			{return (EOL);}
-"/"			{return (SLASH);}
-"<"			{return (OPENBRAC);}
-">"			{return (CLOSEBRAC);}
-{BOOL_TRUE}		{yylval.boolean = 1; return (BTRUE);}
-{BOOL_FALSE}		{yylval.boolean = 0; return (BFALSE);}
+{EOL}               {return (EOL);}
+"{"                 {return (OPENBRAC);}
+"}"                 {return (CLOSEBRAC);}
+{BOOL_TRUE}         {yylval->boolean = 1; return (BTRUE);}
+{BOOL_FALSE}        {yylval->boolean = 0; return (BFALSE);}
 
-{IPV4_ADDR}		{yylval.string = yytext; return (UNQUOTED_STRING);}
-{IPV6_ADDR}		{yylval.string = yytext; return (UNQUOTED_STRING);}
+{IPV4_ADDR}         {yylval->string = yytext; return (UNQUOTED_STRING);}
+{IPV6_ADDR}         {yylval->string = yytext; return (UNQUOTED_STRING);}
 
-{NUMBER}		{yylval.number = strtod (yytext, NULL); return (NUMBER);}
+{NUMBER}            {yylval->number = strtod (yytext, NULL); return (NUMBER);}
 
-\"{QUOTED_STRING}\"	{yylval.string = yytext; return (QUOTED_STRING);}
-{UNQUOTED_STRING}	{yylval.string = yytext; return (UNQUOTED_STRING);}
+"/"{REGEX}"/"       {yylval->string = yytext; return (REGEX);}
+{UNQUOTED_STRING}   {yylval->string = yytext; return (UNQUOTED_STRING);}
 
-\"{QUOTED_STRING}\\{EOL} {
-	size_t len = strlen (yytext);
+\"{DQUOTED_STRING}\" {yylval->string = yytext; return (DQUOTED_STRING);}
 
-	ml_pos = 0;
+\"{DQUOTED_STRING}\\{EOL} {
+    size_t len = strlen (yytext);
 
-	/* remove "\\<EOL>" */
-	if (yytext[len - 2] == '\r')
-		len -= 3;
-	else
-		len -= 2;
-	yytext[len] = '\0';
+    ml_pos = 0;
 
-	ml_append (yytext);
-	BEGIN (ML);
+    /* remove "\\<EOL>" */
+    if (yytext[len - 2] == '\r')
+        len -= 3;
+    else
+        len -= 2;
+    yytext[len] = '\0';
+
+    ml_append (yyscanner, yytext);
+    BEGIN (DQUOTED_ML);
 }
-<ML>^{WHITE_SPACE}+ {/* remove leading white-space */}
-<ML>{NON_WHITE_SPACE}{QUOTED_STRING}\\{EOL} {
-	size_t len = strlen (yytext);
+<DQUOTED_ML>^{WHITE_SPACE}+ {/* remove leading white-space */}
+<DQUOTED_ML>{NON_WHITE_SPACE}{DQUOTED_STRING}\\{EOL} {
+    size_t len = strlen (yytext);
 
-	/* remove "\\<EOL>" */
-	if (yytext[len - 2] == '\r')
-		len -= 3;
-	else
-		len -= 2;
-	yytext[len] = '\0';
+    /* remove "\\<EOL>" */
+    if (yytext[len - 2] == '\r')
+        len -= 3;
+    else
+        len -= 2;
+    yytext[len] = '\0';
 
-	ml_append(yytext);
+    ml_append(yyscanner, yytext);
 }
-<ML>{NON_WHITE_SPACE}{QUOTED_STRING}\" {
-	ml_append(yytext);
-	yylval.string = ml_buffer;
+<DQUOTED_ML>{NON_WHITE_SPACE}{DQUOTED_STRING}\" {
+    ml_append(yyscanner, yytext);
+    yylval->string = ml_buffer;
 
-	BEGIN (INITIAL);
-	return (QUOTED_STRING);
+    BEGIN (INITIAL);
+    return (DQUOTED_STRING);
 }
+
+
+"'"{SQUOTED_STRING}"'" {yylval->string = yytext; return (SQUOTED_STRING);}
+
+"'"{SQUOTED_STRING}\\{EOL} {
+    size_t len = strlen (yytext);
+
+    ml_pos = 0;
+
+    /* remove "\\<EOL>" */
+    if (yytext[len - 2] == '\r')
+        len -= 3;
+    else
+        len -= 2;
+    yytext[len] = '\0';
+
+    ml_append (yyscanner, yytext);
+    BEGIN (SQUOTED_ML);
+}
+
+<SQUOTED_ML>^{WHITE_SPACE}+ {/* remove leading white-space */}
+
+<SQUOTED_ML>{NON_WHITE_SPACE}{SQUOTED_STRING}\\{EOL} {
+    size_t len = strlen (yytext);
+
+    /* remove "\\<EOL>" */
+    if (yytext[len - 2] == '\r')
+        len -= 3;
+    else
+        len -= 2;
+    yytext[len] = '\0';
+
+    ml_append(yyscanner, yytext);
+}
+
+<SQUOTED_ML>{NON_WHITE_SPACE}{SQUOTED_STRING}"'" {
+    ml_append(yyscanner, yytext);
+    yylval->string = ml_buffer;
+
+    BEGIN (INITIAL);
+    return (SQUOTED_STRING);
+}
+
+
+"'''"{HEREDOC_STRING}"'''" {yylval->string = yytext; return (HEREDOC_STRING);}
+
+"'''"{HEREDOC_STRING}{EOL} {
+    ml_pos = 0;
+    ml_append (yyscanner, yytext);
+    BEGIN (HEREDOC_ML);
+}
+
+<HEREDOC_ML>{HEREDOC_STRING}{EOL} {
+    ml_append(yyscanner, yytext);
+}
+
+<HEREDOC_ML>{HEREDOC_STRING}"'''" {
+    ml_append(yyscanner, yytext);
+    yylval->string = ml_buffer;
+
+    BEGIN (INITIAL);
+    return (HEREDOC_STRING);
+}
+
 %%
-static void ml_append (char *string)
+static void ml_append (yyscan_t yyscanner, char *string)
 {
-	size_t len = strlen (string);
+    size_t len = strlen (string);
 
-	if (ml_free <= len) {
-		ml_len += len - ml_free + 1;
-		ml_buffer = realloc (ml_buffer, ml_len);
-		if (ml_buffer == NULL)
-			YY_FATAL_ERROR ("out of dynamic memory in ml_append");
-	}
+    if (ml_free <= len) {
+        ml_len += len - ml_free + 1;
+        ml_buffer = realloc (ml_buffer, ml_len);
+        if (ml_buffer == NULL)
+            YY_FATAL_ERROR ("out of dynamic memory in ml_append");
+    }
 
-	int s = snprintf(ml_buffer + ml_pos, ml_free, "%s", string);
-	if (s < 0 || (size_t)s >= ml_free)
-		YY_FATAL_ERROR ("failed to write to multiline buffer");
+    int s = snprintf(ml_buffer + ml_pos, ml_free, "%s", string);
+    if (s < 0 || (size_t)s >= ml_free)
+        YY_FATAL_ERROR ("failed to write to multiline buffer");
 
-	ml_pos += s;
-	return;
-} /* ml_append */
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+    ml_pos += s;
+    return;
+}
