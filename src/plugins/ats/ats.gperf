@@ -1,0 +1,162 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix ATS_
+%define hash-function-name ats_hash
+%define lookup-function-name ats_get_key
+%define slot-name key
+%{
+%}
+struct ats_metric {
+    char *key;
+    double scale;
+    int fam;
+    char *lkey1;
+    char *lvalue1;
+    char *lkey2;
+    char *lvalue2;
+};
+%%
+proxy.process.http.invalid_client_requests,                         0, FAM_ATS_CLIENT_REQUESTS_INVALID, "protocol", "http", NULL, NULL
+proxy.process.http.missing_host_hdr,                                0, FAM_ATS_CLIENT_REQUESTS_MISSING_HOST_HDR, "protocol", "http", NULL, NULL
+proxy.process.http.err_connect_fail_count_stat,                     0, FAM_ATS_CONNECT_FAILURES, "protocol", "http", NULL, NULL,
+proxy.process.http.total_client_connections,                        0, FAM_ATS_CONNECTIONS, "protocol", "http", "source", "client"
+proxy.process.http.total_server_connections,                        0, FAM_ATS_CONNECTIONS, "protocol", "http", "source", "server"
+proxy.process.http.total_parent_proxy_connections,                  0, FAM_ATS_CONNECTIONS, "protocol", "http", "source", "parent_proxy"
+proxy.process.http.err_client_abort_count_stat,                     0, FAM_ATS_ERROR_CLIENT_ABORTS, "protocol", "http", NULL, NULL
+proxy.process.http.transaction_totaltime.errors.aborts,          1e-3, FAM_ATS_ERROR_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "abort"
+proxy.process.http.transaction_totaltime.errors.possible_aborts, 1e-3, FAM_ATS_ERROR_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "possible_abort"
+proxy.process.http.transaction_totaltime.errors.connect_failed,  1e-3, FAM_ATS_ERROR_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "connect_failed"
+proxy.process.http.transaction_totaltime.errors.other,           1e-3, FAM_ATS_ERROR_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "other"
+proxy.process.http.transaction_totaltime.hit_fresh,              1e-3, FAM_ATS_HIT_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "fresh"
+proxy.process.http.transaction_totaltime.hit_revalidated,        1e-3, FAM_ATS_HIT_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "revalidated"
+proxy.process.http.transaction_totaltime.miss_cold,              1e-3, FAM_ATS_MISS_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "cold"
+proxy.process.http.transaction_totaltime.miss_not_cacheable,     1e-3, FAM_ATS_MISS_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "not_cacheable"
+proxy.process.http.transaction_totaltime.miss_changed,           1e-3, FAM_ATS_MISS_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "changed"
+proxy.process.http.transaction_totaltime.miss_client_no_cache,   1e-3, FAM_ATS_MISS_TRANSACTION_TIME_SECONDS, "protocol", "http", "state", "no_cache"
+proxy.process.cache.ram_cache.total_bytes,                          0, FAM_ATS_RAM_CACHE_TOTAL_BYTES, NULL, NULL, NULL, NULL
+proxy.process.cache.ram_cache.misses,                               0, FAM_ATS_RAM_CACHE_MISSES, NULL, NULL, NULL, NULL
+proxy.process.cache.ram_cache.bytes_used,                           0, FAM_ATS_RAM_CACHE_USED_BYTES, NULL, NULL, NULL, NULL
+proxy.process.cache.ram_cache.hits,                                 0, FAM_ATS_RAM_CACHE_HITS, NULL, NULL, NULL, NULL
+proxy.process.http.incoming_requests,                               0, FAM_ATS_INCOMING_REQUESTS, "protocol", "http", NULL, NULL
+proxy.process.http.outgoing_requests,                               0, FAM_ATS_OUTGOING_REQUESTS, "protocol", "http", NULL, NULL
+proxy.process.http.connect_requests,                                0, FAM_ATS_REQUESTS, "protocol", "http", "method", "CONNECT"
+proxy.process.http.delete_requests,                                 0, FAM_ATS_REQUESTS, "protocol", "http", "method", "DELETE"
+proxy.process.http.get_requests,                                    0, FAM_ATS_REQUESTS, "protocol", "http", "method", "GET"
+proxy.process.http.head_requests,                                   0, FAM_ATS_REQUESTS, "protocol", "http", "method", "HEAD"
+proxy.process.http.post_requests,                                   0, FAM_ATS_REQUESTS, "protocol", "http", "method", "POST"
+proxy.process.http.purge_requests,                                  0, FAM_ATS_REQUESTS, "protocol", "http", "method", "PURGE"
+proxy.process.http.push_requests,                                   0, FAM_ATS_REQUESTS, "protocol", "http", "method", "PUSH"
+proxy.process.http.put_requests,                                    0, FAM_ATS_REQUESTS, "protocol", "http", "method", "PUT"
+proxy.process.http.options_requests,                                0, FAM_ATS_REQUESTS, "protocol", "http", "method", "OPTIONS"
+proxy.process.http.trace_requests,                                  0, FAM_ATS_REQUESTS, "protocol", "http", "method", "TRACE"
+proxy.process.http.1xx_responses,                                   0, FAM_ATS_RESPONSE_CLASSES, "code", "1xx", "protocol", "http"
+proxy.process.http.2xx_responses,                                   0, FAM_ATS_RESPONSE_CLASSES, "code", "2xx", "protocol", "http"
+proxy.process.http.3xx_responses,                                   0, FAM_ATS_RESPONSE_CLASSES, "code", "3xx", "protocol", "http"
+proxy.process.http.4xx_responses,                                   0, FAM_ATS_RESPONSE_CLASSES, "code", "4xx", "protocol", "http"
+proxy.process.http.5xx_responses,                                   0, FAM_ATS_RESPONSE_CLASSES, "code", "5xx", "protocol", "http"
+proxy.process.http.incoming_responses,                              0, FAM_ATS_INCOMING_RESPONSES, "protocol", "http", NULL, NULL
+proxy.process.http.100_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "100"
+proxy.process.http.101_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "101"
+proxy.process.http.200_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "200"
+proxy.process.http.201_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "201"
+proxy.process.http.202_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "202"
+proxy.process.http.203_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "203"
+proxy.process.http.204_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "204"
+proxy.process.http.205_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "205"
+proxy.process.http.206_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "206"
+proxy.process.http.300_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "300"
+proxy.process.http.301_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "301"
+proxy.process.http.302_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "302"
+proxy.process.http.303_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "303"
+proxy.process.http.304_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "304"
+proxy.process.http.305_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "305"
+proxy.process.http.307_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "307"
+proxy.process.http.400_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "400"
+proxy.process.http.401_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "401"
+proxy.process.http.402_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "402"
+proxy.process.http.403_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "403"
+proxy.process.http.404_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "404"
+proxy.process.http.405_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "405"
+proxy.process.http.406_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "406"
+proxy.process.http.407_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "407"
+proxy.process.http.408_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "408"
+proxy.process.http.409_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "409"
+proxy.process.http.410_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "410"
+proxy.process.http.411_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "411"
+proxy.process.http.412_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "412"
+proxy.process.http.413_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "413"
+proxy.process.http.414_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "414"
+proxy.process.http.415_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "415"
+proxy.process.http.416_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "416"
+proxy.process.http.500_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "500"
+proxy.process.http.501_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "501"
+proxy.process.http.502_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "502"
+proxy.process.http.503_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "503"
+proxy.process.http.504_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "504"
+proxy.process.http.505_responses,                                   0, FAM_ATS_RESPONSES, "protocol", "http", "code", "505"
+proxy.node.restarts.proxy.restart_count,                            0, FAM_ATS_RESTARTS, NULL, NULL, NULL, NULL
+proxy.process.http.transaction_counts.errors.aborts,                0, FAM_ATS_TRANSACTION_ERRORS, "protocol", "http", "state", "abort"
+proxy.process.http.transaction_counts.errors.possible_aborts,       0, FAM_ATS_TRANSACTION_ERRORS, "protocol", "http", "state", "possible_aborts"
+proxy.process.http.transaction_counts.errors.connect_failed,        0, FAM_ATS_TRANSACTION_ERRORS, "protocol", "http", "state", "connect_failed"
+proxy.process.http.transaction_counts.errors.other,                 0, FAM_ATS_TRANSACTION_ERRORS, "protocol", "http", "state", "other"
+proxy.process.http.transaction_counts.hit_fresh,                    0, FAM_ATS_TRANSACTION_HITS, "protocol", "http", "state", "fresh"
+proxy.process.http.transaction_counts.hit_revalidated,              0, FAM_ATS_TRANSACTION_HITS, "protocol", "http", "state", "revalidated"
+proxy.process.http.transaction_counts.miss_cold,                    0, FAM_ATS_TRANSACTION_MISSES, "protocol", "http", "state", "cold"
+proxy.process.http.transaction_counts.miss_not_cacheable,           0, FAM_ATS_TRANSACTION_MISSES, "protocol", "http", "state", "not_cacheable"
+proxy.process.http.transaction_counts.miss_changed,                 0, FAM_ATS_TRANSACTION_MISSES, "protocol", "http", "state", "changed"
+proxy.process.http.transaction_counts.other.unclassified,           0, FAM_ATS_TRANSACTION_OTHERS, "protocol", "http", "state", "unclassified"
+proxy.process.http.total_transactions_time,                         0, FAM_ATS_TRANSACTIONS_TIME, "protocol", "http", NULL, NULL
+proxy.node.http.origin_server_total_transactions_count,             0, FAM_ATS_TRANSACTIONS, "protocol", "http", "source", "origin_server"
+proxy.node.http.user_agents_total_transactions_count,               0, FAM_ATS_TRANSACTIONS, "protocol", "http", "source", "user_agent"
+proxy.process.http.user_agent_total_request_bytes,                  0, FAM_ATS_REQUEST_SIZE_BYTES, "protocol", "http", "source", "user_agent"
+proxy.process.http.origin_server_total_request_bytes,               0, FAM_ATS_REQUEST_SIZE_BYTES, "protocol", "http", "source", "origin_server"
+proxy.process.http.parent_proxy_request_total_bytes,                0, FAM_ATS_REQUEST_SIZE_BYTES, "protocol", "http", "source", "parent_proxy"
+proxy.process.http.user_agent_total_response_bytes,                 0, FAM_ATS_RESPONSE_SIZE_BYTES, "protocol", "http", "source", "user_agent"
+proxy.process.http.origin_server_total_response_bytes,              0, FAM_ATS_RESPONSE_SIZE_BYTES, "protocol", "http", "source", "origin_server"
+proxy.process.http.parent_proxy_response_total_bytes,               0, FAM_ATS_RESPONSE_SIZE_BYTES, "protocol", "http", "source", "parent_proxy"
+proxy.process.http.origin_server_request_header_total_size,         0, FAM_ATS_REQUEST_HEADER_SIZE_BYTES, "protocol", "http", "source", "user_agent"
+proxy.process.http.user_agent_request_header_total_size,            0, FAM_ATS_REQUEST_HEADER_SIZE_BYTES, "protocol", "http", "source", "origin_server"
+proxy.process.http.origin_server_response_header_total_size,        0, FAM_ATS_REPONSE_HEADER_SIZE_BYTES, "protocol", "http", "source", "user_agent"
+proxy.process.http.user_agent_response_header_total_size,           0, FAM_ATS_REPONSE_HEADER_SIZE_BYTES, "protocol", "http", "source", "origin_server"
+proxy.process.http.origin_server_request_document_total_size,       0, FAM_ATS_REQUEST_DOCUMENT_SIZE_BYTES, "protocol", "http", "source", "user_agent"
+proxy.process.http.user_agent_request_document_total_size,          0, FAM_ATS_REQUEST_DOCUMENT_SIZE_BYTES, "protocol", "http", "source", "origin_server"
+proxy.process.http.origin_server_response_document_total_size,      0, FAM_ATS_REPONSE_DOCUMENT_SIZE_BYTES, "protocol", "http", "source", "user_agent"
+proxy.process.http.user_agent_response_document_total_size,         0, FAM_ATS_REPONSE_DOCUMENT_SIZE_BYTES, "protocol", "http", "source", "origin_server"
+proxy.process.cache.volume.bytes_used,                              0, FAM_ATS_CACHE_VOLUME_USED_BYTES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.bytes_total,                             0, FAM_ATS_CACHE_VOLUME_TOTAL_BYTES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.ram_cache.total_bytes,                   0, FAM_ATS_CACHE_VOLUME_RAM_CACHE_USED_BYTES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.ram_cache.bytes_used,                    0, FAM_ATS_CACHE_VOLUME_RAM_CACHE_TOTAL_BYTES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.ram_cache.hits,                          0, FAM_ATS_CACHE_VOLUME_RAM_CACHE_HITS, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.ram_cache.misses,                        0, FAM_ATS_CACHE_VOLUME_RAM_CACHE_MISSES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.percent_full,                            0, FAM_ATS_CACHE_VOLUME_FULL_RATIO, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.direntries.total,                        0, FAM_ATS_CACHE_VOLUME_TOTAL_DIRENTRIES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.direntries.used,                         0, FAM_ATS_CACHE_VOLUME_USED_DIRENTRIES, NULL, NULL, NULL, NULL
+proxy.process.cache.volume.lookup.active,                           0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "lookup", NULL, NULL
+proxy.process.cache.volume.read.active,                             0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "read", NULL, NULL
+proxy.process.cache.volume.write.active,                            0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "write", NULL, NULL
+proxy.process.cache.volume.update.active,                           0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "update", NULL, NULL
+proxy.process.cache.volume.remove.active,                           0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "remove", NULL, NULL
+proxy.process.cache.volume.evacuate.active,                         0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "evacuate", NULL, NULL
+proxy.process.cache.volume.scan.active,                             0, FAM_ATS_CACHE_VOLUME_OPERATIONS_ACTIVE, "operation", "scan", NULL, NULL
+proxy.process.cache.volume.lookup.success,                          0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "lookup", NULL, NULL
+proxy.process.cache.volume.read.success,                            0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "read", NULL, NULL
+proxy.process.cache.volume.write.success,                           0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "write", NULL, NULL
+proxy.process.cache.volume.update.success,                          0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "update", NULL, NULL
+proxy.process.cache.volume.remove.success,                          0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "remove", NULL, NULL
+proxy.process.cache.volume.evacuate.success,                        0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "evacuate", NULL, NULL
+proxy.process.cache.volume.scan.success,                            0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "scan", NULL, NULL
+proxy.process.cache.volume.read_busy.success,                       0, FAM_ATS_CACHE_VOLUME_OPERATIONS_SUCCESS, "operation", "read_busy", NULL, NULL
+proxy.process.cache.volume.lookup.failure,                          0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "lookup", NULL, NULL
+proxy.process.cache.volume.read.failure,                            0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "read", NULL, NULL
+proxy.process.cache.volume.write.failure,                           0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "write", NULL, NULL
+proxy.process.cache.volume.write.backlog.failure,                   0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "write.backlog", NULL, NULL
+proxy.process.cache.volume.update.failure,                          0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "update", NULL, NULL
+proxy.process.cache.volume.remove.failure,                          0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "remove", NULL, NULL
+proxy.process.cache.volume.evacuate.failure,                        0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "evacuate", NULL, NULL
+proxy.process.cache.volume.scan.failure,                            0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "scan", NULL, NULL
+proxy.process.cache.volume.read_busy.failure,                       0, FAM_ATS_CACHE_VOLUME_OPERATIONS_FAILURE, "operation", "read_busy", NULL, NULL
