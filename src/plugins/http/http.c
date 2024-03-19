@@ -1,695 +1,572 @@
-/**
- * collectd - src/curl.c
- * Copyright (C) 2006-2009  Florian octo Forster
- * Copyright (C) 2009       Aman Gupta
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Aman Gupta <aman at tmm1.net>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2006-2009 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2009 Aman Gupta
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Aman Gupta <aman at tmm1.net>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
-#include "utils/curl_stats/curl_stats.h"
-#include "utils/match/match.h"
-#include "utils_time.h"
+#include "libutils/common.h"
+#include "libutils/time.h"
 
 #include <curl/curl.h>
 
-/*
- * Data types
- */
-struct web_match_s;
-typedef struct web_match_s web_match_t;
-struct web_match_s /* {{{ */
+#include "curl_stats.h"
+
+typedef struct {
+    char *instance;
+    char *metric_prefix;
+    label_set_t labels;
+    char *metric_response_time;
+    char *metric_response_code;
+
+    char *url;
+    int address_family;
+    char *user;
+    char *pass;
+    char *credentials;
+    bool digest;
+    bool verify_peer;
+    bool verify_host;
+    char *cacert;
+    struct curl_slist *headers;
+    char *post_body;
+    bool response_time;
+    bool response_code;
+    int timeout;
+    curl_stats_t *stats;
+
+    CURL *curl;
+    char curl_errbuf[CURL_ERROR_SIZE];
+    char *buffer;
+    size_t buffer_size;
+    size_t buffer_fill;
+
+    plugin_match_t *matches;
+} chttp_ctx_t;
+
+static size_t chttp_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
 {
-  char *regex;
-  char *exclude_regex;
-  int dstype;
-  char *type;
-  char *instance;
+    size_t len;
 
-  cu_match_t *match;
+    len = size * nmemb;
+    if (len == 0)
+        return len;
 
-  web_match_t *next;
-}; /* }}} */
+    chttp_ctx_t *ctx = user_data;
+    if (ctx == NULL)
+        return 0;
 
-struct web_page_s;
-typedef struct web_page_s web_page_t;
-struct web_page_s /* {{{ */
-{
-  char *plugin_name;
-  char *instance;
+    if ((ctx->buffer_fill + len) >= ctx->buffer_size) {
+        char *temp;
+        size_t temp_size;
 
-  char *url;
-  int address_family;
-  char *user;
-  char *pass;
-  char *credentials;
-  bool digest;
-  bool verify_peer;
-  bool verify_host;
-  char *cacert;
-  struct curl_slist *headers;
-  char *post_body;
-  bool response_time;
-  bool response_code;
-  int timeout;
-  curl_stats_t *stats;
+        temp_size = ctx->buffer_fill + len + 1;
+        temp = realloc(ctx->buffer, temp_size);
+        if (temp == NULL) {
+            PLUGIN_ERROR("realloc failed.");
+            return 0;
+        }
+        ctx->buffer = temp;
+        ctx->buffer_size = temp_size;
+    }
 
-  CURL *curl;
-  char curl_errbuf[CURL_ERROR_SIZE];
-  char *buffer;
-  size_t buffer_size;
-  size_t buffer_fill;
+    memcpy(ctx->buffer + ctx->buffer_fill, (char *)buf, len);
+    ctx->buffer_fill += len;
+    ctx->buffer[ctx->buffer_fill] = 0;
 
-  web_match_t *matches;
-}; /* }}} */
-
-/*
- * Private functions
- */
-static int cc_read_page(user_data_t *ud);
-
-static size_t cc_curl_callback(void *buf, /* {{{ */
-                               size_t size, size_t nmemb, void *user_data) {
-  web_page_t *wp;
-  size_t len;
-
-  len = size * nmemb;
-  if (len == 0)
     return len;
+}
 
-  wp = user_data;
-  if (wp == NULL)
+static void chttp_free(void *arg)
+{
+    chttp_ctx_t *ctx = arg;
+    if (ctx == NULL)
+        return;
+
+    if (ctx->curl != NULL)
+        curl_easy_cleanup(ctx->curl);
+    ctx->curl = NULL;
+
+    free(ctx->instance);
+    free(ctx->metric_prefix);
+    label_set_reset(&ctx->labels);
+    free(ctx->metric_response_time);
+    free(ctx->metric_response_code);
+    free(ctx->url);
+    free(ctx->user);
+    free(ctx->pass);
+    free(ctx->credentials);
+    free(ctx->cacert);
+    free(ctx->post_body);
+    curl_slist_free_all(ctx->headers);
+    curl_stats_destroy(ctx->stats);
+
+    free(ctx->buffer);
+
+    if (ctx->matches != NULL)
+        plugin_match_shutdown(ctx->matches);
+
+    free(ctx);
+}
+
+static int chttp_config_append_string(const char *name, struct curl_slist **dest, config_item_t *ci)
+{
+    struct curl_slist *temp = NULL;
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_WARNING("`%s' needs exactly one string argument.", name);
+        return -1;
+    }
+
+    temp = curl_slist_append(*dest, ci->values[0].value.string);
+    if (temp == NULL)
+        return -1;
+
+    *dest = temp;
+
     return 0;
+}
 
-  if ((wp->buffer_fill + len) >= wp->buffer_size) {
-    char *temp;
-    size_t temp_size;
-
-    temp_size = wp->buffer_fill + len + 1;
-    temp = realloc(wp->buffer, temp_size);
-    if (temp == NULL) {
-      ERROR("curl plugin: realloc failed.");
-      return 0;
-    }
-    wp->buffer = temp;
-    wp->buffer_size = temp_size;
-  }
-
-  memcpy(wp->buffer + wp->buffer_fill, (char *)buf, len);
-  wp->buffer_fill += len;
-  wp->buffer[wp->buffer_fill] = 0;
-
-  return len;
-} /* }}} size_t cc_curl_callback */
-
-static void cc_web_match_free(web_match_t *wm) /* {{{ */
+static int cc_page_init_curl(chttp_ctx_t *ctx)
 {
-  if (wm == NULL)
-    return;
-
-  sfree(wm->regex);
-  sfree(wm->type);
-  sfree(wm->instance);
-  match_destroy(wm->match);
-  cc_web_match_free(wm->next);
-  sfree(wm);
-} /* }}} void cc_web_match_free */
-
-static void cc_web_page_free(void *arg) /* {{{ */
-{
-  web_page_t *wp = (web_page_t *)arg;
-  if (wp == NULL)
-    return;
-
-  if (wp->curl != NULL)
-    curl_easy_cleanup(wp->curl);
-  wp->curl = NULL;
-
-  sfree(wp->plugin_name);
-  sfree(wp->instance);
-
-  sfree(wp->url);
-  sfree(wp->user);
-  sfree(wp->pass);
-  sfree(wp->credentials);
-  sfree(wp->cacert);
-  sfree(wp->post_body);
-  curl_slist_free_all(wp->headers);
-  curl_stats_destroy(wp->stats);
-
-  sfree(wp->buffer);
-
-  cc_web_match_free(wp->matches);
-  sfree(wp);
-} /* }}} void cc_web_page_free */
-
-static int cc_config_append_string(const char *name,
-                                   struct curl_slist **dest, /* {{{ */
-                                   oconfig_item_t *ci) {
-  struct curl_slist *temp = NULL;
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    WARNING("curl plugin: `%s' needs exactly one string argument.", name);
-    return -1;
-  }
-
-  temp = curl_slist_append(*dest, ci->values[0].value.string);
-  if (temp == NULL)
-    return -1;
-
-  *dest = temp;
-
-  return 0;
-} /* }}} int cc_config_append_string */
-
-static int cc_config_add_match_dstype(int *dstype_ret, /* {{{ */
-                                      oconfig_item_t *ci) {
-  int dstype;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    WARNING("curl plugin: `DSType' needs exactly one string argument.");
-    return -1;
-  }
-
-  if (strncasecmp("Gauge", ci->values[0].value.string, strlen("Gauge")) == 0) {
-    dstype = UTILS_MATCH_DS_TYPE_GAUGE;
-    if (strcasecmp("GaugeAverage", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_GAUGE_AVERAGE;
-    else if (strcasecmp("GaugeMin", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_GAUGE_MIN;
-    else if (strcasecmp("GaugeMax", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_GAUGE_MAX;
-    else if (strcasecmp("GaugeLast", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_GAUGE_LAST;
-    else
-      dstype = 0;
-  } else if (strncasecmp("Counter", ci->values[0].value.string,
-                         strlen("Counter")) == 0) {
-    dstype = UTILS_MATCH_DS_TYPE_COUNTER;
-    if (strcasecmp("CounterSet", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_COUNTER_SET;
-    else if (strcasecmp("CounterAdd", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_COUNTER_ADD;
-    else if (strcasecmp("CounterInc", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_COUNTER_INC;
-    else
-      dstype = 0;
-  } else if (strncasecmp("Derive", ci->values[0].value.string,
-                         strlen("Derive")) == 0) {
-    dstype = UTILS_MATCH_DS_TYPE_DERIVE;
-    if (strcasecmp("DeriveSet", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_DERIVE_SET;
-    else if (strcasecmp("DeriveAdd", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_DERIVE_ADD;
-    else if (strcasecmp("DeriveInc", ci->values[0].value.string) == 0)
-      dstype |= UTILS_MATCH_CF_DERIVE_INC;
-    else
-      dstype = 0;
-  }
-
-  else {
-    dstype = 0;
-  }
-
-  if (dstype == 0) {
-    WARNING("curl plugin: `%s' is not a valid argument to `DSType'.",
-            ci->values[0].value.string);
-    return -1;
-  }
-
-  *dstype_ret = dstype;
-  return 0;
-} /* }}} int cc_config_add_match_dstype */
-
-static int cc_config_add_match(web_page_t *page, /* {{{ */
-                               oconfig_item_t *ci) {
-  web_match_t *match;
-  int status;
-
-  if (ci->values_num != 0) {
-    WARNING("curl plugin: Ignoring arguments for the `Match' block.");
-  }
-
-  match = calloc(1, sizeof(*match));
-  if (match == NULL) {
-    ERROR("curl plugin: calloc failed.");
-    return -1;
-  }
-
-  status = 0;
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Regex", child->key) == 0)
-      status = cf_util_get_string(child, &match->regex);
-    else if (strcasecmp("ExcludeRegex", child->key) == 0)
-      status = cf_util_get_string(child, &match->exclude_regex);
-    else if (strcasecmp("DSType", child->key) == 0)
-      status = cc_config_add_match_dstype(&match->dstype, child);
-    else if (strcasecmp("Type", child->key) == 0)
-      status = cf_util_get_string(child, &match->type);
-    else if (strcasecmp("Instance", child->key) == 0)
-      status = cf_util_get_string(child, &match->instance);
-    else {
-      WARNING("curl plugin: Option `%s' not allowed here.", child->key);
-      status = -1;
+    ctx->curl = curl_easy_init();
+    if (ctx->curl == NULL) {
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
     }
 
-    if (status != 0)
-      break;
-  } /* for (i = 0; i < ci->children_num; i++) */
+    CURLcode rcode = 0;
 
-  while (status == 0) {
-    if (match->regex == NULL) {
-      WARNING("curl plugin: `Regex' missing in `Match' block.");
-      status = -1;
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_NOSIGNAL, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
     }
 
-    if (match->type == NULL) {
-      WARNING("curl plugin: `Type' missing in `Match' block.");
-      status = -1;
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_WRITEFUNCTION, chttp_curl_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
     }
 
-    if (match->dstype == 0) {
-      WARNING("curl plugin: `DSType' missing in `Match' block.");
-      status = -1;
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_WRITEDATA, ctx);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
     }
 
-    break;
-  } /* while (status == 0) */
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
 
-  if (status != 0) {
-    cc_web_match_free(match);
-    return status;
-  }
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_ERRORBUFFER, ctx->curl_errbuf);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
 
-  match->match =
-      match_create_simple(match->regex, match->exclude_regex, match->dstype);
-  if (match->match == NULL) {
-    ERROR("curl plugin: match_create_simple failed.");
-    cc_web_match_free(match);
-    return -1;
-  } else {
-    web_match_t *prev;
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
 
-    prev = page->matches;
-    while ((prev != NULL) && (prev->next != NULL))
-      prev = prev->next;
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_MAXREDIRS, 50L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
 
-    if (prev == NULL)
-      page->matches = match;
-    else
-      prev->next = match;
-  }
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_IPRESOLVE, ctx->address_family);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_IPRESOLVE failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
 
-  return 0;
-} /* }}} int cc_config_add_match */
 
-static int cc_page_init_curl(web_page_t *wp) /* {{{ */
-{
-  wp->curl = curl_easy_init();
-  if (wp->curl == NULL) {
-    ERROR("curl plugin: curl_easy_init failed.");
-    return -1;
-  }
-
-  curl_easy_setopt(wp->curl, CURLOPT_NOSIGNAL, 1L);
-  curl_easy_setopt(wp->curl, CURLOPT_WRITEFUNCTION, cc_curl_callback);
-  curl_easy_setopt(wp->curl, CURLOPT_WRITEDATA, wp);
-  curl_easy_setopt(wp->curl, CURLOPT_USERAGENT, COLLECTD_USERAGENT);
-  curl_easy_setopt(wp->curl, CURLOPT_ERRORBUFFER, wp->curl_errbuf);
-  curl_easy_setopt(wp->curl, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(wp->curl, CURLOPT_MAXREDIRS, 50L);
-  curl_easy_setopt(wp->curl, CURLOPT_IPRESOLVE, wp->address_family);
-
-  if (wp->user != NULL) {
+    if (ctx->user != NULL) {
 #ifdef HAVE_CURLOPT_USERNAME
-    curl_easy_setopt(wp->curl, CURLOPT_USERNAME, wp->user);
-    curl_easy_setopt(wp->curl, CURLOPT_PASSWORD,
-                     (wp->pass == NULL) ? "" : wp->pass);
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_USERNAME, ctx->user);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERNAME failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_PASSWORD,
+                                         (ctx->pass == NULL) ? "" : ctx->pass);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_PASSWORD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
 #else
-    size_t credentials_size;
+        size_t credentials_size = strlen(ctx->user) + 2;
+        if (ctx->pass != NULL)
+            credentials_size += strlen(ctx->pass);
 
-    credentials_size = strlen(wp->user) + 2;
-    if (wp->pass != NULL)
-      credentials_size += strlen(wp->pass);
+        ctx->credentials = malloc(credentials_size);
+        if (ctx->credentials == NULL) {
+            PLUGIN_ERROR("malloc failed.");
+            return -1;
+        }
 
-    wp->credentials = malloc(credentials_size);
-    if (wp->credentials == NULL) {
-      ERROR("curl plugin: malloc failed.");
-      return -1;
-    }
+        snprintf(ctx->credentials, credentials_size, "%s:%s", ctx->user,
+                         (ctx->pass == NULL) ? "" : ctx->pass);
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_USERPWD, ctx->credentials);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
 
-    snprintf(wp->credentials, credentials_size, "%s:%s", wp->user,
-             (wp->pass == NULL) ? "" : wp->pass);
-    curl_easy_setopt(wp->curl, CURLOPT_USERPWD, wp->credentials);
 #endif
 
-    if (wp->digest)
-      curl_easy_setopt(wp->curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
-  }
+        if (ctx->digest) {
+            rcode = curl_easy_setopt(ctx->curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+            if (rcode != CURLE_OK) {
+                PLUGIN_ERROR("curl_easy_setopt CURLOPT_HTTPAUTH failed: %s",
+                             curl_easy_strerror(rcode));
+                return -1;
+            }
+        }
+    }
 
-  curl_easy_setopt(wp->curl, CURLOPT_SSL_VERIFYPEER, (long)wp->verify_peer);
-  curl_easy_setopt(wp->curl, CURLOPT_SSL_VERIFYHOST, wp->verify_host ? 2L : 0L);
-  if (wp->cacert != NULL)
-    curl_easy_setopt(wp->curl, CURLOPT_CAINFO, wp->cacert);
-  if (wp->headers != NULL)
-    curl_easy_setopt(wp->curl, CURLOPT_HTTPHEADER, wp->headers);
-  if (wp->post_body != NULL)
-    curl_easy_setopt(wp->curl, CURLOPT_POSTFIELDS, wp->post_body);
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_SSL_VERIFYPEER, (long)ctx->verify_peer);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYPEER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_SSL_VERIFYHOST, ctx->verify_host ? 2L : 0L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYHOST failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    if (ctx->cacert != NULL) {
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_CAINFO, ctx->cacert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_CAINFO failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (ctx->headers != NULL) {
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_HTTPHEADER, ctx->headers);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HTTPHEADER failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (ctx->post_body != NULL) {
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_POSTFIELDS, ctx->post_body);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_POSTFIELDS failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
 
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
-  if (wp->timeout >= 0)
-    curl_easy_setopt(wp->curl, CURLOPT_TIMEOUT_MS, (long)wp->timeout);
-  else
-    curl_easy_setopt(wp->curl, CURLOPT_TIMEOUT_MS,
-                     (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    if (ctx->timeout >= 0) {
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_TIMEOUT_MS,
+                                            (long)ctx->timeout);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    } else {
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_TIMEOUT_MS,
+                                            (long)CDTIME_T_TO_MS(plugin_get_interval()));
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
 #endif
 
-  return 0;
-} /* }}} int cc_page_init_curl */
+    return 0;
+}
 
-static int cc_config_add_page(oconfig_item_t *ci) /* {{{ */
+static int chttp_read(user_data_t *ud)
 {
-  cdtime_t interval = 0;
-  web_page_t *page;
-  int status;
 
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    WARNING("curl plugin: `Page' blocks need exactly one string argument.");
-    return -1;
-  }
-
-  page = calloc(1, sizeof(*page));
-  if (page == NULL) {
-    ERROR("curl plugin: calloc failed.");
-    return -1;
-  }
-  page->plugin_name = NULL;
-  page->url = NULL;
-  page->address_family = CURL_IPRESOLVE_WHATEVER;
-  page->user = NULL;
-  page->pass = NULL;
-  page->digest = false;
-  page->verify_peer = true;
-  page->verify_host = true;
-  page->response_time = false;
-  page->response_code = false;
-  page->timeout = -1;
-  page->stats = NULL;
-
-  page->instance = strdup(ci->values[0].value.string);
-  if (page->instance == NULL) {
-    ERROR("curl plugin: strdup failed.");
-    sfree(page);
-    return -1;
-  }
-
-  /* Process all children */
-  status = 0;
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Plugin", child->key) == 0)
-      status = cf_util_get_string(child, &page->plugin_name);
-    else if (strcasecmp("URL", child->key) == 0)
-      status = cf_util_get_string(child, &page->url);
-    else if (strcasecmp("AddressFamily", child->key) == 0) {
-      char *af = NULL;
-      status = cf_util_get_string(child, &af);
-      if (status != 0 || af == NULL) {
-        WARNING("curl plugin: Cannot parse value of `%s' "
-                "for instance `%s'.",
-                child->key, page->instance);
-      } else if (strcasecmp("any", af) == 0) {
-        page->address_family = CURL_IPRESOLVE_WHATEVER;
-      } else if (strcasecmp("ipv4", af) == 0) {
-        page->address_family = CURL_IPRESOLVE_V4;
-      } else if (strcasecmp("ipv6", af) == 0) {
-        /* If curl supports ipv6, use it. If not, log a warning and
-         * fall back to default - don't set status to non-zero.
-         */
-        curl_version_info_data *curl_info = curl_version_info(CURLVERSION_NOW);
-        if (curl_info->features & CURL_VERSION_IPV6)
-          page->address_family = CURL_IPRESOLVE_V6;
-        else
-          WARNING("curl plugin: IPv6 not supported by this libCURL. "
-                  "Using fallback `any'.");
-      } else {
-        WARNING("curl plugin: Unsupported value of `%s' "
-                "for instance `%s'.",
-                child->key, page->instance);
-        status = -1;
-      }
-      free(af);
-    } else if (strcasecmp("User", child->key) == 0)
-      status = cf_util_get_string(child, &page->user);
-    else if (strcasecmp("Password", child->key) == 0)
-      status = cf_util_get_string(child, &page->pass);
-    else if (strcasecmp("Digest", child->key) == 0)
-      status = cf_util_get_boolean(child, &page->digest);
-    else if (strcasecmp("VerifyPeer", child->key) == 0)
-      status = cf_util_get_boolean(child, &page->verify_peer);
-    else if (strcasecmp("VerifyHost", child->key) == 0)
-      status = cf_util_get_boolean(child, &page->verify_host);
-    else if (strcasecmp("MeasureResponseTime", child->key) == 0)
-      status = cf_util_get_boolean(child, &page->response_time);
-    else if (strcasecmp("MeasureResponseCode", child->key) == 0)
-      status = cf_util_get_boolean(child, &page->response_code);
-    else if (strcasecmp("CACert", child->key) == 0)
-      status = cf_util_get_string(child, &page->cacert);
-    else if (strcasecmp("Match", child->key) == 0)
-      /* Be liberal with failing matches => don't set `status'. */
-      cc_config_add_match(page, child);
-    else if (strcasecmp("Header", child->key) == 0)
-      status = cc_config_append_string("Header", &page->headers, child);
-    else if (strcasecmp("Post", child->key) == 0)
-      status = cf_util_get_string(child, &page->post_body);
-    else if (strcasecmp("Interval", child->key) == 0)
-      status = cf_util_get_cdtime(child, &interval);
-    else if (strcasecmp("Timeout", child->key) == 0)
-      status = cf_util_get_int(child, &page->timeout);
-    else if (strcasecmp("Statistics", child->key) == 0) {
-      page->stats = curl_stats_from_config(child);
-      if (page->stats == NULL)
-        status = -1;
-    } else {
-      WARNING("curl plugin: Option `%s' not allowed here.", child->key);
-      status = -1;
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("cc_read_page: Invalid user data.");
+        return -1;
     }
 
+    chttp_ctx_t *ctx = ud->data;
+
+    cdtime_t start = 0;
+    if (ctx->response_time)
+        start = cdtime();
+
+    ctx->buffer_fill = 0;
+
+    CURLcode rcode = curl_easy_setopt(ctx->curl, CURLOPT_URL, ctx->url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    int status = curl_easy_perform(ctx->curl);
+    if (status != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_perform failed with status %i: %s", status, ctx->curl_errbuf);
+        return -1;
+    }
+
+    if (ctx->response_time) {
+        metric_family_t fam = {
+            .name = ctx->metric_response_time,
+            .type = METRIC_TYPE_GAUGE,
+        };
+        double value = CDTIME_T_TO_DOUBLE(cdtime() - start);
+        metric_family_append(&fam, VALUE_GAUGE(value), &ctx->labels, NULL);
+        plugin_dispatch_metric_family(&fam, 0);
+    }
+
+    if (ctx->stats != NULL)
+        curl_stats_dispatch(ctx->stats, ctx->curl, &ctx->labels);
+
+    if (ctx->response_code) {
+        long response_code = 0;
+        status = curl_easy_getinfo(ctx->curl, CURLINFO_RESPONSE_CODE, &response_code);
+        if (status != CURLE_OK) {
+            PLUGIN_ERROR("Fetching response code failed with status %i: %s", status, ctx->curl_errbuf);
+        } else {
+            metric_family_t fam = {
+             .name = ctx->metric_response_code,
+             .type = METRIC_TYPE_GAUGE,
+            };
+            metric_family_append(&fam, VALUE_GAUGE(response_code), &ctx->labels, NULL);
+            plugin_dispatch_metric_family(&fam, 0);
+        }
+    }
+
+    status = plugin_match(ctx->matches, ctx->buffer);
     if (status != 0)
-      break;
-  } /* for (i = 0; i < ci->children_num; i++) */
+        PLUGIN_WARNING("plugin_match failed.");
 
-  /* Additionial sanity checks and libCURL initialization. */
-  while (status == 0) {
-    if (page->url == NULL) {
-      WARNING("curl plugin: `URL' missing in `Page' block.");
-      status = -1;
+    plugin_match_dispatch(ctx->matches, true);
+
+    return 0;
+}
+
+static int chttp_config_instance(config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_WARNING("`Page' blocks need exactly one string argument.");
+        return -1;
     }
 
-    if (page->matches == NULL && page->stats == NULL && !page->response_time &&
-        !page->response_code) {
-      assert(page->instance != NULL);
-      WARNING("curl plugin: No (valid) `Match' block "
-              "or Statistics or MeasureResponseTime or MeasureResponseCode "
-              "within `Page' block `%s'.",
-              page->instance);
-      status = -1;
+    chttp_ctx_t *ctx= calloc(1, sizeof(*ctx));
+    if (ctx== NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
+    ctx->address_family = CURL_IPRESOLVE_WHATEVER;
+    ctx->digest = false;
+    ctx->verify_peer = true;
+    ctx->verify_host = true;
+    ctx->response_time = false;
+    ctx->response_code = false;
+    ctx->timeout = -1;
+
+    ctx->instance = strdup(ci->values[0].value.string);
+    if (ctx->instance == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        free(ctx);
+        return -1;
+    }
+
+    /* Process all children */
+    cdtime_t interval = 0;
+    int status = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("metric-prefix", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->metric_prefix);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &ctx->labels);
+        } else if (strcasecmp("url", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->url);
+        } else if (strcasecmp("address-family", child->key) == 0) {
+            char *af = NULL;
+            status = cf_util_get_string(child, &af);
+            if (status != 0 || af == NULL) {
+                PLUGIN_WARNING("Cannot parse value of `%s' for instance `%s'.",
+                               child->key, ctx->instance);
+            } else if (strcasecmp("any", af) == 0) {
+                ctx->address_family = CURL_IPRESOLVE_WHATEVER;
+            } else if (strcasecmp("ipv4", af) == 0) {
+                ctx->address_family = CURL_IPRESOLVE_V4;
+            } else if (strcasecmp("ipv6", af) == 0) {
+                /* If curl supports ipv6, use it. If not, log a warning and
+                 * fall back to default - don't set status to non-zero.
+                 */
+                curl_version_info_data *curl_info = curl_version_info(CURLVERSION_NOW);
+                if (curl_info->features & CURL_VERSION_IPV6)
+                    ctx->address_family = CURL_IPRESOLVE_V6;
+                else
+                    PLUGIN_WARNING("IPv6 not supported by this libCURL. "
+                                    "Using fallback `any'.");
+            } else {
+                PLUGIN_WARNING("Unsupported value of `%s' "
+                                "for instance `%s'.",
+                                child->key, ctx->instance);
+                status = -1;
+            }
+            free(af);
+        } else if (strcasecmp("user", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->user);
+        } else if (strcasecmp("password", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->pass);
+        } else if (strcasecmp("digest", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->digest);
+        } else if (strcasecmp("verify-peer", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->verify_peer);
+        } else if (strcasecmp("verify-host", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->verify_host);
+        } else if (strcasecmp("measure-response-time", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->response_time);
+        } else if (strcasecmp("measure-response-code", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->response_code);
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->cacert);
+        } else if (strcasecmp("match", child->key) == 0) {
+            status = plugin_match_config(child, &ctx->matches);
+        } else if (strcasecmp("header", child->key) == 0) {
+            status = chttp_config_append_string("Header", &ctx->headers, child);
+        } else if (strcasecmp("post", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->post_body);
+        } else if (strcasecmp("interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_int(child, &ctx->timeout);
+        } else if (strcasecmp("statistics", child->key) == 0) {
+            status = curl_stats_from_config(child, "http_", &ctx->stats);
+        } else {
+            PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    /* Additionial sanity checks and libCURL initialization. */
+    while (status == 0) {
+        if (ctx->url == NULL) {
+            PLUGIN_WARNING("`URL' missing in `Page' block.");
+            status = -1;
+            break;
+        }
+
+        if ((ctx->matches == NULL) && (ctx->stats == NULL) &&
+            !ctx->response_time && !ctx->response_code) {
+            assert(ctx->instance != NULL);
+            PLUGIN_WARNING("No (valid) 'match' block "
+                           "or 'statistics' or 'measure-response-time' or 'measure-response-code' "
+                           "within `Page' block `%s'.",
+                           ctx->instance);
+            status = -1;
+            break;
+        }
+
+        if (ctx->response_time) {
+            if (ctx->metric_prefix == NULL)
+                ctx->metric_response_time = strdup("http_response_time_seconds");
+            else
+                ctx->metric_response_time = ssnprintf_alloc("%s_response_time_seconds",
+                                                             ctx->metric_prefix);
+
+            if (ctx->metric_response_time == NULL) {
+                PLUGIN_ERROR("alloc metric response time string failed.");
+                status = -1;
+                break;
+            }
+        }
+
+        if (ctx->response_code) {
+            if (ctx->metric_prefix == NULL)
+                ctx->metric_response_code = strdup("http_response_code");
+            else
+                ctx->metric_response_code = ssnprintf_alloc("%s_response_code",
+                                                             ctx->metric_prefix);
+
+            if (ctx->metric_response_code == NULL) {
+                PLUGIN_ERROR("alloc metric response code string failed.");
+                status = -1;
+                break;
+            }
+        }
+
+        if (status == 0)
+            status = cc_page_init_curl(ctx);
+
+        break;
     }
 
     if (status == 0)
-      status = cc_page_init_curl(page);
+        status = label_set_add(&ctx->labels, true, "instance", ctx->instance);
 
-    break;
-  } /* while (status == 0) */
-
-  if (status != 0) {
-    cc_web_page_free(page);
-    return status;
-  }
-
-  /* If all went well, register this page for reading */
-  char *cb_name = ssnprintf_alloc("curl-%s-%s", page->instance, page->url);
-
-  plugin_register_complex_read(/* group = */ NULL, cb_name, cc_read_page,
-                               interval,
-                               &(user_data_t){
-                                   .data = page,
-                                   .free_func = cc_web_page_free,
-                               });
-  sfree(cb_name);
-
-  return 0;
-} /* }}} int cc_config_add_page */
-
-static int cc_config(oconfig_item_t *ci) /* {{{ */
-{
-  int success;
-  int errors;
-  int status;
-
-  success = 0;
-  errors = 0;
-
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Page", child->key) == 0) {
-      status = cc_config_add_page(child);
-      if (status == 0)
-        success++;
-      else
-        errors++;
-    } else {
-      WARNING("curl plugin: Option `%s' not allowed here.", child->key);
-      errors++;
-    }
-  }
-
-  if ((success == 0) && (errors > 0)) {
-    ERROR("curl plugin: All statements failed.");
-    return -1;
-  }
-
-  return 0;
-} /* }}} int cc_config */
-
-static int cc_init(void) /* {{{ */
-{
-  curl_global_init(CURL_GLOBAL_SSL);
-  return 0;
-} /* }}} int cc_init */
-
-static void cc_submit(const web_page_t *wp, const web_match_t *wm, /* {{{ */
-                      value_t value) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &value;
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, (wp->plugin_name != NULL) ? wp->plugin_name : "curl",
-           sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, wp->instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, wm->type, sizeof(vl.type));
-  if (wm->instance != NULL)
-    sstrncpy(vl.type_instance, wm->instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-} /* }}} void cc_submit */
-
-static void cc_submit_response_code(const web_page_t *wp, long code) /* {{{ */
-{
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = (gauge_t)code};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, (wp->plugin_name != NULL) ? wp->plugin_name : "curl",
-           sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, wp->instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, "response_code", sizeof(vl.type));
-
-  plugin_dispatch_values(&vl);
-} /* }}} void cc_submit_response_code */
-
-static void cc_submit_response_time(const web_page_t *wp, /* {{{ */
-                                    gauge_t response_time) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = response_time};
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, (wp->plugin_name != NULL) ? wp->plugin_name : "curl",
-           sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, wp->instance, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, "response_time", sizeof(vl.type));
-
-  plugin_dispatch_values(&vl);
-} /* }}} void cc_submit_response_time */
-
-static int cc_read_page(user_data_t *ud) /* {{{ */
-{
-
-  if ((ud == NULL) || (ud->data == NULL)) {
-    ERROR("curl plugin: cc_read_page: Invalid user data.");
-    return -1;
-  }
-
-  web_page_t *wp = (web_page_t *)ud->data;
-
-  int status;
-  cdtime_t start = 0;
-
-  if (wp->response_time)
-    start = cdtime();
-
-  wp->buffer_fill = 0;
-
-  curl_easy_setopt(wp->curl, CURLOPT_URL, wp->url);
-
-  status = curl_easy_perform(wp->curl);
-  if (status != CURLE_OK) {
-    ERROR("curl plugin: curl_easy_perform failed with status %i: %s", status,
-          wp->curl_errbuf);
-    return -1;
-  }
-
-  if (wp->response_time)
-    cc_submit_response_time(wp, CDTIME_T_TO_DOUBLE(cdtime() - start));
-  if (wp->stats != NULL)
-    curl_stats_dispatch(wp->stats, wp->curl, NULL, "curl", wp->instance);
-
-  if (wp->response_code) {
-    long response_code = 0;
-    status =
-        curl_easy_getinfo(wp->curl, CURLINFO_RESPONSE_CODE, &response_code);
-    if (status != CURLE_OK) {
-      ERROR("curl plugin: Fetching response code failed with status %i: %s",
-            status, wp->curl_errbuf);
-    } else {
-      cc_submit_response_code(wp, response_code);
-    }
-  }
-
-  for (web_match_t *wm = wp->matches; wm != NULL; wm = wm->next) {
-    cu_match_value_t *mv;
-
-    status = match_apply(wm->match, wp->buffer);
     if (status != 0) {
-      WARNING("curl plugin: match_apply failed.");
-      continue;
+        chttp_free(ctx);
+        return status;
     }
 
-    mv = match_get_user_data(wm->match);
-    if (mv == NULL) {
-      WARNING("curl plugin: match_get_user_data returned NULL.");
-      continue;
+    return plugin_register_complex_read("http", ctx->instance, chttp_read, interval,
+                                        &(user_data_t){.data=ctx, .free_func=chttp_free});
+}
+
+static int chttp_config(config_item_t *ci)
+{
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("instance", child->key) == 0) {
+            int status = chttp_config_instance(child);
+            if (status != 0)
+                return -1;
+        } else {
+            PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
+            return -1;
+        }
     }
 
-    cc_submit(wp, wm, mv->value);
-    match_value_reset(mv);
-  } /* for (wm = wp->matches; wm != NULL; wm = wm->next) */
+    return 0;
+}
 
-  return 0;
-} /* }}} int cc_read_page */
+static int chttp_init(void)
+{
+    curl_global_init(CURL_GLOBAL_SSL);
+    return 0;
+}
 
-void module_register(void) {
-  plugin_register_complex_config("curl", cc_config);
-  plugin_register_init("curl", cc_init);
-} /* void module_register */
+void module_register(void)
+{
+    plugin_register_config("http", chttp_config);
+    plugin_register_init("http", chttp_init);
+}

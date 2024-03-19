@@ -1,0 +1,191 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-http 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd http man page"
+.SH NAME
+ncollectd-http \- Documentation of ncollectd's http plugin
+.SH SYNOPSIS
+\fBload-plugin\fP http
+.br
+\fBplugin\fP http {
+    \fBinstance\fP \fIinstance\fP {
+        \fBurl\fP \fIurl\fP
+        \fBaddress-family\fP \fIany|ipv4|ipv6\fP
+        \fBuser\fP \fIusername\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBdigest\fP \fItrue|false\fP
+        \fBverify-peer\fP \fItrue|false\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBmeasure-response-time\fP \fItrue|false\fP
+        \fBmeasure-response-code\fP \fItrue|false\fP
+        \fBca-cert\fP \fI/path/to/ca-cert\fP
+        \fBheader\fP \fIheader\fP
+        \fBpost\fP \fIdata\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBcollect\fP \fIflags\fP
+        \fBmatch\fP \fItype\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBhttp\fP plugin uses the \fBlibcurl\fP to read web pages
+and the match infrastructure to obtain metrics from data.
+.PP
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
+a web page and one or more "matches" to be performed on the returned data. The
+string argument to the \fBinstance\fP block is used as instance label.
+.PP
+The following options are valid within \fBinstance\fP blocks:
+.PP
+.TP
+\fBurl\fP \fIurl\fP
+URL of the web site to retrieve.
+.TP
+\fBaddress-family\fP \fIany|ipv4|ipv6\fP
+IP version to resolve URL to. Useful in cases when hostname in URL resolves
+to both IPv4 and IPv6 addresses, and you are interested in using one of them
+specifically.
+Use \fIipv4\fP to enforce IPv4, \fIipv6\fP to enforce IPv6, or \fIany\fP to keep the
+default behavior of resolving addresses to all IP versions your system allows.
+If \fBlibcurl\fP is compiled without IPv6 support, using \fIipv6\fP will result in
+a warning and fallback to \fIany\fP.
+.TP
+\fBuser\fP \fIusername\fP
+Username to use if authorization is required to read the page.
+.TP
+\fBpassword\fP \fIpassword\fP
+Password to use if authorization is required to read the page.
+.TP
+\fBdigest\fP \fItrue|false\fP
+Enable HTTP digest authentication.
+.TP
+\fBverify-peer\fP \fItrue|false\fP
+Enable or disable peer SSL certificate verification. See
+.UR http://curl.haxx.se/docs/sslcerts.html
+.UE
+for details. Enabled by default.
+.TP
+\fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification. If enabled, the plugin checks if
+the \f(CWCommon Name\fP or a \f(CWSubject Alternate Name\fP field of the SSL certificate
+matches the host name provided by the \fBurl\fP option. If this identity check
+fails, the connection is aborted. Obviously, only works when connecting to a
+SSL enabled server. Enabled by default.
+.TP
+\fBmeasure-response-time\fP \fItrue|false\fP
+Measure response time for the request. If this setting is enabled, \fBmatch\fP
+blocks (see below) are optional. Disabled by default.
+
+Beware that requests will get aborted if they take too long to complete. Adjust
+\fBtimeout\fP accordingly if you expect \fBmeasure-response-time\fP to report such
+slow requests.
+
+This option is similar to enabling the \fBtotal-time\fP statistic but it's
+measured by ncollectd instead of cURL.
+.TP
+\fBmeasure-response-code\fP \fItrue|false\fP
+Measure response code for the request. If this setting is enabled, \fBmatch\fP
+blocks (see below) are optional. Disabled by default.
+.TP
+\fBca-cert\fP \fI/path/to/ca-cert\fP
+File that holds one or more SSL certificates. If you want to use HTTPS you will
+possibly need this option. What CA certificates come bundled with \fBlibcurl\fP
+and are checked by default depends on the distribution you use.
+.TP
+\fBheader\fP \fIheader\fP
+A HTTP header to add to the request. Multiple headers are added if this option
+is specified more than once.
+.TP
+\fBpost\fP \fIdata\fP
+Specifies that the HTTP operation should be a POST instead of a GET. The
+complete data to be posted is given as the argument.  This option will usually
+need to be accompanied by a \fBheader\fP option to set an appropriate
+\f(CWContent-Type\fP for the post body (e.g. to \f(CWapplication/x-www-form-urlencoded\fP).
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBurl\fP, in
+seconds. By default, the configured \fBinterval\fP is used to set the
+timeout.
+If \fBtimeout\fP is bigger than the \fBinterval\fP, keep in mind that each slow
+network connection will stall one read thread. Adjust the \fBread-threads\fP global
+setting accordingly to prevent this from blocking other plugins.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name in the \fBmatch\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBinstance\fP block.
+.TP
+\fBmatch\fP \fItype\fP
+One or more \fBmatch\fP blocks that define how to match information in the data
+returned by \fIlibcurl\fP.  If the \fBmeasure-response-time\fP or \fBmeasure-response-code\fP
+options are set to \fItrue\fP, \fBmatch\fP blocks are optional.
+.TP
+\fBcollect\fP \fIflags\fP
+.RS
+.TP
+\fBtotal_time\fP
+Total time of the transfer, including name resolving, TCP connect, etc.
+.TP
+\fBnamelookup_time\fP
+Time it took from the start until name resolving was completed.
+.TP
+\fBconnect_time\fP
+Time it took from the start until the connect to the remote host (or proxy)
+was completed.
+.TP
+\fBpretransfer_time\fP
+Time it took from the start until just before the transfer begins.
+.TP
+\fBsize_upload\fP
+The total amount of bytes that were uploaded.
+.TP
+\fBsize_download\fP
+The total amount of bytes that were downloaded.
+.TP
+\fBspeed_download\fP
+The average download speed that curl measured for the complete download.
+.TP
+\fBspeed_upload\fP
+The average upload speed that curl measured for the complete upload.
+.TP
+\fBheader_size\fP
+The total size of all the headers received.
+.TP
+\fBrequest_size\fP
+The total size of the issued requests.
+.TP
+\fBcontent_length_download\fP
+The content-length of the download.
+.TP
+\fBcontent_length_upload\fP
+The specified size of the upload.
+.TP
+\fBstarttransfer_time\fP
+Time it took from the start until the first byte was received.
+.TP
+\fBredirect_time\fP
+Time it took for all redirection steps include name lookup, connect,
+pre-transfer and transfer before final transaction was started.
+.TP
+\fBredirect_count\fP
+The total number of redirections that were actually followed.
+.TP
+\fBnum_connects\fP
+The number of new connections that were created to achieve the transfer.
+.TP
+\fBappconnect_time\fP
+Time it took from the start until the SSL connect/handshake to the remote
+host was completed.
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
