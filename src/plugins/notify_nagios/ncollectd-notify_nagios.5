@@ -1,0 +1,22 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-notify_nagios 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd notify_nagios man page"
+.SH NAME
+ncollectd-notify_nagios \- Documentation of ncollectd's notify_nagios plugin
+.SH SYNOPSIS
+\fBload-plugin\fP notify_nagios
+.br
+\fBplugin\fP notify_nagios {
+    \fBcommand-file\fP \fIpath\fP
+.br
+}
+.SH DESCRIPTION
+The \fBnotify_nagios\fP plugin writes notifications to Nagios' \fIcommand file\fP as
+a \fIpassive service check result\fP.
+.PP
+Available configuration options:
+.TP
+\fBcommand-file\fP \fIpath\fP
+Sets the \fIcommand file\fP to write to. Defaults to \f(CW/usr/local/nagios/var/rw/nagios.cmd\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

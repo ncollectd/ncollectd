@@ -1,38 +1,14 @@
-/**
- * collectd - src/notify_nagios.c
- * Copyright (C) 2015       Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- */
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2015  Florian octo Forster
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
-#define NAGIOS_OK 0
-#define NAGIOS_WARNING 1
+#define NAGIOS_OK       0
+#define NAGIOS_WARNING  1
 #define NAGIOS_CRITICAL 2
-#define NAGIOS_UNKNOWN 3
+#define NAGIOS_UNKNOWN  3
 
 #ifndef NAGIOS_COMMAND_FILE
 #define NAGIOS_COMMAND_FILE "/usr/local/nagios/var/rw/nagios.cmd"
@@ -40,110 +16,137 @@
 
 static char *nagios_command_file;
 
-static int nagios_config(oconfig_item_t *ci) /* {{{ */
+static int nagios_print(char const *buffer)
 {
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
+    char const *file = NAGIOS_COMMAND_FILE;
+    int fd;
+    int status;
+    struct flock lock = {0};
 
-    if (strcasecmp("CommandFile", child->key) == 0)
-      cf_util_get_string(child, &nagios_command_file);
-    else
-      WARNING("notify_nagios plugin: Ignoring unknown config option \"%s\".",
-              child->key);
-  }
+    if (nagios_command_file != NULL)
+        file = nagios_command_file;
 
-  return 0;
-} /* }}} nagios_config */
+    fd = open(file, O_WRONLY | O_APPEND);
+    if (fd < 0) {
+        status = errno;
+        PLUGIN_ERROR("Opening \"%s\" failed: %s", file, STRERRNO);
+        return status;
+    }
 
-static int nagios_print(char const *buffer) /* {{{ */
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_END;
+
+    status = fcntl(fd, F_GETLK, &lock);
+    if (status != 0) {
+        status = errno;
+        PLUGIN_ERROR("Failed to acquire write lock on \"%s\": %s", file, STRERRNO);
+        close(fd);
+        return status;
+    }
+
+    status = (int)lseek(fd, 0, SEEK_END);
+    if (status == -1) {
+        status = errno;
+        PLUGIN_ERROR("Seeking to end of \"%s\" failed: %s", file, STRERRNO);
+        close(fd);
+        return status;
+    }
+
+    status = (int)swrite(fd, buffer, strlen(buffer));
+    if (status != 0) {
+        status = errno;
+        PLUGIN_ERROR("Writing to \"%s\" failed: %s", file, STRERRNO);
+        close(fd);
+        return status;
+    }
+
+    close(fd);
+    return status;
+}
+
+// [<timestamp>] PROCESS_SERVICE_CHECK_RESULT;<host_name>;<svc_description>;<return_code>;<plugin_output>
+static int nagios_notify(const notification_t *n, __attribute__((unused)) user_data_t *user_data)
 {
-  char const *file = NAGIOS_COMMAND_FILE;
-  int fd;
-  int status;
-  struct flock lock = {0};
+    int status = 0;
 
-  if (nagios_command_file != NULL)
-    file = nagios_command_file;
+    strbuf_t buf = STRBUF_CREATE;
 
-  fd = open(file, O_WRONLY | O_APPEND);
-  if (fd < 0) {
-    status = errno;
-    ERROR("notify_nagios plugin: Opening \"%s\" failed: %s", file, STRERRNO);
+    status |= strbuf_putchar(&buf, '[');
+    status |= strbuf_putuint(&buf, CDTIME_T_TO_TIME_T(n->time));
+    status |= strbuf_putstr(&buf, "] PROCESS_SERVICE_CHECK_RESULT;");
+    label_pair_t *pair = label_set_read(n->label, "hostname");
+    if (pair != NULL)
+        status |= strbuf_putstr(&buf, pair->value);
+    status |= strbuf_putchar(&buf, ';');
+    for (size_t i = 0; i < n->label.num; i++) {
+        if (strcmp(n->label.ptr[i].name, "hostname") != 0) {
+            if (i != 0)
+                status |= strbuf_putchar(&buf, ',');
+            status |= strbuf_putstr(&buf, n->label.ptr[i].name);
+            status |= strbuf_putstr(&buf, "=\"");
+            // TODO escape ';'
+            status |= strbuf_putescape_label(&buf, n->label.ptr[i].value);
+            status |= strbuf_putchar(&buf, '"');
+        }
+    }
+    status |= strbuf_putchar(&buf, ';');
+    int code;
+    switch (n->severity) {
+    case NOTIF_OKAY:
+        code = NAGIOS_OK;
+        break;
+    case NOTIF_WARNING:
+        code = NAGIOS_WARNING;
+        break;
+    case NOTIF_FAILURE:
+        code = NAGIOS_CRITICAL;
+        break;
+    default:
+        code = NAGIOS_UNKNOWN;
+        break;
+    }
+    status |= strbuf_putint(&buf, code);
+    status |= strbuf_putchar(&buf, ';');
+    pair = label_set_read(n->annotation, "message");
+    if (pair != NULL)
+        status |= strbuf_putstr(&buf, pair->value);
+    status |= strbuf_putchar(&buf, '\n');
+
+    if (status != 0) {
+        strbuf_destroy(&buf);
+        return status;
+    }
+
+    status = nagios_print(buf.ptr);
+
+    strbuf_destroy(&buf);
+
     return status;
-  }
+}
 
-  lock.l_type = F_WRLCK;
-  lock.l_whence = SEEK_END;
+static int nagios_config(config_item_t *ci)
+{
+    int status = 0;
 
-  status = fcntl(fd, F_GETLK, &lock);
-  if (status != 0) {
-    status = errno;
-    ERROR("notify_nagios plugin: Failed to acquire write lock on \"%s\": %s",
-          file, STRERRNO);
-    close(fd);
-    return status;
-  }
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-  status = (int)lseek(fd, 0, SEEK_END);
-  if (status == -1) {
-    status = errno;
-    ERROR("notify_nagios plugin: Seeking to end of \"%s\" failed: %s", file,
-          STRERRNO);
-    close(fd);
-    return status;
-  }
+        if (strcasecmp("command-file", child->key) == 0) {
+            status = cf_util_get_string(child, &nagios_command_file);
+        } else {
+            PLUGIN_ERROR("Unknown config option \"%s\".", child->key);
+            status = -1;
+        }
 
-  status = (int)swrite(fd, buffer, strlen(buffer));
-  if (status != 0) {
-    status = errno;
-    ERROR("notify_nagios plugin: Writing to \"%s\" failed: %s", file, STRERRNO);
-    close(fd);
-    return status;
-  }
+        if (status != 0)
+            return -1;
+    }
 
-  close(fd);
-  return status;
-} /* }}} int nagios_print */
+    return 0;
+}
 
-static int nagios_notify(const notification_t *n, /* {{{ */
-                         __attribute__((unused)) user_data_t *user_data) {
-  char svc_description[4 * DATA_MAX_NAME_LEN];
-  char buffer[4096];
-  int code;
-  int status;
-
-  status = format_name(svc_description, (int)sizeof(svc_description),
-                       /* host */ "", n->plugin, n->plugin_instance, n->type,
-                       n->type_instance);
-  if (status != 0) {
-    ERROR("notify_nagios plugin: Formatting service name failed.");
-    return status;
-  }
-
-  switch (n->severity) {
-  case NOTIF_OKAY:
-    code = NAGIOS_OK;
-    break;
-  case NOTIF_WARNING:
-    code = NAGIOS_WARNING;
-    break;
-  case NOTIF_FAILURE:
-    code = NAGIOS_CRITICAL;
-    break;
-  default:
-    code = NAGIOS_UNKNOWN;
-    break;
-  }
-
-  snprintf(buffer, sizeof(buffer),
-           "[%.0f] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",
-           CDTIME_T_TO_DOUBLE(n->time), n->host, &svc_description[1], code,
-           n->message);
-
-  return nagios_print(buffer);
-} /* }}} int nagios_notify */
-
-void module_register(void) {
-  plugin_register_complex_config("notify_nagios", nagios_config);
-  plugin_register_notification("notify_nagios", nagios_notify, NULL);
-} /* void module_register (void) */
+void module_register(void)
+{
+    plugin_register_config("notify_nagios", nagios_config);
+    plugin_register_notification(NULL, "notify_nagios", nagios_notify, NULL);
+}
