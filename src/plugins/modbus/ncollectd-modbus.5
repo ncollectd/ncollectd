@@ -1,0 +1,165 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-modbus 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd modbus man page"
+.SH NAME
+ncollectd-modbus \- Documentation of ncollectd's modbus plugin
+.SH SYNOPSIS
+\fBload-plugin\fP modbus
+.br
+\fBplugin\fP modbus {
+    \fBdata\fP \fIdata-name\fP {
+        \fBregister-base\fP \fIbase\fP
+        \fBregister-type\fP \fIint16|int32|int64|uint16|uint32|uint64|float|int32le|int32le|floatle\fP
+        \fBregister-cmd\fP \fIread-holding|read-input\fP
+        \fBmetric\fP \fImetric\fP
+        \fBhelp\fP \fIhelp\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBscale\fP \fIscale\fP
+        \fBshift\fP \fIshift\fP
+    }
+    \fBhost\fP \fIhost\fP {
+        \fBaddress\fP \fIaddress\fP
+        \fBport\fP \fIport\fP
+        \fBdevice\fP \fIdevicenode\fP
+        \fBbaudrate\fP \fIbaudrate\fP
+        \fBuart-type\fP \fIRS485|RS422|RS232\fP
+        \fBinterval\fP \fIinterval\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBslave\fP \fIslave\fP {
+            \fBmetric-prefix\fP \fIprefix\fP
+            \fBlabel\fP \fIkey\fP \fIvalue\fP
+            \fBcollect\fP \fIdata-name\fP
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmodbus\fP connects to a Modbus "slave" via Modbus/TCP or Modbus/RTU and
+reads register values. It supports reading single registers (unsigned 16 bit
+values), large integer values (unsigned 32 bit and 64 bit values) and
+floating point values (two registers interpreted as IEEE floats in big endian
+notation).
+.TP
+\fBdata\fP \fIname\fP
+Data blocks define a mapping between register numbers and the metrics used by
+\fIncollectd\fP.
+
+Within \fBdata\fP blocks, the following options are allowed:
+.RS
+.TP
+\fBregister-base\fP \fInumber\fP
+Configures the base register to read from the device. If the option
+\fBregister-type\fP has been set to \fBuint32\fP or \fBfloat\fP, this and the next
+register will be read (the register number is increased by one).
+.TP
+\fBregister-type\fP \fIint16|int32|int64|uint16|uint32|uint64|float|int32le|int32le|floatle\fP
+Specifies what kind of data is returned by the device. This defaults to
+\fBuint16\fP.  If the type is \fBint32\fP, \fBint32le\fP, \fBuint32\fP, \fBint32le\fP
+\fBfloat\fP or \fBfloatle\fP, two 16 bit registers at \fBregister-base\fP
+and \fBregister-rase+1\fP will be read and the data is combined into one
+32 value. For \fBint32\fP, \fBuint32\fP and \fBfloat\fP the most significant
+16 bits are in the register at \fBregister-base\fP and the least
+significant 16 bits are in the register at \fBregister-base+1\fP.
+For \fBint32le\fP, \fBuint32le\fP, or \fBfloat32le\fP, the high and low order
+registers are swapped with the most significant 16 bits in
+the \fBregister-base+1\fP and the least significant 16 bits in
+\fBregister-base\fP. If the type is \fBint64\fP or \fBuint64\fP, four 16 bit
+registers at \fBregister-base\fP, \fBregister-base+1\fP, \fBregister-base+2\fP and
+\fBregister-base+3\fP will be read and the data combined into one
+64 value.
+.TP
+\fBregister-cmd\fP \fIread-holding|read-input\fP
+Specifies register type to be collected from device. Works only with libmodbus
+2.9.2 or higher. Defaults to \fBread-holding\fP.
+.TP
+\fBmetric\fP \fImetric\fP
+Set the metric name.
+.TP
+\fBhelp\fP \fIhelp\fP
+Set the \fBhelp\fP text for the metric.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBdata\fP block.
+.TP
+\fBtype\fP \fIgauge|counter|unknow\fP
+The \fBtype\fP for the metric. Must be \fIgauge\fP, \fIcounter\fP or \fIunknow\fP.
+If not set is \fIunknow\fP.
+There must be exactly one \fBtype\fP option inside each \fBdata\fP block.
+.TP
+\fBscale\fP \fIvalue\fP
+The values taken from device are multiplied by \fIvalue\fP. The field is optional
+and the default is \fB1.0\fP.
+.TP
+\fBshift\fP \fIvalue\fP
+\fIValue\fP is added to values from device after they have been multiplied by
+\fBscale\fP value. The field is optional and the default value is \fB0.0\fP.
+.RE
+.TP
+\fBhost\fP \fIname\fB
+Host blocks are used to specify to which hosts to connect and what data to read
+from their "slaves". The string argument \fIname\fP is used as hostname when
+dispatching the values to \fIncollectd\fP.
+
+Within \fBhost\fP blocks, the following options are allowed:
+.RS
+.TP
+\fBaddress\fP \fIhostname\fP
+For Modbus/TCP, specifies the node name (the actual network address) used to
+connect to the host. This may be an IP address or a hostname. Please note that
+the used \fIlibmodbus\fP library only supports IPv4 at the moment.
+.TP
+\fBport\fP \fIservice\fP
+For Modbus/TCP, specifies the port used to connect to the host. The port can
+either be given as a number or as a service name. Please note that the
+\fIservice\fP argument must be a string, even if ports are given in their numerical
+form. Defaults to "502".
+.TP
+\fBdevice\fP \fIdevicenode\fP
+For Modbus/RTU, specifies the path to the serial device being used.
+.TP
+\fBbaudrate\fP \fIbaudrate\fP
+For Modbus/RTU, specifies the baud rate of the serial device.
+Note, connections currently support only 8/N/1.
+.TP
+\fBuart-type\fP \fIRS485|RS422|RS232\fP
+For Modbus/RTU, specifies the type of the serial device.
+RS232, RS422 and RS485 are supported. Defaults to RS232.
+Available only on Linux systems with libmodbus>=2.9.4.
+.TP
+\fBinterval\fP \fIinterval\fP
+Sets the interval (in seconds) in which the values will be collected from this
+host. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name in the \fBdata\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBhost\fP block.
+.TP
+\fBslave\fP \fIsalve\fP
+Over each connection, multiple Modbus devices may be reached. The slave ID
+is used to specify which device should be addressed. For each device you want
+to query, one \fBslave\fP block must be given.
+
+Within \fBslave\fP blocks, the following options are allowed:
+.RS
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name in the \fBdata\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBslave\fP block.
+.TP
+\fBcollect\fP \fIdata-name\fP
+Specifies which data to retrieve from the device. \fIdata-name\fP must be the same
+string as the \fIname\fP argument passed to a \fBdata\fP block. You can specify this
+option multiple times to collect more than one value from a slave. At least one
+\fBcollect\fP option is mandatory.
+.RE
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
