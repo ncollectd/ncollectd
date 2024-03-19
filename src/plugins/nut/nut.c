@@ -1,398 +1,492 @@
-/**
- * collectd - src/nut.c
- * Copyright (C) 2007       Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Pavel Rochnyak <pavel2000 ngs.ru>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2007 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Pavel Rochnyak <pavel2000 ngs.ru>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
 #include <upsclient.h>
 
-#if HAVE_UPSCONN_T
-typedef UPSCONN_t collectd_upsconn_t;
-#elif HAVE_UPSCONN
-typedef UPSCONN collectd_upsconn_t;
+#ifdef HAVE_UPSCONN_T
+typedef UPSCONN_t ncollectd_upsconn_t;
+#elif defined(HAVE_UPSCONN)
+typedef UPSCONN ncollectd_upsconn_t;
 #else
 #error "Unable to determine the UPS connection type."
 #endif
 
-struct nut_ups_s;
-typedef struct nut_ups_s nut_ups_t;
-struct nut_ups_s {
-  collectd_upsconn_t *conn;
-  char *upsname;
-  char *hostname;
-  int port;
-  nut_ups_t *next;
+enum {
+    FAM_UPS_POWER_VOLTS_AMPS,
+    FAM_UPS_REALPOWER_WATTS,
+    FAM_UPS_TEMPERATURE_CELSIUS,
+    FAM_UPS_LOAD_RATIO,
+    FAM_UPS_INPUT_VOLTAGE_VOLTS,
+    FAM_UPS_INPUT_CURRENT_AMPS,
+    FAM_UPS_INPUT_FREQUENCY_HZ,
+    FAM_UPS_INPUT_LOAD_RATIO,
+    FAM_UPS_INPUT_REALPOWER_WATTS,
+    FAM_UPS_INPUT_POWER_VOLTS_AMPS,
+    FAM_UPS_OUTPUT_VOLTAGE_VOLTS,
+    FAM_UPS_OUTPUT_CURRENT_AMPS,
+    FAM_UPS_OUTPUT_FREQUENCY_HZ,
+    FAM_UPS_OUTPUT_REALPOWER_WATTS,
+    FAM_UPS_OUTPUT_POWER_VOLTS_AMPS,
+    FAM_UPS_BATTERY_CHARGE_RATIO,
+    FAM_UPS_BATTERY_VOLTAGE_VOLTS,
+    FAM_UPS_BATTERY_CAPACITY_AMPS_HOUR,
+    FAM_UPS_BATTERY_CURRENT_AMPS,
+    FAM_UPS_BATTERY_TEMPERATURE_CELSIUS,
+    FAM_UPS_BATTERY_RUNTIME_SECONDS,
+    FAM_UPS_AMBIENT_TEMPERATURE_CELSIUS,
+    FAM_UPS_AMBIENT_HUMIDITY_RATIO,
+    FAM_UPS_MAX,
 };
 
-static const char *config_keys[] = {"UPS", "FORCESSL", "VERIFYPEER", "CAPATH",
-                                    "CONNECTTIMEOUT"};
-static int config_keys_num = STATIC_ARRAY_SIZE(config_keys);
-static int force_ssl;   // Initialized to default of 0 (false)
-static int verify_peer; // Initialized to default of 0 (false)
-static int ssl_flags = UPSCLI_CONN_TRYSSL;
-static int connect_timeout = -1;
+static metric_family_t fams[FAM_UPS_MAX] = {
+    [FAM_UPS_POWER_VOLTS_AMPS] = {
+        .name = "ups_power_volts_amps",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current value of apparent power (Volt-Amps)",
+    },
+    [FAM_UPS_REALPOWER_WATTS] = {
+        .name = "ups_realpower_watts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current value of real power (Watts)",
+    },
+    [FAM_UPS_TEMPERATURE_CELSIUS] = {
+        .name = "ups_temperature_celsius",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "UPS temperature (degrees C)",
+    },
+    [FAM_UPS_LOAD_RATIO] = {
+        .name = "ups_load_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Load on UPS (percent)",
+    },
+    [FAM_UPS_INPUT_VOLTAGE_VOLTS] = {
+        .name = "ups_input_voltage_volts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Input voltage (V)",
+    },
+    [FAM_UPS_INPUT_CURRENT_AMPS] = {
+        .name = "ups_input_current_amps",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Input current (A)",
+    },
+    [FAM_UPS_INPUT_FREQUENCY_HZ] = {
+        .name = "ups_input_frequency_hz",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Input line frequency (Hz)",
+    },
+    [FAM_UPS_INPUT_LOAD_RATIO] = {
+        .name = "ups_input_load_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Load on (ePDU) input (percent of full)",
+    },
+    [FAM_UPS_INPUT_REALPOWER_WATTS] = {
+        .name = "ups_input_realpower_watts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current sum value of all (ePDU) phases real power (W)",
+    },
+    [FAM_UPS_INPUT_POWER_VOLTS_AMPS] = {
+        .name = "ups_input_power_volts_amps",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current sum value of all (ePDU) phases apparent power (VA)",
+    },
+    [FAM_UPS_OUTPUT_VOLTAGE_VOLTS] = {
+        .name = "ups_output_voltage_volts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Output voltage (V)",
+    },
+    [FAM_UPS_OUTPUT_CURRENT_AMPS] = {
+        .name = "ups_output_current_amps",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Input current (A)",
+    },
+    [FAM_UPS_OUTPUT_FREQUENCY_HZ] = {
+        .name = "ups_output_frequency_hz",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Output frequency (Hz)",
+    },
+    [FAM_UPS_OUTPUT_REALPOWER_WATTS] = {
+        .name = "ups_output_realpower_watts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Output real power (Watts)",
+    },
+    [FAM_UPS_OUTPUT_POWER_VOLTS_AMPS] = {
+        .name = "ups_output_power_volts_amps",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Output apparent power (Volt-Amps)",
+    },
+    [FAM_UPS_BATTERY_CHARGE_RATIO] = {
+        .name = "ups_battery_charge_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Battery charge (percent)",
+    },
+    [FAM_UPS_BATTERY_VOLTAGE_VOLTS] = {
+        .name = "ups_battery_voltage_volts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Battery voltage (V)",
+    },
+    [FAM_UPS_BATTERY_CAPACITY_AMPS_HOUR] = {
+        .name = "ups_battery_capacity_amps_hour",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Battery capacity (Ah)",
+    },
+    [FAM_UPS_BATTERY_CURRENT_AMPS] = {
+        .name = "ups_battery_current_amps",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Battery current (A)",
+    },
+    [FAM_UPS_BATTERY_TEMPERATURE_CELSIUS] = {
+        .name = "ups_battery_temperature_celsius",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Battery temperature (degrees C)",
+    },
+    [FAM_UPS_BATTERY_RUNTIME_SECONDS] = {
+        .name = "ups_battery_runtime_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Battery runtime (seconds)",
+    },
+    [FAM_UPS_AMBIENT_TEMPERATURE_CELSIUS] = {
+        .name = "ups_ambient_temperature_celsius",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Ambient temperature (degrees C)",
+    },
+    [FAM_UPS_AMBIENT_HUMIDITY_RATIO] = {
+        .name = "ups_ambient_humidity_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Ambient relative humidity (percent)",
+    },
+};
+
+typedef struct nut_ups_s {
+    char *instance;
+    char *name;
+    char *upsname;
+    char *hostname;
+    NUT_PORT_TYPE port;
+    ncollectd_upsconn_t *conn;
+    label_set_t labels;
+    bool force_ssl;
+    bool verify_peer;
+    cdtime_t connect_timeout;
+    metric_family_t fams[FAM_UPS_MAX];
+} nut_ups_t;
+
 static char *ca_path;
+static bool can_verify_peer;
 
-static int nut_read(user_data_t *user_data);
+static void free_nut_ups(void *arg)
+{
+    nut_ups_t *ups = arg;
 
-static void free_nut_ups_t(void *arg) {
-  nut_ups_t *ups = arg;
+    if (ups == NULL)
+        return;
 
-  if (ups->conn != NULL) {
-    upscli_disconnect(ups->conn);
-    sfree(ups->conn);
-  }
-  sfree(ups->hostname);
-  sfree(ups->upsname);
-  sfree(ups);
-} /* void free_nut_ups_t */
+    if (ups->conn != NULL) {
+        upscli_disconnect(ups->conn);
+        free(ups->conn);
+    }
 
-static int nut_add_ups(const char *name) {
-  nut_ups_t *ups;
-  int status;
-  char *cb_name;
+    free(ups->instance);
+    free(ups->name);
+    free(ups->hostname);
+    free(ups->upsname);
 
-  DEBUG("nut plugin: nut_add_ups (name = %s);", name);
+    label_set_reset(&ups->labels);
 
-  ups = calloc(1, sizeof(*ups));
-  if (ups == NULL) {
-    ERROR("nut plugin: nut_add_ups: calloc failed.");
-    return 1;
-  }
-
-  status = upscli_splitname(name, &ups->upsname, &ups->hostname, &ups->port);
-  if (status != 0) {
-    ERROR("nut plugin: nut_add_ups: upscli_splitname (%s) failed.", name);
-    free_nut_ups_t(ups);
-    return 1;
-  }
-
-  cb_name = ssnprintf_alloc("nut/%s", name);
-
-  status = plugin_register_complex_read(
-      /* group     = */ "nut",
-      /* name      = */ cb_name,
-      /* callback  = */ nut_read,
-      /* interval  = */ 0,
-      /* user_data = */
-      &(user_data_t){
-          .data = ups,
-          .free_func = free_nut_ups_t,
-      });
-
-  sfree(cb_name);
-
-  if (status == EINVAL) {
-    WARNING("nut plugin: UPS \"%s\" already added. "
-            "Please check your configuration.",
-            name);
-    return -1;
-  }
-
-  return 0;
-} /* int nut_add_ups */
-
-static int nut_force_ssl(const char *value) {
-  if (strcasecmp(value, "true") == 0)
-    force_ssl = 1;
-  else if (strcasecmp(value, "false") == 0)
-    force_ssl = 0; // Should already be set to 0 from initialization
-  else {
-    force_ssl = 0;
-    WARNING("nut plugin: nut_force_ssl: invalid FORCESSL value "
-            "found. Defaulting to false.");
-  }
-  return 0;
-} /* int nut_parse_force_ssl */
-
-static int nut_verify_peer(const char *value) {
-  if (strcasecmp(value, "true") == 0)
-    verify_peer = 1;
-  else if (strcasecmp(value, "false") == 0)
-    verify_peer = 0; // Should already be set to 0 from initialization
-  else {
-    verify_peer = 0;
-    WARNING("nut plugin: nut_verify_peer: invalid VERIFYPEER value "
-            "found. Defaulting to false.");
-  }
-  return 0;
-} /* int nut_verify_peer */
-
-static int nut_ca_path(const char *value) {
-  if (value != NULL && strcmp(value, "") != 0) {
-    ca_path = strdup(value);
-  } else {
-    ca_path = NULL; // Should alread be set to NULL from initialization
-  }
-  return 0;
-} /* int nut_ca_path */
-
-static int nut_set_connect_timeout(const char *value) {
-#if HAVE_UPSCLI_TRYCONNECT
-  long ret;
-
-  errno = 0;
-  ret = strtol(value, /* endptr = */ NULL, /* base = */ 10);
-  if (errno == 0)
-    connect_timeout = ret;
-  else
-    WARNING("nut plugin: The ConnectTimeout option requires numeric argument. "
-            "Setting ignored.");
-#else /* #if HAVE_UPSCLI_TRYCONNECT */
-  WARNING("nut plugin: Dependency libupsclient version insufficient (<2.6.2) "
-          "for ConnectTimeout option support. Setting ignored.");
-#endif
-  return 0;
-} /* int nut_set_connect_timeout */
-
-static int nut_config(const char *key, const char *value) {
-  if (strcasecmp(key, "UPS") == 0)
-    return nut_add_ups(value);
-  else if (strcasecmp(key, "FORCESSL") == 0)
-    return nut_force_ssl(value);
-  else if (strcasecmp(key, "VERIFYPEER") == 0)
-    return nut_verify_peer(value);
-  else if (strcasecmp(key, "CAPATH") == 0)
-    return nut_ca_path(value);
-  else if (strcasecmp(key, "CONNECTTIMEOUT") == 0)
-    return nut_set_connect_timeout(value);
-  else
-    return -1;
-} /* int nut_config */
-
-static void nut_submit(nut_ups_t *ups, const char *type,
-                       const char *type_instance, gauge_t value) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &(value_t){.gauge = value};
-  vl.values_len = 1;
-  if (strcasecmp(ups->hostname, "localhost") != 0)
-    sstrncpy(vl.host, ups->hostname, sizeof(vl.host));
-  sstrncpy(vl.plugin, "nut", sizeof(vl.plugin));
-  sstrncpy(vl.plugin_instance, ups->upsname, sizeof(vl.plugin_instance));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-} /* void nut_submit */
-
-static int nut_connect(nut_ups_t *ups) {
-  int status, ssl_status;
-
-#if HAVE_UPSCLI_TRYCONNECT
-  struct timeval tv;
-  tv.tv_sec = connect_timeout / 1000;
-  tv.tv_usec = connect_timeout % 1000;
-
-  status =
-      upscli_tryconnect(ups->conn, ups->hostname, ups->port, ssl_flags, &tv);
-#else /* #if HAVE_UPSCLI_TRYCONNECT */
-  status = upscli_connect(ups->conn, ups->hostname, ups->port, ssl_flags);
-#endif
-
-  if (status != 0) {
-    ERROR("nut plugin: nut_connect: upscli_connect (%s, %i) failed: %s",
-          ups->hostname, ups->port, upscli_strerror(ups->conn));
-    sfree(ups->conn);
-    return -1;
-  } /* if (status != 0) */
-
-  INFO("nut plugin: Connection to (%s, %i) established.", ups->hostname,
-       ups->port);
-
-  // Output INFO or WARNING based on SSL and VERIFICATION
-  ssl_status = upscli_ssl(ups->conn); // 1 for SSL, 0 for not, -1 for error
-  if (ssl_status == 1 && verify_peer == 1) {
-    INFO("nut plugin: Connection is secured with SSL and certificate "
-         "has been verified.");
-  } else if (ssl_status == 1) {
-    INFO("nut plugin: Connection is secured with SSL with no verification "
-         "of server SSL certificate.");
-  } else if (ssl_status == 0) {
-    WARNING("nut plugin: Connection is unsecured (no SSL).");
-  } else {
-    ERROR("nut plugin: nut_connect: upscli_ssl failed: %s",
-          upscli_strerror(ups->conn));
-    sfree(ups->conn);
-    return -1;
-  } /* if (ssl_status == 1 && verify_peer == 1) */
-  return 0;
+    free(ups);
 }
 
-static int nut_read(user_data_t *user_data) {
-  nut_ups_t *ups = user_data->data;
-  const char *query[3] = {"VAR", ups->upsname, NULL};
-  unsigned int query_num = 2;
-  char **answer;
-  unsigned int answer_num;
-  int status;
+static int nut_connect(nut_ups_t *ups)
+{
+    int ssl_flags = UPSCLI_CONN_TRYSSL;
+    if (ups->force_ssl)
+        ssl_flags |= UPSCLI_CONN_REQSSL;
+    if (can_verify_peer && ups->verify_peer)
+        ssl_flags |= UPSCLI_CONN_CERTVERIF;
 
-  /* (Re-)Connect if we have no connection */
-  if (ups->conn == NULL) {
-    ups->conn = malloc(sizeof(*ups->conn));
+    int status = 0;
+
+#ifdef HAVE_UPSCLI_TRYCONNECT
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(ups->connect_timeout);
+    status = upscli_tryconnect(ups->conn, ups->hostname, ups->port, ssl_flags, &tv);
+#else
+    status = upscli_connect(ups->conn, ups->hostname, ups->port, ssl_flags);
+#endif
+
+    if (status != 0) {
+        PLUGIN_ERROR("upscli_connect (%s, %i) failed: %s",
+                     ups->hostname, ups->port, upscli_strerror(ups->conn));
+        free(ups->conn);
+        return -1;
+    }
+
+    PLUGIN_INFO("Connection to (%s, %i) established.", ups->hostname, ups->port);
+
+    // Output INFO or WARNING based on SSL and VERIFICATION
+    int ssl_status = upscli_ssl(ups->conn); // 1 for SSL, 0 for not, -1 for error
+    if (ssl_status == 1 && ups->verify_peer) {
+        PLUGIN_INFO("Connection is secured with SSL and certificate has been verified.");
+    } else if (ssl_status == 1) {
+        PLUGIN_INFO("Connection is secured with SSL with no verification of server SSL certificate.");
+    } else if (ssl_status == 0) {
+        PLUGIN_WARNING("Connection is unsecured (no SSL).");
+    } else {
+        PLUGIN_ERROR("upscli_ssl failed: %s", upscli_strerror(ups->conn));
+        free(ups->conn);
+        return -1;
+    }
+    return 0;
+}
+
+static int nut_read(user_data_t *user_data)
+{
+    nut_ups_t *ups = user_data->data;
+
+    /* (Re-)Connect if we have no connection */
     if (ups->conn == NULL) {
-      ERROR("nut plugin: malloc failed.");
-      return -1;
+        ups->conn = malloc(sizeof(*ups->conn));
+        if (ups->conn == NULL) {
+            PLUGIN_ERROR("malloc failed.");
+            return -1;
+        }
+
+        int status = nut_connect(ups);
+        if (status == -1)
+            return -1;
+
     }
 
-    status = nut_connect(ups);
-    if (status == -1)
-      return -1;
-
-  } /* if (ups->conn == NULL) */
-
-  /* nut plugin: nut_read_one: upscli_list_start (adpos) failed: Protocol
-   * error */
-  status = upscli_list_start(ups->conn, query_num, query);
-  if (status != 0) {
-    ERROR("nut plugin: nut_read: upscli_list_start (%s) failed: %s",
-          ups->upsname, upscli_strerror(ups->conn));
-    upscli_disconnect(ups->conn);
-    sfree(ups->conn);
-    return -1;
-  }
-
-  while ((status = upscli_list_next(ups->conn, query_num, query, &answer_num,
-                                    &answer)) == 1) {
-    char *key;
-    double value;
-
-    if (answer_num < 4)
-      continue;
-
-    key = answer[2];
-    value = atof(answer[3]);
-
-    if (strncmp("ambient.", key, 8) == 0) {
-      if (strcmp("ambient.humidity", key) == 0)
-        nut_submit(ups, "humidity", "ambient", value);
-      else if (strcmp("ambient.temperature", key) == 0)
-        nut_submit(ups, "temperature", "ambient", value);
-    } else if (strncmp("battery.", key, 8) == 0) {
-      if (strcmp("battery.charge", key) == 0)
-        nut_submit(ups, "percent", "charge", value);
-      else if (strcmp("battery.current", key) == 0)
-        nut_submit(ups, "current", "battery", value);
-      else if (strcmp("battery.runtime", key) == 0)
-        nut_submit(ups, "timeleft", "battery", value);
-      else if (strcmp("battery.temperature", key) == 0)
-        nut_submit(ups, "temperature", "battery", value);
-      else if (strcmp("battery.voltage", key) == 0)
-        nut_submit(ups, "voltage", "battery", value);
-    } else if (strncmp("input.", key, 6) == 0) {
-      if (strcmp("input.frequency", key) == 0)
-        nut_submit(ups, "frequency", "input", value);
-      else if (strcmp("input.voltage", key) == 0)
-        nut_submit(ups, "voltage", "input", value);
-    } else if (strncmp("output.", key, 7) == 0) {
-      if (strcmp("output.current", key) == 0)
-        nut_submit(ups, "current", "output", value);
-      else if (strcmp("output.frequency", key) == 0)
-        nut_submit(ups, "frequency", "output", value);
-      else if (strcmp("output.voltage", key) == 0)
-        nut_submit(ups, "voltage", "output", value);
-      else if (strcmp("output.realpower", key) == 0)
-        nut_submit(ups, "power", "watt-output", value);
-      else if (strcmp("output.power", key) == 0)
-        nut_submit(ups, "power", "voltampere-output", value);
-    } else if (strncmp("ups.", key, 4) == 0) {
-      if (strcmp("ups.load", key) == 0)
-        nut_submit(ups, "percent", "load", value);
-      else if (strcmp("ups.power", key) == 0)
-        nut_submit(ups, "power", "ups", value);
-      else if (strcmp("ups.temperature", key) == 0)
-        nut_submit(ups, "temperature", "ups", value);
+    const char *query[3] = {"VAR", ups->upsname, NULL};
+    unsigned int query_num = 2;
+    /* nut plugin: nut_read_one: upscli_list_start (adpos) failed: Protocol error */
+    int status = upscli_list_start(ups->conn, query_num, query);
+    if (status != 0) {
+        PLUGIN_ERROR("upscli_list_start (%s) failed: %s", ups->upsname, upscli_strerror(ups->conn));
+        upscli_disconnect(ups->conn);
+        free(ups->conn);
+        return -1;
     }
-  } /* while (upscli_list_next) */
 
-  return 0;
-} /* int nut_read */
+    char **answer;
+    NUT_SIZE_TYPE answer_num;
+    while (upscli_list_next(ups->conn, query_num, query, &answer_num, &answer) == 1) {
+        if (answer_num < 4)
+            continue;
 
-static int nut_init(void) {
-#if HAVE_UPSCLI_INIT
-  if (verify_peer == 1 && force_ssl == 0) {
-    WARNING("nut plugin: nut_connect: VerifyPeer true but ForceSSL "
-            "false. Setting ForceSSL to true.");
-    force_ssl = 1;
-  }
+        char buffer[1024];
+        sstrncpy(buffer, answer[2], sizeof(buffer));
+        char *ptr = buffer;
+        char *tokens[8] = {NULL};
+        size_t tokens_num = 0;
+        char *saveptr = NULL;
+        char *token = NULL;
+        while ((token = strtok_r(ptr, ".", &saveptr)) != NULL) {
+            ptr = NULL;
+            if (tokens_num < STATIC_ARRAY_SIZE(tokens)) {
+                tokens[tokens_num] = token;
+            }
+            tokens_num++;
+        }
 
-  if (verify_peer == 1 && ca_path == NULL) {
-    ERROR("nut plugin: nut_connect: VerifyPeer true but missing "
-          "CAPath value.");
-    plugin_unregister_read_group("nut");
-    return -1;
-  }
+        if ((tokens_num < 2) || (tokens_num > STATIC_ARRAY_SIZE(tokens)))
+            continue;
 
-  if (verify_peer == 1 || force_ssl == 1) {
-    int status = upscli_init(verify_peer, ca_path, NULL, NULL);
+        metric_family_t *fam = NULL;
+        if (strcmp("ambient", tokens[0]) == 0) {
+            if (strcmp("humidity", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_AMBIENT_HUMIDITY_RATIO];
+            else if (strcmp("temperature", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_AMBIENT_TEMPERATURE_CELSIUS];
+        } else if (strcmp("battery", tokens[0]) == 0) {
+            if (strcmp("charge", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_BATTERY_CHARGE_RATIO];
+            else if (strcmp("voltage", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_BATTERY_VOLTAGE_VOLTS];
+            else if (strcmp("capacity", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_BATTERY_CAPACITY_AMPS_HOUR];
+            else if (strcmp("current", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_BATTERY_CURRENT_AMPS];
+            else if (strcmp("temperature", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_BATTERY_TEMPERATURE_CELSIUS];
+            else if (strcmp("runtime", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_BATTERY_RUNTIME_SECONDS];
+        } else if (strcmp("input", tokens[0]) == 0) {
+            if (strcmp("voltage", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_INPUT_VOLTAGE_VOLTS];
+            else if (strcmp("current", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_INPUT_CURRENT_AMPS];
+            else if (strcmp("frequency", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_INPUT_FREQUENCY_HZ];
+            else if (strcmp("load", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_INPUT_LOAD_RATIO];
+            else if (strcmp("realpower", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_INPUT_REALPOWER_WATTS];
+            else if (strcmp("power", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_INPUT_POWER_VOLTS_AMPS];
+        } else if (strcmp("output", tokens[0]) == 0) {
+            if (strcmp("voltage", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_OUTPUT_VOLTAGE_VOLTS];
+            else if (strcmp("current", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_OUTPUT_CURRENT_AMPS];
+            else if (strcmp("frequency", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_OUTPUT_FREQUENCY_HZ];
+            else if (strcmp("realpower", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_OUTPUT_REALPOWER_WATTS];
+            else if (strcmp("power", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_OUTPUT_POWER_VOLTS_AMPS];
+        } else if (strcmp("ups", tokens[0]) == 0) {
+            if (strcmp("power", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_POWER_VOLTS_AMPS];
+            else if (strcmp("realpower", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_REALPOWER_WATTS];
+            else if (strcmp("temperature", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_TEMPERATURE_CELSIUS];
+            else if (strcmp("load", tokens[tokens_num-1]) == 0)
+                fam = &ups->fams[FAM_UPS_LOAD_RATIO];
+        }
 
-    if (status != 1) {
-      ERROR("nut plugin: upscli_init (%i, %s) failed", verify_peer, ca_path);
-      upscli_cleanup();
-      plugin_unregister_read_group("nut");
-      return -1;
+        if (fam != NULL) {
+            double value = atof(answer[3]);
+            if (tokens_num > 2) {
+                metric_family_append(fam, VALUE_GAUGE(value), NULL,
+                                     &(label_pair_const_t){.name="context", .value=tokens[1]},
+                                     &(label_pair_const_t){.name="instance", .value=ups->upsname},
+                                     NULL);
+            } else {
+                metric_family_append(fam, VALUE_GAUGE(value), NULL,
+                                     &(label_pair_const_t){.name="instance", .value=ups->upsname},
+                                     NULL);
+            }
+        }
     }
-  } /* if (verify_peer == 1) */
 
-  if (verify_peer == 1)
-    ssl_flags = (UPSCLI_CONN_REQSSL | UPSCLI_CONN_CERTVERIF);
-  else if (force_ssl == 1)
-    ssl_flags = UPSCLI_CONN_REQSSL;
+    plugin_dispatch_metric_family_array(ups->fams, FAM_UPS_MAX, 0);
+    return 0;
+}
 
-#else /* #if HAVE_UPSCLI_INIT */
-  if (verify_peer == 1 || ca_path != NULL) {
-    WARNING("nut plugin: nut_connect: Dependency libupsclient version "
-            "insufficient (<2.7) for VerifyPeer support. Ignoring VerifyPeer "
-            "and CAPath.");
-    verify_peer = 0;
-  }
+static int nut_config_instance(config_item_t *ci)
+{
+    nut_ups_t *ups = calloc(1, sizeof(*ups));
+    if (ups == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
+    memcpy(ups->fams, fams, FAM_UPS_MAX * sizeof(*fams));
 
-  if (force_ssl == 1)
-    ssl_flags = UPSCLI_CONN_REQSSL;
+    int status = cf_util_get_string(ci, &ups->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Missing instance name in %s:%d.",cf_get_file(ci), cf_get_lineno(ci));
+        free_nut_ups(ups);
+        return -1;
+    }
+
+    ups->connect_timeout = plugin_get_interval();
+
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp(child->key, "ups") == 0) {
+            status = cf_util_get_string(child, &ups->name);
+        } else if (strcasecmp(child->key, "force-ssl") == 0) {
+            status = cf_util_get_boolean(child, &ups->force_ssl);
+        } else if (strcasecmp(child->key, "verify-peer") == 0) {
+            status = cf_util_get_boolean(child, &ups->verify_peer);
+        } else if (strcasecmp(child->key, "connect-timeout") == 0) {
+            status = cf_util_get_cdtime(child, &ups->connect_timeout);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &ups->labels);
+        } else if (strcasecmp("interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &interval);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0) {
+        free_nut_ups(ups);
+        return -1;
+    }
+
+    status = upscli_splitname(ups->name, &ups->upsname, &ups->hostname, &ups->port);
+    if (status != 0) {
+        PLUGIN_ERROR("nut_add_ups: upscli_splitname (%s) failed.", ups->name);
+        free_nut_ups(ups);
+        return 1;
+    }
+
+    PLUGIN_DEBUG("nut_add_ups (name = %s);", ups->instance);
+
+    return plugin_register_complex_read("nut", ups->instance, nut_read, interval,
+                                        &(user_data_t){.data = ups,.free_func = free_nut_ups});
+}
+
+static int nut_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("instance", child->key) == 0) {
+            status = nut_config_instance(child);
+        } else if (strcasecmp(child->key, "ca-path") == 0) {
+            status = cf_util_get_string(child, &ca_path);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
+
+#ifdef HAVE_UPSCLI_INIT
+    if (ca_path != NULL) {
+        status = upscli_init(0, ca_path, NULL, NULL);
+        if (status != 1) {
+            PLUGIN_ERROR("upscli_init '%s' failed", ca_path);
+            upscli_cleanup();
+            return -1;
+        }
+        can_verify_peer = true;
+    }
+#else
+    if (ca_path != NULL) {
+        PLUGIN_WARNING("nut_connect: Dependency libupsclient version insufficient (<2.7) "
+                       "for 'verify-peer support. Ignoring 'verify-peer' and 'ca-path'.");
+        verify_peer = false;
+    }
 #endif
 
-  if (connect_timeout <= 0)
-    connect_timeout = (long)CDTIME_T_TO_MS(plugin_get_interval());
+    return 0;
+}
 
-  return 0;
-} /* int nut_init */
-
-static int nut_shutdown(void) {
-#if HAVE_UPSCLI_INIT
-  upscli_cleanup();
+static int nut_shutdown(void)
+{
+#ifdef HAVE_UPSCLI_INIT
+    upscli_cleanup();
 #endif
+    return 0;
+}
 
-  return 0;
-} /* int nut_shutdown */
-
-void module_register(void) {
-  plugin_register_config("nut", nut_config, config_keys, config_keys_num);
-  plugin_register_init("nut", nut_init);
-  plugin_register_shutdown("nut", nut_shutdown);
-} /* void module_register */
+void module_register(void)
+{
+    plugin_register_config("nut", nut_config);
+    plugin_register_shutdown("nut", nut_shutdown);
+}
