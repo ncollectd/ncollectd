@@ -1,125 +1,134 @@
-/**
- * collectd - src/entropy.c
- * Copyright (C) 2007       Florian octo Forster
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2007 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
-static void entropy_submit(gauge_t value);
-static int entropy_read(void);
+#ifdef KERNEL_LINUX
 
-#if !KERNEL_LINUX && !KERNEL_NETBSD
-#error "No applicable input method."
-#endif
+static char *path_proc_entropy_avail;
+static char *path_proc_poolsize;
 
-#if KERNEL_LINUX
-#define ENTROPY_FILE "/proc/sys/kernel/random/entropy_avail"
-
-static int entropy_read(void) {
-  value_t v;
-  if (parse_value_file(ENTROPY_FILE, &v, DS_TYPE_GAUGE) != 0) {
-    ERROR("entropy plugin: Reading \"" ENTROPY_FILE "\" failed.");
-    return -1;
-  }
-
-  entropy_submit(v.gauge);
-  return 0;
-}
-#endif /* KERNEL_LINUX */
-
-#if KERNEL_NETBSD
-/* Provide a NetBSD implementation, partial from rndctl.c */
-
-/*
- * Improved to keep the /dev/urandom open, since there's a consumption
- * of entropy from /dev/random for every open of /dev/urandom, and this
- * will end up opening /dev/urandom lots of times.
- */
-
+#elif defined(KERNEL_NETBSD)
 #include <sys/ioctl.h>
 #include <sys/param.h>
 #include <sys/rnd.h>
 #include <sys/types.h>
-#if HAVE_SYS_RNDIO_H
+#ifdef HAVE_SYS_RNDIO_H
 #include <sys/rndio.h>
 #endif
 #include <paths.h>
 
-static int entropy_read(void) {
-  value_t v;
-  rndpoolstat_t rs;
-  static int fd;
-  char buf[30];
+#else
+#error "No applicable input method."
+#endif
 
-  if (fd == 0) {
-    fd = open(_PATH_URANDOM, O_RDONLY, 0644);
-    if (fd < 0) {
-      fd = 0;
-      return -1;
+enum {
+    FAM_HOST_ENTROPY_AVAILABLE_BITS,
+    FAM_HOST_ENTROPY_POOL_SIZE_BITS,
+    FAM_HOST_ENTROPY_MAX,
+};
+
+static metric_family_t fams[FAM_HOST_ENTROPY_MAX] = {
+    [FAM_HOST_ENTROPY_AVAILABLE_BITS] = {
+        .name = "system_entropy_available_bits",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Bits of available entropy",
+    },
+    [FAM_HOST_ENTROPY_POOL_SIZE_BITS] = {
+        .name = "system_entropy_pool_size_bits",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Bits of entropy pool",
+    },
+};
+
+static int entropy_read(void)
+{
+    double available = 0;
+    double poolsize = 0;
+
+#ifdef KERNEL_LINUX
+
+    if (parse_double_file(path_proc_entropy_avail, &available) != 0) {
+        PLUGIN_ERROR("Reading '%s' failed.", path_proc_entropy_avail);
+        return -1;
     }
-  }
 
-  if (ioctl(fd, RNDGETPOOLSTAT, &rs) < 0) {
-    (void)close(fd);
-    fd = 0; /* signal a reopening on next attempt */
-    return -1;
-  }
-  snprintf(buf, sizeof(buf), "%ju", (uintmax_t)rs.curentropy);
-  if (parse_value(buf, &v, DS_TYPE_GAUGE) != 0) {
-    ERROR("entropy plugin: Parsing \"%s\" failed.", buf);
-    return (-1);
-  }
+    if (parse_double_file(path_proc_poolsize, &poolsize) != 0) {
+        PLUGIN_ERROR("Reading '%s' failed.", path_proc_poolsize);
+        return -1;
+    }
 
-  entropy_submit(v.gauge);
+#elif defined(KERNEL_NETBSD)
+/* Improved to keep the /dev/urandom open, since there's a consumption
+ * of entropy from /dev/random for every open of /dev/urandom, and this
+ * will end up opening /dev/urandom lots of times.
+ */
+    rndpoolstat_t rs;
+    static int fd = 0;
 
-  return 0;
+    if (fd == 0) {
+        fd = open(_PATH_URANDOM, O_RDONLY, 0644);
+        if (fd < 0) {
+            fd = 0;
+            return -1;
+        }
+    }
+
+    if (ioctl(fd, RNDGETPOOLSTAT, &rs) < 0) {
+        close(fd);
+        fd = 0; /* signal a reopening on next attempt */
+        return -1;
+    }
+
+    available = rs.curentropy;
+    poolsize = rs.poolsize;
+#endif
+
+    metric_family_append(&fams[FAM_HOST_ENTROPY_AVAILABLE_BITS],
+                         VALUE_GAUGE(available), NULL, NULL);
+    metric_family_append(&fams[FAM_HOST_ENTROPY_POOL_SIZE_BITS],
+                         VALUE_GAUGE(poolsize), NULL, NULL);
+
+    plugin_dispatch_metric_family_array(fams, FAM_HOST_ENTROPY_MAX, 0);
+
+    return 0;
 }
 
-#endif /* KERNEL_NETBSD */
+#ifdef KERNEL_LINUX
+static int entropy_init(void)
+{
+    path_proc_entropy_avail = plugin_procpath("sys/kernel/random/entropy_avail");
+    if (path_proc_entropy_avail == NULL) {
+        PLUGIN_ERROR("Cannot get proc path.");
+        return -1;
+    }
 
-static void entropy_submit(gauge_t value) {
-  metric_family_t fam = {
-      .name = "entropy_available_bits",
-      .type = METRIC_TYPE_GAUGE,
-  };
+    path_proc_poolsize = plugin_procpath("sys/kernel/random/poolsize");
+    if (path_proc_poolsize == NULL) {
+        PLUGIN_ERROR("Cannot get proc path.");
+        return -1;
+    }
 
-  metric_family_metric_append(&fam, (metric_t){
-                                        .value.gauge = value,
-                                    });
-
-  int status = plugin_dispatch_metric_family(&fam);
-  if (status != 0) {
-    ERROR("entropy plugin: plugin_dispatch_metric_family failed: %s",
-          STRERROR(status));
-  }
-
-  metric_family_metric_reset(&fam);
+    return 0;
 }
 
-void module_register(void) {
-  plugin_register_read("entropy", entropy_read);
-} /* void module_register */
+static int entropy_shutdown(void)
+{
+    free(path_proc_entropy_avail);
+    free(path_proc_poolsize);
+    return 0;
+}
+#endif
+
+void module_register(void)
+{
+#ifdef KERNEL_LINUX
+    plugin_register_init("entropy", entropy_init);
+    plugin_register_shutdown("entropy", entropy_shutdown);
+#endif
+    plugin_register_read("entropy", entropy_read);
+}
