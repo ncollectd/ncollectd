@@ -1,0 +1,43 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-df 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd df man page"
+.SH NAME
+ncollectd-df \- Documentation of ncollectd's df plugin
+.SH SYNOPSIS
+\fBload-plugin\fP df
+.br
+\fBplugin\fP df {
+    \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+    \fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
+    \fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
+    \fBlog-once\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBdf\fP plugin collects file system usage information, i. e. basically how much space
+on a mounted partition is used and how much is available. It's named after and very similar
+to the
+.BR df (1)
+UNIX command that's been around forever.
+.PP
+The \fBdf\fP plugin supports the following options:
+.TP
+\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+Select partitions based on the devicename.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
+Select partitions based on the mountpoint.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
+Select partitions based on the filesystem type.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBlog-once\fP \fItrue|false\fP
+Only log stat() errors once.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
