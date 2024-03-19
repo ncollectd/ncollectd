@@ -1,0 +1,63 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-notify_email 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd notify_email man page"
+.SH NAME
+ncollectd-notify_email \- Documentation of ncollectd's notify_email plugin
+.SH SYNOPSIS
+\fBload-plugin\fP notify_email
+.br
+\fBplugin\fP notify_email {
+    \fBrecipient\fP \fIaddress\fP
+    \fBsmtp-server\fP \fIhostname\fP
+    \fBsmtp-port\fP \fIport\fP
+    \fBsmtp-user\fP \fIusername\fP
+    \fBsmtp-password\fP \fIpassword\fP
+    \fBfrom\fP \fIaddress\fP
+    \fBsubject\fP \fIsubject\fP
+.br
+}
+.br
+.SH DESCRIPTION
+The \fBnotify_email\fP plugin  uses the \fIESMTP\fP library to send notifications to a
+configured email address.
+
+\fIlibESMTP\fP is available from
+.UR http://www.stafford.uklinux.net/libesmtp/
+.UE
+
+Available configuration options:
+
+.TP
+\fBrecipient\fP \fIaddress\fP
+Configures the email address(es) to which the notifications should be mailed.
+May be repeated to send notifications to multiple addresses.
+
+At least one \fBrecipient\fP must be present for the plugin to work correctly.
+.TP
+\fBsmtp-server\fP \fIhostname\fP
+Hostname of the SMTP server to connect to.
+Default to \f(CWlocalhost\fP.
+.TP
+\fBsmtp-port\fP \fIport\fP
+TCP port to connect to.
+Default to \f(CW25\fP
+.TP
+\fBsmtp-user\fP \fIusername\fP
+Username for ASMTP authentication. Optional.
+.TP
+\fBsmtp-password\fP \fIpassword\fP
+Password for ASMTP authentication. Optional.
+.TP
+\fBfrom\fP \fIaddress\fP
+Email address from which the emails should appear to come from.
+Default to \f(CWroot@localhost\fP.
+.TP
+\fBsubject\fP \fIsubject\fP
+Subject-template to use when sending emails. There must be exactly two
+string-placeholders in the subject, given in the standard
+.BR printf(3)
+syntax, i. e. \f(CW%s\fP. The first will be replaced with the severity, the second
+with the hostname.
+Default: \f(CWncollectd notify: %s@%s\fP
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
