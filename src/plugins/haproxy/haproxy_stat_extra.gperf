@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix HASTAT_EXTRA_
+%define hash-function-name hastat_extra_hash
+%define lookup-function-name hastat_extra_get_key
+%define slot-name key
+%{
+%}
+struct hastat_extra {
+    char *key;
+    int stat;
+};
+%%
+ssl_sess,                                  HA_STAT_EXTRA_SSL_SESS
+ssl_reused_sess,                           HA_STAT_EXTRA_SSL_REUSED_SESS
+ssl_failed_handshake,                      HA_STAT_EXTRA_SSL_FAILED_HANDSHAKE
+h2_headers_rcvd,                           HA_STAT_EXTRA_H2_HEADERS_RCVD
+h2_data_rcvd,                              HA_STAT_EXTRA_H2_DATA_RCVD
+h2_settings_rcvd,                          HA_STAT_EXTRA_H2_SETTINGS_RCVD
+h2_rst_stream_rcvd,                        HA_STAT_EXTRA_H2_RST_STREAM_RCVD
+h2_goaway_rcvd,                            HA_STAT_EXTRA_H2_GOAWAY_RCVD
+h2_detected_conn_protocol_errors,          HA_STAT_EXTRA_H2_DETECTED_CONN_PROTOCOL_ERRORS
+h2_detected_strm_protocol_errors,          HA_STAT_EXTRA_H2_DETECTED_STRM_PROTOCOL_ERRORS
+h2_rst_stream_resp,                        HA_STAT_EXTRA_H2_RST_STREAM_RESP
+h2_goaway_resp,                            HA_STAT_EXTRA_H2_GOAWAY_RESP
+h2_open_connections,                       HA_STAT_EXTRA_H2_OPEN_CONNECTIONS
+h2_backend_open_streams,                   HA_STAT_EXTRA_H2_BACKEND_OPEN_STREAMS
+h2_total_connections,                      HA_STAT_EXTRA_H2_TOTAL_CONNECTIONS
+h2_backend_total_streams,                  HA_STAT_EXTRA_H2_BACKEND_TOTAL_STREAMS
+h1_open_connections,                       HA_STAT_EXTRA_H1_OPEN_CONNECTIONS
+h1_open_streams,                           HA_STAT_EXTRA_H1_OPEN_STREAMS
+h1_total_connections,                      HA_STAT_EXTRA_H1_TOTAL_CONNECTIONS
+h1_total_streams,                          HA_STAT_EXTRA_H1_TOTAL_STREAMS
+h1_bytes_in,                               HA_STAT_EXTRA_H1_BYTES_IN
+h1_bytes_out,                              HA_STAT_EXTRA_H1_BYTES_OUT
+h1_spliced_bytes_in,                       HA_STAT_EXTRA_H1_SPLICED_BYTES_IN
+h1_spliced_bytes_out,                      HA_STAT_EXTRA_H1_SPLICED_BYTES_OUT
+h3_data                                    HA_STAT_EXTRA_H3_DATA
+h3_headers                                 HA_STAT_EXTRA_H3_HEADERS
+h3_cancel_push                             HA_STAT_EXTRA_H3_CANCEL_PUSH
+h3_push_promise                            HA_STAT_EXTRA_H3_PUSH_PROMISE
+h3_max_push_id                             HA_STAT_EXTRA_H3_MAX_PUSH_ID
+h3_goaway                                  HA_STAT_EXTRA_H3_GOAWAY
+h3_settings                                HA_STAT_EXTRA_H3_SETTINGS
+h3_no_error                                HA_STAT_EXTRA_H3_NO_ERROR
+h3_general_protocol_error                  HA_STAT_EXTRA_H3_GENERAL_PROTOCOL_ERROR
+h3_internal_error                          HA_STAT_EXTRA_H3_INTERNAL_ERROR
+h3_stream_creation_error                   HA_STAT_EXTRA_H3_STREAM_CREATION_ERROR
+h3_closed_critical_stream                  HA_STAT_EXTRA_H3_CLOSED_CRITICAL_STREAM
+h3_frame_unexpected                        HA_STAT_EXTRA_H3_FRAME_UNEXPECTED
+h3_frame_error                             HA_STAT_EXTRA_H3_FRAME_ERROR
+h3_excessive_load                          HA_STAT_EXTRA_H3_EXCESSIVE_LOAD
+h3_id_error                                HA_STAT_EXTRA_H3_ID_ERROR
+h3_settings_error                          HA_STAT_EXTRA_H3_SETTINGS_ERROR
+h3_missing_settings                        HA_STAT_EXTRA_H3_MISSING_SETTINGS
+h3_request_rejected                        HA_STAT_EXTRA_H3_REQUEST_REJECTED
+h3_request_cancelled                       HA_STAT_EXTRA_H3_REQUEST_CANCELLED
+h3_request_incomplete                      HA_STAT_EXTRA_H3_REQUEST_INCOMPLETE
+h3_message_error                           HA_STAT_EXTRA_H3_MESSAGE_ERROR
+h3_connect_error                           HA_STAT_EXTRA_H3_CONNECT_ERROR
+h3_version_fallback                        HA_STAT_EXTRA_H3_VERSION_FALLBACK
+pack_decompression_failed                  HA_STAT_EXTRA_H3_QPACK_DECOMPRESSION_FAILED
+qpack_encoder_stream_error                 HA_STAT_EXTRA_H3_QPACK_ENCODER_STREAM_ERROR
+qpack_decoder_stream_error                 HA_STAT_EXTRA_H3_QPACK_DECODER_STREAM_ERROR
+quic_dropped_pkt,                          HA_STAT_EXTRA_QUIC_DROPPED_PACKET
+quic_dropped_parsing_pkt,                  HA_STAT_EXTRA_QUIC_DROPPED_PARSING
+quic_lost_pkt,                             HA_STAT_EXTRA_QUIC_LOST_PACKET
+quic_too_short_dgram,                      HA_STAT_EXTRA_QUIC_TOO_SHORT_INITIAL_DGRAM
+quic_retry_sent,                           HA_STAT_EXTRA_QUIC_RETRY_SENT
+quic_retry_validated,                      HA_STAT_EXTRA_QUIC_RETRY_VALIDATED
+quic_retry_error,                          HA_STAT_EXTRA_QUIC_RETRY_ERRORS
+quic_half_open_conn,                       HA_STAT_EXTRA_QUIC_HALF_OPEN_CONN
+quic_hdshk_fail,                           HA_STAT_EXTRA_QUIC_HDSHK_FAIL
+quic_stless_rst_sent,                      HA_STAT_EXTRA_QUIC_STATELESS_RESET_SENT
+quic_transp_err_no_error,                  HA_STAT_EXTRA_QUIC_TRANSP_ERR_NO_ERROR
+quic_transp_err_internal_error,            HA_STAT_EXTRA_QUIC_TRANSP_ERR_INTERNAL_ERROR
+quic_transp_err_connection_refused,        HA_STAT_EXTRA_QUIC_TRANSP_ERR_CONNECTION_REFUSED
+quic_transp_err_flow_control_error,        HA_STAT_EXTRA_QUIC_TRANSP_ERR_FLOW_CONTROL_ERROR
+quic_transp_err_stream_limit_error,        HA_STAT_EXTRA_QUIC_TRANSP_ERR_STREAM_LIMIT_ERROR
+quic_transp_err_stream_state_error,        HA_STAT_EXTRA_QUIC_TRANSP_ERR_STREAM_STATE_ERROR
+quic_transp_err_final_size_error,          HA_STAT_EXTRA_QUIC_TRANSP_ERR_FINAL_SIZE_ERROR
+quic_transp_err_frame_encoding_error,      HA_STAT_EXTRA_QUIC_TRANSP_ERR_FRAME_ENCODING_ERROR
+quic_transp_err_transport_parameter_error, HA_STAT_EXTRA_QUIC_TRANSP_ERR_TRANSPORT_PARAMETER_ERROR
+quic_transp_err_connection_id_limit,       HA_STAT_EXTRA_QUIC_TRANSP_ERR_CONNECTION_ID_LIMIT_ERROR
+quic_transp_err_protocol_violation_error,  HA_STAT_EXTRA_QUIC_TRANSP_ERR_PROTOCOL_VIOLATION
+quic_transp_err_invalid_token,             HA_STAT_EXTRA_QUIC_TRANSP_ERR_INVALID_TOKEN
+quic_transp_err_application_error,         HA_STAT_EXTRA_QUIC_TRANSP_ERR_APPLICATION_ERROR
+quic_transp_err_crypto_buffer_exceeded,    HA_STAT_EXTRA_QUIC_TRANSP_ERR_CRYPTO_BUFFER_EXCEEDED
+quic_transp_err_key_update_error,          HA_STAT_EXTRA_QUIC_TRANSP_ERR_KEY_UPDATE_ERROR
+quic_transp_err_aead_limit_reached,        HA_STAT_EXTRA_QUIC_TRANSP_ERR_AEAD_LIMIT_REACHED
+quic_transp_err_no_viable_path,            HA_STAT_EXTRA_QUIC_TRANSP_ERR_NO_VIABLE_PATH
+quic_transp_err_crypto_error,              HA_STAT_EXTRA_QUIC_TRANSP_ERR_CRYPTO_ERROR
+quic_transp_err_unknown_error,             HA_STAT_EXTRA_QUIC_TRANSP_ERR_UNKNOWN_ERROR
+quic_data_blocked,                         HA_STAT_EXTRA_QUIC_DATA_BLOCKED
+quic_stream_data_blocked,                  HA_STAT_EXTRA_QUIC_STREAM_DATA_BLOCKED
+quic_streams_data_blocked_bidi,            HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_BIDI
+quic_streams_data_blocked_uni,             HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_UNI

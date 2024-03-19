@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix HAINFO_
+%define hash-function-name hainfo_hash
+%define lookup-function-name hainfo_get_key
+%define slot-name key
+%{
+%}
+struct hainfo_metric {
+    char *key;
+    int fam;
+};
+%%
+Nbthread,                    FAM_HAPROXY_PROCESS_NBTHREAD
+Nbproc,                      FAM_HAPROXY_PROCESS_NBPROC
+Process_num,                 FAM_HAPROXY_PROCESS_RELATIVE_PROCESS_ID
+Uptime_sec,                  FAM_HAPROXY_PROCESS_UPTIME_SECONDS
+Start_time_sec,              FAM_HAPROXY_PROCESS_START_TIME_SECONDS
+Memmax_bytes,                FAM_HAPROXY_PROCESS_MAX_MEMORY_BYTES
+PoolAlloc_bytes,             FAM_HAPROXY_PROCESS_POOL_ALLOCATED_BYTES
+PoolUsed_bytes,              FAM_HAPROXY_PROCESS_POOL_USED_BYTES
+PoolFailed,                  FAM_HAPROXY_PROCESS_POOL_FAILURES
+Ulimit-n,                    FAM_HAPROXY_PROCESS_MAX_FDS
+Maxsock,                     FAM_HAPROXY_PROCESS_MAX_SOCKETS
+Maxconn,                     FAM_HAPROXY_PROCESS_MAX_CONNECTIONS
+Hard_maxconn,                FAM_HAPROXY_PROCESS_HARD_MAX_CONNECTIONS
+CurrConns,                   FAM_HAPROXY_PROCESS_CURRENT_CONNECTIONS
+CumConns,                    FAM_HAPROXY_PROCESS_CONNECTIONS
+CumReq,                      FAM_HAPROXY_PROCESS_REQUESTS
+MaxSslConns,                 FAM_HAPROXY_PROCESS_MAX_SSL_CONNECTIONS
+CurrSslConns,                FAM_HAPROXY_PROCESS_CURRENT_SSL_CONNECTIONS
+CumSslConns,                 FAM_HAPROXY_PROCESS_SSL_CONNECTIONS
+Maxpipes,                    FAM_HAPROXY_PROCESS_MAX_PIPES
+PipesUsed,                   FAM_HAPROXY_PROCESS_PIPES_USED
+PipesFree,                   FAM_HAPROXY_PROCESS_PIPES_FREE
+ConnRate,                    FAM_HAPROXY_PROCESS_CURRENT_CONNECTION_RATE
+ConnRateLimit,               FAM_HAPROXY_PROCESS_LIMIT_CONNECTION_RATE
+MaxConnRate,                 FAM_HAPROXY_PROCESS_MAX_CONNECTION_RATE
+SessRate,                    FAM_HAPROXY_PROCESS_CURRENT_SESSION_RATE
+SessRateLimit,               FAM_HAPROXY_PROCESS_LIMIT_SESSION_RATE
+MaxSessRate,                 FAM_HAPROXY_PROCESS_MAX_SESSION_RATE
+SslRate,                     FAM_HAPROXY_PROCESS_CURRENT_SSL_RATE
+SslRateLimit,                FAM_HAPROXY_PROCESS_LIMIT_SSL_RATE
+MaxSslRate,                  FAM_HAPROXY_PROCESS_MAX_SSL_RATE
+SslFrontendKeyRate,          FAM_HAPROXY_PROCESS_CURRENT_FRONTEND_SSL_KEY_RATE
+SslFrontendMaxKeyRate,       FAM_HAPROXY_PROCESS_MAX_FRONTEND_SSL_KEY_RATE
+SslFrontendSessionReuse_pct, FAM_HAPROXY_PROCESS_FRONTEND_SSL_REUSE
+SslBackendKeyRate,           FAM_HAPROXY_PROCESS_CURRENT_BACKEND_SSL_KEY_RATE
+SslBackendMaxKeyRate,        FAM_HAPROXY_PROCESS_MAX_BACKEND_SSL_KEY_RATE
+SslCacheLookups,             FAM_HAPROXY_PROCESS_SSL_CACHE_LOOKUPS
+SslCacheMisses,              FAM_HAPROXY_PROCESS_SSL_CACHE_MISSES
+CompressBpsIn,               FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_IN
+CompressBpsOut,              FAM_HAPROXY_PROCESS_HTTP_COMP_BYTES_OUT
+CompressBpsRateLim,          FAM_HAPROXY_PROCESS_LIMIT_HTTP_COMP
+ZlibMemUsage,                FAM_HAPROXY_PROCESS_CURRENT_ZLIB_MEMORY
+MaxZlibMemUsage,             FAM_HAPROXY_PROCESS_MAX_ZLIB_MEMORY
+Tasks,                       FAM_HAPROXY_PROCESS_CURRENT_TASKS
+Run_queue,                   FAM_HAPROXY_PROCESS_CURRENT_RUN_QUEUE
+Idle_pct,                    FAM_HAPROXY_PROCESS_IDLE_TIME_PERCENT
+Stopping,                    FAM_HAPROXY_PROCESS_STOPPING
+Jobs,                        FAM_HAPROXY_PROCESS_JOBS
+Unstoppable Jobs,            FAM_HAPROXY_PROCESS_UNSTOPPABLE_JOBS
+Listeners,                   FAM_HAPROXY_PROCESS_LISTENERS
+ActivePeers,                 FAM_HAPROXY_PROCESS_ACTIVE_PEERS
+ConnectedPeers,              FAM_HAPROXY_PROCESS_CONNECTED_PEERS
+DroppedLogs,                 FAM_HAPROXY_PROCESS_DROPPED_LOGS
+BusyPolling,                 FAM_HAPROXY_PROCESS_BUSY_POLLING_ENABLED
+FailedResolutions,           FAM_HAPROXY_PROCESS_FAILED_RESOLUTIONS
+TotalBytesOut,               FAM_HAPROXY_PROCESS_BYTES_OUT
+TotalSplicdedBytesOut,       FAM_HAPROXY_PROCESS_SPLICED_BYTES_OUT
+BytesOutRate,                FAM_HAPROXY_PROCESS_BYTES_OUT_RATE
+CumRecvLogs,                 FAM_HAPROXY_PROCESS_RECV_LOGS
+Build info,                  FAM_HAPROXY_PROCESS_BUILD_INFO
+Tainted,                     FAM_HAPROXY_PROCESS_TAINTED
