@@ -1,0 +1,45 @@
+# TYPE system_softnet_processed counter
+system_softnet_processed_total{cpu="0",hostname="localhost.localdomain"} 106
+system_softnet_processed_total{cpu="1",hostname="localhost.localdomain"} 98
+system_softnet_processed_total{cpu="2",hostname="localhost.localdomain"} 56
+system_softnet_processed_total{cpu="3",hostname="localhost.localdomain"} 317765
+system_softnet_processed_total{cpu="4",hostname="localhost.localdomain"} 88
+system_softnet_processed_total{cpu="5",hostname="localhost.localdomain"} 106
+system_softnet_processed_total{cpu="6",hostname="localhost.localdomain"} 90
+system_softnet_processed_total{cpu="7",hostname="localhost.localdomain"} 108
+# TYPE system_softnet_backlog_length gauge
+system_softnet_backlog_length{cpu="0",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="1",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="2",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="3",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="4",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="5",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="6",hostname="localhost.localdomain"} 0
+system_softnet_backlog_length{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_softnet_dropped counter
+system_softnet_dropped_total{cpu="0",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="1",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="2",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="3",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="4",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="5",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="6",hostname="localhost.localdomain"} 0
+system_softnet_dropped_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_softnet_times_squeezed counter
+system_softnet_times_squeezed_total{cpu="0",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="1",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="2",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="3",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="4",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="5",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="6",hostname="localhost.localdomain"} 0
+system_softnet_times_squeezed_total{cpu="7",hostname="localhost.localdomain"} 0
+# TYPE system_softnet_received_rps counter
+system_softnet_received_rps_total{cpu="0",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="1",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="2",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="3",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="4",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="5",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="6",hostname="localhost.localdomain"} 0
+system_softnet_received_rps_total{cpu="7",hostname="localhost.localdomain"} 0
