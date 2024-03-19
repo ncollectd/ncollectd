@@ -1,0 +1,24 @@
+plugin_option(PLUGIN_APACHE "Apache httpd statistics" ON)
+
+set(BUILD_PLUGIN_APACHE 0)
+
+if(PLUGIN_APACHE)
+    find_package(LibCurl)
+    if(LIBCURL_FOUND)
+        set(BUILD_PLUGIN_APACHE 1)
+    else()
+        set(BUILD_PLUGIN_APACHE_REASON "libcurl not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_APACHE ${BUILD_PLUGIN_APACHE} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_APACHE)
+    set(PLUGIN_APACHE_SRC apache.c)
+    add_library(apache MODULE ${PLUGIN_APACHE_SRC})
+    target_link_libraries(apache PRIVATE libutils libmetric LibCurl::LibCurl)
+    set_target_properties(apache PROPERTIES PREFIX "")
+    install(TARGETS apache DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-apache.5 ncollectd-apache.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-apache.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
