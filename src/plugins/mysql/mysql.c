@@ -1,36 +1,21 @@
-/**
- * collectd - src/mysql.c
- * Copyright (C) 2006-2010  Florian octo Forster
- * Copyright (C) 2008       Mirko Buffoni
- * Copyright (C) 2009       Doug MacEachern
- * Copyright (C) 2009       Sebastian tokkee Harl
- * Copyright (C) 2009       Rodolphe Quiédeville
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Florian octo Forster <octo at collectd.org>
- *   Mirko Buffoni <briareos at eswat.org>
- *   Doug MacEachern <dougm at hyperic.com>
- *   Sebastian tokkee Harl <sh at tokkee.org>
- *   Rodolphe Quiédeville <rquiedeville at bearstech.com>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2006-2010 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2008 Mirko Buffoni
+// SPDX-FileCopyrightText: Copyright (C) 2009 Doug MacEachern
+// SPDX-FileCopyrightText: Copyright (C) 2009 Sebastian tokkee Harl
+// SPDX-FileCopyrightText: Copyright (C) 2009 Rodolphe Quiédeville
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Mirko Buffoni <briareos at eswat.org>
+// SPDX-FileContributor: Doug MacEachern <dougm at hyperic.com>
+// SPDX-FileContributor: Sebastian tokkee Harl <sh at tokkee.org>
+// SPDX-FileContributor: Rodolphe Quiédeville <rquiedeville at bearstech.com>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
+#include "libutils/complain.h"
+#include "libdbquery/dbquery.h"
 
 #ifdef HAVE_MYSQL_H
 #include <mysql.h>
@@ -38,930 +23,1480 @@
 #include <mysql/mysql.h>
 #endif
 
-struct mysql_database_s /* {{{ */
-{
-  char *instance;
-  char *alias;
-  char *host;
-  char *user;
-  char *pass;
-  char *database;
+#include "mysql_fam.h"
+#include "mysql_flags.h"
 
-  /* mysql_ssl_set params */
-  char *key;
-  char *cert;
-  char *ca;
-  char *capath;
-  char *cipher;
-
-  char *socket;
-  int port;
-  int timeout;
-
-  bool primary_stats;
-  bool replica_stats;
-  bool innodb_stats;
-  bool wsrep_stats;
-
-  bool replica_notif;
-  bool replica_io_running;
-  bool replica_sql_running;
-
-  MYSQL *con;
-  bool is_connected;
-  unsigned long mysql_version;
+static cf_flags_t cmysql_flags[] = {
+    { "globals",             COLLECT_GLOBALS           },
+    { "acl",                 COLLECT_ACL               },
+    { "aria",                COLLECT_ARIA              },
+    { "binlog",              COLLECT_BINLOG            },
+    { "commands",            COLLECT_COMMANDS          },
+    { "features",            COLLECT_FEATURES          },
+    { "handlers",            COLLECT_HANDLERS          },
+    { "innodb",              COLLECT_INNODB            },
+    { "innodb_cmp",          COLLECT_INNODB_CMP        },
+    { "innodb_cmpmem",       COLLECT_INNODB_CMPMEM     },
+    { "innodb_tablespace",   COLLECT_INNODB_TABLESPACE },
+    { "myisam",              COLLECT_MYISAM            },
+    { "perfomance_lost",     COLLECT_PERF_LOST         },
+    { "qcache",              COLLECT_QCACHE            },
+    { "slave",               COLLECT_SLAVE             },
+    { "ssl",                 COLLECT_SSL               },
+    { "wsrep",               COLLECT_WSREP             },
+    { "client",              COLLECT_CLIENT_STATS      },
+    { "user",                COLLECT_USER_STATS        },
+    { "index",               COLLECT_INDEX_STATS       },
+    { "table",               COLLECT_TABLE_STATS       },
+    { "table",               COLLECT_TABLE             },
+    { "response_time",       COLLECT_RESPONSE_TIME     },
+    { "master",              COLLECT_MASTER_STATS      },
+    { "slave",               COLLECT_SLAVE_STATS       },
+    { "heartbeat",           COLLECT_HEARTBEAT         },
 };
-typedef struct mysql_database_s mysql_database_t; /* }}} */
+static size_t cmysql_flags_size = STATIC_ARRAY_SIZE(cmysql_flags);
 
-static int mysql_read(user_data_t *ud);
+extern metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX];
 
-static void mysql_database_free(void *arg) /* {{{ */
-{
-  mysql_database_t *db;
-
-  DEBUG("mysql plugin: mysql_database_free (arg = %p);", arg);
-
-  db = arg;
-
-  if (db == NULL)
-    return;
-
-  if (db->con != NULL)
-    mysql_close(db->con);
-
-  sfree(db->alias);
-  sfree(db->host);
-  sfree(db->user);
-  sfree(db->pass);
-  sfree(db->socket);
-  sfree(db->instance);
-  sfree(db->database);
-  sfree(db->key);
-  sfree(db->cert);
-  sfree(db->ca);
-  sfree(db->capath);
-  sfree(db->cipher);
-  sfree(db);
-} /* }}} void mysql_database_free */
-
-/* Configuration handling functions {{{
- *
- * <Plugin mysql>
- *   <Database "plugin_instance1">
- *     Host "localhost"
- *     Port 22000
- *     ...
- *   </Database>
- * </Plugin>
- */
-static int mysql_config_database(oconfig_item_t *ci) /* {{{ */
-{
-  mysql_database_t *db;
-  int status = 0;
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    WARNING("mysql plugin: The `Database' block "
-            "needs exactly one string argument.");
-    return -1;
-  }
-
-  db = calloc(1, sizeof(*db));
-  if (db == NULL) {
-    ERROR("mysql plugin: calloc failed.");
-    return -1;
-  }
-
-  /* initialize all the pointers */
-  db->alias = NULL;
-  db->host = NULL;
-  db->user = NULL;
-  db->pass = NULL;
-  db->database = NULL;
-  db->key = NULL;
-  db->cert = NULL;
-  db->ca = NULL;
-  db->capath = NULL;
-  db->cipher = NULL;
-
-  db->socket = NULL;
-  db->con = NULL;
-  db->timeout = 0;
-
-  /* trigger a notification, if it's not running */
-  db->replica_io_running = true;
-  db->replica_sql_running = true;
-
-  status = cf_util_get_string(ci, &db->instance);
-  if (status != 0) {
-    sfree(db);
-    return status;
-  }
-  assert(db->instance != NULL);
-
-  /* Fill the `mysql_database_t' structure.. */
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Alias", child->key) == 0)
-      status = cf_util_get_string(child, &db->alias);
-    else if (strcasecmp("Host", child->key) == 0)
-      status = cf_util_get_string(child, &db->host);
-    else if (strcasecmp("User", child->key) == 0)
-      status = cf_util_get_string(child, &db->user);
-    else if (strcasecmp("Password", child->key) == 0)
-      status = cf_util_get_string(child, &db->pass);
-    else if (strcasecmp("Port", child->key) == 0) {
-      status = cf_util_get_port_number(child);
-      if (status > 0) {
-        db->port = status;
-        status = 0;
-      }
-    } else if (strcasecmp("Socket", child->key) == 0)
-      status = cf_util_get_string(child, &db->socket);
-    else if (strcasecmp("Database", child->key) == 0)
-      status = cf_util_get_string(child, &db->database);
-    else if (strcasecmp("SSLKey", child->key) == 0)
-      status = cf_util_get_string(child, &db->key);
-    else if (strcasecmp("SSLCert", child->key) == 0)
-      status = cf_util_get_string(child, &db->cert);
-    else if (strcasecmp("SSLCA", child->key) == 0)
-      status = cf_util_get_string(child, &db->ca);
-    else if (strcasecmp("SSLCAPath", child->key) == 0)
-      status = cf_util_get_string(child, &db->capath);
-    else if (strcasecmp("SSLCipher", child->key) == 0)
-      status = cf_util_get_string(child, &db->cipher);
-    else if (strcasecmp("ConnectTimeout", child->key) == 0)
-      status = cf_util_get_int(child, &db->timeout);
-    else if (strcasecmp("MasterStats", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->primary_stats);
-    else if (strcasecmp("SlaveStats", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->replica_stats);
-    else if (strcasecmp("SlaveNotifications", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->replica_notif);
-    else if (strcasecmp("InnodbStats", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->innodb_stats);
-    else if (strcasecmp("WsrepStats", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->wsrep_stats);
-    else {
-      WARNING("mysql plugin: Option `%s' not allowed here.", child->key);
-      status = -1;
-    }
-
-    if (status != 0)
-      break;
-  }
-
-  /* If all went well, register this database for reading */
-  if (status == 0) {
-    char cb_name[DATA_MAX_NAME_LEN];
-
-    DEBUG("mysql plugin: Registering new read callback: %s",
-          (db->database != NULL) ? db->database : "<default>");
-
-    if (db->instance != NULL)
-      ssnprintf(cb_name, sizeof(cb_name), "mysql-%s", db->instance);
-    else
-      sstrncpy(cb_name, "mysql", sizeof(cb_name));
-
-    plugin_register_complex_read(
-        /* group = */ NULL, cb_name, mysql_read, /* interval = */ 0,
-        &(user_data_t){
-            .data = db,
-            .free_func = mysql_database_free,
-        });
-  } else {
-    mysql_database_free(db);
-    return -1;
-  }
-
-  return 0;
-} /* }}} int mysql_config_database */
-
-static int mysql_config(oconfig_item_t *ci) /* {{{ */
-{
-  if (ci == NULL)
-    return EINVAL;
-
-  /* Fill the `mysql_database_t' structure.. */
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Database", child->key) == 0)
-      mysql_config_database(child);
-    else
-      WARNING("mysql plugin: Option \"%s\" not allowed here.", child->key);
-  }
-
-  return 0;
-} /* }}} int mysql_config */
-
-/* }}} End of configuration handling functions */
-
-static MYSQL *getconnection(mysql_database_t *db) {
-  const char *cipher;
-
-  if (db->is_connected) {
-    int status;
-
-    status = mysql_ping(db->con);
-    if (status == 0)
-      return db->con;
-
-    WARNING("mysql plugin: Lost connection to instance \"%s\": %s",
-            db->instance, mysql_error(db->con));
-  }
-  db->is_connected = false;
-
-  /* Close the old connection before initializing a new one. */
-  if (db->con != NULL) {
-    mysql_close(db->con);
-    db->con = NULL;
-  }
-
-  db->con = mysql_init(NULL);
-  if (db->con == NULL) {
-    ERROR("mysql plugin: mysql_init failed: %s", mysql_error(db->con));
-    return NULL;
-  }
-
-  /* Configure TCP connect timeout (default: 0) */
-  db->con->options.connect_timeout = db->timeout;
-
-  mysql_ssl_set(db->con, db->key, db->cert, db->ca, db->capath, db->cipher);
-
-  if (mysql_real_connect(db->con, db->host, db->user, db->pass, db->database,
-                         db->port, db->socket, 0) == NULL) {
-    ERROR("mysql plugin: Failed to connect to database %s "
-          "at server %s: %s",
-          (db->database != NULL) ? db->database : "<none>",
-          (db->host != NULL) ? db->host : "localhost", mysql_error(db->con));
-    return NULL;
-  }
-
-  cipher = mysql_get_ssl_cipher(db->con);
-
-  db->mysql_version = mysql_get_server_version(db->con);
-  INFO("mysql plugin: Successfully connected to database %s "
-       "at server %s with cipher %s "
-       "(server version: %s, protocol version: %d) ",
-       (db->database != NULL) ? db->database : "<none>",
-       mysql_get_host_info(db->con), (cipher != NULL) ? cipher : "<none>",
-       mysql_get_server_info(db->con), mysql_get_proto_info(db->con));
-
-  db->is_connected = true;
-  return db->con;
-} /* static MYSQL *getconnection (mysql_database_t *db) */
-
-static void set_host(mysql_database_t *db, char *buf, size_t buflen) {
-  if (db->alias)
-    sstrncpy(buf, db->alias, buflen);
-  else if ((db->host == NULL) || (strcmp("", db->host) == 0) ||
-           (strcmp("127.0.0.1", db->host) == 0) ||
-           (strcmp("localhost", db->host) == 0))
-    sstrncpy(buf, hostname_g, buflen);
-  else
-    sstrncpy(buf, db->host, buflen);
-} /* void set_host */
-
-static void submit(const char *type, const char *type_instance, value_t *values,
-                   size_t values_len, mysql_database_t *db) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = values;
-  vl.values_len = values_len;
-
-  set_host(db, vl.host, sizeof(vl.host));
-
-  sstrncpy(vl.plugin, "mysql", sizeof(vl.plugin));
-
-  /* Assured by "mysql_config_database" */
-  assert(db->instance != NULL);
-  sstrncpy(vl.plugin_instance, db->instance, sizeof(vl.plugin_instance));
-
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  if (type_instance != NULL)
-    sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-} /* submit */
-
-static void gauge_submit(const char *type, const char *type_instance,
-                         gauge_t value, mysql_database_t *db) {
-  submit(type, type_instance, &(value_t){.gauge = value}, 1, db);
-} /* void gauge_submit */
-
-static void derive_submit(const char *type, const char *type_instance,
-                          derive_t value, mysql_database_t *db) {
-  submit(type, type_instance, &(value_t){.derive = value}, 1, db);
-} /* void derive_submit */
-
-static void traffic_submit(derive_t rx, derive_t tx, mysql_database_t *db) {
-  value_t values[] = {
-      {.derive = rx},
-      {.derive = tx},
-  };
-
-  submit("mysql_octets", NULL, values, STATIC_ARRAY_SIZE(values), db);
-} /* void traffic_submit */
-
-static MYSQL_RES *exec_query(MYSQL *con, const char *query) {
-  MYSQL_RES *res;
-
-  size_t query_len = strlen(query);
-
-  if (mysql_real_query(con, query, query_len)) {
-    ERROR("mysql plugin: Failed to execute query: %s", mysql_error(con));
-    INFO("mysql plugin: SQL query was: %s", query);
-    return NULL;
-  }
-
-  res = mysql_store_result(con);
-  if (res == NULL) {
-    ERROR("mysql plugin: Failed to store query result: %s", mysql_error(con));
-    INFO("mysql plugin: SQL query was: %s", query);
-    return NULL;
-  }
-
-  return res;
-} /* exec_query */
-
-static int mysql_read_primary_stats(mysql_database_t *db, MYSQL *con) {
-  MYSQL_RES *res;
-  MYSQL_ROW row;
-
-  const char *query;
-  int field_num;
-  unsigned long long position;
-
-  query = "SHOW MASTER STATUS";
-
-  res = exec_query(con, query);
-  if (res == NULL)
-    return -1;
-
-  row = mysql_fetch_row(res);
-  if (row == NULL) {
-    ERROR("mysql plugin: Failed to get primary statistics: "
-          "`%s' did not return any rows.",
-          query);
-    mysql_free_result(res);
-    return -1;
-  }
-
-  field_num = mysql_num_fields(res);
-  if (field_num < 2) {
-    ERROR("mysql plugin: Failed to get primary statistics: "
-          "`%s' returned less than two columns.",
-          query);
-    mysql_free_result(res);
-    return -1;
-  }
-
-  position = atoll(row[1]);
-  derive_submit("mysql_log_position", "master-bin", position, db);
-
-  row = mysql_fetch_row(res);
-  if (row != NULL)
-    WARNING("mysql plugin: `%s' returned more than one row - "
-            "ignoring further results.",
-            query);
-
-  mysql_free_result(res);
-
-  return 0;
-} /* mysql_read_primary_stats */
-
-static int mysql_read_replica_stats(mysql_database_t *db, MYSQL *con) {
-  MYSQL_RES *res;
-  MYSQL_ROW row;
-
-  const char *query;
-  int field_num;
-
-  /* WTF? libmysqlclient does not seem to provide any means to
-   * translate a column name to a column index ... :-/ */
-  const int READ_MASTER_LOG_POS_IDX = 6;
-  const int SLAVE_IO_RUNNING_IDX = 10;
-  const int SLAVE_SQL_RUNNING_IDX = 11;
-  const int EXEC_MASTER_LOG_POS_IDX = 21;
-  const int SECONDS_BEHIND_MASTER_IDX = 32;
-
-  query = "SHOW SLAVE STATUS";
-
-  res = exec_query(con, query);
-  if (res == NULL)
-    return -1;
-
-  row = mysql_fetch_row(res);
-  if (row == NULL) {
-    ERROR("mysql plugin: Failed to get replica statistics: "
-          "`%s' did not return any rows.",
-          query);
-    mysql_free_result(res);
-    return -1;
-  }
-
-  field_num = mysql_num_fields(res);
-  if (field_num < 33) {
-    ERROR("mysql plugin: Failed to get replica statistics: "
-          "`%s' returned less than 33 columns.",
-          query);
-    mysql_free_result(res);
-    return -1;
-  }
-
-  if (db->replica_stats) {
-    unsigned long long counter;
-    double gauge;
-
-    gauge_submit("bool", "slave-sql-running",
-                 (row[SLAVE_SQL_RUNNING_IDX] != NULL) &&
-                     (strcasecmp(row[SLAVE_SQL_RUNNING_IDX], "yes") == 0),
-                 db);
-
-    gauge_submit("bool", "slave-io-running",
-                 (row[SLAVE_IO_RUNNING_IDX] != NULL) &&
-                     (strcasecmp(row[SLAVE_IO_RUNNING_IDX], "yes") == 0),
-                 db);
-
-    counter = atoll(row[READ_MASTER_LOG_POS_IDX]);
-    derive_submit("mysql_log_position", "slave-read", counter, db);
-
-    counter = atoll(row[EXEC_MASTER_LOG_POS_IDX]);
-    derive_submit("mysql_log_position", "slave-exec", counter, db);
-
-    if (row[SECONDS_BEHIND_MASTER_IDX] != NULL) {
-      gauge = atof(row[SECONDS_BEHIND_MASTER_IDX]);
-      gauge_submit("time_offset", NULL, gauge, db);
-    }
-  }
-
-  if (db->replica_notif) {
-    notification_t n = {0,  cdtime(),      "", "",  "mysql",
-                        "", "time_offset", "", NULL};
-
-    char *io, *sql;
-
-    io = row[SLAVE_IO_RUNNING_IDX];
-    sql = row[SLAVE_SQL_RUNNING_IDX];
-
-    set_host(db, n.host, sizeof(n.host));
-
-    /* Assured by "mysql_config_database" */
-    assert(db->instance != NULL);
-    sstrncpy(n.plugin_instance, db->instance, sizeof(n.plugin_instance));
-
-    if (((io == NULL) || (strcasecmp(io, "yes") != 0)) &&
-        (db->replica_io_running)) {
-      n.severity = NOTIF_WARNING;
-      ssnprintf(n.message, sizeof(n.message),
-                "replica I/O thread not started or not connected to primary");
-      plugin_dispatch_notification(&n);
-      db->replica_io_running = false;
-    } else if (((io != NULL) && (strcasecmp(io, "yes") == 0)) &&
-               (!db->replica_io_running)) {
-      n.severity = NOTIF_OKAY;
-      ssnprintf(n.message, sizeof(n.message),
-                "replica I/O thread started and connected to primary");
-      plugin_dispatch_notification(&n);
-      db->replica_io_running = true;
-    }
-
-    if (((sql == NULL) || (strcasecmp(sql, "yes") != 0)) &&
-        (db->replica_sql_running)) {
-      n.severity = NOTIF_WARNING;
-      ssnprintf(n.message, sizeof(n.message), "replica SQL thread not started");
-      plugin_dispatch_notification(&n);
-      db->replica_sql_running = false;
-    } else if (((sql != NULL) && (strcasecmp(sql, "yes") == 0)) &&
-               (!db->replica_sql_running)) {
-      n.severity = NOTIF_OKAY;
-      ssnprintf(n.message, sizeof(n.message), "replica SQL thread started");
-      plugin_dispatch_notification(&n);
-      db->replica_sql_running = true;
-    }
-  }
-
-  row = mysql_fetch_row(res);
-  if (row != NULL)
-    WARNING("mysql plugin: `%s' returned more than one row - "
-            "ignoring further results.",
-            query);
-
-  mysql_free_result(res);
-
-  return 0;
-} /* mysql_read_replica_stats */
-
-static int mysql_read_innodb_stats(mysql_database_t *db, MYSQL *con) {
-  MYSQL_RES *res;
-  MYSQL_ROW row;
-
-  const char *query;
-  struct {
-    const char *key;
-    const char *type;
-    int ds_type;
-  } metrics[] = {
-      {"metadata_mem_pool_size", "bytes", DS_TYPE_GAUGE},
-      {"lock_deadlocks", "mysql_locks", DS_TYPE_DERIVE},
-      {"lock_timeouts", "mysql_locks", DS_TYPE_DERIVE},
-      {"lock_row_lock_current_waits", "mysql_locks", DS_TYPE_DERIVE},
-      {"buffer_pool_size", "bytes", DS_TYPE_GAUGE},
-
-      {"os_log_bytes_written", "operations", DS_TYPE_DERIVE},
-      {"os_log_pending_fsyncs", "operations", DS_TYPE_DERIVE},
-      {"os_log_pending_writes", "operations", DS_TYPE_DERIVE},
-
-      {"trx_rseg_history_len", "gauge", DS_TYPE_GAUGE},
-
-      {"adaptive_hash_searches", "operations", DS_TYPE_DERIVE},
-
-      {"file_num_open_files", "gauge", DS_TYPE_GAUGE},
-
-      {"ibuf_merges_insert", "operations", DS_TYPE_DERIVE},
-      {"ibuf_merges_delete_mark", "operations", DS_TYPE_DERIVE},
-      {"ibuf_merges_delete", "operations", DS_TYPE_DERIVE},
-      {"ibuf_merges_discard_insert", "operations", DS_TYPE_DERIVE},
-      {"ibuf_merges_discard_delete_mark", "operations", DS_TYPE_DERIVE},
-      {"ibuf_merges_discard_delete", "operations", DS_TYPE_DERIVE},
-      {"ibuf_merges_discard_merges", "operations", DS_TYPE_DERIVE},
-      {"ibuf_size", "bytes", DS_TYPE_GAUGE},
-
-      {"innodb_activity_count", "gauge", DS_TYPE_GAUGE},
-
-      {"innodb_rwlock_s_spin_waits", "operations", DS_TYPE_DERIVE},
-      {"innodb_rwlock_x_spin_waits", "operations", DS_TYPE_DERIVE},
-      {"innodb_rwlock_s_spin_rounds", "operations", DS_TYPE_DERIVE},
-      {"innodb_rwlock_x_spin_rounds", "operations", DS_TYPE_DERIVE},
-      {"innodb_rwlock_s_os_waits", "operations", DS_TYPE_DERIVE},
-      {"innodb_rwlock_x_os_waits", "operations", DS_TYPE_DERIVE},
-
-      {"dml_reads", "operations", DS_TYPE_DERIVE},
-      {"dml_inserts", "operations", DS_TYPE_DERIVE},
-      {"dml_deletes", "operations", DS_TYPE_DERIVE},
-      {"dml_updates", "operations", DS_TYPE_DERIVE},
-
-      {NULL, NULL, 0}};
-
-  if (db->mysql_version >= 100500)
-    query = "SELECT name, count, type FROM information_schema.innodb_metrics "
-            "WHERE enabled";
-  else
-    query = "SELECT name, count, type FROM information_schema.innodb_metrics "
-            "WHERE status = 'enabled'";
-
-  res = exec_query(con, query);
-  if (res == NULL)
-    return -1;
-
-  while ((row = mysql_fetch_row(res))) {
-    int i;
+struct cmysql_innodb {
     char *key;
-    unsigned long long val;
+    int fam;
+    char *lname;
+    char *lvalue;
+};
 
-    key = row[0];
-    val = atoll(row[1]);
+const struct cmysql_innodb *cmysql_innodb_get_key (register const char *str, register size_t len);
 
-    for (i = 0; metrics[i].key != NULL && strcmp(metrics[i].key, key) != 0; i++)
-      ;
+struct cmysql_status {
+    char *key;
+    cmysql_flag_t flag;
+    int fam;
+    char *lname;
+    char *lvalue;
+};
 
-    if (metrics[i].key == NULL)
-      continue;
+const struct cmysql_status *cmysql_status_get_key (register const char *str, register size_t len);
 
-    switch (metrics[i].ds_type) {
-    case DS_TYPE_COUNTER:
-      derive_submit(metrics[i].type, key, (counter_t)val, db);
-      break;
-    case DS_TYPE_GAUGE:
-      gauge_submit(metrics[i].type, key, (gauge_t)val, db);
-      break;
-    case DS_TYPE_DERIVE:
-      derive_submit(metrics[i].type, key, (derive_t)val, db);
-      break;
+typedef enum {
+    SERVER_MARIADB,
+    SERVER_PERCONA,
+    SERVER_MYSQL
+} cmysql_server_t;
+
+typedef struct {
+    char *instance;
+    char *host;
+    char *user;
+    char *pass;
+    char *database;
+
+    /* mysql_ssl_set params */
+    char *key;
+    char *cert;
+    char *ca;
+    char *capath;
+    char *cipher;
+
+    char *socket;
+    int port;
+    int timeout;
+
+    c_complain_t conn_complaint;
+
+    char *metric_prefix;
+    label_set_t labels;
+    uint64_t flags;
+
+    bool heartbeat_utc;
+    char *heartbeat_schema;
+    char *heartbeat_table;
+
+    db_query_preparation_area_t **q_prep_areas;
+    db_query_t **queries;
+    size_t queries_num;
+
+    bool primary_stats;
+    bool replica_stats;
+
+    bool replica_notif;
+    bool replica_io_running;
+    bool replica_sql_running;
+
+    MYSQL *con;
+    bool is_connected;
+    unsigned long mysql_version;
+    cmysql_server_t mysql_server;
+
+    metric_family_t fams[FAM_MYSQL_STATUS_MAX];
+
+} cmysql_database_t;
+
+static db_query_t **queries;
+static size_t queries_num;
+
+static void cmysql_database_free(void *arg)
+{
+    cmysql_database_t *db = arg;
+
+    if (db == NULL)
+        return;
+
+    if (db->con != NULL)
+        mysql_close(db->con);
+
+    free(db->host);
+    free(db->user);
+    free(db->pass);
+    free(db->socket);
+    free(db->instance);
+    free(db->database);
+    free(db->key);
+    free(db->cert);
+    free(db->ca);
+    free(db->capath);
+    free(db->cipher);
+
+    free(db->metric_prefix);
+    label_set_reset(&db->labels);
+    free(db->heartbeat_schema);
+    free(db->heartbeat_table);
+
+    if (db->q_prep_areas) {
+        for (size_t i = 0; i < db->queries_num; ++i)
+            db_query_delete_preparation_area(db->q_prep_areas[i]);
     }
-  }
+    free(db->q_prep_areas);
+    /* N.B.: db->queries references objects "owned" by the global queries
+     * variable. Free the array here, but not the content. */
+    free(db->queries);
 
-  mysql_free_result(res);
-  return 0;
+    free(db);
 }
 
-static int mysql_read_wsrep_stats(mysql_database_t *db, MYSQL *con) {
-  MYSQL_RES *res;
-  MYSQL_ROW row;
+static MYSQL *cmysql_get_connection(cmysql_database_t *db)
+{
+    const char *cipher;
 
-  const char *query;
-  struct {
-    const char *key;
-    const char *type;
-    int ds_type;
-  } metrics[] = {
+    if (db->is_connected) {
+        int status = mysql_ping(db->con);
+        if (status == 0)
+            return db->con;
 
-      {"wsrep_apply_oooe", "operations", DS_TYPE_DERIVE},
-      {"wsrep_apply_oool", "operations", DS_TYPE_DERIVE},
-      {"wsrep_causal_reads", "operations", DS_TYPE_DERIVE},
-      {"wsrep_commit_oooe", "operations", DS_TYPE_DERIVE},
-      {"wsrep_commit_oool", "operations", DS_TYPE_DERIVE},
-      {"wsrep_flow_control_recv", "operations", DS_TYPE_DERIVE},
-      {"wsrep_flow_control_sent", "operations", DS_TYPE_DERIVE},
-      {"wsrep_flow_control_paused", "operations", DS_TYPE_DERIVE},
-      {"wsrep_local_bf_aborts", "operations", DS_TYPE_DERIVE},
-      {"wsrep_local_cert_failures", "operations", DS_TYPE_DERIVE},
-      {"wsrep_local_commits", "operations", DS_TYPE_DERIVE},
-      {"wsrep_local_replays", "operations", DS_TYPE_DERIVE},
-      {"wsrep_received", "operations", DS_TYPE_DERIVE},
-      {"wsrep_replicated", "operations", DS_TYPE_DERIVE},
+        PLUGIN_WARNING("Lost connection to instance '%s': %s",
+                        db->instance, mysql_error(db->con));
+    }
 
-      {"wsrep_received_bytes", "total_bytes", DS_TYPE_DERIVE},
-      {"wsrep_replicated_bytes", "total_bytes", DS_TYPE_DERIVE},
+    db->is_connected = false;
 
-      {"wsrep_apply_window", "gauge", DS_TYPE_GAUGE},
-      {"wsrep_commit_window", "gauge", DS_TYPE_GAUGE},
+    /* Close the old connection before initializing a new one. */
+    if (db->con != NULL) {
+        mysql_close(db->con);
+        db->con = NULL;
+    }
 
-      {"wsrep_cluster_size", "gauge", DS_TYPE_GAUGE},
-      {"wsrep_cert_deps_distance", "gauge", DS_TYPE_GAUGE},
+    db->con = mysql_init(NULL);
+    if (db->con == NULL) {
+        PLUGIN_ERROR("mysql_init failed: %s", mysql_error(db->con));
+        return NULL;
+    }
 
-      {"wsrep_local_recv_queue", "queue_length", DS_TYPE_GAUGE},
-      {"wsrep_local_send_queue", "queue_length", DS_TYPE_GAUGE},
+    /* Configure TCP connect timeout (default: 0) */
+    db->con->options.connect_timeout = db->timeout;
 
-      {NULL, NULL, 0}
+    mysql_ssl_set(db->con, db->key, db->cert, db->ca, db->capath, db->cipher);
 
-  };
+    MYSQL *con = mysql_real_connect(db->con, db->host, db->user, db->pass, db->database,
+                                    db->port, db->socket, 0);
+    if (con == NULL) {
+        c_complain(LOG_ERR, &db->conn_complaint,
+                   "Failed to connect to database %s at server %s: %s",
+                   (db->database != NULL) ? db->database : "<none>",
+                   (db->host != NULL) ? db->host : "localhost", mysql_error(db->con));
+        return NULL;
+    }
 
-  query = "SHOW GLOBAL STATUS LIKE 'wsrep_%'";
+    cipher = mysql_get_ssl_cipher(db->con);
 
-  res = exec_query(con, query);
-  if (res == NULL)
-    return -1;
+    db->mysql_version = mysql_get_server_version(db->con);
 
-  row = mysql_fetch_row(res);
-  if (row == NULL) {
-    ERROR("mysql plugin: Failed to get wsrep statistics: "
-          "`%s' did not return any rows.",
-          query);
+    const char *info = mysql_get_server_info(db->con);
+    if (info != NULL) {
+        if (strstr(info, "MariaDB") != NULL) {
+            db->mysql_server = SERVER_MARIADB;
+        } else if (strstr(info, "Percona") != NULL) {
+            db->mysql_server = SERVER_PERCONA;
+        } else {
+            db->mysql_server = SERVER_MYSQL;
+        }
+    } else {
+        db->mysql_server = SERVER_MARIADB;
+    }
+
+    c_do_release(LOG_INFO, &db->conn_complaint,
+                 "Successfully connected to database %s at server %s with cipher %s "
+                 "(server version: %s, protocol version: %u) ",
+                 (db->database != NULL) ? db->database : "<none>",
+                 mysql_get_host_info(db->con), (cipher != NULL) ? cipher : "<none>",
+                 mysql_get_server_info(db->con), mysql_get_proto_info(db->con));
+
+    db->is_connected = true;
+    return db->con;
+}
+
+static MYSQL_RES *exec_query(MYSQL *con, const char *query)
+{
+    size_t query_len = strlen(query);
+
+    if (mysql_real_query(con, query, query_len)) {
+        PLUGIN_ERROR("Failed to execute query: %s", mysql_error(con));
+        PLUGIN_INFO("SQL query was: %s", query);
+        return NULL;
+    }
+
+    MYSQL_RES *res = mysql_store_result(con);
+    if (res == NULL) {
+        PLUGIN_ERROR("Failed to store query result: %s", mysql_error(con));
+        PLUGIN_INFO("SQL query was: %s", query);
+        return NULL;
+    }
+
+    return res;
+}
+
+static int cmysql_read_primary_stats(__attribute__((unused)) cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SHOW MASTER STATUS";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    if (row == NULL) {
+        PLUGIN_ERROR("Failed to get primary statistics: '%s' did not return any rows.", query);
+        mysql_free_result(res);
+        return -1;
+    }
+
+    int field_num = mysql_num_fields(res);
+    if (field_num < 2) {
+        PLUGIN_ERROR("Failed to get primary statistics: '%s' returned less than two columns.",
+                    query);
+        mysql_free_result(res);
+        return -1;
+    }
+
+//    unsigned long long position = atoll(row[1]);
+//    derive_submit("mysql_log_position", "master-bin", position, db);
+
+    row = mysql_fetch_row(res);
+    if (row != NULL)
+        PLUGIN_WARNING("`%s' returned more than one row ignoring further results.", query);
+
     mysql_free_result(res);
-    return -1;
-  }
 
-  while ((row = mysql_fetch_row(res))) {
-    int i;
-    char *key;
-    unsigned long long val;
+    return 0;
+}
 
-    key = row[0];
-    val = atoll(row[1]);
+static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
+{
+#if 0
+    /* WTF? libmysqlclient does not seem to provide any means to
+     * translate a column name to a column index ... :-/ */
+    const int READ_MASTER_LOG_POS_IDX = 6;
+    const int SLAVE_IO_RUNNING_IDX = 10;
+    const int SLAVE_SQL_RUNNING_IDX = 11;
+    const int EXEC_MASTER_LOG_POS_IDX = 21;
+    const int SECONDS_BEHIND_MASTER_IDX = 32;
+#endif
+    const char *query = "SHOW SLAVE STATUS";
 
-    for (i = 0; metrics[i].key != NULL && strcmp(metrics[i].key, key) != 0; i++)
-      ;
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
 
-    if (metrics[i].key == NULL)
-      continue;
-
-    switch (metrics[i].ds_type) {
-    case DS_TYPE_GAUGE:
-      gauge_submit(metrics[i].type, key, (gauge_t)val, db);
-      break;
-    case DS_TYPE_DERIVE:
-      derive_submit(metrics[i].type, key, (derive_t)val, db);
-      break;
+    MYSQL_ROW row = mysql_fetch_row(res);
+    if (row == NULL) {
+        PLUGIN_ERROR("Failed to get replica statistics: '%s' did not return any rows.", query);
+        mysql_free_result(res);
+        return -1;
     }
-  }
 
-  mysql_free_result(res);
-  return 0;
-} /* mysql_read_wsrep_stats */
-
-static int mysql_read(user_data_t *ud) {
-  mysql_database_t *db;
-  MYSQL *con;
-  MYSQL_RES *res;
-  MYSQL_ROW row;
-  const char *query;
-
-  derive_t qcache_hits = 0;
-  derive_t qcache_inserts = 0;
-  derive_t qcache_not_cached = 0;
-  derive_t qcache_lowmem_prunes = 0;
-  gauge_t qcache_queries_in_cache = NAN;
-
-  gauge_t threads_running = NAN;
-  gauge_t threads_connected = NAN;
-  gauge_t threads_cached = NAN;
-  derive_t threads_created = 0;
-
-  unsigned long long traffic_incoming = 0ULL;
-  unsigned long long traffic_outgoing = 0ULL;
-
-  if ((ud == NULL) || (ud->data == NULL)) {
-    ERROR("mysql plugin: mysql_database_read: Invalid user data.");
-    return -1;
-  }
-
-  db = (mysql_database_t *)ud->data;
-
-  /* An error message will have been printed in this case */
-  if ((con = getconnection(db)) == NULL)
-    return -1;
-
-  query = "SHOW STATUS";
-  if (db->mysql_version >= 50002)
-    query = "SHOW GLOBAL STATUS";
-
-  res = exec_query(con, query);
-  if (res == NULL)
-    return -1;
-
-  while ((row = mysql_fetch_row(res))) {
-    char *key;
-    unsigned long long val;
-
-    key = row[0];
-    val = atoll(row[1]);
-
-    if (strncmp(key, "Com_", strlen("Com_")) == 0) {
-      if (val == 0ULL)
-        continue;
-
-      /* Ignore `prepared statements' */
-      if (strncmp(key, "Com_stmt_", strlen("Com_stmt_")) != 0)
-        derive_submit("mysql_commands", key + strlen("Com_"), val, db);
-    } else if (strncmp(key, "Handler_", strlen("Handler_")) == 0) {
-      if (val == 0ULL)
-        continue;
-
-      derive_submit("mysql_handler", key + strlen("Handler_"), val, db);
-    } else if (strncmp(key, "Qcache_", strlen("Qcache_")) == 0) {
-      if (strcmp(key, "Qcache_hits") == 0)
-        qcache_hits = (derive_t)val;
-      else if (strcmp(key, "Qcache_inserts") == 0)
-        qcache_inserts = (derive_t)val;
-      else if (strcmp(key, "Qcache_not_cached") == 0)
-        qcache_not_cached = (derive_t)val;
-      else if (strcmp(key, "Qcache_lowmem_prunes") == 0)
-        qcache_lowmem_prunes = (derive_t)val;
-      else if (strcmp(key, "Qcache_queries_in_cache") == 0)
-        qcache_queries_in_cache = (gauge_t)val;
-    } else if (strncmp(key, "Bytes_", strlen("Bytes_")) == 0) {
-      if (strcmp(key, "Bytes_received") == 0)
-        traffic_incoming += val;
-      else if (strcmp(key, "Bytes_sent") == 0)
-        traffic_outgoing += val;
-    } else if (strncmp(key, "Threads_", strlen("Threads_")) == 0) {
-      if (strcmp(key, "Threads_running") == 0)
-        threads_running = (gauge_t)val;
-      else if (strcmp(key, "Threads_connected") == 0)
-        threads_connected = (gauge_t)val;
-      else if (strcmp(key, "Threads_cached") == 0)
-        threads_cached = (gauge_t)val;
-      else if (strcmp(key, "Threads_created") == 0)
-        threads_created = (derive_t)val;
-    } else if (strncmp(key, "Table_locks_", strlen("Table_locks_")) == 0) {
-      derive_submit("mysql_locks", key + strlen("Table_locks_"), val, db);
-    } else if (db->innodb_stats &&
-               strncmp(key, "Innodb_", strlen("Innodb_")) == 0) {
-      /* buffer pool */
-      if (strcmp(key, "Innodb_buffer_pool_pages_data") == 0)
-        gauge_submit("mysql_bpool_pages", "data", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_pages_dirty") == 0)
-        gauge_submit("mysql_bpool_pages", "dirty", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_pages_flushed") == 0)
-        derive_submit("mysql_bpool_counters", "pages_flushed", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_pages_free") == 0)
-        gauge_submit("mysql_bpool_pages", "free", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_pages_misc") == 0)
-        gauge_submit("mysql_bpool_pages", "misc", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_pages_total") == 0)
-        gauge_submit("mysql_bpool_pages", "total", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_read_ahead_rnd") == 0)
-        derive_submit("mysql_bpool_counters", "read_ahead_rnd", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_read_ahead") == 0)
-        derive_submit("mysql_bpool_counters", "read_ahead", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_read_ahead_evicted") == 0)
-        derive_submit("mysql_bpool_counters", "read_ahead_evicted", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_read_requests") == 0)
-        derive_submit("mysql_bpool_counters", "read_requests", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_reads") == 0)
-        derive_submit("mysql_bpool_counters", "reads", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_wait_free") == 0)
-        derive_submit("mysql_bpool_counters", "wait_free", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_write_requests") == 0)
-        derive_submit("mysql_bpool_counters", "write_requests", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_bytes_data") == 0)
-        gauge_submit("mysql_bpool_bytes", "data", val, db);
-      else if (strcmp(key, "Innodb_buffer_pool_bytes_dirty") == 0)
-        gauge_submit("mysql_bpool_bytes", "dirty", val, db);
-
-      /* data */
-      if (strcmp(key, "Innodb_data_fsyncs") == 0)
-        derive_submit("mysql_innodb_data", "fsyncs", val, db);
-      else if (strcmp(key, "Innodb_data_read") == 0)
-        derive_submit("mysql_innodb_data", "read", val, db);
-      else if (strcmp(key, "Innodb_data_reads") == 0)
-        derive_submit("mysql_innodb_data", "reads", val, db);
-      else if (strcmp(key, "Innodb_data_writes") == 0)
-        derive_submit("mysql_innodb_data", "writes", val, db);
-      else if (strcmp(key, "Innodb_data_written") == 0)
-        derive_submit("mysql_innodb_data", "written", val, db);
-
-      /* double write */
-      else if (strcmp(key, "Innodb_dblwr_writes") == 0)
-        derive_submit("mysql_innodb_dblwr", "writes", val, db);
-      else if (strcmp(key, "Innodb_dblwr_pages_written") == 0)
-        derive_submit("mysql_innodb_dblwr", "written", val, db);
-      else if (strcmp(key, "Innodb_dblwr_page_size") == 0)
-        gauge_submit("mysql_innodb_dblwr", "page_size", val, db);
-
-      /* log */
-      else if (strcmp(key, "Innodb_log_waits") == 0)
-        derive_submit("mysql_innodb_log", "waits", val, db);
-      else if (strcmp(key, "Innodb_log_write_requests") == 0)
-        derive_submit("mysql_innodb_log", "write_requests", val, db);
-      else if (strcmp(key, "Innodb_log_writes") == 0)
-        derive_submit("mysql_innodb_log", "writes", val, db);
-      else if (strcmp(key, "Innodb_os_log_fsyncs") == 0)
-        derive_submit("mysql_innodb_log", "fsyncs", val, db);
-      else if (strcmp(key, "Innodb_os_log_written") == 0)
-        derive_submit("mysql_innodb_log", "written", val, db);
-
-      /* pages */
-      else if (strcmp(key, "Innodb_pages_created") == 0)
-        derive_submit("mysql_innodb_pages", "created", val, db);
-      else if (strcmp(key, "Innodb_pages_read") == 0)
-        derive_submit("mysql_innodb_pages", "read", val, db);
-      else if (strcmp(key, "Innodb_pages_written") == 0)
-        derive_submit("mysql_innodb_pages", "written", val, db);
-
-      /* row lock */
-      else if (strcmp(key, "Innodb_row_lock_time") == 0)
-        derive_submit("mysql_innodb_row_lock", "time", val, db);
-      else if (strcmp(key, "Innodb_row_lock_waits") == 0)
-        derive_submit("mysql_innodb_row_lock", "waits", val, db);
-
-      /* rows */
-      else if (strcmp(key, "Innodb_rows_deleted") == 0)
-        derive_submit("mysql_innodb_rows", "deleted", val, db);
-      else if (strcmp(key, "Innodb_rows_inserted") == 0)
-        derive_submit("mysql_innodb_rows", "inserted", val, db);
-      else if (strcmp(key, "Innodb_rows_read") == 0)
-        derive_submit("mysql_innodb_rows", "read", val, db);
-      else if (strcmp(key, "Innodb_rows_updated") == 0)
-        derive_submit("mysql_innodb_rows", "updated", val, db);
-    } else if (strncmp(key, "Select_", strlen("Select_")) == 0) {
-      derive_submit("mysql_select", key + strlen("Select_"), val, db);
-    } else if (strncmp(key, "Sort_", strlen("Sort_")) == 0) {
-      if (strcmp(key, "Sort_merge_passes") == 0)
-        derive_submit("mysql_sort_merge_passes", NULL, val, db);
-      else if (strcmp(key, "Sort_rows") == 0)
-        derive_submit("mysql_sort_rows", NULL, val, db);
-      else if (strcmp(key, "Sort_range") == 0)
-        derive_submit("mysql_sort", "range", val, db);
-      else if (strcmp(key, "Sort_scan") == 0)
-        derive_submit("mysql_sort", "scan", val, db);
-
-    } else if (strncmp(key, "Slow_queries", strlen("Slow_queries")) == 0) {
-      derive_submit("mysql_slow_queries", NULL, val, db);
-    } else if (strcmp(key, "Uptime") == 0) {
-      gauge_submit("uptime", NULL, val, db);
+    int field_num = mysql_num_fields(res);
+    if (field_num < 33) {
+        PLUGIN_ERROR("Failed to get replica statistics: '%s' returned less than 33 columns.", query);
+        mysql_free_result(res);
+        return -1;
     }
-  }
-  mysql_free_result(res);
-  res = NULL;
 
-  if ((qcache_hits != 0) || (qcache_inserts != 0) || (qcache_not_cached != 0) ||
-      (qcache_lowmem_prunes != 0)) {
-    derive_submit("cache_result", "qcache-hits", qcache_hits, db);
-    derive_submit("cache_result", "qcache-inserts", qcache_inserts, db);
-    derive_submit("cache_result", "qcache-not_cached", qcache_not_cached, db);
-    derive_submit("cache_result", "qcache-prunes", qcache_lowmem_prunes, db);
+    if (db->replica_stats) {
+#if 0
+        unsigned long long counter;
+        double gauge;
 
-    gauge_submit("cache_size", "qcache", qcache_queries_in_cache, db);
-  }
+        gauge_submit("bool", "slave-sql-running", (row[SLAVE_SQL_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_SQL_RUNNING_IDX], "yes") == 0), db);
 
-  if (threads_created != 0) {
-    gauge_submit("threads", "running", threads_running, db);
-    gauge_submit("threads", "connected", threads_connected, db);
-    gauge_submit("threads", "cached", threads_cached, db);
+        gauge_submit("bool", "slave-io-running", (row[SLAVE_IO_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_IO_RUNNING_IDX], "yes") == 0), db);
 
-    derive_submit("total_threads", "created", threads_created, db);
-  }
+        counter = atoll(row[READ_MASTER_LOG_POS_IDX]);
+        derive_submit("mysql_log_position", "slave-read", counter, db);
 
-  traffic_submit(traffic_incoming, traffic_outgoing, db);
+        counter = atoll(row[EXEC_MASTER_LOG_POS_IDX]);
+        derive_submit("mysql_log_position", "slave-exec", counter, db);
 
-  if (db->mysql_version >= 50600 && db->innodb_stats)
-    mysql_read_innodb_stats(db, con);
+        if (row[SECONDS_BEHIND_MASTER_IDX] != NULL) {
+            gauge = atof(row[SECONDS_BEHIND_MASTER_IDX]);
+            gauge_submit("time_offset", NULL, gauge, db);
+        }
+#endif
+    }
 
-  if (db->primary_stats)
-    mysql_read_primary_stats(db, con);
+    if (db->replica_notif) {
+#if 0
+        notification_t n = {0,  cdtime(), "", "", "mysql", "", "time_offset", "", NULL};
 
-  if ((db->replica_stats) || (db->replica_notif))
-    mysql_read_replica_stats(db, con);
+        char *io, *sql;
 
-  if (db->wsrep_stats)
-    mysql_read_wsrep_stats(db, con);
+        io = row[SLAVE_IO_RUNNING_IDX];
+        sql = row[SLAVE_SQL_RUNNING_IDX];
 
-  return 0;
-} /* int mysql_read */
+        set_host(db, n.host, sizeof(n.host));
 
-void module_register(void) {
-  plugin_register_complex_config("mysql", mysql_config);
-} /* void module_register */
+        /* Assured by "mysql_config_database" */
+        assert(db->instance != NULL);
+        sstrncpy(n.plugin_instance, db->instance, sizeof(n.plugin_instance));
+
+        if (((io == NULL) || (strcasecmp(io, "yes") != 0)) && (db->replica_io_running)) {
+            n.severity = NOTIF_WARNING;
+            ssnprintf(n.message, sizeof(n.message), "replica I/O thread not started or not connected to primary");
+            plugin_dispatch_notification(&n);
+            db->replica_io_running = false;
+        } else if (((io != NULL) && (strcasecmp(io, "yes") == 0)) && (!db->replica_io_running)) {
+            n.severity = NOTIF_OKAY;
+            ssnprintf(n.message, sizeof(n.message), "replica I/O thread started and connected to primary");
+            plugin_dispatch_notification(&n);
+            db->replica_io_running = true;
+        }
+
+        if (((sql == NULL) || (strcasecmp(sql, "yes") != 0)) && (db->replica_sql_running)) {
+            n.severity = NOTIF_WARNING;
+            ssnprintf(n.message, sizeof(n.message), "replica SQL thread not started");
+            plugin_dispatch_notification(&n);
+            db->replica_sql_running = false;
+        } else if (((sql != NULL) && (strcasecmp(sql, "yes") == 0)) && (!db->replica_sql_running)) {
+            n.severity = NOTIF_OKAY;
+            ssnprintf(n.message, sizeof(n.message), "replica SQL thread started");
+            plugin_dispatch_notification(&n);
+            db->replica_sql_running = true;
+        }
+#endif
+    }
+
+    row = mysql_fetch_row(res);
+    if (row != NULL)
+        PLUGIN_WARNING("`%s' returned more than one row - ignoring further results.", query);
+
+    mysql_free_result(res);
+
+    return 0;
+}
+
+static int cmysql_read_heartbeat(cmysql_database_t *db, MYSQL *con)
+{
+    char query[512];
+    ssnprintf(query, sizeof(query),
+              "SELECT MAX(UNIX_TIMESTAMP(%s) - UNIX_TIMESTAMP(ts)) AS delay, server_id"
+              "  FROM %s.%s GROUP BY server_id",
+              db->heartbeat_utc ? "UTC_TIMESTAMP(6)" : "NOW(6)",
+              db->heartbeat_schema != NULL ? db->heartbeat_schema : "heartbeat",
+              db->heartbeat_table != NULL ? db->heartbeat_table : "heartbeat");
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 2) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if ((row[0] == NULL) || (row[1] == NULL))
+            continue;
+
+        metric_family_append(&db->fams[FAM_MYSQL_HEARTBEAT_DELAY_SECONDS],
+                            VALUE_GAUGE(atof(row[0])), &db->labels,
+                            &(label_pair_const_t){.name = "server_id", .value = row[1]},
+                            NULL);
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_query_response_time(cmysql_database_t *db, MYSQL *con,
+                                           const char *query, int fam)
+{
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 3) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    histogram_t *h = histogram_new();
+    double sum = 0.0;
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if ((row[0] == NULL) || (row[1] == NULL) || (row[2] == NULL))
+            continue;
+
+        if (strncmp("TOO LONG", row[0], strlen("TOO LONG")) == 0)
+            continue;
+
+        double maximum = atof(row[0]);
+        uint64_t counter = atoll(row[1]);
+        sum += atof(row[2]);
+
+        histogram_t *tmp = histogram_bucket_append(h, maximum, counter);
+        if (tmp == NULL) {
+            histogram_destroy(h);
+            h = NULL;
+            break;
+        }
+        h = tmp;
+    }
+
+    if (h != NULL) {
+        h->sum = sum;
+        metric_family_append(&db->fams[fam], VALUE_HISTOGRAM(h),  &db->labels, NULL);
+        histogram_destroy(h);
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_query_response_time_all(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SELECT time, count, total"
+                        " FROM information_schema.query_response_time";
+
+    return cmysql_read_query_response_time(db, con,
+                                           query, FAM_MYSQL_QUERY_RESPONSE_TIME_SECONDS);
+}
+
+//  PERCONA Percona Server for MySQL 5.7.10-1: Feature ported from Percona Server for MySQL 5.6
+static int cmysql_read_query_response_time_read(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SELECT time, count, total"
+                        "  FROM information_schema.query_response_time_read";
+
+    return cmysql_read_query_response_time(db, con,
+                                           query, FAM_MYSQL_READ_QUERY_RESPONSE_TIME_SECONDS);
+}
+
+//  PERCONA Percona Server for MySQL 5.7.10-1: Feature ported from Percona Server for MySQL 5.6
+static int cmysql_read_query_response_time_write(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SELECT time, count, total"
+                        "  FROM information_schema.query_response_time_write";
+
+    return cmysql_read_query_response_time(db, con,
+                                           query, FAM_MYSQL_WRITE_QUERY_RESPONSE_TIME_SECONDS);
+}
+
+static int cmysql_read_table(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SELECT table_schema, table_name, data_length, index_length, data_free"
+                        "  FROM information_schema.tables"
+                        " WHERE table_schema NOT IN ('mysql', 'performance_schema',"
+                        "                            'information_schema')";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 5) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 2, FAM_MYSQL_TABLE_DATA_SIZE_BYTES  },
+        { 3, FAM_MYSQL_TABLE_INDEX_SIZE_BYTES },
+        { 4, FAM_MYSQL_TABLE_DATA_FREE_BYTES  },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if ((row[0] == NULL) || (row[1] == NULL))
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                value = VALUE_COUNTER(atoll(row[fields[n].field]));
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "table_schema", .value = row[0]},
+                                 &(label_pair_const_t){.name = "table_name", .value = row[1]},
+                                 NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_client_statistics(cmysql_database_t *db, MYSQL *con)
+{
+    if (db->mysql_server != SERVER_MARIADB)
+        return 0;
+    if (db->mysql_version < 100101)
+        return 0;
+
+    const char *query = "SELECT client, total_connections, concurrent_connections, connected_time,"
+                        "       busy_time, cpu_time, bytes_received, bytes_sent,"
+                        "       binlog_bytes_written, rows_read, rows_sent, rows_deleted,"
+                        "       rows_inserted, rows_updated, select_commands, update_commands,"
+                        "       other_commands, commit_transactions, rollback_transactions,"
+                        "       denied_connections, lost_connections, access_denied,"
+                        "       empty_queries, total_ssl_connections, max_statement_time_exceeded"
+                        "  FROM information_schema.client_statistics";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 25) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 1,  FAM_MYSQL_CLIENT_CONNECTIONS                 },
+        { 2,  FAM_MYSQL_CLIENT_CONCURRENT_CONNECTIONS      },
+        { 3,  FAM_MYSQL_CLIENT_CONNECTED_TIME_SECONDS      },
+        { 4,  FAM_MYSQL_CLIENT_BUSY_TIME_SECONDS           },
+        { 5,  FAM_MYSQL_CLIENT_CPU_TIME_SECONDS            },
+        { 6,  FAM_MYSQL_CLIENT_RECEIVED_BYTES              },
+        { 7,  FAM_MYSQL_CLIENT_SENT_BYTES                  },
+        { 8,  FAM_MYSQL_CLIENT_BINLOG_WRITTEN_BYTES        },
+        { 9,  FAM_MYSQL_CLIENT_READ_ROWS                   },
+        { 10, FAM_MYSQL_CLIENT_SENT_ROWS                   },
+        { 11, FAM_MYSQL_CLIENT_DELETED_ROWS                },
+        { 12, FAM_MYSQL_CLIENT_INSERTED_ROWS               },
+        { 13, FAM_MYSQL_CLIENT_UPDATED_ROWS                },
+        { 14, FAM_MYSQL_CLIENT_SELECT_COMMANDS             },
+        { 15, FAM_MYSQL_CLIENT_UPDATE_COMMANDS             },
+        { 16, FAM_MYSQL_CLIENT_OTHER_COMMANDS              },
+        { 17, FAM_MYSQL_CLIENT_COMMIT_TRANSACTIONS         },
+        { 18, FAM_MYSQL_CLIENT_ROLLBACK_TRANSACTIONS       },
+        { 19, FAM_MYSQL_CLIENT_DENIED_CONNECTIONS          },
+        { 20, FAM_MYSQL_CLIENT_LOST_CONNECTIONS            },
+        { 21, FAM_MYSQL_CLIENT_ACCESS_DENIED               },
+        { 22, FAM_MYSQL_CLIENT_EMPTY_QUERIES               },
+        { 23, FAM_MYSQL_CLIENT_SSL_CONNECTIONS             },
+        { 24, FAM_MYSQL_CLIENT_MAX_STATEMENT_TIME_EXCEEDED },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if (row[0] == NULL)
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                if (fields[n].fam == FAM_MYSQL_CLIENT_BUSY_TIME_SECONDS) {
+                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
+                } else if (fields[n].fam == FAM_MYSQL_CLIENT_CPU_TIME_SECONDS) {
+                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
+                } else {
+                    value = VALUE_COUNTER(atoll(row[fields[n].field]));
+                }
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "client", .value = row[0]}, NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_user_statistics(cmysql_database_t *db, MYSQL *con)
+{
+    if (db->mysql_server != SERVER_MARIADB)
+        return 0;
+    if (db->mysql_version  < 100101)
+        return 0;
+
+    const char *query = "SELECT user, total_connections, concurrent_connections, connected_time,"
+                        "       busy_time, cpu_time, bytes_received, bytes_sent,"
+                        "       binlog_bytes_written, rows_read, rows_sent, rows_deleted,"
+                        "       rows_inserted, rows_updated, select_commands, update_commands,"
+                        "       other_commands, commit_transactions, rollback_transactions,"
+                        "       denied_connections, lost_connections, access_denied,"
+                        "       empty_queries, total_ssl_connections, max_statement_time_exceeded"
+                        "  FROM information_schema.user_statistics";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 25) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 1,  FAM_MYSQL_USER_CONNECTIONS                 },
+        { 2,  FAM_MYSQL_USER_CONCURRENT_CONNECTIONS      },
+        { 3,  FAM_MYSQL_USER_CONNECTED_TIME_SECONDS      },
+        { 4,  FAM_MYSQL_USER_BUSY_TIME_SECONDS           },
+        { 5,  FAM_MYSQL_USER_CPU_TIME                    },
+        { 6,  FAM_MYSQL_USER_RECEIVED_BYTES              },
+        { 7,  FAM_MYSQL_USER_SENT_BYTES                  },
+        { 8,  FAM_MYSQL_USER_BINLOG_WRITTEN_BYTES        },
+        { 9,  FAM_MYSQL_USER_READ_ROWS                   },
+        { 10, FAM_MYSQL_USER_SENT_ROWS                   },
+        { 11, FAM_MYSQL_USER_DELETED_ROWS                },
+        { 12, FAM_MYSQL_USER_INSERTED_ROWS               },
+        { 13, FAM_MYSQL_USER_UPDATED_ROWS                },
+        { 14, FAM_MYSQL_USER_SELECT_COMMANDS             },
+        { 15, FAM_MYSQL_USER_UPDATE_COMMANDS             },
+        { 16, FAM_MYSQL_USER_OTHER_COMMANDS              },
+        { 17, FAM_MYSQL_USER_COMMIT_TRANSACTIONS         },
+        { 18, FAM_MYSQL_USER_ROLLBACK_TRANSACTIONS       },
+        { 19, FAM_MYSQL_USER_DENIED_CONNECTIONS          },
+        { 20, FAM_MYSQL_USER_LOST_CONNECTIONS            },
+        { 21, FAM_MYSQL_USER_ACCESS_DENIED               },
+        { 22, FAM_MYSQL_USER_EMPTY_QUERIES               },
+        { 23, FAM_MYSQL_USER_TOTAL_SSL_CONNECTIONS       },
+        { 24, FAM_MYSQL_USER_MAX_STATEMENT_TIME_EXCEEDED },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if (row[0] == NULL)
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                if (fields[n].fam == FAM_MYSQL_USER_BUSY_TIME_SECONDS) {
+                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
+                } else if (fields[n].fam == FAM_MYSQL_USER_CPU_TIME) {
+                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
+                } else {
+                    value = VALUE_COUNTER(atoll(row[fields[n].field]));
+                }
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "user", .value = row[0]}, NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+
+static int cmysql_read_index_statistics(cmysql_database_t *db, MYSQL *con)
+{
+    if (db->mysql_server != SERVER_MARIADB)
+        return 0;
+    if (db->mysql_version  < 100101)
+        return 0;
+
+    const char *query = "SELECT table_schema, table_name, index_name, rows_read"
+                        "  FROM information_schema.index_statistics";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 4) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if ((row[0] == NULL) || (row[1] == NULL) || (row[2] == NULL))
+            continue;
+
+        if (row[3] != NULL)
+            metric_family_append(&db->fams[FAM_MYSQL_INDEX_ROWS_READ],
+                                VALUE_COUNTER(atoll(row[3])),  &db->labels,
+                                &(label_pair_const_t){.name = "table_schema", .value = row[0]},
+                                &(label_pair_const_t){.name = "table_name", .value = row[1]},
+                                &(label_pair_const_t){.name = "index_name", .value = row[2]},
+                                NULL);
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_table_statistics(cmysql_database_t *db, MYSQL *con)
+{
+    if (db->mysql_server != SERVER_MARIADB)
+        return 0;
+    if (db->mysql_version  < 100101)
+        return 0;
+
+    const char *query = "SELECT table_schema, table_name, rows_read, rows_changed, "
+                        "       rows_changed_x_indexes"
+                        "  FROM information_schema.table_statistics";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 5) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 2, FAM_MYSQL_TABLE_ROWS_READ              },
+        { 3, FAM_MYSQL_TABLE_ROWS_CHANGED           },
+        { 4, FAM_MYSQL_TABLE_ROWS_CHANGED_X_INDEXES },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if ((row[0] == NULL) || (row[1] == NULL))
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                value = VALUE_GAUGE(atoll(row[fields[n].field]));
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "table_schema", .value = row[0]},
+                                 &(label_pair_const_t){.name = "table_name", .value = row[1]},
+                                 NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_innodb_tablespace(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query;
+
+    if ((db->mysql_server == SERVER_MYSQL) && (db->mysql_version >= 80030)) {
+        query = "SELECT name, file_size, allocated_size"
+                "  FROM information_schema.innodb_tablespaces";
+    } else {
+        query = "SELECT name, file_size, allocated_size"
+                "  FROM information_schema.innodb_sys_tablespaces";
+    }
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 3) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 1 , FAM_MYSQL_INNODB_TABLESPACE_FILE_SIZE_BYTES      },
+        { 2 , FAM_MYSQL_INNODB_TABLESPACE_ALLOCATED_SIZE_BYTES },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if (row[0] == NULL)
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                value = VALUE_COUNTER(atoll(row[fields[n].field]));
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "tablespace", .value = row[0]},
+                                 NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_innodb_cmp(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SELECT page_size, compress_ops, compress_ops_ok, compress_time,"
+                        "       uncompress_ops, uncompress_time"
+                        "  FROM information_schema.innodb_cmp";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 6) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 1, FAM_MYSQL_INNODB_CMP_COMPRESS_OPS            },
+        { 2, FAM_MYSQL_INNODB_CMP_COMPRESS_OPS_OK         },
+        { 3, FAM_MYSQL_INNODB_CMP_COMPRESS_TIME_SECONDS   },
+        { 4, FAM_MYSQL_INNODB_CMP_UNCOMPRESS_OPS          },
+        { 5, FAM_MYSQL_INNODB_CMP_UNCOMPRESS_TIME_SECONDS },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if (row[0] == NULL)
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                value = VALUE_COUNTER(atoll(row[fields[n].field]));
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "page_size", .value = row[0]},
+                                 NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_innodb_cmpmem(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = "SELECT page_size, buffer_pool_instance, pages_used, pages_free, "
+                        "       relocation_ops, relocation_time "
+                        "  FROM information_schema.innodb_cmpmem";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 6) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    static struct {
+        int field;
+        int fam;
+    } fields[] = {
+        { 2, FAM_MYSQL_INNODB_CMPMEM_USED_PAGES             },
+        { 3, FAM_MYSQL_INNODB_CMPMEM_FREE_PAGES             },
+        { 4, FAM_MYSQL_INNODB_CMPMEM_RELOCATION_OPS         },
+        { 5, FAM_MYSQL_INNODB_CMPMEM_RELOCATION_TIME_SECOND },
+    };
+    static size_t fields_size = STATIC_ARRAY_SIZE(fields);
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        if ((row[0] == NULL) || (row[1] == NULL))
+            continue;
+
+        for (size_t n = 0; n < fields_size ; n++) {
+            value_t value = {0};
+
+            if (row[fields[n].field] == NULL)
+                continue;
+
+            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
+                value = VALUE_GAUGE(atof(row[fields[n].field]));
+            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
+                value = VALUE_COUNTER(atoll(row[fields[n].field]));
+            } else {
+                continue;
+            }
+
+            metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
+                                 &(label_pair_const_t){.name = "page_size", .value = row[0]},
+                                 &(label_pair_const_t){.name = "buffer_pool", .value = row[1]},
+                                 NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_innodb_metrics(cmysql_database_t *db, MYSQL *con)
+{
+    if (db->mysql_version < 50600)
+        return 0;
+
+    const char *query;
+
+    if (db->mysql_version >= 100500)
+        query = "SELECT name, count, type FROM information_schema.innodb_metrics"
+                " WHERE enabled";
+    else
+        query = "SELECT name, count, type FROM information_schema.innodb_metrics"
+                " WHERE status = 'enabled'";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        char *key = row[0];
+        char *val = row[1];
+
+        if ((key == NULL) || (val == NULL))
+            continue;
+
+        const struct cmysql_innodb *minnodb = cmysql_innodb_get_key(key, strlen(key));
+        if (minnodb == NULL)
+            continue;
+
+        metric_family_t *fam = &db->fams[minnodb->fam];
+
+        value_t value = {0};
+        if (fam->type == METRIC_TYPE_GAUGE) {
+            value = VALUE_GAUGE(atof(val));
+        } else if (fam->type == METRIC_TYPE_COUNTER) {
+            value = VALUE_COUNTER(atoll(val));
+        }
+
+        if (minnodb->lname != NULL) {
+            metric_family_append(fam, value, &db->labels,
+                                 &(label_pair_const_t){.name = minnodb->lname,
+                                                       .value = minnodb->lvalue}, NULL);
+        } else {
+            metric_family_append(fam, value, &db->labels, NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_status(cmysql_database_t *db, MYSQL *con)
+{
+    const char *query = db->mysql_version >= 50002 ? "SHOW GLOBAL STATUS" : "SHOW STATUS";
+
+    MYSQL_RES *res = exec_query(con, query);
+    if (res == NULL)
+        return -1;
+
+    if (mysql_num_fields(res) != 2) {
+        mysql_free_result(res);
+        return -1;
+    }
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        char *key = row[0];
+        char *val = row[1];
+
+        if ((key == NULL) || (val == NULL))
+            continue;
+
+        const struct cmysql_status *mstatus = cmysql_status_get_key(key, strlen(key));
+        if (mstatus == NULL)
+            continue;
+
+        if (!(db->flags & mstatus->flag))
+            continue;
+
+        metric_family_t *fam = &db->fams[mstatus->fam];
+
+        value_t value = {0};
+        if (fam->type == METRIC_TYPE_GAUGE) {
+            value = VALUE_GAUGE(atof(val));
+        } else if (fam->type == METRIC_TYPE_COUNTER) {
+            if (mstatus->fam == FAM_MYSQL_BUSY_TIME_SECONDS) {
+                value = VALUE_COUNTER_FLOAT64(atof(val));
+            } else if (mstatus->fam == FAM_MYSQL_WSREP_FLOW_CONTROL_PAUSED_SECONDS) {
+                value = VALUE_COUNTER_FLOAT64((double)atoll(val) * 1e-9);
+            } else {
+                value = VALUE_COUNTER((uint64_t)atoll(val));
+            }
+        }
+
+        if (mstatus->lname != NULL) {
+            metric_family_append(fam, value, &db->labels,
+                                 &(label_pair_const_t){.name = mstatus->lname,
+                                                       .value = mstatus->lvalue}, NULL);
+        } else {
+            metric_family_append(fam, value, &db->labels, NULL);
+        }
+    }
+
+    mysql_free_result(res);
+    return 0;
+}
+
+static int cmysql_read_database_query(cmysql_database_t *db, MYSQL *con,
+                                      db_query_t *q, db_query_preparation_area_t *prep_area)
+{
+    size_t column_num = 0;
+    char **column_names = NULL;
+    char **column_values = NULL;
+    MYSQL_RES *res = NULL;
+
+    int status = -1;
+
+    char *statement = db_query_get_statement(q);
+    assert(statement != NULL);
+    size_t statement_len = strlen(statement);
+
+    if (mysql_real_query(con, statement, statement_len)) {
+        PLUGIN_ERROR("Failed to execute query: %s", mysql_error(con));
+        PLUGIN_INFO("SQL query was: %s", statement);
+        goto error;
+    }
+
+    res = mysql_store_result(con);
+    if (res == NULL) {
+        PLUGIN_ERROR("Failed to store query result: %s", mysql_error(con));
+        PLUGIN_INFO("SQL query was: %s", statement);
+        goto error;
+    }
+
+    column_num = mysql_num_fields(res);
+
+    /* Allocate `column_names' and `column_values'. */
+    column_names = calloc(column_num, sizeof(*column_names));
+    if (column_names == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        goto error;
+    }
+
+    column_names[0] = calloc(column_num, DATA_MAX_NAME_LEN);
+    if (column_names[0] == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        goto error;
+    }
+    for (size_t i = 1; i < column_num; i++) {
+        column_names[i] = column_names[i - 1] + DATA_MAX_NAME_LEN;
+    }
+
+    column_values = calloc(column_num, sizeof(*column_values));
+    if (column_values == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        goto error;
+    }
+
+    column_values[0] = calloc(column_num, DATA_MAX_NAME_LEN);
+    if (column_values[0] == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        goto error;
+    }
+    for (size_t i = 1; i < column_num; i++)
+        column_values[i] = column_values[i - 1] + DATA_MAX_NAME_LEN;
+
+    for (size_t i = 0; i < column_num; i++) {
+        MYSQL_FIELD *field = mysql_fetch_field(res);
+        if (field == NULL) {
+            PLUGIN_ERROR("mysql_fetch_field %zu in %s at %s failed : %s",
+                          i+1, db_query_get_name(q), db->instance, mysql_error(con));
+            goto error;
+        }
+
+        sstrncpy(column_names[i], field->name, DATA_MAX_NAME_LEN);
+    }
+
+    status = db_query_prepare_result(q, prep_area, db->metric_prefix, &db->labels,
+                                        db->instance, column_names, column_num);
+    if (status != 0) {
+        PLUGIN_ERROR("db_query_prepare_result failed with status %i.", status);
+        goto error;
+    }
+
+    /* Iterate over all rows and call `db_query_handle_result' with each list of values. */
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        /* Copy the value of the columns to `column_values' */
+        for (size_t i = 0; i < column_num; i++) {
+            if (row[i] == NULL) {
+                column_values[i][0] = '\0';
+            } else {
+                sstrncpy(column_values[i], row[i], DATA_MAX_NAME_LEN);
+            }
+        }
+
+        /* If all values were copied successfully, call `db_query_handle_result'
+         * to dispatch the row to the daemon. */
+        status = db_query_handle_result(q, prep_area, column_values);
+        if (status != 0) {
+            PLUGIN_ERROR("%s in %s: db_query_handle_result failed.",
+                         db->instance, db_query_get_name(q));
+            goto error;
+        }
+    }
+
+    /* Tell the db query interface that we're done with this query. */
+    db_query_finish_result(q, prep_area);
+
+    status = 0;
+
+error:
+
+    if (column_names != NULL) {
+        free(column_names[0]);
+        free(column_names);
+    }
+
+    if (column_values != NULL) {
+        free(column_values[0]);
+        free(column_values);
+    }
+
+    if (res != NULL)
+        mysql_free_result(res);
+
+    return status;
+}
+
+static int cmysql_read(user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+
+    cmysql_database_t *db = (cmysql_database_t *)ud->data;
+
+    /* An error message will have been printed in this case */
+    MYSQL *con = cmysql_get_connection(db);
+    if (con == NULL) {
+        metric_family_append(&db->fams[FAM_MYSQL_UP], VALUE_GAUGE(0), &db->labels, NULL);
+        plugin_dispatch_metric_family(&db->fams[FAM_MYSQL_UP], 0);
+        return 0;
+    }
+
+    metric_family_append(&db->fams[FAM_MYSQL_UP], VALUE_GAUGE(1), &db->labels, NULL);
+
+    cmysql_read_status(db, con);
+
+    if (db->flags & COLLECT_INNODB)
+        cmysql_read_innodb_metrics(db, con);
+
+    if (db->flags & COLLECT_INNODB_CMP)
+        cmysql_read_innodb_cmp(db, con);
+
+    if (db->flags & COLLECT_INNODB_CMPMEM)
+        cmysql_read_innodb_cmpmem(db, con);
+
+    if (db->flags & COLLECT_INNODB_TABLESPACE)
+        cmysql_read_innodb_tablespace(db, con);
+
+    if (db->flags & COLLECT_CLIENT_STATS)
+        cmysql_read_client_statistics(db, con);
+
+    if (db->flags & COLLECT_USER_STATS)
+        cmysql_read_user_statistics(db, con);
+
+    if (db->flags & COLLECT_INDEX_STATS)
+        cmysql_read_index_statistics(db, con);
+
+    if (db->flags & COLLECT_TABLE_STATS)
+        cmysql_read_table_statistics(db, con);
+
+    if (db->flags & COLLECT_TABLE)
+        cmysql_read_table(db, con);
+
+    if (db->flags & COLLECT_RESPONSE_TIME) {
+        cmysql_read_query_response_time_all(db, con);
+        cmysql_read_query_response_time_read(db, con);
+        cmysql_read_query_response_time_write(db, con);
+    }
+
+    if (db->flags & COLLECT_HEARTBEAT)
+        cmysql_read_heartbeat(db, con);
+
+    if (db->primary_stats)
+        cmysql_read_primary_stats(db, con);
+
+    if ((db->replica_stats) || (db->replica_notif))
+        cmysql_read_replica_stats(db, con);
+
+    plugin_dispatch_metric_family_array(db->fams, FAM_MYSQL_STATUS_MAX, 0);
+
+    for (size_t i = 0; i < db->queries_num; i++) {
+        /* Check if we know the database's version and if so, if this query applies
+         * to that version. */
+        if ((db->mysql_version!= 0) &&
+            (db_query_check_version(db->queries[i], db->mysql_version) == 0))
+            continue;
+
+        cmysql_read_database_query(db, con, db->queries[i], db->q_prep_areas[i]);
+    }
+
+
+    return 0;
+}
+
+/* Configuration handling functions
+ *
+ * plugin mysql {
+ *   database "plugin_instance1" {
+ *       Host "localhost"
+ *       Port 22000
+ *       ...
+ *   }
+ * }
+ */
+static int cmysql_config_database(config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The 'database' block needs exactly one string argument.");
+        return -1;
+    }
+
+    cmysql_database_t *db = calloc(1, sizeof(*db));
+    if (db == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
+
+    db->flags = COLLECT_GLOBALS;
+
+    C_COMPLAIN_INIT(&db->conn_complaint);
+
+    /* trigger a notification, if it's not running */
+    db->replica_io_running = true;
+    db->replica_sql_running = true;
+
+    memcpy(db->fams, fam_mysql_status, sizeof(db->fams[0])*FAM_MYSQL_STATUS_MAX);
+
+    int status = cf_util_get_string(ci, &db->instance);
+    if (status != 0) {
+        free(db);
+        return status;
+    }
+    assert(db->instance != NULL);
+
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("host", child->key) == 0) {
+            status = cf_util_get_string(child, &db->host);
+        } else if (strcasecmp("user", child->key) == 0) {
+            status = cf_util_get_string(child, &db->user);
+        } else if (strcasecmp("password", child->key) == 0) {
+            status = cf_util_get_string(child, &db->pass);
+        } else if (strcasecmp("port", child->key) == 0) {
+            status = cf_util_get_port_number(child, &db->port);
+        } else if (strcasecmp("socket", child->key) == 0) {
+            status = cf_util_get_string(child, &db->socket);
+        } else if (strcasecmp("database", child->key) == 0) {
+            status = cf_util_get_string(child, &db->database);
+        } else if (strcasecmp("ssl-key", child->key) == 0) {
+            status = cf_util_get_string(child, &db->key);
+        } else if (strcasecmp("ssl-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &db->cert);
+        } else if (strcasecmp("ssl-ca", child->key) == 0) {
+            status = cf_util_get_string(child, &db->ca);
+        } else if (strcasecmp("ssl-ca-path", child->key) == 0) {
+            status = cf_util_get_string(child, &db->capath);
+        } else if (strcasecmp("ssl-cipher", child->key) == 0) {
+            status = cf_util_get_string(child, &db->cipher);
+        } else if (strcasecmp("connect-timeout", child->key) == 0) {
+            status = cf_util_get_int(child, &db->timeout);
+        } else if (strcasecmp("metric-prefix", child->key) == 0) {
+            status = cf_util_get_string(child, &db->metric_prefix);
+        } else if (strcasecmp("heartbeat-utc", child->key) == 0) {
+            status = cf_util_get_boolean(child, &db->heartbeat_utc);
+        } else if (strcasecmp("heartbeat-schema", child->key) == 0) {
+            status = cf_util_get_string(child, &db->heartbeat_schema);
+        } else if (strcasecmp("heartbeat-table", child->key) == 0) {
+            status = cf_util_get_string(child, &db->heartbeat_table);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &db->labels);
+        } else if (strcasecmp("interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("collect", child->key) == 0) {
+            status = cf_util_get_flags(child, cmysql_flags, cmysql_flags_size, &db->flags);
+        } else if (strcasecmp("query", child->key) == 0) {
+            status = db_query_pick_from_list(child, queries, queries_num,
+                                                    &db->queries, &db->queries_num);
+        } else if (strcasecmp("master-stats", child->key) == 0) {
+            status = cf_util_get_boolean(child, &db->primary_stats);
+        } else if (strcasecmp("slave-stats", child->key) == 0) {
+            status = cf_util_get_boolean(child, &db->replica_stats);
+        } else if (strcasecmp("slave-notifications", child->key) == 0) {
+            status = cf_util_get_boolean(child, &db->replica_notif);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    while ((status == 0) && (db->queries_num > 0)) {
+        db->q_prep_areas = calloc(db->queries_num, sizeof(*db->q_prep_areas));
+        if (db->q_prep_areas == NULL) {
+            PLUGIN_WARNING("calloc failed");
+            status = -1;
+            break;
+        }
+
+        for (size_t i = 0; i < db->queries_num; ++i) {
+            db->q_prep_areas[i] = db_query_allocate_preparation_area(db->queries[i]);
+
+            if (db->q_prep_areas[i] == NULL) {
+                PLUGIN_WARNING("db_query_allocate_preparation_area failed");
+                status = -1;
+                break;
+            }
+        }
+
+        break;
+    }
+
+    /* If all went well, register this database for reading */
+    if (status != 0) {
+        cmysql_database_free(db);
+        return -1;
+    }
+
+    label_set_add(&db->labels, true, "instance", db->instance);
+
+    if ((db->host != NULL) && (strcmp(db->host, "") != 0) &&
+        (strcmp(db->host, "127.0.0.1") != 0) && (strcmp(db->host, "localhost") != 0)) {
+        label_set_add(&db->labels, false, "hostname", db->host);
+    }
+
+    return plugin_register_complex_read("mysql", db->instance, cmysql_read, interval,
+                                        &(user_data_t){.data=db, .free_func=cmysql_database_free});
+}
+
+static int cmysql_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("instance", child->key) == 0) {
+            status = cmysql_config_database(child);
+        } else if (strcasecmp("query", child->key) == 0) {
+            status = db_query_create(&queries, &queries_num, child, NULL);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+static int cmysql_shutdown(void)
+{
+    db_query_free(queries, queries_num);
+    queries = NULL;
+    queries_num = 0;
+    return 0;
+}
+
+void module_register(void)
+{
+    plugin_register_config("mysql", cmysql_config);
+    plugin_register_shutdown("mysql", cmysql_shutdown);
+}

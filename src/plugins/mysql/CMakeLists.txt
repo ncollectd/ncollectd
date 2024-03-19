@@ -1,0 +1,26 @@
+plugin_option(PLUGIN_MYSQL "MySQL statistics" ON)
+
+set(BUILD_PLUGIN_MYSQL 0)
+
+if(PLUGIN_MYSQL)
+    find_package(LibMysql)
+    if (LIBMYSQL_FOUND)
+        set(BUILD_PLUGIN_MYSQL 1)
+    else()
+        set(BUILD_PLUGIN_MYSQL_REASON "libmysql no found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_MYSQL ${BUILD_PLUGIN_MYSQL} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_MYSQL)
+    gperf_generate(mysql_innodb.gperf "${CMAKE_CURRENT_BINARY_DIR}/mysql_innodb.c" MYSQL_INNODB_C)
+    gperf_generate(mysql_status.gperf "${CMAKE_CURRENT_BINARY_DIR}/mysql_status.c" MYSQL_STATUS_C)
+    set(PLUGIN_MYSQL_SRC mysql.c mysql_fam.h mysql_fam.c mysql_flags.h)
+    add_library(mysql MODULE ${PLUGIN_MYSQL_SRC} ${MYSQL_INNODB_C} ${MYSQL_STATUS_C})
+    target_link_libraries(mysql PRIVATE libutils libmetric libdbquery LibMysql::LibMysql)
+    set_target_properties(mysql PROPERTIES PREFIX "")
+    install(TARGETS mysql DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-mysql.5 ncollectd-mysql.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-mysql.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
