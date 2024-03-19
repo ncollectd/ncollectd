@@ -1,0 +1,26 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-nftables 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nftables man page"
+.SH NAME
+ncollectd-nftables \- Documentation of ncollectd's nftables plugin
+.SH SYNOPSIS
+\fBload-plugin\fP nftables
+.br
+\fBplugin\fP nftables {
+    \fBrule\fP \fItable\fP \fIchain\fP [\fIcomment\fP]
+.br
+}
+.SH DESCRIPTION
+The \fBnftables\fP plugin collects information about the packet and byte count
+of rules inside your ruleset, given a table and chain.
+.PP
+The plugin has the following options:
+.PP
+.TP
+\fBrule\fP \fItable\fP \fIchain\fP [\fIcomment\fP]
+If only \fItable\fP and \fIchain\fP are specified the plugin will only match rules
+with a comment, and use it as type instance.
+
+You can optionally specify \fIcomment\fP, to filter rules given its comment.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
