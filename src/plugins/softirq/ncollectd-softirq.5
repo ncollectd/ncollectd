@@ -1,0 +1,25 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-softirq 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd softirq man page"
+.SH NAME
+ncollectd-softirq \- Documentation of ncollectd's softirq plugin
+.SH SYNOPSIS
+\fBload-plugin\fP softirq
+.br
+\fBplugin\fP softirq {
+    \fBsoft-irq\fP [\fIincl|include|excl|exclude\fP] \fIsoft-irq\fP
+.br
+}
+.SH DESCRIPTION
+The \fBsoftirq\fP plugin collect counts of softirq handlers serviced since boot time, for each CPU.
+Reading the file \fI/proc/softirq\fP.
+.PP
+.TP
+\fBsoft-irq\fP [\fIincl|include|excl|exclude\fP] \fIsoft-irq\fP
+Select this softirq to collectd coutners.
+If no configuration if given, the \fBsoftirq\fP plugin will collect data from all
+irqs.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
