@@ -1,0 +1,12 @@
+# TYPE system_avc_cache_lookups counter
+system_avc_cache_lookups_total{hostname="localhost.localdomain"} 59196792513
+# TYPE system_avc_cache_hits counter
+system_avc_cache_hits_total{hostname="localhost.localdomain"} 59195336807
+# TYPE system_avc_cache_reclaims counter
+system_avc_cache_reclaims_total{hostname="localhost.localdomain"} 1449168
+# TYPE system_avc_cache_misses counter
+system_avc_cache_misses_total{hostname="localhost.localdomain"} 1455706
+# TYPE system_avc_cache_frees counter
+system_avc_cache_frees_total{hostname="localhost.localdomain"} 1455203
+# TYPE system_avc_cache_allocations counter
+system_avc_cache_allocations_total{hostname="localhost.localdomain"} 1455706
