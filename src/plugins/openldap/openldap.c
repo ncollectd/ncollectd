@@ -1,519 +1,664 @@
-/**
- * collectd - src/openldap.c
- * Copyright (C) 2011       Kimo Rosenbaum
- * Copyright (C) 2014-2015  Marc Fournier
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- *
- * Authors:
- *   Kimo Rosenbaum <kimor79 at yahoo.com>
- *   Marc Fournier <marc.fournier at camptocamp.com>
- **/
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (C) 2011 Kimo Rosenbaum
+// SPDX-FileCopyrightText: Copyright (C) 2014-2015 Marc Fournier
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Kimo Rosenbaum <kimor79 at yahoo.com>
+// SPDX-FileContributor: Marc Fournier <marc.fournier at camptocamp.com>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
-
-#if defined(__APPLE__)
-#pragma clang diagnostic push
-#pragma clang diagnostic warning "-Wdeprecated-declarations"
-#endif
+#include "libutils/common.h"
 
 #include <lber.h>
 #include <ldap.h>
 
-struct cldap_s /* {{{ */
-{
-  char *name;
-
-  char *binddn;
-  char *password;
-  char *cacert;
-  char *host;
-  bool starttls;
-  int timeout;
-  char *url;
-  bool verifyhost;
-  int version;
-
-  LDAP *ld;
+enum {
+    FAM_OPENLDAP_UP,
+    FAM_OPENLDAP_CONNECTIONS,
+    FAM_OPENLDAP_CURRENT_CONNECTIONS,
+    FAM_OPENLDAP_OPERATIONS_INITIATED,
+    FAM_OPENLDAP_OPERATIONS_COMPLETED,
+    FAM_OPENLDAP_THREADS,
+    FAM_OPENLDAP_WAITERS_READ,
+    FAM_OPENLDAP_WAITERS_WRITE,
+    FAM_OPENLDAP_BDB_ENTRY_CACHE_SIZE,
+    FAM_OPENLDAP_BDB_DN_CACHE_SIZE,
+    FAM_OPENLDAP_BDB_IDL_CACHE_SIZE,
+    FAM_OPENLDAP_MDB_ENTRIES,
+    FAM_OPENLDAP_MDB_PAGES_MAX,
+    FAM_OPENLDAP_MDB_PAGES_USED,
+    FAM_OPENLDAP_MDB_PAGES_FREE,
+    FAM_OPENLDAP_MDB_READERS_MAX,
+    FAM_OPENLDAP_MDB_READERS_USED,
+    FAM_OPENLDAP_SEND_BYTES,
+    FAM_OPENLDAP_SEND_PDUS,
+    FAM_OPENLDAP_SEND_ENTRIES,
+    FAM_OPENLDAP_SEND_REFERRALS,
+    FAM_OPENLDAP_MAX,
 };
-typedef struct cldap_s cldap_t; /* }}} */
 
-static void cldap_free(void *arg) /* {{{ */
+static metric_family_t fams[FAM_OPENLDAP_MAX] = {
+    [FAM_OPENLDAP_UP] = {
+        .name = "openldap_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the openldap server be reached.",
+    },
+    [FAM_OPENLDAP_CONNECTIONS] = {
+        .name = "openldap_connections",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of connections",
+    },
+    [FAM_OPENLDAP_CURRENT_CONNECTIONS] = {
+        .name = "openldap_current_connections",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of current connections",
+    },
+    [FAM_OPENLDAP_OPERATIONS_INITIATED] = {
+        .name = "openldap_operations_initiated",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of initiated operations",
+    },
+    [FAM_OPENLDAP_OPERATIONS_COMPLETED] = {
+        .name = "openldap_operations_completed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of completed operations",
+    },
+    [FAM_OPENLDAP_THREADS] = {
+        .name = "openldap_threads",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current number of threads by type",
+    },
+    [FAM_OPENLDAP_WAITERS_READ] = {
+        .name = "openldap_waiters_read",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current number of read waiters",
+    },
+    [FAM_OPENLDAP_WAITERS_WRITE] = {
+        .name = "openldap_waiters_write",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current number of write waiters",
+    },
+    [FAM_OPENLDAP_BDB_ENTRY_CACHE_SIZE] = {
+        .name = "openldap_bdb_entry_cache_size",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_BDB_DN_CACHE_SIZE] = {
+        .name = "openldap_bdb_dn_cache_size",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_BDB_IDL_CACHE_SIZE] = {
+        .name = "openldap_bdb_idl_cache_size",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_MDB_ENTRIES] = {
+        .name = "openldap_mdb_entries",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_MDB_PAGES_MAX] = {
+        .name = "openldap_mdb_pages_max",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_MDB_PAGES_USED] = {
+        .name = "openldap_mdb_pages_used",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_MDB_PAGES_FREE] = {
+        .name = "openldap_mdb_pages_free",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_MDB_READERS_MAX] = {
+        .name = "openldap_mdb_reader_max",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_MDB_READERS_USED] = {
+        .name = "openldap_mdb_readers_used",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_SEND_BYTES] = {
+        .name = "openldap_send_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_SEND_PDUS] = {
+        .name = "openldap_send_pdus",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_SEND_ENTRIES] = {
+        .name = "openldap_send_entries",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_OPENLDAP_SEND_REFERRALS] = {
+        .name = "openldap_send_referrals",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+};
+
+typedef struct {
+    char *name;
+    char *binddn;
+    char *password;
+    char *cacert;
+    bool starttls;
+    int timeout;
+    char *url;
+    bool verifyhost;
+    int version;
+    label_set_t labels;
+    LDAP *ld;
+    metric_family_t fams[FAM_OPENLDAP_MAX];
+} openldap_t;
+
+static void openldap_free(void *arg)
 {
-  cldap_t *st = arg;
+    openldap_t *st = arg;
 
-  if (st == NULL)
-    return;
+    if (st == NULL)
+        return;
 
-  sfree(st->binddn);
-  sfree(st->password);
-  sfree(st->cacert);
-  sfree(st->host);
-  sfree(st->name);
-  sfree(st->url);
-  if (st->ld)
-    ldap_unbind_ext_s(st->ld, NULL, NULL);
+    free(st->binddn);
+    free(st->password);
+    free(st->cacert);
+    free(st->name);
+    free(st->url);
+    if (st->ld)
+        ldap_unbind_ext_s(st->ld, NULL, NULL);
 
-  sfree(st);
-} /* }}} void cldap_free */
+    free(st);
+}
 
-/* initialize ldap for each host */
-static int cldap_init_host(cldap_t *st) /* {{{ */
+static int openldap_init_host(openldap_t *st)
 {
-  int rc;
+    int rc;
 
-  if (st->ld) {
-    DEBUG("openldap plugin: Already connected to %s", st->url);
-    return 0;
-  }
-
-  rc = ldap_initialize(&st->ld, st->url);
-  if (rc != LDAP_SUCCESS) {
-    ERROR("openldap plugin: ldap_initialize failed: %s", ldap_err2string(rc));
-    if (st->ld != NULL)
-      ldap_unbind_ext_s(st->ld, NULL, NULL);
-    st->ld = NULL;
-    return (-1);
-  }
-
-  ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
-
-  ldap_set_option(st->ld, LDAP_OPT_TIMEOUT,
-                  &(const struct timeval){st->timeout, 0});
-
-  ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
-
-  if (st->cacert != NULL)
-    ldap_set_option(st->ld, LDAP_OPT_X_TLS_CACERTFILE, st->cacert);
-
-  if (st->verifyhost == false) {
-    int never = LDAP_OPT_X_TLS_NEVER;
-    ldap_set_option(st->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
-  }
-
-  if (st->starttls) {
-    rc = ldap_start_tls_s(st->ld, NULL, NULL);
-    if (rc != LDAP_SUCCESS) {
-      ERROR("openldap plugin: Failed to start tls on %s: %s", st->url,
-            ldap_err2string(rc));
-      ldap_unbind_ext_s(st->ld, NULL, NULL);
-      st->ld = NULL;
-      return (-1);
+    if (unlikely(st->ld)) {
+        PLUGIN_DEBUG("Already connected to %s", st->url);
+        return 0;
     }
-  }
 
-  struct berval cred;
-  if (st->password != NULL) {
-    cred.bv_val = st->password;
-    cred.bv_len = strlen(st->password);
-  } else {
-    cred.bv_val = "";
-    cred.bv_len = 0;
-  }
+    rc = ldap_initialize(&st->ld, st->url);
+    if (unlikely(rc != LDAP_SUCCESS)) {
+        PLUGIN_ERROR("ldap_initialize failed: %s", ldap_err2string(rc));
+        if (st->ld != NULL)
+            ldap_unbind_ext_s(st->ld, NULL, NULL);
+        st->ld = NULL;
+        return -1;
+    }
 
-  rc = ldap_sasl_bind_s(st->ld, st->binddn, LDAP_SASL_SIMPLE, &cred, NULL, NULL,
-                        NULL);
-  if (rc != LDAP_SUCCESS) {
-    ERROR("openldap plugin: Failed to bind to %s: %s", st->url,
-          ldap_err2string(rc));
-    ldap_unbind_ext_s(st->ld, NULL, NULL);
-    st->ld = NULL;
-    return (-1);
-  } else {
-    DEBUG("openldap plugin: Successfully connected to %s", st->url);
+    ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
+
+    ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &(const struct timeval){st->timeout, 0});
+
+    ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
+
+    if (st->cacert != NULL)
+        ldap_set_option(st->ld, LDAP_OPT_X_TLS_CACERTFILE, st->cacert);
+
+    if (st->verifyhost == false) {
+        int never = LDAP_OPT_X_TLS_NEVER;
+        ldap_set_option(st->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
+    }
+
+    if (st->starttls) {
+        rc = ldap_start_tls_s(st->ld, NULL, NULL);
+        if (rc != LDAP_SUCCESS) {
+            PLUGIN_ERROR("Failed to start tls on %s: %s", st->url, ldap_err2string(rc));
+            ldap_unbind_ext_s(st->ld, NULL, NULL);
+            st->ld = NULL;
+            return -1;
+        }
+    }
+
+    struct berval cred;
+    if (st->password != NULL) {
+        cred.bv_val = st->password;
+        cred.bv_len = strlen(st->password);
+    } else {
+        cred.bv_val = "";
+        cred.bv_len = 0;
+    }
+
+    rc = ldap_sasl_bind_s(st->ld, st->binddn, LDAP_SASL_SIMPLE, &cred, NULL, NULL, NULL);
+    if (unlikely(rc != LDAP_SUCCESS)) {
+        PLUGIN_ERROR("Failed to bind to %s: %s", st->url, ldap_err2string(rc));
+        ldap_unbind_ext_s(st->ld, NULL, NULL);
+        st->ld = NULL;
+        return -1;
+    }
+
+    PLUGIN_DEBUG("Successfully connected to %s", st->url);
     return 0;
-  }
-} /* }}} static cldap_init_host */
+}
 
-static void cldap_submit_value(const char *type,
-                               const char *type_instance, /* {{{ */
-                               value_t value, cldap_t *st) {
-  value_list_t vl = VALUE_LIST_INIT;
-
-  vl.values = &value;
-  vl.values_len = 1;
-
-  if ((st->host != NULL) && (strcmp("localhost", st->host) != 0))
-    sstrncpy(vl.host, st->host, sizeof(vl.host));
-
-  sstrncpy(vl.plugin, "openldap", sizeof(vl.plugin));
-  if (st->name != NULL)
-    sstrncpy(vl.plugin_instance, st->name, sizeof(vl.plugin_instance));
-
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  if (type_instance != NULL)
-    sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
-
-  plugin_dispatch_values(&vl);
-} /* }}} void cldap_submit_value */
-
-static void cldap_submit_derive(const char *type,
-                                const char *type_instance, /* {{{ */
-                                derive_t d, cldap_t *st) {
-  cldap_submit_value(type, type_instance, (value_t){.derive = d}, st);
-} /* }}} void cldap_submit_derive */
-
-static void cldap_submit_gauge(const char *type,
-                               const char *type_instance, /* {{{ */
-                               gauge_t g, cldap_t *st) {
-  cldap_submit_value(type, type_instance, (value_t){.gauge = g}, st);
-} /* }}} void cldap_submit_gauge */
-
-static int cldap_read_host(user_data_t *ud) /* {{{ */
+static int openldap_read_host(user_data_t *ud)
 {
-  cldap_t *st;
-  LDAPMessage *result;
-  char *dn;
-  int rc;
-  int status;
+    char *attrs[] = {
+        "monitorCounter",    "monitorOpCompleted", "monitorOpInitiated",
+        "monitoredInfo",     "olmBDBEntryCache",   "olmBDBDNCache",
+        "olmBDBIDLCache",    "namingContexts",     "olmMDBPagesMax",
+        "olmMDBPagesUsed",   "olmMDBPagesFree",    "olmMDBReadersMax",
+        "olmMDBReadersUsed", "olmMDBEntries",      NULL
+    };
 
-  char *attrs[9] = {
-      "monitorCounter", "monitorOpCompleted", "monitorOpInitiated",
-      "monitoredInfo",  "olmBDBEntryCache",   "olmBDBDNCache",
-      "olmBDBIDLCache", "namingContexts",     NULL};
+    if (unlikely((ud == NULL) || (ud->data == NULL))) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+    openldap_t *st = (openldap_t *)ud->data;
 
-  if ((ud == NULL) || (ud->data == NULL)) {
-    ERROR("openldap plugin: cldap_read_host: Invalid user data.");
-    return -1;
-  }
+    int status = openldap_init_host(st);
+    if (unlikely(status != 0)) {
+        metric_family_append(&st->fams[FAM_OPENLDAP_UP],
+                             VALUE_GAUGE(0), &st->labels, NULL);
+        plugin_dispatch_metric_family(&st->fams[FAM_OPENLDAP_UP], 0);
+        return -1;
+    }
 
-  st = (cldap_t *)ud->data;
+    LDAPMessage *result;
+    int rc = ldap_search_ext_s(st->ld, "cn=Monitor", LDAP_SCOPE_SUBTREE,
+                               "(|(!(cn=* *))(cn=Database*))", attrs, 0, NULL, NULL,
+                               NULL, 0, &result);
 
-  status = cldap_init_host(st);
-  if (status != 0)
-    return -1;
+    if (unlikely(rc != LDAP_SUCCESS)) {
+        PLUGIN_ERROR("Failed to execute search: %s", ldap_err2string(rc));
+        ldap_msgfree(result);
+        ldap_unbind_ext_s(st->ld, NULL, NULL);
+        st->ld = NULL;
+        metric_family_append(&st->fams[FAM_OPENLDAP_UP],
+                             VALUE_GAUGE(0), &st->labels, NULL);
+        plugin_dispatch_metric_family(&st->fams[FAM_OPENLDAP_UP], 0);
+        return -1;
+    }
 
-  rc = ldap_search_ext_s(st->ld, "cn=Monitor", LDAP_SCOPE_SUBTREE,
-                         "(|(!(cn=* *))(cn=Database*))", attrs, 0, NULL, NULL,
-                         NULL, 0, &result);
+    metric_family_append(&st->fams[FAM_OPENLDAP_UP],
+                         VALUE_GAUGE(1), &st->labels, NULL);
 
-  if (rc != LDAP_SUCCESS) {
-    ERROR("openldap plugin: Failed to execute search: %s", ldap_err2string(rc));
+    for (LDAPMessage *e = ldap_first_entry(st->ld, result);
+         e != NULL;
+         e = ldap_next_entry(st->ld, e)) {
+        char *dn =  ldap_get_dn(st->ld, e);
+        if (dn == NULL)
+            continue;
+
+        unsigned long long counter = 0;
+        unsigned long long opc = 0;
+        unsigned long long opi = 0;
+        unsigned long long info = 0;
+
+        struct berval counter_data;
+        struct berval opc_data;
+        struct berval opi_data;
+        struct berval info_data;
+        struct berval olmbdb_data;
+        struct berval nc_data;
+
+        struct berval **counter_list;
+        struct berval **opc_list;
+        struct berval **opi_list;
+        struct berval **info_list;
+        struct berval **olmbdb_list;
+        struct berval **nc_list;
+
+        if ((counter_list = ldap_get_values_len(st->ld, e, "monitorCounter")) != NULL) {
+            counter_data = *counter_list[0];
+            counter = atoll(counter_data.bv_val);
+        }
+
+        if ((opc_list = ldap_get_values_len(st->ld, e, "monitorOpCompleted")) != NULL) {
+            opc_data = *opc_list[0];
+            opc = atoll(opc_data.bv_val);
+        }
+
+        if ((opi_list = ldap_get_values_len(st->ld, e, "monitorOpInitiated")) != NULL) {
+            opi_data = *opi_list[0];
+            opi = atoll(opi_data.bv_val);
+        }
+
+        if ((info_list = ldap_get_values_len(st->ld, e, "monitoredInfo")) != NULL) {
+            info_data = *info_list[0];
+            info = atoll(info_data.bv_val);
+        }
+
+        if (strcmp(dn, "cn=Total,cn=Connections,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_CONNECTIONS],
+                                 VALUE_COUNTER(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=Current,cn=Connections,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_CURRENT_CONNECTIONS],
+                                  VALUE_GAUGE(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="all"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="all"}, NULL);
+        } else if (strcmp(dn, "cn=Bind,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="bind"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="bind"}, NULL);
+        } else if (strcmp(dn, "cn=UnBind,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="unbind"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="unbind"}, NULL);
+        } else if (strcmp(dn, "cn=Search,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="search"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="search"}, NULL);
+        } else if (strcmp(dn, "cn=Compare,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="compare"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="compare"}, NULL);
+        } else if (strcmp(dn, "cn=Modify,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="modify"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="modify"}, NULL);
+        } else if (strcmp(dn, "cn=Modrdn,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="modrdn"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="modrdn"}, NULL);
+        } else if (strcmp(dn, "cn=Add,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="add"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="add"}, NULL);
+        } else if (strcmp(dn, "cn=Delete,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="delete"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="delete"}, NULL);
+        } else if (strcmp(dn, "cn=Abandon,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="abandon"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="abandon"}, NULL);
+        } else if (strcmp(dn, "cn=Extended,cn=Operations,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
+                                 VALUE_COUNTER(opc), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="extended"}, NULL);
+            metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
+                                 VALUE_COUNTER(opi), &st->labels,
+                                 &(label_pair_const_t){.name="operation", .value="extended"}, NULL);
+        } else if ((strncmp(dn, "cn=Database", 11) == 0) &&
+                   ((nc_list = ldap_get_values_len(st->ld, e, "namingContexts")) != NULL)) {
+            nc_data = *nc_list[0];
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBEntryCache")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_BDB_ENTRY_CACHE_SIZE],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBDNCache")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_BDB_DN_CACHE_SIZE],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBIDLCache")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_BDB_IDL_CACHE_SIZE],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBEntries")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_ENTRIES],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBPagesMax")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_MAX],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBPagesUsed")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_USED],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBPagesFree")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_FREE],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBReadersMax")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_READERS_MAX],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBReadersUsed")) != NULL) {
+                olmbdb_data = *olmbdb_list[0];
+                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_READERS_USED],
+                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
+                            &(label_pair_const_t){.name="database", .value=nc_data.bv_val}, NULL);
+                ldap_value_free_len(olmbdb_list);
+            }
+
+            ldap_value_free_len(nc_list);
+        } else if (strcmp(dn, "cn=Bytes,cn=Statistics,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_SEND_BYTES],
+                                 VALUE_COUNTER(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=PDU,cn=Statistics,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_SEND_PDUS],
+                                 VALUE_COUNTER(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=Entries,cn=Statistics,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_SEND_ENTRIES],
+                                 VALUE_COUNTER(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=Referrals,cn=Statistics,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_SEND_REFERRALS],
+                                 VALUE_COUNTER(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=Open,cn=Threads,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
+                                 VALUE_GAUGE(info), &st->labels,
+                                 &(label_pair_const_t){.name="status", .value="open"}, NULL);
+        } else if (strcmp(dn, "cn=Starting,cn=Threads,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
+                                 VALUE_GAUGE(info), &st->labels,
+                                 &(label_pair_const_t){.name="status", .value="stating"}, NULL);
+        } else if (strcmp(dn, "cn=Active,cn=Threads,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
+                                 VALUE_GAUGE(info), &st->labels,
+                                 &(label_pair_const_t){.name="status", .value="active"}, NULL);
+        } else if (strcmp(dn, "cn=Pending,cn=Threads,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
+                                 VALUE_GAUGE(info), &st->labels,
+                                 &(label_pair_const_t){.name="status", .value="pending"}, NULL);
+        } else if (strcmp(dn, "cn=Backload,cn=Threads,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
+                                 VALUE_GAUGE(info), &st->labels,
+                                 &(label_pair_const_t){.name="status", .value="backload"}, NULL);
+        } else if (strcmp(dn, "cn=Read,cn=Waiters,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_WAITERS_READ],
+                                 VALUE_GAUGE(counter), &st->labels, NULL);
+        } else if (strcmp(dn, "cn=Write,cn=Waiters,cn=Monitor") == 0) {
+            metric_family_append(&st->fams[FAM_OPENLDAP_WAITERS_WRITE],
+                                 VALUE_GAUGE(counter), &st->labels, NULL);
+        }
+
+        ldap_value_free_len(counter_list);
+        ldap_value_free_len(opc_list);
+        ldap_value_free_len(opi_list);
+        ldap_value_free_len(info_list);
+        ldap_memfree(dn);
+    }
     ldap_msgfree(result);
-    ldap_unbind_ext_s(st->ld, NULL, NULL);
-    st->ld = NULL;
-    return (-1);
-  }
 
-  for (LDAPMessage *e = ldap_first_entry(st->ld, result); e != NULL;
-       e = ldap_next_entry(st->ld, e)) {
-    if ((dn = ldap_get_dn(st->ld, e)) != NULL) {
-      unsigned long long counter = 0;
-      unsigned long long opc = 0;
-      unsigned long long opi = 0;
-      unsigned long long info = 0;
+    plugin_dispatch_metric_family_array(st->fams, FAM_OPENLDAP_MAX, 0);
+    return 0;
+}
 
-      struct berval counter_data;
-      struct berval opc_data;
-      struct berval opi_data;
-      struct berval info_data;
-      struct berval olmbdb_data;
-      struct berval nc_data;
-
-      struct berval **counter_list;
-      struct berval **opc_list;
-      struct berval **opi_list;
-      struct berval **info_list;
-      struct berval **olmbdb_list;
-      struct berval **nc_list;
-
-      if ((counter_list = ldap_get_values_len(st->ld, e, "monitorCounter")) !=
-          NULL) {
-        counter_data = *counter_list[0];
-        counter = atoll(counter_data.bv_val);
-      }
-
-      if ((opc_list = ldap_get_values_len(st->ld, e, "monitorOpCompleted")) !=
-          NULL) {
-        opc_data = *opc_list[0];
-        opc = atoll(opc_data.bv_val);
-      }
-
-      if ((opi_list = ldap_get_values_len(st->ld, e, "monitorOpInitiated")) !=
-          NULL) {
-        opi_data = *opi_list[0];
-        opi = atoll(opi_data.bv_val);
-      }
-
-      if ((info_list = ldap_get_values_len(st->ld, e, "monitoredInfo")) !=
-          NULL) {
-        info_data = *info_list[0];
-        info = atoll(info_data.bv_val);
-      }
-
-      if (strcmp(dn, "cn=Total,cn=Connections,cn=Monitor") == 0) {
-        cldap_submit_derive("total_connections", NULL, counter, st);
-      } else if (strcmp(dn, "cn=Current,cn=Connections,cn=Monitor") == 0) {
-        cldap_submit_gauge("current_connections", NULL, counter, st);
-      } else if (strcmp(dn, "cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "completed", opc, st);
-        cldap_submit_derive("operations", "initiated", opi, st);
-      } else if (strcmp(dn, "cn=Bind,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "bind-completed", opc, st);
-        cldap_submit_derive("operations", "bind-initiated", opi, st);
-      } else if (strcmp(dn, "cn=UnBind,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "unbind-completed", opc, st);
-        cldap_submit_derive("operations", "unbind-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Search,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "search-completed", opc, st);
-        cldap_submit_derive("operations", "search-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Compare,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "compare-completed", opc, st);
-        cldap_submit_derive("operations", "compare-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Modify,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "modify-completed", opc, st);
-        cldap_submit_derive("operations", "modify-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Modrdn,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "modrdn-completed", opc, st);
-        cldap_submit_derive("operations", "modrdn-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Add,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "add-completed", opc, st);
-        cldap_submit_derive("operations", "add-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Delete,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "delete-completed", opc, st);
-        cldap_submit_derive("operations", "delete-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Abandon,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "abandon-completed", opc, st);
-        cldap_submit_derive("operations", "abandon-initiated", opi, st);
-      } else if (strcmp(dn, "cn=Extended,cn=Operations,cn=Monitor") == 0) {
-        cldap_submit_derive("operations", "extended-completed", opc, st);
-        cldap_submit_derive("operations", "extended-initiated", opi, st);
-      } else if ((strncmp(dn, "cn=Database", 11) == 0) &&
-                 ((nc_list = ldap_get_values_len(st->ld, e,
-                                                 "namingContexts")) != NULL)) {
-        nc_data = *nc_list[0];
-        char typeinst[DATA_MAX_NAME_LEN];
-
-        if ((olmbdb_list =
-                 ldap_get_values_len(st->ld, e, "olmBDBEntryCache")) != NULL) {
-          olmbdb_data = *olmbdb_list[0];
-          ssnprintf(typeinst, sizeof(typeinst), "bdbentrycache-%s",
-                    nc_data.bv_val);
-          cldap_submit_gauge("cache_size", typeinst, atoll(olmbdb_data.bv_val),
-                             st);
-          ldap_value_free_len(olmbdb_list);
-        }
-
-        if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBDNCache")) !=
-            NULL) {
-          olmbdb_data = *olmbdb_list[0];
-          ssnprintf(typeinst, sizeof(typeinst), "bdbdncache-%s",
-                    nc_data.bv_val);
-          cldap_submit_gauge("cache_size", typeinst, atoll(olmbdb_data.bv_val),
-                             st);
-          ldap_value_free_len(olmbdb_list);
-        }
-
-        if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBIDLCache")) !=
-            NULL) {
-          olmbdb_data = *olmbdb_list[0];
-          ssnprintf(typeinst, sizeof(typeinst), "bdbidlcache-%s",
-                    nc_data.bv_val);
-          cldap_submit_gauge("cache_size", typeinst, atoll(olmbdb_data.bv_val),
-                             st);
-          ldap_value_free_len(olmbdb_list);
-        }
-
-        ldap_value_free_len(nc_list);
-      } else if (strcmp(dn, "cn=Bytes,cn=Statistics,cn=Monitor") == 0) {
-        cldap_submit_derive("derive", "statistics-bytes", counter, st);
-      } else if (strcmp(dn, "cn=PDU,cn=Statistics,cn=Monitor") == 0) {
-        cldap_submit_derive("derive", "statistics-pdu", counter, st);
-      } else if (strcmp(dn, "cn=Entries,cn=Statistics,cn=Monitor") == 0) {
-        cldap_submit_derive("derive", "statistics-entries", counter, st);
-      } else if (strcmp(dn, "cn=Referrals,cn=Statistics,cn=Monitor") == 0) {
-        cldap_submit_derive("derive", "statistics-referrals", counter, st);
-      } else if (strcmp(dn, "cn=Open,cn=Threads,cn=Monitor") == 0) {
-        cldap_submit_gauge("threads", "threads-open", info, st);
-      } else if (strcmp(dn, "cn=Starting,cn=Threads,cn=Monitor") == 0) {
-        cldap_submit_gauge("threads", "threads-starting", info, st);
-      } else if (strcmp(dn, "cn=Active,cn=Threads,cn=Monitor") == 0) {
-        cldap_submit_gauge("threads", "threads-active", info, st);
-      } else if (strcmp(dn, "cn=Pending,cn=Threads,cn=Monitor") == 0) {
-        cldap_submit_gauge("threads", "threads-pending", info, st);
-      } else if (strcmp(dn, "cn=Backload,cn=Threads,cn=Monitor") == 0) {
-        cldap_submit_gauge("threads", "threads-backload", info, st);
-      } else if (strcmp(dn, "cn=Read,cn=Waiters,cn=Monitor") == 0) {
-        cldap_submit_derive("derive", "waiters-read", counter, st);
-      } else if (strcmp(dn, "cn=Write,cn=Waiters,cn=Monitor") == 0) {
-        cldap_submit_derive("derive", "waiters-write", counter, st);
-      }
-
-      ldap_value_free_len(counter_list);
-      ldap_value_free_len(opc_list);
-      ldap_value_free_len(opi_list);
-      ldap_value_free_len(info_list);
+static int openldap_config_add(config_item_t *ci)
+{
+    openldap_t *st = calloc(1, sizeof(*st));
+    if (st == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
     }
 
-    ldap_memfree(dn);
-  }
-
-  ldap_msgfree(result);
-  return 0;
-} /* }}} int cldap_read_host */
-
-/* Configuration handling functions {{{
- *
- * <Plugin ldap>
- *   <Instance "plugin_instance1">
- *     URL "ldap://localhost"
- *     ...
- *   </Instance>
- * </Plugin>
- */
-
-static int cldap_config_add(oconfig_item_t *ci) /* {{{ */
-{
-  cldap_t *st;
-  int status;
-
-  st = calloc(1, sizeof(*st));
-  if (st == NULL) {
-    ERROR("openldap plugin: calloc failed.");
-    return -1;
-  }
-
-  status = cf_util_get_string(ci, &st->name);
-  if (status != 0) {
-    sfree(st);
-    return status;
-  }
-
-  st->starttls = false;
-  st->timeout = (long)CDTIME_T_TO_TIME_T(plugin_get_interval());
-  st->verifyhost = true;
-  st->version = LDAP_VERSION3;
-
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("BindDN", child->key) == 0)
-      status = cf_util_get_string(child, &st->binddn);
-    else if (strcasecmp("Password", child->key) == 0)
-      status = cf_util_get_string(child, &st->password);
-    else if (strcasecmp("CACert", child->key) == 0)
-      status = cf_util_get_string(child, &st->cacert);
-    else if (strcasecmp("StartTLS", child->key) == 0)
-      status = cf_util_get_boolean(child, &st->starttls);
-    else if (strcasecmp("Timeout", child->key) == 0)
-      status = cf_util_get_int(child, &st->timeout);
-    else if (strcasecmp("URL", child->key) == 0)
-      status = cf_util_get_string(child, &st->url);
-    else if (strcasecmp("VerifyHost", child->key) == 0)
-      status = cf_util_get_boolean(child, &st->verifyhost);
-    else if (strcasecmp("Version", child->key) == 0)
-      status = cf_util_get_int(child, &st->version);
-    else {
-      WARNING("openldap plugin: Option `%s' not allowed here.", child->key);
-      status = -1;
+    int status = cf_util_get_string(ci, &st->name);
+    if (status != 0) {
+        free(st);
+        return status;
     }
 
-    if (status != 0)
-      break;
-  }
+    st->starttls = false;
+    st->verifyhost = true;
+    st->version = LDAP_VERSION3;
 
-  /* Check if struct is complete.. */
-  if ((status == 0) && (st->url == NULL)) {
-    ERROR("openldap plugin: Instance `%s': "
-          "No URL has been configured.",
-          st->name);
-    status = -1;
-  }
+    memcpy(st->fams, fams, sizeof(st->fams[0])*FAM_OPENLDAP_MAX);
 
-  /* Check if URL is valid */
-  if ((status == 0) && (st->url != NULL)) {
-    LDAPURLDesc *ludpp;
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-    if (ldap_url_parse(st->url, &ludpp) != 0) {
-      ERROR("openldap plugin: Instance `%s': "
-            "Invalid URL: `%s'",
-            st->name, st->url);
-      status = -1;
+        if (strcasecmp("bind-dn", child->key) == 0) {
+            status = cf_util_get_string(child, &st->binddn);
+        } else if (strcasecmp("password", child->key) == 0) {
+            status = cf_util_get_string(child, &st->password);
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &st->cacert);
+        } else if (strcasecmp("start-tls", child->key) == 0) {
+            status = cf_util_get_boolean(child, &st->starttls);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_int(child, &st->timeout);
+        } else if (strcasecmp("url", child->key) == 0) {
+            status = cf_util_get_string(child, &st->url);
+        } else if (strcasecmp("verify-host", child->key) == 0) {
+            status = cf_util_get_boolean(child, &st->verifyhost);
+        } else if (strcasecmp("version", child->key) == 0) {
+            status = cf_util_get_int(child, &st->version);
+        } else if (strcasecmp("interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &st->labels);
+        } else {
+            PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
     }
 
-    if ((status == 0) && (ludpp->lud_host != NULL))
-      st->host = strdup(ludpp->lud_host);
+    /* Check if struct is complete.. */
+    if ((status == 0) && (st->url == NULL)) {
+        PLUGIN_ERROR("Instance '%s': No 'url' has been configured.", st->name);
+        status = -1;
+    }
 
-    ldap_free_urldesc(ludpp);
-  }
+    /* Check if URL is valid */
+    if ((status == 0) && (st->url != NULL)) {
+        LDAPURLDesc *ludpp;
 
-  if (status != 0) {
-    cldap_free(st);
-    return -1;
-  }
+        if (ldap_url_parse(st->url, &ludpp) != 0) {
+            PLUGIN_ERROR("Instance '%s': Invalid 'url': `%s'", st->name, st->url);
+            status = -1;
+        }
 
-  char callback_name[3 * DATA_MAX_NAME_LEN] = {0};
+        ldap_free_urldesc(ludpp);
+    }
 
-  ssnprintf(callback_name, sizeof(callback_name), "openldap/%s/%s",
-            (st->host != NULL) ? st->host : hostname_g,
-            (st->name != NULL) ? st->name : "default");
+    if (status == 0)
+        status = label_set_add(&st->labels, false, "instance", st->name);
 
-  return plugin_register_complex_read(/* group = */ NULL,
-                                      /* name      = */ callback_name,
-                                      /* callback  = */ cldap_read_host,
-                                      /* interval  = */ 0,
-                                      &(user_data_t){
-                                          .data = st,
-                                          .free_func = cldap_free,
-                                      });
-} /* }}} int cldap_config_add */
+    if (status != 0) {
+        openldap_free(st);
+        return -1;
+    }
 
-static int cldap_config(oconfig_item_t *ci) /* {{{ */
+    st->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+
+    return plugin_register_complex_read("openldap", st->name, openldap_read_host, interval,
+                                        &(user_data_t){ .data = st, .free_func = openldap_free });
+}
+
+static int openldap_config(config_item_t *ci)
 {
-  int status = 0;
+    int status = 0;
 
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-    if (strcasecmp("Instance", child->key) == 0)
-      cldap_config_add(child);
-    else
-      WARNING("openldap plugin: The configuration option "
-              "\"%s\" is not allowed here. Did you "
-              "forget to add an <Instance /> block "
-              "around the configuration?",
-              child->key);
-  } /* for (ci->children) */
+        if (strcasecmp("instance", child->key) == 0) {
+            status = openldap_config_add(child);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' is not allowed here.", child->key);
+            status = -1;
+        }
 
-  return status;
-} /* }}} int cldap_config */
+        if (status != 0)
+            return -1;
+    }
 
-/* }}} End of configuration handling functions */
+    return 0;
+}
 
-static int cldap_init(void) /* {{{ */
+static int openldap_init(void)
 {
-  /* Initialize LDAP library while still single-threaded as recommended in
-   * ldap_initialize(3) */
-  int debug_level;
-  ldap_get_option(NULL, LDAP_OPT_DEBUG_LEVEL, &debug_level);
-  return 0;
-} /* }}} int cldap_init */
+    /* Initialize LDAP library while still single-threaded as recommended in
+     * ldap_initialize(3) */
+    int debug_level;
+    ldap_get_option(NULL, LDAP_OPT_DEBUG_LEVEL, &debug_level);
+    return 0;
+}
 
-void module_register(void) /* {{{ */
+void module_register(void)
 {
-  plugin_register_complex_config("openldap", cldap_config);
-  plugin_register_init("openldap", cldap_init);
-} /* }}} void module_register */
-
-#if defined(__APPLE__)
-#pragma clang diagnostic pop
-#endif
+    plugin_register_config("openldap", openldap_config);
+    plugin_register_init("openldap", openldap_init);
+}
