@@ -1,0 +1,96 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ipmi 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ipmi man page"
+.SH NAME
+ncollectd-ipmi \- Documentation of ncollectd's ipmi plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ipmi
+.br
+\fBplugin\fP ipmi {
+    \fBinstance\fP \fIinstance\fP {
+        \fBaddress\fP \fIaddress\fP
+        \fBusername\fP \fIusername\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBauth-type\fP \fIMD5|rmcp+\fP
+        \fBhost\fP \fIhostname\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBsensor\fP \fItrue|false\fP
+        \fBnotify-ipmi-connection-state\fP \fItrue|false\fP
+        \fBnotify-sensor-add\fP \fItrue|false\fP
+        \fBnotify-sensor-remove\fP \fItrue|false\fP
+        \fBnotify-sensor-not-present\fP \fItrue|false\fP
+        \fBsel-sensor\fP \fIsensor\fP
+        \fBsel-enable\fP \fItrue|false\fP
+        \fBsel-celear-event\fP \fItrue|false\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBipmi\fP plugin allows to monitor server platform status using the Intelligent
+Platform Management Interface (IPMI). Local and remote interfaces are supported.
+
+The plugin configuration consists of one or more \fBinstance\fP blocks which
+specify one \fIipmi\fP connection each. Each block requires one unique string
+argument as the instance name. If instances are not configured, an instance with
+the default option values will be created.
+
+Within the \fBinstance\fP blocks, the following options are allowed:
+
+.TP
+\fBaddress\fP \fIaddress\fP
+Hostname or IP to connect to. If not specified, plugin will try to connect to
+local management controller (BMC).
+.TP
+\fBusername\fP \fIusername\fP
+.TP
+\fBpassword\fP \fIpassword\fP
+The username and the password to use for the connection to remote BMC.
+.TP
+\fBauth-type\fP \fIMD5|rmcp+\fP
+Forces the authentication type to use for the connection to remote BMC.
+By default most secure type is seleted.
+.TP
+\fBhost\fP \fIhostname\fP
+Sets the \fBhostname\fP label on dispatched values and notifications.
+Defaults to the global hostname setting.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear multiple times.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected.
+.TP
+\fBsensor\fP \fIsensor\fP
+Selects sensors to collect or to ignore.
+.TP
+\fBnotify-ipmi-connection-state\fP \fItrue|false\fP
+If a IPMI connection state changes after initialization time of a minute
+a notification is sent. Defaults to \fIfalse\fP.
+.TP
+\fBnotify-sensor-add\fP \fItrue|false\fP
+If a sensor appears after initialization time of a minute a notification is sent.
+.TP
+\fBnotify-sensor-remove\fP \fItrue|false\fP
+If a sensor disappears a notification is sent.
+.TP
+\fBnotify-sensor-not-present\fP \fItrue|false\fP
+If you have for example dual power supply and one of them is (un)plugged then
+a notification is sent.
+.TP
+\fBsel-sensor\fP \fIsensor\fP
+Selects sensors to get events from or to ignore.
+.TP
+\fBsel-enable\fP \fItrue|false\fP
+If system event log (SEL) is enabled, plugin will listen for sensor threshold
+and discrete events. When event is received the notification is sent.
+SEL event filtering can be configured using \fBsel-sensor\fP.
+Defaults to \fIfalse\fP.
+.TP
+\fBsel-celear-event\fP \fItrue|false\fP
+If SEL clear event is enabled, plugin will delete event from SEL list after
+it is received and successfully handled. In this case other tools that are
+subscribed for SEL events will receive an empty event.
+Defaults to \fIfalse\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
