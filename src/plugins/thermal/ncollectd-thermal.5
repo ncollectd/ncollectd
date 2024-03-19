@@ -1,0 +1,30 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-thermal 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd thermal man page"
+.SH NAME
+ncollectd-thermal \- Documentation of ncollectd's thermal plugin
+.SH SYNOPSIS
+\fBload-plugin\fP thermal
+.br
+\fBplugin\fP thermal {
+    \fBdevice\fP  [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+    \fBforce-use-procfs\fP \fItrue|false\fP
+.br
+}
+.SH DESCRIPTION
+The \fBthermal\fP plugin reads ACPI thermal zone information from the sysfs or procfs file system,
+i. e. mostly system temperature information.
+.PP
+.TP
+\fBdevice\fP  [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+Selects the name of the thermal device that you want to collect or ignore.
+This option may be used multiple times to specify a list of devices.
+If no selection is configured at all, \fBall\fP devices are selected.
+.TP
+\fBforce-use-procfs\fP \fItrue|false\fP
+By default, the \fIthermal\fP plugin tries to read the statistics from the Linux
+\fIsysfs\fP interface. If that is not available, the plugin falls back to the
+\fIprocfs\fP interface. By setting this option to \fItrue\fP, you can force the
+plugin to use the latter. This option defaults to \fIfalse\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
