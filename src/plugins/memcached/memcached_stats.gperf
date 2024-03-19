@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix MEMCACHED_STATS_
+%define hash-function-name memcached_stats_hash
+%define lookup-function-name memcached_get_key
+%define slot-name key
+%{
+%}
+struct memcached_metric {
+    char *key;
+    int fam;
+};
+%%
+uptime,                         FAM_MEMCACHED_UPTIME_SECONDS
+version,                        FAM_MEMCACHED_VERSION
+rusage_user,                    FAM_MEMCACHED_RUSAGE_USER_SECONDS
+rusage_system,                  FAM_MEMCACHED_RUSAGE_SYSTEM_SECONDS
+max_connections,                FAM_MEMCACHED_MAX_CONNECTIONS
+curr_connections,               FAM_MEMCACHED_CURRENT_CONNECTIONS
+total_connections,              FAM_MEMCACHED_CONNECTIONS
+rejected_connections,           FAM_MEMCACHED_REJECTED_CONNECTIONS
+connection_structures,          FAM_MEMCACHED_CONNECTION_STRUCTURES
+response_obj_oom,               FAM_MEMCACHED_RESPONSE_OBJECTS_OOM
+response_obj_count,             FAM_MEMCACHED_RESPONSE_OBJECTS
+response_obj_bytes,             FAM_MEMCACHED_RESPONSE_OBJECTS_BYTES
+read_buf_count,                 FAM_MEMCACHED_READ_BUFFERS
+read_buf_bytes,                 FAM_MEMCACHED_READ_BUFFERS_BYTES
+read_buf_bytes_free,            FAM_MEMCACHED_READ_BUFFERS_FREE_BYTES
+read_buf_oom,                   FAM_MEMCACHED_READ_BUFFERS_OOM
+reserved_fds,                   FAM_MEMCACHED_RESERVED_FDS
+cmd_get,                        FAM_MEMCACHED_CMD_GET
+cmd_set,                        FAM_MEMCACHED_CMD_SET
+cmd_flush,                      FAM_MEMCACHED_CMD_FLUSH
+cmd_touch,                      FAM_MEMCACHED_CMD_TOUCH
+cmd_meta,                       FAM_MEMCACHED_CMD_META
+get_hits,                       FAM_MEMCACHED_GET_HITS
+get_misses,                     FAM_MEMCACHED_GET_MISSES
+get_expired,                    FAM_MEMCACHED_GET_EXPIRE
+get_flushed,                    FAM_MEMCACHED_GET_FLUSHED
+get_extstore,                   FAM_MEMCACHED_GET_EXTSTORE
+get_aborted_extstore,           FAM_MEMCACHED_GET_ABORTED_EXTSTORE
+get_oom_extstore,               FAM_MEMCACHED_GET_OOM_EXTSTORE
+recache_from_extstore,          FAM_MEMCACHED_RECACHE_FROM_EXTSTORE
+miss_from_extstore,             FAM_MEMCACHED_MISS_FROM_EXTSTORE
+badcrc_from_extstore,           FAM_MEMCACHED_BADCRC_FROM_EXTSTORE
+delete_misses,                  FAM_MEMCACHED_DELETE_MISSES
+delete_hits,                    FAM_MEMCACHED_DELETE_HITS
+incr_misses,                    FAM_MEMCACHED_INCR_MISSES
+incr_hits,                      FAM_MEMCACHED_INCR_HITS
+decr_misses,                    FAM_MEMCACHED_DECR_MISSES
+decr_hits,                      FAM_MEMCACHED_DECR_HITS
+cas_misses,                     FAM_MEMCACHED_CAS_MISSES
+cas_hits,                       FAM_MEMCACHED_CAS_HITS
+cas_badval,                     FAM_MEMCACHED_CAS_BADVAL
+touch_hits,                     FAM_MEMCACHED_TOUCH_HITS
+touch_misses,                   FAM_MEMCACHED_TOUCH_MISSES
+auth_cmds,                      FAM_MEMCACHED_AUTH_CMDS
+auth_errors,                    FAM_MEMCACHED_AUTH_ERRORS
+idle_kicks,                     FAM_MEMCACHED_IDLE_KICKS
+bytes_read,                     FAM_MEMCACHED_READ_BYTES
+bytes_written,                  FAM_MEMCACHED_WRITTEN_BYTES
+limit_maxbytes,                 FAM_MEMCACHED_LIMIT_BYTES
+accepting_conns,                FAM_MEMCACHED_ACCEPTING_CONNECTIONS
+listen_disabled_num,            FAM_MEMCACHED_CONNECTIONS_LISTENER_DISABLED
+time_in_listen_disabled_us,     FAM_MEMCACHED_TIME_LISTEN_DISABLED_SECONDS
+threads,                        FAM_MEMCACHED_THREADS
+conn_yields,                    FAM_MEMCACHED_CONNECTIONS_YIELDED
+hash_power_level,               FAM_MEMCACHED_HASH_POWER_LEVEL
+hash_bytes,                     FAM_MEMCACHED_HASH_BYTES
+hash_is_expanding,              FAM_MEMCACHED_HASH_IS_EXPANDING
+slab_reassign_rescues,          FAM_MEMCACHED_SLAB_REASSIGN_RESCUES
+slab_reassign_chunk_rescues,    FAM_MEMCACHED_SLAB_REASSIGN_EVICTIONS_NOMEM
+slab_reassign_evictions_nomem,  FAM_MEMCACHED_SLAB_REASSIGN_CHUNK_RESCUES
+slab_reassign_inline_reclaim,   FAM_MEMCACHED_SLAB_REASSIGN_INLINE_RECLAIM
+slab_reassign_busy_items,       FAM_MEMCACHED_SLAB_REASSIGN_BUSY_ITEMS
+slab_reassign_busy_deletes,     FAM_MEMCACHED_SLAB_REASSIGN_BUSY_DELETES
+slab_reassign_running,          FAM_MEMCACHED_SLAB_REASSIGN_RUNNING
+slabs_moved,                    FAM_MEMCACHED_SLABS_MOVED
+lru_crawler_running,            FAM_MEMCACHED_LRU_CRAWLER_RUNNING
+lru_crawler_starts,             FAM_MEMCACHED_LRU_CRAWLER_STARTS
+lru_maintainer_juggles,         FAM_MEMCACHED_LRU_MAINTAINER_JUGGLES
+malloc_fails,                   FAM_MEMCACHED_MALLOC_FAILS
+log_worker_dropped,             FAM_MEMCACHED_LOG_WORKER_DROPPED
+log_worker_written,             FAM_MEMCACHED_LOG_WORKER_WRITTEN
+log_watcher_skipped,            FAM_MEMCACHED_LOG_WATCHER_SKIPPED
+log_watcher_sent,               FAM_MEMCACHED_LOG_WATCHER_SENT
+ssl_new_sessions,               FAM_MEMCACHED_SSL_NEW_SESSIONS
+ssl_handshake_errors,           FAM_MEMCACHED_SSL_HANDSHAKE_ERRORS
+time_since_server_cert_refresh, FAM_MEMCACHED_TIME_SINCE_SERVER_CERT_REFRESH_SECONDS
+unexpected_napi_ids,            FAM_MEMCACHED_UNEXECTED_NAPI_IDS
+round_robin_fallback,           FAM_MEMCACHED_ROUND_ROBIN_FALLBACK
+expired_unfetched,              FAM_MEMCACHED_EXPIRED_UNFETCHED
+evicted_unfetched,              FAM_MEMCACHED_EVICTED_UNFETCHED
+evicted_active,                 FAM_MEMCACHED_EVICTED_ACTIVE
+evictions,                      FAM_MEMCACHED_EVICTIONS
+reclaimed,                      FAM_MEMCACHED_RECLAIMED
+crawler_reclaimed,              FAM_MEMCACHED_CRAWLER_RECLAIMED
+crawler_items_checked,          FAM_MEMCACHED_CRAWLER_ITEMS_CHECKED
+lrutail_reflocked,              FAM_MEMCACHED_LRUTAIL_REFLOCKED
+moves_to_cold,                  FAM_MEMCACHED_MOVES_TO_COLD
+moves_to_warm,                  FAM_MEMCACHED_MOVES_TO_WARM
+moves_within_lru,               FAM_MEMCACHED_MOVES_WITHIN_LRU
+direct_reclaims,                FAM_MEMCACHED_DIRECT_RECLAIMS
+lru_bumps_dropped,              FAM_MEMCACHED_LRU_BUMPS_DROPPED
+bytes,                          FAM_MEMCACHED_BYTES
+curr_items,                     FAM_MEMCACHED_CURRENT_ITEMS
+total_items,                    FAM_MEMCACHED_TOTAL_ITEMS
+slab_global_page_pool,          FAM_MEMCACHED_SLAB_GLOBAL_PAGE_POOL
+items:number,                   FAM_MEMCACHED_ITEMS
+items:number_hot,               FAM_MEMCACHED_ITEMS_HOT
+items:number_warm,              FAM_MEMCACHED_ITEMS_WARM
+items:number_cold,              FAM_MEMCACHED_ITEMS_COLD
+items:number_temp,              FAM_MEMCACHED_ITEMS_TEMP
+items:age_hot,                  FAM_MEMCACHED_ITEMS_AGE_HOT_SECONDS
+items:age_warm,                 FAM_MEMCACHED_ITEMS_AGE_WARM_SECONDS
+items:age,                      FAM_MEMCACHED_ITEMS_AGE_SECONDS
+items:mem_requested,            FAM_MEMCACHED_ITEMS_REQUESTED_BYTES
+items:evicted,                  FAM_MEMCACHED_ITEMS_EVICTED
+items:evicted_nonzero,          FAM_MEMCACHED_ITEMS_EVICTED_NONZERO
+items:evicted_time,             FAM_MEMCACHED_ITEMS_EVICTED_SECONDS
+items:outofmemory,              FAM_MEMCACHED_ITEMS_OUTOFMEMORY
+items:tailrepairs,              FAM_MEMCACHED_ITEMS_TAILREPAIRS
+items:reclaimed,                FAM_MEMCACHED_ITEMS_RECLAIMED
+items:expired_unfetched,        FAM_MEMCACHED_ITEMS_EXPIRED_UNFETCHED
+items:evicted_unfetched,        FAM_MEMCACHED_ITEMS_EVICTED_UNFETCHED
+items:evicted_active,           FAM_MEMCACHED_ITEMS_EVICTED_ACTIVE
+items:crawler_reclaimed,        FAM_MEMCACHED_ITEMS_CRAWLER_RECLAIMED
+items:crawler_items_checked,    FAM_MEMCACHED_ITEMS_CRAWLER_ITEMS_CHECKED
+items:lrutail_reflocked,        FAM_MEMCACHED_ITEMS_LRUTAIL_REFLOCKED
+items:moves_to_cold,            FAM_MEMCACHED_ITEMS_MOVES_TO_COLD
+items:moves_to_warm,            FAM_MEMCACHED_ITEMS_MOVES_TO_WARM
+items:moves_within_lru,         FAM_MEMCACHED_ITEMS_MOVES_WITHIN_LRU
+items:direct_reclaims,          FAM_MEMCACHED_ITEMS_DIRECT_RECLAIMS
+items:hits_to_hot,              FAM_MEMCACHED_ITEMS_HITS_TO_HOT
+items:hits_to_warm,             FAM_MEMCACHED_ITEMS_HITS_TO_WARM
+items:hits_to_cold,             FAM_MEMCACHED_ITEMS_HITS_TO_COLD
+items:hits_to_temp,             FAM_MEMCACHED_ITEMS_HITS_TO_TEMP
+slabs:chunk_size,               FAM_MEMCACHED_SLAB_CHUNK_BYTES
+slabs:chunks_per_page,          FAM_MEMCACHED_SLAB_CHUNKS_PER_PAGE
+slabs:total_pages,              FAM_MEMCACHED_SLAB_TOTAL_PAGES
+slabs:total_chunks,             FAM_MEMCACHED_SLAB_TOTAL_CHUNKS
+slabs:used_chunks,              FAM_MEMCACHED_SLAB_USED_CHUNKS
+slabs:free_chunks,              FAM_MEMCACHED_SLAB_FREE_CHUNKS
+slabs:free_chunks_end,          FAM_MEMCACHED_SLAB_FREE_CHUNKS_END
+slabs:get_hits,                 FAM_MEMCACHED_SLAB_GET_HITS
+slabs:cmd_set,                  FAM_MEMCACHED_SLAB_CMD_SET
+slabs:delete_hits,              FAM_MEMCACHED_SLAB_DELETE_HITS
+slabs:incr_hits,                FAM_MEMCACHED_SLAB_INCR_HITS
+slabs:decr_hits,                FAM_MEMCACHED_SLAB_DECR_HITS
+slabs:cas_hits,                 FAM_MEMCACHED_SLAB_CAS_HITS
+slabs:cas_badval,               FAM_MEMCACHED_SLAB_CAS_BADVAL
+slabs:touch_hits,               FAM_MEMCACHED_SLAB_TOUCH_HITS
+slabs:active_slabs,             FAM_MEMCACHED_SLABS_ACTIVE
+slabs:total_malloced,           FAM_MEMCACHED_SLABS_ALLOC_BYTES
+extstore_compact_lost,          FAM_MEMCACHED_EXTSTORE_COMPACT_LOST
+extstore_compact_rescues,       FAM_MEMCACHED_EXTSTORE_COMPACT_RESCUES
+extstore_compact_skipped,       FAM_MEMCACHED_EXTSTORE_COMPACT_SKIPPED
+extstore_page_allocs,           FAM_MEMCACHED_EXTSTORE_PAGE_ALLOCATED
+extstore_page_evictions,        FAM_MEMCACHED_EXTSTORE_PAGE_EVICTIONS
+extstore_page_reclaims,         FAM_MEMCACHED_EXTSTORE_PAGE_RECLAIMS
+extstore_pages_free,            FAM_MEMCACHED_EXTSTORE_PAGES_FREE
+extstore_pages_used,            FAM_MEMCACHED_EXTSTORE_PAGES_USED
+extstore_objects_evicted,       FAM_MEMCACHED_EXTSTORE_OBJECTS_EVICTED
+extstore_objects_read,          FAM_MEMCACHED_EXTSTORE_OBJECTS_READ
+extstore_objects_written,       FAM_MEMCACHED_EXTSTORE_OBJECTS_WRITTEN
+extstore_objects_used,          FAM_MEMCACHED_EXTSTORE_OBJECTS_USED
+extstore_bytes_evicted,         FAM_MEMCACHED_EXTSTORE_BYTES_EVICTED
+extstore_bytes_written,         FAM_MEMCACHED_EXTSTORE_BYTES_WRITTEN
+extstore_bytes_read,            FAM_MEMCACHED_EXTSTORE_BYTES_READ
+extstore_bytes_used,            FAM_MEMCACHED_EXTSTORE_BYTES_USED
+extstore_bytes_fragmented,      FAM_MEMCACHED_EXTSTORE_BYTES_FRAGMENTED
+extstore_limit_maxbytes,        FAM_MEMCACHED_EXTSTORE_LIMIT_BYTES
+extstore_io_queue,              FAM_MEMCACHED_EXTSTORE_IO_QUEUE

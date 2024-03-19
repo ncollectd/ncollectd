@@ -1,0 +1,45 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-memcached 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd memcached man page"
+.SH NAME
+ncollectd-memcached \- Documentation of ncollectd's memcached plugin
+.SH SYNOPSIS
+\fBload-plugin\fP memcached
+.br
+\fBplugin\fP memcached {
+    \fBinstance\fP \fIname\fP {
+        \fBsocket\fP \fI/path/to/socket\fP
+        \fBhost\fP \fIhostname\fP
+        \fBport\fP \fIport\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBmemcached\fP plugin connects to a memcached server and queries statistics
+about cache utilization, memory and bandwidth used.
+.PP
+The plugin configuration consists of one or more \fBinstance\fP blocks which
+specify one \fImemcached\fP connection each. Within the \fBinstance\fP blocks, the
+following options are allowed:
+.PP
+.TP
+\fBsocket\fP \fI/path/to/socket\fP
+Connect to \fImemcached\fP using the UNIX domain socket at \fI/path/to/socket\fP. If this
+setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
+.TP
+\fBhost\fP \fIhostname\fP
+Hostname or IP to connect to. Defaults to \fB127.0.0.1\fP.
+.TP
+\fBport\fP \fIport\fP
+TCP port to connect to. Defaults to \fB11211\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
