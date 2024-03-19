@@ -1,34 +1,9 @@
-/**
- * collectd - src/utils/proc_pids/proc_pids.h
- *
- * Copyright(c) 2018-2019 Intel Corporation. All rights reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- * Authors:
- *   Starzyk, Mateusz <mateuszx.starzyk@intel.com>
- *   Wojciech Andralojc <wojciechx.andralojc@intel.com>
- *   Michał Aleksiński <michalx.aleksinski@intel.com>
- **/
-
-#ifndef UTILS_PROC_PIDS_PROC_PIDS_H
-#define UTILS_PROC_PIDS_PROC_PIDS_H 1
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT                                */
+/* SPDX-FileCopyrightText: Copyright(c) 2018-2019 Intel Corporation.           */
+/* SPDX-FileContributor: Starzyk, Mateusz <mateuszx.starzyk at intel.com>      */
+/* SPDX-FileContributor: Wojciech Andralojc <wojciechx.andralojc at intel.com> */
+/* SPDX-FileContributor: Michał Aleksiński <michalx.aleksinski at intel.com>   */
+#pragma once
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -189,8 +164,7 @@ int proc_pids_is_name_valid(const char *name);
  *   0 on success. Negative number on error:
  *   -1: allocation error
  */
-int proc_pids_init(const char **procs_names_array,
-                   const size_t procs_names_array_size,
+int proc_pids_init(char **procs_names_array, size_t procs_names_array_size,
                    proc_pids_t **proc_pids[]);
 
 /*
@@ -227,5 +201,3 @@ int proc_pids_update(const char *procfs_path, proc_pids_t *proc_pids[],
  *   0 on success. -1 on error.
  */
 int proc_pids_free(proc_pids_t *proc_pids[], size_t proc_pids_num);
-
-#endif /* UTILS_PROC_PIDS_PROC_PIDS_H */
