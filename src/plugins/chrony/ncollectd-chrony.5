@@ -1,0 +1,42 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-chrony 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd chrony man page"
+.SH NAME
+ncollectd-chrony \- Documentation of ncollectd's chrony plugin
+.SH SYNOPSIS
+\fBload-plugin\fP chrony
+.br
+\fBplugin\fP chrony {
+    \fBhost\fP \fIhostname\fP
+    \fBport\fP \fIport\fP
+    \fBtimeout\fP \fIseconds\fP
+    \fBlabel\fP \fIkey\fP \fIvalue\fP
+    \fBinterval\fP \fIseconds\fP
+.br
+}
+.SH DESCRIPTION
+The \fBchrony\fP plugin collects ntp data from a \fBchronyd\fP server, such as clock
+skew and per-peer stratum.
+.PP
+For talking to \fBchronyd\fP, it mimics what the \fBchronyc\fP control program does
+on the wire.
+.PP
+Available configuration options for the \fBchrony\fP plugin:
+.PP
+.TP
+\fBhost\fP \fIhostname\fP
+Hostname of the host running \fBchronyd\fP. Defaults to \fBlocalhost\fP.
+.TP
+\fBport\fP \fIport\fP
+UDP port to connect to. Defaults to \fB323\fP.
+.TP
+\fBtimeout\fP \fIseconds\fP
+Connection timeout in seconds. Defaults to \fB2\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this server.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
