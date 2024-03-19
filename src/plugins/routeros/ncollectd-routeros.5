@@ -1,0 +1,47 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-routeros 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd routeros man page"
+.SH NAME
+ncollectd-routeros \- Documentation of ncollectd's routeros plugin
+.SH SYNOPSIS
+\fBload-plugin\fP routeros
+.br
+\fBplugin\fP routeros {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBrouteros\fP plugin connects to a device running \fIRouterOS\fP, the
+Linux-based operating system for routers by \fIMikroTik\fP. The plugin uses
+\fIlibrouteros\fP to connect and reads information about the interfaces and
+wireless connections of the device. The configuration supports querying
+multiple routers:
+.PP
+The \fBrouteros\fP plugin consists of one or more \fBinstance\fP blocks.
+Within each block, the following options are understood:
+.TP
+\fBhost\fP \fIhost\fP
+Hostname or IP-address of the router to connect to.
+.TP
+\fBport\fP \fIport\fP
+Port name or port number used when connecting. If left unspecified, the default
+will be chosen by \fIlibrouteros\fP, currently "8728". This option expects a
+string argument, even when a numeric port number is given.
+.TP
+\fBuser\fP \fIuser\fP
+Use the user name \fIuser\fP to authenticate. Defaults to "admin".
+.TP
+\fBpassword\fP \fIpassword\fP
+Set the password used to authenticate.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
