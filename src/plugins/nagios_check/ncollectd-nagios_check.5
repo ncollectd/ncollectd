@@ -1,0 +1,76 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-nagios_check 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nagios_check man page"
+.SH NAME
+ncollectd-nagios_check \- Documentation of ncollectd's nagios_check plugin
+.SH SYNOPSIS
+\fBload-plugin\fP nagios_check
+.br
+\fBplugin\fP nagios_check {
+    \fBinstance\fP \fIname\fP {
+        \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
+        \fBuser\fP \fIusername\fP
+        \fBgroup\fP \fIgroupname\fP
+        \fBenv\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBrefresh\fP \fIseconds\fP
+        \fBpersist\fP \fItrue|false\fP
+        \fBpersist-ok\fP \fItrue|false\fP
+        \fBnotification\fP \fIname\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBannotation\fP \fIkey\fP \fIvalue\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBnagios_check\fP plugin forks off a Nagios Plugin and dispatch the notifications
+with the state change.
+.PP
+The \fBinstance\fP defines the Nagios Plugin an program to exec, and has the following
+options:
+.TP
+\fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
+The program to execute it may be followed by optional arguments that are passed to the
+program. Please note that due to the configuration parsing numbers and boolean
+values may be changed. If you want to be absolutely sure that something is
+passed as-is please enclose it in quotes.
+.TP
+\fBuser\fP \fIusername\fP
+Execute the executable \fBcmd\fP as user \fIuser\fP.
+.TP
+\fBgroup\fP \fIgroupname\fP
+If the \fBgroup\fP is set, the effective group of the executed program is set to that group.
+Please note that in order to change the user and/or group the daemon needs
+superuser privileges. If the daemon is run as an unprivileged user you must
+specify the same user/group here. If the daemon is run with superuser
+privileges, you must supply a non-root user here.
+.TP
+\fBenv\fP \fIkey\fP \fIvalue\fP
+Set the eviroment variable \f(CWkey=value\fP for the executed program.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBrefresh\fP \fIseconds\fP
+Sets the refresh interval (in seconds) to fire the notification again
+even if the state has not changed.
+.TP
+\fBpersist\fP \fItrue|false\fP
+Fire the notification again even if the state has not changed.
+.TP
+\fBpersist-ok\fP \fItrue|false\fP
+Fire the notification again when the state is OKAY and the state has not changed.
+.TP
+\fBnotification\fP \fIname\fP
+Sets de notification name.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the notification. Can appear
+multiple time in the \fBinstance\fP block.
+.TP
+\fBannotation\fP \fIkey\fP \fIvalue\fP
+Append the annotation \fIkey\fP=\fIvalue\fP to the notification. Can appear
+multiple time in the \fBinstance\fP block.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
