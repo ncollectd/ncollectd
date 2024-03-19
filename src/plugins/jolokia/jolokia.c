@@ -1,34 +1,19 @@
-/**
- * collectd - src/curl_jolokia.c
- * Copyright (C) 2009       Doug MacEachern
- * Copyright (C) 2006-2013  Florian octo Forster
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; only version 2 of the License is applicable.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
- *
- * Authors:
- *   Doug MacEachern <dougm at hyperic.com>
- *   Florian octo Forster <octo at collectd.org>
- *   Wilfried dothebart Goesgens <dothebart at citadel.org>
- **/
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2009 Doug MacEachern
+// SPDX-FileCopyrightText: Copyright (C) 2006-2013 Florian octo Forster
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Doug MacEachern <dougm at hyperic.com>
+// SPDX-FileContributor: Florian octo Forster <octo at collectd.org>
+// SPDX-FileContributor: Wilfried dothebart Goesgens <dothebart at citadel.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
-#include "collectd.h"
-
-#include "configfile.h"
 #include "plugin.h"
-#include "utils/common/common.h"
-#include "utils_complain.h"
-#include "utils_llist.h"
+#include "libutils/common.h"
+#include "libutils/complain.h"
+#include "libutils/llist.h"
+#include "libutils/strbuf.h"
+#include "libxson/render.h"
+#include "libxson/json_parse.h"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -36,1022 +21,1064 @@
 
 #include <curl/curl.h>
 
-#include <yajl/yajl_parse.h>
-#if HAVE_YAJL_YAJL_VERSION_H
-#include <yajl/yajl_version.h>
+typedef struct {
+    char *name;
+    label_set_t labels;
+} object_name_t;
+
+typedef struct {
+    char *attribute;
+    char *metric_name;
+    char *help;
+    metric_type_t type;
+    label_set_t labels;
+    label_set_t labels_from;
+} jlk_mbean_attribute_t;
+
+typedef struct {
+    jlk_mbean_attribute_t *ptr;
+    size_t size;
+} jlk_mbean_attribute_set_t;
+
+typedef struct {
+    char *mbean;
+    object_name_t on;
+    char *path;
+    char *metric_prefix;
+    label_set_t labels;
+    label_set_t labels_from;
+    jlk_mbean_attribute_set_t attributes;
+} jlk_mbean_t;
+
+typedef struct {
+    jlk_mbean_t *ptr;
+    size_t size;
+} jlk_mbean_set_t;
+
+typedef enum {
+    JLK_NONE = 0,
+    JLK_VALUE,
+    JLK_TIMESTAMP,
+    JLK_STATUS,
+    JLK_ERROR,
+    JLK_REQUEST,
+    JLK_REQUEST_PATH,
+    JLK_REQUEST_MBEAN,
+    JLK_REQUEST_ATTRIBUTE,
+} jlk_status_t;
+
+typedef struct {
+    char *attribute;
+    double value;
+} jlk_response_value_t;
+
+typedef struct {
+    char *path;
+    char *mbean;
+} jlk_response_request_t;
+
+enum {
+    RESPONSE_FOUND_PATH      = 1 << 1,
+    RESPONSE_FOUND_MBEAN     = 1 << 2,
+    RESPONSE_FOUND_ATTRIBUTE = 1 << 3,
+    RESPONSE_FOUND_VALUE     = 1 << 4,
+    RESPONSE_FOUND_TIMESTAMP = 1 << 5,
+    RESPONSE_FOUND_STATUS    = 1 << 6,
+};
+
+typedef struct {
+    uint64_t found;
+    char *request_path;
+    char *request_mbean;
+    char *request_attribute;
+    double value;
+    cdtime_t timestamp;
+    int status;
+} jlk_response_t;
+
+typedef struct {
+    int depth;
+    jlk_status_t stack[JSON_MAX_DEPTH];
+    jlk_mbean_set_t *mbeans;
+    jlk_response_t response;
+    char *metric_prefix;
+    label_set_t *labels;
+} jlk_parser_t;
+
+typedef struct {
+    char *instance;
+    char *url;
+    char *user;
+    char *pass;
+    char *credentials;
+    bool verify_peer;
+    bool verify_host;
+    char *cacert;
+    struct curl_slist *headers;
+    cdtime_t timeout;
+    strbuf_t post_body;
+
+    CURL *curl;
+    char curl_errbuf[CURL_ERROR_SIZE];
+    const unsigned char *start, *end;
+
+    char *metric_prefix;
+    label_set_t labels;
+    json_parser_t parser;
+    jlk_mbean_set_t mbeans;
+} jlk_t;
+
+#if 0
+mbean = "java.lang:name=*,type=GarbageCollector"
 #endif
 
-#if defined(YAJL_MAJOR) && (YAJL_MAJOR > 1)
-#define HAVE_YAJL_V2 1
-#endif
-
-#define CJO_DEFAULT_HOST "localhost"
-
-struct cjo_attribute_s /* {{{ */
+static void jlk_response_reset(jlk_response_t *response)
 {
-  char *attribute_name;
-  char *attribute_match;
-  size_t attribute_match_len;
-  char *type;
-};
-typedef struct cjo_attribute_s cjo_attribute_t;
-/* }}} */
+    response->found = 0;
+    free(response->request_path);
+    response->request_path = NULL;
+    free(response->request_mbean);
+    response->request_mbean = NULL;
+    free(response->request_attribute);
+    response->request_attribute = NULL;
+    response->value = 0;
+    response->timestamp = 0;
+    response->status = 0;
+}
 
-struct cjo_bean_s /* {{{ */
+static void jlk_object_name_reset(object_name_t *on)
 {
-  char *bean_name;
-  char *mbean_match;
-  char *mbean_namespace;
-  size_t mbean_match_len;
-  llist_t *attributes; /* list of cjo_attribute_t */
-};
-typedef struct cjo_bean_s cjo_bean_t;
-/* }}} */
+    free(on->name);
+    label_set_reset(&on->labels);
+}
 
-typedef enum { eNone = 0, eValue, eMBean } cjo_expect_token;
-
-/* {{{ */
-struct cjo_attribute_values_s {
-  const char *json_value;
-  size_t json_value_len;
-  const char *json_name;
-  size_t json_name_len;
-};
-typedef struct cjo_attribute_values_s cjo_attribute_values_t;
-/* }}} */
-
-struct cjo_membuffer_s {
-  char *buffer;
-  size_t size;
-  size_t used;
-};
-
-typedef struct cjo_membuffer_s cjo_membuffer_t;
-
-struct cjo_s /* {{{ */
+static int jlk_object_name_parse(object_name_t *on, char *str)
 {
-  char *instance;
-  char *host;
+    char *labels = strchr(str, ':');
+    if (labels == NULL)
+        return -1;
 
-  char *sock;
-
-  char *url;
-  char *user;
-  char *pass;
-  char *credentials;
-
-  const cjo_bean_t *match_this_bean;
-  cjo_attribute_values_t *curr_attribute_value; /* points to the pool below. */
-  cjo_attribute_values_t *attributepool;
-  int attribute_pool_used;
-
-  const char *json_key;
-  size_t json_key_len;
-
-  cjo_expect_token expect;
-
-  _Bool verify_peer;
-  _Bool verify_host;
-  char *cacert;
-  struct curl_slist *headers;
-  char *post_body;
-  size_t post_body_len;
-  _Bool expect_escapes;
-  cdtime_t interval;
-  int timeout;
-
-  CURL *curl;
-  char curl_errbuf[CURL_ERROR_SIZE];
-  const unsigned char *start, *end;
-  cjo_membuffer_t replybuffer;
-  cjo_membuffer_t itembuffer;
-
-  size_t poolsize;
-  char *pool;
-  const char *poolmax;
-  char *pool_ptr;
-
-  yajl_handle yajl;
-  llist_t *bean_configs;
-  int max_attribute_count;
-  int max_value_len;
-};
-typedef struct cjo_s cjo_t; /* }}} */
-
-#if HAVE_YAJL_V2
-typedef size_t yajl_len_t;
-#else
-typedef unsigned int yajl_len_t;
-#endif
-
-static void cjo_init_buffer(cjo_membuffer_t *buf, size_t initial_size) {
-  buf->buffer = calloc(1, initial_size);
-  buf->used = 0;
-  buf->size = initial_size;
-}
-
-static void cjo_append_buffer(cjo_membuffer_t *buf, const char *append,
-                              size_t appendlen) {
-  if (buf->used + appendlen + 1 > buf->size) {
-    size_t newsize = buf->size * 2;
-    char *newbuf = calloc(1, newsize);
-    memcpy(newbuf, buf->buffer, buf->used);
-    free(buf->buffer);
-    buf->buffer = newbuf;
-    buf->size = newsize;
-  }
-  memcpy(buf->buffer + buf->used, append, appendlen);
-  buf->used += appendlen;
-}
-
-static void cjo_release_buffercontent(cjo_membuffer_t *buf) {
-  sfree(buf->buffer);
-  buf->size = 0;
-  buf->used = 0;
-}
-
-static void cjo_remember_value(cjo_membuffer_t *should_be_in_here,
-                               cjo_membuffer_t *buffer_here_if_not,
-                               const char *ptr, size_t len,
-                               const char **SetThisOne, size_t *SetThisLen) {
-  if (!((ptr > should_be_in_here->buffer) &&
-        (ptr < should_be_in_here->buffer + should_be_in_here->used))) {
-    char *tptr = buffer_here_if_not->buffer + buffer_here_if_not->used;
-    cjo_append_buffer(buffer_here_if_not, ptr, len);
-    ptr = tptr;
-  }
-
-  *SetThisOne = ptr;
-  *SetThisLen = len;
-}
-
-/*
- * llist lookup methods
- */
-static int cjo_cfg_compare_attribute(llentry_t *match, void *vdb) {
-  cjo_t *db = (cjo_t *)vdb;
-  cjo_attribute_t *pcfg = (cjo_attribute_t *)match->value;
-
-  if (pcfg->attribute_match_len != db->curr_attribute_value->json_name_len)
-    return -1;
-  else
-    return strncmp(pcfg->attribute_match, db->curr_attribute_value->json_name,
-                   db->curr_attribute_value->json_name_len);
-}
-static int cjo_cfg_compare_bean(llentry_t *match, void *vdb) {
-  cjo_t *db = (cjo_t *)vdb;
-  cjo_bean_t *pbeancfg = (cjo_bean_t *)match->value;
-
-  if (pbeancfg->mbean_match_len != db->json_key_len)
-    return -1;
-  return strncmp(pbeancfg->mbean_match, db->json_key, db->json_key_len);
-}
-
-/*
- * Aligning data with Configs & Sending it
- */
-
-static int cjo_get_type(cjo_attribute_t *attribute) {
-  if (attribute->type != NULL) {
-    return -EINVAL;
-  }
-
-  const data_set_t *ds = plugin_get_ds(attribute->type);
-  if (ds == NULL) {
-    static char type[DATA_MAX_NAME_LEN] = "/--invalid--/";
-
-    if (strcmp(type, attribute->type) != 0) {
-      ERROR("curl_jolokia plugin: Unable to look up DS type \"%s\".",
-            attribute->type);
-      sstrncpy(type, attribute->type, sizeof(type));
+    size_t name_len = labels - str;
+    on->name = strndup(str, name_len);
+    if (on->name == NULL) {
+        return -1;
     }
 
-    return -1;
-  } else if (ds->ds_num > 1) {
-    static c_complain_t complaint = C_COMPLAIN_INIT_STATIC;
+    labels++;
 
-    c_complain_once(
-        LOG_WARNING, &complaint,
-        "curl_jolokia plugin: The type \"%s\" has more than one data source. "
-        "This is currently not supported. I will return the type of the "
-        "first data source, but this will likely lead to problems later on.",
-        attribute->type);
-  }
+    while (true) {
+        if (*labels == '\0')
+            return 0;
 
-  return ds->ds[0].type;
-}
+        char *key = labels;
+        char *value = strchr(key, '=');
+        if (value == NULL)
+            return -1;
 
-static void cjo_submit(cjo_t *db) /* {{{ */
-{
-  if ((db->match_this_bean == NULL) || (db->attribute_pool_used == 0))
-    return; /* nothing to do yet. */
+        size_t key_len = value - key;
+        value++;
+        if (*value == '\0')
+            return -1;
 
-  for (int i = 0; i < db->attribute_pool_used; i++) {
-    value_list_t vl = VALUE_LIST_INIT;
-    cjo_attribute_values_t *CAV = db->curr_attribute_value =
-        &db->attributepool[i];
-    llentry_t *cfgptr = llist_search_custom(db->match_this_bean->attributes,
-                                            cjo_cfg_compare_attribute, db);
-    if (cfgptr == NULL) {
-      char attribute[CAV->json_name_len + 1];
+        char *end = strchr(value, ',');
+        size_t value_len = 0;
+        if (end == NULL)
+            value_len = strlen(value);
+        else
+            value_len = end - value;
 
-      memcpy(attribute, CAV->json_name, CAV->json_name_len);
-      attribute[CAV->json_name_len] = '\0';
-      ERROR("curl_jolokia plugin: failed to locate attribute [%s:\"%s\"]",
-            db->match_this_bean->bean_name, attribute);
+        _label_set_add(&on->labels, true, true, key, key_len, value, value_len);
 
-      continue; /* we don't know this! */
-    }
-    cjo_attribute_t *curr_attribute = cfgptr->value;
-
-    /* Create a null-terminated version of the string. */
-    int ds_type = cjo_get_type(curr_attribute);
-    if (ds_type < 0) {
-      char attribute[CAV->json_name_len + 1];
-
-      memcpy(attribute, CAV->json_name, CAV->json_name_len);
-      attribute[CAV->json_name_len] = '\0';
-
-      ERROR("curl_jolokia plugin: failed to map type for [%s:%s:%s]",
-            db->match_this_bean->bean_name, attribute, curr_attribute->type);
-      continue;
+        if (end == NULL)
+            break;
+        labels = end + 1;
     }
 
-    value_t ret_value = {0};
-
-    char buffer[db->max_value_len + 1];
-    memcpy(buffer, CAV->json_value, CAV->json_value_len);
-
-    buffer[CAV->json_value_len] = '\0';
-
-    if (parse_value(buffer, &ret_value, ds_type) != 0) {
-      char attribute[CAV->json_name_len + 1];
-
-      memcpy(attribute, CAV->json_name, CAV->json_name_len);
-      attribute[CAV->json_name_len] = '\0';
-
-      WARNING("curl_jolokia plugin: Unable to parse number: [%s:%s:\"%s\"]",
-              db->match_this_bean->bean_name, attribute, buffer);
-      continue;
-    }
-
-    vl.values = &ret_value;
-    vl.values_len = 1;
-
-    char *host;
-    if ((db->host == NULL) || (strcmp("", db->host) == 0) ||
-        (strcmp(CJO_DEFAULT_HOST, db->host) == 0))
-      host = "";
-    else
-      host = db->host;
-
-    sstrncpy(vl.type_instance, curr_attribute->attribute_name,
-             sizeof(vl.type_instance));
-    sstrncpy(vl.plugin_instance, db->match_this_bean->bean_name,
-             sizeof(vl.type_instance));
-
-    sstrncpy(vl.host, host, sizeof(vl.host));
-    if (db->match_this_bean->mbean_namespace == NULL)
-      sstrncpy(vl.plugin, "jolokia", sizeof(vl.plugin));
-    else
-      sstrncpy(vl.plugin, db->match_this_bean->mbean_namespace,
-               sizeof(vl.plugin));
-    sstrncpy(vl.type, curr_attribute->type, sizeof(vl.type));
-
-    plugin_dispatch_values(&vl);
-  }
-
-  /* flush values */
-  db->match_this_bean = NULL;
-  db->attribute_pool_used = 0;
-
-  memset(db->attributepool, 0,
-         sizeof(*db->attributepool) * db->max_attribute_count);
-
-} /* }}} int cjo_submit */
-
-/* yajl callbacks */
-#define CJO_CB_ABORT 0
-#define CJO_CB_CONTINUE 1
-
-static int cjo_cb_string(void *ctx, const unsigned char *val, yajl_len_t len) {
-  cjo_t *db = (cjo_t *)ctx;
-
-  switch (db->expect) {
-  case eValue:
-    cjo_remember_value(&db->replybuffer, &db->itembuffer, (const char *)val,
-                       len, &db->curr_attribute_value->json_value,
-                       &db->curr_attribute_value->json_value_len);
-
-    if (len > db->max_value_len)
-      db->max_value_len = len;
-
-    break;
-  case eMBean:
-    db->json_key = (const char *)val;
-    db->json_key_len = len;
-
-    llentry_t *cfgptr =
-        llist_search_custom(db->bean_configs, cjo_cfg_compare_bean, db);
-    if (cfgptr != NULL) {
-      db->match_this_bean = cfgptr->value;
-      cjo_submit(db);
-    }
-    db->expect = eNone;
-    break;
-  case eNone:
-    break; /* Don't care... */
-  }
-
-  /* Handle the string as if it was a number. */
-  return CJO_CB_CONTINUE;
-} /* int cjo_cb_string */
-
-static int cjo_cb_number(void *ctx, const char *number, yajl_len_t number_len) {
-  cjo_t *db = (cjo_t *)ctx;
-
-  switch (db->expect) {
-  case eValue:
-    cjo_remember_value(&db->replybuffer, &db->itembuffer, number, number_len,
-                       &db->curr_attribute_value->json_value,
-                       &db->curr_attribute_value->json_value_len);
-
-    if (number_len > db->max_value_len)
-      db->max_value_len = number_len;
-    break;
-  case eMBean:
-  case eNone:
-    db->expect = eNone;
-    break; /* Don't care... */
-  }
-
-  /* are we complete yet? */
-
-  return CJO_CB_CONTINUE;
-} /* int cjo_cb_number */
-
-static int cjo_cb_map_key(void *ctx, unsigned char const *in_name,
-                          yajl_len_t in_name_len) {
-  cjo_t *db = (cjo_t *)ctx;
-
-  if ((in_name_len == 5) && !strncmp((const char *)in_name, "value", 5)) {
-    db->expect = eValue;
-  } else if ((in_name_len == 5) &&
-             !strncmp((const char *)in_name, "mbean", 5)) {
-    db->expect = eMBean;
-  } else if (db->expect == eValue) {
-    if (db->attribute_pool_used <= db->max_attribute_count) {
-      db->curr_attribute_value = &db->attributepool[db->attribute_pool_used];
-      db->attribute_pool_used++;
-    } else {
-      char buffer[in_name_len + 1];
-
-      memcpy(buffer, in_name, in_name_len);
-      buffer[in_name_len] = '\0';
-      ERROR("curl_jolokia plugin: attribute pool[%d/%d] [%s] exhausted! We may "
-            "loose values!",
-            db->attribute_pool_used, db->max_attribute_count, buffer);
-    }
-    cjo_remember_value(&db->replybuffer, &db->itembuffer, (const char *)in_name,
-                       in_name_len, &db->curr_attribute_value->json_name,
-                       &db->curr_attribute_value->json_name_len);
-  }
-  return CJO_CB_CONTINUE;
-}
-
-static int cjo_cb_end_map(void *ctx) {
-  cjo_t *db = (cjo_t *)ctx;
-
-  if (db->expect == eValue) {
-    cjo_submit(db);
-    db->expect = eNone;
-  }
-  return CJO_CB_CONTINUE;
-}
-
-static yajl_callbacks ycallbacks = {
-    NULL, /* null */
-    NULL, /* boolean */
-    NULL, /* integer */
-    NULL, /* double */
-    cjo_cb_number,  cjo_cb_string, NULL, cjo_cb_map_key,
-    cjo_cb_end_map, NULL,          NULL};
-
-/*
- *------------------------------------------------------------------------------
- * cURL Handling
- */
-static size_t cjo_curl_callback(void *buf, /* {{{ */
-                                size_t size, size_t nmemb, void *user_data) {
-  size_t len = size * nmemb;
-
-  if (len <= 0)
-    return len;
-
-  cjo_t *db = user_data;
-  if (db == NULL)
     return 0;
+}
 
-  cjo_append_buffer(&db->replybuffer, (char *)buf, len);
-
-  return len;
-} /* }}} size_t cjo_curl_callback */
-
-static int cjo_init_curl(cjo_t *db) /* {{{ */
+static bool jlk_object_name_cmp(object_name_t *oa, object_name_t *ob)
 {
-  db->curl = curl_easy_init();
-  if (db->curl == NULL) {
-    ERROR("curl_jolokia plugin: curl_easy_init failed.");
-    return -1;
-  }
+    if (strcmp(oa->name, ob->name) != 0)
+        return false;
 
-  curl_easy_setopt(db->curl, CURLOPT_NOSIGNAL, 1L);
-  curl_easy_setopt(db->curl, CURLOPT_WRITEFUNCTION, cjo_curl_callback);
-  curl_easy_setopt(db->curl, CURLOPT_WRITEDATA, db);
-  curl_easy_setopt(db->curl, CURLOPT_USERAGENT,
-                   PACKAGE_NAME "/" PACKAGE_VERSION);
-  curl_easy_setopt(db->curl, CURLOPT_ERRORBUFFER, db->curl_errbuf);
-  curl_easy_setopt(db->curl, CURLOPT_URL, db->url);
+    if (oa->labels.num != ob->labels.num)
+        return false;
 
-  if (db->user != NULL) {
-    size_t credentials_size;
+    for (size_t i = 0; i < oa->labels.num; i++) {
+        label_pair_t *paira = &oa->labels.ptr[i];
+        label_pair_t *pairb = &ob->labels.ptr[i];
+        if (strcmp(paira->name, pairb->name) != 0)
+            return false;
 
-    credentials_size = strlen(db->user) + 2;
-    if (db->pass != NULL)
-      credentials_size += strlen(db->pass);
+        if ((paira->value[0] == '*') && (paira->value[1] == '\0'))
+            return false;
 
-    db->credentials = (char *)calloc(1, credentials_size);
-    if (db->credentials == NULL) {
-      ERROR("curl_jolokia plugin: calloc failed.");
-      return -1;
+        if ((pairb->value[0] == '*') && (pairb->value[1] == '\0'))
+            return false;
+
+        if (strcmp(paira->value, pairb->value) != 0)
+            return false;
     }
 
-    snprintf(db->credentials, credentials_size, "%s:%s", db->user,
-             (db->pass == NULL) ? "" : db->pass);
-    curl_easy_setopt(db->curl, CURLOPT_USERPWD, db->credentials);
-  }
+    return true;
+}
 
-  curl_easy_setopt(db->curl, CURLOPT_SSL_VERIFYPEER, (long)db->verify_peer);
-  curl_easy_setopt(db->curl, CURLOPT_SSL_VERIFYHOST, db->verify_host ? 2L : 0L);
-  if (db->cacert != NULL)
-    curl_easy_setopt(db->curl, CURLOPT_CAINFO, db->cacert);
-  if (db->headers != NULL)
-    curl_easy_setopt(db->curl, CURLOPT_HTTPHEADER, db->headers);
-  if (db->post_body != NULL)
-    curl_easy_setopt(db->curl, CURLOPT_POSTFIELDS, db->post_body);
+static void jlk_submit(char *metric_prefix, label_set_t *labels,
+                       jlk_mbean_set_t *mbeans, jlk_response_t *response)
+{
+    if (mbeans == NULL || response == NULL)
+        return;
+
+    object_name_t on = {0};
+    int status = jlk_object_name_parse(&on, response->request_mbean);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to parse objet name: '%s'.", response->request_mbean);
+        return;
+    }
+
+
+    for (size_t i = 0; i < mbeans->size; i++) {
+        jlk_mbean_t *mbean = &mbeans->ptr[i];
+
+        if (!jlk_object_name_cmp(&mbean->on, &on))
+            continue;
+
+        if (mbean->path != NULL) {
+            if (response->request_path == NULL)
+                continue;
+            if (strcmp(mbean->path, response->request_path) != 0)
+                continue;
+        }
+
+        if (response->request_attribute == NULL)
+            continue;
+
+        for (size_t j = 0; j < mbean->attributes.size; j++) {
+            jlk_mbean_attribute_t *attribute = &mbean->attributes.ptr[j];
+
+            if (strcmp(attribute->attribute, response->request_attribute) != 0)
+                continue;
+
+            label_set_t mlabels = {0};
+
+            if (labels->num > 0)
+                label_set_add_set(&mlabels, true, *labels);
+
+            if (mbean->labels.num > 0)
+                label_set_add_set(&mlabels, true, mbean->labels);
+
+            for (size_t k =0; k < mbean->labels_from.num; k++) {
+                label_pair_t *pair =  &mbean->labels_from.ptr[k];
+                label_pair_t *pair_value = label_set_read(on.labels, pair->value);
+                if (pair_value == NULL)
+                    continue;
+                label_set_add(&mlabels, true, pair->name, pair_value->value);
+            }
+
+            if (attribute->labels.num > 0)
+                label_set_add_set(&mlabels, true, attribute->labels);
+
+            for (size_t k =0; k < attribute->labels_from.num; k++) {
+                label_pair_t *pair =  &attribute->labels_from.ptr[k];
+                label_pair_t *pair_value = label_set_read(on.labels, pair->value);
+                if (pair_value == NULL)
+                    continue;
+                label_set_add(&mlabels, true, pair->name, pair_value->value);
+            }
+
+            strbuf_t buf = STRBUF_CREATE;
+            if (metric_prefix != NULL)
+                strbuf_putstr(&buf, metric_prefix);
+            if (mbean->metric_prefix != NULL)
+                strbuf_putstr(&buf, mbean->metric_prefix);
+            strbuf_putstr(&buf, attribute->metric_name);
+
+            metric_family_t fam = {0};
+            fam.name = buf.ptr;
+            fam.type = attribute->type;
+            fam.help = attribute->help;
+
+            value_t value = {0};
+
+            if (fam.type == METRIC_TYPE_COUNTER)
+                value = VALUE_COUNTER(response->value);
+            else
+                value = VALUE_GAUGE(response->value);
+
+            metric_family_append(&fam, value, &mlabels, NULL);
+            plugin_dispatch_metric_family_array(&fam, 1, 0);
+
+//fprintf(stderr, "[%s][%s][%s]%f\n", response->request_mbean, response->request_path, response->request_attribute, response->value);
+            strbuf_destroy(&buf);
+            label_set_reset(&mlabels);
+        }
+    }
+
+    jlk_object_name_reset(&on);
+}
+
+static bool jlk_cb_string(void *ctx, const char *val, size_t len)
+{
+    jlk_parser_t *jlk_parser = (jlk_parser_t *)ctx;
+
+//fprintf(stderr, "STRING: (%d)<%d>[%.*s]\n", (int)jlk_parser->depth, (int)jlk_parser->stack[1], (int)len, val);
+
+    switch (jlk_parser->depth) {
+    case 2:
+        switch (jlk_parser->stack[1]) {
+            case JLK_REQUEST_PATH:
+                jlk_parser->response.request_path = strndup((const char *)val, len);
+                jlk_parser->response.found |= RESPONSE_FOUND_PATH;
+                break;
+            case JLK_REQUEST_MBEAN:
+                jlk_parser->response.request_mbean = strndup((const char *)val, len);
+                jlk_parser->response.found |= RESPONSE_FOUND_MBEAN;
+                break;
+            case JLK_REQUEST_ATTRIBUTE:
+                jlk_parser->response.request_attribute = strndup((const char *)val, len);
+                jlk_parser->response.found |= RESPONSE_FOUND_ATTRIBUTE;
+                break;
+            default:
+                break;
+        }
+        break;
+    }
+
+    return true;
+}
+
+static bool jlk_cb_number(void *ctx, const char *number_val, size_t number_len)
+{
+    jlk_parser_t *jlk_parser = (jlk_parser_t *)ctx;
+
+    char number[256];
+    if (number_len > sizeof(number))
+        number_len = sizeof(number)-1;
+    sstrncpy(number, number_val, number_len);
+
+//fprintf(stderr, "NUMBER: (%d)[%.*s]\n", (int)jlk_parser->depth, (int)number_len, number_val);
+    switch (jlk_parser->depth) {
+    case 1:
+        switch (jlk_parser->stack[0]) {
+            case JLK_VALUE:
+                jlk_parser->response.value = atof(number);
+                jlk_parser->response.found |= RESPONSE_FOUND_VALUE;
+                break;
+            case JLK_TIMESTAMP:
+                jlk_parser->response.timestamp = atol(number);
+                jlk_parser->response.found |= RESPONSE_FOUND_TIMESTAMP;
+                break;
+            case JLK_STATUS:
+                jlk_parser->response.status = atol(number);
+                jlk_parser->response.found |= RESPONSE_FOUND_STATUS;
+                break;
+            default:
+                break;
+        }
+        break;
+    }
+
+    return true;
+}
+
+static bool jlk_cb_map_key(void *ctx, const char *key, size_t key_len)
+{
+    jlk_parser_t *jlk_parser = (jlk_parser_t *)ctx;
+//fprintf(stderr, "VAL: (%d)[%.*s]\n", (int)jlk_parser->depth, (int)string_len, key);
+    switch (jlk_parser->depth) {
+    case 1:
+        switch(key_len) {
+        case 5: // "value" "error"
+            if (strncmp("value", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[0] = JLK_VALUE;
+            } else if (strncmp("error", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[0] = JLK_ERROR;
+            } else {
+                jlk_parser->stack[0] = JLK_NONE;
+            }
+            break;
+        case 6: // "status"
+            if (strncmp("status", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[0] = JLK_STATUS;
+            } else {
+                jlk_parser->stack[0] = JLK_NONE;
+            }
+            break;
+        case 7: // "request"
+            if (strncmp("request", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[0] = JLK_REQUEST;
+            } else {
+                jlk_parser->stack[0] = JLK_NONE;
+            }
+            break;
+        case 9: // "timestamp"
+            if (strncmp("timestamp", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[0] = JLK_TIMESTAMP;
+            } else {
+                jlk_parser->stack[0] = JLK_NONE;
+            }
+            break;
+        default:
+            jlk_parser->stack[0] = JLK_NONE;
+            break;
+        }
+        break;
+    case 2:
+        switch(key_len) {
+        case 4: // "path"
+            if (strncmp("path", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[1] = JLK_REQUEST_PATH;
+            } else {
+                jlk_parser->stack[1] = JLK_NONE;
+            }
+            break;
+        case 5: // "mbean"
+            if (strncmp("mbean", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[1] = JLK_REQUEST_MBEAN;
+            } else {
+                jlk_parser->stack[1] = JLK_NONE;
+            }
+            break;
+        case 9: // "attribute"
+            if (strncmp("attribute", (const char *)key, key_len) == 0) {
+                jlk_parser->stack[1] = JLK_REQUEST_ATTRIBUTE;
+            } else {
+                jlk_parser->stack[1] = JLK_NONE;
+            }
+            break;
+        default:
+            jlk_parser->stack[1] = JLK_NONE;
+            break;
+        }
+        break;
+    }
+
+    return true;
+}
+
+static bool jlk_cb_start_map(void *ctx)
+{
+    jlk_parser_t *jlk_parser = (jlk_parser_t *)ctx;
+    jlk_parser->depth++;
+    jlk_parser->stack[jlk_parser->depth] = JLK_NONE;
+
+    return true;
+}
+
+static bool jlk_cb_end_map(void *ctx)
+{
+    jlk_parser_t *jlk_parser = (jlk_parser_t *)ctx;
+    jlk_parser->depth--;
+    if (jlk_parser->depth > 0) {
+        jlk_parser->stack[jlk_parser->depth-1] = JLK_NONE;
+    } else {
+        jlk_parser->depth = 0;
+        jlk_submit(jlk_parser->metric_prefix, jlk_parser->labels,
+                   jlk_parser->mbeans, &jlk_parser->response);
+        jlk_response_reset(&jlk_parser->response);
+    }
+
+    return true;
+}
+
+json_callbacks_t jlk_callbacks = {
+    .json_null        = NULL,
+    .json_boolean     = NULL,
+    .json_integer     = NULL,
+    .json_double      = NULL,
+    .json_number      = jlk_cb_number,
+    .json_string      = jlk_cb_string,
+    .json_start_map   = jlk_cb_start_map,
+    .json_map_key     = jlk_cb_map_key,
+    .json_end_map     = jlk_cb_end_map,
+    .json_start_array = NULL,
+    .json_end_array   = NULL,
+};
+
+static size_t jlk_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
+{
+    size_t len = size * nmemb;
+    if (len <= 0)
+        return len;
+
+    jlk_t *jlk = user_data;
+    if (jlk == NULL)
+        return 0;
+
+    json_status_t status = json_parser_parse(&jlk->parser, buf, len);
+    if (status != JSON_STATUS_OK)
+        return -1;
+
+    return len;
+}
+
+static int jlk_init_curl(jlk_t *jlk)
+{
+    if (jlk->curl != NULL)
+        return 0;
+
+    jlk->curl = curl_easy_init();
+    if (jlk->curl == NULL) {
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
+    }
+
+    CURLcode rcode = 0;
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_NOSIGNAL, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_WRITEFUNCTION, jlk_curl_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_WRITEDATA, jlk);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_USERAGENT, PACKAGE_NAME "/" PACKAGE_VERSION);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_ERRORBUFFER, jlk->curl_errbuf);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_URL, jlk->url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+
+    if (jlk->user != NULL) {
+        size_t credentials_size = strlen(jlk->user)+2;
+        if (jlk->pass != NULL)
+            credentials_size += strlen(jlk->pass);
+
+        jlk->credentials = calloc(1, credentials_size);
+        if (jlk->credentials == NULL) {
+            PLUGIN_ERROR("calloc failed.");
+            return -1;
+        }
+
+        ssnprintf(jlk->credentials, credentials_size, "%s:%s", jlk->user,
+                                  (jlk->pass == NULL) ? "" : jlk->pass);
+        rcode = curl_easy_setopt(jlk->curl, CURLOPT_USERPWD, jlk->credentials);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_SSL_VERIFYPEER, (long)jlk->verify_peer);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYPEER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_SSL_VERIFYHOST, jlk->verify_host ? 2L : 0L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYHOST failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    if (jlk->cacert != NULL) {
+        rcode = curl_easy_setopt(jlk->curl, CURLOPT_CAINFO, jlk->cacert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_CAINFO failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (jlk->headers != NULL) {
+        rcode = curl_easy_setopt(jlk->curl, CURLOPT_HTTPHEADER, jlk->headers);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HTTPHEADER failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (strbuf_len(&jlk->post_body) > 0) {
+        rcode = curl_easy_setopt(jlk->curl, CURLOPT_POSTFIELDS, jlk->post_body.ptr);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_POSTFIELDS failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
 
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
-  if (db->timeout >= 0)
-    curl_easy_setopt(db->curl, CURLOPT_TIMEOUT_MS, (long)db->timeout);
-  else if (db->interval > 0)
-    curl_easy_setopt(db->curl, CURLOPT_TIMEOUT_MS,
-                     (long)CDTIME_T_TO_MS(db->interval));
-  else
-    curl_easy_setopt(db->curl, CURLOPT_TIMEOUT_MS,
-                     (long)CDTIME_T_TO_MS(plugin_get_interval()));
-#endif
-  return 0;
-} /* }}} int cjo_init_curl */
-
-static int cjo_sock_perform(cjo_t *db) /* {{{ */
-{
-  char errbuf[1024];
-  struct sockaddr_un sa_unix = {
-      .sun_family = AF_UNIX,
-  };
-  sstrncpy(sa_unix.sun_path, db->sock, sizeof(sa_unix.sun_path));
-
-  int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (fd < 0)
-    return -1;
-  if (connect(fd, (struct sockaddr *)&sa_unix, sizeof(sa_unix)) < 0) {
-    ERROR("curl_jolokia plugin: connect(%s) failed: %s",
-          (db->sock != NULL) ? db->sock : "<null>",
-          sstrerror(errno, errbuf, sizeof(errbuf)));
-    close(fd);
-    return -1;
-  }
-
-  ssize_t red;
-  do {
-    unsigned char buffer[4096];
-    red = read(fd, buffer, sizeof(buffer));
-    if (red < 0) {
-      ERROR("curl_jolokia plugin: read(%s) failed: %s",
-            (db->sock != NULL) ? db->sock : "<null>",
-            sstrerror(errno, errbuf, sizeof(errbuf)));
-      close(fd);
-      return -1;
+    if (jlk->timeout > 0) {
+        rcode = curl_easy_setopt(jlk->curl, CURLOPT_TIMEOUT_MS,
+                                            (long)CDTIME_T_TO_MS(jlk->timeout));
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    } else {
+        rcode = curl_easy_setopt(jlk->curl, CURLOPT_TIMEOUT_MS,
+                                            (long)CDTIME_T_TO_MS(plugin_get_interval()));
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
     }
-    if (!cjo_curl_callback(buffer, red, 1, db))
-      break;
-  } while (red > 0);
-  close(fd);
-  return 0;
-} /* }}} int cjo_sock_perform */
-
-static int cjo_curl_perform(cjo_t *db) /* {{{ */
-{
-
-  char *url = NULL;
-
-  curl_easy_getinfo(db->curl, CURLINFO_EFFECTIVE_URL, &url);
-
-  size_t len = db->post_body_len;
-  if (len < 4096)
-    len = 4096;
-
-  cjo_init_buffer(&db->replybuffer, len * 4);
-  cjo_init_buffer(&db->itembuffer, len);
-
-  int status = curl_easy_perform(db->curl);
-  if (status != CURLE_OK) {
-    ERROR(
-        "curl_jolokia plugin: curl_easy_perform failed with status %i: %s (%s)",
-        status, db->curl_errbuf, (url != NULL) ? url : "<null>");
-    cjo_release_buffercontent(&db->replybuffer);
-    return -1;
-  }
-
-  long rc;
-  curl_easy_getinfo(db->curl, CURLINFO_RESPONSE_CODE, &rc);
-
-  /* The response code is zero if a non-HTTP transport was used. */
-  if ((rc != 0) && (rc != 200)) {
-    ERROR("curl_jolokia plugin: curl_easy_perform failed with "
-          "response code %ld (%s)",
-          rc, url);
-    cjo_release_buffercontent(&db->replybuffer);
-    return -1;
-  }
-
-  yajl_status json_status = yajl_parse(
-      db->yajl, (unsigned char *)db->replybuffer.buffer, db->replybuffer.used);
-
-  if (json_status != yajl_status_ok) {
-    unsigned char *msg =
-        yajl_get_error(db->yajl, /* verbose = */ 1,
-                       /* jsonText = */ (unsigned char *)db->replybuffer.buffer,
-                       db->replybuffer.used);
-    ERROR("curl_jolokia plugin: yajl_parse failed: %s", msg);
-    yajl_free_error(db->yajl, msg);
-  }
-
-  cjo_release_buffercontent(&db->replybuffer);
-  cjo_release_buffercontent(&db->itembuffer);
-  return 0;
-} /* }}} int cjo_curl_perform */
-
-static int cjo_perform(cjo_t *db) /* {{{ */
-{
-  yajl_handle yprev = db->yajl;
-
-  db->yajl = yajl_alloc(&ycallbacks,
-#if HAVE_YAJL_V2
-                        /* alloc funcs = */ NULL,
-#else
-                        /* alloc funcs = */ NULL, NULL,
 #endif
-                        /* context = */ (void *)db);
-  if (db->yajl == NULL) {
-    ERROR("curl_jolokia plugin: yajl_alloc failed.");
-    db->yajl = yprev;
-    return -1;
-  }
 
-  int status;
-  if (db->url)
-    status = cjo_curl_perform(db);
-  else
-    status = cjo_sock_perform(db);
-  if (status < 0) {
-    yajl_free(db->yajl);
-    db->yajl = yprev;
-    return -1;
-  }
-
-#if HAVE_YAJL_V2
-  status = yajl_complete_parse(db->yajl);
-#else
-  status = yajl_parse_complete(db->yajl);
-#endif
-  if (status != yajl_status_ok) {
-    unsigned char *errmsg;
-
-    errmsg = yajl_get_error(db->yajl, /* verbose = */ 0,
-                            /* jsonText = */ NULL, /* jsonTextLen = */ 0);
-    ERROR("curl_jolokia plugin: yajl_parse_complete failed: %s",
-          (char *)errmsg);
-    yajl_free_error(db->yajl, errmsg);
-    yajl_free(db->yajl);
-    db->yajl = yprev;
-    return -1;
-  }
-
-  yajl_free(db->yajl);
-  db->yajl = yprev;
-  return 0;
-} /* }}} int cjo_perform */
-
-static int cjo_read(user_data_t *ud) /* {{{ */
-{
-  if ((ud == NULL) || (ud->data == NULL)) {
-    ERROR("curl_jolokia plugin: cjo_read: Invalid user data.");
-    return -1;
-  }
-
-  return cjo_perform((cjo_t *)ud->data);
-} /* }}} int cjo_read */
-/* end cURL callbacks */
-
-/*----------------------------------------------------------------------------*/
-/* Configuration handling functions {{{ */
-
-static int cjo_config_append_string(const char *name,
-                                    struct curl_slist **dest, /* {{{ */
-                                    oconfig_item_t *ci) {
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    WARNING("curl_jolokia plugin: `%s' needs exactly one string argument.",
-            name);
-    return -1;
-  }
-
-  *dest = curl_slist_append(*dest, ci->values[0].value.string);
-  if (*dest == NULL)
-    return -1;
-
-  return 0;
-} /* }}} int cjo_config_append_string */
-
-void destroy_attribute_config(cjo_attribute_t *attribute) {
-  sfree(attribute->attribute_name);
-  sfree(attribute->attribute_match);
-  sfree(attribute->type);
-  sfree(attribute);
+    return 0;
 }
 
-int cjo_get_attribute(cjo_bean_t *bean, oconfig_item_t *ci) {
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    ERROR("curl_jolokia plugin: The `Attribute' block "
-          "needs exactly one string argument.");
+static int jlk_curl_perform(jlk_t *jlk)
+{
+    char *url = NULL;
 
-    return -1;
-  }
-  if (strcasecmp("AttributeName", ci->key)) {
-    ERROR("curl_jolokia plugin: cjo_config_add_attribute: "
-          "Invalid key: %s",
-          ci->key);
-    return -1;
-  }
+    curl_easy_getinfo(jlk->curl, CURLINFO_EFFECTIVE_URL, &url);
 
-  cjo_attribute_t *attribute =
-      (cjo_attribute_t *)calloc(1, sizeof(cjo_attribute_t));
-  if (attribute == NULL) {
-    ERROR("curl_jolokia plugin: calloc of bean attribute failed.");
+    int status = curl_easy_perform(jlk->curl);
+    if (status != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_perform failed with status %i: %s (%s)",
+                     status, jlk->curl_errbuf, (url != NULL) ? url : "<null>");
+        return -1;
+    }
 
-    return -1;
-  }
-  memset(attribute, 0, sizeof(*attribute));
+    long rc;
+    curl_easy_getinfo(jlk->curl, CURLINFO_RESPONSE_CODE, &rc);
 
-  int status = cf_util_get_string(ci, &attribute->attribute_name);
-  if (status != 0) {
-    ERROR("curl_jolokia plugin: failed to get attribute name.");
+    /* The response code is zero if a non-HTTP transport was used. */
+    if ((rc != 0) && (rc != 200)) {
+        PLUGIN_ERROR("curl_easy_perform failed with response code %ld (%s)", rc, url);
+        return -1;
+    }
 
-    destroy_attribute_config(attribute);
+    return 0;
+}
+
+static int jlk_read(user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+    jlk_t *jlk = ud->data;
+
+    if (jlk->curl == NULL) {
+        int status = jlk_init_curl(jlk);
+        if (status != 0)
+            return -1;
+    }
+
+    jlk_parser_t ctx = {0};
+
+    ctx.mbeans = &jlk->mbeans;
+    ctx.metric_prefix = jlk->metric_prefix;
+    ctx.labels = &jlk->labels;
+
+    json_parser_init(&jlk->parser, 0, &jlk_callbacks, &ctx);
+
+    int status = jlk_curl_perform(jlk);
+    if (status < 0) {
+        json_parser_free (&jlk->parser);
+        return -1;
+    }
+
+    status = json_parser_complete(&jlk->parser);
+    if (status != JSON_STATUS_OK) {
+        unsigned char *errmsg = json_parser_get_error(&jlk->parser, 1, NULL, 0);
+        PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
+        json_parser_free_error(errmsg);
+        json_parser_free (&jlk->parser);
+        return -1;
+    }
+
+    json_parser_free(&jlk->parser);
+    return 0;
+}
+
+static int jlk_build_post(jlk_t *jlk)
+{
+    xson_render_t r = {0};
+    xson_render_init(&r, &jlk->post_body, XSON_RENDER_TYPE_JSON, 0);
+
+    int status = xson_render_array_open(&r);
+    for (size_t i = 0; i < jlk->mbeans.size; i++) {
+        jlk_mbean_t *mbean = &jlk->mbeans.ptr[i];
+
+        if (mbean->attributes.size == 0)
+            continue;
+
+        status |= xson_render_map_open(&r);
+
+        status |= xson_render_key_string(&r, "type");
+        status |= xson_render_string(&r, "read");
+
+        if (mbean->path != NULL) {
+            status |= xson_render_key_string(&r, "path");
+            status |= xson_render_string(&r, mbean->path);
+        }
+
+        if (mbean->mbean != NULL) {
+            status |= xson_render_key_string(&r, "mbean");
+            status |= xson_render_string(&r, mbean->mbean);
+        }
+
+        if (mbean->attributes.size > 0) {
+            jlk_mbean_attribute_set_t *attributes = &mbean->attributes;
+
+            if (attributes->size == 1) {
+                jlk_mbean_attribute_t *attribute = &attributes->ptr[0];
+                if (attribute->attribute != NULL) {
+                    status |= xson_render_key_string(&r, "attribute");
+                    status |= xson_render_string(&r, attribute->attribute);
+                }
+            } else {
+                status |= xson_render_key_string(&r, "attribute");
+                status |= xson_render_array_open(&r);
+                for (size_t j = 0; j < attributes->size; j++) {
+                    jlk_mbean_attribute_t *attribute = &attributes->ptr[j];
+                    if (attribute->attribute != NULL)
+                        status |= xson_render_string(&r, attribute->attribute);
+                }
+                status |= xson_render_array_close(&r);
+            }
+        }
+
+        status |= xson_render_map_close(&r);
+    }
+
+    status |= xson_render_array_close(&r);
+
     return status;
-  }
+}
 
-  status = 0;
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
+static int jlk_config_append_string(const char *name, struct curl_slist **dest, config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_WARNING("`%s' needs exactly one string argument.", name);
+        return -1;
+    }
 
-    if (strcasecmp("Attribute", child->key) == 0) {
-      status = cf_util_get_string(child, &attribute->attribute_match);
-    } else if (strcasecmp("Type", child->key) == 0) {
-      status = cf_util_get_string(child, &attribute->type);
-    } else {
-      ERROR("curl_jolokia plugin: Option `%s' not allowed in Bean Attribute.",
-            child->key);
-      status = -1;
+    *dest = curl_slist_append(*dest, ci->values[0].value.string);
+    if (*dest == NULL)
+        return -1;
+
+    return 0;
+}
+
+static void jlk_mbean_attribute_free(jlk_mbean_attribute_t *attribute)
+{
+    if (attribute == NULL)
+        return;
+    free(attribute->attribute);
+    free(attribute->metric_name);
+    label_set_reset(&attribute->labels);
+}
+
+static void jlk_mbean_attribute_set_free(jlk_mbean_attribute_set_t *attributes)
+{
+    for (size_t i = 0; i < attributes->size; i++) {
+        jlk_mbean_attribute_free(&attributes->ptr[i]);
+    }
+    free(attributes->ptr);
+    attributes->size = 0;
+}
+
+static void jlk_mbean_free(jlk_mbean_t *mbean)
+{
+    if (mbean == NULL)
+        return;
+    free(mbean->mbean);
+    jlk_object_name_reset(&mbean->on);
+    free(mbean->path);
+    free(mbean->metric_prefix);
+    label_set_reset(&mbean->labels);
+    jlk_mbean_attribute_set_free(&mbean->attributes);
+}
+
+static void jlk_mbean_set_free(jlk_mbean_set_t *mbeans)
+{
+    for (size_t i = 0; i < mbeans->size; i++) {
+        jlk_mbean_free(&mbeans->ptr[i]);
+    }
+    free(mbeans->ptr);
+    mbeans->size = 0;
+}
+
+static void jlk_free(void *arg)
+{
+    jlk_t *jlk = (jlk_t *)arg;
+    if (jlk == NULL)
+        return;
+
+    if (jlk->curl != NULL)
+        curl_easy_cleanup(jlk->curl);
+    jlk->curl = NULL;
+#if 0
+    jlk_destroy_bean_configs(jlk->bean_configs);
+    jlk->bean_configs = NULL;
+#endif
+    free(jlk->instance);
+
+    free(jlk->url);
+    free(jlk->user);
+    free(jlk->pass);
+    free(jlk->credentials);
+    free(jlk->cacert);
+    strbuf_destroy(&jlk->post_body);
+
+
+    curl_slist_free_all(jlk->headers);
+    /// todo: freeme    jlk_attribute_values_t *attributepool;
+
+    jlk_mbean_set_free(&jlk->mbeans);
+
+    free(jlk);
+}
+
+
+static int jlk_config_add_mbean_attribute(config_item_t *ci, jlk_mbean_attribute_set_t *attributes)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The 'attribute' block needs exactly one string argument.");
+        return -1;
+    }
+
+    jlk_mbean_attribute_t *tmp = realloc(attributes->ptr,
+                                 sizeof(*attributes->ptr) * (attributes->size + 1));
+    if (tmp == NULL) {
+        PLUGIN_ERROR("realloc failed.");
+        return -1;
+    }
+    attributes->ptr= tmp;
+    jlk_mbean_attribute_t *attribute = &attributes->ptr[attributes->size];
+    memset(attribute, 0, sizeof(*attribute));
+    attributes->size++;
+
+    int status = cf_util_get_string(ci, &attribute->attribute);
+    if (status != 0) {
+        jlk_mbean_attribute_free(attribute);
+        attributes->size--;
+        return status;
+    }
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("metric", child->key) == 0) {
+            status = cf_util_get_string(child, &attribute->metric_name);
+        } else if (strcasecmp("type", child->key) == 0) {
+            status = cf_util_get_metric_type(child, &attribute->type);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &attribute->labels);
+        } else if (strcasecmp("label-from", child->key) == 0) {
+            status = cf_util_get_label(child, &attribute->labels_from);
+        } else if (strcasecmp("help", child->key) == 0) {
+            status = cf_util_get_string(child, &attribute->help);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
     }
 
     if (status != 0)
-      break;
-  } /* for (i = 0; i < ci->children_num; i++) */
+        return -1;
 
-  if (status == 0) {
-    if ((attribute->attribute_name == NULL) ||
-        (attribute->attribute_match == NULL) || (attribute->type == NULL)) {
-      ERROR("curl_jolokia plugin: some attribute property is missing..");
-      status = -1;
+    return 0;
+}
+
+static int jlk_config_add_mbean(config_item_t *ci, jlk_mbean_set_t *mbeans)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The 'mbean' block needs exactly one string argument.");
+        return -1;
     }
-  }
-  if (status >= 0) {
-    attribute->attribute_match_len = strlen(attribute->attribute_match);
-    llentry_t *listentry = llentry_create(NULL, attribute);
-    llist_append(bean->attributes, listentry);
-  } else {
-    destroy_attribute_config(attribute);
-  }
-  return status;
-}
 
-void destroy_bean_config(cjo_bean_t *bean) {
-  if (bean == NULL)
-    return;
+    jlk_mbean_t *tmp = realloc(mbeans->ptr, sizeof(*mbeans->ptr) * (mbeans->size + 1));
+    if (tmp == NULL) {
+        PLUGIN_ERROR("realloc failed.");
+        return -1;
+    }
+    mbeans->ptr= tmp;
+    jlk_mbean_t *mbean = &mbeans->ptr[mbeans->size];
+    memset(mbean, 0, sizeof(*mbean));
+    mbeans->size++;
 
-  for (llentry_t *e = llist_head(bean->attributes); e != NULL; e = e->next) {
-    cjo_attribute_t *attribute = (cjo_attribute_t *)e->value;
-    e->value = NULL;
+    int status = cf_util_get_string(ci, &mbean->mbean);
+    if (status != 0) {
+        jlk_mbean_free(mbean);
+        mbeans->size--;
+        return status;
+    }
 
-    destroy_attribute_config(attribute);
-  }
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-  llist_destroy(bean->attributes);
-  sfree(bean->bean_name);
-  sfree(bean->mbean_match);
-  sfree(bean->mbean_namespace);
-  sfree(bean);
-}
+        if (strcasecmp("path", child->key) == 0) {
+            status = cf_util_get_string(child, &mbean->path);
+        } else if (strcasecmp("metric-prefix", child->key) == 0) {
+            status = cf_util_get_string(child, &mbean->metric_prefix);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &mbean->labels);
+        } else if (strcasecmp("label-from", child->key) == 0) {
+            status = cf_util_get_label(child, &mbean->labels_from);
+        } else if (strcasecmp("attribute", child->key) == 0) {
+            status = jlk_config_add_mbean_attribute(child, &mbean->attributes);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
 
-static int cjo_config_add_bean(cjo_t *db, /* {{{ */
-                               oconfig_item_t *ci) {
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    ERROR("curl_jolokia plugin: The `BeanName' block "
-          "needs exactly one string argument.");
-
-    return -1;
-  }
-  if (strcasecmp("BeanName", ci->key)) {
-    ERROR("curl_jolokia plugin: cjo_config_add_bean: "
-          "Invalid key: %s",
-          ci->key);
-    return -1;
-  }
-
-  cjo_bean_t *bean = (cjo_bean_t *)calloc(1, sizeof(cjo_bean_t));
-  if (bean == NULL) {
-    ERROR("curl_jolokia plugin: calloc of bean property failed.");
-
-    return -1;
-  }
-  memset(bean, 0, sizeof(*bean));
-  bean->attributes = llist_create();
-  if (bean->attributes == NULL) {
-    ERROR("curl_jolokia plugin: calloc of bean property failed.");
-
-    destroy_bean_config(bean);
-    return -1;
-  }
-
-  int status = cf_util_get_string(ci, &bean->bean_name);
-  if (status != 0) {
-    ERROR("curl_jolokia plugin: fetching of bean name failed.");
-
-    destroy_bean_config(bean);
-    return status;
-  }
-
-  status = 0;
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("MBean", child->key) == 0) {
-      status = cf_util_get_string(child, &bean->mbean_match);
-    } else if (strcasecmp("BeanNameSpace", child->key) == 0) {
-      status = cf_util_get_string(child, &bean->mbean_namespace);
-    } else if (strcasecmp("AttributeName", child->key) == 0) {
-      status = cjo_get_attribute(bean, child);
-    } else {
-      ERROR("curl_jolokia plugin: Option `%s' not allowed in Bean.",
-            child->key);
-      status = -1;
+        if (status != 0)
+            break;
     }
 
     if (status != 0)
-      break;
-  } /* for (i = 0; i < ci->children_num; i++) */
+        return -1;
 
-  if (status == 0) {
-    if ((bean->bean_name == NULL) || (bean->mbean_match == NULL) ||
-        (bean->attributes == NULL) || (llist_size(bean->attributes) == 0)) {
-      ERROR("curl_jolokia plugin: some bean property is invalid..");
-      status = -1;
+    status = jlk_object_name_parse(&mbean->on, mbean->mbean);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to parse mbeam: '%s'.", mbean->mbean);
+        return -1;
     }
-  }
-  if (status >= 0) {
-    int count;
 
-    count = llist_size(bean->attributes);
-    if (count > db->max_attribute_count)
-      db->max_attribute_count = count;
-
-    bean->mbean_match_len = strlen(bean->mbean_match);
-    if (db->bean_configs == NULL)
-      db->bean_configs = llist_create();
-
-    llist_append(db->bean_configs, llentry_create(NULL, bean));
-  } else {
-    destroy_bean_config(bean);
-  }
-
-  return status;
-} /* }}} int cjo_config_add_key */
-
-static void cjo_destroy_bean_configs(llist_t *bean_configs) {
-  llentry_t *e;
-
-  if (bean_configs == NULL)
-    return;
-
-  for (e = llist_head(bean_configs); e != NULL; e = e->next) {
-    cjo_bean_t *bean = (cjo_bean_t *)e->value;
-    e->value = NULL;
-
-    destroy_bean_config(bean);
-  }
-
-  llist_destroy(bean_configs);
+    return 0;
 }
-static void cjo_free(void *arg) /* {{{ */
+
+static int jlk_config_add_instance(config_item_t *ci)
 {
-  cjo_t *db;
-
-  DEBUG("curl_jolokia plugin: cjo_free (arg = %p);", arg);
-
-  db = (cjo_t *)arg;
-
-  if (db == NULL)
-    return;
-
-  if (db->curl != NULL)
-    curl_easy_cleanup(db->curl);
-  db->curl = NULL;
-
-  cjo_destroy_bean_configs(db->bean_configs);
-  db->bean_configs = NULL;
-  sfree(db->instance);
-  sfree(db->host);
-
-  sfree(db->sock);
-
-  sfree(db->url);
-  sfree(db->user);
-  sfree(db->pass);
-  sfree(db->credentials);
-  sfree(db->cacert);
-  sfree(db->post_body);
-  sfree(db->attributepool);
-
-  curl_slist_free_all(db->headers);
-  /// todo: freeme	cjo_attribute_values_t *attributepool;
-
-  sfree(db);
-} /* }}} void cjo_free */
-
-static int cjo_config_add_url(oconfig_item_t *ci) /* {{{ */
-{
-
-  if ((ci->values_num != 1) || (ci->values[0].type != OCONFIG_TYPE_STRING)) {
-    ERROR("curl_jolokia plugin: The `URL' block "
-          "needs exactly one string argument.");
-    return -1;
-  }
-
-  cjo_t *db = (cjo_t *)calloc(1, sizeof(cjo_t));
-  if (db == NULL) {
-    ERROR("curl_jolokia plugin: calloc failed.");
-    return -1;
-  }
-  memset(db, 0, sizeof(*db));
-
-  int status = 0;
-  if (strcasecmp("URL", ci->key) == 0)
-    status = cf_util_get_string(ci, &db->url);
-  else if (strcasecmp("Sock", ci->key) == 0)
-    status = cf_util_get_string(ci, &db->sock);
-  else {
-    ERROR("curl_jolokia plugin: cjo_config: "
-          "Invalid key: %s",
-          ci->key);
-    return -1;
-  }
-  if (status != 0) {
-    sfree(db);
-    return status;
-  }
-
-  /* Fill the `cjo_t' structure.. */
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
-
-    if (strcasecmp("Instance", child->key) == 0)
-      status = cf_util_get_string(child, &db->instance);
-    else if (strcasecmp("Host", child->key) == 0)
-      status = cf_util_get_string(child, &db->host);
-    else if (strcasecmp("MaxReadAttributes", child->key) == 0)
-      status = cf_util_get_int(child, &db->max_attribute_count);
-    else if (db->url && strcasecmp("User", child->key) == 0)
-      status = cf_util_get_string(child, &db->user);
-    else if (db->url && strcasecmp("Password", child->key) == 0)
-      status = cf_util_get_string(child, &db->pass);
-    else if (db->url && strcasecmp("VerifyPeer", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->verify_peer);
-    else if (db->url && strcasecmp("VerifyHost", child->key) == 0)
-      status = cf_util_get_boolean(child, &db->verify_host);
-    else if (db->url && strcasecmp("CACert", child->key) == 0)
-      status = cf_util_get_string(child, &db->cacert);
-    else if (db->url && strcasecmp("Header", child->key) == 0)
-      status = cjo_config_append_string("Header", &db->headers, child);
-    else if (db->url && strcasecmp("Post", child->key) == 0) {
-      status = cf_util_get_string(child, &db->post_body);
-      db->post_body_len = strlen(db->post_body);
-      db->expect_escapes = (strchr(db->post_body, '\\') != NULL) ||
-                           (strchr(db->post_body, '/') != NULL);
-    } else if (strcasecmp("BeanName", child->key) == 0)
-      status = cjo_config_add_bean(db, child);
-    else {
-      ERROR("curl_jolokia plugin: Option `%s' not allowed here.", child->key);
-
-      status = -1;
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The 'instance' block needs exactly one string argument.");
+        return -1;
     }
 
-    if (status != 0)
-      break;
-  }
+    jlk_t *jlk = (jlk_t *)calloc(1, sizeof(jlk_t));
+    if (jlk == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
 
-  if (status == 0) {
-    if (status == 0 && db->url)
-      status = cjo_init_curl(db);
-  }
+    int status = cf_util_get_string(ci, &jlk->instance);
+    if (status != 0) {
+        free(jlk);
+        return status;
+    }
 
-  /* If all went well, register this database for reading */
-  if (status == 0) {
-    char cb_name[DATA_MAX_NAME_LEN];
+    cdtime_t interval = 0;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-    if (db->instance == NULL)
-      db->instance = strdup("default");
+        if (strcasecmp("url", child->key) == 0) {
+            status = cf_util_get_string(child, &jlk->url);
+        } else if (jlk->url && strcasecmp("user", child->key) == 0) {
+            status = cf_util_get_string(child, &jlk->user);
+        } else if (jlk->url && strcasecmp("password", child->key) == 0) {
+            status = cf_util_get_string(child, &jlk->pass);
+        } else if (jlk->url && strcasecmp("verify-peer", child->key) == 0) {
+            status = cf_util_get_boolean(child, &jlk->verify_peer);
+        } else if (jlk->url && strcasecmp("verify-host", child->key) == 0) {
+            status = cf_util_get_boolean(child, &jlk->verify_host);
+        } else if (jlk->url && strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &jlk->cacert);
+        } else if (jlk->url && strcasecmp("header", child->key) == 0) {
+            status = jlk_config_append_string("Header", &jlk->headers, child);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &jlk->timeout);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &jlk->labels);
+        } else if (strcasecmp("interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("metric-prefix", child->key) == 0) {
+            status = cf_util_get_string(child, &jlk->metric_prefix);
+        } else if (strcasecmp("mbean", child->key) == 0) {
+            status = jlk_config_add_mbean(child, &jlk->mbeans);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
 
-    DEBUG("curl_jolokia plugin: Registering new read callback: %s",
-          db->instance);
+        if (status != 0)
+            break;
+    }
 
-    user_data_t ud = {
-        .data = (void *)db,
-        .free_func = cjo_free,
-    };
+    if (status != 0) {
+        jlk_free(jlk);
+        return -1;
+    }
 
-    snprintf(cb_name, sizeof(cb_name), "curl_jolokia-%s-%s", db->instance,
-             db->url ? db->url : db->sock);
+    struct curl_slist *slist = curl_slist_append(jlk->headers, "Content-Type: application/json");
+    if (slist == NULL) {
+        PLUGIN_ERROR("curl_slist_append failed");
+        jlk_free(jlk);
+        return -1;
+    }
 
-    db->attributepool =
-        calloc(db->max_attribute_count + 1, sizeof(*db->attributepool));
+    jlk->headers = slist;
 
-    plugin_register_complex_read(/* group = */ NULL, cb_name, cjo_read,
-                                 /* interval = */ db->interval, &ud);
-  } else {
-    ERROR("curl_jolokia plugin: Failed to load URL");
+    status = jlk_build_post(jlk);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to build POST data");
+        jlk_free(jlk);
+        return -1;
+    }
 
-    cjo_free(db);
-    return -1;
-  }
-
-  return 0;
+    return plugin_register_complex_read("jolokia", jlk->instance, jlk_read, interval,
+                                        &(user_data_t){.data=jlk, .free_func=jlk_free});
 }
-/* }}} int cjo_config_add_database */
 
-static int cjo_config(oconfig_item_t *ci) /* {{{ */
+static int jlk_config(config_item_t *ci)
 {
-  int success = 0;
-  int errors = 0;
+    int status = 0;
 
-  for (int i = 0; i < ci->children_num; i++) {
-    oconfig_item_t *child = ci->children + i;
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
 
-    if (strcasecmp("Sock", child->key) == 0 ||
-        strcasecmp("URL", child->key) == 0) {
-      int status = cjo_config_add_url(child);
-      if (status == 0)
-        success++;
-      else
-        errors++;
-    } else {
-      WARNING("curl_jolokia plugin: Option `%s' not allowed here.", child->key);
-      errors++;
+        if (strcasecmp("instance", child->key) == 0) {
+            status = jlk_config_add_instance(child);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
     }
-  }
 
-  if ((success == 0) && (errors > 0)) {
-    ERROR("curl_jolokia plugin: All statements failed.");
-    return -1;
-  }
+    return 0;
+}
 
-  return 0;
-} /* }}} int cjo_config */
-
-/* }}} End of configuration handling functions */
-
-void module_register(void) {
-  plugin_register_complex_config("curl_jolokia", cjo_config);
-} /* void module_register */
-
-/* vim: set sw=2 sts=2 et fdm=marker : */
+void module_register(void)
+{
+    plugin_register_config("jolokia", jlk_config);
+}
