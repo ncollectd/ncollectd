@@ -1,0 +1,48 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-log_gelf 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd log_gelf man page"
+.SH NAME
+ncollectd-log_gelf \- Documentation of ncollectd's log_gelf plugin
+.SH SYNOPSIS
+\fBload-plugin\fP log_gelf
+.br
+\fBplugin\fP log_gelf {
+    \fBinstance\fP \fIname\fP {
+        \fBlog-level\fP \fIdebug|info|notice|warning|err\fP
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBpacket-size\fP \fIsize\fP
+        \fBttl\fP \fIttl\fP
+        \fBcompress\fP \fItrue|false\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBlog_gelf\fP plugin receives log messages from the daemon and send them in
+the Graylog Extended Log Format (GELF) via UDP.
+.PP
+The plugin has de following options:
+.TP
+\fBlog-level\fP \fIdebug|info|notice|warning|err\fP
+Sets the log-level. If, for example, set to \fBnotice\fP, then all events with
+severity \fBnotice\fP, \fBwarning\fP, or \fBerr\fP will be written to the logfile.
+
+Please note that \fBdebug\fP is only available if ncollectd has been compiled with
+debugging support.
+.TP
+\fBhost\fP \fIhost\fP
+Set the destination address to send the metrics. Default to localhost.
+.TP
+\fBport\fP \fIport\fP
+Set the destionation port. The default port is 12201.
+.TP
+\fBpacket-size\fP \fIsize\fP
+Set maxinum packet size in bytes. Default to 1420 bytes.
+.TP
+\fBttl\fP \fIttl\fP
+Set the IP packet TTL. Default to 255.
+.TP
+\fBcompress\fP \fItrue|false\fP
+If the the playload is compressed. Default to true.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
