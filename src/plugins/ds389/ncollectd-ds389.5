@@ -1,0 +1,82 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ds389 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ds389 man page"
+.SH NAME
+ncollectd-ds389 \- Documentation of ncollectd's ds389 plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ds389
+.br
+\fBplugin\fP ds389 {
+    \fBinstance\fP \fIname\fP {
+        \fBurl\fP \fIldap://host/binddn\fP
+        \fBbind-dn\fP \fIdn\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBca-cert\fP \fI/path/to/ca-cert\fP
+        \fBstart-tls\fP \fItrue|false\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBversion\fP \fIversion\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The ds389 plugin collect metrics from the 389 Directory Server.
+
+The configuration of the \fBds389\fP plugin consists of one or more \fBinstance\fP
+blocks. Each block requires one string argument as the instance name.
+
+In order for the plugin to work correctly, each instance name must be unique.
+This is not enforced by the plugin and it is your responsibility to ensure it is.
+
+The following options are accepted within each \fBinstance\fP block:
+
+.TP
+\fBurl\fP \fIldap://host/binddn\fP
+Sets the URL to use to connect to the \fIds389\fP server. This option is mandatory.
+.TP
+\fBbind-dn\fP \fIdn\fP
+Name in the form of an LDAP distinguished name intended to be used for
+authentication. Defaults to empty string to establish an anonymous authorization.
+.TP
+\fBpassword\fP \fIpassword\fP
+Password for simple bind authentication. If this option is not set,
+unauthenticated bind operation is used.
+.TP
+\fBca-cert\fP \fI/path/to/ca-cert\fP
+File that holds one or more SSL certificates. If you want to use TLS/SSL you
+may possibly need this option. What CA certificates are checked by default
+depends on the distribution you use and can be changed with the usual ldap
+client configuration mechanisms. See
+.BR ldap.conf (5)
+for the details.
+.TP
+\fBstart-tls\fP \fItrue|false\fP
+Defines whether TLS must be used when connecting to the \fIds389\fP server.
+Disabled by default.
+.TP
+\fBtimeout\fP \fIseconds\fP
+Sets the timeout value for ldap operations, in seconds. By default, the
+configured \fBinterval\fP is used to set the timeout. Use \fB-1\fP to disable
+(infinite timeout).
+.TP
+\fBverify-host\fP \fItrue|false\fP
+Enables or disables peer host name verification. If enabled, the plugin checks
+if the \f(CWCommon Name\fP or a \f(CWSubject Alternate Name\fP field of the SSL
+certificate matches the host name provided by the \fBurl\fP option. If this
+identity check fails, the connection is aborted. Enabled by default.
+.TP
+\fBversion\fP \fIversion\fP
+An integer which sets the LDAP protocol version number to use when connecting
+to the LDAP server. Defaults to \fB3\fP for using \fILDAPv3\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
