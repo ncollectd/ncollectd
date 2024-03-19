@@ -1,0 +1,14 @@
+# TYPE system_pressure_cpu_waiting_seconds counter
+system_pressure_cpu_waiting_seconds_total{hostname="localhost.localdomain"} 26.349266
+# TYPE system_pressure_memory_waiting_seconds counter
+system_pressure_memory_waiting_seconds_total{hostname="localhost.localdomain"} 0.000283
+# TYPE system_pressure_io_stalled_seconds counter
+system_pressure_io_stalled_seconds_total{hostname="localhost.localdomain"} 9.390042
+# TYPE system_pressure_io_waiting_seconds counter
+system_pressure_io_waiting_seconds_total{hostname="localhost.localdomain"} 10.33493
+# TYPE system_pressure_memory_stalled_seconds counter
+system_pressure_memory_stalled_seconds_total{hostname="localhost.localdomain"} 0.000119
+# TYPE system_pressure_cpu_stalled_seconds counter
+system_pressure_cpu_stalled_seconds_total{hostname="localhost.localdomain"} 0
+# TYPE system_pressure_irq_stalled_seconds counter
+system_pressure_irq_stalled_seconds_total{hostname="localhost.localdomain"} 8.750518
