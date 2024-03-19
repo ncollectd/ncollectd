@@ -1,0 +1,32 @@
+# TYPE system_sockets_used gauge
+system_sockets_used{hostname="localhost.localdomain"} 3269
+# TYPE system_sockets_tcp_orphan gauge
+system_sockets_tcp_orphan{hostname="localhost.localdomain"} 13
+# TYPE system_sockets_udp_inuse gauge
+system_sockets_udp_inuse{hostname="localhost.localdomain"} 14
+# TYPE system_sockets_udplite_inuse gauge
+system_sockets_udplite_inuse{hostname="localhost.localdomain"} 0
+# TYPE system_sockets_tcp_inuse gauge
+system_sockets_tcp_inuse{hostname="localhost.localdomain"} 117
+# TYPE system_sockets_tcp_time_wait gauge
+system_sockets_tcp_time_wait{hostname="localhost.localdomain"} 295
+# TYPE system_sockets_raw_inuse gauge
+system_sockets_raw_inuse{hostname="localhost.localdomain"} 0
+# TYPE system_sockets_tcp_alloc gauge
+system_sockets_tcp_alloc{hostname="localhost.localdomain"} 2814
+# TYPE system_sockets_udp6_inuse gauge
+system_sockets_udp6_inuse{hostname="localhost.localdomain"} 61
+# TYPE system_sockets_frag_inuse gauge
+system_sockets_frag_inuse{hostname="localhost.localdomain"} 0
+# TYPE system_sockets_frag_memory gauge
+system_sockets_frag_memory{hostname="localhost.localdomain"} 0
+# TYPE system_sockets_frag6_inuse gauge
+system_sockets_frag6_inuse{hostname="localhost.localdomain"} 0
+# TYPE system_sockets_frag6_memory gauge
+system_sockets_frag6_memory{hostname="localhost.localdomain"} 0
+# TYPE system_sockets_raw6_inuse gauge
+system_sockets_raw6_inuse{hostname="localhost.localdomain"} 1
+# TYPE system_sockets_tcp6_inuse gauge
+system_sockets_tcp6_inuse{hostname="localhost.localdomain"} 2557
+# TYPE system_sockets_tcp_mem gauge
+system_sockets_tcp_mem{hostname="localhost.localdomain"} 1132
