@@ -1,0 +1,52 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-notify_exec 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd notify_exec man page"
+.SH NAME
+ncollectd-notify_exec \- Documentation of ncollectd's notify_exec plugin
+.SH SYNOPSIS
+\fBload-plugin\fP notify_exec
+.br
+\fBplugin\fP notify_exec {
+    \fBformat\fP \fItext|json|protob|env|environment\fP
+    \fBif-match\fP \fImatch\fP {
+        \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
+        \fBuser\fP \fIusername\fP
+        \fBgroup\fP \fIUgroupname\fP
+        \fBenv\fP \fIkey\fP \fIvalue\fP
+        \fBformat\fP \fItext|json|protob|env|environment\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBnotify_exec\fP plugin forks off an executable to dispatch
+notifications to the outside world.
+.PP
+.TP
+\fBif-match\fP \fImatch\fP
+The program is forked once for each notification that is handled by the daemon.
+The notification is passed to the program on \f(CWSTDIN\fP in a fashion similar to
+HTTP-headers.
+This program is not serialized, so that several instances of this program may
+run at once if multiple notifications are received.
+.RS
+.TP
+\fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
+.TP
+\fBuser\fP \fIusername\fP
+Execute the executable \fBcmd\fP as user \fIuser\fP.
+.TP
+\fBgroup\fP \fIUgroupname\fP
+If the \fBgroup\fP is set, the effective group of the executed program is set to that group.
+Please note that in order to change the user and/or group the daemon needs
+superuser privileges. If the daemon is run as an unprivileged user you must
+specify the same user/group here. If the daemon is run with superuser
+privileges, you must supply a non-root user here.
+.TP
+\fBenv\fP \fIkey\fP \fIvalue\fP
+Set the eviroment variable \f(CWkey=value\fP for the executed program.
+.TP
+\fBformat\fP \fItext|json|protob|env|environment\fP
+How the notification is passed to the program.
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
