@@ -1,0 +1,67 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-statsd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd statsd man page"
+.SH NAME
+ncollectd-statsd \- Documentation of ncollectd's statsd plugin
+.SH SYNOPSIS
+\fBload-plugin\fP statsd
+.br
+\fBplugin\fP statsd {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBdelete-counters\fP \fItrue|false\fP
+        \fBdelete-timers\fP \fItrue|false\fP
+        \fBdelete-gauges\fP \fItrue|false\fP
+        \fBdelete-sets\fP \fItrue|false\fP
+        \fBtimer-buckets\fP \fIbucket\fP [[\fIbucket\fP] ...]
+        \fBinterval\fP \fIseconds\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBstatsd\fP plugin listens to a UDP socket, reads "events" in the statsd
+protocol and dispatches rates or other aggregates of these numbers periodically.
+.PP
+The plugin implements the \fIcounter\fP, \fItimer\fP, \fIgauge\fP and \fIset\fP statds metrics.
+.PP
+The configuration of the \fBstatsd\fP plugin consists of one or more
+\fBinstance\fP blocks. Each block requires one string argument
+as the instance name.  The following configuration options are valid:
+.TP
+\fBhost\fP \fIhost\fP
+Bind to the hostname / address \fIhost\fP. By default, the plugin will bind to the
+"any" address, i.e. accept packets sent to any of the hosts addresses.
+.TP
+\fBport\fP \fIport\fP
+UDP port to listen to. This can be either a service name or a port number.
+Defaults to \f(CW8125\fP.
+.TP
+\fBdelete-counters\fP \fItrue|false\fP
+.TP
+\fBdelete-timers\fP \fItrue|false\fP
+.TP
+\fBdelete-gauges\fP \fItrue|false\fP
+.TP
+\fBdelete-sets\fP \fItrue|false\fP
+These options control what happens if metrics are not updated in an interval.
+If set to \fIfalse\fP, the default, metrics are dispatched unchanged, i.e. the
+rate of counters and size of sets will be zero, timers report \f(CWNaN\fP and gauges
+are unchanged. If set to \fBtrue\fP, the such metrics are not dispatched and
+removed from the internal cache.
+.TP
+\fBtimer-buckets\fP \fIbucket\fP [[\fIbucket\fP] ...]
+Config the buckets for the timer histograms.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this instance.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prefix the metrics name with this strings.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
