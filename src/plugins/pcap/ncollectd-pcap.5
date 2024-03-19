@@ -1,0 +1,53 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-pcap 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd pcap man page"
+.SH NAME
+ncollectd-pcap \- Documentation of ncollectd's pcap plugin
+.SH SYNOPSIS
+\fBload-plugin\fP pcap
+\fBplugin\fP pcap {
+    \fBinstance\fP \fIname\fP {
+        \fBinterface\fP \fIinterface\fP
+        \fBpromiscuous\fP \fItrue|false\fP
+        \fBignore-source\fP \fIsource\fP
+        \fBignore-destination\fP \fIdestination\fP
+        \fBfilter\fP \fIexpression\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBpcap\fP plugin uses libpcap to get a copy of all traffic on the selected interfaces.
+.PP
+The \fBpcap\fP plugin supports the following options:
+.TP
+\fBinterface\fP \fIinterface\fP
+This option sets the interface that should be used.
+If this option is not set, or set to "any", the plugin will try
+to get packets from all interfaces. This may not work on certain platforms, such as Mac OS X.
+.TP
+\fBpromiscuous\fP \fItrue|false\fP
+Put the interface in promiscuous mode.
+.TP
+\fBignore-source\fP \fIsource\fP
+Ignore packets that originate from this address.
+.TP
+\fBignore-destination\fP \fIdestination\fP
+Ignore packets that has destination this address.
+.TP
+\fBfilter\fP \fIexpression\fP
+Process the packets on a network interface that match the boolean \fIexpression\fP
+(see
+.BR pcap-filter(7)
+for the expression syntax).
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBinstance\fP block.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
