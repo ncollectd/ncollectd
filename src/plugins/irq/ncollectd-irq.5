@@ -1,0 +1,28 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-irq 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd irq man page"
+.SH NAME
+ncollectd-irq \- Documentation of ncollectd's irq plugin
+.SH SYNOPSIS
+\fBload-plugin\fP irq
+.br
+\fBplugin\fP irq {
+    \fBirq\fP [\fIincl|include|excl|exclude\fP] \fIirq\fP
+.br
+}
+.SH DESCRIPTION
+The \fBirq\fP plugin collects the number of times each interrupt
+has been handled by the operating system.
+.PP
+The plugin has the following options:
+.PP
+.TP
+\fBirq\fP [\fIincl|include|excl|exclude\fP] \fIirq\fP
+Select this \fIirq\fP. By default these irqs will then be collected.
+If no configuration if given, the \fBirq\fP plugin will collect data from all
+irqs. This may not be practical, especially if no interrupts happen. Thus, you
+can use the \fBirq\fP option to pick the interrupt you're interested in.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
