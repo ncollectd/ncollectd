@@ -5,3 +5,50 @@
    obj:*libnl.so.1.*
    ...
 }
+{
+   libdl-leaks
+   Memcheck:Leak
+   ...
+   fun:_dl_open
+   ...
+}
+{
+   <plugin_ctx>
+   Memcheck:Leak
+   ...
+   fun:plugin_ctx_create
+   fun:plugin_set_ctx
+   ...
+}
+{
+   config-ctx-leak-1
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:dispatch_loadplugin
+   fun:UnknownInlinedFun
+   fun:cf_read
+   fun:UnknownInlinedFun
+   fun:init_config
+   fun:main
+}
+{
+   config-ctx-leak-2
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:dispatch_block_plugin
+   fun:UnknownInlinedFun
+   fun:cf_read
+   fun:UnknownInlinedFun
+   fun:init_config
+   fun:main
+}
+{
+   libvirt memory allocated at init
+   Memcheck:Leak
+   fun:calloc
+   fun:g_malloc0
+   ...
+   fun:virOnce
+}
