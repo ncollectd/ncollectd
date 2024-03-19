@@ -1,0 +1,30 @@
+# TYPE system_numa_foreign counter
+system_numa_foreign_total{hostname="localhost.localdomain",node="0"} 6630083
+system_numa_foreign_total{hostname="localhost.localdomain",node="1"} 33929711
+system_numa_foreign_total{hostname="localhost.localdomain",node="2"} 629337143
+system_numa_foreign_total{hostname="localhost.localdomain",node="3"} 203306610242
+# TYPE system_numa_local_node counter
+system_numa_local_node_total{hostname="localhost.localdomain",node="0"} 181991995071
+system_numa_local_node_total{hostname="localhost.localdomain",node="1"} 183226879076
+system_numa_local_node_total{hostname="localhost.localdomain",node="2"} 1373880644
+system_numa_local_node_total{hostname="localhost.localdomain",node="3"} 548351227273
+# TYPE system_numa_hit counter
+system_numa_hit_total{hostname="localhost.localdomain",node="0"} 181990747795
+system_numa_hit_total{hostname="localhost.localdomain",node="1"} 183227335533
+system_numa_hit_total{hostname="localhost.localdomain",node="2"} 1373916342
+system_numa_hit_total{hostname="localhost.localdomain",node="3"} 548351268376
+# TYPE system_numa_other_node counter
+system_numa_other_node_total{hostname="localhost.localdomain",node="0"} 4789208201
+system_numa_other_node_total{hostname="localhost.localdomain",node="1"} 6864870
+system_numa_other_node_total{hostname="localhost.localdomain",node="2"} 199151706980
+system_numa_other_node_total{hostname="localhost.localdomain",node="3"} 27914416
+# TYPE system_numa_miss counter
+system_numa_miss_total{hostname="localhost.localdomain",node="0"} 4790455477
+system_numa_miss_total{hostname="localhost.localdomain",node="1"} 6408413
+system_numa_miss_total{hostname="localhost.localdomain",node="2"} 199151671282
+system_numa_miss_total{hostname="localhost.localdomain",node="3"} 27873313
+# TYPE system_numa_interleave_hit counter
+system_numa_interleave_hit_total{hostname="localhost.localdomain",node="0"} 29720
+system_numa_interleave_hit_total{hostname="localhost.localdomain",node="1"} 29611
+system_numa_interleave_hit_total{hostname="localhost.localdomain",node="2"} 29701
+system_numa_interleave_hit_total{hostname="localhost.localdomain",node="3"} 29621
