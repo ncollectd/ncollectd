@@ -1,36 +1,21 @@
-/*
- * Copyright (c) 2010 Pierre-Yves Ritschard
- * Copyright (c) 2011 Stefan Rinkes
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * Authors:
- *   Pierre-Yves Ritschard <pyr at openbsd.org>
- *   Stefan Rinkes <stefan.rinkes at gmail.org>
- */
-
-#include "collectd.h"
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (c) 2010 Pierre-Yves Ritschard
+// SPDX-FileCopyrightText: Copyright (c) 2011 Stefan Rinkes
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Pierre-Yves Ritschard <pyr at openbsd.org>
+// SPDX-FileContributor: Stefan Rinkes <stefan.rinkes at gmail.org>
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include "utils/common/common.h"
+#include "libutils/common.h"
 
-#if HAVE_SYS_IOCTL_H
+#ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#if HAVE_NET_IF_H
+#ifdef HAVE_NET_IF_H
 #include <net/if.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 
@@ -40,14 +25,14 @@
 #if FCNT_MAX != 3
 #error "Unexpected value for FCNT_MAX"
 #endif
-#define FCNT_NAMES {"search", "insert", "removals", NULL};
+#define FCNT_NAMES {"search", "insert", "removals", NULL}
 #endif
 
 #ifndef SCNT_NAMES
 #if SCNT_MAX != 3
 #error "Unexpected value for SCNT_MAX"
 #endif
-#define SCNT_NAMES {"search", "insert", "removals", NULL};
+#define SCNT_NAMES {"search", "insert", "removals", NULL}
 #endif
 
 static char const *pf_reasons[PFRES_MAX + 1] = PFRES_NAMES;
@@ -57,67 +42,86 @@ static char const *pf_scounters[SCNT_MAX + 1] = SCNT_NAMES;
 
 static char const *pf_device = "/dev/pf";
 
-static void pf_submit(char const *type, char const *type_instance, uint64_t val,
-                      bool is_gauge) {
-  value_t values[1];
-  value_list_t vl = VALUE_LIST_INIT;
+enum {
+    FAM_PF_COUNTERS,
+    FAM_PF_LIMITS,
+    FAM_PF_STATE,
+    FAM_PF_SOURCE,
+    FAM_PF_STATES,
+    FAM_PF_MAX
+};
 
-  if (is_gauge)
-    values[0].gauge = (gauge_t)val;
-  else
-    values[0].derive = (derive_t)val;
+static metric_family_t fams[FAM_PF_MAX] = {
+    [FAM_PF_COUNTERS] = {
+        .name = "system_pf_counters",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_PF_LIMITS] = {
+        .name = "system_pf_limits",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_PF_STATE] = {
+        .name = "system_pf_state",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_PF_SOURCE] = {
+        .name = "system_pf_source",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_PF_STATES] = {
+        .name = "system_pf_states",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+};
 
-  vl.values = values;
-  vl.values_len = 1;
-  sstrncpy(vl.plugin, "pf", sizeof(vl.plugin));
-  sstrncpy(vl.type, type, sizeof(vl.type));
-  sstrncpy(vl.type_instance, type_instance, sizeof(vl.type_instance));
+static int pf_read(void)
+{
+    int fd = open(pf_device, O_RDONLY);
+    if (fd < 0) {
+        PLUGIN_ERROR("Unable to open %s: %s", pf_device, STRERRNO);
+        return -1;
+    }
 
-  plugin_dispatch_values(&vl);
-} /* void pf_submit */
+    struct pf_status state;
+    int status = ioctl(fd, DIOCGETSTATUS, &state);
+    if (status != 0) {
+        PLUGIN_ERROR("ioctl(DIOCGETSTATUS) failed: %s", STRERRNO);
+        close(fd);
+        return -1;
+    }
 
-static int pf_read(void) {
-  struct pf_status state;
-  int fd;
-  int status;
-
-  fd = open(pf_device, O_RDONLY);
-  if (fd < 0) {
-    ERROR("pf plugin: Unable to open %s: %s", pf_device, STRERRNO);
-    return -1;
-  }
-
-  status = ioctl(fd, DIOCGETSTATUS, &state);
-  if (status != 0) {
-    ERROR("pf plugin: ioctl(DIOCGETSTATUS) failed: %s", STRERRNO);
     close(fd);
-    return -1;
-  }
 
-  close(fd);
+    if (!state.running) {
+        PLUGIN_WARNING("PF is not running.");
+        return -1;
+    }
 
-  if (!state.running) {
-    WARNING("pf plugin: PF is not running.");
-    return -1;
-  }
+    for (int i = 0; i < PFRES_MAX; i++)
+        metric_family_append(&fams[FAM_PF_COUNTERS], VALUE_COUNTER(state.counters[i]), NULL,
+                             &(label_pair_const_t){.name="counter", .value=pf_reasons[i]}, NULL);
+    for (int i = 0; i < LCNT_MAX; i++)
+        metric_family_append(&fams[FAM_PF_LIMITS], VALUE_COUNTER(state.lcounters[i]), NULL,
+                             &(label_pair_const_t){.name="limit", .value=pf_lcounters[i]}, NULL);
+    for (int i = 0; i < FCNT_MAX; i++)
+        metric_family_append(&fams[FAM_PF_STATE], VALUE_COUNTER(state.fcounters[i]), NULL,
+                             &(label_pair_const_t){.name="state", .value=pf_fcounters[i]}, NULL);
+    for (int i = 0; i < SCNT_MAX; i++)
+        metric_family_append(&fams[FAM_PF_SOURCE], VALUE_COUNTER(state.scounters[i]), NULL,
+                             &(label_pair_const_t){.name="source", .value=pf_scounters[i]}, NULL);
 
-  for (int i = 0; i < PFRES_MAX; i++)
-    pf_submit("pf_counters", pf_reasons[i], state.counters[i],
-              /* is gauge = */ false);
-  for (int i = 0; i < LCNT_MAX; i++)
-    pf_submit("pf_limits", pf_lcounters[i], state.lcounters[i],
-              /* is gauge = */ false);
-  for (int i = 0; i < FCNT_MAX; i++)
-    pf_submit("pf_state", pf_fcounters[i], state.fcounters[i],
-              /* is gauge = */ false);
-  for (int i = 0; i < SCNT_MAX; i++)
-    pf_submit("pf_source", pf_scounters[i], state.scounters[i],
-              /* is gauge = */ false);
+    metric_family_append(&fams[FAM_PF_STATES], VALUE_GAUGE(state.states), NULL, NULL);
 
-  pf_submit("pf_states", "current", (uint32_t)state.states,
-            /* is gauge = */ true);
+    plugin_dispatch_metric_family_array(fams, FAM_PF_MAX, 0);
+    return 0;
+}
 
-  return 0;
-} /* int pf_read */
-
-void module_register(void) { plugin_register_read("pf", pf_read); }
+void module_register(void)
+{
+    plugin_register_read("pf", pf_read);
+}
