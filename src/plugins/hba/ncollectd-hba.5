@@ -1,0 +1,28 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-hba 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd hba man page"
+.SH NAME
+ncollectd-hba \- Documentation of ncollectd's hba plugin
+.SH SYNOPSIS
+\fBload-plugin\fP hba
+.br
+\fBplugin\fP hba {
+    \fBhba\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+    \fBrefresh\fP \fIseconds\fP
+.br
+}
+.SH DESCRIPTION
+The \fBhba\fP plugin collect  information about the usage of host bus adapters.
+The plugin only collect data from Fibre Channel adapters.
+.PP
+The following configuration options are available:
+.TP
+\fBhba\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+Select the hba \fIdevice\fP.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.BR ncollectd.conf (5).
+.TP
+\fBrefresh\fP \fIseconds\fP
+Interval to refresh the hba list from the ODM. The default value is 30 seconds.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
