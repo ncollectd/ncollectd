@@ -1,0 +1,38 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-log_systemd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd log_systemd man page"
+.SH NAME
+ncollectd-log_systemd \- Documentation of ncollectd's log_systemd plugin
+.SH SYNOPSIS
+\fBload-plugin\fP log_systemd
+.br
+\fBplugin\fP log_systemd {
+    \fBlog-level\fP \fIdebug|info|notice|warning|err\fP
+    \fBnotify-level\fP \fIokay|warning|failure\fP
+.br
+}
+.SH DESCRIPTION
+The \fDlog_systemd\fP plugin receives log messages from the daemon and send them
+to the
+.BR systemd (1)
+journal.
+.PP
+The plugin suports the following options:
+.PP
+.TP
+\fBlog-level\fP \fIdebug|info|notice|warning|err\fP
+Sets the log-level. If, for example, set to \fInotice\fP, then all events with
+severity \fInotice\fP, \fIwarning\fP, \fIerr\fP will be submitted to the systemd journal.
+
+Please note that \fIdebug\fP is only available if collectd has been compiled with
+debugging support.
+.TP
+\fBnotify-level\fP \fIokay|warning|failure\fP
+Controls which notifications should be sent to the system journal. The default behaviour is
+not to send any. Less severe notifications always imply logging more severe
+notifications: Setting this to \fBokay\fP means all notifications will be sent to
+systemd, setting this to \fBwarning\fP will send \fBwarning\fP and \fBfailure\fP
+notifications but will dismiss \fBokay\fP notifications. Setting this option to
+\fBfailure\fP will only send failures to systemd.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
