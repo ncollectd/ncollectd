@@ -1,0 +1,36 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-cpu 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cpu man page"
+.SH NAME
+ncollectd-cpu \- Documentation of ncollectd's cpu plugin
+.SH SYNOPSIS
+\fBload-plugin\fP cpu
+.br
+\fBplugin\fP cpu {
+    \fBreport-guest-state\fP \fIfalse|true\fP
+    \fBsubtract-guest-state\fP \fIfalse|true\fP
+    \fBreport-topology\fP \fIfalse|true\fP
+.br
+}
+.SH DESCRIPTION
+The \fBcpu\fP plugin collects CPU usage metrics.
+.PP
+The following configuration options are available:
+.TP
+\fBreport-guest-state\fP \fIfalse|true\fP
+When set to \fBtrue\fP, reports the \*(lqguest\*(rq and \*(lqguest_nice\*(rq CPU states.
+Defaults to \fBfalse\fP.
+.TP
+\fBsubtract-guest-state\fP \fIfalse|true\fP
+This option is only considered when \fBreport-guest-state\fP is set to \fBtrue\fP.
+\*(lqguest\*(rq and \*(lqguest_nice\*(rq are included in respectively \*(lquser\*(rq and
+\*(lqnice\*(rq. If set to \fBtrue\fP, \*(lqguest\*(rq will be subtracted from \*(lquser\*(rq and
+\*(lqguest_nice\*(rq will be subtracted from \*(lqnice\*(rq.
+Defaults to \fBtrue\fP.
+.TP
+\fBreport-topology\fP \fIfalse|true\fP
+When set to \fBtrue\fP in Linux, reports the cpu topology as labels:
+\fInode\fP, \fIcode\fP, \fIsocket\fP, \fIbook\fP and \fIdrawer\fP.
+Defaults to \fBfalse\fP.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
