@@ -1,0 +1,57 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-write_udp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_udp man page"
+.SH NAME
+ncollectd-write_udp \- Documentation of ncollectd's write_udp plugin
+.SH SYNOPSIS
+\fBload-plugin\fP write_udp
+.br
+\fBplugin\fP write_udp {
+    \fBinstance\fP \fIname\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBttl\fP \fIttl\fP
+        \fBpacket-max-size\fP \fIsize\fP
+        \fBflush-interval\fP \fIseconds\fP
+        \fBflush-timeout\fP \fIseconds\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|kairosdb|opentsdb\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBwrite_udp\fP plugin send the metrics as UDP packets.
+.PP
+The following options are accepted within each \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhost\fP
+Hostname or address to connect to. Defaults to localhost.
+.TP
+\fBport\fP \fIport\fP
+Service name or port number to connect to.
+.TP
+\fBttl\fP \fIttl\fP
+.TP
+\fBpacket-max-size\fP \fIsize\fP
+.TP
+\fBflush-interval\fP \fIseconds\fP
+.TP
+\fBflush-timeout\fP \fIseconds\fP
+.TP
+\fBformat-metric\fP \fIinfluxdb|graphite|kairosdb|opentsdb\fP
+Selects the format in which metrics are written.
+.RS
+.TP
+\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+Format the metrics with the influxdb line format.
+.TP
+\fBgraphite\fP
+Format the metrics with the graphite plaintext format.
+.TP
+\fBkairosdb\fP [\fIsec|msec\fP]
+Format the metrics with the karirosdb text format.
+.TP
+\fBopentsdb\fP 
+Format the metrics with the opentsdb text format.
+.RE 
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
