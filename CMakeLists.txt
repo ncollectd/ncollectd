@@ -29,7 +29,7 @@ option(ENABLE_WERROR "Build with -Werror" ON)
 
 find_package(Git)
 if(GIT_EXECUTABLE)
-    execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --match "v*"
+    execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --match "v*"
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                     OUTPUT_VARIABLE GIT_DESCRIBE_VERSION
                     RESULT_VARIABLE GIT_DESCRIBE_ERROR_CODE
@@ -40,14 +40,16 @@ if(GIT_EXECUTABLE)
                             "--format=\"%(creatordate:format:%d %B %Y)\""
                             refs/tags/${GIT_DESCRIBE_VERSION}
                         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                        OUTPUT_VARIABLE GIT_DESCRIBE_DATE
-                        RESULT_VARIABLE GIT_DESCRIBE_ERROR_CODE
-                        ERROR_VARIABLE GIT_DESCRIBE_ERROR
+                        OUTPUT_VARIABLE GIT_FOR_EACH_REF_DATE
+                        RESULT_VARIABLE GIT_FOR_EACH_REF_ERROR_CODE
+                        ERROR_VARIABLE GIT_FOR_EACH_REF_ERROR
                         OUTPUT_STRIP_TRAILING_WHITESPACE)
-        if(NOT GIT_DESCRIBE_ERROR_CODE)
-            string(REGEX REPLACE "^v" "" GIT_DESCRIBE_VERSION "${GIT_DESCRIBE_VERSION}")
-            set(NCOLLECTD_VERSION ${GIT_DESCRIBE_VERSION})
-            set(NCOLLECTD_DATE ${GIT_DESCRIBE_DATE})
+        string(REGEX REPLACE "^v" "" GIT_DESCRIBE_VERSION "${GIT_DESCRIBE_VERSION}")
+        set(NCOLLECTD_VERSION ${GIT_DESCRIBE_VERSION})
+        if(NOT GIT_FOR_EACH_REF_ERROR_CODE AND GIT_FOR_EACH_REF_DATE)
+            set(NCOLLECTD_DATE ${GIT_FOR_EACH_REF_DATE})
+        else()
+            string(TIMESTAMP NCOLLECTD_DATE "%d %B %Y" UTC)
         endif()
     endif()
 endif()
