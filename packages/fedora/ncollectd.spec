@@ -61,7 +61,6 @@
 %define build_with_ipvs 0%{!?_without_ipvs:1}
 %define build_with_irq 0%{!?_without_irq:1}
 %define build_with_java 0%{!?_without_java:1}
-%define build_with_javascript 0%{!?_without_javascript:1}
 %define build_with_jolokia 0%{!?_without_jolokia:1}
 %define build_with_kafka 0%{!?_without_kafka:1}
 %define build_with_keepalived 0%{!?_without_keepalived:1}
@@ -108,7 +107,6 @@
 %define build_with_olsrd 0%{!?_without_olsrd:1}
 %define build_with_openldap 0%{!?_without_openldap:1}
 %define build_with_openvpn 0%{!?_without_openvpn:1}
-%define build_with_ovs 0%{!?_without_ovs:1}
 %define build_with_pcap 0%{!?_without_pcap:1}
 %define build_with_perl 0%{!?_without_perl:1}
 %define build_with_ping 0%{!?_without_ping:1}
@@ -122,7 +120,6 @@
 %define build_with_quota 0%{!?_without_quota:1}
 %define build_with_rapl 0%{!?_without_rapl:1}
 %define build_with_recursor 0%{!?_without_recursor:1}
-%define build_with_redfish 0%{!?_without_redfish:1}
 %define build_with_redis 0%{!?_without_redis:1}
 %define build_with_routeros 0%{!?_without_routeros:1}
 %define build_with_rtcache 0%{!?_without_rtcache:1}
@@ -200,7 +197,6 @@
 # then install cuda-nvml-dev-10-1 or other version
 %define build_with_gpu_nvidia 0%{?_with_gpu_nvidia:1}
 # not available in el or epel
-%define build_with_redfish 0%{?_with_redfish:1}
 
 %define build_with_oracle 0%{?_with_oracle:1}
 %define build_with_db2 0%{?_with_db2:1}
@@ -228,7 +224,6 @@
 %define build_with_kafka 0%{?_with_kafka:1}
 %define build_with_write_kafka 0%{?_with_write_kafka:1}
 %define build_with_write_amqp 0%{?_with_write_amqp:1}
-%define build_with_ovs 0%{?_with_ovs:1}
 %define build_with_mmc 0%{?_with_mmc:1}
 %define build_with_smart 0%{?_with_smart:1}
 %endif
@@ -707,16 +702,6 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 The oracle plugin get information from a Oracle database.
 %endif
 
-%if %{build_with_ovs}
-%package ovs
-Summary: Open vSwitch statistics plugin for ncollectd
-Group: System Environment/Daemons
-Requires: %{name}%{?_isa} = %{version}-%{release}
-BuildRequires: yajl-devel
-%description ovs
-This ovs plugin collects statictics of OVS connected bridges and interfaces.
-%endif
-
 %if %{build_with_pcap}
 %package pcap
 Summary: pcap plugin for ncollectd
@@ -773,16 +758,6 @@ BuildRequires: python2-devel
 %description python
 The Python plugin embeds a Python interpreter into collectd and exposes the
 application programming interface (API) to Python-scripts.
-%endif
-
-%if %{build_with_redfish}
-%package redfish
-Summary: Redfish plugin for ncollectd
-Group: System Environment/Daemons
-Requires: %{name}%{?_isa} = %{version}-%{release}
-BuildRequires: redfish-devel
-%description redfish
-The redfish plugin connects sensor data using REST protocol called Redfish.
 %endif
 
 %if %{build_with_redis}
@@ -1361,12 +1336,6 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_java -DPLUGIN_JAVA:BOOL=OFF
 %endif
 
-%if %{build_with_javascript}
-%define _build_with_javascript -DPLUGIN_JAVASCRIPT:BOOL=ON
-%else
-%define _build_with_javascript -DPLUGIN_JAVASCRIPT:BOOL=OFF
-%endif
-
 %if %{build_with_jolokia}
 %define _build_with_jolokia -DPLUGIN_JOLOKIA:BOOL=ON
 %else
@@ -1671,12 +1640,6 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_oracle -DPLUGIN_ORACLE:BOOL=OFF
 %endif
 
-%if %{build_with_ovs}
-%define _build_with_ovs -DPLUGIN_OVS:BOOL=ON
-%else
-%define _build_with_ovs -DPLUGIN_OVS:BOOL=OFF
-%endif
-
 %if %{build_with_pcap}
 %define _build_with_pcap -DPLUGIN_PCAP:BOOL=ON
 %else
@@ -1759,12 +1722,6 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_recursor -DPLUGIN_RECURSOR:BOOL=ON
 %else
 %define _build_with_recursor -DPLUGIN_RECURSOR:BOOL=OFF
-%endif
-
-%if %{build_with_redfish}
-%define _build_with_redfish -DPLUGIN_REDFISH:BOOL=ON
-%else
-%define _build_with_redfish -DPLUGIN_REDFISH:BOOL=OFF
 %endif
 
 %if %{build_with_redis}
@@ -2187,7 +2144,6 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_ipvs} \
     %{?_build_with_irq} \
     %{?_build_with_java} \
-    %{?_build_with_javascript} \
     %{?_build_with_jolokia} \
     %{?_build_with_kafka} \
     %{?_build_with_keepalived} \
@@ -2238,7 +2194,6 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_openldap} \
     %{?_build_with_openvpn} \
     %{?_build_with_oracle} \
-    %{?_build_with_ovs} \
     %{?_build_with_pcap} \
     %{?_build_with_perl} \
     %{?_build_with_pf} \
@@ -2253,7 +2208,6 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_quota} \
     %{?_build_with_rapl} \
     %{?_build_with_recursor} \
-    %{?_build_with_redfish} \
     %{?_build_with_redis} \
     %{?_build_with_routeros} \
     %{?_build_with_rtcache} \
@@ -2541,10 +2495,6 @@ fi
 %if %{build_with_irq}
 %{_libdir}/%{name}/irq.so
 %{_mandir}/man5/ncollectd-irq.5*
-%endif
-%if %{build_with_javascript}
-%{_libdir}/%{name}/javascript.so
-%{_mandir}/man5/ncollectd-javascript.5*
 %endif
 %if %{build_with_keepalived}
 %{_libdir}/%{name}/keepalived.so
@@ -3094,12 +3044,6 @@ fi
 %{_mandir}/man5/ncollectd-oracle.5*
 %endif
 
-%if %{build_with_ovs}
-%files ovs
-%{_libdir}/%{name}/ovs.so
-%{_mandir}/man5/ncollectd-ovs.5*
-%endif
-
 %if %{build_with_pcap}
 %files pcap
 %{_libdir}/%{name}/pcap.so
@@ -3128,12 +3072,6 @@ fi
 %files python
 %{_libdir}/%{name}/python.so
 %{_mandir}/man5/ncollectd-python.5*
-%endif
-
-%if %{build_with_redfish}
-%files redfish
-%{_libdir}/%{name}/redfish.so
-%{_mandir}/man5/ncollectd-redfish.5*
 %endif
 
 %if %{build_with_redis}
