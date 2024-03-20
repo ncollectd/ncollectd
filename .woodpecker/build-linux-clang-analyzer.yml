@@ -1,0 +1,9 @@
+when:
+  - event: cron
+
+steps:
+  build-fedora-39-clang-analyzer:
+    image: ncollectd/ci-fedora:39
+    commands:
+      - scan-build cmake -B build-fedora-39-clang-analyzer -S .
+      - scan-build cmake --build build-fedora-39-clang-analyzer

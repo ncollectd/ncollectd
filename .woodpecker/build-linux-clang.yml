@@ -1,0 +1,10 @@
+when:
+  - event: pull_request
+  - event: push
+
+steps:
+  build-fedora-39-clang:
+    image: ncollectd/ci-fedora:39
+    commands:
+      - CC=clang cmake -B build-fedora-39-clang -S .
+      - cmake --build build-fedora-39-clang
