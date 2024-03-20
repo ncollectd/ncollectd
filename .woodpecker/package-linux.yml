@@ -7,42 +7,42 @@ steps:
     commands:
       - cmake -B build-fedora-38 -S .
       - cmake --build build-fedora-38 -- dist
-      - TAG=`git describe --tags --match "v*"`
+      - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - mkdir -p package-fedora-38/SOURCES
       - cp packages/fedora/init.d-ncollectd package-fedora-38/SOURCES
       - cp packages/fedora/systemd.ncollectd.service package-fedora-38/SOURCES
       - cp build-fedora-38/ncollectd-$${TAG}.tar.xz package-fedora-38/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-38" --define "git_tag $${TAG#v}" -ba packages/fedora/ncollectd.spec
+      - rpmbuild --define "_topdir `pwd`/package-fedora-38" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
   build-fedora-39:
     image: ncollectd/ci-fedora:39
     commands:
       - cmake -B build-fedora-39 -S .
       - cmake --build build-fedora-39 -- dist
-      - TAG=`git describe --tags --match "v*"`
+      - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - mkdir -p package-fedora-39/SOURCES
       - cp packages/fedora/init.d-ncollectd package-fedora-39/SOURCES
       - cp packages/fedora/systemd.ncollectd.service package-fedora-39/SOURCES
       - cp build-fedora-39/ncollectd-$${TAG}.tar.xz package-fedora-39/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-39" --define "git_tag $${TAG#v}" -ba packages/fedora/ncollectd.spec
+      - rpmbuild --define "_topdir `pwd`/package-fedora-39" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
   build-centos-stream8:
     image: ncollectd/ci-centos:stream8
     commands:
       - cmake -B build-centos-stream8 -S .
       - cmake --build build-centos-stream8 -- dist
-      - TAG=`git describe --tags --match "v*"`
+      - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - mkdir -p package-centos-stream8/SOURCES
       - cp packages/fedora/init.d-ncollectd package-centos-stream8/SOURCES
       - cp packages/fedora/systemd.ncollectd.service package-centos-stream8/SOURCES
       - cp build-centros-stream8/ncollectd-$${TAG}.tar.xz package-centos-stream8/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "git_tag $${TAG#v}" -ba packages/fedora/ncollectd.spec
+      - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
   build-centos-stream9:
     image: ncollectd/ci-centos:stream9
     commands:
       - cmake -B build-centos-stream9 -S .
       - cmake --build build-centos-stream9 -- dist
-      - TAG=`git describe --tags --match "v*"`
+      - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - mkdir -p package-centos-stream9/SOURCES
       - cp packages/fedora/init.d-ncollectd package-centos-stream9/SOURCES
       - cp packages/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
       - cp build-centros-stream9/ncollectd-$${TAG}.tar.xz package-centos-stream9/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "git_tag $${TAG#v}" -ba packages/fedora/ncollectd.spec
+      - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
