@@ -271,12 +271,6 @@ Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: This plugin reads monitoring information from OpenLDAP's cn=Monitor subtree.
 
-Package: ncollectd-ovs
-Section: utils
-Architecture: any
-Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: This ovs plugin collects statictics of OVS connected bridges and interfaces.
-
 Package: ncollectd-pcap
 Section: utils
 Architecture: any
@@ -303,12 +297,6 @@ Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL
  database.
-
-Package: ncollectd-redfish
-Section: utils
-Architecture: any
-Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: The redfish plugin connects sensor data using REST protocol called Redfish.
 
 Package: ncollectd-redis
 Section: utils

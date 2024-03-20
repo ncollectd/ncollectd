@@ -84,8 +84,6 @@ usr/lib/ncollectd/ipvs.so
 usr/share/man/man5/ncollectd-ipvs.5
 usr/lib/ncollectd/irq.so
 usr/share/man/man5/ncollectd-irq.5
-usr/lib/ncollectd/javascript.so
-usr/share/man/man5/ncollectd-javascript.5
 usr/lib/ncollectd/keepalived.so
 usr/share/man/man5/ncollectd-keepalived.5
 usr/lib/ncollectd/ksm.so
