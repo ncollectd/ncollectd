@@ -10,13 +10,13 @@ steps:
       - source: coverity_email
         target: COVERITY_EMAIL
     commands:
-      - TAG=`git describe --tags --match "v*"`
+      - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - cmake -B build-coverity -S .
       - cov-build --dir cov-int cmake --build build-coverity
       - tar czf ncollectd.tgz cov-int
       - curl --form token=$${COVERITY_TOKEN}
         --form email=$${COVERITY_EMAIL}
         --form file=@ncollectd.tgz
-        --form version="$${TAG#v}"
-        --form description="Build of $${TAG#v}"
+        --form version="$${TAG}"
+        --form description="Build of $${TAG}"
         https://scan.coverity.com/builds?project=ncollectd
