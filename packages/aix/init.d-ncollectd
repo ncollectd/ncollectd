@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# Set umask
+umask 022
+
+NCOLLECTD_BIN=/opt/freeware/sbin/ncollectd
+PIDFILE=/opt/freeware/var/run/ncollectd.pid
+
+# Check for missing binaries (stale symlinks should not happen)
+if [ ! -x $NCOLLECTD_BIN ]; then
+        echo "$NCOLLECTD_BIN not installed"
+        [ "$1" = "stop" ] && exit 0
+        exit 5
+fi
+
+# Check for existence of needed config file and read it
+NCOLLECTD_CONFIG=/opt/freeware/etc/ncollectd.conf
+if [ ! -r $NCOLLECTD_CONFIG ]; then
+        echo "$NCOLLECTD_CONFIG not existing"
+        [ "$1" = "stop" ] && exit 0
+        exit 6
+fi
+
+case "$1" in
+    start)
+        if [ -r $PIDFILE ]; then
+            echo "ncollectd daemon is already running with PID `cat $PIDFILE`."
+            exit 1
+        fi
+        echo "Starting ncollectd..."
+
+        ## Start daemon
+        $NCOLLECTD_BIN
+        ;;
+    stop)
+        echo "Shutting down ncollectd daemon... "
+        ## Stop daemon.
+        if [ -r $PIDFILE ]; then
+            pid=`cat $PIDFILE`
+            kill -15 $pid
+            while ps -p $pid >/dev/null; do
+                sleep 1
+            done
+            rm -f $PIDFILE
+        fi
+        ;;
+    status)
+        if [ -r $PIDFILE ]; then
+            echo "ncollectd daemon is running with PID `cat $PIDFILE`."
+        else
+            echo "ncollectd daemon is not running."
+        fi
+        ;;
+    restart)
+        ## Stop the service and regardless of whether it was
+        ## running or not, start it again.
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
