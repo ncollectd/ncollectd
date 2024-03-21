@@ -1,8 +1,13 @@
 include(FindPackageHandleStandardArgs)
 
-find_path(LIBMYSQL_INCLUDE_SUBDIR NAMES mysql/mysql.h)
+find_package(PkgConfig QUIET)
+pkg_check_modules(PC_LIBMYSQL QUIET libmariadb)
+
+find_path(LIBMYSQL_INCLUDE_SUBDIR NAMES mysql/mysql.h
+          HINTS ${PC_LIBMYSQL_INCLUDEDIR} ${PC_LIBMYSQL_INCLUDE_DIRS})
 if(NOT LIBMYSQL_INCLUDE_SUBDIR)
-    find_path(LIBMYSQL_INCLUDE_DIR NAMES mysql.h)
+    find_path(LIBMYSQL_INCLUDE_DIR NAMES mysql.h
+              HINTS ${PC_LIBMYSQL_INCLUDEDIR} ${PC_LIBMYSQL_INCLUDE_DIRS})
     if(LIBMYSQL_INCLUDE_DIR)
         set(HAVE_MYSQL_H ON)
     endif()
@@ -11,7 +16,7 @@ else()
     set(HAVE_MYSQL_MYSQL_H ON)
 endif()
 
-find_library(LIBMYSQL_LIBRARIES NAMES mysqlclient
+find_library(LIBMYSQL_LIBRARIES NAMES mysqlclient mariadb
                                 PATHS "/lib/mysql"
                                       "/lib64/mysql"
                                       "/usr/lib/mysql"
@@ -19,7 +24,8 @@ find_library(LIBMYSQL_LIBRARIES NAMES mysqlclient
                                       "/usr/local/lib/mysql"
                                       "/usr/local/lib64/mysql"
                                       "/usr/mysql/lib/mysql"
-                                      "/usr/mysql/lib64/mysql")
+                                      "/usr/mysql/lib64/mysql"
+                                HINTS ${PC_LIBMYSQL_LIBDIR} ${PC_LIBMYSQL_LIBRARY_DIRS})
 
 find_package_handle_standard_args(LibMysql DEFAULT_MSG LIBMYSQL_LIBRARIES LIBMYSQL_INCLUDE_DIR)
 
