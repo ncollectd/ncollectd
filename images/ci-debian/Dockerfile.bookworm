@@ -1,7 +1,7 @@
 FROM debian:bookworm
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends \
+    apt-get install --yes --no-install-recommends build-essential:native \
         git dpkg-dev fakeroot gcc cpp make cmake flex bison gperf pkgconf libc-ares-dev \
         libcurl4-openssl-dev default-jdk libatasmart-dev libmicrohttpd-dev \
         libnftnl-dev libpcap-dev librabbitmq-dev librdkafka-dev libvirt-dev \
@@ -11,6 +11,7 @@ RUN apt-get update && \
         libesmtp-dev libmosquitto-dev libmongoc-dev libqpid-proton11-dev \
         libsigrok-dev libmodbus-dev libgps-dev libhiredis-dev libnutclient-dev \
         libiptc-dev libmnl-dev libipmctl-dev libupsclient-dev libbtrfs-dev \
-        libxen-dev libmemcached-dev && \
+        libxen-dev libmemcached-dev intel-cmt-cat javahelper libcap-dev \
+        libperl-dev python3-dev libslurm-dev && \
      apt-get clean autoclean && \
      rm -rf /var/lib/apt/lists/*
