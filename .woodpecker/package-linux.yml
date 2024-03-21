@@ -33,7 +33,7 @@ steps:
       - mkdir -p package-centos-stream8/SOURCES
       - cp packages/fedora/init.d-ncollectd package-centos-stream8/SOURCES
       - cp packages/fedora/systemd.ncollectd.service package-centos-stream8/SOURCES
-      - cp build-centros-stream8/ncollectd-$${TAG}.tar.xz package-centos-stream8/SOURCES
+      - cp build-centos-stream8/ncollectd-$${TAG}.tar.xz package-centos-stream8/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
   build-centos-stream9:
     image: ncollectd/ci-centos:stream9
@@ -44,5 +44,5 @@ steps:
       - mkdir -p package-centos-stream9/SOURCES
       - cp packages/fedora/init.d-ncollectd package-centos-stream9/SOURCES
       - cp packages/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
-      - cp build-centros-stream9/ncollectd-$${TAG}.tar.xz package-centos-stream9/SOURCES
+      - cp build-centos-stream9/ncollectd-$${TAG}.tar.xz package-centos-stream9/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
