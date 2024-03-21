@@ -244,6 +244,7 @@ static int mdb_insert_metric_internal(mdb_t *mdb, const char *metric, const char
                 labels.ptr[n].value = pair->value;
                 n++;
             }
+            label_set_qsort(&labels);
         }
 
         return mdb_insert_metric(mdb, metric, &labels, time, interval, value);
@@ -286,6 +287,7 @@ static int mdb_insert_metric_internal(mdb_t *mdb, const char *metric, const char
             labels.ptr[n].value = pair->value;
             n++;
         }
+        label_set_qsort(&labels);
     }
 
     return mdb_insert_metric(mdb, buf.ptr, &labels, time, interval, value);
