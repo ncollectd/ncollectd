@@ -1,5 +1,5 @@
 FROM fedora:38
-RUN dnf install -y rpm-build gcc cpp clang-analyzer clang make cmake flex bison gperf \
+RUN dnf install -y rpm-build git gcc cpp clang-analyzer clang make cmake flex bison gperf \
                    pkgconf-pkg-config kernel-headers c-ares-devel curl-devel gpsd-devel \
                    hiredis-devel iptables-devel java-devel jpackage-utils libatasmart-devel \
                    libesmtp-devel libipmctl-devel libmicrohttpd-devel libmodbus-devel \

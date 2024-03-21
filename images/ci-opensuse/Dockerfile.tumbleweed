@@ -1,5 +1,5 @@
 FROM opensuse/tumbleweed:latest
-RUN zypper -n install gcc cpp make cmake flex bison gperf pkgconf \
+RUN zypper -n install rpm-build git gcc cpp make cmake flex bison gperf pkgconf \
                       c-ares-devel libcurl-devel gpsd-devel hiredis-devel java-17-openjdk-devel \
                       libatasmart-devel libesmtp-devel ipmctl-devel libmicrohttpd-devel \
                       libmodbus-devel libnftnl-devel libpcap-devel librabbitmq-devel \
