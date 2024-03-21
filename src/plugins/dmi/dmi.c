@@ -8,7 +8,7 @@
 static char *path_sys_dmi;
 
 static metric_family_t fam_dmi = {
-    .name = "dmi",
+    .name = "system_dmi",
     .type = METRIC_TYPE_INFO,
     .help = "Dmi info of bios, board, chassis and product.",
 };
