@@ -2,7 +2,7 @@ FROM ubuntu:focal
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install --yes --no-install-recommends \
-        gcc cpp make cmake flex bison gperf pkgconf libc-ares-dev \
+        git dpkg-dev fakeroot gcc cpp make cmake flex bison gperf pkgconf libc-ares-dev \
         libcurl4-openssl-dev default-jdk libatasmart-dev libmicrohttpd-dev \
         libnftnl-dev libpcap-dev librabbitmq-dev librdkafka-dev libvirt-dev \
         libxml2-dev libsensors4-dev liblua5.3-dev libmysqlclient-dev libsnmp-dev \

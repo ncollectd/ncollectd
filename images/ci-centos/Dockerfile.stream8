@@ -4,7 +4,7 @@ ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 RUN dnf install -y dnf-plugins-core epel-release epel-next-release && \
     dnf config-manager --set-enabled powertools && \
-    dnf install -y rpm-build gcc cpp make cmake flex bison gperf kernel-headers \
+    dnf install -y rpm-build git gcc cpp make cmake flex bison gperf kernel-headers \
                    pkgconf-pkg-config c-ares-devel curl-devel  iptables-devel java-devel \
                    jpackage-utils libatasmart-devel libmicrohttpd-devel libnftnl-devel \
                    libpcap-devel librabbitmq-devel librdkafka-devel libvirt-devel libxml2-devel \
