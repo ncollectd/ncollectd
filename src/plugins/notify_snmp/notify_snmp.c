@@ -124,7 +124,7 @@ static notify_snmp_oid_t *notify_snmp_oids_get_oid(notify_snmp_oids_t *oids,
 
 static notify_snmp_target_t *notify_snmp_malloc_target(void)
 {
-    notify_snmp_target_t *target = calloc(sizeof(notify_snmp_target_t), 1);
+    notify_snmp_target_t *target = calloc(1, sizeof(notify_snmp_target_t));
     if (target == NULL) {
         PLUGIN_ERROR("notify_snmp_malloc_target: calloc failed.");
         return NULL;
@@ -148,7 +148,7 @@ static void notify_snmp_free_target(notify_snmp_target_t *target)
 
 static notify_snmp_oids_t *notify_snmp_malloc_oids(void)
 {
-    notify_snmp_oids_t *oids = calloc(sizeof(notify_snmp_oids_t), 1);
+    notify_snmp_oids_t *oids = calloc(1, sizeof(notify_snmp_oids_t));
     if (oids == NULL) {
         PLUGIN_ERROR("notify_snmp_malloc_oids: calloc failed.");
         return NULL;
