@@ -1,5 +1,6 @@
 when:
   - event: release
+  - event: manual
 
 steps:
   package-dist:
@@ -27,6 +28,24 @@ steps:
       - cp packages/fedora/systemd.ncollectd.service package-fedora-39/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-39/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-fedora-39" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
+  package-fedora-40:
+    image: ncollectd/ci-fedora:40
+    commands:
+      - . ./package-dist/envvars
+      - mkdir -p package-fedora-40/SOURCES
+      - cp packages/fedora/init.d-ncollectd package-fedora-40/SOURCES
+      - cp packages/fedora/systemd.ncollectd.service package-fedora-40/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-40/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-40" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
+  package-fedora-rawhide:
+    image: ncollectd/ci-fedora:rawhide
+    commands:
+      - . ./package-dist/envvars
+      - mkdir -p package-fedora-rawhide/SOURCES
+      - cp packages/fedora/init.d-ncollectd package-fedora-rawhide/SOURCES
+      - cp packages/fedora/systemd.ncollectd.service package-fedora-rawhide/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-rawhide/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-rawhide" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
   package-centos-stream8:
     image: ncollectd/ci-centos:stream8
     commands:

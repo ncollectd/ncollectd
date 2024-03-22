@@ -18,6 +18,20 @@ steps:
       - cmake --build build-fedora-39 $${MAKE_FLAGS}
       - cmake --build build-fedora-39 -- build_tests $${MAKE_FLAGS}
       - cmake --build build-fedora-39 -- test
+  build-fedora-40:
+    image: ncollectd/ci-fedora:40
+    commands:
+      - cmake -B build-fedora-40 -S .
+      - cmake --build build-fedora-40 $${MAKE_FLAGS}
+      - cmake --build build-fedora-40 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-fedora-40 -- test
+  build-fedora-rawhide:
+    image: ncollectd/ci-fedora:rawhide
+    commands:
+      - cmake -B build-fedora-rawhide -S .
+      - cmake --build build-fedora-rawhide $${MAKE_FLAGS}
+      - cmake --build build-fedora-rawhide -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-fedora-rawhide -- test
   build-centos-stream8:
     image: ncollectd/ci-centos:stream8
     commands:
