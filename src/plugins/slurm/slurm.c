@@ -653,8 +653,10 @@ static void slurm_submit_stats(stats_info_response_msg_t *stats_resp)
                          VALUE_GAUGE(stats_resp->agent_queue_size), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_AGENTS],
                          VALUE_GAUGE(stats_resp->agent_count), NULL, NULL);
+#if SLURM_VERSION_NUMBER >= SLURM_VERSION_NUM(20,2,0)
     metric_family_append(&fams[FAM_SLURM_AGENT_THREADS],
                          VALUE_GAUGE(stats_resp->agent_thread_count), NULL, NULL);
+#endif
     metric_family_append(&fams[FAM_SLURM_DBD_AGENT_QUEUE],
                          VALUE_GAUGE(stats_resp->dbd_agent_queue_size), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_SCHEDULE_CYCLE_MAX_SECONDS],
@@ -691,7 +693,7 @@ static void slurm_submit_stats(stats_info_response_msg_t *stats_resp)
     metric_family_append(&fams[FAM_SLURM_BACKFILLED_LAST_JOBS],
                          VALUE_COUNTER(stats_resp->bf_last_backfilled_jobs), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILLED_HETEROGENEOUS_JOBS],
-#if SLURM_VERSION_NUMBER >= SLURM_VERSION_NUM(20, 2, 0)
+#if SLURM_VERSION_NUMBER >= SLURM_VERSION_NUM(20,2,0)
                          VALUE_COUNTER(stats_resp->bf_backfilled_het_jobs), NULL, NULL);
 #else
                          VALUE_COUNTER(stats_resp->bf_backfilled_pack_jobs), NULL, NULL);
@@ -719,10 +721,12 @@ static void slurm_submit_stats(stats_info_response_msg_t *stats_resp)
                          VALUE_GAUGE(stats_resp->bf_queue_len), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILL_QUEUE_LEN_SUM],
                          VALUE_COUNTER(stats_resp->bf_queue_len_sum), NULL, NULL);
+#if SLURM_VERSION_NUMBER >= SLURM_VERSION_NUM(20,2,0)
     metric_family_append(&fams[FAM_SLURM_BACKFILL_TABLE_SIZE],
                          VALUE_GAUGE(stats_resp->bf_table_size), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILL_TABLE_SIZE_SUM],
                          VALUE_COUNTER(stats_resp->bf_table_size_sum), NULL, NULL);
+#endif
 }
 
 static int slurm_read(void)
