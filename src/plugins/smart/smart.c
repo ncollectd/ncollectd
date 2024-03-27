@@ -54,7 +54,7 @@ static exclist_t excl_serial;
 static bool ignore_sleep_mode;
 static bool use_serial;
 
-static int pagesize = 0;
+static int pagesize;
 
 static void *smart_alloc(size_t len)
 {
