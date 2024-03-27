@@ -563,9 +563,11 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
 static void smart_handle_disk(const char *dev, const char *serial, metric_family_t *fams)
 {
     const char *name = NULL;
-    if (use_serial && serial) {
+    if (use_serial && (serial != NULL)) {
         name = serial;
     } else {
+        if (dev == NULL)
+            return;
         name = strrchr(dev, '/');
         if (!name)
             return;
