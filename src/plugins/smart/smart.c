@@ -201,7 +201,7 @@ static int get_vendor_id(const char *dev, __attribute__((unused)) char const *na
 {
     __le16 *vid = smart_alloc(sizeof(*vid));
     if (vid == NULL) {
-        PLUGIN_ERROR("Failed alloc of __len16.");
+        PLUGIN_ERROR("Failed to alloc __len16.");
         return -1;
     }
 
@@ -239,7 +239,7 @@ static int smart_read_nvme_disk(const char *dev, __attribute__((unused)) char co
 {
     union nvme_smart_log *smart_log = smart_alloc(sizeof(*smart_log));
     if (smart_log == NULL) {
-        PLUGIN_ERROR("Failed alloc of union nvme_smart_log.");
+        PLUGIN_ERROR("Failed to alloc union nvme_smart_log.");
         return -1;
     }
 
@@ -365,7 +365,7 @@ static int smart_read_nvme_intel_disk(const char *dev, __attribute__((unused)) c
 {
     struct nvme_additional_smart_log *intel_smart_log = smart_alloc(sizeof(*intel_smart_log));
     if (intel_smart_log == NULL) {
-        PLUGIN_ERROR("Failed alloc of struct nvme_additional_smart_log.");
+        PLUGIN_ERROR("Failed to alloc struct nvme_additional_smart_log.");
         return -1;
     }
 
