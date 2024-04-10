@@ -613,15 +613,15 @@ static int openldap_config_add(config_item_t *ci)
         ldap_free_urldesc(ludpp);
     }
 
-    if (status == 0)
-        status = label_set_add(&st->labels, false, "instance", st->name);
-
     if (status != 0) {
         openldap_free(st);
         return -1;
     }
 
-    st->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+    if (st->timeout == 0)
+        st->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+
+    label_set_add(&st->labels, true, "instance", st->name);
 
     return plugin_register_complex_read("openldap", st->name, openldap_read_host, interval,
                                         &(user_data_t){ .data = st, .free_func = openldap_free });

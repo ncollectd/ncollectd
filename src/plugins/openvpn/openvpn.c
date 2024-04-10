@@ -561,7 +561,7 @@ static int openvpn_instance_config(config_item_t *ci)
         return status;
     }
 
-    label_set_add(&oi->labels, false, "instance", oi->instance);
+    label_set_add(&oi->labels, true, "instance", oi->instance);
 
     return plugin_register_complex_read("openvpn", oi->instance, openvpn_read, interval,
                                         &(user_data_t){ .data = oi, .free_func = openvpn_free });

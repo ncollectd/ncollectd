@@ -273,7 +273,7 @@ static int cert_config_instance(config_item_t *ci)
     if (cert_cb->port == 0)
         cert_cb->port = 443;
 
-    label_set_add(&cert_cb->labels, false, "instance", cert_cb->instance);
+    label_set_add(&cert_cb->labels, true, "instance", cert_cb->instance);
 
     return plugin_register_complex_read("cert", cert_cb->instance, cert_read, interval,
                                         &(user_data_t){.data = cert_cb, .free_func = cert_free});

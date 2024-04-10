@@ -726,8 +726,6 @@ static int redis_config_instance(config_item_t *ci)
             break;
     }
 
-    label_set_add(&rn->labels, false, "instance", rn->name);
-
     if (status == 0) {
         redis_query_t *rq = rn->queries;
         while (rq != NULL) {
@@ -742,6 +740,8 @@ static int redis_config_instance(config_item_t *ci)
         redis_instance_free(rn);
         return status;
     }
+
+    label_set_add(&rn->labels, true, "instance", rn->name);
 
     return plugin_register_complex_read("redis", rn->name, redis_read, interval,
                                         &(user_data_t){.data=rn, .free_func=redis_instance_free});

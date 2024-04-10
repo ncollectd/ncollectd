@@ -599,7 +599,7 @@ static int db2_config_add_database(config_item_t *ci)
         return -1;
     }
 
-    label_set_add(&db->labels, false, "instance", db->name);
+    label_set_add(&db->labels, true, "instance", db->name);
 
     return plugin_register_complex_read("db2", db->name, db2_read_database, interval,
                                         &(user_data_t){.data=db, .free_func=db2_database_free });

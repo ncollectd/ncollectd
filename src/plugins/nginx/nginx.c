@@ -434,13 +434,12 @@ static int nginx_config_instance(config_item_t *ci)
         status = -1;
     }
 
-    if (status == 0)
-        status = label_set_add(&st->labels, false, "instance", st->name);
-
     if (status != 0) {
         nginx_free(st);
         return -1;
     }
+
+    label_set_add(&st->labels, true, "instance", st->name);
 
     return plugin_register_complex_read("nginx", st->name, nginx_read, interval,
                                         &(user_data_t){.data = st, .free_func=nginx_free});

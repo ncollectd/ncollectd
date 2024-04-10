@@ -510,9 +510,6 @@ static int config_add_instance(config_item_t *ci)
             break;
     }
 
-    if (status == 0)
-        status = label_set_add(&st->labels, false, "instance", st->name);
-
     if (status != 0) {
         memcached_free(st);
         return -1;
@@ -535,6 +532,8 @@ static int config_add_instance(config_item_t *ci)
             }
         }
     }
+
+    label_set_add(&st->labels, true, "instance", st->name);
 
     return plugin_register_complex_read("memcached", st->name, memcached_read, interval,
                                         &(user_data_t){.data=st, .free_func=memcached_free});

@@ -394,14 +394,14 @@ static int varnish_config_instance(const config_item_t *ci)
         return status;
     }
 
-    label_set_add(&conf->labels, false, "instance", conf->instance);
-
     if (conf->vsh_instance != NULL) {
         if (strcmp("localhost", conf->vsh_instance) == 0) {
             free(conf->vsh_instance);
             conf->vsh_instance = NULL;
         }
     }
+
+    label_set_add(&conf->labels, true, "instance", conf->instance);
 
     return plugin_register_complex_read("varnish", conf->vsh_instance, varnish_read, interval,
                                         &(user_data_t){.data=conf, .free_func=varnish_config_free});

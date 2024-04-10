@@ -829,15 +829,15 @@ static int ds389_config_add(config_item_t *ci)
         ldap_free_urldesc(ludpp);
     }
 
-    if (status == 0)
-        status = label_set_add(&ctx->labels, true, "instance",  ctx->name);
-
     if (status != 0) {
         ds389_free(ctx);
         return -1;
     }
 
-    ctx->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+    if (ctx->timeout == 0)
+        ctx->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+
+    label_set_add(&ctx->labels, true, "instance",  ctx->name);
 
     return plugin_register_complex_read("ds389", ctx->name, ds389_read, interval,
                                         &(user_data_t){.data = ctx, .free_func = ds389_free});
