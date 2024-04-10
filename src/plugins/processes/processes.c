@@ -618,11 +618,23 @@ static int ps_config(config_item_t *ci)
     return 0;
 }
 
+void ps_submit_ctxt(uint64_t value)
+{
+    metric_family_t fam = {
+            .name = "system_processes_contextswitch",
+            .type = METRIC_TYPE_COUNTER,
+            .help = "Total number of context switches across all CPUs."
+    };
+    metric_family_append(&fam, VALUE_COUNTER(value), NULL, NULL);
+    plugin_dispatch_metric_family(&fam, 0);
+}
+
 void ps_submit_forks(uint64_t value)
 {
     metric_family_t fam = {
             .name = "system_processes_forks",
             .type = METRIC_TYPE_COUNTER,
+            .help = "Total number of processes and threads created."
     };
     metric_family_append(&fam, VALUE_COUNTER(value), NULL, NULL);
     plugin_dispatch_metric_family(&fam, 0);
