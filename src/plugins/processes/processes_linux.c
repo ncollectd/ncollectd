@@ -505,36 +505,6 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
     return 0;
 }
 
-static int procs_running(void)
-{
-    char buffer[65536];
-    ssize_t status = read_text_file_contents(path_proc_stat, buffer, sizeof(buffer) - 1);
-    if (status <= 0) {
-        return -1;
-    }
-
-    /* the data contains :
-     * the literal string 'procs_running',
-     * a whitespace
-     * the number of running processes.
-     * The parser does include the white-space character.
-     */
-    char *running = strstr(buffer, "procs_running ");
-    if (!running) {
-        PLUGIN_WARNING("procs_running not found");
-        return -1;
-    }
-    running += strlen("procs_running ");
-
-    char *endptr = NULL;
-    long result = strtol(running, &endptr, 10);
-    if ((*running != '\0') && ((*endptr == '\0') || (*endptr == '\n'))) {
-        return (int)result;
-    }
-
-    return -1;
-}
-
 static char *ps_get_cmdline(long pid, char *name, char *buf, size_t buf_len)
 {
     if ((pid < 1) || (NULL == buf) || (buf_len < 2))
@@ -613,7 +583,7 @@ static char *ps_get_cmdline(long pid, char *name, char *buf, size_t buf_len)
     return buf;
 }
 
-static int read_fork_rate(void)
+static int proc_stat_read(uint64_t *forks, uint64_t *ctx, uint64_t *running)
 {
     FILE *fh = fopen(path_proc_stat, "r");
     if (fh == NULL) {
@@ -621,27 +591,33 @@ static int read_fork_rate(void)
         return -1;
     }
 
-    char buffer[1024];
+    char buffer[65536];
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
         char *fields[3];
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
         if (fields_num != 2)
             continue;
 
-        if (strcmp("processes", fields[0]) != 0)
-            continue;
-
-        uint64_t value = 0;
-        int status = parse_uinteger(fields[1], &value);
-        if (status == 0) {
-            fclose(fh);
-            ps_submit_forks(value);
-            return 0;
+        if (strcmp("processes", fields[0]) == 0) {
+            uint64_t value = 0;
+            int status = parse_uinteger(fields[1], &value);
+            if (status == 0)
+                *forks = value;
+        } else if (strcmp("ctxt", fields[0]) == 0) {
+            uint64_t value = 0;
+            int status = parse_uinteger(fields[1], &value);
+            if (status == 0)
+                *ctx = value;
+        } else if (strcmp("procs_running", fields[0]) == 0) {
+            uint64_t value = 0;
+            int status = parse_uinteger(fields[1], &value);
+            if (status == 0)
+                *running = value;
         }
     }
 
     fclose(fh);
-    return -1;
+    return 0;
 }
 
 /* do actual readings from kernel */
@@ -727,9 +703,13 @@ int ps_read(void)
      * stat(s).
      * The 'procs_running' number in /proc/stat on the other hand is more
      * accurate, and can be retrieved in a single 'read' call. */
-    running = procs_running();
+    uint64_t stat_forks = 0;
+    uint64_t stat_ctxt = 0;
+    uint64_t stat_running = 0;
 
-    proc_state[PROC_STATE_RUNNING] = running;
+    proc_stat_read(&stat_forks, &stat_ctxt, &stat_running);
+
+    proc_state[PROC_STATE_RUNNING] = stat_running;
     proc_state[PROC_STATE_SLEEPING] = sleeping;
     proc_state[PROC_STATE_ZOMBIES] = zombies;
     proc_state[PROC_STATE_STOPPED] = stopped;
@@ -740,7 +720,8 @@ int ps_read(void)
     for (procstat_t *ps_ptr = list_head_g; ps_ptr != NULL; ps_ptr = ps_ptr->next)
         ps_metric_append_proc_list(ps_ptr);
 
-    read_fork_rate();
+    ps_submit_forks(stat_forks);
+    ps_submit_ctxt(stat_ctxt);
 
     want_init = false;
 

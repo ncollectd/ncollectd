@@ -216,5 +216,6 @@ void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry);
 void ps_submit_state(double *proc_state);
 
 void ps_submit_forks(uint64_t value);
+void ps_submit_ctxt(uint64_t value);
 
 void ps_metric_append_proc_list(procstat_t *ps);
