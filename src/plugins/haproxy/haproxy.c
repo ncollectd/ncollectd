@@ -1411,7 +1411,7 @@ static int haproxy_config_instance(config_item_t *ci)
         return status;
     }
 
-    label_set_add(&ha->labels, false, "instance", ha->instance);
+    label_set_add(&ha->labels, true, "instance", ha->instance);
 
     return plugin_register_complex_read("haproxy", ha->instance, haproxy_read, interval,
                                         &(user_data_t){.data = ha, .free_func = haproxy_free});

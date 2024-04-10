@@ -638,13 +638,12 @@ static int ncmosquitto_config_instance(config_item_t *ci)
             break;
     }
 
-    if (status == 0)
-        status = label_set_add(&conf->labels, false, "instance", conf->name);
-
     if (status != 0) {
         ncmosquitto_free(conf);
         return status;
     }
+
+    label_set_add(&conf->labels, true, "instance", conf->name);
 
     status = plugin_thread_create(&conf->thread,
                                    /* func  = */ ncmosquitto_subscribers_thread,

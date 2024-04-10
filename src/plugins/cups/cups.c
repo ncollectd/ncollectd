@@ -274,8 +274,6 @@ static int cups_config_instance(config_item_t *ci)
         if (status != 0)
             break;
     }
-    if (status == 0)
-        status = label_set_add(&ins->labels, true, "instance", ins->name);
 
     if (status != 0) {
         cups_instance_free(ins);
@@ -286,6 +284,8 @@ static int cups_config_instance(config_item_t *ci)
         ins->host = strdup(cupsServer());
     if (ins->port == 0)
         ins->port = ippPort();
+
+    label_set_add(&ins->labels, true, "instance", ins->name);
 
     return plugin_register_complex_read("cups", ins->name, cups_read_instance, interval,
                                      &(user_data_t){.data = ins, .free_func = cups_instance_free});

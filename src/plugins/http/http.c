@@ -529,13 +529,12 @@ static int chttp_config_instance(config_item_t *ci)
         break;
     }
 
-    if (status == 0)
-        status = label_set_add(&ctx->labels, true, "instance", ctx->instance);
-
     if (status != 0) {
         chttp_free(ctx);
         return status;
     }
+
+    label_set_add(&ctx->labels, true, "instance", ctx->instance);
 
     return plugin_register_complex_read("http", ctx->instance, chttp_read, interval,
                                         &(user_data_t){.data=ctx, .free_func=chttp_free});

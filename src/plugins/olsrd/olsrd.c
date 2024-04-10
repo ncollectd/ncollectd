@@ -412,7 +412,7 @@ static int olsrd_config_instance(config_item_t *ci)
         return -1;
     }
 
-    label_set_add(&oi->labels, false, "instance", oi->instance);
+    label_set_add(&oi->labels, true, "instance", oi->instance);
 
     return plugin_register_complex_read("olsrd", oi->instance, olsrd_read, interval,
                                         &(user_data_t){ .data = oi, .free_func = olsrd_free });

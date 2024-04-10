@@ -486,7 +486,7 @@ static int squid_config_instance(config_item_t *ci)
         return status;
     }
 
-    label_set_add(&sq->labels, false, "instance", sq->instance);
+    label_set_add(&sq->labels, true, "instance", sq->instance);
     squid_init_curl(sq);
 
     return plugin_register_complex_read("squid", sq->instance, squid_read, interval,

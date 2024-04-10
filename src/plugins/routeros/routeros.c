@@ -463,9 +463,6 @@ static int cr_config_router(config_item_t *ci)
         }
     }
 
-    if (status == 0)
-        status = label_set_add(&router_data->labels, true, "instance", router_data->name);
-
     if ((status == 0) && (router_data->username == NULL)) {
         router_data->username = sstrdup("admin");
         if (router_data->username == NULL) {
@@ -478,6 +475,8 @@ static int cr_config_router(config_item_t *ci)
         cr_free_data(router_data);
         return status;
     }
+
+    label_set_add(&router_data->labels, true, "instance", router_data->name);
 
     return plugin_register_complex_read("routeros", router_data->node, cr_read, interval,
                             &(user_data_t){.data=router_data, .free_func=cr_free_data});

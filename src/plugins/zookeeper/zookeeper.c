@@ -704,13 +704,12 @@ static int zookeper_config_instance(const config_item_t *ci)
             break;
     }
 
-    if (status == 0)
-        status = label_set_add(&conf->labels, false, "instance", conf->instance);
-
     if (status != 0) {
         zookeeper_config_free(conf);
         return status;
     }
+
+    label_set_add(&conf->labels, true, "instance", conf->instance);
 
     return plugin_register_complex_read("zookeeper", conf->instance, zookeeper_read, interval,
                                         &(user_data_t){.data=conf, .free_func=zookeeper_config_free});

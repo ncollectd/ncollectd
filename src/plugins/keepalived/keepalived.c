@@ -598,7 +598,7 @@ static int keepalived_config_instance(config_item_t *ci)
         }
     }
 
-    label_set_add(&kpd->labels, false, "instance", kpd->instance);
+    label_set_add(&kpd->labels, true, "instance", kpd->instance);
 
     return plugin_register_complex_read("keepalived", kpd->instance, keepalived_read, interval,
                                         &(user_data_t){.data = kpd, .free_func = keepalived_free});
