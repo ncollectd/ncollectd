@@ -467,12 +467,24 @@ static int db2_connect(db2_database_t *db)
 
 static int db2_read_database(user_data_t *ud)
 {
+    metric_family_t fam_up = {
+        .name = "db2_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the DB2 server be reached.",
+    };
+
     db2_database_t *db = (db2_database_t *)ud->data;
 
     int status = db2_connect(db);
-    if (status != 0)
+    if (status != 0) {
+        metric_family_append(&fam_up, VALUE_GAUGE(0), &db->labels, NULL);
+        plugin_dispatch_metric_family(&fam_up, 0);
         return status;
+    }
     assert(db->alias != NULL || db->conn != NULL);
+
+    metric_family_append(&fam_up, VALUE_GAUGE(1), &db->labels, NULL);
+    plugin_dispatch_metric_family(&fam_up, 0);
 
     unsigned int db_version = db2_version(db);
 
@@ -586,6 +598,8 @@ static int db2_config_add_database(config_item_t *ci)
         db2_database_free(db);
         return -1;
     }
+
+    label_set_add(&db->labels, false, "instance", db->name);
 
     return plugin_register_complex_read("db2", db->name, db2_read_database, interval,
                                         &(user_data_t){.data=db, .free_func=db2_database_free });
