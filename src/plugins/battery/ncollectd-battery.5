@@ -5,39 +5,10 @@ ncollectd-battery \- Documentation of ncollectd's battery plugin
 .SH SYNOPSIS
 \fBload-plugin\fP battery
 .br
-\fBplugin\fP battery {
-    \fBvalues-percentage\fP \fItrue|false\fP
-    \fBreport-degraded\fP \fItrue|false\fP
-.br
-}
+\fBplugin\fP battery
 .SH DESCRIPTION
 The \fBbattery\fP plugin reports the remaining capacity, power and voltage of
 laptop batteries.
-.PP
-The plugin has the following options:
-.TP
-\fBvalues-percentage\fP \fIfalse|true\fP
-When enabled, remaining capacity is reported as a percentage, e.g. \*(lq42%
-capacity remaining\*(rq. Otherwise the capacity is stored as reported by the
-battery, most likely in \*(lqWh\*(rq. This option does not work with all input methods,
-in particular when only \fI/proc/pmu\fP is available on an old Linux system.
-Defaults to \fBfalse\fP.
-.TP
-\fBreport-degraded\fP \fIfalse|true\fP
-Typical laptop batteries degrade over time, meaning the capacity decreases with
-recharge cycles. The maximum charge of the previous charge cycle is tracked as
-\*(lqlast full capacity\*(rq and used to determine that a battery is \*(lqfully charged\*(rq.
-
-When this option is set to \fBfalse\fP, the default, the \fBbattery\fP plugin will
-only report the remaining capacity. If the \fBvalues-percentage\fP option is
-enabled, the relative remaining capacity is calculated as the ratio of the
-\*(lqremaining capacity\*(rq and the \*(lqlast full capacity\*(rq. This is what most tools,
-such as the status bar of desktop environments, also do.
-
-When set to \fBtrue\fP, the battery plugin will report the metrics: \fBsystem_battery_charged\fP
-(remaining capacity), \fBsystem_battery_discharged\fP (difference between
-\*(lqlast full capacity\*(rq and \*(lqremaining capacity\*(rq) and \fBsystem_battery_degraded\fP
-(difference between \*(lqdesign capacity\*(rq and \*(lqlast full capacity\*(rq).
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

@@ -52,20 +52,13 @@ static char *path_sys_power_supply;
 #define SYSFS_FACTOR 0.000001
 #endif /* KERNEL_LINUX */
 
-static bool report_percent;
-static bool report_degraded;
-
 enum {
     FAM_BATTERY_POWER,
     FAM_BATTERY_CURRENT,
     FAM_BATTERY_VOLTAGE,
-    FAM_BATTERY_CHARGED_RATIO,
-    FAM_BATTERY_DISCHARGED_RATIO,
-    FAM_BATTERY_DEGRADED_RATIO,
-    FAM_BATTERY_CHARGED,
-    FAM_BATTERY_DISCHARGED,
-    FAM_BATTERY_DEGRADED,
-    FAM_BATTERY_CAPACITY,
+    FAM_BATTERY_CAPACITY_CHARGED,
+    FAM_BATTERY_CAPACITY_FULL,
+    FAM_BATTERY_CAPACITY_DESIGN,
     FAM_BATTERY_MAX,
 };
 
@@ -85,38 +78,18 @@ static metric_family_t fams[FAM_BATTERY_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
-    [FAM_BATTERY_CHARGED_RATIO] = {
-        .name = "system_battery_charged_ratio",
+    [FAM_BATTERY_CAPACITY_CHARGED] = {
+        .name = "system_battery_capacity_charged",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
-    [FAM_BATTERY_DISCHARGED_RATIO] = {
-        .name = "system_battery_discharged_ratio",
+    [FAM_BATTERY_CAPACITY_FULL] = {
+        .name = "system_battery_capacity_full",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
-    [FAM_BATTERY_DEGRADED_RATIO] = {
-        .name = "system_battery_degraded_ratio",
-        .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
-    },
-    [FAM_BATTERY_CHARGED] = {
-        .name = "system_battery_charged",
-        .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
-    },
-    [FAM_BATTERY_DISCHARGED] = {
-        .name = "system_battery_discharged",
-        .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
-    },
-    [FAM_BATTERY_DEGRADED] = {
-        .name = "system_battery_degraded",
-        .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
-    },
-    [FAM_BATTERY_CAPACITY] = {
-        .name = "system_battery_capacity",
+    [FAM_BATTERY_CAPACITY_DESIGN] = {
+        .name = "system_battery_capacity_design",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
@@ -125,46 +98,18 @@ static metric_family_t fams[FAM_BATTERY_MAX] = {
 static void submit_capacity(const char *device, double capacity_charged, double capacity_full,
                                                 double capacity_design)
 {
-    if (report_percent && (capacity_charged > capacity_full))
+    if (capacity_charged > capacity_full)
         return;
-    if (report_degraded && (capacity_full > capacity_design))
+    if (capacity_full > capacity_design)
         return;
 
-    if (report_percent) {
-        double capacity_max;
+    metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(capacity_charged), NULL,
+                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
+    metric_family_append(&fams[FAM_BATTERY_CAPACITY_FULL], VALUE_GAUGE(capacity_full), NULL,
+                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
+    metric_family_append(&fams[FAM_BATTERY_CAPACITY_DESIGN], VALUE_GAUGE(capacity_design), NULL,
+                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
 
-        if (report_degraded)
-            capacity_max = capacity_design;
-        else
-            capacity_max = capacity_full;
-
-        metric_family_append(&fams[FAM_BATTERY_CHARGED_RATIO],
-                             VALUE_GAUGE(100.0 * capacity_charged / capacity_max), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
-        metric_family_append(&fams[FAM_BATTERY_DISCHARGED_RATIO],
-                             VALUE_GAUGE(100.0 * (capacity_full - capacity_charged) / capacity_max),
-                             NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
-
-        if (report_degraded) {
-            metric_family_append(&fams[FAM_BATTERY_DEGRADED_RATIO],
-                                 VALUE_GAUGE(100.0 * (capacity_design - capacity_full) / capacity_max),
-                                 NULL,
-                                 &(label_pair_const_t){.name="battery", .value=device}, NULL);
-        }
-    } else if (report_degraded) {
-        metric_family_append(&fams[FAM_BATTERY_CHARGED], VALUE_GAUGE(capacity_charged), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
-        metric_family_append(&fams[FAM_BATTERY_DISCHARGED],
-                             VALUE_GAUGE(capacity_full - capacity_charged), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
-        metric_family_append(&fams[FAM_BATTERY_DEGRADED],
-                             VALUE_GAUGE(capacity_design - capacity_full), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
-    } else {
-        metric_family_append(&fams[FAM_BATTERY_CAPACITY], VALUE_GAUGE(capacity_charged), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
-    }
 }
 
 #if defined(HAVE_IOKIT_PS_IOPOWERSOURCES_H) || defined(HAVE_IOKIT_IOKITLIB_H)
@@ -733,7 +678,7 @@ static int read_pmu(void)
         fclose(fh);
         fh = NULL;
 
-        metric_family_append(&fams[FAM_BATTERY_CHARGED], VALUE_GAUGE(charge / 1000.0), NULL,
+        metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(charge / 1000.0), NULL,
                              &(label_pair_const_t){.name="battery", .value=device}, NULL);
         metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(current / 1000.0), NULL,
                              &(label_pair_const_t){.name="battery", .value=device}, NULL);
@@ -779,29 +724,6 @@ static int battery_read(void)
     return status;
 }
 
-static int battery_config(config_item_t *ci)
-{
-    int status = 0;
-
-    for (int i = 0; i < ci->children_num; i++) {
-        config_item_t *child = ci->children + i;
-
-        if (strcasecmp("values-percentage", child->key) == 0) {
-            status = cf_util_get_boolean(child, &report_percent);
-        } else if (strcasecmp("report-degraded", child->key) == 0) {
-            status = cf_util_get_boolean(child, &report_degraded);
-        } else {
-            PLUGIN_WARNING("Ignoring unknown configuration option \"%s\".", child->key);
-            status = -1;
-        }
-
-        if (status != 0)
-            return -1;
-    }
-
-    return 0;
-}
-
 #ifdef KERNEL_LINUX
 static int battery_init(void)
 {
@@ -842,6 +764,5 @@ void module_register(void)
     plugin_register_init("battery", battery_init);
     plugin_register_shutdown("battery", battery_shutdown);
 #endif
-    plugin_register_config("battery", battery_config);
     plugin_register_read("battery", battery_read);
 }
