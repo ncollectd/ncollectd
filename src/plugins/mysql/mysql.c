@@ -48,7 +48,6 @@ static cf_flags_t cmysql_flags[] = {
     { "user",                COLLECT_USER_STATS        },
     { "index",               COLLECT_INDEX_STATS       },
     { "table",               COLLECT_TABLE_STATS       },
-    { "table",               COLLECT_TABLE             },
     { "response_time",       COLLECT_RESPONSE_TIME     },
     { "master",              COLLECT_MASTER_STATS      },
     { "slave",               COLLECT_SLAVE_STATS       },
@@ -1287,11 +1286,10 @@ static int cmysql_read(user_data_t *ud)
     if (db->flags & COLLECT_INDEX_STATS)
         cmysql_read_index_statistics(db, con);
 
-    if (db->flags & COLLECT_TABLE_STATS)
+    if (db->flags & COLLECT_TABLE_STATS) {
         cmysql_read_table_statistics(db, con);
-
-    if (db->flags & COLLECT_TABLE)
         cmysql_read_table(db, con);
+    }
 
     if (db->flags & COLLECT_RESPONSE_TIME) {
         cmysql_read_query_response_time_all(db, con);

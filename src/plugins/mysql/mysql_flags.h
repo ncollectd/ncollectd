@@ -26,9 +26,8 @@ typedef enum {
     COLLECT_USER_STATS         = (1 << 18),
     COLLECT_INDEX_STATS        = (1 << 19),
     COLLECT_TABLE_STATS        = (1 << 20),
-    COLLECT_TABLE              = (1 << 21),
-    COLLECT_RESPONSE_TIME      = (1 << 22),
-    COLLECT_MASTER_STATS       = (1 << 23),
-    COLLECT_SLAVE_STATS        = (1 << 24),
-    COLLECT_HEARTBEAT          = (1 << 25),
+    COLLECT_RESPONSE_TIME      = (1 << 21),
+    COLLECT_MASTER_STATS       = (1 << 22),
+    COLLECT_SLAVE_STATS        = (1 << 23),
+    COLLECT_HEARTBEAT          = (1 << 24),
 } cmysql_flag_t;
