@@ -216,12 +216,12 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_TABLE_LOCKS_IMMEDIATE] = {
         .name = "mysql_table_locks_immediate",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of table locks which were completed immediately.",
     },
     [FAM_MYSQL_TABLE_LOCKS_WAITED] = {
         .name = "mysql_table_locks_waited",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of table locks which had to wait. Indicates table lock contention.",
     },
     [FAM_MYSQL_TABLE_OPEN_CACHE_ACTIVE_INSTANCES] = {
