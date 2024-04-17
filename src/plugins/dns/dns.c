@@ -7,6 +7,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/strbuf.h"
 #include "libexpr/expr.h"
 
 #ifdef HAVE_NETINET_IN_H
@@ -199,7 +200,7 @@ struct dns_ctx_s {
     dns_query_t *queries;
     size_t queries_num;
 
-    struct ares_addr_node *servers;
+    strbuf_t servers;
     dns_domains_t domains;
 
     int udp_port;
@@ -1273,11 +1274,11 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
     case T_RRSIG:
     case T_NSEC:
     case T_DNSKEY:
-        PLUGIN_ERROR("Parsing for RR type %hu unavailable.", rr->type);
+        PLUGIN_DEBUG("Parsing for RR type %hu unavailable.", rr->type);
         break;
 
     default:
-        PLUGIN_ERROR("Unknow RR type %hu, parsing unavailable.", rr->type);
+        PLUGIN_DEBUG("Unknow RR type %hu, parsing unavailable.", rr->type);
         break;
     }
 
@@ -1404,28 +1405,28 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
         if (value != NULL) {
             switch(value->type) {
             case EXPR_VALUE_NUMBER:
-fprintf(stderr, "number: %f\n", value->number);
+//fprintf(stderr, "number: %f\n", value->number);
                 validation = value->number == 0.0 ? false : true;
                 break;
             case EXPR_VALUE_STRING:
-fprintf(stderr, "string: [%s]\n", value->string);
+//fprintf(stderr, "string: [%s]\n", value->string);
                 validation = (value->string != NULL) && (strlen(value->string) > 0) ? true : false;
                 break;
             case EXPR_VALUE_BOOLEAN:
-fprintf(stderr, "bool: %s\n", value->boolean ? "true" : "false");
+//fprintf(stderr, "bool: %s\n", value->boolean ? "true" : "false");
                 validation = value->boolean;
                 break;
             }
             expr_value_free(value);
         } else {
-fprintf(stderr, "null\n");
+//fprintf(stderr, "null\n");
         }
 
         metric_family_append(&ctx->fams[FAM_DNS_QUERY_VALIDATION],
                              VALUE_GAUGE(validation), &query->labels,
                              &(label_pair_const_t){.name="query", .value=query->query}, NULL);
     } else {
-fprintf(stderr, "query->ast  is null\n");
+//fprintf(stderr, "query->ast  is null\n");
     }
 
 exit:
@@ -1444,8 +1445,8 @@ static int dns_read(user_data_t *user_data)
         return -1;
     }
 
-    if(ctx->servers) {
-        status = ares_set_servers(channel, ctx->servers);
+    if(strbuf_len(&ctx->servers) > 0) {
+        status = ares_set_servers_csv(channel, ctx->servers.ptr);
         if (status != ARES_SUCCESS) {
             PLUGIN_ERROR("ares_init_options: %s", ares_strerror(status));
             return -1;
@@ -1779,12 +1780,7 @@ static void dns_free(void *arg)
     if (ctx == NULL)
         return;
 
-    struct ares_addr_node *head = ctx->servers;
-    while(head != NULL) {
-        struct ares_addr_node *detached = head;
-        head = head->next;
-        free(detached);
-    }
+    strbuf_destroy(&ctx->servers);
 
     for (size_t i = 0; i < ctx->queries_num; i++) {
         dns_query_t *query = &ctx->queries[i];
@@ -1804,19 +1800,6 @@ static void dns_free(void *arg)
     free(ctx);
 }
 
-static void append_addr_list(struct ares_addr_node **head, struct ares_addr_node *node)
-{
-    struct ares_addr_node *last;
-    node->next = NULL;
-    if(*head) {
-        last = *head;
-        while(last->next)
-            last = last->next;
-        last->next = node;
-    } else
-        *head = node;
-}
-
 static int dns_config_server(config_item_t *ci, dns_ctx_t *ctx)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
@@ -1827,39 +1810,10 @@ static int dns_config_server(config_item_t *ci, dns_ctx_t *ctx)
 
     char *server = ci->values[0].value.string;
 
-    struct ares_addr_node *srvr = malloc(sizeof(*srvr));
-    if (!srvr) {
-        PLUGIN_ERROR("malloc failed");
-        return -1;
-    }
+    if (strbuf_len(&ctx->servers) > 0)
+        strbuf_putchar(&ctx->servers, ',');
 
-    append_addr_list(&ctx->servers, srvr);
-
-    if (ares_inet_pton(AF_INET, server, &srvr->addr.addr4) > 0) {
-        srvr->family = AF_INET;
-    } else if (ares_inet_pton(AF_INET6, server, &srvr->addr.addr6) > 0) {
-        srvr->family = AF_INET6;
-    } else {
-        struct hostent *hostent = gethostbyname(server);
-        if (hostent == NULL) {
-            PLUGIN_ERROR("server %s not found.", server);
-            return -1;
-        }
-
-        switch (hostent->h_addrtype) {
-        case AF_INET:
-            srvr->family = AF_INET;
-            memcpy(&srvr->addr.addr4, hostent->h_addr, sizeof(srvr->addr.addr4));
-            break;
-        case AF_INET6:
-            srvr->family = AF_INET6;
-            memcpy(&srvr->addr.addr6, hostent->h_addr, sizeof(srvr->addr.addr6));
-            break;
-        default:
-            PLUGIN_ERROR("server %s unsupported address family.", server);
-            return -1;
-        }
-    }
+    strbuf_putstr(&ctx->servers, server);
 
     ctx->optmask |= ARES_OPT_SERVERS;
 
