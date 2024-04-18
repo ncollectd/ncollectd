@@ -789,6 +789,8 @@ static int bind_config_instance(config_item_t *ci)
             status = cf_util_get_int(child, &bi->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &bi->labels);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -803,6 +805,8 @@ static int bind_config_instance(config_item_t *ci)
         bind_instance_free(bi);
         return -1;
     }
+
+    label_set_add(&bi->labels, true, "instance", bi->instance);
 
     return plugin_register_complex_read("bind", bi->instance, bind_read, interval,
                     &(user_data_t){ .data = bi, .free_func = bind_instance_free, });
