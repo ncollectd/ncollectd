@@ -398,7 +398,7 @@ static json_callbacks_t bind_json_callbacks = {
 
 int bind_json_parse(bind_json_ctx_t *ctx)
 {
-    json_parser_init(&ctx->handle, 0, &bind_json_callbacks, &ctx);
+    json_parser_init(&ctx->handle, 0, &bind_json_callbacks, ctx);
     return 0;
 }
 
