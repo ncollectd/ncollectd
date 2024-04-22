@@ -58,7 +58,7 @@ cachestats:CacheHits,        FAM_BIND_RESOLVER_CACHE_HITS, NULL, NULL
 cachestats:CacheMisses,      FAM_BIND_RESOLVER_CACHE_MISSES, NULL, NULL
 cachestats:QueryHits,        FAM_BIND_RESOLVER_CACHE_QUERY_HITS, NULL, NULL
 cachestats:QueryMisses,      FAM_BIND_RESOLVER_CACHE_QUERY_MISSES, NULL, NULL
-memory:TotalUse,             FAM_BIND_MEMORY_TOTAL_USE_BYTES, NULL, NULL
+memory:TotalUse,             FAM_BIND_MEMORY_USE_BYTES, NULL, NULL
 memory:InUse,                FAM_BIND_MEMORY_IN_USE_BYTES, NULL, NULL
 memory:Malloced,             FAM_BIND_MEMORY_MALLOCED_BYTES , NULL, NULL
 memory:ContextSize,          FAM_BIND_MEMORY_CONTEXT_SIZE_BYTES, NULL, NULL
