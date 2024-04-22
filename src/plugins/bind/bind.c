@@ -79,17 +79,17 @@ static metric_family_t fams_bind[FAM_BIND_MAX] = {
     },
     [FAM_BIND_INCOMING_QUERIES_UDP] = {
         .name = "bind_incoming_queries_udp",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of incoming UDP queries.",
     },
     [FAM_BIND_INCOMING_QUERIES_TCP] = {
         .name = "bind_incoming_queries_tcp",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of incoming TCP queries.",
     },
     [FAM_BIND_INCOMING_REQUESTS_TCP] = {
         .name = "bind_incoming_requests_tcp",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of incoming TCP requests.",
     },
     [FAM_BIND_QUERY_DUPLICATES] = {
@@ -272,9 +272,9 @@ static metric_family_t fams_bind[FAM_BIND_MAX] = {
         .type = METRIC_TYPE_HISTOGRAM,
         .help = "Size of DNS responses (any transport).",
     },
-    [FAM_BIND_MEMORY_TOTAL_USE_BYTES] = {
-        .name = "bind_memory_total_use_bytes",
-        .type = METRIC_TYPE_GAUGE,
+    [FAM_BIND_MEMORY_USE_BYTES] = {
+        .name = "bind_memory_use_bytes",
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_BIND_MEMORY_IN_USE_BYTES] = {
@@ -617,6 +617,92 @@ static size_t bind_curl_callback(void *buf, size_t size, size_t nmemb, void *use
     return len;
 }
 
+static int bind_curl_init(bind_instance_t *bi)
+{
+    bi->curl = curl_easy_init();
+    if (bi->curl == NULL) {
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
+    }
+
+    CURLcode rcode = 0;
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_NOSIGNAL, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_WRITEFUNCTION, bind_curl_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_WRITEDATA, bi);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_HEADERFUNCTION, bind_header_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_HEADERFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_HEADERDATA, bi);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_HEADERDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_ERRORBUFFER, bi->bind_curl_error);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_MAXREDIRS, 50L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+#ifdef HAVE_CURLOPT_TIMEOUT_MS
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_TIMEOUT_MS,
+                             (bi->timeout >= 0) ? (long)bi->timeout
+                             : (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#endif
+    return 0;
+}
+
 static int bind_read(user_data_t *user_data)
 {
     bind_instance_t *bi = user_data->data;
@@ -627,87 +713,9 @@ static int bind_read(user_data_t *user_data)
     }
 
     if (bi->curl == NULL) {
-        bi->curl = curl_easy_init();
-        if (bi->curl == NULL) {
-            PLUGIN_ERROR("curl_easy_init failed.");
+        int status = bind_curl_init(bi);
+        if (status != 0)
             return -1;
-        }
-
-        CURLcode rcode = 0;
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_NOSIGNAL, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_WRITEFUNCTION, bind_curl_callback);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_WRITEDATA, bi);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_HEADERFUNCTION, bind_header_callback);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HEADERFUNCTION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_HEADERDATA, bi);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HEADERDATA failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_ERRORBUFFER, bi->bind_curl_error);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_FOLLOWLOCATION, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_MAXREDIRS, 50L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-#ifdef HAVE_CURLOPT_TIMEOUT_MS
-        rcode = curl_easy_setopt(bi->curl, CURLOPT_TIMEOUT_MS,
-                                 (bi->timeout >= 0) ? (long)bi->timeout
-                                 : (long)CDTIME_T_TO_MS(plugin_get_interval()));
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-#endif
     }
 
     bi->fmt = BIND_FORMAT_NONE;
@@ -722,8 +730,12 @@ static int bind_read(user_data_t *user_data)
 
     if (curl_easy_perform(bi->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", bi->bind_curl_error);
+        metric_family_append(&bi->fams[FAM_BIND_UP], VALUE_GAUGE(0), &bi->labels, NULL);
+        plugin_dispatch_metric_family(&bi->fams[FAM_BIND_UP], 0);
         return -1;
     }
+
+    metric_family_append(&bi->fams[FAM_BIND_UP], VALUE_GAUGE(1), &bi->labels, NULL);
 
     histogram_t **traffic = NULL;
     if (bi->fmt == BIND_FORMAT_XML) {
