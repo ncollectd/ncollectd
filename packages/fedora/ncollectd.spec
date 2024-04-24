@@ -2316,7 +2316,7 @@ fi
 
 %postun
 %if 0%{?fedora} || 0%{?rhel} >= 7
-%systemd_postun_build_with_restart ncollectd.service
+%systemd_postun_with_restart ncollectd.service
 %else
 # restart ncollectd only when upgrading
 if [ $1 -eq 1 ]; then
