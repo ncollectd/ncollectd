@@ -877,7 +877,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "definition": "label_values(system_load_1m,hostname)",
+          "definition": "label_values(system_uptime_seconds,hostname)",
           "hide": 0,
           "includeAll": false,
           "label": "Hostname",
@@ -886,7 +886,7 @@
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(system_load_1m,hostname)",
+            "query": "label_values(system_uptime_seconds,hostname)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -933,7 +933,7 @@
     "timezone": "browser",
     "title": "Apache",
     "uid": "ddi4tygcyonpcf",
-    "version": 1,
+    "version": 2,
     "weekStart": ""
   },
   "folderUid": "",

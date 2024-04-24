@@ -39,150 +39,7 @@
               "axisPlacement": "auto",
               "barAlignment": 0,
               "drawStyle": "line",
-              "fillOpacity": 100,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "stepBefore",
-              "lineWidth": 1,
-              "pointSize": 1,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "decimals": 0,
-            "mappings": [],
-            "max": 1,
-            "min": 0,
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "up"
-              },
-              "properties": [
-                {
-                  "id": "color",
-                  "value": {
-                    "fixedColor": "semi-dark-green",
-                    "mode": "fixed"
-                  }
-                }
-              ]
-            },
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "down"
-              },
-              "properties": [
-                {
-                  "id": "color",
-                  "value": {
-                    "fixedColor": "semi-dark-red",
-                    "mode": "fixed"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        "gridPos": {
-          "h": 4,
-          "w": 24,
-          "x": 0,
-          "y": 0
-        },
-        "id": 6,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "editorMode": "code",
-            "expr": "nginx_up{hostname=\"${hostname}\",instance=\"${instance}\"}",
-            "hide": false,
-            "instant": false,
-            "legendFormat": "up",
-            "range": true,
-            "refId": "A"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "editorMode": "code",
-            "expr": "nginx_up{hostname=\"${hostname}\",instance=\"${instance}\"} == bool 0",
-            "hide": false,
-            "instant": false,
-            "legendFormat": "down",
-            "range": true,
-            "refId": "B"
-          }
-        ],
-        "title": "Nginx Up/Down",
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
+              "fillOpacity": 61,
               "gradientMode": "none",
               "hideFrom": {
                 "legend": false,
@@ -200,13 +57,15 @@
               "spanNulls": false,
               "stacking": {
                 "group": "A",
-                "mode": "none"
+                "mode": "normal"
               },
               "thresholdsStyle": {
                 "mode": "off"
               }
             },
+            "decimals": 2,
             "mappings": [],
+            "max": 100,
             "min": 0,
             "thresholds": {
               "mode": "absolute",
@@ -220,15 +79,62 @@
                   "value": 80
                 }
               ]
-            }
+            },
+            "unit": "percent"
           },
-          "overrides": []
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "charged"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "semi-dark-green",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "discharged"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "semi-dark-yellow",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "degraded"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "semi-dark-red",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
         },
         "gridPos": {
-          "h": 11,
-          "w": 12,
+          "h": 9,
+          "w": 8,
           "x": 0,
-          "y": 4
+          "y": 0
         },
         "id": 3,
         "options": {
@@ -255,110 +161,9 @@
               "uid": "${datasource}"
             },
             "editorMode": "code",
-            "expr": "irate(nginx_http_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+            "expr": "100 * system_battery_capacity_charged{hostname=\"${hostname}\",battery=\"${battery}\"} / system_battery_capacity_design{hostname=\"${hostname}\",battery=\"${battery}\"}",
             "instant": false,
-            "legendFormat": "request/s",
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Nginx requests/s - ${hostname} - ${instance}",
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "min": 0,
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 11,
-          "w": 12,
-          "x": 12,
-          "y": 4
-        },
-        "id": 2,
-        "options": {
-          "legend": {
-            "calcs": [
-              "min",
-              "max",
-              "mean",
-              "lastNotNull"
-            ],
-            "displayMode": "table",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "editorMode": "code",
-            "expr": "nginx_connections_active{hostname=\"${hostname}\",instance=\"${instance}\"}",
-            "instant": false,
-            "legendFormat": "active",
+            "legendFormat": "charged",
             "range": true,
             "refId": "A"
           },
@@ -368,23 +173,10 @@
               "uid": "${datasource}"
             },
             "editorMode": "code",
-            "expr": "nginx_connections_reading{hostname=\"${hostname}\",instance=\"${instance}\"}",
+            "expr": "100 * (system_battery_capacity_full{hostname=\"${hostname}\",battery=\"${battery}\"} - system_battery_capacity_charged{hostname=\"${hostname}\",battery=\"${battery}\"}) / system_battery_capacity_design{hostname=\"${hostname}\",battery=\"${battery}\"}",
             "hide": false,
             "instant": false,
-            "legendFormat": "reading",
-            "range": true,
-            "refId": "B"
-          },
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "editorMode": "code",
-            "expr": "nginx_connections_waiting{hostname=\"${hostname}\",instance=\"${instance}\"}",
-            "hide": false,
-            "instant": false,
-            "legendFormat": "waiting",
+            "legendFormat": "discharged",
             "range": true,
             "refId": "C"
           },
@@ -394,15 +186,15 @@
               "uid": "${datasource}"
             },
             "editorMode": "code",
-            "expr": "nginx_connections_writing{hostname=\"${hostname}\",instance=\"${instance}\"}",
+            "expr": "100 * (system_battery_capacity_design{hostname=\"${hostname}\",battery=\"${battery}\"} - system_battery_capacity_full{hostname=\"${hostname}\",battery=\"${battery}\"}) / system_battery_capacity_design{hostname=\"${hostname}\",battery=\"${battery}\"}",
             "hide": false,
             "instant": false,
-            "legendFormat": "writing",
+            "legendFormat": "degraded",
             "range": true,
-            "refId": "D"
+            "refId": "B"
           }
         ],
-        "title": "Ngninx connections - ${hostname} - ${instance}",
+        "title": "Battery capacity - ${hostname} - ${battery}",
         "type": "timeseries"
       },
       {
@@ -462,15 +254,15 @@
                 }
               ]
             },
-            "unit": "conn/s"
+            "unit": "volt"
           },
           "overrides": []
         },
         "gridPos": {
           "h": 9,
-          "w": 12,
-          "x": 0,
-          "y": 15
+          "w": 8,
+          "x": 8,
+          "y": 0
         },
         "id": 1,
         "options": {
@@ -497,14 +289,14 @@
               "uid": "${datasource}"
             },
             "editorMode": "code",
-            "expr": "irate(nginx_connections_accepted_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+            "expr": "system_battery_voltage{hostname=\"${hostname}\",battery=\"${battery}\"}",
             "instant": false,
-            "legendFormat": "connections/s",
+            "legendFormat": "voltage",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "Nginx connections/s - ${hostname} - ${instance}",
+        "title": "Battery voltage - ${hostname} - ${battery}",
         "type": "timeseries"
       },
       {
@@ -563,17 +355,18 @@
                   "value": 80
                 }
               ]
-            }
+            },
+            "unit": "amp"
           },
           "overrides": []
         },
         "gridPos": {
           "h": 9,
-          "w": 12,
-          "x": 12,
-          "y": 15
+          "w": 8,
+          "x": 16,
+          "y": 0
         },
-        "id": 4,
+        "id": 2,
         "options": {
           "legend": {
             "calcs": [
@@ -598,14 +391,14 @@
               "uid": "${datasource}"
             },
             "editorMode": "code",
-            "expr": "delta(nginx_connections_accepted_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])-delta(nginx_connections_handled_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+            "expr": "system_battery_current{hostname=\"${hostname}\",battery=\"${battery}\"}",
             "instant": false,
-            "legendFormat": "in-flight request",
+            "legendFormat": "current",
             "range": true,
             "refId": "A"
           }
         ],
-        "title": "Nginx in-flight request - ${hostname} - ${instance}",
+        "title": "Battery current - ${hostname} - ${battery}",
         "type": "timeseries"
       }
     ],
@@ -618,7 +411,7 @@
           "current": {
             "selected": false,
             "text": "prometheus",
-            "value": "${datasource}"
+            "value": "edhq55gf59dz4b"
           },
           "hide": 0,
           "includeAll": false,
@@ -636,8 +429,8 @@
         {
           "current": {
             "selected": false,
-            "text": "dune.localdomain",
-            "value": "dune.localdomain"
+            "text": "axltmanuellsr.central.inditex.grp",
+            "value": "axltmanuellsr.central.inditex.grp"
           },
           "datasource": {
             "type": "prometheus",
@@ -664,23 +457,23 @@
         {
           "current": {
             "selected": false,
-            "text": "local",
-            "value": "local"
+            "text": "BAT0",
+            "value": "BAT0"
           },
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "definition": "label_values(nginx_up{hostname=\"$hostname\"},instance)",
+          "definition": "label_values(system_battery_capacity{hostname=\"$hostname\"},battery)",
           "hide": 0,
           "includeAll": false,
-          "label": "Instance",
+          "label": "Battery",
           "multi": false,
-          "name": "instance",
+          "name": "battery",
           "options": [],
           "query": {
             "qryType": 1,
-            "query": "label_values(nginx_up{hostname=\"$hostname\"},instance)",
+            "query": "label_values(system_battery_capacity{hostname=\"$hostname\"},battery)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "refresh": 1,
@@ -692,14 +485,14 @@
       ]
     },
     "time": {
-      "from": "now-3h",
+      "from": "now-6h",
       "to": "now"
     },
     "timepicker": {},
     "timezone": "browser",
-    "title": "Nginx",
-    "uid": "ddi5lllncpog0b",
-    "version": 2,
+    "title": "Battery",
+    "uid": "edif4ldrpuvi8d",
+    "version": 8,
     "weekStart": ""
   },
   "folderUid": "",
