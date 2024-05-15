@@ -86,8 +86,10 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
     if ((a == NULL) || (b == NULL))
         return -1;
 
-    if (label_set_cmp(&a->label, &b->label) != 0)
-        return -1;
+    if (type != METRIC_TYPE_INFO) {
+        if (label_set_cmp(&a->label, &b->label) != 0)
+            return -1;
+    }
 
     switch (type) {
     case METRIC_TYPE_UNKNOWN:
@@ -169,7 +171,9 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
         // TODO
         break;
     case METRIC_TYPE_INFO:
-        if (label_set_cmp(&a->value.info, &b->value.info) != 0)
+        label_set_add_set(&a->label, true, a->value.info);
+        label_set_add_set(&b->label, true, b->value.info);
+        if (label_set_cmp(&a->label, &b->label) != 0)
             return -1;
         break;
     case METRIC_TYPE_SUMMARY:
