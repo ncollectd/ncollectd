@@ -1,0 +1,2 @@
+# TYPE system_dmi info
+system_dmi_info{bios_date="07/11/2010",bios_release="10.9",bios_vendor="ACME",bios_version="09.08.07",board_name="8AFB",board_serial="B0000FFFFFFFF",board_vendor="ACME",board_version="07.06.05",chassis_asset_tag="0ABCZZZZZZ",chassis_serial="FFFFFFZZZZ",chassis_type="90",chassis_vendor="ACME",hostname="localhost.localdomain",product_family="ACME Computer",product_name="ACME Computer G1",product_serial="0AAABB1234",product_sku="0FZZZZZ",product_uuid="5d03c5ee-1297-11ef-afba-0068ebe8b1de",system_vendor="ACME"} 1
