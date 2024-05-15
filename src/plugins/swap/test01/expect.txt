@@ -1,0 +1,10 @@
+# TYPE system_swap_used_bytes gauge
+system_swap_used_bytes{hostname="localhost.localdomain"} 317988864
+# TYPE system_swap_free_bytes gauge
+system_swap_free_bytes{hostname="localhost.localdomain"} 102068609024
+# TYPE system_swap_cached_bytes gauge
+system_swap_cached_bytes{hostname="localhost.localdomain"} 692609024
+# TYPE system_swap_in_bytes counter
+system_swap_in_bytes_total{hostname="localhost.localdomain"} 50215907328
+# TYPE system_swap_out_bytes counter
+system_swap_out_bytes_total{hostname="localhost.localdomain"} 49205309440
