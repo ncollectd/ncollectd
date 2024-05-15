@@ -21,6 +21,8 @@ ncollectd-table \- Documentation of ncollectd's table plugin
             \fBlabel\fP \fIkey\fP \fIvalue\fP
             \fBlabel-from\fP \fIcolumn\fP
             \fBvalue-from\fP \fIcolumn\fP
+            \fBshift\fP \fIvalue\fP
+            \fBscale\fP \fIvalue\fP
         }
 .br
 }
@@ -40,7 +42,7 @@ The following options are available inside a \fBtable\fP block:
 Any character of string is interpreted as a delimiter between the different
 columns of the table. A sequence of two or more contiguous delimiters in the
 table is considered to be a single delimiter, i. e. there cannot be any
-empty columns. This option is mandatory.
+empty columns. The default separator is a space.
 
 A horizontal tab, newline and carriage return may be specified by \f(CW\\t\fP,
 \f(CW\\n\fP and \f(CW\\r\fP respectively. Please note that the double backslashes are
@@ -79,6 +81,12 @@ this is not set, the global \fBinterval\fP will be used.
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .TP
 \fBvalue-from\fP \fIcolumn\fP
+.TP
+\fBshift\fP \fIvalue\fP
+Value is added to gauge metrics values. This value is not applied to counters.
+.TP
+\fBscale\fP \fIvalue\fP
+The gauge metric value are multiplied by this value. This value is not applied to counters.
 .RE
 .SH "SEE ALSO"
 .BR ncollectd (1)

@@ -20,6 +20,8 @@ typedef struct {
     tbl_label_t *labels_from;
     int labels_from_num;
     int value_from;
+    double scale;
+    double shift;
 } tbl_result_t;
 
 typedef struct {
@@ -85,7 +87,7 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields, int
         double gauge;
         if (parse_double(fields[res->value_from], &gauge) != 0)
             return -1;
-        m.value = VALUE_GAUGE(gauge);
+        m.value = VALUE_GAUGE((res->scale * gauge) + res->shift);
     } else if (res->type == METRIC_TYPE_COUNTER) {
         uint64_t counter;
         if (parse_uinteger(fields[res->value_from], &counter) != 0)
@@ -267,30 +269,38 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
     res = tbl->results + tbl->results_num;
     tbl_result_setup(res);
 
+    res->scale = 1.0;
+    res->shift = 0;
+
     int status = 0;
     for (int i = 0; i < ci->children_num; ++i) {
         config_item_t *c = ci->children + i;
 
-        if (strcasecmp(c->key, "type") == 0)
+        if (strcasecmp(c->key, "type") == 0) {
             status = cf_util_get_metric_type(c, &res->type);
-        else if (strcasecmp(c->key, "help") == 0)
+        } else if (strcasecmp(c->key, "help") == 0) {
             status = cf_util_get_string(c, &res->help);
-        else if (strcasecmp(c->key, "metric") == 0)
+        } else if (strcasecmp(c->key, "metric") == 0) {
             status = cf_util_get_string(c, &res->metric);
-        else if (strcasecmp(c->key, "metric-from") == 0)
+        } else if (strcasecmp(c->key, "metric-from") == 0) {
             status = cf_util_get_int(c, &res->metric_from);
-        else if (strcasecmp(c->key, "metric-prefix") == 0)
+        } else if (strcasecmp(c->key, "metric-prefix") == 0) {
             status = cf_util_get_string(c, &res->metric_prefix);
-        else if (strcasecmp(c->key, "label") == 0)
+        } else if (strcasecmp(c->key, "label") == 0) {
             status = cf_util_get_label(c, &res->labels);
-        else if (strcasecmp(c->key, "label-from") == 0)
+        } else if (strcasecmp(c->key, "label-from") == 0) {
             status = tbl_config_append_label(&res->labels_from, &res->labels_from_num, c);
-        else if (strcasecmp(c->key, "value-from") == 0)
+        } else if (strcasecmp(c->key, "value-from") == 0) {
             status = cf_util_get_int(c, &res->value_from);
-        else {
+        } else if (strcasecmp(c->key, "shift") == 0) {
+            status = cf_util_get_double(c, &res->shift);
+        } else if (strcasecmp(c->key, "scale") == 0) {
+            status = cf_util_get_double(c, &res->scale);
+        } else {
             PLUGIN_WARNING("Ignoring unknown config key '%s' in 'result'.", c->key);
             status = -1;
         }
+
         if (status != 0)
             break;
     }
@@ -300,13 +310,13 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
         return status;
     }
 
-    if (res->metric == NULL && res->metric_from < 0) {
+    if ((res->metric == NULL) && (res->metric_from < 0)) {
         PLUGIN_ERROR("No 'metric' or 'metric-from' option specified for "
                      "'result' in table '%s'.", tbl->file);
         status = -1;
     }
 
-    if (res->metric != NULL && res->metric_from > 0) {
+    if ((res->metric != NULL) && (res->metric_from > 0)) {
         PLUGIN_ERROR("Only one of 'metric' or 'metric-from' can be set in "
                      "'Result' in table \"%s\".", tbl->file);
         status = -1;
@@ -328,7 +338,7 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
 
 static int tbl_config_table(config_item_t *ci)
 {
-    if (ci->values_num != 1 || ci->values[0].type != CONFIG_TYPE_STRING) {
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
         PLUGIN_ERROR("'table' expects a single string argument.");
         return 1;
     }
@@ -379,8 +389,12 @@ static int tbl_config_table(config_item_t *ci)
     }
 
     if (tbl->sep == NULL) {
-        PLUGIN_ERROR("Table '%s' does not specify any separator.", tbl->file);
-        status = -1;
+        tbl->sep = strdup(" ");
+        if (tbl->sep == NULL) {
+            PLUGIN_ERROR("Table '%s': failed to strdup separator.", tbl->file);
+            tbl_free(tbl);
+            return -1;
+        }
     } else {
         strunescape(tbl->sep, strlen(tbl->sep) + 1);
     }
@@ -388,12 +402,8 @@ static int tbl_config_table(config_item_t *ci)
     if (tbl->results == NULL) {
         assert(tbl->results_num == 0);
         PLUGIN_ERROR("Table '%s' does not specify any (valid) results.", tbl->file);
-        status = -1;
-    }
-
-    if (status != 0) {
         tbl_free(tbl);
-        return status;
+        return -1;
     }
 
     for (int i = 0; i < tbl->results_num; ++i) {
