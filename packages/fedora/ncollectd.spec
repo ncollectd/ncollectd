@@ -1118,7 +1118,7 @@ The xencpu plugin collects CPU statistics from Xen.
 
 %if %{build_with_db2}
 %if %{?_db2_path:1}
-%define _build_with_db2 -DPLUGIN_DB2:BOOL=ON -DLibDb2_ROOT:STRING=%{_DB2_PATH}
+%define _build_with_db2 -DPLUGIN_DB2:BOOL=ON -DLibDb2_ROOT:STRING=%{_db2_path}
 %else
 %define _build_with_db2 -DPLUGIN_DB2:BOOL=ON
 %endif
@@ -1494,7 +1494,7 @@ The xencpu plugin collects CPU statistics from Xen.
 
 %if %{build_with_mq}
 %if %{?_mq_path:1}
-%define _build_with_mq -DPLUGIN_MQ:BOOL=ON -DLibMq_ROOT:STRING=%{_MQ_PATH}
+%define _build_with_mq -DPLUGIN_MQ:BOOL=ON -DLibMq_ROOT:STRING=%{_mq_path}
 %else
 %define _build_with_mq -DPLUGIN_MQ:BOOL=ON
 %endif
