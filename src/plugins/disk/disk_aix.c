@@ -112,22 +112,20 @@ int disk_read(void)
         uint64_t read_ops = stat_disk[i].xrate;
         uint64_t write_ops = stat_disk[i].xfers - stat_disk[i].xrate;
 
-        uint64_t diff_read_ops = read_ops - ds->read_ops;
-        uint64_t diff_write_ops = write_ops - ds->write_ops;
+        uint64_t diff_read_ops = counter_diff(ds->read_ops, read_ops);
+        ds->read_ops = read_ops;
+        uint64_t diff_write_ops = counter_diff(ds->write_ops, write_ops);
+        ds->write_ops = write_ops;
 
-        uint64_t diff_read_time = read_time - ds->read_time;
-        uint64_t diff_write_time = write_time - ds->write_time;
+        uint64_t diff_read_time = counter_diff(ds->read_time, read_time);
+        ds->read_time = read_time;
+        uint64_t diff_write_time = counter_diff(ds->write_time, write_time);
+        ds->write_time = write_time;
 
         if (diff_read_ops != 0)
             ds->avg_read_time += disk_calc_time_incr(diff_read_time, diff_read_ops);
         if (diff_write_ops != 0)
             ds->avg_write_time += disk_calc_time_incr(diff_write_time, diff_write_ops);
-
-        ds->read_ops = read_ops;
-        ds->read_time = read_time;
-
-        ds->write_ops = write_ops;
-        ds->write_time = write_time;
 
         if (ds->poll_count == 0)
            continue;

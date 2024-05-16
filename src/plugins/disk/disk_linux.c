@@ -16,10 +16,6 @@
 static struct udev *handle_udev;
 #endif
 
-#ifndef UINT_MAX
-#define UINT_MAX 4294967295U
-#endif
-
 typedef struct diskstats {
     char *name;
 
@@ -197,54 +193,29 @@ int disk_read(void)
             flush_time = atoll(fields[19]);
         }
 
-        /* If the counter wraps around, it's only 32 bits.. */
-        int64_t diff_read_sectors = 0;
-        if (read_sectors < ds->read_sectors)
-            diff_read_sectors = 1 + read_sectors + (UINT_MAX - ds->read_sectors);
-        else
-            diff_read_sectors = read_sectors - ds->read_sectors;
+        int64_t diff_read_sectors = counter_diff(ds->read_sectors, read_sectors);
         ds->read_bytes += 512 * diff_read_sectors;
         ds->read_sectors = read_sectors;
 
-        int64_t diff_write_sectors = 0;
-        if (write_sectors < ds->write_sectors)
-            diff_write_sectors = 1 + write_sectors + (UINT_MAX - ds->write_sectors);
-        else
-            diff_write_sectors = write_sectors - ds->write_sectors;
+        int64_t diff_write_sectors = counter_diff(ds->write_sectors, write_sectors);
         ds->write_bytes += 512 * diff_write_sectors;
         ds->write_sectors = write_sectors;
 
         /* Calculate the average time an io-op needs to complete */
         if (is_disk) {
-            int64_t diff_read_ops = 0;
-            if (read_ops < ds->read_ops)
-                diff_read_ops = 1 + read_ops + (UINT_MAX - ds->read_ops);
-            else
-                diff_read_ops = read_ops - ds->read_ops;
+            int64_t diff_read_ops = counter_diff(ds->read_ops, read_ops);
             ds->read_ops = read_ops;
 
-            int64_t diff_write_ops = 0;
-            if (write_ops < ds->write_ops)
-                diff_write_ops = 1 + write_ops + (UINT_MAX - ds->write_ops);
-            else
-                diff_write_ops = write_ops - ds->write_ops;
+            int64_t diff_write_ops = counter_diff(ds->write_ops, write_ops);
             ds->write_ops = write_ops;
 
-            int64_t diff_read_time = 0;
-            if (read_time < ds->read_time)
-                diff_read_time = 1 + read_time + (UINT_MAX - ds->read_time);
-            else
-                diff_read_time = read_time - ds->read_time;
+            int64_t diff_read_time = counter_diff(ds->read_time, read_time);
             ds->read_time = read_time;
 
             if (diff_read_ops != 0)
                 ds->avg_read_time += disk_calc_time_incr(diff_read_time, diff_read_ops, 1e-3);
 
-            int64_t diff_write_time = 0;
-            if (write_time < ds->write_time)
-                diff_write_time = 1 + write_time + (UINT_MAX - ds->write_time);
-            else
-                diff_write_time = write_time - ds->write_time;
+            int64_t diff_write_time = counter_diff(ds->write_time, write_time);
             ds->write_time = write_time;
             if (diff_write_ops != 0)
                 ds->avg_write_time += disk_calc_time_incr(diff_write_time, diff_write_ops, 1e-3);
@@ -259,26 +230,14 @@ int disk_read(void)
                 ds->has_io_time = true;
 
             if (discard_time) {
-                int64_t diff_discard_ops = 0;
-                if (discard_ops < ds->discard_ops)
-                    diff_discard_ops = 1 + discard_ops + (UINT_MAX - ds->discard_ops);
-                else
-                    diff_discard_ops = discard_ops - ds->discard_ops;
+                int64_t diff_discard_ops = counter_diff(ds->discard_ops, discard_ops);
                 ds->discard_ops = discard_ops;
 
-                int64_t diff_discard_sectors = 0;
-                if (discard_sectors < ds->discard_sectors)
-                    diff_discard_sectors = 1 + discard_sectors + (UINT_MAX - ds->discard_sectors);
-                else
-                    diff_discard_sectors = discard_sectors - ds->discard_sectors;
+                int64_t diff_discard_sectors = counter_diff(ds->discard_sectors, discard_sectors);
                 ds->discard_bytes += 512 * diff_discard_sectors;
                 ds->discard_sectors = discard_sectors;
 
-                int64_t diff_discard_time = 0;
-                if (discard_time < ds->discard_time)
-                    diff_discard_time = 1 + discard_time + (UINT_MAX - ds->discard_time);
-                else
-                    diff_discard_time = discard_time - ds->discard_time;
+                int64_t diff_discard_time = counter_diff(ds->discard_time, discard_time);
                 ds->discard_time = discard_time;
 
                 if (diff_discard_ops != 0)
@@ -289,18 +248,10 @@ int disk_read(void)
             }
 
             if (flush_time) {
-                int64_t diff_flush_ops = 0;
-                if (flush_ops < ds->flush_ops)
-                    diff_flush_ops = 1 + flush_ops + (UINT_MAX - ds->flush_ops);
-                else
-                    diff_flush_ops = flush_ops - ds->flush_ops;
+                int64_t diff_flush_ops = counter_diff(ds->flush_ops, flush_ops);
                 ds->flush_ops = flush_ops;
 
-                int64_t diff_flush_time = 0;
-                if (flush_time < ds->flush_time)
-                    diff_flush_time = 1 + flush_time + (UINT_MAX - ds->flush_time);
-                else
-                    diff_flush_time = flush_time - ds->flush_time;
+                int64_t diff_flush_time = counter_diff(ds->flush_time, flush_time);
                 ds->flush_time = flush_time;
 
                 if (diff_flush_ops != 0)
