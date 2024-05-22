@@ -243,7 +243,7 @@ metric_family_t fams[FAM_INTERFACE_MAX] = {
     },
 };
 
-exclist_t excl_device;
+exclist_t excl_interface;
 bool report_inactive = true;
 bool collect_vf_stats = false;
 bool unique_name = false;
@@ -255,7 +255,7 @@ static int interface_config(config_item_t *ci)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "interface") == 0) {
-            status = cf_util_exclist(child, &excl_device);
+            status = cf_util_exclist(child, &excl_interface);
         } else if (strcasecmp(child->key, "report-inactive") == 0) {
             status = cf_util_get_boolean(child, &report_inactive);
         } else if (strcasecmp(child->key, "unique-name") == 0) {
@@ -294,7 +294,7 @@ int interface_init(void)
 __attribute__(( weak ))
 int interface_shutdown(void)
 {
-    exclist_reset(&excl_device);
+    exclist_reset(&excl_interface);
     return 0;
 }
 

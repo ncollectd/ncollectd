@@ -31,7 +31,7 @@
 #endif
 
 
-extern exclist_t excl_device;
+extern exclist_t excl_interface;
 extern bool report_inactive;
 extern bool unique_name;
 extern metric_family_t fams[FAM_INTERFACE_MAX];
@@ -85,7 +85,7 @@ int interface_read(void)
                 continue;
 
             metric_family_append(&fams[metrics[j].fam], VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="device", .value=iname}, NULL);
+                                 &(label_pair_const_t){.name="interface", .value=iname}, NULL);
         }
     }
 
@@ -126,6 +126,6 @@ int interface_init(void)
 
 int interface_shutdown(void)
 {
-    exclist_reset(&excl_device);
+    exclist_reset(&excl_interface);
     return 0;
 }

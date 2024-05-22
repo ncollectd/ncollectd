@@ -6,7 +6,7 @@ ncollectd-interface \- Documentation of ncollectd's interface plugin
 \fBload-plugin\fP interface
 .br
 \fBplugin\fP interface {
-    \fBinterface\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+    \fBinterface\fP [\fIincl|include|excl|exclude\fP] \fIinterface\fP
     \fBreport-inactive\fP \fItrue|false\fP
     \fBunique-name\fP \fItrue|false\fP
 .br
@@ -20,7 +20,7 @@ you can select the “interesting” interfaces using the plugin's configuration
 The plugin support the following options:
 .PP
 .TP
-\fBinterface\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+\fBinterface\fP [\fIincl|include|excl|exclude\fP] \fIinterface\fP
 If no configuration is given, the \fBinterface\fP plugin will collect data from
 all interfaces. This may not be practical, especially for loopback and
 similar interfaces. Thus, you can use the \fBinterface\fP option to pick the

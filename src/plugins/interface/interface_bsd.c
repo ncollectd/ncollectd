@@ -51,7 +51,7 @@
 #error "No suitable type for `struct ifaddrs->ifa_data' found."
 #endif
 
-extern exclist_t excl_device;
+extern exclist_t excl_interface;
 extern bool report_inactive;
 extern metric_family_t fams[FAM_INTERFACE_MAX];
 
@@ -65,7 +65,7 @@ int interface_read(void)
         if ((if_ptr->ifa_addr == NULL) || (if_ptr->ifa_addr->sa_family != AF_LINK))
             continue;
 
-        if (!exclist_match(&excl_device, if_ptr->ifa_name))
+        if (!exclist_match(&excl_interface, if_ptr->ifa_name))
             continue;
 
         struct IFA_DATA *if_data = (struct IFA_DATA *)if_ptr->ifa_data;
@@ -74,22 +74,22 @@ int interface_read(void)
 
         metric_family_append(&fams[FAM_INTERFACE_RX_BYTES],
                              VALUE_COUNTER(if_data->IFA_RX_BYTES), NULL,
-                             &(label_pair_const_t){.name="device", .value=if_ptr->ifa_name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_PACKETS],
                              VALUE_COUNTER(if_data->IFA_RX_PACKT), NULL,
-                             &(label_pair_const_t){.name="device", .value=if_ptr->ifa_name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_ERRORS],
                              VALUE_COUNTER(if_data->IFA_RX_ERROR), NULL,
-                             &(label_pair_const_t){.name="device", .value=if_ptr->ifa_name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_BYTES],
                              VALUE_COUNTER(if_data->IFA_TX_BYTES), NULL,
-                             &(label_pair_const_t){.name="device", .value=if_ptr->ifa_name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_PACKETS],
                              VALUE_COUNTER(if_data->IFA_TX_PACKT), NULL,
-                             &(label_pair_const_t){.name="device", .value=if_ptr->ifa_name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_ERRORS],
                              VALUE_COUNTER(if_data->IFA_TX_ERROR), NULL,
-                             &(label_pair_const_t){.name="device", .value=if_ptr->ifa_name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
     }
 
     freeifaddrs(if_list);
@@ -101,6 +101,6 @@ int interface_read(void)
 
 int interface_shutdown(void)
 {
-    exclist_reset(&excl_device);
+    exclist_reset(&excl_interface);
     return 0;
 }
