@@ -127,7 +127,7 @@ static char *path_proc_dev;
 static char *path_proc_net_if_inet6;
 
 extern bool collect_vf_stats;
-extern exclist_t excl_device;
+extern exclist_t excl_interface;
 extern bool report_inactive;
 extern metric_family_t fams[FAM_INTERFACE_MAX];
 
@@ -462,7 +462,7 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
     int64_t carrier_up_count = -1;
     int64_t carrier_down_count = -1;
 
-    /* Scan attribute list for device name. */
+    /* Scan attribute list for interface name. */
     const char *dev = NULL;
     mnl_attr_for_each(attr, nlh, sizeof(*ifm)) {
         uint16_t type = mnl_attr_get_type(attr);
@@ -508,11 +508,11 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
     }
 
     if (dev == NULL) {
-        PLUGIN_ERROR("device name is NULL");
+        PLUGIN_ERROR("interface name is NULL");
         return MNL_CB_ERROR;
     }
 
-    if ((strlen(dev) == 0) || !exclist_match(&excl_device, dev))
+    if ((strlen(dev) == 0) || !exclist_match(&excl_interface, dev))
         return MNL_CB_OK;
 
     // ifi->ifi_flags & IFF_RUNNING XXX
@@ -521,10 +521,10 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
 
     metric_family_append(&fams[FAM_INTERFACE_STATE_UP],
                          VALUE_GAUGE(oper_state == 6 ? 1.0 : 0.0), NULL,
-                        &interface_label, NULL);
+                         &interface_label, NULL);
     metric_family_append(&fams[FAM_INTERFACE_ADMIN_STATE_UP],
                          VALUE_GAUGE(ifm->ifi_flags & IFF_UP ? 1.0 : 0.0), NULL,
-                        &interface_label, NULL);
+                         &interface_label, NULL);
     metric_family_append(&fams[FAM_INTERFACE_CARRIER],
                          VALUE_GAUGE(carrier), NULL, &interface_label, NULL);
 
@@ -698,11 +698,11 @@ static int interface_read_proc(void)
         dummy[0] = 0;
         dummy++;
 
-        char *device = buffer;
-        while (device[0] == ' ')
-            device++;
+        char *interface = buffer;
+        while (interface[0] == ' ')
+            interface++;
 
-        if ((strlen(device) == 0) || !exclist_match(&excl_device, device))
+        if ((strlen(interface) == 0) || !exclist_match(&excl_interface, interface))
             continue;
 
         char *fields[24];
@@ -717,40 +717,40 @@ static int interface_read_proc(void)
         if (!report_inactive && (rx == 0) && (tx == 0))
             continue;
 
-        label_pair_const_t device_label = {.name="device", .value=device};
+        label_pair_const_t interface_label = {.name="interface", .value=interface};
 
         metric_family_append(&fams[FAM_INTERFACE_RX_BYTES],
-                             VALUE_COUNTER(atoll(fields[0])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[0])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_PACKETS],
-                             VALUE_COUNTER(atoll(fields[1])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[1])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_ERRORS],
-                             VALUE_COUNTER(atoll(fields[2])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[2])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_DROPPED],
-                             VALUE_COUNTER(atoll(fields[3])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[3])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_FIFO_ERRORS],
-                             VALUE_COUNTER(atoll(fields[4])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[4])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_FRAME_ERRORS],
-                             VALUE_COUNTER(atoll(fields[5])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[5])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_COMPRESSED],
-                             VALUE_COUNTER(atoll(fields[6])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[6])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_MULTICAST],
-                             VALUE_COUNTER(atoll(fields[7])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[7])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_BYTES],
-                             VALUE_COUNTER(atoll(fields[8])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[8])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_PACKETS],
-                             VALUE_COUNTER(atoll(fields[9])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[9])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_ERRORS],
-                             VALUE_COUNTER(atoll(fields[10])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[10])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_DROPPED],
-                             VALUE_COUNTER(atoll(fields[11])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[11])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_FIFO_ERRORS],
-                             VALUE_COUNTER(atoll(fields[12])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[12])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_COLLISIONS],
-                             VALUE_COUNTER(atoll(fields[13])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[13])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_CARRIER_ERRORS],
-                             VALUE_COUNTER(atoll(fields[14])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[14])), NULL, &interface_label, NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_COMPRESSED],
-                             VALUE_COUNTER(atoll(fields[15])), NULL, &device_label, NULL);
+                             VALUE_COUNTER(atoll(fields[15])), NULL, &interface_label, NULL);
     }
 
     fclose(fh);
@@ -861,7 +861,7 @@ int interface_shutdown(void)
     free(path_proc_dev);
     free(path_proc_net_if_inet6);
 
-    exclist_reset(&excl_device);
+    exclist_reset(&excl_interface);
 
     if (nl) {
         mnl_socket_close(nl);
