@@ -91,7 +91,8 @@ int disk_read(void)
             if (ds == NULL)
                 continue;
 
-            if ((ds->name = strdup (disk_name)) == NULL) {
+            ds->name = strdup (disk_name);
+            if (ds->name == NULL) {
                 free (ds);
                 continue;
             }
@@ -127,9 +128,10 @@ int disk_read(void)
         if (diff_write_ops != 0)
             ds->avg_write_time += disk_calc_time_incr(diff_write_time, diff_write_ops);
 
-        if (ds->poll_count == 0)
-           continue;
         ds->poll_count++;
+
+        if (ds->poll_count == 1)
+           continue;
 
         if ((read_ops == 0) && (write_ops == 0)) {
            PLUGIN_DEBUG ("disk plugin: ((read_ops == 0) && (write_ops == 0)); => Not writing.");
