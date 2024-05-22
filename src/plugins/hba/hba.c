@@ -16,7 +16,7 @@ struct hba_device {
     char *device;
 };
 
-static unsigned int refresh = 30;
+static unsigned int refresh;
 static unsigned int cnt_read_loop;
 static struct hba_device *hba_list;
 
@@ -155,32 +155,57 @@ static void hba_odm_list(char *criteria)
         return;
     }
 
-    struct listinfo info;
-    struct CuDv *cudv = (struct CuDv *) odm_get_list(CuDv_CLASS, criteria, &info, 256, 1);
-    if (*(int *)cudv == -1 || !cudv) {
+    struct Class *cudv_class = odm_open_class_rdonly(CuDv_CLASS);
+    if ((*(int *)cudv_class == -1) || (cudv_class == NULL)) {
+        PLUGIN_ERROR("odm_open_class(CuDv_CLASS) failed");
         odm_terminate();
         return;
     }
 
-    hba_list = calloc(info.num+1, sizeof(struct hba_device));
-    if (hba_list == NULL) {
-        PLUGIN_ERROR("malloc failed");
-        odm_terminate();
-        return;
-    }
+    size_t hba_list_size = 0;
 
-    for (int i=0; i<info.num; i++) {
-        hba_list[i].adapter = sstrdup(cudv[i].parent);
-        hba_list[i].device = sstrdup(cudv[i].name);
-        if((hba_list[i].adapter == NULL) || (hba_list[i].device == NULL)) {
-            PLUGIN_ERROR("strdup failed");
-            hba_list_free();
-            odm_terminate();
-            return;
-        }
-    }
+    int first_next = ODM_FIRST;
+    do {
+       struct CuDv cudv;
+       status = *(int *) odm_get_obj(cudv_class, criteria, &cudv, first_next);
+       if (status == 0)
+           break;
+       if (status == -1) {
+            char *errmsg;
+            status = odm_err_msg (odmerrno, &errmsg);
+            if (status < 0)
+                PLUGIN_ERROR("Could not get object: %d", odmerrno);
+            else
+                PLUGIN_ERROR("Could not get object: %s", errmsg);
 
-    odm_free_list(cudv, &info);
+           break;
+       }
+
+       struct hba_device *tmp = realloc(hba_list, (hba_list_size + 2) * sizeof(struct hba_device));
+       if (tmp == NULL) {
+           hba_list_free();
+           PLUGIN_ERROR("realloc failed.");
+           break;
+       }
+
+       hba_list = tmp;
+       hba_list[hba_list_size+1].adapter = NULL;
+       hba_list[hba_list_size+1].device = NULL;
+
+       hba_list[hba_list_size].adapter = sstrdup(cudv.parent);
+       hba_list[hba_list_size].device = sstrdup(cudv.name);
+       if((hba_list[hba_list_size].adapter == NULL) || (hba_list[hba_list_size].device == NULL)) {
+           PLUGIN_ERROR("strdup failed");
+           hba_list_free();
+           break;
+       }
+
+       hba_list_size++;
+
+       first_next = ODM_NEXT;
+    } while (true);
+
+    odm_close_class(cudv_class);
 
     if (odm_terminate() < 0) {
         char *errmsg;
@@ -285,7 +310,7 @@ int hba_get_stats (char *adapter, char *device)
 
 static int hba_read (void)
 {
-    if (!(cnt_read_loop % 30) || (hba_list == NULL)) {
+    if ((cnt_read_loop >= refresh) || (hba_list == NULL)) {
         hba_odm_list("parent LIKE fcs* AND status=1");
         cnt_read_loop = 0;
     }
@@ -299,10 +324,13 @@ static int hba_read (void)
 
         char device[256];
         ssnprintf(device, sizeof(device),"/dev/%s", hba_list[i].device);
+
         hba_get_stats (hba_list[i].adapter, device);
     }
 
     cnt_read_loop++;
+
+    plugin_dispatch_metric_family_array(fams, FAM_HBA_MAX, 0);
 
     return 0;
 }
@@ -311,11 +339,13 @@ static int hba_config (config_item_t *ci)
 {
     int status = 0;
 
+    cdtime_t refresh_interval = TIME_T_TO_CDTIME_T(300);
+
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
-        if (strcasecmp ("refresh", child->key) == 0) {
-            status = cf_util_get_unsigned_int(child, &refresh);
+        if (strcasecmp ("refresh-interval", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &refresh_interval);
         } else if (strcasecmp ("hba", child->key) == 0) {
             status = cf_util_exclist(child, &excl_hba);
         } else {
@@ -326,6 +356,15 @@ static int hba_config (config_item_t *ci)
 
         if (status != 0)
             return -1;
+    }
+
+    if (refresh_interval != 0) {
+        double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
+        if (interval != 0) {
+           refresh = (unsigned int)(CDTIME_T_TO_DOUBLE(refresh_interval)/interval);
+           if (refresh == 0)
+               refresh = 1;
+        }
     }
 
     return 0;
