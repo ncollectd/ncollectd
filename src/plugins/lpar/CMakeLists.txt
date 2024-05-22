@@ -1,6 +1,6 @@
 plugin_option(PLUGIN_LPAR "AIX logical partitions statistics" ON)
 
-include(CheckStructHasMember)
+include(CheckStructHasMemberNoSizeOf)
 
 set(BUILD_PLUGIN_LPAR 0)
 
@@ -8,7 +8,7 @@ if(PLUGIN_LPAR)
     if(BUILD_AIX)
         find_package(LibPerfstat)
         if(LIBPERFSTAT_FOUND)
-            check_struct_has_member("perfstat_partition_type_t" "b.donate_enabled" "libperfstat.h" PERFSTAT_SUPPORTS_DONATION)
+            check_struct_has_member_no_sizeof("perfstat_partition_type_t" "b.donate_enabled" "libperfstat.h" PERFSTAT_SUPPORTS_DONATION)
             set(BUILD_PLUGIN_LPAR 1)
         else()
             set(BUILD_PLUGIN_LPAR_REASON "perfstat not found" PARENT_SCOPE)
