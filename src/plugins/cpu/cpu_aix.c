@@ -35,16 +35,16 @@ int cpu_read(void)
     }
 
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.pidle/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.idle/100.0), NULL,
                          &(label_pair_const_t){.name="state", "idle"}, NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.puser/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.user/100.0), NULL,
                          &(label_pair_const_t){.name="state", "user"}, NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.psys/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.sys/100.0), NULL,
                          &(label_pair_const_t){.name="state", "system"}, NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.pwait/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.wait/100.0), NULL,
                          &(label_pair_const_t){.name="state", "wait"}, NULL);
 
 
