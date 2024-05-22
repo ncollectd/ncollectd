@@ -16,7 +16,7 @@ struct hba_device {
     char *device;
 };
 
-static unsigned int refresh;
+static unsigned int refresh = 30;
 static unsigned int cnt_read_loop;
 static struct hba_device *hba_list;
 
