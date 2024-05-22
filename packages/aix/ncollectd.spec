@@ -1,5 +1,5 @@
 %global _hardened_build 1
-%global __requires_exclude ^.*(libdb2|libmqic_r|libmqm_r|libclntsh)[.]so.*$
+%global __requires_exclude ^.*(libdb2|libmqic_r|libmqm_r|libclntsh)[.](so|a).*$
 
 %if 0%{?git_tag:1}
 %define _version %{git_tag}
@@ -943,16 +943,37 @@ DESTDIR="%{buildroot}" /opt/freeware/bin/cmake --install aix-build
 
 mkdir -p %{buildroot}/%{_localstatedir}/lib/ncollectd
 mkdir -p %{buildroot}/%{_localstatedir}/run
-mkdir -p %{buildroot}/%{_sysconfdir}/rc.d/init.d
-cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/rc.d/init.d/ncollectd
+
+# mv %{buildroot}/%{_sysconfdir}/ncollectd.conf %{buildroot}/etc/ncollectd.conf
+mv %{buildroot}/etc/opt/freeware/ncollectd.conf %{buildroot}/etc/ncollectd.conf
+
+mkdir -p %{buildroot}/etc/rc.d/init.d
+cp %{SOURCE1} %{buildroot}/etc/rc.d/init.d/ncollectd
+
+mkdir -p %{buildroot}/etc/rc.d/rc2.d/
+ln -sf ../init.d/ncollectd %{buildroot}/etc/rc.d/rc2.d/Sncollectd
+ln -sf ../init.d/ncollectd %{buildroot}/etc/rc.d/rc2.d/Kncollectd
+
+mkdir -p %{buildroot}/etc/rc.d/rc3.d/
+ln -sf ../init.d/ncollectd %{buildroot}/etc/rc.d/rc3.d/Sncollectd
+ln -sf ../init.d/ncollectd %{buildroot}/etc/rc.d/rc3.d/Kncollectd
 
 %clean
 rm -rf %{buildroot}
 
+%preun
+if [ $1 -eq 0 ]; then
+    /etc/rc.d/init.d/ncollectd stop > /dev/null 2>&1 || :
+fi
+
+%postun
+if [ $1 -eq 1 ]; then
+    /etc/rc.d/init.d/ncollectd restart >/dev/null 2>&1 || :
+fi
+
 %files
 %defattr(-,root,system)
-##  %config(noreplace) %attr(0644,root,system) {_sysconfdir}/ncollectd.conf
-%attr(0755,root,system) %{_sysconfdir}/rc.d/init.d/ncollectd
+%config(noreplace) %attr(0644,root,system) /etc/ncollectd.conf
 %attr(0755,root,system) %{_sbindir}/ncollectd
 %attr(0755,root,system) %{_sbindir}/ncollectdmon
 %attr(0755,root,system) %{_bindir}/ncollectdctl
@@ -962,6 +983,12 @@ rm -rf %{buildroot}
 %{_datadir}/man/man5/ncollectd.conf.5*
 %dir %{_localstatedir}/lib/ncollectd
 %dir %{_localstatedir}/run
+%attr(0755,root,system) /etc/rc.d/init.d/ncollectd
+/etc/rc.d/rc2.d/Sncollectd
+/etc/rc.d/rc2.d/Kncollectd
+/etc/rc.d/rc3.d/Sncollectd
+/etc/rc.d/rc3.d/Kncollectd
+
 %if %{build_with_contextswitch}
 %{_libdir}/%{name}/contextswitch.so
 %{_datadir}/man/man5/ncollectd-contextswitch.5*
