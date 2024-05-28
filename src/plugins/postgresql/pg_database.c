@@ -19,7 +19,6 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
     char buffer[1024];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[1] = {NULL};
     int param_lengths[1] = {0};
@@ -45,10 +44,8 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
     strbuf_putstr(&buf, "  FROM pg_stat_database");
 
     if (db == NULL) {
-        stmt_name = "NCOLLECTD_PG_STAT_DATABASE";
         strbuf_putchar(&buf, ';');
     } else {
-        stmt_name = "NCOLLECTD_PG_STAT_DATABASE_WHERE_DB";
         strbuf_putstr(&buf, " WHERE datname = $1;");
         stmt_params = 1;
         param_values[0] = db;
@@ -91,7 +88,7 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -100,7 +97,7 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -173,8 +170,6 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
     char buffer[256];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
-    char *stmt = NULL;
     int stmt_params = 0;
     const char *param_values[1] = {NULL};
     int param_lengths[1] = {0};
@@ -184,18 +179,17 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
                         "  FROM pg_database");
 
     if (db == NULL) {
-        stmt_name = "NCOLLECTD_PG_DATABASE_SIZE";
         strbuf_putchar(&buf, ';');
     } else {
-        stmt_name = "NCOLLECTD_PG_DATABASE_SIZE_WHERE_DB";
         strbuf_putstr(&buf, " WHERE datname = $1;");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
     }
 
+    char *stmt = buf.ptr;
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -204,7 +198,7 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -238,7 +232,6 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
     if (version < 70200)
         return 0;
 
-    char *stmt_name = NULL;
     char *stmt = NULL;
     int stmt_params = 0;
     const char *param_values[1] = {NULL};
@@ -246,7 +239,6 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
     int param_formats[1] = {0};
 
     if (db == NULL) {
-        stmt_name = "NCOLLECTD_PG_LOCKS";
         stmt = "SELECT pg_database.datname, tmp.mode, COALESCE(count,0) "
                "  FROM ( VALUES ('accesssharelock'),"
                "                ('rowsharelock'),"
@@ -261,9 +253,8 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
                "(SELECT database, lower(mode) AS mode,count(*) AS count "
                "   FROM pg_locks WHERE database IS NOT NULL "
                "  GROUP BY database, lower(mode)) AS tmp2 "
-               "ON tmp.mode=tmp2.mode and pg_database.oid = tmp2.database";
+               "ON tmp.mode = tmp2.mode AND pg_database.oid = tmp2.database";
      } else {
-        stmt_name = "NCOLLECTD_PG_LOCKS_WHERE_DB";
         stmt = "SELECT pg_database.datname, tmp.mode, COALESCE(count,0) "
                "  FROM ( VALUES ('accesssharelock'),"
                "                ('rowsharelock'),"
@@ -276,15 +267,16 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
                "                ('sireadlock')) AS tmp(mode) CROSS JOIN pg_database "
                "LEFT JOIN "
                "(SELECT database, lower(mode) AS mode,count(*) AS count "
-               "   FROM pg_locks WHERE database = $1 "
+               "   FROM pg_locks WHERE database IS NOT NULL "
                "  GROUP BY database, lower(mode)) AS tmp2 "
-               "ON tmp.mode=tmp2.mode and pg_database.oid = tmp2.database";
+               "ON tmp.mode = tmp2.mode AND pg_database.oid = tmp2.database "
+               "WHERE pg_database.datname = $1";
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
     }
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -293,7 +285,7 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -335,7 +327,6 @@ int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
     char buffer[256];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[1] = {NULL};
     int param_lengths[1] = {0};
@@ -346,10 +337,8 @@ int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
                         "  FROM pg_stat_database_conflicts");
 
     if (db == NULL) {
-        stmt_name = "NCOLLECTD_PG_STAT_DATABASE_CONFLICTS";
         strbuf_putchar(&buf, ';');
     } else {
-        stmt_name = "NCOLLECTD_PG_STAT_DATABASE_CONFLICTS_WHERE_DB";
         strbuf_putstr(&buf, " WHERE datname = $1;");
         stmt_params = 1;
         param_values[0] = db;
@@ -370,7 +359,7 @@ int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -379,7 +368,7 @@ int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);

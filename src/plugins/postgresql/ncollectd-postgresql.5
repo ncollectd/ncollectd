@@ -37,6 +37,7 @@ ncollectd-postgresql \- Documentation of ncollectd's postgresql plugin
         \fBinterval\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
+        \fBcollect\fP \fIflags\fP ...
         \fBquery\fP \fIquery-name\fP
     }
 .br
@@ -128,6 +129,78 @@ multiple time in the \fBdatabase\fP block.
 .TP
 \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics in the queries.
+.TP
+\fBcollect\fP \fIflags\fP ...
+.RS
+.TP
+\fBdatabase\fP
+.TP
+\fBdatabase(database)\fP
+.TP
+\fBdatabase_size\fP
+.TP
+\fBdatabase_size(database)\fP
+.TP
+\fBdatabase_locks\fP
+.TP
+\fBdatabase_locks(database)\fP
+.TP
+\fBtable\fP
+.TP
+\fBtable(schema)\fP
+.TP
+\fBtable(schema,table)\fP
+.TP
+\fBtable_io\fP
+.TP
+\fBtable_io(schema)\fP
+.TP
+\fBtable_io(schema,table)\fP
+.TP
+\fBindexes\fP
+.TP
+\fBindexes(schema)\fP
+.TP
+\fBindexes(schema,table)\fP
+.TP
+\fBindexes(schema,table,index)\fP
+.TP
+\fBindexes_io\fP
+.TP
+\fBindexes_io(schema)\fP
+.TP
+\fBindexes_io(schema,table)\fP
+.TP
+\fBindexes_io(schema,table,index)\fP
+.TP
+\fBsequences_io\fP
+.TP
+\fBsequences_io(schema)\fP
+.TP
+\fBsequences_io(schema,sequence)\fP
+.TP
+\fBfunctions\fP
+.TP
+\fBfunctions(schema)\fP
+.TP
+\fBfunctions(schema,function)\fP
+.TP
+\fBactivity\fP
+.TP
+\fBactivity(database)\fP
+.TP
+\fBreplication_slots\fP
+.TP
+\fBreplication_slots(database)\fP
+.TP
+\fBreplication\fP
+.TP
+\fBarchiver\fP
+.TP
+\fBbgwriter\fP
+.TP
+\fBslru\fP
+.RE
 .TP
 \fBquery\fP \fIquery-name\fP
 Specifies a \fIquery\fP which should be executed in the context of the database

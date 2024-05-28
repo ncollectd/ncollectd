@@ -19,7 +19,6 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
     char buffer[1024];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[1] = {NULL};
     int param_lengths[1] = {0};
@@ -32,27 +31,21 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
                         "                ('idle in transaction'),"
                         "                ('idle in transaction (aborted)'),"
                         "                ('fastpath function call'),"
-                        "                ('disabled')) AS tmp(state) CROSS JOIN pg_database"
+                        "                ('disabled')) AS tmp(state) CROSS JOIN pg_database "
                         "LEFT JOIN ( SELECT datname, state, count(*) AS count,"
                         "            MAX(EXTRACT(EPOCH FROM now() - xact_start))::float AS max_tx"
-                        "            FROM pg_stat_activity");
-
-    if (db == NULL) {
-        stmt_name = "NCOLLECTD_PG_STAT_ACTIVITY";
-    } else {
-        stmt_name = "NCOLLECTD_PG_STAT_ACTIVITY_WHERE_DB";
+                        "            FROM pg_stat_activity GROUP BY datname,state ) AS tmp2"
+                        " ON tmp.state = tmp2.state AND pg_database.datname = tmp2.datname");
+    if (db != NULL) {
         strbuf_putstr(&buf, " WHERE datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
     }
 
-    strbuf_putstr(&buf, " GROUP BY datname,state ) AS tmp2"
-                        " ON tmp.state = tmp2.state AND pg_database.datname = tmp2.datname");
-
     char *stmt = buf.ptr;
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -61,7 +54,7 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -69,7 +62,7 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
     }
 
     int fields = PQnfields(res);
-    if (fields < 5) {
+    if (fields < 4) {
         PQclear(res);
         return 0;
     }
