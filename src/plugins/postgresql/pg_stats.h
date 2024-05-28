@@ -10,6 +10,8 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
                                    char *db);
 int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
                                     char *db);
+int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
+                                             label_set_t *labels, char *db);
 int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
                                      char *schema, char *table);
 int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,

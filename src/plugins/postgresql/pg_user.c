@@ -19,7 +19,6 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
     char buffer[1024];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[2] = {NULL, NULL};
     int param_lengths[2] = {0, 0};
@@ -48,15 +47,13 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
     strbuf_putstr(&buf, " FROM pg_stat_user_tables");
 
     if ((schema == NULL) && (table == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_TABLES";
+        /* all tables */
     } else if ((schema != NULL) && (table == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_TABLES_WHERE_SCHEMA";
         strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_TABLES_WHERE_SCHEMA_AND_TABLE";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
@@ -100,7 +97,7 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -109,7 +106,7 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -186,7 +183,6 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[2] = {NULL, NULL};
     int param_lengths[2] = {0, 0};
@@ -198,15 +194,13 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
                         "  FROM pg_statio_user_tables");
 
     if ((schema == NULL) && (table == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_TABLES";
+        /* all tables */
     } else if ((schema != NULL) && (table == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_TABLES_WHERE_SCHEMA";
         strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_TABLES_WHERE_SCHEMA_AND_TABLE";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
@@ -234,7 +228,7 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -243,7 +237,7 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -307,7 +301,6 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
     char buffer[256];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[2] = {NULL, NULL};
     int param_lengths[2] = {0, 0};
@@ -318,15 +311,13 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
                         "  FROM pg_stat_user_functions");
 
     if ((schema == NULL) && (function == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_FUNCTIONS";
+        /* all functions */
     } else if ((schema != NULL) && (function == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_FUNCTIONS_WHERE_SCHEMA";
         strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (function != NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_FUNCTIONS_WHERE_SCHEMA_AND_FUNC";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and funcname = $2");
         stmt_params = 2;
         param_values[0] = schema;
@@ -339,7 +330,7 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
 
     char *stmt = buf.ptr;
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -348,7 +339,7 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -416,7 +407,6 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[3] = {NULL, NULL, NULL};
     int param_lengths[3] = {0, 0, 0};
@@ -427,15 +417,13 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
                         "  FROM pg_stat_user_indexes");
 
     if ((schema == NULL) && (table == NULL) && (index == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_INDEXES";
+        /* all indexes */
     } else if ((schema != NULL) && (table == NULL) && (index == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_INDEXES_WHERE_SCHEMA";
         strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL) && (index == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_INDEXES_WHERE_SCHEMA_AND_TABLE";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
@@ -443,7 +431,6 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
         param_values[1] = table;
         param_lengths[1] = strlen(table);
     } else if ((schema != NULL) && (table != NULL) && (index != NULL)) {
-        stmt_name = "NCOLLECTD_PG_STAT_USER_INDEXES_WHERE_SCHEMA_AND_TABLE_AND_INDEX";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2 and indexrelname =$3");
         stmt_params = 3;
         param_values[0] = schema;
@@ -458,7 +445,7 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
 
     char *stmt = buf.ptr;
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -467,7 +454,7 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -539,7 +526,6 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[3] = {NULL, NULL, NULL};
     int param_lengths[3] = {0, 0, 0};
@@ -550,15 +536,13 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
                         "  FROM pg_statio_user_indexes");
 
     if ((schema == NULL) && (table == NULL) && (index == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_INDEXES";
+        /* all indexes */
     } else if ((schema != NULL) && (table == NULL) && (index == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_INDEXES_WHERE_SCHEMA";
         strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL) && (index == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_INDEXES_WHERE_SCHEMA_AND_TABLE";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
@@ -566,7 +550,6 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
         param_values[1] = table;
         param_lengths[1] = strlen(table);
     } else if ((schema != NULL) && (table != NULL) && (index != NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_INDEXES_WHERE_SCHEMA_AND_TABLE_AND_INDEX";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2 and indexrelname =$3");
         stmt_params = 3;
         param_values[0] = schema;
@@ -581,7 +564,7 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
 
     char *stmt = buf.ptr;
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -590,7 +573,7 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -653,7 +636,6 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
-    char *stmt_name = NULL;
     int stmt_params = 0;
     const char *param_values[2] = {NULL, NULL};
     int param_lengths[2] = {0, 0};
@@ -664,15 +646,13 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
                         "  FROM pg_statio_user_sequences");
 
     if ((schema == NULL) && (sequence == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_SEQUENCES";
+        /* all schemmas */
     } else if ((schema != NULL) && (sequence == NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_SEQUENCES_WHERE_SCHEMA";
         strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (sequence != NULL)) {
-        stmt_name = "NCOLLECTD_PG_STATIO_USER_SEQUENCES_WHERE_SCHEMA_AND_SEQUENCE";
         strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
@@ -685,7 +665,7 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
 
     char *stmt = buf.ptr;
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, stmt_params, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -694,7 +674,7 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, stmt_params, param_values, param_lengths, param_formats, 0);
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);

@@ -15,7 +15,6 @@ int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *
     if (version < 130000)
         return 0;
 
-    char *stmt_name = "NCOLLECTD_PG_STAT_SLRU";
     char *stmt = "SELECT name, blks_zeroed, blks_hit, blks_read, blks_written,"
                  "       blks_exists, flushes, truncates"
                  "  FROM pg_stat_slru";
@@ -34,7 +33,7 @@ int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, 0, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, 0, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -43,7 +42,7 @@ int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, 0, NULL, NULL, NULL, 0);
+    res = PQexecPrepared(conn, "", 0, NULL, NULL, NULL, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);

@@ -15,12 +15,11 @@ int pg_stat_archiver(PGconn *conn, int version, metric_family_t *fams, label_set
     if (version < 90400)
         return 0;
 
-    char *stmt_name = "NCOLLECTD_PG_STAT_ARCHIVER";
     char *stmt = "SELECT archived_count, failed_count,"
                  "       extract(epoch from now() - last_archived_time) AS last_archive_age"
                  "  FROM pg_stat_archiver";
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, 0, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, 0, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -29,7 +28,7 @@ int pg_stat_archiver(PGconn *conn, int version, metric_family_t *fams, label_set
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, 0, NULL, NULL, NULL, 0);
+    res = PQexecPrepared(conn, "", 0, NULL, NULL, NULL, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);

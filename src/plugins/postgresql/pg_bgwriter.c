@@ -17,7 +17,6 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
 
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
-    char *stmt_name = "NCOLLECTD_PG_STAT_BGWRITER";
     char *stmt = NULL;
 
     if (version < 170000) {
@@ -56,7 +55,7 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, 0, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, 0, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -65,7 +64,7 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, 0, NULL, NULL, NULL, 0);
+    res = PQexecPrepared(conn, "", 0, NULL, NULL, NULL, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -123,40 +122,11 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
     return 0;
 }
 
-#if 0
-    checkpoints_timed → num_timed
-    checkpoints_req → num_requested
-    checkpoint_write_time → write_time
-    checkpoint_sync_time → sync_time
-    buffers_checkpoint → buffers_written
-
-pg_stat_checkpointer (PostgreSQL 17)
-
-                   View "pg_catalog.pg_stat_checkpointer"
-     Column      |           Type           | Collation | Nullable | Default
------------------+--------------------------+-----------+----------+---------
- num_timed       | bigint                   |           |          |
- num_requested   | bigint                   |           |          |
- write_time      | double precision         |           |          |
- sync_time       | double precision         |           |          |
- buffers_written | bigint                   |           |          |
- stats_reset     | timestamp with time zone |           |          |
-
-FAM_PG_CHECKPOINTS_TIMED
-FAM_PG_CHECKPOINTS_REQ
-FAM_PG_CHECKPOINT_WRITE_TIME_SECONDS
-FAM_PG_CHECKPOINT_SYNC_TIME_SECONDS
-FAM_PG_CHECKPOINT_BUFFERS
-
-
-#endif
-
 int pg_stat_checkpointer(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels)
 {
     if (version < 170000)
         return 0;
 
-    char *stmt_name = "NCOLLECTD_PG_STAT_CHECKPOINTER";
     char *stmt = "SELECT num_timed, num_requested, write_time, sync_time, buffers_written"
                  " FROM pg_stat_checkpointer";
 
@@ -173,7 +143,7 @@ int pg_stat_checkpointer(PGconn *conn, int version, metric_family_t *fams, label
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
-    PGresult *res = PQprepare(conn, stmt_name, stmt, 0, NULL);
+    PGresult *res = PQprepare(conn, "", stmt, 0, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
         PQclear(res);
@@ -182,7 +152,7 @@ int pg_stat_checkpointer(PGconn *conn, int version, metric_family_t *fams, label
 
     PQclear(res);
 
-    res = PQexecPrepared(conn, stmt_name, 0, NULL, NULL, NULL, 0);
+    res = PQexecPrepared(conn, "", 0, NULL, NULL, NULL, 0);
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
         PQclear(res);
