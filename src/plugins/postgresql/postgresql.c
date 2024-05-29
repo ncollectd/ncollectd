@@ -540,7 +540,74 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffers allocated.",
     },
-
+    [FAM_PG_IO_READ_BYTES] = {
+        .name = "pg_io_read_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of read bytes.",
+    },
+    [FAM_PG_IO_READ_TIME_SECONDS] = {
+        .name = "pg_io_read_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total time spent in read operations in seconds.",
+    },
+    [FAM_PG_IO_WRITE_BYTES] = {
+        .name = "pg_io_write_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total number of write bytes",
+    },
+    [FAM_PG_IO_WRITE_TIME_SECONDS] = {
+        .name = "pg_io_write_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total time spent in write operations in seconds.",
+    },
+    [FAM_PG_IO_WRITEBACKS_BYTES] = {
+        .name = "pg_io_writebacks_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total bytes which the process requested the kernel write out to permanent storage.",
+    },
+    [FAM_PG_IO_WRITEBACKS_TIME_SECONDS] = {
+        .name = "pg_io_writebacks_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total time spent in writeback operations in seconds.",
+    },
+    [FAM_PG_IO_EXTENDS_BYTES] = {
+        .name = "pg_io_extends_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total number of bytes in relation extend operations.",
+    },
+    [FAM_PG_IO_EXTENDS_TIME_SECONDS] = {
+        .name = "pg_io_extends_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total time spent in extend operations in seconds.",
+    },
+    [FAM_PG_IO_HITS] = {
+        .name = "pg_io_hits",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total number of times a desired block was found in a shared buffer.",
+    },
+    [FAM_PG_IO_EVICTIONS] = {
+        .name = "pg_io_evictions",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total number of times a block has been written out from a shared or local buffer "
+               "in order to make it available for another use.",
+    },
+    [FAM_PG_IO_REUSES] = {
+        .name = "pg_io_reuses",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total the number of times an existing buffer in a size-limited ring buffer "
+               "outside of shared buffers was reused as part of an I/O operation "
+               "in the bulkread, bulkwrite, or vacuum contexts.",
+    },
+    [FAM_PG_IO_FSYNCS] = {
+        .name = "pg_io_fsyncs",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Total number of fsync calls. These are only tracked in context normal.",
+    },
+    [FAM_PG_IO_FSYNCS_TIME_SECONDS] = {
+        .name = "pg_io_fsyncs_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help= "Time spent in fsync operations in seconds.",
+    },
 };
 
 /* Appends the (parameter, value) pair to the string pointed to by 'buf' suitable
@@ -578,6 +645,7 @@ typedef enum {
     COLLECT_ARCHIVER           = (1 <<  13),
     COLLECT_BGWRITER           = (1 <<  14),
     COLLECT_SLRU               = (1 <<  15),
+    COLLECT_IO                 = (1 <<  16),
 } pg_flag_t;
 
 typedef struct pg_stat_filter {
@@ -655,6 +723,7 @@ static pg_flags_t pg_flags[] = {
     { "archiver",           COLLECT_ARCHIVER           },
     { "bgwriter",           COLLECT_BGWRITER           },
     { "slru",               COLLECT_SLRU               },
+    { "io",                 COLLECT_SLRU               },
 };
 static size_t pg_flags_size = STATIC_ARRAY_SIZE(pg_flags);
 
@@ -1082,6 +1151,8 @@ static int psql_read(user_data_t *ud)
         pg_stat_bgwriter(db->conn, db->server_version, db->fams, &db->labels);
     if (db->flags & COLLECT_SLRU)
         pg_stat_slru(db->conn, db->server_version, db->fams, &db->labels);
+    if (db->flags & COLLECT_IO)
+        pg_stat_io(db->conn, db->server_version, db->fams, &db->labels);
 
     plugin_dispatch_metric_family_array(db->fams, FAM_PG_MAX, submit);
 

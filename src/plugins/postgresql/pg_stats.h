@@ -37,3 +37,5 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
 int pg_stat_checkpointer(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels);
 
 int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels);
+
+int pg_stat_io(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels);
