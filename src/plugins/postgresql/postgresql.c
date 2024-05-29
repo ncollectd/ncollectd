@@ -348,6 +348,16 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
                 "leaving behind an original version with a t_ctid field that points "
                 "to a different heap page. These are always non-HOT updates.",
     },
+    [FAM_PG_TABLE_SIZE_BYTES] = {
+        .name = "pg_table_size_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "On-disk size of the table in bytes.",
+    },
+    [FAM_PG_TABLE_INDEXES_SIZE_BYTES] = {
+        .name = "pg_table_indexes_size_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "On-disk size of the table's indexes in bytes.",
+    },
     [FAM_PG_FUNCTION_CALLS] = {
         .name = "pg_function_calls",
         .type = METRIC_TYPE_COUNTER,
@@ -635,17 +645,19 @@ typedef enum {
     COLLECT_DATABASE_CONFLICTS = (1 <<  3),
     COLLECT_TABLE              = (1 <<  4),
     COLLECT_TABLE_IO           = (1 <<  5),
-    COLLECT_INDEXES            = (1 <<  6),
-    COLLECT_INDEXES_IO         = (1 <<  7),
-    COLLECT_SEQUENCES_IO       = (1 <<  8),
-    COLLECT_FUNCTIONS          = (1 <<  9),
-    COLLECT_ACTIVITY           = (1 <<  10),
-    COLLECT_REPLICATION_SLOTS  = (1 <<  11),
-    COLLECT_REPLICATION        = (1 <<  12),
-    COLLECT_ARCHIVER           = (1 <<  13),
-    COLLECT_BGWRITER           = (1 <<  14),
-    COLLECT_SLRU               = (1 <<  15),
-    COLLECT_IO                 = (1 <<  16),
+    COLLECT_TABLE_SIZE         = (1 <<  6),
+    COLLECT_INDEXES            = (1 <<  7),
+    COLLECT_INDEXES_IO         = (1 <<  8),
+    COLLECT_SEQUENCES_IO       = (1 <<  9),
+    COLLECT_FUNCTIONS          = (1 <<  10),
+    COLLECT_ACTIVITY           = (1 <<  11),
+    COLLECT_REPLICATION_SLOTS  = (1 <<  12),
+    COLLECT_REPLICATION        = (1 <<  13),
+    COLLECT_ARCHIVER           = (1 <<  14),
+    COLLECT_BGWRITER           = (1 <<  15),
+    COLLECT_SLRU               = (1 <<  16),
+    COLLECT_IO                 = (1 <<  17),
+    COLLECT_CHECKPOINTER       = (1 <<  18),
 } pg_flag_t;
 
 typedef struct pg_stat_filter {
@@ -686,6 +698,7 @@ typedef struct {
     pg_stat_filter_t *pg_stat_activity;
     pg_stat_filter_t *pg_stat_table;
     pg_stat_filter_t *pg_stat_table_io;
+    pg_stat_filter_t *pg_table_size;
     pg_stat_filter_t *pg_stat_indexes;
     pg_stat_filter_t *pg_stat_indexes_io;
     pg_stat_filter_t *pg_stat_sequence_io;
@@ -713,6 +726,7 @@ static pg_flags_t pg_flags[] = {
     { "database_conflicts", COLLECT_DATABASE_CONFLICTS },
     { "table",              COLLECT_TABLE              },
     { "table_io",           COLLECT_TABLE_IO           },
+    { "table_size",         COLLECT_TABLE_SIZE         },
     { "indexes",            COLLECT_INDEXES            },
     { "indexes_io",         COLLECT_INDEXES_IO         },
     { "sequences_io",       COLLECT_SEQUENCES_IO       },
@@ -724,6 +738,7 @@ static pg_flags_t pg_flags[] = {
     { "bgwriter",           COLLECT_BGWRITER           },
     { "slru",               COLLECT_SLRU               },
     { "io",                 COLLECT_SLRU               },
+    { "checkpointer",       COLLECT_CHECKPOINTER       },
 };
 static size_t pg_flags_size = STATIC_ARRAY_SIZE(pg_flags);
 
@@ -777,6 +792,7 @@ static void psql_database_delete(void *data)
     pg_stat_filter_free(db->pg_stat_activity);
     pg_stat_filter_free(db->pg_stat_table);
     pg_stat_filter_free(db->pg_stat_table_io);
+    pg_stat_filter_free(db->pg_table_size);
     pg_stat_filter_free(db->pg_stat_indexes);
     pg_stat_filter_free(db->pg_stat_indexes_io);
     pg_stat_filter_free(db->pg_stat_sequence_io);
@@ -1061,6 +1077,19 @@ static int psql_read(user_data_t *ud)
         }
     }
 
+    if (db->flags & COLLECT_TABLE_SIZE) {
+        if (db->pg_table_size == NULL) {
+            pg_table_size(db->conn, db->server_version, db->fams, &db->labels, NULL, NULL);
+        } else {
+            pg_stat_filter_t *filter = db->pg_table_size;
+            while (filter != NULL) {
+                pg_table_size(db->conn, db->server_version, db->fams, &db->labels,
+                                        filter->arg1, filter->arg2);
+                filter = filter->next;
+            }
+        }
+    }
+
     if (db->flags & COLLECT_INDEXES) {
         if (db->pg_stat_indexes == NULL) {
             pg_stat_user_indexes(db->conn, db->server_version, db->fams, &db->labels,
@@ -1153,6 +1182,8 @@ static int psql_read(user_data_t *ud)
         pg_stat_slru(db->conn, db->server_version, db->fams, &db->labels);
     if (db->flags & COLLECT_IO)
         pg_stat_io(db->conn, db->server_version, db->fams, &db->labels);
+    if (db->flags & COLLECT_CHECKPOINTER)
+        pg_stat_checkpointer(db->conn, db->server_version, db->fams, &db->labels);
 
     plugin_dispatch_metric_family_array(db->fams, FAM_PG_MAX, submit);
 
@@ -1229,7 +1260,6 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
         }
 
         char *option = ci->values[i].value.string;
-
         bool negate = false;
         if (option[0] == '!') {
             negate = true;
@@ -1245,6 +1275,7 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
             continue;
         }
 
+        size_t option_len = 0;
         char *arg1 = strchr(option, '(');
         if (arg1 != NULL) {
             if (negate) {
@@ -1252,6 +1283,7 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
                              i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
                 return -1;
             }
+            option_len = arg1 - option;
             arg1++;
 
             size_t arg1_len = 0;
@@ -1301,62 +1333,67 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
             }
 
             int status = 0;
-            if (!strcasecmp("table", option)) {
+            if (!strncasecmp("table", option, option_len)) {
                 db->flags |= COLLECT_TABLE;
                 status = psql_config_add_filter(&db->pg_stat_table, arg1, arg1_len,
                                                                     arg2, arg2_len,
                                                                     arg3, arg3_len);
-            } else if (!strcasecmp("table_io", option)) {
+            } else if (!strncasecmp("table_io", option, option_len)) {
                 db->flags |= COLLECT_TABLE_IO;
                 status = psql_config_add_filter(&db->pg_stat_table_io, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strcasecmp("indexes", option)) {
+            } else if (!strncasecmp("table_size", option, option_len)) {
+                db->flags |= COLLECT_TABLE_SIZE;
+                status = psql_config_add_filter(&db->pg_table_size, arg1, arg1_len,
+                                                                    arg2, arg2_len,
+                                                                    arg3, arg3_len);
+            } else if (!strncasecmp("indexes", option, option_len)) {
                 db->flags |= COLLECT_INDEXES;
                 status = psql_config_add_filter(&db->pg_stat_indexes, arg1, arg1_len,
                                                                       arg2, arg2_len,
                                                                       arg3, arg3_len);
-            } else if (!strcasecmp("indexes_io", option)) {
+            } else if (!strncasecmp("indexes_io", option, option_len)) {
                 db->flags |= COLLECT_INDEXES_IO;
                 status = psql_config_add_filter(&db->pg_stat_indexes_io, arg1, arg1_len,
                                                                          arg2, arg2_len,
                                                                          arg3, arg3_len);
-            } else if (!strcasecmp("sequences_io", option)) {
+            } else if (!strncasecmp("sequences_io", option, option_len)) {
                 db->flags |= COLLECT_SEQUENCES_IO;
                 status = psql_config_add_filter(&db->pg_stat_sequence_io, arg1, arg1_len,
                                                                           arg2, arg2_len,
                                                                           arg3, arg3_len);
-            } else if (!strcasecmp("functions", option)) {
+            } else if (!strncasecmp("functions", option, option_len)) {
                 db->flags |= COLLECT_FUNCTIONS;
                 status = psql_config_add_filter(&db->pg_stat_function, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strcasecmp("database", option)) {
+            } else if (!strncasecmp("database", option, option_len)) {
                 db->flags |= COLLECT_DATABASE;
                 status = psql_config_add_filter(&db->pg_stat_database, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strcasecmp("database_size", option)) {
+            } else if (!strncasecmp("database_size", option, option_len)) {
                 db->flags |= COLLECT_DATABASE_SIZE;
                 status = psql_config_add_filter(&db->pg_database_size, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strcasecmp("database_locks",  option)) {
+            } else if (!strncasecmp("database_locks",  option, option_len)) {
                 db->flags |= COLLECT_DATABASE_LOCKS;
                 status = psql_config_add_filter(&db->pg_database_locks, arg1, arg1_len,
                                                                         arg2, arg2_len,
                                                                         arg3, arg3_len);
-            } else if (!strcasecmp("database_conflicts", option)) {
+            } else if (!strncasecmp("database_conflicts", option, option_len)) {
                 db->flags |= COLLECT_DATABASE_CONFLICTS;
                 status = psql_config_add_filter(&db->pg_stat_database_conflicts, arg1, arg1_len,
                                                                                  arg2, arg2_len,
                                                                                  arg3, arg3_len);
-            } else if (!strcasecmp("activity", option)) {
+            } else if (!strncasecmp("activity", option, option_len)) {
                 db->flags |= COLLECT_ACTIVITY;
                 status = psql_config_add_filter(&db->pg_stat_activity, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strcasecmp("replication_slots", option)) {
+            } else if (!strncasecmp("replication_slots", option, option_len)) {
                 db->flags |= COLLECT_REPLICATION_SLOTS;
                 status = psql_config_add_filter(&db->pg_replication_slots, arg1, arg1_len,
                                                                            arg2, arg2_len,
@@ -1407,7 +1444,8 @@ static int psql_config_database(config_item_t *ci)
 
     db->flags = COLLECT_DATABASE | COLLECT_DATABASE_SIZE | COLLECT_DATABASE_LOCKS |
                 COLLECT_DATABASE_CONFLICTS | COLLECT_ACTIVITY | COLLECT_REPLICATION_SLOTS |
-                COLLECT_REPLICATION | COLLECT_ARCHIVER | COLLECT_BGWRITER | COLLECT_SLRU;
+                COLLECT_REPLICATION | COLLECT_ARCHIVER | COLLECT_BGWRITER | COLLECT_SLRU |
+                COLLECT_IO | COLLECT_CHECKPOINTER;
 
     memcpy(db->fams, pg_fams, sizeof(db->fams[0])*FAM_PG_MAX);
 

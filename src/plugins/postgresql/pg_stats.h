@@ -16,6 +16,8 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
                                      char *schema, char *table);
 int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
                                         char *schema, char *table);
+int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
+                                        char *schema, char *table);
 int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
                                        char *schema, char *table, char *index);
 int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
