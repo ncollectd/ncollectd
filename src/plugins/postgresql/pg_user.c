@@ -291,14 +291,109 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
     return 0;
 }
 
+int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
+                                char *schema, char *table)
+{
+    if (version < 90000)
+        return 0;
+
+    char buffer[512];
+    strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
+    strbuf_putstr(&buf, "SELECT current_database() dbname, table_schema, table_name, "
+                        "       pg_total_relation_size('\"'||table_schema||'\".\"'||table_name||'\"') total_relation_size,"
+                        "       pg_indexes_size('\"'||table_schema||'\".\"'||table_name||'\"') indexes_size"
+                        "  FROM information_schema.tables "
+                        " WHERE table_type = 'BASE TABLE' ");
+
+    int stmt_params = 0;
+    const char *param_values[2] = {NULL, NULL};
+    int param_lengths[2] = {0, 0};
+    int param_formats[2] = {0, 0};
+
+    if ((schema == NULL) && (table == NULL)) {
+        /* all tables */
+    } else if ((schema != NULL) && (table == NULL)) {
+        strbuf_putstr(&buf, "AND table_schema = $1");
+        stmt_params = 1;
+        param_values[0] = schema;
+        param_lengths[0] = strlen(schema);
+    } else if ((schema != NULL) && (table != NULL)) {
+        strbuf_putstr(&buf, "AND table_schema = $1 AND table_name = $2");
+        stmt_params = 2;
+        param_values[0] = schema;
+        param_lengths[0] = strlen(schema);
+        param_values[1] = table;
+        param_lengths[1] = strlen(table);
+    } else {
+        return 0;
+    }
+
+    char *stmt = buf.ptr;
+
+    PGresult *res = PQprepare(conn, "", stmt, stmt_params, NULL);
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        PLUGIN_ERROR("PQprepare failed: %s", PQerrorMessage(conn));
+        PQclear(res);
+        return -1;
+    }
+
+    PQclear(res);
+
+    res = PQexecPrepared(conn, "", stmt_params, param_values, param_lengths, param_formats, 0);
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        PLUGIN_ERROR("PQexecPrepared failed: %s", PQerrorMessage(conn));
+        PQclear(res);
+        return -1;
+    }
+
+    int fields = PQnfields(res);
+
+    if (fields < 5) {
+        PQclear(res);
+        return 0;
+    }
+
+    for (int i = 0; i < PQntuples(res); i++) {
+        if (PQgetisnull(res, i, 0))
+            continue;
+        char *col_database = PQgetvalue(res, i, 0);
+
+        if (PQgetisnull(res, i, 1))
+            continue;
+        char *col_schema = PQgetvalue(res, i, 1);
+
+        if (PQgetisnull(res, i, 2))
+            continue;
+        char *col_table = PQgetvalue(res, i, 2);
+
+        metric_family_append(&fams[FAM_PG_TABLE_SIZE_BYTES],
+                             VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
+                             &(label_pair_const_t){.name="database", .value=col_database},
+                             &(label_pair_const_t){.name="schema", .value=col_schema},
+                             &(label_pair_const_t){.name="table", .value=col_table},
+                             NULL);
+
+        metric_family_append(&fams[FAM_PG_TABLE_INDEXES_SIZE_BYTES],
+                             VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
+                             &(label_pair_const_t){.name="database", .value=col_database},
+                             &(label_pair_const_t){.name="schema", .value=col_schema},
+                             &(label_pair_const_t){.name="table", .value=col_table},
+                             NULL);
+    }
+
+    PQclear(res);
+
+    return 0;
+
+}
+
 int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
                                          char *schema, char *function)
 {
     if (version < 80400)
         return 0;
 
-    (void)version;
-    char buffer[256];
+    char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
     int stmt_params = 0;

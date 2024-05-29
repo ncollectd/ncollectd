@@ -134,16 +134,34 @@ Prepends \fIprefix\fP to the metrics in the queries.
 .RS
 .TP
 \fBdatabase\fP
+Read database stats from \f(CWpg_stat_database\fP for all databases.
 .TP
 \fBdatabase(database)\fP
+Read database stats from \f(CWpg_stat_database\fP for the specific database.
 .TP
 \fBdatabase_size\fP
+Read database size from \f(CWpg_database_size\fP for all databases.
 .TP
 \fBdatabase_size(database)\fP
+Read database size from \f(CWpg_database_size\fP for the specific database.
 .TP
 \fBdatabase_locks\fP
+Read database locks from \f(CWpg_locks\fP for all databases.
 .TP
 \fBdatabase_locks(database)\fP
+Read database locks from \f(CWpg_locks\fP for the specific database.
+.TP
+\fBdatabase_conflicts\fP
+Read database conflicts from \f(CWpg_stat_database_conflicts\fP for all databases.
+.TP
+\fBdatabase_conflicts(database)\fP
+Read database conflicts from \f(CWpg_stat_database_conflicts\fP for the specific database.
+.TP
+\fBdatabase_checkpointer\fP
+Read database checkpointer from \f(CWpg_stat_checkpointer\fP for all databases.
+.TP
+\fBdatabase_checkpointer(database)\fP
+Read database checkpointer from \f(CWpg_stat_checkpointer\fP for the specific database.
 .TP
 \fBactivity\fP
 .TP
@@ -158,6 +176,7 @@ Prepends \fIprefix\fP to the metrics in the queries.
 \fBarchiver\fP
 .TP
 \fBbgwriter\fP
+Read bgwriter stats from \f(CWpg_stat_bgwriter\fP.
 .TP
 \fBslru\fP
 .TP
@@ -174,6 +193,14 @@ Prepends \fIprefix\fP to the metrics in the queries.
 \fBtable_io(schema)\fP
 .TP
 \fBtable_io(schema,table)\fP
+.TP
+\fBtable_size\fP
+.TP
+\fBtable_size(schema)\fP
+.TP
+\fBtable_size(schema,table)\fP
+Get table size using \f(CWpg_table_size()\fP and \f(CWpg_indexes_size()\fP.
+An ACCESS EXCLUSIVE lock on the table will block ncollectd until lock is released.
 .TP
 \fBindexes\fP
 .TP
