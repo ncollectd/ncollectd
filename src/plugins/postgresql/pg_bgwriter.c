@@ -36,22 +36,21 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
     }
 
     struct {
-        int field;
         int minversion;
         int maxversion;
         double scale;
         int fam;
     } pg_fields[] = {
-        { 0, 80300, 170000, 0.0,   FAM_PG_CHECKPOINTS_TIMED              },
-        { 1, 80300, 170000, 0.0,   FAM_PG_CHECKPOINTS_REQ                },
-        { 2, 80300, 170000, 0.0,   FAM_PG_CHECKPOINT_BUFFERS             },
-        { 3, 80300, 990000, 0.0,   FAM_PG_BGWRITER_BUFFERS_CLEAN         },
-        { 4, 80300, 990000, 0.0,   FAM_PG_BGWRITER_MAXWRITTEN_CLEAN      },
-        { 5, 80300, 170000, 0.0,   FAM_PG_BGWRITER_BUFFERS_BACKEND       },
-        { 6, 80300, 990000, 0.0,   FAM_PG_BGWRITER_BUFFERS_ALLOC         },
-        { 7, 90100, 170000, 0.0,   FAM_PG_BGWRITER_BUFFERS_BACKEND_FSYNC },
-        { 8, 90200, 170000, 0.001, FAM_PG_CHECKPOINT_WRITE_TIME_SECONDS  },
-        { 9, 90200, 170000, 0.001, FAM_PG_CHECKPOINT_SYNC_TIME_SECONDS   },
+        { 80300, 170000, 0.0,   FAM_PG_CHECKPOINTS_TIMED              },
+        { 80300, 170000, 0.0,   FAM_PG_CHECKPOINTS_REQ                },
+        { 80300, 170000, 0.0,   FAM_PG_CHECKPOINT_BUFFERS             },
+        { 80300, 990000, 0.0,   FAM_PG_BGWRITER_BUFFERS_CLEAN         },
+        { 80300, 990000, 0.0,   FAM_PG_BGWRITER_MAXWRITTEN_CLEAN      },
+        { 80300, 170000, 0.0,   FAM_PG_BGWRITER_BUFFERS_BACKEND       },
+        { 80300, 990000, 0.0,   FAM_PG_BGWRITER_BUFFERS_ALLOC         },
+        { 90100, 170000, 0.0,   FAM_PG_BGWRITER_BUFFERS_BACKEND_FSYNC },
+        { 90200, 170000, 0.001, FAM_PG_CHECKPOINT_WRITE_TIME_SECONDS  },
+        { 90200, 170000, 0.001, FAM_PG_CHECKPOINT_SYNC_TIME_SECONDS   },
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
@@ -86,12 +85,13 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
     }
 
     for (int i = 0; i < PQntuples(res); i++) {
+        int field = -1;
         for (size_t n = 0; n < pg_fields_size ; n++) {
             if (version < pg_fields[n].minversion)
                 continue;
-            if (version > pg_fields[n].maxversion)
+            if (version >= pg_fields[n].maxversion)
                 continue;
-            int field = pg_fields[n].field;
+            field++;
             double scale = pg_fields[n].scale;
             if (!PQgetisnull(res, i, field)) {
                 metric_family_t *fam = &fams[pg_fields[n].fam];
