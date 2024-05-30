@@ -249,6 +249,11 @@
 %if 0%{?rhel} == 9
 %define build_with_iptables 0%{?_with_iptables:1}
 %endif
+%if 0%{?rhel} == 10
+%define build_with_iptables 0%{?_with_iptables:1}
+%define build_with_redis 0%{?_with_redis:1}
+%define build_with_write_redis 0%{?_with_write_redis:1}
+%endif
 %endif
 
 %if 0%{?rhel} && 0%{?rhel} == 6
@@ -273,7 +278,7 @@ Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 BuildRequires: kernel-headers
 BuildRequires: gcc, binutils, cpp, glibc-devel, bison, flex, gperf
-%if 0%{?rhel} && 0%{?rhel} == 7
+%if 0%{?rhel} && 0%{?rhel} <= 7
 BuildRequires: cmake3
 %else
 BuildRequires: cmake
