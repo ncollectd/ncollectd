@@ -71,29 +71,29 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
         int minversion;
         int fam;
     } pg_fields[] = {
-        {  3,  70200, FAM_PG_TABLE_SEQ_SCAN            },
-        {  4,  70200, FAM_PG_TABLE_SEQ_TUP_READ        },
-        {  5,  70200, FAM_PG_TABLE_IDX_SCAN            },
-        {  6,  70200, FAM_PG_TABLE_IDX_TUP_FETCH       },
-        {  7,  70200, FAM_PG_TABLE_N_TUP_INS           },
-        {  8,  70200, FAM_PG_TABLE_N_TUP_UPD           },
-        {  9,  70200, FAM_PG_TABLE_N_TUP_DEL           },
-        { 10,  70200, FAM_PG_TABLE_LAST_VACUUM         },
-        { 11,  70200, FAM_PG_TABLE_LAST_AUTOVACUUM     },
-        { 12,  70200, FAM_PG_TABLE_LAST_ANALYZE        },
-        { 13,  70200, FAM_PG_TABLE_LAST_AUTOANALYZE    },
-        { 14,  80300, FAM_PG_TABLE_N_TUP_HOT_UPD       },
-        { 15,  80300, FAM_PG_TABLE_N_LIVE_TUP          },
-        { 16,  80300, FAM_PG_TABLE_N_DEAD_TUP          },
-        { 17,  90100, FAM_PG_TABLE_VACUUM              },
-        { 18,  90100, FAM_PG_TABLE_AUTOVACUUM          },
-        { 19,  90100, FAM_PG_TABLE_ANALYZE             },
-        { 20,  90100, FAM_PG_TABLE_AUTOANALYZE         },
-        { 21,  90400, FAM_PG_TABLE_N_MOD_SINCE_ANALYZE },
-        { 22, 130000, FAM_PG_TABLE_N_INS_SINCE_VACUUM  },
-        { 23, 160000, FAM_PG_TABLE_LAST_SEQ_SCAN       },
-        { 24, 160000, FAM_PG_TABLE_LAST_IDX_SCAN       },
-        { 25, 160000, FAM_PG_TABLE_N_TUP_NEWPAGE_UPD   },
+        {  3,  70200, FAM_PG_TABLE_SEQ_SCAN                    },
+        {  4,  70200, FAM_PG_TABLE_SEQ_READ_ROWS               },
+        {  5,  70200, FAM_PG_TABLE_IDX_SCAN                    },
+        {  6,  70200, FAM_PG_TABLE_IDX_FETCH_ROWS              },
+        {  7,  70200, FAM_PG_TABLE_INSERTED_ROWS               },
+        {  8,  70200, FAM_PG_TABLE_UPDATED_ROWS                },
+        {  9,  70200, FAM_PG_TABLE_DELETED_ROWS                },
+        { 10,  70200, FAM_PG_TABLE_LAST_VACUUM_SECONDS         },
+        { 11,  70200, FAM_PG_TABLE_LAST_AUTOVACUUM_SECONDS     },
+        { 12,  70200, FAM_PG_TABLE_LAST_ANALYZE_SECONDS        },
+        { 13,  70200, FAM_PG_TABLE_LAST_AUTOANALYZE_SECONDS    },
+        { 14,  80300, FAM_PG_TABLE_HOT_UPDATED_ROWS            },
+        { 15,  80300, FAM_PG_TABLE_LIVE_ROWS                   },
+        { 16,  80300, FAM_PG_TABLE_DEAD_ROWS                   },
+        { 17,  90100, FAM_PG_TABLE_VACUUM                      },
+        { 18,  90100, FAM_PG_TABLE_AUTOVACUUM                  },
+        { 19,  90100, FAM_PG_TABLE_ANALYZE                     },
+        { 20,  90100, FAM_PG_TABLE_AUTOANALYZE                 },
+        { 21,  90400, FAM_PG_TABLE_MODIFIED_SINCE_ANALYZE_ROWS },
+        { 22, 130000, FAM_PG_TABLE_INSERTED_SINCE_VACUUM_ROWS  },
+        { 23, 160000, FAM_PG_TABLE_LAST_SEQ_SCAN_SECONDS       },
+        { 24, 160000, FAM_PG_TABLE_LAST_IDX_SCAN_SECONDS       },
+        { 25, 160000, FAM_PG_TABLE_NEWPAGE_UPDATED_ROWS        },
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
@@ -366,19 +366,21 @@ int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t 
             continue;
         char *col_table = PQgetvalue(res, i, 2);
 
-        metric_family_append(&fams[FAM_PG_TABLE_SIZE_BYTES],
-                             VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
-                             &(label_pair_const_t){.name="database", .value=col_database},
-                             &(label_pair_const_t){.name="schema", .value=col_schema},
-                             &(label_pair_const_t){.name="table", .value=col_table},
-                             NULL);
+        if (!PQgetisnull(res, i, 3))
+            metric_family_append(&fams[FAM_PG_TABLE_SIZE_BYTES],
+                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
+                                 &(label_pair_const_t){.name="database", .value=col_database},
+                                 &(label_pair_const_t){.name="schema", .value=col_schema},
+                                 &(label_pair_const_t){.name="table", .value=col_table},
+                                 NULL);
 
-        metric_family_append(&fams[FAM_PG_TABLE_INDEXES_SIZE_BYTES],
-                             VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
-                             &(label_pair_const_t){.name="database", .value=col_database},
-                             &(label_pair_const_t){.name="schema", .value=col_schema},
-                             &(label_pair_const_t){.name="table", .value=col_table},
-                             NULL);
+        if (!PQgetisnull(res, i, 4))
+            metric_family_append(&fams[FAM_PG_TABLE_INDEXES_SIZE_BYTES],
+                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
+                                 &(label_pair_const_t){.name="database", .value=col_database},
+                                 &(label_pair_const_t){.name="schema", .value=col_schema},
+                                 &(label_pair_const_t){.name="table", .value=col_table},
+                                 NULL);
     }
 
     PQclear(res);
