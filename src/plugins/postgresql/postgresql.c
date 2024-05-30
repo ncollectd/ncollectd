@@ -49,28 +49,28 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .help = "Number of times disk blocks were found already in the buffer cache.",
         .type = METRIC_TYPE_COUNTER,
     },
-    [FAM_PG_DATABASE_TUP_RETURNED] = {
-        .name = "pg_database_tup_returned",
+    [FAM_PG_DATABASE_RETURNED_ROWS] = {
+        .name = "pg_database_returned_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows returned by queries in this database.",
     },
-    [FAM_PG_DATABASE_TUP_FETCHED] = {
-        .name = "pg_database_tup_fetched",
+    [FAM_PG_DATABASE_FETCHED_ROWS] = {
+        .name = "pg_database_fetched_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows fetched by queries in this database.",
     },
-    [FAM_PG_DATABASE_TUP_INSERTED] = {
-        .name = "pg_database_tup_inserted",
+    [FAM_PG_DATABASE_INSERTED_ROWS] = {
+        .name = "pg_database_inserted_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows inserted by queries in this database.",
     },
-    [FAM_PG_DATABASE_TUP_UPDATED] = {
-        .name = "pg_database_tup_updated",
+    [FAM_PG_DATABASE_UPDATED_ROWS] = {
+        .name = "pg_database_updated_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows updated by queries in this database.",
     },
-    [FAM_PG_DATABASE_TUP_DELETED] = {
-        .name = "pg_database_tup_deleted",
+    [FAM_PG_DATABASE_DELETED_ROWS] = {
+        .name = "pg_database_deleted_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows deleted by queries in this database.",
     },
