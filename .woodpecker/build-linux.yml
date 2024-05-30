@@ -46,6 +46,13 @@ steps:
       - cmake --build build-centos-stream9 $${MAKE_FLAGS}
       - cmake --build build-centos-stream9 -- build_tests $${MAKE_FLAGS}
       - cmake --build build-centos-stream9 -- test
+  build-centos-stream10:
+    image: ncollectd/ci-centos:stream10
+    commands:
+      - cmake -B build-centos-stream10 -S .
+      - cmake --build build-centos-stream10 $${MAKE_FLAGS}
+      - cmake --build build-centos-stream10 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-centos-stream10 -- test
   build-ubuntu-focal:
     image: ncollectd/ci-ubuntu:focal
     environment:
