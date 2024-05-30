@@ -86,7 +86,7 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
                                  &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
                                  &(label_pair_const_t){.name="state", .value=col_state},
                                  NULL);
-        if (version >= 100000)
+        if (version >= 100000) {
             if (!PQgetisnull(res, i, 4))
                 metric_family_append(&fams[FAM_PG_REPLICATION_CURRENT_WAL_LSN_BYTES],
                                      VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
@@ -94,6 +94,7 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
                                      &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
                                      &(label_pair_const_t){.name="state", .value=col_state},
                                      NULL);
+        }
     }
 
     PQclear(res);

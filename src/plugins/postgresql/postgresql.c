@@ -194,8 +194,8 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of sequential scans initiated on this table.",
     },
-    [FAM_PG_TABLE_SEQ_TUP_READ] = {
-        .name = "pg_table_seq_tup_read",
+    [FAM_PG_TABLE_SEQ_READ_ROWS] = {
+        .name = "pg_table_seq_read_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of live rows fetched by sequential scans.",
     },
@@ -204,68 +204,68 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of index scans initiated on this table.",
     },
-    [FAM_PG_TABLE_IDX_TUP_FETCH] = {
-        .name = "pg_table_idx_tup_fetch",
+    [FAM_PG_TABLE_IDX_FETCH_ROWS] = {
+        .name = "pg_table_idx_fetch_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of live rows fetched by index scans.",
     },
-    [FAM_PG_TABLE_N_TUP_INS] = {
-        .name = "pg_table_n_tup_ins",
+    [FAM_PG_TABLE_INSERTED_ROWS] = {
+        .name = "pg_table_inserted_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows inserted.",
     },
-    [FAM_PG_TABLE_N_TUP_UPD] = {
-        .name = "pg_table_n_tup_upd",
+    [FAM_PG_TABLE_UPDATED_ROWS] = {
+        .name = "pg_table_updated_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows updated (includes HOT updated rows).",
     },
-    [FAM_PG_TABLE_N_TUP_DEL] = {
-        .name = "pg_table_n_tup_del",
+    [FAM_PG_TABLE_DELETED_ROWS] = {
+        .name = "pg_table_deleted_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows deleted.",
     },
-    [FAM_PG_TABLE_N_TUP_HOT_UPD] = {
-        .name = "pg_table_n_tup_hot_upd",
+    [FAM_PG_TABLE_HOT_UPDATED_ROWS] = {
+        .name = "pg_table_hot_updated_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows HOT updated (i.e., with no separate index update required).",
     },
-    [FAM_PG_TABLE_N_LIVE_TUP] = {
-        .name = "pg_table_n_live_tup",
+    [FAM_PG_TABLE_LIVE_ROWS] = {
+        .name = "pg_table_live_rows",
         .type = METRIC_TYPE_GAUGE,
         .help = "Estimated number of live rows.",
     },
-    [FAM_PG_TABLE_N_DEAD_TUP] = {
-        .name = "pg_table_n_dead_tup",
+    [FAM_PG_TABLE_DEAD_ROWS] = {
+        .name = "pg_table_dead_rows",
         .type = METRIC_TYPE_GAUGE,
         .help = "Estimated number of dead rows.",
     },
-    [FAM_PG_TABLE_N_MOD_SINCE_ANALYZE] = {
-        .name = "pg_table_n_mod_since_analyze",
+    [FAM_PG_TABLE_MODIFIED_SINCE_ANALYZE_ROWS] = {
+        .name = "pg_table_modified_since_analyze_rows",
         .type = METRIC_TYPE_GAUGE,
         .help = "Estimated number of rows modified since this table was last analyzed.",
     },
-    [FAM_PG_TABLE_N_INS_SINCE_VACUUM] = {
-        .name = "pg_table_n_ins_since_vacuum",
+    [FAM_PG_TABLE_INSERTED_SINCE_VACUUM_ROWS] = {
+        .name = "pg_table_inserted_since_vacuum_rows",
         .type = METRIC_TYPE_GAUGE,
         .help = "Estimated number of rows inserted since this table was last vacuumed.",
     },
-    [FAM_PG_TABLE_LAST_VACUUM] = {
-        .name = "pg_table_last_vacuum",
+    [FAM_PG_TABLE_LAST_VACUUM_SECONDS] = {
+        .name = "pg_table_last_vacuum_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Last time at which this table was manually vacuumed (not counting VACUUM FULL).",
     },
-    [FAM_PG_TABLE_LAST_AUTOVACUUM] = {
-        .name = "pg_table_last_autovacuum",
+    [FAM_PG_TABLE_LAST_AUTOVACUUM_SECONDS] = {
+        .name = "pg_table_last_autovacuum_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Last time at which this table was vacuumed by the autovacuum daemon.",
     },
-    [FAM_PG_TABLE_LAST_ANALYZE] = {
-        .name = "pg_table_last_analyze",
+    [FAM_PG_TABLE_LAST_ANALYZE_SECONDS] = {
+        .name = "pg_table_last_analyze_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Last time at which this table was manually analyzed.",
     },
-    [FAM_PG_TABLE_LAST_AUTOANALYZE] = {
-        .name = "pg_table_last_autoanalyze",
+    [FAM_PG_TABLE_LAST_AUTOANALYZE_SECONDS] = {
+        .name = "pg_table_last_autoanalyze_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Last time at which this table was analyzed by the autovacuum daemon.",
     },
@@ -329,20 +329,20 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in this table's TOAST table indexes (if any).",
     },
-    [FAM_PG_TABLE_LAST_SEQ_SCAN] = {
-        .name = "pg_table_last_seq_scan",
+    [FAM_PG_TABLE_LAST_SEQ_SCAN_SECONDS] = {
+        .name = "pg_table_last_seq_scan_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "The time of the last sequential scan on this table, "
                 "based on the most recent transaction stop time.",
     },
-    [FAM_PG_TABLE_LAST_IDX_SCAN] = {
-        .name = "pg_table_last_idx_scan",
+    [FAM_PG_TABLE_LAST_IDX_SCAN_SECONDS] = {
+        .name = "pg_table_last_idx_scan_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "The time of the last index scan on this table, "
                 "based on the most recent transaction stop time.",
     },
-    [FAM_PG_TABLE_N_TUP_NEWPAGE_UPD] = {
-        .name = "pg_table_n_tup_newpage_upd",
+    [FAM_PG_TABLE_NEWPAGE_UPDATED_ROWS] = {
+        .name = "pg_table_newpage_updated_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of rows updated where the successor version goes onto a new heap page, "
                 "leaving behind an original version with a t_ctid field that points "
@@ -626,7 +626,7 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
 #define C_PSQL_SERVER_VERSION3(server_version)                               \
     (server_version) / 10000,                                                \
             (server_version) / 100 - (int)((server_version) / 10000) * 100,  \
-            (server_version) - (int)((server_version) / 100) * 10
+            (server_version) - (int)((server_version) / 100) * 100
 
 /* Returns true if the given host specifies a UNIX domain socket. */
 #define C_PSQL_IS_UNIX_DOMAIN_SOCKET(host)                       \
