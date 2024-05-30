@@ -64,6 +64,15 @@ steps:
       - cp packages/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream9/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
+  package-centos-stream10:
+    image: ncollectd/ci-centos:stream10
+    commands:
+      - . ./package-dist/envvars
+      - mkdir -p package-centos-stream10/SOURCES
+      - cp packages/fedora/init.d-ncollectd package-centos-stream10/SOURCES
+      - cp packages/fedora/systemd.ncollectd.service package-centos-stream10/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream10/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-centos-stream10" --define "git_tag $${TAG}" -ba packages/fedora/ncollectd.spec
   package-debian-buster:
     image: ncollectd/ci-debian:buster
     commands:
