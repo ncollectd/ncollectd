@@ -289,43 +289,43 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of times this table has been analyzed by the autovacuum daemon.",
     },
-    [FAM_PG_TABLE_HEAP_BLKS_READ] = {
-        .name = "pg_table_heap_blks_read",
+    [FAM_PG_TABLE_HEAP_READ_BLOCKS] = {
+        .name = "pg_table_heap_read_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of disk blocks read from this table.",
     },
-    [FAM_PG_TABLE_HEAP_BLKS_HIT] = {
-        .name = "pg_table_heap_blks_hit",
+    [FAM_PG_TABLE_HEAP_HIT_BLOCKS] = {
+        .name = "pg_table_heap_hit_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in this table.",
     },
-    [FAM_PG_TABLE_IDX_BLKS_READ] = {
-        .name = "pg_table_idx_blks_read",
+    [FAM_PG_TABLE_IDX_READ_BLOCKS] = {
+        .name = "pg_table_idx_read_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of disk blocks read from all indexes on this table.",
     },
-    [FAM_PG_TABLE_IDX_BLKS_HIT] = {
-        .name = "pg_table_idx_blks_hit",
+    [FAM_PG_TABLE_IDX_HIT_BLOCKS] = {
+        .name = "pg_table_idx_hit_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in all indexes on this table.",
     },
-    [FAM_PG_TABLE_TOAST_BLKS_READ] = {
-        .name = "pg_table_toast_blks_read",
+    [FAM_PG_TABLE_TOAST_READ_BLOCKS] = {
+        .name = "pg_table_toast_read_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of disk blocks read from this table's TOAST table (if any).",
     },
-    [FAM_PG_TABLE_TOAST_BLKS_HIT] = {
-        .name = "pg_table_toast_blks_hit",
+    [FAM_PG_TABLE_TOAST_HIT_BLOCKS] = {
+        .name = "pg_table_toast_hit_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in this table's TOAST table (if any).",
     },
-    [FAM_PG_TABLE_TIDX_BLKS_READ] = {
-        .name = "pg_table_tidx_blks_read",
+    [FAM_PG_TABLE_TIDX_READ_BLOCKS] = {
+        .name = "pg_table_tidx_read_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of disk blocks read from this table's TOAST table indexes (if any).",
     },
-    [FAM_PG_TABLE_TIDX_BLKS_HIT] = {
-        .name = "pg_table_tidx_blks_hit",
+    [FAM_PG_TABLE_TIDX_HIT_BLOCKS] = {
+        .name = "pg_table_tidx_hit_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in this table's TOAST table indexes (if any).",
     },
@@ -380,33 +380,33 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of index scans initiated on this index.",
     },
-    [FAM_PG_INDEX_IDX_TUP_READ] = {
-        .name = "pg_index_idx_tup_read",
+    [FAM_PG_INDEX_IDX_READ_ROWS] = {
+        .name = "pg_index_idx_read_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of index entries returned by scans on this index.",
     },
-    [FAM_PG_INDEX_IDX_TUP_FETCH] = {
-        .name = "pg_index_idx_tup_fetch",
+    [FAM_PG_INDEX_IDX_FETCH_ROWS] = {
+        .name = "pg_index_idx_fetch_rows",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of live table rows fetched by simple index scans using this index.",
     },
-    [FAM_PG_INDEX_IDX_BLKS_READ] = {
-        .name = "pg_index_idx_blks_read",
+    [FAM_PG_INDEX_IDX_READ_BLOCKS] = {
+        .name = "pg_index_idx_read_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of disk blocks read from this index.",
     },
-    [FAM_PG_INDEX_IDX_BLKS_HIT] = {
-        .name = "pg_index_idx_blks_hit",
+    [FAM_PG_INDEX_IDX_HIT_BLOCKS] = {
+        .name = "pg_index_idx_hit_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in this index.",
     },
-    [FAM_PG_SEQUENCES_BLKS_READ] = {
-        .name = "pg_sequences_blks_read",
+    [FAM_PG_SEQUENCES_READ_BLOCKS] = {
+        .name = "pg_sequences_read_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of disk blocks read from this sequence.",
     },
-    [FAM_PG_SEQUENCES_BLKS_HIT] = {
-        .name = "pg_sequences_blks_hit",
+    [FAM_PG_SEQUENCES_HIT_BLOCKS] = {
+        .name = "pg_sequences_hit_blocks",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of buffer hits in this sequence.",
     },
