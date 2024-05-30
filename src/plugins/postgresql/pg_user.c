@@ -217,14 +217,14 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
         int field;
         int fam;
     } pg_fields[] = {
-        {  3, FAM_PG_TABLE_HEAP_BLKS_READ  },
-        {  4, FAM_PG_TABLE_HEAP_BLKS_HIT   },
-        {  5, FAM_PG_TABLE_IDX_BLKS_READ   },
-        {  6, FAM_PG_TABLE_IDX_BLKS_HIT    },
-        {  7, FAM_PG_TABLE_TOAST_BLKS_READ },
-        {  8, FAM_PG_TABLE_TOAST_BLKS_HIT  },
-        {  9, FAM_PG_TABLE_TIDX_BLKS_READ  },
-        { 10, FAM_PG_TABLE_TIDX_BLKS_HIT   },
+        {  3, FAM_PG_TABLE_HEAP_READ_BLOCKS  },
+        {  4, FAM_PG_TABLE_HEAP_HIT_BLOCKS   },
+        {  5, FAM_PG_TABLE_IDX_READ_BLOCKS   },
+        {  6, FAM_PG_TABLE_IDX_HIT_BLOCKS    },
+        {  7, FAM_PG_TABLE_TOAST_READ_BLOCKS },
+        {  8, FAM_PG_TABLE_TOAST_HIT_BLOCKS  },
+        {  9, FAM_PG_TABLE_TIDX_READ_BLOCKS  },
+        { 10, FAM_PG_TABLE_TIDX_HIT_BLOCKS   },
     };
     size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
@@ -591,7 +591,7 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
                                  NULL);
 
         if (!PQgetisnull(res, i, 5))
-            metric_family_append(&fams[FAM_PG_INDEX_IDX_TUP_READ],
+            metric_family_append(&fams[FAM_PG_INDEX_IDX_READ_ROWS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 5))), labels,
                                  &(label_pair_const_t){.name="database", .value=col_database},
                                  &(label_pair_const_t){.name="schema", .value=col_schema},
@@ -600,7 +600,7 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
                                  NULL);
 
         if (!PQgetisnull(res, i, 6))
-            metric_family_append(&fams[FAM_PG_INDEX_IDX_TUP_FETCH],
+            metric_family_append(&fams[FAM_PG_INDEX_IDX_FETCH_ROWS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 6))), labels,
                                  &(label_pair_const_t){.name="database", .value=col_database},
                                  &(label_pair_const_t){.name="schema", .value=col_schema},
@@ -701,7 +701,7 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
         char *col_index = PQgetvalue(res, i, 3);
 
         if (!PQgetisnull(res, i, 4))
-            metric_family_append(&fams[FAM_PG_INDEX_IDX_BLKS_READ],
+            metric_family_append(&fams[FAM_PG_INDEX_IDX_READ_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
                                  &(label_pair_const_t){.name="database", .value=col_database},
                                  &(label_pair_const_t){.name="schema", .value=col_schema},
@@ -710,7 +710,7 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
                                  NULL);
 
         if (!PQgetisnull(res, i, 5))
-            metric_family_append(&fams[FAM_PG_INDEX_IDX_BLKS_HIT],
+            metric_family_append(&fams[FAM_PG_INDEX_IDX_HIT_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 5))), labels,
                                  &(label_pair_const_t){.name="database", .value=col_database},
                                  &(label_pair_const_t){.name="schema", .value=col_schema},
@@ -798,7 +798,7 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
         char *col_sequence = PQgetvalue(res, i, 2);
 
         if (!PQgetisnull(res, i, 3))
-            metric_family_append(&fams[FAM_PG_SEQUENCES_BLKS_READ],
+            metric_family_append(&fams[FAM_PG_SEQUENCES_READ_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 3))), labels,
                                  &(label_pair_const_t){.name="database", .value=col_database},
                                  &(label_pair_const_t){.name="schema", .value=col_schema},
@@ -806,7 +806,7 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
                                  NULL);
 
         if (!PQgetisnull(res, i, 4))
-            metric_family_append(&fams[FAM_PG_SEQUENCES_BLKS_HIT],
+            metric_family_append(&fams[FAM_PG_SEQUENCES_HIT_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
                                  &(label_pair_const_t){.name="database", .value=col_database},
                                  &(label_pair_const_t){.name="schema", .value=col_schema},
