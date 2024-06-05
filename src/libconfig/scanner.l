@@ -33,6 +33,8 @@ static void ml_append (yyscan_t yyscanner, char *string);
 #define yyterminate() \
     do { free (ml_buffer); ml_buffer = NULL; ml_pos = 0; ml_len = 0; \
         return YY_NULL; } while (0)
+
+#define YY_USER_ACTION yylloc->first_line = yylloc->last_line = yylineno;
 %}
 
 %option bison-bridge
@@ -84,25 +86,25 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 
 %%
 {WHITE_SPACE}       |
-{COMMENT}           {/* ignore */}
+{COMMENT}           {/* ignore */ }
 
-\\{EOL}             {/* continue line */}
+\\{EOL}             { /* continue line */ }
 
-{EOL}               {return (EOL);}
-"{"                 {return (OPENBRAC);}
-"}"                 {return (CLOSEBRAC);}
-{BOOL_TRUE}         {yylval->boolean = 1; return (BTRUE);}
-{BOOL_FALSE}        {yylval->boolean = 0; return (BFALSE);}
+{EOL}               { return (EOL); }
+"{"                 { return (OPENBRAC); }
+"}"                 { return (CLOSEBRAC); }
+{BOOL_TRUE}         { yylval->boolean = 1; return (BTRUE); }
+{BOOL_FALSE}        { yylval->boolean = 0; return (BFALSE); }
 
-{IPV4_ADDR}         {yylval->string = yytext; return (UNQUOTED_STRING);}
-{IPV6_ADDR}         {yylval->string = yytext; return (UNQUOTED_STRING);}
+{IPV4_ADDR}         { yylval->string = yytext; return (UNQUOTED_STRING); }
+{IPV6_ADDR}         { yylval->string = yytext; return (UNQUOTED_STRING); }
 
-{NUMBER}            {yylval->number = strtod (yytext, NULL); return (NUMBER);}
+{NUMBER}            { yylval->number = strtod (yytext, NULL); return (NUMBER); }
 
-"/"{REGEX}"/"       {yylval->string = yytext; return (REGEX);}
-{UNQUOTED_STRING}   {yylval->string = yytext; return (UNQUOTED_STRING);}
+"/"{REGEX}"/"       { yylval->string = yytext; return (REGEX); }
+{UNQUOTED_STRING}   { yylval->string = yytext; return (UNQUOTED_STRING); }
 
-\"{DQUOTED_STRING}\" {yylval->string = yytext; return (DQUOTED_STRING);}
+\"{DQUOTED_STRING}\" { yylval->string = yytext; return (DQUOTED_STRING); }
 
 \"{DQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
@@ -119,7 +121,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     ml_append (yyscanner, yytext);
     BEGIN (DQUOTED_ML);
 }
-<DQUOTED_ML>^{WHITE_SPACE}+ {/* remove leading white-space */}
+<DQUOTED_ML>^{WHITE_SPACE}+ { /* remove leading white-space */ }
 <DQUOTED_ML>{NON_WHITE_SPACE}{DQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
 
@@ -141,7 +143,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 }
 
 
-"'"{SQUOTED_STRING}"'" {yylval->string = yytext; return (SQUOTED_STRING);}
+"'"{SQUOTED_STRING}"'" { yylval->string = yytext; return (SQUOTED_STRING); }
 
 "'"{SQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
@@ -159,7 +161,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     BEGIN (SQUOTED_ML);
 }
 
-<SQUOTED_ML>^{WHITE_SPACE}+ {/* remove leading white-space */}
+<SQUOTED_ML>^{WHITE_SPACE}+ { /* remove leading white-space */ }
 
 <SQUOTED_ML>{NON_WHITE_SPACE}{SQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
@@ -183,7 +185,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 }
 
 
-"'''"{HEREDOC_STRING}"'''" {yylval->string = yytext; return (HEREDOC_STRING);}
+"'''"{HEREDOC_STRING}"'''" { yylval->string = yytext; return (HEREDOC_STRING); }
 
 "'''"{HEREDOC_STRING}{EOL} {
     ml_pos = 0;
@@ -203,6 +205,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     return (HEREDOC_STRING);
 }
 
+.  { return CONFIG_YYUNDEF; }
 %%
 static void ml_append (yyscan_t yyscanner, char *string)
 {
