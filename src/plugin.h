@@ -109,14 +109,27 @@ int plugin_unregister_log(const char *name);
 
 int plugin_unregister_notification(const char *name);
 
-int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size, cdtime_t time);
+struct plugin_filter_s;
+typedef struct plugin_filter_s plugin_filter_t;
+
+int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t size,
+                                                 plugin_filter_t *filter, cdtime_t time);
+
+static inline int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size,
+                                                      cdtime_t time)
+{
+    return plugin_dispatch_metric_family_array_filtered(fams, size, NULL, time);
+}
 
 static inline int plugin_dispatch_metric_family(metric_family_t *fam, cdtime_t time)
 {
-    return plugin_dispatch_metric_family_array(fam, 1, time);
+    return plugin_dispatch_metric_family_array_filtered(fam, 1, NULL, time);
 }
 
 int plugin_dispatch_notification(const notification_t *notif);
+
+int plugin_filter_configure(const config_item_t *ci, plugin_filter_t **filter);
+void plugin_filter_free(plugin_filter_t *filter);
 
 void plugin_log(int level, const char *file, int line, const char *func, const char *format, ...)
     __attribute__((format(printf, 5, 6)));

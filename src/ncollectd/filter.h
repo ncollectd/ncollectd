@@ -30,6 +30,9 @@ filter_t *filter_global_get_by_name(const char *name);
 int filter_global_configure(const config_item_t *ci);
 filter_t *filter_configure(const config_item_t *ci);
 
+int plugin_filter_configure(const config_item_t *ci, filter_t **filter);
+void plugin_filter_free(filter_t *filter);
+
 int filter_process(filter_t *filter, metric_family_list_t *fam_list);
 
 void filter_free(filter_t *filter);
