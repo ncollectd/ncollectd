@@ -4,11 +4,17 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/complain.h"
 
 static char *proc_pressure_cpu;
 static char *proc_pressure_io;
 static char *proc_pressure_memory;
 static char *proc_pressure_irq;
+
+static c_complain_t complain_cpu;
+static c_complain_t complain_io;
+static c_complain_t complain_memory;
+static c_complain_t complain_irq;
 
 enum {
     FAM_PRESSURE_CPU_WAITING_SECONDS,
@@ -62,12 +68,12 @@ static metric_family_t fams[FAM_PRESSURE_MAX] = {
     },
 };
 
-static int pressure_read_file(const char *filename,
+static int pressure_read_file(c_complain_t *complain, const char *filename,
                               metric_family_t *fam_waiting, metric_family_t *fam_stalled)
 {
     FILE *fh = fopen(filename, "r");
     if (unlikely(fh == NULL)) {
-        PLUGIN_ERROR("Open \"%s\"  failed: %s", filename, STRERRNO);
+        c_complain_once(LOG_ERR, complain, "Open \"%s\"  failed: %s", filename, STRERRNO);
         return -1;
     }
 
@@ -101,16 +107,16 @@ static int pressure_read_file(const char *filename,
 
 static int pressure_read(void)
 {
-    pressure_read_file(proc_pressure_cpu,
+    pressure_read_file(&complain_cpu, proc_pressure_cpu,
                        &fams[FAM_PRESSURE_CPU_WAITING_SECONDS],
                        &fams[FAM_PRESSURE_CPU_STALLED_SECONDS]);
-    pressure_read_file(proc_pressure_io,
+    pressure_read_file(&complain_io, proc_pressure_io,
                        &fams[FAM_PRESSURE_IO_WAITING_SECONDS],
                        &fams[FAM_PRESSURE_IO_STALLED_SECONDS]);
-    pressure_read_file(proc_pressure_memory,
+    pressure_read_file(&complain_memory, proc_pressure_memory,
                        &fams[FAM_PRESSURE_MEMORY_WAITING_SECONDS],
                        &fams[FAM_PRESSURE_MEMORY_STALLED_SECONDS]);
-    pressure_read_file(proc_pressure_irq, NULL,
+    pressure_read_file(&complain_irq, proc_pressure_irq, NULL,
                        &fams[FAM_PRESSURE_IRQ_STALLED_SECONDS]);
 
     plugin_dispatch_metric_family_array(fams, FAM_PRESSURE_MAX, 0);
