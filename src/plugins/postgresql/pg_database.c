@@ -24,32 +24,37 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
     int param_lengths[1] = {0};
     int param_formats[1] = {0};
 
-    strbuf_putstr(&buf, "SELECT datname, numbackends, xact_commit, xact_rollback"
-                        ", blks_read, blks_hit");
+    int status = strbuf_putstr(&buf, "SELECT datname, numbackends, xact_commit, xact_rollback"
+                                     ", blks_read, blks_hit");
 
     if (version >= 80300)
-        strbuf_putstr(&buf, ", tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted");
+        status |= strbuf_putstr(&buf, ", tup_returned, tup_fetched, tup_inserted"
+                                      ", tup_updated, tup_deleted");
     if (version >= 90100)
-        strbuf_putstr(&buf, ", conflicts");
+        status |= strbuf_putstr(&buf, ", conflicts");
     if (version >= 90200)
-        strbuf_putstr(&buf, ", temp_files, temp_bytes, deadlocks"
-                            ", blk_read_time, blk_write_time");
+        status |= strbuf_putstr(&buf, ", temp_files, temp_bytes, deadlocks"
+                                      ", blk_read_time, blk_write_time");
     if (version >= 120000)
-        strbuf_putstr(&buf, ", checksum_failures"
-                            ", EXTRACT(epoch from COALESCE(checksum_last_failure, '1970-01-01Z'))");
+        status |= strbuf_putstr(&buf, ", checksum_failures"
+                    ", EXTRACT(epoch from COALESCE(checksum_last_failure, '1970-01-01Z'))");
     if (version >= 140000)
-        strbuf_putstr(&buf, ", session_time, active_time, idle_in_transaction_time"
-                            ", sessions, sessions_abandoned, sessions_fatal, sessions_killed");
+        status |= strbuf_putstr(&buf, ", session_time, active_time, idle_in_transaction_time"
+                                      ", sessions, sessions_abandoned, sessions_fatal"
+                                      ", sessions_killed");
 
-    strbuf_putstr(&buf, "  FROM pg_stat_database");
+    status |= strbuf_putstr(&buf, "  FROM pg_stat_database");
 
-    if (db == NULL) {
-        strbuf_putchar(&buf, ';');
-    } else {
-        strbuf_putstr(&buf, " WHERE datname = $1;");
+    if (db != NULL) {
+        status |= strbuf_putstr(&buf, " WHERE datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -175,16 +180,20 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
     int param_lengths[1] = {0};
     int param_formats[1] = {0};
 
-    strbuf_putstr(&buf, "SELECT pg_database.datname, pg_database_size(pg_database.datname)"
-                        "  FROM pg_database");
+    int status = strbuf_putstr(&buf, "SELECT pg_database.datname, "
+                                     "       pg_database_size(pg_database.datname)"
+                                     "  FROM pg_database");
 
-    if (db == NULL) {
-        strbuf_putchar(&buf, ';');
-    } else {
-        strbuf_putstr(&buf, " WHERE datname = $1;");
+    if (db != NULL) {
+        status |= strbuf_putstr(&buf, " WHERE datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -332,17 +341,20 @@ int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
     int param_lengths[1] = {0};
     int param_formats[1] = {0};
 
-    strbuf_putstr(&buf, "SELECT datname, confl_tablespace, confl_lock, confl_snapshot,"
-                        "       confl_bufferpin, confl_deadlock"
-                        "  FROM pg_stat_database_conflicts");
+    int status = strbuf_putstr(&buf, "SELECT datname, confl_tablespace, confl_lock, "
+                                     "       confl_snapshot, confl_bufferpin, confl_deadlock"
+                                     "  FROM pg_stat_database_conflicts");
 
-    if (db == NULL) {
-        strbuf_putchar(&buf, ';');
-    } else {
-        strbuf_putstr(&buf, " WHERE datname = $1;");
+    if (db != NULL) {
+        status |= strbuf_putstr(&buf, " WHERE datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;

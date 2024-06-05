@@ -24,23 +24,29 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
     int param_lengths[1] = {0};
     int param_formats[1] = {0};
 
-    strbuf_putstr(&buf, "SELECT pg_database.datname, tmp.state, COALESCE(count,0) as count,"
-                        "       COALESCE(max_tx,0) as max_tx"
-                        "  FROM ( VALUES ('active'),"
-                        "                ('idle'),"
-                        "                ('idle in transaction'),"
-                        "                ('idle in transaction (aborted)'),"
-                        "                ('fastpath function call'),"
-                        "                ('disabled')) AS tmp(state) CROSS JOIN pg_database "
-                        "LEFT JOIN ( SELECT datname, state, count(*) AS count,"
-                        "            MAX(EXTRACT(EPOCH FROM now() - xact_start))::float AS max_tx"
-                        "            FROM pg_stat_activity GROUP BY datname,state ) AS tmp2"
-                        " ON tmp.state = tmp2.state AND pg_database.datname = tmp2.datname");
+    int status = strbuf_putstr(&buf,
+                    "SELECT pg_database.datname, tmp.state, COALESCE(count,0) as count,"
+                    "       COALESCE(max_tx,0) as max_tx"
+                    "  FROM ( VALUES ('active'),"
+                    "                ('idle'),"
+                    "                ('idle in transaction'),"
+                    "                ('idle in transaction (aborted)'),"
+                    "                ('fastpath function call'),"
+                    "                ('disabled')) AS tmp(state) CROSS JOIN pg_database "
+                    "LEFT JOIN ( SELECT datname, state, count(*) AS count,"
+                    "            MAX(EXTRACT(EPOCH FROM now() - xact_start))::float AS max_tx"
+                    "            FROM pg_stat_activity GROUP BY datname,state ) AS tmp2"
+                    " ON tmp.state = tmp2.state AND pg_database.datname = tmp2.datname");
     if (db != NULL) {
-        strbuf_putstr(&buf, " WHERE datname = $1");
+        status |= strbuf_putstr(&buf, " WHERE datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;

@@ -24,37 +24,38 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
     int param_lengths[2] = {0, 0};
     int param_formats[2] = {0, 0};
 
-    strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname, seq_scan,"
-                        "       seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd,"
-                        "       n_tup_del, "
-                        "       EXTRACT(epoch from COALESCE(last_vacuum, '1970-01-01Z')),"
-                        "       EXTRACT(epoch from COALESCE(last_autovacuum, '1970-01-01Z')),"
-                        "       EXTRACT(epoch from COALESCE(last_analyze, '1970-01-01Z')),"
-                        "       EXTRACT(epoch from COALESCE(last_autoanalyze, '1970-01-01Z'))");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname,"
+                                     " seq_scan, seq_tup_read, idx_scan, idx_tup_fetch,"
+                                     " n_tup_ins, n_tup_upd, n_tup_del,"
+                                     " EXTRACT(epoch from COALESCE(last_vacuum, '1970-01-01Z')),"
+                                     " EXTRACT(epoch from COALESCE(last_autovacuum, '1970-01-01Z')),"
+                                     " EXTRACT(epoch from COALESCE(last_analyze, '1970-01-01Z')),"
+                                     " EXTRACT(epoch from COALESCE(last_autoanalyze, '1970-01-01Z'))");
     if (version >= 80300)
-        strbuf_putstr(&buf, ", n_tup_hot_upd, n_live_tup, n_dead_tup");
+        status |= strbuf_putstr(&buf, ", n_tup_hot_upd, n_live_tup, n_dead_tup");
     if (version >= 90100)
-        strbuf_putstr(&buf, ", vacuum_count, autovacuum_count, analyze_count, autoanalyze_count");
+        status |= strbuf_putstr(&buf, ", vacuum_count, autovacuum_count, analyze_count"
+                                      ", autoanalyze_count");
     if (version >= 90400)
-        strbuf_putstr(&buf, ", n_mod_since_analyze");
+        status |= strbuf_putstr(&buf, ", n_mod_since_analyze");
     if (version >= 130000)
-        strbuf_putstr(&buf, ", n_ins_since_vacuum");
+        status |= strbuf_putstr(&buf, ", n_ins_since_vacuum");
     if (version >= 160000)
-        strbuf_putstr(&buf, ", EXTRACT(epoch from COALESCE(last_seq_scan, '1970-01-01Z'))"
-                            ", EXTRACT(epoch from COALESCE(last_idx_scan, '1970-01-01Z'))"
-                            ", n_tup_newpage_upd");
+        status |= strbuf_putstr(&buf, ", EXTRACT(epoch from COALESCE(last_seq_scan, '1970-01-01Z'))"
+                                      ", EXTRACT(epoch from COALESCE(last_idx_scan, '1970-01-01Z'))"
+                                      ", n_tup_newpage_upd");
 
-    strbuf_putstr(&buf, " FROM pg_stat_user_tables");
+    status |= strbuf_putstr(&buf, " FROM pg_stat_user_tables");
 
     if ((schema == NULL) && (table == NULL)) {
         /* all tables */
     } else if ((schema != NULL) && (table == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -62,6 +63,11 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
         param_lengths[1] = strlen(table);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -188,20 +194,21 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
     int param_lengths[2] = {0, 0};
     int param_formats[2] = {0, 0};
 
-    strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname, heap_blks_read,"
-                        "       heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read,"
-                        "       toast_blks_hit, tidx_blks_read, tidx_blks_hit"
-                        "  FROM pg_statio_user_tables");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname,"
+                                     "       heap_blks_read, heap_blks_hit, idx_blks_read,"
+                                     "       idx_blks_hit, toast_blks_read, toast_blks_hit,"
+                                     "       tidx_blks_read, tidx_blks_hit"
+                                     "  FROM pg_statio_user_tables");
 
     if ((schema == NULL) && (table == NULL)) {
         /* all tables */
     } else if ((schema != NULL) && (table == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -209,6 +216,11 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
         param_lengths[1] = strlen(table);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -299,11 +311,11 @@ int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t 
 
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
-    strbuf_putstr(&buf, "SELECT current_database() dbname, table_schema, table_name, "
-                        "       pg_total_relation_size('\"'||table_schema||'\".\"'||table_name||'\"') total_relation_size,"
-                        "       pg_indexes_size('\"'||table_schema||'\".\"'||table_name||'\"') indexes_size"
-                        "  FROM information_schema.tables "
-                        " WHERE table_type = 'BASE TABLE' ");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, table_schema, table_name, "
+                     "       pg_total_relation_size('\"'||table_schema||'\".\"'||table_name||'\"') total_relation_size,"
+                     "       pg_indexes_size('\"'||table_schema||'\".\"'||table_name||'\"') indexes_size"
+                     "  FROM information_schema.tables "
+                     " WHERE table_type = 'BASE TABLE' ");
 
     int stmt_params = 0;
     const char *param_values[2] = {NULL, NULL};
@@ -313,12 +325,12 @@ int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t 
     if ((schema == NULL) && (table == NULL)) {
         /* all tables */
     } else if ((schema != NULL) && (table == NULL)) {
-        strbuf_putstr(&buf, "AND table_schema = $1");
+        status |= strbuf_putstr(&buf, "AND table_schema = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL)) {
-        strbuf_putstr(&buf, "AND table_schema = $1 AND table_name = $2");
+        status |= strbuf_putstr(&buf, "AND table_schema = $1 AND table_name = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -326,6 +338,11 @@ int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t 
         param_lengths[1] = strlen(table);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -403,19 +420,19 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
     int param_lengths[2] = {0, 0};
     int param_formats[2] = {0, 0};
 
-    strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, funcname, calls,"
-                        "       total_time, self_time"
-                        "  FROM pg_stat_user_functions");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, funcname, calls,"
+                                     "       total_time, self_time"
+                                     "  FROM pg_stat_user_functions");
 
     if ((schema == NULL) && (function == NULL)) {
         /* all functions */
     } else if ((schema != NULL) && (function == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (function != NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and funcname = $2");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND funcname = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -423,6 +440,11 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
         param_lengths[1] = strlen(function);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -509,26 +531,26 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
     int param_lengths[3] = {0, 0, 0};
     int param_formats[3] = {0, 0, 0};
 
-    strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname, indexrelname,"
-                        "       idx_scan, idx_tup_read, idx_tup_fetch"
-                        "  FROM pg_stat_user_indexes");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname,"
+                                     "       indexrelname, idx_scan, idx_tup_read, idx_tup_fetch"
+                                     "  FROM pg_stat_user_indexes");
 
     if ((schema == NULL) && (table == NULL) && (index == NULL)) {
         /* all indexes */
     } else if ((schema != NULL) && (table == NULL) && (index == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL) && (index == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
         param_values[1] = table;
         param_lengths[1] = strlen(table);
     } else if ((schema != NULL) && (table != NULL) && (index != NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2 and indexrelname =$3");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2 AND indexrelname =$3");
         stmt_params = 3;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -538,6 +560,11 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
         param_lengths[2] = strlen(index);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -628,26 +655,26 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
     int param_lengths[3] = {0, 0, 0};
     int param_formats[3] = {0, 0, 0};
 
-    strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname, indexrelname,"
-                        "       idx_blks_read, idx_blks_hit"
-                        "  FROM pg_statio_user_indexes");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname,"
+                                     "       indexrelname, idx_blks_read, idx_blks_hit"
+                                     "  FROM pg_statio_user_indexes");
 
     if ((schema == NULL) && (table == NULL) && (index == NULL)) {
         /* all indexes */
     } else if ((schema != NULL) && (table == NULL) && (index == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (table != NULL) && (index == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
         param_values[1] = table;
         param_lengths[1] = strlen(table);
     } else if ((schema != NULL) && (table != NULL) && (index != NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2 and indexrelname =$3");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2 AND indexrelname =$3");
         stmt_params = 3;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -657,6 +684,11 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
         param_lengths[2] = strlen(index);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
@@ -738,19 +770,19 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
     int param_lengths[2] = {0, 0};
     int param_formats[2] = {0, 0};
 
-    strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname,"
-                        "       blks_read, blks_hit"
-                        "  FROM pg_statio_user_sequences");
+    int status = strbuf_putstr(&buf, "SELECT current_database() dbname, schemaname, relname,"
+                                     "       blks_read, blks_hit"
+                                     "  FROM pg_statio_user_sequences");
 
     if ((schema == NULL) && (sequence == NULL)) {
         /* all schemmas */
     } else if ((schema != NULL) && (sequence == NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1");
         stmt_params = 1;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
     } else if ((schema != NULL) && (sequence != NULL)) {
-        strbuf_putstr(&buf, " WHERE schemaname = $1 and relname = $2");
+        status |= strbuf_putstr(&buf, " WHERE schemaname = $1 AND relname = $2");
         stmt_params = 2;
         param_values[0] = schema;
         param_lengths[0] = strlen(schema);
@@ -758,6 +790,11 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
         param_lengths[1] = strlen(sequence);
     } else {
         return 0;
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
