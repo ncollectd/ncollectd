@@ -20,15 +20,21 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
     char *stmt = NULL;
 
     if (version < 170000) {
-        strbuf_putstr(&buf, "SELECT checkpoints_timed, checkpoints_req, buffers_checkpoint"
-                            ", buffers_clean, maxwritten_clean, buffers_backend, buffers_alloc");
+        int status = strbuf_putstr(&buf, "SELECT checkpoints_timed, checkpoints_req"
+                                         ", buffers_checkpoint, buffers_clean, maxwritten_clean"
+                                         ", buffers_backend, buffers_alloc");
 
         if (version >= 90100)
-            strbuf_putstr(&buf, ", buffers_backend_fsync");
+            status |= strbuf_putstr(&buf, ", buffers_backend_fsync");
         if (version >= 90200)
-            strbuf_putstr(&buf, ", checkpoint_write_time, checkpoint_sync_time");
+            status |= strbuf_putstr(&buf, ", checkpoint_write_time, checkpoint_sync_time");
 
-        strbuf_putstr(&buf, " FROM pg_stat_bgwriter");
+        status |= strbuf_putstr(&buf, " FROM pg_stat_bgwriter");
+
+        if (status != 0) {
+            PLUGIN_ERROR("Failed to create statement.");
+            return -1;
+        }
 
         stmt = buf.ptr;
     } else {

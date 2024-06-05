@@ -116,15 +116,20 @@ int pg_replication_slots(PGconn *conn, int version, metric_family_t *fams, label
     int param_lengths[1] = {0};
     int param_formats[1] = {0};
 
-    strbuf_putstr(&buf, "SELECT slot_name, database, active, "
-                        "       pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)"
-                        "  FROM pg_replication_slots");
+    int status = strbuf_putstr(&buf, "SELECT slot_name, database, active, "
+                                     "       pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)"
+                                     "  FROM pg_replication_slots");
 
     if (db != NULL) {
-        strbuf_putstr(&buf, " WHERE database = $1");
+        status |= strbuf_putstr(&buf, " WHERE database = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to create statement.");
+        return -1;
     }
 
     char *stmt = buf.ptr;
