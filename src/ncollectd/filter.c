@@ -193,6 +193,16 @@ void filter_free(filter_t *filter)
     free(filter);
 }
 
+void plugin_filter_free(filter_t *filter)
+{
+    if (filter == NULL)
+        return;
+
+    free(filter->name);
+    filter_stmt_free(filter->ptr);
+    free(filter);
+}
+
 void filter_reset(filter_t *filter)
 {
     if (filter == NULL)
@@ -1167,28 +1177,38 @@ int filter_global_configure(const config_item_t *ci)
     return 0;
 }
 
-filter_t *filter_configure(const config_item_t *ci)
+int plugin_filter_configure(const config_item_t *ci, filter_t **filter)
 {
-    if (ci->values_num == 0) {
-        ERROR("Local 'filter' doesn't have arguments in %s:%d.",
+    if (ci->values_num != 0) {
+        ERROR("Local 'filter' cannot have arguments in %s:%d.",
               cf_get_file(ci), cf_get_lineno(ci));
-        return NULL;
+        return -1;
     }
 
-    filter_t *filter = filter_alloc(NULL);
-    if (filter == NULL)
-        return NULL;
+    if (*filter == NULL) {
+       *filter = filter_alloc(NULL);
+        if (*filter == NULL)
+            return -1;
+    }
 
     bool error = false;
     filter_stmt_t *stmt = filter_config_stmt(ci, &error, false);
     if ((stmt == NULL) && error) {
-        filter_free(filter);
-        return NULL;
+        filter_free(*filter);
+        return -1;
     }
 
-    filter->ptr = stmt;
+    if ((*filter)->ptr == NULL) {
+        (*filter)->ptr = stmt;
+    } else {
+        filter_stmt_t *nstmt = (*filter)->ptr;
+        while (nstmt->next != NULL) {
+            nstmt = nstmt->next;
+        }
+        nstmt->next = stmt;
+    }
 
-    return filter;
+    return 0;
 }
 
 static void filter_write(filter_stmt_t *stmt, metric_family_t *fam, metric_t *m)

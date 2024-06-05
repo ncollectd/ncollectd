@@ -236,7 +236,44 @@ static int plugin_dispatch_metric_internal(metric_family_t *fam)
     return 0;
 }
 
-int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size, cdtime_t time)
+static int plugin_dispatch_metric_internal_filtered(metric_family_t *fam, filter_t *filter)
+{
+    if (fam == NULL)
+        return EINVAL;
+
+    if (filter != NULL) {
+        metric_family_t *fams[METRIC_FAMILY_LIST_STACK_SIZE];
+        metric_family_list_t faml = METRIC_FAMILY_LIST_CREATE();
+        if (fam->metric.num > METRIC_FAMILY_LIST_STACK_SIZE) {
+            metric_family_list_alloc(&faml, fam->metric.num);
+        } else {
+            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams);
+        }
+        metric_family_list_append(&faml, fam);
+
+        int status = filter_process(filter, &faml);
+        if (status < 0) {
+            WARNING("Running the filter chain failed with status %d.", status);
+        } else if (status == FILTER_RESULT_STOP) {
+            metric_family_list_reset(&faml);
+            return 0;
+        }
+
+        for (size_t i = 0; i < faml.pos; i++) {
+            plugin_dispatch_metric_internal(faml.ptr[i]);
+            faml.ptr[i] = NULL;
+        }
+
+        metric_family_list_reset(&faml);
+    } else {
+        plugin_dispatch_metric_internal(fam);
+    }
+
+    return 0;
+}
+
+int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t size,
+                                                 filter_t *filter, cdtime_t time)
 {
     if ((fams == NULL) || (size == 0))
         return EINVAL;
@@ -277,7 +314,12 @@ int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size, cdti
             label_set_add_set(&fam_copy->metric.ptr[j].label, false, labels_g);
         }
 
-        int status = plugin_dispatch_metric_internal(fam_copy);
+        int status = 0;
+        if (filter != NULL)
+            status = plugin_dispatch_metric_internal_filtered(fam_copy, filter);
+        else
+            status = plugin_dispatch_metric_internal(fam_copy);
+
         if (status != 0) {
             ERROR("plugin_dispatch_metric_internal failed with status %i (%s).",
                    status, STRERROR(status));

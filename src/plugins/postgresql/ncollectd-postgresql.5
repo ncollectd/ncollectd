@@ -39,6 +39,9 @@ ncollectd-postgresql \- Documentation of ncollectd's postgresql plugin
         \fBmetric-prefix\fP \fIprefix\fP
         \fBcollect\fP \fIflags\fP ...
         \fBquery\fP \fIquery-name\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -234,6 +237,10 @@ An ACCESS EXCLUSIVE lock on the table will block ncollectd until lock is release
 \fBquery\fP \fIquery-name\fP
 Specifies a \fIquery\fP which should be executed in the context of the database
 connection.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .RE
 .TP
 \fBquery\fP \fIquery-name\fP

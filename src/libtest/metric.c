@@ -397,8 +397,9 @@ static int plugin_test_add_metric_family(metric_family_t *fam)
     return 0;
 }
 
-int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size,
-                                        __attribute__((unused)) cdtime_t time)
+int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t size,
+                                                 __attribute__((unused)) plugin_filter_t *filter,
+                                                 __attribute__((unused)) cdtime_t time)
 {
     for (size_t i = 0; i < size; i++) {
         int status = plugin_test_add_metric_family(&fams[i]);

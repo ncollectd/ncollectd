@@ -704,6 +704,8 @@ typedef struct {
     pg_stat_filter_t *pg_stat_sequence_io;
     pg_stat_filter_t *pg_stat_function;
 
+    plugin_filter_t *filter;
+
     db_query_preparation_area_t **q_prep_areas;
     db_query_t **queries;
     size_t queries_num;
@@ -797,6 +799,8 @@ static void psql_database_delete(void *data)
     pg_stat_filter_free(db->pg_stat_indexes_io);
     pg_stat_filter_free(db->pg_stat_sequence_io);
     pg_stat_filter_free(db->pg_stat_function);
+
+    plugin_filter_free(db->filter);
 
     free(db);
 }
@@ -1185,7 +1189,7 @@ static int psql_read(user_data_t *ud)
     if (db->flags & COLLECT_CHECKPOINTER)
         pg_stat_checkpointer(db->conn, db->server_version, db->fams, &db->labels);
 
-    plugin_dispatch_metric_family_array(db->fams, FAM_PG_MAX, submit);
+    plugin_dispatch_metric_family_array_filtered(db->fams, FAM_PG_MAX, db->filter, submit);
 
     for (size_t i = 0; i < db->queries_num; i++) {
         db_query_preparation_area_t *prep_area = db->q_prep_areas[i];
@@ -1480,6 +1484,8 @@ static int psql_config_database(config_item_t *ci)
             status = psql_config_collect(child, db);
         } else if (strcasecmp(child->key, "interval") == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &db->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
