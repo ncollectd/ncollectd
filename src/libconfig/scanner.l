@@ -205,7 +205,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     return (HEREDOC_STRING);
 }
 
-.  { return CONFIG_YYUNDEF; }
+.  { return yytext[0]; }
 %%
 static void ml_append (yyscan_t yyscanner, char *string)
 {
