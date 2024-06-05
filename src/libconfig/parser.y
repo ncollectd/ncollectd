@@ -19,18 +19,13 @@ static char *unhquote (const char *orig);
 static void yyerror(CONFIG_YYLTYPE *yylloc, void *scanner, config_status_t *status, const char *msg);
 static config_file_t *get_file_ref(void);
 
-/* Lexer variables */
-// extern int config_yylineno;
-// extern char *config_yytext;
-// extern int config_yylex (void);
-
 extern config_item_t *ci_root;
 extern config_file_t *c_file;
 %}
 
 %define api.pure full
 %define api.prefix {config_yy}
-%define parse.trace true
+%define parse.trace false
 %define parse.error verbose
 
 %lex-param   { void *scanner }

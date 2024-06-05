@@ -54,6 +54,7 @@ static config_item_t *config_parse_fh(FILE *fh)
     config_yyset_in((FILE *)0, scanner);
 
     config_yylex_destroy(scanner);
+
     return ret;
 }
 
@@ -176,7 +177,7 @@ static void config_dump_config_item(FILE *fh, int level, config_item_t *ci)
     for (int i = 0; i < ci->values_num; i++) {
         switch(ci->values[i].type) {
         case CONFIG_TYPE_STRING:
-            fprintf(fh, " \"%s\"", ci->values[i].value.string); // FIXME scape "
+            fprintf(fh, " \"%s\"", ci->values[i].value.string); // FIXME escape "
             break;
         case CONFIG_TYPE_NUMBER:
             fprintf(fh, " %f", ci->values[i].value.number);
@@ -185,7 +186,7 @@ static void config_dump_config_item(FILE *fh, int level, config_item_t *ci)
             fprintf(fh, " %s", ci->values[i].value.boolean ? "true" : "false");
             break;
         case CONFIG_TYPE_REGEX:
-            fprintf(fh, " /%s/", ci->values[i].value.string); // FIXME scape /
+            fprintf(fh, " /%s/", ci->values[i].value.string); // FIXME escape /
             break;
         }
     }
