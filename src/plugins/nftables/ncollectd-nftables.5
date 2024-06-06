@@ -6,21 +6,20 @@ ncollectd-nftables \- Documentation of ncollectd's nftables plugin
 \fBload-plugin\fP nftables
 .br
 \fBplugin\fP nftables {
-    \fBrule\fP \fItable\fP \fIchain\fP [\fIcomment\fP]
+    \fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
 .br
 }
 .SH DESCRIPTION
 The \fBnftables\fP plugin collects information about the packet and byte count
-of rules inside your ruleset, given a table and chain.
+of named counters inside your ruleset.
 .PP
 The plugin has the following options:
 .PP
 .TP
-\fBrule\fP \fItable\fP \fIchain\fP [\fIcomment\fP]
-If only \fItable\fP and \fIchain\fP are specified the plugin will only match rules
-with a comment, and use it as type instance.
-
-You can optionally specify \fIcomment\fP, to filter rules given its comment.
+\fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
+If only the \fIfamily\fP is specified all named counters on the family tables are collected.
+If \fIfamily\fP and \fItable\fP are specified, only the counters for this table are collectd.
+You can optionally specify the \fIcounter\fP name to collect a specific counter.
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)
