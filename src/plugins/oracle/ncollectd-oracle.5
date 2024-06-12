@@ -34,6 +34,9 @@ ncollectd-oracle \- Documentation of ncollectd's oracle plugin
         \fBmetric-prefix\fP \fIprefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBquery\fP \fIquery-name\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -42,7 +45,7 @@ The \fBoracle\fP plugin collect metrics from an Oracle database.
 The \fBoracle\fP  plugin uses the Oracle® Call Interface (\fIOCI\fP) to connect to an
 Oracle® Database and lets you execute SQL statements there.
 .TP
-\fBinstane\fP \fIdatabase\fP
+\fBinstance\fP \fIdatabase\fP
 Instance blocks define a connection to a database and which queries should be sent to that
 database. Each database needs a "name" as string argument in the starting tag of the
 block.
@@ -74,6 +77,10 @@ Associates the query named \fIquery-name\fP with this database connection. The
 query needs to be defined \fIbefore\fP this statement, i. e. all query
 blocks you want to refer to must be placed above the database block you want to
 refer to them from.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .TP
 .RE
 .TP

@@ -127,6 +127,7 @@ typedef enum {
 typedef struct {
     char *instance;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     char *socketpath;
 
@@ -898,7 +899,8 @@ static int haproxy_read_curl_stat(haproxy_t *ha, cdtime_t when)
         }
     }
 
-    plugin_dispatch_metric_family_array(ha->fams_stat, FAM_HAPROXY_STAT_MAX, when);
+    plugin_dispatch_metric_family_array_filtered(ha->fams_stat, FAM_HAPROXY_STAT_MAX,
+                                                 ha->filter, when);
 
     return 0;
 }
@@ -935,7 +937,8 @@ static int haproxy_read_cmd_stat(haproxy_t *ha)
         }
     }
 
-    plugin_dispatch_metric_family_array(ha->fams_stat, FAM_HAPROXY_STAT_MAX, when);
+    plugin_dispatch_metric_family_array_filtered(ha->fams_stat, FAM_HAPROXY_STAT_MAX,
+                                                 ha->filter, when);
 
     fclose(fp);
     return 0;
@@ -998,7 +1001,8 @@ static int haproxy_read_cmd_info(haproxy_t *ha)
         }
     }
 
-    plugin_dispatch_metric_family_array(ha->fams_process, FAM_HAPROXY_PROCESS_MAX, when);
+    plugin_dispatch_metric_family_array_filtered(ha->fams_process, FAM_HAPROXY_PROCESS_MAX,
+                                                 ha->filter, when);
 
     fclose(fp);
     return 0;
@@ -1051,7 +1055,8 @@ static int haproxy_read_cmd_table(haproxy_t *ha)
         }
     }
 
-    plugin_dispatch_metric_family_array(ha->fams_sticktable, FAM_HAPROXY_STICKTABLE_MAX, when);
+    plugin_dispatch_metric_family_array_filtered(ha->fams_sticktable, FAM_HAPROXY_STICKTABLE_MAX,
+                                                 ha->filter, when);
 
     fclose(fp);
     return 0;
@@ -1123,7 +1128,7 @@ static int haproxy_read (user_data_t *ud)
     }
 
     metric_family_append(&fam_up, VALUE_GAUGE(status == 0 ? 1 : 0), &ha->labels, NULL);
-    plugin_dispatch_metric_family(&fam_up, 0);
+    plugin_dispatch_metric_family_filtered(&fam_up, ha->filter, 0);
 
     return 0;
 }
@@ -1389,6 +1394,8 @@ static int haproxy_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ha->labels);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ha->filter);
         } else {
             PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
             status = -1;

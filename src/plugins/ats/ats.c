@@ -303,6 +303,7 @@ typedef struct {
     char *url;
     int timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     CURL *curl;
     char ats_curl_error[CURL_ERROR_SIZE];
     metric_family_t fams[FAM_ATS_MAX];
@@ -594,7 +595,7 @@ static int ats_read(user_data_t *user_data)
     }
     json_parser_free(&handle);
 
-    plugin_dispatch_metric_family_array(ats->fams, FAM_ATS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ats->fams, FAM_ATS_MAX, ats->filter, 0);
 
     return 0;
 }
@@ -614,6 +615,7 @@ static void ats_instance_free(void *arg)
     free(ats->instance);
     free(ats->url);
     label_set_reset(&ats->labels);
+    plugin_filter_free(ats->filter);
 
     free(ats);
 }
@@ -649,6 +651,8 @@ static int ats_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &ats->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &ats->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

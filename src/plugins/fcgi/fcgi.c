@@ -78,6 +78,8 @@ typedef struct {
 
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
+
     char *metric_response_time;
     char *metric_response_code;
 
@@ -106,6 +108,7 @@ static void fcgi_free(void *arg)
 
     free(ctx->metric_prefix);
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
     free(ctx->metric_response_time);
     free(ctx->metric_response_code);
     free(ctx->host);
@@ -353,7 +356,7 @@ static void fcgi_submit_response_code(fcgi_ctx_t *ctx, int response_code)
             .type = METRIC_TYPE_GAUGE,
         };
         metric_family_append(&fam, VALUE_GAUGE(response_code), &ctx->labels, NULL);
-        plugin_dispatch_metric_family(&fam, 0);
+        plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
     }
 }
 
@@ -366,7 +369,7 @@ static void fcgi_submit_response_time(fcgi_ctx_t *ctx, cdtime_t start)
         };
         double value = CDTIME_T_TO_DOUBLE(cdtime() - start);
         metric_family_append(&fam, VALUE_GAUGE(value), &ctx->labels, NULL);
-        plugin_dispatch_metric_family(&fam, 0);
+        plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
     }
 }
 
@@ -442,7 +445,7 @@ static int fcgi_read(user_data_t *ud)
         status = plugin_match(ctx->matches, body);
         if (status != 0)
             PLUGIN_WARNING("plugin_match failed.");
-        plugin_match_dispatch(ctx->matches, true);
+        plugin_match_dispatch(ctx->matches, ctx->filter, true);
     }
 
     return 0;
@@ -528,6 +531,8 @@ static int fcgi_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_cdtime(child, &ctx->timeout);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                          child->key, cf_get_file(child), cf_get_lineno(child));

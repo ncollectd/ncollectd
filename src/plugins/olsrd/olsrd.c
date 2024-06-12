@@ -69,6 +69,7 @@ typedef struct {
     char *host;
     char *port;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_OLSRD_MAX];
 } olsrd_t;
 
@@ -314,6 +315,8 @@ static void olsrd_free(void *arg)
     free(oi->host);
     free(oi->port);
     label_set_reset(&oi->labels);
+    plugin_filter_free(oi->filter);
+
     free(oi);
 }
 
@@ -355,7 +358,7 @@ static int olsrd_read(user_data_t *user_data)
     }
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(oi->fams, FAM_OLSRD_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(oi->fams, FAM_OLSRD_MAX, oi->filter, 0);
     return 0;
 }
 
@@ -387,6 +390,8 @@ static int olsrd_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(option, &interval);
         } else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &oi->labels);
+        } else if (strcasecmp("filter", option->key) == 0) {
+            status = plugin_filter_configure(option, &oi->filter);
         } else {
             PLUGIN_ERROR("Unknown configuration option given: %s", option->key);
             status = 1;

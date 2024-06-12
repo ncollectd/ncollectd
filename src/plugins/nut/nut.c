@@ -171,6 +171,7 @@ typedef struct nut_ups_s {
     NUT_PORT_TYPE port;
     ncollectd_upsconn_t *conn;
     label_set_t labels;
+    plugin_filter_t *filter;
     bool force_ssl;
     bool verify_peer;
     cdtime_t connect_timeout;
@@ -198,6 +199,7 @@ static void free_nut_ups(void *arg)
     free(ups->upsname);
 
     label_set_reset(&ups->labels);
+    plugin_filter_free(ups->filter);
 
     free(ups);
 }
@@ -366,7 +368,7 @@ static int nut_read(user_data_t *user_data)
         }
     }
 
-    plugin_dispatch_metric_family_array(ups->fams, FAM_UPS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ups->fams, FAM_UPS_MAX, ups->filter, 0);
     return 0;
 }
 
@@ -404,6 +406,8 @@ static int nut_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &ups->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ups->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

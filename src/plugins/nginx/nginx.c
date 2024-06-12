@@ -78,6 +78,7 @@ typedef struct {
     char *ssl_ciphers;
     cdtime_t timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     char nginx_buffer[16384];
     size_t nginx_buffer_len;
     char nginx_curl_error[CURL_ERROR_SIZE];
@@ -99,6 +100,8 @@ static void nginx_free(void *arg) {
     free(st->cacert);
     free(st->ssl_ciphers);
     label_set_reset(&st->labels);
+    plugin_filter_free(st->filter);
+
     if (st->curl) {
         curl_easy_cleanup(st->curl);
         st->curl = NULL;
@@ -301,7 +304,7 @@ static int nginx_read(user_data_t *user_data)
     if (unlikely(st->curl == NULL)) {
         if (unlikely(nginx_init_host(st) != 0)) {
             metric_family_append(&st->fams[FAM_NGINX_UP], VALUE_GAUGE(0), &st->labels, NULL);
-            plugin_dispatch_metric_family(&st->fams[FAM_NGINX_UP], 0);
+            plugin_dispatch_metric_family_filtered(&st->fams[FAM_NGINX_UP], st->filter, 0);
             return 0;
         }
     }
@@ -317,7 +320,7 @@ static int nginx_read(user_data_t *user_data)
     if (curl_easy_perform(st->curl) != CURLE_OK) {
         PLUGIN_WARNING("curl_easy_perform failed: %s", st->nginx_curl_error);
         metric_family_append(&st->fams[FAM_NGINX_UP], VALUE_GAUGE(0), &st->labels, NULL);
-        plugin_dispatch_metric_family(&st->fams[FAM_NGINX_UP], 0);
+        plugin_dispatch_metric_family_filtered(&st->fams[FAM_NGINX_UP], st->filter, 0);
         return 0;
     }
 
@@ -373,7 +376,7 @@ static int nginx_read(user_data_t *user_data)
     }
 
     st->nginx_buffer_len = 0;
-    plugin_dispatch_metric_family_array(st->fams, FAM_NGINX_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(st->fams, FAM_NGINX_MAX, st->filter, 0);
     return 0;
 }
 
@@ -420,6 +423,8 @@ static int nginx_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &st->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &st->filter);
         } else {
             PLUGIN_ERROR("Option `%s' not allowed here.", child->key);
             status = -1;

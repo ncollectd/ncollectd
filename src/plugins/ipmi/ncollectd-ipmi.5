@@ -22,6 +22,9 @@ ncollectd-ipmi \- Documentation of ncollectd's ipmi plugin
         \fBsel-sensor\fP \fIsensor\fP
         \fBsel-enable\fP \fItrue|false\fP
         \fBsel-celear-event\fP \fItrue|false\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -91,6 +94,10 @@ If SEL clear event is enabled, plugin will delete event from SEL list after
 it is received and successfully handled. In this case other tools that are
 subscribed for SEL events will receive an empty event.
 Defaults to \fIfalse\fP.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

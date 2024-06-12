@@ -31,6 +31,9 @@ ncollectd-jolokia \- Documentation of ncollectd's jolokia plugin
                 \fBhelp\fP \fIhelp\fP
             }
         }
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -119,6 +122,10 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear mul
 \fBhelp\fP \fIhelp\fP
 .RE
 .RE
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

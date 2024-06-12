@@ -21,6 +21,9 @@ ncollectd-fcgi \- Documentation of ncollectd's fcgi plugin
         \fBmatch\fP \fItype\fP {
             ...
         }
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -70,7 +73,10 @@ The \fBtimeout\fP option sets the overall timeout for FCGI requests, in
 seconds. By default, the configured \fBinterval\fP is used to set the timeout.
 .TP
 \fBmatch\fP \fItype\fP
-
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

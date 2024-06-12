@@ -186,6 +186,7 @@ typedef struct {
     char *instance;
     char *file;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_OPENVPN_MAX];
 } openvpn_instance_t;
 
@@ -215,6 +216,7 @@ static void openvpn_free(void *arg)
     free(oi->instance);
     free(oi->file);
     label_set_reset(&oi->labels);
+    plugin_filter_free(oi->filter);
     free(oi);
 }
 
@@ -516,7 +518,7 @@ static int openvpn_read(user_data_t *user_data)
     }
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(oi->fams, FAM_OPENVPN_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(oi->fams, FAM_OPENVPN_MAX, oi->filter, 0);
 
     return read;
 }
@@ -547,8 +549,11 @@ static int openvpn_instance_config(config_item_t *ci)
             status = cf_util_get_label(child, &oi->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &oi->filter);
         } else {
-            PLUGIN_ERROR("The '%s' config option is not valid.", child->key);
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
             status = -1;
         }
 

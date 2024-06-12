@@ -23,6 +23,7 @@ typedef struct {
     struct stat stat;
     bool whole;
     bool force_rewind;
+    plugin_filter_t *filter;
     plugin_match_t *matches;
 } tail_t;
 
@@ -183,7 +184,7 @@ static int tail_read(user_data_t *ud)
     if (tail->whole)
         tail_close(tail);
 
-    plugin_match_dispatch(tail->matches, true);
+    plugin_match_dispatch(tail->matches, tail->filter, true);
 
     return 0;
 }
@@ -201,6 +202,8 @@ static void tail_destroy(void *arg)
 
     if (tail->matches != NULL)
         plugin_match_shutdown(tail->matches);
+
+    plugin_filter_free(tail->filter);
 
     free(tail);
     return;
@@ -230,6 +233,8 @@ static int tail_config_file(config_item_t *ci)
             status = cf_util_get_boolean(child, &tail->whole);
         } else if (strcasecmp("match", child->key) == 0) {
             status = plugin_match_config(child, &tail->matches);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &tail->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

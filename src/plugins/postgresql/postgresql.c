@@ -785,6 +785,7 @@ static void psql_database_delete(void *data)
 
     free(db->metric_prefix);
     label_set_reset(&db->labels);
+    plugin_filter_free(db->filter);
 
     pg_stat_filter_free(db->pg_stat_database);
     pg_stat_filter_free(db->pg_database_size);
@@ -799,8 +800,6 @@ static void psql_database_delete(void *data)
     pg_stat_filter_free(db->pg_stat_indexes_io);
     pg_stat_filter_free(db->pg_stat_sequence_io);
     pg_stat_filter_free(db->pg_stat_function);
-
-    plugin_filter_free(db->filter);
 
     free(db);
 }
@@ -964,7 +963,7 @@ static int psql_exec_query(psql_database_t *db, db_query_t *q, db_query_preparat
         if (col < column_num)
             continue;
 
-        status = db_query_handle_result(q, prep_area, column_values);
+        status = db_query_handle_result(q, prep_area, column_values, db->filter);
         if (status != 0) {
             PLUGIN_ERROR("db_query_handle_result failed with status %i.", status);
             goto error;

@@ -43,7 +43,7 @@ int plugin_match(plugin_match_t *plugin_match_list, char *str);
 
 void plugin_match_shutdown(plugin_match_t *plugin_match_list);
 
-int plugin_match_dispatch(plugin_match_t *plugin_match_list, bool reset);
+int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *filter, bool reset);
 
 
 int plugin_match_metric_family_set_add(match_metric_family_set_t *set,

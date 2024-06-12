@@ -29,6 +29,7 @@ typedef struct {
     char *user;
     char *password;
     label_set_t labels;
+    plugin_filter_t *filter;
     bool prefer_secondary_query;
     mongoc_client_t *client;
     metric_family_t fams[FAM_MONGODB_MAX];
@@ -45,6 +46,7 @@ static void mongodb_free(void *arg)
     free(ctx->user);
     free(ctx->password);
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
     mongoc_client_destroy(ctx->client);
 
     free(ctx);
@@ -317,7 +319,7 @@ static int mongodb_read(user_data_t *user_data)
     int status = mongodb_connect(ctx);
     if (status != 0) {
         metric_family_append(&ctx->fams[FAM_MONGODB_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
-        plugin_dispatch_metric_family(&ctx->fams[FAM_MONGODB_UP], 0);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_MONGODB_UP], ctx->filter, 0);
         return 0;
     }
 
@@ -341,7 +343,7 @@ static int mongodb_read(user_data_t *user_data)
         PLUGIN_ERROR("mongoc_client_get_database_names failed: %s.", error.message);
     }
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_MONGODB_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_MONGODB_MAX, ctx->filter, 0);
 
     return 0;
 }
@@ -381,6 +383,8 @@ static int mongodb_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &ctx->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

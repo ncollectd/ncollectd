@@ -207,6 +207,7 @@ struct c_ipmi_instance_s {
     int init_in_progress;
 
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_IPMI_MAX];
 };
 typedef struct c_ipmi_instance_s c_ipmi_instance_t;
@@ -461,7 +462,7 @@ static void sensor_read_handler(ipmi_sensor_t *sensor, int err,
 //  sstrncpy(vl.plugin, "ipmi", sizeof(vl.plugin));
 //  sstrncpy(vl.type, list_item->sensor_type, sizeof(vl.type));
 //  sstrncpy(vl.type_instance, list_item->type_instance, sizeof(vl.type_instance));
-    plugin_dispatch_metric_family(fam, 0);
+    plugin_dispatch_metric_family_filtered(fam, st->filter, 0);
 }
 
 static void sensor_get_name(ipmi_sensor_t *sensor, char *buffer, int buf_len)
@@ -1171,6 +1172,7 @@ static void c_ipmi_instance_free(void *arg)
     free(st->password);
 
     label_set_reset(&st->labels);
+    plugin_filter_free(st->filter);
 
     exclist_reset(&st->excl_sensor);
     exclist_reset(&st->excl_sel_sensor);
@@ -1243,6 +1245,8 @@ static int c_ipmi_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &st->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &st->filter);
         } else {
             PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
             status = -1;

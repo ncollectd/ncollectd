@@ -219,7 +219,7 @@ fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
                 buffer[line_size] = '\0';
                 lineno += 1;
                 if (line_size > 0) {
-                    status = metric_parse_line(&fam, plugin_dispatch_metric_family,
+                    status = metric_parse_line(&fam, plugin_dispatch_metric_family_filtered, NULL,
                                                      NULL, 0, NULL, interval_g, time, line);
                     if (status < 0)
                         break;
@@ -229,7 +229,7 @@ fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
                 buffer = end + 1;              // +1
             }
 
-            metric_parser_dispatch(&fam, plugin_dispatch_metric_family);
+            metric_parser_dispatch(&fam, plugin_dispatch_metric_family_filtered, NULL);
 
             plugin_set_ctx(old_ctx);
 

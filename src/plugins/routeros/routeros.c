@@ -174,6 +174,7 @@ typedef struct {
     char *password;
 
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_ROUTEROS_MAX];
     ros_connection_t *connection;
 } cr_data_t;
@@ -342,7 +343,7 @@ static int cr_read(user_data_t *user_data)
         if (rd->connection == NULL) {
             PLUGIN_ERROR("ros_connect failed: %s", STRERRNO);
             metric_family_append(&rd->fams[FAM_ROUTEROS_UP], VALUE_GAUGE(0), &rd->labels, NULL);
-            plugin_dispatch_metric_family(&rd->fams[FAM_ROUTEROS_UP], 0);
+            plugin_dispatch_metric_family_filtered(&rd->fams[FAM_ROUTEROS_UP], rd->filter, 0);
             return 0;
         }
     }
@@ -385,7 +386,7 @@ static int cr_read(user_data_t *user_data)
         rd->connection = NULL;
     }
 
-    plugin_dispatch_metric_family_array(rd->fams, FAM_ROUTEROS_MAX, submit);
+    plugin_dispatch_metric_family_array_filtered(rd->fams, FAM_ROUTEROS_MAX, rd->filter, submit);
 
     return 0;
 }
@@ -441,6 +442,8 @@ static int cr_config_router(config_item_t *ci)
             status = cf_util_get_label(child, &router_data->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &router_data->filter);
         } else {
             PLUGIN_ERROR("Unknown config option `%s'.", child->key);
             status = -1;

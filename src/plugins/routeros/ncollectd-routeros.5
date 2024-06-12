@@ -12,6 +12,9 @@ ncollectd-routeros \- Documentation of ncollectd's routeros plugin
         \fBuser\fP \fIuser\fP
         \fBpassword\fP \fIpassword\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -42,6 +45,10 @@ Set the password used to authenticate.
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this instance.
 By default the global \fBinterval\fP setting will be used.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

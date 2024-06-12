@@ -13,6 +13,9 @@ ncollectd-recursor \- Documentation of ncollectd's recursor plugin
         \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
         \fBinterval\fP \fIseconds\fP
         \fBprotocol\fP \fI1|2|3\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -57,6 +60,10 @@ For PowerDNS Recursor versions between 4.5.0 and 4.5.11.
 \fB3\fP
 For PowerDNS Recursor versions great than 4.6.0.
 .RE
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

@@ -14,6 +14,7 @@
 typedef struct {
     char *instance;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     char *url;
 
@@ -78,6 +79,8 @@ static void squid_free(void *arg)
     sq->curl = NULL;
 
     label_set_reset(&sq->labels);
+    plugin_filter_free(sq->filter);
+
     free(sq->url);
     free(sq->user);
     free(sq->pass);
@@ -387,7 +390,7 @@ static int squid_read_counters(squid_t *sq)
         }
     }
 
-    plugin_dispatch_metric_family_array(sq->fams, FAM_SQUID_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(sq->fams, FAM_SQUID_MAX, sq->filter, 0);
 
     return 0;
 }
@@ -410,7 +413,7 @@ static int squid_read(user_data_t *ud)
     int status = squid_read_counters(sq);
 
     metric_family_append(&fam_up, VALUE_GAUGE(status == 0 ? 1 : 0), &sq->labels, NULL);
-    plugin_dispatch_metric_family(&fam_up, 0);
+    plugin_dispatch_metric_family_filtered(&fam_up, sq->filter, 0);
 
     return 0;
 }
@@ -465,6 +468,8 @@ static int squid_config_instance(config_item_t *ci)
             status = squid_config_append_string(child, "Header", &sq->headers);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &sq->filter);
         } else {
             PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
             status = -1;

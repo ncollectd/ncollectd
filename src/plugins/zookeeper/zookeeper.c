@@ -473,6 +473,7 @@ typedef struct {
     char *host;
     char *port;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_ZOOKEEPER_MAX];
 } zookeeper_instance_t;
 
@@ -635,7 +636,7 @@ static int zookeeper_read(user_data_t *ud)
     metric_family_append(&conf->fams[FAM_ZOOKEEPER_UP],
                          VALUE_GAUGE(status < 0 ? 0 : 1), &conf->labels, NULL);
 
-    plugin_dispatch_metric_family_array(conf->fams, FAM_ZOOKEEPER_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(conf->fams, FAM_ZOOKEEPER_MAX, conf->filter, 0);
 
     return 0;
 }
@@ -653,7 +654,9 @@ static void zookeeper_config_free(void *ptr)
         free(conf->host);
     if (conf->port != NULL)
         free(conf->port);
+
     label_set_reset(&conf->labels);
+    plugin_filter_free(conf->filter);
 
     free(conf);
 }
@@ -695,6 +698,8 @@ static int zookeper_config_instance(const config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &conf->labels);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &conf->filter);
         } else {
             WARNING("Zookeeper plugin: Option `%s' not allowed here.", child->key);
             status = -1;

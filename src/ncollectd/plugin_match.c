@@ -492,7 +492,7 @@ int plugin_match_metric_family_set_add(match_metric_family_set_t *set,
     return 0;
 }
 
-int plugin_match_dispatch(plugin_match_t *plugin_match_list, bool reset)
+int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *filter, bool reset)
 {
     plugin_match_t *pm = plugin_match_list;
     while (pm != NULL) {
@@ -549,7 +549,7 @@ int plugin_match_dispatch(plugin_match_t *plugin_match_list, bool reset)
             }
             c_avl_iterator_destroy(miter);
 
-            plugin_dispatch_metric_family(&fam, 0);
+            plugin_dispatch_metric_family_filtered(&fam, filter, 0);
 
         }
         c_avl_iterator_destroy(fiter);

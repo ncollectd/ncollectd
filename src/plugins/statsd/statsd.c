@@ -59,6 +59,7 @@ typedef struct {
 
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
 } statsd_instance_t;
 
 /* Must hold metrics_lock when calling this function. */
@@ -670,7 +671,7 @@ static int statsd_metric_submit_unsafe(statsd_instance_t *si, char const *name,
     metric_family_metric_append(&fam, m);
     metric_reset(&m, fam.type);
 
-    plugin_dispatch_metric_family(&fam, 0);
+    plugin_dispatch_metric_family_filtered(&fam, si->filter, 0);
 
     strbuf_destroy(&buf);
     
@@ -763,6 +764,8 @@ static void statsd_instance_shutdown(void *arg)
     free(si->service);
     free(si->metric_prefix);
     label_set_reset(&si->labels);
+    plugin_filter_free(si->filter);
+
     free(si->timer_buckets);
 
     pthread_mutex_unlock(&si->metrics_lock);
@@ -808,6 +811,8 @@ static int statsd_instance_config(config_item_t *ci)
             status = cf_util_get_label(child, &si->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &si->filter);
         } else {
             PLUGIN_ERROR("The '%s' config option is not valid.", child->key);
             status = -1;

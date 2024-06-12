@@ -150,6 +150,7 @@ typedef struct {
     char *data_path;
     char *pid_path;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_KEEPALIVED_MAX];
 } keepalived_t;
 
@@ -482,7 +483,7 @@ static int keepalived_read(user_data_t *ud)
     pid_t pid = keepalived_get_pid(kpd);
     if (pid <= 0) {
         metric_family_append(&kpd->fams[FAM_KEEPALIVED_UP], VALUE_GAUGE(0), &kpd->labels, NULL);
-        plugin_dispatch_metric_family(&kpd->fams[FAM_KEEPALIVED_UP], 0);
+        plugin_dispatch_metric_family_filtered(&kpd->fams[FAM_KEEPALIVED_UP], kpd->filter, 0);
         return 0;
     }
 
@@ -498,7 +499,7 @@ static int keepalived_read(user_data_t *ud)
 
     metric_family_append(&kpd->fams[FAM_KEEPALIVED_UP], VALUE_GAUGE(up), &kpd->labels, NULL);
 
-    plugin_dispatch_metric_family_array(kpd->fams, FAM_KEEPALIVED_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(kpd->fams, FAM_KEEPALIVED_MAX, kpd->filter, 0);
 
     return 0;
 }
@@ -516,6 +517,7 @@ static void keepalived_free(void *arg)
     free(kpd->pid_path);
 
     label_set_reset(&kpd->labels);
+    plugin_filter_free(kpd->filter);
 
     free(kpd);
 }
@@ -557,6 +559,8 @@ static int keepalived_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &kpd->labels);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &kpd->filter);
         } else {
             PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
             status = -1;

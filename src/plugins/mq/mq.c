@@ -108,6 +108,7 @@ typedef struct {
     char *qmanager;
     char *cchannel;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_MQ_MAX];
     MQHCONN hdl;
 } cmq_instance_t;
@@ -177,6 +178,8 @@ static void cmq_instance_free(void *arg)
     free(mq->qmanager);
     free(mq->cchannel);
     label_set_reset(&mq->labels);
+    plugin_filter_free(mq->filter);
+
     free(mq);
 }
 
@@ -469,8 +472,6 @@ static int cmq_queue_list(cmq_instance_t *mq)
 
     rcode = 0;
 
-    plugin_dispatch_metric_family_array(mq->fams, FAM_MQ_MAX, 0);
-
 error:
 
     if (reqbag != MQHB_UNUSABLE_HBAG) {
@@ -501,7 +502,7 @@ static int cmq_read(user_data_t *ud)
         status = cmq_connect(mq);
         if (status != 0) {
             metric_family_append(&mq->fams[FAM_MQ_UP], VALUE_GAUGE(0), &mq->labels, NULL);
-            plugin_dispatch_metric_family(&mq->fams[FAM_MQ_UP], 0);
+            plugin_dispatch_metric_family_filtered(&mq->fams[FAM_MQ_UP], mq->filter, 0);
             return 0;
         }
     }
@@ -517,7 +518,7 @@ static int cmq_read(user_data_t *ud)
 
     metric_family_append(&mq->fams[FAM_MQ_UP], VALUE_GAUGE(up), &mq->labels, NULL);
 
-    plugin_dispatch_metric_family_array(mq->fams, FAM_MQ_MAX, submit);
+    plugin_dispatch_metric_family_array_filtered(mq->fams, FAM_MQ_MAX, mq->filter, submit);
     return 0;
 }
 
@@ -559,6 +560,8 @@ static int cmq_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &mq->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &mq->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

@@ -581,6 +581,7 @@ typedef struct {
     char *control_cert_file;
     cdtime_t timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_UNBOUND_MAX];
 } unbound_t;
 
@@ -695,6 +696,7 @@ static void unbound_free(void *data)
     free(unbound->control_key_file);
     free(unbound->control_cert_file);
     label_set_reset(&unbound->labels);
+    plugin_filter_free(unbound->filter);
 
     free(unbound);
 }
@@ -836,8 +838,6 @@ static int unbound_read_ssl(unbound_t *unbound)
         unbound_parse_metric(unbound, buffer);
     }
 
-    plugin_dispatch_metric_family_array(unbound->fams, FAM_UNBOUND_MAX, 0);
-
     status = 0;
 
 error:
@@ -903,7 +903,7 @@ static int unbound_read(user_data_t *user_data)
     metric_family_append(&unbound->fams[FAM_UNBOUND_UP], VALUE_GAUGE(status == 0 ? 1 : 0),
                          &unbound->labels, NULL);
 
-    plugin_dispatch_metric_family_array(unbound->fams, FAM_UNBOUND_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(unbound->fams, FAM_UNBOUND_MAX, unbound->filter, 0);
 
     return 0;
 }
@@ -949,6 +949,8 @@ static int unbound_config_instance (config_item_t *ci)
             status = cf_util_get_label(child, &unbound->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &unbound->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

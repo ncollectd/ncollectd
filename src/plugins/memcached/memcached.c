@@ -38,6 +38,7 @@ typedef struct {
     char *socket;
     char *port;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_MEMCACHED_MAX];
     int fd;
 } memcached_t;
@@ -55,6 +56,7 @@ static void memcached_free(void *arg)
     }
 
     label_set_reset(&st->labels);
+    plugin_filter_free(st->filter);
 
     free(st->name);
     free(st->host);
@@ -453,7 +455,7 @@ static int memcached_read(user_data_t *user_data)
     int status = memcached_read_stats(st);
     if (status != 0) {
         metric_family_append(&st->fams[FAM_MEMCACHED_UP], VALUE_GAUGE(0), &st->labels, NULL);
-        plugin_dispatch_metric_family(&st->fams[FAM_MEMCACHED_UP], 0);
+        plugin_dispatch_metric_family_filtered(&st->fams[FAM_MEMCACHED_UP], st->filter, 0);
         return 0;
     }
 
@@ -462,7 +464,7 @@ static int memcached_read(user_data_t *user_data)
     memcached_read_stats_items(st);
     memcached_read_stats_slabs(st);
 
-    plugin_dispatch_metric_family_array(st->fams, FAM_MEMCACHED_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(st->fams, FAM_MEMCACHED_MAX, st->filter, 0);
     return 0;
 }
 
@@ -501,6 +503,8 @@ static int config_add_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &st->labels);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &st->filter);
         } else {
             PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
             status = -1;
