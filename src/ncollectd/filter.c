@@ -91,7 +91,7 @@ struct filter_stmt_s {
             filter_stmt_t *next;
         } stmt_if;
         struct {
-            filter_t *filter;
+            plugin_filter_t *filter;
         } stmt_call;
         struct {
             c_complain_t complaint;
@@ -131,14 +131,14 @@ struct filter_stmt_s {
     filter_stmt_t *next;
 };
 
-struct filter_s {
+struct plugin_filter_s {
     char *name;
     filter_stmt_t *ptr;
 };
 
 typedef struct {
     size_t size;
-    filter_t **ptr;
+    plugin_filter_t **ptr;
 } filter_list_t;
 
 typedef enum {
@@ -163,9 +163,9 @@ static filter_stmt_t *filter_stmt_alloc(filter_stmt_type_t type)
     return stmt;
 }
 
-static filter_t *filter_alloc(char *name)
+static plugin_filter_t *filter_alloc(char *name)
 {
-    filter_t *filter = calloc(1, sizeof(*filter));
+    plugin_filter_t *filter = calloc(1, sizeof(*filter));
     if (filter == NULL) {
         ERROR("calloc failed.");
         return NULL;
@@ -183,7 +183,7 @@ static filter_t *filter_alloc(char *name)
     return filter;
 }
 
-void filter_free(filter_t *filter)
+void filter_free(plugin_filter_t *filter)
 {
     if (filter == NULL)
         return;
@@ -193,7 +193,7 @@ void filter_free(filter_t *filter)
     free(filter);
 }
 
-void plugin_filter_free(filter_t *filter)
+void plugin_filter_free(plugin_filter_t *filter)
 {
     if (filter == NULL)
         return;
@@ -203,7 +203,7 @@ void plugin_filter_free(filter_t *filter)
     free(filter);
 }
 
-void filter_reset(filter_t *filter)
+void filter_reset(plugin_filter_t *filter)
 {
     if (filter == NULL)
         return;
@@ -224,13 +224,13 @@ void filter_global_free(void)
     filter_global_list.size = 0;
 }
 
-filter_t *filter_global_get_by_name(const char *name)
+plugin_filter_t *filter_global_get_by_name(const char *name)
 {
     if (name == NULL)
         return NULL;
 
     for (size_t i=0; i < filter_global_list.size; i++) {
-        filter_t *filter = filter_global_list.ptr[i];
+        plugin_filter_t *filter = filter_global_list.ptr[i];
         if ((filter != NULL) && (filter->name != NULL)) {
             if (strcmp(name, filter->name) == 0)
                 return filter;
@@ -240,9 +240,9 @@ filter_t *filter_global_get_by_name(const char *name)
     return NULL;
 }
 
-static int filter_global_list_append(filter_t *filter)
+static int filter_global_list_append(plugin_filter_t *filter)
 {
-    filter_t **tmp = realloc(filter_global_list.ptr,
+    plugin_filter_t **tmp = realloc(filter_global_list.ptr,
                              sizeof(filter_global_list.ptr[0])*(filter_global_list.size + 1));
     if (tmp == NULL) {
         ERROR("realloc failed.");
@@ -500,7 +500,7 @@ static filter_stmt_t *filter_config_stmt_call(const config_item_t *ci)
         return NULL;
     }
 
-    filter_t *filter = filter_global_get_by_name(ci->values[0].value.string);
+    plugin_filter_t *filter = filter_global_get_by_name(ci->values[0].value.string);
     if (filter == NULL) {
         ERROR("Filter '%s' not found in %s:%d.", ci->values[0].value.string,
               cf_get_file(ci), cf_get_lineno(ci));
@@ -1143,7 +1143,7 @@ int filter_global_configure(const config_item_t *ci)
         return -1;
     }
 
-    filter_t *filter = filter_global_get_by_name(ci->values[0].value.string);
+    plugin_filter_t *filter = filter_global_get_by_name(ci->values[0].value.string);
     if (filter == NULL) {
         filter = filter_alloc(ci->values[0].value.string);
         if (filter == NULL)
@@ -1177,7 +1177,7 @@ int filter_global_configure(const config_item_t *ci)
     return 0;
 }
 
-int plugin_filter_configure(const config_item_t *ci, filter_t **filter)
+int plugin_filter_configure(const config_item_t *ci, plugin_filter_t **filter)
 {
     if (ci->values_num != 0) {
         ERROR("Local 'filter' cannot have arguments in %s:%d.",
@@ -1691,7 +1691,7 @@ filter_result_t filter_process_stmt(filter_stmt_t *stmt, uint64_t *flags,
     return result;
 }
 
-int filter_process(filter_t *filter, metric_family_list_t *faml)
+int filter_process(plugin_filter_t *filter, metric_family_list_t *faml)
 {
     if ((filter == NULL) || (faml == NULL))
         return -1;

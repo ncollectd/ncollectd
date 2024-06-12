@@ -147,6 +147,8 @@ typedef struct {
 typedef struct {
     char *instance;
     label_set_t labels;
+    plugin_filter_t *filter;
+
     char *host;
     char *port;
     cdtime_t timeout;
@@ -381,7 +383,7 @@ static int cgps_read(user_data_t *user_data)
     metric_family_append(&cgps->fams[FAM_GPSD_EPC_METERS_PER_SECOND],
                          VALUE_GAUGE(cgps_data.epc), &cgps->labels, NULL);
 
-    plugin_dispatch_metric_family_array(cgps->fams, FAM_GPSD_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(cgps->fams, FAM_GPSD_MAX, cgps->filter, 0);
 
     metric_reset(&m, METRIC_TYPE_GAUGE);
 
@@ -414,6 +416,7 @@ static void cgps_free(void *data)
     free(cgps->port);
     free(cgps->host);
     label_set_reset(&cgps->labels);
+    plugin_filter_free(cgps->filter);
     free(cgps);
 }
 
@@ -477,6 +480,8 @@ static int cgps_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &cgps->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &cgps->filter);
         } else {
             PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
             status = -1;

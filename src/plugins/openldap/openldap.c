@@ -156,6 +156,7 @@ typedef struct {
     bool verifyhost;
     int version;
     label_set_t labels;
+    plugin_filter_t *filter;
     LDAP *ld;
     metric_family_t fams[FAM_OPENLDAP_MAX];
 } openldap_t;
@@ -174,6 +175,9 @@ static void openldap_free(void *arg)
     free(st->url);
     if (st->ld)
         ldap_unbind_ext_s(st->ld, NULL, NULL);
+
+    label_set_reset(&st->labels);
+    plugin_filter_free(st->filter);
 
     free(st);
 }
@@ -261,7 +265,7 @@ static int openldap_read_host(user_data_t *ud)
     if (unlikely(status != 0)) {
         metric_family_append(&st->fams[FAM_OPENLDAP_UP],
                              VALUE_GAUGE(0), &st->labels, NULL);
-        plugin_dispatch_metric_family(&st->fams[FAM_OPENLDAP_UP], 0);
+        plugin_dispatch_metric_family_filtered(&st->fams[FAM_OPENLDAP_UP], st->filter, 0);
         return -1;
     }
 
@@ -277,7 +281,7 @@ static int openldap_read_host(user_data_t *ud)
         st->ld = NULL;
         metric_family_append(&st->fams[FAM_OPENLDAP_UP],
                              VALUE_GAUGE(0), &st->labels, NULL);
-        plugin_dispatch_metric_family(&st->fams[FAM_OPENLDAP_UP], 0);
+        plugin_dispatch_metric_family_filtered(&st->fams[FAM_OPENLDAP_UP], st->filter, 0);
         return -1;
     }
 
@@ -538,7 +542,8 @@ static int openldap_read_host(user_data_t *ud)
     }
     ldap_msgfree(result);
 
-    plugin_dispatch_metric_family_array(st->fams, FAM_OPENLDAP_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(st->fams, FAM_OPENLDAP_MAX, st->filter, 0);
+
     return 0;
 }
 
@@ -586,6 +591,8 @@ static int openldap_config_add(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &st->labels);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &st->filter);
         } else {
             PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
             status = -1;

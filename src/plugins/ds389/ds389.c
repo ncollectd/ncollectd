@@ -37,6 +37,7 @@ typedef struct {
     bool verifyhost;
     int version;
     label_set_t labels;
+    plugin_filter_t *filter;
     LDAP *ld;
     metric_family_t fams[FAM_DS389_MAX];
 } ds389_ctx_t;
@@ -193,6 +194,8 @@ static void ds389_free(void *arg)
     free(ctx->name);
     free(ctx->url);
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
+
     if (ctx->ld != NULL)
         ldap_unbind_ext_s(ctx->ld, NULL, NULL);
 
@@ -715,7 +718,7 @@ static int ds389_read(user_data_t *ud)
 
         metric_family_append(&ctx->fams[FAM_DS389_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
 
-        plugin_dispatch_metric_family(&ctx->fams[FAM_DS389_UP], 0);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_DS389_UP], ctx->filter, 0);
         return 0;
     }
 
@@ -754,7 +757,7 @@ static int ds389_read(user_data_t *ud)
     if (status < 0)
         PLUGIN_ERROR("error reading replication metrics");
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_DS389_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_DS389_MAX, ctx->filter, 0);
     return 0;
 }
 
@@ -802,6 +805,8 @@ static int ds389_config_add(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ctx->labels);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_WARNING("Option '%s' not allowed here.", child->key);
             status = -1;

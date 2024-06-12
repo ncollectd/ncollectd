@@ -35,6 +35,9 @@ ncollectd-load \- Documentation of ncollectd's dns plugin
             \fBlabel\fP \fIkey\fP \fIvalue\fP
             \fBvalidate\fP \fIexpression\fP
         }
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -260,6 +263,10 @@ A NS MD MF CNAME SOA MB MG MR NULL WKS PTR HINFO MINFO MX TXT RP AFSDB X25 ISDN 
 .RE
 .RE
 .RE
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

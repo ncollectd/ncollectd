@@ -39,6 +39,7 @@ typedef struct {
     char *passwd;
     struct timeval timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     redisContext *redisContext;
     redis_query_t *queries;
     metric_family_t fams[FAM_REDIS_MAX];
@@ -67,6 +68,7 @@ static void redis_instance_free(void *arg)
     free(rn->socket);
     free(rn->passwd);
     label_set_reset(&rn->labels);
+    plugin_filter_free(rn->filter);
     free(rn);
 }
 
@@ -156,7 +158,7 @@ static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
     };
     metric_family_append(&fam, value, &rq->labels, NULL);
 
-    plugin_dispatch_metric_family(&fam, 0);
+    plugin_dispatch_metric_family_filtered(&fam, rn->filter, 0);
 
     freeReplyObject(rr);
     return 0;
@@ -575,7 +577,7 @@ static void redis_read_info(redis_node_t *rn)
 
     freeReplyObject(rr);
 
-    plugin_dispatch_metric_family_array(rn->fams, FAM_REDIS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(rn->fams, FAM_REDIS_MAX, rn->filter, 0);
 }
 
 static int redis_read(user_data_t *user_data)
@@ -592,7 +594,7 @@ static int redis_read(user_data_t *user_data)
     redis_check_connection(rn);
     if (!rn->redisContext) { /* no connection */
         metric_family_append(&rn->fams[FAM_REDIS_UP], VALUE_GAUGE(0), &rn->labels, NULL);
-        plugin_dispatch_metric_family(&rn->fams[FAM_REDIS_UP], 0);
+        plugin_dispatch_metric_family_filtered(&rn->fams[FAM_REDIS_UP], rn->filter,  0);
         return 0;
     }
 
@@ -717,6 +719,8 @@ static int redis_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(option, &interval);
         } else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &rn->labels);
+        } else if (strcasecmp("filter", option->key) == 0) {
+            status = plugin_filter_configure(option, &rn->filter);
         }  else {
             PLUGIN_WARNING("Option '%s' not allowed inside a 'instance' block.", option->key);
             status = -1;

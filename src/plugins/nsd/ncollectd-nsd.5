@@ -11,6 +11,9 @@ ncollectd-nsd \- Documentation of ncollectd's nsd plugin
         \fBport\fP \fIport\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -32,6 +35,10 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .TP
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this instance.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

@@ -103,6 +103,7 @@ typedef struct {
     jlk_response_t response;
     char *metric_prefix;
     label_set_t *labels;
+    plugin_filter_t *filter;
 } jlk_parser_t;
 
 typedef struct {
@@ -124,6 +125,8 @@ typedef struct {
 
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
+
     json_parser_t parser;
     jlk_mbean_set_t mbeans;
 } jlk_t;
@@ -224,7 +227,7 @@ static bool jlk_object_name_cmp(object_name_t *oa, object_name_t *ob)
     return true;
 }
 
-static void jlk_submit(char *metric_prefix, label_set_t *labels,
+static void jlk_submit(char *metric_prefix, label_set_t *labels, plugin_filter_t *filter,
                        jlk_mbean_set_t *mbeans, jlk_response_t *response)
 {
     if (mbeans == NULL || response == NULL)
@@ -307,7 +310,7 @@ static void jlk_submit(char *metric_prefix, label_set_t *labels,
                 value = VALUE_GAUGE(response->value);
 
             metric_family_append(&fam, value, &mlabels, NULL);
-            plugin_dispatch_metric_family_array(&fam, 1, 0);
+            plugin_dispatch_metric_family_filtered(&fam, filter, 0);
 
 //fprintf(stderr, "[%s][%s][%s]%f\n", response->request_mbean, response->request_path, response->request_attribute, response->value);
             strbuf_destroy(&buf);
@@ -474,7 +477,7 @@ static bool jlk_cb_end_map(void *ctx)
         jlk_parser->stack[jlk_parser->depth-1] = JLK_NONE;
     } else {
         jlk_parser->depth = 0;
-        jlk_submit(jlk_parser->metric_prefix, jlk_parser->labels,
+        jlk_submit(jlk_parser->metric_prefix, jlk_parser->labels, jlk_parser->filter,
                    jlk_parser->mbeans, &jlk_parser->response);
         jlk_response_reset(&jlk_parser->response);
     }
@@ -698,6 +701,7 @@ static int jlk_read(user_data_t *ud)
     ctx.mbeans = &jlk->mbeans;
     ctx.metric_prefix = jlk->metric_prefix;
     ctx.labels = &jlk->labels;
+    ctx.filter = jlk->filter;
 
     json_parser_init(&jlk->parser, 0, &jlk_callbacks, &ctx);
 
@@ -856,6 +860,9 @@ static void jlk_free(void *arg)
     /// todo: freeme    jlk_attribute_values_t *attributepool;
 
     jlk_mbean_set_free(&jlk->mbeans);
+
+    label_set_reset(&jlk->labels);
+    plugin_filter_free(jlk->filter);
 
     free(jlk);
 }
@@ -1021,6 +1028,8 @@ static int jlk_config_add_instance(config_item_t *ci)
             status = cf_util_get_string(child, &jlk->metric_prefix);
         } else if (strcasecmp("mbean", child->key) == 0) {
             status = jlk_config_add_mbean(child, &jlk->mbeans);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &jlk->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

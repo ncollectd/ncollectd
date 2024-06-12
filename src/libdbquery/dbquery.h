@@ -47,7 +47,7 @@ int db_query_prepare_result(db_query_t const *q, db_query_preparation_area_t *pr
                                                  size_t column_num);
 
 int db_query_handle_result(db_query_t const *q, db_query_preparation_area_t *prep_area,
-                                                char **column_values);
+                                                char **column_values, plugin_filter_t *filter);
 void db_query_finish_result(db_query_t const *q, db_query_preparation_area_t *prep_area);
 
 db_query_preparation_area_t * db_query_allocate_preparation_area(db_query_t *q);

@@ -32,6 +32,7 @@ typedef struct {
     char *metric_prefix;
     size_t metric_prefix_size;
     label_set_t labels;
+    plugin_filter_t *filter;
     int status;
     pid_t pid;
     bool running;
@@ -97,7 +98,7 @@ static void *exec_read_one(void *arg)
                 if (*(pnl - 1) == '\r')
                     *(pnl - 1) = '\0';
 
-                status = metric_parse_line(&fam, plugin_dispatch_metric_family,
+                status = metric_parse_line(&fam, plugin_dispatch_metric_family_filtered, pm->filter,
                                                  pm->metric_prefix, pm->metric_prefix_size,
                                                  &pm->labels, 0, 0, pbuffer);
                 if (status < 0)
@@ -238,6 +239,7 @@ static void exec_free(void *arg)
     exec_reset(&pm->exec);
 
     label_set_reset(&pm->labels);
+    plugin_filter_free(pm->filter);
 
     free(pm->metric_prefix);
 
@@ -282,6 +284,8 @@ static int exec_config_exec(config_item_t *ci)
             status = cf_util_get_label(child, &pm->labels);
         } else if (strcasecmp("metric-prefix", child->key) == 0) {
             status = cf_util_get_string(child, &pm->metric_prefix);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &pm->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

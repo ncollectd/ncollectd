@@ -88,7 +88,7 @@ typedef struct {
 typedef struct {
     c_avl_tree_t *tree;
     label_set_t *labels;
-
+    plugin_filter_t *filter;
     cdtime_t time;
     perf_key_t *perf_key;
     perf_value_t *perf_value;
@@ -104,6 +104,7 @@ typedef struct {
     char *asok_path;  /* path to the socket to talk to the ceph daemon */
     cdtime_t timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     bool have_schema;
     c_avl_tree_t *schema;
 } ceph_daemon_t;
@@ -509,7 +510,7 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
                     .help = state->perf_value->description,
                 };
                 metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
-                plugin_dispatch_metric_family(&fam, state->time);
+                plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             } else if (state->perf_value->perf_metric == PERF_METRIC_COUNTER) {
                 metric_family_t fam = {
                     .name = state->perf_value->metric,
@@ -517,7 +518,7 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
                     .help = state->perf_value->description,
                 };
                 metric_family_append(&fam, VALUE_COUNTER(atoi(num)), state->labels, NULL);
-                plugin_dispatch_metric_family(&fam, state->time);
+                plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }
         }
         break;
@@ -531,7 +532,7 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
                     .help = state->perf_value->description,
                 };
                 metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
-                plugin_dispatch_metric_family(&fam, state->time);
+                plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }   break;
             case PERF_LONGRUN_AVGTIME: {
                 metric_family_t fam = {
@@ -540,7 +541,7 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
                     .help = state->perf_value->description,
                 };
                 metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
-                plugin_dispatch_metric_family(&fam, state->time);
+                plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }   break;
             case PERF_LONGRUN_AVGCOUNT: {
                 metric_family_t fam = {
@@ -549,7 +550,7 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
                     .help = state->perf_value->description,
                 };
                 metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
-                plugin_dispatch_metric_family(&fam, state->time);
+                plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }   break;
             default:
                 break;
@@ -699,6 +700,7 @@ static void ceph_daemon_free(void *arg)
     free(cd->name);
     free(cd->asok_path);
     label_set_reset(&cd->labels);
+    plugin_filter_free(cd->filter);
 
     if (cd->schema!= NULL) {
         while (true) {
@@ -791,6 +793,7 @@ static int ceph_conn_process_json(ceph_conn_t *io)
     if (io->request_type == ASOK_REQ_DATA) {
         io->yajl.tree = io->d->schema;
         io->yajl.labels = &io->d->labels;
+        io->yajl.filter = io->d->filter;
     }
 
     json_status_t status = json_parser_parse(&handle, io->json, io->json_len);
@@ -1091,16 +1094,19 @@ static int ceph_config_daemon(config_item_t *ci)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
-        if (strcasecmp("socket-path", child->key) == 0)
+        if (strcasecmp("socket-path", child->key) == 0) {
             status = cf_util_get_string(child, &cd->asok_path);
-        else if (strcasecmp("label", child->key) == 0)
+        } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &cd->labels);
-        else if (strcasecmp("timeout", child->key) == 0)
+        } else if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_cdtime(child, &cd->timeout);
-        else if (strcasecmp("interval", child->key) == 0)
+        } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
-        else {
-            PLUGIN_ERROR("Option `%s' not allowed here.", child->key);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &cd->filter);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
             status = -1;
         }
 
@@ -1144,7 +1150,8 @@ static int ceph_config(config_item_t *ci)
         if (strcasecmp("daemon", child->key) == 0) {
             status = ceph_config_daemon(child);
         } else {
-            PLUGIN_WARNING("ignoring unknown option %s", child->key);
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
             status = -1;
         }
 

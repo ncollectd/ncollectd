@@ -21,6 +21,9 @@ ncollectd-scraper \- Documentation of ncollectd's \*(lqscraper plugin\*(rq
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBcollect\fP \fIflags\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -143,6 +146,11 @@ The number of new connections that were created to achieve the transfer.
 \fBappconnect_time\fP
 Time it took from the start until the SSL connect/handshake to the remote
 host was completed.
+.RE
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

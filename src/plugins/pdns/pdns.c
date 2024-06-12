@@ -518,6 +518,7 @@ static metric_family_t fams_server[FAM_PDNS_MAX] = {
 typedef struct {
     char *name;
     label_set_t labels;
+    plugin_filter_t *filter;
     cdtime_t timeout;
     char *command;
     char *sockpath;
@@ -533,6 +534,7 @@ static void pdns_free(void *arg)
 
     free(server->name);
     label_set_reset(&server->labels);
+    plugin_filter_free(server->filter);
     free(server->sockpath);
     free(server);
 }
@@ -643,7 +645,7 @@ static int pdns_read(user_data_t *user_data)
     }
 
     free(buffer);
-    plugin_dispatch_metric_family_array(server->fams, FAM_PDNS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(server->fams, FAM_PDNS_MAX, server->filter, 0);
 
     return 0;
 }
@@ -678,6 +680,8 @@ int pdns_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &server->timeout);
         } else if (strcasecmp("socket", child->key) == 0) {
             status = cf_util_get_string(child, &server->sockpath);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &server->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

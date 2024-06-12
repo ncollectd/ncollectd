@@ -6,12 +6,17 @@ ncollectd-ntpd \- Documentation of ncollectd's ntpd plugin
 \fBload-plugin\fP ntpd
 .br
 \fBplugin\fP ntpd {
-    \fBhost\fP \fIhost\fP
-    \fBport\fP \fIport\fP
-    \fBlabel\fP \fIkey\fP \fIvalue\fP
-    \fBinterval\fP \fIseconds\fP
-    \fBreverse-lookups\fP \fItrue|false\fP
-    \fBinclude-unit-id\fP \fItrue|false\fP
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBreverse-lookups\fP \fItrue|false\fP
+        \fBinclude-unit-id\fP \fItrue|false\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
 .br
 }
 .SH DESCRIPTION
@@ -25,6 +30,10 @@ correctly with them, the ntp daemon must be explicitly configured to
 enable \fBmode 7\fP (which is disabled by default). Refer to the
 .BR ntp.conf (5)
 manual page for details.
+.PP
+The configuration of the \fBntpd\fP plugin consists of one or more
+\fBinstance\fP blocks. Each block requires one string argument
+as the instance name.
 .PP
 The following options are accepted within each \fBinstance\fP block:
 .PP
@@ -50,11 +59,14 @@ compatibility, though.
 \fBinclude-unit-id\fP \fItrue|false\fP
 When a peer is a refclock, include the unit ID in the \fIpeer\fP label.
 Defaults to \fBfalse\fP.
-
 If two refclock peers use the same driver and this is \fBfalse\fP, the plugin will
 try to write simultaneous measurements from both to the same type instance.
 This will result in error messages in the log and only one set of measurements
 making it through.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

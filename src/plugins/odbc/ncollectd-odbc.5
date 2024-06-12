@@ -35,6 +35,9 @@ ncollectd-odbc \- Documentation of ncollectd's odbc plugin
         \fBinterval\fP \fIseconds\fP
         \fBping-query\fP \fIquery\fP
         \fBquery\fP \fIquery-name\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -90,6 +93,10 @@ Associates the query named \fIquery-name\fP with this database connection. The
 query needs to be defined \fIbefore\fP this statement, i. e. all query
 blocks you want to refer to must be placed above the database block you want to
 refer to them from.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .TP
 .RE
 .TP

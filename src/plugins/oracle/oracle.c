@@ -21,6 +21,7 @@ typedef struct {
 
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     db_query_preparation_area_t **q_prep_areas;
     db_query_t **queries;
@@ -93,6 +94,7 @@ static void o_database_free(void *arg)
 
     free(db->metric_prefix);
     label_set_reset(&db->labels);
+    plugin_filter_free(db->filter);
 
     if (db->oci_service_context != NULL)
         OCIHandleFree(db->oci_service_context, OCI_HTYPE_SVCCTX);
@@ -308,7 +310,7 @@ static int o_read_database_query(o_database_t *db,
             break;
         }
 
-        status = db_query_handle_result(q, prep_area, column_values);
+        status = db_query_handle_result(q, prep_area, column_values, db->filter);
         if (status != 0) {
             PLUGIN_WARNING("o_read_database_query (%s, %s): db_query_handle_result failed.",
                             db->name, db_query_get_name(q));
@@ -460,6 +462,9 @@ static int o_config_add_database(config_item_t *ci)
         } else if (strcasecmp("query", child->key) == 0) {
             status = db_query_pick_from_list(child, queries, queries_num,
                                                     &db->queries, &db->queries_num);
+
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &db->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

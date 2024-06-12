@@ -207,6 +207,7 @@ typedef struct {
     char *ciphersuite;
     int qos;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     metric_family_t fams[FAM_MOSQUITTO_MAX];
     ncmosquitto_subs_t *subs;
@@ -292,6 +293,7 @@ static void ncmosquitto_free(void *arg)
     free(conf->ciphersuite);
     free(conf->subs);
     label_set_reset(&conf->labels);
+    plugin_filter_free(conf->filter);
 
     free(conf);
 }
@@ -520,7 +522,7 @@ static int ncmosquitto_read(user_data_t *user_data)
 
     if (!conf->connected) {
         metric_family_append(&conf->fams[FAM_MOSQUITTO_UP], VALUE_GAUGE(0), &conf->labels, NULL);
-        plugin_dispatch_metric_family(&conf->fams[FAM_MOSQUITTO_UP], 0);
+        plugin_dispatch_metric_family_filtered(&conf->fams[FAM_MOSQUITTO_UP], conf->filter, 0);
         return 0;
     }
 
@@ -539,7 +541,7 @@ static int ncmosquitto_read(user_data_t *user_data)
         }
     }
 
-    plugin_dispatch_metric_family_array(conf->fams, FAM_MOSQUITTO_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(conf->fams, FAM_MOSQUITTO_MAX, conf->filter, 0);
 
     return 0;
 }
@@ -629,6 +631,8 @@ static int ncmosquitto_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &conf->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &conf->filter);
         } else {
             PLUGIN_ERROR("Unknown config option: %s", child->key);
             status = -1;

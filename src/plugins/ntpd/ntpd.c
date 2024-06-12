@@ -280,6 +280,7 @@ typedef struct {
     bool do_reverse_lookups;
     bool include_unit_id;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_NTPD_MAX];
     int sd;
 } ntpd_ctx_t;
@@ -851,7 +852,7 @@ static int ntpd_read(user_data_t *user_data)
     if (status == 0)
         ntp_read_peer_summary(ctx);
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_NTPD_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_NTPD_MAX, ctx->filter, 0);
     return 0;
 }
 
@@ -867,6 +868,7 @@ static void ntpd_free(void *arg)
     free(ctx->port);
 
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
 
     if (ctx->sd >= 0)
         close(ctx->sd);
@@ -910,6 +912,8 @@ static int ntpd_config_instance(config_item_t *ci)
             status = cf_util_get_boolean(child, &ctx->do_reverse_lookups);
         } else if (strcasecmp("include-unit-id", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctx->include_unit_id);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_ERROR("Option `%s' not allowed here.", child->key);
             status = -1;

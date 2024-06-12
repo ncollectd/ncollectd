@@ -17,6 +17,9 @@ ncollectd-apache \- Documentation of ncollectd's apache plugin
         \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -107,6 +110,9 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
 URL. By default the global \fBinterval\fP setting will be used.
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

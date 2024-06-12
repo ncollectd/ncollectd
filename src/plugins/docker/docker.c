@@ -202,6 +202,7 @@ struct docker_instance_s {
     char *url_info;
     int timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     pthread_t thread_id;
     bool thread_running;
@@ -1195,7 +1196,7 @@ static int docker_read(user_data_t *user_data)
     pthread_mutex_unlock(&docker->lock);
 
 
-    plugin_dispatch_metric_family_array(docker->fams, FAM_DOCKER_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(docker->fams, FAM_DOCKER_MAX, docker->filter, 0);
     return 0;
 }
 
@@ -1223,6 +1224,7 @@ static void docker_instance_free(void *arg)
     free(docker->url);
     free(docker->url_info);
     label_set_reset(&docker->labels);
+    plugin_filter_free(docker->filter);
 
     if (docker->ladd != NULL) {
         for (llentry_t *e = llist_head(docker->ladd); e != NULL; e = e->next) {
@@ -1309,6 +1311,8 @@ static int docker_config_instance(config_item_t *ci)
             status = cf_util_get_int(child, &docker->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &docker->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

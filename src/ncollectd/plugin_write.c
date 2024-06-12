@@ -59,8 +59,8 @@ static write_queue_stats_t *write_queue_stats;
 
 static atomic_ullong metrics_dispatched;
 
-static filter_t *pre_cache_filter;
-static filter_t *post_cache_filter;
+static plugin_filter_t *pre_cache_filter;
+static plugin_filter_t *post_cache_filter;
 
 extern mdb_t *mdb;
 
@@ -236,7 +236,7 @@ static int plugin_dispatch_metric_internal(metric_family_t *fam)
     return 0;
 }
 
-static int plugin_dispatch_metric_internal_filtered(metric_family_t *fam, filter_t *filter)
+static int plugin_dispatch_metric_internal_filtered(metric_family_t *fam, plugin_filter_t *filter)
 {
     if (fam == NULL)
         return EINVAL;
@@ -273,7 +273,7 @@ static int plugin_dispatch_metric_internal_filtered(metric_family_t *fam, filter
 }
 
 int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t size,
-                                                 filter_t *filter, cdtime_t time)
+                                                 plugin_filter_t *filter, cdtime_t time)
 {
     if ((fams == NULL) || (size == 0))
         return EINVAL;

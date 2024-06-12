@@ -15,6 +15,7 @@ typedef struct {
     char *name;
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     char *conn;
     char *alias;
@@ -200,6 +201,7 @@ static void db2_database_free(void *arg)
     free(db->pass);
 
     label_set_reset(&db->labels);
+    plugin_filter_free(db->filter);
 
     if (db->q_prep_areas != NULL) {
         for (size_t i = 0; i < db->queries_num; i++) {
@@ -364,7 +366,7 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
 
         /* If all values were copied successfully, call `db_query_handle_result'
          * to dispatch the row to the daemon. */
-        status = db_query_handle_result(q, prep_area, column_values);
+        status = db_query_handle_result(q, prep_area, column_values, db->filter);
         if (status != 0) {
             PLUGIN_ERROR("db2_read_database_query (%s, %s): db_query_handle_result failed.",
                          db->name, db_query_get_name(q));
@@ -552,6 +554,8 @@ static int db2_config_add_database(config_item_t *ci)
                                                      &db->queries, &db->queries_num);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &db->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

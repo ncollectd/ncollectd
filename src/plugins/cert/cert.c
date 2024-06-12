@@ -48,6 +48,7 @@ typedef struct cert_cb {
     int port;
     char *server_name;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_CERT_MAX];
 } cert_cb_t;
 
@@ -100,6 +101,7 @@ static void cert_free(void *data)
     free(cert_cb->server_name);
 
     label_set_reset(&cert_cb->labels);
+    plugin_filter_free(cert_cb->filter);
 
     free(cert_cb);
 }
@@ -194,7 +196,7 @@ static int cert_read(user_data_t *user_data)
                              NULL);
     }
 
-    plugin_dispatch_metric_family_array(cert_cb->fams, FAM_CERT_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(cert_cb->fams, FAM_CERT_MAX, cert_cb->filter, 0);
 
 error:
     if (ssl != NULL)
@@ -247,6 +249,8 @@ static int cert_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &cert_cb->labels);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &cert_cb->filter);
         } else {
             PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
             status = -1;

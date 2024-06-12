@@ -17,6 +17,9 @@ ncollectd-squid \- Documentation of ncollectd's squid plugin
         \fBheader\fP \fIheader\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -69,6 +72,10 @@ multiple time in the B<Instance> block.
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
 URL. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

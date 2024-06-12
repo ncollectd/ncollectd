@@ -6,7 +6,11 @@ ncollectd-ethstat \- Documentation of ncollectd's ethstat plugin
 \fBload-plugin\fP ethstat
 .br
 \fBplugin\fP ethstat {
-    \fBinterface\fP \fIname\fP
+    \fBinterface\fP \fIname\fP {
+        \fBfilter\fP {
+            ...
+        }
+    }
 .br
 }
 .SH DESCRIPTION
@@ -18,6 +22,12 @@ The plugin supports the following options:
 .TP
 \fBinterface\fP \fIname\fP
 Collect statistical information about interface \fIname\fP.
+.RS
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.RE
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

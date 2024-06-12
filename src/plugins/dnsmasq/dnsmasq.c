@@ -79,6 +79,7 @@ typedef struct {
     int port;
     char *leases;
     label_set_t labels;
+    plugin_filter_t *filter;
     struct timeval timeout;
     struct sockaddr_in dst;
     int sd;
@@ -320,6 +321,8 @@ static void dnsmasq_free(void *data)
     free(dnsi->name);
     free(dnsi->host);
     label_set_reset(&dnsi->labels);
+    plugin_filter_free(dnsi->filter);
+
     if (dnsi->sd >= 0)
         close(dnsi->sd);
 
@@ -369,6 +372,8 @@ static int dnsmasq_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(option, &interval);
         }  else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &dnsi->labels);
+        } else if (strcasecmp("filter", option->key) == 0) {
+            status = plugin_filter_configure(option, &dnsi->filter);
         } else {
             PLUGIN_ERROR("Option `%s' not allowed inside a 'instance' block. "
                          "I'll ignore this option.", option->key);

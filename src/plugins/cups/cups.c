@@ -59,6 +59,7 @@ typedef struct {
     cdtime_t timeout;
     http_t *http;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_CUPS_MAX];
 } cups_instance_t;
 
@@ -232,6 +233,9 @@ static void cups_instance_free(void *data)
     if (ins->http != NULL)
         httpClose(ins->http);
 
+    label_set_reset(&ins->labels);
+    plugin_filter_free(ins->filter);
+
     free(ins);
 }
 
@@ -266,6 +270,8 @@ static int cups_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &ins->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ins->filter);
         } else {
             PLUGIN_ERROR("Unknown config option: %s", child->key);
             status = -1;

@@ -11,6 +11,9 @@ ncollectd-tail \- Documentation of ncollectd's tail plugin
         \fBmatch\fP \fImatch\fP {
             ...
         }
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -28,6 +31,10 @@ Defaults to the plugin's default interval.
 .TP
 \fBmatch\fP \fImatch\fP
 Configure the \fImatch\fP plugin to process the lines of the file.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

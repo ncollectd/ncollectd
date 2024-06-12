@@ -141,6 +141,7 @@ typedef struct {
 typedef struct {
     char *instance;
     label_set_t labels;
+    plugin_filter_t *filter;
     rd_kafka_conf_t *conf;
     rd_kafka_t *rk;
     c_avl_tree_t *topic_offsets;
@@ -526,7 +527,7 @@ static int kafka_read(user_data_t *user_data)
         metric_family_append(&ctx->fams[FAM_KAFKA_UP], VALUE_GAUGE(0), &ctx->labels,
                              &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
                              NULL);
-        plugin_dispatch_metric_family(&ctx->fams[FAM_KAFKA_UP], 0);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_KAFKA_UP], ctx->filter, 0);
         return 0;
     }
 
@@ -631,7 +632,7 @@ FAM_KAFKA_CLUSTER
     kafka_topic_offset_reset(ctx->topic_offsets);
 #endif
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_KAFKA_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_KAFKA_MAX, ctx->filter, 0);
 
     if (cluster_id != NULL)
         rd_kafka_mem_free (ctx->rk, cluster_id);
@@ -657,6 +658,7 @@ static void kafka_free(void *arg)
     free(ctx->instance);
 
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
 
     if (ctx->rk != NULL) {
         rd_kafka_destroy(ctx->rk);
@@ -736,6 +738,8 @@ static int kafka_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &ctx->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_WARNING("Invalid directive: %s.", child->key);
             status = -1;

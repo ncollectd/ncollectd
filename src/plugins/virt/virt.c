@@ -655,6 +655,8 @@ typedef struct {
 
     uint64_t flags;
     label_set_t labels;
+    plugin_filter_t *filter;
+
     metric_family_t fams[FAM_VIRT_MAX];
 } virt_ctx_t;
 
@@ -2448,7 +2450,7 @@ static int lv_read(user_data_t *ud)
                          virDomainGetName(state->interface_devices[i].dom));
     }
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_VIRT_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_VIRT_MAX, ctx->filter, 0);
 
     return 0;
 }
@@ -3011,6 +3013,8 @@ static int lv_config_instance(config_item_t *ci)
             }
         } else if (strcasecmp(c->key, "persistent-notification") == 0) {
             status = cf_util_get_boolean(c, &ctx->persistent_notification);
+        } else if (strcasecmp(c->key, "filter") == 0) {
+            status = plugin_filter_configure(c, &ctx->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           c->key, cf_get_file(c), cf_get_lineno(c));

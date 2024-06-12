@@ -85,6 +85,7 @@ typedef struct {
     char *ssl_ciphers;
     char *server; /* user specific server type */
     label_set_t labels;
+    plugin_filter_t *filter;
 
     char *apache_buffer;
     char apache_curl_error[CURL_ERROR_SIZE];
@@ -116,6 +117,7 @@ static void apache_free(void *arg)
         curl_easy_cleanup(ctx->curl);
         ctx->curl = NULL;
     }
+    plugin_filter_free(ctx->filter);
     free(ctx);
 }
 
@@ -640,7 +642,7 @@ static int apache_read(user_data_t *user_data)
 
     ctx->apache_buffer_fill = 0;
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_APACHE_MAX, submit);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_APACHE_MAX, ctx->filter, submit);
 
     return 0;
 }
@@ -689,6 +691,8 @@ static int apache_config_instance (config_item_t *ci)
             status = cf_util_get_label(child, &ctx->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

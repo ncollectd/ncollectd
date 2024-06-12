@@ -156,12 +156,18 @@ plugin_ctx_t plugin_get_ctx(void);
 plugin_ctx_t plugin_set_ctx(plugin_ctx_t ctx);
 
 int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t size,
-                                                 filter_t *filter, cdtime_t time);
+                                                 plugin_filter_t *filter, cdtime_t time);
 
 static inline int plugin_dispatch_metric_family_array(metric_family_t *fams, size_t size,
                                                       cdtime_t time)
 {
     return plugin_dispatch_metric_family_array_filtered(fams, size, NULL, time);
+}
+
+static inline int plugin_dispatch_metric_family_filtered(metric_family_t *fam,
+                                                         plugin_filter_t *filter, cdtime_t time)
+{
+    return plugin_dispatch_metric_family_array_filtered(fam, 1, filter, time);
 }
 
 static inline int plugin_dispatch_metric_family(metric_family_t *fam, cdtime_t time)

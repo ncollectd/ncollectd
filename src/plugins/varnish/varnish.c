@@ -82,6 +82,7 @@ typedef struct {
     char *instance;
     char *vsh_instance;
     label_set_t labels;
+    plugin_filter_t *filter;
     uint64_t flags;
     metric_family_t fams[FAM_VARNISH_MAX];
 } varnish_instance_t;
@@ -327,7 +328,7 @@ static int varnish_read(user_data_t *ud)
     metric_family_append(&conf->fams[FAM_VARNISH_UP],
                          VALUE_GAUGE(status == 0 ? 1 : 0), &conf->labels, NULL);
 
-    plugin_dispatch_metric_family_array(conf->fams, FAM_VARNISH_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(conf->fams, FAM_VARNISH_MAX, conf->filter, 0);
     return 0;
 }
 
@@ -342,7 +343,9 @@ static void varnish_config_free(void *ptr)
         free(conf->instance);
     if (conf->vsh_instance != NULL)
         free(conf->vsh_instance);
+
     label_set_reset(&conf->labels);
+    plugin_filter_free(conf->filter);
 
     free(conf);
 }
@@ -379,6 +382,8 @@ static int varnish_config_instance(const config_item_t *ci)
             status = cf_util_get_label(child, &conf->labels);
         } else if (strcasecmp("collect", child->key) == 0) {
             status = cf_util_get_flags(child, cvarnish_flags, cvarnish_flags_size, &conf->flags);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &conf->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

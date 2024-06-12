@@ -12,6 +12,9 @@ ncollectd-docker \- Documentation of ncollectd's docker plugin
         \fBlabels\fP \fIkey\fP \fIvalue\fP
         \fBtimeout\fP \fIseconds\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -38,6 +41,10 @@ seconds.
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
 instanced. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

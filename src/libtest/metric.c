@@ -29,7 +29,9 @@ static void test_metric_family_array_free(metric_family_t *fams, size_t size)
     free(fams);
 }
 
-static int test_metric_expect_add(metric_family_t *fam, __attribute__((unused)) cdtime_t time)
+static int test_metric_expect_add(metric_family_t *fam,
+                                  __attribute__((unused)) plugin_filter_t *filter,
+                                  __attribute__((unused)) cdtime_t time)
 {
     if (fam == NULL)
         return 0;
@@ -310,7 +312,8 @@ int plugin_test_metrics_cmp(const char *filename)
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), fp) != NULL) {
         strnrtrim(buffer, strlen(buffer));
-        int status = metric_parse_line(&fam, test_metric_expect_add, NULL, 0, NULL, 0, 0, buffer);
+        int status = metric_parse_line(&fam, test_metric_expect_add,
+                                       NULL, NULL, 0, NULL, 0, 0, buffer);
         if (status != 0) {
             fprintf(stderr, "Cannot parse '%s'.", buffer);
             fclose(fp);
@@ -318,7 +321,7 @@ int plugin_test_metrics_cmp(const char *filename)
         }
     }
 
-    metric_parser_dispatch(&fam, test_metric_expect_add);
+    metric_parser_dispatch(&fam, test_metric_expect_add, NULL);
 
     fclose(fp);
 

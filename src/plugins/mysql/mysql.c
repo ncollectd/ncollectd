@@ -104,6 +104,7 @@ typedef struct {
 
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
     uint64_t flags;
 
     bool heartbeat_utc;
@@ -157,6 +158,7 @@ static void cmysql_database_free(void *arg)
 
     free(db->metric_prefix);
     label_set_reset(&db->labels);
+    plugin_filter_free(db->filter);
     free(db->heartbeat_schema);
     free(db->heartbeat_table);
 
@@ -1213,7 +1215,7 @@ static int cmysql_read_database_query(cmysql_database_t *db, MYSQL *con,
 
         /* If all values were copied successfully, call `db_query_handle_result'
          * to dispatch the row to the daemon. */
-        status = db_query_handle_result(q, prep_area, column_values);
+        status = db_query_handle_result(q, prep_area, column_values, db->filter);
         if (status != 0) {
             PLUGIN_ERROR("%s in %s: db_query_handle_result failed.",
                          db->instance, db_query_get_name(q));
@@ -1257,7 +1259,7 @@ static int cmysql_read(user_data_t *ud)
     MYSQL *con = cmysql_get_connection(db);
     if (con == NULL) {
         metric_family_append(&db->fams[FAM_MYSQL_UP], VALUE_GAUGE(0), &db->labels, NULL);
-        plugin_dispatch_metric_family(&db->fams[FAM_MYSQL_UP], 0);
+        plugin_dispatch_metric_family_filtered(&db->fams[FAM_MYSQL_UP], db->filter, 0);
         return 0;
     }
 
@@ -1306,7 +1308,7 @@ static int cmysql_read(user_data_t *ud)
     if ((db->replica_stats) || (db->replica_notif))
         cmysql_read_replica_stats(db, con);
 
-    plugin_dispatch_metric_family_array(db->fams, FAM_MYSQL_STATUS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(db->fams, FAM_MYSQL_STATUS_MAX, db->filter, 0);
 
     for (size_t i = 0; i < db->queries_num; i++) {
         /* Check if we know the database's version and if so, if this query applies
@@ -1413,6 +1415,8 @@ static int cmysql_config_database(config_item_t *ci)
             status = cf_util_get_boolean(child, &db->replica_stats);
         } else if (strcasecmp("slave-notifications", child->key) == 0) {
             status = cf_util_get_boolean(child, &db->replica_notif);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &db->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

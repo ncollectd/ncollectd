@@ -196,6 +196,7 @@ typedef struct {
     char *control_cert_file;
     cdtime_t timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_NSD_MAX];
 } nsd_t;
 
@@ -306,6 +307,7 @@ static void nsd_free(void *data)
     free(nsd->control_key_file);
     free(nsd->control_cert_file);
     label_set_reset(&nsd->labels);
+    plugin_filter_free(nsd->filter);
 
     free(nsd);
 }
@@ -498,7 +500,7 @@ static int nsd_read(user_data_t *user_data)
     metric_family_append(&nsd->fams[FAM_NSD_UP], VALUE_GAUGE(status == 0 ? 1 : 0),
                          &nsd->labels, NULL);
 
-    plugin_dispatch_metric_family_array(nsd->fams, FAM_NSD_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(nsd->fams, FAM_NSD_MAX, nsd->filter, 0);
 
     return 0;
 }
@@ -544,6 +546,8 @@ static int nsd_config_instance (config_item_t *ci)
             status = cf_util_get_label(child, &nsd->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &nsd->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

@@ -85,6 +85,7 @@ typedef struct  {
     pthread_t ping_thread_id;
     hostlist_t *hostlist_head;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_PING_MAX];
 } ping_inst_t;
 
@@ -411,7 +412,7 @@ static int ping_read(user_data_t *user_data)
                              &(label_pair_const_t){.name="source", .value=hostname}, NULL);
     }
 
-    plugin_dispatch_metric_family_array(inst->fams, FAM_PING_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(inst->fams, FAM_PING_MAX, inst->filter, 0);
 
     return 0;
 }
@@ -449,6 +450,7 @@ static void ping_instance_free(void *arg)
     free(inst->buckets);
 
     label_set_reset(&inst->labels);
+    plugin_filter_free(inst->filter);
 
     ping_hostlist_free(inst->hostlist_head);
 
@@ -613,6 +615,8 @@ static int ping_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &inst->labels);
         } else if (strcasecmp("histogram-buckets", child->key) == 0) {
             status = cf_util_get_double_array(child, &inst->buckets_size, &inst->buckets);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &inst->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

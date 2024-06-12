@@ -20,6 +20,9 @@ ncollectd-mosquitto \- Documentation of ncollectd's mosquitto plugin
         \fBcipher-suite\fP \fIciphersuite\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -98,6 +101,10 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this Mosquitto
 broker.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

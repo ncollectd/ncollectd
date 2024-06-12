@@ -38,7 +38,7 @@ typedef struct {
     char *metric_prefix;
     size_t metric_prefix_size;
     label_set_t label;
-
+    plugin_filter_t *filter;
 
     struct curl_slist *headers;
     char *post_body;
@@ -52,7 +52,7 @@ typedef struct {
 
 int metric_parse_buffer(strbuf_t *buf, char *buffer, size_t buffer_len, size_t *lineno,
                         metric_family_t *fam, const char *prefix, size_t prefix_size,
-                        label_set_t *labels, cdtime_t time)
+                        label_set_t *labels, plugin_filter_t *filter, cdtime_t time)
 {
     while (buffer_len > 0) {
         char *end = memchr(buffer, '\n', buffer_len);
@@ -62,7 +62,7 @@ int metric_parse_buffer(strbuf_t *buf, char *buffer, size_t buffer_len, size_t *
             if (line_size > 0) { // FIXME
                 strbuf_putstrn(buf, buffer, line_size);
 
-                int status = metric_parse_line(fam, plugin_dispatch_metric_family,
+                int status = metric_parse_line(fam, plugin_dispatch_metric_family_filtered, filter,
                                                prefix, prefix_size, labels, 0, time, buf->ptr);
                 if (status < 0)
                     return status;
@@ -94,7 +94,7 @@ static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *
     int status = metric_parse_buffer(&target->parser.buf, buf, buf_len, &target->parser.lineno,
                                      &target->parser.fam,
                                      target->metric_prefix, target->metric_prefix_size,
-                                     &target->label, target->parser.time);
+                                     &target->label, target->filter, target->parser.time);
     if (status < 0) {
 
     }
@@ -147,6 +147,7 @@ static void scraper_instance_free(void *arg)
     curl_slist_free_all(target->headers);
     free(target->metric_prefix);
     label_set_reset(&target->label);
+    plugin_filter_free(target->filter);
 
     strbuf_destroy(&target->parser.buf);
     curl_stats_destroy(target->stats);
@@ -450,6 +451,8 @@ static int scraper_config_target(config_item_t *ci)
             status = cf_util_get_string(child, &target->metric_prefix);
         } else if (strcasecmp("statistics", child->key) == 0) {
             status = curl_stats_from_config(child, "scraper_", &target->stats);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &target->filter);
         } else {
             PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
             status = -1;

@@ -119,10 +119,11 @@ static inline int sstrncmpend(const char *str, size_t size, const char *suffix, 
     return sstrncmp(str + (size - suffix_size), suffix_size, suffix, suffix_size);
 }
 
-int metric_parser_dispatch(metric_family_t *fam, dispatch_metric_family_t dispatch)
+int metric_parser_dispatch(metric_family_t *fam, dispatch_metric_family_t dispatch,
+                           plugin_filter_t *filter)
 {
     if ((fam->metric.num > 0) && (dispatch != NULL))
-        dispatch(fam, 0);
+        dispatch(fam, filter, 0);
 
     if (fam->name != NULL) {
         free(fam->name);
@@ -202,7 +203,7 @@ static int metric_parser_set_family_name(metric_family_t *fam,
 }
 
 static int metric_parser_push(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                              const char *prefix, size_t prefix_size,
+                              plugin_filter_t *filter, const char *prefix, size_t prefix_size,
                               const char *name, size_t name_size)
 {
     size_t fixed_name_size = name_size;
@@ -220,7 +221,7 @@ static int metric_parser_push(metric_family_t *fam, dispatch_metric_family_t dis
        (strncmp(fam->name + prefix_size, name, fixed_name_size) == 0))
        return 0;
 
-    metric_parser_dispatch(fam, dispatch);
+    metric_parser_dispatch(fam, dispatch, filter);
 
     return metric_parser_set_family_name(fam, prefix, prefix_size, name, fixed_name_size);
 }
@@ -307,7 +308,7 @@ static ssize_t metric_parser_labels(label_set_t *labels, const char *line,
 }
 
 static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                               const char *prefix, size_t prefix_size,
+                               plugin_filter_t *filter, const char *prefix, size_t prefix_size,
                                label_set_t *labels_extra, cdtime_t interval, cdtime_t ts,
                                const char *line)
 {
@@ -437,9 +438,9 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
 
     if (fam->name != NULL) {
         if ((strlen(fam->name) - prefix_size) != metric_fixed_size) {
-            metric_parser_dispatch(fam, dispatch);
+            metric_parser_dispatch(fam, dispatch, filter);
         } else if (strncmp(fam->name + prefix_size, metric, metric_fixed_size) != 0) {
-            metric_parser_dispatch(fam, dispatch);
+            metric_parser_dispatch(fam, dispatch, filter);
         }
     }
 
@@ -641,7 +642,7 @@ static int metric_parse_type(const char *str, size_t len, metric_type_t *type)
 }
 
 int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                      const char *prefix, size_t prefix_size,
+                      plugin_filter_t *filter, const char *prefix, size_t prefix_size,
                       label_set_t *labels_extra, cdtime_t interval, cdtime_t ts, const char *line)
 {
     const char *ptr = line;
@@ -654,7 +655,7 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
         return 0;
 
     if ((sc == SC_COLON) || (sc == SC_ALPHA))
-        return metric_parse_metric(fam, dispatch, prefix, prefix_size,
+        return metric_parse_metric(fam, dispatch, filter, prefix, prefix_size,
                                    labels_extra, interval, ts, line);
 
     if (sc != SC_COMMENT)
@@ -693,7 +694,7 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
         while ((sc = scan_code[(unsigned char)*ptr]) == SC_SPACE)
             ptr++;
         if (sc == 0) {
-            metric_parser_dispatch(fam, dispatch);
+            metric_parser_dispatch(fam, dispatch, filter);
             return 1;
         }
         return 0;
@@ -719,7 +720,7 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
     if (metric_size == 0)
         return -1;
 
-    metric_parser_push(fam, dispatch, prefix, prefix_size, metric, metric_size);
+    metric_parser_push(fam, dispatch, filter, prefix, prefix_size, metric, metric_size);
 
     if (sc == SC_SPACE) {
         while (scan_code[(unsigned char)*ptr] == SC_SPACE)

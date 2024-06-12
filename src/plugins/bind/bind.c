@@ -367,6 +367,7 @@ typedef struct {
     char *url;
     int timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
 
     CURL *curl;
     char bind_curl_error[CURL_ERROR_SIZE];
@@ -748,7 +749,7 @@ static int bind_read(user_data_t *user_data)
 
     bind_traffic_histograms(bi->fams, &bi->labels, traffic);
 
-    plugin_dispatch_metric_family_array(bi->fams, FAM_BIND_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(bi->fams, FAM_BIND_MAX, bi->filter, 0);
 
     return 0;
 }
@@ -768,6 +769,7 @@ static void bind_instance_free(void *arg)
     free(bi->instance);
     free(bi->url);
     label_set_reset(&bi->labels);
+    plugin_filter_free(bi->filter);
 
     free(bi);
 }
@@ -803,6 +805,8 @@ static int bind_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &bi->labels);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &bi->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

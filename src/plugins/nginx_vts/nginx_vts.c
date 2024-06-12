@@ -257,6 +257,7 @@ typedef struct {
     char *url;
     int timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     CURL *curl;
     char curl_error[CURL_ERROR_SIZE];
     metric_family_t fams[FAM_NGINX_VTS_MAX];
@@ -876,7 +877,7 @@ static int nginx_vts_read(user_data_t *user_data)
     }
     json_parser_free(&ngx->handle);
 
-    plugin_dispatch_metric_family_array(ngx->fams, FAM_NGINX_VTS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ngx->fams, FAM_NGINX_VTS_MAX, ngx->filter, 0);
     return 0;
 }
 
@@ -895,6 +896,7 @@ static void nginx_vts_instance_free(void *arg)
     free(ngx->instance);
     free(ngx->url);
     label_set_reset(&ngx->labels);
+    plugin_filter_free(ngx->filter);
 
     free(ngx);
 }
@@ -930,6 +932,8 @@ static int nginx_vts_config_instance(config_item_t *ci)
             status = cf_util_get_int(child, &ngx->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ngx->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

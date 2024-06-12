@@ -11,6 +11,9 @@ ncollectd-vanish \- Documentation of ncollectd's vanish plugin
         \fBcollect\fP \fIflags\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -141,6 +144,10 @@ vmod-goto counters. Only available with Varnish Plus 6.x. False by default.
 .TP
 \fBworkspace\fP
 .RE
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

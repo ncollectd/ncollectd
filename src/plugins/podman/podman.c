@@ -182,6 +182,7 @@ typedef struct {
     char *url_info;
     int timeout;
     label_set_t labels;
+    plugin_filter_t *filter;
     CURL *curl;
     char curl_error[CURL_ERROR_SIZE];
     metric_family_t fams[FAM_PODMAN_MAX];
@@ -768,7 +769,7 @@ static int podman_read(user_data_t *user_data)
 
     }
 
-    plugin_dispatch_metric_family_array(podman->fams, FAM_PODMAN_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(podman->fams, FAM_PODMAN_MAX, podman->filter, 0);
     return 0;
 }
 
@@ -788,6 +789,7 @@ static void podman_instance_free(void *arg)
     free(podman->url);
     // FIXME
     label_set_reset(&podman->labels);
+    plugin_filter_free(podman->filter);
 
     free(podman);
 }
@@ -823,6 +825,8 @@ static int podman_config_instance(config_item_t *ci)
             status = cf_util_get_int(child, &podman->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &podman->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

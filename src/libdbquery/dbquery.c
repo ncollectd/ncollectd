@@ -86,7 +86,8 @@ static int db_config_set_uint(unsigned int *ret_value, config_item_t *ci)
 }
 
 static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area,
-                             db_query_t const *q, db_query_preparation_area_t *q_area)
+                            db_query_t const *q, db_query_preparation_area_t *q_area,
+                            plugin_filter_t *filter)
 {
     assert(r != NULL);
 
@@ -168,7 +169,7 @@ static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area
 
     if (ret == 0) {
         metric_family_metric_append(&fam, m);
-        plugin_dispatch_metric_family(&fam, 0);
+        plugin_dispatch_metric_family_filtered(&fam, filter, 0);
     }
 
     metric_reset(&m, fam.type);
@@ -192,8 +193,8 @@ static void db_result_finish_result(db_result_t const *r,
 static int db_result_handle_result(db_result_t *r,
                                    db_query_preparation_area_t *q_area,
                                    db_result_preparation_area_t *r_area,
-                                   db_query_t const *q,
-                                   char **column_values)
+                                   db_query_t const *q, char **column_values,
+                                   plugin_filter_t *filter)
 {
     assert(r && q_area && r_area);
 
@@ -211,7 +212,7 @@ static int db_result_handle_result(db_result_t *r,
 
     r_area->value_str = column_values[r_area->value_pos];
 
-    return db_result_submit(r, r_area, q, q_area);
+    return db_result_submit(r, r_area, q, q_area, filter);
 }
 
 static int db_result_prepare_result(db_result_t const *r,
@@ -702,7 +703,7 @@ void db_query_finish_result(db_query_t const *q, db_query_preparation_area_t *pr
 }
 
 int db_query_handle_result(db_query_t const *q, db_query_preparation_area_t *prep_area,
-                            char **column_values)
+                            char **column_values, plugin_filter_t *filter)
 {
     if ((q == NULL) || (prep_area == NULL))
         return -EINVAL;
@@ -724,7 +725,7 @@ int db_query_handle_result(db_query_t const *q, db_query_preparation_area_t *pre
     int success = 0;
     for (r = q->results, r_area = prep_area->result_prep_areas; r != NULL;
              r = r->next, r_area = r_area->next) {
-        int status = db_result_handle_result(r, prep_area, r_area, q, column_values);
+        int status = db_result_handle_result(r, prep_area, r_area, q, column_values, filter);
         if (status == 0)
             success++;
     }
@@ -739,8 +740,8 @@ int db_query_handle_result(db_query_t const *q, db_query_preparation_area_t *pre
 }
 
 int db_query_prepare_result(db_query_t const *q, db_query_preparation_area_t *prep_area,
-                             char *metric_prefix, label_set_t *labels,
-                             const char *db_name, char **column_names, size_t column_num)
+                            char *metric_prefix, label_set_t *labels,
+                            const char *db_name, char **column_names, size_t column_num)
 {
     if ((q == NULL) || (prep_area == NULL))
         return -EINVAL;

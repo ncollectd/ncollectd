@@ -18,6 +18,9 @@ ncollectd-nagios_check \- Documentation of ncollectd's nagios_check plugin
         \fBnotification\fP \fIname\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBannotation\fP \fIkey\fP \fIvalue\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -71,6 +74,10 @@ multiple time in the \fBinstance\fP block.
 \fBannotation\fP \fIkey\fP \fIvalue\fP
 Append the annotation \fIkey\fP=\fIvalue\fP to the notification. Can appear
 multiple time in the \fBinstance\fP block.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

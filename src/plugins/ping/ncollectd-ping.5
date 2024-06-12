@@ -19,6 +19,9 @@ ncollectd-ping \- Documentation of ncollectd's ping plugin
         \fBmax-missed\fP \fIpackets\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBhistogram-buckets\fP [\fIbucket\fP] ...
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -85,6 +88,10 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .TP
 \fBhistogram-buckets\fP [\fIbucket\fP] ...
 Define the list of buckets for the ICMP response time histogram.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

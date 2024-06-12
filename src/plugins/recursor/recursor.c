@@ -859,6 +859,7 @@ typedef struct {
     char *name;
     recursor_protocol_t version;
     label_set_t labels;
+    plugin_filter_t *filter;
     cdtime_t timeout;
     char command[24];
     size_t command_size;
@@ -900,6 +901,7 @@ static void recursor_free(void *arg)
 
     free(recursor->name);
     label_set_reset(&recursor->labels);
+    plugin_filter_free(recursor->filter);
     free(recursor->local_sockpath);
     free(recursor->sockpath);
     free(recursor);
@@ -1095,7 +1097,8 @@ static int recursor_read(user_data_t *user_data)
             metric_family_append(fam, mvalue, &recursor->labels, NULL);
     }
 
-    plugin_dispatch_metric_family_array(recursor->fams, FAM_RECURSOR_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(recursor->fams, FAM_RECURSOR_MAX,
+                                                 recursor->filter, 0);
 
     return 0;
 }
@@ -1144,6 +1147,8 @@ int recursor_config_instance(config_item_t *ci)
                     status = -1;
                 }
             }
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &recursor->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

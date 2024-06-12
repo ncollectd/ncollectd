@@ -13,6 +13,9 @@ ncollectd-dnsmasq \- Documentation of ncollectd's dnsmasq plugin
         \fBtimeout\fP \fIseconds\fP
         \fBleases\fP \fI/path/to/leases\fP
         \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -41,6 +44,10 @@ Leases file path. Default to \fI/var/lib/misc/dnsmasq.leases\fP. TODO
 .TP
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this instance.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)

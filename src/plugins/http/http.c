@@ -18,6 +18,8 @@ typedef struct {
     char *instance;
     char *metric_prefix;
     label_set_t labels;
+    plugin_filter_t *filter;
+
     char *metric_response_time;
     char *metric_response_code;
 
@@ -92,6 +94,8 @@ static void chttp_free(void *arg)
     free(ctx->instance);
     free(ctx->metric_prefix);
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
+
     free(ctx->metric_response_time);
     free(ctx->metric_response_code);
     free(ctx->url);
@@ -343,7 +347,7 @@ static int chttp_read(user_data_t *ud)
         };
         double value = CDTIME_T_TO_DOUBLE(cdtime() - start);
         metric_family_append(&fam, VALUE_GAUGE(value), &ctx->labels, NULL);
-        plugin_dispatch_metric_family(&fam, 0);
+        plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
     }
 
     if (ctx->stats != NULL)
@@ -360,7 +364,7 @@ static int chttp_read(user_data_t *ud)
              .type = METRIC_TYPE_GAUGE,
             };
             metric_family_append(&fam, VALUE_GAUGE(response_code), &ctx->labels, NULL);
-            plugin_dispatch_metric_family(&fam, 0);
+            plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
         }
     }
 
@@ -368,7 +372,7 @@ static int chttp_read(user_data_t *ud)
     if (status != 0)
         PLUGIN_WARNING("plugin_match failed.");
 
-    plugin_match_dispatch(ctx->matches, true);
+    plugin_match_dispatch(ctx->matches, ctx->filter, true);
 
     return 0;
 }
@@ -467,6 +471,8 @@ static int chttp_config_instance(config_item_t *ci)
             status = cf_util_get_int(child, &ctx->timeout);
         } else if (strcasecmp("statistics", child->key) == 0) {
             status = curl_stats_from_config(child, "http_", &ctx->stats);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
             status = -1;

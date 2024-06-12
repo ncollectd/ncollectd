@@ -46,6 +46,9 @@ ncollectd-mysql \- Documentation of ncollectd's mysql plugin
         \fBmetric-prefix\fP \fIprefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBquery\fP \fIquery-name\fP
+        \fBfilter\fP {
+            ...
+        }
     }
 .br
 }
@@ -233,6 +236,10 @@ query needs to be defined \fIbefore\fP this statement, i. e. all query
 blocks you want to refer to must be placed above the database block you want to
 refer to them from.
 .TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
+.TP
 .RE
 .TP
 \fBquery\fP \fIquery-name\fP
@@ -312,7 +319,6 @@ Specifies the columns whose values will be used to create the labels.
 \fBvalue-from\fP \fIcolumn-name\fP
 Name of the column whose content is used as the actual data for the metric
 that are dispatched to the daemon.
-
 There must be only one \fBvalue-from\fP option inside each \fBresult\fP block.
 .RE
 .RE
