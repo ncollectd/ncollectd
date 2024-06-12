@@ -98,5 +98,5 @@ quic_transp_err_crypto_error,              HA_STAT_EXTRA_QUIC_TRANSP_ERR_CRYPTO_
 quic_transp_err_unknown_error,             HA_STAT_EXTRA_QUIC_TRANSP_ERR_UNKNOWN_ERROR
 quic_data_blocked,                         HA_STAT_EXTRA_QUIC_DATA_BLOCKED
 quic_stream_data_blocked,                  HA_STAT_EXTRA_QUIC_STREAM_DATA_BLOCKED
-quic_streams_data_blocked_bidi,            HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_BIDI
-quic_streams_data_blocked_uni,             HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_UNI
+quic_streams_blocked_bidi,                 HA_STAT_EXTRA_QUIC_STREAMS_BLOCKED_BIDI
+quic_streams_blocked_uni,                  HA_STAT_EXTRA_QUIC_STREAMS_BLOCKED_UNI

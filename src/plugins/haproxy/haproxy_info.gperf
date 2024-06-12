@@ -77,3 +77,7 @@ BytesOutRate,                FAM_HAPROXY_PROCESS_BYTES_OUT_RATE
 CumRecvLogs,                 FAM_HAPROXY_PROCESS_RECV_LOGS
 Build info,                  FAM_HAPROXY_PROCESS_BUILD_INFO
 Tainted,                     FAM_HAPROXY_PROCESS_TAINTED
+TotalWarnings,               FAM_HAPROXY_PROCESS_WARNINGS
+MaxconnReached,              FAM_HAPROXY_PROCESS_MAXCONN_REACHED
+BootTime_ms,                 FAM_HAPROXY_PROCESS_BOOTTIME_SECONDS
+Niced_tasks,                 FAM_HAPROXY_PROCESS_NICED_TASKS

@@ -33,6 +33,14 @@ enum {
     FAM_HAPROXY_FRONTEND_HTTP_CACHE_LOOKUPS,
     FAM_HAPROXY_FRONTEND_HTTP_CACHE_HITS,
     FAM_HAPROXY_FRONTEND_INTERNAL_ERRORS,
+    FAM_HAPROXY_FRONTEND_OTHER_SESSIONS,
+    FAM_HAPROXY_FRONTEND_H1_SESSIONS,
+    FAM_HAPROXY_FRONTEND_H2_SESSIONS,
+    FAM_HAPROXY_FRONTEND_H3_SESSIONS,
+    FAM_HAPROXY_FRONTEND_OTHER_REQUEST,
+    FAM_HAPROXY_FRONTEND_H1_REQUEST,
+    FAM_HAPROXY_FRONTEND_H2_REQUEST,
+    FAM_HAPROXY_FRONTEND_H3_REQUEST,
     FAM_HAPROXY_FRONTEND_SSL_SESSIONS,
     FAM_HAPROXY_FRONTEND_SSL_REUSE_SESSIONS,
     FAM_HAPROXY_FRONTEND_SSL_FAILED_HANDSHAKE,
@@ -115,8 +123,8 @@ enum {
     FAM_HAPROXY_FRONTEND_QUIC_TRANSP_ERR_UNKNOWN_ERROR,
     FAM_HAPROXY_FRONTEND_QUIC_DATA_BLOCKED,
     FAM_HAPROXY_FRONTEND_QUIC_STREAM_DATA_BLOCKED,
-    FAM_HAPROXY_FRONTEND_QUIC_STREAMS_DATA_BLOCKED_BIDI,
-    FAM_HAPROXY_FRONTEND_QUIC_STREAMS_DATA_BLOCKED_UNI,
+    FAM_HAPROXY_FRONTEND_QUIC_STREAMS_BLOCKED_BIDI,
+    FAM_HAPROXY_FRONTEND_QUIC_STREAMS_BLOCKED_UNI,
     FAM_HAPROXY_LISTENER_CURRENT_SESSIONS,
     FAM_HAPROXY_LISTENER_MAX_SESSIONS,
     FAM_HAPROXY_LISTENER_LIMIT_SESSIONS,
@@ -182,7 +190,6 @@ enum {
     FAM_HAPROXY_BACKEND_MAX_TOTAL_TIME_SECONDS,
     FAM_HAPROXY_BACKEND_INTERNAL_ERRORS,
     FAM_HAPROXY_BACKEND_UWEIGHT,
-    FAM_HAPROXY_BACKEND_SERVER_CHECK_STATUS,
     FAM_HAPROXY_BACKEND_SSL_SESSIONS,
     FAM_HAPROXY_BACKEND_SSL_REUSE_SESSIONS,
     FAM_HAPROXY_BACKEND_SSL_FAILED_HANDSHAKE,
@@ -406,10 +413,54 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of internal errors.",
     },
+    [FAM_HAPROXY_FRONTEND_OTHER_SESSIONS] = {
+        .name = "haproxy_frontend_other_sessions",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of sessions other than HTTP since process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_H1_SESSIONS] = {
+        .name = "haproxy_frontend_h1_sessions",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of HTTP/1 sessions since process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_H2_SESSIONS] = {
+        .name = "haproxy_frontend_h2_sessions",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of HTTP/2 sessions since process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_H3_SESSIONS] = {
+        .name = "haproxy_frontend_h3_sessions",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of HTTP/3 sessions since process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_OTHER_REQUEST] = {
+        .name = "haproxy_frontend_other_request",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of sessions other than HTTP processed by this object "
+                "since the worker process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_H1_REQUEST] = {
+        .name = "haproxy_frontend_h1_request",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of HTTP/1 sessions processed by this object "
+                "since the worker process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_H2_REQUEST] = {
+        .name = "haproxy_frontend_h2_request",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of hTTP/2 sessions processed by this object "
+                "since the worker process started.",
+    },
+    [FAM_HAPROXY_FRONTEND_H3_REQUEST] = {
+        .name = "haproxy_frontend_h3_request",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of HTTP/3 sessions processed by this object "
+                "since the worker process started.",
+    },
     [FAM_HAPROXY_FRONTEND_SSL_SESSIONS] = {
         .name = "haproxy_frontend_ssl_sessions",
         .type = METRIC_TYPE_COUNTER,
-           .help = "Total number of ssl sessions established in this frontend."
+        .help = "Total number of ssl sessions established in this frontend."
     },
     [FAM_HAPROXY_FRONTEND_SSL_REUSE_SESSIONS] = {
         .name = "haproxy_frontend_ssl_reused_sessions",
@@ -816,15 +867,15 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of received STREAMS_BLOCKED frames",
     },
-    [FAM_HAPROXY_FRONTEND_QUIC_STREAMS_DATA_BLOCKED_BIDI] = {
-        .name = "haproxy_frontend_quic_streams_data_blocked_bidi",
+    [FAM_HAPROXY_FRONTEND_QUIC_STREAMS_BLOCKED_BIDI] = {
+        .name = "haproxy_frontend_quic_streams_blocked_bidi",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of received STREAM_DATA_BLOCKED_BIDI frames",
+        .help = "Total number of received STREAM_BLOCKED_BIDI frames",
     },
-    [FAM_HAPROXY_FRONTEND_QUIC_STREAMS_DATA_BLOCKED_UNI] = {
-        .name = "haproxy_frontend_quic_streams_data_blocked_uni",
+    [FAM_HAPROXY_FRONTEND_QUIC_STREAMS_BLOCKED_UNI] = {
+        .name = "haproxy_frontend_quic_streams_blocked_uni",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of received STREAM_DATA_BLOCKED_UNI frames",
+        .help = "Total number of received STREAM_BLOCKED_UNI frames",
     },
     [FAM_HAPROXY_LISTENER_CURRENT_SESSIONS] = {
         .name = "haproxy_listener_current_sessions",
@@ -1158,11 +1209,6 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
         .name = "haproxy_backend_uweight",
         .type = METRIC_TYPE_GAUGE,
         .help = "Server's user weight, or sum of active servers' user weights for a backend.",
-    },
-    [FAM_HAPROXY_BACKEND_SERVER_CHECK_STATUS] = {
-        .name = "haproxy_backend_server_check_status",
-        .type = METRIC_TYPE_STATE_SET,
-        .help = "Backend's aggregated gauge of servers' state check status.",
     },
     [FAM_HAPROXY_BACKEND_SSL_SESSIONS] = {
         .name = "haproxy_backend_ssl_sessions",
