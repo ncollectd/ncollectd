@@ -97,8 +97,8 @@ enum {
     HA_STAT_EXTRA_QUIC_TRANSP_ERR_UNKNOWN_ERROR,
     HA_STAT_EXTRA_QUIC_DATA_BLOCKED,
     HA_STAT_EXTRA_QUIC_STREAM_DATA_BLOCKED,
-    HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_BIDI,
-    HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_UNI,
+    HA_STAT_EXTRA_QUIC_STREAMS_BLOCKED_BIDI,
+    HA_STAT_EXTRA_QUIC_STREAMS_BLOCKED_UNI,
     HA_STAT_EXTRA_MAX
 };
 
@@ -192,6 +192,15 @@ static haproxy_field_t haproxy_frontend_fields[] = {
     { HA_STAT_CACHE_LOOKUPS, FAM_HAPROXY_FRONTEND_HTTP_CACHE_LOOKUPS       },
     { HA_STAT_CACHE_HITS,    FAM_HAPROXY_FRONTEND_HTTP_CACHE_HITS          },
     { HA_STAT_EINT,          FAM_HAPROXY_FRONTEND_INTERNAL_ERRORS          },
+    { HA_STAT_SESS_OTHER,    FAM_HAPROXY_FRONTEND_OTHER_SESSIONS           },
+    { HA_STAT_H1SESS,        FAM_HAPROXY_FRONTEND_H1_SESSIONS              },
+    { HA_STAT_H2SESS,        FAM_HAPROXY_FRONTEND_H2_SESSIONS              },
+    { HA_STAT_H3SESS,        FAM_HAPROXY_FRONTEND_H3_SESSIONS              },
+    { HA_STAT_REQ_OTHER,     FAM_HAPROXY_FRONTEND_OTHER_REQUEST            },
+    { HA_STAT_H1REQ,         FAM_HAPROXY_FRONTEND_H1_REQUEST               },
+    { HA_STAT_H2REQ,         FAM_HAPROXY_FRONTEND_H2_REQUEST               },
+    { HA_STAT_H3REQ,         FAM_HAPROXY_FRONTEND_H3_REQUEST               },
+
 };
 static size_t haproxy_frontend_fields_size = STATIC_ARRAY_SIZE(haproxy_frontend_fields);
 
@@ -278,8 +287,8 @@ static haproxy_field_t haproxy_frontend_fields_extra[] = {
     { HA_STAT_EXTRA_QUIC_TRANSP_ERR_UNKNOWN_ERROR,             FAM_HAPROXY_FRONTEND_QUIC_TRANSP_ERR_UNKNOWN_ERROR             },
     { HA_STAT_EXTRA_QUIC_DATA_BLOCKED,                         FAM_HAPROXY_FRONTEND_QUIC_DATA_BLOCKED                         },
     { HA_STAT_EXTRA_QUIC_STREAM_DATA_BLOCKED,                  FAM_HAPROXY_FRONTEND_QUIC_STREAM_DATA_BLOCKED                  },
-    { HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_BIDI,            FAM_HAPROXY_FRONTEND_QUIC_STREAMS_DATA_BLOCKED_BIDI            },
-    { HA_STAT_EXTRA_QUIC_STREAMS_DATA_BLOCKED_UNI,             FAM_HAPROXY_FRONTEND_QUIC_STREAMS_DATA_BLOCKED_UNI             },
+    { HA_STAT_EXTRA_QUIC_STREAMS_BLOCKED_BIDI,                 FAM_HAPROXY_FRONTEND_QUIC_STREAMS_BLOCKED_BIDI                 },
+    { HA_STAT_EXTRA_QUIC_STREAMS_BLOCKED_UNI,                  FAM_HAPROXY_FRONTEND_QUIC_STREAMS_BLOCKED_UNI                  },
 
 };
 static size_t haproxy_frontend_fields_extra_size = STATIC_ARRAY_SIZE(haproxy_frontend_fields_extra);
@@ -363,7 +372,6 @@ static haproxy_field_t haproxy_backend_fields[] = {
     { HA_STAT_TT_MAX,               FAM_HAPROXY_BACKEND_MAX_TOTAL_TIME_SECONDS        },
     { HA_STAT_EINT,                 FAM_HAPROXY_BACKEND_INTERNAL_ERRORS               },
     { HA_STAT_UWEIGHT,              FAM_HAPROXY_BACKEND_UWEIGHT                       },
-    { HA_STAT_AGG_SRV_CHECK_STATUS, FAM_HAPROXY_BACKEND_SERVER_CHECK_STATUS           }, // FIXME
 };
 static size_t haproxy_backend_fields_size = STATIC_ARRAY_SIZE(haproxy_backend_fields);
 
@@ -990,6 +998,9 @@ static int haproxy_read_cmd_info(haproxy_t *ha)
             metric_family_append(fam, VALUE_INFO(info), &ha->labels, NULL);
         } else if (hm->fam == FAM_HAPROXY_PROCESS_TAINTED) {
             value = VALUE_GAUGE(strtol(val, NULL, 16));
+            metric_family_append(fam, value, &ha->labels, NULL);
+        } else if (hm->fam == FAM_HAPROXY_PROCESS_BOOTTIME_SECONDS) {
+            value = VALUE_GAUGE(atoll(val) / 1000.0);
             metric_family_append(fam, value, &ha->labels, NULL);
         } else {
             if (fam->type == METRIC_TYPE_GAUGE)
