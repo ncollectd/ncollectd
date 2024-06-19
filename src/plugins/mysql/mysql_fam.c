@@ -1030,8 +1030,8 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Read-ahead pages evicted without being accessed (innodb_buffer_pool_read_ahead_evicted)",
     },
-    [FAM_MYSQL_INNODB_BUFFER_POOL_PAGES_TOTAL] = {
-        .name = "mysql_innodb_buffer_pool_pages_total",
+    [FAM_MYSQL_INNODB_BUFFER_POOL_PAGES_ALL] = {
+        .name = "mysql_innodb_buffer_pool_pages_all",
         .type = METRIC_TYPE_GAUGE,
         .help = "Total buffer pool size in pages (innodb_buffer_pool_pages_total)",
     },
