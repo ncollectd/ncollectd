@@ -46,7 +46,7 @@ buffer_pool_write_requests,                 FAM_MYSQL_INNODB_BUFFER_POOL_WRITE_R
 buffer_pool_wait_free,                      FAM_MYSQL_INNODB_BUFFER_POOL_WAIT_FREE, NULL, NULL
 buffer_pool_read_ahead,                     FAM_MYSQL_INNODB_BUFFER_POOL_READ_AHEAD, NULL, NULL
 buffer_pool_read_ahead_evicted,             FAM_MYSQL_INNODB_BUFFER_POOL_READ_AHEAD_EVICTED, NULL, NULL
-buffer_pool_pages_total,                    FAM_MYSQL_INNODB_BUFFER_POOL_PAGES_TOTAL, NULL, NULL
+buffer_pool_pages_total,                    FAM_MYSQL_INNODB_BUFFER_POOL_PAGES_ALL, NULL, NULL
 buffer_pool_pages_misc,                     FAM_MYSQL_INNODB_BUFFER_POOL_PAGES_MISC, NULL, NULL
 buffer_pool_pages_data,                     FAM_MYSQL_INNODB_BUFFER_POOL_PAGES_DATA, NULL, NULL
 buffer_pool_bytes_data,                     FAM_MYSQL_INNODB_BUFFER_POOL_BYTES_DATA, NULL, NULL
