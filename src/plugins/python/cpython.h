@@ -153,64 +153,64 @@ typedef struct {
     double value;
 } MetricUnknownDouble;
 extern PyTypeObject MetricUnknownDoubleType;
-#define MetricUnknownDouble_New()                                              \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricUnknownDoubleType, (void *)0)
+#define MetricUnknownDouble_New(v)                                              \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricUnknownDoubleType, (v), (void *)0)
 
 typedef struct {
     Metric metric;
     int64_t value;
 } MetricUnknownLong;
 extern PyTypeObject MetricUnknownLongType;
-#define MetricUnknownLong_New()                                                \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricUnknownLongType, (void *)0)
+#define MetricUnknownLong_New(v)                                                \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricUnknownLongType, (v), (void *)0)
 
 typedef struct {
     Metric metric;
     double value;
 } MetricGaugeDouble;
 extern PyTypeObject MetricGaugeDoubleType;
-#define MetricGaugeDouble_New()                                                \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricGaugeDoubleType, (void *)0)
+#define MetricGaugeDouble_New(v)                                                \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricGaugeDoubleType, (v), (void *)0)
 
 typedef struct {
     Metric metric;
     int64_t value;
 } MetricGaugeLong;
 extern PyTypeObject MetricGaugeLongType;
-#define MetricGaugeLong_New()                                                  \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricGaugeLongType, (void *)0)
+#define MetricGaugeLong_New(v)                                                  \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricGaugeLongType, (v), (void *)0)
 
 typedef struct {
     Metric metric;
     uint64_t value;
 } MetricCounterULong;
 extern PyTypeObject MetricCounterULongType;
-#define MetricCounterULong_New()                                               \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricCounterULongType, (void *)0)
+#define MetricCounterULong_New(v)                                               \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricCounterULongType, (v), (void *)0)
 
 typedef struct {
     Metric metric;
     double value;
 } MetricCounterDouble;
 extern PyTypeObject MetricCounterDoubleType;
-#define MetricCounterDouble_New()                                              \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricCounterDoubleType, (void *)0)
+#define MetricCounterDouble_New(v)                                              \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricCounterDoubleType, (v), (void *)0)
 
 typedef struct {
     Metric metric;
     PyObject *set; /* dict */
 } MetricStateSet;
 extern PyTypeObject MetricStateSetType;
-#define MetricStateSet_New()                                                   \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricStateSetType, (void *)0)
+#define MetricStateSet_New(s)                                                   \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricStateSetType, (s), (void *)0)
 
 typedef struct {
     Metric metric;
     PyObject *info;
 } MetricInfo;
 extern PyTypeObject MetricInfoType;
-#define MetricInfo_New()                                                       \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricTypeInfo, (void *)0)
+#define MetricInfo_New(l)                                                       \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricInfoType, (l), (void *)0)
 
 typedef struct {
     Metric metric;
@@ -219,8 +219,8 @@ typedef struct {
     PyObject *quantiles; /* Sequence */
 } MetricSummary;
 extern PyTypeObject MetricSummaryType;
-#define MetricSummary_New()                                                    \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricSummaryType, (void *)0)
+#define MetricSummary_New(s, c, q)                                              \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricSummaryType, (s), (c), (q), (void *)0)
 
 typedef struct {
     Metric metric;
@@ -228,8 +228,8 @@ typedef struct {
     PyObject *buckets;  /* Sequence */
 } MetricHistogram;
 extern PyTypeObject MetricHistogramType;
-#define MetricHistogram_New()                                                  \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricHistogramType, (void *)0)
+#define MetricHistogram_New(s, b)                                               \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricHistogramType, (s), (b), (void *)0)
 
 typedef struct {
     Metric metric;
@@ -237,8 +237,8 @@ typedef struct {
     PyObject *buckets;
 } MetricGaugeHistogram;
 extern PyTypeObject MetricGaugeHistogramType;
-#define MetricGaugeHistogram_New()                                             \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricGaugeHistogramType, (void *)0)
+#define MetricGaugeHistogram_New(s, b)                                          \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricGaugeHistogramType, (s), (b), (void *)0)
 
 typedef struct {
     PyObject_HEAD      /* No semicolon! */
@@ -249,8 +249,8 @@ typedef struct {
     PyObject *metrics; /* Sequence */
 } MetricFamily;
 extern PyTypeObject MetricFamilyType;
-#define MetricFamily_New()                                                     \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricFamilyType, (void *)0)
+#define MetricFamily_New(t, n)                                                     \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricFamilyType, (t), (n), (void *)0)
 
 typedef struct {
     PyObject_HEAD          /* No semicolon! */
@@ -261,8 +261,12 @@ typedef struct {
     PyObject *annotations; /* dict */
 } Notification;
 extern PyTypeObject NotificationType;
-#define Notification_New()                                                     \
-    PyObject_CallFunctionObjArgs((PyObject *)&NotificationType, (void *)0)
+#define Notification_New(n)                                                     \
+    PyObject_CallFunctionObjArgs((PyObject *)&NotificationType, (n), (void *)0)
 
 int cpy_build_labels(PyObject *dict, label_set_t *labels);
+int cpy_build_state_set(PyObject *dict, state_set_t *set);
+histogram_t *cpy_build_histogram(PyObject *list);
+summary_t *cpy_build_summary(PyObject *list);
 PyObject *cpy_metric_repr(PyObject *s);
+
