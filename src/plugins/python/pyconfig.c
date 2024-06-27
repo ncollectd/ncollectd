@@ -107,25 +107,52 @@ static PyObject *Config_repr(PyObject *s)
 {
     Config *self = (Config *)s;
     PyObject *ret = NULL;
-    static PyObject *node_prefix, *root_prefix, *ending;
+    PyObject *tmp = NULL;
+    static PyObject *l_open, *l_key, *l_values, *l_children, *l_close;
 
     /* This is ok because we have the GIL, so this is thread-save by default. */
-    if (node_prefix == NULL)
-        node_prefix = cpy_string_to_unicode_or_bytes("<ncollectd.Config node ");
-    if (root_prefix == NULL)
-        root_prefix = cpy_string_to_unicode_or_bytes("<ncollectd.Config root node ");
-    if (ending == NULL)
-        ending = cpy_string_to_unicode_or_bytes(">");
-    if (node_prefix == NULL || root_prefix == NULL || ending == NULL)
+    if (l_open == NULL)
+        l_open = cpy_string_to_unicode_or_bytes("(");
+    if (l_key == NULL)
+        l_key = cpy_string_to_unicode_or_bytes("key=");
+    if (l_values == NULL)
+        l_values = cpy_string_to_unicode_or_bytes(",values=");
+    if (l_children == NULL)
+        l_children = cpy_string_to_unicode_or_bytes(",children=");
+    if (l_close == NULL)
+        l_close = cpy_string_to_unicode_or_bytes(")");
+
+    if ((l_open == NULL) || (l_key == NULL) || (l_values == NULL) ||
+        (l_children == NULL) || (l_close == NULL))
         return NULL;
 
-    ret = PyObject_Str(self->key);
-    CPY_SUBSTITUTE(PyObject_Repr, ret, ret);
-    if (self->parent == NULL || self->parent == Py_None)
-        CPY_STRCAT(&ret, root_prefix);
-    else
-        CPY_STRCAT(&ret, node_prefix);
-    CPY_STRCAT(&ret, ending);
+    ret = cpy_string_to_unicode_or_bytes(s->ob_type->tp_name);
+
+    CPY_STRCAT(&ret, l_open);
+
+    if (self->key != NULL) {
+        CPY_STRCAT(&ret, l_key);
+        tmp = PyObject_Repr(self->key);
+        CPY_STRCAT_AND_DEL(&ret, tmp);
+    }
+
+    if ((self->values != NULL) &&
+        (!PyTuple_Check(self->values) || !PyList_Check(self->values)) &&
+        (PySequence_Length(self->values) > 0)) {
+        CPY_STRCAT(&ret, l_values);
+        tmp = PyObject_Repr(self->values);
+        CPY_STRCAT_AND_DEL(&ret, tmp);
+    }
+
+    if ((self->children != NULL) &&
+        (!PyTuple_Check(self->children) || !PyList_Check(self->children)) &&
+        (PySequence_Length(self->children) > 0)) {
+        CPY_STRCAT(&ret, l_children);
+        tmp = PyObject_Repr(self->children);
+        CPY_STRCAT_AND_DEL(&ret, tmp);
+    }
+
+    CPY_STRCAT(&ret, l_close);
 
     return ret;
 }

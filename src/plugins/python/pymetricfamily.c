@@ -14,21 +14,18 @@
 
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 
-static char fam_name_doc[] =
-    "The name of the metric family.";
+static char fam_name_doc[] = "The name of the metric family.";
 
-static char fam_help_doc[] =
-    "The name of the metric family.";
+static char fam_help_doc[] = "Brief description of the metric family.";
 
-static char fam_unit_doc[] =
-    "The name of the metric family.";
+static char fam_unit_doc[] = "Specifies the metric family units.";
 
-static char fam_metrics_doc[] = "";
+static char fam_metrics_doc[] = "List of metrics.";
 
 static char MetricFamily_doc[] =
     "The MetricFamily class is a wrapper around the ncollectd metric_family_t.\n"
     "It can be used to submit metrics.\n"
-    "MetricFamilys can be dispatched at any time and can be received with "
+    "Metric families can be dispatched at any time and can be received with "
     "register_read.";
 
 static char fam_dispatch_doc[] =
@@ -39,6 +36,11 @@ static char fam_dispatch_doc[] =
     "If you do not submit the metrics the value saved in its member will be submitted.\n"
     "If you do provide the metrics it will be used instead, "
     "without altering the metrics in the metrics family.";
+
+static char fam_append_doc[] =
+    "append([metrics]) -> None.  Append metrics.\n"
+    "\n"
+    "Append this metrics to this metrics family.\n";
 
 static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
 {
@@ -53,7 +55,7 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     int status = PyArg_ParseTupleAndKeywords(args, kwds, "iO|OOO", kwlist,
                                              &type, &name, &help, &unit, &metrics);
-    if (status != 0)
+    if (status == 0)
         return -1;
 
     if (!IS_BYTES_OR_UNICODE(name)) {
@@ -113,10 +115,6 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
     }
     self->type = type;
 
-    if (metrics == NULL) {
-        metrics = PyList_New(0);
-        PyErr_Clear();
-    }
 
     PyObject *old_name = self->name;
     Py_INCREF(name);
@@ -137,7 +135,13 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
         Py_XDECREF(old_unit);
     }
 
-    if (metrics != NULL) {
+    if (metrics == NULL) {
+        metrics = PyList_New(0); /* New reference. */
+        PyErr_Clear();
+        PyObject *old_metrics = self->metrics;
+        self->metrics = metrics;
+        Py_XDECREF(old_metrics);
+    } else {
         PyObject *old_metrics = self->metrics;
         Py_INCREF(metrics);
         self->metrics = metrics;
@@ -147,34 +151,141 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
     return 0;
 }
 
-static PyObject *MetricFamily_dispatch(MetricFamily *self, PyObject *args, PyObject *kwds)
+static int build_metric(metric_t *m, int metric_type, PyObject *item)
+{
+    PyTypeObject *type = Py_TYPE(item);
+    Metric *cpy_metric = NULL;
+
+    switch (metric_type) {
+    case METRIC_TYPE_UNKNOWN:
+        if (strcmp(type->tp_name, "ncollectd.MetricUnknownDouble") == 0) {
+            MetricUnknownDouble *unknown = (MetricUnknownDouble *) item;
+            m->value = VALUE_UNKNOWN_FLOAT64(unknown->value);
+            cpy_metric = &unknown->metric;
+        } else if (strcmp(type->tp_name, "ncollectd.MetricUnknownLong") == 0) {
+            MetricUnknownLong *unknown = (MetricUnknownLong*) item;
+            m->value = VALUE_UNKNOWN_INT64(unknown->value);
+            cpy_metric = &unknown->metric;
+        }
+        break;
+    case METRIC_TYPE_GAUGE:
+        if (strcmp(type->tp_name, "ncollectd.MetricGaugeDouble") == 0) {
+            MetricGaugeDouble *gauge = (MetricGaugeDouble *) item;
+            m->value = VALUE_GAUGE_FLOAT64(gauge->value);
+            cpy_metric = &gauge->metric;
+        } else if (strcmp(type->tp_name, "ncollectd.MetricGaugeLong") == 0) {
+            MetricGaugeLong *gauge = (MetricGaugeLong *) item;
+            m->value = VALUE_GAUGE_INT64(gauge->value);
+            cpy_metric = &gauge->metric;
+        }
+        break;
+    case METRIC_TYPE_COUNTER:
+        if (strcmp(type->tp_name, "ncollectd.MetricCounterULong") == 0) {
+            MetricCounterULong *counter = (MetricCounterULong *) item;
+            m->value = VALUE_COUNTER_UINT64(counter->value);
+            cpy_metric = &counter->metric;
+        } else if (strcmp(type->tp_name, "ncollectd.MetricCounterDouble") == 0) {
+            MetricCounterDouble *counter = (MetricCounterDouble *) item;
+            m->value = VALUE_COUNTER_FLOAT64(counter->value);
+            cpy_metric = &counter->metric;
+        }
+        break;
+    case METRIC_TYPE_STATE_SET:
+        if (strcmp(type->tp_name, "ncollectd.MetricStateSet") == 0) {
+            MetricStateSet *set = (MetricStateSet *) item;
+            cpy_metric = &set->metric;
+            cpy_build_state_set(set->set, &m->value.state_set);
+        }
+        break;
+    case METRIC_TYPE_INFO:
+        if (strcmp(type->tp_name, "ncollectd.MetricInfo") == 0) {
+            MetricInfo *info = (MetricInfo *) item;
+            cpy_metric = &info->metric;
+            cpy_build_labels(info->info, &m->value.info);
+        }
+        break;
+    case METRIC_TYPE_SUMMARY:
+        if (strcmp(type->tp_name, "ncollectd.MetricSummary") == 0) {
+            MetricSummary *summary = (MetricSummary *) item;
+            cpy_metric = &summary->metric;
+            m->value.summary = cpy_build_summary (summary->quantiles);
+            if (m->value.summary == NULL) {
+                cpy_metric = NULL;
+            } else {
+                m->value.summary->sum = summary->sum;
+                m->value.summary->count = summary->count;
+            }
+        }
+        break;
+    case METRIC_TYPE_HISTOGRAM:
+        if (strcmp(type->tp_name, "ncollectd.MetricHistogram") == 0) {
+            MetricHistogram *histogram = (MetricHistogram *) item;
+            cpy_metric = &histogram->metric;
+            m->value.histogram = cpy_build_histogram(histogram->buckets);
+            if (m->value.histogram == NULL) {
+                cpy_metric = NULL;
+            } else {
+                m->value.histogram->sum = histogram->sum;
+            }
+        }
+        break;
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        if (strcmp(type->tp_name, "ncollectd.MetricGaugeHistogram") == 0) {
+            MetricGaugeHistogram *gauge_histogram = (MetricGaugeHistogram *) item;
+            cpy_metric = &gauge_histogram->metric;
+            m->value.histogram = cpy_build_histogram(gauge_histogram->buckets);
+            if (m->value.histogram == NULL) {
+                cpy_metric = NULL;
+            } else {
+                m->value.histogram->sum = gauge_histogram->sum;
+            }
+        }
+        break;
+    }
+
+    if (cpy_metric == NULL)
+        return -1;
+
+    m->time = DOUBLE_TO_CDTIME_T(cpy_metric->time);
+    m->interval = DOUBLE_TO_CDTIME_T(cpy_metric->interval);
+
+    cpy_build_labels(cpy_metric->labels, &m->label);
+
+    return 0;
+}
+
+static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kwds)
 {
     int ret;
-
-    PyObject *metrics = self->metrics;
+    MetricFamily *self = (MetricFamily *) s;
+    PyObject *metrics = NULL;
     double time = 0;
     static char *kwlist[] = {"metrics", "time" , NULL};
 
     int status = PyArg_ParseTupleAndKeywords(args, kwds, "|Od", kwlist, &metrics, &time);
-    if (status != 0)
+    if (status == 0)
         return NULL;
 
     if (self->name == NULL) {
+        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "missing name");
         return NULL;
     }
 
     if (!IS_BYTES_OR_UNICODE(self->name)) {
+        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "name must be str");
         return NULL;
     }
 
     if ((self->help != NULL) && !IS_BYTES_OR_UNICODE(self->help)) {
+        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "help must be str");
         return NULL;
     }
 
     if ((self->unit != NULL) && !IS_BYTES_OR_UNICODE(self->unit)) {
+        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "unit must be str");
         return NULL;
     }
@@ -190,7 +301,8 @@ static PyObject *MetricFamily_dispatch(MetricFamily *self, PyObject *args, PyObj
     case METRIC_TYPE_GAUGE_HISTOGRAM:
         break;
     default:
-        PyErr_SetString(PyExc_TypeError, "invalid severity value");
+        Py_XDECREF(metrics);
+        PyErr_SetString(PyExc_TypeError, "invalid metric type value");
         return NULL;
         break;
     }
@@ -199,93 +311,223 @@ static PyObject *MetricFamily_dispatch(MetricFamily *self, PyObject *args, PyObj
 
     fam.type = self->type;
 
-    if ((metrics != NULL) && (PyTuple_Check(metrics) == 0 && PyList_Check(metrics) == 0)) {
-        PyErr_Format(PyExc_TypeError, "labels must be a dict");
+    if (metrics == NULL) {
+        if (self->metrics == NULL)
+            Py_RETURN_NONE;
+
+        if ((!PyTuple_Check(self->metrics) && !PyList_Check(self->metrics))) {
+            PyErr_Format(PyExc_TypeError, "metrics must be a list");
+            return NULL;
+        }
+    } else if ((metrics != NULL) && (!PyTuple_Check(metrics) && !PyList_Check(metrics))) {
+        Py_XDECREF(metrics);
+        PyErr_Format(PyExc_TypeError, "metrics must be a list");
         return NULL;
     }
 
+    PyObject *str_unit = NULL;
     if (self->unit != NULL) {
-        PyObject *tmp = PyObject_Str(self->unit);
-        const char *string = cpy_unicode_or_bytes_to_string(&tmp);
-        if (string != NULL)
+        str_unit = PyObject_Str(self->unit);
+        const char *string = cpy_unicode_or_bytes_to_string(&str_unit);
+        if (string == NULL) {
+            Py_XDECREF(str_unit);
+            str_unit = NULL;
+        } else {
             fam.unit = discard_const(string);
-        Py_XDECREF(tmp);
+        }
     }
 
+    PyObject *str_help = NULL;
     if (self->help != NULL) {
-        PyObject *tmp = PyObject_Str(self->help);
-        const char *string = cpy_unicode_or_bytes_to_string(&tmp);
-        if (string != NULL)
+        str_help = PyObject_Str(self->help);
+        const char *string = cpy_unicode_or_bytes_to_string(&str_help);
+        if (string == NULL) {
+            Py_XDECREF(str_help);
+            str_help = NULL;
+        } else {
             fam.help = discard_const(string);
-        Py_XDECREF(tmp);
+        }
     }
 
-    PyObject *tmp = PyObject_Str(self->name);
-    const char *string = cpy_unicode_or_bytes_to_string(&tmp);
-    if (string != NULL)
+    PyObject *str_name = PyObject_Str(self->name);
+    const char *string = cpy_unicode_or_bytes_to_string(&str_name);
+    if (string == NULL) {
+        Py_XDECREF(str_name);
+        str_name = NULL;
+    } else {
         fam.name = discard_const(string);
-    Py_XDECREF(tmp);
+    }
 
+    PyObject *metrics_list = metrics == NULL ? self->metrics : metrics;
 
-    size_t size = (size_t)PySequence_Length(metrics);
+    size_t size = (size_t)PySequence_Length(metrics_list);
     fam.metric.ptr = calloc(size, sizeof(*fam.metric.ptr));
     if (fam.metric.ptr == NULL) {
         PyErr_SetString(PyExc_TypeError, "failed to alloc metrics");
+        Py_XDECREF(metrics);
+        Py_XDECREF(str_name);
+        Py_XDECREF(str_help);
+        Py_XDECREF(str_unit);
         return NULL;
     }
 
-    for (size_t i = 0; i < size; ++i) {
-        PyObject *item = PySequence_Fast_GET_ITEM(metrics, (int)i); /* Borrowed reference. */
-        if (item != NULL) {
+    fam.metric.num = size;
 
-        }
-#if 0
-        PyObject *num;
-        switch (ds->ds[i].type) {
-        case DS_TYPE_COUNTER:
-            num = PyNumber_Long(item); /* New reference. */
-            if (num != NULL) {
-                value[i].counter = PyLong_AsUnsignedLongLong(num);
-                Py_XDECREF(num);
-            }
-            break;
-        case DS_TYPE_GAUGE:
-            num = PyNumber_Float(item); /* New reference. */
-            if (num != NULL) {
-                value[i].gauge = PyFloat_AsDouble(num);
-                Py_XDECREF(num);
-            }
-            break;
-        case DS_TYPE_DERIVE:
-            /* This might overflow without raising an exception.
-             * Not much we can do about it */
-            num = PyNumber_Long(item); /* New reference. */
-            if (num != NULL) {
-                value[i].derive = PyLong_AsLongLong(num);
-                Py_XDECREF(num);
-            }
-            break;
-        default:
-            free(value);
-            PyErr_Format(PyExc_RuntimeError, "unknown data type %d for %s", ds->ds[i].type, value_list.type);
+    for (size_t i = 0; i < size; ++i) {
+        PyObject *item = PySequence_Fast_GET_ITEM(metrics_list, (int)i); /* Borrowed reference. */
+        if (item == NULL) {
+            Py_XDECREF(metrics);
+            Py_XDECREF(str_name);
+            Py_XDECREF(str_help);
+            Py_XDECREF(str_unit);
+            metric_list_reset(&fam.metric, fam.type);
             return NULL;
         }
-#endif
+
+        metric_t *m = fam.metric.ptr + i;
+
+        status = build_metric(m, self->type, item);
+        if (status != 0) {
+            Py_XDECREF(metrics);
+            Py_XDECREF(str_name);
+            Py_XDECREF(str_help);
+            Py_XDECREF(str_unit);
+            metric_list_reset(&fam.metric, fam.type);
+            return NULL;
+        }
+
         if (PyErr_Occurred() != NULL) {
-//            free(value);
+            Py_XDECREF(metrics);
+            Py_XDECREF(str_name);
+            Py_XDECREF(str_help);
+            Py_XDECREF(str_unit);
+            metric_list_reset(&fam.metric, fam.type);
             return NULL;
         }
     }
-    fam.metric.num = size;
 
     Py_BEGIN_ALLOW_THREADS;
     ret = plugin_dispatch_metric_family(&fam, CDTIME_T_TO_DOUBLE(time));
     Py_END_ALLOW_THREADS;
 
+    if (metrics == NULL) {
+        Py_XDECREF(self->metrics);
+        self->metrics = PyList_New(0); /* New reference. */
+    } else {
+        Py_XDECREF(metrics);
+    }
+
+    Py_XDECREF(str_name);
+    Py_XDECREF(str_help);
+    Py_XDECREF(str_unit);
+
     if (ret != 0) {
         PyErr_SetString(PyExc_RuntimeError, "error dispatching metric family, read the logs");
         return NULL;
     }
+
+    Py_RETURN_NONE;
+}
+
+static bool check_metric_type(metric_type_t metric_type, PyObject *item)
+{
+    PyTypeObject *type = Py_TYPE(item);
+
+    switch (metric_type) {
+    case METRIC_TYPE_UNKNOWN:
+        if (strcmp(type->tp_name, "ncollectd.MetricUnknownDouble") == 0) {
+            return true;
+        } else if (strcmp(type->tp_name, "ncollectd.MetricUnknownLong") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_GAUGE:
+        if (strcmp(type->tp_name, "ncollectd.MetricGaugeDouble") == 0) {
+            return true;
+        } else if (strcmp(type->tp_name, "ncollectd.MetricGaugeLong") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_COUNTER:
+        if (strcmp(type->tp_name, "ncollectd.MetricCounterULong") == 0) {
+            return true;
+        } else if (strcmp(type->tp_name, "ncollectd.MetricCounterDouble") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_STATE_SET:
+        if (strcmp(type->tp_name, "ncollectd.MetricStateSet") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_INFO:
+        if (strcmp(type->tp_name, "ncollectd.MetricInfo") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_SUMMARY:
+        if (strcmp(type->tp_name, "ncollectd.MetricSummary") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_HISTOGRAM:
+        if (strcmp(type->tp_name, "ncollectd.MetricHistogram") == 0) {
+            return true;
+        }
+        break;
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        if (strcmp(type->tp_name, "ncollectd.MetricGaugeHistogram") == 0) {
+            return true;
+        }
+        break;
+    }
+    return false;
+}
+
+static PyObject *MetricFamily_append(PyObject *s, PyObject *args, PyObject *kwds)
+{
+    MetricFamily *self = (MetricFamily *) s;
+    PyObject *metrics = NULL;
+    static char *kwlist[] = {"metrics", NULL};
+
+    int status = PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &metrics);
+    if (status == 0)
+        return NULL;
+
+    if (metrics == NULL)
+        Py_RETURN_NONE;
+
+    if (self->metrics == NULL) {
+        self->metrics = PyList_New(0); /* New reference. */
+        if (self->metrics == NULL)
+            return NULL;
+    }
+
+    if ((!PyTuple_Check(metrics) && !PyList_Check(metrics))) {
+        if (check_metric_type(self->type, metrics) == false) {
+            return NULL;
+        }
+
+        PyList_Append(self->metrics, metrics);
+
+        Py_RETURN_NONE;
+    }
+
+    ssize_t size = PySequence_Length(metrics);
+
+    for (ssize_t i = 0; i < size; ++i) {
+        PyObject *item = PySequence_Fast_GET_ITEM(metrics, (int)i); /* Borrowed reference. */
+        if (item == NULL) {
+            return NULL;
+        }
+
+        if (check_metric_type(self->type, item) == false)  {
+            return NULL;
+        }
+
+        PyList_Append(self->metrics, item);
+    }
+
 
     Py_RETURN_NONE;
 }
@@ -305,14 +547,39 @@ static PyObject *MetricFamily_new(PyTypeObject *type, __attribute__((unused)) Py
     return (PyObject *)self;
 }
 
+const char *cpy_metric_type(metric_type_t type)
+{
+    switch(type) {
+    case METRIC_TYPE_UNKNOWN:
+        return "METRIC_TYPE_UNKNOWN";
+    case METRIC_TYPE_GAUGE:
+        return "METRIC_TYPE_GAUGE";
+    case METRIC_TYPE_COUNTER:
+        return "METRIC_TYPE_COUNTER";
+    case METRIC_TYPE_STATE_SET:
+        return "METRIC_TYPE_STATE_SET";
+    case METRIC_TYPE_INFO:
+        return "METRIC_TYPE_INFO";
+    case METRIC_TYPE_SUMMARY:
+        return "METRIC_TYPE_SUMMARY";
+    case METRIC_TYPE_HISTOGRAM:
+        return "METRIC_TYPE_HISTOGRAM";
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        return "METRIC_TYPE_GAUGE_HISTOGRAM";
+    }
+    return NULL;
+}
+
 static PyObject *MetricFamily_repr(PyObject *s)
 {
     PyObject *tmp;
-    static PyObject *l_open, *l_name, *l_help, *l_unit, *l_metrics, *l_closing;
+    static PyObject *l_open, *l_type, *l_name, *l_help, *l_unit, *l_metrics, *l_closing;
     MetricFamily *self = (MetricFamily *)s;
 
     if (l_open == NULL)
         l_open = cpy_string_to_unicode_or_bytes("(");
+    if (l_type == NULL)
+        l_type = cpy_string_to_unicode_or_bytes("type=");
     if (l_name == NULL)
         l_name = cpy_string_to_unicode_or_bytes(",name=");
     if (l_help == NULL)
@@ -324,13 +591,25 @@ static PyObject *MetricFamily_repr(PyObject *s)
     if (l_closing == NULL)
         l_closing = cpy_string_to_unicode_or_bytes(")");
 
-    if ((l_name == NULL) || (l_help == NULL) || (l_unit == NULL) ||
+    if ((l_open == NULL) || (l_name == NULL) || (l_help == NULL) || (l_unit == NULL) ||
         (l_metrics == NULL) || (l_closing == NULL))
         return NULL;
 
     PyObject *ret = cpy_string_to_unicode_or_bytes(s->ob_type->tp_name);
 
     CPY_STRCAT(&ret, l_open);
+
+    CPY_STRCAT(&ret, l_type);
+    const char *metric_type = cpy_metric_type(self->type);
+    if (metric_type != NULL) {
+        PyObject *type = cpy_string_to_unicode_or_bytes(metric_type);
+        if (type != NULL)
+            CPY_STRCAT_AND_DEL(&ret, type);
+    } else {
+        tmp = PyInt_FromLong(self->type);
+        CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
+        CPY_STRCAT_AND_DEL(&ret, tmp);
+    }
 
     if (self->name != 0) {
         CPY_STRCAT(&ret, l_name);
@@ -390,6 +669,7 @@ static void MetricFamily_dealloc(PyObject *self)
 
 static PyMethodDef MetricFamily_methods[] = {
     {"dispatch", (PyCFunction)MetricFamily_dispatch, METH_VARARGS | METH_KEYWORDS, fam_dispatch_doc},
+    {"append", (PyCFunction)MetricFamily_append, METH_VARARGS | METH_KEYWORDS, fam_append_doc},
     {NULL}
 };
 

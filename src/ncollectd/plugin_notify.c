@@ -180,7 +180,7 @@ int plugin_notify(const char *plugin, const notification_t *notify)
         return ENOMEM;
     }
 
-     atomic_fetch_add(&notifications_dispatched, 1);
+    atomic_fetch_add(&notifications_dispatched, 1);
 
     elem->n = n;
 

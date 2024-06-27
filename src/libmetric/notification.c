@@ -32,7 +32,7 @@ int notification_marshal(strbuf_t *buf, notification_t const *n)
         severity = " OKAY ";
 
     status = status || strbuf_print(buf, severity);
-    status = status || strbuf_printf(buf, "%.3f\n", CDTIME_T_TO_DOUBLE(n->time));
+    status = status || strbuf_printf(buf, "%.3f", CDTIME_T_TO_DOUBLE(n->time));
 
     return status;
 }
