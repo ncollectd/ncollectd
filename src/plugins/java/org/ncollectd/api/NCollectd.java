@@ -75,20 +75,20 @@ public class NCollectd
     native public static int registerRead(String name, NCollectdReadInterface object);
 
     /**
+     * Java representation of ncollectd/src/plugin.h:plugin_register_read
+     *
+     * @return Zero when successful, non-zero otherwise.
+     * @see CollectdReadInterface
+     */
+    native public static int registerRead(String name, NCollectdReadInterface object, long interval);
+
+    /**
      * Java representation of ncollectd/src/plugin.h:plugin_register_write
      *
      * @return Zero when successful, non-zero otherwise.
      * @see CollectdWriteInterface
      */
     native public static int registerWrite(String name, NCollectdWriteInterface object);
-
-    /**
-     * Java representation of ncollectd/src/plugin.h:plugin_register_flush
-     *
-     * @return Zero when successful, non-zero otherwise.
-     * @see CollectdFlushInterface
-     */
-    native public static int registerFlush(String name, NCollectdFlushInterface object);
 
     /**
      * Java representation of ncollectd/src/plugin.h:plugin_register_shutdown

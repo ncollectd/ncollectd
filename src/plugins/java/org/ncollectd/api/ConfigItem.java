@@ -20,53 +20,53 @@ public class ConfigItem
 
     public ConfigItem (String key)
     {
-        _key = key;
+        this._key = key;
     }
 
     public String getKey ()
     {
-        return (_key);
+        return this._key;
     }
 
     public void addValue (ConfigValue cv)
     {
-        _values.add (cv);
+        this._values.add(cv);
     }
 
     public void addValue (String s)
     {
-        _values.add (new ConfigValue (s));
+        this._values.add(new ConfigValue (s));
     }
 
     public void addValue (Number n)
     {
-        _values.add (new ConfigValue (n));
+        this._values.add(new ConfigValue (n));
     }
 
     public void addValue (boolean b)
     {
-        _values.add (new ConfigValue (b));
+        this._values.add(new ConfigValue (b));
     }
 
     public List<ConfigValue> getValues ()
     {
-        return (_values);
+        return this._values;
     }
 
     public void addChild (ConfigItem ci)
     {
-        _children.add (ci);
+        this._children.add(ci);
     }
 
     public List<ConfigItem> getChildren ()
     {
-        return (_children);
+        return this._children;
     }
 
     public String toString ()
     {
         return (new String ("{ key: " + _key + "; "
-                    + "values: " + _values.toString () + "; "
-                    + "children: " + _children.toString () + "; }"));
+                    + "values: " + this._values.toString () + "; "
+                    + "children: " + this._children.toString () + "; }"));
     }
 }

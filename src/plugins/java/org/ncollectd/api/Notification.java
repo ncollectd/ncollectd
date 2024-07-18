@@ -3,7 +3,9 @@
 
 package org.ncollectd.api;
 
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Date;
 
 /**
  * Java representation of collectd/src/plugin.h:notfication_t structure.
@@ -22,24 +24,24 @@ public class Notification
     };
 
     private String _name;
-    private double _time;
+    private long _time;
     private int _severity;
-    private Hashtable<String, String> _labels = new Hashtable<>();
-    private Hashtable<String, String> _annotations = new Hashtable<>();
+    private HashMap<String, String> _labels = new HashMap<>();
+    private HashMap<String, String> _annotations = new HashMap<>();
 
     public Notification ()
     {
-        _severity = FAILURE;
+        this._severity = FAILURE;
     }
 
-    public Notification (String name, int severity, double time,
-                         Hashtable<String, String> labels, Hashtable<String, String> annotations)
+    public Notification (String name, int severity, long time,
+                         HashMap<String, String> labels, HashMap<String, String> annotations)
     {
-        _name = name;
-        _severity = severity;
-        _time = time;
-        _labels = labels;
-        _annotations = annotations;
+        this._name = name;
+        this._severity = severity;
+        this._time = time;
+        this._labels = labels;
+        this._annotations = annotations;
     }
 
     public void setName(String name)
@@ -49,7 +51,7 @@ public class Notification
 
     public String getName()
     {
-        return _name;
+        return this._name;
     }
 
     public void setSeverity (int severity)
@@ -60,12 +62,12 @@ public class Notification
 
     public int getSeverity()
     {
-        return _severity;
+        return this._severity;
     }
 
     public String getSeverityString()
     {
-        switch (_severity) {
+        switch (this._severity) {
         case FAILURE:
             return SEVERITY[0];
         case WARNING:
@@ -77,39 +79,91 @@ public class Notification
         }
     }
 
-    public void setTime(double time)
+    public void setTime(long time)
     {
         this._time = time;
     }
 
-    public double getTime()
+    public long getTime()
     {
-        return _time;
+        return this._time;
     }
 
-    public void setLabels(Hashtable<String, String> labels)
+    public void setLabels(HashMap<String, String> labels)
     {
         this._labels = labels;
     }
 
-    public Hashtable<String, String> getLabels()
+    public void addLabel(String name, String value)
     {
-        return _labels;
+        this._labels.put(name, value);
     }
 
-    public void setAnnotations(Hashtable<String, String> annotations)
+    public HashMap<String, String> getLabels()
+    {
+        return this._labels;
+    }
+
+    public void setAnnotations(HashMap<String, String> annotations)
     {
         this._annotations = annotations;
     }
 
-    public Hashtable<String, String> getAnnotations()
+    public void addAnnotation(String name, String value)
     {
-        return _annotations;
+        this._annotations.put(name, value);
+    }
+
+    public HashMap<String, String> getAnnotations()
+    {
+        return this._annotations;
     }
 
     public String toString()
     {
-        StringBuffer sb = new StringBuffer(super.toString());
+        StringBuffer sb = new StringBuffer();
+
+        sb.append(_name);
+        if (this._labels.isEmpty()) {
+            sb.append("{}");
+        } else {
+            int i = 0;
+            sb.append("{");
+            for (Map.Entry<String, String> set : this._labels.entrySet()) {
+                if (i != 0)
+                    sb.append(",");
+                sb.append(set.getKey()).append("=");
+                sb.append("\"").append(set.getValue()).append("\"");
+                i++;
+            }
+            sb.append("}");
+        }
+
+        if (!this._annotations.isEmpty()) {
+            int i = 0;
+            sb.append("{");
+            for (Map.Entry<String, String> set : this._annotations.entrySet()) {
+                if (i != 0)
+                    sb.append(",");
+                sb.append(set.getKey()).append("=");
+                sb.append("\"").append(set.getValue()).append("\"");
+                i++;
+            }
+        }
+
+        switch (this._severity) {
+        case FAILURE:
+            sb.append(" FAILURE ");
+        case WARNING:
+            sb.append(" WARNING ");
+        case OKAY:
+            sb.append(" OKAY ");
+        default:
+            sb.append(" UNKNOWN ");
+        }
+
+        sb.append(this._time);
+
         return sb.toString();
     }
 }

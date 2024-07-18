@@ -28,6 +28,9 @@ import javax.management.openmbean.InvalidKeyException;
 import org.ncollectd.api.NCollectd;
 import org.ncollectd.api.MetricFamily;
 import org.ncollectd.api.Metric;
+import org.ncollectd.api.MetricUnknown;
+import org.ncollectd.api.MetricGauge;
+import org.ncollectd.api.MetricCounter;
 import org.ncollectd.api.ConfigValue;
 import org.ncollectd.api.ConfigItem;
 
@@ -39,7 +42,7 @@ import org.ncollectd.api.ConfigItem;
  * construct an object of this class.
  *
  * The object can then be asked to query data from JMX and dispatch it to
- * collectd.
+ * ncollectd.
  *
  * @see GenericJMXConfMBean
  */
@@ -52,50 +55,119 @@ class GenericJMXConfMetric
     private String _attribute;
     private HashMap<String, String> _labels;
     private HashMap<String, String> _labels_from;
-    private boolean _is_table;
 
-    /**
-     * Converts a generic (OpenType) object to a number.
-     *
-     * Returns null if a conversion is not possible or not implemented.
-     */
-    private Number genericObjectToNumber(Object obj, int type)
+    private Metric genericObjectToMetric(Object obj, int type, HashMap<String, String> labels)
     {
         if (obj instanceof String) {
             String str = (String)obj;
 
             try {
-                if ((type == MetricFamily.METRIC_TYPE_UNKNOWN) ||
-                    (type == MetricFamily.METRIC_TYPE_GAUGE)) {
-                    return Double.valueOf(str);
-                } else {
-                    return Long.valueOf(str);
+                if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                    double value = Double.valueOf(str).doubleValue();
+                    return new MetricUnknown(value, labels);
+                } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                    double value = Double.valueOf(str).doubleValue();
+                    return new MetricGauge(value, labels);
+                } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                    double value = Long.valueOf(str).longValue();
+                    return new MetricCounter(value, labels);
                 }
             } catch (NumberFormatException e) {
                 return null;
             }
         } else if (obj instanceof Byte) {
-            return Byte.valueOf((Byte)obj);
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(((Byte)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(((Byte)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(((Byte)obj).longValue(), labels);
+            }
         } else if (obj instanceof Short) {
-            return Short.valueOf((Short)obj);
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(((Short)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(((Short)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(((Short)obj).longValue(), labels);
+            }
         } else if (obj instanceof Integer) {
-            return Integer.valueOf((Integer)obj);
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(((Integer)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(((Integer)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(((Integer)obj).longValue(), labels);
+            }
         } else if (obj instanceof Long) {
-            return Long.valueOf((Long)obj);
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(((Long)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(((Long)obj).longValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(((Long)obj).longValue(), labels);
+            }
         } else if (obj instanceof Float) {
-            return Float.valueOf((Float)obj);
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(((Float)obj).doubleValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(((Float)obj).doubleValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(((Float)obj).doubleValue(), labels);
+            }
         } else if (obj instanceof Double) {
-            return Double.valueOf((Double)obj);
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(((Double)obj).doubleValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(((Double)obj).doubleValue(), labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(((Double)obj).doubleValue(), labels);
+            }
         } else if (obj instanceof BigDecimal) {
-            return BigDecimal.ZERO.add((BigDecimal)obj);
+            double value = BigDecimal.ZERO.add((BigDecimal)obj).doubleValue();
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(value, labels);
+            }
         } else if (obj instanceof BigInteger) {
-            return BigInteger.ZERO.add((BigInteger)obj);
+            long value = BigInteger.ZERO.add((BigInteger)obj).longValue();
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(value, labels);
+            }
         } else if (obj instanceof AtomicInteger) {
-            return Integer.valueOf(((AtomicInteger)obj).get());
+            long value = Integer.valueOf(((AtomicInteger)obj).get()).longValue();
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(value, labels);
+            }
         } else if (obj instanceof AtomicLong) {
-            return Long.valueOf(((AtomicLong)obj).get());
+            long value = Long.valueOf(((AtomicLong)obj).get()).longValue();
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(value, labels);
+            }
         } else if (obj instanceof Boolean) {
-            return (Boolean)obj ? 1 : 0;
+            long value = ((Boolean)obj).booleanValue() ? 1 : 0;
+            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                return new MetricUnknown(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                return new MetricGauge(value, labels);
+            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                return new MetricCounter(value, labels);
+            }
         }
 
         return null;
@@ -138,7 +210,7 @@ class GenericJMXConfMetric
                 value = compositeData.get("value");
             }
         }
-        if (null == value) {
+        if (value == null) {
             return (null);
         }
 
@@ -196,84 +268,6 @@ class GenericJMXConfMetric
         }
     }
 
-    private String join(String separator, List<String> list)
-    {
-        StringBuffer sb = new StringBuffer();
-
-        for (int i = 0; i < list.size(); i++) {
-            if (i > 0)
-                sb.append("-");
-            sb.append(list.get(i));
-        }
-
-        return sb.toString();
-    }
-
-    private String getConfigString(ConfigItem ci)
-    {
-
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 1) {
-            NCollectd.logError("GenericJMXConfMetric: The " + ci.getKey() +
-                               " configuration option needs exactly one string argument.");
-            return null;
-        }
-
-        ConfigValue v = values.get(0);
-        if (v.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError("GenericJMXConfMetric: The " + ci.getKey() +
-                               " configuration option needs exactly one string argument.");
-            return null;
-        }
-
-        return v.getString();
-    }
-
-    private void getConfigLabel(ConfigItem ci, HashMap<String, String> labels)
-    {
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 2) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        ConfigValue name = values.get(0);
-        if (name.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        ConfigValue value = values.get(1);
-        if (value.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        labels.put(name.getString(), value.getString());
-    }
-
-    private Boolean getConfigBoolean(ConfigItem ci)
-    {
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 1) {
-            NCollectd.logError("GenericJMXConfMetric: The " + ci.getKey() +
-                               " configuration option needs exactly one boolean argument.");
-            return null;
-        }
-
-        ConfigValue v = values.get(0);
-        if (v.getType() != ConfigValue.CONFIG_TYPE_BOOLEAN) {
-            NCollectd.logError("GenericJMXConfMetric: The " + ci.getKey() +
-                               " configuration option needs exactly one boolean argument.");
-            return null;
-        }
-
-        return Boolean.valueOf(v.getBoolean());
-    }
-
     /**
      * Constructs a new value with the configured properties.
      */
@@ -284,22 +278,21 @@ class GenericJMXConfMetric
         this._attribute = null;
         this._labels = new HashMap<String, String>();
         this._labels_from = new HashMap<String, String>();
-        this._is_table = false;
 
         /*
          * metric "metric-name" {
          *   type "counter"
          *   table true|false
          *   attribute "HeapMemoryUsage"
-         *   attribute "..."
          *   :
-         *   # Type instance:
          * }
          */
 
-        String name = getConfigString(ci);
-        if (name != null)
-            this._metric_name = name;
+        String name = GenericJMX.getConfigString(ci);
+        if (name == null)
+            throw new IllegalArgumentException("Missing metric name.");
+
+        this._metric_name = name;
         // FIXME else
 
         List<ConfigItem> children = ci.getChildren();
@@ -308,7 +301,7 @@ class GenericJMXConfMetric
             ConfigItem child = iter.next();
 
             if (child.getKey().equalsIgnoreCase("type")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null) {
                     if (tmp.equalsIgnoreCase("unknown")) {
                         this._type = MetricFamily.METRIC_TYPE_UNKNOWN;
@@ -320,20 +313,28 @@ class GenericJMXConfMetric
                         this._type = MetricFamily.METRIC_TYPE_UNKNOWN;
                     }
                 }
-            } else if (child.getKey().equalsIgnoreCase("table")) {
-                Boolean tmp = getConfigBoolean(child);
-                if (tmp != null)
-                    this._is_table = tmp.booleanValue();
+            } else if (child.getKey().equalsIgnoreCase("help")) {
+                String tmp = GenericJMX.getConfigString(child);
+                if (tmp != null) {
+                    this._metric_help = tmp;
+                }
+            } else if (child.getKey().equalsIgnoreCase("unit")) {
+                String tmp = GenericJMX.getConfigString(child);
+                if (tmp != null) {
+                    this._metric_unit = tmp;
+                }
             } else if (child.getKey().equalsIgnoreCase("attribute")) {
-                String tmp = getConfigString(child);
-                if (tmp != null)
+                String tmp = GenericJMX.getConfigString(child);
+                if (tmp != null) {
                     this._attribute = tmp;
+                }
             } else if (child.getKey().equalsIgnoreCase("label")) {
-                getConfigLabel(child, this._labels);
+                GenericJMX.getConfigLabel(child, this._labels);
             } else if (child.getKey().equalsIgnoreCase("label-from")) {
-                getConfigLabel(child, this._labels_from);
-            } else
+                GenericJMX.getConfigLabel(child, this._labels_from);
+            } else {
                 throw new IllegalArgumentException("Unknown option: " + child.getKey());
+            }
         }
 
         if (this._attribute == null)
@@ -342,14 +343,14 @@ class GenericJMXConfMetric
 
     /**
      * Query values via JMX according to the object's configuration and dispatch
-     * them to collectd.
+     * them to ncollectd.
      *
-     * @param conn      Connection to the MBeanServer.
+     * @param conn    Connection to the MBeanServer.
      * @param objName Object name of the MBean to query.
-     * @param pd            Preset naming components. The members host, plugin and
-     *                              plugin instance will be used.
+     * @param labels  Labes to add to the metric.
+     *
      */
-    public void query(MBeanServerConnection conn, ObjectName objName,
+    public void query(MBeanServerConnection conn, ObjectName objName, String metric_prefix,
                       HashMap<String, String> labels)
     {
         HashMap<String, String> mlabels = new HashMap<String, String>(labels);
@@ -374,18 +375,31 @@ class GenericJMXConfMetric
             return;
         }
 
-        Number value = genericObjectToNumber(object, this._type);
-        if (value == null) {
-            NCollectd.logError("GenericJMXConfMetric: Cannot convert object to number.");
+        if (object instanceof CompositeData) {
+            CompositeData cd = (CompositeData)object;
+            Set<String> set =  cd.getCompositeType().keySet();
+            NCollectd.logError("GenericJMXConfMetric.query: attribute \"" +
+                               this._attribute + "\" is CompositeData object ("+
+                               String.join(",", set) + ")");
             return;
         }
 
-        // FIXME
+        Metric metric = genericObjectToMetric(object, this._type, mlabels);
+        if (metric == null) {
+            NCollectd.logError("GenericJMXConfMetric: Cannot convert object to metric.");
+            return;
+        }
 
-        MetricFamily fam = new MetricFamily(this._type, this._metric_name,
+        String metric_name = null;
+        if (metric_prefix != null) {
+            metric_name = metric_prefix + this._metric_name;
+        } else {
+            metric_name = this._metric_name;
+        }
+
+        MetricFamily fam = new MetricFamily(this._type, metric_name,
                                             this._metric_help, this._metric_unit);
-//        fam.addMetric(m);
+        fam.addMetric(metric);
         NCollectd.dispatchMetricFamily(fam);
-//        fam.clearMetrics();
     }
 }

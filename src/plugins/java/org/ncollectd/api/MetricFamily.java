@@ -36,13 +36,13 @@ public class MetricFamily
         case METRIC_TYPE_SUMMARY:
         case METRIC_TYPE_HISTOGRAM:
         case METRIC_TYPE_GAUGE_HISTOGRAM:
-            _type = type;
+            this._type = type;
             break;
         default:
-            _type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_TYPE_UNKNOWN;
             break;
         }
-        _name = name;
+        this._name = name;
     }
 
     public MetricFamily(int type, String name, String help)
@@ -56,14 +56,14 @@ public class MetricFamily
         case METRIC_TYPE_SUMMARY:
         case METRIC_TYPE_HISTOGRAM:
         case METRIC_TYPE_GAUGE_HISTOGRAM:
-            _type = type;
+            this._type = type;
             break;
         default:
-            _type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_TYPE_UNKNOWN;
             break;
         }
-        _name = name;
-        _help = help;
+        this._name = name;
+        this._help = help;
     }
 
     public MetricFamily(int type, String name, String help, String unit)
@@ -77,15 +77,15 @@ public class MetricFamily
         case METRIC_TYPE_SUMMARY:
         case METRIC_TYPE_HISTOGRAM:
         case METRIC_TYPE_GAUGE_HISTOGRAM:
-            _type = type;
+            this._type = type;
             break;
         default:
-            _type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_TYPE_UNKNOWN;
             break;
         }
-        _name = name;
-        _help = help;
-        _unit = unit;
+        this._name = name;
+        this._help = help;
+        this._unit = unit;
     }
 
     public MetricFamily(int type, String name, String help, String unit, List<Metric> metrics)
@@ -99,76 +99,166 @@ public class MetricFamily
         case METRIC_TYPE_SUMMARY:
         case METRIC_TYPE_HISTOGRAM:
         case METRIC_TYPE_GAUGE_HISTOGRAM:
-            _type = type;
+            this._type = type;
             break;
         default:
-            _type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_TYPE_UNKNOWN;
             break;
         }
-        _name = name;
-        _help = help;
-        _unit = unit;
-        _metrics = metrics;
+        this._name = name;
+        this._help = help;
+        this._unit = unit;
+        this._metrics = metrics;
+    }
+
+    public int getType()
+    {
+        return this._type;
     }
 
     public String getName()
     {
-        return _name;
+        return this._name;
     }
 
     public void setName(String name)
     {
-        _name = name;
+        this._name = name;
     }
 
     public String getHelp()
     {
-        return _help;
+        return this._help;
     }
 
     public void setHelp(String help)
     {
-        _help = help;
+        this._help = help;
     }
 
     public String getUnit()
     {
-        return _unit;
+        return this._unit;
     }
 
     public void setUnit(String unit)
     {
-        _unit = unit;
+        this._unit = unit;
     }
 
     public List<Metric> getMetrics()
     {
-        return _metrics;
+        return this._metrics;
     }
 
     public void setMetrics(List<Metric> metrics)
     {
-        _metrics = metrics;
+        this._metrics = metrics;
     }
 
     public void addMetric(Metric metric)
     {
-        _metrics.add(metric);
+        switch (this._type) {
+        case METRIC_TYPE_UNKNOWN:
+            if (!(metric instanceof MetricUnknown)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_GAUGE:
+            if (!(metric instanceof MetricGauge)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_COUNTER:
+            if (!(metric instanceof MetricCounter)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_STATE_SET:
+            if (!(metric instanceof MetricStateSet)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_INFO:
+            if (!(metric instanceof MetricInfo)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_SUMMARY:
+            if (!(metric instanceof MetricSummary)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_HISTOGRAM:
+            if (!(metric instanceof MetricHistogram)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        case METRIC_TYPE_GAUGE_HISTOGRAM:
+            if (!(metric instanceof MetricHistogram)) {
+                return; // FIXME throw exception ¿?
+            }
+            break;
+        default:
+            return;
+        }
+
+        this._metrics.add(metric);
     }
 
     public void clearMetrics()
     {
-        _metrics.clear();
+        this._metrics.clear();
     }
 
     public String toString()
     {
         StringBuffer sb = new StringBuffer();
-/*
-        sb.append('[').append(new Date(_time)).append("] ");
-        sb.append(getSource());
-*/
-        return sb.toString();
+        sb.append("name: ").append(this._name);
+        if (this._help != null)
+            sb.append(",help: ").append(this._help);
+        if (this._unit != null)
+            sb.append(",unit: ").append(this._unit);
 
+        sb.append(",type: ");
+        switch (this._type) {
+        case METRIC_TYPE_UNKNOWN:
+            sb.append("unknown");
+            break;
+        case METRIC_TYPE_GAUGE:
+            sb.append("gauge");
+            break;
+        case METRIC_TYPE_COUNTER:
+            sb.append("counter");
+            break;
+        case METRIC_TYPE_STATE_SET:
+            sb.append("state_set");
+            break;
+        case METRIC_TYPE_INFO:
+            sb.append("info");
+            break;
+        case METRIC_TYPE_SUMMARY:
+            sb.append("summary");
+            break;
+        case METRIC_TYPE_HISTOGRAM:
+            sb.append("histogram");
+            break;
+        case METRIC_TYPE_GAUGE_HISTOGRAM:
+            sb.append("gauge_histogram");
+            break;
+        }
+
+        if (!this._metrics.isEmpty()) {
+            sb.append(",metrics: ");
+            int i = 0;
+            for (Metric metric : this._metrics) {
+                if (i != 0)
+                    sb.append(",");
+                sb.append("(").append(metric.toString()).append(")");
+                i++;
+            }
+        }
+
+        return sb.toString();
     }
 }

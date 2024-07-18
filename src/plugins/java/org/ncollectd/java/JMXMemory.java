@@ -6,7 +6,7 @@ package org.ncollectd.java;
 
 import java.util.List;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.HashMap;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
@@ -39,10 +39,14 @@ public class JMXMemory implements NCollectdConfigInterface,
     private String _jmx_service_url = null;
     private MemoryMXBean _mbean = null;
 
-    private MetricFamily fam_memory_init_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE, "jmx_memory_init_bytes");
-    private MetricFamily fam_memory_used_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE, "jmx_memory_used_bytes");
-    private MetricFamily fam_memory_committed_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,  "jmx_memory_committed_bytes");
-    private MetricFamily fam_memory_max_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE, "jmx_memory_max_bytes");
+    private MetricFamily fam_memory_init_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
+                                                                  "jmx_memory_init_bytes");
+    private MetricFamily fam_memory_used_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
+                                                                  "jmx_memory_used_bytes");
+    private MetricFamily fam_memory_committed_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
+                                                                       "jmx_memory_committed_bytes");
+    private MetricFamily fam_memory_max_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
+                                                                 "jmx_memory_max_bytes");
 
     public JMXMemory ()
     {
@@ -65,7 +69,7 @@ public class JMXMemory implements NCollectdConfigInterface,
                 + "mem_committed = " + mem_committed + "; "
                 + "mem_max = " + mem_max + ";");
 
-        Hashtable<String, String> labels = new Hashtable<>();
+        HashMap<String, String> labels = new HashMap<>();
         labels.put("instance", instance);
 
         if (mem_init >= 0) {
@@ -95,17 +99,14 @@ public class JMXMemory implements NCollectdConfigInterface,
 
     private int configServiceURL (ConfigItem ci)
     {
-        List<ConfigValue> values;
-        ConfigValue cv;
-
-        values = ci.getValues ();
+        List<ConfigValue> values = ci.getValues ();
         if (values.size () != 1) {
             NCollectd.logError ("JMXMemory plugin: The JMXServiceURL option needs "
                     + "exactly one string argument.");
             return (-1);
         }
 
-        cv = values.get (0);
+        ConfigValue cv = values.get (0);
         if (cv.getType () != ConfigValue.CONFIG_TYPE_STRING) {
             NCollectd.logError ("JMXMemory plugin: The JMXServiceURL option needs "
                     + "exactly one string argument.");
@@ -118,13 +119,10 @@ public class JMXMemory implements NCollectdConfigInterface,
 
     public int config (ConfigItem ci)
     {
-        List<ConfigItem> children;
-        int i;
-
         NCollectd.logDebug ("JMXMemory plugin: config: ci = " + ci + ";");
 
-        children = ci.getChildren ();
-        for (i = 0; i < children.size (); i++) {
+        List<ConfigItem> children = ci.getChildren ();
+        for (int i = 0; i < children.size (); i++) {
             ConfigItem child;
             String key;
 
@@ -142,19 +140,15 @@ public class JMXMemory implements NCollectdConfigInterface,
 
     public int init ()
     {
-        JMXServiceURL service_url;
-        JMXConnector connector;
-        MBeanServerConnection connection;
-
         if (_jmx_service_url == null) {
             NCollectd.logError ("JMXMemory: _jmx_service_url == null");
             return (-1);
         }
 
         try {
-            service_url = new JMXServiceURL (_jmx_service_url);
-            connector = JMXConnectorFactory.connect (service_url);
-            connection = connector.getMBeanServerConnection ();
+            JMXServiceURL service_url = new JMXServiceURL (_jmx_service_url);
+            JMXConnector connector = JMXConnectorFactory.connect (service_url);
+            MBeanServerConnection connection = connector.getMBeanServerConnection ();
             _mbean = ManagementFactory.newPlatformMXBeanProxy (connection,
                     ManagementFactory.MEMORY_MXBEAN_NAME,
                     MemoryMXBean.class);

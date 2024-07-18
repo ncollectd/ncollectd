@@ -7,68 +7,68 @@ import java.util.HashMap;
 /**
  * Java representation of ncollectd/src/libmetric/metric.h:metric_t structure.
  */
-public class MetricGauge extends Metric
+public class MetricUnknown extends Metric
 {
-    public static final int GAUGE_FLOAT64 = 0;
-    public static final int GAUGE_INT64   = 1;
+    public static final int UNKNOWN_FLOAT64 = 0;
+    public static final int UNKNOWN_INT64   = 1;
 
     protected int _type;
     protected double _dvalue;
     protected long _lvalue;
 
-    public MetricGauge(long value)
+    public MetricUnknown(long value)
     {
         super();
-        this._type = GAUGE_INT64;
+        this._type = UNKNOWN_INT64;
         this._lvalue = value;
     }
 
-    public MetricGauge(long value, HashMap<String, String> labels)
+    public MetricUnknown(long value, HashMap<String, String> labels)
     {
         super(labels);
-        this._type = GAUGE_INT64;
+        this._type = UNKNOWN_INT64;
         this._lvalue = value;
     }
 
-    public MetricGauge(long value, HashMap<String, String> labels, long time)
+    public MetricUnknown(long value, HashMap<String, String> labels, long time)
     {
         super(labels, time);
-        this._type = GAUGE_INT64;
+        this._type = UNKNOWN_INT64;
         this._lvalue = value;
     }
 
-    public MetricGauge(long value, HashMap<String, String> labels, long time, long interval)
+    public MetricUnknown(long value, HashMap<String, String> labels, long time, long interval)
     {
         super(labels, time, interval);
-        this._type = GAUGE_INT64;
+        this._type = UNKNOWN_INT64;
         this._lvalue = value;
     }
 
-    public MetricGauge(double value)
+    public MetricUnknown(double value)
     {
         super();
-        this._type = GAUGE_FLOAT64;
+        this._type = UNKNOWN_FLOAT64;
         this._dvalue = value;
     }
 
-    public MetricGauge(double value, HashMap<String, String> labels)
+    public MetricUnknown(double value, HashMap<String, String> labels)
     {
         super(labels);
-        this._type = GAUGE_FLOAT64;
+        this._type = UNKNOWN_FLOAT64;
         this._dvalue = value;
     }
 
-    public MetricGauge(double value, HashMap<String, String> labels, long time)
+    public MetricUnknown(double value, HashMap<String, String> labels, long time)
     {
         super(labels, time);
-        this._type = GAUGE_FLOAT64;
+        this._type = UNKNOWN_FLOAT64;
         this._dvalue = value;
     }
 
-    public MetricGauge(double value, HashMap<String, String> labels, long time, long interval)
+    public MetricUnknown(double value, HashMap<String, String> labels, long time, long interval)
     {
         super(labels, time, interval);
-        this._type = GAUGE_FLOAT64;
+        this._type = UNKNOWN_FLOAT64;
         this._dvalue = value;
     }
 
@@ -79,7 +79,7 @@ public class MetricGauge extends Metric
 
     public double getDouble()
     {
-        if (this._type == GAUGE_FLOAT64) {
+        if (this._type == UNKNOWN_FLOAT64) {
             return this._dvalue;
         }
         return 0;
@@ -87,7 +87,7 @@ public class MetricGauge extends Metric
 
     public long getLong()
     {
-        if (this._type == GAUGE_INT64) {
+        if (this._type == UNKNOWN_INT64) {
             return this._lvalue;
         }
         return 0;
@@ -96,10 +96,10 @@ public class MetricGauge extends Metric
     public String toString() {
         StringBuffer sb = new StringBuffer(super.toString());
 
-        if (this._type == GAUGE_FLOAT64) {
+        if (this._type == UNKNOWN_FLOAT64) {
             sb.append(",type: float64");
             sb.append(",value: ").append(this._dvalue);
-        } else if (this._type == GAUGE_INT64) {
+        } else if (this._type == UNKNOWN_INT64) {
             sb.append(",type: int64");
             sb.append(",value: ").append(this._lvalue);
 

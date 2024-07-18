@@ -6,6 +6,7 @@ package org.ncollectd.java;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -35,6 +36,51 @@ public class GenericJMX implements NCollectdConfigInterface,
         this._connections = new ArrayList<GenericJMXConfConnection> ();
     }
 
+    public static String getConfigString (ConfigItem ci)
+    {
+        List<ConfigValue> values = ci.getValues();
+        if (values.size() != 1) {
+            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+                    + " configuration option needs exactly one string argument.");
+            return (null);
+        }
+
+        ConfigValue v = values.get(0);
+        if (v.getType() != ConfigValue.CONFIG_TYPE_STRING) {
+            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+                    + " configuration option needs exactly one string argument.");
+            return (null);
+        }
+
+        return v.getString();
+    }
+
+    public static void getConfigLabel(ConfigItem ci, HashMap<String, String> labels)
+    {
+        List<ConfigValue> values = ci.getValues();
+        if (values.size() != 2) {
+            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
+                    + " configuration option needs exactly two string arguments.");
+            return;
+        }
+
+        ConfigValue name = values.get(0);
+        if (name.getType() != ConfigValue.CONFIG_TYPE_STRING) {
+            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
+                    + " configuration option needs exactly two string arguments.");
+            return;
+        }
+
+        ConfigValue value = values.get(1);
+        if (value.getType() != ConfigValue.CONFIG_TYPE_STRING) {
+            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
+                    + " configuration option needs exactly two string arguments.");
+            return;
+        }
+
+        labels.put(name.getString(), value.getString());
+    }
+
     public int config (ConfigItem ci)
     {
         List<ConfigItem> children;
@@ -49,14 +95,14 @@ public class GenericJMX implements NCollectdConfigInterface,
 
             child = children.get (i);
             key = child.getKey ();
-            if (key.equalsIgnoreCase ("MBean")) {
+            if (key.equalsIgnoreCase ("mbean")) {
                 try {
                     GenericJMXConfMBean mbean = new GenericJMXConfMBean (child);
                     putMBean (mbean);
                 } catch (IllegalArgumentException e) {
                     NCollectd.logError("GenericJMX plugin: Evaluating 'MBean' block failed: " + e);
                 }
-            } else if (key.equalsIgnoreCase ("Connection")) {
+            } else if (key.equalsIgnoreCase ("connection")) {
                 try {
                     GenericJMXConfConnection conn = new GenericJMXConfConnection (child);
                     this._connections.add (conn);
@@ -69,7 +115,7 @@ public class GenericJMX implements NCollectdConfigInterface,
             }
         }
 
-        return (0);
+        return 0;
     }
 
     public int read ()
@@ -90,7 +136,7 @@ public class GenericJMX implements NCollectdConfigInterface,
     {
         System.out.print ("org.collectd.java.GenericJMX.Shutdown ();\n");
         this._connections = null;
-        return (0);
+        return 0;
     }
 
     /*
