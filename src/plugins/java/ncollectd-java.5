@@ -16,7 +16,7 @@ ncollectd-java \- Documentation of ncollectd's java plugin
 }
 .SH DESCRIPTION
 The \fBjava\fP plugin embeds a \fIJava Virtual Machine\fP (JVM) into \fBncollectd\fP and
-provides a Java interface to part of collectd's API. This makes it possible to
+provides a Java interface to part of ncollectd's API. This makes it possible to
 write additions to the daemon in Java.
 
 Example:
@@ -63,7 +63,7 @@ independent from the \fIjava-class\fP argument passed to \fBload-plugin\fP.
 
 .SH OVERVIEW
 
-When writing additions for collectd in Java, the underlying C base is mostly
+When writing additions for ncollectd in Java, the underlying C base is mostly
 hidden from you. All complex data types are converted to their Java counterparts
 before they're passed to your functions. These Java classes reside in the
 \f(CWorg.ncollectd.api\fP namespace.
@@ -75,7 +75,7 @@ methods", i. e. methods that will be called by the daemon when appropriate.
 The available classes are:
 
 .TP
-\fBorg.ncollectd.api.Collectd\fP
+\fBorg.ncollectd.api.NCollectd\fP
 All API functions exported to Java are implemented as static functions of this
 class. See \fBEXPORTED API FUNCTIONS\fP below.
 .TP
@@ -87,6 +87,30 @@ Corresponds to \f(CWconfig_item_t\fP, defined in \f(CWsrc/libconfig/config.h\fP.
 .TP
 \fBorg.ncollectd.api.Notification\fP
 Corresponds to \f(CWnotification_t\fP, defined in \f(CWsrc/libmetric/notification.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricFamily\fP
+Corresponds to \f(CWmetric_family_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricUnknown\fP
+Corresponds to \f(CWunknown_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricGauge\fP
+Corresponds to \f(CWgauge_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricCounter\fP
+Corresponds to \f(CWcounter_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricInfo\fP
+Corresponds to \f(CWlabel_set_t\fP, defined in \f(CWsrc/libmetric/label_set.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricStateSet\fP
+Corresponds to \f(CWstate_set_t\fP, defined in \f(CWsrc/libmetric/state_set.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricHistogram\fP
+Corresponds to \f(CWhistogram_t\fP, defined in \f(CWsrc/libmetric/histogram.h\fP.
+.TP
+\fBorg.ncollectd.api.MetricSummary\fP
+Corresponds to \f(CWsummary_t\fP, defined in \f(CWsrc/libmetric/histogram.h\fP.
 
 .PP
 
@@ -96,17 +120,17 @@ need to \fBimport\fP the classes.
 
 .SH EXPORTED API FUNCTIONS
 
-All collectd API functions that are available to Java plugins are implemented
-as \fIpublic static\fP functions of the \fBCollectd\fP class. This makes
+All ncollectd API functions that are available to Java plugins are implemented
+as \fIpublic static\fP functions of the \fNBCollectd\fP class. This makes
 calling these functions pretty straight forward. For example, to send an error
 message to the daemon, you'd do something like this:
 
-  Collectd.logError ("That wasn't chicken!");
+  NCollectd.logError ("That wasn't chicken!");
 
 The following are the currently exported functions.
 .SS registerConfig
 
-Signature: \fIint\fP \fBregisterConfig\fP (\fIString\fP name, \fICollectdConfigInterface\fP object);
+Signature: \fIint\fP \fBregisterConfig\fP (\fIString\fP name, \fINCollectdConfigInterface\fP object);
 
 Registers the \fBconfig\fP function of \fIobject\fP with the daemon.
 
@@ -116,7 +140,7 @@ See \fB"config callback"\fP below.
 
 .SS registerInit
 
-Signature: \fIint\fP \fBregisterInit\fP (\fIString\fP name, \fICollectdInitInterface\fP object);
+Signature: \fIint\fP \fBregisterInit\fP (\fIString\fP name, \fINCollectdInitInterface\fP object);
 
 Registers the \fBinit\fP function of \fIobject\fP with the daemon.
 
@@ -126,7 +150,7 @@ See \fB"init callback"\fP below.
 
 .SS registerRead
 
-Signature: \fIint\fP \fBregisterRead\fP (\fIString\fP name, \fICollectdReadInterface\fP object)
+Signature: \fIint\fP \fBregisterRead\fP (\fIString\fP name, \fINCollectdReadInterface\fP object)
 
 Registers the \fBread\fP function of \fIobject\fP with the daemon.
 
@@ -136,7 +160,7 @@ See \fB"read callback"\fP below.
 
 .SS registerWrite
 
-Signature: \fIint\fP \fBregisterWrite\fP (\fIString\fP name, \fICollectdWriteInterface\fP object)
+Signature: \fIint\fP \fBregisterWrite\fP (\fIString\fP name, \fINCollectdWriteInterface\fP object)
 
 Registers the \fBwrite\fP function of \fIobject\fP with the daemon.
 
@@ -146,7 +170,7 @@ See \fB"write callback"\fP below.
 
 .SS registerShutdown
 
-Signature: \fIint\fP \fBregisterShutdown\fP (\fIString\fP name, \fICollectdShutdownInterface\fP object);
+Signature: \fIint\fP \fBregisterShutdown\fP (\fIString\fP name, \fINCollectdShutdownInterface\fP object);
 
 Registers the \fBshutdown\fP function of \fIobject\fP with the daemon.
 
@@ -156,7 +180,7 @@ See \fB"shutdown callback"\fP below.
 
 .SS registerLog
 
-Signature: \fIint\fP \fBregisterLog\fP (\fIString\fP name, \fICollectdLogInterface\fP object);
+Signature: \fIint\fP \fBregisterLog\fP (\fIString\fP name, \fINCollectdLogInterface\fP object);
 
 Registers the \fBlog\fP function of \fIobject\fP with the daemon.
 
@@ -166,7 +190,7 @@ See \fB"log callback"\fP below.
 
 .SS registerNotification
 
-Signature: \fIint\fP \fBregisterNotification\fP (\fIString\fP name, \fICollectdNotificationInterface\fP object);
+Signature: \fIint\fP \fBregisterNotification\fP (\fIString\fP name, \fINCollectdNotificationInterface\fP object);
 
 Registers the \fBnotification\fP function of \fIobject\fP with the daemon.
 
@@ -176,13 +200,16 @@ See \fB"notification callback"\fP below.
 
 .SS dispatchMetricFamily
 
-Signature: \fIint\fP \fBdispatchValues\fP (\fIValueList\fP)
+Signature: \fIint\fP \fBdispatchMetricFamily\fP (\fIMetricFamily\fP object)
 
-Passes the values represented by the \fBValueList\fP object to the
-C<plugin_dispatch_values\fP function of the daemon. The "data set" (or list of
-"data sources") associated with the object are ignored, because
-C<plugin_dispatch_values\fP will automatically lookup the required data set. It
-is therefore absolutely okay to leave this blank.
+Passes the metrics represented by the \fBMetricFamily\fP object to the
+\fBplugin_dispatch_metric_family\fP function of the daemon.
+
+Returns zero upon success or non-zero upon failure.
+
+.SS dispatchNotification
+
+Signature: \fIint\fP \fBdispatchNotification\fP (\fINotification\fP object);
 
 Returns zero upon success or non-zero upon failure.
 
@@ -218,7 +245,7 @@ Sends a log message with severity \fBDEBUG\fP to the daemon.
 
 .SH REGISTERING CALLBACKS
 
-When starting up, collectd creates an object of each configured class. The
+When starting up, ncollectd creates an object of each configured class. The
 constructor of this class should then register "callbacks" with the daemon,
 using the appropriate static functions in \fBncollectd\fP,
 see \fBEXPORTED API FUNCTIONS\fP above. To register a callback, the object being
@@ -226,7 +253,7 @@ passed to one of the register functions must implement an appropriate
 interface, which are all in the \fBorg.ncollectd.api\fP namespace.
 
 A constructor may register any number of these callbacks, even none. An object
-without callback methods is never actively called by collectd, but may still
+without callback methods is never actively called by ncollectd, but may still
 call the exported API functions. One could, for example, start a new thread in
 the constructor and dispatch (submit to the daemon) values asynchronously,
 whenever one is available.
@@ -235,7 +262,7 @@ Each callback method is now explained in more detail:
 
 .SS config callback
 
-Interface: \fBorg.collectd.api.CollectdConfigInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdConfigInterface\fP
 
 Signature: \fIint\fP \fBconfig\fP (\fIOConfigItem\fP ci)
 
@@ -252,7 +279,7 @@ See \fB"registerConfig"\fP above.
 
 .SS init callback
 
-Interface: \fBorg.collectd.api.CollectdInitInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdInitInterface\fP
 
 Signature: \fIint\fP \fBinit\fP ()
 
@@ -267,13 +294,13 @@ See \fB"registerInit"\fP above.
 
 .SS read callback
 
-Interface: \fBorg.collectd.api.CollectdReadInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdReadInterface\fP
 
 Signature: \fIint\fP \fBread\fP ()
 
 This method is called periodically and is supposed to gather statistics in
-whatever fashion. These statistics are represented as a \fBValueList\fP object and
-sent to the daemon using \fBdispatchValues|"dispatchValues"\fP.
+whatever fashion. These statistics are represented as a \fBMetricFamily\fP object and
+sent to the daemon using \fBddispatchMetricFamily\fP.
 
 To signal success, this method has to return zero. Anything else will be
 considered an error condition and cause an appropriate message to be logged.
@@ -285,9 +312,9 @@ See \fB"registerRead"\fP above.
 
 .SS write callback
 
-Interface: \fBorg.collectd.api.CollectdWriteInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdWriteInterface\fP
 
-Signature: \fIint\fP \fBwrite\fP (\fIValueList\fP vl)
+Signature: \fIint\fP \fBwrite\fP (\fIMetricFamily\fP object)
 
 This method is called whenever a value is dispatched to the daemon. The
 corresponding C "write"-functions are passed a C<data_set_t\fP, so they can
@@ -302,7 +329,7 @@ See \fB"registerWrite"\fP above.
 
 .SS shutdown callback
 
-Interface: \fBorg.collectd.api.CollectdShutdownInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdShutdownInterface\fP
 
 Signature: \fIint\fP \fBshutdown\fP ()
 
@@ -316,7 +343,7 @@ See \fB"registerShutdown"\fP above.
 
 .SS log callback
 
-Interface: \fBorg.collectd.api.CollectdLogInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdLogInterface\fP
 
 Signature: \fIvoid\fP \fBlog\fP (\fIint\fP severity, \fIString\fP message)
 
@@ -343,7 +370,7 @@ See \fB"registerLog"\fP above.
 
 .SS notification callback
 
-Interface: \fBorg.collectd.api.CollectdNotificationInterface\fP
+Interface: \fBorg.ncollectd.api.NCollectdNotificationInterface\fP
 
 Signature: \fIint\fP \fBnotification\fP (\fINotification\fP n)
 
@@ -359,25 +386,27 @@ See \fB"registerNotification"\fP above.
 This short example demonstrates how to register a read callback with the
 daemon:
 
-  import org.collectd.api.Collectd;
-  import org.collectd.api.ValueList;
+  import org.ncollectd.api.NCollectd;
+  import org.ncollectd.api.MetricFamily;
+  import org.ncollectd.api.MetricGauge;
 
-  import org.collectd.api.CollectdReadInterface;
+  import org.ncollectd.api.NCollectdReadInterface;
 
-  public class Foobar implements CollectdReadInterface
+  public class Foobar implements NCollectdReadInterface
   {
     public Foobar ()
     {
-      Collectd.registerRead ("Foobar", this);
+      NCollectd.registerRead ("Foobar", this);
     }
 
     public int read ()
     {
-      ValueList vl;
+      MetricFamily fam = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE, "test");
+      fam.addMetric(new MetricGauge(10));
 
       /* Do something... */
 
-      Collectd.dispatchValues (vl);
+      NCollectd.dispatchMetricFamily (fam);
     }
   }
 
@@ -400,7 +429,7 @@ connect to an \fIMBeanServer\fP and what data to collect. The configuration of t
 \fISNMP plugin\fP is similar in nature, in case you know it.
 .PP
 \fBplugin\fP \fIjava\fP {
-    \fBjvm-arg\fP "\fI-Djava.class.path=/usr/share/ncollectd/java/collectd-api.jar:/usr/share/ncollectd/java/generic-jmx.jar\fP"
+    \fBjvm-arg\fP "\fI-Djava.class.path=/usr/share/ncollectd/java/ncollectd-api.jar:/usr/share/ncollectd/java/generic-jmx.jar\fP"
     \fBload-plugin\fP  "\fIorg.ncollectd.java.GenericJMX\fP"
     \fBplugin\fP GenericJMX {
         \fBmbean\fP \fIname\fP {
@@ -412,13 +441,13 @@ connect to an \fIMBeanServer\fP and what data to collect. The configuration of t
                 \fBlabel\fP \fIkey\fP \fIvalue\fP
                 \fBlabel-from\fP \fIkey\fP \fIproperty\fP
                 \fBtype\fP \fIunknown|gauge|counter\fP
-                \fBtable\fP \fItrue|false\fP
                 \fBattribute\fP \fIattribute\fP
             }
         }
         \fBconnection\fP {
             \fBservice-url\fP \fIurl\fP
             \fBlabel\fP \fIkey\fP \fIvalue\fP
+            \fBmetric-prefix\fP \fIprefix\fP
             \fBcollect\fP \fImbean\fP
             \fBuser\fP \fIuser\fP
             \fBpassword\fP \fIpassword\fP
@@ -453,7 +482,7 @@ See also:
 The \fIobject names\fP used by JMX to identify \fIMBeans\fP include so called
 “\fIproperties\fP” which are basically key-value-pairs. If the given object name
 is not unique and multiple MBeans are returned, the values of those properties
-usually differ. 
+usually differ.
 .TP
 \fBmetrix-prefix\fP "\fIprefix\fP"
 .TP
@@ -469,16 +498,10 @@ block.
 .TP
 \fBtype\fP \fIunknown|gauge|counter\fP
 .TP
-\fBtable\fP \fItrue|false\fP
-Set this to true if the returned attribute is a \fIcomposite type\fP. If set to
-true, the keys within the \fIcomposite type\fP is appended to the \fItype instance\fP.
-.TP
 \fBattribute\fP \fIattribute\fP
 Sets the name of the attribute from which to read the value. You can access the
 keys of composite types by using a dot to concatenate the key name to the
-attribute name. For example: “attrib0.key42”. If \fBtable\fP is set to \fBtrue\fP
-\fIpath\fP must point to a \fIcomposite type\fP, otherwise it must point to a numeric
-type.
+attribute name. For example: “attrib0.key42”.
 .RE
 .RE
 .TP
@@ -495,6 +518,8 @@ See also:
 \fBhttp://java.sun.com/javase/6/docs/api/javax/management/remote/JMXServiceURL.html\fP
 .TP
 \fBlabel\fP \fIkey\fP \fIvalue\fP
+.TP
+\fBmetrix-prefix\fP "\fIprefix\fP"
 .TP
 \fBcollect\fP \fImbean\fP
 Configures which of the \fIMBean\fP blocks to use with this connection. May be

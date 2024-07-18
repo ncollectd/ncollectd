@@ -24,69 +24,15 @@ import org.ncollectd.api.ConfigItem;
 class GenericJMXConfMBean
 {
     private String _name; /* name by which this mapping is referenced */
+    private String _metric_prefix;
     private ObjectName _obj_name;
     private HashMap<String, String> _labels;
     private HashMap<String, String> _labels_from;
     private List<GenericJMXConfMetric> _metrics;
 
-    private String getConfigString (ConfigItem ci)
-    {
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 1) {
-            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
-                    + " configuration option needs exactly one string argument.");
-            return (null);
-        }
-
-        ConfigValue v = values.get(0);
-        if (v.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
-                    + " configuration option needs exactly one string argument.");
-            return (null);
-        }
-
-        return v.getString();
-    }
-
-    private void getConfigLabel(ConfigItem ci, HashMap<String, String> labels)
-    {
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 2) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        ConfigValue name = values.get(0);
-        if (name.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        ConfigValue value = values.get(1);
-        if (value.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        labels.put(name.getString(), value.getString());
-    }
-
-/*
- * MBean "alias name" {
- *   ObjectName "object name"
- *   InstancePrefix "foobar"
- *   InstanceFrom "name"
- *   <Value />
- *   <Value />
- *   :
- * }
- */
     public GenericJMXConfMBean (ConfigItem ci) throws IllegalArgumentException
     {
-        this._name = getConfigString(ci);
+        this._name = GenericJMX.getConfigString(ci);
         if (this._name == null)
             throw (new IllegalArgumentException ("No alias name was defined. "
                         + "MBean blocks need exactly one string argument."));
@@ -97,12 +43,13 @@ class GenericJMXConfMBean
         this._labels_from = new HashMap<String, String>();
         List<ConfigItem> children = ci.getChildren();
         Iterator<ConfigItem> iter = children.iterator();
+
         while (iter.hasNext()) {
             ConfigItem child = iter.next();
 
             NCollectd.logDebug ("GenericJMXConfMBean: child.getKey () = " + child.getKey());
             if (child.getKey().equalsIgnoreCase("object-name")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp == null)
                     continue;
 
@@ -112,9 +59,13 @@ class GenericJMXConfMBean
                     throw (new IllegalArgumentException("Not a valid object name: " + tmp, e));
                 }
             } else if (child.getKey().equalsIgnoreCase("label")) {
-                getConfigLabel(child, this._labels);
+                GenericJMX.getConfigLabel(child, this._labels);
             } else if (child.getKey().equalsIgnoreCase("label-from")) {
-                getConfigLabel(child, this._labels_from);
+                GenericJMX.getConfigLabel(child, this._labels_from);
+            } else if (child.getKey().equalsIgnoreCase("metric-prefix")) {
+                String tmp = GenericJMX.getConfigString(child);
+                if (tmp != null)
+                    this._metric_prefix = tmp;
             } else if (child.getKey().equalsIgnoreCase("metric")) {
                 this._metrics.add(new GenericJMXConfMetric(child));
             } else {
@@ -135,7 +86,8 @@ class GenericJMXConfMBean
         return this._name;
     }
 
-    public int query(MBeanServerConnection conn, HashMap<String, String> labels)
+    public int query(MBeanServerConnection conn, String metric_prefix,
+                                                 HashMap<String, String> labels)
     {
         Set<ObjectName> names;
         try {
@@ -145,9 +97,18 @@ class GenericJMXConfMBean
             return (-1);
         }
 
-        if (names.size () == 0) {
-            NCollectd.logWarning("GenericJMXConfMBean: No MBean matched "
-                    + "the ObjectName " + this._obj_name);
+        if (names.size() == 0) {
+            NCollectd.logWarning("GenericJMXConfMBean: No MBean matched " + "the ObjectName " +
+                                  this._obj_name);
+        }
+
+        String prefix = null;
+        if ((metric_prefix != null) && (this._metric_prefix != null)) {
+            prefix = metric_prefix + this._metric_prefix;
+        } else if ((metric_prefix != null) && (this._metric_prefix == null)) {
+            prefix = metric_prefix;
+        } else if ((metric_prefix == null) && (this._metric_prefix != null)) {
+            prefix = this._metric_prefix;
         }
 
         Iterator<ObjectName> iter = names.iterator();
@@ -172,7 +133,7 @@ class GenericJMXConfMBean
             }
 
             for (int i = 0; i < this._metrics.size(); i++)
-                this._metrics.get(i).query(conn, objName, mlabels);
+                this._metrics.get(i).query(conn, objName, prefix, mlabels);
         }
 
         return 0;

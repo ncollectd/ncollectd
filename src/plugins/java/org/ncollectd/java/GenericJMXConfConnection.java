@@ -29,6 +29,7 @@ class GenericJMXConfConnection
     private String _password = null;
     private String _host = null;
     private String _service_url = null;
+    private String _metric_prefix = null;
     private HashMap<String, String> _labels = null;
     private JMXConnector _jmx_connector = null;
     private MBeanServerConnection _mbean_connection = null;
@@ -37,50 +38,6 @@ class GenericJMXConfConnection
     /*
      * private methods
      */
-    private String getConfigString(ConfigItem ci)
-    {
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 1) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly one string argument.");
-            return null;
-        }
-
-        ConfigValue v = values.get(0);
-        if (v.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly one string argument.");
-            return null;
-        }
-
-        return v.getString();
-    }
-
-    private void getConfigLabel(ConfigItem ci, HashMap<String, String> labels)
-    {
-        List<ConfigValue> values = ci.getValues();
-        if (values.size() != 2) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        ConfigValue name = values.get(0);
-        if (name.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        ConfigValue value = values.get(1);
-        if (value.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
-                    + " configuration option needs exactly two string arguments.");
-            return;
-        }
-
-        labels.put(name.getString(), value.getString());
-    }
 
     private String getHost ()
     {
@@ -89,7 +46,6 @@ class GenericJMXConfConnection
         }
 
         return null;
-//        return NCollectd.getHostname(); // FIXME
     }
 
     private void connect ()
@@ -145,12 +101,12 @@ class GenericJMXConfConnection
     /*
      * public methods
      *
-     * <Connection>
-     *   Host "tomcat0.mycompany"
-     *   ServiceURL "service:jmx:rmi:///jndi/rmi://localhost:17264/jmxrmi"
-     *   Collect "java.lang:type=GarbageCollector,name=Copy"
-     *   Collect "java.lang:type=Memory"
-     * </Connection>
+     * connection {
+     *   host "tomcat0.mycompany"
+     *   service-url "service:jmx:rmi:///jndi/rmi://localhost:17264/jmxrmi"
+     *   collect "java.lang:type=GarbageCollector,name=Copy"
+     *   collect "java.lang:type=Memory"
+     * }
      *
      */
     public GenericJMXConfConnection (ConfigItem ci) throws IllegalArgumentException
@@ -164,25 +120,29 @@ class GenericJMXConfConnection
             ConfigItem child = iter.next();
 
             if (child.getKey().equalsIgnoreCase("host")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null)
                     this._host = tmp;
             } else if (child.getKey().equalsIgnoreCase("user")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null)
                     this._username = tmp;
             } else if (child.getKey().equalsIgnoreCase("password")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null)
                     this._password = tmp;
             } else if (child.getKey().equalsIgnoreCase("service-url")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null)
                     this._service_url = tmp;
+            } else if (child.getKey().equalsIgnoreCase("metric-prefix")) {
+                String tmp = GenericJMX.getConfigString(child);
+                if (tmp != null)
+                    this._metric_prefix = tmp;
             } else if (child.getKey().equalsIgnoreCase("label")) {
-                getConfigLabel(child, _labels);
+                GenericJMX.getConfigLabel(child, this._labels);
             } else if (child.getKey().equalsIgnoreCase("collect")) {
-                String tmp = getConfigString(child);
+                String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null) {
                     GenericJMXConfMBean mbean;
 
@@ -218,7 +178,8 @@ class GenericJMXConfConnection
                 + ((this._host != null) ? this._host : "(null)"));
 
         for (int i = 0; i < this._mbeans.size (); i++) {
-            int status = this._mbeans.get (i).query (this._mbean_connection, this._labels);
+            int status = this._mbeans.get (i).query (this._mbean_connection, this._metric_prefix,
+                                                                             this._labels);
             if (status != 0) {
                 disconnect ();
                 return;

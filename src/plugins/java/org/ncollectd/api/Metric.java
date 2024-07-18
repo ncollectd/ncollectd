@@ -2,71 +2,95 @@
 
 package org.ncollectd.api;
 
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Java representation of ncollectd/src/libmetric/metric.h:metric_t structure.
  */
 public class Metric
 {
-    protected double _time;
-    protected double _interval;
-    protected Hashtable<String, String> _labels = new Hashtable<>();
+    protected long _time;
+    protected long _interval;
+    protected HashMap<String, String> _labels = new HashMap<>();
 
-
-    public Metric(Hashtable<String, String> labels)
+    public Metric()
     {
-        _labels = labels;
     }
 
-    public Metric(Hashtable<String, String> labels, double time)
+    public Metric(HashMap<String, String> labels)
     {
-        _labels = labels;
-        _time = time;
+        this._labels = labels;
     }
 
-    public Metric(Hashtable<String, String> labels, double time, double interval)
+    public Metric(HashMap<String, String> labels, long time)
     {
-        _labels = labels;
-        _time = time;
-        _interval = interval;
+        this._labels = labels;
+        this._time = time;
     }
 
-    public double getTime() {
-        return _time;
+    public Metric(HashMap<String, String> labels, long time, long interval)
+    {
+        this._labels = labels;
+        this._time = time;
+        this._interval = interval;
     }
 
-    public void setTime(double time)
-    {
-        _time = time;
+    public long getTime() {
+        return this._time;
     }
 
-    public double getInterval()
+    public void setTime(long time)
     {
-        return _interval;
+        this._time = time;
     }
 
-    public void setName(double interval)
+    public long getInterval()
     {
-        _interval = interval;
+        return this._interval;
     }
 
-    public Hashtable<String, String> getLabels()
+    public void setInterval(long interval)
     {
-        return _labels;
+        this._interval = interval;
     }
 
-    public void setLabels(Hashtable<String, String> labels)
+    public HashMap<String, String> getLabels()
     {
-        _labels = labels;
+        return this._labels;
+    }
+
+    public void addLabel(String name, String value)
+    {
+        this._labels.put(name, value);
+    }
+
+    public void setLabels(HashMap<String, String> labels)
+    {
+        this._labels = labels;
     }
 
     public String toString() {
         StringBuffer sb = new StringBuffer();
-/*
-        sb.append('[').append(new Date(_time)).append("] ");
-        sb.append(getSource());
-*/
+
+        sb.append("labels: ");
+        if (this._labels.isEmpty()) {
+            sb.append("{}");
+        } else {
+            int i = 0;
+            sb.append("{");
+            for (Map.Entry<String, String> set : this._labels.entrySet()) {
+                if (i != 0)
+                    sb.append(",");
+                sb.append(set.getKey()).append("=");
+                sb.append("\"").append(set.getValue()).append("\"");
+                i++;
+            }
+            sb.append("}");
+        }
+        sb.append(", time: ").append(this._time);
+        sb.append(", interval: ").append(this._interval);
+
         return sb.toString();
 
     }

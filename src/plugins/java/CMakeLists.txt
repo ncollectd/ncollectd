@@ -17,7 +17,7 @@ endif()
 set(BUILD_PLUGIN_JAVA ${BUILD_PLUGIN_JAVA} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_JAVA)
-    set(PLUGIN_JAVA_SRC java.c)
+    set(PLUGIN_JAVA_SRC java.c jutil.c jutil.h notification.c metric.c config.c)
     add_library(java MODULE ${PLUGIN_JAVA_SRC})
     target_include_directories(java PRIVATE ${JNI_INCLUDE_DIRS})
     target_link_libraries(java PRIVATE libutils libmetric ${JAVA_JVM_LIBRARY})
@@ -26,7 +26,6 @@ if(BUILD_PLUGIN_JAVA)
     set(NCOLLECTD_API_SRC
         org/ncollectd/api/NCollectd.java
         org/ncollectd/api/NCollectdConfigInterface.java
-        org/ncollectd/api/NCollectdFlushInterface.java
         org/ncollectd/api/NCollectdInitInterface.java
         org/ncollectd/api/NCollectdLogInterface.java
         org/ncollectd/api/NCollectdNotificationInterface.java
@@ -37,6 +36,15 @@ if(BUILD_PLUGIN_JAVA)
         org/ncollectd/api/MetricFamily.java
         org/ncollectd/api/Metric.java
         org/ncollectd/api/MetricGauge.java
+        org/ncollectd/api/MetricUnknown.java
+        org/ncollectd/api/MetricGauge.java
+        org/ncollectd/api/MetricCounter.java
+        org/ncollectd/api/MetricInfo.java
+        org/ncollectd/api/MetricStateSet.java
+        org/ncollectd/api/MetricSummaryQuantile.java
+        org/ncollectd/api/MetricSummary.java
+        org/ncollectd/api/MetricHistogramBucket.java
+        org/ncollectd/api/MetricHistogram.java
         org/ncollectd/api/ConfigItem.java
         org/ncollectd/api/ConfigValue.java)
     add_jar("ncollectd-api" ${NCOLLECTD_API_SRC})
