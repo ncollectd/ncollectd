@@ -160,44 +160,36 @@ public class MetricFamily
     {
         switch (this._type) {
         case METRIC_TYPE_UNKNOWN:
-            if (!(metric instanceof MetricUnknown)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricUnknown))
+                return;
             break;
         case METRIC_TYPE_GAUGE:
-            if (!(metric instanceof MetricGauge)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricGauge))
+                return;
             break;
         case METRIC_TYPE_COUNTER:
-            if (!(metric instanceof MetricCounter)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricCounter))
+                return;
             break;
         case METRIC_TYPE_STATE_SET:
-            if (!(metric instanceof MetricStateSet)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricStateSet))
+                return;
             break;
         case METRIC_TYPE_INFO:
-            if (!(metric instanceof MetricInfo)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricInfo))
+                return;
             break;
         case METRIC_TYPE_SUMMARY:
-            if (!(metric instanceof MetricSummary)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricSummary))
+                return;
             break;
         case METRIC_TYPE_HISTOGRAM:
-            if (!(metric instanceof MetricHistogram)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricHistogram))
+                return;
             break;
         case METRIC_TYPE_GAUGE_HISTOGRAM:
-            if (!(metric instanceof MetricHistogram)) {
-                return; // FIXME throw exception ¿?
-            }
+            if (!(metric instanceof MetricHistogram))
+                return;
             break;
         default:
             return;
