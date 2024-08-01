@@ -1,0 +1,39 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-systemd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd systemd man page"
+.SH NAME
+ncollectd-systemd \- Documentation of ncollectd's systemd plugin
+.SH SYNOPSIS
+\fBload-plugin\fP systemd
+.br
+\fBplugin\fP systemd {
+    \fBunit\fP \fIunit-name\fP ...
+    \fBservice\fP \fIservice-name\fP ...
+    \fBsocket\fP \fIsocket-name\fP ...
+    \fBtimer\fP \fItimer-name\fP ...
+.br
+}
+.SH DESCRIPTION
+The \fBsystemd\fP plugin collects information from systemd supervised unit.
+If no units are specified then all units are collected.
+.PP
+The following configuration options are available:
+.TP
+\fBunit\fP \fIunit-name\fP ...
+Collect information of the specified units names. The unit name consist of a unit name prefix
+and a suffix specifying the unit type which begins with a dot. 
+.TP
+\fBservice\fP \fIservice-name\fP ...
+Collect information of the specified services names.
+It is not necessary to add the suffix ".service".
+.TP
+\fBsocket\fP \fIsocket-name\fP ...
+Collect information of the specified sockets names.
+It is not necessary to add the suffix ".socket".
+.TP
+\fBtimer\fP \fItimer-name\fP ...
+Collect information of the specified timers names.
+It is not necessary to add the suffix ".timer".
+
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
