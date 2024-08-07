@@ -41,7 +41,7 @@ static void logfile_log(const log_msg_t *msg, user_data_t __attribute__((unused)
 
     pthread_mutex_lock(&file_lock);
 
-    FILE *fh;
+    FILE *fh = NULL;
     bool do_close = false;
     if (log_file == NULL) {
         fh = stderr;
@@ -52,11 +52,11 @@ static void logfile_log(const log_msg_t *msg, user_data_t __attribute__((unused)
     } else {
         fh = fopen(log_file, "a");
         do_close = true;
+        if (fh == NULL)
+            fprintf(stderr, "logfile plugin: fopen (%s) failed: %s\n", log_file, STRERRNO);
     }
 
-    if (fh == NULL) {
-        fprintf(stderr, "logfile plugin: fopen (%s) failed: %s\n", log_file, STRERRNO);
-    } else {
+    if (fh != NULL) {
         fprintf(fh, "%s\n", buf.ptr);
 
         if (do_close) {
