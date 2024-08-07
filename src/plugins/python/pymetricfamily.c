@@ -85,7 +85,7 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    if ((metrics != NULL) && (PyTuple_Check(metrics) == 0 && PyList_Check(metrics) == 0)) {
+    if ((metrics != NULL) && (!PyTuple_Check(metrics) && !PyList_Check(metrics))) {
         PyErr_SetString(PyExc_TypeError, "metrics must be a list or a tuple");
         Py_XDECREF(name);
         Py_XDECREF(help);

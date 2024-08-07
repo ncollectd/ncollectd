@@ -155,7 +155,7 @@ histogram_t *cpy_build_histogram(PyObject *list)
             return NULL;
         }
 
-        if (!PyTuple_Check(item) == 0 && !PyList_Check(item) == 0) {
+        if (!PyTuple_Check(item) && !PyList_Check(item)) {
             free(h);
             return NULL;
         }
@@ -242,7 +242,7 @@ summary_t *cpy_build_summary(PyObject *list)
             return NULL;
         }
 
-        if (!PyTuple_Check(item) == 0 && !PyList_Check(item) == 0) {
+        if (!PyTuple_Check(item) && !PyList_Check(item)) {
             free(s);
             return NULL;
         }
