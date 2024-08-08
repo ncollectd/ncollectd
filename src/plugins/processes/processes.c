@@ -164,24 +164,29 @@ metric_family_t fams[FAM_PROC_MAX] = {
     },
     [FAM_PROC_DELAY_CPU] = {
         .name = "system_process_delay_cpu_seconds",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Delay waiting for cpu in seconds, while runnable count.",
     },
     [FAM_PROC_DELAY_BLKIO] = {
         .name = "system_process_delay_blkio_seconds",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Delay waiting for synchronous block I/O to complete in seconds "
                 "does not account for delays in I/O submission.",
     },
     [FAM_PROC_DELAY_SWAPIN] = {
         .name = "system_process_delay_swapin_seconds",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Delay waiting for page fault I/O in seconds (swap in only).",
     },
     [FAM_PROC_DELAY_FREEPAGES] = {
         .name = "system_process_delay_freepages_seconds",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Delay waiting for memory reclaim in seconds.",
+    },
+    [FAM_PROC_DELAY_IRQ] = {
+        .name = "system_process_delay_irq_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Delay waiting for IRQ/SOFTIRQ.",
     },
     [FAM_PROC_SCHED_RUNNING] = {
         .name = "system_process_sched_running_seconds",
@@ -324,6 +329,7 @@ static void ps_update_counter(int64_t *group_counter, int64_t *curr_counter, int
 {
     if (want_init) {
         *curr_counter = new_counter;
+        *group_counter = new_counter;
         return;
     }
 
@@ -339,34 +345,6 @@ static void ps_update_counter(int64_t *group_counter, int64_t *curr_counter, int
     *curr_counter = new_counter;
     *group_counter += curr_value;
 }
-
-#ifdef HAVE_TASKSTATS
-static void ps_update_delay_one(double *out_rate_sum, counter_to_rate_state_t *state,
-                                uint64_t cnt, cdtime_t t)
-{
-    double rate = NAN;
-    int status = counter_to_rate(&rate, cnt, t, state);
-    if ((status != 0) || isnan(rate)) {
-        return;
-    }
-
-    if (isnan(*out_rate_sum)) {
-        *out_rate_sum = rate;
-    } else {
-        *out_rate_sum += rate;
-    }
-}
-
-static void ps_update_delay(procstat_t *out, procstat_entry_t *prev, process_entry_t *curr)
-{
-    cdtime_t now = cdtime();
-
-    ps_update_delay_one(&out->delay_cpu, &prev->delay_cpu, curr->delay.cpu_ns, now);
-    ps_update_delay_one(&out->delay_blkio, &prev->delay_blkio, curr->delay.blkio_ns, now);
-    ps_update_delay_one(&out->delay_swapin, &prev->delay_swapin, curr->delay.swapin_ns, now);
-    ps_update_delay_one(&out->delay_freepages, &prev->delay_freepages, curr->delay.freepages_ns, now);
-}
-#endif
 
 /* add process entry to 'instances' of process 'name' (or refresh it) */
 void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry)
@@ -455,8 +433,32 @@ void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry)
         ps_update_counter(&ps->cpu_system_counter, &pse->cpu_system_counter, entry->cpu_system_counter);
 
 #ifdef HAVE_TASKSTATS
-        if (entry->has_delay)
-            ps_update_delay(ps, pse, entry);
+        if (entry->has_delay) {
+            if (isnan(ps->delay_cpu))
+                ps->delay_cpu = entry->delay.cpu_ns;
+            else
+                ps->delay_cpu += entry->delay.cpu_ns;
+
+            if (isnan(ps->delay_blkio))
+                ps->delay_blkio = entry->delay.blkio_ns;
+            else
+                ps->delay_blkio += entry->delay.blkio_ns;
+
+            if (isnan(ps->delay_swapin))
+                ps->delay_swapin = entry->delay.swapin_ns;
+            else
+                ps->delay_swapin += entry->delay.swapin_ns;
+
+            if (isnan(ps->delay_freepages))
+                ps->delay_freepages = entry->delay.freepages_ns;
+            else
+                ps->delay_freepages += entry->delay.freepages_ns;
+
+            if (isnan(ps->delay_irq))
+                ps->delay_irq = entry->delay.irq_ns;
+            else
+                ps->delay_irq += entry->delay.irq_ns;
+        }
 #endif
     }
 }
@@ -705,21 +707,29 @@ void ps_metric_append_proc_list(procstat_t *ps)
         metric_family_append(&fams[FAM_PROC_SCHED_TIMESLICES],
                              VALUE_COUNTER(ps->sched_timeslices), &labels, NULL);
 
-    /* The ps->delay_* metrics are in nanoseconds per second. Convert to seconds per second. */
+    /* The ps->delay_* metrics are in nanoseconds. Convert to seconds. */
     double const delay_factor = 1000000000.0;
 
     if (!isnan(ps->delay_cpu))
         metric_family_append(&fams[FAM_PROC_DELAY_CPU],
-                             VALUE_GAUGE(ps->delay_cpu / delay_factor), &labels, NULL);
+                             VALUE_COUNTER_FLOAT64(ps->delay_cpu / delay_factor),
+                             &labels, NULL);
     if (!isnan(ps->delay_blkio))
         metric_family_append(&fams[FAM_PROC_DELAY_BLKIO],
-                             VALUE_GAUGE(ps->delay_blkio / delay_factor), &labels, NULL);
+                             VALUE_COUNTER_FLOAT64(ps->delay_blkio / delay_factor),
+                             &labels, NULL);
     if (!isnan(ps->delay_swapin))
         metric_family_append(&fams[FAM_PROC_DELAY_SWAPIN],
-                             VALUE_GAUGE(ps->delay_swapin / delay_factor), &labels, NULL);
+                             VALUE_COUNTER_FLOAT64(ps->delay_swapin / delay_factor),
+                             &labels, NULL);
     if (!isnan(ps->delay_freepages))
         metric_family_append(&fams[FAM_PROC_DELAY_FREEPAGES],
-                             VALUE_GAUGE(ps->delay_freepages / delay_factor), &labels, NULL);
+                             VALUE_COUNTER_FLOAT64(ps->delay_freepages / delay_factor),
+                             &labels, NULL);
+    if (!isnan(ps->delay_irq))
+        metric_family_append(&fams[FAM_PROC_DELAY_IRQ],
+                             VALUE_COUNTER_FLOAT64(ps->delay_irq / delay_factor),
+                             &labels, NULL);
 
     PLUGIN_DEBUG("name = %s; num_proc = %lu; num_lwp = %lu; num_fd = %lu; num_maps = %lu; "
                  "vmem_size = %lu; vmem_rss = %lu; vmem_data = %lu; vmem_code = %lu; "

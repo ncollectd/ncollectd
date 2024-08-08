@@ -676,6 +676,15 @@ int ps_init(void)
 
     pagesize_g = sysconf(_SC_PAGESIZE);
     PLUGIN_DEBUG("pagesize_g = %li; CONFIG_HZ = %i;", pagesize_g, CONFIG_HZ);
+
+#if HAVE_TASKSTATS
+    if (taskstats_handle == NULL) {
+        taskstats_handle = ts_create();
+        if (taskstats_handle == NULL)
+            PLUGIN_WARNING("Creating taskstats handle failed.");
+    }
+#endif
+
     return 0;
 }
 
