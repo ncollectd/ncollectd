@@ -37,163 +37,198 @@
 #    endif
 #endif
 
-void ps_fill_details(const procstat_t *ps, process_entry_t *entry);
-
 metric_family_t fams[FAM_PROC_MAX] = {
+    [FAM_PROCESSES_CTX] = {
+          .name = "system_processes_contextswitch",
+          .type = METRIC_TYPE_COUNTER,
+          .help = "Total number of context switches across all CPUs."
+    },
+    [FAM_PROCESSES_FORKS] = {
+          .name = "system_processes_forks",
+          .type = METRIC_TYPE_COUNTER,
+          .help = "Total number of processes and threads created in the system."
+    },
+    [FAM_PROCESSES_STATE] = {
+         .name = "system_processes_state",
+         .type = METRIC_TYPE_GAUGE,
+         .help = "Summary of processes state.",
+    },
     [FAM_PROC_VMEM_SIZE] = {
-        .name = "system_processes_vmem_size_bytes",
+        .name = "system_process_vmem_size_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Virtual memory size in bytes.",
     },
     [FAM_PROC_VMEM_RSS] = {
-        .name = "system_processes_vmem_rss_bytes",
+        .name = "system_process_vmem_rss_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Resident Set Size: number of bytes the process hasin real memory."
     },
     [FAM_PROC_VMEM_DATA] = {
-        .name = "system_processes_vmem_data_bytes",
+        .name = "system_process_vmem_data_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Size in bytes of data segments for these processes.",
     },
     [FAM_PROC_VMEM_CODE] = {
-        .name = "system_processes_vmem_code_bytes",
+        .name = "system_process_vmem_code_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Size in bytes of code segments for these processes.",
     },
     [FAM_PROC_VMEM_STACK] = {
-        .name = "system_processes_vmem_stack_bytes",
+        .name = "system_process_vmem_stack_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Size in bytes of stack segments for these processes.",
     },
     [FAM_PROC_CPU_USER] = {
-        .name = "system_processes_cpu_user",
+        .name = "system_process_cpu_user",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Amount of time that this processes have been scheduled in user mode.",
     },
     [FAM_PROC_CPU_SYSTEM] = {
-        .name = "system_processes_cpu_system",
+        .name = "system_process_cpu_system",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Amount of time that this processes have been scheduled in kernel mode.",
     },
     [FAM_PROC_NUM_PROCESSS] = {
-        .name = "system_processes_num_processs",
+        .name = "system_process_num_process",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of processes."
     },
     [FAM_PROC_NUM_THREADS] = {
-        .name = "system_processes_num_threads",
+        .name = "system_process_num_threads",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of threads in this processes.",
     },
     [FAM_PROC_VMEM_MINFLT] = {
-        .name = "system_processes_vmem_minflt",
+        .name = "system_process_vmem_minflt",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of minor faults the processes have made "
+                "which have not required loading a memory page from disk.",
     },
     [FAM_PROC_VMEM_MAJFLT] = {
-        .name = "system_processes_vmem_majflt",
+        .name = "system_process_vmem_majflt",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of major faults the processes have made "
+                "which have required loading a memory page from disk.",
     },
     [FAM_PROC_IO_RCHAR] = {
-        .name = "system_processes_io_rchar_bytes",
+        .name = "system_process_io_rchar_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of bytes returned by successful read(2) and similar system calls.",
     },
     [FAM_PROC_IO_WCHAR] = {
-        .name = "system_processes_io_wchar_bytes",
+        .name = "system_process_io_wchar_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of bytes returned by successful write(2) and similar system calls.",
     },
     [FAM_PROC_IO_SYSCR] = {
-        .name = "system_processes_io_syscr",
+        .name = "system_process_io_syscr",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of \"file read\" system calls—those from "
+                "the read(2) family, sendfile(2), copy_file_range(2), etc.",
     },
     [FAM_PROC_IO_SYSCW] = {
-        .name = "system_processes_io_syscw",
+        .name = "system_process_io_syscw",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of \"file write\" system calls—those from "
+                "the write(2) family, sendfile(2), copy_file_range(2), etc.",
     },
     [FAM_PROC_IO_DISKR] = {
-        .name = "system_processes_io_diskr_bytes",
+        .name = "system_process_io_diskr_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of bytes really fetched from the storage layer.",
     },
     [FAM_PROC_IO_DISKW] = {
-        .name = "system_processes_io_diskw_bytes",
+        .name = "system_process_io_diskw_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "The number of bytes really sent to the storage layer.",
     },
     [FAM_PROC_FILE_HANDLES] = {
-        .name = "system_processes_file_handles",
+        .name = "system_process_file_handles",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of the currently open file handles.",
     },
-    [FAM_PROC_FILE_HANDLES_MAPPED] = {
-        .name = "system_processes_file_handles_mapped",
+    [FAM_PROC_MEMORY_MAPPED_REGIONS] = {
+        .name = "system_process_memory_mapped_regions",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of the currently mapped memory regions.",
     },
     [FAM_PROC_CTX_VOLUNTARY] = {
-        .name = "system_processes_contextswitch_voluntary",
+        .name = "system_process_contextswitch_voluntary",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of voluntary context switches.",
     },
     [FAM_PROC_CTX_INVOLUNTARY] = {
-        .name = "system_processes_contextswitch_involuntary",
+        .name = "system_process_contextswitch_involuntary",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of involuntary context switches.",
     },
     [FAM_PROC_DELAY_CPU] = {
-        .name = "system_processes_delay_cpu_seconds",
+        .name = "system_process_delay_cpu_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Delay waiting for cpu in seconds, while runnable count.",
     },
     [FAM_PROC_DELAY_BLKIO] = {
-        .name = "system_processes_delay_blkio_seconds",
+        .name = "system_process_delay_blkio_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Delay waiting for synchronous block I/O to complete in seconds "
+                "does not account for delays in I/O submission.",
     },
     [FAM_PROC_DELAY_SWAPIN] = {
-        .name = "system_processes_delay_swapin_seconds",
+        .name = "system_process_delay_swapin_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Delay waiting for page fault I/O in seconds (swap in only).",
     },
     [FAM_PROC_DELAY_FREEPAGES] = {
-        .name = "system_processes_delay_freepages_seconds",
+        .name = "system_process_delay_freepages_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Delay waiting for memory reclaim in seconds.",
     },
     [FAM_PROC_SCHED_RUNNING] = {
-        .name = "system_processes_sched_running",
+        .name = "system_process_sched_running_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Time spent on the cpu in seconds.",
     },
     [FAM_PROC_SCHED_WAITING] = {
-        .name = "system_processes_sched_waiting",
+        .name = "system_process_sched_waiting_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Time spent waiting on a runqueue in seconds.",
     },
     [FAM_PROC_SCHED_TIMESLICES] = {
-        .name = "system_processes_sched_timeslices",
+        .name = "system_process_sched_timeslices",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of timeslices run on the cpu.",
     },
 };
 
+static cf_flags_t processes_flags[] = {
+    { "file_descriptors",  COLLECT_FILE_DESCRIPTORS  },
+    { "memory_maps",       COLLECT_MEMORY_MAPS       },
+    { "delay_accounting",  COLLECT_DELAY_ACCOUNTING  }
+};
+
+static size_t processes_flags_size = STATIC_ARRAY_SIZE(processes_flags);
 
 procstat_t *list_head_g = NULL;
 
 bool want_init = true;
-bool report_ctx_switch = false;
-bool report_fd_num = false;
-bool report_maps_num = false;
-bool report_delay = false;
+
+uint64_t flags;
 
 static char const *proc_state_name[PROC_STATE_MAX] = {
-    "blocked", "daemon",  "dead",     "detached", "idle",   "onproc", "orphan",
-    "paging",  "running", "sleeping", "stopped",  "system", "wait",   "zombies"
+    [PROC_STATE_BLOCKED]  = "blocked",
+    [PROC_STATE_DAEMON]   = "daemon",
+    [PROC_STATE_DEAD]     = "dead",
+    [PROC_STATE_DETACHED] = "detached",
+    [PROC_STATE_IDLE]     = "idle",
+    [PROC_STATE_ONPROC]   = "onproc",
+    [PROC_STATE_ORPHAN]   = "orphan",
+    [PROC_STATE_PAGING]   = "paging",
+    [PROC_STATE_RUNNING]  = "running",
+    [PROC_STATE_SLEEPING] = "sleeping",
+    [PROC_STATE_STOPPED]  = "stopped",
+    [PROC_STATE_SYSTEM]   = "system",
+    [PROC_STATE_WAIT]     = "wait",
+    [PROC_STATE_ZOMBIES]  = "zombies"
 };
 
 /* put name of process from config to list_head_g tree
@@ -224,10 +259,7 @@ static procstat_t *ps_list_register(const char *name, const char *regexp)
     new->sched_waiting = -1;
     new->sched_timeslices = -1;
 
-    new->report_fd_num = report_fd_num;
-    new->report_maps_num = report_maps_num;
-    new->report_ctx_switch = report_ctx_switch;
-    new->report_delay = report_delay;
+    new->flags = flags;
 
     if (regexp != NULL) {
         PLUGIN_DEBUG("process-match: adding \"%s\" as criteria to process %s.", regexp, name);
@@ -278,9 +310,7 @@ static int ps_list_match(const char *name, const char *cmdline, procstat_t *ps)
 
         assert(str != NULL);
 
-        int status = regexec(ps->re, str, /* nmatch = */ 0,
-                                          /* pmatch = */ NULL,
-                                          /* eflags = */ 0);
+        int status = regexec(ps->re, str, 0, NULL, 0);
         if (status == 0)
             return 1;
     } else if (strcmp(ps->name, name) == 0) {
@@ -434,7 +464,6 @@ void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry)
 /* remove old entries from instances of processes in list_head_g */
 void ps_list_reset(void)
 {
-
     for (procstat_t *ps = list_head_g; ps != NULL; ps = ps->next) {
         ps->num_proc = 0;
         ps->num_lwp = 0;
@@ -505,19 +534,8 @@ static int ps_tune_instance(config_item_t *ci, procstat_t *ps)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *c = ci->children + i;
 
-        if (strcasecmp(c->key, "collect-context-switch") == 0) {
-            status = cf_util_get_boolean(c, &ps->report_ctx_switch);
-        } else if (strcasecmp(c->key, "collect-file-descriptor") == 0) {
-            status = cf_util_get_boolean(c, &ps->report_fd_num);
-        } else if (strcasecmp(c->key, "collect-memory-maps") == 0) {
-            status = cf_util_get_boolean(c, &ps->report_maps_num);
-        } else if (strcasecmp(c->key, "collect-delay-accounting") == 0) {
-#ifdef HAVE_TASKSTATS
-            status = cf_util_get_boolean(c, &ps->report_delay);
-#else
-            PLUGIN_WARNING("The plugin has been compiled without support "
-                            "for the 'collect-delay-accounting' option.");
-#endif
+        if (strcasecmp("collect", c->key) == 0) {
+            status = cf_util_get_flags(c, processes_flags, processes_flags_size, &ps->flags);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           c->key, cf_get_file(c), cf_get_lineno(c));
@@ -587,19 +605,8 @@ static int ps_config(config_item_t *ci)
 
             if (c->children_num != 0)
                 status = ps_tune_instance(c, ps);
-        } else if (strcasecmp(c->key, "collect-context-switch") == 0) {
-            status = cf_util_get_boolean(c, &report_ctx_switch);
-        } else if (strcasecmp(c->key, "collect-file-descriptor") == 0) {
-            status = cf_util_get_boolean(c, &report_fd_num);
-        } else if (strcasecmp(c->key, "collect-memory-maps") == 0) {
-            status = cf_util_get_boolean(c, &report_maps_num);
-        } else if (strcasecmp(c->key, "collect-delay-accounting") == 0) {
-#ifdef HAVE_TASKSTATS
-            status = cf_util_get_boolean(c, &report_delay);
-#else
-            PLUGIN_WARNING("The plugin has been compiled without support "
-                           "for the 'collect-delay-accounting' option.");
-#endif
+        } else if (strcasecmp("collect", c->key) == 0) {
+            status = cf_util_get_flags(c, processes_flags, processes_flags_size, &flags);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                          c->key, cf_get_file(c), cf_get_lineno(c));
@@ -620,42 +627,23 @@ static int ps_config(config_item_t *ci)
 
 void ps_submit_ctxt(uint64_t value)
 {
-    metric_family_t fam = {
-            .name = "system_processes_contextswitch",
-            .type = METRIC_TYPE_COUNTER,
-            .help = "Total number of context switches across all CPUs."
-    };
-    metric_family_append(&fam, VALUE_COUNTER(value), NULL, NULL);
-    plugin_dispatch_metric_family(&fam, 0);
+    metric_family_append(&fams[FAM_PROCESSES_CTX], VALUE_COUNTER(value), NULL, NULL);
 }
 
 void ps_submit_forks(uint64_t value)
 {
-    metric_family_t fam = {
-            .name = "system_processes_forks",
-            .type = METRIC_TYPE_COUNTER,
-            .help = "Total number of processes and threads created."
-    };
-    metric_family_append(&fam, VALUE_COUNTER(value), NULL, NULL);
-    plugin_dispatch_metric_family(&fam, 0);
+    metric_family_append(&fams[FAM_PROCESSES_FORKS], VALUE_COUNTER(value), NULL, NULL);
 }
 
 /* submit global state (e.g.: qty of zombies, running, etc..) */
 void ps_submit_state(double *proc_state)
 {
-    metric_family_t fam = {
-            .name = "system_processes_state",
-            .type = METRIC_TYPE_GAUGE,
-    };
-
     for (size_t i = 0; i < PROC_STATE_MAX; i++) {
         if (!isnan(proc_state[i])) {
-            metric_family_append(&fam, VALUE_GAUGE(proc_state[i]), NULL,
+            metric_family_append(&fams[FAM_PROCESSES_STATE], VALUE_GAUGE(proc_state[i]), NULL,
                             &(label_pair_const_t){.name="state", .value=proc_state_name[i]}, NULL);
         }
     }
-
-    plugin_dispatch_metric_family(&fam, 0);
 }
 
 /* submit info about specific process (e.g.: memory taken, cpu usage, etc..) */
@@ -693,11 +681,14 @@ void ps_metric_append_proc_list(procstat_t *ps)
         metric_family_append(&fams[FAM_PROC_IO_DISKR], VALUE_COUNTER(ps->io_diskr), &labels, NULL);
     if (ps->io_diskw != -1)
         metric_family_append(&fams[FAM_PROC_IO_DISKW], VALUE_COUNTER(ps->io_diskw), &labels, NULL);
-    if (ps->num_fd > 0)
-        metric_family_append(&fams[FAM_PROC_FILE_HANDLES], VALUE_GAUGE(ps->num_fd), &labels, NULL);
-    if (ps->num_maps > 0)
-        metric_family_append(&fams[FAM_PROC_FILE_HANDLES_MAPPED],
+
+    if (ps->flags & COLLECT_FILE_DESCRIPTORS)
+        metric_family_append(&fams[FAM_PROC_FILE_HANDLES],
+                             VALUE_GAUGE(ps->num_fd), &labels, NULL);
+    if (ps->flags & COLLECT_MEMORY_MAPS)
+        metric_family_append(&fams[FAM_PROC_MEMORY_MAPPED_REGIONS],
                              VALUE_GAUGE(ps->num_maps), &labels, NULL);
+
     if (ps->cswitch_vol != -1)
         metric_family_append(&fams[FAM_PROC_CTX_VOLUNTARY],
                              VALUE_COUNTER(ps->cswitch_vol), &labels, NULL);
@@ -714,8 +705,7 @@ void ps_metric_append_proc_list(procstat_t *ps)
         metric_family_append(&fams[FAM_PROC_SCHED_TIMESLICES],
                              VALUE_COUNTER(ps->sched_timeslices), &labels, NULL);
 
-    /* The ps->delay_* metrics are in nanoseconds per second. Convert to seconds
-     * per second. */
+    /* The ps->delay_* metrics are in nanoseconds per second. Convert to seconds per second. */
     double const delay_factor = 1000000000.0;
 
     if (!isnan(ps->delay_cpu))

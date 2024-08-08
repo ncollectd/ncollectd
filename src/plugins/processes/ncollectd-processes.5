@@ -59,6 +59,8 @@ The \fBprocesses\fP plugin has the following options:
 Select more detailed statistics of processes matching this name.
 Some platforms have a limit on the length of process names.
 \fIname\fP must stay below this limit.
+In Linux the \fIname\fP it's chequed against the second field of \f(CW/proc/pid/stat\fP,
+the filename of the executable, in parentheses.
 .TP
 \fBprocess-match\fP \fIname\fP \fIregex\fP
 Select more detailed statistics of processes matching the specified \fIregex\fP
@@ -70,14 +72,12 @@ identifier. This allows one to "group" several processes together.
  \fIname\fP must not contain slashes.
 .TP
 \fBcollect\fP \fIflags\fP ...
+Must be defined before \fBprocess\fP and \fBprocess-match\fP.
 See \fBCOLLECT FLAGS\fP from
 .BR ncollectd.conf (5).
 .RS
 .TP
-\fBcontext-switch\fP
-Collect the number of context switches for matched processes. Disabled by default.
-.TP
-\fBdealy-accounting\fP
+\fBdelay-accounting\fP
 If enabled, collect Linux Delay Accounding information for matching processes.
 Delay Accounting provides the time processes wait for the CPU to become
 available, for I/O operations to finish, for pages to be swapped in and for

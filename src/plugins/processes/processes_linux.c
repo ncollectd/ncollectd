@@ -44,86 +44,16 @@ static long pagesize_g;
 static char *path_proc;
 static char *path_proc_stat;
 
-void ps_fill_details(const procstat_t *ps, process_entry_t *entry);
+void ps_fill_details(procstat_t *ps, process_entry_t *entry);
 
 extern metric_family_t fams[];
 
 extern procstat_t *list_head_g;
 
 extern bool want_init;
-extern bool report_ctx_switch;
 extern bool report_fd_num;
 extern bool report_maps_num;
 extern bool report_delay;
-
-static int ps_read_tasks_status(process_entry_t *ps)
-{
-    char dirname[PATH_MAX];
-    snprintf(dirname, sizeof(dirname), "%s/%lu/task", path_proc, ps->id);
-
-    DIR *dh = opendir(dirname);
-    if (dh == NULL) {
-        PLUGIN_DEBUG("Failed to open directory `%s'", dirname);
-        return -1;
-    }
-
-    int64_t cswitch_vol = 0;
-    int64_t cswitch_invol = 0;
-    struct dirent *ent;
-    while ((ent = readdir(dh)) != NULL) {
-        if (!isdigit((int)ent->d_name[0]))
-            continue;
-
-        char *tpid = ent->d_name;
-
-        char filename[PATH_MAX];
-        int r = ssnprintf(filename, sizeof(filename), "%s/%lu/task/%s/status",
-                                                      path_proc, ps->id, tpid);
-        if ((size_t)r >= sizeof(filename)) {
-            PLUGIN_DEBUG("Filename too long: `%s'", filename);
-            continue;
-        }
-
-        FILE *fh = fopen(filename, "r");
-        if (fh == NULL) {
-            PLUGIN_DEBUG("Failed to open file `%s'", filename);
-            continue;
-        }
-
-        char buffer[1024];
-        while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-            if ((strncmp(buffer, "voluntary_ctxt_switches", 23) != 0) &&
-                (strncmp(buffer, "nonvoluntary_ctxt_switches", 26) != 0))
-                continue;
-
-            char *fields[8];
-            int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
-            if (numfields < 2)
-                continue;
-
-            errno = 0;
-            char *endptr = NULL;
-            int64_t tmp = (int64_t)strtoll(fields[1], &endptr, /* base = */ 10);
-            if ((errno == 0) && (endptr != fields[1])) {
-                if (strncmp(buffer, "voluntary_ctxt_switches", 23) == 0) {
-                    cswitch_vol += tmp;
-                } else if (strncmp(buffer, "nonvoluntary_ctxt_switches", 26) == 0) {
-                    cswitch_invol += tmp;
-                }
-            }
-        }
-
-        if (fclose(fh))
-            PLUGIN_WARNING("fclose: %s", STRERRNO);
-    }
-
-    closedir(dh);
-
-    ps->cswitch_vol = cswitch_vol;
-    ps->cswitch_invol = cswitch_invol;
-
-    return 0;
-}
 
 static int ps_read_schedstat(process_entry_t *ps)
 {
@@ -149,10 +79,10 @@ static int ps_read_schedstat(process_entry_t *ps)
 }
 
 /* Read data from /proc/pid/status */
-static int ps_read_status(long pid, process_entry_t *ps)
+static int ps_read_status(process_entry_t *ps)
 {
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%li/status", path_proc, pid);
+    snprintf(filename, sizeof(filename), "%s/%lu/status", path_proc, ps->id);
 
     FILE *fh = fopen(filename, "r");
     if (fh == NULL)
@@ -162,10 +92,27 @@ static int ps_read_status(long pid, process_entry_t *ps)
     unsigned long exe = 0;
     unsigned long data = 0;
     unsigned long threads = 0;
+    unsigned long cswitch_vol= 0;
+    unsigned long cswitch_invol= 0;
     char buffer[1024];
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-        if (strncmp(buffer, "Vm", 2) != 0 && strncmp(buffer, "Threads", 7) != 0)
+        unsigned long *tmp;
+
+        if (strncmp(buffer, "VmData", 6) == 0) {
+            tmp = &data;
+        } else if (strncmp(buffer, "VmLib", 5) == 0) {
+            tmp = &lib;
+        } else if (strncmp(buffer, "VmExe", 5) == 0) {
+            tmp = &exe;
+        } else if (strncmp(buffer, "Threads", 7) == 0) {
+            tmp = &threads;
+        } else if (strncmp(buffer, "voluntary_ctxt_switches", 23) == 0) {
+            tmp = &cswitch_vol;
+        } else if (strncmp(buffer, "nonvoluntary_ctxt_switches", 26) == 0) {
+            tmp = &cswitch_invol;
+        } else {
             continue;
+        }
 
         char *fields[8];
         int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
@@ -174,17 +121,9 @@ static int ps_read_status(long pid, process_entry_t *ps)
 
         errno = 0;
         char *endptr = NULL;
-        unsigned long tmp = strtoul(fields[1], &endptr, /* base = */ 10);
+        unsigned long value = strtoul(fields[1], &endptr, /* base = */ 10);
         if ((errno == 0) && (endptr != fields[1])) {
-            if (strncmp(buffer, "VmData", 6) == 0) {
-                data = tmp;
-            } else if (strncmp(buffer, "VmLib", 5) == 0) {
-                lib = tmp;
-            } else if (strncmp(buffer, "VmExe", 5) == 0) {
-                exe = tmp;
-            } else if (strncmp(buffer, "Threads", 7) == 0) {
-                threads = tmp;
-            }
+            *tmp = value;
         }
     }
 
@@ -193,6 +132,8 @@ static int ps_read_status(long pid, process_entry_t *ps)
 
     ps->vmem_data = data * 1024;
     ps->vmem_code = (exe + lib) * 1024;
+    ps->cswitch_vol = cswitch_vol;
+    ps->cswitch_invol = cswitch_invol;
     if (threads != 0)
         ps->num_lwp = threads;
 
@@ -295,7 +236,7 @@ static int ps_count_fd(int pid)
     }
     closedir(dh);
 
-    return (count >= 1) ? count : 1;
+    return count;
 }
 
 #ifdef HAVE_TASKSTATS
@@ -345,8 +286,10 @@ static int ps_delay(process_entry_t *ps)
 }
 #endif
 
-void ps_fill_details(const procstat_t *ps, process_entry_t *entry)
+void ps_fill_details(procstat_t *ps, process_entry_t *entry)
 {
+    ps_read_status(entry);
+
     if (entry->has_io == false) {
         ps_read_io(entry);
         entry->has_io = true;
@@ -357,29 +300,22 @@ void ps_fill_details(const procstat_t *ps, process_entry_t *entry)
         entry->has_sched = true;
     }
 
-    if (ps->report_ctx_switch) {
-        if (entry->has_cswitch == false) {
-            ps_read_tasks_status(entry);
-            entry->has_cswitch = true;
-        }
-    }
-
-    if (ps->report_maps_num) {
+    if (ps->flags & COLLECT_MEMORY_MAPS) {
         int num_maps;
-        if (entry->has_maps == false && (num_maps = ps_count_maps(entry->id)) > 0)
+        if (entry->has_maps == false && (num_maps = ps_count_maps(entry->id)) >= 0)
             entry->num_maps = num_maps;
         entry->has_maps = true;
     }
 
-    if (ps->report_fd_num) {
+    if (ps->flags & COLLECT_FILE_DESCRIPTORS) {
         int num_fd;
-        if (entry->has_fd == false && (num_fd = ps_count_fd(entry->id)) > 0)
+        if (entry->has_fd == false && (num_fd = ps_count_fd(entry->id)) >= 0)
             entry->num_fd = num_fd;
         entry->has_fd = true;
     }
 
 #ifdef HAVE_TASKSTATS
-    if (ps->report_delay && !entry->has_delay) {
+    if ((ps->flags & COLLECT_DELAY_ACCOUNTING) && !entry->has_delay) {
         if (ps_delay(entry) == 0)
             entry->has_delay = true;
     }
@@ -431,10 +367,9 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
 
     char *fields[64];
     int fields_len = strsplit(buffer_ptr, fields, STATIC_ARRAY_SIZE(fields));
-    if (fields_len < 22) {
-        DEBUG("processes plugin: ps_read_process (pid = %li):"
-                    " `%s' has only %i fields..",
-                    pid, filename, fields_len);
+    if (fields_len < 26) {
+        PLUGIN_DEBUG("processes plugin: ps_read_process (pid = %li): '%s' has only %i fields..",
+                     pid, filename, fields_len);
         return -1;
     }
 
@@ -445,12 +380,6 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
         ps->num_proc = 0;
     } else {
         ps->num_lwp = strtoul(fields[17], /* endptr = */ NULL, /* base = */ 10);
-        if ((ps_read_status(pid, ps)) != 0) {
-            /* No VMem data */
-            ps->vmem_data = -1;
-            ps->vmem_code = -1;
-            PLUGIN_DEBUG("Did not get vmem data for pid %li", pid);
-        }
         if (ps->num_lwp == 0)
             ps->num_lwp = 1;
         ps->num_proc = 1;
@@ -495,6 +424,8 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
     ps->io_diskr = -1;
     ps->io_diskw = -1;
 
+    ps->vmem_data = -1;
+    ps->vmem_code = -1;
     ps->cswitch_vol = -1;
     ps->cswitch_invol = -1;
 
