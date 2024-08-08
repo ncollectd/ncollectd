@@ -215,7 +215,7 @@ histogram_t *cpy_build_histogram(PyObject *list)
             cpy_log_exception("building state_set");
     }
 
-    return 0;
+    return h;
 }
 
 summary_t *cpy_build_summary(PyObject *list)
@@ -302,7 +302,7 @@ summary_t *cpy_build_summary(PyObject *list)
             cpy_log_exception("building state_set");
     }
 
-    return 0;
+    return s;
 }
 
 PyObject *cpy_metric_repr(PyObject *s)
