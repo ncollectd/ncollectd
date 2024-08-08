@@ -46,7 +46,6 @@ int getargs(void *processBuffer, int bufferLen, char *argsBuffer, int argsLen);
 
 int ps_read(void)
 {
-
     double proc_state[PROC_STATE_MAX];
 
     for (size_t i = 0; i < PROC_STATE_MAX; i++) {

@@ -19,7 +19,16 @@
 #endif
 
 enum {
-    FAM_PROC_VMEM_SIZE = 0,
+    COLLECT_FILE_DESCRIPTORS = (1 <<  0),
+    COLLECT_MEMORY_MAPS      = (1 <<  1),
+    COLLECT_DELAY_ACCOUNTING = (1 <<  2),
+};
+
+enum {
+    FAM_PROCESSES_CTX,
+    FAM_PROCESSES_FORKS,
+    FAM_PROCESSES_STATE,
+    FAM_PROC_VMEM_SIZE,
     FAM_PROC_VMEM_RSS,
     FAM_PROC_VMEM_DATA,
     FAM_PROC_VMEM_CODE,
@@ -37,7 +46,7 @@ enum {
     FAM_PROC_IO_DISKR,
     FAM_PROC_IO_DISKW,
     FAM_PROC_FILE_HANDLES,
-    FAM_PROC_FILE_HANDLES_MAPPED,
+    FAM_PROC_MEMORY_MAPPED_REGIONS,
     FAM_PROC_CTX_VOLUNTARY,
     FAM_PROC_CTX_INVOLUNTARY,
     FAM_PROC_DELAY_CPU,
@@ -102,7 +111,6 @@ typedef struct process_entry_s {
 
     int64_t cswitch_vol;
     int64_t cswitch_invol;
-    bool has_cswitch;
 
     int64_t sched_running;
     int64_t sched_waiting;
@@ -196,16 +204,13 @@ typedef struct procstat_s {
     double delay_swapin;
     double delay_freepages;
 
-    bool report_fd_num;
-    bool report_maps_num;
-    bool report_ctx_switch;
-    bool report_delay;
+    uint64_t flags;
 
     struct procstat_s *next;
     struct procstat_entry_s *instances;
 } procstat_t;
 
-void ps_fill_details(const procstat_t *ps, process_entry_t *entry);
+void ps_fill_details(procstat_t *ps, process_entry_t *entry);
 
 void ps_list_reset(void);
 
