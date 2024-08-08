@@ -53,6 +53,7 @@ enum {
     FAM_PROC_DELAY_BLKIO,
     FAM_PROC_DELAY_SWAPIN,
     FAM_PROC_DELAY_FREEPAGES,
+    FAM_PROC_DELAY_IRQ,
     FAM_PROC_SCHED_RUNNING,
     FAM_PROC_SCHED_WAITING,
     FAM_PROC_SCHED_TIMESLICES,
@@ -60,7 +61,7 @@ enum {
 };
 
 enum {
-    PROC_STATE_BLOCKED = 0,
+    PROC_STATE_BLOCKED,
     PROC_STATE_DAEMON,
     PROC_STATE_DEAD,
     PROC_STATE_DETACHED,
@@ -198,11 +199,12 @@ typedef struct procstat_s {
     int64_t sched_waiting;
     int64_t sched_timeslices;
 
-    /* Linux Delay Accounting. Unit is ns/s. */
+    /* Linux Delay Accounting. */
     double delay_cpu;
     double delay_blkio;
     double delay_swapin;
     double delay_freepages;
+    double delay_irq;
 
     uint64_t flags;
 

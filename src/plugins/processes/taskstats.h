@@ -14,6 +14,8 @@ typedef struct {
     uint64_t blkio_ns;
     uint64_t swapin_ns;
     uint64_t freepages_ns;
+    /* v14: Delay waiting for IRQ/SOFTIRQ */
+    uint64_t irq_ns;
 } ts_delay_t;
 
 ts_t *ts_create(void);
