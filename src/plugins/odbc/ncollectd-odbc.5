@@ -12,6 +12,7 @@ ncollectd-odbc \- Documentation of ncollectd's odbc plugin
         \fBmax-version\fP \fIversion\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
         \fBresult\fP {
             \fBtype\fP \fIgauge|counter|info|unknow\fP
             \fBtype-from\fP \fIcolumn-name\fP
@@ -137,6 +138,9 @@ Prepends \fIprefix\fP to the metrics name.
 \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
 multiple time in the \fBquery\fP block.
+.TP
+\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+Specifies the columns whose values will be used to create the labels.
 .TP
 \fBresult\fP
 .RS

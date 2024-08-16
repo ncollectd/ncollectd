@@ -33,6 +33,7 @@ struct db_query_s
     char *statement;
     char *metric_prefix;
     label_set_t labels;
+    label_set_t labels_from;
     unsigned int min_version;
     unsigned int max_version;
 
@@ -469,6 +470,7 @@ static void db_query_free_one(db_query_t *q)
     free(q->statement);
     free(q->metric_prefix);
     label_set_reset(&q->labels);
+    label_set_reset(&q->labels_from);
 
     db_result_free(q->results);
 
@@ -519,6 +521,8 @@ int db_query_create(db_query_t ***ret_query_list, size_t *ret_query_list_len, co
             status = cf_util_get_string(child, &q->metric_prefix);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &q->labels);
+        } else if (strcasecmp("label-from", child->key) == 0) {
+            status = cf_util_get_label(child, &q->labels_from);
         } else if (cb != NULL) {
             status = (*cb)(q, child);
             if (status != 0)
@@ -561,6 +565,14 @@ int db_query_create(db_query_t ***ret_query_list, size_t *ret_query_list_len, co
     if (status != 0) {
         db_query_free_one(q);
         return -1;
+    }
+
+    if (q->labels_from.num > 0) {
+        db_result_t *r = q->results;
+        while (r != NULL) {
+            label_set_add_set(&r->labels_from, false, q->labels_from);
+            r = r->next;
+        }
     }
 
     *ret_query_list = query_list;
