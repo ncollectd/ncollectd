@@ -275,10 +275,10 @@ int ts_delay_by_tgid(ts_t *ts, uint32_t tgid, ts_delay_t *out)
     if (status != 0)
         return status;
 
-    out->cpu_ns = raw.cpu_delay_total,
-    out->blkio_ns = raw.blkio_delay_total,
-    out->swapin_ns = raw.swapin_delay_total,
-    out->freepages_ns = raw.freepages_delay_total,
+    out->cpu_ns = raw.cpu_delay_total;
+    out->blkio_ns = raw.blkio_delay_total;
+    out->swapin_ns = raw.swapin_delay_total;
+    out->freepages_ns = raw.freepages_delay_total;
 #if TASKSTATS_VERSION >= 14
     out->irq_ns = raw.irq_delay_total;
 #endif
