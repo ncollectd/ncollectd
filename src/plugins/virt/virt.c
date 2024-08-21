@@ -77,6 +77,14 @@
 #define HAVE_DOM_REASON_POSTCOPY 1
 #endif
 
+#if LIBVIR_CHECK_VERSION(2, 1, 0)
+#define HAVE_DOM_MEMORY_STAT_USABLE 1
+#endif
+
+#if LIBVIR_CHECK_VERSION(4, 6, 0)
+#define HAVE_DOM_MEMORY_STAT_DISK_CACHES 1
+#endif
+
 #if LIBVIR_CHECK_VERSION(4, 10, 0)
 #define HAVE_DOM_REASON_SHUTOFF_DAEMON 1
 #endif
@@ -1096,6 +1104,7 @@ static void domain_state_submit_notif(virDomainPtr dom, int state, int reason)
         return;
     }
 #else
+    (void)reason;
     const char *reason_str = "N/A";
 #endif
 
@@ -1206,6 +1215,7 @@ static int lv_domain_block_stats(virt_ctx_t *ctx, virDomainPtr dom,
     free(params);
     return rc;
 #else
+    (void)ctx;
     return virDomainBlockStats(dom, path, &(bstats->bi), sizeof(bstats->bi));
 #endif
 }
@@ -1619,14 +1629,18 @@ static int get_memory_stats(virt_ctx_t *ctx, virDomainPtr domain,
             fam = FAM_VIRT_DOMAIN_MEMORY_RSS_BYTES;
             val *= 1024;
             break;
+#ifdef HAVE_DOM_MEMORY_STAT_USABLE
         case VIR_DOMAIN_MEMORY_STAT_USABLE:
             fam = FAM_VIRT_DOMAIN_MEMORY_USABLE_BYTES;
             val *= 1024;
             break;
+#endif
+#ifdef HAVE_DOM_MEMORY_STAT_DISK_CACHES
         case VIR_DOMAIN_MEMORY_STAT_DISK_CACHES:
             fam = FAM_VIRT_DOMAIN_MEMORY_DISK_CACHE_BYTES;
             val *= 1024;
             break;
+#endif
 #ifdef HAVE_VIR_DOMAIN_MEMORY_STAT_HUGETLB_PGALLOC
         case VIR_DOMAIN_MEMORY_STAT_HUGETLB_PGALLOC:
             fam = FAM_VIRT_DOMAIN_MEMORY_HUGETLB_PAGE_ALLOC;
@@ -2136,6 +2150,8 @@ static int domain_lifecycle_event_cb(__attribute__((unused)) virConnectPtr con_,
     int domain_reason = 0; /* 0 means UNKNOWN reason for any state */
 #ifdef HAVE_DOM_REASON
     domain_reason = map_domain_event_detail_to_reason(event, detail);
+#else
+    (void)detail;
 #endif
     domain_state_submit_notif(dom, domain_state, domain_reason);
 
@@ -2306,7 +2322,7 @@ static int persistent_domains_state_notification(virt_ctx_t *ctx)
         }
         n = virConnectListDomains(ctx->conn, domids, n);
         if (n < 0) {
-            VIRT_ERROR(conn, "reading list of domains");
+            VIRT_ERROR(ctx->conn, "reading list of domains");
             free(domids);
             return -1;
         }
@@ -2316,7 +2332,7 @@ static int persistent_domains_state_notification(virt_ctx_t *ctx)
             virDomainPtr dom = NULL;
             dom = virDomainLookupByID(ctx->conn, domids[i]);
             if (dom == NULL) {
-                VIRT_ERROR(conn, "virDomainLookupByID");
+                VIRT_ERROR(ctx->conn, "virDomainLookupByID");
                 /* Could be that the domain went away -- ignore it anyway. */
                 continue;
             }
@@ -2629,9 +2645,9 @@ static int refresh_lists(virt_ctx_t *ctx, struct lv_read_instance *inst)
     int n;
 
 #ifndef HAVE_LIST_ALL_DOMAINS
-    n = virConnectNumOfDomains(conn);
+    n = virConnectNumOfDomains(ctx->conn);
     if (n < 0) {
-        VIRT_ERROR(conn, "reading number of domains");
+        VIRT_ERROR(ctx->conn, "reading number of domains");
         return -1;
     }
 #endif
@@ -2687,7 +2703,7 @@ static int refresh_lists(virt_ctx_t *ctx, struct lv_read_instance *inst)
 #ifdef HAVE_LIST_ALL_DOMAINS
         virDomainPtr dom = domains[i];
 #else
-        virDomainPtr dom = virDomainLookupByID(conn, domids[i]);
+        virDomainPtr dom = virDomainLookupByID(ctx->conn, domids[i]);
         if (dom == NULL) {
             VIRT_ERROR(ctx->conn, "virDomainLookupByID");
             /* Could be that the domain went away -- ignore it anyway. */
