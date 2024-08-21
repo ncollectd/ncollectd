@@ -249,9 +249,26 @@ int main(void) {
     if(HAVE_TIMEGM)
         cmake_push_check_state(RESET)
         SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror -Werror=implicit-function-declaration")
+        if (HAVE_STRPTIME_STANDARDS)
+            SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -DHAVE_STRPTIME_STANDARDS")
+        endif()
+        if (STRPTIME_NEEDS_STANDARDS)
+            SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -DSTRPTIME_NEEDS_STANDARDS")
+        endif()
         check_c_source_compiles("
+#if defined(STRPTIME_NEEDS_STANDARDS) || defined(HAVE_STRPTIME_STANDARDS)
+# ifndef _ISOC99_SOURCE
+#  define _ISOC99_SOURCE 1
+# endif
+# ifndef _POSIX_C_SOURCE
+#  define _POSIX_C_SOURCE 200809L
+# endif
+# ifndef _XOPEN_SOURCE
+#  define _XOPEN_SOURCE 500
+# endif
+#endif
 #ifndef _DEFAULT_SOURCE
-#define _DEFAULT_SOURCE 1
+# define _DEFAULT_SOURCE 1
 #endif
 
 #include <time.h>
@@ -264,6 +281,17 @@ int main(void) {
 }" TIMEGM_NEEDS_DEFAULT)
         if(NOT TIMEGM_NEEDS_DEFAULT)
             check_c_source_compiles("
+#if defined(STRPTIME_NEEDS_STANDARDS) || defined(HAVE_STRPTIME_STANDARDS)
+# ifndef _ISOC99_SOURCE
+#  define _ISOC99_SOURCE 1
+# endif
+# ifndef _POSIX_C_SOURCE
+#  define _POSIX_C_SOURCE 200809L
+# endif
+# ifndef _XOPEN_SOURCE
+#  define _XOPEN_SOURCE 500
+# endif
+#endif
 #ifndef _BSD_SOURCE
 # define _BSD_SOURCE 1
 #endif
