@@ -164,6 +164,8 @@ usr/lib/ncollectd/softnet.so
 usr/share/man/man5/ncollectd-softnet.5
 usr/lib/ncollectd/statsd.so
 usr/share/man/man5/ncollectd-statsd.5
+usr/lib/ncollectd/systemd.so
+usr/share/man/man5/ncollectd-systemd.5
 usr/lib/ncollectd/swap.so
 usr/share/man/man5/ncollectd-swap.5
 usr/lib/ncollectd/synproxy.so
