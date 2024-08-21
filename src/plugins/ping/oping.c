@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-2.1-or-later
+// SPDX-License-Identifier: GPL-2.1-or-later
 // SPDX-FileCopyrightText: Copyright (C) 2006-2017 Florian octo Forster
 // SPDX-FileContributor: Florian octo Forster <ff at octo.it>
 
