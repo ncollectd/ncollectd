@@ -14,6 +14,7 @@ steps:
     image: ncollectd/ci-fedora:38
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-fedora-38/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-fedora-38/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-38/SOURCES
@@ -23,6 +24,7 @@ steps:
     image: ncollectd/ci-fedora:39
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-fedora-39/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-fedora-39/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-39/SOURCES
@@ -32,6 +34,7 @@ steps:
     image: ncollectd/ci-fedora:40
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-fedora-40/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-fedora-40/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-40/SOURCES
@@ -41,6 +44,7 @@ steps:
     image: ncollectd/ci-fedora:rawhide
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-fedora-rawhide/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-fedora-rawhide/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-rawhide/SOURCES
@@ -50,6 +54,7 @@ steps:
     image: ncollectd/ci-centos:stream8
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-centos-stream8/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-centos-stream8/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream8/SOURCES
@@ -59,6 +64,7 @@ steps:
     image: ncollectd/ci-centos:stream9
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-centos-stream9/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-centos-stream9/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
@@ -68,6 +74,7 @@ steps:
     image: ncollectd/ci-centos:stream10
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-centos-stream10/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-centos-stream10/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream10/SOURCES
@@ -77,6 +84,7 @@ steps:
     image: ncollectd/ci-debian:buster
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-debian-buster
       - tar -C package-debian-buster -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-buster/ncollectd_$${TAG}.orig.tar.xz
@@ -93,6 +101,7 @@ steps:
     image: ncollectd/ci-debian:bullseye
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-debian-bullseye
       - tar -C package-debian-bullseye -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-bullseye/ncollectd_$${TAG}.orig.tar.xz
@@ -107,6 +116,7 @@ steps:
     image: ncollectd/ci-debian:bookworm
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-debian-bookworm
       - tar -C package-debian-bookworm -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-bookworm/ncollectd_$${TAG}.orig.tar.xz
@@ -121,6 +131,7 @@ steps:
     image: ncollectd/ci-debian:trixie
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-debian-trixie
       - tar -C package-debian-trixie -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-trixie/ncollectd_$${TAG}.orig.tar.xz
@@ -137,6 +148,7 @@ steps:
     image: ncollectd/ci-ubuntu:focal
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-ubuntu-focal
       - tar -C package-ubuntu-focal -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-focal/ncollectd_$${TAG}.orig.tar.xz
@@ -151,6 +163,7 @@ steps:
     image: ncollectd/ci-ubuntu:jammy
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-ubuntu-jammy
       - tar -C package-ubuntu-jammy -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-jammy/ncollectd_$${TAG}.orig.tar.xz
@@ -165,6 +178,7 @@ steps:
     image: ncollectd/ci-ubuntu:mantic
     commands:
       - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
       - mkdir -p package-ubuntu-mantic
       - tar -C package-ubuntu-mantic -xJf package-dist/ncollectd-$${TAG}.tar.xz
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-mantic/ncollectd_$${TAG}.orig.tar.xz
