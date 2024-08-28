@@ -8,6 +8,7 @@
 %endif
 
 %define build_with_apache 0%{!?_without_apache:1}
+%define build_with_apcups 0%{!?_without_apcups:1}
 %define build_with_ats 0%{!?_without_ats:1}
 %define build_with_bind 0%{!?_without_bind:1}
 %define build_with_contextswitch 0%{!?_without_contextswitch:1}
@@ -306,6 +307,12 @@ using HTTP POST requests.
 %define _build_with_apache -DPLUGIN_APACHE:BOOL=ON
 %else
 %define _build_with_apache -DPLUGIN_APACHE:BOOL==OFF
+%endif
+
+%if %{build_with_apcups}
+%define _build_with_apcups -DPLUGIN_APCUPS:BOOL=ON
+%else
+%define _build_with_apcups -DPLUGIN_APCUPS:BOOL==OFF
 %endif
 
 %if %{build_with_ats}
@@ -749,6 +756,7 @@ export OBJECT_MODE=64
         -DSHARE_INSTALL_PREFIX:PATH=%{_libdir}/ncollectd \
         -DENABLE_ALL_PLUGINS:BOOL=ON \
         %{?_build_with_apache} \
+        %{?_build_with_apcups} \
         %{?_build_with_ats} \
         %{?_build_with_bind} \
         %{?_build_with_contextswitch} \
@@ -989,6 +997,10 @@ fi
 /etc/rc.d/rc3.d/Sncollectd
 /etc/rc.d/rc3.d/Kncollectd
 
+%if %{build_with_apcups}
+%{_libdir}/%{name}/apcups.so
+%{_datadir}/man/man5/ncollectd-apcups.5*
+%endif
 %if %{build_with_contextswitch}
 %{_libdir}/%{name}/contextswitch.so
 %{_datadir}/man/man5/ncollectd-contextswitch.5*

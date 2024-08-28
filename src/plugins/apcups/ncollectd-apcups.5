@@ -1,0 +1,54 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-apcups 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd apcups man page"
+.SH NAME
+ncollectd-apcups \- Documentation of ncollectd's apcups plugin
+.SH SYNOPSIS
+\fBload-plugin\fP apcups
+.br
+\fBplugin\fP apcups {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhostname\fP
+        \fBport\fP \fIport\fP
+        \fBpersistent-connection\fP \fItrue|false\fP
+        \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+        \fBinterval\fP \fIseconds\fP
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBapcups\fP plugin connects to an instance of \fBapcupsd\fP to read various statistics
+about a connected uninterruptible power supply (UPS), such as voltage, load, etc.
+.PP
+The configuration of the \fBapcups\fP plugin consists of one or more
+\fBinstance\fP blocks. Each block requires one string argument
+as the instance name.
+The following options are accepted within each \fBinstance\fP block:
+.TP
+\fBhost\fP \fIhostname\fP
+Hostname of the host running \fBapcupsd\fP. Defaults to \fIlocalhost\fP. Please note
+that IPv6 support has been disabled unless someone can confirm or decline that
+\fBapcupsd\fP can handle it.
+.TP
+\fBport\fP \fIport\fP
+TCP port to connect to. Defaults to \fB3551\fP.
+.TP
+\fBpersistent-connection\fP \fItrue|false\fP
+The plugin is designed to keep the connection to \fBapcupsd\fP open between reads.
+If plugin poll interval is greater than 15 seconds (hardcoded socket close
+timeout in \fBapcupsd\fP NIS), then this option is \fIfalse\fP by default.
+
+You can instruct the plugin to close the connection after each read by setting
+this option to \fIfalse\fP or force keeping the connection by setting it to \fBtrue\fP.
+
+If \fBapcupsd\fP appears to close the connection due to inactivity quite quickly,
+the plugin will try to detect this problem and switch to an open-read-close mode.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected.
+By default the global \fBinterval\fP setting will be used.
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

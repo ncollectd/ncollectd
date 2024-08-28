@@ -8,6 +8,8 @@ usr/share/man/man1/ncollectd.1
 usr/share/man/man1/ncollectdmon.1
 usr/share/man/man1/ncollectdctl.1
 usr/share/man/man5/ncollectd.conf.5
+usr/lib/ncollectd/apcups.so
+usr/share/man/man5/ncollectd-apcups.5
 usr/lib/ncollectd/arp.so
 usr/share/man/man5/ncollectd-arp.5
 usr/lib/ncollectd/arpcache.so

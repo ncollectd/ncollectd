@@ -11,6 +11,7 @@
 %define build_with_arpcache 0%{!?_without_arpcache:1}
 %define build_with_ats 0%{!?_without_ats:1}
 %define build_with_apache 0%{!?_without_apache:1}
+%define build_with_apcups 0%{!?_without_apcups:1}
 %define build_with_avccache 0%{!?_without_avccache:1}
 %define build_with_battery 0%{!?_without_battery:1}
 %define build_with_bcache 0%{!?_without_bcache:1}
@@ -1014,6 +1015,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_apache -DPLUGIN_APACHE:BOOL=ON
 %else
 %define _build_with_apache -DPLUGIN_APACHE:BOOL=OFF
+%endif
+
+%if %{build_with_apcups}
+%define _build_with_apcups -DPLUGIN_APCUPS:BOOL=ON
+%else
+%define _build_with_apcups -DPLUGIN_APCUPS:BOOL=OFF
 %endif
 
 %if %{build_with_avccache}
@@ -2104,6 +2111,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_arpcache} \
     %{?_build_with_ats} \
     %{?_build_with_apache} \
+    %{?_build_with_apcups} \
     %{?_build_with_avccache} \
     %{?_build_with_battery} \
     %{?_build_with_bcache} \
@@ -2355,6 +2363,10 @@ fi
 %{_mandir}/man1/ncollectdmon.1*
 %{_mandir}/man1/ncollectdctl.1*
 %{_mandir}/man5/ncollectd.conf.5*
+%if %{build_with_apcups}
+%{_libdir}/%{name}/apcups.so
+%{_mandir}/man5/ncollectd-apcups.5*
+%endif
 %if %{build_with_arp}
 %{_libdir}/%{name}/arp.so
 %{_mandir}/man5/ncollectd-arp.5*
