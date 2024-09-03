@@ -690,6 +690,7 @@ static void freeradius_free(void *arg)
     if (ctx->fd > 0)
         close(ctx->fd);
 
+    free(ctx->name);
     free(ctx->host);
     free(ctx->secret);
 
