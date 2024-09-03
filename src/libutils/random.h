@@ -26,3 +26,5 @@ uint32_t cdrand_u(void);
  * outside the intended range. This function is thread- and reentrant-safe.
  */
 long cdrand_range(long min, long max);
+
+void cdrand(uint8_t *dst, size_t size);
