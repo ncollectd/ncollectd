@@ -66,3 +66,29 @@ long cdrand_range(long min, long max)
 
     return r;
 }
+
+void cdrand(uint8_t *dst, size_t size)
+{
+    size_t remain = size % sizeof(uint32_t);
+
+    pthread_mutex_lock(&lock);
+    cdrand_seed();
+
+    size_t rsize = size - remain;
+    size_t n = 0;
+    while (n < rsize) {
+        /* coverity[DC.WEAK_CRYPTO] */
+        uint32_t r = (uint32_t) jrand48(seed);
+        memcpy(dst, &r, sizeof(r));
+        dst += sizeof(r);
+        n += sizeof(r);
+    }
+
+    if (remain > 0) {
+        /* coverity[DC.WEAK_CRYPTO] */
+        uint32_t r = (uint32_t) jrand48(seed);
+        memcpy(dst, &r, remain);
+    }
+
+    pthread_mutex_unlock(&lock);
+}
