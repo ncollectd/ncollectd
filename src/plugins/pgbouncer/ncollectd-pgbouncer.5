@@ -1,0 +1,84 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-pgbouncer 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd pgbouncer man page"
+.SH NAME
+ncollectd-pgbouncer \- Documentation of ncollectd's pgbouncer plugin
+.SH SYNOPSIS
+\fBload-plugin\fP pgbouncer
+.br
+\fBplugin\fP pgbouncer {
+    \fBinstance\fP \fIinstance\fP {
+        \fBhost\fP \fIhost\fP
+        \fBport\fP \fIport\fP
+        \fBdatabase\fP \fIdatabase\fP
+        \fBuser\fP \fIuser\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBpgbouncer\fP plugin queries statistics from Pgbouncer server. It
+keeps a persistent connection to all configured databases and tries to
+reconnect if the connection has been interrupted. A connection is configured by
+specifying a \fBinstance\fP block as described below.
+.TP
+\fBinstance\fP \fIinstance\fP
+The \fBinstance\fP block defines one Pgbouncer server for which to collect
+statistics. 
+.RS
+.TP
+\fBhost\fP \fIhost\fP
+Specify the hostname or IP of the Pgbouncer server to connect to. If the
+value begins with a slash, it is interpreted as the directory name in which to
+look for the UNIX domain socket.
+.TP
+\fBport\fP \fIport\fP
+Specify the TCP port or the local UNIX domain socket file extension of the
+server.
+.TP
+\fBdatabase\fP \fIdatabase\fP
+The database to connect. The default value is \fIpgbouncer\fP.
+.TP
+\fBuser\fP \fIuser\fP
+Specify the username to be used when connecting to the server.
+.TP
+\fBpassword\fP \fIpassword\fP
+Specify the password to be used when connecting to the server.
+.TP
+\fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+Specify whether to use an SSL connection when contacting the server. The
+following modes are supported:
+.RS
+.TP
+\fBdisable\fP
+Do not use SSL at all.
+.TP
+\fBallow\fP
+First, try to connect without using SSL. If that fails, try using SSL.
+.TP
+\fBprefer\fP \fI(default)\fP
+First, try to connect using SSL. If that fails, try without using SSL.
+.TP
+\fBrequire\fP
+Use SSL only.
+.RE
+.TP
+\fBinterval\fP \fIseconds\fP
+Specify the interval with which the database should be queried.
+The default is to use the global \fBinterval\fP setting.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple time in the \fBdatabase\fP block.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

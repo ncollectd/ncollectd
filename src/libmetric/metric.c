@@ -282,8 +282,7 @@ int metric_family_metric_append(metric_family_t *fam, metric_t m)
     return metric_list_add(&fam->metric, m, fam->type);
 }
 
-__attribute__ ((sentinel(0)))
-int metric_family_append(metric_family_t *fam, value_t v, label_set_t *labels, ...)
+int metric_family_append_va(metric_family_t *fam, value_t v, label_set_t *labels, va_list ap)
 {
     if (fam == NULL)
         return EINVAL;
@@ -295,8 +294,8 @@ int metric_family_append(metric_family_t *fam, value_t v, label_set_t *labels, .
             return status;
     }
 
-    va_list ap;
-    va_start(ap, labels);
+    va_list apc;
+    va_copy(apc, ap);
     label_pair_t *pair;
 
     while ((pair = va_arg(ap, label_pair_t *)) != NULL) {
@@ -323,6 +322,20 @@ int metric_family_append(metric_family_t *fam, value_t v, label_set_t *labels, .
         metric_reset(&m, fam->type);
         return status;
     }
+
+    return status;
+}
+
+__attribute__ ((sentinel(0)))
+int metric_family_append(metric_family_t *fam, value_t v, label_set_t *labels, ...)
+{
+    va_list ap;
+
+    va_start(ap, labels);
+
+    int status = metric_family_append_va(fam, v, labels, ap);
+
+    va_end(ap);
 
     return status;
 }

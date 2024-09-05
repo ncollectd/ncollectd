@@ -132,6 +132,8 @@ typedef struct {
  * allocates memory which must be freed using metric_family_metric_reset. */
 int metric_family_metric_append(metric_family_t *fam, metric_t m);
 
+int metric_family_append_va(metric_family_t *fam, value_t v, label_set_t *labels, va_list ap);
+
 __attribute__ ((sentinel(0)))
 int metric_family_append(metric_family_t *fam, value_t v, label_set_t *labels, ...);
 
