@@ -67,7 +67,7 @@ jobject ctoj_notification(JNIEnv *jvm_env, const notification_t *n)
                                             o_annotations);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_annotations);
     }
-        
+
     return o_notification;
 }
 

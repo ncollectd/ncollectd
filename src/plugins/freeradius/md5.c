@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Public-Domain
+
 #include "md5.h"
 
 /*	The below was retrieved from

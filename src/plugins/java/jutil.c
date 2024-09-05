@@ -63,7 +63,7 @@ static jcached_class_t classes[] = {
         { "hasNext", "()Z",                  &gref.iterator.has_next },
         { "next",    "()Ljava/lang/Object;", &gref.iterator.next      },
         { NULL,      NULL,                   NULL                     }}},
-    { "java/util/Map$Entry", &gref.map_entry.class, (jcached_method_t[]) { 
+    { "java/util/Map$Entry", &gref.map_entry.class, (jcached_method_t[]) {
         { "getKey",   "()Ljava/lang/Object;", &gref.map_entry.get_key   },
         { "getValue", "()Ljava/lang/Object;", &gref.map_entry.get_value },
         { NULL,       NULL,                   NULL                      }}},
@@ -185,7 +185,7 @@ int cjni_cache_classes(JNIEnv *jvm_env)
 
         jclass global_class = (*jvm_env)->NewGlobalRef(jvm_env, class);
         if (global_class == NULL) {
-            PLUGIN_ERROR ("Global class reference create failed for '%s'.", classes[i].name); 
+            PLUGIN_ERROR ("Global class reference create failed for '%s'.", classes[i].name);
             return -1;
         }
         (*jvm_env)->DeleteLocalRef (jvm_env, class);

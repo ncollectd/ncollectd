@@ -217,7 +217,7 @@ void expr_yyerror(EXPR_YYLTYPE *yylloc, __attribute__((unused)) void *scanner,
                  yylloc->first_line, message);
 
     } else {
-        fprintf(stderr, "Parse error: %s\n", message); 
+        fprintf(stderr, "Parse error: %s\n", message);
     }
 }
 

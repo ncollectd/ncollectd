@@ -399,7 +399,7 @@ static int write_redis_config_instance(config_item_t *ci)
         write_redis_free(node);
         return -1;
     }
-        
+
     status = strbuf_resize(&node->buf_key, 1024);
     if (status != 0) {
         PLUGIN_ERROR("Failed to resize key buffer.");

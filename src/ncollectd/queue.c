@@ -118,7 +118,7 @@ int queue_enqueue(queue_t *queue, const char *plugin, queue_elem_t *ins_head)
     queue_thread_t *thread = queue->threads;
     while(thread != NULL) {
         if (thread->head == NULL) {
-            /* coverity[USE_AFTER_FREE] */ 
+            /* coverity[USE_AFTER_FREE] */
             thread->head = ins_head;
         }
 

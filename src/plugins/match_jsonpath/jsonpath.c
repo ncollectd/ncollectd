@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only or PostgreSQL
+// SPDX-License-Identifier: GPL-2.0-only OR PostgreSQL
 // SPDX-FileCopyrightText: Copyright (c) 2019-2023, PostgreSQL Global Development Group
 // SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
@@ -460,7 +460,7 @@ jsonpath_item_t *jsonpath_parser(const char *query)
     jsonpath_yy_delete_buffer(buffer, scanner);
     jsonpath_yylex_destroy(scanner);
     free(scanstring.val);
-    
+
     if (status != 0) {
         if (parse_result.error == true) {
             if (parse_result.expr != NULL)

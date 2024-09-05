@@ -211,7 +211,7 @@ static MHD_RESULT http_handler(void *cls, struct MHD_Connection *connection,
     format_stream_metric_end(&ctx);
 
     if (exporter->format == FORMAT_STREAM_METRIC_OPENMETRICS_TEXT) {
-        int status = strbuf_printf(&buf, "# ncollectd/write_exporter %s at %s\n# EOF\n", 
+        int status = strbuf_printf(&buf, "# ncollectd/write_exporter %s at %s\n# EOF\n",
                                    PACKAGE_VERSION, plugin_get_hostname());
         if (status != 0)
             PLUGIN_WARNING("Cannot append comment to response.");

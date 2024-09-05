@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only or MIT
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
 // SPDX-FileCopyrightText: Copyright (C) 2007-2008 C-Ware, Inc.
 // SPDX-FileCopyrightText: Copyright (C) 2008-2013 Florian Forster
 // SPDX-FileCopyrightText: Copyright (C) 2013 Kris Nielander

@@ -16,7 +16,7 @@ typedef struct {
         jclass class;
         jmethodID size;
         jmethodID to_array;
-    } list;   
+    } list;
     struct {
         jclass class;
         jmethodID constructor;
@@ -142,7 +142,7 @@ typedef struct {
         jmethodID set_severity;
         jmethodID set_labels;
         jmethodID set_annotations;
-        jmethodID get_name; 
+        jmethodID get_name;
         jmethodID get_time;
         jmethodID get_severity;
         jmethodID get_labels;
