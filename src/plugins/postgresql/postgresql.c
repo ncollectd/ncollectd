@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only OR MIT/Dockerfile
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
 // SPDX-FileCopyrightText: Copyright (C) 2008-2012 Sebastian Harl
 // SPDX-FileCopyrightText: Copyright (C) 2009 Florian Forster
 // SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
