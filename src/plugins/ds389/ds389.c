@@ -789,6 +789,8 @@ static int ds389_config_add(config_item_t *ci)
             status = cf_util_get_string(child, &ctx->binddn);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ctx->password);
         } else if (strcasecmp("ca-cert", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->cacert);
         } else if (strcasecmp("start-tls", child->key) == 0) {

@@ -375,8 +375,12 @@ static int mongodb_config_instance(config_item_t *ci)
             status = cf_util_get_port_number(child, &ctx->port);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ctx->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ctx->password);
         } else if (strcasecmp("prefer-secondary-query", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctx->prefer_secondary_query);
         } else if (strcasecmp("label", child->key) == 0) {

@@ -9,9 +9,11 @@ ncollectd-write_postgresql \- Documentation of ncollectd's write postgresql plug
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
-        \fBuser\fP \fIuser\fP
         \fBdatabase\fP \fIdatabase\fP
+        \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
         \fBkrb-srv-name\fP \fIname\fP
         \fBservice\fP \fIservice\fP
@@ -46,8 +48,16 @@ Database name to connect.
 \fBuser\fP \fIuser\fP
 Specify the username to be used when connecting to the server.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username to be used when connecting to the server from the environment variable
+\fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Specify the password to be used when connecting to the server.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the the password to be used when connecting to the server from the environment variable
+\fIenv-name\fP.
 .TP
 \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
 Specify whether to use an SSL connection when contacting the server. The

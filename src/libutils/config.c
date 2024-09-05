@@ -23,8 +23,38 @@ int cf_util_get_string(const config_item_t *ci, char **ret_string)
     }
 
     char *string = strdup(ci->values[0].value.string);
-    if (string == NULL)
+    if (string == NULL) {
+        PLUGIN_ERROR("strdup failed.");
         return -1;
+    }
+
+    if (*ret_string != NULL)
+        free(*ret_string);
+    *ret_string = string;
+
+    return 0;
+}
+
+int cf_util_get_string_env(const config_item_t *ci, char **ret_string)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    char *string_env = getenv(ci->values[0].value.string);
+    if (string_env == NULL) {
+        PLUGIN_ERROR("The environment variable '%s' in '%s' option at %s:%d was not found.",
+                     ci->values[0].value.string, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    char *string = strdup(string_env);
+    if (string == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        return -1;
+    }
 
     if (*ret_string != NULL)
         free(*ret_string);

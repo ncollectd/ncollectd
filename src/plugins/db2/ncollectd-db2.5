@@ -29,7 +29,9 @@ ncollectd-db2 \- Documentation of ncollectd's db2 plugin
     \fBinstance\fP \fIdatabase\fP {
         \fBalias\fP \fIdatabase-alias\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBconnection\fP \fIconnection-string\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
@@ -59,8 +61,14 @@ It's the alternative name of the database object in the catalog.
 \fBuser\fP \fIuser\fP
 User to connecto to database
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the user to connecto to database from the environment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 User password to connecto to database
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the user password to connecto to database from the environment variable \fIenv-name\fP.
 .TP
 \fBconnection\fP \fIconnection-string\fP
 Specifies the connection string to use to connect to the database. A connection

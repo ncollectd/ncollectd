@@ -436,8 +436,12 @@ static int cr_config_router(config_item_t *ci)
             status = cf_util_get_service(child, &router_data->service);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &router_data->username);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &router_data->username);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &router_data->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &router_data->password);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &router_data->labels);
         } else if (strcasecmp("interval", child->key) == 0) {

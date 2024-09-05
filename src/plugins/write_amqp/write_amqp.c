@@ -584,8 +584,12 @@ static int camqp_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &conf->vhost);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &conf->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &conf->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &conf->password);
+        } else if (strcasecmp("password_env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &conf->password);
         } else if (strcasecmp("tls-enabled", child->key) == 0) {
             status = cf_util_get_boolean(child, &conf->tls_enabled);
         } else if (strcasecmp("tls-verify-peer", child->key) == 0) {

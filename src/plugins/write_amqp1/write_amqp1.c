@@ -399,8 +399,12 @@ static int amqp1_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &inst->port);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &inst->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &inst->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &inst->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &inst->password);
         } else if (strcasecmp("address", child->key) == 0) {
             status = cf_util_get_string(child, &inst->address);
         } else if (strcasecmp("retry-delay", child->key) == 0) {

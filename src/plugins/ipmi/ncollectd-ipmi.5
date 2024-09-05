@@ -8,8 +8,10 @@ ncollectd-ipmi \- Documentation of ncollectd's ipmi plugin
 \fBplugin\fP ipmi {
     \fBinstance\fP \fIinstance\fP {
         \fBaddress\fP \fIaddress\fP
-        \fBusername\fP \fIusername\fP
+        \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBauth-type\fP \fIMD5|rmcp+\fP
         \fBhost\fP \fIhostname\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -44,10 +46,16 @@ Within the \fBinstance\fP blocks, the following options are allowed:
 Hostname or IP to connect to. If not specified, plugin will try to connect to
 local management controller (BMC).
 .TP
-\fBusername\fP \fIusername\fP
+\fBuser\fP \fIusername\fP
+.TP
+\fBuser-env\fP \fIenv-name\fP
 .TP
 \fBpassword\fP \fIpassword\fP
 The username and the password to use for the connection to remote BMC.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the username and the password to use for the connection to remote BMC from the
+environment variable \fIenv-name\fP.
 .TP
 \fBauth-type\fP \fIMD5|rmcp+\fP
 Forces the authentication type to use for the connection to remote BMC.

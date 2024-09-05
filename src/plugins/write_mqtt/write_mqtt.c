@@ -369,8 +369,12 @@ static int mqtt_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &conf->client_id);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &conf->username);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &conf->username);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &conf->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &conf->password);
         } else if (strcasecmp("qos", child->key) == 0) {
             int tmp = -1;
             status = cf_util_get_int(child, &tmp);

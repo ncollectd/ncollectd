@@ -10,7 +10,9 @@ ncollectd-write_amqp1 \- Documentation of ncollectd's write_amqp1 plugin
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBaddress\fP \fIaddress\fP
         \fBretry-delay\fP \fIretry-delay\fP
         \fBformat\fP \fIFORMAT\fP
@@ -39,9 +41,15 @@ is used. Defaults to "5672".
 .TP
 \fBuser\fP \fIuser\fP
 .TP
+\fBuser-env\fP \fIenv-name\fP
+.TP
 \fBpassword\fP \fIpassword\fP
 Credentials used to authenticate to the AMQP 1.0 intermediary. By
 default "guest"/"guest" is used.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the credentials used to authenticate to the AMQP 1.0 intermediary from
+the environment variable \fIenv-name\fP.
 .TP
 \fBaddress\fP \fIaddress\fP
 This option specifies the prefix for the send-to value in the message.

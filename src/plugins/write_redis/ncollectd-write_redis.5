@@ -11,6 +11,7 @@ ncollectd-write_redis \- Documentation of ncollectd's write_redis plugin
         \fBport\fP \fIport\fP
         \fBsocket\fP \fIsocket-path\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBtimeout\fP \fIseconds\fP
         \fBdatabase\fP \fIdatabase\fP
         \fBretention\fP \fIseconds\fP
@@ -37,6 +38,9 @@ setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
 .TP
 \fBpassword\fP \fIpassword\fP
 Use \fIpassword\fP to authenticate when connecting to \fIredis\fP.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password to authenticate from the environment variable \fIenv-name\fP.
 .TP
 \fBtimeout\fP \fIseconds\fP
 .TP

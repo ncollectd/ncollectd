@@ -11,7 +11,9 @@ ncollectd-write_mongodb \- Documentation of ncollectd's write mongodb plugin
         \fBport\fP \fIport\fP
         \fBdatabase\fP \fIdatabase\fP
         \fBuser\fP \fIuser\fP
-        \fBpassword\fP \fIpasswrod\fP
+        \fBuser-env\fP \fIenv-name\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBstore-rates\fP \fItrue|false\fP
         \fBcollection\fP \fIcollection-name\fP
         \fBtimestamp-field\fP \fItimestamp-field-name\fP
@@ -39,10 +41,16 @@ Service name or port number to connect to. Defaults to \f(CW27017\fP.
 .TP
 \fBuser\fP \fIuser\fP
 .TP
-\fBpassword\fP \fIpasswrod\fP
+\fBuser-env\fP \fIenv-name\fP
+.TP
+\fBpassword\fP \fIpassword\fP
 Sets the information used when authenticating to a \fIMongoDB\fP database. The
 fields are optional (in which case no authentication is attempted), but if you
 want to use authentication all three fields must be set.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password fox authenticating to a \fIMongoDB\fP database from the
+environment variable \fIenv-name\fP.
 .TP
 \fBstore-rates\fP \fItrue|false\fP
 .TP

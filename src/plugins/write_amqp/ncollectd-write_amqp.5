@@ -11,7 +11,9 @@ ncollectd-write_amqp \- Documentation of ncollectd's write_amqp plugin
         \fBport\fP \fIport\fP
         \fBvhost\fP \fIvhost\fP
         \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBtls-enabled\fP \fItrue|false\fP
         \fBtls-verify-peer\fP \fItrue|false\fP
         \fBtls-verify-hostname\fP \fItrue|false\fP
@@ -52,8 +54,14 @@ Name of the \fIvirtual host\fP on the AMQP broker to use. Defaults to "/".
 .TP
 \fBuser\fP \fIusername\fP
 .TP
+\fBuser-env\fP \fIenv-name\fP
+.TP
 \fBpassword\fP \fIpassword\fP
 Credentials used to authenticate to the AMQP broker. By default "guest"/"guest" is used.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the credentials used to authenticate to the AMQP broker from the environment variable
+\fIenv-name\fP.
 .TP
 \fBtls-enabled\fP \fItrue|false\fP
 If set to \fItrue\fP then connect to the broker using a TLS connection.

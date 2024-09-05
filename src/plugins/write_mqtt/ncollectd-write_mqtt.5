@@ -47,8 +47,16 @@ MQTT client ID to use. Defaults to the hostname used by \fBncollectd\fP.
 \fBuser\fP \fIuser\fP
 Username used when authenticating to the MQTT broker.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username used when authenticating to the MQTT broker from the environment variable
+\fIenv-name\fP.
+.TP
 \fBpassword\fP \fIuser\fP
 Password used when authenticating to the MQTT broker.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password used when authenticating to the MQTT broker from the environment variable
+\fIenv-name\fP.
 .TP
 \fBqos\fP \fI0|1|2\fP
 Sets the \fIQuality of Service\fP, with the values \fI0\fP, \fI1\fP and \fI2\fP meaning:

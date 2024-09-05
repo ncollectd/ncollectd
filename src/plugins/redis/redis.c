@@ -715,6 +715,8 @@ static int redis_config_instance(config_item_t *ci)
                 rn->timeout = CDTIME_T_TO_TIMEVAL(timeout);
         } else if (strcasecmp("password", option->key) == 0) {
             status = cf_util_get_string(option, &rn->passwd);
+        } else if (strcasecmp("password-env", option->key) == 0) {
+            status = cf_util_get_string_env(option, &rn->passwd);
         } else if (strcasecmp("interval", option->key) == 0) {
             status = cf_util_get_cdtime(option, &interval);
         } else if (strcasecmp("label", option->key) == 0) {

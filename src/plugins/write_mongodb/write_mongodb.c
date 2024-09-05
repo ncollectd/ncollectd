@@ -416,8 +416,12 @@ static int write_mongodb_config_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->database_name);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &db->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &db->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &db->passwd);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &db->passwd);
         } else if (strcasecmp("collection", child->key) == 0) {
             status = cf_util_get_string(child, &db->collection_name);
         } else if (strcasecmp("timestamp-field", child->key) == 0) {

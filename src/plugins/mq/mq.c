@@ -548,10 +548,14 @@ static int cmq_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &mq->host);
         } else if (strcasecmp("port", child->key) == 0) {
             status = cf_util_get_string(child, &mq->port);
-        } else if (strcasecmp("username", child->key) == 0) {
+        } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &mq->username);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &mq->username);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &mq->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &mq->password);
         } else if (strcasecmp("queue-manager", child->key) == 0) {
             status = cf_util_get_string(child, &mq->qmanager);
         } else if (strcasecmp("connection-channel", child->key) == 0) {

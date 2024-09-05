@@ -12,6 +12,7 @@ ncollectd-redis \- Documentation of ncollectd's redis plugin
         \fBsocket\fP \fIpath\fP
         \fBtimeout\fP \fIseconds\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBinterval\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBquery\fP \fIquery-string\fP {
@@ -57,6 +58,10 @@ globally.  Defaults to 2000 (2 seconds).
 .TP
 \fBpassword\fP \fIpassword\fP
 Use \fIpassword\fP to authenticate when connecting to \fIredis\fP.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the \fIpassword\fP to authenticate when connecting to \fIredis\fP from the
+environment variable \fIenv-name\fP.
 .TP
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected.

@@ -10,7 +10,9 @@ ncollectd-routeros \- Documentation of ncollectd's routeros plugin
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBinterval\fP \fIseconds\fP
         \fBfilter\fP {
             ...
@@ -39,8 +41,14 @@ string argument, even when a numeric port number is given.
 \fBuser\fP \fIuser\fP
 Use the user name \fIuser\fP to authenticate. Defaults to "admin".
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the user name \fIuser\fP to authenticate from the environment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Set the password used to authenticate.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password used to authenticate from the environment variable \fIenv-name\fP.
 .TP
 \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this instance.
