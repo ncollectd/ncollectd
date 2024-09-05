@@ -99,6 +99,7 @@ typedef struct {
     int retries;
     int iterations;
     label_set_t labels;
+    plugin_filter_t *filter;
     metric_family_t fams[FAM_APCUPS_MAX];
 } apc_ctx_t;
 
@@ -353,6 +354,7 @@ static void apcups_free(void *arg)
     free(ctx->host);
     free(ctx->service);
     label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
     free(ctx);
 }
 
@@ -394,7 +396,7 @@ static int apcups_read(user_data_t *user_data)
     metric_family_append(&ctx->fams[FAM_APCUPS_INPUT_FREQUENCY_HZ],
                          VALUE_GAUGE(apcups_detail.linefreq), &ctx->labels, NULL);
 
-    plugin_dispatch_metric_family_array(ctx->fams, FAM_APCUPS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_APCUPS_MAX, ctx->filter, 0);
 
     return 0;
 }
@@ -435,6 +437,8 @@ static int apcups_config_instance(config_item_t *ci)
             status = cf_util_get_label(child, &ctx->labels);
         } else if (strcasecmp(child->key, "interval") == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &ctx->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
