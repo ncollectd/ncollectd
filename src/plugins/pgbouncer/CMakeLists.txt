@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_PGBOUNCER "Pgbouncer statistics" ON)
+
+set(BUILD_PLUGIN_PGBOUNCER 0)
+
+if(PLUGIN_PGBOUNCER)
+    find_package(LibPq)
+    if (LIBPQ_FOUND)
+        set(BUILD_PLUGIN_PGBOUNCER 1)
+    else()
+        set(BUILD_PLUGIN_PGBOUNCER_REASON "libpq not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_PGBOUNCER ${BUILD_PLUGIN_PGBOUNCER} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_PGBOUNCER)
+    set(PLUGIN_PGBOUNCER_SRC pgbouncer.c)
+    add_library(pgbouncer MODULE ${PLUGIN_PGBOUNCER_SRC})
+    target_include_directories(pgbouncer PRIVATE ${LIBPGBOUNCER_INCLUDE_DIRS})
+    target_link_libraries(pgbouncer PRIVATE libutils libmetric LibPq::LibPq)
+    set_target_properties(pgbouncer PROPERTIES PREFIX "")
+    install(TARGETS pgbouncer DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-pgbouncer.5 ncollectd-pgbouncer.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-pgbouncer.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
