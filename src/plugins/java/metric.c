@@ -156,7 +156,7 @@ static jobject ctoj_metric_counter(JNIEnv *jvm_env, const metric_t *m)
             PLUGIN_ERROR("Creating a new MetricCounter instance failed.");
             return NULL;
         }
-    
+
         return o_metric;
     } else if (m->value.counter.type == COUNTER_FLOAT64) {
         jobject o_metric = (*jvm_env)->NewObject(jvm_env, gref.metric_counter.class,
@@ -166,10 +166,10 @@ static jobject ctoj_metric_counter(JNIEnv *jvm_env, const metric_t *m)
             PLUGIN_ERROR("Creating a new MetricCounter instance failed.");
             return NULL;
         }
-    
+
         return o_metric;
     }
-    
+
     return NULL;
 }
 
@@ -183,7 +183,7 @@ static jobject ctoj_metric_gauge(JNIEnv *jvm_env, const metric_t *m)
             PLUGIN_ERROR("Creating a new MetricGauge instance failed.");
             return NULL;
         }
-    
+
         return o_metric;
     } else if (m->value.gauge.type == GAUGE_INT64) {
         jobject o_metric = (*jvm_env)->NewObject(jvm_env, gref.metric_gauge.class,
@@ -193,9 +193,9 @@ static jobject ctoj_metric_gauge(JNIEnv *jvm_env, const metric_t *m)
             PLUGIN_ERROR("Creating a new MetricGauge instance failed.");
             return NULL;
         }
-    
+
         return o_metric;
-    }      
+    }
 
     return NULL;
 }
@@ -210,7 +210,7 @@ static jobject ctoj_metric_unknown(JNIEnv *jvm_env, const metric_t *m)
             PLUGIN_ERROR("Creating a new MetricUnknown instance failed.");
             return NULL;
         }
-    
+
         return o_metric;
     } else if (m->value.unknown.type == UNKNOWN_INT64) {
         jobject o_metric = (*jvm_env)->NewObject(jvm_env, gref.metric_unknown.class,
@@ -220,7 +220,7 @@ static jobject ctoj_metric_unknown(JNIEnv *jvm_env, const metric_t *m)
             PLUGIN_ERROR("Creating a new MetricUnknown instance failed.");
             return NULL;
         }
-    
+
         return o_metric;
     }
 
@@ -304,7 +304,7 @@ jobject ctoj_metric_family(JNIEnv *jvm_env, const metric_family_t *fam)
         PLUGIN_ERROR("Creating a new MetricFamily instance failed.");
         return NULL;
     }
-    
+
     (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
 
     if (fam->help != NULL) {
@@ -362,7 +362,7 @@ static int jtoc_metric_histogram(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
         PLUGIN_ERROR("calloc failed.");
         return -1;
     }
-    
+
     m->value.histogram->num = size;
     m->value.histogram->sum = sum;
 
@@ -414,7 +414,7 @@ static int jtoc_metric_summary(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
         (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
         return -1;
     }
-              
+
     m->value.summary = calloc(1, sizeof(summary_t) + sizeof(summary_quantile_t)*size);
     if (m->value.summary == NULL) {
         PLUGIN_ERROR("calloc failed.");
@@ -422,7 +422,7 @@ static int jtoc_metric_summary(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
         (*jvm_env)->DeleteLocalRef(jvm_env, o_quantiles_array);
         return -1;
     }
-    
+
     m->value.summary->num = size;
     m->value.summary->sum = sum;
     m->value.summary->count = count;
@@ -590,7 +590,7 @@ int jtoc_metric_family(JNIEnv *jvm_env, metric_family_t *fam, jobject o_fam)
         PLUGIN_ERROR("jtoc_metric_family: GetObjectClass failed.");
         return -1;
     }
-    
+
     char *name = NULL;
     int status = jtoc_string(jvm_env, &name, o_fam, gref.metric_family.get_name);
     if (status != 0) {
@@ -624,7 +624,7 @@ int jtoc_metric_family(JNIEnv *jvm_env, metric_family_t *fam, jobject o_fam)
         PLUGIN_ERROR("CallObjectMethod (getMetrics) failed.");
         return -1;
     }
-    
+
     jobject o_metrics_array = (*jvm_env)->CallObjectMethod(jvm_env, o_metrics, gref.list.to_array);
     if (o_metrics_array == NULL) {
         PLUGIN_ERROR("CallObjectMethod (toArray) failed.");

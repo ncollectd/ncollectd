@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only or PostgreSQL                                  */
+/* SPDX-License-Identifier: GPL-2.0-only OR PostgreSQL                                  */
 /* SPDX-FileCopyrightText: Copyright (c) 1996-2023, PostgreSQL Global Development Group */
 /* SPDX-FileCopyrightText: Copyright (c) 1994, Regents of the University of California  */
 

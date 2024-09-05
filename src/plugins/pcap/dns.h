@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause                                      */
+/* SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause                                      */
 /* SPDX-FileCopyrightText: Copyright (C) 2002 The Measurement Factory, Inc.                   */
 /* SPDX-FileCopyrightText: Copyright (C) 2006-2011 Florian octo Forster                       */
 /* SPDX-FileCopyrightText: Copyright (C) 2009 Mirko Buffoni                                   */

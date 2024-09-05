@@ -674,7 +674,7 @@ static int statsd_metric_submit_unsafe(statsd_instance_t *si, char const *name,
     plugin_dispatch_metric_family_filtered(&fam, si->filter, 0);
 
     strbuf_destroy(&buf);
-    
+
     return 0;
 }
 

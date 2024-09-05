@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only or PostgreSQL
+// SPDX-License-Identifier: GPL-2.0-only OR PostgreSQL
 // SPDX-FileCopyrightText: Copyright (c) 2019-2023, PostgreSQL Global Development Group
 // from posgreql src/backend/utils/adt/jsonpath_gram.y
 %{

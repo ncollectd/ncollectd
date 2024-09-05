@@ -237,7 +237,7 @@ static void yyerror(CONFIG_YYLTYPE *yylloc, __attribute__((unused)) void *scanne
 
     } else {
         fprintf(stderr, "Parse error in file '%s', line %i: %s\n",
-                        c_file->name, yylloc->first_line, msg); 
+                        c_file->name, yylloc->first_line, msg);
     }
 }
 

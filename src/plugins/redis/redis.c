@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-late
+// SPDX-License-Identifier: GPL-2.0-or-later
 // SPDX-FileCopyrightText: Copyright (C) 2010 Andrés J. Díaz
 // SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
 // SPDX-FileContributor: Andrés J. Díaz <ajdiaz at connectical.com>

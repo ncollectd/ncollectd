@@ -18,7 +18,7 @@ ncollectd-perl \- Documentation of ncollectd's perl plugin
 .SH DESCRIPTION
 The \fBperl\fP plugin embeds a Perl-interpreter into collectd and provides an
 interface to ncollectd's plugin system. This makes it possible to write plugins
-for collectd in Perl. 
+for collectd in Perl.
 
 .TP
 \fBinclude-dir\fI \fI/path/to/perl/plugins\fP
@@ -115,7 +115,7 @@ collectd's logging mechanism.
 .PP
 See the documentation of the \fBplugin_register\fP method in the section
 \fBMETHODS\fP below for the number and types of arguments passed to each
-\fBcallback function\fP. This section also explains how to register 
+\fBcallback function\fP. This section also explains how to register
 \fBcallback functions\fP with ncollectd.
 .PP
 To enable a plugin, copy it to a place where Perl can find it (i. e. a
@@ -315,7 +315,7 @@ Wrappers around \fBplugin_log\fP, using \fBLOG_ERR\fP, \fBLOG_WARNING\fP,
 \fBplugin_get_interval\fP ()
 Returns the interval of the current plugin as a floating point number in
 seconds. This value depends on the interval configured within the
-\f(CWload-plugin perl\fP block or the global interval (see 
+\f(CWload-plugin perl\fP block or the global interval (see
 .BR ncollectd.conf(5)
 for details).
 
@@ -471,7 +471,7 @@ types used by the read, write and match functions.
 
 .SH CAVEATS
 ncollectd is heavily multi-threaded. Each collectd thread accessing the perl
-plugin will be mapped to a Perl interpreter thread (see 
+plugin will be mapped to a Perl interpreter thread (see
 .BR threads(3perl)
 ). Any such thread will be created and destroyed transparently and on-the-fly.
 .PP

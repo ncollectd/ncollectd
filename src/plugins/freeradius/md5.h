@@ -1,7 +1,9 @@
+/* SPDX-License-Identifier: Public-Domain */
+
 #pragma once
 
-#ifdef HAVE_CONFIG_H                                                                                
-#    include "config.h"                                                                             
+#ifdef HAVE_CONFIG_H
+#    include "config.h"
 #endif
 
 #include <inttypes.h>

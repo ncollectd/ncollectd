@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only or PostgreSQL
+// SPDX-License-Identifier: GPL-2.0-only OR PostgreSQL
 // SPDX-FileCopyrightText: Copyright (c) 2019-2023, PostgreSQL Global Development Group
 // SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>

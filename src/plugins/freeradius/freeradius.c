@@ -4,8 +4,8 @@
 
 #include "plugin.h"
 #include "libutils/socket.h"
-#include "libutils/common.h" 
-#include "libutils/random.h" 
+#include "libutils/common.h"
+#include "libutils/random.h"
 
 #include "hmac.h"
 
@@ -640,7 +640,7 @@ static int freeradius_read(user_data_t *user_data)
 
         if (ntohl(avp_vsa->vendor_id) != FREERADIUS_ATTR_VENDOR_ID)
             continue;
-        
+
         if (avp_vsa->vsa.length != 6)
             continue;
 
