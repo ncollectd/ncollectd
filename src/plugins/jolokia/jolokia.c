@@ -1008,8 +1008,12 @@ static int jlk_config_add_instance(config_item_t *ci)
             status = cf_util_get_string(child, &jlk->url);
         } else if (jlk->url && strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &jlk->user);
+        } else if (jlk->url && strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &jlk->user);
         } else if (jlk->url && strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &jlk->pass);
+        } else if (jlk->url && strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &jlk->pass);
         } else if (jlk->url && strcasecmp("verify-peer", child->key) == 0) {
             status = cf_util_get_boolean(child, &jlk->verify_peer);
         } else if (jlk->url && strcasecmp("verify-host", child->key) == 0) {

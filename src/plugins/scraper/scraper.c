@@ -427,8 +427,12 @@ static int scraper_config_target(config_item_t *ci)
             status = cf_util_get_string(child, &target->url);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &target->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &target->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &target->pass);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &target->pass);
         } else if (strcasecmp("digest", child->key) == 0) {
             status = cf_util_get_boolean(child, &target->digest);
         } else if (strcasecmp("verify-peer", child->key) == 0) {

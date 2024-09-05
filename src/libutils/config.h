@@ -24,6 +24,8 @@ static inline int cf_get_lineno(const config_item_t *ci)
  * success. */
 int cf_util_get_string(const config_item_t *ci, char **ret_string);
 
+int cf_util_get_string_env(const config_item_t *ci, char **ret_string);
+
 /* Assures the config option is a string and copies it to the provided buffer.
  * Assures null-termination. */
 int cf_util_get_string_buffer(const config_item_t *ci, char *buffer,

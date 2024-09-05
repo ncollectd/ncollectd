@@ -597,8 +597,12 @@ static int wh_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &cb->location);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &cb->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &cb->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &cb->pass);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &cb->pass);
         } else if (strcasecmp("verify-peer", child->key) == 0) {
             status = cf_util_get_boolean(child, &cb->verify_peer);
         } else if (strcasecmp("verify-host", child->key) == 0) {

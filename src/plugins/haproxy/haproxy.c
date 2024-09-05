@@ -1236,8 +1236,12 @@ static int haproxy_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &ha->socketpath);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &ha->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ha->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &ha->pass);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ha->pass);
         } else if (strcasecmp("digest", child->key) == 0) {
             status = cf_util_get_boolean(child, &ha->digest);
         } else if (strcasecmp("verify-peer", child->key) == 0) {

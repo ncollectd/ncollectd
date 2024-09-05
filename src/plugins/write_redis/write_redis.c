@@ -357,6 +357,8 @@ static int write_redis_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &node->socket);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &node->passwd);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &node->passwd);
         } else if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_cdtime(child, &node->timeout);
         } else if (strcasecmp("database", child->key) == 0) {

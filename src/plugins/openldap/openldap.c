@@ -575,6 +575,8 @@ static int openldap_config_add(config_item_t *ci)
             status = cf_util_get_string(child, &st->binddn);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &st->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &st->password);
         } else if (strcasecmp("ca-cert", child->key) == 0) {
             status = cf_util_get_string(child, &st->cacert);
         } else if (strcasecmp("start-tls", child->key) == 0) {

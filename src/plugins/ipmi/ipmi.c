@@ -1223,10 +1223,14 @@ static int c_ipmi_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &st->host);
         } else if (strcasecmp("address", child->key) == 0) {
             status = cf_util_get_string(child, &st->connaddr);
-        } else if (strcasecmp("username", child->key) == 0) {
+        } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &st->username);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &st->username);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &st->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &st->password);
         } else if (strcasecmp("auth-type", child->key) == 0) {
             char tmp[8];
             status = cf_util_get_string_buffer(child, tmp, sizeof(tmp));

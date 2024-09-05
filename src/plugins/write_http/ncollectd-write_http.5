@@ -9,7 +9,9 @@ ncollectd-write_http \- Documentation of ncollectd's http write plugin
     \fBinstance\fP \fIinstance\fP {
         \fBurl\fP \fIurl\fP
         \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBverify-peer\fP \fItrue|false\fP
         \fBverify-host\fP \fItrue|false\fP
         \fBca-cert\fP \fI/path/to/ca-cert\fP
@@ -46,8 +48,14 @@ URL to which the values are submitted to. Mandatory.
 \fBuser\fP \fIusername\fP
 Optional user name needed for authentication.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the user name for authentication from the enviroment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Optional password needed for authentication.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password for authentication from the enviroment variable \fIenv-name\fP.
 .TP
 \fBverify-peer\fP \fItrue|false\fP
 Enable or disable peer SSL certificate verification. Enabled by default.

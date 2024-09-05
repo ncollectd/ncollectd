@@ -595,8 +595,12 @@ static int exporter_config_instance(config_item_t *ci)
             }
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &exporter->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &exporter->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &exporter->password);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &exporter->password);
         } else if (strcasecmp("realm", child->key) == 0) {
             status = cf_util_get_string(child, &exporter->realm);
         } else if (strcasecmp("format", child->key) == 0) {

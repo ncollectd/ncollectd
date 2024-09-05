@@ -709,8 +709,12 @@ static int pgb_config_instance(config_item_t *ci)
             status = cf_util_get_service(child, &db->port);
         } else if (strcasecmp(child->key, "user") == 0) {
             status = cf_util_get_string(child, &db->user);
+        } else if (strcasecmp(child->key, "user-env") == 0) {
+            status = cf_util_get_string_env(child, &db->user);
         } else if (strcasecmp(child->key, "password") == 0) {
             status = cf_util_get_string(child, &db->password);
+        } else if (strcasecmp(child->key, "password-env") == 0) {
+            status = cf_util_get_string_env(child, &db->password);
         } else if (strcasecmp(child->key, "ssl-mode") == 0) {
             status = cf_util_get_string(child, &db->sslmode);
         } else if (strcasecmp(child->key, "label") == 0) {

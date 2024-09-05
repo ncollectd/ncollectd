@@ -9,8 +9,10 @@ ncollectd-mq \- Documentation of ncollectd's mq plugin
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhostname\fP
         \fBport\fP \fIport\fP
-        \fBusername\fP \fIusername\fP
+        \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBqueue-manager\fP \fImanager\fP
         \fBconnection-channel\fP \fIchannel\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -33,11 +35,19 @@ Hostname of the MQ server to connect to.
 \fBport\fP \fIport\fP
 Port number or service name of the MQ server to connect to.
 .TP
-\fBusername\fP \fIusername\fP
+\fBuser\fP \fIusername\fP
 Username used when authenticating to the MQ server.
+.TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username used when authenticating to the MQ server from the
+environment variable \fIenv-name\fP
 .TP
 \fBpassword\fP \fIpassword\fP
 Password used when authenticating to the MQ server.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password used when authenticating to the MQ server from the
+environment variable \fIenv-name\fP
 .TP
 \fBqueue-manager\fP \fImanager\fP
 Sets the \fIqueue-manger\fP name to connect.

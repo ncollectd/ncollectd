@@ -9,7 +9,9 @@ ncollectd-jolokia \- Documentation of ncollectd's jolokia plugin
     \fBinstance\fP \fIname\fP {
         \fBurl\fP \fIurl\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBverify-peer\fP \fItrue|false\fP
         \fBverify-host\fP \fItrue|false\fP
         \fBca-cert\fP \fI/path/to/ca\fP
@@ -52,8 +54,16 @@ Moreof - no java binding is required in collectd to do so.
 \fBuser\fP \fIuser\fP
 Username to use if authorization is required to read the page.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username to use if authorization is required to read the page from the
+environment variable \fIenv-name\fP
+.TP
 \fBpassword\fP \fIpassword\fP
 Password to use if authorization is required to read the page.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the Password to use if authorization is required to read the page from the
+environment variable \fIenv-name\fP
 .TP
 \fBverify-peer\fP \fItrue|false\fP
 Enable or disable peer SSL certificate verification. See

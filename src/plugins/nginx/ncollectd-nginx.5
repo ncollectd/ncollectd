@@ -10,7 +10,9 @@ ncollectd-nginx \- Documentation of ncollectd's nginx plugin
         \fBurl\fP "\fIhttp://host/nginx_status\fP"
         \fBsocket-path\fP "\fI/path/to/unix/socket\fP"
         \fBuser\fP "\fIusername\fP"
+        \fBuser-env\fP "\fIenv-name\fP"
         \fBpassword\fP "\fIpassword\fP"
+        \fBpassword-env\fP "\fIenv-name\fP"
         \fBverify-peer\fP \fItrue|false\fP
         \fBverify-host\fP \fItrue|false\fP
         \fBca-cert\fP "\fIfile\fP"
@@ -65,8 +67,14 @@ Will connect to the Unix domain socket instead of establishing a TCP connection 
 \fBuser\fP \fIusername\fP
 Optional user name needed for authentication.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the user name needed for authentication from the environment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Optional password needed for authentication.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password needed for authentication from the environment variable \fIenv-name\fP.
 .TP
 \fBverify\-peer\fP \fBtrue|false\fP
 Enable or disable peer SSL certificate verification. See

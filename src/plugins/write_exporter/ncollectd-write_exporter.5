@@ -16,7 +16,9 @@ ncollectd-write_exporter \- Documentation of ncollectd's write_exporter plugin
         \fBtls-priority\fP
         \fBauth-method\fP \fIbasic|digest\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBrealm\fP \fIrealm\fP
         \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
     }
@@ -52,7 +54,11 @@ It defaults to \f(CW300\fP seconds (5 minutes).
 .TP
 \fBuser\fP \fIuser\fP
 .TP
+\fBuser-env\fP \fIenv-name\fP
+.TP
 \fBpassword\fP \fIpassword\fP
+.TP
+\fBpassword-env\fP \fIenv-name\fP
 .TP
 \fBrealm\fP \fIrealm\fP
 .TP

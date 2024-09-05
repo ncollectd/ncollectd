@@ -29,8 +29,10 @@ ncollectd-oracle \- Documentation of ncollectd's oracle plugin
     \fBinstance\fP \fIname\fP {
         \fBconnect-id\fP \fIconnect-id\fP
         \fBhost\fP \fIhost\fP
-        \fBusername\fP \fIusername\fP
+        \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBinterval\fP \fIseconds\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -59,8 +61,14 @@ names are defined in the file named \f(CW$ORACLE_HOME/network/admin/tnsnames.ora
 \fBuser\fP \fIuser\fP
 User to connecto to database
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the user to connecto to database from the environment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 User password to connecto to database
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the user password to connecto to database from the environment variable \fIenv-name\fP.
 .TP
 \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear

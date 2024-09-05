@@ -10,6 +10,7 @@ ncollectd-openldap \- Documentation of ncollectd's openldap plugin
         \fBurl\fP \fIldap://host/binddn\fP
         \fBbind-dn\fP \fIDN\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBca-cert\fP \fI/path/to/ca\fP
         \fBstart-tls\fP \fItrue|false\fP
         \fBtimeout\fP \fIseconds\fP
@@ -51,6 +52,9 @@ authentication. Defaults to empty string to establish an anonymous authorization
 \fBpassword\fP \fIpassword\fP
 Password for simple bind authentication. If this option is not set,
 unauthenticated bind operation is used.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password for simple bind authentication from the environment variable \fIenv-name\fP.
 .TP
 \fBca-cert\fP \fI/path/to/ca\fP
 File that holds one or more SSL certificates. If you want to use TLS/SSL you

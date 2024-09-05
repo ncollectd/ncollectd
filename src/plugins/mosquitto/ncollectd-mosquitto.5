@@ -11,7 +11,9 @@ ncollectd-mosquitto \- Documentation of ncollectd's mosquitto plugin
         \fBqos\fP \fIqos\fP
         \fBclient-id\fP [\fI0-2\fP]
         \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBclean-session\fP \fItrue|false\fP
         \fBca-cert\fP \fI/path/to/ca\fP
         \fBcertificate-file\fP \fI/path/to/cert\fP
@@ -58,8 +60,16 @@ MQTT client ID to use. Defaults to the hostname used by ncollectd.
 \fBuser\fP \fIusername\fP
 Username used when authenticating to the Mosquitto broker.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username used when authenticating to the Mosquitto broker from the
+environment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Password used when authenticating to the Mosquitto broker.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password used when authenticating to the Mosquitto broker from the
+environment variable \fIenv-name\fP.
 .TP
 \fBclean-session\fP \fItrue|false\fP
 Controls whether the MQTT "cleans" the session up after the subscriber

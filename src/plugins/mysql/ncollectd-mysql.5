@@ -29,7 +29,9 @@ ncollectd-mysql \- Documentation of ncollectd's mysql plugin
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhostname\fP
         \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBport\fP \fIport\fP
         \fBsocket\fP \fIsocket-path\fP
         \fBdatabase\fP \fIdatabase\fP
@@ -77,8 +79,15 @@ Username to use when connecting to the database. The user does not have to be
 granted any privileges (which is synonym to granting the \f(CWUSAGE\fP privilege),
 unless you want to collect replication statistics.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username to use when connecting to the database from the environment
+variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Password needed to log into the database.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password needed to log into the database from the environment variable \fIenv-name\fP.
 .TP
 \fBport\fP \fIport\fP
 TCP-port to connect to. If \fBhost\fP is set to \fBlocalhost\fP (the default), this setting

@@ -10,7 +10,9 @@ ncollectd-mongodb \- Documentation of ncollectd's mongodb plugin
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBprefer-secondary-query\fP \fItrue|false\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
@@ -35,10 +37,16 @@ Service name or port number to connect to. Defaults to \f(CW27017\fP.
 .TP
 \fBuser\fP \fIuser\fP
 .TP
+\fBuser-env\fP \fIenv-name\fP
+.TP
 \fBpassword\fP \fIpassword\fP
 Sets the information used when authenticating to a \fIMongoDB\fP database. The
 fields are optional (in which case no authentication is attempted), but if you
 want to use authentication all three fields must be set.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password to authenticating to a \fIMongoDB\fP database from the
+environment variable \fIenv-name\fP.
 .TP
 \fBprefer-secondary-query\fP \fItrue|false\fP
 .TP

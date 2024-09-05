@@ -9,7 +9,9 @@ ncollectd-squid \- Documentation of ncollectd's squid plugin
     \fBinstance\fP \fIname\fP {
         \fBurl\fP \fIurl\fP
         \fBuser\fP \fIuser\fP
+        \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBdigest\fP \fItrue|false\fP
         \fBverify-peer\fP \fItrue|false\fP
         \fBverify-host\fP \fItrue|false\fP
@@ -37,8 +39,16 @@ URL to access the Squid cachemgr.
 \fBuser\fP \fIuser\fP
 Username to use if authorization is required to read the url.
 .TP
+\fBuser-env\fP \fIenv-name\fP
+Get the username to use if authorization is required to read the url from the
+environment variable \fIenv-name\fP.
+.TP
 \fBpassword\fP \fIpassword\fP
 Password to use if authorization is required to read the url.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password to use if authorization is required to read the url from the
+environment variable \fIenv-name\fP.
 .TP
 \fBdigest\fP \fItrue|false\fP
 Enable HTTP digest authentication.

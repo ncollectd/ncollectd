@@ -1372,8 +1372,12 @@ static int cmysql_config_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->host);
         } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &db->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &db->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &db->pass);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &db->pass);
         } else if (strcasecmp("port", child->key) == 0) {
             status = cf_util_get_port_number(child, &db->port);
         } else if (strcasecmp("socket", child->key) == 0) {
