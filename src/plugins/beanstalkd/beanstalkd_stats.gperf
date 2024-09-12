@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix BEANSTALKD_STATS_
+%define hash-function-name beanstalkd_stats_hash
+%define lookup-function-name beanstalkd_stats_get_key
+%define slot-name key
+%{
+%}
+struct beanstalkd_stats {
+    char *key;
+    int fam;
+    char *lname;
+    char *lvalue;
+};
+%%
+current-jobs-urgent:,      FAM_BEANSTALKD_CURRENT_JOBS_URGENT,     NULL,      NULL 
+current-jobs-ready:,       FAM_BEANSTALKD_CURRENT_JOBS_READY,      NULL,      NULL
+current-jobs-reserved:,    FAM_BEANSTALKD_CURRENT_JOBS_RESERVED,   NULL,      NULL
+current-jobs-delayed:,     FAM_BEANSTALKD_CURRENT_JOBS_DELAYED,    NULL,      NULL
+current-jobs-buried:,      FAM_BEANSTALKD_CURRENT_JOBS_BURIED,     NULL,      NULL
+cmd-put:,                  FAM_BEANSTALKD_COMMAND,                 "command", "put"
+cmd-peek:,                 FAM_BEANSTALKD_COMMAND,                 "command", "peek"
+cmd-peek-ready:,           FAM_BEANSTALKD_COMMAND,                 "command", "peek-ready"
+cmd-peek-delayed:,         FAM_BEANSTALKD_COMMAND,                 "command", "peek-delayed"
+cmd-peek-buried:,          FAM_BEANSTALKD_COMMAND,                 "command", "peek-buried"
+cmd-reserve:,              FAM_BEANSTALKD_COMMAND,                 "command", "reserve"
+cmd-reserve-with-timeout:, FAM_BEANSTALKD_COMMAND,                 "command", "reserve-with-timeout"
+cmd-delete:,               FAM_BEANSTALKD_COMMAND,                 "command", "delete"
+cmd-release:,              FAM_BEANSTALKD_COMMAND,                 "command", "release"
+cmd-use:,                  FAM_BEANSTALKD_COMMAND,                 "command", "use"
+cmd-watch:,                FAM_BEANSTALKD_COMMAND,                 "command", "watch"
+cmd-ignore:,               FAM_BEANSTALKD_COMMAND,                 "command", "ignore"
+cmd-bury:,                 FAM_BEANSTALKD_COMMAND,                 "command", "bury"
+cmd-kick:,                 FAM_BEANSTALKD_COMMAND,                 "command", "kick"
+cmd-touch:,                FAM_BEANSTALKD_COMMAND,                 "command", "touch"
+cmd-stats:,                FAM_BEANSTALKD_COMMAND,                 "command", "stats"
+cmd-stats-job:,            FAM_BEANSTALKD_COMMAND,                 "command", "stats-job"
+cmd-stats-tube:,           FAM_BEANSTALKD_COMMAND,                 "command", "stats-tube"
+cmd-list-tubes:,           FAM_BEANSTALKD_COMMAND,                 "command", "list-tubes"
+cmd-list-tube-used:,       FAM_BEANSTALKD_COMMAND,                 "command", "list-tube-used"
+cmd-list-tubes-watched:,   FAM_BEANSTALKD_COMMAND,                 "command", "list-tubes-watched"
+cmd-pause-tube:,           FAM_BEANSTALKD_COMMAND,                 "command", "pause-tube"
+job-timeouts:,             FAM_BEANSTALKD_JOB_TIMEOUTS,            NULL,      NULL
+total-jobs:,               FAM_BEANSTALKD_JOBS,                    NULL,      NULL
+max-job-size:,             FAM_BEANSTALKD_MAX_JOB_SIZE_BYTES,      NULL,      NULL
+current-tubes:,            FAM_BEANSTALKD_CURRENT_TUBES,           NULL,      NULL
+current-connections:,      FAM_BEANSTALKD_CURRENT_CONNECTIONS,     NULL,      NULL
+current-producers:,        FAM_BEANSTALKD_CURRENT_PRODUCERS,       NULL,      NULL
+current-workers:,          FAM_BEANSTALKD_CURRENT_WORKERS,         NULL,      NULL
+current-waiting:,          FAM_BEANSTALKD_CURRENT_WAITING,         NULL,      NULL
+total-connections:,        FAM_BEANSTALKD_CONNECTIONS,             NULL,      NULL
+rusage-utime:,             FAM_BEANSTALKD_CPU_USER_TIME_SECONDS,   NULL,      NULL
+rusage-stime:,             FAM_BEANSTALKD_CPU_SYSTEM_TIME_SECONDS, NULL,      NULL
+uptime:,                   FAM_BEANSTALKD_UPTIME_SECONDS,          NULL,      NULL
+binlog-oldest-index:,      FAM_BEANSTALKD_BINLOG_OLDEST_INDEX,     NULL,      NULL
+binlog-current-index:,     FAM_BEANSTALKD_BINLOG_CURRENT_INDEX,    NULL,      NULL
+binlog-records-migrated:,  FAM_BEANSTALKD_BINLOG_MAX_SIZE_BYTES,   NULL,      NULL
+binlog-records-written:,   FAM_BEANSTALKD_BINLOG_RECORDS_WRITTEN,  NULL,      NULL
+binlog-max-size:,          FAM_BEANSTALKD_BINLOG_RECORDS_MIGRATED, NULL,      NULL
+draining:,                 FAM_BEANSTALKD_DRAINING,                NULL,      NULL
