@@ -257,7 +257,6 @@ static int beanstalkd_read(user_data_t *user_data)
     char buffer[8192];
     cdtime_t submit = cdtime();
    
-//    beanstalkd_query(ctx, "stats\r\n", buffer, sizeof(buffer));
     int status = beanstalkd_query_stats(ctx, buffer, sizeof(buffer));
     if (status != 0)
         goto error;
