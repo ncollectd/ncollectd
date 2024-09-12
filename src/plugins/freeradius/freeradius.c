@@ -729,6 +729,8 @@ static int freeradius_config_instance (config_item_t *ci)
             status = cf_util_get_port_number(child, &ctx->port);
         } else if (strcasecmp(child->key, "secret") == 0) {
             status = cf_util_get_string(child, &ctx->secret);
+        } else if (strcasecmp(child->key, "secret-env") == 0) {
+            status = cf_util_get_string_env(child, &ctx->secret);
         } else if (strcasecmp(child->key, "timeout") == 0) {
             status = cf_util_get_cdtime(child, &ctx->timeout);
         } else if (strcasecmp(child->key, "label") == 0) {

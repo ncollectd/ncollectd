@@ -10,6 +10,7 @@ ncollectd-freeradius \- Documentation of ncollectd's freeradius plugin
         \fBhost\fP \fIhostname\fP
         \fBport\fP \fIport\fP
         \fBsecret\fP \fIsecret\fP
+        \fBsecret-env\fP \fIenv-name\fP
         \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
         \fBinterval\fP \fIseconds\fP
@@ -38,6 +39,9 @@ TCP port of the "status" virtual server to connect to. Defaults to \fB18121\fP.
 .TP
 \fBsecret\fP \fIsecret\fP
 \fISecret\fP used to calculate message-authenticator.
+.TP
+\fBsecret-env\fP \fIenv-name\fP
+Get the secret used to calculate message-authenticator from the environment variable \fIenv-name\fP.
 .TP
 \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for the request to the freeradius server.
