@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_MSSQL "MS SQL database statistics" ON)
+
+set(BUILD_PLUGIN_MSSQL 0)
+
+if(PLUGIN_MSSQL)
+    find_package(LibFreeTDS)
+    if (LIBFREETDS_FOUND)
+        set(BUILD_PLUGIN_MSSQL 1)
+    else()
+        set(BUILD_PLUGIN_MSSQL_REASON "freetds not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_MSSQL ${BUILD_PLUGIN_MSSQL} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_MSSQL)
+    set(PLUGIN_MSSQL_SRC mssql.c)
+    add_library(mssql MODULE ${PLUGIN_MSSQL_SRC})
+    target_include_directories(mssql PRIVATE ${LIBMSSQL_INCLUDE_DIRS})
+    target_link_libraries(mssql PRIVATE libutils libmetric libdbquery LibFreeTDS::LibFreeTDS)
+    set_target_properties(mssql PROPERTIES PREFIX "")
+    install(TARGETS mssql DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-mssql.5 ncollectd-mssql.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-mssql.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
