@@ -27,7 +27,7 @@ ncollectd-odbc \- Documentation of ncollectd's odbc plugin
         }
     }
     \fBinstance\fP \fIdatabase\fP {
-        \fBdns\fP \fIdatabase-dns\fP
+        \fBdsn\fP \fIdatabase-dsn\fP
         \fBuser\fP \fIuser\fP
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
@@ -63,7 +63,7 @@ Each database needs a \fIdatabase-name\fP as string argument in the starting tag
 block.
 .RS
 .TP
-\fBdns\fP \fIdatabase-dns\fP
+\fBdsn\fP \fIdatabase-dsn\fP
 Specifies the  \fIdsn\fP (Data Source Name) that you configure in unixODBC.
 .TP
 \fBuser\fP \fIuser\fP
@@ -95,7 +95,7 @@ Sets the interval (in seconds) in which the values will be collected from this
 database. By default the global \fBinterval\fP setting will be used.
 .TP
 \fBping-query\fP \fIquery\fP
-Specifies a query to test the connection to the databbase.
+Specifies a query to test the connection to the database.
 .TP
 \fBquery\fP \fIquery-name\fP
 Associates the query named \fIquery-name\fP with this database connection. The
