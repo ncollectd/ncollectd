@@ -1,0 +1,56 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-sendmail 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd sendmail man page"
+.SH NAME
+ncollectd-sendmail \- Documentation of ncollectd's sendmail plugin
+.SH SYNOPSIS
+\fBload-plugin\fP sendmail
+.br
+\fBplugin\fP sendmail {
+    \fBinstance\fP \fIname\fP {
+        \fBconfig-path\fP \fIconfig-file-path\fP
+        \fBqueue-path\fP \fIqueue-path\fP
+        \fBhistogram-queue-size-buckets\fP [\fIbucket\fP] ...
+        \fBhistogram-queue-age-buckets\fP [\fIbucket\fP] ...
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIinterval\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBsendmail\fP plugin will collect statistics from a \fIsendmail\fP MTA
+using stastus file.
+
+The plugin configuration consists of one or more \fBinstance\fP blocks which
+specify one \fIsendmail\fP MTA each. Within the \fBinstance\fP blocks, the
+following options are allowed:
+.TP
+\fBconfig-path\fP \fIconfig-file-path\fP
+Set the sendmail config file path to get the mailers name and status file path.
+The default value is \f(CW/etc/mail/sendmail.cf\fP.
+.TP
+\fBqueue-path\fP \fIqueue-path\fP
+Set the path for de queue directory.
+The default value is \f(CW/var/spool/mqueue\fP.
+.TP
+\fBhistogram-queue-size-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for queue size histogram.
+.TP
+\fBhistogram-queue-age-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for queue age histogram.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIinterval\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instance. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
