@@ -10,6 +10,7 @@ set(LIBUTILS_SRC avltree.c avltree.h
                  complain.c complain.h
                  random.c random.h
                  time.c time.h
+                 tail.c tail.h
                  strlist.c strlist.h
                  exclist.c exclist.h
                  htable.c htable.h

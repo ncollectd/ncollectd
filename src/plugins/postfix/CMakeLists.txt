@@ -1,0 +1,37 @@
+plugin_option(PLUGIN_POSTFIX "Postfix statistics" ON)
+
+set(BUILD_PLUGIN_POSTFIX 0)
+
+if(PLUGIN_POSTFIX)
+    set(BUILD_PLUGIN_POSTFIX 1)
+    if(BUILD_LINUX)
+        find_package(LibSystemd)
+        if (LIBSYSTEMD_FOUND)
+            set(HAVE_SD_JOURNAL 1)
+        endif()
+    endif()
+endif()
+
+set(BUILD_PLUGIN_POSTFIX ${BUILD_PLUGIN_POSTFIX} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_POSTFIX)
+    set(PLUGIN_POSTFIX_SRC postfix.c)
+    add_library(postfix MODULE ${PLUGIN_POSTFIX_SRC})
+    set(PLUGIN_POSTFIX_LIBS libutils libmetric)
+    if (HAVE_SD_JOURNAL)
+        list(APPEND PLUGIN_POSTFIX_LIBS LibSystemd::LibSystemd)
+        list(APPEND PLUGIN_POSTFIX_DEFINITIONS HAVE_SD_JOURNAL)
+    endif()
+    target_link_libraries(postfix PRIVATE ${PLUGIN_POSTFIX_LIBS})
+    target_compile_definitions(postfix PUBLIC ${PLUGIN_POSTFIX_DEFINITIONS})
+    set_target_properties(postfix PROPERTIES PREFIX "")
+
+#    add_executable(test_plugin_postfix EXCLUDE_FROM_ALL postfix_test.c ${PLUGIN_POSTFIX_SRC})
+#    target_link_libraries(test_plugin_postfix libtest libutils libmetric -lm)
+#    add_dependencies(build_tests test_plugin_postfix)
+#    add_test(NAME test_plugin_postfix COMMAND test_plugin_postfix WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    install(TARGETS postfix DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-postfix.5 ncollectd-postfix.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-postfix.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()

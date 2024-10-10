@@ -1,0 +1,82 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-postfix 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd postfix man page"
+.SH NAME
+ncollectd-postfix \- Documentation of ncollectd's postfix plugin
+.SH SYNOPSIS
+\fBload-plugin\fP postfix
+.br
+\fBplugin\fP postfix {
+    \fBinstance\fP \fIname\fP {
+        \fBunit\fP \fIunit-name\fP
+        \fBlog-path\fP \fIpath-to-log\fP
+        \fBlog-from\fP \fIfile|systemd\fP
+        \fBshowq-path\fP \fIpath-to-showq-socket\fP
+        \fBhistogram-time-buckets\fP [\fIbucket\fP] ...
+        \fBhistogram-queue-size-buckets\fP [\fIbucket\fP] ...
+        \fBhistogram-queue-age-buckets\fP [\fIbucket\fP] ...
+        \fBhistogram-qmgr-inserts-nrcpt-buckets\fP [\fIbucket\fP] ...
+        \fBhistogram-qmgr-inserts-size-buckets\fP [\fIbucket\fP] ...
+        \fBtimeout\fP \fIseconds\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIinterval\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBpostfix\fP plugin will collect statistics from a \fIpostfix\fP server
+reading the logs and access the showq socket to list the mail queue.
+
+The plugin configuration consists of one or more \fBinstance\fP blocks which
+specify one \fIpostfix\fP instance. Within the \fBinstance\fP blocks, the
+following options are allowed:
+.TP
+\fBunit\fP \fIunit-name\fP
+Set the unit name from which to read the logs stored in the journal.
+The default value is \f(CWpostfix.service\fP.
+.TP
+\fBlog-path\fP \fIpath-to-log\fP
+Set file path from which to read the logs. 
+The default value is \f(CW/var/log/mail.log\fP.
+.TP
+\fBlog-from\fP \fIfile|systemd\fP
+Define from with source to read the postfix logs.
+By default if systemd is detected the logs will be read from the journal.
+.TP
+\fBshowq-path\fP \fIpath-to-showq-socket\fP
+Set the path to the showq postfix socket.
+The default value is \f(CW/var/spool/postfix/public/showq\fP.
+.TP
+\fBhistogram-time-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for time based histograms.
+.TP
+\fBhistogram-queue-size-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for queue size histogram.
+.TP
+\fBhistogram-queue-age-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for queue age histogram.
+.TP
+\fBhistogram-qmgr-inserts-nrcpt-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for qmgr number of receipients per message histogram.
+.TP
+\fBhistogram-qmgr-inserts-size-buckets\fP [\fIbucket\fP] ...
+Define the list of buckets for qmgr inserts histogram.
+.TP
+\fBtimeout\fP \fIseconds\fP
+Set the timeout in seconds for read the showq socket.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBinterval\fP \fIinterval\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instance. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
