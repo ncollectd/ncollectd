@@ -185,7 +185,7 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
 
     struct dirent *ent;
     while ((ent = readdir(dh)) != NULL) {
-		if ((ent->d_name[0] != 'd') || (ent->d_name[1] != 'f'))
+        if ((ent->d_name[0] != 'd') || (ent->d_name[1] != 'f'))
             continue;
 
         struct stat statbuf;
@@ -198,11 +198,11 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
             continue;
         }
 
-		if ((statbuf.st_size > 0) && (S_ISREG(statbuf.st_mode))) {
+        if ((statbuf.st_size > 0) && (S_ISREG(statbuf.st_mode))) {
 #ifdef KERNEL_DARWIN
-		    double waiting = now - TIMESPEC_TO_DOUBLE(&statbuf.st_mtimespec);
+            double waiting = now - TIMESPEC_TO_DOUBLE(&statbuf.st_mtimespec);
 #else
-		    double waiting = now - TIMESPEC_TO_DOUBLE(&statbuf.st_mtim);
+            double waiting = now - TIMESPEC_TO_DOUBLE(&statbuf.st_mtim);
 #endif
             if (waiting < 0)
                 waiting = 0;
