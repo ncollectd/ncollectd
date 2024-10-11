@@ -14,6 +14,7 @@
 %define build_with_apcups 0%{!?_without_apcups:1}
 %define build_with_avccache 0%{!?_without_avccache:1}
 %define build_with_battery 0%{!?_without_battery:1}
+%define build_with_beanstalkd 0%{!?_without_beanstalkd:1}
 %define build_with_bcache 0%{!?_without_bcache:1}
 %define build_with_bind 0%{!?_without_bind:1}
 %define build_with_bonding 0%{!?_without_bonding:1}
@@ -45,6 +46,7 @@
 %define build_with_exec 0%{!?_without_exec:1}
 %define build_with_fcgi 0%{!?_without_fcgi:1}
 %define build_with_fchost 0%{!?_without_fchost:1}
+%define build_with_freeradius 0%{!?_without_freeradius:1}
 %define build_with_fhcount 0%{!?_without_fhcount:1}
 %define build_with_filecount 0%{!?_without_filecount:1}
 %define build_with_fscache 0%{!?_without_fscache:1}
@@ -87,6 +89,7 @@
 %define build_with_modbus 0%{!?_without_modbus:1}
 %define build_with_mongodb 0%{!?_without_mongodb:1}
 %define build_with_mosquitto 0%{!?_without_mosquitto:1}
+%define build_with_mssql 0%{!?_without_mssql:1}
 %define build_with_mysql 0%{!?_without_mysql:1}
 %define build_with_nagios_check 0%{!?_without_nagios_check:1}
 %define build_with_nfacct 0%{!?_without_nfacct:1}
@@ -110,8 +113,10 @@
 %define build_with_openvpn 0%{!?_without_openvpn:1}
 %define build_with_pcap 0%{!?_without_pcap:1}
 %define build_with_perl 0%{!?_without_perl:1}
+%define build_with_pgbouncer 0%{!?_without_pgbouncer:1}
 %define build_with_ping 0%{!?_without_ping:1}
 %define build_with_podman 0%{!?_without_podman:1}
+%define build_with_postfix 0%{!?_without_postfix:1}
 %define build_with_postgresql 0%{!?_without_postgresql:1}
 %define build_with_pdns 0%{!?_without_pdns:1}
 %define build_with_pressure 0%{!?_without_pressure:1}
@@ -122,10 +127,12 @@
 %define build_with_rapl 0%{!?_without_rapl:1}
 %define build_with_recursor 0%{!?_without_recursor:1}
 %define build_with_redis 0%{!?_without_redis:1}
+%define build_with_resctrl 0%{!?_without_resctrl:1}
 %define build_with_routeros 0%{!?_without_routeros:1}
 %define build_with_rtcache 0%{!?_without_rtcache:1}
 %define build_with_schedstat 0%{!?_without_schedstat:1}
 %define build_with_scraper 0%{!?_without_scraper:1}
+%define build_with_sendmail 0%{!?_without_sendmail:1}
 %define build_with_sensors 0%{!?_without_sensors:1}
 %define build_with_serial 0%{!?_without_serial:1}
 %define build_with_sigrok 0%{!?_without_sigrok:1}
@@ -221,6 +228,7 @@
 %define build_with_dcpmm 0%{?_with_dcpmm:1}
 %define build_with_gpu_intel 0%{?_with_gpu_intel:1}
 %define build_with_btrfs 0%{?_with_btrfs:1}
+%define build_with_mssql 0%{?_with_msql:1}
 %if 0%{?rhel} == 6
 %define build_with_log_systemd 0%{?_with_log_systemd:1}
 %define build_with_kafka 0%{?_with_kafka:1}
@@ -591,6 +599,16 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 The mq plugin get metrics from a MQ broker.
 %endif
 
+%if %{build_with_mssql}
+%package mssql
+Summary: MS SQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: freetds-devel
+%description mssql
+MS SQL querying plugin.
+%endif
+
 %if %{build_with_mysql}
 %package mysql
 Summary: MySQL plugin for ncollectd
@@ -732,6 +750,16 @@ BuildRequires: perl-ExtUtils-Embed
 %description perl
 The Perl plugin embeds a Perl interpreter into ncollectd and exposes the
 application programming interface (API) to Perl-scripts.
+%endif
+
+%if %{build_with_pgbouncer}
+%package pgbouncer
+Summary: PgBouncer plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: postgresql-devel
+%description pgbouncer
+The pgbouncer plugin collects metrics from a PgBouncer instance.
 %endif
 
 %if %{build_with_podman}
@@ -1041,6 +1069,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_bcache -DPLUGIN_BCACHE:BOOL=OFF
 %endif
 
+%if %{build_with_beanstalkd}
+%define _build_with_beanstalkd -DPLUGIN_BEANSTALKD:BOOL=ON
+%else
+%define _build_with_beanstalkd -DPLUGIN_BEANSTALKD:BOOL=OFF
+%endif
+
 %if %{build_with_bind}
 %define _build_with_bind -DPLUGIN_BIND:BOOL=ON
 %else
@@ -1247,6 +1281,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_fscache -DPLUGIN_FSCACHE:BOOL=ON
 %else
 %define _build_with_fscache -DPLUGIN_FSCACHE:BOOL=OFF
+%endif
+
+%if %{build_with_freeradius}
+%define _build_with_freeradius -DPLUGIN_FREERADIUS:BOOL=ON
+%else
+%define _build_with_freeradius -DPLUGIN_FREERADIUS:BOOL=OFF
 %endif
 
 %if %{build_with_gps}
@@ -1517,6 +1557,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_mq -DPLUGIN_MQ:BOOL=OFF
 %endif
 
+%if %{build_with_mssql}
+%define _build_with_mssql -DPLUGIN_MSSQL:BOOL=ON
+%else
+%define _build_with_mssql -DPLUGIN_MSSQL:BOOL=OFF
+%endif
+
 %if %{build_with_mysql}
 %define _build_with_mysql -DPLUGIN_MYSQL:BOOL=ON
 %else
@@ -1673,6 +1719,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_pf -DPLUGIN_PF:BOOL=OFF
 %endif
 
+%if %{build_with_pgbouncer}
+%define _build_with_pgbouncer -DPLUGIN_PGBOUNCER:BOOL=ON
+%else
+%define _build_with_pgbouncer -DPLUGIN_PGBOUNCER:BOOL=OFF
+%endif
+
 %if %{build_with_ping}
 %define _build_with_ping -DPLUGIN_PING:BOOL=ON
 %else
@@ -1683,6 +1735,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_podman -DPLUGIN_PODMAN:BOOL=ON
 %else
 %define _build_with_podman -DPLUGIN_PODMAN:BOOL=OFF
+%endif
+
+%if %{build_with_postfix}
+%define _build_with_postfix -DPLUGIN_POSTFIX:BOOL=ON
+%else
+%define _build_with_postfix -DPLUGIN_POSTFIX:BOOL=OFF
 %endif
 
 %if %{build_with_postgresql}
@@ -1745,6 +1803,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_redis -DPLUGIN_REDIS:BOOL=OFF
 %endif
 
+%if %{build_with_resctrl}
+%define _build_with_resctrl -DPLUGIN_RESCTRL:BOOL=ON
+%else
+%define _build_with_resctrl -DPLUGIN_RESCTRL:BOOL=OFF
+%endif
+
 %if %{build_with_routeros}
 %define _build_with_routeros -DPLUGIN_ROUTEROS:BOOL=ON
 %else
@@ -1767,6 +1831,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_scraper -DPLUGIN_SCRAPER:BOOL=ON
 %else
 %define _build_with_scraper -DPLUGIN_SCRAPER:BOOL=OFF
+%endif
+
+%if %{build_with_sendmail}
+%define _build_with_sendmail -DPLUGIN_SENDMAIL:BOOL=ON
+%else
+%define _build_with_sendmail -DPLUGIN_SENDMAIL:BOOL=OFF
 %endif
 
 %if %{build_with_sensors}
@@ -2116,6 +2186,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_battery} \
     %{?_build_with_bcache} \
     %{?_build_with_bind} \
+    %{?_build_with_beanstalkd} \
     %{?_build_with_bonding} \
     %{?_build_with_btrfs} \
     %{?_build_with_buddyinfo} \
@@ -2148,6 +2219,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_fchost} \
     %{?_build_with_fhcount} \
     %{?_build_with_filecount} \
+    %{?_build_with_freeradius} \
     %{?_build_with_fscache} \
     %{?_build_with_gps} \
     %{?_build_with_gpu_intel} \
@@ -2193,6 +2265,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_mongodb} \
     %{?_build_with_mosquitto} \
     %{?_build_with_mq} \
+    %{?_build_with_mssql} \
     %{?_build_with_mysql} \
     %{?_build_with_netstat_udp} \
     %{?_build_with_nagios_check} \
@@ -2219,8 +2292,10 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_pcap} \
     %{?_build_with_perl} \
     %{?_build_with_pf} \
+    %{?_build_with_pgbouncer} \
     %{?_build_with_ping} \
     %{?_build_with_podman} \
+    %{?_build_with_postfix} \
     %{?_build_with_postgresql} \
     %{?_build_with_pdns} \
     %{?_build_with_pressure} \
@@ -2231,11 +2306,13 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_rapl} \
     %{?_build_with_recursor} \
     %{?_build_with_redis} \
+    %{?_build_with_resctrl} \
     %{?_build_with_routeros} \
     %{?_build_with_rtcache} \
     %{?_build_with_schedstat} \
     %{?_build_with_scraper} \
     %{?_build_with_sensors} \
+    %{?_build_with_sendmail} \
     %{?_build_with_serial} \
     %{?_build_with_sigrok} \
     %{?_build_with_slabinfo} \
@@ -2387,6 +2464,10 @@ fi
 %{_libdir}/%{name}/bcache.so
 %{_mandir}/man5/ncollectd-bcache.5*
 %endif
+%if %{build_with_beanstalkd}
+%{_libdir}/%{name}/beanstalkd.so
+%{_mandir}/man5/ncollectd-beanstalkd.5*
+%endif
 %if %{build_with_bonding}
 %{_libdir}/%{name}/bonding.so
 %{_mandir}/man5/ncollectd-bonding.5*
@@ -2486,6 +2567,10 @@ fi
 %if %{build_with_filecount}
 %{_libdir}/%{name}/filecount.so
 %{_mandir}/man5/ncollectd-filecount.5*
+%endif
+%if %{build_with_freeradius}
+%{_libdir}/%{name}/freeradius.so
+%{_mandir}/man5/ncollectd-freeradius.5*
 %endif
 %if %{build_with_fscache}
 %{_libdir}/%{name}/fscache.so
@@ -2659,6 +2744,10 @@ fi
 %{_libdir}/%{name}/pdns.so
 %{_mandir}/man5/ncollectd-pdns.5*
 %endif
+%if %{build_with_postfix}
+%{_libdir}/%{name}/postfix.so
+%{_mandir}/man5/ncollectd-postfix.5*
+%endif
 %if %{build_with_pressure}
 %{_libdir}/%{name}/pressure.so
 %{_mandir}/man5/ncollectd-pressure.5*
@@ -2683,6 +2772,10 @@ fi
 %{_libdir}/%{name}/recursor.so
 %{_mandir}/man5/ncollectd-recursor.5*
 %endif
+%if %{build_with_resctrl}
+%{_libdir}/%{name}/resctrl.so
+%{_mandir}/man5/ncollectd-resctrl.5*
+%endif
 %if %{build_with_routeros}
 %{_libdir}/%{name}/routeros.so
 %{_mandir}/man5/ncollectd-routeros.5*
@@ -2694,6 +2787,10 @@ fi
 %if %{build_with_schedstat}
 %{_libdir}/%{name}/schedstat.so
 %{_mandir}/man5/ncollectd-schedstat.5*
+%endif
+%if %{build_with_sendmail}
+%{_libdir}/%{name}/sendmail.so
+%{_mandir}/man5/ncollectd-sendmail.5*
 %endif
 %if %{build_with_serial}
 %{_libdir}/%{name}/serial.so
@@ -3009,6 +3106,12 @@ fi
 %{_mandir}/man5/ncollectd-mq.5*
 %endif
 
+%if %{build_with_mssql}
+%files mssql
+%{_libdir}/%{name}/mssql.so
+%{_mandir}/man5/ncollectd-mssql.5*
+%endif
+
 %if %{build_with_mysql}
 %files mysql
 %{_libdir}/%{name}/mysql.so
@@ -3085,6 +3188,12 @@ fi
 %files perl
 %{_libdir}/%{name}/perl.so
 %{_mandir}/man5/ncollectd-perl.5*
+%endif
+
+%if %{build_with_pgbouncer}
+%files pgbouncer
+%{_libdir}/%{name}/pgbouncer.so
+%{_mandir}/man5/ncollectd-pgbouncer.5*
 %endif
 
 %if %{build_with_podman}
