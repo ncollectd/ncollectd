@@ -1,0 +1,18 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-resctrl 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd resctrl man page"
+.SH NAME
+ncollectd-resctrl \- Documentation of ncollectd's resctrl plugin
+.SH SYNOPSIS
+\fBload-plugin\fP resctrl
+.br
+\fBplugin\fP resctrl
+.SH DESCRIPTION
+The \fBresctrl\fP plugin collect performance metrics from the \f(CW/sys/fs/resctrl\fP interface
+to provide information on the last level cache.
+.PP
+For more information on the support of the user interface for resource control see
+.UR https://docs.kernel.org/arch/x86/resctrl.html
+.UE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

@@ -1,0 +1,9 @@
+# TYPE system_resctrl_llc_occupancy_bytes gauge
+system_resctrl_llc_occupancy_bytes{domain="0",group="global",hostname="localhost.localdomain"} 25583616
+system_resctrl_llc_occupancy_bytes{domain="1",group="global",hostname="localhost.localdomain"} 25731072
+# TYPE system_resctrl_mem_bandwidth_local_bytes counter
+system_resctrl_mem_bandwidth_local_bytes_total{domain="0",group="global",hostname="localhost.localdomain"} 855164362752
+system_resctrl_mem_bandwidth_local_bytes_total{domain="1",group="global",hostname="localhost.localdomain"} 880025518080
+# TYPE system_resctrl_mem_bandwidth_total_bytes counter
+system_resctrl_mem_bandwidth_total_bytes_total{domain="0",group="global",hostname="localhost.localdomain"} 877343514624
+system_resctrl_mem_bandwidth_total_bytes_total{domain="1",group="global",hostname="localhost.localdomain"} 890005561344
