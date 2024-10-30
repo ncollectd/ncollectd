@@ -191,7 +191,7 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
         struct stat statbuf;
         int status = fstatat(dfd, ent->d_name, &statbuf, 0);
         if (status != 0) {
-            if (errno = ENOENT)
+            if (errno == ENOENT)
                 continue;
             PLUGIN_ERROR("Cannot stat file: '%s' in dir '%s': %s.",
                          ent->d_name, ctx->queue_path, STRERRNO);
