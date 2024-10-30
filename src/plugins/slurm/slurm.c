@@ -392,7 +392,9 @@ static uint8_t slurm_node_state(uint32_t inx)
     bool drain_flag = (inx & NODE_STATE_DRAIN);
     bool fail_flag = (inx & NODE_STATE_FAIL);
     bool maint_flag = (inx & NODE_STATE_MAINT);
+#if SLURM_VERSION_NUMBER < SLURM_VERSION_NUM(24,5,0)
     bool net_flag = (inx & NODE_STATE_NET);
+#endif
 #if SLURM_VERSION_NUMBER >= SLURM_VERSION_NUM(21,8,0)
     bool reboot_flag = (inx & NODE_STATE_REBOOT_ISSUED);
 #else
@@ -531,8 +533,10 @@ static uint8_t slurm_node_state(uint32_t inx)
             return IDLE_POWERDOWN;
         if (no_resp_flag)
             return IDLE_NONRESP;
+#if SLURM_VERSION_NUMBER < SLURM_VERSION_NUM(24,5,0)
         if (net_flag)
             return PERFCTRS;
+#endif
         if (res_flag)
             return RESERVED;
         return IDLE;
