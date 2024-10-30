@@ -2245,9 +2245,16 @@ static int virt_notif_thread_init(virt_notif_thread_t *thread_data)
 static int start_event_loop(virt_ctx_t *ctx, virt_notif_thread_t *thread_data)
 {
     assert(thread_data != NULL);
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#endif
     thread_data->domain_event_cb_id = virConnectDomainEventRegisterAny(
             ctx->conn, NULL, VIR_DOMAIN_EVENT_ID_LIFECYCLE,
             VIR_DOMAIN_EVENT_CALLBACK(domain_lifecycle_event_cb), NULL, NULL);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
     if (thread_data->domain_event_cb_id == -1) {
         PLUGIN_ERROR("error while callback registering");
         return -1;
