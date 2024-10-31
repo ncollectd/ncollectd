@@ -12,6 +12,7 @@ typedef struct {
     char *unit;
     char *namespace;
     char *path;
+    label_set_t labels;
     sd_journal *journal;
     plugin_filter_t *filter;
     plugin_match_t *matches;
@@ -117,7 +118,7 @@ static int journal_read(user_data_t *ud)
 
     pthread_mutex_lock(&ctx->lock);
 
-    plugin_match_dispatch(ctx->matches, ctx->filter, true);
+    plugin_match_dispatch(ctx->matches, ctx->filter, &ctx->labels, true);
 
     pthread_mutex_unlock(&ctx->lock);
 
@@ -142,6 +143,8 @@ static void journal_free(void *arg)
     free(journal->unit);
     free(journal->namespace);
     free(journal->path);
+
+    label_set_reset(&journal->labels);
 
     if (journal->journal != NULL)
         sd_journal_close(journal->journal);
@@ -181,6 +184,8 @@ static int journal_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &journal->path);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &journal->labels);
         } else if (strcasecmp("match", child->key) == 0) {
             status = plugin_match_config(child, &journal->matches);
         } else if (strcasecmp(child->key, "filter") == 0) {
@@ -206,6 +211,8 @@ static int journal_config_instance(config_item_t *ci)
         journal_free(journal);
         return -1;
     }
+
+    label_set_add(&journal->labels, true, "instance", journal->name);
 
     journal->thread_running = true;
 
