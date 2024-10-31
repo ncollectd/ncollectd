@@ -116,10 +116,17 @@ static int logfile_config(config_item_t *ci)
     return 0;
 }
 
+static int logfile_shutdown(void)
+{
+    free(log_file);
+
+    return 0;
+}
 
 void module_register(void)
 {
     plugin_register_config("log_file", logfile_config);
     plugin_register_log("log_file", NULL, logfile_log, NULL);
     plugin_register_notification("log_file", NULL, logfile_notification, NULL);
+    plugin_register_shutdown("log_file", logfile_shutdown);
 }
