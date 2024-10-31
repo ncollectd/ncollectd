@@ -50,7 +50,7 @@ struct wh_callback_s {
     const char *content_type;
 
     CURL *curl;
-    curl_stats_t *curl_stats;
+    uint64_t curl_stats_flags;
     struct curl_slist *headers;
     char curl_errbuf[CURL_ERROR_SIZE];
 
@@ -150,8 +150,12 @@ static int wh_post(wh_callback_t *cb, char *data, size_t data_len)
 
     wh_log_http_error(cb);
 
-    if (cb->curl_stats != NULL) {
-        int rc = curl_stats_dispatch(cb->curl_stats, cb->curl, NULL);
+    if (cb->curl_stats_flags != 0) {
+        label_set_t labels = {
+            .ptr = (label_pair_t[]) {{.name = "instance", .value = cb->name }},
+            .num = 1,
+        };
+        int rc = curl_stats_dispatch(cb->curl, cb->curl_stats_flags, "write_http", &labels);
         if (rc != 0)
             PLUGIN_ERROR("curl_stats_dispatch failed with status %d", rc);
     }
@@ -423,9 +427,6 @@ static void wh_callback_free(void *data)
         cb->curl = NULL;
     }
 
-    curl_stats_destroy(cb->curl_stats);
-    cb->curl_stats = NULL;
-
     if (cb->headers != NULL) {
         curl_slist_free_all(cb->headers);
         cb->headers = NULL;
@@ -583,7 +584,6 @@ static int wh_config_instance(config_item_t *ci)
     cb->timeout = 0;
     cb->log_http_error = false;
     cb->headers = NULL;
-    cb->curl_stats = NULL;
     cb->send_buffer_max = 65536;
     cb->flush_timeout = plugin_get_interval()/2;
 
@@ -625,8 +625,8 @@ static int wh_config_instance(config_item_t *ci)
             status = config_format_notification(child, &cb->format_notification);
         } else if (strcasecmp("compress", child->key) == 0) {
             status = config_compress(child, &cb->compress);
-        } else if (strcasecmp("statistics", child->key) == 0) {
-            status = curl_stats_from_config(child, "write_http_", &cb->curl_stats);
+        } else if (strcasecmp("collect", child->key) == 0) {
+            status = curl_stats_from_config(child, &cb->curl_stats_flags);
         } else if (strcasecmp("store-rates", child->key) == 0) {
             status = cf_util_get_boolean(child, &cb->store_rates);
         } else if (strcasecmp("buffer-size", child->key) == 0) {

@@ -21,7 +21,7 @@ ncollectd-write_http \- Documentation of ncollectd's http write plugin
         \fBclient-key-pass\fP \fIkey-pass\fP
         \fBssl-version\fP \fIdefault|sslv2|sslv3|tlsv1|tlsv1_0|tlsv1_1|tlsv1_2|tlsv1_3\fP
         \fBcompress\fP \fInone|snappy|gzip|zlib|deflate\fP
-        \fBstatistics\fP \fItrue|false\fP
+        \fBcollect\fP \fIflags\fP
         \fBstore-rates\fP \fItrue|false\fP
         \fBbuffer-size\fP \fIsize\fP
         \fBlow-speed-limit\fP \fIlimit\fP
@@ -92,7 +92,63 @@ Define which SSL protocol version must be used.
 .TP
 \fBcompress\fP \fInone|snappy|gzip|zlib|deflate\fP
 .TP
-\fBstatistics\fP \fItrue|false\fP
+\fBcollect\fP \fIflags\fP
+.RS
+.TP
+\fBtotal_time\fP
+Total time of the transfer, including name resolving, TCP connect, etc.
+.TP
+\fBnamelookup_time\fP
+Time it took from the start until name resolving was completed.
+.TP
+\fBconnect_time\fP
+Time it took from the start until the connect to the remote host (or proxy)
+was completed.
+.TP
+\fBpretransfer_time\fP
+Time it took from the start until just before the transfer begins.
+.TP
+\fBsize_upload\fP
+The total amount of bytes that were uploaded.
+.TP
+\fBsize_download\fP
+The total amount of bytes that were downloaded.
+.TP
+\fBspeed_download\fP
+The average download speed that curl measured for the complete download.
+.TP
+\fBspeed_upload\fP
+The average upload speed that curl measured for the complete upload.
+.TP
+\fBheader_size\fP
+The total size of all the headers received.
+.TP
+\fBrequest_size\fP
+The total size of the issued requests.
+.TP
+\fBcontent_length_download\fP
+The content-length of the download.
+.TP
+\fBcontent_length_upload\fP
+The specified size of the upload.
+.TP
+\fBstarttransfer_time\fP
+Time it took from the start until the first byte was received.
+.TP
+\fBredirect_time\fP
+Time it took for all redirection steps include name lookup, connect,
+pre-transfer and transfer before final transaction was started.
+.TP
+\fBredirect_count\fP
+The total number of redirections that were actually followed.
+.TP
+\fBnum_connects\fP
+The number of new connections that were created to achieve the transfer.
+.TP
+\fBappconnect_time\fP
+Time it took from the start until the SSL connect/handshake to the remote
+host was completed.
+.RE
 .TP
 \fBstore-rates\fP \fItrue|false\fP
 If set to \fBtrue\fP, convert counter values to rates. If set to \fBfalse\fP (the

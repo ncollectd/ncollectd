@@ -37,7 +37,7 @@ typedef struct {
     bool response_time;
     bool response_code;
     int timeout;
-    curl_stats_t *stats;
+    uint64_t curl_stats_flags;
 
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
@@ -105,7 +105,6 @@ static void chttp_free(void *arg)
     free(ctx->cacert);
     free(ctx->post_body);
     curl_slist_free_all(ctx->headers);
-    curl_stats_destroy(ctx->stats);
 
     free(ctx->buffer);
 
@@ -350,8 +349,8 @@ static int chttp_read(user_data_t *ud)
         plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
     }
 
-    if (ctx->stats != NULL)
-        curl_stats_dispatch(ctx->stats, ctx->curl, &ctx->labels);
+    curl_stats_dispatch(ctx->curl, ctx->curl_stats_flags,
+                        ctx->metric_prefix != NULL ? ctx->metric_prefix : "http_", &ctx->labels);
 
     if (ctx->response_code) {
         long response_code = 0;
@@ -473,8 +472,8 @@ static int chttp_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_int(child, &ctx->timeout);
-        } else if (strcasecmp("statistics", child->key) == 0) {
-            status = curl_stats_from_config(child, "http_", &ctx->stats);
+        } else if (strcasecmp("collect", child->key) == 0) {
+            status = curl_stats_from_config(child, &ctx->curl_stats_flags);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &ctx->filter);
         } else {
@@ -494,7 +493,7 @@ static int chttp_config_instance(config_item_t *ci)
             break;
         }
 
-        if ((ctx->matches == NULL) && (ctx->stats == NULL) &&
+        if ((ctx->matches == NULL) && (ctx->curl_stats_flags == 0) &&
             !ctx->response_time && !ctx->response_code) {
             assert(ctx->instance != NULL);
             PLUGIN_WARNING("No (valid) 'match' block "
