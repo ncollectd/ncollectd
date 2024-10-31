@@ -1,0 +1,53 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-journal 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd journal man page"
+.SH NAME
+ncollectd-journal \- Documentation of ncollectd's journal plugin
+.SH SYNOPSIS
+\fBload-plugin\fP journal
+.br
+\fBplugin\fP journal {
+    \fBinstance\fP \fIname\fP {
+        \fBnamespace\fP \fInamespace\fP
+        \fBpath\fP \fIpath\fP
+        \fBunit\fP \fIname\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBmatch\fP \fImatch\fP {
+            ...
+        }
+        \fBfilter\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBjournal\fP plugin reads logs from the systemd journal and process
+the lines using a match plugin.
+.PP
+The configuration consists of one or more \fBinstance\fP blocks that define a
+\fBfilename\fP to read and a match plugin to process the lines.
+.PP
+The \fBfile\fP block has the following options:
+.TP
+\fBnamespace\fP \fInamespace\fP
+Set the journal namespace from which to read journal messages.
+.TP
+\fBpath\fP \fIpath\fP
+Set the directory from which to read journal files.
+.TP
+\fBunit\fP \fIname\fP
+Get messages for the specified systemd unit.
+.TP
+\fBinterval\fP \fIseconds\fP
+Configures the interval in which to read lines from this file.
+Defaults to the plugin's default interval.
+.TP
+\fBmatch\fP \fImatch\fP
+Configure the \fImatch\fP plugin to process the lines of the file.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
