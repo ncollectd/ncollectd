@@ -42,7 +42,7 @@ typedef struct {
 
     struct curl_slist *headers;
     char *post_body;
-    curl_stats_t *stats;
+    uint64_t curl_stats_flags;
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
 
@@ -150,7 +150,6 @@ static void scraper_instance_free(void *arg)
     plugin_filter_free(target->filter);
 
     strbuf_destroy(&target->parser.buf);
-    curl_stats_destroy(target->stats);
     free(target);
 }
 
@@ -453,8 +452,8 @@ static int scraper_config_target(config_item_t *ci)
             status = cf_util_get_label(child, &target->label);
         } else if (strcasecmp("metric-prefix", child->key) == 0) {
             status = cf_util_get_string(child, &target->metric_prefix);
-        } else if (strcasecmp("statistics", child->key) == 0) {
-            status = curl_stats_from_config(child, "scraper_", &target->stats);
+        } else if (strcasecmp("collect", child->key) == 0) {
+            status = curl_stats_from_config(child, &target->curl_stats_flags);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &target->filter);
         } else {
