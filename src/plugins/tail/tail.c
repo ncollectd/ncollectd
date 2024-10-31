@@ -15,6 +15,7 @@
 typedef struct {
     tail_t tail;
     bool whole;
+    label_set_t labels;
     plugin_filter_t *filter;
     plugin_match_t *matches;
 } ctail_t;
@@ -55,7 +56,7 @@ static int ctail_read(user_data_t *ud)
     if (ctail->whole)
         tail_close(&ctail->tail);
 
-    plugin_match_dispatch(ctail->matches, ctail->filter, true);
+    plugin_match_dispatch(ctail->matches, ctail->filter, &ctail->labels, true);
 
     return 0;
 }
@@ -72,6 +73,8 @@ static void ctail_free(void *arg)
         plugin_match_shutdown(ctail->matches);
 
     plugin_filter_free(ctail->filter);
+
+    label_set_reset(&ctail->labels);
 
     free(ctail);
     return;
@@ -99,6 +102,8 @@ static int ctail_config_file(config_item_t *ci)
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("whole", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctail->whole);
+        } else if (strcasecmp("label", child->key) == 0) {
+            status = cf_util_get_label(child, &ctail->labels);
         } else if (strcasecmp("match", child->key) == 0) {
             status = plugin_match_config(child, &ctail->matches);
         } else if (strcasecmp(child->key, "filter") == 0) {
@@ -124,6 +129,8 @@ static int ctail_config_file(config_item_t *ci)
         ctail_free(ctail);
         return -1;
     }
+
+    label_set_add(&ctail->labels, true, "instance", ctail->tail.file);
 
     return plugin_register_complex_read("tail", ctail->tail.file, ctail_read, interval,
                                         &(user_data_t){.data=ctail, .free_func=ctail_free});

@@ -298,6 +298,8 @@ static int match_metric_value_set(match_metric_t *mm, match_metric_type_t type, 
     case MATCH_METRIC_TYPE_GAUGE: {
         double value = 0;
         if (type != MATCH_METRIC_TYPE_GAUGE_INC) {
+            if (svalue == NULL)
+                return -1;
             char *endptr = NULL;
             value = (double)strtod(svalue, &endptr);
             if (svalue == endptr)
@@ -352,7 +354,9 @@ static int match_metric_value_set(match_metric_t *mm, match_metric_type_t type, 
         break;
     case MATCH_METRIC_TYPE_COUNTER: {
         uint64_t value = 0;
-        if (type != MATCH_METRIC_TYPE_GAUGE_INC) {
+        if (type != MATCH_METRIC_TYPE_COUNTER_INC) {
+            if (svalue == NULL)
+                return -1;
             char *endptr = NULL;
             value = (uint64_t)strtoull(svalue, &endptr, 0);
             if (svalue == endptr)
@@ -492,7 +496,8 @@ int plugin_match_metric_family_set_add(match_metric_family_set_t *set,
     return 0;
 }
 
-int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *filter, bool reset)
+int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *filter,
+                          label_set_t *labels, bool reset)
 {
     plugin_match_t *pm = plugin_match_list;
     while (pm != NULL) {
@@ -521,20 +526,18 @@ int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *fi
                 .type = type,
             };
 
-            label_set_t *labels = NULL;
+            label_set_t *mlabels = NULL;
             match_metric_t *mm = NULL;
             c_avl_iterator_t *miter = c_avl_get_iterator(mfam->metrics);
-            while (c_avl_iterator_next(miter,(void *)&labels, (void *)&mm) == 0) {
-                metric_t m = {
-                    .label = {.ptr = mm->label.ptr, .num = mm->label.num }
-                };
+            while (c_avl_iterator_next(miter,(void *)&mlabels, (void *)&mm) == 0) {
+                metric_t m = {0};
 
                 switch (fam.type) {
                 case METRIC_TYPE_GAUGE:
-                    m.value.gauge.float64 = mm->value.gauge.float64;
+                    m.value = VALUE_GAUGE(mm->value.gauge.float64);
                     break;
                 case METRIC_TYPE_COUNTER:
-                    m.value.counter.uint64 = mm->value.counter.uint64;
+                    m.value = VALUE_COUNTER(mm->value.counter.uint64);
                     break;
                 default:
                     PLUGIN_WARNING("unsupported metric type in match");
@@ -542,7 +545,12 @@ int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *fi
                     break;
                 }
 
+                label_set_clone(&m.label, *labels);
+                label_set_add_set(&m.label, true, mm->label);
+
                 metric_family_metric_append(&fam, m);
+
+                label_set_reset(&m.label);
 
                 if (reset)
                     match_metric_value_reset(mm, mfam->type);

@@ -371,7 +371,7 @@ static int chttp_read(user_data_t *ud)
     if (status != 0)
         PLUGIN_WARNING("plugin_match failed.");
 
-    plugin_match_dispatch(ctx->matches, ctx->filter, true);
+    plugin_match_dispatch(ctx->matches, ctx->filter, &ctx->labels, true);
 
     return 0;
 }

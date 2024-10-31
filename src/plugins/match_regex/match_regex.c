@@ -123,7 +123,6 @@ static void match_regex_destroy(void *user_data)
     free(regex);
 }
 
-
 static int match_regex_match(match_metric_family_set_t *set, char *buffer, void *user_data)
 {
     match_regex_t *regex = user_data;
@@ -217,12 +216,10 @@ static int match_regex_match(match_metric_family_set_t *set, char *buffer, void 
             }
         }
 
-        char *lval = match_regex_substr(buffer, &re_match[regex_metric->time_from]);
-        if (lval != NULL) {
-            plugin_match_metric_family_set_add(set, buf.ptr, regex_metric->help, NULL,
-                                               regex_metric->type, &mlabel, lval, t);
-            free(lval);
-        }
+        char *lval = match_regex_substr(buffer, &re_match[regex_metric->value_from]);
+        plugin_match_metric_family_set_add(set, buf.ptr, regex_metric->help, NULL,
+                                           regex_metric->type, &mlabel, lval, t);
+        free(lval);
 
         label_set_reset(&mlabel);
         strbuf_destroy(&buf);
@@ -280,17 +277,6 @@ static int match_regex_config_append_label(metric_label_from_t **var, size_t *le
     *len = (*len) + 1;
     return 0;
 }
-
-/*
-  match regex {
-      metric-prefix
-      label
-      metric {
-          regex "\\<sshd[^:]*: Invalid user [^ ]+ from\\>"
-          type counter inc
-      }
-  }
-*/
 
 static int match_regex_config_metric(const config_item_t *ci, match_regex_t *regex)
 {
@@ -358,7 +344,7 @@ static int match_regex_config_metric(const config_item_t *ci, match_regex_t *reg
         return -1;
     }
 
-    if ((regex_metric->metric == NULL) || (regex_metric->metric_from < 0)) {
+    if ((regex_metric->metric == NULL) && (regex_metric->metric_from < 0)) {
         PLUGIN_ERROR("'metric' or 'metric-from' missing in 'metric' block.");
         return -1;
     }

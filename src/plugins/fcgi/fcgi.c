@@ -445,7 +445,7 @@ static int fcgi_read(user_data_t *ud)
         status = plugin_match(ctx->matches, body);
         if (status != 0)
             PLUGIN_WARNING("plugin_match failed.");
-        plugin_match_dispatch(ctx->matches, ctx->filter, true);
+        plugin_match_dispatch(ctx->matches, ctx->filter, &ctx->labels, true);
     }
 
     return 0;
