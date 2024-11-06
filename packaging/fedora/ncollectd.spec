@@ -65,6 +65,7 @@
 %define build_with_irq 0%{!?_without_irq:1}
 %define build_with_java 0%{!?_without_java:1}
 %define build_with_jolokia 0%{!?_without_jolokia:1}
+%define build_with_journal 0%{!?_without_journal:1}
 %define build_with_kafka 0%{!?_without_kafka:1}
 %define build_with_keepalived 0%{!?_without_keepalived:1}
 %define build_with_ksm 0%{!?_without_ksm:1}
@@ -237,6 +238,7 @@
 %define build_with_mmc 0%{?_with_mmc:1}
 %define build_with_smart 0%{?_with_smart:1}
 %define build_with_systemd 0%{?_with_systemd:1}
+%define build_with_journal 0%{?_with_journal:1}
 %endif
 %if 0%{?rhel} <= 7
 %define build_with_cpusleep 0%{?_with_cpusleep:1}
@@ -1397,6 +1399,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_jolokia -DPLUGIN_JOLOKIA:BOOL=OFF
 %endif
 
+%if %{build_with_journal}
+%define _build_with_journal -DPLUGIN_IRQ:BOOL=ON
+%else
+%define _build_with_journal -DPLUGIN_IRQ:BOOL=OFF
+%endif
+
 %if %{build_with_kafka}
 %define _build_with_kafka -DPLUGIN_KAFKA:BOOL=ON
 %else
@@ -2239,6 +2247,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_irq} \
     %{?_build_with_java} \
     %{?_build_with_jolokia} \
+    %{?_build_with_journal} \
     %{?_build_with_kafka} \
     %{?_build_with_keepalived} \
     %{?_build_with_ksm} \
@@ -2607,6 +2616,10 @@ fi
 %if %{build_with_irq}
 %{_libdir}/%{name}/irq.so
 %{_mandir}/man5/ncollectd-irq.5*
+%endif
+%if %{build_with_journal}
+%{_libdir}/%{name}/journal.so
+%{_mandir}/man5/ncollectd-journal.5*
 %endif
 %if %{build_with_keepalived}
 %{_libdir}/%{name}/keepalived.so
