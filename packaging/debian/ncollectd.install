@@ -20,6 +20,8 @@ usr/lib/ncollectd/battery.so
 usr/share/man/man5/ncollectd-battery.5
 usr/lib/ncollectd/bcache.so
 usr/share/man/man5/ncollectd-bcache.5
+usr/lib/ncollectd/beanstalkd.so
+usr/share/man/man5/ncollectd-beanstalkd.5
 usr/lib/ncollectd/bonding.so
 usr/share/man/man5/ncollectd-bonding.5
 usr/lib/ncollectd/btrfs.so
@@ -70,6 +72,8 @@ usr/lib/ncollectd/fhcount.so
 usr/share/man/man5/ncollectd-fhcount.5
 usr/lib/ncollectd/filecount.so
 usr/share/man/man5/ncollectd-filecount.5
+usr/lib/ncollectd/freeradius.so
+usr/share/man/man5/ncollectd-freeradius.so
 usr/lib/ncollectd/fscache.so
 usr/share/man/man5/ncollectd-fscache.5
 usr/lib/ncollectd/hugepages.so
@@ -86,6 +90,8 @@ usr/lib/ncollectd/ipvs.so
 usr/share/man/man5/ncollectd-ipvs.5
 usr/lib/ncollectd/irq.so
 usr/share/man/man5/ncollectd-irq.5
+usr/lib/ncollectd/journal.so
+usr/share/man/man5/ncollectd-journal.5
 usr/lib/ncollectd/keepalived.so
 usr/share/man/man5/ncollectd-keepalived.5
 usr/lib/ncollectd/ksm.so
@@ -138,6 +144,8 @@ usr/lib/ncollectd/openvpn.so
 usr/share/man/man5/ncollectd-openvpn.5
 usr/lib/ncollectd/ping.so
 usr/share/man/man5/ncollectd-ping.5
+usr/lib/ncollectd/postfix.so
+usr/share/man/man5/ncollectd-postfix.5
 usr/lib/ncollectd/pressure.so
 usr/share/man/man5/ncollectd-pressure.5
 usr/lib/ncollectd/processes.so
@@ -148,12 +156,16 @@ usr/lib/ncollectd/python.so
 usr/share/man/man5/ncollectd-python.5
 usr/lib/ncollectd/quota.so
 usr/share/man/man5/ncollectd-quota.5
+usr/lib/ncollectd/resctrl.so
+usr/share/man/man5/ncollectd-resctrl.5
 usr/lib/ncollectd/routeros.so
 usr/share/man/man5/ncollectd-routeros.5
 usr/lib/ncollectd/rtcache.so
 usr/share/man/man5/ncollectd-rtcache.5
 usr/lib/ncollectd/schedstat.so
 usr/share/man/man5/ncollectd-schedstat.5
+usr/lib/ncollectd/sendmail.so
+usr/share/man/man5/ncollectd-sendmail.5
 usr/lib/ncollectd/serial.so
 usr/share/man/man5/ncollectd-serial.5
 usr/lib/ncollectd/slabinfo.so
