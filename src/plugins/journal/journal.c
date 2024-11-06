@@ -53,7 +53,11 @@ static void *journal_thread_read(void *data)
         int status = 0;
 
         if (ctx->namespace != NULL) {
+#ifdef HAVE_SD_JOURNAL_OPEN_NAMESPACE
             status = sd_journal_open_namespace(&ctx->journal, ctx->namespace, 0);
+#else
+            status = -1;
+#endif
         } else if (ctx->path != NULL) {
             status = sd_journal_open_directory(&ctx->journal, ctx->path, 0);
         } else {
@@ -179,7 +183,12 @@ static int journal_config_instance(config_item_t *ci)
         if (strcasecmp("unit", child->key) == 0) {
             status = cf_util_get_string(child, &journal->unit);
         } else if (strcasecmp("namespace", child->key) == 0) {
+#ifdef HAVE_SD_JOURNAL_OPEN_NAMESPACE
             status = cf_util_get_string(child, &journal->namespace);
+#else
+	    PLUGIN_ERROR("The option namespace is not supported in this version of systemd.");
+	    status = -1;
+#endif
         } else if (strcasecmp("path", child->key) == 0) {
             status = cf_util_get_string(child, &journal->path);
         } else if (strcasecmp("interval", child->key) == 0) {
