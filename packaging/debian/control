@@ -42,7 +42,8 @@ Build-Depends: gcc, bison, flex, cmake, gperf, pkg-config,
  python3-dev,
  libqpid-proton11-dev,
  libmosquitto-dev,
- libslurm-dev
+ libslurm-dev,
+ freetds-dev
 Build-Conflicts: libpthread-dev, libhal-dev, python-dev
 Standards-Version: 4.2.1
 Homepage: https://ncollectd.org/
@@ -201,6 +202,12 @@ Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: The mosquitto plugin ncollectd metrics from a mosquitto broker.
 
+Package: ncollectd-mssql
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: MS SQL querying plugin.
+
 Package: ncollectd-mysql
 Section: utils
 Architecture: any
@@ -277,6 +284,12 @@ Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: The Perl plugin embeds a Perl interpreter into ncollectd and exposes the
  application programming interface (API) to Perl-scripts.
+
+Package: ncollectd-pgbouncer
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The pgbouncer plugin collects metrics from a PgBouncer instance.
 
 Package: ncollectd-podman
 Section: utils
