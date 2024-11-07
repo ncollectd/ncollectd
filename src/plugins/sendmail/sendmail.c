@@ -291,7 +291,7 @@ static int sendmail_read_mailers(sendmail_ctx_t *ctx)
                     break;
             }
             if (i == n) {
-                strncpy(ctx->mailers[n], mailer, sizeof(ctx->mailers[n]));
+                sstrncpy(ctx->mailers[n], mailer, MAILER_LEN);
                 n++;
             }
 
