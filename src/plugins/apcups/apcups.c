@@ -298,7 +298,7 @@ static int apc_query_server(apc_ctx_t *ctx, apc_detail_t *apcups_detail)
             if ((tokptr = strtok_r(NULL, " :\t", &toksaveptr)) == NULL)
                 continue;
 
-            double value;
+            double value = 0;
             if (strtodouble(tokptr, &value) != 0)
                 continue;
 
