@@ -10,6 +10,7 @@
 %define build_with_apache 0%{!?_without_apache:1}
 %define build_with_apcups 0%{!?_without_apcups:1}
 %define build_with_ats 0%{!?_without_ats:1}
+%define build_with_beanstalkd 0%{!?_without_beanstalkd:1}
 %define build_with_bind 0%{!?_without_bind:1}
 %define build_with_contextswitch 0%{!?_without_contextswitch:1}
 %define build_with_cpu 0%{!?_without_cpu:1}
@@ -18,6 +19,7 @@
 %define build_with_dnsmasq 0%{!?_without_dnsmasq:1}
 %define build_with_exec 0%{!?_without_exec:1}
 %define build_with_fcgi 0%{!?_without_fcgi:1}
+%define build_with_freeradius 0%{!?_without_freeradius:1}
 %define build_with_filecount 0%{!?_without_filecount:1}
 %define build_with_haproxy 0%{!?_without_haproxy:1}
 %define build_with_hba 0%{!?_without_hba:1}
@@ -40,6 +42,8 @@
 %define build_with_match_xpath 0%{!?_without_match_xpath:1}
 %define build_with_memcached 0%{!?_without_memcached:1}
 %define build_with_memory 0%{!?_without_memory:1}
+%define build_with_mongodb 0%{!?_without_mongodb:1}
+%define build_with_mysql 0%{!?_without_mysql:1}
 %define build_with_nagios_check 0%{!?_without_nagios_check:1}
 %define build_with_nginx 0%{!?_without_nginx:1}
 %define build_with_nginx_vts 0%{!?_without_nginx_vts:1}
@@ -51,11 +55,15 @@
 %define build_with_openvpn 0%{!?_without_openvpn:1}
 %define build_with_pdns 0%{!?_without_pdns:1}
 %define build_with_ping 0%{!?_without_ping:1}
+%define build_with_pgbouncer 0%{!?_without_pgbouncer:1}
+%define build_with_postgresql 0%{!?_without_postgresql:1}
+%define build_with_postfix 0%{!?_without_postfix:1}
 %define build_with_processes 0%{!?_without_processes:1}
 %define build_with_python 0%{!?_without_python:1}
 %define build_with_recursor 0%{!?_without_recursor:1}
 %define build_with_routeros 0%{!?_without_routeros:1}
 %define build_with_scraper 0%{!?_without_scraper:1}
+%define build_with_sendmail 0%{!?_without_sendmail:1}
 %define build_with_squid 0%{!?_without_squid:1}
 %define build_with_statsd 0%{!?_without_statsd:1}
 %define build_with_swap 0%{!?_without_swap:1}
@@ -72,6 +80,8 @@
 %define build_with_write_file 0%{!?_without_write_file:1}
 %define build_with_write_http 0%{!?_without_write_http:1}
 %define build_with_write_log 0%{!?_without_write_log:1}
+%define build_with_write_mongodb 0%{!?_without_write_mongodb:1}
+%define build_with_write_postgresql 0%{!?_without_write_postgresql:1}
 %define build_with_write_tcp 0%{!?_without_write_tcp:1}
 %define build_with_write_udp 0%{!?_without_write_udp:1}
 %define build_with_zookeeper 0%{!?_without_zookeeper:1}
@@ -205,6 +215,27 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 The mq plugin get metrics from a MQ broker.
 %endif
 
+%if %{build_with_mongodb}
+%package mongodb
+Summary: Mongodb plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: mongo-c-driver-devel
+%description mongodb
+The mongodb pluginb provides metrics from a mongodb database.
+%endif
+
+%if %{build_with_mysql}
+%package mysql
+Summary: MySQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: mariadb-connector-c-devel
+%description mysql
+MySQL querying plugin. This plugin provides data of issued commands, called
+handlers and database traffic.
+%endif
+
 %if %{build_with_nginx}
 %package nginx
 Summary: Nginx plugin for ncollectd
@@ -244,6 +275,26 @@ BuildRequires: unixODBC-devel
 %description odbc
 The odbc plugin uses ODBC, a database abstraction library, to execute SQL
 statements on a database and read back the result.
+%endif
+
+%if %{build_with_pgbouncer}
+%package pgbouncer
+Summary: PgBouncer plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: postgresql-devel
+%description pgbouncer
+The pgbouncer plugin collects metrics from a PgBouncer instance.
+%endif
+
+%if %{build_with_postgresql}
+%package postgresql
+Summary: PostgreSQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: postgresql-devel
+%description postgresql
+The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL database.
 %endif
 
 %if %{build_with_python}
@@ -298,6 +349,27 @@ The write_http plugin sends the values collected by ncollectd to a web-server
 using HTTP POST requests.
 %endif
 
+%if %{build_with_write_mongodb}
+%package write_mongodb
+Summary: Write mongodb plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: mongo-c-driver-devel
+%description write_mongodb
+The write_mongodb plugin write values to a mongodb database.
+%endif
+
+%if %{build_with_write_postgresql}
+%package write_postgresql
+Summary: Write PostgreSQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: postgresql-devel
+%description write_postgresql
+The write_postgresql plugin write values to a postgresql database.
+database.
+%endif
+
 %prep
 %setup -q
 
@@ -319,6 +391,12 @@ using HTTP POST requests.
 %define _build_with_ats -DPLUGIN_ATS:BOOL=ON
 %else
 %define _build_with_ats -DPLUGIN_ATS:BOOL==OFF
+%endif
+
+%if %{build_with_beanstalkd}
+%define _build_with_beanstalkd -DPLUGIN_BEANSTALKD:BOOL=ON
+%else
+%define _build_with_beanstalkd -DPLUGIN_BEANSTALKD:BOOL=OFF
 %endif
 
 %if %{build_with_bind}
@@ -361,6 +439,12 @@ using HTTP POST requests.
 %define _build_with_exec -DPLUGIN_EXEC:BOOL=ON
 %else
 %define _build_with_exec -DPLUGIN_EXEC:BOOL==OFF
+%endif
+
+%if %{build_with_freeradius}
+%define _build_with_freeradius -DPLUGIN_FREERADIUS:BOOL=ON
+%else
+%define _build_with_freeradius -DPLUGIN_FREERADIUS:BOOL=OFF
 %endif
 
 %if %{build_with_fcgi}
@@ -501,6 +585,18 @@ using HTTP POST requests.
 %define _build_with_memory -DPLUGIN_MEMORY:BOOL==OFF
 %endif
 
+%if %{build_with_mongodb}
+%define _build_with_mongodb -DPLUGIN_MONGODB:BOOL=ON
+%else
+%define _build_with_mongodb -DPLUGIN_MONGODB:BOOL=OFF
+%endif
+
+%if %{build_with_mysql}
+%define _build_with_mysql -DPLUGIN_MYSQL:BOOL=ON
+%else
+%define _build_with_mysql -DPLUGIN_MYSQL:BOOL=OFF
+%endif
+
 %if %{build_with_nagios_check}
 %define _build_with_nagios_check -DPLUGIN_NAGIOS_CHECK:BOOL=ON
 %else
@@ -567,6 +663,24 @@ using HTTP POST requests.
 %define _build_with_ping -DPLUGIN_PING:BOOL==OFF
 %endif
 
+%if %{build_with_pgbouncer}
+%define _build_with_pgbouncer -DPLUGIN_PGBOUNCER:BOOL=ON
+%else
+%define _build_with_pgbouncer -DPLUGIN_PGBOUNCER:BOOL=OFF
+%endif
+
+%if %{build_with_postfix}
+%define _build_with_postfix -DPLUGIN_POSTFIX:BOOL=ON
+%else
+%define _build_with_postfix -DPLUGIN_POSTFIX:BOOL=OFF
+%endif
+
+%if %{build_with_postgresql}
+%define _build_with_postgresql -DPLUGIN_POSTGRESQL:BOOL=ON
+%else
+%define _build_with_postgresql -DPLUGIN_POSTGRESQL:BOOL=OFF
+%endif
+
 %if %{build_with_processes}
 %define _build_with_processes -DPLUGIN_PROCESSES:BOOL=ON
 %else
@@ -595,6 +709,12 @@ using HTTP POST requests.
 %define _build_with_scraper -DPLUGIN_SCRAPER:BOOL=ON
 %else
 %define _build_with_scraper -DPLUGIN_SCRAPER:BOOL==OFF
+%endif
+
+%if %{build_with_sendmail}
+%define _build_with_sendmail -DPLUGIN_SENDMAIL:BOOL=ON
+%else
+%define _build_with_sendmail -DPLUGIN_SENDMAIL:BOOL=OFF
 %endif
 
 %if %{build_with_squid}
@@ -693,6 +813,18 @@ using HTTP POST requests.
 %define _build_with_write_log -DPLUGIN_WRITE_LOG:BOOL==OFF
 %endif
 
+%if %{build_with_write_mongodb}
+%define _build_with_write_mongodb -DPLUGIN_WRITE_MONGODB:BOOL=ON
+%else
+%define _build_with_write_mongodb -DPLUGIN_WRITE_MONGODB:BOOL=OFF
+%endif
+
+%if %{build_with_write_postgresql}
+%define _build_with_write_postgresql -DPLUGIN_WRITE_POSTGRESQL:BOOL=ON
+%else
+%define _build_with_write_postgresql -DPLUGIN_WRITE_POSTGRESQL:BOOL=OFF
+%endif
+
 %if %{build_with_write_tcp}
 %define _build_with_write_tcp -DPLUGIN_WRITE_TCP:BOOL=ON
 %else
@@ -758,6 +890,7 @@ export OBJECT_MODE=64
         %{?_build_with_apache} \
         %{?_build_with_apcups} \
         %{?_build_with_ats} \
+        %{?_build_with_beanstalkd} \
         %{?_build_with_bind} \
         %{?_build_with_contextswitch} \
         %{?_build_with_cpu} \
@@ -765,6 +898,7 @@ export OBJECT_MODE=64
         %{?_build_with_disk} \
         %{?_build_with_dnsmasq} \
         %{?_build_with_exec} \
+        %{?_build_with_freeradius} \
         %{?_build_with_fcgi} \
         %{?_build_with_filecount} \
         %{?_build_with_haproxy} \
@@ -788,6 +922,8 @@ export OBJECT_MODE=64
         %{?_build_with_match_xpath} \
         %{?_build_with_memcached} \
         %{?_build_with_memory} \
+        %{?_build_with_mongodb} \
+        %{?_build_with_mysql} \
         %{?_build_with_nagios_check} \
         %{?_build_with_nginx} \
         %{?_build_with_nginx_vts} \
@@ -799,11 +935,15 @@ export OBJECT_MODE=64
         %{?_build_with_openvpn} \
         %{?_build_with_pdns} \
         %{?_build_with_ping} \
+        %{?_build_with_pgbouncer} \
+        %{?_build_with_postfix} \
+        %{?_build_with_postgresql} \
         %{?_build_with_processes} \
         %{?_build_with_python} \
         %{?_build_with_recursor} \
         %{?_build_with_routeros} \
         %{?_build_with_scraper} \
+        %{?_build_with_sendmail} \
         %{?_build_with_squid} \
         %{?_build_with_statsd} \
         %{?_build_with_swap} \
@@ -820,6 +960,8 @@ export OBJECT_MODE=64
         %{?_build_with_write_file} \
         %{?_build_with_write_http} \
         %{?_build_with_write_log} \
+        %{?_build_with_write_mongodb} \
+        %{?_build_with_write_postgresql} \
         %{?_build_with_write_tcp} \
         %{?_build_with_write_udp} \
         %{?_build_with_zookeeper} \
@@ -873,6 +1015,7 @@ export OBJECT_MODE=64
         -DPLUGIN_IPVS:BOOL=OFF \
         -DPLUGIN_IRQ:BOOL=OFF \
         -DPLUGIN_JAVA:BOOL=OFF \
+        -DPLUGIN_JOURNAL:BOOL=OFF \
         -DPLUGIN_KAFKA:BOOL=OFF \
         -DPLUGIN_KSM:BOOL=OFF \
         -DPLUGIN_LOCKS:BOOL=OFF \
@@ -882,9 +1025,7 @@ export OBJECT_MODE=64
         -DPLUGIN_MEMINFO:BOOL=OFF \
         -DPLUGIN_MMC:BOOL=OFF \
         -DPLUGIN_MODBUS:BOOL=OFF \
-        -DPLUGIN_MONGODB:BOOL=OFF \
         -DPLUGIN_MOSQUITTO:BOOL=OFF \
-        -DPLUGIN_MYSQL:BOOL=OFF \
         -DPLUGIN_NETSTAT_UDP:BOOL=OFF \
         -DPLUGIN_NFACCT:BOOL=OFF \
         -DPLUGIN_NFCONNTRACK:BOOL=OFF \
@@ -898,12 +1039,12 @@ export OBJECT_MODE=64
         -DPLUGIN_PCAP:BOOL=OFF \
         -DPLUGIN_PERL:BOOL=OFF \
         -DPLUGIN_PF:BOOL=OFF \
-        -DPLUGIN_POSTGRESQL:BOOL=OFF \
         -DPLUGIN_PRESSURE:BOOL=OFF \
         -DPLUGIN_PROTOCOLS:BOOL=OFF \
         -DPLUGIN_QUOTA:BOOL=OFF \
         -DPLUGIN_RAPL:BOOL=OFF \
         -DPLUGIN_REDIS:BOOL=OFF \
+        -DPLUGIN_RESCTRL:BOOL=OFF \
         -DPLUGIN_RTCACHE:BOOL=OFF \
         -DPLUGIN_SCHEDSTAT:BOOL=OFF \
         -DPLUGIN_SENSORS:BOOL=OFF \
@@ -930,9 +1071,7 @@ export OBJECT_MODE=64
         -DPLUGIN_WRITE_AMQP1:BOOL=OFF \
         -DPLUGIN_WRITE_EXPORTER:BOOL=OFF \
         -DPLUGIN_WRITE_KAFKA:BOOL=OFF \
-        -DPLUGIN_WRITE_MONGODB:BOOL=OFF \
         -DPLUGIN_WRITE_MQTT:BOOL=OFF \
-        -DPLUGIN_WRITE_POSTGRESQL:BOOL=OFF \
         -DPLUGIN_WRITE_REDIS:BOOL=OFF \
         -DPLUGIN_XENCPU:BOOL=OFF \
         -DPLUGIN_XFRM:BOOL=OFF \
@@ -1001,6 +1140,10 @@ fi
 %{_libdir}/%{name}/apcups.so
 %{_datadir}/man/man5/ncollectd-apcups.5*
 %endif
+%if %{build_with_beanstalkd}
+%{_libdir}/%{name}/beanstalkd.so
+%{_datadir}/man/man5/ncollectd-beanstalkd.5*
+%endif
 %if %{build_with_contextswitch}
 %{_libdir}/%{name}/contextswitch.so
 %{_datadir}/man/man5/ncollectd-contextswitch.5*
@@ -1028,6 +1171,10 @@ fi
 %if %{build_with_fcgi}
 %{_libdir}/%{name}/fcgi.so
 %{_datadir}/man/man5/ncollectd-fcgi.5*
+%endif
+%if %{build_with_freeradius}
+%{_libdir}/%{name}/freeradius.so
+%{_datadir}/man/man5/ncollectd-freeradius.5*
 %endif
 %if %{build_with_filecount}
 %{_libdir}/%{name}/filecount.so
@@ -1129,6 +1276,10 @@ fi
 %{_libdir}/%{name}/ping.so
 %{_datadir}/man/man5/ncollectd-ping.5*
 %endif
+%if %{build_with_postfix}
+%{_libdir}/%{name}/postfix.so
+%{_datadir}/man/man5/ncollectd-postfix.5*
+%endif
 %if %{build_with_processes}
 %{_libdir}/%{name}/processes.so
 %{_datadir}/man/man5/ncollectd-processes.5*
@@ -1140,6 +1291,10 @@ fi
 %if %{build_with_routeros}
 %{_libdir}/%{name}/routeros.so
 %{_datadir}/man/man5/ncollectd-routeros.5*
+%endif
+%if %{build_with_sendmail}
+%{_libdir}/%{name}/sendmail.so
+%{_datadir}/man/man5/ncollectd-sendmail.5*
 %endif
 %if %{build_with_statsd}
 %{_libdir}/%{name}/statsd.so
@@ -1264,6 +1419,18 @@ fi
 %{_datadir}/man/man5/ncollectd-mq.5*
 %endif
 
+%if %{build_with_mongodb}
+%files mongodb
+%{_libdir}/%{name}/mongodb.so
+%{_datadir}/man/man5/ncollectd-mongodb.5*
+%endif
+
+%if %{build_with_mysql}
+%files mysql
+%{_libdir}/%{name}/mysql.so
+%{_datadir}/man/man5/ncollectd-mysql.5*
+%endif
+
 %if %{build_with_nginx}
 %files nginx
 %{_libdir}/%{name}/nginx.so
@@ -1280,6 +1447,18 @@ fi
 %files odbc
 %{_libdir}/%{name}/odbc.so
 %{_datadir}/man/man5/ncollectd-odbc.5*
+%endif
+
+%if %{build_with_pgbouncer}
+%files pgbouncer
+%{_libdir}/%{name}/pgbouncer.so
+%{_datadir}/man/man5/ncollectd-pgbouncer.5*
+%endif
+
+%if %{build_with_postgresql}
+%files postgresql
+%{_libdir}/%{name}/postgresql.so
+%{_datadir}/man/man5/ncollectd-postgresql.5*
 %endif
 
 %if %{build_with_python}
@@ -1310,6 +1489,18 @@ fi
 %files write_http
 %{_libdir}/%{name}/write_http.so
 %{_datadir}/man/man5/ncollectd-write_http.5*
+%endif
+
+%if %{build_with_write_mongodb}
+%files write_mongodb
+%{_libdir}/%{name}/write_mongodb.so
+%{_datadir}/man/man5/ncollectd-write_mongodb.5*
+%endif
+
+%if %{build_with_write_postgresql}
+%files write_postgresql
+%{_libdir}/%{name}/write_postgresql.so
+%{_datadir}/man/man5/ncollectd-write_postgresql.5*
 %endif
 
 %changelog
