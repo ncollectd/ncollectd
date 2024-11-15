@@ -1,1205 +1,682 @@
-// SPDX-License-Identifier: GPL-2.0-only OR Apache-2.0
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-FileCopyrightText: Copyright (c) 2009 Florian Loitsch
 
-// File from the swift project: stdlib/public/runtime/SwiftDtoa.cpp
-// Copyright (c) 2018-2020 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//===---------------------------------------------------------------------===//
-/// For other formats, SwiftDtoa uses a modified form of the Grisu2
-/// algorithm from Florian Loitsch; "Printing Floating-Point Numbers
-/// Quickly and Accurately with Integers", 2010.
-/// https://doi.org/10.1145/1806596.1806623
-///
-/// Some of the Grisu2 modifications were suggested by the "Errol
-/// paper": Marc Andrysco, Ranjit Jhala, Sorin Lerner; "Printing
-/// Floating-Point Numbers: A Faster, Always Correct Method", 2016.
-/// https://doi.org/10.1145/2837614.2837654
-/// In particular, the Errol paper explored the impact of higher-precision
-/// fixed-width arithmetic on Grisu2 and showed a way to rapidly test
-/// the correctness of such algorithms.
-///
-/// A few further improvements were inspired by the Ryu algorithm
-/// from Ulf Anders; "Ryū: fast float-to-string conversion", 2018.
-/// https://doi.org/10.1145/3296979.3192369
-///
-/// In summary, this implementation is:
-///
-/// * Fast.  It uses only fixed-width integer arithmetic and has
-///   constant memory requirements.  For double-precision values on
-///   64-bit processors, it is competitive with Ryu. For double-precision
-///   values on 32-bit processors, and higher-precision values on all
-///   processors, it is considerably faster.
-///
-/// * Always Accurate. Converting the decimal form back to binary
-///   will always yield exactly the same value. For the IEEE 754
-///   formats, the round-trip will produce exactly the same bit
-///   pattern in memory.
-///
-/// * Always Short.  This always selects an accurate result with the
-///   minimum number of significant digits.
-///
-/// * Always Close.  Among all accurate, short results, this always
-///   chooses the result that is closest to the exact floating-point
-///   value. (In case of an exact tie, it rounds the last digit even.)
-///
-/// * Portable.  The code is written in portable C99.  The core
-///   implementations utilize only fixed-size integer arithmetic.
-///   128-bit integer support is utilized if present but is not
-///   necessary.  There are thin wrappers that accept platform-native
-///   floating point types and delegate to the portable core
-///   functions.
-///
-// ----------------------------------------------------------------------------
-
-#include <float.h>
-#include <stdbool.h>
+#include <assert.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <math.h>
 
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#if __GNUC__ >= 10
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
+#define DIY_SIGNIFICAND_SIZE 64
+#define DP_SIGNIFICAND_SIZE  52
+#define DP_EXPONENT_BIAS     (0x3FF + DP_SIGNIFICAND_SIZE)
+#define DP_MIN_EXPONENT      (-DP_EXPONENT_BIAS)
+#define DP_EXPONENT_MASK     0x7FF0000000000000
+#define DP_SIGNIFICAND_MASK  0x000FFFFFFFFFFFFF
+#define DP_HIDDEN_BIT        0x0010000000000000
+#define D_1_LOG2_10          0.30102999566398114 //  1 / lg(10)
+#define TEN9                 1000000000
 
-#if !((FLT_RADIX == 2) && (DBL_MANT_DIG == 53) && (DBL_MIN_EXP == -1021) && (DBL_MAX_EXP == 1024))
-    #error "Double on this system not use binary64 format"
-#endif
-
-#if defined(__SIZEOF_INT128__)
-  // We get a significant speed boost if we can use the __uint128_t
-  // type that's present in GCC and Clang on 64-bit architectures.  In
-  // particular, we can do 128-bit arithmetic directly and can
-  // represent 256-bit integers as collections of 64-bit elements.
-  #define HAVE_UINT128_T 1
-#else
-  // On 32-bit, we use slower code that manipulates 128-bit
-  // and 256-bit integers as collections of 32-bit elements.
-  #define HAVE_UINT128_T 0
-#endif
-
-// A table of all two-digit decimal numbers
-static const char asciiDigitTable[] =
-  "0001020304050607080910111213141516171819"
-  "2021222324252627282930313233343536373839"
-  "4041424344454647484950515253545556575859"
-  "6061626364656667686970717273747576777879"
-  "8081828384858687888990919293949596979899";
-
-// Tables with powers of 10
-//
-// The constant powers of 10 here represent pure fractions
-// with a binary point at the far left. (Each number in
-// this first table is implicitly divided by 2^128.)
-//
-// Table size: 896 bytes
-//
-// A 64-bit significand allows us to exactly represent powers of 10 up
-// to 10^27.  In 128 bits, we can exactly represent powers of 10 up to
-// 10^55.  As with all of these tables, the binary exponent is not stored;
-// it is computed by the `binaryExponentFor10ToThe(p)` function.
-static const uint64_t powersOf10_Exact128[56 * 2] = {
-    // Low order ... high order
-    0x0000000000000000ULL, 0x8000000000000000ULL, // x 2^1 == 10^0 exactly
-    0x0000000000000000ULL, 0xa000000000000000ULL, // x 2^4 == 10^1 exactly
-    0x0000000000000000ULL, 0xc800000000000000ULL, // x 2^7 == 10^2 exactly
-    0x0000000000000000ULL, 0xfa00000000000000ULL, // x 2^10 == 10^3 exactly
-    0x0000000000000000ULL, 0x9c40000000000000ULL, // x 2^14 == 10^4 exactly
-    0x0000000000000000ULL, 0xc350000000000000ULL, // x 2^17 == 10^5 exactly
-    0x0000000000000000ULL, 0xf424000000000000ULL, // x 2^20 == 10^6 exactly
-    0x0000000000000000ULL, 0x9896800000000000ULL, // x 2^24 == 10^7 exactly
-    0x0000000000000000ULL, 0xbebc200000000000ULL, // x 2^27 == 10^8 exactly
-    0x0000000000000000ULL, 0xee6b280000000000ULL, // x 2^30 == 10^9 exactly
-    0x0000000000000000ULL, 0x9502f90000000000ULL, // x 2^34 == 10^10 exactly
-    0x0000000000000000ULL, 0xba43b74000000000ULL, // x 2^37 == 10^11 exactly
-    0x0000000000000000ULL, 0xe8d4a51000000000ULL, // x 2^40 == 10^12 exactly
-    0x0000000000000000ULL, 0x9184e72a00000000ULL, // x 2^44 == 10^13 exactly
-    0x0000000000000000ULL, 0xb5e620f480000000ULL, // x 2^47 == 10^14 exactly
-    0x0000000000000000ULL, 0xe35fa931a0000000ULL, // x 2^50 == 10^15 exactly
-    0x0000000000000000ULL, 0x8e1bc9bf04000000ULL, // x 2^54 == 10^16 exactly
-    0x0000000000000000ULL, 0xb1a2bc2ec5000000ULL, // x 2^57 == 10^17 exactly
-    0x0000000000000000ULL, 0xde0b6b3a76400000ULL, // x 2^60 == 10^18 exactly
-    0x0000000000000000ULL, 0x8ac7230489e80000ULL, // x 2^64 == 10^19 exactly
-    0x0000000000000000ULL, 0xad78ebc5ac620000ULL, // x 2^67 == 10^20 exactly
-    0x0000000000000000ULL, 0xd8d726b7177a8000ULL, // x 2^70 == 10^21 exactly
-    0x0000000000000000ULL, 0x878678326eac9000ULL, // x 2^74 == 10^22 exactly
-    0x0000000000000000ULL, 0xa968163f0a57b400ULL, // x 2^77 == 10^23 exactly
-    0x0000000000000000ULL, 0xd3c21bcecceda100ULL, // x 2^80 == 10^24 exactly
-    0x0000000000000000ULL, 0x84595161401484a0ULL, // x 2^84 == 10^25 exactly
-    0x0000000000000000ULL, 0xa56fa5b99019a5c8ULL, // x 2^87 == 10^26 exactly
-    0x0000000000000000ULL, 0xcecb8f27f4200f3aULL, // x 2^90 == 10^27 exactly
-    0x4000000000000000ULL, 0x813f3978f8940984ULL, // x 2^94 == 10^28 exactly
-    0x5000000000000000ULL, 0xa18f07d736b90be5ULL, // x 2^97 == 10^29 exactly
-    0xa400000000000000ULL, 0xc9f2c9cd04674edeULL, // x 2^100 == 10^30 exactly
-    0x4d00000000000000ULL, 0xfc6f7c4045812296ULL, // x 2^103 == 10^31 exactly
-    0xf020000000000000ULL, 0x9dc5ada82b70b59dULL, // x 2^107 == 10^32 exactly
-    0x6c28000000000000ULL, 0xc5371912364ce305ULL, // x 2^110 == 10^33 exactly
-    0xc732000000000000ULL, 0xf684df56c3e01bc6ULL, // x 2^113 == 10^34 exactly
-    0x3c7f400000000000ULL, 0x9a130b963a6c115cULL, // x 2^117 == 10^35 exactly
-    0x4b9f100000000000ULL, 0xc097ce7bc90715b3ULL, // x 2^120 == 10^36 exactly
-    0x1e86d40000000000ULL, 0xf0bdc21abb48db20ULL, // x 2^123 == 10^37 exactly
-    0x1314448000000000ULL, 0x96769950b50d88f4ULL, // x 2^127 == 10^38 exactly
-    0x17d955a000000000ULL, 0xbc143fa4e250eb31ULL, // x 2^130 == 10^39 exactly
-    0x5dcfab0800000000ULL, 0xeb194f8e1ae525fdULL, // x 2^133 == 10^40 exactly
-    0x5aa1cae500000000ULL, 0x92efd1b8d0cf37beULL, // x 2^137 == 10^41 exactly
-    0xf14a3d9e40000000ULL, 0xb7abc627050305adULL, // x 2^140 == 10^42 exactly
-    0x6d9ccd05d0000000ULL, 0xe596b7b0c643c719ULL, // x 2^143 == 10^43 exactly
-    0xe4820023a2000000ULL, 0x8f7e32ce7bea5c6fULL, // x 2^147 == 10^44 exactly
-    0xdda2802c8a800000ULL, 0xb35dbf821ae4f38bULL, // x 2^150 == 10^45 exactly
-    0xd50b2037ad200000ULL, 0xe0352f62a19e306eULL, // x 2^153 == 10^46 exactly
-    0x4526f422cc340000ULL, 0x8c213d9da502de45ULL, // x 2^157 == 10^47 exactly
-    0x9670b12b7f410000ULL, 0xaf298d050e4395d6ULL, // x 2^160 == 10^48 exactly
-    0x3c0cdd765f114000ULL, 0xdaf3f04651d47b4cULL, // x 2^163 == 10^49 exactly
-    0xa5880a69fb6ac800ULL, 0x88d8762bf324cd0fULL, // x 2^167 == 10^50 exactly
-    0x8eea0d047a457a00ULL, 0xab0e93b6efee0053ULL, // x 2^170 == 10^51 exactly
-    0x72a4904598d6d880ULL, 0xd5d238a4abe98068ULL, // x 2^173 == 10^52 exactly
-    0x47a6da2b7f864750ULL, 0x85a36366eb71f041ULL, // x 2^177 == 10^53 exactly
-    0x999090b65f67d924ULL, 0xa70c3c40a64e6c51ULL, // x 2^180 == 10^54 exactly
-    0xfff4b4e3f741cf6dULL, 0xd0cf4b50cfe20765ULL, // x 2^183 == 10^55 exactly
-};
-
-// Rounded values supporting the full range of binary64
-//
-// Table size: 464 bytes
-//
-// We only store every 28th power of ten here.
-// We can multiply by an exact 64-bit power of
-// ten from the table above to reconstruct the
-// significand for any power of 10.
-static const uint64_t powersOf10_Binary64[] = {
-    // low-order half, high-order half
-    0x3931b850df08e738, 0x95fe7e07c91efafa, // x 2^-1328 ~= 10^-400
-    0xba954f8e758fecb3, 0x9774919ef68662a3, // x 2^-1235 ~= 10^-372
-    0x9028bed2939a635c, 0x98ee4a22ecf3188b, // x 2^-1142 ~= 10^-344
-    0x47b233c92125366e, 0x9a6bb0aa55653b2d, // x 2^-1049 ~= 10^-316
-    0x4ee367f9430aec32, 0x9becce62836ac577, // x 2^-956 ~= 10^-288
-    0x6f773fc3603db4a9, 0x9d71ac8fada6c9b5, // x 2^-863 ~= 10^-260
-    0xc47bc5014a1a6daf, 0x9efa548d26e5a6e1, // x 2^-770 ~= 10^-232
-    0x80e8a40eccd228a4, 0xa086cfcd97bf97f3, // x 2^-677 ~= 10^-204
-    0xb8ada00e5a506a7c, 0xa21727db38cb002f, // x 2^-584 ~= 10^-176
-    0xc13e60d0d2e0ebba, 0xa3ab66580d5fdaf5, // x 2^-491 ~= 10^-148
-    0xc2974eb4ee658828, 0xa54394fe1eedb8fe, // x 2^-398 ~= 10^-120
-    0xcb4ccd500f6bb952, 0xa6dfbd9fb8e5b88e, // x 2^-305 ~= 10^-92
-    0x3f2398d747b36224, 0xa87fea27a539e9a5, // x 2^-212 ~= 10^-64
-    0xdde50bd1d5d0b9e9, 0xaa242499697392d2, // x 2^-119 ~= 10^-36
-    0xfdc20d2b36ba7c3d, 0xabcc77118461cefc, // x 2^-26 ~= 10^-8
-    0x0000000000000000, 0xad78ebc5ac620000, // x 2^67 == 10^20 exactly
-    0x9670b12b7f410000, 0xaf298d050e4395d6, // x 2^160 == 10^48 exactly
-    0x3b25a55f43294bcb, 0xb0de65388cc8ada8, // x 2^253 ~= 10^76
-    0x58edec91ec2cb657, 0xb2977ee300c50fe7, // x 2^346 ~= 10^104
-    0x29babe4598c311fb, 0xb454e4a179dd1877, // x 2^439 ~= 10^132
-    0x577b986b314d6009, 0xb616a12b7fe617aa, // x 2^532 ~= 10^160
-    0x0c11ed6d538aeb2f, 0xb7dcbf5354e9bece, // x 2^625 ~= 10^188
-    0x6d953e2bd7173692, 0xb9a74a0637ce2ee1, // x 2^718 ~= 10^216
-    0x9d6d1ad41abe37f1, 0xbb764c4ca7a4440f, // x 2^811 ~= 10^244
-    0x4b2d8644d8a74e18, 0xbd49d14aa79dbc82, // x 2^904 ~= 10^272
-    0xe0470a63e6bd56c3, 0xbf21e44003acdd2c, // x 2^997 ~= 10^300
-    0x505f522e53053ff2, 0xc0fe908895cf3b44, // x 2^1090 ~= 10^328
-    0xcca845ab2beafa9a, 0xc2dfe19c8c055535, // x 2^1183 ~= 10^356
-    0x1027fff56784f444, 0xc4c5e310aef8aa17, // x 2^1276 ~= 10^384
-};
-
-//
-// Predefine various arithmetic helpers.  Most implementations and extensive
-// comments are at the bottom of this file.
-//
-
-// The power-of-10 tables do not directly store the associated binary
-// exponent.  That's because the binary exponent is a simple linear
-// function of the decimal power (and vice versa), so it's just as
-// fast (and uses much less memory) to compute it:
-
-// The binary exponent corresponding to a particular power of 10.
-// This matches the power-of-10 tables across the full range of binary128.
-#define binaryExponentFor10ToThe(p) ((int)(((((int64_t)(p)) * 55732705) >> 24) + 1))
-
-// A decimal exponent that approximates a particular binary power.
-#define decimalExponentFor2ToThe(e) ((int)(((int64_t)e * 20201781) >> 26))
-
-//
-// Helper functions used only by the single-precision binary32 formatter
-//
-
-// Helpers used by binary32, binary64, float80, and binary128.
-//
-
-#if HAVE_UINT128_T
-typedef __uint128_t swift_uint128_t;
-#define initialize128WithHighLow64(dest, high64, low64) ((dest) = ((__uint128_t)(high64) << 64) | (low64))
-#define shiftLeft128(u128, shift) (*(u128) <<= shift)
-#else
 typedef struct {
-    uint32_t low, b, c, high;
-} swift_uint128_t;
-#define initialize128WithHighLow64(dest, high64, low64) \
-    ((dest).low = (uint32_t)(low64),                    \
-     (dest).b = (uint32_t)((low64) >> 32),              \
-     (dest).c = (uint32_t)(high64),                     \
-     (dest).high = (uint32_t)((high64) >> 32))
-static void shiftLeft128(swift_uint128_t *, int shift);
-#endif
+    uint64_t f;
+    int e;
+} diy_fp_t;
 
+typedef union {
+    double d;
+    uint64_t n;
+} converter_t;
 
-//
-// Helper functions needed by the binary64 formatter.
-//
+static const uint64_t powers_ten[] = {
+    0xbf29dcaba82fdeae, 0xeef453d6923bd65a, 0x9558b4661b6565f8,
+    0xbaaee17fa23ebf76, 0xe95a99df8ace6f54, 0x91d8a02bb6c10594,
+    0xb64ec836a47146fa, 0xe3e27a444d8d98b8, 0x8e6d8c6ab0787f73,
+    0xb208ef855c969f50, 0xde8b2b66b3bc4724, 0x8b16fb203055ac76,
+    0xaddcb9e83c6b1794, 0xd953e8624b85dd79, 0x87d4713d6f33aa6c,
+    0xa9c98d8ccb009506, 0xd43bf0effdc0ba48, 0x84a57695fe98746d,
+    0xa5ced43b7e3e9188, 0xcf42894a5dce35ea, 0x818995ce7aa0e1b2,
+    0xa1ebfb4219491a1f, 0xca66fa129f9b60a7, 0xfd00b897478238d1,
+    0x9e20735e8cb16382, 0xc5a890362fddbc63, 0xf712b443bbd52b7c,
+    0x9a6bb0aa55653b2d, 0xc1069cd4eabe89f9, 0xf148440a256e2c77,
+    0x96cd2a865764dbca, 0xbc807527ed3e12bd, 0xeba09271e88d976c,
+    0x93445b8731587ea3, 0xb8157268fdae9e4c, 0xe61acf033d1a45df,
+    0x8fd0c16206306bac, 0xb3c4f1ba87bc8697, 0xe0b62e2929aba83c,
+    0x8c71dcd9ba0b4926, 0xaf8e5410288e1b6f, 0xdb71e91432b1a24b,
+    0x892731ac9faf056f, 0xab70fe17c79ac6ca, 0xd64d3d9db981787d,
+    0x85f0468293f0eb4e, 0xa76c582338ed2622, 0xd1476e2c07286faa,
+    0x82cca4db847945ca, 0xa37fce126597973d, 0xcc5fc196fefd7d0c,
+    0xff77b1fcbebcdc4f, 0x9faacf3df73609b1, 0xc795830d75038c1e,
+    0xf97ae3d0d2446f25, 0x9becce62836ac577, 0xc2e801fb244576d5,
+    0xf3a20279ed56d48a, 0x9845418c345644d7, 0xbe5691ef416bd60c,
+    0xedec366b11c6cb8f, 0x94b3a202eb1c3f39, 0xb9e08a83a5e34f08,
+    0xe858ad248f5c22ca, 0x91376c36d99995be, 0xb58547448ffffb2e,
+    0xe2e69915b3fff9f9, 0x8dd01fad907ffc3c, 0xb1442798f49ffb4b,
+    0xdd95317f31c7fa1d, 0x8a7d3eef7f1cfc52, 0xad1c8eab5ee43b67,
+    0xd863b256369d4a41, 0x873e4f75e2224e68, 0xa90de3535aaae202,
+    0xd3515c2831559a83, 0x8412d9991ed58092, 0xa5178fff668ae0b6,
+    0xce5d73ff402d98e4, 0x80fa687f881c7f8e, 0xa139029f6a239f72,
+    0xc987434744ac874f, 0xfbe9141915d7a922, 0x9d71ac8fada6c9b5,
+    0xc4ce17b399107c23, 0xf6019da07f549b2b, 0x99c102844f94e0fb,
+    0xc0314325637a193a, 0xf03d93eebc589f88, 0x96267c7535b763b5,
+    0xbbb01b9283253ca3, 0xea9c227723ee8bcb, 0x92a1958a7675175f,
+    0xb749faed14125d37, 0xe51c79a85916f485, 0x8f31cc0937ae58d3,
+    0xb2fe3f0b8599ef08, 0xdfbdcece67006ac9, 0x8bd6a141006042be,
+    0xaecc49914078536d, 0xda7f5bf590966849, 0x888f99797a5e012d,
+    0xaab37fd7d8f58179, 0xd5605fcdcf32e1d7, 0x855c3be0a17fcd26,
+    0xa6b34ad8c9dfc070, 0xd0601d8efc57b08c, 0x823c12795db6ce57,
+    0xa2cb1717b52481ed, 0xcb7ddcdda26da269, 0xfe5d54150b090b03,
+    0x9efa548d26e5a6e2, 0xc6b8e9b0709f109a, 0xf867241c8cc6d4c1,
+    0x9b407691d7fc44f8, 0xc21094364dfb5637, 0xf294b943e17a2bc4,
+    0x979cf3ca6cec5b5b, 0xbd8430bd08277231, 0xece53cec4a314ebe,
+    0x940f4613ae5ed137, 0xb913179899f68584, 0xe757dd7ec07426e5,
+    0x9096ea6f3848984f, 0xb4bca50b065abe63, 0xe1ebce4dc7f16dfc,
+    0x8d3360f09cf6e4bd, 0xb080392cc4349ded, 0xdca04777f541c568,
+    0x89e42caaf9491b61, 0xac5d37d5b79b6239, 0xd77485cb25823ac7,
+    0x86a8d39ef77164bd, 0xa8530886b54dbdec, 0xd267caa862a12d67,
+    0x8380dea93da4bc60, 0xa46116538d0deb78, 0xcd795be870516656,
+    0x806bd9714632dff6, 0xa086cfcd97bf97f4, 0xc8a883c0fdaf7df0,
+    0xfad2a4b13d1b5d6c, 0x9cc3a6eec6311a64, 0xc3f490aa77bd60fd,
+    0xf4f1b4d515acb93c, 0x991711052d8bf3c5, 0xbf5cd54678eef0b7,
+    0xef340a98172aace5, 0x9580869f0e7aac0f, 0xbae0a846d2195713,
+    0xe998d258869facd7, 0x91ff83775423cc06, 0xb67f6455292cbf08,
+    0xe41f3d6a7377eeca, 0x8e938662882af53e, 0xb23867fb2a35b28e,
+    0xdec681f9f4c31f31, 0x8b3c113c38f9f37f, 0xae0b158b4738705f,
+    0xd98ddaee19068c76, 0x87f8a8d4cfa417ca, 0xa9f6d30a038d1dbc,
+    0xd47487cc8470652b, 0x84c8d4dfd2c63f3b, 0xa5fb0a17c777cf0a,
+    0xcf79cc9db955c2cc, 0x81ac1fe293d599c0, 0xa21727db38cb0030,
+    0xca9cf1d206fdc03c, 0xfd442e4688bd304b, 0x9e4a9cec15763e2f,
+    0xc5dd44271ad3cdba, 0xf7549530e188c129, 0x9a94dd3e8cf578ba,
+    0xc13a148e3032d6e8, 0xf18899b1bc3f8ca2, 0x96f5600f15a7b7e5,
+    0xbcb2b812db11a5de, 0xebdf661791d60f56, 0x936b9fcebb25c996,
+    0xb84687c269ef3bfb, 0xe65829b3046b0afa, 0x8ff71a0fe2c2e6dc,
+    0xb3f4e093db73a093, 0xe0f218b8d25088b8, 0x8c974f7383725573,
+    0xafbd2350644eead0, 0xdbac6c247d62a584, 0x894bc396ce5da772,
+    0xab9eb47c81f5114f, 0xd686619ba27255a3, 0x8613fd0145877586,
+    0xa798fc4196e952e7, 0xd17f3b51fca3a7a1, 0x82ef85133de648c5,
+    0xa3ab66580d5fdaf6, 0xcc963fee10b7d1b3, 0xffbbcfe994e5c620,
+    0x9fd561f1fd0f9bd4, 0xc7caba6e7c5382c9, 0xf9bd690a1b68637b,
+    0x9c1661a651213e2d, 0xc31bfa0fe5698db8, 0xf3e2f893dec3f126,
+    0x986ddb5c6b3a76b8, 0xbe89523386091466, 0xee2ba6c0678b597f,
+    0x94db483840b717f0, 0xba121a4650e4ddec, 0xe896a0d7e51e1566,
+    0x915e2486ef32cd60, 0xb5b5ada8aaff80b8, 0xe3231912d5bf60e6,
+    0x8df5efabc5979c90, 0xb1736b96b6fd83b4, 0xddd0467c64bce4a1,
+    0x8aa22c0dbef60ee4, 0xad4ab7112eb3929e, 0xd89d64d57a607745,
+    0x87625f056c7c4a8b, 0xa93af6c6c79b5d2e, 0xd389b47879823479,
+    0x843610cb4bf160cc, 0xa54394fe1eedb8ff, 0xce947a3da6a9273e,
+    0x811ccc668829b887, 0xa163ff802a3426a9, 0xc9bcff6034c13053,
+    0xfc2c3f3841f17c68, 0x9d9ba7832936edc1, 0xc5029163f384a931,
+    0xf64335bcf065d37d, 0x99ea0196163fa42e, 0xc06481fb9bcf8d3a,
+    0xf07da27a82c37088, 0x964e858c91ba2655, 0xbbe226efb628afeb,
+    0xeadab0aba3b2dbe5, 0x92c8ae6b464fc96f, 0xb77ada0617e3bbcb,
+    0xe55990879ddcaabe, 0x8f57fa54c2a9eab7, 0xb32df8e9f3546564,
+    0xdff9772470297ebd, 0x8bfbea76c619ef36, 0xaefae51477a06b04,
+    0xdab99e59958885c5, 0x88b402f7fd75539b, 0xaae103b5fcd2a882,
+    0xd59944a37c0752a2, 0x857fcae62d8493a5, 0xa6dfbd9fb8e5b88f,
+    0xd097ad07a71f26b2, 0x825ecc24c8737830, 0xa2f67f2dfa90563b,
+    0xcbb41ef979346bca, 0xfea126b7d78186bd, 0x9f24b832e6b0f436,
+    0xc6ede63fa05d3144, 0xf8a95fcf88747d94, 0x9b69dbe1b548ce7d,
+    0xc24452da229b021c, 0xf2d56790ab41c2a3, 0x97c560ba6b0919a6,
+    0xbdb6b8e905cb600f, 0xed246723473e3813, 0x9436c0760c86e30c,
+    0xb94470938fa89bcf, 0xe7958cb87392c2c3, 0x90bd77f3483bb9ba,
+    0xb4ecd5f01a4aa828, 0xe2280b6c20dd5232, 0x8d590723948a535f,
+    0xb0af48ec79ace837, 0xdcdb1b2798182245, 0x8a08f0f8bf0f156b,
+    0xac8b2d36eed2dac6, 0xd7adf884aa879177, 0x86ccbb52ea94baeb,
+    0xa87fea27a539e9a5, 0xd29fe4b18e88640f, 0x83a3eeeef9153e89,
+    0xa48ceaaab75a8e2b, 0xcdb02555653131b6, 0x808e17555f3ebf12,
+    0xa0b19d2ab70e6ed6, 0xc8de047564d20a8c, 0xfb158592be068d2f,
+    0x9ced737bb6c4183d, 0xc428d05aa4751e4d, 0xf53304714d9265e0,
+    0x993fe2c6d07b7fac, 0xbf8fdb78849a5f97, 0xef73d256a5c0f77d,
+    0x95a8637627989aae, 0xbb127c53b17ec159, 0xe9d71b689dde71b0,
+    0x9226712162ab070e, 0xb6b00d69bb55c8d1, 0xe45c10c42a2b3b06,
+    0x8eb98a7a9a5b04e3, 0xb267ed1940f1c61c, 0xdf01e85f912e37a3,
+    0x8b61313bbabce2c6, 0xae397d8aa96c1b78, 0xd9c7dced53c72256,
+    0x881cea14545c7575, 0xaa242499697392d3, 0xd4ad2dbfc3d07788,
+    0x84ec3c97da624ab5, 0xa6274bbdd0fadd62, 0xcfb11ead453994ba,
+    0x81ceb32c4b43fcf5, 0xa2425ff75e14fc32, 0xcad2f7f5359a3b3e,
+    0xfd87b5f28300ca0e, 0x9e74d1b791e07e48, 0xc612062576589ddb,
+    0xf79687aed3eec551, 0x9abe14cd44753b53, 0xc16d9a0095928a27,
+    0xf1c90080baf72cb1, 0x971da05074da7bef, 0xbce5086492111aeb,
+    0xec1e4a7db69561a5, 0x9392ee8e921d5d07, 0xb877aa3236a4b449,
+    0xe69594bec44de15b, 0x901d7cf73ab0acd9, 0xb424dc35095cd80f,
+    0xe12e13424bb40e13, 0x8cbccc096f5088cc, 0xafebff0bcb24aaff,
+    0xdbe6fecebdedd5bf, 0x89705f4136b4a597, 0xabcc77118461cefd,
+    0xd6bf94d5e57a42bc, 0x8637bd05af6c69b6, 0xa7c5ac471b478423,
+    0xd1b71758e219652c, 0x83126e978d4fdf3b, 0xa3d70a3d70a3d70a,
+    0xcccccccccccccccd, 0x8000000000000000, 0xa000000000000000,
+    0xc800000000000000, 0xfa00000000000000, 0x9c40000000000000,
+    0xc350000000000000, 0xf424000000000000, 0x9896800000000000,
+    0xbebc200000000000, 0xee6b280000000000, 0x9502f90000000000,
+    0xba43b74000000000, 0xe8d4a51000000000, 0x9184e72a00000000,
+    0xb5e620f480000000, 0xe35fa931a0000000, 0x8e1bc9bf04000000,
+    0xb1a2bc2ec5000000, 0xde0b6b3a76400000, 0x8ac7230489e80000,
+    0xad78ebc5ac620000, 0xd8d726b7177a8000, 0x878678326eac9000,
+    0xa968163f0a57b400, 0xd3c21bcecceda100, 0x84595161401484a0,
+    0xa56fa5b99019a5c8, 0xcecb8f27f4200f3a, 0x813f3978f8940984,
+    0xa18f07d736b90be5, 0xc9f2c9cd04674edf, 0xfc6f7c4045812296,
+    0x9dc5ada82b70b59e, 0xc5371912364ce305, 0xf684df56c3e01bc7,
+    0x9a130b963a6c115c, 0xc097ce7bc90715b3, 0xf0bdc21abb48db20,
+    0x96769950b50d88f4, 0xbc143fa4e250eb31, 0xeb194f8e1ae525fd,
+    0x92efd1b8d0cf37be, 0xb7abc627050305ae, 0xe596b7b0c643c719,
+    0x8f7e32ce7bea5c70, 0xb35dbf821ae4f38c, 0xe0352f62a19e306f,
+    0x8c213d9da502de45, 0xaf298d050e4395d7, 0xdaf3f04651d47b4c,
+    0x88d8762bf324cd10, 0xab0e93b6efee0054, 0xd5d238a4abe98068,
+    0x85a36366eb71f041, 0xa70c3c40a64e6c52, 0xd0cf4b50cfe20766,
+    0x82818f1281ed44a0, 0xa321f2d7226895c8, 0xcbea6f8ceb02bb3a,
+    0xfee50b7025c36a08, 0x9f4f2726179a2245, 0xc722f0ef9d80aad6,
+    0xf8ebad2b84e0d58c, 0x9b934c3b330c8577, 0xc2781f49ffcfa6d5,
+    0xf316271c7fc3908b, 0x97edd871cfda3a57, 0xbde94e8e43d0c8ec,
+    0xed63a231d4c4fb27, 0x945e455f24fb1cf9, 0xb975d6b6ee39e437,
+    0xe7d34c64a9c85d44, 0x90e40fbeea1d3a4b, 0xb51d13aea4a488dd,
+    0xe264589a4dcdab15, 0x8d7eb76070a08aed, 0xb0de65388cc8ada8,
+    0xdd15fe86affad912, 0x8a2dbf142dfcc7ab, 0xacb92ed9397bf996,
+    0xd7e77a8f87daf7fc, 0x86f0ac99b4e8dafd, 0xa8acd7c0222311bd,
+    0xd2d80db02aabd62c, 0x83c7088e1aab65db, 0xa4b8cab1a1563f52,
+    0xcde6fd5e09abcf27, 0x80b05e5ac60b6178, 0xa0dc75f1778e39d6,
+    0xc913936dd571c84c, 0xfb5878494ace3a5f, 0x9d174b2dcec0e47b,
+    0xc45d1df942711d9a, 0xf5746577930d6501, 0x9968bf6abbe85f20,
+    0xbfc2ef456ae276e9, 0xefb3ab16c59b14a3, 0x95d04aee3b80ece6,
+    0xbb445da9ca61281f, 0xea1575143cf97227, 0x924d692ca61be758,
+    0xb6e0c377cfa2e12e, 0xe498f455c38b997a, 0x8edf98b59a373fec,
+    0xb2977ee300c50fe7, 0xdf3d5e9bc0f653e1, 0x8b865b215899f46d,
+    0xae67f1e9aec07188, 0xda01ee641a708dea, 0x884134fe908658b2,
+    0xaa51823e34a7eedf, 0xd4e5e2cdc1d1ea96, 0x850fadc09923329e,
+    0xa6539930bf6bff46, 0xcfe87f7cef46ff17, 0x81f14fae158c5f6e,
+    0xa26da3999aef774a, 0xcb090c8001ab551c, 0xfdcb4fa002162a63,
+    0x9e9f11c4014dda7e, 0xc646d63501a1511e, 0xf7d88bc24209a565,
+    0x9ae757596946075f, 0xc1a12d2fc3978937, 0xf209787bb47d6b85,
+    0x9745eb4d50ce6333, 0xbd176620a501fc00, 0xec5d3fa8ce427b00,
+    0x93ba47c980e98ce0, 0xb8a8d9bbe123f018, 0xe6d3102ad96cec1e,
+    0x9043ea1ac7e41393, 0xb454e4a179dd1877, 0xe16a1dc9d8545e95,
+    0x8ce2529e2734bb1d, 0xb01ae745b101e9e4, 0xdc21a1171d42645d,
+    0x899504ae72497eba, 0xabfa45da0edbde69, 0xd6f8d7509292d603,
+    0x865b86925b9bc5c2, 0xa7f26836f282b733, 0xd1ef0244af2364ff,
+    0x8335616aed761f1f, 0xa402b9c5a8d3a6e7, 0xcd036837130890a1,
+    0x802221226be55a65, 0xa02aa96b06deb0fe, 0xc83553c5c8965d3d,
+    0xfa42a8b73abbf48d, 0x9c69a97284b578d8, 0xc38413cf25e2d70e,
+    0xf46518c2ef5b8cd1, 0x98bf2f79d5993803, 0xbeeefb584aff8604,
+    0xeeaaba2e5dbf6785, 0x952ab45cfa97a0b3, 0xba756174393d88e0,
+    0xe912b9d1478ceb17, 0x91abb422ccb812ef, 0xb616a12b7fe617aa,
+    0xe39c49765fdf9d95, 0x8e41ade9fbebc27d, 0xb1d219647ae6b31c,
+    0xde469fbd99a05fe3, 0x8aec23d680043bee, 0xada72ccc20054aea,
+    0xd910f7ff28069da4, 0x87aa9aff79042287, 0xa99541bf57452b28,
+    0xd3fa922f2d1675f2, 0x847c9b5d7c2e09b7, 0xa59bc234db398c25,
+    0xcf02b2c21207ef2f, 0x8161afb94b44f57d, 0xa1ba1ba79e1632dc,
+    0xca28a291859bbf93, 0xfcb2cb35e702af78, 0x9defbf01b061adab,
+    0xc56baec21c7a1916, 0xf6c69a72a3989f5c, 0x9a3c2087a63f6399,
+    0xc0cb28a98fcf3c80, 0xf0fdf2d3f3c30b9f, 0x969eb7c47859e744,
+    0xbc4665b596706115, 0xeb57ff22fc0c795a, 0x9316ff75dd87cbd8,
+    0xb7dcbf5354e9bece, 0xe5d3ef282a242e82, 0x8fa475791a569d11,
+    0xb38d92d760ec4455, 0xe070f78d3927556b, 0x8c469ab843b89563,
+    0xaf58416654a6babb, 0xdb2e51bfe9d0696a, 0x88fcf317f22241e2,
+    0xab3c2fddeeaad25b, 0xd60b3bd56a5586f2, 0x85c7056562757457,
+    0xa738c6bebb12d16d, 0xd106f86e69d785c8, 0x82a45b450226b39d,
+    0xa34d721642b06084, 0xcc20ce9bd35c78a5, 0xff290242c83396ce,
+    0x9f79a169bd203e41, 0xc75809c42c684dd1, 0xf92e0c3537826146,
+    0x9bbcc7a142b17ccc, 0xc2abf989935ddbfe, 0xf356f7ebf83552fe,
+    0x98165af37b2153df, 0xbe1bf1b059e9a8d6, 0xeda2ee1c7064130c,
+    0x9485d4d1c63e8be8, 0xb9a74a0637ce2ee1, 0xe8111c87c5c1ba9a,
+    0x910ab1d4db9914a0, 0xb54d5e4a127f59c8, 0xe2a0b5dc971f303a,
+    0x8da471a9de737e24, 0xb10d8e1456105dad, 0xdd50f1996b947519,
+    0x8a5296ffe33cc930, 0xace73cbfdc0bfb7b, 0xd8210befd30efa5a,
+    0x8714a775e3e95c78, 0xa8d9d1535ce3b396, 0xd31045a8341ca07c,
+    0x83ea2b892091e44e, 0xa4e4b66b68b65d61, 0xce1de40642e3f4b9,
+    0x80d2ae83e9ce78f4, 0xa1075a24e4421731, 0xc94930ae1d529cfd,
+    0xfb9b7cd9a4a7443c, 0x9d412e0806e88aa6, 0xc491798a08a2ad4f,
+    0xf5b5d7ec8acb58a3, 0x9991a6f3d6bf1766, 0xbff610b0cc6edd3f,
+    0xeff394dcff8a948f, 0x95f83d0a1fb69cd9, 0xbb764c4ca7a44410,
+    0xea53df5fd18d5514, 0x92746b9be2f8552c, 0xb7118682dbb66a77,
+    0xe4d5e82392a40515, 0x8f05b1163ba6832d, 0xb2c71d5bca9023f8,
+    0xdf78e4b2bd342cf7, 0x8bab8eefb6409c1a, 0xae9672aba3d0c321,
+    0xda3c0f568cc4f3e9, 0x8865899617fb1871, 0xaa7eebfb9df9de8e,
+    0xd51ea6fa85785631, 0x8533285c936b35df, 0xa67ff273b8460357,
+    0xd01fef10a657842c, 0x8213f56a67f6b29c, 0xa298f2c501f45f43,
+    0xcb3f2f7642717713, 0xfe0efb53d30dd4d8, 0x9ec95d1463e8a507,
+    0xc67bb4597ce2ce49, 0xf81aa16fdc1b81db, 0x9b10a4e5e9913129,
+    0xc1d4ce1f63f57d73, 0xf24a01a73cf2dcd0, 0x976e41088617ca02,
+    0xbd49d14aa79dbc82, 0xec9c459d51852ba3, 0x93e1ab8252f33b46,
+    0xb8da1662e7b00a17, 0xe7109bfba19c0c9d, 0x906a617d450187e2,
+    0xb484f9dc9641e9db, 0xe1a63853bbd26451, 0x8d07e33455637eb3,
+    0xb049dc016abc5e60, 0xdc5c5301c56b75f7, 0x89b9b3e11b6329bb,
+    0xac2820d9623bf429, 0xd732290fbacaf134, 0x867f59a9d4bed6c0,
+    0xa81f301449ee8c70, 0xd226fc195c6a2f8c, 0x83585d8fd9c25db8,
+    0xa42e74f3d032f526, 0xcd3a1230c43fb26f, 0x80444b5e7aa7cf85,
+    0xa0555e361951c367, 0xc86ab5c39fa63441, 0xfa856334878fc151,
+    0x9c935e00d4b9d8d2, 0xc3b8358109e84f07, 0xf4a642e14c6262c9,
+    0x98e7e9cccfbd7dbe, 0xbf21e44003acdd2d, 0xeeea5d5004981478,
+    0x95527a5202df0ccb, 0xbaa718e68396cffe, 0xe950df20247c83fd,
+    0x91d28b7416cdd27e, 0xb6472e511c81471e, 0xe3d8f9e563a198e5,
+    0x8e679c2f5e44ff8f, 0xb201833b35d63f73, 0xde81e40a034bcf50,
+    0x8b112e86420f6192, 0xadd57a27d29339f6, 0xd94ad8b1c7380874,
+    0x87cec76f1c830549, 0xa9c2794ae3a3c69b, 0xd433179d9c8cb841,
+    0x849feec281d7f329, 0xa5c7ea73224deff3, 0xcf39e50feae16bf0,
+    0x81842f29f2cce376, 0xa1e53af46f801c53, 0xca5e89b18b602368,
+    0xfcf62c1dee382c42, 0x9e19db92b4e31ba9, 0xc5a05277621be294,
+    0xf70867153aa2db39, 0x9a65406d44a5c903, 0xc0fe908895cf3b44,
+    0xf13e34aabb430a15, 0x96c6e0eab509e64d, 0xbc789925624c5fe1,
+    0xeb96bf6ebadf77d9, 0x933e37a534cbaae8, 0xb80dc58e81fe95a1,
+    0xe61136f2227e3b0a, 0x8fcac257558ee4e6, 0xb3bd72ed2af29e20,
+    0xe0accfa875af45a8, 0x8c6c01c9498d8b89, 0xaf87023b9bf0ee6b,
+    0xdb68c2ca82ed2a06, 0x892179be91d43a44, 0xab69d82e364948d4
+};
 
-#if HAVE_UINT128_T
-#define isLessThan128x128(lhs, rhs) ((lhs) < (rhs))
-#define subtract128x128(lhs, rhs) (*(lhs) -= (rhs))
-#define multiply128xu32(lhs, rhs) (*(lhs) *= (rhs))
-#define initialize128WithHigh64(dest, value) ((dest) = (__uint128_t)(value) << 64)
-#define extractHigh64From128(arg) ((uint64_t)((arg) >> 64))
-#define is128bitZero(arg) ((arg) == 0)
-static int extractIntegerPart128(__uint128_t *fixed128, int integerBits) {
-    const int fractionBits = 128 - integerBits;
-    int integerPart = (int)(*fixed128 >> fractionBits);
-    const swift_uint128_t fixedPointMask = (((__uint128_t)1 << fractionBits) - 1);
-    *fixed128 &= fixedPointMask;
-    return integerPart;
-}
-#define shiftRightRoundingDown128(val, shift) ((val) >> (shift))
-#define shiftRightRoundingUp128(val, shift) (((val) + (((uint64_t)1 << (shift)) - 1)) >> (shift))
+static const int powers_ten_e[] = {
+    -1203, -1200, -1196, -1193, -1190, -1186, -1183, -1180, -1176, -1173, -1170,
+    -1166, -1163, -1160, -1156, -1153, -1150, -1146, -1143, -1140, -1136, -1133,
+    -1130, -1127, -1123, -1120, -1117, -1113, -1110, -1107, -1103, -1100, -1097,
+    -1093, -1090, -1087, -1083, -1080, -1077, -1073, -1070, -1067, -1063, -1060,
+    -1057, -1053, -1050, -1047, -1043, -1040, -1037, -1034, -1030, -1027, -1024,
+    -1020, -1017, -1014, -1010, -1007, -1004, -1000, -997,  -994,  -990,  -987,
+    -984,  -980,  -977,  -974,  -970,  -967,  -964,  -960,  -957,  -954,  -950,
+    -947,  -944,  -940,  -937,  -934,  -931,  -927,  -924,  -921,  -917,  -914,
+    -911,  -907,  -904,  -901,  -897,  -894,  -891,  -887,  -884,  -881,  -877,
+    -874,  -871,  -867,  -864,  -861,  -857,  -854,  -851,  -847,  -844,  -841,
+    -838,  -834,  -831,  -828,  -824,  -821,  -818,  -814,  -811,  -808,  -804,
+    -801,  -798,  -794,  -791,  -788,  -784,  -781,  -778,  -774,  -771,  -768,
+    -764,  -761,  -758,  -754,  -751,  -748,  -744,  -741,  -738,  -735,  -731,
+    -728,  -725,  -721,  -718,  -715,  -711,  -708,  -705,  -701,  -698,  -695,
+    -691,  -688,  -685,  -681,  -678,  -675,  -671,  -668,  -665,  -661,  -658,
+    -655,  -651,  -648,  -645,  -642,  -638,  -635,  -632,  -628,  -625,  -622,
+    -618,  -615,  -612,  -608,  -605,  -602,  -598,  -595,  -592,  -588,  -585,
+    -582,  -578,  -575,  -572,  -568,  -565,  -562,  -558,  -555,  -552,  -549,
+    -545,  -542,  -539,  -535,  -532,  -529,  -525,  -522,  -519,  -515,  -512,
+    -509,  -505,  -502,  -499,  -495,  -492,  -489,  -485,  -482,  -479,  -475,
+    -472,  -469,  -465,  -462,  -459,  -455,  -452,  -449,  -446,  -442,  -439,
+    -436,  -432,  -429,  -426,  -422,  -419,  -416,  -412,  -409,  -406,  -402,
+    -399,  -396,  -392,  -389,  -386,  -382,  -379,  -376,  -372,  -369,  -366,
+    -362,  -359,  -356,  -353,  -349,  -346,  -343,  -339,  -336,  -333,  -329,
+    -326,  -323,  -319,  -316,  -313,  -309,  -306,  -303,  -299,  -296,  -293,
+    -289,  -286,  -283,  -279,  -276,  -273,  -269,  -266,  -263,  -259,  -256,
+    -253,  -250,  -246,  -243,  -240,  -236,  -233,  -230,  -226,  -223,  -220,
+    -216,  -213,  -210,  -206,  -203,  -200,  -196,  -193,  -190,  -186,  -183,
+    -180,  -176,  -173,  -170,  -166,  -163,  -160,  -157,  -153,  -150,  -147,
+    -143,  -140,  -137,  -133,  -130,  -127,  -123,  -120,  -117,  -113,  -110,
+    -107,  -103,  -100,  -97,   -93,   -90,   -87,   -83,   -80,   -77,   -73,
+    -70,    -67,  -63,   -60,   -57,   -54,   -50,   -47,   -44,   -40,   -37,
+    -34,    -30,  -27,   -24,   -20,   -17,   -14,   -10,   -7,    -4,    0,
+    3,      6,    10,    13,    16,    20,    23,    26,    30,    33,    36,
+    39,     43,   46,    49,    53,    56,    59,    63,    66,    69,    73,
+    76,     79,   83,    86,    89,    93,    96,    99,    103,   106,   109,
+    113,    116,  119,   123,   126,   129,   132,   136,   139,   142,   146,
+    149,    152,  156,   159,   162,   166,   169,   172,   176,   179,   182,
+    186,    189,  192,   196,   199,   202,   206,   209,   212,   216,   219,
+    222,    226,  229,   232,   235,   239,   242,   245,   249,   252,   255,
+    259,    262,  265,   269,   272,   275,   279,   282,   285,   289,   292,
+    295,    299,  302,   305,   309,   312,   315,   319,   322,   325,   328,
+    332,    335,  338,   342,   345,   348,   352,   355,   358,   362,   365,
+    368,    372,  375,   378,   382,   385,   388,   392,   395,   398,   402,
+    405,    408,  412,   415,   418,   422,   425,   428,   431,   435,   438,
+    441,    445,  448,   451,   455,   458,   461,   465,   468,   471,   475,
+    478,    481,  485,   488,   491,   495,   498,   501,   505,   508,   511,
+    515,    518,  521,   524,   528,   531,   534,   538,   541,   544,   548,
+    551,    554,  558,   561,   564,   568,   571,   574,   578,   581,   584,
+    588,    591,  594,   598,   601,   604,   608,   611,   614,   617,   621,
+    624,    627,  631,   634,   637,   641,   644,   647,   651,   654,   657,
+    661,    664,  667,   671,   674,   677,   681,   684,   687,   691,   694,
+    697,    701,  704,   707,   711,   714,   717,   720,   724,   727,   730,
+    734,    737,  740,   744,   747,   750,   754,   757,   760,   764,   767,
+    770,    774,  777,   780,   784,   787,   790,   794,   797,   800,   804,
+    807,    810,  813,   817,   820,   823,   827,   830,   833,   837,   840,
+    843,    847,  850,   853,   857,   860,   863,   867,   870,   873,   877,
+    880,    883,  887,   890,   893,   897,   900,   903,   907,   910,   913,
+    916,    920,  923,   926,   930,   933,   936,   940,   943,   946,   950,
+    953,    956,  960,   963,   966,   970,   973,   976,   980,   983,   986,
+    990,    993,  996,   1000,  1003,  1006,  1009,  1013,  1016,  1019,  1023,
+    1026,   1029, 1033,  1036,  1039,  1043,  1046,  1049,  1053,  1056,  1059,
+    1063,   1066, 1069,  1073,  1076
+};
 
-#else
-
-#define initialize128WithHigh64(dest, value)            \
-    ((dest).low = (dest).b = 0,                         \
-     (dest).c = (uint32_t)(value),                      \
-     (dest).high = (uint32_t)((value) >> 32))
-#define extractHigh64From128(arg) (((uint64_t)(arg).high << 32)|((arg).c))
-#define is128bitZero(dest) \
-  (((dest).low | (dest).b | (dest).c | (dest).high) == 0)
-// Treat a uint128_t as a fixed-point value with `integerBits` bits in
-// the integer portion.  Return the integer portion and zero it out.
-static int extractIntegerPart128(swift_uint128_t *fixed128, int integerBits) {
-    const int highFractionBits = 32 - integerBits;
-    int integerPart = (int)(fixed128->high >> highFractionBits);
-    fixed128->high &= ((uint32_t)1 << highFractionBits) - 1;
-    return integerPart;
-}
-#endif
-
-// ================================================================
-//
-// Helpers to output formatted results for infinity, zero, and NaN
-//
-// ================================================================
-
-static inline size_t infinity(char *dest, size_t len, int negative)
+static diy_fp_t minus(diy_fp_t x, diy_fp_t y)
 {
-  if (negative) {
-    if (len >= 5) {
-      memcpy(dest, "-inf", 5);
-      return 4;
-    }
-  } else {
-    if (len >= 4) {
-      memcpy(dest, "inf", 4);
-      return 3;
-    }
-  }
-  if (len > 0) {
-    dest[0] = '\0';
-  }
-  return 0;
+    assert(x.e == y.e);
+    assert(x.f >= y.f);
+    diy_fp_t r = {.f = x.f - y.f, .e = x.e};
+    return r;
 }
 
-static inline size_t zero(char *dest, size_t len, int negative)
+static diy_fp_t multiply(diy_fp_t x, diy_fp_t y)
 {
-  if (negative) {
-    if (len >= 3) {
-      memcpy(dest, "-0", 3);
-      return 2;
-    }
-  } else {
-    if (len >= 2) {
-      memcpy(dest, "0", 2);
-      return 1;
-    }
-  }
-  if (len > 0) {
-    dest[0] = '\0';
-  }
-  return 0;
+    uint64_t a, b, c, d, ac, bc, ad, bd, tmp;
+    diy_fp_t r;
+    uint64_t M32 = 0xFFFFFFFF;
+    a = x.f >> 32;
+    b = x.f & M32;
+    c = y.f >> 32;
+    d = y.f & M32;
+    ac = a * c;
+    bc = b * c;
+    ad = a * d;
+    bd = b * d;
+    tmp = (bd >> 32) + (ad & M32) + (bc & M32);
+    tmp += 1U << 31; /// mult_round
+    r.f = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
+    r.e = x.e + y.e + 64;
+    return r;
 }
 
-static inline size_t nan_details(char *dest, size_t len, int negative, int quiet)
+static diy_fp_t cached_power(int k)
 {
-  if (negative) {
-    if (quiet) {
-      if (len >= 5) {
-        memcpy(dest, "-nan", 5);
-        return 4;
-      }
+    diy_fp_t res;
+    int index = 343 + k;
+    res.f = powers_ten[index];
+    res.e = powers_ten_e[index];
+    return res;
+}
+
+static uint64_t double_to_uint64(double d)
+{
+    converter_t tmp;
+    tmp.d = d;
+    return tmp.n;
+}
+
+static diy_fp_t normalize_diy_fp(diy_fp_t in)
+{
+    diy_fp_t res = in;
+    /* Normalize now */
+    /* the original number could have been a denormal. */
+    while (!(res.f & DP_HIDDEN_BIT)) {
+        res.f <<= 1;
+        res.e--;
+    }
+    /* do the final shifts in one go. Don't forget the hidden bit (the '-1') */
+    res.f <<= (DIY_SIGNIFICAND_SIZE - DP_SIGNIFICAND_SIZE - 1);
+    res.e = res.e - (DIY_SIGNIFICAND_SIZE - DP_SIGNIFICAND_SIZE - 1);
+    return res;
+}
+
+static diy_fp_t double2diy_fp(double d)
+{
+    uint64_t d64 = double_to_uint64(d);
+    int biased_e = (d64 & DP_EXPONENT_MASK) >> DP_SIGNIFICAND_SIZE;
+    uint64_t significand = (d64 & DP_SIGNIFICAND_MASK);
+    diy_fp_t res;
+    if (biased_e != 0) {
+        res.f = significand + DP_HIDDEN_BIT;
+        res.e = biased_e - DP_EXPONENT_BIAS;
     } else {
-      if (len >= 6) {
-        memcpy(dest, "-snan", 6);
-        return 5;
-      }
+        res.f = significand;
+        res.e = DP_MIN_EXPONENT + 1;
     }
-  } else {
-    if (quiet) {
-      if (len >= 4) {
-        memcpy(dest, "nan", 4);
-        return 3;
-      }
+    return res;
+}
+
+static diy_fp_t normalize_boundary(diy_fp_t in)
+{
+    diy_fp_t res = in;
+    /* Normalize now */
+    /* the original number could have been a denormal. */
+    while (!(res.f & (DP_HIDDEN_BIT << 1))) {
+        res.f <<= 1;
+        res.e--;
+    }
+    /* do the final shifts in one go. Don't forget the hidden bit (the '-1') */
+    res.f <<= (DIY_SIGNIFICAND_SIZE - DP_SIGNIFICAND_SIZE - 2);
+    res.e = res.e - (DIY_SIGNIFICAND_SIZE - DP_SIGNIFICAND_SIZE - 2);
+    return res;
+}
+
+static void normalized_boundaries(double d, diy_fp_t *out_m_minus, diy_fp_t *out_m_plus)
+{
+    diy_fp_t v = double2diy_fp(d);
+    diy_fp_t pl, mi;
+    bool significand_is_zero = v.f == DP_HIDDEN_BIT;
+    pl.f = (v.f << 1) + 1;
+    pl.e = v.e - 1;
+    pl = normalize_boundary(pl);
+    if (significand_is_zero) {
+        mi.f = (v.f << 2) - 1;
+        mi.e = v.e - 2;
     } else {
-      if (len >= 5) {
-        memcpy(dest, "snan", 5);
-        return 4;
-      }
+        mi.f = (v.f << 1) - 1;
+        mi.e = v.e - 1;
     }
-  }
-  if (len > 0) {
-    dest[0] = '\0';
-  }
-  return 0;
+    mi.f <<= mi.e - pl.e;
+    mi.e = pl.e;
+    *out_m_plus = pl;
+    *out_m_minus = mi;
 }
 
-// ================================================================
-//
-// Arithmetic helpers
-//
-// ================================================================
-
-// The core algorithm relies heavily on fixed-point arithmetic with
-// 128-bit and 256-bit integer values. (For binary32/64 and
-// float80/binary128, respectively.) They also need precise control
-// over all rounding.
-//
-// Note that most arithmetic operations are the same for integers and
-// fractions, so we can just use the normal integer operations in most
-// places.  Multiplication however, is different for fixed-size
-// fractions.  Integer multiplication preserves the low-order part and
-// discards the high-order part (ignoring overflow).  Fraction
-// multiplication preserves the high-order part and discards the
-// low-order part (rounding).  So most of the arithmetic helpers here
-// are for multiplication.
-
-// Note: With 64-bit GCC and Clang, we get a noticable performance
-// gain by using `__uint128_t`.  Otherwise, we have to break things
-// down into 32-bit chunks so we don't overflow 64-bit temporaries.
-
-// Multiply a 128-bit fraction by a 64-bit fraction, rounding down.
-static inline swift_uint128_t multiply128x64RoundingDown(swift_uint128_t lhs, uint64_t rhs)
+/* musl ceil implementation */
+static inline double internal_ceil(double x)
 {
-#if HAVE_UINT128_T
-    uint64_t lhsl = (uint64_t)lhs;
-    uint64_t lhsh = (uint64_t)(lhs >> 64);
-    swift_uint128_t h = (swift_uint128_t)lhsh * rhs;
-    swift_uint128_t l = (swift_uint128_t)lhsl * rhs;
-    return h + (l >> 64);
-#else
-    swift_uint128_t result;
-    static const uint64_t mask32 = UINT32_MAX;
-    uint64_t rhs0 = rhs & mask32;
-    uint64_t rhs1 = rhs >> 32;
-    uint64_t t = (lhs.low) * rhs0;
-    t >>= 32;
-    uint64_t a = (lhs.b) * rhs0;
-    uint64_t b = (lhs.low) * rhs1;
-    t += a + (b & mask32);
-    t >>= 32;
-    t += (b >> 32);
-    a = lhs.c * rhs0;
-    b = lhs.b * rhs1;
-    t += (a & mask32) + (b & mask32);
-    result.low = t;
-    t >>= 32;
-    t += (a >> 32) + (b >> 32);
-    a = lhs.high * rhs0;
-    b = lhs.c * rhs1;
-    t += (a & mask32) + (b & mask32);
-    result.b = t;
-    t >>= 32;
-    t += (a >> 32) + (b >> 32);
-    t += lhs.high * rhs1;
-    result.c = t;
-    result.high = t >> 32;
-    return result;
-#endif
+    static const double_t toint = 1/2.22044604925031308085e-16;
+	union {double f; uint64_t i;} u = {x};
+	int e = u.i >> 52 & 0x7ff;
+	double_t y;
+
+	if (e >= 0x3ff+52 || x == 0)
+		return x;
+	/* y = int(x) - x, where int(x) is an integer neighbor of x */
+	if (u.i >> 63)
+		y = x - toint + toint - x;
+	else
+		y = x + toint - toint - x;
+	/* special case because of non-nearest rounding modes */
+	if (e <= 0x3ff-1)
+		return u.i >> 63 ? -0.0 : 1;
+	if (y < 0)
+		return x + y + 1;
+	return x + y;
 }
 
-// Multiply a 128-bit fraction by a 64-bit fraction, rounding up.
-static inline swift_uint128_t multiply128x64RoundingUp(swift_uint128_t lhs, uint64_t rhs)
+static int k_comp(int e, int alpha, __attribute__((unused)) int gamma)
 {
-#if HAVE_UINT128_T
-    uint64_t lhsl = (uint64_t)lhs;
-    uint64_t lhsh = (uint64_t)(lhs >> 64);
-    swift_uint128_t h = (swift_uint128_t)lhsh * rhs;
-    swift_uint128_t l = (swift_uint128_t)lhsl * rhs;
-    static const __uint128_t bias = ((__uint128_t)1 << 64) - 1;
-    return h + ((l + bias) >> 64);
-#else
-    swift_uint128_t result;
-    static const uint64_t mask32 = UINT32_MAX;
-    uint64_t rhs0 = rhs & mask32;
-    uint64_t rhs1 = rhs >> 32;
-    uint64_t t = (lhs.low) * rhs0 + mask32;
-    t >>= 32;
-    uint64_t a = (lhs.b) * rhs0;
-    uint64_t b = (lhs.low) * rhs1;
-    t += (a & mask32) + (b & mask32) + mask32;
-    t >>= 32;
-    t += (a >> 32) + (b >> 32);
-    a = lhs.c * rhs0;
-    b = lhs.b * rhs1;
-    t += (a & mask32) + (b & mask32);
-    result.low = t;
-    t >>= 32;
-    t += (a >> 32) + (b >> 32);
-    a = lhs.high * rhs0;
-    b = lhs.c * rhs1;
-    t += (a & mask32) + (b & mask32);
-    result.b = t;
-    t >>= 32;
-    t += (a >> 32) + (b >> 32);
-    t += lhs.high * rhs1;
-    result.c = t;
-    result.high = t >> 32;
-    return result;
-#endif
+    return internal_ceil((alpha - e + 63) * D_1_LOG2_10);
 }
 
-#if !HAVE_UINT128_T
-// Multiply a 128-bit fraction by a 32-bit integer in a 32-bit environment.
-// (On 64-bit, we use a fast inline macro.)
-static inline void multiply128xu32(swift_uint128_t *lhs, uint32_t rhs)
+static void grisu_round(char *buffer, int len, uint64_t delta, uint64_t rest,
+                                      uint64_t ten_kappa, uint64_t wp_w)
 {
-    uint64_t t = (uint64_t)(lhs->low) * rhs;
-    lhs->low = (uint32_t)t;
-    t = (t >> 32) + (uint64_t)(lhs->b) * rhs;
-    lhs->b = (uint32_t)t;
-    t = (t >> 32) + (uint64_t)(lhs->c) * rhs;
-    lhs->c = (uint32_t)t;
-    t = (t >> 32) + (uint64_t)(lhs->high) * rhs;
-    lhs->high = (uint32_t)t;
-}
-
-// Compare two 128-bit integers in a 32-bit environment
-// (On 64-bit, we use a fast inline macro.)
-static inline int isLessThan128x128(swift_uint128_t lhs, swift_uint128_t rhs)
-{
-    return ((lhs.high < rhs.high)
-            || ((lhs.high == rhs.high)
-                && ((lhs.c < rhs.c)
-                    || ((lhs.c == rhs.c)
-                        && ((lhs.b < rhs.b)
-                            || ((lhs.b == rhs.b)
-                                && (lhs.low < rhs.low)))))));
-}
-
-// Subtract 128-bit values in a 32-bit environment
-static inline void subtract128x128(swift_uint128_t *lhs, swift_uint128_t rhs)
-{
-    uint64_t t = (uint64_t)lhs->low + (~rhs.low) + 1;
-    lhs->low = (uint32_t)t;
-    t = (t >> 32) + lhs->b + (~rhs.b);
-    lhs->b = (uint32_t)t;
-    t = (t >> 32) + lhs->c + (~rhs.c);
-    lhs->c = (uint32_t)t;
-    t = (t >> 32) + lhs->high + (~rhs.high);
-    lhs->high = (uint32_t)t;
-}
-#endif
-
-#if !HAVE_UINT128_T
-// Shift a 128-bit integer right, rounding down.
-static inline swift_uint128_t shiftRightRoundingDown128(swift_uint128_t lhs, int shift)
-{
-    // Note: Shift is always less than 32
-    swift_uint128_t result;
-    uint64_t t = (uint64_t)lhs.low >> shift;
-    t += ((uint64_t)lhs.b << (32 - shift));
-    result.low = t;
-    t >>= 32;
-    t += ((uint64_t)lhs.c << (32 - shift));
-    result.b = t;
-    t >>= 32;
-    t += ((uint64_t)lhs.high << (32 - shift));
-    result.c = t;
-    t >>= 32;
-    result.high = t;
-    return result;
-}
-#endif
-
-#if !HAVE_UINT128_T
-// Shift a 128-bit integer right, rounding up.
-static inline swift_uint128_t shiftRightRoundingUp128(swift_uint128_t lhs, int shift)
-{
-    swift_uint128_t result;
-    const uint64_t bias = (1 << shift) - 1;
-    uint64_t t = ((uint64_t)lhs.low + bias) >> shift;
-    t += ((uint64_t)lhs.b << (32 - shift));
-    result.low = t;
-    t >>= 32;
-    t += ((uint64_t)lhs.c << (32 - shift));
-    result.b = t;
-    t >>= 32;
-    t += ((uint64_t)lhs.high << (32 - shift));
-    result.c = t;
-    t >>= 32;
-    result.high = t;
-    return result;
-}
-#endif
-
- // Shift a 128-bit integer left, discarding high bits
-#if !HAVE_UINT128_T
-static inline void shiftLeft128(swift_uint128_t *lhs, int shift)
-{
-    // Note: Shift is always less than 32
-    uint64_t t = (uint64_t)lhs->high << (shift + 32);
-    t += (uint64_t)lhs->c << shift;
-    lhs->high = t >> 32;
-    t <<= 32;
-    t += (uint64_t)lhs->b << shift;
-    lhs->c = t >> 32;
-    t <<= 32;
-    t += (uint64_t)lhs->low << shift;
-    lhs->b = t >> 32;
-    lhs->low = t;
-}
-#endif
-
-// Given a power `p`, this returns three values:
-// * 128-bit fractions `lower` and `upper`
-// * integer `exponent`
-//
-// Note: This function takes on average about 10% of the total runtime
-// for formatting a double, as the general case here requires several
-// multiplications to accurately reconstruct the lower and upper
-// bounds.
-//
-// The returned values satisty the following:
-// ```
-//    lower * 2^exponent <= 10^p <= upper * 2^exponent
-// ```
-//
-// Note: Max(*upper - *lower) = 3
-static inline void intervalContainingPowerOf10_Binary64(int p, swift_uint128_t *lower, swift_uint128_t *upper, int *exponent)
-{
-    if (p >= 0 && p <= 55) {
-        // Use one 64-bit exact value
-        swift_uint128_t exact;
-        initialize128WithHighLow64(exact,
-                                   powersOf10_Exact128[p * 2 + 1],
-                                   powersOf10_Exact128[p * 2]);
-        *upper = exact;
-        *lower = exact;
-        *exponent = binaryExponentFor10ToThe(p);
-        return;
+    while (rest < wp_w && delta - rest >= ten_kappa &&
+                 (rest + ten_kappa < wp_w || /// closer
+                    wp_w - rest > rest + ten_kappa - wp_w)) {
+        buffer[len - 1]--;
+        rest += ten_kappa;
     }
+}
 
-    // Multiply a 128-bit approximate value with a 64-bit exact value
-    int index = p + 400;
-    // Copy a pair of uint64_t into a swift_uint128_t
-    int mainPower = index / 28;
-    const uint64_t *base_p = powersOf10_Binary64 + mainPower * 2;
-    swift_uint128_t base;
-    initialize128WithHighLow64(base, base_p[1], base_p[0]);
-    int extraPower = index - mainPower * 28;
-    int baseExponent = binaryExponentFor10ToThe(p - extraPower);
+static void digit_gen(diy_fp_t W, diy_fp_t Mp, diy_fp_t delta, char *buffer, int *len, int *K)
+{
+    uint32_t div;
+    int d, kappa;
+    diy_fp_t one, wp_w;
+    wp_w = minus(Mp, W);
+    one.f = ((uint64_t)1) << -Mp.e;
+    one.e = Mp.e;
+    uint32_t p1 = Mp.f >> -one.e; /// Mp_cut
+    uint64_t p2 = Mp.f & (one.f - 1);
+    *len = 0;
+    kappa = 10;
+    div = TEN9;
+    while (kappa > 0) {
+        d = p1 / div;
+        if (d || *len)
+            buffer[(*len)++] = '0' + d; /// Mp_inv1
+        p1 %= div;
+        kappa--;
+        uint64_t tmp = (((uint64_t)p1) << -one.e) + p2;
+        if (tmp <= delta.f) { /// Mp_delta
+            *K += kappa;
+            grisu_round(buffer, *len, delta.f, tmp, ((uint64_t)div) << -one.e,
+                                    wp_w.f);
+            return;
+        }
+        div /= 10;
+    }
+    uint64_t unit = 1;
+    while (1) {
+        p2 *= 10;
+        delta.f *= 10;
+        unit *= 10;
+        d = p2 >> -one.e;
+        if (d || *len)
+            buffer[(*len)++] = '0' + d;
+        p2 &= one.f - 1;
+        kappa--;
+        if (p2 < delta.f) {
+            *K += kappa;
+            grisu_round(buffer, *len, delta.f, p2, one.f, wp_w.f * unit);
+            return;
+        }
+    }
+}
 
-    int e = baseExponent;
-    if (extraPower == 0) {
-        // We're using a tightly-rounded lower bound, so +1 gives a tightly-rounded upper bound
-        *lower = base;
-#if HAVE_UINT128_T
-        *upper = *lower + 1;
-#else
-        *upper = *lower;
-        upper->low += 1;
-#endif
+static void grisu2(double v, char *buffer, int *length, int *K)
+{
+    diy_fp_t w_m, w_p;
+    int q = 64, alpha = -59, gamma = -56;
+    normalized_boundaries(v, &w_m, &w_p);
+    diy_fp_t w = normalize_diy_fp(double2diy_fp(v));
+    int mk = k_comp(w_p.e + q, alpha, gamma);
+    diy_fp_t c_mk = cached_power(mk);
+    diy_fp_t W = multiply(w, c_mk);
+    diy_fp_t Wp = multiply(w_p, c_mk);
+    diy_fp_t Wm = multiply(w_m, c_mk);
+    Wm.f++;
+    Wp.f--;
+    diy_fp_t delta = minus(Wp, Wm);
+    *K = -mk;
+    digit_gen(W, Wp, delta, buffer, length, K);
+}
+
+static size_t fill_exponent(int K, char *buffer)
+{
+    int i = 0;
+
+    if (K < 0) {
+        buffer[i++] = '-';
+        K = -K;
     } else {
-        // We need to multiply two values to get a lower bound
-        int64_t extra = powersOf10_Exact128[extraPower * 2 + 1];
-        e += binaryExponentFor10ToThe(extraPower);
-        *lower = multiply128x64RoundingDown(base, extra);
-        // +2 is enough to get an upper bound
-        // (Verified through exhaustive testing.)
-#if HAVE_UINT128_T
-        *upper = *lower + 2;
-#else
-        *upper = *lower;
-        upper->low += 2;
-#endif
+        buffer[i++] = '+';
     }
-    *exponent = e;
+
+    if (K >= 100) {
+        buffer[i++] = '0' + K / 100;
+        K %= 100;
+        buffer[i++] = '0' + K / 10;
+        K %= 10;
+        buffer[i++] = '0' + K;
+    } else if (K >= 10) {
+        buffer[i++] = '0' + K / 10;
+        K %= 10;
+        buffer[i++] = '0' + K;
+    } else {
+        buffer[i++] = '0';
+        buffer[i++] = '0' + K;
+    }
+    buffer[i] = '\0';
+
+    return i;
 }
 
-
-static int finishFormatting(char *dest, size_t length, char *p,
-                            char *firstOutputChar, int forceExponential, int base10Exponent)
+static size_t prettify_string(char *buffer, int from_pos, int end_pos, int k)
 {
-    int digitCount = p - firstOutputChar - 1;
-    if (base10Exponent < -4 || forceExponential) {
-      // Exponential form: convert "0123456" => "1.23456e78"
-      firstOutputChar[0] = firstOutputChar[1];
-      if (digitCount > 1) {
-        firstOutputChar[1] = '.';
-      } else {
-        p--;
-      }
-      // Add exponent at the end
-      if (p > dest + length - 5) {
-        dest[0] = '\0';
+    int nb_digits = end_pos - from_pos;
+    int i, offset;
+    /* v = buffer * 10^k
+       kk is such that 10^(kk-1) <= v < 10^kk
+       this way kk gives the position of the comma.
+    */
+    int kk = nb_digits + k;
+
+    size_t size = end_pos;
+    buffer[size] = '\0';
+    if (nb_digits <= kk && kk <= 21) {
+        /* the first digits are already in. Add some 0s and call it a day. */
+        /* the 21 is a personal choice. Only 16 digits could possibly be relevant.
+         * Basically we want to print 12340000000 rather than 1234.0e7 or 1.234e10
+         */
+        for (i = nb_digits; i < kk; i++)
+            buffer[from_pos + i] = '0';
+        size = kk;
+        buffer[size] = '\0';
+    } else if (0 < kk && kk <= 21) {
+        /* comma number. Just insert a '.' at the correct location. */
+        memmove(&buffer[from_pos + kk + 1], &buffer[from_pos + kk], nb_digits - kk);
+        buffer[from_pos + kk] = '.';
+        size = from_pos + nb_digits + 1;
+        buffer[size] = '\0';
+    } else if (-6 < kk && kk <= 0) {
+        /* something like 0.000abcde.
+         * add '0.' and some '0's */
+        offset = 2 - kk;
+        memmove(&buffer[from_pos + offset], &buffer[from_pos], nb_digits);
+        buffer[from_pos] = '0';
+        buffer[from_pos + 1] = '.';
+        for (i = from_pos + 2; i < from_pos + offset; i++)
+            buffer[i] = '0';
+        size = from_pos + nb_digits + offset;
+        buffer[size] = '\0';
+    } else if (nb_digits == 1) {
+        /* just add 'e...' */
+        size = from_pos + 1;
+        buffer[size] = 'e';
+        /* fill_positive_fixnum will terminate the string */
+        size += 1 + fill_exponent(kk - 1, &buffer[size + 1]);
+    } else {
+        /* leave the first digit. then add a '.' and at the end 'e...' */
+        memmove(&buffer[from_pos + 2], &buffer[from_pos + 1], nb_digits - 1);
+        buffer[from_pos + 1] = '.';
+        size = from_pos + nb_digits + 1;
+        buffer[from_pos + nb_digits + 1] = 'e';
+        /* fill_fixnum will terminate the string */
+        size += 1 + fill_exponent(kk - 1, &buffer[size + 1]);
+    }
+
+    return size;
+}
+
+size_t dtoa(double v, char *buffer, size_t buffer_length)
+{
+    if (buffer_length < 24) {
+        buffer[0] = '\0';
         return 0;
-      }
-      *p++ = 'e';
-      if (base10Exponent < 0) {
-        *p++ = '-';
-        base10Exponent = -base10Exponent;
-      } else {
-        *p++ = '+';
-      }
-      if (base10Exponent > 99) {
-        if (base10Exponent > 999) {
-          if (p > dest + length - 5) {
-            dest[0] = '\0';
-            return 0;
-          }
-          memcpy(p, asciiDigitTable + (base10Exponent / 100) * 2, 2);
-          p += 2;
+    }
+
+    if (isfinite(v)) {
+        if (v == 0.0) {
+            if (signbit(v)) {
+                memcpy(buffer, "-0", 3);
+                return 2;
+            } else {
+                memcpy(buffer, "0", 2);
+                return 1;
+            }
         } else {
-          if (p > dest + length - 4) {
-            dest[0] = '\0';
-            return 0;
-          }
-          *p++ = (base10Exponent / 100) + '0';
+            size_t sign = 0;
+            if (v < 0.0) {
+                *buffer++ = '-';
+                sign = 1;
+                v = -v;
+            }
+
+            int length, K;
+            grisu2(v, buffer, &length, &K);
+            return sign + prettify_string(buffer, 0, length, K);
         }
-        base10Exponent %= 100;
-      }
-      memcpy(p, asciiDigitTable + base10Exponent * 2, 2);
-      p += 2;
-    } else if (base10Exponent < 0) { // "0123456" => "0.00123456"
-      // Slide digits back in buffer and prepend zeros and a period
-      if (p > dest + length + base10Exponent - 1) {
-        dest[0] = '\0';
-        return 0;
-      }
-      memmove(firstOutputChar - base10Exponent, firstOutputChar, p - firstOutputChar);
-      /* coverity[NO_EFFECT] */
-      memset(firstOutputChar, '0', -base10Exponent);
-      firstOutputChar[1] = '.';
-      p += -base10Exponent;
-    } else if (base10Exponent + 1 < digitCount) { // "0123456" => "123.456"
-      // Slide integer digits forward and insert a '.'
-      memmove(firstOutputChar, firstOutputChar + 1, base10Exponent + 1);
-      firstOutputChar[base10Exponent + 1] = '.';
-    } else { // "0123456" => "12345600.0"
-      // Slide digits forward 1 and append suitable zeros and '.0'
-      if (p + base10Exponent - digitCount > dest + length - 3) {
-        dest[0] = '\0';
-        return 0;
-      }
-      memmove(firstOutputChar, firstOutputChar + 1, p - firstOutputChar - 1);
-      p -= 1;
-      memset(p, '0', base10Exponent - digitCount + 1);
-      p += base10Exponent - digitCount + 1;
-//      *p++ = '.'; // XXX
-//      *p++ = '0'; // XXX
-    }
-    *p = '\0';
-    return p - dest;
-}
-
-// Format an IEEE 754 double-precision binary64 format floating-point number.
-
-// The calling convention here assumes that C `double` is this format,
-// but otherwise, this does not utilize any floating-point arithmetic
-// or library routines.
-static size_t swift_dtoa_optimal_binary64_p(const void *d, char *dest, size_t length)
-{
-    // Bits in raw significand (not including hidden bit, if present)
-    static const int significandBitCount = DBL_MANT_DIG - 1;
-    static const uint64_t significandMask
-        = ((uint64_t)1 << significandBitCount) - 1;
-    // Bits in raw exponent
-    static const int exponentBitCount = 11;
-    static const int exponentMask = (1 << exponentBitCount) - 1;
-    // Note: IEEE 754 conventionally uses 1023 as the exponent
-    // bias.  That's because they treat the significand as a
-    // fixed-point number with one bit (the hidden bit) integer
-    // portion.  The logic here reconstructs the significand as a
-    // pure fraction, so we need to accommodate that when
-    // reconstructing the binary exponent.
-    static const int64_t exponentBias = (1 << (exponentBitCount - 1)) - 2; // 1022
-
-    // Step 0: Deconstruct an IEEE 754 binary64 double-precision value
-    uint64_t raw = *(const uint64_t *)d;
-    int exponentBitPattern = (raw >> significandBitCount) & exponentMask;
-    uint64_t significandBitPattern = raw & significandMask;
-    int negative = raw >> 63;
-
-    // Step 1: Handle the various input cases:
-    if (length < 1) {
-      return 0;
-    }
-    int binaryExponent;
-    int isBoundary = significandBitPattern == 0;
-    uint64_t significand;
-    if (exponentBitPattern == exponentMask) { // NaN or Infinity
-        if (isBoundary) { // Infinity
-            return infinity(dest, length, negative);
-        } else {
-            const int quiet = (raw >> (significandBitCount - 1)) & 1;
-            return nan_details(dest, length, negative, quiet);
-        }
-    } else if (exponentBitPattern == 0) {
-        if (isBoundary) { // Zero
-          return zero(dest, length, negative);
-        } else { // subnormal
-            binaryExponent = 1 - exponentBias;
-            significand = significandBitPattern << (64 - significandBitCount - 1);
-        }
-    } else { // normal
-        binaryExponent = exponentBitPattern - exponentBias;
-        uint64_t hiddenBit = (uint64_t)1 << significandBitCount;
-        uint64_t fullSignificand = significandBitPattern + hiddenBit;
-        significand = fullSignificand << (64 - significandBitCount - 1);
-    }
-
-    // Step 2: Determine the exact unscaled target interval
-
-    // Grisu-style algorithms construct the shortest decimal digit
-    // sequence within a specific interval.  To build the appropriate
-    // interval, we start by computing the midpoints between this
-    // floating-point value and the adjacent ones.  Note that this
-    // step is an exact computation.
-
-    uint64_t halfUlp = (uint64_t)1 << (64 - significandBitCount - 2);
-    uint64_t quarterUlp = halfUlp >> 1;
-    uint64_t upperMidpointExact = significand + halfUlp;
-
-    uint64_t lowerMidpointExact = significand - (isBoundary ? quarterUlp : halfUlp);
-
-    int isOddSignificand = (significandBitPattern & 1) != 0;
-
-    // Step 3: Estimate the base 10 exponent
-
-    // Grisu algorithms are based in part on a simple technique for
-    // generating a base-10 form for a binary floating-point number.
-    // Start with a binary floating-point number `f * 2^e` and then
-    // estimate the decimal exponent `p`. You can then rewrite your
-    // original number as:
-    //
-    // ```
-    //     f * 2^e * 10^-p * 10^p
-    // ```
-    //
-    // The last term is part of our output, and a good estimate for
-    // `p` will ensure that `2^e * 10^-p` is close to 1.  Multiplying
-    // the first three terms then yields a fraction suitable for
-    // producing the decimal digits.  Here we use a very fast estimate
-    // of `p` that is never off by more than 1; we'll have
-    // opportunities later to correct any error.
-
-    int base10Exponent = decimalExponentFor2ToThe(binaryExponent);
-
-    // Step 4: Compute a power-of-10 scale factor
-
-    // Compute `10^-p` to 128-bit precision.  We generate
-    // both over- and under-estimates to ensure we can exactly
-    // bound the later use of these values.
-    swift_uint128_t powerOfTenRoundedDown;
-    swift_uint128_t powerOfTenRoundedUp;
-    int powerOfTenExponent = 0;
-    static const int bulkFirstDigits = 7;
-    static const int bulkFirstDigitFactor = 1000000; // 10^(bulkFirstDigits - 1)
-    // Note the extra factor of 10^bulkFirstDigits -- that will give
-    // us a headstart on digit generation later on.  (In contrast, Ryu
-    // uses an extra factor of 10^17 here to get all the digits up
-    // front, but then has to back out any extra digits.  Doing that
-    // with a 17-digit value requires 64-bit division, which is the
-    // root cause of Ryu's poor performance on 32-bit processors.  We
-    // also might have to back out extra digits if 7 is too many, but
-    // will only need 32-bit division in that case.)
-    intervalContainingPowerOf10_Binary64(-base10Exponent + bulkFirstDigits - 1,
-                                       &powerOfTenRoundedDown,
-                                       &powerOfTenRoundedUp,
-                                       &powerOfTenExponent);
-    const int extraBits = binaryExponent + powerOfTenExponent;
-
-    // Step 5: Scale the interval (with rounding)
-
-    // As mentioned above, the final digit generation works
-    // with an interval, so we actually apply the scaling
-    // to the upper and lower midpoint values separately.
-
-    // As part of the scaling here, we'll switch from a pure
-    // fraction with zero bit integer portion and 128-bit fraction
-    // to a fixed-point form with 32 bits in the integer portion.
-    static const int integerBits = 32;
-
-    // We scale the interval in one of two different ways,
-    // depending on whether the significand is even or odd...
-
-    swift_uint128_t u, l;
-    if (isOddSignificand) {
-        // Case A: Narrow the interval (odd significand)
-
-        // Loitsch' original Grisu2 always rounds so as to narrow the
-        // interval.  Since our digit generation will select a value
-        // within the scaled interval, narrowing the interval
-        // guarantees that we will find a digit sequence that converts
-        // back to the original value.
-
-        // This ensures accuracy but, as explained in Loitsch' paper,
-        // this carries a risk that there will be a shorter digit
-        // sequence outside of our narrowed interval that we will
-        // miss. This risk obviously gets lower with increased
-        // precision, but it wasn't until the Errol paper that anyone
-        // had a good way to test whether a particular implementation
-        // had sufficient precision. That paper shows a way to enumerate
-        // the worst-case numbers; those numbers that are extremely close
-        // to the mid-points between adjacent floating-point values.
-        // These are the values that might sit just outside of the
-        // narrowed interval. By testing these values, we can verify
-        // the correctness of our implementation.
-
-        // Multiply out the upper midpoint, rounding down...
-        swift_uint128_t u1 = multiply128x64RoundingDown(powerOfTenRoundedDown,
-                                                    upperMidpointExact);
-        // Account for residual binary exponent and adjust
-        // to the fixed-point format
-        u = shiftRightRoundingDown128(u1, integerBits - extraBits);
-
-        // Conversely for the lower midpoint...
-        swift_uint128_t l1 = multiply128x64RoundingUp(powerOfTenRoundedUp,
-                                                  lowerMidpointExact);
-        l = shiftRightRoundingUp128(l1, integerBits - extraBits);
-
     } else {
-        // Case B: Widen the interval (even significand)
-
-        // As explained in Errol Theorem 6, in certain cases there is
-        // a short decimal representation at the exact boundary of the
-        // scaled interval.  When such a number is converted back to
-        // binary, it will get rounded to the adjacent even
-        // significand.
-
-        // So when the significand is even, we round so as to widen
-        // the interval in order to ensure that the exact midpoints
-        // are considered.  Of couse, this ensures that we find a
-        // short result but carries a risk of selecting a result
-        // outside of the exact scaled interval (which would be
-        // inaccurate).
-
-        // The same testing approach described above (based on results
-        // in the Errol paper) also applies
-        // to this case.
-
-        swift_uint128_t u1 = multiply128x64RoundingUp(powerOfTenRoundedUp,
-                                                  upperMidpointExact);
-        u = shiftRightRoundingUp128(u1, integerBits - extraBits);
-
-        swift_uint128_t l1 = multiply128x64RoundingDown(powerOfTenRoundedDown,
-                                                    lowerMidpointExact);
-        l = shiftRightRoundingDown128(l1, integerBits - extraBits);
+        if (isnan(v)) {
+            if (signbit(v)) {
+                    memcpy(buffer, "-nan", 5);
+                    return 4;
+            } else {
+                    memcpy(buffer, "nan", 4);
+                    return 3;
+            }
+        } else if (isinf(v)) {
+            if (signbit(v)) {
+                    memcpy(buffer, "-inf", 5);
+                    return 4;
+            } else {
+                    memcpy(buffer, "inf", 4);
+                    return 3;
+            }
+        }
     }
 
-    // Step 6: Align first digit, adjust exponent
-
-    // Calculations above used an estimate for the power-of-ten scale.
-    // Here, we compensate for any error in that estimate by testing
-    // whether we have the expected number of digits in the integer
-    // portion and correcting as necesssary.  This also serves to
-    // prune leading zeros from subnormals.
-
-    // Except for subnormals, this loop should never run more than once.
-    // For subnormals, this might run as many as 16 + bulkFirstDigits
-    // times.
-#if HAVE_UINT128_T
-    while (u < ((__uint128_t)bulkFirstDigitFactor << (128 - integerBits)))
-#else
-    while (u.high < ((uint32_t)bulkFirstDigitFactor << (32 - integerBits)))
-#endif
-    {
-        base10Exponent -= 1;
-        multiply128xu32(&l, 10);
-        multiply128xu32(&u, 10);
-    }
-
-    // Step 7: Produce decimal digits
-
-    // One standard approach generates digits for the scaled upper and
-    // lower boundaries and stops when at the first digit that
-    // differs. For example, note that 0.1234 is the shortest decimal
-    // between u = 0.123456 and l = 0.123345.
-
-    // Grisu optimizes this by generating digits for the upper bound
-    // (multiplying by 10 to isolate each digit) while simultaneously
-    // scaling the interval width `delta`.  As we remove each digit
-    // from the upper bound, the remainder is the difference between
-    // the base-10 value generated so far and the true upper bound.
-    // When that remainder is less than the scaled width of the
-    // interval, we know the current digits specify a value within the
-    // target interval.
-
-    // The logic below actually blends three different digit-generation
-    // strategies:
-    // * The first digits are already in the integer portion of the
-    //   fixed-point value, thanks to the `bulkFirstDigits` factor above.
-    //   We can just break those down and write them out.
-    // * If we generated too many digits, we use a Ryu-inspired technique
-    //   to backtrack.
-    // * If we generated too few digits (the usual case), we use an
-    //   optimized form of the Grisu2 method to produce the remaining
-    //   values.
-
-    // Generate digits for `t` with interval width `delta = u - l`
-    swift_uint128_t t = u;
-    swift_uint128_t delta = u;
-    subtract128x128(&delta, l);
-
-    char *p = dest;
-    if (negative) {
-      if (p >= dest + length) {
-        dest[0] = '\0';
-        return 0;
-      }
-      *p++ = '-';
-    }
-    char * const firstOutputChar = p;
-
-    // The `bulkFirstDigits` adjustment above already set up the first 7 digits
-    // Format as 8 digits (with a leading zero that we'll exploit later on).
-    uint32_t d12345678 = extractIntegerPart128(&t, integerBits);
-
-    if (!isLessThan128x128(delta, t)) {
-      // Oops!  We have too many digits.  Back out the extra ones to
-      // get the right answer.  This is similar to Ryu, but since
-      // we've only produced seven digits, we only need 32-bit
-      // arithmetic here.  A few notes:
-      // * Our target hardware always supports 32-bit hardware division,
-      //   so this should be reasonably fast.
-      // * For small integers (like "2"), Ryu would have to back out 16
-      //   digits; we only have to back out 6.
-      // * Very few double-precision values actually need fewer than 7
-      //   digits.  So this is rarely used except in workloads that
-      //   specifically use double for small integers.  This is more
-      //   common for binary32, of course.
-
-      // TODO: Add benchmarking for "small integers" -1000...1000 to
-      // verify that this does not unduly penalize those values.
-
-      // Why this is critical for performance: In order to use the
-      // 8-digits-at-a-time optimization below, we need at least 30
-      // bits in the integer part of our fixed-point format above.  If
-      // we only use bulkDigits = 1, that leaves only 128 - 30 = 98
-      // bit accuracy for our scaling step, which isn't enough
-      // (binary64 needs ~110 bits for correctness).  So we have to
-      // use a large bulkDigits value to make full use of the 128-bit
-      // scaling above, which forces us to have some form of logic to
-      // handle the case of too many digits.  The alternatives are to
-      // use >128 bit values (slower) or do some complex finessing of
-      // bit counts by working with powers of 5 instead of 10.
-
-#if HAVE_UINT128_T
-      uint64_t uHigh = u >> 64;
-      uint64_t lHigh = l >> 64;
-      if (0 != (uint64_t)l) {
-        lHigh += 1;
-      }
-#else
-      uint64_t uHigh = ((uint64_t)u.high << 32) + u.c;
-      uint64_t lHigh = ((uint64_t)l.high << 32) + l.c;
-      if (0 != (l.b | l.low)) {
-        lHigh += 1;
-      }
-#endif
-      uint64_t tHigh;
-      if (isBoundary) {
-        tHigh = (uHigh + lHigh * 2) / 3;
-      } else {
-        tHigh = (uHigh + lHigh) / 2;
-      }
-
-      uint32_t u0 = uHigh >> (64 - integerBits);
-      uint32_t l0 = lHigh >> (64 - integerBits);
-      if ((lHigh & ((1ULL << (64 - integerBits)) - 1)) != 0) {
-        l0 += 1;
-      }
-      uint32_t t0 = tHigh >> (64 - integerBits);
-      int t0digits = 8;
-
-      uint32_t u1 = u0 / 10;
-      uint32_t l1 = (l0 + 9) / 10;
-      int trailingZeros = is128bitZero(t);
-      int droppedDigit = ((tHigh * 10) >> (64 - integerBits)) % 10;
-      while (u1 >= l1 && u1 != 0) {
-        u0 = u1;
-        l0 = l1;
-        trailingZeros &= droppedDigit == 0;
-        droppedDigit = t0 % 10;
-        t0 /= 10;
-        t0digits--;
-        u1 = u0 / 10;
-        l1 = (l0 + 9) / 10;
-      }
-      // Correct the final digit
-      if (droppedDigit > 5 || (droppedDigit == 5 && !trailingZeros)) {
-        t0 += 1;
-      } else if (droppedDigit == 5 && trailingZeros) {
-        t0 += 1;
-        t0 &= ~1;
-      }
-      // t0 has t0digits digits.  Write them out
-      if (p > dest + length - t0digits - 1) { // Make sure we have space
-        dest[0] = '\0';
-        return 0;
-      }
-      int i = t0digits;
-      while (i > 1) { // Write out 2 digits at a time back-to-front
-        i -= 2;
-        memcpy(p + i, asciiDigitTable + (t0 % 100) * 2, 2);
-        t0 /= 100;
-      }
-      if (i > 0) { // Handle an odd number of digits
-        p[0] = t0 + '0';
-      }
-      p += t0digits; // Move the pointer past the digits we just wrote
-    } else {
-      //
-      // Our initial scaling did not produce too many digits.
-      // The `d12345678` value holds the first 7 digits (plus
-      // a leading zero that will be useful later).  We write
-      // those out and then incrementally generate as many
-      // more digits as necessary.  The remainder of this
-      // algorithm is basically just Grisu2.
-      //
-
-      if (p > dest + length - 9) {
-        dest[0] = '\0';
-        return 0;
-      }
-      // Write out the 7 digits we got earlier + leading zero
-      int d1234 = d12345678 / 10000;
-      int d5678 = d12345678 % 10000;
-      int d78 = d5678 % 100;
-      int d56 = d5678 / 100;
-      memcpy(p + 6, asciiDigitTable + d78 * 2, 2);
-      memcpy(p + 4, asciiDigitTable + d56 * 2, 2);
-      int d34 = d1234 % 100;
-      int d12 = d1234 / 100;
-      memcpy(p + 2, asciiDigitTable + d34 * 2, 2);
-      memcpy(p, asciiDigitTable + d12 * 2, 2);
-      p += 8;
-
-      // Seven digits wasn't enough, so let's get some more.
-      // Most binary64 values need >= 15 digits total.  We already have seven,
-      // so try grabbing the next 8 digits all at once.
-      // (This is suboptimal for binary32, but the code savings
-      // from sharing this implementation are worth it.)
-      static const uint32_t bulkDigitFactor = 100000000; // 10^(15-bulkFirstDigits)
-      swift_uint128_t d0 = delta;
-      multiply128xu32(&d0, bulkDigitFactor);
-      swift_uint128_t t0 = t;
-      multiply128xu32(&t0, bulkDigitFactor);
-      int bulkDigits = extractIntegerPart128(&t0, integerBits); // 9 digits
-      if (isLessThan128x128(d0, t0)) {
-        if (p > dest + length - 9) {
-          dest[0] = '\0';
-          return 0;
-        }
-        // Next 8 digits are good; add them to the output
-        int d1234 = bulkDigits / 10000;
-        int d5678 = bulkDigits % 10000;
-        int d78 = d5678 % 100;
-        int d56 = d5678 / 100;
-        memcpy(p + 6, asciiDigitTable + d78 * 2, 2);
-        memcpy(p + 4, asciiDigitTable + d56 * 2, 2);
-        int d34 = d1234 % 100;
-        int d12 = d1234 / 100;
-        memcpy(p + 2, asciiDigitTable + d34 * 2, 2);
-        memcpy(p, asciiDigitTable + d12 * 2, 2);
-        p += 8;
-
-        t = t0;
-        delta = d0;
-      }
-
-      // Finish up by generating and writing one digit at a time.
-      while (isLessThan128x128(delta, t)) {
-        if (p > dest + length - 2) {
-          dest[0] = '\0';
-          return 0;
-        }
-        multiply128xu32(&delta, 10);
-        multiply128xu32(&t, 10);
-        *p++ = '0' + extractIntegerPart128(&t, integerBits);
-      }
-
-      // Adjust the final digit to be closer to the original value.  This accounts
-      // for the fact that sometimes there is more than one shortest digit
-      // sequence.
-
-      // For example, consider how the above would work if you had the
-      // value 0.1234 and computed u = 0.1257, l = 0.1211.  The above
-      // digit generation works with `u`, so produces 0.125.  But the
-      // values 0.122, 0.123, and 0.124 are just as short and 0.123 is
-      // therefore the best choice, since it's closest to the original
-      // value.
-
-      // We know delta and t are both less than 10.0 here, so we can
-      // shed some excess integer bits to simplify the following:
-      const int adjustIntegerBits = 4; // Integer bits for "adjust" phase
-      shiftLeft128(&delta, integerBits - adjustIntegerBits);
-      shiftLeft128(&t, integerBits - adjustIntegerBits);
-
-      // Note: We've already consumed most of our available precision,
-      // so it's okay to just work in 64 bits for this...
-      uint64_t deltaHigh64 = extractHigh64From128(delta);
-      uint64_t tHigh64 = extractHigh64From128(t);
-
-      // If `delta < t + 1.0`, then the interval is narrower than
-      // one decimal digit, so there is no other option.
-      if (deltaHigh64 >= tHigh64 + ((uint64_t)1 << (64 - adjustIntegerBits))) {
-        uint64_t skew;
-        if (isBoundary) {
-          // If we're at the boundary where the exponent shifts,
-          // then the original value is 1/3 of the way from
-          // the bottom of the interval ...
-          skew = deltaHigh64 - deltaHigh64 / 3 - tHigh64;
-        } else {
-          // ... otherwise it's exactly in the middle.
-          skew = deltaHigh64 / 2 - tHigh64;
-        }
-
-        // The `skew` above is the difference between our
-        // computed digits and the original exact value.
-        // Use that to offset the final digit:
-        uint64_t one = (uint64_t)(1) << (64 - adjustIntegerBits);
-        uint64_t fractionMask = one - 1;
-        uint64_t oneHalf = one >> 1;
-        if ((skew & fractionMask) == oneHalf) {
-          int adjust = (int)(skew >> (64 - adjustIntegerBits));
-          // If the skew is exactly integer + 1/2, round the
-          // last digit even after adjustment
-          p[-1] -= adjust;
-          p[-1] &= ~1;
-        } else {
-          // Else round to nearest...
-          int adjust = (int)((skew + oneHalf) >> (64 - adjustIntegerBits));
-          p[-1] -= adjust;
-        }
-      }
-    }
-
-    // Step 8: Shuffle digits into the final textual form
-    int forceExponential = binaryExponent > 54 || (binaryExponent == 54 && !isBoundary);
-    return finishFormatting(dest, length, p, firstOutputChar, forceExponential, base10Exponent);
+    buffer[0] = '\0';
+    return 0;
 }
-
-size_t dtoa(double d, char *dest, size_t length)
-{
-  return swift_dtoa_optimal_binary64_p(&d, dest, length);
-}
-
