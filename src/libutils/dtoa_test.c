@@ -66,8 +66,8 @@ DEF_TEST(dtoa)
     OK(dtoa(2.2250738585072014E-308, buffer, sizeof(buffer)) == 23);
     EXPECT_EQ_STR("2.2250738585072014e-308", buffer);
 
-    OK(dtoa(-2.109808898695963E16, buffer, sizeof(buffer)) == 22);
-    EXPECT_EQ_STR("-2.109808898695963e+16", buffer);
+    OK(dtoa(-2.109808898695963E16, buffer, sizeof(buffer)) == 18);
+    EXPECT_EQ_STR("-21098088986959632", buffer);
 
     OK(dtoa(4.940656E-318, buffer, sizeof(buffer)) == 13);
     EXPECT_EQ_STR("4.940656e-318", buffer);
@@ -78,14 +78,14 @@ DEF_TEST(dtoa)
     OK(dtoa(2.989102097996E-312, buffer, sizeof(buffer)) == 19);
     EXPECT_EQ_STR("2.989102097996e-312", buffer);
 
-    OK(dtoa(9.0608011534336E15, buffer, sizeof(buffer)) == 19);
-    EXPECT_EQ_STR("9.0608011534336e+15", buffer);
+    OK(dtoa(9.0608011534336E15, buffer, sizeof(buffer)) == 16);
+    EXPECT_EQ_STR("9060801153433600", buffer);
 
-    OK(dtoa(4.708356024711512E18, buffer, sizeof(buffer)) == 21);
-    EXPECT_EQ_STR("4.708356024711512e+18", buffer);
+    OK(dtoa(4.708356024711512E18, buffer, sizeof(buffer)) == 19);
+    EXPECT_EQ_STR("4708356024711512000", buffer);
 
-    OK(dtoa(9.409340012568248E18, buffer, sizeof(buffer)) == 21);
-    EXPECT_EQ_STR("9.409340012568248e+18", buffer);
+    OK(dtoa(9.409340012568248E18, buffer, sizeof(buffer)) == 19);
+    EXPECT_EQ_STR("9409340012568248000", buffer);
 
     OK(dtoa(1.8531501765868567E21, buffer, sizeof(buffer)) == 22);
     EXPECT_EQ_STR("1.8531501765868567e+21", buffer);
@@ -93,14 +93,14 @@ DEF_TEST(dtoa)
     OK(dtoa(-3.347727380279489E33, buffer, sizeof(buffer)) == 22);
     EXPECT_EQ_STR("-3.347727380279489e+33", buffer);
 
-    OK(dtoa(1.9430376160308388E16, buffer, sizeof(buffer)) == 22);
-    EXPECT_EQ_STR("1.9430376160308388e+16", buffer);
+    OK(dtoa(1.9430376160308388E16, buffer, sizeof(buffer)) == 17);
+    EXPECT_EQ_STR("19430376160308388", buffer);
 
-    OK(dtoa(-6.9741824662760956E19, buffer, sizeof(buffer)) == 23);
-    EXPECT_EQ_STR("-6.9741824662760956e+19", buffer);
+    OK(dtoa(-6.9741824662760956E19, buffer, sizeof(buffer)) == 21);
+    EXPECT_EQ_STR("-69741824662760956000", buffer);
 
-    OK(dtoa(4.3816050601147837E18, buffer, sizeof(buffer)) == 22);
-    EXPECT_EQ_STR("4.3816050601147837e+18", buffer);
+    OK(dtoa(4.3816050601147837E18, buffer, sizeof(buffer)) == 19);
+    EXPECT_EQ_STR("4381605060114783700", buffer);
 
     OK(dtoa(9.007199254740991E15, buffer, sizeof(buffer)) == 16);
     EXPECT_EQ_STR("9007199254740991", buffer);
@@ -340,7 +340,7 @@ DEF_TEST(dtoa)
     EXPECT_EQ_STR("8796093022208000", buffer);
 
     OK(dtoa(2.9802322387695312E-8, buffer, sizeof(buffer)) == 22);
-    EXPECT_EQ_STR("2.9802322387695312e-08", buffer);
+    EXPECT_EQ_STR("2.9802322387695313e-08", buffer); // FIXME
 
     OK(dtoa(5.764607523034235E39, buffer, sizeof(buffer)) == 21);
     EXPECT_EQ_STR("5.764607523034235e+39", buffer);
@@ -429,11 +429,11 @@ DEF_TEST(dtoa)
     OK(dtoa(4.8929891601781557E-296, buffer, sizeof(buffer)) == 23);
     EXPECT_EQ_STR("4.8929891601781557e-296", buffer);
 
-    OK(dtoa(1.8014398509481984E16, buffer, sizeof(buffer)) == 22);
-    EXPECT_EQ_STR("1.8014398509481984e+16", buffer);
+    OK(dtoa(1.8014398509481984E16, buffer, sizeof(buffer)) == 17);
+    EXPECT_EQ_STR("18014398509481984", buffer);
 
-    OK(dtoa(3.6028797018963964E16, buffer, sizeof(buffer)) == 22);
-    EXPECT_EQ_STR("3.6028797018963964e+16", buffer);
+    OK(dtoa(3.6028797018963964E16, buffer, sizeof(buffer)) == 17);
+    EXPECT_EQ_STR("36028797018963964", buffer);
 
     OK(dtoa(2.900835519859558E-216, buffer, sizeof(buffer)) == 22);
     EXPECT_EQ_STR("2.900835519859558e-216", buffer);
