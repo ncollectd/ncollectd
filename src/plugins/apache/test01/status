@@ -1,0 +1,42 @@
+HTTP/1.1 200 OK
+Date: Thu, 05 Dec 2024 10:22:56 GMT
+Server: Apache/2.4.62 (Fedora Linux)
+Content-Length: 1190
+Content-Type: text/plain; charset=ISO-8859-1
+
+127.0.0.1
+ServerVersion: Apache/2.4.62 (Fedora Linux)
+ServerMPM: event
+Server Built: Aug  1 2024 00:00:00
+CurrentTime: Thursday, 05-Dec-2024 11:22:56 CET
+RestartTime: Thursday, 05-Dec-2024 11:13:44 CET
+ParentServerConfigGeneration: 1
+ParentServerMPMGeneration: 0
+ServerUptimeSeconds: 551
+ServerUptime: 9 minutes 11 seconds
+Load1: 16.21
+Load5: 5.00
+Load15: 2.12
+Total Accesses: 784953
+Total kBytes: 6767572
+Total Duration: 375955
+CPUUser: 117.51
+CPUSystem: 123.65
+CPUChildrenUser: 0
+CPUChildrenSystem: 0
+CPULoad: 43.7677
+Uptime: 551
+ReqPerSec: 1424.6
+BytesPerSec: 12577100
+BytesPerReq: 8828.55
+DurationPerReq: .478952
+BusyWorkers: 13
+GracefulWorkers: 0
+IdleWorkers: 212
+Processes: 9
+Stopping: 0
+ConnsTotal: 233
+ConnsAsyncWriting: 0
+ConnsAsyncKeepAlive: 0
+ConnsAsyncClosing: 218
+Scoreboard: __________________________________R_________________________________C_____W__W_W___W___W____W____________________________________________R_______________________R________________________________W_________W________W___________...............................................................................................................................................................................

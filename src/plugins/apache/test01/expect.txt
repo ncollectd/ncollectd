@@ -1,0 +1,30 @@
+# TYPE apache_up gauge
+apache_up{hostname="localhost.localdomain",instance="local"} 1
+# TYPE apache_requests counter
+apache_requests_total{hostname="localhost.localdomain",instance="local"} 784953
+# TYPE apache_bytes counter
+apache_bytes_total{hostname="localhost.localdomain",instance="local"} 6929993728
+# TYPE apache_workers gauge
+apache_workers{hostname="localhost.localdomain",instance="local",state="busy"} 13
+apache_workers{hostname="localhost.localdomain",instance="local",state="idle"} 212
+# TYPE apache_scoreboard gauge
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="open"} 175
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="waiting"} 212
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="starting"} 0
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="reading"} 3
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="sending"} 9
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="keepalive"} 0
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="dnslookup"} 0
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="closing"} 1
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="logging"} 0
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="finishing"} 0
+apache_scoreboard{hostname="localhost.localdomain",instance="local",state="idle_cleanup"} 0
+# TYPE apache_connections gauge
+apache_connections{hostname="localhost.localdomain",instance="local",state="total"} 233
+apache_connections{hostname="localhost.localdomain",instance="local",state="writting"} 0
+apache_connections{hostname="localhost.localdomain",instance="local",state="keepalive"} 0
+apache_connections{hostname="localhost.localdomain",instance="local",state="closing"} 218
+# TYPE apache_processes gauge
+apache_processes{hostname="localhost.localdomain",instance="local"} 9
+# TYPE apache_uptime_seconds gauge
+apache_uptime_seconds{hostname="localhost.localdomain",instance="local"} 551
