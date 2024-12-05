@@ -6,9 +6,14 @@
 
 #include "libutils/time.h"
 
+int socket_listen_unix_stream(const char *file, int backlog, char const *group, int perms,
+                              bool delete, cdtime_t timeout);
+
 int socket_connect_unix_stream(const char *path, cdtime_t timeout);
 
 int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t timeout);
+
+int socket_listen_tcp(const char *host, short port, int addrfamily, int backlog, bool reuseaddr);
 
 int socket_connect_udp(const char *host, short port, int ttl);
 

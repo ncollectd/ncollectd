@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix KEA_STATS_
+%define hash-function-name kea_stats_hash
+%define lookup-function-name kea_stats_get_key
+%define slot-name key
+%{
+%}
+struct kea_stats {
+    char *key;
+    int fam;
+    char *lkey;
+    char *lvalue;
+};
+%%
+pkt4-sent,                     -1,                                   NULL,        NULL
+pkt4-offer-sent,               FAM_KEA_DHCP4_PACKETS_SENT,           "operation", "offer"
+pkt4-nak-sent,                 FAM_KEA_DHCP4_PACKETS_SENT,           "operation", "nak"
+pkt4-ack-sent,                 FAM_KEA_DHCP4_PACKETS_SENT,           "operation", "ack"
+pkt4-received,                 -1,                                   NULL,        NULL
+pkt4-nak-received,             FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "nak"
+pkt4-ack-received,             FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "ack"
+pkt4-decline-received,         FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "decline"
+pkt4-discover-received,        FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "discover"
+pkt4-inform-received,          FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "inform"
+pkt4-offer-received,           FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "offer"
+pkt4-receive-drop,             FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "drop"
+pkt4-parse-failed,             FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "parse-failed"
+pkt4-release-received,         FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "release"
+pkt4-request-received,         FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "request"
+pkt4-unknown-received,         FAM_KEA_DHCP4_PACKETS_RECEIVED,       "operation", "unknown"
+pkt6-sent,                     -1,                                   NULL,        NULL
+pkt6-advertise-sent,           FAM_KEA_DHCP6_PACKETS_SENT,           "operation", "advertise"
+pkt6-reply-sent,               FAM_KEA_DHCP6_PACKETS_SENT,           "operation", "reply"
+pkt6-received,                 -1,                                   NULL,        NULL
+pkt6-receive-drop,             FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "drop"
+pkt6-parse-failed,             FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "parse-failed"
+pkt6-solicit-received,         FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "solicit"
+pkt6-advertise-received,       FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "advertise"
+pkt6-request-received,         FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "request"
+pkt6-reply-received,           FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "reply"
+pkt6-renew-received,           FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "renew"
+pkt6-rebind-received,          FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "rebind"
+pkt6-release-received,         FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "release"
+pkt6-decline-received,         FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "decline"
+pkt6-infrequest-received,      FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "infrequest"
+pkt6-unknown-received,         FAM_KEA_DHCP6_PACKETS_RECEIVED,       "operation", "unknown"
+pkt6-dhcpv4-response-sent,     FAM_KEA_DHCP6_PACKETS_SENT_DHCP4,     "operation", "response"
+pkt6-dhcpv4-query-received,    FAM_KEA_DHCP6_PACKETS_RECEIVED_DHCP4, "operation", "query"
+pkt6-dhcpv4-response-received, FAM_KEA_DHCP6_PACKETS_RECEIVED_DHCP4, "operation", "response"
+v4-allocation-fail,                -1,       NULL, NULL
+v4-allocation-fail-classes,        -1,       NULL, NULL
+v4-allocation-fail-no-pools,       -1,       NULL, NULL
+v4-allocation-fail-shared-network, -1,       NULL, NULL
+v4-allocation-fail-subnet,         -1,       NULL, NULL
+v4-lease-reuses,                   -1,       NULL, NULL
+v4-reservation-conflicts,          -1,       NULL, NULL
+v6-allocation-fail-shared-network, -1,       NULL, NULL
+v6-allocation-fail-subnet,         -1,       NULL, NULL
+v6-allocation-fail-no-pools,       -1,       NULL, NULL
+v6-allocation-fail-classes,        -1,       NULL, NULL
+v6-reservation-conflicts,          -1,       NULL, NULL
+v6-ia-na-lease-reuses,             -1,       NULL, NULL
+v6-ia-pd-lease-reuses,             -1,       NULL, NULL
+global4::cumulative-assigned-addresses, FAM_KEA_DHCP4_GLOBAL4_CUMULATIVE_ADDRESSES_ASSIGNED, NULL, NULL
+global4::declined-addresses,            FAM_KEA_DHCP4_GLOBAL4_ADDRESSES_DECLINED,            NULL, NULL
+global4::reclaimed-declined-addresses,  FAM_KEA_DHCP4_GLOBAL4_ADDRESSES_DECLINED_RECLAIMED,  NULL, NULL
+global4::reclaimed-leases,              FAM_KEA_DHCP4_GLOBAL4_ADDRESSES_RECLAIMED,           NULL, NULL
+global6::declined-addresses,            FAM_KEA_DHCP6_GLOBAL6_ADDRESSES_DECLINED,            NULL, NULL
+global6::cumulative-assigned-nas,       FAM_KEA_DHCP6_GLOBAL6_CUMULATIVE_NAS_ASSIGNED,       NULL, NULL
+global6::cumulative-assigned-pds,       FAM_KEA_DHCP6_GLOBAL6_CUMULATIVE_PDS_ASSIGNED,       NULL, NULL
+global6::reclaimed-declined-addresses,  FAM_KEA_DHCP6_GLOBAL6_ADDRESSES_DECLINED_RECLAIMED,  NULL, NULL
+global6::reclaimed-leases,              FAM_KEA_DHCP6_GLOBAL6_ADDRESSES_RECLAIMED,           NULL, NULL
+subnet4::assigned-addresses,            FAM_KEA_DHCP4_ADDRESSES_ASSIGNED,            NULL, NULL
+subnet4::declined-addresses,            FAM_KEA_DHCP4_ADDRESSES_DECLINED,            NULL, NULL
+subnet4::reclaimed-declined-addresses,  FAM_KEA_DHCP4_ADDRESSES_DECLINED_RECLAIMED,  NULL, NULL
+subnet4::reclaimed-leases,              FAM_KEA_DHCP4_ADDRESSES_RECLAIMED,           NULL, NULL
+subnet4::total-addresses,               FAM_KEA_DHCP4_ADDRESSES,                     NULL, NULL
+subnet4::cumulative-assigned-addresses, FAM_KEA_DHCP4_CUMULATIVE_ADDRESSES_ASSIGNED, NULL, NULL
+subnet4::v4-allocation-fail-subnet,         FAM_KEA_DHCP4_ADDRESSES_ALLOCATION_FAIL, "context", "subnet",
+subnet4::v4-allocation-fail-shared-network, FAM_KEA_DHCP4_ADDRESSES_ALLOCATION_FAIL, "context", "shared-network"
+subnet4::v4-allocation-fail-no-pools,       FAM_KEA_DHCP4_ADDRESSES_ALLOCATION_FAIL, "context", "no-pools"
+subnet4::v4-allocation-fail-classes,        FAM_KEA_DHCP4_ADDRESSES_ALLOCATION_FAIL, "context", "classes"
+subnet4::v4-lease-reuses,                   FAM_KEA_DHCP4_LEASES_REUSED,             NULL, NULL
+subnet4::v4-reservation-conflicts,          FAM_KEA_DHCP4_RESERVATION_CONFLICTS,     NULL, NULL
+subnet6::total-nas,                     FAM_KEA_DHCP6_NA,                            NULL, NULL
+subnet6::assigned-nas,                  FAM_KEA_DHCP6_NA_ASSIGNED,                   NULL, NULL
+subnet6::total-pds,                     FAM_KEA_DHCP6_PD,                            NULL, NULL
+subnet6::assigned-pds,                  FAM_KEA_DHCP6_PD_ASSIGNED,                   NULL, NULL
+subnet6::reclaimed-leases,              FAM_KEA_DHCP6_ADDRESSES_RECLAIMED,           NULL, NULL
+subnet6::declined-addresses,            FAM_KEA_DHCP6_ADDRESSES_DECLINED,            NULL, NULL
+subnet6::reclaimed-declined-addresses,  FAM_KEA_DHCP6_ADDRESSES_DECLINED_RECLAIMED,  NULL, NULL
+subnet6::declined-reclaimed-addresses,  FAM_KEA_DHCP6_ADDRESSES_DECLINED_RECLAIMED,  NULL, NULL
+subnet6::cumulative-assigned-nas,       FAM_KEA_DHCP6_CUMULATIVE_NAS_ASSIGNED,       NULL, NULL
+subnet6::cumulative-assigned-pds,       FAM_KEA_DHCP6_CUMULATIVE_PDS_ASSIGNED,       NULL, NULL
+subnet6::v6-allocation-fail-shared-network, FAM_KEA_DHCP6_ALLOCATIONS_FAILED, "context", "shared-network"
+subnet6::v6-allocation-fail-subnet,         FAM_KEA_DHCP6_ALLOCATIONS_FAILED, "context", "subnet"
+subnet6::v6-allocation-fail-no-pools,       FAM_KEA_DHCP6_ALLOCATIONS_FAILED, "context", "no-pools"
+subnet6::v6-allocation-fail-classes,        FAM_KEA_DHCP6_ALLOCATIONS_FAILED, "context", "classes"
+subnet6::v6-reservation-conflicts,          FAM_KEA_DHCP6_RESERVATION_CONFLICTS, NULL, NULL
+subnet6::v6-ia-na-lease-reuses,             FAM_KEA_DHCP6_NA_REUSES, NULL, NULL
+subnet6::v6-ia-pd-lease-reuses,             FAM_KEA_DHCP6_PD_REUSES, NULL, NULL

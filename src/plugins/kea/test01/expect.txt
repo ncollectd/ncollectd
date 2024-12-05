@@ -1,0 +1,44 @@
+# TYPE kea_up gauge
+kea_up{hostname="localhost.localdomain",instance="local"} 1
+# TYPE kea_dhcp4_packets_sent counter
+kea_dhcp4_packets_sent_total{hostname="localhost.localdomain",instance="local",operation="ack"} 0
+kea_dhcp4_packets_sent_total{hostname="localhost.localdomain",instance="local",operation="nak"} 0
+kea_dhcp4_packets_sent_total{hostname="localhost.localdomain",instance="local",operation="offer"} 0
+# TYPE kea_dhcp4_packets_received counter
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="ack"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="decline"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="discover"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="inform"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="nak"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="offer"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="parse-failed"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="drop"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="release"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="request"} 0
+kea_dhcp4_packets_received_total{hostname="localhost.localdomain",instance="local",operation="unknown"} 0
+# TYPE kea_dhcp4_global4_cumulative_addresses_assigned counter
+kea_dhcp4_global4_cumulative_addresses_assigned_total{hostname="localhost.localdomain",instance="local"} 0
+# TYPE kea_dhcp4_global4_addresses_declined counter
+kea_dhcp4_global4_addresses_declined_total{hostname="localhost.localdomain",instance="local"} 0
+# TYPE kea_dhcp4_global4_addresses_declined_reclaimed counter
+kea_dhcp4_global4_addresses_declined_reclaimed_total{hostname="localhost.localdomain",instance="local"} 0
+# TYPE kea_dhcp4_global4_addresses_reclaimed counter
+kea_dhcp4_global4_addresses_reclaimed_total{hostname="localhost.localdomain",instance="local"} 0
+# TYPE kea_dhcp4_addresses_assigned counter
+kea_dhcp4_addresses_assigned_total{hostname="localhost.localdomain",id="1",instance="local",subnet="192.0.2.0/24"} 0
+kea_dhcp4_addresses_assigned_total{hostname="localhost.localdomain",id="1",instance="local",pool="192.0.2.1-192.0.2.200",subnet="192.0.2.0/24"} 0
+# TYPE kea_dhcp4_addresses_declined counter
+kea_dhcp4_addresses_declined_total{hostname="localhost.localdomain",id="1",instance="local",subnet="192.0.2.0/24"} 0
+kea_dhcp4_addresses_declined_total{hostname="localhost.localdomain",id="1",instance="local",pool="192.0.2.1-192.0.2.200",subnet="192.0.2.0/24"} 0
+# TYPE kea_dhcp4_addresses_declined_reclaimed counter
+kea_dhcp4_addresses_declined_reclaimed_total{hostname="localhost.localdomain",id="1",instance="local",pool="192.0.2.1-192.0.2.200",subnet="192.0.2.0/24"} 0
+kea_dhcp4_addresses_declined_reclaimed_total{hostname="localhost.localdomain",id="1",instance="local",subnet="192.0.2.0/24"} 0
+# TYPE kea_dhcp4_addresses_reclaimed counter
+kea_dhcp4_addresses_reclaimed_total{hostname="localhost.localdomain",id="1",instance="local",pool="192.0.2.1-192.0.2.200",subnet="192.0.2.0/24"} 0
+kea_dhcp4_addresses_reclaimed_total{hostname="localhost.localdomain",id="1",instance="local",subnet="192.0.2.0/24"} 0
+# TYPE kea_dhcp4_addresses counter
+kea_dhcp4_addresses_total{hostname="localhost.localdomain",id="1",instance="local",pool="192.0.2.1-192.0.2.200",subnet="192.0.2.0/24"} 200
+kea_dhcp4_addresses_total{hostname="localhost.localdomain",id="1",instance="local",subnet="192.0.2.0/24"} 200
+# TYPE kea_dhcp4_cumulative_addresses_assigned counter
+kea_dhcp4_cumulative_addresses_assigned_total{hostname="localhost.localdomain",id="1",instance="local",subnet="192.0.2.0/24"} 0
+kea_dhcp4_cumulative_addresses_assigned_total{hostname="localhost.localdomain",id="1",instance="local",pool="192.0.2.1-192.0.2.200",subnet="192.0.2.0/24"} 0

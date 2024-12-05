@@ -1,0 +1,49 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-kea 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd kea man page"
+.SH NAME
+ncollectd-kea \- Documentation of ncollectd's kea plugin
+.SH SYNOPSIS
+\fBload-plugin\fP kea
+.br
+\fBplugin\fP kea {
+    \fBinstance\fP \fIname\fP {
+        \fBsocket-path\fP "\fI/path-to-socket\fP"
+        \fBtimeout\fP \fIseconds\fP
+        \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+        \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fBkea\fP plugin collect metris from Kea DHCP server.
+.PP
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
+a Kea instance.
+.PP
+The following options are valid within \fBinstance\fP blocks:
+.PP
+.TP
+\fBsocket-path\fP "\fI/path-to-socket\fP"
+Path to control Unix socket to retrieve metrics.
+.TP
+\fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for the requests to the \fBkea\fP server,
+in seconds. By default, the configured \fBinterval\fP is used to set the timeout.
+.TP
+\fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple time in the \fBinstance\fP block.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)

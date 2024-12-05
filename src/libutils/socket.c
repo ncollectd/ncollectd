@@ -15,6 +15,90 @@
 
 #include <sys/stat.h>
 #include <sys/un.h>
+#include <grp.h>
+
+int socket_listen_unix_stream(const char *file, int backlog, char const *group, int perms,
+                              bool delete, cdtime_t timeout)
+{
+    int fd = socket(PF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        ERROR("socket failed: %s", STRERRNO);
+        return -1;
+    }
+
+    struct sockaddr_un sa = {0};
+    sa.sun_family = AF_UNIX;
+    sstrncpy(sa.sun_path, file, sizeof(sa.sun_path));
+
+    DEBUG("socket path = %s", sa.sun_path);
+
+    if (delete) {
+        errno = 0;
+        int status = unlink(sa.sun_path);
+        if ((status != 0) && (errno != ENOENT)) {
+            WARNING("Deleting socket file \"%s\" failed: %s", sa.sun_path, STRERRNO);
+        } else if (status == 0) {
+            INFO("Successfully deleted socket file \"%s\".", sa.sun_path);
+        }
+    }
+
+    if (timeout > 0) {
+        struct timeval tvout = CDTIME_T_TO_TIMEVAL(timeout);
+        int status = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tvout, sizeof(tvout));
+        if (status != 0) {
+            ERROR("setockopt failed: %s", STRERRNO);
+            close(fd);
+            return -1;
+        }
+    }
+
+    int status = bind(fd, (struct sockaddr *)&sa, sizeof(sa));
+    if (status != 0) {
+        ERROR("bind failed: %s", STRERRNO);
+        close(fd);
+        return -1;
+    }
+
+    status = chmod(sa.sun_path, perms);
+    if (status == -1) {
+        ERROR("chmod failed: %s", STRERRNO);
+        close(fd);
+        return -1;
+    }
+
+    status = listen(fd, backlog);
+    if (status != 0) {
+        ERROR("listen failed: %s", STRERRNO);
+        close(fd);
+        return -1;
+    }
+
+    if (group != NULL) {
+        long int grbuf_size = sysconf(_SC_GETGR_R_SIZE_MAX);
+        if (grbuf_size <= 0)
+            grbuf_size = sysconf(_SC_PAGESIZE);
+        if (grbuf_size <= 0)
+            grbuf_size = 4096;
+
+        struct group *g = NULL;
+        char grbuf[grbuf_size];
+        struct group sg;
+        status = getgrnam_r(group, &sg, grbuf, sizeof(grbuf), &g);
+        if (status != 0) {
+            WARNING("getgrnam_r (%s) failed: %s", group, STRERROR(status));
+            return fd;
+        }
+        if (g == NULL) {
+            WARNING("No such group: `%s'", group);
+            return fd;
+        }
+
+        if (chown(file, (uid_t)-1, g->gr_gid) != 0)
+            WARNING("chown (%s, -1, %i) failed: %s", file, (int)g->gr_gid, STRERRNO);
+    }
+
+    return fd;
+}
 
 int socket_connect_unix_stream(const char *path, cdtime_t timeout)
 {
@@ -166,6 +250,67 @@ int socket_connect_udp(const char *host, short port, int ttl)
     }
 
     freeaddrinfo(ai_list);
+
+    return fd;
+}
+
+int socket_listen_tcp(const char *host, short port, int addrfamily, int backlog, bool reuseaddr)
+{
+    char service[ITOA_MAX];
+
+    uitoa(port, service);
+
+    struct addrinfo *res;
+    int status = getaddrinfo(host, service,
+                             &(struct addrinfo){ .ai_flags = AI_PASSIVE | AI_ADDRCONFIG,
+                                                 .ai_family = addrfamily,
+                                                 .ai_socktype = SOCK_STREAM, }, &res);
+    if (status != 0)
+        return -1;
+
+    int fd = -1;
+    for (struct addrinfo *ai = res; ai != NULL; ai = ai->ai_next) {
+        int flags = ai->ai_socktype;
+#ifdef SOCK_CLOEXEC
+        flags |= SOCK_CLOEXEC;
+#endif
+
+        fd = socket(ai->ai_family, flags, 0);
+        if (fd == -1)
+            continue;
+
+        if (reuseaddr) {
+            if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) != 0) {
+                WARNING("setsockopt(SO_REUSEADDR) failed: %s", STRERRNO);
+                close(fd);
+                fd = -1;
+                continue;
+            }
+        }
+
+        if (bind(fd, ai->ai_addr, ai->ai_addrlen) != 0) {
+            close(fd);
+            fd = -1;
+            continue;
+        }
+
+        if (listen(fd, backlog) != 0) {
+            close(fd);
+            fd = -1;
+            continue;
+        }
+
+        char str_node[NI_MAXHOST];
+        char str_service[NI_MAXSERV];
+
+        getnameinfo(ai->ai_addr, ai->ai_addrlen, str_node, sizeof(str_node),
+                    str_service, sizeof(str_service), NI_NUMERICHOST | NI_NUMERICSERV);
+
+        INFO("Listening on [%s]:%s.", str_node, str_service);
+        break;
+    }
+
+    freeaddrinfo(res);
 
     return fd;
 }
