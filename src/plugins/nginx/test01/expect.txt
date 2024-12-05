@@ -1,0 +1,16 @@
+# TYPE nginx_up gauge
+nginx_up{hostname="localhost.localdomain",instance="local"} 1
+# TYPE nginx_connections_active gauge
+nginx_connections_active{hostname="localhost.localdomain",instance="local"} 85
+# TYPE nginx_connections_accepted counter
+nginx_connections_accepted_total{hostname="localhost.localdomain",instance="local"} 361869
+# TYPE nginx_connections_handled counter
+nginx_connections_handled_total{hostname="localhost.localdomain",instance="local"} 361868
+# TYPE nginx_connections_reading gauge
+nginx_connections_reading{hostname="localhost.localdomain",instance="local"} 0
+# TYPE nginx_connections_waiting gauge
+nginx_connections_waiting{hostname="localhost.localdomain",instance="local"} 84
+# TYPE nginx_connections_writing gauge
+nginx_connections_writing{hostname="localhost.localdomain",instance="local"} 1
+# TYPE nginx_http_requests counter
+nginx_http_requests_total{hostname="localhost.localdomain",instance="local"} 361785
