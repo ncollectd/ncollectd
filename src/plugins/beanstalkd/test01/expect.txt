@@ -1,0 +1,69 @@
+# TYPE beanstalkd_up gauge
+beanstalkd_up{hostname="localhost.localdomain",instance="local"} 1
+# TYPE beanstalkd_current_jobs_urgent gauge
+beanstalkd_current_jobs_urgent{hostname="localhost.localdomain",instance="local"} 61
+# TYPE beanstalkd_current_jobs_ready gauge
+beanstalkd_current_jobs_ready{hostname="localhost.localdomain",instance="local"} 75
+# TYPE beanstalkd_current_jobs_reserved gauge
+beanstalkd_current_jobs_reserved{hostname="localhost.localdomain",instance="local"} 32
+# TYPE beanstalkd_current_jobs_delayed gauge
+beanstalkd_current_jobs_delayed{hostname="localhost.localdomain",instance="local"} 12
+# TYPE beanstalkd_current_jobs_buried gauge
+beanstalkd_current_jobs_buried{hostname="localhost.localdomain",instance="local"} 84
+# TYPE beanstalkd_command counter
+beanstalkd_command_total{command="put",hostname="localhost.localdomain",instance="local"} 224
+beanstalkd_command_total{command="peek",hostname="localhost.localdomain",instance="local"} 214
+beanstalkd_command_total{command="peek-ready",hostname="localhost.localdomain",instance="local"} 34
+beanstalkd_command_total{command="peek-delayed",hostname="localhost.localdomain",instance="local"} 15
+beanstalkd_command_total{command="peek-buried",hostname="localhost.localdomain",instance="local"} 57
+beanstalkd_command_total{command="reserve",hostname="localhost.localdomain",instance="local"} 9
+beanstalkd_command_total{command="reserve-with-timeout",hostname="localhost.localdomain",instance="local"} 6
+beanstalkd_command_total{command="delete",hostname="localhost.localdomain",instance="local"} 78
+beanstalkd_command_total{command="release",hostname="localhost.localdomain",instance="local"} 66
+beanstalkd_command_total{command="use",hostname="localhost.localdomain",instance="local"} 57
+beanstalkd_command_total{command="watch",hostname="localhost.localdomain",instance="local"} 81
+beanstalkd_command_total{command="ignore",hostname="localhost.localdomain",instance="local"} 10
+beanstalkd_command_total{command="bury",hostname="localhost.localdomain",instance="local"} 76
+beanstalkd_command_total{command="kick",hostname="localhost.localdomain",instance="local"} 49
+beanstalkd_command_total{command="touch",hostname="localhost.localdomain",instance="local"} 37
+beanstalkd_command_total{command="stats",hostname="localhost.localdomain",instance="local"} 24
+beanstalkd_command_total{command="stats-job",hostname="localhost.localdomain",instance="local"} 79
+beanstalkd_command_total{command="stats-tube",hostname="localhost.localdomain",instance="local"} 62
+beanstalkd_command_total{command="list-tubes",hostname="localhost.localdomain",instance="local"} 46
+beanstalkd_command_total{command="list-tube-used",hostname="localhost.localdomain",instance="local"} 54
+beanstalkd_command_total{command="list-tubes-watched",hostname="localhost.localdomain",instance="local"} 13
+beanstalkd_command_total{command="pause-tube",hostname="localhost.localdomain",instance="local"} 22
+# TYPE beanstalkd_job_timeouts counter
+beanstalkd_job_timeouts_total{hostname="localhost.localdomain",instance="local"} 7
+# TYPE beanstalkd_jobs counter
+beanstalkd_jobs_total{hostname="localhost.localdomain",instance="local"} 622
+# TYPE beanstalkd_max_job_size_bytes gauge
+beanstalkd_max_job_size_bytes{hostname="localhost.localdomain",instance="local"} 65535
+# TYPE beanstalkd_current_tubes gauge
+beanstalkd_current_tubes{hostname="localhost.localdomain",instance="local"} 13
+# TYPE beanstalkd_current_connections gauge
+beanstalkd_current_connections{hostname="localhost.localdomain",instance="local"} 53
+# TYPE beanstalkd_current_producers gauge
+beanstalkd_current_producers{hostname="localhost.localdomain",instance="local"} 24
+# TYPE beanstalkd_current_workers gauge
+beanstalkd_current_workers{hostname="localhost.localdomain",instance="local"} 19
+# TYPE beanstalkd_current_waiting gauge
+beanstalkd_current_waiting{hostname="localhost.localdomain",instance="local"} 22
+# TYPE beanstalkd_connections counter
+beanstalkd_connections_total{hostname="localhost.localdomain",instance="local"} 2
+# TYPE beanstalkd_cpu_user_time_seconds counter
+beanstalkd_cpu_user_time_seconds_total{hostname="localhost.localdomain",instance="local"} 0.001789
+# TYPE beanstalkd_cpu_system_time_seconds counter
+beanstalkd_cpu_system_time_seconds_total{hostname="localhost.localdomain",instance="local"} 0.009063
+# TYPE beanstalkd_uptime_seconds gauge
+beanstalkd_uptime_seconds{hostname="localhost.localdomain",instance="local"} 126
+# TYPE beanstalkd_binlog_oldest_index gauge
+beanstalkd_binlog_oldest_index{hostname="localhost.localdomain",instance="local"} 25
+# TYPE beanstalkd_binlog_current_index gauge
+beanstalkd_binlog_current_index{hostname="localhost.localdomain",instance="local"} 78
+# TYPE beanstalkd_binlog_max_size_bytes gauge
+beanstalkd_binlog_max_size_bytes{hostname="localhost.localdomain",instance="local"} 605
+# TYPE beanstalkd_binlog_records_written counter
+beanstalkd_binlog_records_written_total{hostname="localhost.localdomain",instance="local"} 756
+# TYPE beanstalkd_binlog_records_migrated counter
+beanstalkd_binlog_records_migrated_total{hostname="localhost.localdomain",instance="local"} 10485760
