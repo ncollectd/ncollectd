@@ -192,6 +192,20 @@ int plugin_unregister_log(__attribute__((unused)) char const *name)
     return 0;
 }
 
+struct plugin_filter_s;
+typedef struct plugin_filter_s plugin_filter_t;
+
+int plugin_filter_configure(__attribute__((unused)) const config_item_t *ci,
+                            __attribute__((unused)) plugin_filter_t **filter)
+{
+    return 0;
+}
+
+void plugin_filter_free(__attribute__((unused)) plugin_filter_t *filter)
+{
+
+}
+
 int plugin_dispatch_notification(__attribute__((unused)) const notification_t *notif)
 {
     return 0;
