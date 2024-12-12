@@ -366,10 +366,9 @@ static int connect_client(const char *hostname, const char *service)
  * git://git.tuxfamily.org/gitroot/chrony/chrony.git:util.c */
 /* Original code licensed as GPLv2, by Richard P. Purnow, Miroslav Lichvar */
 /* Original name: char * UTI_IPToString(IPAddr *addr)*/
-static char *niptoha(const chrony_ipaddr_t *addr, char *buf,
-                     __attribute__((unused)) size_t buf_size)
+static char *niptoha(const chrony_ipaddr_t *addr, char *buf, size_t buf_size)
 {
-    int status = 1;
+    __attribute__((unused)) int status = 1;
 
     switch (ntohs(addr->f_family)) {
     case IPADDR_UNSPEC:
