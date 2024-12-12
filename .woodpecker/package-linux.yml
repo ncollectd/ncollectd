@@ -189,3 +189,21 @@ steps:
       - dpkg-buildpackage
       - cd ..
       - rm -rf ncollectd-$${TAG}
+  package-opensuse-leap:
+    image: ncollectd/ci-opensuse:leap
+    commands:
+      - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
+      - mkdir -p package-opensuse-leap/SOURCES
+      - cp packaging/opensuse/systemd.ncollectd.service package-opensuse-leap/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-opensuse-leap/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-opensuse-leap" --define "git_tag $${TAG}" -ba packaging/opensuse/ncollectd.spec
+  package-opensuse-tumbleweed:
+    image: ncollectd/ci-opensuse:tumbleweed
+    commands:
+      - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
+      - mkdir -p package-opensuse-tumbleweed/SOURCES
+      - cp packaging/opensuse/systemd.ncollectd.service package-opensuse-tumbleweed/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-opensuse-tumbleweed/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-opensuse-tumbleweed" --define "git_tag $${TAG}" -ba packaging/opensuse/ncollectd.spec
