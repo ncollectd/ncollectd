@@ -66,7 +66,7 @@ static void match_table_destroy(void *arg)
 
 static int match_table_read_metric(match_table_t *tbl, match_table_metric_t *tbl_metric,
                                    match_metric_family_set_t *set,
-                                   char **fields, int fields_num)
+                                   char **fields, __attribute__((unused)) int fields_num)
 {
     assert(tbl_metric->value_from < fields_num);
 
