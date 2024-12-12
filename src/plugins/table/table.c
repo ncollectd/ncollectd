@@ -78,7 +78,8 @@ static void tbl_free(void *arg)
     free(tbl);
 }
 
-static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields, int fields_num)
+static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
+                               __attribute__((unused)) int fields_num)
 {
     assert(res->value_from < fields_num);
     metric_t m = {0};
