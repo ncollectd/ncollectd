@@ -288,7 +288,7 @@ int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t s
         if (fam->metric.num == 0)
             continue;
 
-        if (fams->name == NULL) {
+        if (fam->name == NULL) {
             metric_family_metric_reset(fam);
             continue;
         }
@@ -300,7 +300,8 @@ int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t s
             int status = errno;
             ERROR("metric_family_clone failed: %s", STRERROR(status));
             fam->metric = ml;
-            return status;
+            metric_family_metric_reset(fam);
+            continue;
         }
 
         fam_copy->metric = ml;
