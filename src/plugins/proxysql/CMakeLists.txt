@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_PROXYSQL "ProxySQL statistics" ON)
+
+set(BUILD_PLUGIN_PROXYSQL 0)
+
+if(PLUGIN_PROXYSQL)
+    find_package(LibMysql)
+    if (LIBMYSQL_FOUND)
+        set(BUILD_PLUGIN_PROXYSQL 1)
+    else()
+        set(BUILD_PLUGIN_PROXYSQL_REASON "libmysql no found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_PROXYSQL ${BUILD_PLUGIN_PROXYSQL} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_PROXYSQL)
+    gperf_generate(proxysql.gperf "${CMAKE_CURRENT_BINARY_DIR}/proxysql.h" PROXYSQL_H)
+    set(PLUGIN_PROXYSQL_SRC proxysql.c ${PROXYSQL_H})
+    add_library(proxysql MODULE ${PLUGIN_PROXYSQL_SRC})
+    target_link_libraries(proxysql PRIVATE libutils libmetric libdbquery LibMysql::LibMysql)
+    set_target_properties(proxysql PROPERTIES PREFIX "")
+    install(TARGETS proxysql DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-proxysql.5 ncollectd-proxysql.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-proxysql.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()

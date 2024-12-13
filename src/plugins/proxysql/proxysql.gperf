@@ -1,0 +1,140 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix PROXYSQL_KV
+%define hash-function-name proxysql_kv_hash
+%define lookup-function-name proxysql_kv_get_key
+%define slot-name key
+%{
+%}
+struct proxysql_kv {
+    char *key;
+    double scale;
+    int fam;
+    char *lname;
+    char *lvalue;
+};
+%%
+ProxySQL_Uptime,                              0.0, FAM_PROXYSQL_UPTIME_SECONDS, NULL, NULL
+Active_Transactions,                          0.0, FAM_PROXYSQL_ACTIVE_TRANSACTIONS, NULL, NULL
+Client_Connections_aborted,                   0.0, FAM_PROXYSQL_CLIENT_CONNECTIONS_ABORTED, NULL, NULL
+Client_Connections_connected,                 0.0, FAM_PROXYSQL_CLIENT_CONNECTIONS_CONNECTED  , NULL, NULL
+Client_Connections_created,                   0.0, FAM_PROXYSQL_CLIENT_CONNECTIONS_CREATED, NULL, NULL
+Client_Connections_non_idle,                  0.0, FAM_PROXYSQL_CLIENT_CONNECTIONS_NON_IDLE, NULL, NULL
+Client_Connections_hostgroup_locked,          0.0, FAM_PROXYSQL_CLIENT_CONNECTIONS_HOSTGROUP_LOCKED, NULL, NULL
+Server_Connections_aborted,                   0.0, FAM_PROXYSQL_SERVER_CONNECTIONS_ABORTED, NULL, NULL
+Server_Connections_connected,                 0.0, FAM_PROXYSQL_SERVER_CONNECTIONS_CONNECTED, NULL, NULL
+Server_Connections_created,                   0.0, FAM_PROXYSQL_SERVER_CONNECTIONS_CREATED, NULL, NULL
+Server_Connections_delayed,                   0.0, FAM_PROXYSQL_SERVER_CONNECTIONS_DELAYED, NULL, NULL
+Servers_table_version,                        0.0, -1, NULL, NULL
+Backend_query_time_nsec,                      0.0, FAM_PROXYSQL_BACKEND_QUERY_TIME_SECONDS, NULL, NULL
+Queries_backends_bytes_recv,                  0.0, FAM_PROXYSQL_QUERIES_BACKENDS_RECV_BYTES, NULL, NULL
+Queries_backends_bytes_sent,                  0.0, FAM_PROXYSQL_QUERIES_BACKENDS_SENT_BYTES, NULL, NULL
+Queries_frontends_bytes_recv,                 0.0, FAM_PROXYSQL_QUERIES_FRONTENDS_RECV_BYTES, NULL, NULL
+Queries_frontends_bytes_sent,                 0.0, FAM_PROXYSQL_QUERIES_FRONTENDS_SENT_BYTES, NULL, NULL
+backend_lagging_during_query,                 0.0, FAM_PROXYSQL_BACKEND_LAGGING_DURING_QUERY, NULL, NULL
+backend_offline_during_query,                 0.0, FAM_PROXYSQL_BACKEND_OFFLINE_DURING_QUERY, NULL, NULL
+mysql_backend_buffers_bytes,                  0.0, FAM_PROXYSQL_MYSQL_BACKEND_BUFFERS_BYTES, NULL, NULL
+mysql_frontend_buffers_bytes,                 0.0, FAM_PROXYSQL_MYSQL_FRONTEND_BUFFERS_BYTES, NULL, NULL
+mysql_killed_backend_connections,             0.0, FAM_PROXYSQL_MYSQL_KILLED_BACKEND_CONNECTIONS, NULL, NULL
+mysql_killed_backend_queries,                 0.0, FAM_PROXYSQL_MYSQL_KILLED_BACKEND_QUERIES, NULL, NULL
+mysql_unexpected_frontend_com_quit,           0.0, FAM_PROXYSQL_MYSQL_UNEXPECTED_FRONTEND_COM_QUIT, NULL, NULL
+mysql_unexpected_frontend_packets,            0.0, FAM_PROXYSQL_MYSQL_UNEXPECTED_FRONTEND_PACKETS, NULL, NULL
+client_host_error_killed_connections,         0.0, FAM_PROXYSQL_CLIENT_HOST_ERROR_KILLED_CONNECTIONS,  NULL, NULL
+hostgroup_locked_queries,                     0.0, FAM_PROXYSQL_HOSTGROUP_LOCKED_QUERIES, NULL, NULL
+hostgroup_locked_set_commands,                0.0, FAM_PROXYSQL_HOSTGROUP_LOCKED_SET_CMDS, NULL, NULL
+max_connect_timeouts,                         0.0, FAM_PROXYSQL_MAX_CONNECT_TIMEOUTS, NULL, NULL
+new_req_conns_count,                          0.0, -1, NULL, NULL
+automatic_detected_sql_injection,             0.0, FAM_PROXYSQL_AUTOMATIC_DETECTED_SQL_INJECTION, NULL, NULL
+whitelisted_sqli_fingerprint,                 0.0, FAM_PROXYSQL_WHITELISTED_SQLI_FINGERPRINT, NULL, NULL
+generated_error_packets,                      0.0, FAM_PROXYSQL_GENERATED_ERROR_PACKETS, NULL, NULL
+Selects_for_update__autocommit0,              0.0, -1, NULL, NULL
+mysql_session_internal_bytes,                 0.0, FAM_PROXYSQL_MYSQL_SESSION_INTERNAL_BYTES, NULL, NULL
+Com_autocommit,                               0.0, -1, NULL, NULL
+Com_autocommit_filtered,                      0.0, -1, NULL, NULL
+Com_backend_change_user,                      0.0, -1, NULL, NULL
+Com_backend_init_db,                          0.0, -1, NULL, NULL
+Com_backend_set_names,                        0.0, -1, NULL, NULL
+Com_commit,                                   0.0, -1, NULL, NULL
+Com_commit_filtered,                          0.0, -1, NULL, NULL
+Com_frontend_init_db,                         0.0, -1, NULL, NULL
+Com_frontend_set_names,                       0.0, -1, NULL, NULL
+Com_frontend_use_db,                          0.0, -1, NULL, NULL
+Com_rollback,                                 0.0, -1, NULL, NULL
+Com_rollback_filtered,                        0.0, -1, NULL, NULL
+Com_frontend_stmt_prepare,                    0.0, FAM_PROXYSQL_COM_FRONTEND_STMT, "op", "prepare"
+Com_frontend_stmt_execute,                    0.0, FAM_PROXYSQL_COM_FRONTEND_STMT, "op", "execute"
+Com_frontend_stmt_close,                      0.0, FAM_PROXYSQL_COM_FRONTEND_STMT, "op", "close"
+Com_backend_stmt_prepare,                     0.0, FAM_PROXYSQL_COM_BACKEND_STMT, "op", "prepare"
+Com_backend_stmt_execute,                     0.0, FAM_PROXYSQL_COM_BACKEND_STMT, "op", "execute"
+Com_backend_stmt_close,                       0.0, FAM_PROXYSQL_COM_BACKEND_STMT, "op", "close"
+MySQL_Thread_Workers,                         0.0, FAM_PROXYSQL_MYSQL_THREAD_WORKERS, NULL, NULL
+MySQL_Monitor_Workers,                        0.0, FAM_PROXYSQL_MYSQL_MONITOR_WORKERS, NULL, NULL
+MySQL_Monitor_Workers_Aux,                    0.0, FAM_PROXYSQL_MYSQL_MONITOR_WORKERS_AUX, NULL, NULL
+MySQL_Monitor_Workers_Started,                0.0, FAM_PROXYSQL_MYSQL_MONITOR_WORKERS_STARTED, NULL, NULL
+MySQL_Monitor_connect_check_ERR,              0.0, FAM_PROXYSQL_MYSQL_MONITOR_CONNECT_CHECK_ERR, NULL, NULL
+MySQL_Monitor_connect_check_OK,               0.0, FAM_PROXYSQL_MYSQL_MONITOR_CONNECT_CHECK_OK, NULL, NULL
+MySQL_Monitor_ping_check_ERR,                 0.0, FAM_PROXYSQL_MYSQL_MONITOR_PING_CHECK_ERR, NULL, NULL
+MySQL_Monitor_ping_check_OK,                  0.0, FAM_PROXYSQL_MYSQL_MONITOR_PING_CHECK_OK, NULL, NULL
+MySQL_Monitor_read_only_check_ERR,            0.0, FAM_PROXYSQL_MYSQL_MONITOR_READ_ONLY_CHECK_ERR, NULL, NULL
+MySQL_Monitor_read_only_check_OK,             0.0, FAM_PROXYSQL_MYSQL_MONITOR_READ_ONLY_CHECK_OK, NULL, NULL
+MySQL_Monitor_replication_lag_check_ERR,      0.0, FAM_PROXYSQL_MYSQL_MONITOR_REPLICATION_LAG_CHECK_ERR, NULL, NULL
+MySQL_Monitor_replication_lag_check_OK,       0.0, FAM_PROXYSQL_MYSQL_MONITOR_REPLICATION_LAG_CHECK_OK, NULL, NULL
+ConnPool_get_conn_success,                    0.0, FAM_PROXYSQL_CONNPOOL_GET_CONN_SUCCESS, NULL, NULL
+ConnPool_get_conn_failure,                    0.0, FAM_PROXYSQL_CONNPOOL_GET_CONN_FAILURE, NULL, NULL
+ConnPool_get_conn_immediate,                  0.0, FAM_PROXYSQL_CONNPOOL_GET_CONN_IMMEDIATE, NULL, NULL
+ConnPool_get_conn_latency_awareness,          0.0, FAM_PROXYSQL_CONNPOOL_GET_CONN_LATENCY_AWARENESS, NULL, NULL
+Questions,                                    0.0, FAM_PROXYSQL_QUESTIONS, NULL, NULL
+Slow_queries,                                 0.0, FAM_PROXYSQL_SLOW_QUERIES, NULL, NULL
+GTID_consistent_queries,                      0.0, FAM_PROXYSQL_GTID_CONSISTENT_QUERIES, NULL, NULL
+GTID_session_collected,                       0.0, FAM_PROXYSQL_GTID_SESSION_COLLECTED, NULL, NULL
+Mirror_concurrency,                           0.0, FAM_PROXYSQL_MIRROR_CONCURRENCY, NULL, NULL
+Mirror_que_length,                            0.0, FAM_PROXYSQL_MIRROR_QUEUE_LENGTH, NULL, NULL
+queries_with_max_lag_ms,                      0.0, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG, NULL, NULL
+queries_with_max_lag_ms__delayed,             0.0, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG_DELAYED, NULL, NULL
+queries_with_max_lag_ms__total_wait_time_us,  0.0, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG_WAIT_TIME_SECONDS, NULL, NULL
+get_aws_aurora_replicas_skipped_during_query, 0.0, FAM_PROXYSQL_AWS_AURORA_REPLICAS_SKIPPED_DURING_QUERY, NULL, NULL
+Access_Denied_Max_Connections,                0.0, FAM_PROXYSQL_ACCESS_DENIED_MAX_CONNECTIONS, NULL, NULL
+Access_Denied_Max_User_Connections,           0.0, FAM_PROXYSQL_ACCESS_DENIED_MAX_USER_CONNECTIONS, NULL, NULL
+Access_Denied_Wrong_Password,                 0.0, FAM_PROXYSQL_ACCESS_DENIED_WRONG_PASSWORD, NULL, NULL
+MyHGM_myconnpoll_get,                         0.0, FAM_PROXYSQL_MYSQL_HOSTGROUPS_MANAGER_CONNECTION_POLL_GET, NULL, NULL
+MyHGM_myconnpoll_get_ok,                      0.0, FAM_PROXYSQL_MYSQL_HOSTGROUPS_MANAGER_CONNECTION_POLL_GET_OK, NULL, NULL
+MyHGM_myconnpoll_push,                        0.0, FAM_PROXYSQL_MYSQL_HOSTGROUPS_MANAGER_CONNECTION_POLL_PUSH, NULL, NULL
+MyHGM_myconnpoll_destroy,                     0.0, FAM_PROXYSQL_MYSQL_HOSTGROUPS_MANAGER_CONNECTION_POLL_DESTROY, NULL, NULL
+MyHGM_myconnpoll_reset,                       0.0, FAM_PROXYSQL_MYSQL_HOSTGROUPS_MANAGER_CONNECTION_POLL_RESET, NULL, NULL
+ConnPool_memory_bytes,                        0.0, FAM_PROXYSQL_CONNECTION_POOL_MEMORY_BYTES, NULL, NULL
+Stmt_Client_Active_Total,                     0.0, FAM_PROXYSQL_STMT_CLIENT_ACTIVE, NULL, NULL
+Stmt_Client_Active_Unique,                    0.0, FAM_PROXYSQL_STMT_CLIENT_ACTIVE_UNIQUE, NULL, NULL
+Stmt_Server_Active_Total,                     0.0, FAM_PROXYSQL_STMT_SERVER_ACTIVE, NULL, NULL
+Stmt_Server_Active_Unique,                    0.0, FAM_PROXYSQL_STMT_SERVER_ACTIVE_UNIQUE, NULL, NULL
+Stmt_Cached,                                  0.0, FAM_PROXYSQL_STMT_CACHED, NULL, NULL
+Stmt_Max_Stmt_id,                             0.0, FAM_PROXYSQL_STMT_MAX_STMT_ID, NULL, NULL
+Query_Cache_Memory_bytes,                     0.0, FAM_PROXYSQL_QUERY_CACHE_MEMORY_BYTES, NULL, NULL
+Query_Cache_Entries,                          0.0, FAM_PROXYSQL_QUERY_CACHE_ENTRIES, NULL, NULL
+Query_Cache_Purged,                           0.0, FAM_PROXYSQL_QUERY_CACHE_PURGED, NULL, NULL
+Query_Cache_bytes_IN,                         0.0, FAM_PROXYSQL_QUERY_CACHE_IN_BYTES, NULL, NULL
+Query_Cache_bytes_OUT,                        0.0, FAM_PROXYSQL_QUERY_CACHE_OUT_BYTES, NULL, NULL
+Query_Cache_count_GET,                        0.0, FAM_PROXYSQL_QUERY_CACHE_COUNT_GET, NULL, NULL
+Query_Cache_count_GET_OK,                     0.0, FAM_PROXYSQL_QUERY_CACHE_COUNT_GET_OK, NULL, NULL
+Query_Cache_count_SET,                        0.0, FAM_PROXYSQL_QUERY_CACHE_COUNT_SET, NULL, NULL
+Query_Processor_time_nsec,                    0.0, FAM_PROXYSQL_QUERY_PROCESSOR_TIME_SECONDS, NULL, NULL
+jemalloc_allocated,                           0.0, FAM_PROXYSQL_JEMALLOC_ALLOCATED_BYTES, NULL, NULL
+jemalloc_active,                              0.0, FAM_PROXYSQL_JEMALLOC_ACTIVE_BYTES, NULL, NULL
+jemalloc_mapped,                              0.0, FAM_PROXYSQL_JEMALLOC_MAPPED_BYTES, NULL, NULL
+jemalloc_metadata,                            0.0, FAM_PROXYSQL_JEMALLOC_METADATA_BYTES, NULL, NULL
+jemalloc_resident,                            0.0, FAM_PROXYSQL_JEMALLOC_RESIDENT_BYTES, NULL, NULL
+Auth_memory,                                  0.0, FAM_PROXYSQL_MEMORY_AUTH_BYTES, NULL, NULL
+SQLite3_memory_bytes,                         0.0, FAM_PROXYSQL_SQLITE_MEMORY_BYTES, NULL, NULL
+query_digest_memory,                          0.0, FAM_PROXYSQL_QUERY_DIGEST_MEMORY_BYTES, NULL, NULL
+mysql_query_rules_memory,                     0.0, FAM_PROXYSQL_MYSQL_QUERY_RULES_MEMORY_BYTES, NULL, NULL
+mysql_firewall_users_table,                   0.0, FAM_PROXYSQL_MYSQL_FIREWALL_USERS_TABLE_BYTES, NULL, NULL
+mysql_firewall_users_config,                  0.0, FAM_PROXYSQL_MYSQL_FIREWALL_USERS_CONFIG_BYTES, NULL, NULL
+mysql_firewall_rules_table,                   0.0, FAM_PROXYSQL_MYSQL_FIREWALL_RULES_TABLE_BYTES, NULL, NULL
+mysql_firewall_rules_config,                  0.0, FAM_PROXYSQL_MYSQL_FIREWALL_RULES_CONFIG_BYTES, NULL, NULL
+stack_memory_mysql_threads,                   0.0, FAM_PROXYSQL_STACK_MEMORY_MYSQL_THREADS_BYTES, NULL, NULL
+stack_memory_admin_threads,                   0.0, FAM_PROXYSQL_STACK_MEMORY_ADMIN_THREADS_BYTES, NULL, NULL
+stack_memory_cluster_threads,                 0.0, FAM_PROXYSQL_STACK_MEMORY_CLUSTER_THREADS_BYTES, NULL, NULL
