@@ -28,6 +28,7 @@
 %define build_with_interface 0%{!?_without_interface:1}
 %define build_with_ipc 0%{!?_without_ipc:1}
 %define build_with_jolokia 0%{!?_without_jolokia:1}
+%define build_with_kea 0%{!?_without_kea:1}
 %define build_with_keepalived 0%{!?_without_keepalived:1}
 %define build_with_load 0%{!?_without_load:1}
 %define build_with_log_file 0%{!?_without_log_file:1}
@@ -59,6 +60,7 @@
 %define build_with_postgresql 0%{!?_without_postgresql:1}
 %define build_with_postfix 0%{!?_without_postfix:1}
 %define build_with_processes 0%{!?_without_processes:1}
+%define build_with_proxysql 0%{!?_without_proxysql:1}
 %define build_with_python 0%{!?_without_python:1}
 %define build_with_recursor 0%{!?_without_recursor:1}
 %define build_with_routeros 0%{!?_without_routeros:1}
@@ -297,6 +299,16 @@ BuildRequires: postgresql-devel
 The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL database.
 %endif
 
+%if %{build_with_proxysql}
+%package proxysql
+Summary: ProxySQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: mariadb-connector-c-devel
+%description proxysql
+The ProxySQL plugin collect metrics from the MySQL proxy: ProxySQL.
+%endif
+
 %if %{build_with_python}
 %package python
 Summary: Python plugin for ncollectd
@@ -501,6 +513,12 @@ database.
 %define _build_with_jolokia -DPLUGIN_JOLOKIA:BOOL==OFF
 %endif
 
+%if %{build_with_kea}
+%define _build_with_kea -DPLUGIN_KEA:BOOL=ON
+%else
+%define _build_with_kea -DPLUGIN_KEA:BOOL==OFF
+%endif
+
 %if %{build_with_keepalived}
 %define _build_with_keepalived -DPLUGIN_KEEPALIVED:BOOL=ON
 %else
@@ -685,6 +703,12 @@ database.
 %define _build_with_processes -DPLUGIN_PROCESSES:BOOL=ON
 %else
 %define _build_with_processes -DPLUGIN_PROCESSES:BOOL==OFF
+%endif
+
+%if %{build_with_proxysql}
+%define _build_with_proxysql -DPLUGIN_PROXYSQL:BOOL=ON
+%else
+%define _build_with_proxysql -DPLUGIN_PROXYSQL:BOOL==OFF
 %endif
 
 %if %{build_with_python}
@@ -908,6 +932,7 @@ export OBJECT_MODE=64
         %{?_build_with_interface} \
         %{?_build_with_ipc} \
         %{?_build_with_jolokia} \
+        %{?_build_with_kea} \
         %{?_build_with_keepalived} \
         %{?_build_with_load} \
         %{?_build_with_log_file} \
@@ -939,6 +964,7 @@ export OBJECT_MODE=64
         %{?_build_with_postfix} \
         %{?_build_with_postgresql} \
         %{?_build_with_processes} \
+        %{?_build_with_proxysql} \
         %{?_build_with_python} \
         %{?_build_with_recursor} \
         %{?_build_with_routeros} \
@@ -1195,6 +1221,10 @@ fi
 %if %{build_with_ipc}
 %{_libdir}/%{name}/ipc.so
 %{_datadir}/man/man5/ncollectd-ipc.5*
+%endif
+%if %{build_with_kea}
+%{_libdir}/%{name}/kea.so
+%{_datadir}/man/man5/ncollectd-kea.5*
 %endif
 %if %{build_with_keepalived}
 %{_libdir}/%{name}/keepalived.so
@@ -1459,6 +1489,12 @@ fi
 %files postgresql
 %{_libdir}/%{name}/postgresql.so
 %{_datadir}/man/man5/ncollectd-postgresql.5*
+%endif
+
+%if %{build_with_proxysql}
+%files proxysql
+%{_libdir}/%{name}/proxysql.so
+%{_datadir}/man/man5/ncollectd-proxysql.5*
 %endif
 
 %if %{build_with_python}
