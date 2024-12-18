@@ -12,7 +12,7 @@ RUN apt-get update && \
         libsigrok-dev libmodbus-dev libgps-dev libhiredis-dev libnutclient-dev \
         libiptc-dev libmnl-dev libipmctl-dev libupsclient-dev libbtrfs-dev \
         libxen-dev libmemcached-dev intel-cmt-cat javahelper libcap-dev \
-        libperl-dev python3-dev libslurm-dev && \
+        libperl-dev python3-dev libslurm-dev freetds-dev && \
     apt-get clean autoclean && \
     rm -rf /var/lib/apt/lists/*
 

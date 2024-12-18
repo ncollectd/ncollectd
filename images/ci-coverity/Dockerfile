@@ -1,4 +1,4 @@
-FROM fedora:39
+FROM fedora:41
 RUN --mount=type=secret,id=coverity.data,dst=/tmp/coverity.data \
     dnf install -y gcc cpp clang-analyzer clang make cmake flex bison gperf pkgconf-pkg-config \
                    kernel-headers c-ares-devel curl-devel gpsd-devel \
@@ -10,7 +10,8 @@ RUN --mount=type=secret,id=coverity.data,dst=/tmp/coverity.data \
                    openldap-devel openssl-devel postgresql-devel qpid-proton-c-devel slurm-devel \
                    unixODBC-devel varnish-libs-devel xen-devel xfsprogs-devel yajl-devel \
                    cups-devel systemd-devel libsigrok-devel btrfs-progs-devel \
-                   libmemcached-awesome-devel && \
+                   libmemcached-awesome-devel oneapi-level-zero-devel perl-ExtUtils-Embed \
+                   python3-devel freetds-dev && \
     dnf clean all && \
     rm -rf /var/cache/yum && \
     curl -s -d @/tmp/coverity.data -o /opt/coverity_tool.tgz https://scan.coverity.com/download/linux64 && \

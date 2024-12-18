@@ -4,20 +4,6 @@ when:
   - event: manual
 
 steps:
-  build-fedora-38:
-    image: ncollectd/ci-fedora:38
-    commands:
-      - cmake -B build-fedora-38 -S .
-      - cmake --build build-fedora-38 $${MAKE_FLAGS}
-      - cmake --build build-fedora-38 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-fedora-38 -- test
-  build-fedora-39:
-    image: ncollectd/ci-fedora:39
-    commands:
-      - cmake -B build-fedora-39 -S .
-      - cmake --build build-fedora-39 $${MAKE_FLAGS}
-      - cmake --build build-fedora-39 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-fedora-39 -- test
   build-fedora-40:
     image: ncollectd/ci-fedora:40
     commands:
@@ -25,6 +11,13 @@ steps:
       - cmake --build build-fedora-40 $${MAKE_FLAGS}
       - cmake --build build-fedora-40 -- build_tests $${MAKE_FLAGS}
       - cmake --build build-fedora-40 -- test
+  build-fedora-41:
+    image: ncollectd/ci-fedora:41
+    commands:
+      - cmake -B build-fedora-41 -S .
+      - cmake --build build-fedora-41 $${MAKE_FLAGS}
+      - cmake --build build-fedora-41 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-fedora-41 -- test
   build-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:
@@ -71,24 +64,15 @@ steps:
       - cmake --build build-ubuntu-jammy $${MAKE_FLAGS}
       - cmake --build build-ubuntu-jammy -- build_tests $${MAKE_FLAGS}
       - cmake --build build-ubuntu-jammy -- test
-  build-ubuntu-mantic:
-    image: ncollectd/ci-ubuntu:mantic
+  build-ubuntu-noble:
+    image: ncollectd/ci-ubuntu:noble
     environment:
       DEBIAN_FRONTEND: noninteractive
     commands:
-      - cmake -B build-ubuntu-mantic -S .
-      - cmake --build build-ubuntu-mantic $${MAKE_FLAGS}
-      - cmake --build build-ubuntu-mantic -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-ubuntu-mantic -- test
-  build-debian-buster:
-    image: ncollectd/ci-debian:buster
-    environment:
-      DEBIAN_FRONTEND: noninteractive
-    commands:
-      - cmake -B build-debian-buster -S .
-      - cmake --build build-debian-buster $${MAKE_FLAGS}
-      - cmake --build build-debian-buster -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-debian-buster -- test
+      - cmake -B build-ubuntu-noble -S .
+      - cmake --build build-ubuntu-noble $${MAKE_FLAGS}
+      - cmake --build build-ubuntu-noble -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-ubuntu-noble -- test
   build-debian-bullseye:
     image: ncollectd/ci-debian:bullseye
     environment:
@@ -123,13 +107,13 @@ steps:
       - cmake --build build-archlinux-base-devel $${MAKE_FLAGS}
       - cmake --build build-archlinux-base-devel -- build_tests $${MAKE_FLAGS}
       - cmake --build build-archlinux-base-devel -- test
-  build-alpine-3.18:
-    image: ncollectd/ci-alpine:3.18
+  build-alpine-edge:
+    image: ncollectd/ci-alpine:edge
     commands:
-      - cmake -B build-alpine-3.18 -S . -DENABLE_WERROR=OFF
-      - cmake --build build-alpine-3.18 $${MAKE_FLAGS}
-      - cmake --build build-alpine-3.18 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-alpine-3.18 -- test
+      - cmake -B build-alpine-edge -S . -DENABLE_WERROR=OFF
+      - cmake --build build-alpine-edge $${MAKE_FLAGS}
+      - cmake --build build-alpine-edge -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-alpine-edge -- test
   build-opensuse-leap:
     image: ncollectd/ci-opensuse:leap
     commands:
@@ -144,3 +128,10 @@ steps:
       - cmake --build build-opensuse-tumbleweed $${MAKE_FLAGS}
       - cmake --build build-opensuse-tumbleweed -- build_tests $${MAKE_FLAGS}
       - cmake --build build-opensuse-tumbleweed -- test
+  build-gentoo-latest:
+    image: ncollectd/ci-gentoo:latest
+    commands:
+      - cmake -B build-gentoo-latest -S .
+      - cmake --build build-gentoo-latest $${MAKE_FLAGS}
+      - cmake --build build-gentoo-latest -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-gentoo-latest -- test

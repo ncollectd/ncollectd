@@ -4,32 +4,12 @@ when:
 
 steps:
   package-dist:
-    image: ncollectd/ci-fedora:39
+    image: ncollectd/ci-fedora:41
     commands:
       - cmake -B package-dist -S .
       - cmake --build package-dist -- dist
       - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - echo "TAG=$${TAG}" > package-dist/envvars
-  package-fedora-38:
-    image: ncollectd/ci-fedora:38
-    commands:
-      - . ./package-dist/envvars
-      - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-fedora-38/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-fedora-38/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-fedora-38/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-38/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-38" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
-  package-fedora-39:
-    image: ncollectd/ci-fedora:39
-    commands:
-      - . ./package-dist/envvars
-      - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-fedora-39/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-fedora-39/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-fedora-39/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-39/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-39" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
   package-fedora-40:
     image: ncollectd/ci-fedora:40
     commands:
@@ -40,6 +20,16 @@ steps:
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-40/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-40/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-fedora-40" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+  package-fedora-41:
+    image: ncollectd/ci-fedora:41
+    commands:
+      - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
+      - mkdir -p package-fedora-41/SOURCES
+      - cp packaging/fedora/init.d-ncollectd package-fedora-41/SOURCES
+      - cp packaging/fedora/systemd.ncollectd.service package-fedora-41/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-41/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-41" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
   package-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:
@@ -80,23 +70,6 @@ steps:
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream10/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream10/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-centos-stream10" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
-  package-debian-buster:
-    image: ncollectd/ci-debian:buster
-    commands:
-      - . ./package-dist/envvars
-      - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-debian-buster
-      - tar -C package-debian-buster -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-buster/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-debian-buster/ncollectd-$${TAG}/
-      - cd package-debian-buster/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
-      - rm -f debian/ncollectd-docker.install
-      - rm -f debian/ncollectd-nftables.install
-      - dpkg-buildpackage
-      - cd ..
-      - rm -rf ncollectd-$${TAG}
   package-debian-bullseye:
     image: ncollectd/ci-debian:bullseye
     commands:
@@ -174,16 +147,16 @@ steps:
       - dpkg-buildpackage
       - cd ..
       - rm -rf ncollectd-$${TAG}
-  package-ubuntu-mantic:
-    image: ncollectd/ci-ubuntu:mantic
+  package-ubuntu-noble:
+    image: ncollectd/ci-ubuntu:noble
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-ubuntu-mantic
-      - tar -C package-ubuntu-mantic -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-mantic/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-ubuntu-mantic/ncollectd-$${TAG}/
-      - cd package-ubuntu-mantic/ncollectd-$${TAG}
+      - mkdir -p package-ubuntu-noble
+      - tar -C package-ubuntu-noble -xJf package-dist/ncollectd-$${TAG}.tar.xz
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-noble/ncollectd_$${TAG}.orig.tar.xz
+      - cp -r packaging/debian package-ubuntu-noble/ncollectd-$${TAG}/
+      - cd package-ubuntu-noble/ncollectd-$${TAG}
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
       - dpkg-buildpackage

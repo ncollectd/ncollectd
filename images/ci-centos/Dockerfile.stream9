@@ -11,6 +11,6 @@ RUN dnf install -y dnf-plugins-core epel-release epel-next-release && \
                    libesmtp-devel libipmctl-devel hiredis-devel libmodbus-devel \
                    mongo-c-driver-devel mosquitto-devel nut-devel gpsd-devel \
                    libmemcached-awesome-devel qpid-proton-c-devel slurm-devel \
-                   perl-ExtUtils-Embed python3-devel && \
+                   perl-ExtUtils-Embed python3-devel freetds-devel && \
     dnf clean all && \
     rm -rf /var/cache/yum
