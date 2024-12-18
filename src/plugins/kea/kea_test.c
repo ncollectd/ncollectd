@@ -25,7 +25,9 @@ static int dump_file(char *base_path, char *file, int fdw)
     char buffer[8192];
     ssize_t size = 0;
     while ((size = read(fdr, buffer, sizeof(buffer))) > 0) {
-        write(fdw, buffer, size);
+        int status = write(fdw, buffer, size);
+        if (status < 0)
+            fprintf(stderr, "Failed to write.\n");
     }
 
     close(fdr);
