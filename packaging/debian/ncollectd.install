@@ -92,6 +92,8 @@ usr/lib/ncollectd/irq.so
 usr/share/man/man5/ncollectd-irq.5
 usr/lib/ncollectd/journal.so
 usr/share/man/man5/ncollectd-journal.5
+usr/lib/ncollectd/kea.so
+usr/share/man/man5/ncollectd-kea.5
 usr/lib/ncollectd/keepalived.so
 usr/share/man/man5/ncollectd-keepalived.5
 usr/lib/ncollectd/ksm.so
