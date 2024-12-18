@@ -1,4 +1,4 @@
-FROM alpine:3.18
+FROM alpine:edge
 RUN apk update && \
     apk add gcc make cmake flex bison gperf pkgconf c-ares-dev curl-dev \
             openjdk17-jdk libatasmart-dev libmicrohttpd-dev libnftnl-dev libpcap-dev \
@@ -6,5 +6,5 @@ RUN apk update && \
             mariadb-connector-c-dev net-snmp-dev openipmi-dev openldap-dev openssl-dev libpq-dev \
             unixodbc-dev varnish-dev xfsprogs-dev yajl-dev cups-dev mosquitto-dev \
             mongo-c-driver-dev libmodbus-dev hiredis-dev nut-dev iptables-dev libmnl-dev \
-            btrfs-progs-dev gpsd-dev libmemcached-dev && \
+            btrfs-progs-dev gpsd-dev libmemcached-dev freetds-dev && \
     rm -rf /var/cache/apk/*

@@ -67,6 +67,7 @@
 %define build_with_jolokia 0%{!?_without_jolokia:1}
 %define build_with_journal 0%{!?_without_journal:1}
 %define build_with_kafka 0%{!?_without_kafka:1}
+%define build_with_kea 0%{!?_without_kea:1}
 %define build_with_keepalived 0%{!?_without_keepalived:1}
 %define build_with_ksm 0%{!?_without_ksm:1}
 %define build_with_load 0%{!?_without_load:1}
@@ -123,6 +124,7 @@
 %define build_with_pressure 0%{!?_without_pressure:1}
 %define build_with_processes 0%{!?_without_processes:1}
 %define build_with_protocols 0%{!?_without_protocols:1}
+%define build_with_proxysql 0%{!?_without_proxysql:1}
 %define build_with_python 0%{!?_without_python:1}
 %define build_with_quota 0%{!?_without_quota:1}
 %define build_with_rapl 0%{!?_without_rapl:1}
@@ -784,6 +786,24 @@ BuildRequires: postgresql-devel
 The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL database.
 %endif
 
+%if %{build_with_proxysql}
+%package proxysql
+Summary: ProxySQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+%if 0%{?rhel} && 0%{?rhel} == 6
+BuildRequires: mysql-devel
+%else
+%if 0%{?rhel} && 0%{?rhel} == 7
+BuildRequires: mariadb-devel
+%else
+BuildRequires: mariadb-connector-c-devel
+%endif
+%endif
+%description proxysql
+The ProxySQL plugin collect metrics from the MySQL proxy: ProxySQL.
+%endif
+
 %if %{build_with_python}
 %package python
 Summary: Python plugin for ncollectd
@@ -1411,6 +1431,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_kafka -DPLUGIN_KAFKA:BOOL=OFF
 %endif
 
+%if %{build_with_kea}
+%define _build_with_kea -DPLUGIN_KEA:BOOL=ON
+%else
+%define _build_with_kea -DPLUGIN_KEA:BOOL=OFF
+%endif
+
 %if %{build_with_keepalived}
 %define _build_with_keepalived -DPLUGIN_KEEPALIVED:BOOL=ON
 %else
@@ -1779,6 +1805,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_protocols -DPLUGIN_PROTOCOLS:BOOL=ON
 %else
 %define _build_with_protocols -DPLUGIN_PROTOCOLS:BOOL=OFF
+%endif
+
+%if %{build_with_proxysql}
+%define _build_with_proxysql -DPLUGIN_PROXYSQL:BOOL=ON
+%else
+%define _build_with_proxysql -DPLUGIN_PROXYSQL:BOOL=OFF
 %endif
 
 %if %{build_with_python}
@@ -2249,6 +2281,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_jolokia} \
     %{?_build_with_journal} \
     %{?_build_with_kafka} \
+    %{?_build_with_kea} \
     %{?_build_with_keepalived} \
     %{?_build_with_ksm} \
     %{?_build_with_load} \
@@ -2310,6 +2343,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_pressure} \
     %{?_build_with_processes} \
     %{?_build_with_protocols} \
+    %{?_build_with_proxysql} \
     %{?_build_with_python} \
     %{?_build_with_quota} \
     %{?_build_with_rapl} \
@@ -2620,6 +2654,10 @@ fi
 %if %{build_with_journal}
 %{_libdir}/%{name}/journal.so
 %{_mandir}/man5/ncollectd-journal.5*
+%endif
+%if %{build_with_kea}
+%{_libdir}/%{name}/kea.so
+%{_mandir}/man5/ncollectd-kea.5*
 %endif
 %if %{build_with_keepalived}
 %{_libdir}/%{name}/keepalived.so
@@ -3219,6 +3257,12 @@ fi
 %files postgresql
 %{_libdir}/%{name}/postgresql.so
 %{_mandir}/man5/ncollectd-postgresql.5*
+%endif
+
+%if %{build_with_proxysql}
+%files proxysql
+%{_libdir}/%{name}/proxysql.so
+%{_mandir}/man5/ncollectd-proxysql.5*
 %endif
 
 %if %{build_with_python}

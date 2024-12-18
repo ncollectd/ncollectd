@@ -304,6 +304,12 @@ Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL
  database.
 
+Package: ncollectd-proxysql
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The ProxySQL plugin collect metrics from the MySQL proxy: ProxySQL.
+
 Package: ncollectd-redis
 Section: utils
 Architecture: any

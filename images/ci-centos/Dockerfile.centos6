@@ -14,7 +14,8 @@ RUN ulimit -n 1024000 && \
                    net-snmp-devel OpenIPMI-devel openldap-devel openldap-devel openssl-devel \
                    openssl-devel openssl-devel postgresql-devel postgresql-devel unixODBC-devel \
                    varnish-libs-devel xfsprogs-devel yajl-devel cups-devel libesmtp-devel \
-                   libmodbus-devel nut-devel libmemcached-devel qpid-proton-c-devel libmnl-devel && \
+                   libmodbus-devel nut-devel libmemcached-devel qpid-proton-c-devel libmnl-devel
+                   freetds-devel && \
     yum clean all && \
     rm -fr /var/cache/yum/*
 

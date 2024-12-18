@@ -124,6 +124,7 @@
 %define build_with_pressure 0%{!?_without_pressure:1}
 %define build_with_processes 0%{!?_without_processes:1}
 %define build_with_protocols 0%{!?_without_protocols:1}
+%define build_with_proxysql 0%{!?_without_proxysql:1}
 %define build_with_python 0%{!?_without_python:1}
 %define build_with_quota 0%{!?_without_quota:1}
 %define build_with_rapl 0%{!?_without_rapl:1}
@@ -704,6 +705,16 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: postgresql-devel
 %description postgresql
 The PostgreSQL plugin connects to and executes SQL statements on a PostgreSQL database.
+%endif
+
+%if %{build_with_proxysql}
+%package proxysql
+Summary: ProxySQL plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: libmariadb-devel
+%description proxysql
+The ProxySQL plugin collect metrics from the MySQL proxy: ProxySQL.
 %endif
 
 %if %{build_with_python}
@@ -1705,6 +1716,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_protocols -DPLUGIN_PROTOCOLS:BOOL=OFF
 %endif
 
+%if %{build_with_proxysql}
+%define _build_with_proxysql -DPLUGIN_PROXYSQL:BOOL=ON
+%else
+%define _build_with_proxysql -DPLUGIN_PROXYSQL:BOOL=OFF
+%endif
+
 %if %{build_with_python}
 %define _build_with_python -DPLUGIN_PYTHON:BOOL=ON
 %else
@@ -2235,6 +2252,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_pressure} \
     %{?_build_with_processes} \
     %{?_build_with_protocols} \
+    %{?_build_with_proxysql} \
     %{?_build_with_python} \
     %{?_build_with_quota} \
     %{?_build_with_rapl} \
@@ -3121,6 +3139,12 @@ rm -rf %{buildroot}
 %files postgresql
 %{_libdir}/%{name}/postgresql.so
 %{_mandir}/man5/ncollectd-postgresql.5*
+%endif
+
+%if %{build_with_proxysql}
+%files proxysql
+%{_libdir}/%{name}/proxysql.so
+%{_mandir}/man5/ncollectd-proxysql.5*
 %endif
 
 %if %{build_with_python}

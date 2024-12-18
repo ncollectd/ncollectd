@@ -5,5 +5,5 @@ RUN pacman -Sy && \
                           libxml2 lm_sensors lua mariadb-libs net-snmp openipmi libldap openssl \
                           postgresql-libs unixodbc varnish xfsprogs yajl libcups systemd-libs \
                           libatasmart libesmtp mosquitto mongo-c-driver libsigrok gpsd hiredis \
-                          nut iptables libmnl btrfs-progs libmemcached-awesome && \
+                          nut iptables libmnl btrfs-progs libmemcached-awesome freetds && \
     find /var/cache/pacman/ -type f -delete

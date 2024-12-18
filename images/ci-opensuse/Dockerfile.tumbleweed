@@ -8,5 +8,5 @@ RUN zypper -n install rpm-build git gcc cpp make cmake flex bison gperf pkgconf 
                       openldap2-devel libopenssl-devel postgresql-devel qpid-proton-devel \
                       slurm-devel unixODBC-devel varnish-devel xen-devel xfsprogs-devel \
                       libyajl-devel cups-devel systemd-devel libsigrok-devel libbtrfs-devel \
-                      libmemcached-devel && \
+                      libmemcached-devel freetds-devel && \
     zypper clean -a
