@@ -267,8 +267,6 @@
 %endif
 %if 0%{?rhel} == 10
 %define build_with_iptables 0%{?_with_iptables:1}
-%define build_with_redis 0%{?_with_redis:1}
-%define build_with_write_redis 0%{?_with_write_redis:1}
 %endif
 %endif
 
