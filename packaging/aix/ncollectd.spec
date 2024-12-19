@@ -995,10 +995,9 @@ export OBJECT_MODE=64
         %{?_build_with_snmp} \
         %{?_build_with_db2} \
         %{?_build_with_mq} \
-        %{?_build_with_openldap} \
-        %{?_build_with_ds389} \
         -DPLUGIN_DS389:BOOL=OFF \
         -DPLUGIN_OPENLDAP:BOOL=OFF \
+        -DPLUGIN_LDAP:BOOL=OFF \
         -DPLUGIN_CHRONY:BOOL=OFF \
         -DPLUGIN_DOCKER:BOOL=OFF \
         -DPLUGIN_PODMAN:BOOL=OFF \

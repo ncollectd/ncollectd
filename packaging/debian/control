@@ -258,6 +258,12 @@ Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: This plugin for ncollectd provides Network UPS Tools support.
 
+Package: ncollectd-ldap
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The ldap plugin execute queries on a ldap server and read back the result.
+
 Package: ncollectd-odbc
 Section: utils
 Architecture: any
