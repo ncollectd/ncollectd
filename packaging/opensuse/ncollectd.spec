@@ -630,7 +630,7 @@ This plugin for ncollectd provides Network UPS Tools support.
 Summary: Ldap plugin for ncollectd
 Group: System Environment/Daemons
 Requires: %{name}%{?_isa} = %{version}-%{release}
-BuildRequires: openldap-devel
+BuildRequires: openldap2-devel
 %description ldap
 The ldap plugin execute queries on a ldap server and read back the result.
 %endif
