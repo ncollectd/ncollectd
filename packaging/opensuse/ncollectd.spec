@@ -3022,7 +3022,7 @@ rm -rf %{buildroot}
 %endif
 
 %if %{build_with_ldap}
-%files lua
+%files ldap
 %{_libdir}/%{name}/ldap.so
 %{_mandir}/man5/ncollectd-ldap.5*
 %endif
