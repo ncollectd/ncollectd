@@ -1,0 +1,203 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.TH ncollectd-ldap 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ldap man page"
+.SH NAME
+ncollectd-ldap \- Documentation of ncollectd's ldap plugin
+.SH SYNOPSIS
+\fBload-plugin\fP ldap
+.br
+\fBplugin\fP ldap {
+    \fBquery\fP \fIname\fP {
+        \fBbase\fP \fIsearchbase\fP
+        \fBscope\fP \fIbase|one|sub|children\fP
+        \fBfilter\fP \fIfilter\fP
+        \fBattrs\fP \fIattribute\fP [\fIattribute\fP ...]
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBlabel-from\fP \fIatribute\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBmetric\fP {
+            \fBdn\fP \fIDN\fP
+            \fBcn\fP \fICN\fP
+            \fBmetric-prefix\fP \fIprefix\fP
+            \fBmetric\fP \fIname\fP
+            \fBmetric-from\fP \fIattribute\fP
+            \fBhelp\fP \fIhelp\fP
+            \fBhelp-from\fP \fIattribute\fP
+            \fBtype\fP \fIcounter|gauge\fP
+            \fBlabel\fP \fIkey\fP \fIvalue\fP
+            \fBlabel-from\fP \fIkey\fP \fIattribute\fP
+            \fBvalue-from\fP \fIattribute\fP
+        }
+    }
+    \fBinstance\fP \fIname\fP {
+        \fBurl\fP \fIldap://host/binddn\fP
+        \fBbind-dn\fP \fIDN\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
+        \fBca-cert\fP \fI/path/to/ca\fP
+        \fBstart-tls\fP \fItrue|false\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBversion\fP \fIversion\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBquery\fP \fIname\fP [\fIname\fP ...]
+        \fBfilter\fP {
+            ...
+        }
+    }
+.br
+}
+.SH DESCRIPTION
+The \fPldap\fP plugin connect no a ldap server to do search queries and read back
+the results. You can configure how each result is interpreted and the plugin
+will generate one or more metrics por each result.
+.PP
+The configuration of the \fBldap\fP plugin consists of one or more \fBinstance\fP and
+\fBquery\fP blocks. Each block requires one string argument as the name.
+.TP
+\fBinstance\fP \fIdatabase\fP
+The instance blocks define a connection to a ldap server and which search queries should
+be sent to that server.
+The instance name will be used as the label instance. In order for the
+plugin to work correctly, each instance name must be unique. This is not
+enforced by the plugin and it is your responsibility to ensure it is.
+.RS
+.TP
+\fBurl\fP \fIldap://host/binddn\fP
+Sets the URL to use to connect to the OpenLDAP server. This option is
+mandatory.
+.TP
+\fBbind-dn\fP \fIDN\fP
+Name in the form of an LDAP distinguished name intended to be used for
+authentication. Defaults to empty string to establish an anonymous authorization.
+.TP
+\fBpassword\fP \fIpassword\fP
+Password for simple bind authentication. If this option is not set,
+unauthenticated bind operation is used.
+.TP
+\fBpassword-env\fP \fIenv-name\fP
+Get the password for simple bind authentication from the environment variable \fIenv-name\fP.
+.TP
+\fBca-cert\fP \fI/path/to/ca\fP
+File that holds one or more SSL certificates. If you want to use TLS/SSL you
+may possibly need this option. What CA certificates are checked by default
+depends on the distribution you use and can be changed with the usual ldap
+client configuration mechanisms. See
+.BR ldap.conf (5)
+for the details.
+.TP
+\fBstart-tls\fP \fItrue|false\fP
+Defines whether TLS must be used when connecting to the OpenLDAP server.
+Disabled by default.
+.TP
+\fBtimeout\fP \fIseconds\fP
+Sets the timeout value for ldap operations, in seconds. By default, the
+configured \fIinterval\fP is used to set the timeout. Use \fB-1\fP to disable
+(infinite timeout).
+.TP
+\fBverify-host\fP \fItrue|false\fP
+Enables or disables peer host name verification. If enabled, the plugin checks
+if the C<Common Name> or a C<Subject Alternate Name> field of the SSL
+certificate matches the host name provided by the B<URL> option. If this
+identity check fails, the connection is aborted. Enabled by default.
+.TP
+\fBversion\fP \fIversion\fP
+An integer which sets the LDAP protocol version number to use when connecting
+to the OpenLDAP server. Defaults to \fB3\fP for using \fILDAPv3\fP.
+.TP
+\fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+URL. By default the global \fBinterval\fP setting will be used.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name.
+.TP
+\fBquery\fP \fIname\fP [\fIname\fP ...]
+Associates the query named \fIname\fP with this database connection.
+The query needs to be defined \fIbefore\fP this statement, i. e. all query
+blocks you want to refer to must be placed above the instance block you want to
+refer to them from.
+.TP
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.RE
+.TP
+\fBquery\fP \fIquery-name\fP
+The query blocks define a ldap search and how the returned data should be interpreted.
+.RS
+.TP
+\fBbase\fP \fIsearchbase\fP
+Use \fIsearchbase\fP as the starting point for the search instead of the default.
+.TP
+\fBscope\fP \fIbase|one|sub|children\fP
+ Specify  the scope of the search to be one of \fIbase\fP, \fIone\fP, \fIsub\fP \fIchildren\fP
+to specify a base object, one-level, subtree, or children search.
+The default is \fIsub\fP.
+.TP
+\fBfilter\fP \fIfilter\fP
+Set the filter for the search. The filter should conform to the string representation
+for search filters as defined in RFC 4515.
+If not provided, the default filter, \f(CW(objectClass=*)\fP, is used.
+.TP
+\fBattrs\fP \fIattribute\fP [\fIattribute\fP ...]
+Set the list of attributes that will be returned. If no attributes are set,
+all user attributes are returned.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.TP
+\fBlabel-from\fP \fIatribute\fP
+Specifies the attribute whose values will be used to create the labels.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name.
+.TP
+\fBmetric\fP
+.RS
+.TP
+\fBdn\fP \fIDN\fP
+Only apply this metric definition to entries that match this \fIDN\fP.
+.TP
+\fBcn\fP \fICN\fP
+Only apply this metric definition to entries that match this \fICN\fP.
+.TP
+\fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name.
+.TP
+\fBmetric\fP \fIname\fP
+Set the metric name.
+.TP
+\fBmetric-from\fP \fIattribute\fP
+Read the metric name from the named attribute.
+There must be at least one \fBmetric\fP or \fBmetric-from\fP option inside
+each \fBmetric\fP block.
+.TP
+\fBhelp\fP \fIhelp\fP
+Set the \fBhelp\fP text for the metric.
+.TP
+\fBhelp-from\fP \fIattribute\fP
+Read the \fBhelp\fP text for the the metric from the named attribute.
+.TP
+\fBtype\fP \fIcounter|gauge\fP
+The \fBtype\fP that's used for each metric returned. Must be \fIgauge\fP or \fIcounter\fP.
+.TP
+\fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
+multiple times in the \fBmetric\fP block.
+.TP
+\fBlabel-from\fP \fIkey\fP \fIattribute\fP
+Specifies the attribute whose values will be used to create the labels.
+.TP
+\fBvalue-from\fP \fIattribute\fP
+Name of the attribute whose content is used as the actual data for the metric
+that are dispatched to the daemon.
+There must be only one \fBvalue-from\fP option inside each \fBmetric\fP block.
+.RE
+.RE
+.SH "SEE ALSO"
+.BR ncollectd (1)
+.BR ncollectd.conf (5)
