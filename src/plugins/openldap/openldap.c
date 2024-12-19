@@ -151,7 +151,7 @@ typedef struct {
     char *password;
     char *cacert;
     bool starttls;
-    int timeout;
+    cdtime_t timeout;
     char *url;
     bool verifyhost;
     int version;
@@ -202,7 +202,8 @@ static int openldap_init_host(openldap_t *st)
 
     ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
 
-    ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &(const struct timeval){st->timeout, 0});
+    struct timeval tm = CDTIME_T_TO_TIMEVAL(st->timeout);
+    ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &tm);
 
     ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
 
@@ -582,7 +583,7 @@ static int openldap_config_add(config_item_t *ci)
         } else if (strcasecmp("start-tls", child->key) == 0) {
             status = cf_util_get_boolean(child, &st->starttls);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &st->timeout);
+            status = cf_util_get_cdtime(child, &st->timeout);
         } else if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &st->url);
         } else if (strcasecmp("verify-host", child->key) == 0) {
@@ -628,7 +629,7 @@ static int openldap_config_add(config_item_t *ci)
     }
 
     if (st->timeout == 0)
-        st->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+        st->timeout = interval == 0 ? plugin_get_interval()/2 : interval/2;
 
     label_set_add(&st->labels, true, "instance", st->name);
 
