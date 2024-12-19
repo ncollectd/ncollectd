@@ -70,6 +70,7 @@
 %define build_with_kea 0%{!?_without_kea:1}
 %define build_with_keepalived 0%{!?_without_keepalived:1}
 %define build_with_ksm 0%{!?_without_ksm:1}
+%define build_with_ldap 0%{!?_without_ldap:1}
 %define build_with_load 0%{!?_without_load:1}
 %define build_with_locks 0%{!?_without_locks:1}
 %define build_with_log_file 0%{!?_without_log_file:1}
@@ -699,6 +700,16 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: nut-devel
 %description nut
 This plugin for ncollectd provides Network UPS Tools support.
+%endif
+
+%if %{build_with_ldap}
+%package ldap
+Summary: Ldap plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: openldap-devel
+%description ldap
+The ldap plugin execute queries on a ldap server and read back the result.
 %endif
 
 %if %{build_with_odbc}
@@ -1445,6 +1456,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_ksm -DPLUGIN_KSM:BOOL=ON
 %else
 %define _build_with_ksm -DPLUGIN_KSM:BOOL=OFF
+%endif
+
+%if %{build_with_ldap}
+%define _build_with_ldap -DPLUGIN_LDAP:BOOL=ON
+%else
+%define _build_with_ldap -DPLUGIN_LDAP:BOOL=OFF
 %endif
 
 %if %{build_with_load}
@@ -2282,6 +2299,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_kea} \
     %{?_build_with_keepalived} \
     %{?_build_with_ksm} \
+    %{?_build_with_ldap} \
     %{?_build_with_load} \
     %{?_build_with_locks} \
     %{?_build_with_log_file} \
@@ -3117,6 +3135,12 @@ fi
 %files kafka
 %{_libdir}/%{name}/kafka.so
 %{_mandir}/man5/ncollectd-kafka.5*
+%endif
+
+%if %{build_with_ldap}
+%files ldap
+%{_libdir}/%{name}/ldap.so
+%{_mandir}/man5/ncollectd-ldap.5*
 %endif
 
 %if %{build_with_lua}
