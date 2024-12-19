@@ -63,6 +63,58 @@ int cf_util_get_string_env(const config_item_t *ci, char **ret_string)
     return 0;
 }
 
+int cf_util_get_string_file(const config_item_t *ci, char **ret_string)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+    int fd = open(ci->values[0].value.string, O_RDONLY);
+    if (fd < 0) {
+        PLUGIN_ERROR("Cannot open file '%s' from '%s' option in %s:%d: %s",
+                     ci->values[0].value.string, ci->key, cf_get_file(ci), cf_get_lineno(ci),
+                     STRERRNO);
+        return -1;
+    }
+
+    struct stat statbuf;
+    int status = fstat(fd, &statbuf);
+    if (status < 0) {
+        PLUGIN_ERROR("Cannot stat file '%s' from '%s' option in %s:%d: %s",
+                     ci->values[0].value.string, ci->key, cf_get_file(ci), cf_get_lineno(ci),
+                     STRERRNO);
+        close(fd);
+        return -1;
+    }
+
+    char *buf = malloc(statbuf.st_size + 1);
+    if (buf == NULL) {
+        PLUGIN_ERROR("malloc failed");
+        close(fd);
+        return -1;
+    }
+
+    ssize_t size = read(fd, buf, statbuf.st_size);
+    if ((size <= 0) || (size != statbuf.st_size)) {
+        PLUGIN_ERROR("Cannot read file '%s' from '%s' option in %s:%d: %s",
+                     ci->values[0].value.string, ci->key, cf_get_file(ci), cf_get_lineno(ci),
+                     STRERRNO);
+        free(buf);
+        close(fd);
+        return -1;
+    }
+    close(fd);
+
+    buf[statbuf.st_size] = '\0';
+
+    if (*ret_string != NULL)
+        free(*ret_string);
+   *ret_string = buf;
+
+    return 0;
+}
+
 /* Assures the config option is a string and copies it to the provided buffer.
  * Assures NUL-termination. */
 int cf_util_get_string_buffer(const config_item_t *ci, char *buffer, size_t buffer_size)

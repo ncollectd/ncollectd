@@ -478,52 +478,6 @@ static void exporter_free(void *arg)
     free(exporter);
 }
 
-static int config_exporter_read_file(const config_item_t *ci, char **ret_string)
-{
-    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
-        PLUGIN_ERROR("The '%s' option requires exactly one string argument.", ci->key);
-        return -1;
-    }
-
-    int fd = open (ci->values[0].value.string, O_RDONLY);
-    if (fd < 0) {
-        PLUGIN_ERROR("open %s failed: %s", ci->values[0].value.string, STRERRNO);
-        return -1;
-    }
-
-    struct stat statbuf;
-    int status = fstat(fd, &statbuf);
-    if (status < 0) {
-        PLUGIN_ERROR("fstat %s failed: %s", ci->values[0].value.string, STRERRNO);
-        close(fd);
-        return -1;
-    }
-
-    char *buf = malloc(statbuf.st_size + 1);
-    if (buf == NULL) {
-        PLUGIN_ERROR("malloc failed");
-        close(fd);
-        return -1;
-    }
-
-    ssize_t size = read(fd, buf, statbuf.st_size);
-    if ((size <= 0) || (size != statbuf.st_size)) {
-        PLUGIN_ERROR("read %s failed: %s", ci->values[0].value.string, STRERRNO);
-        free(buf);
-        close(fd);
-        return -1;
-    }
-    close(fd);
-
-    buf[statbuf.st_size] = '\0';
-
-    if (*ret_string != NULL)
-        free(*ret_string);
-   *ret_string = buf;
-
-    return 0;
-}
-
 static int exporter_config_instance(config_item_t *ci)
 {
     char *name = NULL;
@@ -569,11 +523,11 @@ static int exporter_config_instance(config_item_t *ci)
         } else if (strcasecmp("staleness-delta", child->key) == 0) {
             status = cf_util_get_cdtime(child, &exporter->staleness_delta);
         } else if (strcasecmp("private-key", child->key) == 0) {
-            status = config_exporter_read_file(child, &exporter->private_key);
+            status = cf_util_get_string_file(child, &exporter->private_key);
         } else if (strcasecmp("private-key-password", child->key) == 0) {
             status = cf_util_get_string(child, &exporter->private_key_pass);
         } else if (strcasecmp("certificate", child->key) == 0) {
-            status = config_exporter_read_file(child, &exporter->certificate);
+            status = cf_util_get_string_file(child, &exporter->certificate);
         } else if (strcasecmp("tls-priority", child->key) == 0) {
             status = cf_util_get_string(child, &exporter->tls_priority);
         } else if (strcasecmp("auth-method", child->key) == 0) {
