@@ -49,7 +49,7 @@ typedef struct {
     char *password;
     char *cacert;
     bool starttls;
-    int timeout;
+    cdtime_t timeout;
     char *url;
     bool verifyhost;
     int version;
@@ -658,7 +658,7 @@ static int ldap_config_instance(config_item_t *ci)
         } else if (strcasecmp("start-tls", child->key) == 0) {
             status = cf_util_get_boolean(child, &st->starttls);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &st->timeout);
+            status = cf_util_get_cdtime(child, &st->timeout);
         } else if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &st->url);
         } else if (strcasecmp("verify-host", child->key) == 0) {

@@ -32,7 +32,7 @@ typedef struct {
     char *password;
     char *cacert;
     bool starttls;
-    int timeout;
+    cdtime_t timeout;
     char *url;
     bool verifyhost;
     int version;
@@ -219,7 +219,8 @@ static int ds389_init_host(ds389_ctx_t *ctx)
     }
 
     ldap_set_option(ctx->ld, LDAP_OPT_PROTOCOL_VERSION, &ctx->version);
-    ldap_set_option(ctx->ld, LDAP_OPT_TIMEOUT, &(const struct timeval){ctx->timeout, 0});
+    struct timeval tm = CDTIME_T_TO_TIMEVAL(ctx->timeout);
+    ldap_set_option(ctx->ld, LDAP_OPT_TIMEOUT, &tm);
     ldap_set_option(ctx->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
 
     if (ctx->cacert != NULL)
@@ -796,7 +797,7 @@ static int ds389_config_add(config_item_t *ci)
         } else if (strcasecmp("start-tls", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctx->starttls);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &ctx->timeout);
+            status = cf_util_get_cdtime(child, &ctx->timeout);
         } else if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->url);
         } else if (strcasecmp("verify-host", child->key) == 0) {
@@ -842,7 +843,7 @@ static int ds389_config_add(config_item_t *ci)
     }
 
     if (ctx->timeout == 0)
-        ctx->timeout = (long)CDTIME_T_TO_TIME_T(interval);
+        ctx->timeout = interval == 0 ? plugin_get_interval()/2 : interval/2;
 
     label_set_add(&ctx->labels, true, "instance",  ctx->name);
 
