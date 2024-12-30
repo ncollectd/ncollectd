@@ -1506,9 +1506,11 @@ static int cpy_config(config_item_t *ci)
             char *encoding = NULL;
             status = cf_util_get_string(item, &encoding);
 #ifdef IS_PY3K
-            PLUGIN_ERROR("'encoding' was used in the config file but Python3 was "
-                          "used, which does not support changing encodings");
-            status = 1;
+            if (status == 0) {
+                PLUGIN_ERROR("'encoding' was used in the config file but Python3 was "
+                              "used, which does not support changing encodings");
+                status = 1;
+            }
 #else
             /* Why is this even necessary? And undocumented? */
             if (PyUnicode_SetDefaultEncoding(encoding)) {
