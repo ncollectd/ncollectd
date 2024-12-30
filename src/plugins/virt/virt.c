@@ -1392,7 +1392,7 @@ static int get_vcpu_stats(virt_ctx_t *ctx, virDomainPtr domain, unsigned short n
                                  &(label_pair_const_t){.name="cpu", .value=cpu},
                                  NULL);
         }
-        if (ctx->flags & COLLECT_VIRT_VCPUPIN) {
+        if ((ctx->flags & COLLECT_VIRT_VCPUPIN) && (cpumaps != NULL)) {
             char nvcpu[ITOA_MAX];
             itoa(i, nvcpu);
             for (int cpu = 0; cpu < max_cpus; cpu++) {
