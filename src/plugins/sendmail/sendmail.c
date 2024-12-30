@@ -170,6 +170,11 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
     }
 
     int dfd = dirfd(dh);
+    if (dfd < 0) {
+        PLUGIN_ERROR("Cannot get directory stream file descriptor '%s': %s",
+                      ctx->queue_path, STRERRNO);
+        return -1;
+    }
 
     histogram_t *queue_msg_size = histogram_new_custom(ctx->buckets_queue_size_size,
                                                        ctx->buckets_queue_size_buckets);
