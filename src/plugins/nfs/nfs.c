@@ -1133,11 +1133,14 @@ static int nfs_read_mountstats_device(FILE *fh, nfs_mountstats_t *nfs, label_set
         } else if (strncmp(str, "xprt:", strlen("xprt:")) == 0) {
             nfs_read_mountstats_xprt(str, nfs, labels);
         } else if (strncmp(str, "per-op statistics", strlen("per-op statistics")) == 0) {
-            while (fgets(line, sizeof(line), fh) != NULL) {
+            char *rline = NULL;
+            while ((rline = fgets(line, sizeof(line), fh)) != NULL) {
                 if (line[0] == '\n')
                     return 0;
                 nfs_read_mountstats_ops(line, nfs, labels);
             }
+            if (rline == NULL)
+                return 0;
         } else if (line[0] == '\n') {
             return 0;
         }
@@ -1247,8 +1250,12 @@ static int nfs_read_mountstats(void)
                     continue;
                 }
             }
+
+            if (feof(fh))
+                break;
         }
     }
+
     fclose(fh);
 
     while (true) {
