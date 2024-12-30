@@ -325,6 +325,7 @@ static int kea_subnet_add_pool(kea_subnet_t *subnet, const char *pool, size_t po
 
     char **tmp = realloc(subnet->pools, sizeof(*subnet->pools) * (subnet->pool_size + 1));
     if (tmp == NULL) {
+        free(apool);
         PLUGIN_ERROR("realloc failed.");
         return -1;
     }
@@ -589,9 +590,8 @@ static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
 static bool kea_json_stats_map_key(void * ctx, const char *ukey, size_t key_len)
 {
     kea_json_stats_ctx_t *sctx = ctx;
-    if (sctx != NULL) {
-
-    }
+    if (sctx == NULL)
+        return false;
 
     switch(sctx->depth) {
     case 1:
@@ -1082,9 +1082,8 @@ typedef struct {
 static bool kea_json_config_hash_string(void *ctx, const char *str, size_t str_len)
 {
     kea_json_config_hash_ctx_t *sctx = ctx;
-    if (sctx != NULL) {
-
-    }
+    if (sctx == NULL)
+        return false;
 
     if ((sctx->depth == 2) && (sctx->stack[1] == KEA_CONFIG_HASH_JSON_ARGS_HASH))
         sstrnncpy(sctx->hash, CONFIG_HASH_SIZE, str, str_len);
@@ -1095,9 +1094,8 @@ static bool kea_json_config_hash_string(void *ctx, const char *str, size_t str_l
 static bool kea_json_config_hash_map_key(void * ctx, const char *ukey, size_t key_len)
 {
     kea_json_config_hash_ctx_t *sctx = ctx;
-    if (sctx != NULL) {
-
-    }
+    if (sctx == NULL)
+        return false;
 
     switch(sctx->depth) {
     case 1:
