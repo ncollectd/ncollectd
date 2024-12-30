@@ -157,13 +157,12 @@ static unsigned int mssql_version(mssql_database_t *db)
     default:
         return 0;
     }
-    ndots++;
 
     unsigned int version = 0;
     char *dot;
     char *start = (char *)buffer;
     int i = 0;
-    for (i = 0; (dot = strrchr(start, '.')) != NULL && i < ndots; i++) {
+    for (i = 0; ((dot = strrchr(start, '.')) != NULL) && (i < ndots); i++) {
         version += atoi(dot + 1) * mult[i];
         *dot = '\0';
     }
@@ -284,14 +283,14 @@ static int mssql_read_database_query(mssql_database_t *db, db_query_t *q,
         column_names[i] = column_names[i - 1] + DATA_MAX_NAME_LEN;
     }
 
-    column_types = calloc(column_num, sizeof(column_types));
+    column_types = calloc(column_num, sizeof(*column_types));
     if (column_types == NULL) {
         PLUGIN_ERROR("calloc failed.");
         status = -1;
         goto error;
     }
 
-    column_status = calloc(column_num, sizeof(column_status));
+    column_status = calloc(column_num, sizeof(*column_status));
     if (column_status == NULL) {
         PLUGIN_ERROR("calloc failed.");
         status = -1;
