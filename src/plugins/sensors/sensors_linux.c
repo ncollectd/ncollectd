@@ -75,6 +75,7 @@ static int sensors_load_conf(void)
         return -1;
     }
 
+    first_feature = NULL;
     featurelist_t *last_feature = NULL;
     const sensors_chip_name *chip;
     int chip_num = 0;
