@@ -587,7 +587,7 @@ static int postfix_showq_parse(postfix_ctx_t *ctx)
                 double wait = now - gauge;
                 if (wait < 0)
                     wait = 0;
-                histogram_update(queue_msg_age[queue], now - gauge);
+                histogram_update(queue_msg_age[queue], wait);
             }
         }
     }
