@@ -2383,8 +2383,15 @@ static int perl_config_loadplugin(pTHX_ config_item_t *ci)
     if (init_pi(perl_argc, perl_argv) != 0)
         return -1;
 
-    assert(perl_threads != NULL);
-    assert(perl_threads->head != NULL);
+    if (perl_threads == NULL) {
+        PLUGIN_ERROR("perl_threads is NULL.");
+        return -1;
+    }
+
+    if (perl_threads->head == NULL) {
+        PLUGIN_ERROR("perl_threads->head is NULL.");
+        return -1;
+    }
 
     aTHX = perl_threads->head->interp;
 
