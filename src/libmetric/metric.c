@@ -298,18 +298,18 @@ int metric_family_append_va(metric_family_t *fam, value_t v, label_set_t *labels
     va_copy(apc, ap);
     label_pair_t *pair;
 
-    while ((pair = va_arg(ap, label_pair_t *)) != NULL) {
+    while ((pair = va_arg(apc, label_pair_t *)) != NULL) {
         if ((pair->name != NULL) && (pair->value != NULL)) {
             int status = label_set_add(&m.label, true, pair->name, pair->value);
             if (status != 0) {
                 metric_reset(&m, fam->type);
-                va_end(ap);
+                va_end(apc);
                 return status;
             }
         }
     }
 
-    va_end(ap);
+    va_end(apc);
 
     int status = metric_value_clone(&m.value, v, fam->type);
     if (status != 0) {
