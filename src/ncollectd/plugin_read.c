@@ -433,7 +433,7 @@ int plugin_register_read(const char *name, int (*callback)(void))
     }
 
     read_stats_t *stats = calloc(1, sizeof(*stats));
-    if (rf == NULL) {
+    if (stats == NULL) {
         ERROR("calloc failed.");
         free(rf);
         return ENOMEM;
@@ -498,7 +498,7 @@ int plugin_register_complex_read(const char *group, const char *name, plugin_rea
     }
 
     read_stats_t *stats = calloc(1, sizeof(*stats));
-    if (rf == NULL) {
+    if (stats == NULL) {
         ERROR("calloc failed.");
         free(full_name);
         free_userdata(user_data);
