@@ -96,15 +96,20 @@ static int create_pipe(int fd_pipe[2])
         return -1;
     }
 
+    if ((fd_pipe[0] < 0) || (fd_pipe[1] < 0)) {
+        PLUGIN_ERROR("pipe failed. Return negative file descriptor.");
+        return -1;
+    }
+
     return 0;
 }
 
 static void close_pipe(int fd_pipe[2])
 {
-    if (fd_pipe[0] != -1)
+    if (fd_pipe[0] >= 0)
         close(fd_pipe[0]);
 
-    if (fd_pipe[1] != -1)
+    if (fd_pipe[1] >= 0)
         close(fd_pipe[1]);
 }
 
