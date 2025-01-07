@@ -97,6 +97,10 @@ static int logind_session_cmp(void *a, void *b)
     int cmp;
 
     if (logind_group_by & LOGIND_GROUP_BY_SEAT) {
+        if (sa->seat == NULL)
+            return -1;
+        if (sb->seat == NULL)
+            return 1;
         if ((cmp = strcmp(sa->seat, sb->seat)) != 0)
             return cmp;
     }
@@ -110,11 +114,19 @@ static int logind_session_cmp(void *a, void *b)
     }
 
     if (logind_group_by & LOGIND_GROUP_BY_TYPE) {
+        if (sa->type == NULL)
+            return -1;
+        if (sb->type == NULL)
+            return 1;
         if ((cmp = strcmp(sa->type, sb->type)) != 0)
             return cmp;
     }
 
     if (logind_group_by & LOGIND_GROUP_BY_CLASS) {
+        if (sa->class == NULL)
+            return -1;
+        if (sb->class == NULL)
+            return 1;
         if ((cmp = strcmp(sa->class, sb->class)) != 0)
             return cmp;
     }
@@ -137,11 +149,17 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
     if (logind_group_by & LOGIND_GROUP_BY_REMOTE)
         lk.remote = remote == 0 ? 0 : 1;
 
-    if (logind_group_by & LOGIND_GROUP_BY_TYPE)
+    if (logind_group_by & LOGIND_GROUP_BY_TYPE) {
+        if (type == NULL)
+            return -1;
         lk.type = get_session_type(type);
+    }
 
-    if (logind_group_by & LOGIND_GROUP_BY_CLASS)
+    if (logind_group_by & LOGIND_GROUP_BY_CLASS) {
+        if (class == NULL)
+            return -1;
         lk.class = get_session_class(class);
+    }
 
     int status = c_avl_get(tree, &lk, (void *)&lv);
     if (status == 0) {
@@ -152,29 +170,51 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
     logind_session_t *ls = calloc (1,  sizeof(*ls));
     if (ls == NULL)
         return -1;
-    
+
     if (logind_group_by & LOGIND_GROUP_BY_SEAT) {
+        if (seat == NULL) {
+            logind_session_free(ls);
+            return -1;
+        }
+
         if (seat[0] == '\0')
             ls->seat = strdup("none");
         else
             ls->seat = strdup(seat);
-        if (ls->seat == NULL)
+
+        if (ls->seat == NULL) {
             logind_session_free(ls);
+            return -1;
+        }
     }
 
     if (logind_group_by & LOGIND_GROUP_BY_REMOTE)
         ls->remote = remote == 0 ? 0 : 1;
 
     if (logind_group_by & LOGIND_GROUP_BY_TYPE) {
-        ls->type = strdup(get_session_type(type));
-        if (ls->type == NULL)
+        if (ls->type == NULL) {
             logind_session_free(ls);
+            return -1;
+        }
+
+        ls->type = strdup(get_session_type(type));
+        if (ls->type == NULL) {
+            logind_session_free(ls);
+            return -1;
+        }
     }
 
     if (logind_group_by & LOGIND_GROUP_BY_CLASS) {
-        ls->class = strdup(get_session_class(class));
-        if (ls->class == NULL)
+        if (ls->class == NULL) {
             logind_session_free(ls);
+            return -1;
+        }
+
+        ls->class = strdup(get_session_class(class));
+        if (ls->class == NULL) {
+            logind_session_free(ls);
+            return -1;
+        }
     }
 
     ls->cnt++;
@@ -184,7 +224,7 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
         logind_session_free(ls);
         return -1;
     }
-   
+
     return 0;
 }
 
@@ -263,7 +303,7 @@ static int get_property_string(sd_bus *bus, const char *destination, const char 
 }
 
 static int logind_submit(metric_family_t *fam,  c_avl_tree_t *sessions,
-                         char *seat, char *type, char *class, int remote) 
+                         char *seat, char *type, char *class, int remote)
 {
     size_t n = 0;
     label_pair_t labels[4] = {0};
@@ -443,6 +483,10 @@ static int logind_read(void)
     if (sd_booted() <= 0)
         return -1;
 
+    c_avl_tree_t *sessions = c_avl_create((int (*)(const void *, const void *))logind_session_cmp);
+    if (sessions == NULL)
+        return -1;
+
     sd_bus_default_system(&bus);
 
     char *seats[1024];
@@ -452,16 +496,10 @@ static int logind_read(void)
     if (logind_group_by & LOGIND_GROUP_BY_SEAT)
         seats_size += logind_list_seats(bus, seats + 1,  STATIC_ARRAY_SIZE(seats) - 1);
 
-    c_avl_tree_t *sessions = c_avl_create((int (*)(const void *, const void *))logind_session_cmp);
-    if (sessions == NULL) {
-        return -1;
-    }
-
     logind_list_sessions(bus, sessions);
 
     sd_bus_unref(bus);
 
-    
     logind_group_by &= (LOGIND_GROUP_BY_SEAT | LOGIND_GROUP_BY_REMOTE |
                         LOGIND_GROUP_BY_TYPE | LOGIND_GROUP_BY_CLASS);
 
@@ -558,7 +596,7 @@ static int logind_read(void)
                               session_classes[k], m);
             }
         }
-    } else if (logind_group_by == LOGIND_GROUP_BY_SEAT) { 
+    } else if (logind_group_by == LOGIND_GROUP_BY_SEAT) {
         for (size_t i = 0; i < seats_size; i++) {
             logind_submit(&fams[FAM_LOGIND_SESSIONS], sessions, seats[i], NULL, NULL, 0);
         }
@@ -588,13 +626,13 @@ static int logind_read(void)
     }
 
     c_avl_destroy(sessions);
-    
+
     for (size_t i = 1; i < seats_size; i++) {
         if (seats[i] == NULL)
             break;
         free(seats[i]);
     }
-        
+
     plugin_dispatch_metric_family_array(fams, FAM_LOGIND_MAX, 0);
 
     return 0;
