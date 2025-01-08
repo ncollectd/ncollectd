@@ -50,6 +50,7 @@ steps:
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream8/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream8/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - rm -rf package-centos-stream8/BUILD
   package-centos-stream9:
     image: ncollectd/ci-centos:stream9
     commands:
@@ -60,6 +61,7 @@ steps:
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream9/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - rm -rf package-centos-stream9/BUILD
   package-centos-stream10:
     image: ncollectd/ci-centos:stream10
     commands:
@@ -171,6 +173,7 @@ steps:
       - cp packaging/opensuse/systemd.ncollectd.service package-opensuse-leap/SOURCES
       - cp package-dist/ncollectd-$${TAG}.tar.xz package-opensuse-leap/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-opensuse-leap" --define "git_tag $${TAG}" -ba packaging/opensuse/ncollectd.spec
+      - rm -rf package-opensuse-leap/BUILD
   package-opensuse-tumbleweed:
     image: ncollectd/ci-opensuse:tumbleweed
     commands:
