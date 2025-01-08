@@ -73,6 +73,7 @@
 %define build_with_ldap 0%{!?_without_ldap:1}
 %define build_with_load 0%{!?_without_load:1}
 %define build_with_locks 0%{!?_without_locks:1}
+%define build_with_logind 0%{!?_without_logind:1}
 %define build_with_log_file 0%{!?_without_log_file:1}
 %define build_with_log_gelf 0%{!?_without_log_gelf:1}
 %define build_with_log_syslog 0%{!?_without_log_syslog:1}
@@ -1387,6 +1388,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_locks -DPLUGIN_LOCKS:BOOL=OFF
 %endif
 
+%if %{build_with_logind}
+%define _build_with_logind -DPLUGIN_LOGIND:BOOL=ON
+%else
+%define _build_with_logind -DPLUGIN_LOGIND:BOOL=OFF
+%endif
+
 %if %{build_with_log_file}
 %define _build_with_log_file -DPLUGIN_LOG_FILE:BOOL=ON
 %else
@@ -2213,6 +2220,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_ldap} \
     %{?_build_with_load} \
     %{?_build_with_locks} \
+    %{?_build_with_logind} \
     %{?_build_with_log_file} \
     %{?_build_with_log_gelf} \
     %{?_build_with_log_syslog} \
@@ -2574,6 +2582,10 @@ rm -rf %{buildroot}
 %if %{build_with_locks}
 %{_libdir}/%{name}/locks.so
 %{_mandir}/man5/ncollectd-locks.5*
+%endif
+%if %{build_with_logind}
+%{_libdir}/%{name}/logind.so
+%{_mandir}/man5/ncollectd-logind.5*
 %endif
 %if %{build_with_log_file}
 %{_libdir}/%{name}/log_file.so
