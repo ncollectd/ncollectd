@@ -102,6 +102,8 @@ usr/lib/ncollectd/load.so
 usr/share/man/man5/ncollectd-load.5
 usr/lib/ncollectd/locks.so
 usr/share/man/man5/ncollectd-locks.5
+usr/lib/ncollectd/logind.so
+usr/share/man/man5/ncollectd-logind.5
 usr/lib/ncollectd/log_file.so
 usr/share/man/man5/ncollectd-log_file.5
 usr/lib/ncollectd/log_syslog.so

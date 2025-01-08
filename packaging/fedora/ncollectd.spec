@@ -73,6 +73,7 @@
 %define build_with_ldap 0%{!?_without_ldap:1}
 %define build_with_load 0%{!?_without_load:1}
 %define build_with_locks 0%{!?_without_locks:1}
+%define build_with_logind 0%{!?_without_logind:1}
 %define build_with_log_file 0%{!?_without_log_file:1}
 %define build_with_log_gelf 0%{!?_without_log_gelf:1}
 %define build_with_log_syslog 0%{!?_without_log_syslog:1}
@@ -241,6 +242,7 @@
 %define build_with_mmc 0%{?_with_mmc:1}
 %define build_with_smart 0%{?_with_smart:1}
 %define build_with_systemd 0%{?_with_systemd:1}
+%define build_with_logind 0%{?_with_logind:1}
 %define build_with_journal 0%{?_with_journal:1}
 %endif
 %if 0%{?rhel} <= 7
@@ -257,6 +259,7 @@
 %define build_with_virt 0%{?_with_virt:1}
 %define build_with_docker 0%{?_with_docker:1}
 %define build_with_systemd 0%{?_with_systemd:1}
+%define build_with_logind 0%{?_with_logind:1}
 %define build_with_wireguard 0%{?_with_wireguard:1}
 %endif
 %if 0%{?rhel} == 8
@@ -1500,6 +1503,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_log_systemd -DPLUGIN_LOG_SYSTEMD:BOOL=OFF
 %endif
 
+%if %{build_with_logind}
+%define _build_with_logind -DPLUGIN_LOGIND:BOOL=ON
+%else
+%define _build_with_logind -DPLUGIN_LOGIND:BOOL=OFF
+%endif
+
 %if %{build_with_lpar}
 %define _build_with_lpar -DPLUGIN_LPAR:BOOL=ON
 %else
@@ -2301,6 +2310,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_ksm} \
     %{?_build_with_ldap} \
     %{?_build_with_load} \
+    %{?_build_with_logind} \
     %{?_build_with_locks} \
     %{?_build_with_log_file} \
     %{?_build_with_log_gelf} \
@@ -2706,6 +2716,10 @@ fi
 %if %{build_with_log_systemd}
 %{_libdir}/%{name}/log_systemd.so
 %{_mandir}/man5/ncollectd-log_systemd.5*
+%endif
+%if %{build_with_logind}
+%{_libdir}/%{name}/logind.so
+%{_mandir}/man5/ncollectd-logind.5*
 %endif
 %if %{build_with_lpar}
 %{_libdir}/%{name}/lpar.so
