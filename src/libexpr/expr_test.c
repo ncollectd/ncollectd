@@ -109,6 +109,8 @@ expr_test_t expr_test[] = {
     {"64T",                 &(expr_value_t){.type=EXPR_VALUE_NUMBER, .number=64000000000000}},
     {"6.4Ki",               &(expr_value_t){.type=EXPR_VALUE_NUMBER, .number=6553.6}},
     {"6.4k",                &(expr_value_t){.type=EXPR_VALUE_NUMBER, .number=6400}},
+    {"\"1\"+1",             &(expr_value_t){.type=EXPR_VALUE_NUMBER, .number=2}},
+    {"\"1x\"+1",            &(expr_value_t){.type=EXPR_VALUE_NUMBER, .number=NAN}},
     { NULL,                 &(expr_value_t){.type=EXPR_VALUE_BOOLEAN, .boolean=false}},
 };
 

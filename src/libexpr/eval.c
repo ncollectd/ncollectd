@@ -131,15 +131,20 @@ double expr_value_to_number(expr_value_t *value)
     case EXPR_VALUE_NUMBER:
         num = value->number;
         break;
-    case EXPR_VALUE_STRING: {
-        errno = 0;
-        char *endptr = NULL;
-        num = (double )strtod(value->string, &endptr);
-        if (errno == 0)
+    case EXPR_VALUE_STRING:
+        if (value->string == NULL) {
             num = NAN;
-        else if ((endptr != NULL) && (*endptr != '\0'))
-            num = NAN;
-    }   break;
+        } else {
+            errno = 0;
+            char *endptr = NULL;
+            num = (double)strtod(value->string, &endptr);
+            if (errno != 0) {
+                num = NAN;
+            } else if ((endptr != NULL) && (*endptr != '\0')) {
+                num = NAN;
+            }
+        }
+        break;
     case EXPR_VALUE_BOOLEAN:
         num = value->boolean ? 1.0 : 0.0;
         break;
