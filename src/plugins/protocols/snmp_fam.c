@@ -4,7 +4,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/exclist.h"
 #include "plugins/protocols/snmp_fam.h"
 #include "plugins/protocols/flags.h"
 
@@ -496,7 +495,7 @@ int snmp_shutdown(void)
     return 0;
 }
 
-int snmp_read(uint64_t flags, exclist_t *excl_value)
+int snmp_read(uint64_t flags, plugin_filter_t *filter)
 {
     if (!proc_snmp_found)
         return 0;
@@ -581,9 +580,6 @@ int snmp_read(uint64_t flags, exclist_t *excl_value)
         for (int i = 0; i < key_fields_num; i++) {
             sstrncpy(name + name_key_len, key_fields[i], name_len);
 
-            if (!exclist_match(excl_value, name))
-                continue;
-
             const struct snmp_metric *m = snmp_get_key (name, strlen(name));
             if (m == NULL) {
                 if (strcmp("IcmpMsg", key_buffer) == 0) {
@@ -625,7 +621,7 @@ int snmp_read(uint64_t flags, exclist_t *excl_value)
 
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_SNMP_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_SNMP_MAX, filter, 0);
 
     return status;
 }

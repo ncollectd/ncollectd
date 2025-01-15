@@ -6,14 +6,14 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/exclist.h"
 #include "plugins/protocols/flags.h"
 
 #ifndef KERNEL_LINUX
 #error "No applicable input method."
 #endif
 
-static exclist_t excl_value;
+static plugin_filter_t *filter;
+
 static uint64_t protocols_flags =
     COLLECT_IP  | COLLECT_ICMP  | COLLECT_UDP  | COLLECT_UDPLITE  |
     COLLECT_IP6 | COLLECT_ICMP6 | COLLECT_UDP6 | COLLECT_UDPLITE6 |
@@ -36,26 +36,26 @@ static cf_flags_t protocols_flags_list[] = {
 
 int netstat_init(void);
 int netstat_shutdown(void);
-int netstat_read(uint64_t flags, exclist_t *excl_value);
+int netstat_read(uint64_t flags, plugin_filter_t *filter);
 
 int snmp_init(void);
 int snmp_shutdown(void);
-int snmp_read(uint64_t flags, exclist_t *excl_value);
+int snmp_read(uint64_t flags, plugin_filter_t *filter);
 
 int snmp6_init(void);
 int snmp6_shutdown(void);
-int snmp6_read(uint64_t flags, exclist_t *excl_value);
+int snmp6_read(uint64_t flags, plugin_filter_t *filter);
 
 int sctp_init(void);
 int sctp_shutdown(void);
-int sctp_read(uint64_t flags, exclist_t *excl_value);
+int sctp_read(uint64_t flags, plugin_filter_t *filter);
 
 static int protocols_read(void)
 {
-    netstat_read(protocols_flags, &excl_value);
-    snmp_read(protocols_flags, &excl_value);
-    snmp6_read(protocols_flags, &excl_value);
-    sctp_read(protocols_flags, &excl_value);
+    netstat_read(protocols_flags, filter);
+    snmp_read(protocols_flags, filter);
+    snmp6_read(protocols_flags, filter);
+    sctp_read(protocols_flags, filter);
 
     return 0;
 }
@@ -66,11 +66,11 @@ static int protocols_config(config_item_t *ci)
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
-        if (strcasecmp(child->key, "key") == 0) {
-            status = cf_util_exclist(child, &excl_value);
-        } else if (strcasecmp(child->key, "collect") == 0) {
+        if (strcasecmp(child->key, "collect") == 0) {
             status = cf_util_get_flags(child, protocols_flags_list,
                                        STATIC_ARRAY_SIZE(protocols_flags_list), &protocols_flags);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -99,7 +99,7 @@ static int protocols_init(void)
 
 static int protocols_shutdown(void)
 {
-    exclist_reset(&excl_value);
+    plugin_filter_free(filter);
 
     netstat_shutdown();
     snmp_shutdown();

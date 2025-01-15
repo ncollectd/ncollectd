@@ -4,7 +4,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/exclist.h"
 #include "plugins/protocols/sctp_fam.h"
 #include "plugins/protocols/flags.h"
 
@@ -214,7 +213,7 @@ int sctp_shutdown(void)
     return 0;
 }
 
-int sctp_read(uint64_t flags, exclist_t *excl_value)
+int sctp_read(uint64_t flags, plugin_filter_t *filter)
 {
     if (!proc_sctp_found)
         return 0;
@@ -234,9 +233,6 @@ int sctp_read(uint64_t flags, exclist_t *excl_value)
 
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
         if (fields_num < 2)
-            continue;
-
-        if (!exclist_match(excl_value, fields[0]))
             continue;
 
         const struct sctp_metric *m = sctp_get_key(fields[0], strlen(fields[0]));
@@ -260,7 +256,7 @@ int sctp_read(uint64_t flags, exclist_t *excl_value)
 
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_SCTP_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_SCTP_MAX, filter, 0);
 
     return 0;
 }
