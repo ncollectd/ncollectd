@@ -1432,9 +1432,9 @@ The xencpu plugin collects CPU statistics from Xen.
 %endif
 
 %if %{build_with_journal}
-%define _build_with_journal -DPLUGIN_IRQ:BOOL=ON
+%define _build_with_journal -DPLUGIN_JOURNAL:BOOL=ON
 %else
-%define _build_with_journal -DPLUGIN_IRQ:BOOL=OFF
+%define _build_with_journal -DPLUGIN_JOURNAL:BOOL=OFF
 %endif
 
 %if %{build_with_kafka}
