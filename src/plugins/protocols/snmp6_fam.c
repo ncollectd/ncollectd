@@ -188,6 +188,13 @@ static metric_family_t fams[FAM_SNMP6_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of packets received with Congestion Experienced.",
     },
+    [FAM_IP6_OUT_TRANSMITS] = {
+        .name = "system_ip6_out_transmits",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The total number of IPv6 datagrams that this entity supplied to the lower layers "
+                "for transmission. This includes datagrams generated locally and those forwarded "
+                "by this entity.",
+    },
     [FAM_ICMP6_IN_MESSAGES] = {
         .name = "system_icmp6_in_messages",
         .type = METRIC_TYPE_COUNTER,

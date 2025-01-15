@@ -125,6 +125,13 @@ static metric_family_t fams[FAM_SNMP_MAX] = {
         .help = "The number of IP datagram fragments that have been generated "
                 "as a result of fragmentation at this entity.",
     },
+    [FAM_IP_OUT_TRANSMITS] = {
+        .name = "system_ip_out_transmits",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The total number of IP datagrams that this entity supplied to the lower layers "
+                "for transmission. This includes datagrams generated locally and those forwarded "
+                "by this entity.",
+    },
     [FAM_ICMP_IN_MESSAGES] = {
         .name = "system_icmp_in_messages",
         .type = METRIC_TYPE_COUNTER,

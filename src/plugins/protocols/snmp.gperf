@@ -40,6 +40,7 @@ IpReasmFails,               COLLECT_IP,      FAM_IP_REASSEMBLY_FAILS
 IpFragOKs,                  COLLECT_IP,      FAM_IP_FRAGMENTED_OKS
 IpFragFails,                COLLECT_IP,      FAM_IP_FRAGMENTED_FAILS
 IpFragCreates,              COLLECT_IP,      FAM_IP_FRAGMENTED_CREATES
+IPOutTransmits,             COLLECT_IP,      FAM_IP_OUT_TRANSMITS
 IcmpInMsgs,                 COLLECT_ICMP,    FAM_ICMP_IN_MESSAGES
 IcmpInErrors,               COLLECT_ICMP,    FAM_ICMP_IN_ERRORS
 IcmpInCsumErrors,           COLLECT_ICMP,    FAM_ICMP_IN_CSUM_ERRORS

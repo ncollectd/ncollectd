@@ -53,6 +53,7 @@ Ip6InNoECTPkts,                 COLLECT_IP6,      FAM_IP6_IN_NOECT_PACKETS
 Ip6InECT1Pkts,                  COLLECT_IP6,      FAM_IP6_IN_ECT1_PACKETS
 Ip6InECT0Pkts,                  COLLECT_IP6,      FAM_IP6_IN_ECT0_PACKETS
 Ip6InCEPkts,                    COLLECT_IP6,      FAM_IP6_IN_CE_PACKETS
+Ip6OutTransmits,                COLLECT_IP6,      FAM_IP6_OUT_TRANSMITS
 Icmp6InMsgs,                    COLLECT_ICMP6,    FAM_ICMP6_IN_MESSAGES
 Icmp6InErrors,                  COLLECT_ICMP6,    FAM_ICMP6_IN_ERRORS
 Icmp6OutMsgs,                   COLLECT_ICMP6,    FAM_ICMP6_OUT_MESSAGES
