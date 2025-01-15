@@ -708,8 +708,31 @@ Initial time period in second to disable Fastopen on active TCP sockets when a T
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
-
-
+    [FAM_TCP_AO_REQUIRED] = {
+        .name = "system_tcp_ao_required",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_TCP_AO_BAD] = {
+        .name = "system_tcp_ao_bad",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_TCP_AO_KEY_NOT_FOUND] = {
+        .name = "system_tcp_ao_key_not_found",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_TCP_AO_GOOD] = {
+        .name = "system_tcp_ao_good",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_TCP_AO_DROPPED_ICMPS] = {
+        .name = "system_tcp_ao_dropped_icmps",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
     [FAM_IP_NO_ROUTES] = {
         .name = "system_ip_no_routes",
         .type = METRIC_TYPE_COUNTER,
