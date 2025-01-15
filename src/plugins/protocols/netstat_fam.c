@@ -4,7 +4,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/exclist.h"
 #include "plugins/protocols/netstat_fam.h"
 #include "plugins/protocols/flags.h"
 
@@ -1122,7 +1121,7 @@ int netstat_shutdown(void)
     return 0;
 }
 
-int netstat_read(uint64_t flags, exclist_t *excl_value)
+int netstat_read(uint64_t flags, plugin_filter_t *filter)
 {
     if (!proc_netstat_found)
         return 0;
@@ -1207,9 +1206,6 @@ int netstat_read(uint64_t flags, exclist_t *excl_value)
         for (int i = 0; i < key_fields_num; i++) {
             sstrncpy(name + name_key_len, key_fields[i], name_len);
 
-            if (!exclist_match(excl_value, name))
-                continue;
-
             const struct netstat_metric *m = netstat_get_key (name, strlen(name));
             if (m == NULL)
                 continue;
@@ -1231,7 +1227,7 @@ int netstat_read(uint64_t flags, exclist_t *excl_value)
 
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_NETSTAT_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_NETSTAT_MAX, filter, 0);
 
     return status;
 }

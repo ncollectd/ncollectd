@@ -7,7 +7,9 @@ ncollectd-protocols \- Documentation of ncollectd's protocols plugin
 .br
 \fBplugin\fP protocols {
     \fBcollect\fP \fI[ip|icmp|udp|udplite|udplite6|ip6|icmp6|udp6|tcp|mptcp|sctp]\fP
-    \fBkey\fP [\fIincl|include|excl|exclude\fP] \fIkey\fP
+    \fBfilter\fP {
+        ...
+    }
 .br
 }
 .SH DESCRIPTION
@@ -43,8 +45,9 @@ Available configuration options:
 \fBsctp\fP
 .RE
 .TP
-\fBkey\fP [\fIincl|include|excl|exclude\fP] \fIkey\fP
-Selects whether or not to select a specific value.
+\fBfilter\fP
+Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
+.BR ncollectd.conf(5)
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)
