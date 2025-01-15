@@ -147,6 +147,11 @@ TcpExtTCPDSACKIgnoredDubious,    COLLECT_TCP,   FAM_TCP_SDACK_IGNORED_DUBIOUS
 TcpExtTCPMigrateReqSuccess,      COLLECT_TCP,   FAM_TCP_MIGRATE_REQ_SUCCESS
 TcpExtTCPMigrateReqFailure,      COLLECT_TCP,   FAM_TCP_MIGRATE_REQ_FAILURE
 TcpExtTCPPLBRehash,              COLLECT_TCP,   FAM_TCP_PLB_REHASH
+TcpExtTCPAORequired,             COLLECT_TCP,   FAM_TCP_AO_REQUIRED
+TcpExtTCPAOBad,                  COLLECT_TCP,   FAM_TCP_AO_BAD
+TcpExtTCPAOKeyNotFound,          COLLECT_TCP,   FAM_TCP_AO_KEY_NOT_FOUND
+TcpExtTCPAOGood,                 COLLECT_TCP,   FAM_TCP_AO_GOOD
+TcpExtTCPAODroppedIcmps,         COLLECT_TCP,   FAM_TCP_AO_DROPPED_ICMPS
 IpExtInNoRoutes,                 COLLECT_IP,    FAM_IP_NO_ROUTES
 IpExtInTruncatedPkts,            COLLECT_IP,    FAM_IP_TRUNCATED_PKTS
 IpExtInMcastPkts,                COLLECT_IP,    FAM_IP_MCAST_PKTS
