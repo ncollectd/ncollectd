@@ -710,27 +710,27 @@ Initial time period in second to disable Fastopen on active TCP sockets when a T
     [FAM_TCP_AO_REQUIRED] = {
         .name = "system_tcp_ao_required",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help ="Number of segments where an AO signature was expected, but wasn't found.",
     },
     [FAM_TCP_AO_BAD] = {
         .name = "system_tcp_ao_bad",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of bad segments (failed TCP-AO verification).",
     },
     [FAM_TCP_AO_KEY_NOT_FOUND] = {
         .name = "system_tcp_ao_key_not_found",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of segments with unknown keys.",
     },
     [FAM_TCP_AO_GOOD] = {
         .name = "system_tcp_ao_good",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of good segments (properly signed).",
     },
     [FAM_TCP_AO_DROPPED_ICMPS] = {
         .name = "system_tcp_ao_dropped_icmps",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of ignored ICMPs.",
     },
     [FAM_IP_NO_ROUTES] = {
         .name = "system_ip_no_routes",
