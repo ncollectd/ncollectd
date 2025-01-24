@@ -13,6 +13,7 @@
 #include "plugin.h"
 #include "libutils/common.h"
 #include "libutils/dtoa.h"
+#include "libmetric/marshal.h"
 
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #include <mongoc.h>
@@ -24,13 +25,22 @@ typedef struct {
     char *database_name;
     char *user;
     char *passwd;
-    char *collection_name;
-    char *timestamp_field;
-    char *metadata_field;
-    char *value_field;
+
+    char *metric_collection_name;
+    char *metric_timestamp_field;
+    char *metric_metadata_field;
+    char *metric_value_field;
+
+    char *notification_collection_name;
+    char *notification_name_field;
+    char *notification_severity_field;
+    char *notification_timestamp_field;
+    char *notification_labels_field;
+    char *notification_annotations_field;
 
     bool store_rates;
     bool connected;
+    cf_send_t send;
 
     mongoc_client_t *client;
     mongoc_database_t *database;
@@ -43,10 +53,224 @@ typedef struct {
     int ttl;
 } write_mongodb_t;
 
+static int write_mongodb_initialize(write_mongodb_t *db, char *collection)
+{
+    if (db->connected)
+        return 0;
+
+    PLUGIN_INFO("Connecting to [%s]:%d", db->host, db->port);
+
+    if ((db->database_name != NULL) && (db->user != NULL) && (db->passwd != NULL)) {
+        char *uri = ssnprintf_alloc("mongodb://%s:%s@%s:%d/?authSource=%s", db->user,
+                                    db->passwd, db->host, db->port, db->database_name);
+        if (uri == NULL) {
+            PLUGIN_ERROR("Not enough memory to assemble authentication string.");
+            mongoc_client_destroy(db->client);
+            db->client = NULL;
+            db->connected = false;
+            return -1;
+        }
+
+        db->client = mongoc_client_new(uri);
+        if (!db->client) {
+            PLUGIN_ERROR("Authenticating to [%s]:%d for database '%s' as user '%s' failed.",
+                         db->host, db->port, db->database_name, db->user);
+            db->connected = false;
+            free(uri);
+            return -1;
+        }
+        free(uri);
+    } else {
+        char *uri = ssnprintf_alloc("mongodb://%s:%d", db->host, db->port);
+        if (uri == NULL) {
+            PLUGIN_ERROR("Not enough memory to assemble authentication string.");
+            mongoc_client_destroy(db->client);
+            db->client = NULL;
+            db->connected = false;
+            return -1;
+        }
+
+        db->client = mongoc_client_new(uri);
+        if (!db->client) {
+            PLUGIN_ERROR("Connecting to [%s]:%d failed.", db->host, db->port);
+            db->connected = false;
+            free(uri);
+            return -1;
+        }
+        free(uri);
+    }
+
+    db->database = mongoc_client_get_database(db->client, db->database_name);
+    if (db->database == NULL) {
+        PLUGIN_ERROR("error creating/getting database");
+        mongoc_client_destroy(db->client);
+        db->client = NULL;
+        db->connected = false;
+        return -1;
+    }
+
+    if (!mongoc_database_has_collection(db->database, collection, NULL)) {
+
+        if (db->send == SEND_METRICS) {
+            bson_t *b = bson_new();
+            if (b == NULL) {
+                PLUGIN_ERROR("bson_new failed.");
+                return -1;
+            }
+
+            bson_t ts;
+            BSON_APPEND_DOCUMENT_BEGIN(b, "timeseries", &ts);
+            BSON_APPEND_UTF8(&ts, "timeField", db->metric_timestamp_field);
+            BSON_APPEND_UTF8(&ts, "metaField", db->metric_metadata_field);
+            BSON_APPEND_UTF8(&ts, "granularity", "seconds");
+            if (db->ttl > 0)
+                BSON_APPEND_INT64(&ts, "expireAfterSeconds", db->ttl);
+            bson_append_document_end(b, &ts);
+
+            bson_error_t error;
+            db->collection = mongoc_database_create_collection(db->database, collection, b, &error);
+            if (db->collection == NULL) {
+                PLUGIN_ERROR("Error creating collection");
+                bson_destroy(b);
+                mongoc_database_destroy(db->database);
+                db->database = NULL;
+                mongoc_client_destroy(db->client);
+                db->client = NULL;
+                db->connected = false;
+                return -1;
+            }
+            bson_destroy(b);
+        } else if (db->send == SEND_NOTIFICATIONS) {
+            bson_error_t error;
+            db->collection = mongoc_database_create_collection(db->database, collection, NULL, &error);
+            if (db->collection == NULL) {
+                PLUGIN_ERROR("Error creating collection '%s'",error.message);
+                mongoc_database_destroy(db->database);
+                db->database = NULL;
+                mongoc_client_destroy(db->client);
+                db->client = NULL;
+                db->connected = false;
+                return -1;
+            }
+        }
+    } else {
+        db->collection = mongoc_client_get_collection(db->client, db->database_name, collection);
+        if (db->collection == NULL) {
+            PLUGIN_ERROR("Error getting collection");
+            mongoc_database_destroy(db->database);
+            db->database = NULL;
+            mongoc_client_destroy(db->client);
+            db->client = NULL;
+            db->connected = false;
+            return -1;
+        }
+    }
+
+    db->connected = true;
+
+    return 0;
+}
+
+static int write_mongodb_notif(notification_t const *n, user_data_t *ud)
+{
+    if ((n == NULL) || (ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+
+    write_mongodb_t *db = ud->data;
+
+    if (write_mongodb_initialize(db, db->notification_collection_name) < 0) {
+        PLUGIN_ERROR("Error making connection to server");
+        return -1;
+    }
+
+    strbuf_t buf = STRBUF_CREATE;
+    strbuf_resize(&buf, 1024);
+
+    int status = strbuf_putstr(&buf, n->name);
+    if (n->label.num > 0)
+        status = status || label_set_marshal(&buf, n->label);
+
+    if (status != 0) {
+        strbuf_destroy(&buf);
+        PLUGIN_ERROR("Failed to marshal notification");
+        return -1;
+    }
+
+    bson_t *selector = BCON_NEW ("_id", BCON_UTF8(buf.ptr));
+
+    strbuf_destroy(&buf);
+
+    if (n->severity == NOTIF_OKAY) {
+        bson_error_t error;
+        bool ret = mongoc_collection_delete_one(db->collection, selector,  NULL, NULL, &error);
+        if (ret == false) {
+            PLUGIN_ERROR("Error inserting in collection.");
+        }
+
+        bson_destroy(selector);
+        return 0;
+    }
+
+    bson_t *b = bson_new();
+    if (b == NULL) {
+        PLUGIN_ERROR("bson_new failed.");
+        return -1;
+    }
+
+    BSON_APPEND_UTF8(b, db->notification_name_field, n->name);
+    BSON_APPEND_DATE_TIME(b, db->notification_timestamp_field, CDTIME_T_TO_MS(n->time));
+
+    switch(n->severity) {
+    case NOTIF_FAILURE:
+        BSON_APPEND_UTF8(b, db->notification_severity_field, "FAILURE");
+        break;
+    case NOTIF_WARNING:
+        BSON_APPEND_UTF8(b, db->notification_severity_field, "WARNING");
+        break;
+    case NOTIF_OKAY:
+        BSON_APPEND_UTF8(b, db->notification_severity_field, "OKAY");
+        break;
+    }
+
+    if (n->label.num > 0) {
+        bson_t labels;
+        BSON_APPEND_DOCUMENT_BEGIN(b, db->notification_labels_field, &labels);
+        for (size_t i = 0; i < n->label.num; i++) {
+            BSON_APPEND_UTF8(&labels, n->label.ptr[i].name, n->label.ptr[i].value);
+        }
+        bson_append_document_end(b, &labels);
+    }
+
+    if (n->annotation.num > 0) {
+        bson_t annotations;
+        BSON_APPEND_DOCUMENT_BEGIN(b, db->notification_annotations_field, &annotations);
+        for (size_t i = 0; i < n->annotation.num; i++) {
+            BSON_APPEND_UTF8(&annotations, n->annotation.ptr[i].name, n->annotation.ptr[i].value);
+        }
+        bson_append_document_end(b, &annotations);
+    }
+
+    bson_t *update = BCON_NEW ("$set", BCON_DOCUMENT(b));
+
+    bson_error_t error;
+    bool ret = mongoc_collection_update (db->collection, MONGOC_UPDATE_UPSERT, selector, update,
+                                        NULL, &error);
+    if (ret == false) {
+        PLUGIN_ERROR("Error inserting in collection.");
+    }
+
+    bson_destroy(selector);
+    bson_destroy(b);
+    bson_destroy(update);
+    return 0;
+}
+
 static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
-                              char *metric, char *metric_suffix,
-                              const label_set_t *labels1, const label_set_t *labels2,
-                              double value, cdtime_t time)
+                                char *metric, char *metric_suffix,
+                                const label_set_t *labels1, const label_set_t *labels2,
+                                double value, cdtime_t time)
 {
     bson_t *b = bson_new();
     if (b == NULL) {
@@ -55,7 +279,7 @@ static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
     }
 
     bson_t meta;
-    BSON_APPEND_DOCUMENT_BEGIN(b, db->metadata_field, &meta);
+    BSON_APPEND_DOCUMENT_BEGIN(b, db->metric_metadata_field, &meta);
 
     if (metric_suffix == NULL) {
         BSON_APPEND_UTF8(&meta, "__name__", metric);
@@ -88,8 +312,8 @@ static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
 
     bson_append_document_end(b, &meta);
 
-    BSON_APPEND_DATE_TIME(b, db->timestamp_field, CDTIME_T_TO_MS(time));
-    BSON_APPEND_DOUBLE(b, db->value_field, value);
+    BSON_APPEND_DATE_TIME(b, db->metric_timestamp_field, CDTIME_T_TO_MS(time));
+    BSON_APPEND_DOUBLE(b, db->metric_value_field, value);
 
     size_t error_location;
     if (!bson_validate(b, BSON_VALIDATE_UTF8, &error_location)) {
@@ -218,113 +442,7 @@ int write_mongodb_create_bson(write_mongodb_t *db, metric_family_t const *fam)
     return status;
 }
 
-static int write_mongodb_initialize(write_mongodb_t *db)
-{
-    if (db->connected)
-        return 0;
-
-    PLUGIN_INFO("Connecting to [%s]:%d", db->host, db->port);
-
-    if ((db->database_name != NULL) && (db->user != NULL) && (db->passwd != NULL)) {
-        char *uri = ssnprintf_alloc("mongodb://%s:%s@%s:%d/?authSource=%s", db->user,
-                                    db->passwd, db->host, db->port, db->database_name);
-        if (uri == NULL) {
-            PLUGIN_ERROR("Not enough memory to assemble authentication string.");
-            mongoc_client_destroy(db->client);
-            db->client = NULL;
-            db->connected = false;
-            return -1;
-        }
-
-        db->client = mongoc_client_new(uri);
-        if (!db->client) {
-            PLUGIN_ERROR("Authenticating to [%s]:%d for database '%s' as user '%s' failed.",
-                         db->host, db->port, db->database_name, db->user);
-            db->connected = false;
-            free(uri);
-            return -1;
-        }
-        free(uri);
-    } else {
-        char *uri = ssnprintf_alloc("mongodb://%s:%d", db->host, db->port);
-        if (uri == NULL) {
-            PLUGIN_ERROR("Not enough memory to assemble authentication string.");
-            mongoc_client_destroy(db->client);
-            db->client = NULL;
-            db->connected = false;
-            return -1;
-        }
-
-        db->client = mongoc_client_new(uri);
-        if (!db->client) {
-            PLUGIN_ERROR("Connecting to [%s]:%d failed.", db->host, db->port);
-            db->connected = false;
-            free(uri);
-            return -1;
-        }
-        free(uri);
-    }
-
-    db->database = mongoc_client_get_database(db->client, db->database_name);
-    if (db->database == NULL) {
-        PLUGIN_ERROR("error creating/getting database");
-        mongoc_client_destroy(db->client);
-        db->client = NULL;
-        db->connected = false;
-        return -1;
-    }
-
-    if (!mongoc_database_has_collection(db->database, db->database_name, NULL)) {
-        bson_t *b = bson_new();
-        if (b == NULL) {
-            PLUGIN_ERROR("bson_new failed.");
-            return -1;
-        }
-
-        bson_t ts;
-        BSON_APPEND_DOCUMENT_BEGIN(b, "timeseries", &ts);
-        BSON_APPEND_UTF8(&ts, "timeField", db->timestamp_field);
-        BSON_APPEND_UTF8(&ts, "metaField", db->metadata_field);
-        BSON_APPEND_UTF8(&ts, "granularity", "seconds");
-        if (db->ttl > 0)
-            BSON_APPEND_INT64(&ts, "expireAfterSeconds", db->ttl);
-        bson_append_document_end(b, &ts);
-
-        bson_error_t error;
-        db->collection = mongoc_database_create_collection(db->database, db->collection_name,
-                                                           b, &error);
-        if (db->collection == NULL) {
-            PLUGIN_ERROR("Error creating collection");
-            bson_destroy(b);
-            mongoc_database_destroy(db->database);
-            db->database = NULL;
-            mongoc_client_destroy(db->client);
-            db->client = NULL;
-            db->connected = false;
-            return -1;
-        }
-
-        bson_destroy(b);
-    } else {
-        db->collection = mongoc_client_get_collection(db->client, db->database_name,
-                                                                  db->collection_name);
-        if (db->collection == NULL) {
-            PLUGIN_ERROR("Error getting collection");
-            mongoc_database_destroy(db->database);
-            db->database = NULL;
-            mongoc_client_destroy(db->client);
-            db->client = NULL;
-            db->connected = false;
-            return -1;
-        }
-    }
-
-    db->connected = true;
-
-    return 0;
-}
-
-static int write_mongodb(metric_family_t const *fam, user_data_t *ud)
+static int write_mongodb_fam(metric_family_t const *fam, user_data_t *ud)
 {
     if ((ud == NULL) || (ud->data == NULL))
         return -1;
@@ -332,7 +450,7 @@ static int write_mongodb(metric_family_t const *fam, user_data_t *ud)
     write_mongodb_t *db = ud->data;
 
 
-    if (write_mongodb_initialize(db) < 0) {
+    if (write_mongodb_initialize(db, db->metric_collection_name) < 0) {
         PLUGIN_ERROR("Error making connection to server");
         return -1;
     }
@@ -368,10 +486,18 @@ static void write_mongodb_free(void *ptr)
     free(db->database_name);
     free(db->user);
     free(db->passwd);
-    free(db->collection_name);
-    free(db->timestamp_field);
-    free(db->metadata_field);
-    free(db->value_field);
+
+    free(db->metric_collection_name);
+    free(db->metric_timestamp_field);
+    free(db->metric_metadata_field);
+    free(db->metric_value_field);
+
+    free(db->notification_collection_name);
+    free(db->notification_name_field);
+    free(db->notification_severity_field);
+    free(db->notification_timestamp_field);
+    free(db->notification_labels_field);
+    free(db->notification_annotations_field);
 
     for(size_t i = 0; i < db->documents_size; i++)
         bson_destroy(db->documents[i]);
@@ -385,7 +511,6 @@ static int write_mongodb_config_database(config_item_t *ci)
     write_mongodb_t *db = calloc(1, sizeof(*db));
     if (db == NULL)
       return ENOMEM;
-
 
     db->host = strdup("localhost");
     if (db->host == NULL) {
@@ -401,6 +526,8 @@ static int write_mongodb_config_database(config_item_t *ci)
         write_mongodb_free(db);
         return status;
     }
+
+    db->send = SEND_METRICS;
 
     unsigned int bulk_size = 0;
     for (int i = 0; i < ci->children_num; i++) {
@@ -422,18 +549,32 @@ static int write_mongodb_config_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->passwd);
         } else if (strcasecmp("password-env", child->key) == 0) {
             status = cf_util_get_string_env(child, &db->passwd);
-        } else if (strcasecmp("collection", child->key) == 0) {
-            status = cf_util_get_string(child, &db->collection_name);
-        } else if (strcasecmp("timestamp-field", child->key) == 0) {
-            status = cf_util_get_string(child, &db->timestamp_field);
-        } else if (strcasecmp("metadata-field", child->key) == 0) {
-            status = cf_util_get_string(child, &db->metadata_field);
-        } else if (strcasecmp("value-field", child->key) == 0) {
-            status = cf_util_get_string(child, &db->value_field);
+        } else if (strcasecmp("metric-collection", child->key) == 0) {
+            status = cf_util_get_string(child, &db->metric_collection_name);
+        } else if (strcasecmp("metric-timestamp-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->metric_timestamp_field);
+        } else if (strcasecmp("metric-metadata-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->metric_metadata_field);
+        } else if (strcasecmp("metric-value-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->metric_value_field);
+        } else if (strcasecmp("notification-collection", child->key) == 0) {
+            status = cf_util_get_string(child, &db->notification_collection_name);
+        } else if (strcasecmp("notification-name-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->notification_name_field);
+        } else if (strcasecmp("notification-severity-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->notification_severity_field);
+        } else if (strcasecmp("notification-timestamp-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->notification_timestamp_field);
+        } else if (strcasecmp("notification-labels-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->notification_labels_field);
+        } else if (strcasecmp("notification-annotations-field", child->key) == 0) {
+            status = cf_util_get_string(child, &db->notification_annotations_field);
         } else if (strcasecmp("ttl", child->key) == 0) {
             status = cf_util_get_int(child, &db->ttl);
         } else if (strcasecmp("bulk-size", child->key) == 0) {
             status = cf_util_get_unsigned_int(child, &bulk_size);
+        } else if (strcasecmp(child->key, "write") == 0) {
+            status = cf_uti_get_send(child, &db->send);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -456,7 +597,7 @@ static int write_mongodb_config_database(config_item_t *ci)
     }
 
     if (db->database_name == NULL) {
-        db->database_name = strdup("metrics");
+        db->database_name = strdup("ncollectd");
         if (db->database_name == NULL) {
             PLUGIN_ERROR("strdup failed");
             write_mongodb_free(db);
@@ -464,53 +605,114 @@ static int write_mongodb_config_database(config_item_t *ci)
         }
     }
 
-    if (db->collection_name == NULL) {
-        db->collection_name = strdup("metrics");
-        if (db->collection_name == NULL) {
-            PLUGIN_ERROR("strdup failed");
+    if (db->send == SEND_METRICS) {
+        if (db->metric_collection_name == NULL) {
+            db->metric_collection_name = strdup("metrics");
+            if (db->metric_collection_name == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        if (db->metric_timestamp_field == NULL) {
+            db->metric_timestamp_field = strdup("timestamp");
+            if (db->metric_timestamp_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        if (db->metric_metadata_field == NULL) {
+            db->metric_metadata_field = strdup("metadata");
+            if (db->metric_metadata_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        if (db->metric_value_field == NULL) {
+            db->metric_value_field = strdup("value");
+            if (db->metric_value_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        db->documents_alloc = bulk_size == 0 ? 512 : bulk_size;
+        db->documents_size = 0;
+        db->documents = calloc(db->documents_alloc, sizeof(*db->documents));
+        if (db->documents == NULL) {
+            PLUGIN_ERROR("calloc failed");
             write_mongodb_free(db);
             return -1;
         }
-    }
 
-    if (db->timestamp_field == NULL) {
-        db->timestamp_field = strdup("timestamp");
-        if (db->timestamp_field == NULL) {
-            PLUGIN_ERROR("strdup failed");
-            write_mongodb_free(db);
-            return -1;
+        return plugin_register_write("write_mongodb", db->name, write_mongodb_fam, NULL, 0, 0,
+                                     &(user_data_t){ .data = db, .free_func = write_mongodb_free });
+    } else if (db->send == SEND_NOTIFICATIONS) {
+        if (db->notification_collection_name == NULL) {
+            db->notification_collection_name = strdup("notifications");
+            if (db->notification_collection_name == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
         }
-    }
 
-    if (db->metadata_field == NULL) {
-        db->metadata_field = strdup("metadata");
-        if (db->metadata_field == NULL) {
-            PLUGIN_ERROR("strdup failed");
-            write_mongodb_free(db);
-            return -1;
+        if (db->notification_name_field == NULL) {
+            db->notification_name_field = strdup("name");
+            if (db->notification_name_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
         }
-    }
 
-    if (db->value_field == NULL) {
-        db->value_field = strdup("value");
-        if (db->value_field == NULL) {
-            PLUGIN_ERROR("strdup failed");
-            write_mongodb_free(db);
-            return -1;
+        if (db->notification_severity_field == NULL) {
+            db->notification_severity_field = strdup("severity");
+            if (db->notification_severity_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
         }
+
+        if (db->notification_timestamp_field == NULL) {
+            db->notification_timestamp_field = strdup("timestamp");
+            if (db->notification_timestamp_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        if (db->notification_labels_field == NULL) {
+            db->notification_labels_field = strdup("labels");
+            if (db->notification_labels_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        if (db->notification_annotations_field == NULL) {
+            db->notification_annotations_field = strdup("annotations");
+            if (db->notification_annotations_field == NULL) {
+                PLUGIN_ERROR("strdup failed");
+                write_mongodb_free(db);
+                return -1;
+            }
+        }
+
+        return plugin_register_notification("write_mongodb", db->name, write_mongodb_notif,
+                                     &(user_data_t){ .data = db, .free_func = write_mongodb_free });
     }
 
-    db->documents_alloc = bulk_size == 0 ? 512 : bulk_size;
-    db->documents_size = 0;
-    db->documents = calloc(db->documents_alloc, sizeof(*db->documents));
-    if (db->documents == NULL) {
-        PLUGIN_ERROR("calloc failed");
-        write_mongodb_free(db);
-        return -1;
-    }
-
-    return plugin_register_write("write_mongodb", db->name, write_mongodb, NULL, 0, 0,
-                                 &(user_data_t){ .data = db, .free_func = write_mongodb_free });
+    return -1;
 }
 
 static int write_mongodb_config(config_item_t *ci)
