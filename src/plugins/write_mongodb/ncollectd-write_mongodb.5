@@ -15,10 +15,17 @@ ncollectd-write_mongodb \- Documentation of ncollectd's write mongodb plugin
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
         \fBstore-rates\fP \fItrue|false\fP
-        \fBcollection\fP \fIcollection-name\fP
-        \fBtimestamp-field\fP \fItimestamp-field-name\fP
-        \fBmetadata-field\fP \fImetadata-field-name\fP
-        \fBvalue-field\fP \fIvalue-field-name\fP
+        \fBmetric-collection\fP \fIcollection-name\fP
+        \fBmetric-timestamp-field\fP \fItimestamp-field-name\fP
+        \fBmetric-metadata-field\fP \fImetadata-field-name\fP
+        \fBmetric-value-field\fP \fIvalue-field-name\fP
+        \fBnotification-collection\fP \fIcollection-name\fP
+        \fBnotification-name-field\fP \fIname-field-name\fP
+        \fBnotification-severity-field\fP \fIseverity-field-name\fP
+        \fBnotification-timestamp-field\fP \fItimestamp-field-name\fP
+        \fBnotification-labels-field\fP \fIlabels-field-name\fP
+        \fBnotification-annotations-field\fP \fIannotations-field-name\fP
+        \fBwrite\fP \fImetrics|notifications\fP
         \fBttl\fP \fIseconds\fP
         \fBbulk-size\fP \fIsize\fP
     }
@@ -54,20 +61,47 @@ environment variable \fIenv-name\fP.
 .TP
 \fBstore-rates\fP \fItrue|false\fP
 .TP
-\fBcollection\fP \fIcollection-name\fP
+\fBmetric-collection\fP \fIcollection-name\fP
 The collection name to write the metrics. The default name is "metrics".
 .TP
-\fBtimestamp-field\fP \fItimestamp-field-name\fP
+\fBtmetric-timestamp-field\fP \fItimestamp-field-name\fP
 The name of the field which contains the date in each time series document.
 The default name is "timestamp".
 .TP
-\fBmetadata-field\fP \fImetadata-field-name\fP
+\fBmetric-metadata-field\fP \fImetadata-field-name\fP
 The name of the field which contains the labels in each time series document.
 The default name is "metadata".
 .TP
-\fBvalue-field\fP \fIvalue-field-name\fP
-The name of the filed witch contains the value in each time series document.
+\fBmetric-value-field\fP \fIvalue-field-name\fP
+The name of the field witch contains the value in each time series document.
 The default name is "value".
+.TP
+\fBnotification-collection\fP \fIcollection-name\fP
+The collection name to write the notifications. The default name is "notifications".
+.TP
+\fBnotification-name-field\fP \fIname-field-name\fP
+The name of the field which contains the notification name.
+The default name is "name".
+.TP
+\fBnotification-severity-field\fP \fIseverity-field-name\fP
+The name of the field which contains the notification severity.
+The default name is "severity".
+.TP
+\fBnotification-timestamp-field\fP \fItimestamp-field-name\fP
+The name of the field which contains the date of the notification.
+The default name is "timestamp".
+.TP
+\fBnotification-labels-field\fP \fIlabels-field-name\fP
+The name of the field which contains the labels of the notification.
+The default name is "labels".
+.TP
+\fBnotification-annotations-field\fP \fIannotations-field-name\fP
+The name of the field which contains the annotations of the notification.
+The default name is "annotations".
+.TP
+\fBwrite\fP \fImetrics|notifications\fP
+If set to \fImetrics\fP (the default) the plugin will handle metrics.
+If set to \fInotifications\fP the plugin will handle notifications.
 .TP
 \fBttl\fP \fIseconds\fP
 Automatic removal of metrics older than a specified number of seconds.
