@@ -12,6 +12,7 @@ extern void module_register(void);
 
 static pthread_mutex_t lock;
 static pthread_cond_t cond;
+static bool running;
 
 static int dump_file(char *base_path, char *file, int fdw)
 {
@@ -71,6 +72,7 @@ static void *kea_thread(void *data)
 
     pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&cond);
+    running = true;
     pthread_mutex_unlock(&lock);
 
     if (sfd < 0)
@@ -129,7 +131,8 @@ DEF_TEST(test01)
     };
 
     pthread_mutex_lock(&lock);
-    pthread_cond_wait(&cond, &lock);
+    if (!running)
+        pthread_cond_wait(&cond, &lock);
     pthread_mutex_unlock(&lock);
 
     EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, &ci, "src/plugins/kea/test01/expect.txt"));
