@@ -189,18 +189,15 @@ ssize_t httpd_write(int fd,  buf_t *buf)
 int httpd_response(httpd_client_t *client, http_version_t version, http_status_code_t status_code,
                    http_header_set_t *headers, void *content, size_t content_length)
 {
-fprintf(stderr, "httpd_response 1\n");
     const char *sversion = http_get_version(version);
     if (sversion == NULL)
        return -1;
 
     const int nstatus_code = http_get_status(status_code);
-fprintf(stderr, "httpd_response status_code: %d\n", nstatus_code);
 
     const char *status_reason = http_get_status_reason(status_code);
     if (status_reason == NULL)
        return -1;
-fprintf(stderr, "httpd_response 3\n");
 
     int status = 0;
     status |= buf_put(&client->bout, sversion, strlen(sversion));
@@ -236,7 +233,6 @@ fprintf(stderr, "httpd_response 3\n");
     if ((content != NULL) && (content_length > 0))
         status |= buf_put(&client->bout, content, content_length);
 
-fprintf(stderr, "httpd_response 4\n");
     httpd_write(client->fd, &client->bout);
 
     return status;
@@ -246,7 +242,6 @@ ssize_t httpd_read(int fd, buf_t *buf, size_t min_size)
 {
     ssize_t size = 0;
     while (true) {
-        fprintf(stderr, "httpd_read: %d\n", (int)size);
         if (buf_avail(buf) < min_size) {
             if (buf_resize(buf, min_size) != 0)
                 return -1;
@@ -254,7 +249,6 @@ ssize_t httpd_read(int fd, buf_t *buf, size_t min_size)
 
         size_t avail = buf_avail(buf);
         ssize_t rsize = read(fd, buf->ptr + buf->pos, avail);
-        fprintf(stderr, "httpd_read: read: %d\n", (int)rsize);
         if (rsize < 0) {
             if (errno == EINTR)
                 continue;
@@ -278,7 +272,6 @@ ssize_t httpd_read(int fd, buf_t *buf, size_t min_size)
 
 int httpd_client_read(httpd_client_t *client)
 {
-fprintf(stderr, "httpd_client_read: %u\n", client->state);
     switch (client->state) {
     case HTTPD_CLIENT_STATE_READ_REQUEST: {
         ssize_t rsize = httpd_read(client->fd, &client->bin, BUFFER_SIZE);
@@ -288,15 +281,25 @@ fprintf(stderr, "httpd_client_read: %u\n", client->state);
 // const char *buf, size_t len, size_t last_len);
         int status = http_parse_request(&client->request, (char *)client->bin.ptr,
                                         buf_len(&client->bin), client->bin_last_len);
- fprintf(stderr, "httpd_client_read:  http_parse_request %d\n", status);
         client->bin_last_len = buf_len(&client->bin);
         if (status > 0) {
             client->content_length = httpd_client_get_content_length(client);
             if (client->content_length > 0)
                 client->state = HTTPD_CLIENT_STATE_READ_DATA;
             else
-                client->state = HTTPD_CLIENT_STATE_DONE;
+                client->state = HTTPD_CLIENT_STATE_DONE; // FIXME
             client->offset_data = status;
+
+            if (client->state == HTTPD_CLIENT_STATE_READ_DATA) {
+                if (client->content_length > 0) {
+                    ssize_t readed = (ssize_t)(buf_len(&client->bin) - client->offset_data);
+                    if (readed >= client->content_length) {
+                        client->state = HTTPD_CLIENT_STATE_DONE;
+                        return 0;
+                    }
+                }
+            }
+
             return status;
 //            break; /* successfully parsed the request */
         } else if (status == -1) {
@@ -307,19 +310,18 @@ fprintf(stderr, "httpd_client_read: %u\n", client->state);
 //        assert(pret == -2);
         if (buf_len(&client->bin) >= REQUEST_MAX_SIZE)
             return -1; // RequestIsTooLongError;
-    }
-        break;
+    }   break;
     case HTTPD_CLIENT_STATE_READ_DATA: {
-fprintf(stderr, "httpd_client_read:  HTTPD_CLIENT_STATE_READ_DATA\n");
         ssize_t rsize = httpd_read(client->fd, &client->bin, BUFFER_SIZE);
         if (rsize <= 0) {
             client->state = HTTPD_CLIENT_STATE_DONE;
             return -1;
-        } else if (client->content_length >= (ssize_t)(buf_len(&client->bin) - client->offset_data)) {
-            client->state = HTTPD_CLIENT_STATE_DONE;
-            return 0;
+        } else if (client->content_length > 0) {
+            if (client->content_length >= (ssize_t)(buf_len(&client->bin) - client->offset_data)) {
+                client->state = HTTPD_CLIENT_STATE_DONE;
+                return 0;
+            }
         }
-fprintf(stderr, "httpd_client_read:  HTTPD_CLIENT_STATE_READ_DATA :%d\n", (int)rsize);
     }   break;
     case HTTPD_CLIENT_STATE_DONE:
         break;
@@ -331,7 +333,6 @@ int httpd_loop(httpd_t *httpd, httpd_request_t request_cb)
 {
     while (httpd->run) {
         int result = poll(httpd->pfds, httpd->nclients+1, httpd->timeout);
-fprintf(stderr, "httpd_loop: poll result: %d\n", result);
 
         if (result > 0) {
             for (int i = 0; i < httpd->listeners; i++) {
@@ -340,8 +341,6 @@ fprintf(stderr, "httpd_loop: poll result: %d\n", result);
                     socklen_t addrlen = sizeof(cliaddr);
 
                     int client_socket = accept(httpd->pfds[i].fd, (struct sockaddr *)&cliaddr, &addrlen);
-fprintf(stderr, "httpd_loop: accept %d\n", client_socket);
-printf("accept success %s\n", inet_ntoa(cliaddr.sin_addr));
 
                     size_t j;
                     for (j = httpd->listeners; j < httpd->npfds_max; j++) {
@@ -355,7 +354,6 @@ printf("accept success %s\n", inet_ntoa(cliaddr.sin_addr));
                             }
                             httpd->clients[j] = httpd_client_alloc(client_socket);
                             if (httpd->clients[j] != NULL) {
- fprintf(stderr, "httpd_loop: httpd_client_alloc \n" );
                                 httpd->pfds[j].fd = client_socket;
                                 httpd->pfds[j].events = POLLIN | POLLPRI;
                                 httpd->nclients++;
@@ -372,7 +370,6 @@ printf("accept success %s\n", inet_ntoa(cliaddr.sin_addr));
             for (size_t i = httpd->listeners; i < httpd->npfds_max; i++) {
                 if ((httpd->pfds[i].fd > 0) && (httpd->pfds[i].revents & POLLIN)) {
                     int status = httpd_client_read(httpd->clients[i]);
- fprintf(stderr, "httpd_loop: httpd_client_read %d \n", status );
                     if (status == -1) {
                         close(httpd->pfds[i].fd);
                         httpd->pfds[i].fd = -1;
@@ -419,7 +416,6 @@ printf("accept success %s\n", inet_ntoa(cliaddr.sin_addr));
                                                client->request.path_len,
                                                NULL, NULL, 0);
                                 }
-fprintf(stderr, "httpd_client_t request_cb end\n");
                             }
 
                             close(httpd->pfds[i].fd);
@@ -500,27 +496,29 @@ int httpd_open_unix_socket(httpd_listen_t *httpd_listen, char const *file, int b
         return -1;
     }
 
-    long int grbuf_size = sysconf(_SC_GETGR_R_SIZE_MAX);
-    if (grbuf_size <= 0)
-        grbuf_size = sysconf(_SC_PAGESIZE);
-    if (grbuf_size <= 0)
-        grbuf_size = 4096;
+    if (group != NULL) {
+        long int grbuf_size = sysconf(_SC_GETGR_R_SIZE_MAX);
+        if (grbuf_size <= 0)
+            grbuf_size = sysconf(_SC_PAGESIZE);
+        if (grbuf_size <= 0)
+            grbuf_size = 4096;
 
-    struct group *g = NULL;
-    char grbuf[grbuf_size];
-    struct group sg;
-    status = getgrnam_r(group, &sg, grbuf, sizeof(grbuf), &g);
-    if (status != 0) {
-        WARNING("getgrnam_r (%s) failed: %s", group, STRERROR(status));
-        return httpd_listen_add(httpd_listen, fd);
-    }
-    if (g == NULL) {
-        WARNING("No such group: `%s'", group);
-        return httpd_listen_add(httpd_listen, fd);
-    }
+        struct group *g = NULL;
+        char grbuf[grbuf_size];
+        struct group sg;
+        status = getgrnam_r(group, &sg, grbuf, sizeof(grbuf), &g);
+        if (status != 0) {
+            WARNING("getgrnam_r (%s) failed: %s", group, STRERROR(status));
+            return httpd_listen_add(httpd_listen, fd);
+        }
+        if (g == NULL) {
+            WARNING("No such group: `%s'", group);
+            return httpd_listen_add(httpd_listen, fd);
+        }
 
-    if (chown(file, (uid_t)-1, g->gr_gid) != 0) {
-        WARNING("chown (%s, -1, %i) failed: %s", file, (int)g->gr_gid, STRERRNO);
+        if (chown(file, (uid_t)-1, g->gr_gid) != 0) {
+            WARNING("chown (%s, -1, %i) failed: %s", file, (int)g->gr_gid, STRERRNO);
+        }
     }
 
     return httpd_listen_add(httpd_listen, fd);
@@ -547,6 +545,13 @@ int httpd_open_socket(httpd_listen_t *httpd_listen, const char *node, const char
         int fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
         if (fd < 0) {
             ERROR("socket(2) failed: %s", STRERRNO);
+            continue;
+        }
+
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) != 0) {
+            ERROR("setsockopt(SO_REUSEADDR) failed: %s", STRERRNO);
+            freeaddrinfo(ai_list);
+            close(fd);
             continue;
         }
 
