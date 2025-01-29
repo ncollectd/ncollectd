@@ -11,3 +11,8 @@ add_library(libhttp STATIC ${LIBHTTP_SRC})
 set_target_properties(libhttp PROPERTIES PREFIX "")
 set_target_properties(libhttp PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # add_dependencies(libhttp libutils)
+
+add_executable(test_libhttp EXCLUDE_FROM_ALL http_test.c)
+target_link_libraries(test_libhttp libhttp libutils libtest)
+add_dependencies(build_tests test_libhttp)
+add_test(NAME test_libhttp COMMAND test_libhttp)
