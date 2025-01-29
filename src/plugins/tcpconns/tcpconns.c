@@ -131,6 +131,8 @@
 #include <sys/socketvar.h>
 #endif
 
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 #ifdef KERNEL_LINUX
 #ifdef HAVE_STRUCT_LINUX_INET_DIAG_REQ
 struct nlreq {

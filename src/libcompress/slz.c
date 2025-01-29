@@ -32,6 +32,7 @@
 #pragma GCC diagnostic ignored "-Wpointer-arith"
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wcast-align"
 
 /* First, RFC1951-specific declarations and extracts from the RFC.
  *

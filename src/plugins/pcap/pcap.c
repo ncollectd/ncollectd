@@ -103,6 +103,8 @@
 
 #include "plugins/pcap/dns.h"
 
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 struct ip_list_s {
     struct in6_addr addr;
     void *data;

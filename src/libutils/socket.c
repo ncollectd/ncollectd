@@ -233,15 +233,17 @@ int socket_connect_udp(const char *host, short port, int ttl)
 
         if (ttl > 0) {
             if (ai_ptr->ai_family == AF_INET) {
-                struct sockaddr_in *addr = (struct sockaddr_in *)ai_ptr->ai_addr;
-                int optname = IN_MULTICAST(ntohl(addr->sin_addr.s_addr)) ? IP_MULTICAST_TTL
-                                                                         : IP_TTL;
+                struct sockaddr_in addr;
+                memcpy(&addr, ai_ptr->ai_addr, sizeof(addr));
+                int optname = IN_MULTICAST(ntohl(addr.sin_addr.s_addr)) ? IP_MULTICAST_TTL
+                                                                        : IP_TTL;
                 if (setsockopt(fd, IPPROTO_IP, optname, &ttl, sizeof(ttl)) != 0)
                     WARNING("setsockopt(ipv4-ttl): %s", STRERRNO);
             } else if (ai_ptr->ai_family == AF_INET6) {
-                struct sockaddr_in6 *addr = (struct sockaddr_in6 *)ai_ptr->ai_addr;
-                int optname = IN6_IS_ADDR_MULTICAST(&addr->sin6_addr) ? IPV6_MULTICAST_HOPS
-                                                                      : IPV6_UNICAST_HOPS;
+                struct sockaddr_in6 addr;
+                memcpy(&addr, ai_ptr->ai_addr, sizeof(addr));
+                int optname = IN6_IS_ADDR_MULTICAST(&addr.sin6_addr) ? IPV6_MULTICAST_HOPS
+                                                                     : IPV6_UNICAST_HOPS;
                 if (setsockopt(fd, IPPROTO_IPV6, optname, &ttl, sizeof(ttl)) != 0)
                     WARNING("setsockopt(ipv6-ttl): %s", STRERRNO);
             }
