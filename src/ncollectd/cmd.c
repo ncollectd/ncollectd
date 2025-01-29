@@ -19,7 +19,6 @@ static void sig_term_handler(int __attribute__((unused)) signal)
     stop_ncollectd();
 }
 
-#ifdef NCOLLECTD_DAEMON
 static int pidfile_create(void)
 {
     const char *file = global_option_get("pid-file");
@@ -44,7 +43,6 @@ static int pidfile_remove(void)
 
     return unlink(file);
 }
-#endif
 
 #ifdef KERNEL_LINUX
 static bool using_upstart(void)
@@ -142,7 +140,6 @@ int main(int argc, char **argv)
 {
     struct cmdline_config config = init_config(argc, argv);
 
-#ifdef NCOLLECTD_DAEMON
     /* fork off child */
     struct sigaction sig_chld_action = {.sa_handler = SIG_DFL};
     sigaction(SIGCHLD, &sig_chld_action, NULL);
@@ -195,7 +192,6 @@ int main(int argc, char **argv)
             return 1;
         }
     }
-#endif
 
     struct sigaction sig_pipe_action = {.sa_handler = SIG_IGN};
     sigaction(SIGPIPE, &sig_pipe_action, NULL);
@@ -224,10 +220,8 @@ int main(int argc, char **argv)
 
     int exit_status = run_loop(config.test_readall, notify_func);
 
-#ifdef NCOLLECTD_DAEMON
     if (config.daemonize)
         pidfile_remove();
-#endif
 
     return exit_status;
 }
