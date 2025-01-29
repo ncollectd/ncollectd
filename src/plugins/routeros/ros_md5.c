@@ -43,6 +43,8 @@
 
 #include "ros_md5.h"
 
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 /*
  * The basic MD5 functions.
  *

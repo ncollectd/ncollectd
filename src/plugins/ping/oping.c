@@ -33,6 +33,8 @@
 
 #include "oping.h"
 
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 #define PING_ERRMSG_LEN 256
 #define PING_TABLE_LEN 5381
 

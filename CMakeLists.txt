@@ -176,7 +176,8 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
                            -Wshadow            -Wstrict-prototypes      -Wformat=2
                            -Wformat-overflow=2 -Wnull-dereference       -Wtrampolines
                            -Walloca            -Wcast-qual              -Warith-conversion
-                           -Wundef             -Wno-missing-field-initializers)
+                           -Wundef             -Wno-missing-field-initializers
+                           -Wstrict-overflow=2 -Wcast-align=strict)
     add_definitions(${COMPILER_FLAGS})
 elseif ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
     check_c_compiler_flags(COMPILER_FLAGS

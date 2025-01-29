@@ -13,6 +13,8 @@
 #include "libxson/parser.h"
 #include "libxson/struct.h"
 
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 typedef struct {
     void *st;
     json_struct_attr_t *parent;

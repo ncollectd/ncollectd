@@ -76,7 +76,7 @@ static int create_socket(char *hostname, int port)
     struct sockaddr_in dest_addr = {0};
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(port);
-    dest_addr.sin_addr.s_addr = *(long*)(host->h_addr);
+    memcpy(&dest_addr.sin_addr.s_addr, host->h_addr, sizeof(dest_addr.sin_addr.s_addr));
 
     char *tmp_ptr = inet_ntoa(dest_addr.sin_addr);
 

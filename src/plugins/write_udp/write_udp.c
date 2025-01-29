@@ -135,15 +135,17 @@ static int write_udp_callback_init(write_udp_callback_t *cb)
         if (cb->ttl > 0) {
             int ttl = cb->ttl;
             if (ai_ptr->ai_family == AF_INET) {
-                struct sockaddr_in *addr = (struct sockaddr_in *)ai_ptr->ai_addr;
-                int optname = IN_MULTICAST(ntohl(addr->sin_addr.s_addr)) ? IP_MULTICAST_TTL
-                                                                         : IP_TTL;
+                struct sockaddr_in addr;
+                memcpy(&addr, ai_ptr->ai_addr, sizeof(addr));
+                int optname = IN_MULTICAST(ntohl(addr.sin_addr.s_addr)) ? IP_MULTICAST_TTL
+                                                                        : IP_TTL;
                 if (setsockopt(cb->sock_fd, IPPROTO_IP, optname, &ttl, sizeof(ttl)) != 0)
                     PLUGIN_WARNING("setsockopt(ipv4-ttl): %s", STRERRNO);
             } else if (ai_ptr->ai_family == AF_INET6) {
-                struct sockaddr_in6 *addr = (struct sockaddr_in6 *)ai_ptr->ai_addr;
-                int optname = IN6_IS_ADDR_MULTICAST(&addr->sin6_addr) ? IPV6_MULTICAST_HOPS
-                                                                      : IPV6_UNICAST_HOPS;
+                struct sockaddr_in6 addr;
+                memcpy(&addr, ai_ptr->ai_addr, sizeof(addr));
+                int optname = IN6_IS_ADDR_MULTICAST(&addr.sin6_addr) ? IPV6_MULTICAST_HOPS
+                                                                     : IPV6_UNICAST_HOPS;
                 if (setsockopt(cb->sock_fd, IPPROTO_IPV6, optname, &ttl, sizeof(ttl)) != 0)
                     PLUGIN_WARNING("setsockopt(ipv6-ttl): %s", STRERRNO);
             }
