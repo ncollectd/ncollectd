@@ -154,9 +154,7 @@ __attribute__((noreturn)) static void exit_usage(int status)
            "      -T              Test plugin read and exit.\n"
            "      -P <file>       PID-file.\n"
            "                          Default: " PIDFILE "\n"
-#ifdef NCOLLECTD_DAEMON
            "      -f              Don't fork to the background.\n"
-#endif
            "      -B              Don't create the BaseDir\n"
            "      -d              Dump config file to stdout\n"
            "      -h              Display help (this message)\n"
@@ -239,20 +237,14 @@ static void read_cmdline(int argc, char **argv, struct cmdline_config *config)
             break;
         case 'T':
             config->test_readall = true;
-            global_option_set("ReadThreads", "-1", 1);
-#ifdef NCOLLECTD_DAEMON
+            global_option_set("read-threads", "-1", 1);
             config->daemonize = false;
-#endif
             break;
         case 'P':
-#ifdef NCOLLECTD_DAEMON
-            global_option_set("PIDFile", optarg, 1);
-#endif
+            global_option_set("pid-file", optarg, 1);
             break;
         case 'f':
-#ifdef NCOLLECTD_DAEMON
             config->daemonize = false;
-#endif
             break;
         case 'd':
             config->dump_config = true;

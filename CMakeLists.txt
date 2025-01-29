@@ -17,7 +17,6 @@ include(CheckCSourceCompiles)
 include(CheckStructHasMember)
 include(CTest)
 
-option(NCOLLECTD_DAEMON "Enable daemon mode" ON)
 option(NCOLLECTD_DEBUG "Enable debugging" OFF)
 # NCOLLECTD_MNTTAB
 #option(NCOLLECTD_GETIFADDRS "Enable feature getifaddrs under Linux" No)
