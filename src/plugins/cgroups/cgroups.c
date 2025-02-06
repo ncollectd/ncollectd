@@ -914,13 +914,13 @@ static int read_memory_stat(int dir_fd, const char *cgroup_name)
             int status = strtouint(fields[1], &raw);
             if (status != 0)
                 continue;
-            value = VALUE_GAUGE(raw);
+            value = VALUE_COUNTER(raw);
         } else if (fams[ms->fam].type == METRIC_TYPE_GAUGE) {
             double raw = 0;
             int status = strtodouble(fields[1], &raw);
             if (status != 0)
                 continue;
-            value = VALUE_COUNTER(raw);
+            value = VALUE_GAUGE(raw);
         } else {
             continue;
         }
