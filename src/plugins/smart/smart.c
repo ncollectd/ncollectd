@@ -43,7 +43,7 @@ struct nvme_admin_cmd {
 #define NVME_IOCTL_ADMIN_CMD _IOWR('N', 0x41, struct nvme_admin_cmd)
 
 typedef struct {
-    char const *name;
+    char const *device;
     metric_family_t *fams;
     label_set_t *labels;
 } smart_user_data_t;
@@ -52,7 +52,6 @@ static exclist_t excl_disk;
 static exclist_t excl_serial;
 
 static bool ignore_sleep_mode;
-static bool use_serial;
 
 static int pagesize;
 
@@ -67,45 +66,6 @@ static void *smart_alloc(size_t len)
 
     memset(p, 0, len);
     return p;
-}
-
-static int create_ignorelist_by_serial(void)
-{
-    // Use udev to get a list of disks
-    struct udev *handle_udev = udev_new();
-    if (!handle_udev) {
-        PLUGIN_ERROR("unable to initialize udev.");
-        return 1;
-    }
-
-    struct udev_enumerate *enumerate = udev_enumerate_new(handle_udev);
-    if (enumerate == NULL) {
-        PLUGIN_ERROR("fail udev_enumerate_new");
-        return 1;
-    }
-
-    udev_enumerate_add_match_subsystem(enumerate, "block");
-    udev_enumerate_add_match_property(enumerate, "DEVTYPE", "disk");
-    udev_enumerate_scan_devices(enumerate);
-    struct udev_list_entry *devices = udev_enumerate_get_list_entry(enumerate);
-    if (devices == NULL) {
-        PLUGIN_ERROR("udev returned an empty list deviecs");
-        return 1;
-    }
-    struct udev_list_entry *dev_list_entry;
-    udev_list_entry_foreach(dev_list_entry, devices) {
-        const char *path = udev_list_entry_get_name(dev_list_entry);
-        struct udev_device *dev = udev_device_new_from_syspath(handle_udev, path);
-        const char *devpath = udev_device_get_devnode(dev);
-        const char *serial = udev_device_get_property_value(dev, "ID_SERIAL_SHORT");
-        if (devpath != NULL) {
-            if (exclist_match(&excl_disk, devpath) && (serial != NULL)) {
-                exclist_add_incl_string(&excl_serial, serial);
-            }
-        }
-    }
-
-    return 0;
 }
 
 static void handle_attribute(__attribute__((unused)) SkDisk *d,
@@ -148,7 +108,7 @@ static void handle_attribute(__attribute__((unused)) SkDisk *d,
             .name = "smart_attribute",
         };
 
-        notification_label_set(&n, "device", ud->name);
+        notification_label_set(&n, "device", ud->device);
         notification_label_set(&n, "attribute", a->name);
 
         char message[1024];
@@ -197,7 +157,7 @@ static inline double int48_to_double(__u8 *data)
     return sum;
 }
 
-static int get_vendor_id(const char *dev, __attribute__((unused)) char const *name)
+static int get_vendor_id(const char *dev)
 {
     __le16 *vid = smart_alloc(sizeof(*vid));
     if (vid == NULL) {
@@ -234,8 +194,7 @@ static int get_vendor_id(const char *dev, __attribute__((unused)) char const *na
     return vendor_id;
 }
 
-static int smart_read_nvme_disk(const char *dev, __attribute__((unused)) char const *name,
-                                metric_family_t *fams, label_set_t *labels)
+static int smart_read_nvme_disk(const char *dev, metric_family_t *fams, label_set_t *labels)
 {
     union nvme_smart_log *smart_log = smart_alloc(sizeof(*smart_log));
     if (smart_log == NULL) {
@@ -360,8 +319,7 @@ static int smart_read_nvme_disk(const char *dev, __attribute__((unused)) char co
     return 0;
 }
 
-static int smart_read_nvme_intel_disk(const char *dev, __attribute__((unused)) char const *name,
-                                      metric_family_t *fams, label_set_t *labels)
+static int smart_read_nvme_intel_disk(const char *dev, metric_family_t *fams, label_set_t *labels)
 {
     struct nvme_additional_smart_log *intel_smart_log = smart_alloc(sizeof(*intel_smart_log));
     if (intel_smart_log == NULL) {
@@ -553,7 +511,7 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
     smart_user_data_t ud = {
         .fams = fams,
         .labels = labels,
-        .name = name,
+        .device = name,
     };
     if (sk_disk_smart_parse_attributes(d, handle_attribute, (void *)&ud) < 0) {
         PLUGIN_ERROR("unable to handle SMART attributes for %s.", name);
@@ -562,46 +520,40 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
 
 static void smart_handle_disk(const char *dev, const char *serial, metric_family_t *fams)
 {
-    const char *name = NULL;
-    if (use_serial && (serial != NULL)) {
-        name = serial;
-    } else {
-        if (dev == NULL)
-            return;
-        name = strrchr(dev, '/');
-        if (!name)
-            return;
-        name++;
+    if (dev == NULL)
+        return;
+    const char *dev_name = strrchr(dev, '/');
+    if (dev_name == NULL)
+        return;
+    dev_name++;
+
+    if (!exclist_match(&excl_disk, dev_name)) {
+        PLUGIN_DEBUG("ignoring %s. name = %s", dev, dev_name);
+        return;
     }
 
-    if (use_serial) {
-        if (!exclist_match(&excl_serial, name)) {
-            PLUGIN_DEBUG("ignoring %s. Name = %s", dev, name);
-            return;
-        }
-    } else {
-        if (!exclist_match(&excl_disk, name)) {
-            PLUGIN_DEBUG("ignoring %s. Name = %s", dev, name);
+    if (serial != NULL) {
+        if (!exclist_match(&excl_serial, serial)) {
+            PLUGIN_DEBUG("ignoring %s. serial= %s", dev, serial);
             return;
         }
     }
 
     PLUGIN_DEBUG("checking SMART status of %s.", dev);
 
-
     label_set_t labels = {0};
-    label_set_add(&labels, true, "disk", name);
+    label_set_add(&labels, true, "disk", dev_name);
     if (serial != NULL)
         label_set_add(&labels, true, "serial", serial);
 
     if (strstr(dev, "nvme")) {
-        int err = smart_read_nvme_disk(dev, name, fams, &labels);
+        int err = smart_read_nvme_disk(dev, fams, &labels);
         if (err < 0) {
             PLUGIN_ERROR("smart_read_nvme_disk failed, %d", err);
         } else {
-            switch (get_vendor_id(dev, name)) {
+            switch (get_vendor_id(dev)) {
             case INTEL_VENDOR_ID:
-                err = smart_read_nvme_intel_disk(dev, name, fams, &labels);
+                err = smart_read_nvme_intel_disk(dev, fams, &labels);
                 if (err < 0)
                     PLUGIN_ERROR("smart_read_nvme_intel_disk failed, %d", err);
                 break;
@@ -616,7 +568,7 @@ static void smart_handle_disk(const char *dev, const char *serial, metric_family
         if (sk_disk_open(dev, &d) < 0) {
             PLUGIN_ERROR("unable to open %s.", dev);
         } else {
-            smart_read_sata_disk(d, name, fams, &labels);
+            smart_read_sata_disk(d, dev_name, fams, &labels);
             sk_disk_free(d);
         }
     }
@@ -685,10 +637,10 @@ static int smart_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "disk") == 0) {
             status = cf_util_exclist(child, &excl_disk);
+        } else if (strcasecmp(child->key, "serial") == 0) {
+            status = cf_util_exclist(child, &excl_serial);
         } else if (strcasecmp(child->key, "ignore-sleep-mode") == 0) {
             status = cf_util_get_boolean(child, &ignore_sleep_mode);
-        } else if (strcasecmp(child->key, "use-serial") == 0) {
-            status = cf_util_get_boolean(child, &use_serial);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -704,14 +656,6 @@ static int smart_config(config_item_t *ci)
 
 static int smart_init(void)
 {
-    if (use_serial) {
-        int err = create_ignorelist_by_serial();
-        if (err != 0) {
-            PLUGIN_ERROR("Enable to create ignorelist_by_serial");
-            return 1;
-        }
-    }
-
     pagesize = getpagesize();
 
 #if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_SYS_RAWIO)
