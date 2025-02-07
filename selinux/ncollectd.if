@@ -2,204 +2,226 @@
 
 ########################################
 ## <summary>
-##	Transition to ncollectd.
+##    Transition to ncollectd.
 ## </summary>
 ## <param name="domain">
 ## <summary>
-##	Domain allowed to transition.
+##    Domain allowed to transition.
 ## </summary>
 ## </param>
 #
 interface(`ncollectd_domtrans',`
-	gen_require(`
-		type ncollectd_t, ncollectd_exec_t;
-	')
+    gen_require(`
+        type ncollectd_t, ncollectd_exec_t;
+    ')
 
-	corecmd_search_bin($1)
-	domtrans_pattern($1, ncollectd_exec_t, ncollectd_t)
+    corecmd_search_bin($1)
+    domtrans_pattern($1, ncollectd_exec_t, ncollectd_t)
 ')
 
 ########################################
 ## <summary>
-##	Execute ncollectd server in the ncollectd domain.
+##    Execute ncollectd server in the ncollectd domain.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_initrc_domtrans',`
-	gen_require(`
-		type ncollectd_initrc_exec_t;
-	')
+    gen_require(`
+        type ncollectd_initrc_exec_t;
+    ')
 
-	init_labeled_script_domtrans($1, ncollectd_initrc_exec_t)
+    init_labeled_script_domtrans($1, ncollectd_initrc_exec_t)
 ')
 
 ########################################
 ## <summary>
-##	Search ncollectd lib directories.
+##    Search ncollectd lib directories.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_search_lib',`
-	gen_require(`
-		type ncollectd_var_lib_t;
-	')
+    gen_require(`
+        type ncollectd_var_lib_t;
+    ')
 
-	allow $1 ncollectd_var_lib_t:dir search_dir_perms;
-	files_search_var_lib($1)
+    allow $1 ncollectd_var_lib_t:dir search_dir_perms;
+    files_search_var_lib($1)
 ')
 
 ########################################
 ## <summary>
-##	Read ncollectd lib files.
+##    Read ncollectd lib files.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_read_lib_files',`
-	gen_require(`
-		type ncollectd_var_lib_t;
-	')
+    gen_require(`
+        type ncollectd_var_lib_t;
+    ')
 
-	files_search_var_lib($1)
-	read_files_pattern($1, ncollectd_var_lib_t, ncollectd_var_lib_t)
+    files_search_var_lib($1)
+    read_files_pattern($1, ncollectd_var_lib_t, ncollectd_var_lib_t)
 ')
 
 ########################################
 ## <summary>
-##	Manage ncollectd lib files.
+##    Manage ncollectd lib files.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_manage_lib_files',`
-	gen_require(`
-		type ncollectd_var_lib_t;
-	')
+    gen_require(`
+        type ncollectd_var_lib_t;
+    ')
 
-	files_search_var_lib($1)
-	manage_files_pattern($1, ncollectd_var_lib_t, ncollectd_var_lib_t)
+    files_search_var_lib($1)
+    manage_files_pattern($1, ncollectd_var_lib_t, ncollectd_var_lib_t)
 ')
 
 ########################################
 ## <summary>
-##	Manage ncollectd lib directories.
+##    Manage ncollectd lib directories.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_manage_lib_dirs',`
-	gen_require(`
-		type ncollectd_var_lib_t;
-	')
+    gen_require(`
+        type ncollectd_var_lib_t;
+    ')
 
-	files_search_var_lib($1)
-	manage_dirs_pattern($1, ncollectd_var_lib_t, ncollectd_var_lib_t)
+    files_search_var_lib($1)
+    manage_dirs_pattern($1, ncollectd_var_lib_t, ncollectd_var_lib_t)
 ')
 
 ########################################
 ## <summary>
-##	Manage ncollectd httpd rw content.
+##    Manage ncollectd httpd rw content.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_manage_rw_content',`
-	gen_require(`
-		type ncollectd_rw_content_t;
-	')
+    gen_require(`
+        type ncollectd_rw_content_t;
+    ')
 
-	manage_dirs_pattern($1, ncollectd_rw_content_t, ncollectd_rw_content_t)
-	manage_files_pattern($1, ncollectd_rw_content_t, ncollectd_rw_content_t)
-	manage_lnk_files_pattern($1, ncollectd_rw_content_t, ncollectd_rw_content_t)
+    manage_dirs_pattern($1, ncollectd_rw_content_t, ncollectd_rw_content_t)
+    manage_files_pattern($1, ncollectd_rw_content_t, ncollectd_rw_content_t)
+    manage_lnk_files_pattern($1, ncollectd_rw_content_t, ncollectd_rw_content_t)
 ')
 
 ########################################
 ## <summary>
-##	Execute ncollectd server in the ncollectd domain.
+##    Execute ncollectd server in the ncollectd domain.
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed to transition.
-##	</summary>
+##    <summary>
+##    Domain allowed to transition.
+##    </summary>
 ## </param>
 #
 interface(`ncollectd_systemctl',`
-	gen_require(`
-		type ncollectd_t;
-		type ncollectd_unit_file_t;
-	')
+    gen_require(`
+        type ncollectd_t;
+        type ncollectd_unit_file_t;
+    ')
 
-	systemd_exec_systemctl($1)
-	init_reload_services($1)
-	allow $1 ncollectd_unit_file_t:file read_file_perms;
-	allow $1 ncollectd_unit_file_t:service manage_service_perms;
+    systemd_exec_systemctl($1)
+    init_reload_services($1)
+    allow $1 ncollectd_unit_file_t:file read_file_perms;
+    allow $1 ncollectd_unit_file_t:service manage_service_perms;
 
-	ps_process_pattern($1, ncollectd_t)
+    ps_process_pattern($1, ncollectd_t)
 ')
 
 ########################################
 ## <summary>
-##	All of the rules required to administrate
-##	an ncollectd environment
+##    All of the rules required to administrate
+##    an ncollectd environment
 ## </summary>
 ## <param name="domain">
-##	<summary>
-##	Domain allowed access.
-##	</summary>
+##    <summary>
+##    Domain allowed access.
+##    </summary>
 ## </param>
 ## <param name="role">
-##	<summary>
-##	Role allowed access.
-##	</summary>
+##    <summary>
+##    Role allowed access.
+##    </summary>
 ## </param>
 ## <rolecap/>
 #
 interface(`ncollectd_admin',`
-	gen_require(`
-		type ncollectd_t, ncollectd_initrc_exec_t, ncollectd_var_run_t;
+    gen_require(`
+        type ncollectd_t, ncollectd_initrc_exec_t, ncollectd_var_run_t;
         type ncollectd_var_lib_t, ncollectd_unit_file_t;
-	')
+    ')
 
-	a low $1 ncollectd_t:process signal_perms;
-	ps_process_pattern($1, ncollectd_t)
+    allow $1 ncollectd_t:process signal_perms;
+    ps_process_pattern($1, ncollectd_t)
 
-	tunable_policy(`deny_ptrace',`',`
-		allow $1 ncollectd_t:process ptrace;
-	')
+    tunable_policy(`deny_ptrace',`',`
+        allow $1 ncollectd_t:process ptrace;
+    ')
 
-	ncollectd_initrc_domtrans($1)
-	domain_system_change_exemption($1)
-	role_transition $2 ncollectd_initrc_exec_t system_r;
-	allow $2 system_r;
+    ncollectd_initrc_domtrans($1)
+    domain_system_change_exemption($1)
+    role_transition $2 ncollectd_initrc_exec_t system_r;
+    allow $2 system_r;
 
-	files_search_pids($1)
-	admin_pattern($1, ncollectd_var_run_t)
+    files_search_pids($1)
+    admin_pattern($1, ncollectd_var_run_t)
 
-	files_search_var_lib($1)
-	admin_pattern($1, ncollectd_var_lib_t)
+    files_search_var_lib($1)
+    admin_pattern($1, ncollectd_var_lib_t)
 
-	ncollectd_systemctl($1)
-	admin_pattern($1, ncollectd_unit_file_t)
-	allow $1 ncollectd_unit_file_t:service all_service_perms;
+    ncollectd_systemctl($1)
+    admin_pattern($1, ncollectd_unit_file_t)
+    allow $1 ncollectd_unit_file_t:service all_service_perms;
 ')
 
+########################################
+## <summary>
+##    Allow the caller to directly read from a fixed disk device.
+##    This is extremly dangerous as it can bypass the
+##    SELinux protections for filesystem objects, and
+##    should only be used by trusted domains.
+## </summary>
+## <param name="domain">
+##    <summary>
+##    Domain allowed access.
+##    </summary>
+## </param>
+#
+interface(`ncollectd_raw_read_fixed_disk_blk_device',`
+    gen_require(`
+        attribute fixed_disk_raw_read;
+        type fixed_disk_device_t;
+    ')
+    dev_list_all_dev_nodes($1)
+    allow $1 fixed_disk_device_t:blk_file read_blk_file_perms;
+    typeattribute $1 fixed_disk_raw_read;
+')

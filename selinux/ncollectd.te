@@ -6,18 +6,18 @@ policy_module(ncollectd, 1.0.0)
 #
 
 ## <desc>
-##	<p>
-##	Determine whether ncollectd can connect
-##	to the network using TCP.
-##	</p>
+##    <p>
+##    Determine whether ncollectd can connect
+##    to the network using TCP.
+##    </p>
 ## </desc>
 gen_tunable(ncollectd_tcp_network_connect, false)
 
 ## <desc>
-##	<p>
-##	Determine whether ncollectd can listen to any
-##	TCP port.
-##	</p>
+##    <p>
+##    Determine whether ncollectd can listen to any
+##    TCP port.
+##    </p>
 ## </desc>
 gen_tunable(ncollectd_tcp_network_listen, false)
 
@@ -50,15 +50,13 @@ systemd_unit_file(ncollectd_unit_file_t)
 apache_content_template(ncollectd)
 apache_content_alias_template(ncollectd, ncollectd)
 
-type ncollectd_script_tmp_t alias httpd_ncollectd_script_tmp_t;
-files_tmp_file(ncollectd_script_tmp_t)
-
 ########################################
 #
 # Local policy
 #
 
 allow ncollectd_t self:capability { ipc_lock net_raw net_admin sys_nice sys_ptrace dac_read_search  setuid setgid };
+allow ncollectd_t self:cap_userns sys_ptrace;
 allow ncollectd_t self:process { getsched setsched signal };
 allow ncollectd_t self:fifo_file rw_fifo_file_perms;
 allow ncollectd_t self:packet_socket { create_socket_perms map };
@@ -96,7 +94,7 @@ auth_use_nsswitch(ncollectd_t)
 corecmd_exec_bin(ncollectd_t)
 
 corenet_udp_bind_generic_node(ncollectd_t)
-corenet_udp_bind_ncollectd_port(ncollectd_t)
+corenet_udp_bind_statsd_port(ncollectd_t)
 corenet_tcp_connect_lmtp_port(ncollectd_t)
 corenet_tcp_bind_bacula_port(ncollectd_t)
 
@@ -122,28 +120,30 @@ init_read_utmp(ncollectd_t)
 
 logging_send_syslog_msg(ncollectd_t)
 
+ncollectd_raw_read_fixed_disk_blk_device(ncollectd_t)
+
 sysnet_dns_name_resolve(ncollectd_t)
 
 varnishd_read_lib_files(ncollectd_t)
 
 tunable_policy(`use_ecryptfs_home_dirs',`
-	fs_manage_ecryptfs_files(ncollectd_t)
+    fs_manage_ecryptfs_files(ncollectd_t)
 ')
 
 tunable_policy(`ncollectd_tcp_network_connect',`
-	corenet_sendrecv_all_client_packets(ncollectd_t)
-	corenet_tcp_connect_all_ports(ncollectd_t)
-	corenet_tcp_sendrecv_all_ports(ncollectd_t)
+    corenet_sendrecv_all_client_packets(ncollectd_t)
+    corenet_tcp_connect_all_ports(ncollectd_t)
+    corenet_tcp_sendrecv_all_ports(ncollectd_t)
 ')
 
 tunable_policy(`ncollectd_tcp_network_listen',`
-  corenet_tcp_bind_generic_node(ncollectd_t)
-  corenet_tcp_bind_generic_port(ncollectd_t)
-  allow ncollectd_t self:tcp_socket { accept listen };
+    corenet_tcp_bind_generic_node(ncollectd_t)
+    corenet_tcp_bind_generic_port(ncollectd_t)
+    allow ncollectd_t self:tcp_socket { accept listen };
 ')
 
 tunable_policy(`ncollectd_execmem',`
-  allow ncollectd_t self:process { execmem execstack };
+    allow ncollectd_t self:process { execmem execstack };
 ')
 
 optional_policy(`
@@ -151,7 +151,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	mysql_stream_connect(ncollectd_t)
+    mysql_stream_connect(ncollectd_t)
 ')
 
 optional_policy(`
@@ -159,7 +159,7 @@ optional_policy(`
 ')
 
 optional_policy(`
-	postgresql_stream_connect(ncollectd_t)
+    postgresql_stream_connect(ncollectd_t)
 ')
 
 optional_policy(`
@@ -167,23 +167,10 @@ optional_policy(`
 ')
 
 optional_policy(`
-	virt_read_config(ncollectd_t)
-	virt_stream_connect(ncollectd_t)
+    udev_read_pid_files(ncollectd_t)
 ')
 
-########################################
-#
-# Web ncollectd local policy
-#
-
-
-files_search_var_lib(ncollectd_script_t)	
-read_files_pattern(ncollectd_script_t, ncollectd_var_lib_t, ncollectd_var_lib_t)
-list_dirs_pattern(ncollectd_script_t, ncollectd_var_lib_t, ncollectd_var_lib_t)
-miscfiles_setattr_fonts_cache_dirs(ncollectd_script_t)
-
-manage_dirs_pattern(ncollectd_script_t, ncollectd_script_tmp_t, ncollectd_script_tmp_t)
-manage_files_pattern(ncollectd_script_t, ncollectd_script_tmp_t, ncollectd_script_tmp_t)
-files_tmp_filetrans(ncollectd_script_t, ncollectd_script_tmp_t, { file dir })	
-
-auth_read_passwd(ncollectd_script_t)
+optional_policy(`
+    virt_read_config(ncollectd_t)
+    virt_stream_connect(ncollectd_t)
+')
