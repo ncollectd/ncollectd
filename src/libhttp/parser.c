@@ -21,6 +21,8 @@
 
 #include "libhttp/parser.h"
 
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
