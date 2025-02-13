@@ -79,12 +79,12 @@ metric_family_t fams[FAM_PROC_MAX] = {
         .help = "Size in bytes of stack segments for these processes.",
     },
     [FAM_PROC_CPU_USER] = {
-        .name = "system_process_cpu_user",
+        .name = "system_process_cpu_user_seconds",
         .type = METRIC_TYPE_COUNTER,
         .help = "Amount of time that this processes have been scheduled in user mode.",
     },
     [FAM_PROC_CPU_SYSTEM] = {
-        .name = "system_process_cpu_system",
+        .name = "system_process_cpu_system_seconds",
         .type = METRIC_TYPE_COUNTER,
         .help = "Amount of time that this processes have been scheduled in kernel mode.",
     },
@@ -659,9 +659,11 @@ void ps_metric_append_proc_list(procstat_t *ps)
     metric_family_append(&fams[FAM_PROC_VMEM_CODE], VALUE_GAUGE(ps->vmem_code), &labels, NULL);
     metric_family_append(&fams[FAM_PROC_VMEM_STACK], VALUE_GAUGE(ps->stack_size), &labels, NULL);
     metric_family_append(&fams[FAM_PROC_CPU_USER],
-                         VALUE_COUNTER(ps->cpu_user_counter), &labels, NULL);
+                         VALUE_COUNTER_FLOAT64((double)ps->cpu_user_counter * 1e-6),
+                         &labels, NULL);
     metric_family_append(&fams[FAM_PROC_CPU_SYSTEM],
-                         VALUE_COUNTER(ps->cpu_system_counter), &labels, NULL);
+                         VALUE_COUNTER_FLOAT64((double)ps->cpu_system_counter * 1e-6),
+                         &labels, NULL);
     metric_family_append(&fams[FAM_PROC_NUM_PROCESSS],
                          VALUE_GAUGE(ps->num_proc), &labels, NULL);
     metric_family_append(&fams[FAM_PROC_NUM_THREADS],
@@ -699,10 +701,12 @@ void ps_metric_append_proc_list(procstat_t *ps)
                              VALUE_COUNTER(ps->cswitch_invol), &labels, NULL);
     if (ps->sched_running != -1)
         metric_family_append(&fams[FAM_PROC_SCHED_RUNNING],
-                             VALUE_COUNTER(ps->sched_running), &labels, NULL);
+                             VALUE_COUNTER_FLOAT64((double)ps->sched_running * 1e-9),
+                             &labels, NULL);
     if (ps->sched_waiting!= -1)
         metric_family_append(&fams[FAM_PROC_SCHED_WAITING],
-                             VALUE_COUNTER(ps->sched_waiting), &labels, NULL);
+                             VALUE_COUNTER_FLOAT64((double)ps->sched_waiting * 1e-9),
+                             &labels, NULL);
     if (ps->sched_timeslices!= -1)
         metric_family_append(&fams[FAM_PROC_SCHED_TIMESLICES],
                              VALUE_COUNTER(ps->sched_timeslices), &labels, NULL);
