@@ -33,6 +33,10 @@ ncollectd-snmp \- Documentation of ncollectd's snmp plugin
         \fBauth-passphrase\fP \fIpassphrase\fP
         \fBprivacy-passphrase\fP \fIpassphrase\fP
         \fBsecurity-level\fP \fIauthpriv|authnopriv|noauthnopriv\fP
+        \fBlocal-cert\fP \fIfingerprint|fileprefix\fP
+        \fBpeer-cert\fP \fIfingerprint|fileprefix\fP
+        \fBtrust-cert\fP \fIfingerprint|fileprefix\fP
+        \fBpeer-hostname\fP \fIhostname\fP
         \fBcontext\fP \fIcontext\fP
         \fBbulk-size\fP \fIinteger\fP
         \fBmetric-prefix\fP \fImetric-prefix\fP
@@ -74,7 +78,7 @@ queried. The following options can be set:
 Define if this is a single list of values or a table of values. The difference
 is the following:
 
-When \fBtable\fP is set to \fIfalse\fP, the OIDs given to B<Values> (see below) are
+When \fBtable\fP is set to \fIfalse\fP, the OID given to \fBvalue\fP (see below) are
 queried using the \f(CWNGET\fP SNMP command (see
 .BR snmpget(1)
 ) and transmitted to
@@ -188,7 +192,7 @@ version to use and which of the defined \fBdata\fP to query.
 Set the address to connect to. Address may include transport specifier and/or port number.
 .TP
 \fBcommunity\fP \fIcommunity\fP
-Pass \fIcommunity\fP to the host. (ignored for snmpv3).
+Pass \fIcommunity\fP to the host. (ignored for SNMPv3).
 .TP
 \fBversion\fP \fI1|2|3\fP
 Set the SNMP version to use. When giving \fI2\fP version \fI2c\fP is actually used.
@@ -206,25 +210,46 @@ devices with not much CPU power, e.g. network equipment such as
 switches, embedded devices, rack monitoring systems and so on.
 .TP
 \fBusername\fP \fIusername\fP
-Sets the \fIusername\fP to use for snmpv3 security.
+Sets the \fIusername\fP to use for SNMPv3 User-based Security Model (USM) security.
 .TP
 \fBauth-protocol\fP \fImd5|sha\fP
-Selects the authentication protocol for snmpv3 security.
+Selects the authentication protocol for SNMPv3 User-based Security Model (USM) security.
 .TP
 \fBprivacy-protocol\fP \fIaes|des\fP
-Selects the privacy (encryption) protocol for snmpv3 security.
+Selects the privacy (encryption) protocol for SNMPv3 User-based Security Model (USM) security.
 .TP
 \fBauth-passphrase\fP \fIpassphrase\fP
-Sets the authentication passphrase for snmpv3 security.
+Sets the authentication passphrase for SNMPv3 User-based Security Model (USM) security.
 .TP
 \fBprivacy-passphrase\fP \fIpassphrase\fP
-Sets the privacy (encryption) passphrase for snmpv3 security.
+Sets the privacy (encryption) passphrase for SNMPv3 User-based Security Model (USM) security.
 .TP
 \fBsecurity-level\fP \fIauthpriv|authnopriv|noauthnopriv\fP
-Selects the security level for snmpv3 security.
+Selects the security level for SNMPv3 User-based Security Model (USM) security.
+.TP
+\fBlocal-cert\fP \fIfingerprint|fileprefix\fP
+Sets the fingerprint or the filename prefix of the local certificate,
+key, and (if supported) intermediate certificates for SNMPv3 Transport
+Security Model (TSM) security.
+.TP
+\fBpeer-cert\fP \fIfingerprint|fileprefix\fP
+Sets the fingerprint or the filename prefix of the self signed remote peer
+certificate to be accepted as presented by the SNMPv3 server for SNMPv3
+Transport Security Model (TSM) security.
+.TP
+\fBtrust-cert\fP \fIfingerprint|fileprefix\fP
+Sets the fingerprint or the filename prefix of the certificate authority
+certificates to be trusted by ncollectd-snmp for SNMPv3 Transport Security
+Model (TSM) security.
+This option can only be specified once. From \f(CWNet-SNMP\fP v5.10 onwards,
+all certificates in files matching the given filename prefix are trusted.
+.TP
+\fBpeer-hostname\fP \fIhostname\fP
+If specified, the hostname of the SNMPv3 server will be checked against the
+peer certificate presented by the SNMPv3 server.
 .TP
 \fBcontext\fP \fIcontext\fP
-Sets the \fIcontext\fP for snmpv3 security.
+Sets the \fIcontext\fP for SNMPv3 security.
 .TP
 \fBbulk-size\fP \fIinteger\fP
 Configures the size of SNMP bulk transfers.
@@ -240,6 +265,66 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear mul
 Defines which values to collect. \fIdata\fP refers to one of the \fBdata\fP block
 above. Since the config file is read top-down you need to define the data before using it here.
 .RE
+.SH SECURITY
+SNMP provides various security levels, ranging from open SNMPv1 and SNMPv2c,
+to the secure SNMPv3 User-based Security Model (USM) and Transport Security
+Model (TSM) options.
+
+.SS "SNMPv1 / SNMPv2c Security"
+When \fBversion\fP 1 or 2 is used, anyone with knowledge of the community
+string can connect to the SNMP server.
+
+No authentication or privacy is supported in these modes.
+
+.SS "SNMPv3 User-based Security Model (USM) Security"
+When \fBaddress\fP prefixes such as \fIudp:\fP or \fIudp6:\fP are used along with
+\fBversion\fP 3 and the \fBusername\fP option, USM security is enabled.
+
+Security in this mode is based on shared secrets, and can offer
+optional authentication and privacy.
+
+The digest and encryption algorithms specified by \fBauth-protocol\fP and
+\fBprivacy-protocol\fP must match those on the SNMPv3 server.
+
+The user credentials used by the SNMPv3 server are specified by the
+\fBusername\fP option.
+
+.SS "SNMPv3 Transport Security Model (TSM) Security"
+When TLS/DTLS \fBaddress\fP prefixes such as \fIdtlsudp:\fP or \fIdtlsudp6:\fP are
+used along with the \fBlocal-cert\fP option, TSM security is enabled.
+.PP
+Security in this mode is based on X509 certificates and public/private keys.
+The SNMPv3 server and ncollectd-snmp client authenticate and secure the
+connection through server and client certificates. The SNMPv3 server will
+decide the user credentials to be applied based on the attributes of the
+client certificate presented by ncollectd-snmp in \fBlocal-cert\fP.
+.PP
+The certificates and keys are stored in any of the series of certificate
+store paths supported by the \f(CWNet-SNMP\fP library, and are scanned and indexed
+for performance. The path cannot be specified directly via ncollectd-snmp.
+.PP
+Certificates are chosen by specifying the fingerprint of the certificate
+or the name prefix of the file the certificate is stored in. The algorithm
+used for the fingerprint matches the algorithm used to sign the certificate.
+.PP
+Files containing keys must have no group or world permissions, otherwise the
+contents of the files will be silently ignored.
+.PP
+If a filename prefix is used, certificates are picked up from files with
+specific prefixes known to \f(CWNet-SNMP\fP matching the filename prefix. This value
+is not a path. For example, if a filename prefix of "router-cert" is specified,
+files called \fIrouter-cert.pem\fP, \fIrouter-cert.crt\fP, \fIrouter-cert.cer\fP,
+\fIrouter-cert.cert\fP, \fIrouter-cert.der\fP, \fIrouter-cert.key\fP and
+\fIrouter-cert.private\fP will be scanned for certificates and keys.
+.PP
+The \f(CWNet-SNMP\fP library v5.9 and older has limited support for certificates
+other than self signed certificates. Intermediate certificates are ignored
+by these older versions of \f(CWNet-SNMP\fP, and only the first certificate in
+each file is recognised. \f(CWNet-SNMP\fP v5.10 and higher recognise concatenated
+intermediate certificates in files, as well as multiple CA certificates
+specified in one file, such as the \fItls-ca-bundle.pem\fP available on many
+platforms. This allows certificates to be used that have been provided by a
+PKI, either privately or through a public certificate authority.
 .SH "SEE ALSO"
 .BR ncollectd (1)
 .BR ncollectd.conf (5)
