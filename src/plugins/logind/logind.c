@@ -41,8 +41,7 @@ static uint64_t logind_group_by = 0;
 
 static uint64_t sessions_total = 0;
 
-static char *session_remote[] = {"false", "true"};
-static size_t session_remote_size = STATIC_ARRAY_SIZE(session_remote);
+static size_t session_remote_size = 2;
 
 static char *session_types[] = {"other", "unspecified", "tty", "x11", "wayland", "mir", "web"};
 static size_t session_types_size = STATIC_ARRAY_SIZE(session_types);
