@@ -1,0 +1,9 @@
+# TYPE system_iscsi_lun_iops counter
+system_iscsi_lun_iops_total{hostname="localhost.localdomain",iqn="iqn.2025-02.org.linux-iscsi.osd1.x8664:sn.89321afeecfd",lun="0",tpgt="1"} 122830
+system_iscsi_lun_iops_total{hostname="localhost.localdomain",iqn="iqn.2025-02.org.linux-iscsi.igw.x86:dev.rbd0",lun="0",tpgt="1"} 487238
+# TYPE system_iscsi_lun_read_bytes counter
+system_iscsi_lun_read_bytes_total{hostname="localhost.localdomain",iqn="iqn.2025-02.org.linux-iscsi.osd1.x8664:sn.89321afeecfd",lun="0",tpgt="1"} 22290628608
+system_iscsi_lun_read_bytes_total{hostname="localhost.localdomain",iqn="iqn.2025-02.org.linux-iscsi.igw.x86:dev.rbd0",lun="0",tpgt="1"} 23088594944
+# TYPE system_iscsi_lun_write_bytes counter
+system_iscsi_lun_write_bytes_total{hostname="localhost.localdomain",iqn="iqn.2025-02.org.linux-iscsi.osd1.x8664:sn.89321afeecfd",lun="0",tpgt="1"} 32716619776
+system_iscsi_lun_write_bytes_total{hostname="localhost.localdomain",iqn="iqn.2025-02.org.linux-iscsi.igw.x86:dev.rbd0",lun="0",tpgt="1"} 97748254720
