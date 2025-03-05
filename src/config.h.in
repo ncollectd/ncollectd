@@ -101,6 +101,9 @@
 #ifndef HAVE_PTHREAD_SET_NAME_NP
 #cmakedefine HAVE_PTHREAD_SET_NAME_NP
 #endif
+#ifndef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
+#cmakedefine HAVE_PTHREAD_ATTR_SETAFFINITY_NP
+#endif
 #ifndef HAVE_PWD_H
 #cmakedefine HAVE_PWD_H
 #endif

@@ -73,4 +73,6 @@ cdtime_t global_option_get_time(char const *option, cdtime_t default_value);
 
 cdtime_t cf_get_default_interval(void);
 
+int global_option_get_cpumap(const char *name);
+
 void global_options_free (void);

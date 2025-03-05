@@ -458,12 +458,22 @@ int http_server_init(void)
     }
 
     httpd_in_loop = 1;
-    status = plugin_thread_create(&httpd_listen_thread, httpd_server, NULL, "httpd listen");
+
+    const char *name = "httpd listen";
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    set_thread_setaffinity(&attr, name);
+
+    status = pthread_create(&httpd_listen_thread, &attr, httpd_server, NULL);
+    pthread_attr_destroy(&attr);
     if (status != 0) {
         ERROR("pthread_create failed: %s", STRERRNO);
         // clean FIXME
         return -1;
     }
+
+    set_thread_name(httpd_listen_thread, name);
 
     return 0;
 }

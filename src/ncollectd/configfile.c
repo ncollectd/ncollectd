@@ -45,11 +45,20 @@ typedef struct cf_global_option_s {
     const char *def;
 } cf_global_option_t;
 
+typedef struct {
+    char *name;
+    int num;
+} cf_cpumap_t;
+
+static int cf_cpumap_num;
+static cf_cpumap_t *cf_cpumap;
+
 /* Prototypes of callback functions */
 static int dispatch_value_plugindir(config_item_t *ci);
 static int dispatch_loadplugin(config_item_t *ci);
 static int dispatch_block_plugin(config_item_t *ci);
 static int dispatch_label(config_item_t *ci);
+static int dispatch_cpumap(config_item_t *ci);
 
 /* Private variables */
 static cf_callback_t *callback_head;
@@ -58,7 +67,8 @@ static cf_value_map_t cf_value_map[] = {
     {"plugin-dir",  dispatch_value_plugindir},
     {"load-plugin", dispatch_loadplugin     },
     {"plugin",      dispatch_block_plugin   },
-    {"label",       dispatch_label          }
+    {"label",       dispatch_label          },
+    {"cpu-map",     dispatch_cpumap         }
 };
 static int cf_value_map_num = STATIC_ARRAY_SIZE(cf_value_map);
 
@@ -301,6 +311,45 @@ static int dispatch_label(config_item_t *ci)
     }
 
     return label_set_add(&labels_g, true, ci->values[0].value.string, ci->values[1].value.string);
+}
+
+static int dispatch_cpumap(config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "cpu-map") == 0);
+
+    if (ci->values_num != 2) {
+        ERROR("configfile: The 'cpu-map' in %s:%d option requires two arguments.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+    if (ci->values[0].type != CONFIG_TYPE_STRING) {
+        ERROR("configfile: The first argument of 'cpu-map' option in %s:%d must be a string.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    if (ci->values[1].type != CONFIG_TYPE_NUMBER) {
+        ERROR("configfile: The seconds argument of 'cpu-map' option in %s:%d must be a number.",
+              cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    cf_cpumap_t *tmp = realloc(cf_cpumap, sizeof(*tmp) * (cf_cpumap_num+1));
+    if (tmp == NULL) {
+        ERROR("configfile: realloc failed.");
+        return -1;
+    }
+
+    cf_cpumap = tmp;
+    cf_cpumap[cf_cpumap_num].name = strdup(ci->values[0].value.string);
+    if (cf_cpumap[cf_cpumap_num].name == NULL) {
+        ERROR("configfile: strdup failed.");
+        return -1;
+    }
+
+    cf_cpumap[cf_cpumap_num].num = ci->values[1].value.number;
+    cf_cpumap_num++;
+    return 0;
 }
 
 static int cf_ci_replace_child(config_item_t *dst, config_item_t *src, int offset)
@@ -753,6 +802,19 @@ cdtime_t global_option_get_time(const char *name, cdtime_t def)
     return DOUBLE_TO_CDTIME_T(v);
 }
 
+int global_option_get_cpumap(const char *name)
+{
+    if (cf_cpumap == NULL)
+        return -1;
+
+    for(int i=0; i < cf_cpumap_num; i++) {
+        if (strcasecmp(cf_cpumap[i].name, name) == 0)
+            return cf_cpumap[i].num;
+    }
+
+    return -1;
+}
+
 cdtime_t cf_get_default_interval(void)
 {
     return global_option_get_time("interval", DOUBLE_TO_CDTIME_T(NCOLLECTD_DEFAULT_INTERVAL));
@@ -855,4 +917,9 @@ void global_options_free (void)
     free(hostname_g);
 
     label_set_reset(&labels_g);
+
+    for(int i = 0; i < cf_cpumap_num; i++) {
+        free(cf_cpumap[i].name);
+    }
+    free(cf_cpumap);
 }

@@ -113,6 +113,8 @@ void free_userdata(const user_data_t *ud);
 
 void set_thread_name(pthread_t tid, char const *name);
 
+void set_thread_setaffinity(pthread_attr_t *attr, char const *name);
+
 strlist_t *list_callbacks(llist_t **list);
 
 int create_register_callback(llist_t **list, const char *name, callback_func_t *icf);

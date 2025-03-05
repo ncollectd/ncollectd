@@ -360,6 +360,31 @@ void set_thread_name(pthread_t tid, char const *name)
 #endif
 }
 
+void set_thread_setaffinity(pthread_attr_t *attr, char const *name)
+{
+#ifdef HAVE_PTHREAD_ATTR_SETAFFINITY_NP
+    int ncpu = global_option_get_cpumap(name);
+    if (ncpu < 0)
+      return;
+
+    if (ncpu >= CPU_SETSIZE) {
+        ERROR("cpu number '%d' is greater than CPU_SETSIZE(%d).", ncpu, CPU_SETSIZE);
+        return;
+    }
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(ncpu, &cpuset);
+    int status = pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), &cpuset);
+    if (status != 0) {
+        ERROR("pthread_attr_setaffinity_np(\"%s\"): %s", name, STRERROR(status));
+    }
+#else
+    (void)attr;
+    (void)name;
+#endif
+}
+
 void plugin_set_dir(const char *dir)
 {
     free(plugindir);
@@ -889,7 +914,13 @@ int plugin_thread_create(pthread_t *thread, void *(*start_routine)(void *),
     plugin_thread->start_routine = start_routine;
     plugin_thread->arg = arg;
 
-    int ret = pthread_create(thread, NULL, plugin_thread_start, plugin_thread);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    if (name != NULL)
+        set_thread_setaffinity(&attr, name);
+
+    int ret = pthread_create(thread, &attr, plugin_thread_start, plugin_thread);
+    pthread_attr_destroy(&attr);
     if (ret != 0) {
         free(plugin_thread);
         return ret;

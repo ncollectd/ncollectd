@@ -44,6 +44,8 @@ ncollectd.conf - Configuration for the system statistics collection daemon
 .br
 \fBsys-path\fP \fI/path/to/sys\fP
 .br
+\fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
+.br
 \fBlabel\fP \fIkey\fP \fIvalue\fP
 .br
 \fBplugin-dir\fP \fI/path/to/plugins\fP
@@ -261,6 +263,9 @@ a multiple of the interval. The default value is \fBfalse\fP.
 \fBproc-path\fP \fI/path/to/proc\fP
 .TP
 \fBsys-path\fP \fI/path/to/sys\fP
+.TP
+\fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
+Bind a thread to a specific cpu.
 .TP
 \fBlabel\fP \fIkey\fP \fIvalue\fP
 .TP
