@@ -66,14 +66,14 @@ extern config_file_t *c_file;
 
 %%
 string:
-    SQUOTED_STRING     {$$ = unsquote ($1);}
-    | DQUOTED_STRING   {$$ = undquote ($1);}
-    | HEREDOC_STRING   {$$ = unhquote ($1);}
-    | UNQUOTED_STRING  {$$ = strdup ($1);}
+    SQUOTED_STRING     {$$ = unsquote($1);}
+    | DQUOTED_STRING   {$$ = undquote($1);}
+    | HEREDOC_STRING   {$$ = unhquote($1);}
+    | UNQUOTED_STRING  {$$ = strdup($1);}
     ;
 
 regex:
-    REGEX            {$$ = unrquote ($1); /* FIXME escape */}
+    REGEX            {$$ = unrquote($1);}
     ;
 
 argument:
@@ -132,15 +132,20 @@ option:
     }
     ;
 
+block_begin_eol:
+    OPENBRAC EOL
+    | EOL OPENBRAC
+    ;
+
 block_begin:
-    identifier OPENBRAC EOL
+    identifier block_begin_eol
     {
         memset(&$$, 0, sizeof($$));
         $$.key = $1;
         $$.lineno = yylloc.first_line;
         $$.file = get_file_ref();
     }
-    | identifier argument_list OPENBRAC EOL
+    | identifier argument_list block_begin_eol
     {
         memset(&$$, 0, sizeof($$));
         $$.key = $1;
@@ -176,7 +181,6 @@ statement_list:
     statement_list statement
     {
         $$ = $1;
-//      if (($2.values_num > 0) || ($2.children_num > 0)) {
         if ($2.key != NULL) {
             config_item_t *tmp = realloc($$.statement, ($$.statement_num+1) * sizeof(*tmp));
             if (tmp == NULL) {
@@ -190,7 +194,6 @@ statement_list:
     }
     | statement
     {
-//      if (($1.values_num > 0) || ($1.children_num > 0)) {
         if ($1.key != NULL) {
             $$.statement = calloc(1, sizeof(*$$.statement));
             if ($$.statement == NULL) {

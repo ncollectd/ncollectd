@@ -14,9 +14,7 @@
 #define YYLTYPE  CONFIG_YYLTYPE
 #include "libconfig/parser.h"
 #include "libconfig/scanner.h"
-
-// extern FILE *config_yyin;
-// extern int config_yyparse(void);
+#include "libutils/strbuf.h"
 
 config_item_t *ci_root;
 config_file_t *c_file;
@@ -35,9 +33,10 @@ static config_item_t *config_parse_fh(FILE *fh)
         return NULL;
 
     yyscan_t scanner;
+    config_yy_extra_t extra = {0};
     config_status_t ostatus = {0};
 
-    config_yylex_init(&scanner);
+    config_yylex_init_extra(&extra, &scanner);
 //  config_yyset_debug(1, scanner);
 
     config_yyrestart(fh, scanner);
@@ -88,7 +87,7 @@ config_item_t *config_parse_file(const char *file)
     return ret;
 }
 
-config_item_t *config_clone(const config_item_t *ci_orig) // FIXME
+config_item_t *config_clone(const config_item_t *ci_orig) /* FIXME */
 {
 
     config_item_t *ci_copy = calloc(1, sizeof(*ci_copy));
@@ -107,7 +106,7 @@ config_item_t *config_clone(const config_item_t *ci_orig) // FIXME
         return NULL;
     }
 
-    ci_copy->file = config_get_file_ref(ci_orig->file); // FIXME
+    ci_copy->file = config_get_file_ref(ci_orig->file); /* FIXME */
 
     if (ci_orig->values_num > 0) {
         ci_copy->values = calloc(ci_orig->values_num, sizeof(*ci_copy->values));
@@ -160,7 +159,7 @@ config_item_t *config_clone(const config_item_t *ci_orig) // FIXME
     return ci_copy;
 }
 
-static void config_dump_config_item(FILE *fh, int level, config_item_t *ci)
+static void config_dump_config_item(strbuf_t *buf, int level, config_item_t *ci)
 {
     if (ci == NULL)
         return;
@@ -168,44 +167,57 @@ static void config_dump_config_item(FILE *fh, int level, config_item_t *ci)
     if (ci->key == NULL)
         return;
 
-    for (int i = 0; i < level; i++) {
-        fputs("    ", fh);
-    }
+    if (level > 0)
+        strbuf_putxstrn(buf, "    ", strlen("    "), level);
 
-    fputs(ci->key, fh);
+    strbuf_putstr(buf, ci->key);
 
     for (int i = 0; i < ci->values_num; i++) {
         switch(ci->values[i].type) {
         case CONFIG_TYPE_STRING:
-            fprintf(fh, " \"%s\"", ci->values[i].value.string); // FIXME escape "
+            strbuf_putchar(buf, ' ');
+            strbuf_putchar(buf, '"');
+            strbuf_putescape_json(buf, ci->values[i].value.string);
+            strbuf_putchar(buf, '"');
             break;
         case CONFIG_TYPE_NUMBER:
-            fprintf(fh, " %f", ci->values[i].value.number);
+            strbuf_putchar(buf, ' ');
+            strbuf_putdouble(buf, ci->values[i].value.number);
             break;
         case CONFIG_TYPE_BOOLEAN:
-            fprintf(fh, " %s", ci->values[i].value.boolean ? "true" : "false");
+            strbuf_putchar(buf, ' ');
+            strbuf_putstr(buf, ci->values[i].value.boolean ? "true" : "false");
             break;
-        case CONFIG_TYPE_REGEX:
-            fprintf(fh, " /%s/", ci->values[i].value.string); // FIXME escape /
-            break;
+        case CONFIG_TYPE_REGEX: {
+            strbuf_putchar(buf, ' ');
+            strbuf_putchar(buf, '/');
+            char *c = ci->values[i].value.string;
+            while (*c != '\0') {
+                if (*c == '/') {
+                    strbuf_putchar(buf, '\\');
+                    strbuf_putchar(buf, '/');
+                } else {
+                    strbuf_putchar(buf, *c);
+                }
+            }
+            strbuf_putchar(buf, '/');
+        }   break;
         }
     }
 
     if (ci->children != NULL)
-        fputs(" {", fh);
+        strbuf_putstr(buf, " {");
 
-    fputc('\n', fh);
+    strbuf_putchar(buf, '\n');
 
 
     for (int i = 0; i < ci->children_num; i++) {
-        config_dump_config_item(fh, level + 1, ci->children + i);
+        config_dump_config_item(buf, level + 1, ci->children + i);
     }
 
     if (ci->children != NULL) {
-        for (int i = 0; i < level; i++) {
-            fputs("    ", fh);
-        }
-        fputs("}\n", fh);
+        strbuf_putxstrn(buf, "    ", strlen("    "), level);
+        strbuf_putstr(buf, "}\n");
     }
 
 }
@@ -215,9 +227,15 @@ void config_dump(FILE *fh, config_item_t *ci)
     if (ci == NULL)
         return;
 
+    strbuf_t buf = STRBUF_CREATE;
+
     for (int i = 0; i < ci->children_num; i++) {
-        config_dump_config_item(fh, 0, ci->children + i);
+        config_dump_config_item(&buf, 0, ci->children + i);
     }
+
+    fputs(buf.ptr, fh);
+
+    strbuf_destroy(&buf);
 }
 
 static void config_free_all(config_item_t *ci)

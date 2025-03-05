@@ -20,3 +20,10 @@ typedef struct {
     config_value_t *argument;
     int argument_num;
 } argument_list_t;
+
+typedef struct {
+    int openbrac;
+    int closebrac;
+    int eof;
+} config_yy_extra_t;
+
