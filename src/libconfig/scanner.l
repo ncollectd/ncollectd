@@ -41,12 +41,11 @@ static void ml_append (yyscan_t yyscanner, char *string);
 %option bison-locations
 %option noyywrap
 %option noinput
-%option nounput
 %option nostdinit
 %option never-interactive
 %option reentrant
 %option yylineno
-
+%option extra-type="config_yy_extra_t *"
 %option prefix="config_yy"
 
 %x DQUOTED_ML
@@ -91,8 +90,41 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 \\{EOL}             { /* continue line */ }
 
 {EOL}               { return (EOL); }
-"{"                 { return (OPENBRAC); }
-"}"                 { return (CLOSEBRAC); }
+<<EOF>>             {
+    if (yyextra->eof == 0) {
+        yyextra->eof = 1;
+        return (EOL);
+    } else {
+        yyterminate();
+    }
+}
+
+"{"                 {
+    if (yyextra->openbrac == 0) {
+        yyextra->openbrac = 1;
+        unput('{');
+        return (OPENBRAC);
+    } else {
+        yyextra->openbrac = 0;
+        return (EOL);
+    }
+}
+
+"}"                 {
+    if (yyextra->closebrac == 0) {
+        yyextra->closebrac = 1;
+        unput('}');
+        return (EOL);
+    } else if (yyextra->closebrac == 1) {
+        yyextra->closebrac = 2;
+        unput('}');
+        return (CLOSEBRAC);
+    } else {
+        yyextra->closebrac = 0;
+        return (EOL);
+    }
+}
+
 {BOOL_TRUE}         { yylval->boolean = 1; return (BTRUE); }
 {BOOL_FALSE}        { yylval->boolean = 0; return (BFALSE); }
 
@@ -121,7 +153,9 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     ml_append (yyscanner, yytext);
     BEGIN (DQUOTED_ML);
 }
+
 <DQUOTED_ML>^{WHITE_SPACE}+ { /* remove leading white-space */ }
+
 <DQUOTED_ML>{NON_WHITE_SPACE}{DQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
 
@@ -134,6 +168,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 
     ml_append(yyscanner, yytext);
 }
+
 <DQUOTED_ML>{NON_WHITE_SPACE}{DQUOTED_STRING}\" {
     ml_append(yyscanner, yytext);
     yylval->string = ml_buffer;
@@ -142,8 +177,10 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     return (DQUOTED_STRING);
 }
 
-
-"'"{SQUOTED_STRING}"'" { yylval->string = yytext; return (SQUOTED_STRING); }
+"'"{SQUOTED_STRING}"'" {
+    yylval->string = yytext;
+    return (SQUOTED_STRING);
+}
 
 "'"{SQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
@@ -184,8 +221,10 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
     return (SQUOTED_STRING);
 }
 
-
-"'''"{HEREDOC_STRING}"'''" { yylval->string = yytext; return (HEREDOC_STRING); }
+"'''"{HEREDOC_STRING}"'''" {
+    yylval->string = yytext;
+    return (HEREDOC_STRING);
+}
 
 "'''"{HEREDOC_STRING}{EOL} {
     ml_pos = 0;
