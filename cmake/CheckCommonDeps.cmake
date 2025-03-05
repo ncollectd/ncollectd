@@ -350,6 +350,8 @@ int main(void) {
 }" HAVE_PTHREAD_SET_NAME_NP)
             endif()
         endif()
+
+        check_function_exists(pthread_attr_setaffinity_np HAVE_PTHREAD_ATTR_SETAFFINITY_NP)
     endif()
     cmake_pop_check_state()
 

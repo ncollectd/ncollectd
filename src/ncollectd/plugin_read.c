@@ -377,17 +377,23 @@ static void start_read_threads(size_t num)
 
     read_threads_num = 0;
     for (size_t i = 0; i < num; i++) {
-        int status = pthread_create(read_threads + read_threads_num,
-                                    /* attr = */ NULL, plugin_read_thread,
+        char name[THREAD_NAME_MAX];
+
+        ssnprintf(name, sizeof(name), "reader#%" PRIu64, (uint64_t)read_threads_num);
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        set_thread_setaffinity(&attr, name);
+
+        int status = pthread_create(read_threads + read_threads_num, &attr, plugin_read_thread,
                                     /* arg = */ NULL);
+        pthread_attr_destroy(&attr);
         if (status != 0) {
             ERROR("plugin: start_read_threads: pthread_create failed with status %i " "(%s).",
                    status, STRERROR(status));
             return;
         }
 
-        char name[THREAD_NAME_MAX];
-        ssnprintf(name, sizeof(name), "reader#%" PRIu64, (uint64_t)read_threads_num);
         set_thread_name(read_threads[read_threads_num], name);
 
         read_threads_num++;

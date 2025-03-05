@@ -287,15 +287,21 @@ int queue_thread_start(queue_t *queue, queue_thread_t *thread, char *name,
 
     pthread_mutex_lock(&queue->lock);
 
-    int status = pthread_create(&thread->thread, NULL, start_routine, arg);
+    char thread_name[THREAD_NAME_MAX];
+    ssnprintf(thread_name, sizeof(thread_name), "%s", name);
+
+     pthread_attr_t attr;
+     pthread_attr_init(&attr);
+     set_thread_setaffinity(&attr, thread_name);
+
+    int status = pthread_create(&thread->thread, &attr, start_routine, arg);
+    pthread_attr_destroy(&attr);
     if (status != 0) {
         ERROR("pthread_create failed with status %i: %s.", status, STRERROR(status));
         pthread_mutex_unlock(&queue->lock);
         return status;
     }
 
-    char thread_name[THREAD_NAME_MAX];
-    ssnprintf(thread_name, sizeof(thread_name), "%s", name);
     set_thread_name(thread->thread, thread_name);
 
     thread->next = queue->threads;
