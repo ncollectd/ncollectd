@@ -151,7 +151,7 @@ int ps_read(void)
             pse.sched_waiting = -1;
             pse.sched_timeslices = -1;
 
-            ps_list_add(procs[i].kp_comm, have_cmdline ? cmdline : NULL, &pse);
+            ps_list_add(procs[i].kp_comm, have_cmdline ? cmdline : NULL, procs[i].kp_pid, &pse);
 
             switch (procs[i].kp_stat) {
             case SSTOP:

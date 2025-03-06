@@ -329,7 +329,7 @@ int ps_read(void)
             break;
         }
 
-        ps_list_add(pse.name, ps_get_cmdline(pid, pse.name, cmdline, sizeof(cmdline)), &pse);
+        ps_list_add(pse.name, ps_get_cmdline(pid, pse.name, cmdline, sizeof(cmdline)), pid, &pse);
     }
     closedir(proc);
 

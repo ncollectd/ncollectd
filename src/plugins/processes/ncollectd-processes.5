@@ -7,17 +7,15 @@ ncollectd-processes \- Documentation of ncollectd's processes plugin
 .br
 \fBplugin\fP processes {
     \fBcollect\fP \fIflags\fP ...
-    \fBprocess\fP \fIname\fP
     \fBprocess\fP \fIname\fP {
         \fBcollect\fP \fIflags\fP ...
-.br
     }
-.br
-    \fBprocess-match\fP \fIname\fP \fIregex\fP
-    \fBprocess-match\fP \fIname\fP \fIregex\fP {
+    \fBprocess-match\fP \fIname\fP \fI/regex/\fP {
         \fBcollect\fP \fIflags\fP ...
-.br
-   }
+    }
+    \fBprocess-pidfile\fP \fIname\fP \fIpidfile-path\fP {
+        \fBcollect\fP \fIflags\fP ...
+    }
 .br
 }
 .SH DESCRIPTION
@@ -67,9 +65,12 @@ Select more detailed statistics of processes matching the specified \fIregex\fP
 (see.
 .BR regex (7)
 for details). The statistics of all matching processes are
-summed up and dispatched to the daemon using the specified I<name> as an
+summed up and dispatched to the daemon using the specified \fIname\fP as an
 identifier. This allows one to "group" several processes together.
- \fIname\fP must not contain slashes.
+.TP
+\fBprocess-pidfile\fP \fIname\fP \fIpidfile-path\fP
+ Select more detailed statistics of processes matching and specified \fIPID\fP contained in the
+file \fIpidfile-path\fP.
 .TP
 \fBcollect\fP \fIflags\fP ...
 Must be defined before \fBprocess\fP and \fBprocess-match\fP.

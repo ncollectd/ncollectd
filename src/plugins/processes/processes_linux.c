@@ -621,7 +621,7 @@ int ps_read(void)
             break;
         }
 
-        ps_list_add(pse.name, ps_get_cmdline(pid, pse.name, cmdline, sizeof(cmdline)), &pse);
+        ps_list_add(pse.name, ps_get_cmdline(pid, pse.name, cmdline, sizeof(cmdline)), pid, &pse);
     }
 
     closedir(proc);
@@ -693,5 +693,7 @@ int ps_shutdown(void)
     free(path_proc);
     free(path_proc_stat);
     ps_list_free();
+    ts_destroy(taskstats_handle);
+
     return 0;
 }

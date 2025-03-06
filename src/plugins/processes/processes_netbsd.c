@@ -168,8 +168,8 @@ int ps_read(void)
             pse.cswitch_vol = -1;
             pse.cswitch_invol = -1;
 
-            ps_list_add(procs[i].p_comm, have_cmdline ? cmdline : NULL, &pse);
-        } /* if ((proc_ptr == NULL) || (proc_ptr->ki_pid != procs[i].ki_pid)) */
+            ps_list_add(procs[i].p_comm, have_cmdline ? cmdline : NULL, procs[i].p_pid, &pse);
+        }
 
         /* system processes' LWPs end up in "running" state */
         if ((procs[i].p_flag & P_SYSTEM) != 0)

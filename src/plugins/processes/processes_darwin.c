@@ -325,7 +325,7 @@ int ps_read(void)
 
             if (ps != NULL)
                 /* FIXME: cmdline should be here instead of NULL */
-                ps_list_add(task_name, NULL, &pse);
+                ps_list_add(task_name, NULL, task_pid, &pse);
         }
 
         if ((status = vm_deallocate(port_task_self, (vm_address_t)task_list,
