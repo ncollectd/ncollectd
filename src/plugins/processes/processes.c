@@ -239,13 +239,10 @@ static char const *proc_state_name[PROC_STATE_MAX] = {
 /* put name of process from config to list_head_g tree
  * list_head_g is a list of 'procstat_t' structs with
  * processes names we want to watch */
-static procstat_t *ps_list_register(const char *name, const char *regexp)
+static procstat_t *ps_list_register(const char *name, const char *regexp, const char *pid_file)
 {
-    procstat_t *new;
-    procstat_t *ptr;
-    int status;
 
-    new = calloc(1, sizeof(*new));
+    procstat_t *new = calloc(1, sizeof(*new));
     if (new == NULL) {
         PLUGIN_ERROR("calloc failed.");
         return NULL;
@@ -275,20 +272,30 @@ static procstat_t *ps_list_register(const char *name, const char *regexp)
             return NULL;
         }
 
-        status = regcomp(new->re, regexp, REG_EXTENDED | REG_NOSUB);
+        int status = regcomp(new->re, regexp, REG_EXTENDED | REG_NOSUB);
         if (status != 0) {
             PLUGIN_ERROR("process-match: compiling the regular expression \"%s\" failed.", regexp);
             free(new->re);
             free(new);
             return NULL;
         }
+    } else if (pid_file != NULL) {
+        new->pid_file = strdup(pid_file);
+        if (new->pid_file == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            free(new->re);
+            free(new);
+            return NULL;
+        }
     }
 
+    procstat_t *ptr;
     for (ptr = list_head_g; ptr != NULL; ptr = ptr->next) {
         if (strcmp(ptr->name, name) == 0) {
             PLUGIN_WARNING("You have configured more than one `Process' or 'ProcessMatch' "
                            "with the same name. All but the first setting will be ignored.");
             free(new->re);
+            free(new->pid_file);
             free(new);
             return NULL;
         }
@@ -306,7 +313,7 @@ static procstat_t *ps_list_register(const char *name, const char *regexp)
 }
 
 /* try to match name against entry, returns 1 if success */
-static int ps_list_match(const char *name, const char *cmdline, procstat_t *ps)
+static int ps_list_match(const char *name, const char *cmdline, unsigned long pid, procstat_t *ps)
 {
     if (ps->re != NULL) {
         const char *str = cmdline;
@@ -317,6 +324,9 @@ static int ps_list_match(const char *name, const char *cmdline, procstat_t *ps)
 
         int status = regexec(ps->re, str, 0, NULL, 0);
         if (status == 0)
+            return 1;
+    } else if (ps->pid_file != NULL) {
+        if (ps->pid == pid)
             return 1;
     } else if (strcmp(ps->name, name) == 0) {
         return 1;
@@ -347,7 +357,7 @@ static void ps_update_counter(int64_t *group_counter, int64_t *curr_counter, int
 }
 
 /* add process entry to 'instances' of process 'name' (or refresh it) */
-void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry)
+void ps_list_add(const char *name, const char *cmdline, unsigned long pid, process_entry_t *entry)
 {
     procstat_entry_t *pse;
 
@@ -355,7 +365,7 @@ void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry)
         return;
 
     for (procstat_t *ps = list_head_g; ps != NULL; ps = ps->next) {
-        if ((ps_list_match(name, cmdline, ps)) == 0)
+        if ((ps_list_match(name, cmdline, pid, ps)) == 0)
             continue;
 
 #ifdef KERNEL_LINUX
@@ -467,6 +477,8 @@ void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry)
 void ps_list_reset(void)
 {
     for (procstat_t *ps = list_head_g; ps != NULL; ps = ps->next) {
+        ps->pid = 0;
+
         ps->num_proc = 0;
         ps->num_lwp = 0;
         ps->num_fd = 0;
@@ -503,6 +515,13 @@ void ps_list_reset(void)
                 pse = pse->next;
             }
         }
+
+        if (ps->pid_file != NULL) {
+            uint64_t pid = 0;
+            int status = filetouint(ps->pid_file, &pid);
+            if (status == 0)
+                ps->pid = pid;
+        }
     }
 }
 
@@ -514,6 +533,8 @@ void ps_list_free(void)
             regfree(ps->re);
             free(ps->re);
         }
+
+        free(ps->pid_file);
 
         procstat_entry_t *pse = ps->instances;
         while(pse != NULL) {
@@ -582,7 +603,7 @@ static int ps_config(config_item_t *ci)
             }
 #endif
 
-            ps = ps_list_register(c->values[0].value.string, NULL);
+            ps = ps_list_register(c->values[0].value.string, NULL, NULL);
             if (ps == NULL) {
                 status = -1;
                 break;
@@ -592,14 +613,30 @@ static int ps_config(config_item_t *ci)
                 status = ps_tune_instance(c, ps);
         } else if (strcasecmp(c->key, "process-match") == 0) {
             if ((c->values_num != 2) || (CONFIG_TYPE_STRING != c->values[0].type) ||
-                (CONFIG_TYPE_STRING != c->values[1].type)) {
-                PLUGIN_ERROR("'process-match' in %s:%d needs exactly two string arguments (got %i).",
+                (CONFIG_TYPE_REGEX != c->values[1].type)) {
+                PLUGIN_ERROR("'process-match' in %s:%d needs exactly a string and a regex (got %i).",
                              cf_get_file(c), cf_get_lineno(c), c->values_num);
                 status = -1;
                 break;
             }
 
-            ps = ps_list_register(c->values[0].value.string, c->values[1].value.string);
+            ps = ps_list_register(c->values[0].value.string, c->values[1].value.string, NULL);
+            if (ps == NULL) {
+                status = -1;
+                break;
+            }
+
+            if (c->children_num != 0)
+                status = ps_tune_instance(c, ps);
+        } else if (strcasecmp(c->key, "process-pidfile") == 0) {
+            if ((c->values_num != 2) || (CONFIG_TYPE_STRING != c->values[0].type) ||
+                (CONFIG_TYPE_STRING != c->values[1].type)) {
+                PLUGIN_ERROR("'process-pidfile' in %s:%d needs exactly two string arguments (got %i).",
+                             cf_get_file(c), cf_get_lineno(c), c->values_num);
+                status = -1;
+                break;
+            }
+            ps = ps_list_register(c->values[0].value.string, NULL, c->values[1].value.string);
             if (ps == NULL) {
                 status = -1;
                 break;

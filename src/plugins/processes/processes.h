@@ -167,6 +167,8 @@ typedef struct procstat_entry_s {
 typedef struct procstat_s {
     char name[PROCSTAT_NAME_LEN];
     regex_t *re;
+    char *pid_file;
+    unsigned long pid;
 
     unsigned long num_proc;
     unsigned long num_lwp;
@@ -218,7 +220,7 @@ void ps_list_reset(void);
 
 void ps_list_free(void);
 
-void ps_list_add(const char *name, const char *cmdline, process_entry_t *entry);
+void ps_list_add(const char *name, const char *cmdline, unsigned long pid, process_entry_t *entry);
 
 void ps_submit_state(double *proc_state);
 

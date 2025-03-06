@@ -170,7 +170,7 @@ int ps_read(void)
             pse.sched_waiting = -1;
             pse.sched_timeslices = -1;
 
-            ps_list_add(cmdline, cargs, &pse);
+            ps_list_add(cmdline, cargs, procentry[i].pi_pid, &pse);
         }
 
         if (nprocs < MAXPROCENTRY)
