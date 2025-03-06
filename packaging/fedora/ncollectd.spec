@@ -63,6 +63,7 @@
 %define build_with_iptables 0%{!?_without_iptables:1}
 %define build_with_ipvs 0%{!?_without_ipvs:1}
 %define build_with_irq 0%{!?_without_irq:1}
+%define build_with_iscsi 0%{!?_without_iscsi:1}
 %define build_with_java 0%{!?_without_java:1}
 %define build_with_jolokia 0%{!?_without_jolokia:1}
 %define build_with_journal 0%{!?_without_journal:1}
@@ -1419,6 +1420,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_irq -DPLUGIN_IRQ:BOOL=OFF
 %endif
 
+%if %{build_with_iscsi}
+%define _build_with_iscsi -DPLUGIN_ISCSI:BOOL=ON
+%else
+%define _build_with_iscsi -DPLUGIN_ISCSI:BOOL=OFF
+%endif
+
 %if %{build_with_java}
 %define _build_with_java -DPLUGIN_JAVA:BOOL=ON
 %else
@@ -2301,6 +2308,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_ipstats} \
     %{?_build_with_ipvs} \
     %{?_build_with_irq} \
+    %{?_build_with_iscsi} \
     %{?_build_with_java} \
     %{?_build_with_jolokia} \
     %{?_build_with_journal} \
@@ -2676,6 +2684,10 @@ fi
 %if %{build_with_irq}
 %{_libdir}/%{name}/irq.so
 %{_mandir}/man5/ncollectd-irq.5*
+%endif
+%if %{build_with_iscsi}
+%{_libdir}/%{name}/iscsi.so
+%{_mandir}/man5/ncollectd-iscsi.5*
 %endif
 %if %{build_with_journal}
 %{_libdir}/%{name}/journal.so

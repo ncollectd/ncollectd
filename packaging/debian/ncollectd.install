@@ -90,6 +90,8 @@ usr/lib/ncollectd/ipvs.so
 usr/share/man/man5/ncollectd-ipvs.5
 usr/lib/ncollectd/irq.so
 usr/share/man/man5/ncollectd-irq.5
+usr/lib/ncollectd/iscsi.so
+usr/share/man/man5/ncollectd-iscsi.5
 usr/lib/ncollectd/journal.so
 usr/share/man/man5/ncollectd-journal.5
 usr/lib/ncollectd/kea.so
