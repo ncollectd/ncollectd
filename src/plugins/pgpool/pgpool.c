@@ -39,10 +39,10 @@
 
 enum {
     FAM_PGPOOL_UP,
-	FAM_PGPOOL_BACKEND_SLOTS,
-	FAM_PGPOOL_BACKEND_SLOTS_INUSE,
-	FAM_PGPOOL_PROCESSES,
-	FAM_PGPOOL_PROCESSES_INUSE,
+    FAM_PGPOOL_BACKEND_SLOTS,
+    FAM_PGPOOL_BACKEND_SLOTS_INUSE,
+    FAM_PGPOOL_PROCESSES,
+    FAM_PGPOOL_PROCESSES_INUSE,
     FAM_PGPOOL_NODE_STATUS,
     FAM_PGPOOL_NODE_SELECTS,
     FAM_PGPOOL_NODE_REPLICATION_DELAY_SECONDS,
@@ -84,23 +84,23 @@ static metric_family_t pgpool_fams[FAM_PGPOOL_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "",
     },
-	[FAM_PGPOOL_BACKEND_SLOTS] = {
-	    .name = "pgpool_backend_slots",
+    [FAM_PGPOOL_BACKEND_SLOTS] = {
+        .name = "pgpool_backend_slots",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of total possible backend connection slots.",
     },
-	[FAM_PGPOOL_BACKEND_SLOTS_INUSE] = {
-	    .name = "pgpool_backend_slots_inuse",
+    [FAM_PGPOOL_BACKEND_SLOTS_INUSE] = {
+        .name = "pgpool_backend_slots_inuse",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of backend connection slots in use.",
     },
-	[FAM_PGPOOL_PROCESSES] = {
-	    .name = "pgpool_processes",
+    [FAM_PGPOOL_PROCESSES] = {
+        .name = "pgpool_processes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of total child processed.",
     },
-	[FAM_PGPOOL_PROCESSES_INUSE] = {
-	    .name = "pgpool_processes_inuse",
+    [FAM_PGPOOL_PROCESSES_INUSE] = {
+        .name = "pgpool_processes_inuse",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of used child processes.",
     },
