@@ -1,0 +1,25 @@
+plugin_option(PLUGIN_PGPOOL "Pgpool-II statistics" ON)
+
+set(BUILD_PLUGIN_PGPOOL 0)
+
+if(PLUGIN_PGPOOL)
+    find_package(LibPq)
+    if (LIBPQ_FOUND)
+        set(BUILD_PLUGIN_PGPOOL 1)
+    else()
+        set(BUILD_PLUGIN_PGPOOL_REASON "libpq not found" PARENT_SCOPE)
+    endif()
+endif()
+
+set(BUILD_PLUGIN_PGPOOL ${BUILD_PLUGIN_PGPOOL} PARENT_SCOPE)
+
+if(BUILD_PLUGIN_PGPOOL)
+    set(PLUGIN_PGPOOL_SRC pgpool.c)
+    add_library(pgpool MODULE ${PLUGIN_PGPOOL_SRC})
+    target_include_directories(pgpool PRIVATE ${LIBPGPOOL_INCLUDE_DIRS})
+    target_link_libraries(pgpool PRIVATE libutils libmetric LibPq::LibPq)
+    set_target_properties(pgpool PROPERTIES PREFIX "")
+    install(TARGETS pgpool DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
+    configure_file(ncollectd-pgpool.5 ncollectd-pgpool.5 @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-pgpool.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)
+endif()
