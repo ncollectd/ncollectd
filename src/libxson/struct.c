@@ -17,9 +17,9 @@
 
 typedef struct {
     void *st;
-    json_struct_attr_t *parent;
-    json_struct_attr_t *attrs;
-    json_struct_attr_t *attr;
+    xson_struct_attr_t *parent;
+    xson_struct_attr_t *attrs;
+    xson_struct_attr_t *attr;
 } json_stack_t;
 
 typedef struct {
@@ -36,7 +36,7 @@ typedef struct {
     } while(0)
 
 static int context_push(context_t *ctx,
-                        json_struct_attr_t *parent, json_struct_attr_t *attrs, void *st)
+                        xson_struct_attr_t *parent, xson_struct_attr_t *attrs, void *st)
 {
     if ((ctx->depth + 1) >= JSON_MAX_DEPTH) {
         JSON_ERROR (ctx, "Out of memory");
@@ -93,32 +93,32 @@ static json_stack_t *context_peek(context_t *ctx)
     return stack;
 }
 
-static size_t json_struct_set_defaults(void *st, json_struct_attr_t *attr)
+static size_t xson_struct_set_defaults(void *st, xson_struct_attr_t *attr)
 {
     for (size_t i = 0; ; i++) {
         switch (attr[i].type) {
-        case JSON_STRUCT_TYPE_NONE:
+        case XSON_STRUCT_TYPE_NONE:
             return i+1;
             break;
-        case JSON_STRUCT_TYPE_ARRAY:
+        case XSON_STRUCT_TYPE_ARRAY:
             break;
-        case JSON_STRUCT_TYPE_MAP:
+        case XSON_STRUCT_TYPE_MAP:
             break;
-        case JSON_STRUCT_TYPE_OBJECT:
+        case XSON_STRUCT_TYPE_OBJECT:
             break;
-        case JSON_STRUCT_TYPE_BOOLEAN:
+        case XSON_STRUCT_TYPE_BOOLEAN:
             *(bool *)((char *)st + attr[i].offset) = attr[i].boolean;
             break;
-        case JSON_STRUCT_TYPE_INT64:
+        case XSON_STRUCT_TYPE_INT64:
             *(int64_t *)((char *)st + attr[i].offset) = attr[i].int64;
             break;
-        case JSON_STRUCT_TYPE_UINT64:
+        case XSON_STRUCT_TYPE_UINT64:
             *(uint64_t *)((char *)st + attr[i].offset) = attr[i].uint64;
             break;
-        case JSON_STRUCT_TYPE_DOUBLE:
+        case XSON_STRUCT_TYPE_DOUBLE:
             *(double *)((char *)st + attr[i].offset) = attr[i].float64;
             break;
-        case JSON_STRUCT_TYPE_STRING:
+        case XSON_STRUCT_TYPE_STRING:
             if (attr[i].string != NULL) {
                 char *str = strdup(attr[i].string);
                 if (str != NULL)
@@ -139,7 +139,7 @@ static bool handle_string (void *ctx, const char *str, size_t str_len)
     if ((stack->attr == NULL) || (stack->parent == NULL))
         return true;
 
-    if (stack->attr->type != JSON_STRUCT_TYPE_STRING)
+    if (stack->attr->type != XSON_STRUCT_TYPE_STRING)
         return false;
 
     char *nstr = NULL;
@@ -153,9 +153,9 @@ static bool handle_string (void *ctx, const char *str, size_t str_len)
         nstr[str_len] = 0;
     }
 
-    if (stack->parent->type == JSON_STRUCT_TYPE_ARRAY) {
+    if (stack->parent->type == XSON_STRUCT_TYPE_ARRAY) {
 
-    } else if (stack->parent->type == JSON_STRUCT_TYPE_OBJECT) {
+    } else if (stack->parent->type == XSON_STRUCT_TYPE_OBJECT) {
         char *astr = *(char **)((char *)stack->st + stack->attr->offset);
         if (astr != NULL)
             free(astr);
@@ -181,18 +181,18 @@ static bool handle_number(void * ctx, const char *number_val, size_t number_len)
     if ((stack->attr == NULL) || (stack->parent == NULL))
         return true;
 
-    if (stack->attr->type == JSON_STRUCT_TYPE_ARRAY) {
+    if (stack->attr->type == XSON_STRUCT_TYPE_ARRAY) {
         size_t array_size = *(size_t *)((char *)stack->st + stack->attr->array.offset_size);
 
         size_t type_size = 0;
         switch (stack->attr->array.type) {
-        case JSON_STRUCT_TYPE_INT64:
+        case XSON_STRUCT_TYPE_INT64:
             type_size = sizeof(int64_t);
             break;
-        case JSON_STRUCT_TYPE_UINT64:
+        case XSON_STRUCT_TYPE_UINT64:
             type_size = sizeof(uint64_t);
             break;
-        case JSON_STRUCT_TYPE_DOUBLE:
+        case XSON_STRUCT_TYPE_DOUBLE:
             type_size = sizeof(double);
             break;
         default:
@@ -207,19 +207,19 @@ static bool handle_number(void * ctx, const char *number_val, size_t number_len)
         *(void **)((char *)stack->st + stack->attr->offset) = new;
 
         switch (stack->attr->array.type) {
-        case JSON_STRUCT_TYPE_INT64: {
+        case XSON_STRUCT_TYPE_INT64: {
             int64_t num = json_parse_integer((const unsigned char *)number_val, number_len);
             int64_t *array = *(int64_t **)((char *)stack->st + stack->attr->offset);
             array[array_size] = num;
             break;
             }
-        case JSON_STRUCT_TYPE_UINT64: {
+        case XSON_STRUCT_TYPE_UINT64: {
             uint64_t num = json_parse_integer((const unsigned char *)number_val, number_len);
             uint64_t *array = *(uint64_t **)((char *)stack->st + stack->attr->offset);
             array[array_size] = num;
             break;
             }
-        case JSON_STRUCT_TYPE_DOUBLE: {
+        case XSON_STRUCT_TYPE_DOUBLE: {
             double num = strtod(number_val, NULL); // FIXME
             double *array = *(double **)((char *)stack->st + stack->attr->offset);
             array[array_size] = num;
@@ -233,17 +233,17 @@ static bool handle_number(void * ctx, const char *number_val, size_t number_len)
         *(size_t *)((char *)stack->st + stack->attr->array.offset_size) = array_size+1;
     } else {
         switch (stack->attr->type) {
-        case JSON_STRUCT_TYPE_INT64: {
+        case XSON_STRUCT_TYPE_INT64: {
             int64_t num = json_parse_integer((const unsigned char *)number_val, number_len);
             *(int64_t *)((char *)stack->st + stack->attr->offset) = num;
             break;
             }
-        case JSON_STRUCT_TYPE_UINT64: {
+        case XSON_STRUCT_TYPE_UINT64: {
             uint64_t num = json_parse_integer((const unsigned char *)number_val, number_len);
             *(uint64_t *)((char *)stack->st + stack->attr->offset) = num;
             break;
             }
-        case JSON_STRUCT_TYPE_DOUBLE: {
+        case XSON_STRUCT_TYPE_DOUBLE: {
             double num = strtod(number_val, NULL);
             *(double *)((char *)stack->st + stack->attr->offset) = num;
             break;
@@ -263,8 +263,8 @@ static bool handle_start_map (void *ctx)
     if (stack == NULL)
         return false;
 
-    json_struct_attr_t *attrs = NULL;
-    json_struct_attr_t *parent = NULL;
+    xson_struct_attr_t *attrs = NULL;
+    xson_struct_attr_t *parent = NULL;
 
     context_t *sctx = ctx;
 
@@ -292,7 +292,7 @@ static bool handle_start_map (void *ctx)
 //    void *pst = sctx->stack[sctx->depth-2].st;
         *(void **)((char *)stack->st + stack->attr->offset) = st;
     }
-    json_struct_set_defaults(st, parent->object.attrs);
+    xson_struct_set_defaults(st, parent->object.attrs);
 
     if (sctx->depth == 1) {
 fprintf(stderr, "1st: %p\n", stack->st);
@@ -313,11 +313,11 @@ fprintf(stderr, "key st: %.*s %p\n", (int)size, key,stack->st);
     if (stack->parent == NULL)
         return true;
 
-    json_struct_attr_t *attrs = stack->attrs;
+    xson_struct_attr_t *attrs = stack->attrs;
 
     stack->attr = NULL;
     for (size_t i = 0; ; i++) {
-        if (attrs[i].type == JSON_STRUCT_TYPE_NONE)
+        if (attrs[i].type == XSON_STRUCT_TYPE_NONE)
             break;
         if (attrs[i].attr_size == size) {
             if (strncmp((const char *)key, attrs[i].attr, size) == 0) {
@@ -362,7 +362,7 @@ static bool handle_boolean (void *ctx, int value)
     if ((stack->attr == NULL) || (stack->parent == NULL))
         return true;
 
-    if (stack->attr->type != JSON_STRUCT_TYPE_BOOLEAN)
+    if (stack->attr->type != XSON_STRUCT_TYPE_BOOLEAN)
         return false; //FIXME
 
     *(bool *)((char *)stack->st + stack->attr->offset) = value ? true : false;
@@ -379,13 +379,13 @@ static bool handle_null (void *ctx)
     if ((stack->attr == NULL) || (stack->parent == NULL))
         return true;
 
-    if (stack->attr->type != JSON_STRUCT_TYPE_STRING)
+    if (stack->attr->type != XSON_STRUCT_TYPE_STRING)
         return false; // FIXME
 
-    if (stack->parent->type == JSON_STRUCT_TYPE_ARRAY) {
+    if (stack->parent->type == XSON_STRUCT_TYPE_ARRAY) {
 
 
-    } else if (stack->parent->type == JSON_STRUCT_TYPE_OBJECT) {
+    } else if (stack->parent->type == XSON_STRUCT_TYPE_OBJECT) {
         char *astr = *(char **)((char *)stack->st + stack->attr->offset);
         if (astr != NULL) {
 //        free(astr);
@@ -398,21 +398,21 @@ static bool handle_null (void *ctx)
     return true;
 }
 
-static const json_callbacks_t callbacks = {
-    .json_null        = handle_null,        /* null        = */
-    .json_boolean     = handle_boolean,     /* boolean     = */
-    .json_integer     = NULL,               /* integer     = */
-    .json_double      = NULL,               /* double      = */
-    .json_number      = handle_number,      /* number      = */
-    .json_string      = handle_string,      /* string      = */
-    .json_start_map   = handle_start_map,   /* start map   = */
-    .json_map_key     = handle_map_key,     /* map key     = */
-    .json_end_map     = handle_end_map,     /* end map     = */
-    .json_start_array = handle_start_array, /* start array = */
-    .json_end_array   = handle_end_array    /* end array   = */
+static const xson_callbacks_t callbacks = {
+    .xson_null        = handle_null,        /* null        = */
+    .xson_boolean     = handle_boolean,     /* boolean     = */
+    .xson_integer     = NULL,               /* integer     = */
+    .xson_double      = NULL,               /* double      = */
+    .xson_number      = handle_number,      /* number      = */
+    .xson_string      = handle_string,      /* string      = */
+    .xson_start_map   = handle_start_map,   /* start map   = */
+    .xson_map_key     = handle_map_key,     /* map key     = */
+    .xson_end_map     = handle_end_map,     /* end map     = */
+    .xson_start_array = handle_start_array, /* start array = */
+    .xson_end_array   = handle_end_array    /* end array   = */
 };
 
-void *json_struct_parse(json_struct_attr_t *parent,
+void *xson_struct_parse(xson_struct_attr_t *parent,
                         const char *input, char *error_buffer, size_t error_buffer_size)
 {
     context_t ctx = {
@@ -426,9 +426,9 @@ void *json_struct_parse(json_struct_attr_t *parent,
 
 
     ctx.stack[0].st = NULL;
-    if (parent->type == JSON_STRUCT_TYPE_OBJECT) {
+    if (parent->type == XSON_STRUCT_TYPE_OBJECT)
         ctx.stack[0].attrs = parent->object.attrs;
-    }
+
     ctx.stack[0].attr = NULL;
     ctx.stack[0].parent = parent;
     ctx.depth = 1;
@@ -455,14 +455,14 @@ void *json_struct_parse(json_struct_attr_t *parent,
     return ctx.stack[0].st;
 }
 
-void *json_struct_parse_object(size_t struct_size, json_struct_attr_t *attrs,
+void *xson_struct_parse_object(size_t struct_size, xson_struct_attr_t *attrs,
                                const char *input, char *error_buffer, size_t error_buffer_size)
 {
-    json_struct_attr_t parent = {0};
+    xson_struct_attr_t parent = {0};
 
-    parent.type = JSON_STRUCT_TYPE_OBJECT;
+    parent.type = XSON_STRUCT_TYPE_OBJECT;
     parent.object.struct_size = struct_size;
     parent.object.attrs = attrs;
 
-    return json_struct_parse(&parent, input, error_buffer, error_buffer_size);
+    return xson_struct_parse(&parent, input, error_buffer, error_buffer_size);
 }

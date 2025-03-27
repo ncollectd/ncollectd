@@ -82,18 +82,18 @@ static bool handle_null (__attribute__((unused)) void *ctx)
     return false;
 }
 
-static const json_callbacks_t callbacks = {
-    .json_null        = handle_null,        /* null        = */
-    .json_boolean     = handle_boolean,     /* boolean     = */
-    .json_integer     = NULL,               /* integer     = */
-    .json_double      = handle_double,      /* double      = */
-    .json_number      = NULL,               /* number      = */
-    .json_string      = handle_string,      /* string      = */
-    .json_start_map   = handle_start_map,   /* start map   = */
-    .json_map_key     = handle_map_key,     /* map key     = */
-    .json_end_map     = handle_end_map,     /* end map     = */
-    .json_start_array = handle_start_array, /* start array = */
-    .json_end_array   = handle_end_array    /* end array   = */
+static const xson_callbacks_t callbacks = {
+    .xson_null        = handle_null,        /* null        = */
+    .xson_boolean     = handle_boolean,     /* boolean     = */
+    .xson_integer     = NULL,               /* integer     = */
+    .xson_double      = handle_double,      /* double      = */
+    .xson_number      = NULL,               /* number      = */
+    .xson_string      = handle_string,      /* string      = */
+    .xson_start_map   = handle_start_map,   /* start map   = */
+    .xson_map_key     = handle_map_key,     /* map key     = */
+    .xson_end_map     = handle_end_map,     /* end map     = */
+    .xson_start_array = handle_start_array, /* start array = */
+    .xson_end_array   = handle_end_array    /* end array   = */
 };
 
 strlist_t *mdb_strlist_parse(const char *data, size_t len)

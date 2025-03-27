@@ -476,18 +476,18 @@ static bool ceph_schema_cb_map_key(void *ctx, const char *key, size_t string_len
     return true;
 }
 
-static json_callbacks_t schema_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = ceph_schema_cb_number,
-    .json_string      = ceph_schema_cb_string,
-    .json_start_map   = ceph_schema_cb_start_map,
-    .json_map_key     = ceph_schema_cb_map_key,
-    .json_end_map     = ceph_schema_cb_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t schema_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = ceph_schema_cb_number,
+    .xson_string      = ceph_schema_cb_string,
+    .xson_start_map   = ceph_schema_cb_start_map,
+    .xson_map_key     = ceph_schema_cb_map_key,
+    .xson_end_map     = ceph_schema_cb_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number_len)
@@ -677,18 +677,18 @@ static bool ceph_data_cb_map_key(void *ctx, const char *key, size_t string_len)
     return true;
 }
 
-static json_callbacks_t data_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = ceph_data_cb_number,
-    .json_string      = NULL,
-    .json_start_map   = ceph_data_cb_start_map,
-    .json_map_key     = ceph_data_cb_map_key,
-    .json_end_map     = ceph_data_cb_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t data_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = ceph_data_cb_number,
+    .xson_string      = NULL,
+    .xson_start_map   = ceph_data_cb_start_map,
+    .xson_map_key     = ceph_data_cb_map_key,
+    .xson_end_map     = ceph_data_cb_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static void ceph_daemon_free(void *arg)
@@ -781,7 +781,7 @@ static int ceph_conn_process_json(ceph_conn_t *io)
     if ((io->request_type != ASOK_REQ_DATA) && (io->request_type != ASOK_REQ_SCHEMA))
         return -EDOM;
 
-    json_callbacks_t *callbacks = io->request_type == ASOK_REQ_SCHEMA ? &schema_callbacks
+    xson_callbacks_t *callbacks = io->request_type == ASOK_REQ_SCHEMA ? &schema_callbacks
                                                                       : &data_callbacks;
 
     json_parser_t handle = {0};

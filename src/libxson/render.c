@@ -2,8 +2,8 @@
 
 #include "ncollectd.h"
 #include "libxson/render.h"
-#include "libxson/render_json.h"
-#include "libxson/render_syaml.h"
+#include "libxson/json_render.h"
+#include "libxson/yaml_render.h"
 
 #include <stdbool.h>
 #include <stdlib.h>

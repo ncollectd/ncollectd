@@ -8,230 +8,230 @@
 #include <stdbool.h>
 
 typedef enum {
-    JSON_TYPE_NULL   = 0,
-    JSON_TYPE_STRING = 1,
-    JSON_TYPE_NUMBER = 2,
-    JSON_TYPE_OBJECT = 3,
-    JSON_TYPE_ARRAY  = 4,
-    JSON_TYPE_TRUE   = 5,
-    JSON_TYPE_FALSE  = 6,
-} json_type_t;
+    XSON_TYPE_NULL   = 0,
+    XSON_TYPE_STRING = 1,
+    XSON_TYPE_NUMBER = 2,
+    XSON_TYPE_OBJECT = 3,
+    XSON_TYPE_ARRAY  = 4,
+    XSON_TYPE_TRUE   = 5,
+    XSON_TYPE_FALSE  = 6,
+} xson_type_t;
 
-typedef struct json_value_s json_value_t;
-typedef struct json_keyval_s json_keyval_t;
-
-typedef struct {
-    json_keyval_t *keyval;
-    size_t len;
-} json_object_t;
+typedef struct xson_value_s xson_value_t;
+typedef struct xson_keyval_s xson_keyval_t;
 
 typedef struct {
-    json_value_t *values;
+    xson_keyval_t *keyval;
     size_t len;
-} json_array_t;
+} xson_object_t;
 
-struct json_value_s {
-    json_type_t type;
+typedef struct {
+    xson_value_t *values;
+    size_t len;
+} xson_array_t;
+
+struct xson_value_s {
+    xson_type_t type;
     union {
         char *string;
         double number;
-        json_object_t object;
-        json_array_t array;
+        xson_object_t object;
+        xson_array_t array;
     };
 };
 
-struct json_keyval_s {
+struct xson_keyval_s {
     char *key;
-    json_value_t value;
+    xson_value_t value;
 };
 
-json_value_t *json_value_parse (const char *input, char *error_buffer, size_t error_buffer_size);
+xson_value_t *xson_value_parse (const char *input, char *error_buffer, size_t error_buffer_size);
 
-static inline json_value_t *json_value_alloc(json_type_t type)
+static inline xson_value_t *xson_value_alloc(xson_type_t type)
 {
-    json_value_t *v = calloc(1, sizeof(*v));
+    xson_value_t *v = calloc(1, sizeof(*v));
     if (v == NULL)
         return NULL;
     v->type = type;
     return v;
 }
 
-void json_value_free (json_value_t *v);
-void json_value_clear (json_value_t *v);
+void xson_value_free (xson_value_t *v);
+void xson_value_clear (xson_value_t *v);
 
-json_value_t *json_value_clone(json_value_t *val);
+xson_value_t *xson_value_clone(xson_value_t *val);
 
-static inline json_type_t json_value_type(json_value_t *val)
+static inline xson_type_t xson_value_type(xson_value_t *val)
 {
     return val->type;
 }
 
-const char *json_value_type_name(json_value_t *val);
+const char *xson_value_type_name(xson_value_t *val);
 
-static inline int json_value_set_string(json_value_t *val, const char *string)
+static inline int xson_value_set_string(xson_value_t *val, const char *string)
 {
-    val->type = JSON_TYPE_STRING;
+    val->type = XSON_TYPE_STRING;
     val->string = strdup(string);
     if (val->string == NULL)
         return -1;
     return 0;
 }
 
-static inline int json_value_set_number(json_value_t *val, double number)
+static inline int xson_value_set_number(xson_value_t *val, double number)
 {
-    val->type = JSON_TYPE_NUMBER;
+    val->type = XSON_TYPE_NUMBER;
     val->number = number;
     return 0;
 }
 
-static inline int json_value_set_object(json_value_t *val)
+static inline int xson_value_set_object(xson_value_t *val)
 {
-    val->type = JSON_TYPE_OBJECT;
+    val->type = XSON_TYPE_OBJECT;
     val->object.len = 0;
     val->object.keyval = NULL;
     return 0;
 }
 
-static inline int json_value_set_array(json_value_t *val)
+static inline int xson_value_set_array(xson_value_t *val)
 {
-    val->type = JSON_TYPE_ARRAY;
+    val->type = XSON_TYPE_ARRAY;
     val->array.len = 0;
     val->array.values = NULL;
     return 0;
 }
 
-static inline int json_value_set_true(json_value_t *val)
+static inline int xson_value_set_true(xson_value_t *val)
 {
-    val->type = JSON_TYPE_TRUE;
+    val->type = XSON_TYPE_TRUE;
     return 0;
 }
 
-static inline int json_value_set_false(json_value_t *val)
+static inline int xson_value_set_false(xson_value_t *val)
 {
-    val->type = JSON_TYPE_FALSE;
+    val->type = XSON_TYPE_FALSE;
     return 0;
 }
 
-static inline int json_value_set_null(json_value_t *val)
+static inline int xson_value_set_null(xson_value_t *val)
 {
-    val->type = JSON_TYPE_NULL;
+    val->type = XSON_TYPE_NULL;
     return 0;
 }
 
-static inline json_value_t *json_value_alloc_string(const char *string)
+static inline xson_value_t *xson_value_alloc_string(const char *string)
 {
-    json_value_t *val = json_value_alloc(JSON_TYPE_STRING);
+    xson_value_t *val = xson_value_alloc(XSON_TYPE_STRING);
     if (val == NULL)
         return NULL;
     val->string = strdup(string);
     if (val->string == NULL) {
-        json_value_free(val);
+        xson_value_free(val);
         return NULL;
     }
     return val;
 }
 
-static inline json_value_t *json_value_alloc_number(double number)
+static inline xson_value_t *xson_value_alloc_number(double number)
 {
-    json_value_t *val = json_value_alloc(JSON_TYPE_NUMBER);
+    xson_value_t *val = xson_value_alloc(XSON_TYPE_NUMBER);
     if (val == NULL)
         return NULL;
     val->number = number;
     return val;
 }
 
-static inline json_value_t *json_value_alloc_object(void)
+static inline xson_value_t *xson_value_alloc_object(void)
 {
-    return json_value_alloc(JSON_TYPE_OBJECT);
+    return xson_value_alloc(XSON_TYPE_OBJECT);
 }
 
-static inline json_value_t *json_value_alloc_array(void)
+static inline xson_value_t *xson_value_alloc_array(void)
 {
-    return json_value_alloc(JSON_TYPE_ARRAY);
+    return xson_value_alloc(XSON_TYPE_ARRAY);
 }
 
-static inline json_value_t *json_value_alloc_true(void)
+static inline xson_value_t *xson_value_alloc_true(void)
 {
-    return json_value_alloc(JSON_TYPE_TRUE);
+    return xson_value_alloc(XSON_TYPE_TRUE);
 }
 
-static inline json_value_t *json_value_alloc_false(void)
+static inline xson_value_t *xson_value_alloc_false(void)
 {
-    return json_value_alloc(JSON_TYPE_FALSE);
+    return xson_value_alloc(XSON_TYPE_FALSE);
 }
 
-static inline json_value_t *json_value_alloc_null(void)
+static inline xson_value_t *xson_value_alloc_null(void)
 {
-    return json_value_alloc(JSON_TYPE_NULL);
+    return xson_value_alloc(XSON_TYPE_NULL);
 }
 
-static inline size_t json_value_array_size(json_value_t *val)
+static inline size_t xson_value_array_size(xson_value_t *val)
 {
     return val->array.len;
 }
 
-static inline size_t json_value_object_size(json_value_t *val)
+static inline size_t xson_value_object_size(xson_value_t *val)
 {
     return val->object.len;
 }
 
-json_value_t *json_value_array_append(json_value_t *val);
-json_value_t *json_value_object_append(json_value_t *val, char *name);
+xson_value_t *xson_value_array_append(xson_value_t *val);
+xson_value_t *xson_value_object_append(xson_value_t *val, char *name);
 
-static inline bool json_value_is_null(json_value_t *val)
+static inline bool xson_value_is_null(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_NULL;
+    return val->type == XSON_TYPE_NULL;
 }
 
-static inline bool json_value_is_string(json_value_t *val)
+static inline bool xson_value_is_string(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_STRING;
+    return val->type == XSON_TYPE_STRING;
 }
 
-static inline bool json_value_is_number(json_value_t *val)
+static inline bool xson_value_is_number(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_NUMBER;
+    return val->type == XSON_TYPE_NUMBER;
 }
 
-static inline bool json_value_is_bool(json_value_t *val)
+static inline bool xson_value_is_bool(xson_value_t *val)
 {
-    return (val->type == JSON_TYPE_TRUE) || (val->type == JSON_TYPE_FALSE);
+    return (val->type == XSON_TYPE_TRUE) || (val->type == XSON_TYPE_FALSE);
 }
 
-static inline bool json_value_is_true(json_value_t *val)
+static inline bool xson_value_is_true(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_TRUE;
+    return val->type == XSON_TYPE_TRUE;
 }
 
-static inline bool json_value_is_false(json_value_t *val)
+static inline bool xson_value_is_false(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_FALSE;
+    return val->type == XSON_TYPE_FALSE;
 }
 
-static inline bool json_value_is_array(json_value_t *val)
+static inline bool xson_value_is_array(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_ARRAY;
+    return val->type == XSON_TYPE_ARRAY;
 }
 
-static inline bool json_value_is_object(json_value_t *val)
+static inline bool xson_value_is_object(xson_value_t *val)
 {
-    return val->type == JSON_TYPE_OBJECT;
+    return val->type == XSON_TYPE_OBJECT;
 }
 
-static inline bool json_value_is_scalar(json_value_t *val)
+static inline bool xson_value_is_scalar(xson_value_t *val)
 {
-    return (val->type == JSON_TYPE_NULL  ) ||
-           (val->type == JSON_TYPE_STRING) ||
-           (val->type == JSON_TYPE_NUMBER) ||
-           (val->type == JSON_TYPE_TRUE  ) ||
-           (val->type == JSON_TYPE_FALSE );
+    return (val->type == XSON_TYPE_NULL  ) ||
+           (val->type == XSON_TYPE_STRING) ||
+           (val->type == XSON_TYPE_NUMBER) ||
+           (val->type == XSON_TYPE_TRUE  ) ||
+           (val->type == XSON_TYPE_FALSE );
 }
 
-static inline json_value_t *json_value_object_find(json_value_t *val, char *key)
+static inline xson_value_t *xson_value_object_find(xson_value_t *val, char *key)
 {
-    if (val->type == JSON_TYPE_OBJECT) {
+    if (val->type == XSON_TYPE_OBJECT) {
         for (size_t i = 0; i < val->object.len; i++) {
-            json_keyval_t *kv = &val->object.keyval[i];
+            xson_keyval_t *kv = &val->object.keyval[i];
             if (strcmp(key, kv->key) == 0)
                 return &kv->value;
         }
@@ -240,9 +240,9 @@ static inline json_value_t *json_value_object_find(json_value_t *val, char *key)
     return NULL;
 }
 
-static inline  json_value_t *json_value_array_at(json_value_t *val, size_t n)
+static inline  xson_value_t *xson_value_array_at(xson_value_t *val, size_t n)
 {
-    if (val->type == JSON_TYPE_ARRAY) {
+    if (val->type == XSON_TYPE_ARRAY) {
         if (n >= val->array.len)
             return NULL;
         return &val->array.values[n];
@@ -251,8 +251,10 @@ static inline  json_value_t *json_value_array_at(json_value_t *val, size_t n)
     return NULL;
 }
 
-int json_value_to_number(json_value_t *val);
+int xson_value_to_number(xson_value_t *val);
 
-int json_value_to_string(json_value_t *val);
+int xson_value_to_string(xson_value_t *val);
 
-int json_value_to_boolean(json_value_t *val);
+int xson_value_to_boolean(xson_value_t *val);
+
+int xson_value_cmp(const xson_value_t *val1, const xson_value_t *val2);

@@ -383,18 +383,18 @@ static bool podman_container_stats_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t podman_container_stats_json_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = podman_container_stats_json_number,
-    .json_string      = podman_container_stats_json_string,
-    .json_start_map   = podman_container_stats_json_start_map,
-    .json_map_key     = podman_container_stats_json_map_key,
-    .json_end_map     = podman_container_stats_json_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t podman_container_stats_json_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = podman_container_stats_json_number,
+    .xson_string      = podman_container_stats_json_string,
+    .xson_start_map   = podman_container_stats_json_start_map,
+    .xson_map_key     = podman_container_stats_json_map_key,
+    .xson_end_map     = podman_container_stats_json_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static bool podman_container_info_json_string(void *ctx, const char *string, size_t string_len)
@@ -602,18 +602,18 @@ static bool podman_container_info_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t podman_container_info_json_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = podman_container_info_json_number,
-    .json_string      = podman_container_info_json_string,
-    .json_start_map   = podman_container_info_json_start_map,
-    .json_map_key     = podman_container_info_json_map_key,
-    .json_end_map     = podman_container_info_json_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t podman_container_info_json_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = podman_container_info_json_number,
+    .xson_string      = podman_container_info_json_string,
+    .xson_start_map   = podman_container_info_json_start_map,
+    .xson_map_key     = podman_container_info_json_map_key,
+    .xson_end_map     = podman_container_info_json_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static size_t podman_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
@@ -636,7 +636,7 @@ static size_t podman_curl_callback(void *buf, size_t size, size_t nmemb, void *u
 }
 
 static int podman_curl_read(podman_instance_t *podman, const char *url,
-                            json_callbacks_t callbacks, void *ctx)
+                            xson_callbacks_t callbacks, void *ctx)
 {
     if (podman->curl == NULL) {
         podman->curl = curl_easy_init();

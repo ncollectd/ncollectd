@@ -735,18 +735,18 @@ static bool nginx_vts_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t nginx_vts_json_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = nginx_vts_json_number,
-    .json_string      = nginx_vts_json_string,
-    .json_start_map   = nginx_vts_json_start_map,
-    .json_map_key     = nginx_vts_json_map_key,
-    .json_end_map     = nginx_vts_json_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t nginx_vts_json_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = nginx_vts_json_number,
+    .xson_string      = nginx_vts_json_string,
+    .xson_start_map   = nginx_vts_json_start_map,
+    .xson_map_key     = nginx_vts_json_map_key,
+    .xson_end_map     = nginx_vts_json_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static size_t nginx_vts_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)

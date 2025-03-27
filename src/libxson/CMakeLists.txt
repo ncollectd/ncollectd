@@ -8,8 +8,8 @@ set(LIBXSON_SRC buf.h bytestack.h common.h
                       json_parse.h
                       struct.c struct.h
                       render.c render.h
-                      render_json.c render_json.h
-                      render_syaml.c render_syaml.h)
+                      json_render.c json_render.h
+                      yaml_render.c yaml_render.h)
 
 add_library(libxson STATIC ${LIBXSON_SRC})
 set_target_properties(libxson PROPERTIES PREFIX "")

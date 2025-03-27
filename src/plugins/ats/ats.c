@@ -451,18 +451,18 @@ static bool ats_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t ats_json_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = NULL,
-    .json_string      = ats_json_string,
-    .json_start_map   = ats_json_start_map,
-    .json_map_key     = ats_json_map_key,
-    .json_end_map     = ats_json_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t ats_json_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = NULL,
+    .xson_string      = ats_json_string,
+    .xson_start_map   = ats_json_start_map,
+    .xson_map_key     = ats_json_map_key,
+    .xson_end_map     = ats_json_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static size_t ats_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)

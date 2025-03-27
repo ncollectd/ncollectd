@@ -485,18 +485,18 @@ static bool jlk_cb_end_map(void *ctx)
     return true;
 }
 
-json_callbacks_t jlk_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = jlk_cb_number,
-    .json_string      = jlk_cb_string,
-    .json_start_map   = jlk_cb_start_map,
-    .json_map_key     = jlk_cb_map_key,
-    .json_end_map     = jlk_cb_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t jlk_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = jlk_cb_number,
+    .xson_string      = jlk_cb_string,
+    .xson_start_map   = jlk_cb_start_map,
+    .xson_map_key     = jlk_cb_map_key,
+    .xson_end_map     = jlk_cb_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static size_t jlk_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)

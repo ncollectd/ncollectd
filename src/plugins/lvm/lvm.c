@@ -536,18 +536,18 @@ static bool lvm_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t lvm_json_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = lvm_json_number,
-    .json_string      = lvm_json_string,
-    .json_start_map   = lvm_json_start_map,
-    .json_map_key     = lvm_json_map_key,
-    .json_end_map     = lvm_json_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t lvm_json_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = lvm_json_number,
+    .xson_string      = lvm_json_string,
+    .xson_start_map   = lvm_json_start_map,
+    .xson_map_key     = lvm_json_map_key,
+    .xson_end_map     = lvm_json_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static int lvm_read(void)

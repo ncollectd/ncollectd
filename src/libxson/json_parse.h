@@ -21,7 +21,7 @@ const char *json_status_to_string(json_status_t code);
  *  \param ctx        a context pointer that will be passed to callbacks.
  */
 void json_parser_init(json_parser_t *hand, unsigned int flags,
-                      const json_callbacks_t *callbacks, void *ctx);
+                      const xson_callbacks_t *callbacks, void *ctx);
 
 
 /** free a parser handle */

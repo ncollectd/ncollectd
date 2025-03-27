@@ -5,7 +5,7 @@
 #include "libxson/value.h"
 #include "libxson/render.h"
 
-json_value_t *json_tree_parser(const char *input, char *error_buffer, size_t error_buffer_size);
+xson_value_t *xson_tree_parser(const char *input, char *error_buffer, size_t error_buffer_size);
 
-int json_tree_render(json_value_t *v, strbuf_t *buf,
+int xson_tree_render(xson_value_t *v, strbuf_t *buf,
                      xson_render_type_t type, xson_render_option_t options);

@@ -233,6 +233,13 @@ static inline int strbuf_putescape_json(strbuf_t *buf, char const *str)
     return strbuf_putnescape_json(buf, str, strlen(str));
 }
 
+int strbuf_putnescape_squote(strbuf_t *buf, char const *str, size_t len);
+
+static inline int strbuf_putescape_squote(strbuf_t *buf, char const *str)
+{
+    return strbuf_putnescape_squote(buf, str, strlen(str));
+}
+
 int strbuf_putnescape_label(strbuf_t *buf, char const *str, size_t len);
 
 static inline int strbuf_putescape_label(strbuf_t *buf, char const *str)

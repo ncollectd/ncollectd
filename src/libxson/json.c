@@ -31,7 +31,7 @@ const char *json_status_to_string(json_status_t stat)
 
 
 void json_parser_init(json_parser_t *hand, unsigned int flags,
-                      const json_callbacks_t *callbacks, void *ctx)
+                      const xson_callbacks_t *callbacks, void *ctx)
 {
     memset(hand, 0, sizeof(*hand));
     hand->callbacks = callbacks;

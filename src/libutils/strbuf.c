@@ -470,3 +470,53 @@ int strbuf_putnescape_label(strbuf_t *buf, char const *str, size_t len)
     return 0;
 }
 
+int strbuf_putnescape_squote(strbuf_t *buf, char const *str, size_t len)
+{
+    if (unlikely(strbuf_avail(buf) < len)) {
+        if (strbuf_resize(buf, len) != 0)
+            return ENOMEM;
+    }
+
+    if (unlikely(buf->ptr == NULL))
+        return ENOMEM;
+
+    size_t n = 0;
+    while (n < len) {
+        if (unlikely(strbuf_avail(buf) < 2)) {
+          if (strbuf_resize(buf, 2) != 0)
+            return ENOMEM;
+        }
+
+        unsigned char c = (unsigned char)str[n];
+        switch(c) {
+        case '\'':
+            buf->ptr[buf->pos++] = '\\';
+            buf->ptr[buf->pos++] = '\'';
+            break;
+        case '\\':
+            buf->ptr[buf->pos++] = '\\';
+            buf->ptr[buf->pos++] = '\\';
+            break;
+        case '\n':
+            buf->ptr[buf->pos++] = '\\';
+            buf->ptr[buf->pos++] = 'n';
+            break;
+        case '\r':
+            buf->ptr[buf->pos++] = '\\';
+            buf->ptr[buf->pos++] = 'r';
+            break;
+        case '\t':
+            buf->ptr[buf->pos++] = '\\';
+            buf->ptr[buf->pos++] = 't';
+            break;
+        default:
+            buf->ptr[buf->pos++] = (char)c;
+            break;
+        }
+
+        n++;
+    }
+
+    buf->ptr[buf->pos] = '\0';
+    return 0;
+}
