@@ -679,18 +679,18 @@ static bool kea_json_stats_end_array(void *ctx)
     return true;
 }
 
-static json_callbacks_t kea_json_stats_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = kea_json_stats_number,
-    .json_string      = NULL,
-    .json_start_map   = kea_json_stats_start_map,
-    .json_map_key     = kea_json_stats_map_key,
-    .json_end_map     = kea_json_stats_end_map,
-    .json_start_array = kea_json_stats_start_array,
-    .json_end_array   = kea_json_stats_end_array,
+static xson_callbacks_t kea_json_stats_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = kea_json_stats_number,
+    .xson_string      = NULL,
+    .xson_start_map   = kea_json_stats_start_map,
+    .xson_map_key     = kea_json_stats_map_key,
+    .xson_end_map     = kea_json_stats_end_map,
+    .xson_start_array = kea_json_stats_start_array,
+    .xson_end_array   = kea_json_stats_end_array,
 };
 
 static int kea_read_stats(kea_t *kea)
@@ -1015,18 +1015,18 @@ static bool kea_json_config_end_array(void *ctx)
     return true;
 }
 
-static json_callbacks_t kea_json_config_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = kea_json_config_number,
-    .json_string      = kea_json_config_string,
-    .json_start_map   = kea_json_config_start_map,
-    .json_map_key     = kea_json_config_map_key,
-    .json_end_map     = kea_json_config_end_map,
-    .json_start_array = kea_json_config_start_array,
-    .json_end_array   = kea_json_config_end_array,
+static xson_callbacks_t kea_json_config_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = kea_json_config_number,
+    .xson_string      = kea_json_config_string,
+    .xson_start_map   = kea_json_config_start_map,
+    .xson_map_key     = kea_json_config_map_key,
+    .xson_end_map     = kea_json_config_end_map,
+    .xson_start_array = kea_json_config_start_array,
+    .xson_end_array   = kea_json_config_end_array,
 };
 
 static int kea_read_config(kea_t *kea)
@@ -1141,18 +1141,18 @@ static bool kea_json_config_hash_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t kea_json_config_hash_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = NULL,
-    .json_string      = kea_json_config_hash_string,
-    .json_start_map   = kea_json_config_hash_start_map,
-    .json_map_key     = kea_json_config_hash_map_key,
-    .json_end_map     = kea_json_config_hash_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t kea_json_config_hash_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = NULL,
+    .xson_string      = kea_json_config_hash_string,
+    .xson_start_map   = kea_json_config_hash_start_map,
+    .xson_map_key     = kea_json_config_hash_map_key,
+    .xson_end_map     = kea_json_config_hash_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 static int kea_read_config_hash(kea_t *kea, char hash[CONFIG_HASH_SIZE])

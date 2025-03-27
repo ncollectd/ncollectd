@@ -382,18 +382,18 @@ static bool bind_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t bind_json_callbacks = {
-    .json_null        = NULL,
-    .json_boolean     = NULL,
-    .json_integer     = NULL,
-    .json_double      = NULL,
-    .json_number      = bind_json_number,
-    .json_string      = bind_json_string,
-    .json_start_map   = bind_json_start_map,
-    .json_map_key     = bind_json_map_key,
-    .json_end_map     = bind_json_end_map,
-    .json_start_array = NULL,
-    .json_end_array   = NULL,
+static xson_callbacks_t bind_json_callbacks = {
+    .xson_null        = NULL,
+    .xson_boolean     = NULL,
+    .xson_integer     = NULL,
+    .xson_double      = NULL,
+    .xson_number      = bind_json_number,
+    .xson_string      = bind_json_string,
+    .xson_start_map   = bind_json_start_map,
+    .xson_map_key     = bind_json_map_key,
+    .xson_end_map     = bind_json_end_map,
+    .xson_start_array = NULL,
+    .xson_end_array   = NULL,
 };
 
 int bind_json_parse(bind_json_ctx_t *ctx)

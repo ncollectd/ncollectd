@@ -14,12 +14,12 @@
 #include "libxson/render.h"
 
 typedef struct {
-    json_value_t *value;
-} json_stack_t;
+    xson_value_t *value;
+} xson_stack_t;
 
 typedef struct {
-    json_value_t *root;
-    json_stack_t stack[JSON_MAX_DEPTH];
+    xson_value_t *root;
+    xson_stack_t stack[JSON_MAX_DEPTH];
     int depth;
     char *errbuf;
     size_t errbuf_size;
@@ -31,7 +31,7 @@ typedef struct {
             snprintf ((ctx)->errbuf, (ctx)->errbuf_size, __VA_ARGS__);  \
     } while(0)
 
-static int context_push(context_t *ctx, json_value_t *v)
+static int context_push(context_t *ctx, xson_value_t *v)
 {
     if ((ctx->depth + 1) >= JSON_MAX_DEPTH) {
         JSON_ERROR (ctx, "Out of memory");
@@ -43,41 +43,41 @@ static int context_push(context_t *ctx, json_value_t *v)
     return 0;
 }
 
-static json_value_t *context_pop(context_t *ctx)
+static xson_value_t *context_pop(context_t *ctx)
 {
     if (ctx->depth == 0) {
         JSON_ERROR (ctx, "context_pop: " "Bottom of stack reached prematurely");
         return NULL;
     }
     ctx->depth--;
-    json_value_t *v = ctx->stack[ctx->depth].value;
+    xson_value_t *v = ctx->stack[ctx->depth].value;
 //    ctx->stack[ctx->depth].value = NULL;
     return v;
 }
 
-static json_value_t *context_peek(context_t *ctx, bool key)
+static xson_value_t *context_peek(context_t *ctx, bool key)
 {
-    json_value_t *sval = ctx->stack[ctx->depth].value;
+    xson_value_t *sval = ctx->stack[ctx->depth].value;
     if (sval == NULL)
         return NULL;
 
-    if (sval->type == JSON_TYPE_OBJECT) {
+    if (sval->type == XSON_TYPE_OBJECT) {
         if (key)
             return sval;
         return &sval->object.keyval[sval->object.len-1].value;
-    } else if (sval->type == JSON_TYPE_ARRAY) {
-        json_value_t *tmp = realloc(sval->array.values,
+    } else if (sval->type == XSON_TYPE_ARRAY) {
+        xson_value_t *tmp = realloc(sval->array.values,
                                   sizeof(*sval->array.values) * (sval->array.len + 1));
         if (tmp == NULL) {
             JSON_ERROR ((context_t *) ctx, "Out of memory");
             return NULL;
         }
         sval->array.values = tmp;
-        json_value_t *jval = &sval->array.values[sval->array.len];
-        jval->type = JSON_TYPE_NULL;
+        xson_value_t *jval = &sval->array.values[sval->array.len];
+        jval->type = XSON_TYPE_NULL;
         sval->array.len++;
         return jval;
-    } else if (sval->type == JSON_TYPE_NULL) {
+    } else if (sval->type == XSON_TYPE_NULL) {
         return sval;
     }
 
@@ -95,35 +95,35 @@ static bool handle_string (void *ctx, const char *str, size_t str_len)
         memcpy(nstr, str, str_len);
     nstr[str_len] = 0;
 
-    json_value_t *jval = context_peek(ctx, false);
+    xson_value_t *jval = context_peek(ctx, false);
     if (jval == NULL) {
         free(nstr);
         return false;
     }
 
-    jval->type = JSON_TYPE_STRING;
+    jval->type = XSON_TYPE_STRING;
     jval->string = nstr;
     return true;
 }
 
 static bool handle_number(void * ctx, const char * number_val, size_t number_len)
 {
-    json_value_t *jval = context_peek(ctx, false);
+    xson_value_t *jval = context_peek(ctx, false);
     if (jval == NULL)
         return false;
     char num[64];
     sstrnncpy(num, sizeof(num), number_val, number_len);
-    jval->type = JSON_TYPE_NUMBER;
+    jval->type = XSON_TYPE_NUMBER;
     jval->number = atof(num); // FIXME
     return true;
 }
 
 static bool handle_start_map (void *ctx)
 {
-    json_value_t *jval = context_peek(ctx, false);
+    xson_value_t *jval = context_peek(ctx, false);
     if (jval == NULL)
         return false;
-    jval->type = JSON_TYPE_OBJECT;
+    jval->type = XSON_TYPE_OBJECT;
     jval->object.keyval = NULL;
     jval->object.len = 0;
 
@@ -142,13 +142,13 @@ static bool handle_map_key(void * ctx, const char *key, size_t size)
         memcpy(str_key, key, size);
     str_key[size] = 0;
 
-    json_value_t *jval = context_peek(ctx, true); // FIXME
+    xson_value_t *jval = context_peek(ctx, true); // FIXME
     if (jval == NULL) {
         free(str_key);
         return false;
     }
 
-    json_keyval_t *tmp = realloc(jval->object.keyval,
+    xson_keyval_t *tmp = realloc(jval->object.keyval,
                                  sizeof(*jval->object.keyval) * (jval->object.len + 1));
     if (tmp == NULL) {
         free(str_key);
@@ -158,7 +158,7 @@ static bool handle_map_key(void * ctx, const char *key, size_t size)
     jval->object.keyval = tmp;
 
     jval->object.keyval[jval->object.len].key = str_key;
-    jval->object.keyval[jval->object.len].value.type = JSON_TYPE_NULL;
+    jval->object.keyval[jval->object.len].value.type = XSON_TYPE_NULL;
     jval->object.len++;
 
     return true;
@@ -166,7 +166,7 @@ static bool handle_map_key(void * ctx, const char *key, size_t size)
 
 static bool handle_end_map (void *ctx)
 {
-    json_value_t *jval = context_pop (ctx);
+    xson_value_t *jval = context_pop (ctx);
     if (jval == NULL)
         return false;
     return true;
@@ -174,10 +174,10 @@ static bool handle_end_map (void *ctx)
 
 static bool handle_start_array (void *ctx)
 {
-    json_value_t *jval = context_peek(ctx, false);
+    xson_value_t *jval = context_peek(ctx, false);
     if (jval == NULL)
         return false;
-    jval->type = JSON_TYPE_ARRAY;
+    jval->type = XSON_TYPE_ARRAY;
     jval->array.values = NULL;
     jval->array.len = 0;
 
@@ -186,7 +186,7 @@ static bool handle_start_array (void *ctx)
 
 static bool handle_end_array (void *ctx)
 {
-    json_value_t *jval = context_pop(ctx);
+    xson_value_t *jval = context_pop(ctx);
     if (jval == NULL)
         return false;
     return true;
@@ -194,37 +194,37 @@ static bool handle_end_array (void *ctx)
 
 static bool handle_boolean (void *ctx, int value)
 {
-    json_value_t *jval = context_peek(ctx, false);
+    xson_value_t *jval = context_peek(ctx, false);
     if (jval == NULL)
         return false;
-    jval->type = value ? JSON_TYPE_TRUE : JSON_TYPE_FALSE;
+    jval->type = value ? XSON_TYPE_TRUE : XSON_TYPE_FALSE;
     return true;
 }
 
 static bool handle_null (void *ctx)
 {
-    json_value_t *jval = context_peek(ctx, false);
+    xson_value_t *jval = context_peek(ctx, false);
     if (jval == NULL)
         return false;
-    jval->type = JSON_TYPE_NULL;
+    jval->type = XSON_TYPE_NULL;
     return true;
 }
 
-static const json_callbacks_t callbacks = {
-   .json_null        =   handle_null,        /* null        = */
-   .json_boolean     =   handle_boolean,     /* boolean     = */
-   .json_integer     =   NULL,               /* integer     = */
-   .json_double      =   NULL,               /* double      = */
-   .json_number      =   handle_number,      /* number      = */
-   .json_string      =   handle_string,      /* string      = */
-   .json_start_map   =   handle_start_map,   /* start map   = */
-   .json_map_key     =   handle_map_key,     /* map key     = */
-   .json_end_map     =   handle_end_map,     /* end map     = */
-   .json_start_array =   handle_start_array, /* start array = */
-   .json_end_array   =   handle_end_array    /* end array   = */
+static const xson_callbacks_t callbacks = {
+   .xson_null        =   handle_null,        /* null        = */
+   .xson_boolean     =   handle_boolean,     /* boolean     = */
+   .xson_integer     =   NULL,               /* integer     = */
+   .xson_double      =   NULL,               /* double      = */
+   .xson_number      =   handle_number,      /* number      = */
+   .xson_string      =   handle_string,      /* string      = */
+   .xson_start_map   =   handle_start_map,   /* start map   = */
+   .xson_map_key     =   handle_map_key,     /* map key     = */
+   .xson_end_map     =   handle_end_map,     /* end map     = */
+   .xson_start_array =   handle_start_array, /* start array = */
+   .xson_end_array   =   handle_end_array    /* end array   = */
 };
 
-json_value_t *json_tree_parser(const char *input, char *error_buffer, size_t error_buffer_size)
+xson_value_t *xson_tree_parser(const char *input, char *error_buffer, size_t error_buffer_size)
 {
     context_t ctx = {
         .root = NULL,
@@ -239,7 +239,7 @@ json_value_t *json_tree_parser(const char *input, char *error_buffer, size_t err
     if (error_buffer != NULL)
         memset (error_buffer, 0, error_buffer_size);
 
-    ctx.root = json_value_alloc(JSON_TYPE_NULL);
+    ctx.root = xson_value_alloc(XSON_TYPE_NULL);
     ctx.stack[0].value = ctx.root;
     ctx.depth = 0;
 
@@ -265,18 +265,18 @@ json_value_t *json_tree_parser(const char *input, char *error_buffer, size_t err
     return ctx.root;
 }
 
-static xson_render_status_t render_value(xson_render_t *r, json_value_t *v)
+static xson_render_status_t render_value(xson_render_t *r, xson_value_t *v)
 {
     xson_render_status_t rstatus = 0;
 
     switch (v->type) {
-    case JSON_TYPE_STRING:
+    case XSON_TYPE_STRING:
         rstatus = xson_render_string(r, v->string);
         break;
-    case JSON_TYPE_NUMBER:
+    case XSON_TYPE_NUMBER:
         rstatus = xson_render_double(r, v->number);
         break;
-    case JSON_TYPE_OBJECT:
+    case XSON_TYPE_OBJECT:
         rstatus = xson_render_map_open(r);
         for (size_t i=0 ; i < v->object.len ; i++) {
             rstatus |= xson_render_key_string(r, v->object.keyval[i].key);
@@ -284,20 +284,20 @@ static xson_render_status_t render_value(xson_render_t *r, json_value_t *v)
         }
         rstatus |= xson_render_map_close(r);
         break;
-    case JSON_TYPE_ARRAY:
+    case XSON_TYPE_ARRAY:
         rstatus = xson_render_array_open(r);
         for (size_t i = 0; i < v->array.len; i++) {
             rstatus |= render_value(r, &v->array.values[i]);
         }
         rstatus |= xson_render_array_close(r);
         break;
-    case JSON_TYPE_TRUE:
+    case XSON_TYPE_TRUE:
         rstatus = xson_render_bool(r, true);
         break;
-    case JSON_TYPE_FALSE:
+    case XSON_TYPE_FALSE:
         rstatus = xson_render_bool(r, false);
         break;
-    case JSON_TYPE_NULL:
+    case XSON_TYPE_NULL:
         rstatus = xson_render_null(r);
         break;
     }
@@ -305,7 +305,7 @@ static xson_render_status_t render_value(xson_render_t *r, json_value_t *v)
     return rstatus;
 }
 
-int json_tree_render(json_value_t *v, strbuf_t *buf,
+int xson_tree_render(xson_value_t *v, strbuf_t *buf,
                      xson_render_type_t type, xson_render_option_t options)
 {
     if (v == NULL)

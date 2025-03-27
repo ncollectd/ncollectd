@@ -126,28 +126,28 @@ typedef enum {
  *  }
  */
 typedef struct {
-    bool (* json_null)(void * ctx);
-    bool (* json_boolean)(void * ctx, int bool_val);
-    bool (* json_integer)(void * ctx, long long integer_val);
-    bool (* json_double)(void * ctx, double double_val);
+    bool (* xson_null)(void * ctx);
+    bool (* xson_boolean)(void * ctx, int bool_val);
+    bool (* xson_integer)(void * ctx, long long integer_val);
+    bool (* xson_double)(void * ctx, double double_val);
     /** A callback which passes the string representation of the number
      *  back to the client.  Will be used for all numbers when present */
-    bool (* json_number)(void * ctx, const char * number_val, size_t number_len);
+    bool (* xson_number)(void * ctx, const char * number_val, size_t number_len);
 
     /** strings are returned as pointers into the JSON text when,
      * possible, as a result, they are _not_ null padded */
-    bool (* json_string)(void * ctx, const char * string_val, size_t string_len);
+    bool (* xson_string)(void * ctx, const char * string_val, size_t string_len);
 
-    bool (* json_start_map)(void * ctx);
-    bool (* json_map_key)(void * ctx, const char *key_val, size_t key_len);
-    bool (* json_end_map)(void * ctx);
+    bool (* xson_start_map)(void * ctx);
+    bool (* xson_map_key)(void * ctx, const char *key_val, size_t key_len);
+    bool (* xson_end_map)(void * ctx);
 
-    bool (* json_start_array)(void * ctx);
-    bool (* json_end_array)(void * ctx);
-} json_callbacks_t;
+    bool (* xson_start_array)(void * ctx);
+    bool (* xson_end_array)(void * ctx);
+} xson_callbacks_t;
 
 typedef struct {
-    const json_callbacks_t *callbacks;
+    const xson_callbacks_t *callbacks;
     void * ctx;
     json_lexer_t lexer;
     const char * parse_error;

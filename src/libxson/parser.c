@@ -215,46 +215,46 @@ around_again:
             json_bs_set(hand->state_stack, JSON_PARSER_STATE_LEXICAL_ERROR);
             goto around_again;
         case JSON_TOK_STRING:
-            if (hand->callbacks && hand->callbacks->json_string) {
-                _CC_CHK(hand->callbacks->json_string(hand->ctx, (const char *)buf, buf_len));
+            if (hand->callbacks && hand->callbacks->xson_string) {
+                _CC_CHK(hand->callbacks->xson_string(hand->ctx, (const char *)buf, buf_len));
             }
             break;
         case JSON_TOK_STRING_WITH_ESCAPES:
-            if (hand->callbacks && hand->callbacks->json_string) {
+            if (hand->callbacks && hand->callbacks->xson_string) {
                 json_buf_clear(&hand->decode_buf);
                 json_string_decode(&hand->decode_buf, buf, buf_len);
-                _CC_CHK(hand->callbacks->json_string(hand->ctx,
+                _CC_CHK(hand->callbacks->xson_string(hand->ctx,
                                                      (const char *)json_buf_data(&hand->decode_buf),
                                                      json_buf_len(&hand->decode_buf)));
             }
             break;
         case JSON_TOK_BOOL:
-            if (hand->callbacks && hand->callbacks->json_boolean) {
-                _CC_CHK(hand->callbacks->json_boolean(hand->ctx, *buf == 't'));
+            if (hand->callbacks && hand->callbacks->xson_boolean) {
+                _CC_CHK(hand->callbacks->xson_boolean(hand->ctx, *buf == 't'));
             }
             break;
         case JSON_TOK_NULL:
-            if (hand->callbacks && hand->callbacks->json_null) {
-                _CC_CHK(hand->callbacks->json_null(hand->ctx));
+            if (hand->callbacks && hand->callbacks->xson_null) {
+                _CC_CHK(hand->callbacks->xson_null(hand->ctx));
             }
             break;
         case JSON_TOK_LEFT_BRACKET:
-            if (hand->callbacks && hand->callbacks->json_start_map) {
-                _CC_CHK(hand->callbacks->json_start_map(hand->ctx));
+            if (hand->callbacks && hand->callbacks->xson_start_map) {
+                _CC_CHK(hand->callbacks->xson_start_map(hand->ctx));
             }
             state_to_push = JSON_PARSER_STATE_MAP_START;
             break;
         case JSON_TOK_LEFT_BRACE:
-            if (hand->callbacks && hand->callbacks->json_start_array) {
-                _CC_CHK(hand->callbacks->json_start_array(hand->ctx));
+            if (hand->callbacks && hand->callbacks->xson_start_array) {
+                _CC_CHK(hand->callbacks->xson_start_array(hand->ctx));
             }
             state_to_push = JSON_PARSER_STATE_ARRAY_START;
             break;
         case JSON_TOK_INTEGER:
             if (hand->callbacks) {
-                if (hand->callbacks->json_number) {
-                    _CC_CHK(hand->callbacks->json_number(hand->ctx,(const char *) buf, buf_len));
-                } else if (hand->callbacks->json_integer) {
+                if (hand->callbacks->xson_number) {
+                    _CC_CHK(hand->callbacks->xson_number(hand->ctx,(const char *) buf, buf_len));
+                } else if (hand->callbacks->xson_integer) {
                     long long int i = 0;
                     errno = 0;
                     i = json_parse_integer(buf, buf_len);
@@ -266,15 +266,15 @@ around_again:
                         else *offset = 0;
                         goto around_again;
                     }
-                    _CC_CHK(hand->callbacks->json_integer(hand->ctx, i));
+                    _CC_CHK(hand->callbacks->xson_integer(hand->ctx, i));
                 }
             }
             break;
         case JSON_TOK_DOUBLE:
             if (hand->callbacks) {
-                if (hand->callbacks->json_number) {
-                    _CC_CHK(hand->callbacks->json_number(hand->ctx, (const char *) buf, buf_len));
-                } else if (hand->callbacks->json_double) {
+                if (hand->callbacks->xson_number) {
+                    _CC_CHK(hand->callbacks->xson_number(hand->ctx, (const char *) buf, buf_len));
+                } else if (hand->callbacks->xson_double) {
                     double d = 0.0;
                     json_buf_clear(&hand->decode_buf);
                     json_buf_append(&hand->decode_buf, buf, buf_len);
@@ -290,7 +290,7 @@ around_again:
                         else *offset = 0;
                         goto around_again;
                     }
-                    _CC_CHK(hand->callbacks->json_double(hand->ctx, d));
+                    _CC_CHK(hand->callbacks->xson_double(hand->ctx, d));
                 }
             }
             break;
@@ -298,8 +298,8 @@ around_again:
             if (json_bs_current(hand->state_stack) ==
                 JSON_PARSER_STATE_ARRAY_START)
             {
-                if (hand->callbacks && hand->callbacks->json_end_array) {
-                    _CC_CHK(hand->callbacks->json_end_array(hand->ctx));
+                if (hand->callbacks && hand->callbacks->xson_end_array) {
+                    _CC_CHK(hand->callbacks->xson_end_array(hand->ctx));
                 }
                 json_bs_pop(hand->state_stack);
                 goto around_again;
@@ -347,7 +347,7 @@ around_again:
             json_bs_set(hand->state_stack, JSON_PARSER_STATE_LEXICAL_ERROR);
             goto around_again;
         case JSON_TOK_STRING_WITH_ESCAPES:
-            if (hand->callbacks && hand->callbacks->json_map_key) {
+            if (hand->callbacks && hand->callbacks->xson_map_key) {
                 json_buf_clear(&hand->decode_buf);
                 json_string_decode(&hand->decode_buf, buf, buf_len);
                 buf = json_buf_data(&hand->decode_buf);
@@ -355,8 +355,8 @@ around_again:
             }
             /* intentional fall-through */
         case JSON_TOK_STRING:
-            if (hand->callbacks && hand->callbacks->json_map_key) {
-                _CC_CHK(hand->callbacks->json_map_key(hand->ctx, (const char *)buf, buf_len));
+            if (hand->callbacks && hand->callbacks->xson_map_key) {
+                _CC_CHK(hand->callbacks->xson_map_key(hand->ctx, (const char *)buf, buf_len));
             }
             json_bs_set(hand->state_stack, JSON_PARSER_STATE_MAP_SEP);
             goto around_again;
@@ -364,8 +364,8 @@ around_again:
             if (json_bs_current(hand->state_stack) ==
                 JSON_PARSER_STATE_MAP_START)
             {
-                if (hand->callbacks && hand->callbacks->json_end_map) {
-                    _CC_CHK(hand->callbacks->json_end_map(hand->ctx));
+                if (hand->callbacks && hand->callbacks->xson_end_map) {
+                    _CC_CHK(hand->callbacks->xson_end_map(hand->ctx));
                 }
                 json_bs_pop(hand->state_stack);
                 goto around_again;
@@ -399,8 +399,8 @@ around_again:
         tok = json_lex_lex(&hand->lexer, json_txt, json_txt_len, offset, &buf, &buf_len);
         switch (tok) {
         case JSON_TOK_RIGHT_BRACKET:
-            if (hand->callbacks && hand->callbacks->json_end_map) {
-                _CC_CHK(hand->callbacks->json_end_map(hand->ctx));
+            if (hand->callbacks && hand->callbacks->xson_end_map) {
+                _CC_CHK(hand->callbacks->xson_end_map(hand->ctx));
             }
             json_bs_pop(hand->state_stack);
             goto around_again;
@@ -425,8 +425,8 @@ around_again:
         tok = json_lex_lex(&hand->lexer, json_txt, json_txt_len, offset, &buf, &buf_len);
         switch (tok) {
         case JSON_TOK_RIGHT_BRACE:
-            if (hand->callbacks && hand->callbacks->json_end_array) {
-                _CC_CHK(hand->callbacks->json_end_array(hand->ctx));
+            if (hand->callbacks && hand->callbacks->xson_end_array) {
+                _CC_CHK(hand->callbacks->xson_end_array(hand->ctx));
             }
             json_bs_pop(hand->state_stack);
             goto around_again;

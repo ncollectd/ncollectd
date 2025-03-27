@@ -457,18 +457,18 @@ static bool docker_container_stats_json_end_map(void *ctx)
     return false;
 }
 
-json_callbacks_t docker_container_stats_json_callbacks = {
-    .json_null        =  NULL,
-    .json_boolean     =  NULL,
-    .json_integer     =  NULL,
-    .json_double      =  NULL,
-    .json_number      =  docker_container_stats_json_number,
-    .json_string      =  NULL,
-    .json_start_map   =  docker_container_stats_json_start_map,
-    .json_map_key     =  docker_container_stats_json_map_key,
-    .json_end_map     =  docker_container_stats_json_end_map,
-    .json_start_array =  NULL,
-    .json_end_array   =  NULL,
+static xson_callbacks_t docker_container_stats_json_callbacks = {
+    .xson_null        =  NULL,
+    .xson_boolean     =  NULL,
+    .xson_integer     =  NULL,
+    .xson_double      =  NULL,
+    .xson_number      =  docker_container_stats_json_number,
+    .xson_string      =  NULL,
+    .xson_start_map   =  docker_container_stats_json_start_map,
+    .xson_map_key     =  docker_container_stats_json_map_key,
+    .xson_end_map     =  docker_container_stats_json_end_map,
+    .xson_start_array =  NULL,
+    .xson_end_array   =  NULL,
 };
 
 static void docker_stats_free(docker_stats_t *docker_stats)
@@ -987,18 +987,18 @@ static bool docker_container_info_json_end_map(void *ctx)
     return true;
 }
 
-static json_callbacks_t docker_container_info_json_callbacks = {
-   .json_null        =  NULL,
-   .json_boolean     =  NULL,
-   .json_integer     =  NULL,
-   .json_double      =  NULL,
-   .json_number      =  docker_container_info_json_number,
-   .json_string      =  docker_container_info_json_string,
-   .json_start_map   =  docker_container_info_json_start_map,
-   .json_map_key     =  docker_container_info_json_map_key,
-   .json_end_map     =  docker_container_info_json_end_map,
-   .json_start_array =  NULL,
-   .json_end_array   =  NULL,
+static xson_callbacks_t docker_container_info_json_callbacks = {
+   .xson_null        =  NULL,
+   .xson_boolean     =  NULL,
+   .xson_integer     =  NULL,
+   .xson_double      =  NULL,
+   .xson_number      =  docker_container_info_json_number,
+   .xson_string      =  docker_container_info_json_string,
+   .xson_start_map   =  docker_container_info_json_start_map,
+   .xson_map_key     =  docker_container_info_json_map_key,
+   .xson_end_map     =  docker_container_info_json_end_map,
+   .xson_start_array =  NULL,
+   .xson_end_array   =  NULL,
 };
 
 static size_t docker_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
