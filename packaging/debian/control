@@ -297,6 +297,12 @@ Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: The pgbouncer plugin collects metrics from a PgBouncer instance.
 
+Package: ncollectd-pgpool
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The pgpool plugin collects metrics from a Pgpool-II instance.
+
 Package: ncollectd-podman
 Section: utils
 Architecture: any

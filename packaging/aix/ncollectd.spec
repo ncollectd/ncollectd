@@ -57,6 +57,7 @@
 %define build_with_pdns 0%{!?_without_pdns:1}
 %define build_with_ping 0%{!?_without_ping:1}
 %define build_with_pgbouncer 0%{!?_without_pgbouncer:1}
+%define build_with_pgpool 0%{!?_without_pgpool:1}
 %define build_with_postgresql 0%{!?_without_postgresql:1}
 %define build_with_postfix 0%{!?_without_postfix:1}
 %define build_with_processes 0%{!?_without_processes:1}
@@ -287,6 +288,16 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: postgresql-devel
 %description pgbouncer
 The pgbouncer plugin collects metrics from a PgBouncer instance.
+%endif
+
+%if %{build_with_pgpool}
+%package pgpool
+Summary: Pgpool-II plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: postgresql-devel
+%description pgpool
+The pgpool plugin collects metrics from a Pgpool-II instance.
 %endif
 
 %if %{build_with_postgresql}
@@ -687,6 +698,12 @@ database.
 %define _build_with_pgbouncer -DPLUGIN_PGBOUNCER:BOOL=OFF
 %endif
 
+%if %{build_with_pgpool}
+%define _build_with_pgpool -DPLUGIN_PGPOOL:BOOL=ON
+%else
+%define _build_with_pgpool -DPLUGIN_PGPOOL:BOOL=OFF
+%endif
+
 %if %{build_with_postfix}
 %define _build_with_postfix -DPLUGIN_POSTFIX:BOOL=ON
 %else
@@ -961,6 +978,7 @@ export OBJECT_MODE=64
         %{?_build_with_pdns} \
         %{?_build_with_ping} \
         %{?_build_with_pgbouncer} \
+        %{?_build_with_pgpool} \
         %{?_build_with_postfix} \
         %{?_build_with_postgresql} \
         %{?_build_with_processes} \
@@ -1484,6 +1502,12 @@ fi
 %files pgbouncer
 %{_libdir}/%{name}/pgbouncer.so
 %{_datadir}/man/man5/ncollectd-pgbouncer.5*
+%endif
+
+%if %{build_with_pgpool}
+%files pgpool
+%{_libdir}/%{name}/pgpool.so
+%{_datadir}/man/man5/ncollectd-pgpool.5*
 %endif
 
 %if %{build_with_postgresql}

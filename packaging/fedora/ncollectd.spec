@@ -119,6 +119,7 @@
 %define build_with_pcap 0%{!?_without_pcap:1}
 %define build_with_perl 0%{!?_without_perl:1}
 %define build_with_pgbouncer 0%{!?_without_pgbouncer:1}
+%define build_with_pgpool 0%{!?_without_pgpool :1}
 %define build_with_ping 0%{!?_without_ping:1}
 %define build_with_podman 0%{!?_without_podman:1}
 %define build_with_postfix 0%{!?_without_postfix:1}
@@ -777,6 +778,16 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: postgresql-devel
 %description pgbouncer
 The pgbouncer plugin collects metrics from a PgBouncer instance.
+%endif
+
+%if %{build_with_pgpool}
+%package pgpool
+Summary: Pgpool-II plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: postgresql-devel
+%description pgpool
+The pgpool lugin collects metrics from a Pgpool-II instance.
 %endif
 
 %if %{build_with_podman}
@@ -1790,6 +1801,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_pgbouncer -DPLUGIN_PGBOUNCER:BOOL=OFF
 %endif
 
+%if %{build_with_pgpool}
+%define _build_with_pgpool -DPLUGIN_PGPOOL:BOOL=ON
+%else
+%define _build_with_pgpool -DPLUGIN_PGPOOL:BOOL=OFF
+%endif
+
 %if %{build_with_ping}
 %define _build_with_ping -DPLUGIN_PING:BOOL=ON
 %else
@@ -2369,6 +2386,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_perl} \
     %{?_build_with_pf} \
     %{?_build_with_pgbouncer} \
+    %{?_build_with_pgpool} \
     %{?_build_with_ping} \
     %{?_build_with_podman} \
     %{?_build_with_postfix} \
@@ -3293,6 +3311,12 @@ fi
 %files pgbouncer
 %{_libdir}/%{name}/pgbouncer.so
 %{_mandir}/man5/ncollectd-pgbouncer.5*
+%endif
+
+%if %{build_with_pgpool}
+%files pgpool
+%{_libdir}/%{name}/pgpool.so
+%{_mandir}/man5/ncollectd-pgpool.5*
 %endif
 
 %if %{build_with_podman}
