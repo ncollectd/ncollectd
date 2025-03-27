@@ -46,7 +46,6 @@ typedef enum {
     JSONPATH_MOD,                    /* expr % expr */
     JSONPATH_PLUS,                   /* + expr */
     JSONPATH_MINUS,                  /* - expr */
-    JSONPATH_ANYARRAY,               /* [*] */
     JSONPATH_ANYKEY,                 /* .* */
     JSONPATH_INDEXARRAY,             /* [subscript, ...] */
     JSONPATH_SLICE,                  /* [ start : end : step ] */
@@ -56,41 +55,39 @@ typedef enum {
     JSONPATH_CURRENT,                /* @ */
     JSONPATH_ROOT,                   /* $ */
     JSONPATH_FILTER,                 /* ? (predicate) */
-    JSONPATH_LENGTH,                 /* length() item method */
-    JSONPATH_COUNT,                  /* size() item method */
+    JSONPATH_ABS,                    /* abs() item method */
     JSONPATH_AVG,                    /* avg() item method */
     JSONPATH_MAX,                    /* max() item method */
     JSONPATH_MIN,                    /* min() item method */
-    JSONPATH_ABS,                    /* .abs() item method */
-    JSONPATH_FLOOR,                  /* .floor() item method */
-    JSONPATH_CEILING,                /* .ceiling() item method */
-    JSONPATH_DOUBLE,                 /* .double() item method */
-    JSONPATH_SUBSCRIPT,              /* array subscript: 'expr' or 'expr TO expr' */
+    JSONPATH_CEIL,
+    JSONPATH_VALUE,
+    JSONPATH_COUNT,                  /* size() item method */
+    JSONPATH_FLOOR,                  /* floor() item method */
+    JSONPATH_MATCH,
+    JSONPATH_DOUBLE,                 /* double() item method */
+    JSONPATH_LENGTH,                 /* length() item method */
+    JSONPATH_SEARCH,
 } jsonpath_item_type_t;
 
 typedef struct jsonpath_item jsonpath_item_t;
 
 struct jsonpath_item {
     jsonpath_item_type_t type;
-    jsonpath_item_t *next;    /* next in path */
-    jsonpath_item_t *shadow;  // FIXME
+    jsonpath_item_t *next;
+    jsonpath_item_t *follow;
     union {
-        /* classic operator with two operands: and, or etc */
         struct {
             jsonpath_item_t *left;
             jsonpath_item_t *right;
         } args;
-        /* any unary operation */
         jsonpath_item_t *arg;
         struct {
             int32_t len;
             jsonpath_item_t **items;
         } iunion;
-        /* storage for JSONPATH_INDEXARRAY: indexes of array */
         struct {
             int32_t idx;
         } array;
-        /* JSONPATH_ANY: levels */
         struct {
             uint32_t first;
             uint32_t last;
@@ -106,12 +103,11 @@ struct jsonpath_item {
             int flags;
             char *pattern;
         } regex;
-        /* scalars */
         double numeric;
         bool boolean;
         struct {
             uint32_t len;
-            char *val;    /* could not be not null-terminated */
+            char *val;
         } string;
     } value;
 };
@@ -132,30 +128,32 @@ typedef enum {
 } jsonpath_exec_result_t;
 
 typedef struct {
-    json_value_t *singleton;
+    xson_value_t *singleton;
     jsonpath_list_t *list;
-} json_value_list_t;
+} xson_value_list_t;
 
 typedef struct {
-    json_value_t *value;
+    xson_value_t *value;
     jsonpath_list_t *list;
     jsonpath_list_cell_t *next;
-} json_value_list_iterator_t;
+} xson_value_list_iterator_t;
 
-jsonpath_item_t *jsonpath_parser(const char *str);
+jsonpath_item_t *jsonpath_parser(const char *query, char *buffer_error, size_t buffer_error_size);
 
 void jsonpath_item_free(jsonpath_item_t *item);
 
-void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool inKey, bool printBracketes);
+void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool in_key, bool bsp, bool bracketes);
 
-jsonpath_exec_result_t jsonpath_exec(jsonpath_item_t *jsp,
-                                     json_value_t *json, bool throwErrors,
-                                     json_value_list_t *result);
+void jsonpath_dump_item(FILE *fp, jsonpath_item_t *v);
 
-void json_value_list_destroy(json_value_list_t *jvl);
+jsonpath_exec_result_t jsonpath_exec(jsonpath_item_t *jsp, xson_value_t *json, 
+                                     xson_value_list_t *result,
+                                     char *buffer_error, size_t buffer_error_size);
 
-void json_value_list_init_iterator(const json_value_list_t *jvl, json_value_list_iterator_t *it);
-json_value_t *json_value_list_next(const json_value_list_t *jvl, json_value_list_iterator_t *it);
+void xson_value_list_destroy(xson_value_list_t *jvl);
+
+void xson_value_list_init_iterator(const xson_value_list_t *jvl, xson_value_list_iterator_t *it);
+xson_value_t *xson_value_list_next(const xson_value_list_t *jvl, xson_value_list_iterator_t *it);
 
 
 #if 0
@@ -170,6 +168,19 @@ static inline bool jsonpath_has_next(jsonpath_item_t *v)
 static inline jsonpath_item_t *jsonpath_get_next(jsonpath_item_t *v)
 {
     return v->next;
+}
+
+static inline jsonpath_item_t *jsonpath_get_follow(jsonpath_item_t *v)
+{
+    return v->follow;
+}
+
+static inline jsonpath_item_t *jsonpath_get_next_follow(jsonpath_item_t *v)
+{
+    if (v->next != NULL)
+        return v->next;
+    else
+        return v->follow;
 }
 
 static inline jsonpath_item_t *jsonpath_get_arg(jsonpath_item_t *v)
@@ -205,3 +216,5 @@ static inline char *jsonpath_get_string(jsonpath_item_t *v, int32_t *len)
 }
 
 const char *jsonpath_operation_name(jsonpath_item_type_t type);
+const char *jsonpath_item_name(jsonpath_item_type_t item);
+
