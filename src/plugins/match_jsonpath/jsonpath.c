@@ -4,11 +4,12 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
+#include "libutils/common.h"
+#include "libutils/strbuf.h"
 
 #include <sys/uio.h>
 #include <regex.h>
 
-#include "libutils/strbuf.h"
 #include "plugins/match_jsonpath/jsonpath.h"
 #include "plugins/match_jsonpath/jsonpath_list.h"
 #include "plugins/match_jsonpath/jsonpath_internal.h"
@@ -16,6 +17,98 @@
 #define YYSTYPE JSONPATH_YYSTYPE
 #define YYLTYPE JSONPATH_YYLTYPE
 #include "plugins/match_jsonpath/jsonpath_scan.h"
+
+const char *jsonpath_item_name(jsonpath_item_type_t item)
+{
+    switch (item) {
+    case JSONPATH_NULL:
+        return "NULL";
+    case JSONPATH_STRING:
+        return "STRING";
+    case JSONPATH_NUMERIC:
+        return "NUMERIC";
+    case JSONPATH_BOOL:
+        return "BOOL";
+    case JSONPATH_AND:
+        return "AND";
+    case JSONPATH_OR:
+        return "OR";
+    case JSONPATH_NOT:
+        return "NOT";
+    case JSONPATH_EQUAL:
+        return "EQUAL";
+    case JSONPATH_NOTEQUAL:
+        return "NOTEQUAL";
+    case JSONPATH_LESS:
+        return "LESS";
+    case JSONPATH_GREATER:
+        return "GREATER";
+    case JSONPATH_LESSOREQUAL:
+        return "LESSOREQUAL";
+    case JSONPATH_GREATEROREQUAL:
+        return "GREATEROREQUAL";
+    case JSONPATH_REGEX:
+        return "REGEX";
+    case JSONPATH_ADD:
+        return "ADD";
+    case JSONPATH_SUB:
+        return "SUB";
+    case JSONPATH_MUL:
+        return "MUL";
+    case JSONPATH_DIV:
+        return "DIV";
+    case JSONPATH_MOD:
+        return "MOD";
+    case JSONPATH_PLUS:
+        return "PLUS";
+    case JSONPATH_MINUS:
+        return "MINUS";
+    case JSONPATH_ANYKEY:
+        return "ANYKEY";
+    case JSONPATH_INDEXARRAY:
+        return "INDEXARRAY";
+    case JSONPATH_SLICE:
+        return "SLICE";
+    case JSONPATH_KEY:
+        return "KEY";
+    case JSONPATH_UNION:
+        return "UNION";
+    case JSONPATH_DSC_UNION:
+        return "DSC_UNION";
+    case JSONPATH_CURRENT:
+        return "CURRENT";
+    case JSONPATH_ROOT:
+        return "ROOT";
+    case JSONPATH_FILTER:
+        return "FILTER";
+    case JSONPATH_ABS:
+        return "ABS";
+    case JSONPATH_AVG:
+        return "AVG";
+    case JSONPATH_MAX:
+        return "MAX";
+    case JSONPATH_MIN:
+        return "MIN";
+    case JSONPATH_CEIL:
+        return "CEIL";
+    case JSONPATH_VALUE:
+        return "VALUE";
+    case JSONPATH_COUNT:
+        return "COUNT";
+    case JSONPATH_FLOOR:
+        return "FLOOR";
+    case JSONPATH_MATCH:
+        return "MATCH";
+    case JSONPATH_DOUBLE:
+        return "DOUBLE";
+    case JSONPATH_LENGTH:
+        return "LENGTH";
+    case JSONPATH_SEARCH:
+        return "SEARCH";
+    }
+
+    return NULL;
+}
 
 const char * jsonpath_operation_name(jsonpath_item_type_t type)
 {
@@ -48,10 +141,6 @@ const char * jsonpath_operation_name(jsonpath_item_type_t type)
         return "/";
     case JSONPATH_MOD:
         return "%";
-    case JSONPATH_LENGTH:
-        return "length";
-    case JSONPATH_COUNT:
-        return "count";
     case JSONPATH_ABS:
         return "abs";
     case JSONPATH_AVG:
@@ -60,16 +149,23 @@ const char * jsonpath_operation_name(jsonpath_item_type_t type)
         return "max";
     case JSONPATH_MIN:
         return "min";
+    case JSONPATH_CEIL:
+        return "ceil";
+    case JSONPATH_VALUE:
+        return "value";
+    case JSONPATH_COUNT:
+        return "count";
     case JSONPATH_FLOOR:
         return "floor";
-    case JSONPATH_CEILING:
-        return "ceiling";
+    case JSONPATH_MATCH:
+        return "match";
     case JSONPATH_DOUBLE:
         return "double";
+    case JSONPATH_LENGTH:
+        return "length";
+    case JSONPATH_SEARCH:
+        return "search";
     default:
-#if 0
-        elog(ERROR, "unrecognized jsonpath item type: %d", type);
-#endif
         return NULL;
     }
 }
@@ -103,25 +199,32 @@ static int jsonpath_operation_priority(jsonpath_item_type_t op)
     }
 }
 
-void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool inKey, bool printBracketes)
+static inline bool jsonpath_operation_priority_lte(jsonpath_item_type_t op1,
+                                                   jsonpath_item_type_t op2)
+{
+    return jsonpath_operation_priority(op1) <= jsonpath_operation_priority(op2);
+}
+
+void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool in_key, bool bsp, bool bracketes)
 {
     jsonpath_item_t *elem;
 
     if (v == NULL)
         return;
-//    check_stack_depth();
-//    CHECK_FOR_INTERRUPTS();
+
     switch (v->type) {
     case JSONPATH_NULL:
         strbuf_putstr(buf, "null");
         break;
     case JSONPATH_KEY:
-        if (inKey)
+        if (in_key)
             strbuf_putchar(buf, '.');
         strbuf_putescape_json(buf, jsonpath_get_string(v, NULL));
         break;
     case JSONPATH_STRING:
+        strbuf_putchar(buf, '"');
         strbuf_putescape_json(buf, jsonpath_get_string(v, NULL));
+        strbuf_putchar(buf, '"');
         break;
     case JSONPATH_NUMERIC:
         if (jsonpath_has_next(v))
@@ -149,104 +252,113 @@ void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool inKey, bool pri
     case JSONPATH_MUL:
     case JSONPATH_DIV:
     case JSONPATH_MOD:
-        if (printBracketes)
+        if (bracketes)
             strbuf_putchar(buf, '(');
         elem = jsonpath_get_left_arg(v);
-        jsonpath_print_item(buf, elem, false,
-                          jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
-        strbuf_putchar(buf, ' ');
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        if (bsp)
+            strbuf_putchar(buf, ' ');
+        else if ((v->type == JSONPATH_AND) || (v->type == JSONPATH_OR))
+            strbuf_putchar(buf, ' ');
+
         strbuf_putstr(buf, jsonpath_operation_name(v->type));
-        strbuf_putchar(buf, ' ');
+        if (bsp)
+            strbuf_putchar(buf, ' ');
+        else if ((v->type == JSONPATH_AND) || (v->type == JSONPATH_OR))
+            strbuf_putchar(buf, ' ');
         elem = jsonpath_get_right_arg(v);
-        jsonpath_print_item(buf, elem, false,
-                          jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
-        if (printBracketes)
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        if (bracketes)
             strbuf_putchar(buf, ')');
         break;
     case JSONPATH_REGEX:
-        if (printBracketes)
+        if (bracketes)
             strbuf_putchar(buf, '(');
         elem = v->value.regex.expr;
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
-        strbuf_putstr(buf, "=~ /");
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        if (bsp)
+            strbuf_putstr(buf, "=~ \"");
+        else
+            strbuf_putstr(buf, "=~\"");
         strbuf_putescape_json(buf, v->value.regex.pattern);
-        if (printBracketes)
+        strbuf_putchar(buf, '\"');
+        if (bracketes)
             strbuf_putchar(buf, ')');
         break;
-#if 0
-        if (v->value.like_regex.flags) {
-            strbuf_putstr(buf, " flag \"");
-
-            if (v->value.like_regex.flags & JSP_REGEX_ICASE)
-                strbuf_putchar(buf, 'i');
-            if (v->value.like_regex.flags & JSP_REGEX_DOTALL)
-                strbuf_putchar(buf, 's');
-            if (v->value.like_regex.flags & JSP_REGEX_MLINE)
-                strbuf_putchar(buf, 'm');
-            if (v->value.like_regex.flags & JSP_REGEX_WSPACE)
-                strbuf_putchar(buf, 'x');
-            if (v->value.like_regex.flags & JSP_REGEX_QUOTE)
-                strbuf_putchar(buf, 'q');
-        }
-
-        break;
-#endif
     case JSONPATH_PLUS:
     case JSONPATH_MINUS:
-        if (printBracketes)
+        if (bracketes)
             strbuf_putchar(buf, '(');
         strbuf_putchar(buf, v->type == JSONPATH_PLUS ? '+' : '-');
         elem = jsonpath_get_arg(v);
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <=
-                            jsonpath_operation_priority(v->type));
-        if (printBracketes)
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        if (bracketes)
             strbuf_putchar(buf, ')');
         break;
     case JSONPATH_UNION: {
         strbuf_putchar(buf, '[');
-        for (int32_t i = 0; i < v->value.iunion.len; i++) {
-            if (i > 0)
-                strbuf_putchar(buf, ',');
-            jsonpath_print_item(buf, v->value.iunion.items[i], true, true);
+        if ((v->value.iunion.len == 1) && ((v->value.iunion.items[0]->type == JSONPATH_KEY) ||
+            (v->value.iunion.items[0]->type == JSONPATH_ANYKEY))) {
+            if (v->value.iunion.items[0]->type == JSONPATH_KEY) {
+                strbuf_putchar(buf, '\'');
+                strbuf_putescape_squote(buf, jsonpath_get_string(v->value.iunion.items[0], NULL));
+                strbuf_putchar(buf, '\'');
+            } else {
+                strbuf_putchar(buf, '*');
+            }
+        } else {
+            for (int32_t i = 0; i < v->value.iunion.len; i++) {
+                if (i > 0)
+                    strbuf_putchar(buf, ',');
+                jsonpath_print_item(buf, v->value.iunion.items[i], false, bsp, true);
+            }
         }
         strbuf_putchar(buf, ']');
     }   break;
     case JSONPATH_DSC_UNION: {
         strbuf_putstr(buf, "..[");
-        for (int32_t i = 0; i < v->value.iunion.len; i++) {
-            if (i > 0)
-                strbuf_putchar(buf, ',');
-            jsonpath_print_item(buf, v->value.iunion.items[i], true, true);
+        if ((v->value.iunion.len == 1) && ((v->value.iunion.items[0]->type == JSONPATH_KEY) ||
+            (v->value.iunion.items[0]->type == JSONPATH_ANYKEY))) {
+            if (v->value.iunion.items[0]->type == JSONPATH_KEY) {
+                strbuf_putchar(buf, '\'');
+                strbuf_putescape_squote(buf, jsonpath_get_string(v->value.iunion.items[0], NULL));
+                strbuf_putchar(buf, '\'');
+            } else {
+                strbuf_putchar(buf, '*');
+            }
+        } else {
+            for (int32_t i = 0; i < v->value.iunion.len; i++) {
+                if (i > 0)
+                    strbuf_putchar(buf, ',');
+                jsonpath_print_item(buf, v->value.iunion.items[i], false, bsp, true);
+            }
         }
         strbuf_putchar(buf, ']');
     }   break;
     case JSONPATH_FILTER:
         strbuf_putstr(buf, "?(");
         elem = jsonpath_get_arg(v);
-        jsonpath_print_item(buf, elem, false, false);
+        jsonpath_print_item(buf, elem, false, bsp, false);
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_NOT:
         strbuf_putstr(buf, "!(");
         elem = jsonpath_get_arg(v);
-        jsonpath_print_item(buf, elem, false, false);
+        jsonpath_print_item(buf, elem, false, bsp, false);
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_CURRENT:
-//        Assert(!inKey);
         strbuf_putchar(buf, '@');
         break;
     case JSONPATH_ROOT:
-//        Assert(!inKey);
         strbuf_putchar(buf, '$');
         break;
-    case JSONPATH_ANYARRAY:
-        strbuf_putstr(buf, "[*]");
-        break;
     case JSONPATH_ANYKEY:
-        if (inKey)
+        if (in_key)
             strbuf_putchar(buf, '.');
         strbuf_putchar(buf, '*');
         break;
@@ -267,49 +379,94 @@ void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool inKey, bool pri
     case JSONPATH_LENGTH:
         strbuf_putstr(buf, "length(");
         elem = v->value.regex.expr;
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_COUNT:
         strbuf_putstr(buf, "count(");
         elem = v->value.regex.expr;
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ')');
+        break;
+    case JSONPATH_MATCH:
+        strbuf_putstr(buf, "match(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ',');
+        strbuf_putstr(buf, "\"");
+        strbuf_putescape_json(buf, v->value.regex.pattern);
+        strbuf_putchar(buf, '\"');
+        strbuf_putchar(buf, ')');
+        break;
+    case JSONPATH_SEARCH:
+        strbuf_putstr(buf, "search(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ',');
+        strbuf_putstr(buf, "\"");
+        strbuf_putescape_json(buf, v->value.regex.pattern);
+        strbuf_putchar(buf, '\"');
+        strbuf_putchar(buf, ')');
+        break;
+    case JSONPATH_VALUE:
+        strbuf_putstr(buf, "value(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_AVG:
         strbuf_putstr(buf, "avg(");
         elem = v->value.regex.expr;
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_MAX:
         strbuf_putstr(buf, "max(");
         elem = v->value.regex.expr;
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_MIN:
         strbuf_putstr(buf, "min(");
         elem = v->value.regex.expr;
-        jsonpath_print_item(buf, elem, false,
-                            jsonpath_operation_priority(elem->type) <= jsonpath_operation_priority(v->type));
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
         strbuf_putchar(buf, ')');
         break;
     case JSONPATH_ABS:
-        strbuf_putstr(buf, ".abs()");
+        strbuf_putstr(buf, "abs(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ')');
+        break;
+    case JSONPATH_CEIL:
+        strbuf_putstr(buf, "ceil(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ')');
         break;
     case JSONPATH_FLOOR:
-        strbuf_putstr(buf, ".floor()");
-        break;
-    case JSONPATH_CEILING:
-        strbuf_putstr(buf, ".ceiling()");
+        strbuf_putstr(buf, "floor(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ')');
         break;
     case JSONPATH_DOUBLE:
-        strbuf_putstr(buf, ".double()");
+        strbuf_putstr(buf, "double(");
+        elem = v->value.regex.expr;
+        jsonpath_print_item(buf, elem, false, bsp,
+                            jsonpath_operation_priority_lte(elem->type, v->type));
+        strbuf_putchar(buf, ')');
         break;
     default:
         fprintf(stderr, "unrecognized jsonpath item type: %u\n", v->type);
@@ -318,36 +475,22 @@ void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool inKey, bool pri
 
     elem = jsonpath_get_next(v);
     if (elem != NULL)
-        jsonpath_print_item(buf, elem, true, true);
+        jsonpath_print_item(buf, elem, true, bsp, true);
+}
+
+void jsonpath_dump_item(FILE *fp, jsonpath_item_t *v)
+{
+    strbuf_t buf = {0};
+    jsonpath_print_item(&buf, v, false, true, true);
+    if (buf.ptr != NULL)
+        fputs(buf.ptr, fp);
+    strbuf_destroy(&buf);
 }
 
 void jsonpath_item_free(jsonpath_item_t *item)
 {
     if (item == NULL)
         return;
-
-    jsonpath_item_t *head = item;
-    while (item != NULL) {
-        if ((item->type == JSONPATH_UNION) || (item->type == JSONPATH_DSC_UNION)){
-            jsonpath_item_t *next = item->shadow;
-            if (next != NULL) {
-                for (int32_t i = 0; i < item->value.iunion.len; i++) {
-                    jsonpath_item_t *uitem = item->value.iunion.items[i];
-                    while (uitem != NULL) {
-                        if (uitem->next == next)
-                            uitem->next = NULL;
-                        uitem = uitem->next;
-                    }
-                }
-                item->next = item->shadow;
-            }
-            item = item->next;
-        } else {
-            item = item->next;
-        }
-    }
-
-    item = head;
 
     while (item != NULL) {
         switch (item->type) {
@@ -356,7 +499,6 @@ void jsonpath_item_free(jsonpath_item_t *item)
         case JSONPATH_NUMERIC:
         case JSONPATH_CURRENT:
         case JSONPATH_ROOT:
-        case JSONPATH_ANYARRAY:
         case JSONPATH_ANYKEY:
         case JSONPATH_INDEXARRAY:
         case JSONPATH_SLICE:
@@ -382,6 +524,8 @@ void jsonpath_item_free(jsonpath_item_t *item)
             jsonpath_item_free(jsonpath_get_right_arg(item));
             break;
         case JSONPATH_REGEX:
+        case JSONPATH_MATCH:
+        case JSONPATH_SEARCH:
             jsonpath_item_free(item->value.regex.expr);
             free(item->value.regex.pattern);
             regfree(&item->value.regex.regex);
@@ -399,19 +543,17 @@ void jsonpath_item_free(jsonpath_item_t *item)
             }
             free(item->value.iunion.items);
             break;
-        case JSONPATH_LENGTH:
-        case JSONPATH_COUNT:
+        case JSONPATH_ABS:
         case JSONPATH_AVG:
         case JSONPATH_MAX:
         case JSONPATH_MIN:
-            jsonpath_item_free(jsonpath_get_arg(item));
-            break;
-        case JSONPATH_ABS:
+        case JSONPATH_CEIL:
+        case JSONPATH_VALUE:
+        case JSONPATH_COUNT:
         case JSONPATH_FLOOR:
-        case JSONPATH_CEILING:
         case JSONPATH_DOUBLE:
-
-        case JSONPATH_SUBSCRIPT: // FIXME
+        case JSONPATH_LENGTH:
+            jsonpath_item_free(jsonpath_get_arg(item));
             break;
         }
 
@@ -421,41 +563,98 @@ void jsonpath_item_free(jsonpath_item_t *item)
     }
 }
 
-/* Interface to jsonpath parser */
-jsonpath_item_t *jsonpath_parser(const char *query)
+static void jsonpath_fill_followers(jsonpath_item_t *item)
+{
+    if (item == NULL)
+        return;
+
+    while (item != NULL) {
+        switch (item->type) {
+        case JSONPATH_BOOL:
+        case JSONPATH_NULL:
+        case JSONPATH_NUMERIC:
+        case JSONPATH_CURRENT:
+        case JSONPATH_ROOT:
+        case JSONPATH_ANYKEY:
+        case JSONPATH_INDEXARRAY:
+        case JSONPATH_SLICE:
+        case JSONPATH_KEY:
+        case JSONPATH_STRING:
+            break;
+        case JSONPATH_AND:
+        case JSONPATH_OR:
+        case JSONPATH_EQUAL:
+        case JSONPATH_NOTEQUAL:
+        case JSONPATH_LESS:
+        case JSONPATH_GREATER:
+        case JSONPATH_LESSOREQUAL:
+        case JSONPATH_GREATEROREQUAL:
+        case JSONPATH_ADD:
+        case JSONPATH_SUB:
+        case JSONPATH_MUL:
+        case JSONPATH_DIV:
+        case JSONPATH_MOD:
+            jsonpath_fill_followers(jsonpath_get_left_arg(item));
+            jsonpath_fill_followers(jsonpath_get_right_arg(item));
+            break;
+        case JSONPATH_REGEX:
+        case JSONPATH_MATCH:
+        case JSONPATH_SEARCH:
+            jsonpath_fill_followers(item->value.regex.expr);
+            break;
+        case JSONPATH_PLUS:
+        case JSONPATH_MINUS:
+        case JSONPATH_NOT:
+        case JSONPATH_FILTER:
+            jsonpath_fill_followers(jsonpath_get_arg(item));
+            break;
+        case JSONPATH_UNION:
+        case JSONPATH_DSC_UNION: {
+            jsonpath_item_t *inext = jsonpath_get_next(item);
+            for (int32_t i = 0; i < item->value.iunion.len; i++) {
+                jsonpath_item_t *uitem = item->value.iunion.items[i];
+                while (uitem != NULL) {
+                    if (uitem->next == NULL)
+                        break;
+                    uitem = uitem->next;
+                }
+                if (uitem != NULL)
+                    uitem->follow = inext;
+            }
+        }   break;
+        case JSONPATH_ABS:
+        case JSONPATH_AVG:
+        case JSONPATH_MAX:
+        case JSONPATH_MIN:
+        case JSONPATH_CEIL:
+        case JSONPATH_VALUE:
+        case JSONPATH_COUNT:
+        case JSONPATH_FLOOR:
+        case JSONPATH_DOUBLE:
+        case JSONPATH_LENGTH:
+            jsonpath_fill_followers(jsonpath_get_arg(item));
+            break;
+        }
+
+        jsonpath_item_t *next = jsonpath_get_next(item);
+        item = next;
+    }
+}
+
+jsonpath_item_t *jsonpath_parser(const char *query, char *buffer_error, size_t buffer_error_size)
 {
     yyscan_t scanner;
 
     jsonpath_string_t scanstring = {0};
     jsonpath_yylex_init_extra(&scanstring, &scanner);
-//    jsonpath_yyset_debug(1, scanner);
+//  jsonpath_yyset_debug(1, scanner);
 
     YY_BUFFER_STATE  buffer = jsonpath_yy_scan_string(query, scanner);
-
-#if 0
-    /* Might be left over after ereport() */
-    // yy_init_globals();
-
-    /* Make a scan buffer with special termination needed by flex.  */
-    char *scanbuf = malloc(slen + 2);
-    if (scanbuf == NULL) {
-        // FIXME
-    }
-    memcpy(scanbuf, str, slen);
-    scanbuf[slen] = scanbuf[slen + 1] = '\0';
-    YY_BUFFER_STATE scanbufhandle = jsonpath_yy_scan_buffer(scanbuf, slen + 2, scanner);
-#endif
-    // BEGIN(INITIAL);
 
     jsonpath_parse_result_t parse_result = {0};
     parse_result.expr = NULL;
     parse_result.error = true;
     int status = jsonpath_yyparse(scanner, &parse_result);
-#if 0
-    if (status != 0)  {
-       jsonpath_yyerror(yylloc, NULL, escontext, "invalid input"); /* shouldn't happen */
-    }
-#endif
 
     jsonpath_yy_delete_buffer(buffer, scanner);
     jsonpath_yylex_destroy(scanner);
@@ -465,32 +664,15 @@ jsonpath_item_t *jsonpath_parser(const char *query)
         if (parse_result.error == true) {
             if (parse_result.expr != NULL)
                 jsonpath_item_free(parse_result.expr);
-            PLUGIN_ERROR("Failed to parse '%s': %s", query, parse_result.error_msg);
+            if ((buffer_error != NULL) && (buffer_error_size > 0)) {
+                buffer_error[0] = '\0';
+                sstrncpy(buffer_error, parse_result.error_msg, buffer_error_size);
+            }
         }
         return NULL;
     }
 
-    jsonpath_item_t *item = parse_result.expr;
-    while (item != NULL) {
-        if ((item->type == JSONPATH_UNION) || (item->type == JSONPATH_DSC_UNION)){
-            for (int32_t i = 0; i < item->value.iunion.len; i++) {
-                jsonpath_item_t *uitem = item->value.iunion.items[i];
-                while (uitem != NULL) {
-                    if (uitem->next == NULL)
-                        break;
-                    uitem = uitem->next;
-                }
-                if (uitem != NULL)
-                    uitem->next = item->next;
-            }
-            jsonpath_item_t *prev = item;
-            item = item->next;
-            prev->shadow = prev->next;
-            prev->next = NULL;
-        } else {
-            item = item->next;
-        }
-    }
+    jsonpath_fill_followers(parse_result.expr);
 
     return parse_result.expr;
 }

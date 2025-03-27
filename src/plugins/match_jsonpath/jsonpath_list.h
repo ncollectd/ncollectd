@@ -37,8 +37,6 @@ static inline jsonpath_list_cell_t *jsonpath_list_second_cell(const jsonpath_lis
 
 static inline jsonpath_list_cell_t *jsonpath_list_nth_cell(const jsonpath_list_t *list, int n)
 {
-//    Assert(list != NIL);
-//    Assert(n >= 0 && n < list->length);
     return &list->elements[n];
 }
 
@@ -53,9 +51,8 @@ static inline jsonpath_list_cell_t *jsonpath_list_last_cell(const jsonpath_list_
 #define jsonpath_list_initial(l)   jsonpath_list_first(jsonpath_list_nth_cell(l, 0))
 #define jsonpath_list_last(l)      jsonpath_list_first(jsonpath_list_last_cell(l))
 
-static void jsonpath_list_enlarge(jsonpath_list_t *list, int min_size)
+static int jsonpath_list_enlarge(jsonpath_list_t *list, int min_size)
 {
-//    Assert(min_size > list->max_length);    /* else we shouldn't be here */
     int new_max_len = min_size;
 
     if (list->elements == list->initial_elements) {
@@ -67,26 +64,31 @@ static void jsonpath_list_enlarge(jsonpath_list_t *list, int min_size)
          * to create such a guarantee now.)
          */
         list->elements = calloc(1, new_max_len * sizeof(jsonpath_list_cell_t));
-        // FIXME NULL
+        if (list->elements == NULL)
+            return -1;
         memcpy(list->elements, list->initial_elements, list->length * sizeof(jsonpath_list_cell_t));
-
-    }
-    else
-    {
+    } else {
         /* Normally, let repalloc deal with enlargement */
-        list->elements = realloc(list->elements, new_max_len * sizeof(jsonpath_list_cell_t));
-        // FIXME NULL
+        jsonpath_list_cell_t *tmp = realloc(list->elements,
+                                            new_max_len * sizeof(jsonpath_list_cell_t));
+        if (tmp == NULL)
+            return -1;
+        list->elements = tmp;
     }
 
     list->max_length = new_max_len;
+    return 0;
 }
 
-static void jsonpath_list_new_tail_cell(jsonpath_list_t *list)
+static int jsonpath_list_new_tail_cell(jsonpath_list_t *list)
 {
     /* Enlarge array if necessary */
-    if (list->length >= list->max_length)
-        jsonpath_list_enlarge(list, list->length + 1);
+    if (list->length >= list->max_length) {
+        if (jsonpath_list_enlarge(list, list->length + 1) != 0)
+            return -1;
+    }
     list->length++;
+    return 0;
 }
 
 static inline jsonpath_list_t *jsonpath_list_new(int min_size)
@@ -103,20 +105,19 @@ static inline jsonpath_list_t *jsonpath_list_new(int min_size)
 
 static inline jsonpath_list_t *jsonpath_list_append(jsonpath_list_t *list, void *datum)
 {
-//  Assert(IsPointerList(list));
-    if (list == NULL)
+    if (list == NULL) {
         list = jsonpath_list_new(1);
-    else
-        jsonpath_list_new_tail_cell(list);
+    } else {
+        if (jsonpath_list_new_tail_cell(list) != 0)
+            return list;
+    }
 
     jsonpath_list_last(list) = datum;
-//    check_list_invariants(list);
     return list;
 }
 
 static inline jsonpath_list_t *jsonpath_list_prepend(jsonpath_list_t *list, void *datum)
 {
-//  Assert(IsPointerList(list));
     if (list == NULL) {
         list = jsonpath_list_new(1);
         jsonpath_list_last(list) = datum;
@@ -132,10 +133,8 @@ static inline jsonpath_list_t *jsonpath_list_prepend(jsonpath_list_t *list, void
     return list;
 }
 
-static inline jsonpath_list_cell_t *jsonpath_list_next(jsonpath_list_t *l,
-                                                       jsonpath_list_cell_t *c)
+static inline jsonpath_list_cell_t *jsonpath_list_next(jsonpath_list_t *l, jsonpath_list_cell_t *c)
 {
-//    Assert(c >= &l->elements[0] && c < &l->elements[l->length]);
     c++;
     if (c < &l->elements[l->length])
         return c;
@@ -156,9 +155,6 @@ static inline void jsonpath_list_free(jsonpath_list_t *list)
 
 static inline jsonpath_list_t *jsonpath_list_delete_nth_cell(jsonpath_list_t *list, int n)
 {
-//   check_list_invariants(list);
-//   Assert(n >= 0 && n < list->length);
-
     if (list->length == 1) {
         jsonpath_list_free(list);
         return NULL;
@@ -197,8 +193,8 @@ static inline jsonpath_list_t *jsonpath_list_make2(void *datum1, void *datum2)
 }
 
 typedef struct {
-    const jsonpath_list_t *l;              /* list we're looping through */
-    int         i;              /* current element index */
+    const jsonpath_list_t *l;  /* list we're looping through */
+    int         i;             /* current element index */
 } jsonpath_list_for_each_state_t;
 
 #define for_each_from(cell, lst, N) \
@@ -212,8 +208,6 @@ typedef struct {
 static inline jsonpath_list_for_each_state_t for_each_from_setup(const jsonpath_list_t *lst, int N)
 {
     jsonpath_list_for_each_state_t r = {lst, N};
-
-//    Assert(N >= 0);
     return r;
 }
 
@@ -224,4 +218,3 @@ static inline jsonpath_list_for_each_state_t for_each_from_setup(const jsonpath_
          (cell = &cell##__state.l->elements[cell##__state.i], true) : \
          (cell = NULL, false); \
          cell##__state.i++)
-

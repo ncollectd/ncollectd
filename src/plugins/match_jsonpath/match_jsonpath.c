@@ -48,109 +48,109 @@ typedef struct {
     match_jsonpath_metric_t *metrics;
 } match_jsonpath_t;
 
-static char *metric_path_match_string(metric_path_t *mpath, json_value_t *val)
+static char *metric_path_match_string(metric_path_t *mpath, xson_value_t *val)
 {
-    json_value_list_t vresult = {0};
-    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, true, &vresult);
+    xson_value_list_t vresult = {0};
+    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, &vresult, NULL, 0);
     if (eresult == JSONPATH_EXEC_RESULT_NOT_FOUND) {
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
         return NULL;
     }
 
     if (eresult == JSONPATH_EXEC_RESULT_ERROR) {
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
         return NULL;
     }
 
     if (vresult.list != NULL) {
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
         return NULL;
     }
 
     if (vresult.singleton != NULL) {
-        json_value_t *value = vresult.singleton;
+        xson_value_t *value = vresult.singleton;
         switch(value->type) {
-        case JSON_TYPE_NULL:
-        case JSON_TYPE_OBJECT:
-        case JSON_TYPE_ARRAY:
+        case XSON_TYPE_NULL:
+        case XSON_TYPE_OBJECT:
+        case XSON_TYPE_ARRAY:
             break;
-        case JSON_TYPE_STRING: {
+        case XSON_TYPE_STRING: {
              char *str = strdup(value->string);
-             json_value_list_destroy(&vresult);
+             xson_value_list_destroy(&vresult);
              return str;
         }    break;
-        case JSON_TYPE_NUMBER: {
+        case XSON_TYPE_NUMBER: {
             char number[DTOA_MAX];
             dtoa(value->number, number, sizeof(number));
-             json_value_list_destroy(&vresult);
+             xson_value_list_destroy(&vresult);
             return strdup(number);
         }   break;
-        case JSON_TYPE_TRUE:
-            json_value_list_destroy(&vresult);
+        case XSON_TYPE_TRUE:
+            xson_value_list_destroy(&vresult);
             return strdup("true");
             break;
-        case JSON_TYPE_FALSE:
-            json_value_list_destroy(&vresult);
+        case XSON_TYPE_FALSE:
+            xson_value_list_destroy(&vresult);
             return strdup("false");
             break;
         }
     }
 
-    json_value_list_destroy(&vresult);
+    xson_value_list_destroy(&vresult);
     return NULL;
 }
 
-static cdtime_t metric_path_match_time(metric_path_t *mpath, json_value_t *val)
+static cdtime_t metric_path_match_time(metric_path_t *mpath, xson_value_t *val)
 {
-    json_value_list_t vresult = {0};
-    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, true, &vresult);
+    xson_value_list_t vresult = {0};
+    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, &vresult, NULL, 0);
     if (eresult == JSONPATH_EXEC_RESULT_NOT_FOUND) {
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
         return 0;
     }
 
     if (eresult == JSONPATH_EXEC_RESULT_ERROR) {
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
         return 0;
     }
 
     if (vresult.list != NULL) {
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
         return 0;
     }
 
     if (vresult.singleton != NULL) {
-        json_value_t *value = vresult.singleton;
+        xson_value_t *value = vresult.singleton;
         switch(value->type) {
-        case JSON_TYPE_NULL:
-        case JSON_TYPE_OBJECT:
-        case JSON_TYPE_ARRAY:
-        case JSON_TYPE_TRUE:
-        case JSON_TYPE_FALSE:
+        case XSON_TYPE_NULL:
+        case XSON_TYPE_OBJECT:
+        case XSON_TYPE_ARRAY:
+        case XSON_TYPE_TRUE:
+        case XSON_TYPE_FALSE:
             break;
-        case JSON_TYPE_STRING: {
+        case XSON_TYPE_STRING: {
             double number = 0;
             int status = strtodouble(value->string, &number);
             if (status == 0)
                 return DOUBLE_TO_CDTIME_T(number);
             return 0;
         }   break;
-        case JSON_TYPE_NUMBER: {
+        case XSON_TYPE_NUMBER: {
             double number = value->number;
-            json_value_list_destroy(&vresult);
+            xson_value_list_destroy(&vresult);
             return DOUBLE_TO_CDTIME_T(number);
         }   break;
         }
         return 0;
     }
 
-    json_value_list_destroy(&vresult);
+    xson_value_list_destroy(&vresult);
     return 0;
 }
 
 static int match_jsonpath_match_metric(match_metric_family_set_t *set,
                                        match_jsonpath_t *jp, match_jsonpath_metric_t *jp_metric,
-                                       json_value_t *root, json_value_t *current)
+                                       xson_value_t *root, xson_value_t *current)
 {
     strbuf_t buf = STRBUF_CREATE;
 
@@ -255,7 +255,7 @@ static int match_jsonpath_match(match_metric_family_set_t *set, char *buffer, vo
         return -1;
 
     char error[256] = {'\0'};
-    json_value_t *root = json_tree_parser(buffer, error, sizeof(error));
+    xson_value_t *root = xson_tree_parser(buffer, error, sizeof(error));
     if (root == NULL) {
         PLUGIN_ERROR("Error parsing json: %s", error);
         return -1;
@@ -264,15 +264,15 @@ static int match_jsonpath_match(match_metric_family_set_t *set, char *buffer, vo
     match_jsonpath_metric_t *jp_metric = NULL;
     for (jp_metric = jp->metrics; jp_metric != NULL; jp_metric = jp_metric->next) {
 
-        json_value_list_t vresult = {0};
-        jsonpath_exec_result_t eresult = jsonpath_exec(jp_metric->path.expr, root, true, &vresult);
+        xson_value_list_t vresult = {0};
+        jsonpath_exec_result_t eresult = jsonpath_exec(jp_metric->path.expr, root, &vresult, NULL, 0);
         if (eresult == JSONPATH_EXEC_RESULT_NOT_FOUND) {
-            json_value_list_destroy(&vresult);
+            xson_value_list_destroy(&vresult);
             continue;
         }
 
         if (eresult == JSONPATH_EXEC_RESULT_ERROR) {
-            json_value_list_destroy(&vresult);
+            xson_value_list_destroy(&vresult);
             continue;
         }
 
@@ -285,10 +285,10 @@ static int match_jsonpath_match(match_metric_family_set_t *set, char *buffer, vo
             }
         }
 
-        json_value_list_destroy(&vresult);
+        xson_value_list_destroy(&vresult);
     }
 
-    json_value_free(root);
+    xson_value_free(root);
 
     return 0;
 }
@@ -368,10 +368,10 @@ static int config_metric_path(const config_item_t *ci, metric_path_t *mpath)
         return -1;
     }
 
-    // char error[256] = {'\0'};
-    mpath->expr = jsonpath_parser(mpath->path);
+    char error[256] = {'\0'};
+    mpath->expr = jsonpath_parser(mpath->path, error, sizeof(error));
     if (mpath->expr == NULL) {
-        PLUGIN_ERROR("Parsing jsonpath: '%s' failed.", mpath->path);
+        PLUGIN_ERROR("Parsing jsonpath: '%s' failed: %s.", mpath->path, error);
         free(mpath->path);
         mpath->path = NULL;
         return -1;
@@ -379,7 +379,9 @@ static int config_metric_path(const config_item_t *ci, metric_path_t *mpath)
 
     return 0;
 }
-static int config_metric_path_label_append(const config_item_t *ci, metric_label_path_t **var, size_t *len)
+
+static int config_metric_path_label_append(const config_item_t *ci, metric_label_path_t **var,
+                                           size_t *len)
 {
     if (ci->values_num != 2) {
         PLUGIN_ERROR("'%s' expects two arguments.", ci->key);
@@ -410,10 +412,11 @@ static int config_metric_path_label_append(const config_item_t *ci, metric_label
         PLUGIN_ERROR("strdup failed.");
         return -1;
     }
-
-    tmp[*len].path.expr = jsonpath_parser(tmp[*len].path.path);
+    
+    char error[256] = {'\0'};
+    tmp[*len].path.expr = jsonpath_parser(tmp[*len].path.path, error, sizeof(error));
     if (tmp[*len].path.expr == NULL) {
-        PLUGIN_ERROR("Parsing jsonpath: '%s' failed.", tmp[*len].path.path);
+        PLUGIN_ERROR("Parsing jsonpath: '%s' failed: %s.", tmp[*len].path.path, error);
         free(tmp[*len].key);
         free(tmp[*len].path.path);
         return -1;
@@ -534,7 +537,6 @@ static int config_match_jsonpath_metric(const config_item_t *ci, match_jsonpath_
                      cf_get_file(ci), cf_get_lineno(ci));
         return -1;
     }
-
 
     if ((jp_metric->time_path.expr != NULL) && (jp_metric->time_root_path.expr != NULL)) {
         PLUGIN_ERROR("Error 'time-path' and 'time-root-path' "
