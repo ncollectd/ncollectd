@@ -119,7 +119,7 @@
 %define build_with_pcap 0%{!?_without_pcap:1}
 %define build_with_perl 0%{!?_without_perl:1}
 %define build_with_pgbouncer 0%{!?_without_pgbouncer:1}
-%define build_with_pgpool 0%{!?_without_pgpool :1}
+%define build_with_pgpool 0%{!?_without_pgpool:1}
 %define build_with_ping 0%{!?_without_ping:1}
 %define build_with_podman 0%{!?_without_podman:1}
 %define build_with_postfix 0%{!?_without_postfix:1}
