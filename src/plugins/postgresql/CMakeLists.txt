@@ -16,7 +16,7 @@ set(BUILD_PLUGIN_POSTGRESQL ${BUILD_PLUGIN_POSTGRESQL} PARENT_SCOPE)
 if(BUILD_PLUGIN_POSTGRESQL)
     set(PLUGIN_POSTGRESQL_SRC postgresql.c pg_stats.h pg_fam.h
                               pg_database.c pg_user.c pg_activity.c pg_replication.c
-                              pg_archiver.c pg_bgwriter.c pg_slru.c pg_io.c)
+                              pg_archiver.c pg_bgwriter.c pg_slru.c pg_io.c pg_settings.c)
     add_library(postgresql MODULE ${PLUGIN_POSTGRESQL_SRC})
     target_include_directories(postgresql PRIVATE ${LIBPOSTGRESQL_INCLUDE_DIRS})
     target_link_libraries(postgresql PRIVATE libutils libmetric libdbquery LibPq::LibPq)

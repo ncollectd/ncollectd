@@ -658,6 +658,7 @@ typedef enum {
     COLLECT_SLRU               = (1 <<  16),
     COLLECT_IO                 = (1 <<  17),
     COLLECT_CHECKPOINTER       = (1 <<  18),
+    COLLECT_SETTINGS           = (1 <<  19),
 } pg_flag_t;
 
 typedef struct pg_stat_filter {
@@ -741,6 +742,7 @@ static pg_flags_t pg_flags[] = {
     { "slru",               COLLECT_SLRU               },
     { "io",                 COLLECT_SLRU               },
     { "checkpointer",       COLLECT_CHECKPOINTER       },
+    { "settings",           COLLECT_SETTINGS           },
 };
 static size_t pg_flags_size = STATIC_ARRAY_SIZE(pg_flags);
 
@@ -1187,6 +1189,8 @@ static int psql_read(user_data_t *ud)
         pg_stat_io(db->conn, db->server_version, db->fams, &db->labels);
     if (db->flags & COLLECT_CHECKPOINTER)
         pg_stat_checkpointer(db->conn, db->server_version, db->fams, &db->labels);
+    if (db->flags & COLLECT_SETTINGS)
+        pg_settings(db->conn, db->server_version, &db->labels, submit);
 
     plugin_dispatch_metric_family_array_filtered(db->fams, FAM_PG_MAX, db->filter, submit);
 
@@ -1448,7 +1452,7 @@ static int psql_config_database(config_item_t *ci)
     db->flags = COLLECT_DATABASE | COLLECT_DATABASE_SIZE | COLLECT_DATABASE_LOCKS |
                 COLLECT_DATABASE_CONFLICTS | COLLECT_ACTIVITY | COLLECT_REPLICATION_SLOTS |
                 COLLECT_REPLICATION | COLLECT_ARCHIVER | COLLECT_BGWRITER | COLLECT_SLRU |
-                COLLECT_IO | COLLECT_CHECKPOINTER;
+                COLLECT_IO | COLLECT_CHECKPOINTER | COLLECT_SETTINGS;
 
     memcpy(db->fams, pg_fams, sizeof(db->fams[0])*FAM_PG_MAX);
 
