@@ -13,7 +13,7 @@ static void normalize (char *unit, double *value, char **suffix)
     switch (unit[0]){
     case 'u':
         if ((unit[1] == 's') && (unit[2] == '\0')) {
-		    *value /= 1000000;
+            *value /= 1000000;
             *suffix = "_seconds";
         }
         break;
@@ -23,22 +23,22 @@ static void normalize (char *unit, double *value, char **suffix)
         break;
     case 'm':
         if ((unit[1] == 's') && (unit[2] == '\0')) {
-		    *value /= 1000;
+            *value /= 1000;
             *suffix = "_seconds";
         } else if ((unit[1] == 'i') && (unit[2] == 'n') && (unit[3] == '\0')) {
-		    *value *= 60;
+            *value *= 60;
             *suffix = "_seconds";
         }
         break;
-	case 'h':
+    case 'h':
         if (unit[1] == '\0') {
-    		*value *= 3600;
+            *value *= 3600;
             *suffix = "_seconds";
         }
         break;
     case 'd':
         if (unit[1] == '\0') {
-    		*value *= 86400;
+            *value *= 86400;
             *suffix = "_seconds";
         }
         break;
@@ -46,75 +46,75 @@ static void normalize (char *unit, double *value, char **suffix)
         if (unit[1] == '\0')
             *suffix = "_seconds";
         break;
-	case 'k':
+    case 'k':
         if ((unit[1] == 'B') && (unit[2] == '\0')) {
-		    *value *= 1024;
+            *value *= 1024;
             *suffix = "_bytes";
         }
         break;
-	case 'M':
+    case 'M':
         if ((unit[1] == 'B') && (unit[2] == '\0')) {
-		    *value *= 1048576;
+            *value *= 1048576;
             *suffix = "_bytes";
         }
         break;
-	case 'G':
+    case 'G':
         if ((unit[1] == 'B') && (unit[2] == '\0')) {
-		    *value *= 1073741824;
+            *value *= 1073741824;
             *suffix = "_bytes";
         }
         break;
-	case 'T':
+    case 'T':
         if ((unit[1] == 'B') && (unit[2] == '\0')) {
-		    *value *= 1099511627776L;
+            *value *= 1099511627776L;
             *suffix = "_bytes";
         }
         break;
-	case '1':
+    case '1':
         if ((unit[1] == 'k') && (unit[2] == 'B') && (unit[3] == '\0')) {
-		    *value *= 1024;
+            *value *= 1024;
             *suffix = "_bytes";
         } else if ((unit[1] == '6') && (unit[2] == 'k') && (unit[3] == 'B') && (unit[4] == '\0')) {
-		    *value *= 16384;
+            *value *= 16384;
             *suffix = "_bytes";
         } else if ((unit[1] == '6') && (unit[2] == 'M') && (unit[3] == 'B') && (unit[4] == '\0')) {
-		    *value *= 16777216;
+            *value *= 16777216;
             *suffix = "_bytes";
         }
         break;
-	case '2':
+    case '2':
         if ((unit[1] == 'k') && (unit[2] == 'B') && (unit[3] == '\0')) {
-		    *value *= 2048;
+            *value *= 2048;
             *suffix = "_bytes";
         }
         break;
     case '3':
         if ((unit[1] == '2') && (unit[2] == 'k') && (unit[3] == 'B') && (unit[4] == '\0')) {
-		    *value *= 32768;
+            *value *= 32768;
             *suffix = "_bytes";
         } else if ((unit[1] == '2') && (unit[2] == 'M') && (unit[3] == 'B') && (unit[4] == '\0')) {
-		    *value *= 33554432;
+            *value *= 33554432;
             *suffix = "_bytes";
         }
         break;
-	case '4':
+    case '4':
         if ((unit[1] == 'k') && (unit[2] == 'B') && (unit[3] == '\0')) {
-		    *value *= 4096;
+            *value *= 4096;
             *suffix = "_bytes";
         }
         break;
     case '6':
         if ((unit[1] == '4') && (unit[2] == 'k') && (unit[3] == 'B') && (unit[4] == '\0')) {
-		    *value *= 65536;
+            *value *= 65536;
             *suffix = "_bytes";
         } else if ((unit[1] == '4') && (unit[2] == 'M') && (unit[3] == 'B') && (unit[4] == '\0')) {
-		    *value *= 67108864;
+            *value *= 67108864;
             *suffix = "_bytes";
         }
         break;
-	case '8':
+    case '8':
         if ((unit[1] == 'k') && (unit[2] == 'B') && (unit[3] == '\0')) {
-		    *value *= 8192;
+            *value *= 8192;
             *suffix = "_bytes";
         }
         break;
