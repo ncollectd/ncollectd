@@ -35,14 +35,11 @@ void jsonpath_yyerror(JSONPATH_YYLTYPE *loc, void *scanner, jsonpath_parse_resul
 
 %}
 
-/* BISON Declarations */
 %define api.pure full
 %define api.prefix {jsonpath_yy}
 
 %define parse.trace true
 %define parse.error verbose
-
-/* expect 0 */
 
 %lex-param   {void *scanner }
 %parse-param {void *scanner }{jsonpath_parse_result_t *result}
@@ -67,9 +64,8 @@ void jsonpath_yyerror(JSONPATH_YYLTYPE *loc, void *scanner, jsonpath_parse_resul
 
 %type    <result>   result
 %type    <elems>    segments selection
-// %type    <optype>   method
 %type    <str>      key
-%type    <value>    expr selector root_query segment root_query_or_expr
+%type    <value>    expr fexpr selector segment
 
 %type    <integer>  integer
 
@@ -102,7 +98,7 @@ void jsonpath_yyerror(JSONPATH_YYLTYPE *loc, void *scanner, jsonpath_parse_resul
 %%
 
 result:
-    root_query_or_expr            {
+    expr                         {
                                     result->expr = $1;
                                     result->lax = true;
                                     result->error = false;
@@ -112,18 +108,6 @@ result:
                                     result->expr = NULL;
                                     result->error = false;
                                     (void) yynerrs;
-                                  }
-    ;
-
-root_query_or_expr:
-    root_query                    { $$ = $1; }
-    | '(' expr ')'                { $$ = $2; }
-    ;
-
-root_query:
-    '$'                           { $$ = make_item_type(JSONPATH_ROOT); }
-    | '$' segments                { $$ = make_item_list(jsonpath_list_prepend($2,
-                                                           make_item_type(JSONPATH_ROOT)));
                                   }
     ;
 
@@ -179,7 +163,7 @@ selector:
     QSTRING_P                       { $$ = make_item_key(&$1); }
     | '*'                           { $$ = make_item_type(JSONPATH_ANYKEY); }
     | integer                       { $$ = make_index_array($1); }
-    | '?' expr                      { $$ = make_item_unary(JSONPATH_FILTER, $2); }
+    | '?' fexpr                     { $$ = make_item_unary(JSONPATH_FILTER, $2); }
     | ':'                           { $$ = make_slice(0, INT32_MAX, 1); }
     | integer ':'                   { $$ = make_slice($1, INT32_MAX, 1); }
     | integer ':' integer           { $$ = make_slice($1, $3, 1); }
@@ -238,10 +222,6 @@ expr:
     | '$' segments                  { $$ = make_item_list(jsonpath_list_prepend($2,
                                                              make_item_type(JSONPATH_ROOT)));
                                     }
-    | '@'                           { $$ = make_item_type(JSONPATH_CURRENT); }
-    | '@' segments                  { $$ = make_item_list(jsonpath_list_prepend($2,
-                                                             make_item_type(JSONPATH_CURRENT)));
-                                    }
     | QSTRING_P                     { $$ = make_item_string(&$1);  }
     | NULL_P                        { $$ = make_item_string(NULL); }
     | TRUE_P                        { $$ = make_item_bool(true);   }
@@ -280,6 +260,52 @@ expr:
     | SEARCH_P '(' expr ',' QSTRING_P')'{ $$ = make_item_regex(JSONPATH_SEARCH, $3, &$5); }
     ;
 
+fexpr:
+    '$'                             { $$ = make_item_type(JSONPATH_ROOT); }
+    | '$' segments                  { $$ = make_item_list(jsonpath_list_prepend($2,
+                                                             make_item_type(JSONPATH_ROOT)));
+                                    }
+    | '@'                           { $$ = make_item_type(JSONPATH_CURRENT); }
+    | '@' segments                  { $$ = make_item_list(jsonpath_list_prepend($2,
+                                                             make_item_type(JSONPATH_CURRENT)));
+                                    }
+    | QSTRING_P                     { $$ = make_item_string(&$1);  }
+    | NULL_P                        { $$ = make_item_string(NULL); }
+    | TRUE_P                        { $$ = make_item_bool(true);   }
+    | FALSE_P                       { $$ = make_item_bool(false);  }
+    | NUMERIC_P                     { $$ = make_item_numeric(&$1); }
+    | INT_P                         { $$ = make_item_numeric(&$1); }
+    | '(' fexpr ')'                 { $$ = $2; }
+    | '+' fexpr %prec UPLUS         { $$ = make_item_unary(JSONPATH_PLUS, $2); }
+    | '-' fexpr %prec UMINUS        { $$ = make_item_unary(JSONPATH_MINUS, $2); }
+    | fexpr '+' fexpr               { $$ = make_item_binary(JSONPATH_ADD, $1, $3); }
+    | fexpr '-' fexpr               { $$ = make_item_binary(JSONPATH_SUB, $1, $3); }
+    | fexpr '*' fexpr               { $$ = make_item_binary(JSONPATH_MUL, $1, $3); }
+    | fexpr '/' fexpr               { $$ = make_item_binary(JSONPATH_DIV, $1, $3); }
+    | fexpr '%' fexpr               { $$ = make_item_binary(JSONPATH_MOD, $1, $3); }
+    | fexpr AND_P          fexpr    { $$ = make_item_binary(JSONPATH_AND, $1, $3); }
+    | fexpr OR_P           fexpr    { $$ = make_item_binary(JSONPATH_OR, $1, $3); }
+    | fexpr EQUAL_P        fexpr    { $$ = make_item_binary(JSONPATH_EQUAL, $1, $3); }
+    | fexpr NOTEQUAL_P     fexpr    { $$ = make_item_binary(JSONPATH_NOTEQUAL, $1, $3); }
+    | fexpr LESS_P         fexpr    { $$ = make_item_binary(JSONPATH_LESS, $1, $3); }
+    | fexpr GREATER_P      fexpr    { $$ = make_item_binary(JSONPATH_GREATER, $1, $3); }
+    | fexpr LESSEQUAL_P    fexpr    { $$ = make_item_binary(JSONPATH_LESSOREQUAL, $1, $3); }
+    | fexpr GREATEREQUAL_P fexpr    { $$ = make_item_binary(JSONPATH_GREATEROREQUAL, $1, $3); }
+    | NOT_P fexpr                   { $$ = make_item_unary(JSONPATH_NOT, $2); }
+    | fexpr REGEXOP_P QSTRING_P     { $$ = make_item_regex(JSONPATH_REGEX, $1, &$3); }
+    | ABS_P '(' fexpr ')'           { $$ = make_item_call(JSONPATH_ABS, $3); }
+    | AVG_P '(' fexpr ')'           { $$ = make_item_call(JSONPATH_AVG, $3); }
+    | MAX_P '(' expr ')'            { $$ = make_item_call(JSONPATH_MAX, $3); }
+    | MIN_P '(' fexpr ')'           { $$ = make_item_call(JSONPATH_MIN, $3); }
+    | CEIL_P '(' fexpr')'           { $$ = make_item_call(JSONPATH_CEIL, $3); }
+    | VALUE_P '(' fexpr ')'         { $$ = make_item_call(JSONPATH_VALUE, $3); }
+    | COUNT_P '(' fexpr ')'         { $$ = make_item_call(JSONPATH_COUNT, $3); }
+    | FLOOR_P '(' fexpr ')'         { $$ = make_item_call(JSONPATH_FLOOR, $3); }
+    | MATCH_P '(' fexpr ',' QSTRING_P ')' { $$ = make_item_regex(JSONPATH_MATCH, $3, &$5); }
+    | DOUBLE_P '(' fexpr ')'        { $$ = make_item_call(JSONPATH_DOUBLE, $3); }
+    | LENGTH_P '(' fexpr ')'        { $$ = make_item_call(JSONPATH_LENGTH, $3); }
+    | SEARCH_P '(' fexpr ',' QSTRING_P')'{ $$ = make_item_regex(JSONPATH_SEARCH, $3, &$5); }
+    ;
 %%
 
 static jsonpath_item_t *make_item_type(jsonpath_item_type_t type)
