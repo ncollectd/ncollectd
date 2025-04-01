@@ -11,16 +11,10 @@
 #include "libxson/tree.h"
 #include "jsonpath.h"
 
-#define DEBUG 1
-
 #include "libtest/testing.h"
 
 static int g_argc;
 static char **g_argv;
-
-// https://cburgmer.github.io/json-path-comparison/
-// https://github.com/cburgmer/json-path-comparison/tree/master
-// https://github.com/cburgmer/json-path-comparison/blob/master/regression_suite/regression_suite.yaml
 
 #define JSON_DOC "{\"books\":[{\"category\":\"reference\",\"author\":\"Nigel Rees\",\"title\":\"Sayings of the Century\",\"price\":8.95,\"id\":1},{\"category\":\"fiction\",\"author\":\"Evelyn Waugh\",\"title\":\"Sword of Honour\",\"price\":12.99,\"id\":2},{\"category\":\"fiction\",\"author\":\"Herman Melville\",\"title\":\"Moby Dick\",\"isbn\":\"0-553-21311-3\",\"price\":8.99,\"id\":3},{\"category\":\"fiction\",\"author\":\"J. R. R. Tolkien\",\"title\":\"The Lord of the Rings\",\"isbn\":\"0-395-19395-8\",\"price\":22.99,\"id\":4}],\"services\":{\"delivery\":{\"servicegroup\":1000,\"description\":\"Next day delivery in local town\",\"active\":true,\"price\":5},\"bookbinding\":{\"servicegroup\":1001,\"description\":\"Printing and assembling book in A5 format\",\"active\":true,\"price\":154.99},\"restoration\":{\"servicegroup\":1002,\"description\":\"Various restoration methods\",\"active\":false,\"methods\":[{\"description\":\"Chemical cleaning\",\"price\":46},{\"description\":\"Pressing pages damaged by moisture\",\"price\":24.5},{\"description\":\"Rebinding torn book\",\"price\":99.49}]}},\"filters\":{\"price\":10,\"category\":\"fiction\",\"no filters\":\"no \\\"filters\\\"\"},\"closed message\":\"Store is closed\",\"tags\":[\"a\",\"b\",\"c\",\"d\",\"e\"]}"
 
@@ -2284,7 +2278,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.absent1 == $.absent2)",
+        .selector = "$.absent1 == $.absent2",
         .alt_selector = "($.absent1==$.absent2)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2292,7 +2286,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.absent1 <= $.absent2)",
+        .selector = "$.absent1 <= $.absent2",
         .alt_selector = "($.absent1<=$.absent2)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2300,7 +2294,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.absent == 'g')",
+        .selector = "$.absent == 'g'",
         .alt_selector = "($.absent==\"g\")",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2308,7 +2302,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.absent1 != $.absent2)",
+        .selector = "$.absent1 != $.absent2",
         .alt_selector = "($.absent1!=$.absent2)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2316,7 +2310,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.absent != 'g')",
+        .selector = "$.absent != 'g'",
         .alt_selector = "($.absent!=\"g\")",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2324,7 +2318,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(1 <= 2)",
+        .selector = "1 <= 2",
         .alt_selector = "(1<=2)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2332,7 +2326,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(1 > 2)",
+        .selector = "1 > 2",
         .alt_selector = "(1>2)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2340,7 +2334,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(13 == '13')",
+        .selector = "13 == '13'",
         .alt_selector = "(13==\"13\")",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2348,7 +2342,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "('a' <= 'b')",
+        .selector = "'a' <= 'b'",
         .alt_selector = "(\"a\"<=\"b\")",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2356,7 +2350,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "('a' > 'b')",
+        .selector = "'a' > 'b'",
         .alt_selector = "(\"a\">\"b\")",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2364,7 +2358,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj == $.arr)",
+        .selector = "$.obj == $.arr",
         .alt_selector = "($.obj==$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2372,7 +2366,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj != $.arr)",
+        .selector = "$.obj != $.arr",
         .alt_selector = "($.obj!=$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2380,7 +2374,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj == $.obj)",
+        .selector = "$.obj == $.obj",
         .alt_selector = "($.obj==$.obj)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2388,7 +2382,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj != $.obj)",
+        .selector = "$.obj != $.obj",
         .alt_selector = "($.obj!=$.obj)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2396,7 +2390,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.arr == $.arr)",
+        .selector = "$.arr == $.arr",
         .alt_selector = "($.arr==$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2404,7 +2398,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.arr != $.arr)",
+        .selector = "$.arr != $.arr",
         .alt_selector = "($.arr!=$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2412,7 +2406,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj == 17)",
+        .selector = "$.obj == 17",
         .alt_selector = "($.obj==17)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2420,7 +2414,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj != 17)",
+        .selector = "$.obj != 17",
         .alt_selector = "($.obj!=17)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2428,7 +2422,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj <= $.arr)",
+        .selector = "$.obj <= $.arr",
         .alt_selector = "($.obj<=$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2436,7 +2430,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj < $.arr)",
+        .selector = "$.obj < $.arr",
         .alt_selector = "($.obj<$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2444,7 +2438,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.obj <= $.obj)",
+        .selector = "$.obj <= $.obj",
         .alt_selector = "($.obj<=$.obj)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2452,7 +2446,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "($.arr <= $.arr)",
+        .selector = "$.arr <= $.arr",
         .alt_selector = "($.arr<=$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2460,7 +2454,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(1 <= $.arr)",
+        .selector = "1 <= $.arr",
         .alt_selector = "(1<=$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2468,7 +2462,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(1 >= $.arr)",
+        .selector = "1 >= $.arr",
         .alt_selector = "(1>=$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2476,7 +2470,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(1 > $.arr)",
+        .selector = "1 > $.arr",
         .alt_selector = "(1>$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2484,7 +2478,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(1 < $.arr)",
+        .selector = "1 < $.arr",
         .alt_selector = "(1<$.arr)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2492,7 +2486,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(true <= true)",
+        .selector = "true <= true",
         .alt_selector = "(true<=true)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"true", NULL},
@@ -2500,7 +2494,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(true > true)",
+        .selector = "true > true",
         .alt_selector = "(true>true)",
         .document = "{\"obj\":{\"x\":\"y\"},\"arr\":[2,3]}",
         .result = (char *[]){"false", NULL},
@@ -2756,7 +2750,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(length($.books))",
+        .selector = "length($.books)",
         .alt_selector = "length($.books)",
         .document = JSON_DOC,
         .result = (char *[]){"4", NULL},
@@ -2764,7 +2758,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(count($.tags[:-3]))",
+        .selector = "count($.tags[:-3])",
         .alt_selector = "count($.tags[:-3])",
         .document = JSON_DOC,
         .result = (char *[]){"2", NULL},
@@ -2772,7 +2766,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(count($..['id']))",
+        .selector = "count($..['id'])",
         .alt_selector = "count($..['id'])",
         .document = JSON_DOC,
         .result = (char *[]){"4", NULL},
@@ -2788,7 +2782,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(length($.tags))",
+        .selector = "length($.tags)",
         .alt_selector = "length($.tags)",
         .document = JSON_DOC,
         .result = (char *[]){"5", NULL},
@@ -2796,7 +2790,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(count($.tags))",
+        .selector = "count($.tags)",
         .alt_selector = "count($.tags)",
         .document = JSON_DOC,
         .result = (char *[]){"1", NULL},
@@ -2811,7 +2805,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(count($.books[*].price))",
+        .selector = "count($.books[*].price)",
         .alt_selector = "count($.books[*].price)",
         .document = JSON_DOC,
         .result = (char *[]){"4", NULL},
@@ -2819,7 +2813,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(min($.books[*].price))",
+        .selector = "min($.books[*].price)",
         .alt_selector = "min($.books[*].price)",
         .document = JSON_DOC,
         .result = (char *[]){"8.95", NULL},
@@ -2827,7 +2821,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(min($..price))",
+        .selector = "min($..price)",
         .alt_selector = "min($..['price'])",
         .document = JSON_DOC,
         .result = (char *[]){"5", NULL},
@@ -2835,7 +2829,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(max($..price))",
+        .selector = "max($..price)",
         .alt_selector = "max($..['price'])",
         .document = JSON_DOC,
         .result = (char *[]){"154.99", NULL},
@@ -2851,7 +2845,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(avg($.books[?(@.category == \"fiction\")].price))",
+        .selector = "avg($.books[?(@.category == \"fiction\")].price)",
         .alt_selector = "avg($.books[?(@.category==\"fiction\")].price)",
         .document = JSON_DOC,
         .result = (char *[]){"14.99", NULL},
@@ -2859,7 +2853,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(max($.books[?(@.category == \"fiction\")].price))",
+        .selector = "max($.books[?(@.category == \"fiction\")].price)",
         .alt_selector = "max($.books[?(@.category==\"fiction\")].price)",
         .document = JSON_DOC,
         .result = (char *[]){"22.99", NULL},
@@ -2875,7 +2869,7 @@ static struct test test[] = {
     },
     {
         .id = NULL,
-        .selector = "(min($[0]))",
+        .selector = "min($[0])",
         .alt_selector = "min($[0])",
         .document = "[[5,4,1,2,4]]",
         .result = (char *[]){"1", NULL},
@@ -2985,28 +2979,28 @@ static struct test test[] = {
     },
     {
         .id ="function double",
-        .selector = "(double($.string))",
+        .selector = "double($.string)",
         .document = "{\"string\":\"1.2867\"}",
         .result = (char *[]){"1.2867", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
     {
         .id ="function floor",
-        .selector = "(floor($.number))",
+        .selector = "floor($.number)",
         .document = "{\"number\":1.5}",
         .result = (char *[]){"1", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
     {
         .id ="function ceil",
-        .selector = "(ceil($.number))",
+        .selector = "ceil($.number)",
         .document = "{\"number\":1.5}",
         .result = (char *[]){"2", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
     {
         .id ="function abs",
-        .selector = "(abs($.number))",
+        .selector = "abs($.number)",
         .document = "{\"number\":-1.5}",
         .result = (char *[]){"1.5", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
