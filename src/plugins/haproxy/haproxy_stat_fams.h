@@ -121,6 +121,8 @@ enum {
     HA_STAT_EXTRA_SSL_SESS,
     HA_STAT_EXTRA_SSL_REUSED_SESS,
     HA_STAT_EXTRA_SSL_FAILED_HANDSHAKE,
+    HA_STAT_EXTRA_SSL_OCSP_STAPLE,
+    HA_STAT_EXTRA_SSL_FAILED_OCSP_STAPLE,
     HA_STAT_EXTRA_H2_HEADERS_RCVD,
     HA_STAT_EXTRA_H2_DATA_RCVD,
     HA_STAT_EXTRA_H2_SETTINGS_RCVD,
@@ -246,6 +248,8 @@ enum {
     FAM_HAPROXY_FRONTEND_SSL_SESSIONS,
     FAM_HAPROXY_FRONTEND_SSL_REUSE_SESSIONS,
     FAM_HAPROXY_FRONTEND_SSL_FAILED_HANDSHAKE,
+    FAM_HAPROXY_FRONTEND_SSL_OCSP_STAPLE,
+    FAM_HAPROXY_FRONTEND_SSL_FAILED_OCSP_STAPLE,
     FAM_HAPROXY_FRONTEND_H2_HEADERS_RCVD,
     FAM_HAPROXY_FRONTEND_H2_DATA_RCVD,
     FAM_HAPROXY_FRONTEND_H2_SETTINGS_RCVD,
@@ -673,6 +677,16 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
         .name = "haproxy_frontend_ssl_failed_handshake",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of failed handshake in this frontend."
+    },
+    [FAM_HAPROXY_FRONTEND_SSL_OCSP_STAPLE] = {
+        .name = "ssl_ocsp_staple",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of stapled OCSP responses in this frontend."
+    },
+    [FAM_HAPROXY_FRONTEND_SSL_FAILED_OCSP_STAPLE] = {
+        .name = "ssl_failed_ocsp_staple",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of failed OCSP stapling (expired or error) in this frontend.",
     },
     [FAM_HAPROXY_FRONTEND_H2_HEADERS_RCVD] = {
         .name = "haproxy_frontend_h2_headers_rcvd",

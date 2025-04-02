@@ -113,6 +113,8 @@ static haproxy_field_t haproxy_frontend_fields[] = {
     { HA_STAT_EXTRA_SSL_SESS,                                  FAM_HAPROXY_FRONTEND_SSL_SESSIONS                              },
     { HA_STAT_EXTRA_SSL_REUSED_SESS,                           FAM_HAPROXY_FRONTEND_SSL_REUSE_SESSIONS                        },
     { HA_STAT_EXTRA_SSL_FAILED_HANDSHAKE,                      FAM_HAPROXY_FRONTEND_SSL_FAILED_HANDSHAKE                      },
+    { HA_STAT_EXTRA_SSL_OCSP_STAPLE,                           FAM_HAPROXY_FRONTEND_SSL_OCSP_STAPLE                           },
+    { HA_STAT_EXTRA_SSL_FAILED_OCSP_STAPLE,                    FAM_HAPROXY_FRONTEND_SSL_FAILED_OCSP_STAPLE                    },
     { HA_STAT_EXTRA_H2_HEADERS_RCVD,                           FAM_HAPROXY_FRONTEND_H2_HEADERS_RCVD                           },
     { HA_STAT_EXTRA_H2_DATA_RCVD,                              FAM_HAPROXY_FRONTEND_H2_DATA_RCVD                              },
     { HA_STAT_EXTRA_H2_SETTINGS_RCVD,                          FAM_HAPROXY_FRONTEND_H2_SETTINGS_RCVD                          },

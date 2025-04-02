@@ -132,6 +132,8 @@ proto,                                     HA_STAT_PROTO
 ssl_sess,                                  HA_STAT_EXTRA_SSL_SESS
 ssl_reused_sess,                           HA_STAT_EXTRA_SSL_REUSED_SESS
 ssl_failed_handshake,                      HA_STAT_EXTRA_SSL_FAILED_HANDSHAKE
+ssl_ocsp_staple,                           HA_STAT_EXTRA_SSL_OCSP_STAPLE
+ssl_failed_ocsp_staple,                    HA_STAT_EXTRA_SSL_FAILED_OCSP_STAPLE
 h2_headers_rcvd,                           HA_STAT_EXTRA_H2_HEADERS_RCVD
 h2_data_rcvd,                              HA_STAT_EXTRA_H2_DATA_RCVD
 h2_settings_rcvd,                          HA_STAT_EXTRA_H2_SETTINGS_RCVD
