@@ -588,7 +588,7 @@ static int ps_config(config_item_t *ci)
         config_item_t *c = ci->children + i;
 
         if (strcasecmp(c->key, "process") == 0) {
-            if ((c->values_num != 1) || (CONFIG_TYPE_STRING != c->values[0].type)) {
+            if ((c->values_num != 1) || (c->values[0].type != CONFIG_TYPE_STRING)) {
                 PLUGIN_ERROR("'process' in %s:%d expects exactly one string argument (got %i).",
                              cf_get_file(c), cf_get_lineno(c), c->values_num);
                 status = -1;
@@ -612,8 +612,9 @@ static int ps_config(config_item_t *ci)
             if (c->children_num != 0)
                 status = ps_tune_instance(c, ps);
         } else if (strcasecmp(c->key, "process-match") == 0) {
-            if ((c->values_num != 2) || (CONFIG_TYPE_STRING != c->values[0].type) ||
-                (CONFIG_TYPE_REGEX != c->values[1].type)) {
+            if ((c->values_num != 2) || (c->values[0].type != CONFIG_TYPE_STRING) ||
+                ((c->values[1].type != CONFIG_TYPE_REGEX) &&
+                 (c->values[1].type != CONFIG_TYPE_STRING))) {
                 PLUGIN_ERROR("'process-match' in %s:%d needs exactly a string and a regex (got %i).",
                              cf_get_file(c), cf_get_lineno(c), c->values_num);
                 status = -1;
@@ -629,8 +630,8 @@ static int ps_config(config_item_t *ci)
             if (c->children_num != 0)
                 status = ps_tune_instance(c, ps);
         } else if (strcasecmp(c->key, "process-pidfile") == 0) {
-            if ((c->values_num != 2) || (CONFIG_TYPE_STRING != c->values[0].type) ||
-                (CONFIG_TYPE_STRING != c->values[1].type)) {
+            if ((c->values_num != 2) || (c->values[0].type != CONFIG_TYPE_STRING) ||
+                (c->values[1].type != CONFIG_TYPE_STRING)) {
                 PLUGIN_ERROR("'process-pidfile' in %s:%d needs exactly two string arguments (got %i).",
                              cf_get_file(c), cf_get_lineno(c), c->values_num);
                 status = -1;
