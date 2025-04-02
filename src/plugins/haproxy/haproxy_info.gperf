@@ -81,3 +81,6 @@ TotalWarnings,               FAM_HAPROXY_PROCESS_WARNINGS
 MaxconnReached,              FAM_HAPROXY_PROCESS_MAXCONN_REACHED
 BootTime_ms,                 FAM_HAPROXY_PROCESS_BOOTTIME_SECONDS
 Niced_tasks,                 FAM_HAPROXY_PROCESS_NICED_TASKS
+CurrStreams,                 FAM_HAPROXY_PROCESS_CURRENT_STREAMS
+CumStreams,                  FAM_HAPROXY_PROCESS_STREAMS
+BlockedTrafficWarnings,      FAM_HAPROXY_PROCESS_BLOCKED_TRAFFIC_WARNINGS

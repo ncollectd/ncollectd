@@ -70,6 +70,9 @@ enum {
     FAM_HAPROXY_PROCESS_MAXCONN_REACHED,
     FAM_HAPROXY_PROCESS_BOOTTIME_SECONDS,
     FAM_HAPROXY_PROCESS_NICED_TASKS,
+    FAM_HAPROXY_PROCESS_CURRENT_STREAMS,
+    FAM_HAPROXY_PROCESS_STREAMS,
+    FAM_HAPROXY_PROCESS_BLOCKED_TRAFFIC_WARNINGS,
     FAM_HAPROXY_PROCESS_MAX,
 };
 
@@ -421,5 +424,20 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Total number of active tasks+tasklets in the current worker process "
                 "(Run_queue) that are niced.",
+    },
+    [FAM_HAPROXY_PROCESS_CURRENT_STREAMS] = {
+        .name = "haproxy_process_current_streams",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current number of streams on this worker process.",
+    },
+    [FAM_HAPROXY_PROCESS_STREAMS] = {
+        .name = "haproxy_process_streams",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of streams created on this worker process since started.",
+    },
+    [FAM_HAPROXY_PROCESS_BLOCKED_TRAFFIC_WARNINGS] = {
+        .name = "haproxy_process_blocked_traffic_warnings",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of warnings issued about traffic being blocked by too slow a task.",
     },
 };
