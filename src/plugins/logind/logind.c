@@ -555,17 +555,17 @@ static int logind_read(void)
             }
         }
     } else if (logind_group_by == (LOGIND_GROUP_BY_TYPE | LOGIND_GROUP_BY_CLASS)) {
-        for (size_t k = 0; k < session_classes_size; k++) {
-            for (size_t m = 0; m < session_remote_size; m++) {
-                logind_submit(&fams[FAM_LOGIND_SESSIONS], sessions, NULL, NULL,
-                              session_classes[k], m);
-            }
-        }
-    } else if (logind_group_by == (LOGIND_GROUP_BY_TYPE | LOGIND_GROUP_BY_REMOTE)) {
         for (size_t j = 0; j < session_types_size; j++) {
             for (size_t k = 0; k < session_classes_size; k++) {
                 logind_submit(&fams[FAM_LOGIND_SESSIONS], sessions, NULL,
                               session_types[j], session_classes[k], 0);
+            }
+        }
+    } else if (logind_group_by == (LOGIND_GROUP_BY_TYPE | LOGIND_GROUP_BY_REMOTE)) {
+        for (size_t j = 0; j < session_types_size; j++) {
+            for (size_t m = 0; m < session_remote_size; m++) {
+                logind_submit(&fams[FAM_LOGIND_SESSIONS], sessions, NULL,
+                              session_types[j], NULL, m);
             }
         }
     } else if (logind_group_by == (LOGIND_GROUP_BY_SEAT | LOGIND_GROUP_BY_REMOTE )) {
