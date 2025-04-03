@@ -112,10 +112,10 @@ duration   ([0-9]+(\.[0-9]*)?(ms|s|m|h|d|w|y))+
 \=\=                { return T_EQL;         }
 \!\=                { return T_NQL;         }
 \=\~                { return T_MATCH;       }
-\!\=                { return T_NMATCH;      }
-\>=                 { return T_GTE;         }
+\!\~                { return T_NMATCH;      }
+\>\=                { return T_GTE;         }
 \>                  { return T_GT;          }
-\<=                 { return T_LTE;         }
+\<\=                { return T_LTE;         }
 \<                  { return T_LT;          }
 \!                  { return T_NOT;         }
 \+                  { return T_PLUS;        }
