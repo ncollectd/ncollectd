@@ -231,6 +231,7 @@ static void csnmp_host_open_session(host_definition_t *host)
                 if (sess.transport_configuration == NULL) {
                     PLUGIN_ERROR("Host %s: Failed to initialize the transport "
                                  "configuration container.", host->name);
+                    return;
                 }
                 sess.transport_configuration->compare =
                     (netsnmp_container_compare *)netsnmp_transport_config_compare;
