@@ -1,4 +1,4 @@
-FROM fedora:41
+FROM fedora:42
 RUN dnf install -y rpm-build git xz gcc cpp clang-analyzer clang make cmake flex bison gperf \
                    pkgconf-pkg-config kernel-headers c-ares-devel curl-devel gpsd-devel \
                    hiredis-devel iptables-devel java-devel jpackage-utils libatasmart-devel \

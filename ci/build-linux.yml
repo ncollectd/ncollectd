@@ -4,20 +4,13 @@ when:
   - event: manual
 
 steps:
-  build-fedora-40:
-    image: ncollectd/ci-fedora:40
+  build-fedora-42:
+    image: ncollectd/ci-fedora:42
     commands:
-      - cmake -B build-fedora-40 -S .
-      - cmake --build build-fedora-40 $${MAKE_FLAGS}
-      - cmake --build build-fedora-40 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-fedora-40 -- test
-  build-fedora-41:
-    image: ncollectd/ci-fedora:41
-    commands:
-      - cmake -B build-fedora-41 -S .
-      - cmake --build build-fedora-41 $${MAKE_FLAGS}
-      - cmake --build build-fedora-41 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-fedora-41 -- test
+      - cmake -B build-fedora-42 -S .
+      - cmake --build build-fedora-42 $${MAKE_FLAGS}
+      - cmake --build build-fedora-42 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-fedora-42 -- test
   build-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:

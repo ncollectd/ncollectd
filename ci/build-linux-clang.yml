@@ -3,8 +3,8 @@ when:
   - event: push
 
 steps:
-  build-fedora-41-clang:
-    image: ncollectd/ci-fedora:41
+  build-fedora-42-clang:
+    image: ncollectd/ci-fedora:42
     commands:
-      - CC=clang cmake -B build-fedora-41-clang -S .
-      - cmake --build build-fedora-41-clang
+      - CC=clang cmake -B build-fedora-42-clang -S .
+      - cmake --build build-fedora-42-clang

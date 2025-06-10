@@ -2,8 +2,8 @@ when:
   - event: cron
 
 steps:
-  build-fedora-41-clang-analyzer:
-    image: ncollectd/ci-fedora:41
+  build-fedora-42-clang-analyzer:
+    image: ncollectd/ci-fedora:42
     commands:
-      - scan-build cmake -B build-fedora-41-clang-analyzer -S .
-      - scan-build cmake --build build-fedora-41-clang-analyzer
+      - scan-build cmake -B build-fedora-42-clang-analyzer -S .
+      - scan-build cmake --build build-fedora-42-clang-analyzer
