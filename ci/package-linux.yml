@@ -4,32 +4,22 @@ when:
 
 steps:
   package-dist:
-    image: ncollectd/ci-fedora:41
+    image: ncollectd/ci-fedora:42
     commands:
       - cmake -B package-dist -S .
       - cmake --build package-dist -- dist
       - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
       - echo "TAG=$${TAG}" > package-dist/envvars
-  package-fedora-40:
-    image: ncollectd/ci-fedora:40
+  package-fedora-42:
+    image: ncollectd/ci-fedora:42
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-fedora-40/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-fedora-40/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-fedora-40/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-40/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-40" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
-  package-fedora-41:
-    image: ncollectd/ci-fedora:41
-    commands:
-      - . ./package-dist/envvars
-      - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-fedora-41/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-fedora-41/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-fedora-41/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-41/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-41" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - mkdir -p package-fedora-42/SOURCES
+      - cp packaging/fedora/init.d-ncollectd package-fedora-42/SOURCES
+      - cp packaging/fedora/systemd.ncollectd.service package-fedora-42/SOURCES
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-42/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-42" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
   package-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:
