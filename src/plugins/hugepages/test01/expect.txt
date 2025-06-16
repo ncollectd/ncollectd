@@ -1,0 +1,41 @@
+# TYPE system_hugepages_nr gauge
+system_hugepages_nr{hostname="localhost.localdomain",page_size="1048576kB"} 10
+system_hugepages_nr{hostname="localhost.localdomain",page_size="2048kB"} 20
+# TYPE system_hugepages_free gauge
+system_hugepages_free{hostname="localhost.localdomain",page_size="1048576kB"} 6
+system_hugepages_free{hostname="localhost.localdomain",page_size="2048kB"} 16
+system_hugepages_reserved{hostname="localhost.localdomain",page_size="1048576kB"} 1
+system_hugepages_reserved{hostname="localhost.localdomain",page_size="2048kB"} 2
+# TYPE system_hugepages_surplus gauge
+system_hugepages_surplus{hostname="localhost.localdomain",page_size="1048576kB"} 2
+system_hugepages_surplus{hostname="localhost.localdomain",page_size="2048kB"} 1
+# TYPE system_hugepages_nr_bytes gauge
+system_hugepages_nr_bytes{hostname="localhost.localdomain",page_size="1048576kB"} 10737418240
+system_hugepages_nr_bytes{hostname="localhost.localdomain",page_size="2048kB"} 41943040
+# TYPE system_hugepages_free_bytes gauge
+system_hugepages_free_bytes{hostname="localhost.localdomain",page_size="1048576kB"} 6442450944
+system_hugepages_free_bytes{hostname="localhost.localdomain",page_size="2048kB"} 33554432
+# TYPE system_hugepages_reserved_bytes gauge
+system_hugepages_reserved_bytes{hostname="localhost.localdomain",page_size="1048576kB"} 1073741824
+system_hugepages_reserved_bytes{hostname="localhost.localdomain",page_size="2048kB"} 4194304
+# TYPE system_hugepages_surplus_bytes gauge
+system_hugepages_surplus_bytes{hostname="localhost.localdomain",page_size="1048576kB"} 2147483648
+system_hugepages_surplus_bytes{hostname="localhost.localdomain",page_size="2048kB"} 2097152
+# TYPE system_hugepages_node_nr gauge
+system_hugepages_node_nr{hostname="localhost.localdomain",node="0",page_size="1048576kB"} 10
+system_hugepages_node_nr{hostname="localhost.localdomain",node="0",page_size="2048kB"} 20
+# TYPE system_hugepages_node_free gauge
+system_hugepages_node_free{hostname="localhost.localdomain",node="0",page_size="1048576kB"} 6
+system_hugepages_node_free{hostname="localhost.localdomain",node="0",page_size="2048kB"} 16
+# TYPE system_hugepages_node_surplus gauge
+system_hugepages_node_surplus{hostname="localhost.localdomain",node="0",page_size="1048576kB"} 2
+system_hugepages_node_surplus{hostname="localhost.localdomain",node="0",page_size="2048kB"} 1
+# TYPE system_hugepages_node_nr_bytes gauge
+system_hugepages_node_nr_bytes{hostname="localhost.localdomain",node="0",page_size="1048576kB"} 10737418240
+system_hugepages_node_nr_bytes{hostname="localhost.localdomain",node="0",page_size="2048kB"} 41943040
+# TYPE system_hugepages_node_free_bytes gauge
+system_hugepages_node_free_bytes{hostname="localhost.localdomain",node="0",page_size="1048576kB"} 6442450944
+system_hugepages_node_free_bytes{hostname="localhost.localdomain",node="0",page_size="2048kB"} 33554432
+# TYPE system_hugepages_node_surplus_bytes gauge
+system_hugepages_node_surplus_bytes{hostname="localhost.localdomain",node="0",page_size="1048576kB"} 2147483648
+system_hugepages_node_surplus_bytes{hostname="localhost.localdomain",node="0",page_size="2048kB"} 2097152
