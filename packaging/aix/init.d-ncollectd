@@ -4,31 +4,36 @@ umask 022
 
 NCOLLECTD=/opt/freeware/sbin/ncollectd
 NCOLLECTD_CONFIG=/etc/ncollectd.conf
+NCOLLECTD_DEFAULT=/etc/default/ncollectd
 NCOLLECTDMON=/opt/freeware/sbin/ncollectdmon
 NCOLLECTDMON_PIDFILE=/opt/freeware/var/run/ncollectdmon.pid
 
-if [ ! -x $NCOLLECTD ]; then
-        echo "$NCOLLECTD not installed"
-        [ "$1" = "stop" ] && exit 0
-        exit 5
+if [ ! -x ${NCOLLECTD} ]; then
+    echo "${NCOLLECTD} not installed"
+    [ "$1" = "stop" ] && exit 0
+    exit 5
 fi
 
-if [ ! -x $NCOLLECTDMON ]; then
-        echo "$NCOLLECTDMON not installed"
-        [ "$1" = "stop" ] && exit 0
-        exit 5
+if [ ! -x ${NCOLLECTDMON} ]; then
+    echo "${NCOLLECTDMON} not installed"
+    [ "$1" = "stop" ] && exit 0
+    exit 5
 fi
 
-if [ ! -r $NCOLLECTD_CONFIG ]; then
-        echo "$NCOLLECTD_CONFIG not existing"
-        [ "$1" = "stop" ] && exit 0
-        exit 6
+if [ ! -r ${NCOLLECTD_CONFIG} ]; then
+    echo "${NCOLLECTD_CONFIG} not existing"
+    [ "$1" = "stop" ] && exit 0
+    exit 6
+fi
+
+if [ -r ${NCOLLECTD_DEFAULT} ]; then
+    . ${NCOLLECTD_DEFAULT}
 fi
 
 case "$1" in
     start)
-        if [ -r $NCOLLECTDMON_PIDFILE ]; then
-            echo "ncollectdmon is already running with PID `cat $NCOLLECTDMON_PIDFILE`."
+        if [ -r ${NCOLLECTDMON_PIDFILE} ]; then
+            echo "ncollectdmon is already running with PID `cat ${NCOLLECTDMON_PIDFILE}`."
             exit 1
         fi
         echo "Starting ncollectd..."
@@ -36,18 +41,18 @@ case "$1" in
         ;;
     stop)
         echo "Shutting down ncollectd daemon... "
-        if [ -r $NCOLLECTDMON_PIDFILE ]; then
-            pid=`cat $NCOLLECTDMON_PIDFILE`
+        if [ -r ${NCOLLECTDMON_PIDFILE} ]; then
+            pid=`cat ${NCOLLECTDMON_PIDFILE}`
             kill -15 $pid
             while ps -p $pid >/dev/null; do
                 sleep 1
             done
-            rm -f $NCOLLECTDMON_PIDFILE
+            rm -f ${NCOLLECTDMON_PIDFILE}
         fi
         ;;
     status)
-        if [ -r $NCOLLECTDMON_PIDFILE ]; then
-            echo "ncollectdmon is running with PID `cat $NCOLLECTDMON_PIDFILE`."
+        if [ -r ${NCOLLECTDMON_PIDFILE} ]; then
+            echo "ncollectdmon is running with PID `cat ${NCOLLECTDMON_PIDFILE}`."
         else
             echo "ncollectd daemon is not running."
         fi
