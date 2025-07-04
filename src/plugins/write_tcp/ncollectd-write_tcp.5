@@ -11,7 +11,7 @@ ncollectd-write_tcp \- Documentation of ncollectd's write_tcp plugin
         \fBport\fP \fIport\fP
         \fBresolve-interval\fP \fIseconds\fP
         \fBresolve-jitter\fP \fIseconds\fP
-        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
     }
 .br
 }
@@ -50,7 +50,10 @@ Format the metrics with the karirosdb text format or json format.
 Format the metrics with the opentsdb text format or json format.
 .TP
 \fBopenmetrics\fP [text|protob]
-Format the metrics with the openmetrics text formar.
+Format the metrics with the openmetrics text format.
+.TP
+\fBopentelemetry\fP [json]
+Format the metrics with the opentelemetry json format.
 .TP
 \fBremote\fP [metadata]
 Format the metrics with the protocol buffer remote format.

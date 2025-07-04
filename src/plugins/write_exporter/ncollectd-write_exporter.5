@@ -20,7 +20,7 @@ ncollectd-write_exporter \- Documentation of ncollectd's write_exporter plugin
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
         \fBrealm\fP \fIrealm\fP
-        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
     }
 .br
 }
@@ -77,6 +77,8 @@ Selects the format in which metrics are served.
 \fBopentsdb\fP [telnet|json]
 .TP
 \fBopenmetrics\fP [text|protob]
+.TP
+\fBopentelemetry\fP [json]
 .TP
 \fBremote\fP [metadata]
 .RE

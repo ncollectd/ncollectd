@@ -15,6 +15,7 @@
 #include "libformat/opentsdb_telnet.h"
 #include "libformat/openmetrics_text.h"
 #include "libformat/openmetrics_proto.h"
+#include "libformat/opentelemetry_json.h"
 #include "libformat/remote_proto.h"
 #include "libformat/notification_text.h"
 #include "libformat/notification_json.h"
@@ -152,6 +153,9 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
             return -1;
         }
         return 0;
+    } else if (strcasecmp(fmt, "opentelemetry") == 0) {
+        *format = FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON;
+        return 0;
     } else if (strcasecmp(fmt, "remote") == 0) {
         if (ci->values_num == 1) {
             *format = FORMAT_STREAM_METRIC_REMOTE_WRITE_NOMETADATA;
@@ -204,6 +208,8 @@ int format_stream_metric_begin(format_stream_metric_ctx_t *ctx, format_stream_me
         break;
     case FORMAT_STREAM_METRIC_OPENMETRICS_PROTOB:
         break;
+    case FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON:
+        break;
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA:
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_NOMETADATA:
         break;
@@ -249,6 +255,9 @@ int format_stream_metric_family(format_stream_metric_ctx_t *ctx, metric_family_t
         break;
     case FORMAT_STREAM_METRIC_OPENMETRICS_PROTOB:
 //        return openmetrics_proto_metric_family(buf_t *buf, fam);
+        break;
+    case FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON:
+        return opentelemetry_json_metric_family(ctx->buf, fam);
         break;
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA:
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_NOMETADATA: {
@@ -297,6 +306,9 @@ char *format_stream_metric_content_type(format_stream_metric_t format)
     case FORMAT_STREAM_METRIC_OPENMETRICS_PROTOB:
         return "application/openmetrics-protobuf; version=1.0.0";
         break;
+    case FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON:
+        return "application/json";
+        break;
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA:
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_NOMETADATA:
         // application/x-protobuf // FIXME
@@ -330,6 +342,8 @@ int format_stream_metric_end(format_stream_metric_ctx_t *ctx)
     case FORMAT_STREAM_METRIC_OPENMETRICS_TEXT:
         break;
     case FORMAT_STREAM_METRIC_OPENMETRICS_PROTOB:
+        break;
+    case FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON:
         break;
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA:
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_NOMETADATA:

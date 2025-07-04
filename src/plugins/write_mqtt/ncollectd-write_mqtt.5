@@ -21,7 +21,7 @@ ncollectd-write_mqtt \- Documentation of ncollectd's write_mqtt plugin
         \fBcertificate-key-file\fP \fIfile\fP
         \fBtls-protocol\fP \fIprotocol\fP
         \fBcipher-suite\fP \fIciper-suite\fP
-        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
         \fBformat-notification\fP \fItext|json|protob\fP
         \fBwrite\fP \fImetrics|notifications\fP
     }
@@ -128,7 +128,10 @@ Format the metrics with the karirosdb text format or json format.
 Format the metrics with the opentsdb text format or json format.
 .TP
 \fBopenmetrics\fP [text|protob]
-Format the metrics with the openmetrics text formar.
+Format the metrics with the openmetrics text format.
+.TP
+\fBopentelemetry\fP [json]
+Format the metrics with the opentelemetry json format.
 .TP
 \fBremote\fP [metadata]
 Format the metrics with the protocol buffer remote format.
