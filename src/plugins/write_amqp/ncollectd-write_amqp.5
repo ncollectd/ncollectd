@@ -25,7 +25,7 @@ ncollectd-write_amqp \- Documentation of ncollectd's write_amqp plugin
         \fBrouting-key\fP \fIkey\fP
         \fBpersistent\fP \fItrue|false\fP
         \fBconnection-retry-delay\fP \fIseconds\fP
-        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
         \fBformat-notification\fP \fItext|json|protob\fP
         \fBwrite\fP \fImetrics|notifications\fP
     }
@@ -126,6 +126,8 @@ Selects the format in which messages are sent to the intermediary.
 \fBopentsdb\fP [telnet|json]
 .TP
 \fBopenmetrics\fP [text|protob]
+.TP
+\fBopentelemetry\fP [json]
 .TP
 \fBremote\fP [metadata]
 .RE

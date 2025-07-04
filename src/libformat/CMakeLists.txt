@@ -6,6 +6,7 @@ set(LIBFORMAT_SRC graphite_line.c graphite_line.h
                   json.c json.h
                   openmetrics_proto.c openmetrics_proto.h
                   remote_proto.c remote_proto.h
+                  opentelemetry_json.c opentelemetry_json.h
                   notification_json.c notification_json.h
                   notification_text.c notification_text.h
                   notification_proto.c notification_proto.h
@@ -35,6 +36,11 @@ add_executable(test_libformat_openmetrics_text EXCLUDE_FROM_ALL openmetrics_text
 target_link_libraries(test_libformat_openmetrics_text libformat libxson libutils libmetric libtest -lm)
 add_dependencies(build_tests test_libformat_openmetrics_text)
 add_test(NAME test_libformat_openmetrics_text COMMAND test_libformat_openmetrics_text)
+
+add_executable(test_libformat_opentelemetry_json EXCLUDE_FROM_ALL opentelemetry_json_test.c)
+target_link_libraries(test_libformat_opentelemetry_json libformat libxson libutils libmetric libtest -lm)
+add_dependencies(build_tests test_libformat_opentelemetry_json)
+add_test(NAME test_libformat_opentelemetry_json COMMAND test_libformat_opentelemetry_json)
 
 add_executable(test_libformat_opentsdb_json EXCLUDE_FROM_ALL opentsdb_json_test.c)
 target_link_libraries(test_libformat_opentsdb_json libformat libxson libutils libmetric libtest -lm)

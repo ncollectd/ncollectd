@@ -17,7 +17,7 @@ ncollectd-write_amqp1 \- Documentation of ncollectd's write_amqp1 plugin
         \fBretry-delay\fP \fIretry-delay\fP
         \fBformat\fP \fIFORMAT\fP
         \fBpre-settle\fP \fItrue|false\fP
-        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+        \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
         \fBformat-notification\fP \fItext|json|protob\fP
         \fBwrite\fP \fImetrics|notifications\fP
     }
@@ -82,6 +82,8 @@ Selects the format in which messages are sent to the intermediary.
 \fBopentsdb\fP [telnet|json]
 .TP
 \fBopenmetrics\fP [text|protob]
+.TP
+\fBopentelemetry\fP [json]
 .TP
 \fBremote\fP [metadata]
 .RE
