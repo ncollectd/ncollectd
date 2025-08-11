@@ -1,9 +1,13 @@
-.TH ncollectd-turbostat 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd turbostat man page"
-.SH NAME
-ncollectd-turbostat \- Documentation of ncollectd's turbostat plugin
-.SH SYNOPSIS
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-TURBOSTAT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-turbostat
+.Nd Documentation of ncollectd's turbostat plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP turbostat
-.br
 \fBplugin\fP turbostat {
     \fBcore-cstates\fP \fIbitmask\fP
     \fBpackage-cstates\fP \fIbitmask\fP
@@ -13,90 +17,83 @@ ncollectd-turbostat \- Documentation of ncollectd's turbostat plugin
     \fBrunning-average-power-limit\fP \fIbitmask\fP
     \fBtcc-activation-temp\fP \fItemperature\fP
     \fBrestore-affinity-policy\fP \fIall-cpus|restore\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBturbostat\fP plugin reads CPU frequency and C-state residency on modern
 Intel processors by using \fIModel Specific Registers\fP.
-.PP
-
-.TP
-\fBcore-cstates\fP \fIbitmask\fP
+.Bl -tag -width Ds
+.It \fBcore-cstates\fP \fIbitmask\fP
 Bit mask of the list of core C-states supported by the processor.
 This option should only be used if the automated detection fails.
 Default value extracted from the CPU model and family.
-
+.Pp
 Currently supported C-states (by this plugin): 3, 6, 7
-
+.Pp
 All states (3, 6 and 7): (1<<3) + (1<<6) + (1<<7) = 392
-.TP
-\fBpackage-cstates\fP \fIbitmask\fP
-Bit mask of the list of packages C-states supported by the processor. This
-option should only be used if the automated detection fails. Default value
-extracted from the CPU model and family.
-
+.It \fBpackage-cstates\fP \fIbitmask\fP
+Bit mask of the list of packages C-states supported by the processor.
+This option should only be used if the automated detection fails.
+Default value extracted from the CPU model and family.
+.Pp
 Currently supported C-states (by this plugin): 2, 3, 6, 7, 8, 9, 10
-
+.Pp
 States 2, 3, 6 and 7: (1<<2) + (1<<3) + (1<<6) + (1<<7) = 396
-.TP
-\fBsystem-management-interrupt\fP \fItrue|false\fP
+.It \fBsystem-management-interrupt\fP \fItrue|false\fP
 Boolean enabling the collection of the I/O System-Management Interrupt counter.
 This option should only be used if the automated detection fails or if you want
 to disable this feature.
-.TP
-\fBdigital-temperature-sensor\fP \fItrue|false\fP
-Boolean enabling the collection of the temperature of each core. This option
-should only be used if the automated detection fails or if you want to disable
-this feature.
-.TP
-\fBpackage-thermal-management\fP \fItrue|false\fP
-.TP
-\fBrunning-average-power-limit\fP \fIbitmask\fP
-Bit mask of the list of elements to be thermally monitored. This option should
-only be used if the automated detection fails or if you want to disable some
-collections. The different bits of this bit mask accepted by this plugin are:
-.RS
-.TP
-\fB0 ('1')\fP
+.It \fBdigital-temperature-sensor\fP \fItrue|false\fP
+Boolean enabling the collection of the temperature of each core.
+This option should only be used if the automated detection fails or
+if you want to disable this feature.
+.It \fBpackage-thermal-management\fP \fItrue|false\fP
+.It \fBrunning-average-power-limit\fP \fIbitmask\fP
+Bit mask of the list of elements to be thermally monitored.
+This option should only be used if the automated detection fails or if you want
+to disable some collections.
+The different bits of this bit mask accepted by this plugin are:
+.Bl -tag -width Ds
+.It \fB0 ('1')\fP
 Package
-.TP
-\fB1 ('2'):\fP
+.It \fB1 ('2'):\fP
 DRAM
-.TP
-\fB2 ('4'):\fP
+.It \fB2 ('4'):\fP
 Cores
-.TP
-\fB3 ('8'):\fP
+.It \fB3 ('8'):\fP
 Embedded graphic device
-.RE
-.TP
-\fBtcc-activation-temp\fP \fItemperature\fP
-\fIThermal Control Circuit Activation Temperature\fP of the installed CPU. This
-temperature is used when collecting the temperature of cores or packages. This
-option should only be used if the automated detection fails. Default value
-extracted from \f(CWMSR_IA32_TEMPERATURE_TARGET\fP.
-.TP
-\fBrestore-affinity-policy\fP \fIall-cpus|restore\fP
+.El
+.It \fBtcc-activation-temp\fP \fItemperature\fP
+\fIThermal Control Circuit Activation Temperature\fP of the installed CPU.
+This temperature is used when collecting the temperature of cores or packages.
+This option should only be used if the automated detection fails.
+Default value extracted from \f(CWMSR_IA32_TEMPERATURE_TARGET\fP.
+.It \fBrestore-affinity-policy\fP \fIall-cpus|restore\fP
 Reading data from CPU has side-effect: collectd process's CPU affinity mask
-changes. After reading data is completed, affinity mask needs to be restored.
+changes.
+After reading data is completed, affinity mask needs to be restored.
 This option allows to set restore policy.
-.RS
-.TP
-\fBall-cpus\fP
-Restore the affinity by setting affinity to any/all CPUs. The default.
-.TP
-\fBRestore\fP
-Save affinity using sched_getaffinity() before reading data and restore it after.
-.RE
-
-On some systems, sched_getaffinity() will fail due to inconsistency of the CPU
-set size between userspace and kernel. In these cases plugin will detect the
-unsuccessful call and fail with an error, preventing data collection.
-Most of configurations does not need to save affinity as Collectd process is
+.Bl -tag -width Ds
+.It \fBall-cpus\fP
+Restore the affinity by setting affinity to any/all CPUs.
+The default.
+.It \fBRestore\fP
+Save affinity using
+.Fn sched_getaffinity
+before reading data and restore it after.
+.Pp
+On some systems,
+.Fn sched_getaffinity
+will fail due to inconsistency of the CPU set size between userspace and kernel.
+In these cases plugin will detect the unsuccessful call and fail with an error,
+preventing data collection.
+Most of configurations does not need to save affinity as ncollectd process is
 allowed to run on any/all available CPUs.
-
+.Pp
 If you need to save and restore affinity and get errors like 'Unable to save
 the CPU affinity', setting 'possible_cpus' kernel boot option may also help.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

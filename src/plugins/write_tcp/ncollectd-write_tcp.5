@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-write_tcp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_tcp man page"
-.SH NAME
-ncollectd-write_tcp \- Documentation of ncollectd's write_tcp plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WRITE_TCP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-write_tcp
+.Nd Documentation of ncollectd's write_tcp plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP write_tcp
-.br
 \fBplugin\fP write_tcp {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
@@ -13,51 +16,40 @@ ncollectd-write_tcp \- Documentation of ncollectd's write_tcp plugin
         \fBresolve-jitter\fP \fIseconds\fP
         \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBwrite_tcp\fP plugin writes the metrics through a tcp connection.
-.PP
+.Pp
 The following options are accepted within each \fBinstance\fP block:
-.TP
-\fBhost\fP \fIhost\fP
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
 Hostname or IP-address of the destination connection.
-.TP
-\fBport\fP \fIport\fP
+.It \fBport\fP \fIport\fP
 Service name or port number of the destination connection.
-.TP
-\fBresolve-interval\fP \fIseconds\fP
-.TP
-\fBresolve-jitter\fP \fIseconds\fP
-.TP
-\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+.It \fBresolve-interval\fP \fIseconds\fP
+.It \fBresolve-jitter\fP \fIseconds\fP
+.It \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
 Selects the format in which metrics are written.
-.RS
-.TP
-\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.Bl -tag -width Ds
+.It \fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
 Format the metrics with the influxdb line format.
-.TP
-\fBgraphite\fP
+.It \fBgraphite\fP
 Format the metrics with the graphite plaintext format.
-.TP
-\fBjson\fP
+.It \fBjson\fP
 Format the metrics as json message.
-.TP
-\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.It \fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
 Format the metrics with the karirosdb text format or json format.
-.TP
-\fBopentsdb\fP [telnet|json]
+.It \fBopentsdb\fP [telnet|json]
 Format the metrics with the opentsdb text format or json format.
-.TP
-\fBopenmetrics\fP [text|protob]
+.It \fBopenmetrics\fP [text|protob]
 Format the metrics with the openmetrics text format.
-.TP
-\fBopentelemetry\fP [json]
+.It \fBopentelemetry\fP [json]
 Format the metrics with the opentelemetry json format.
-.TP
-\fBremote\fP [metadata]
+.It \fBremote\fP [metadata]
 Format the metrics with the protocol buffer remote format.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

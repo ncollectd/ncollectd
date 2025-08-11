@@ -1,53 +1,45 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-protocols 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd protocols man page"
-.SH NAME
-ncollectd-protocols \- Documentation of ncollectd's protocols plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PROTOCOLS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-protocols
+.Nd Documentation of ncollectd's protocols plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP protocols
-.br
 \fBplugin\fP protocols {
     \fBcollect\fP \fI[ip|icmp|udp|udplite|udplite6|ip6|icmp6|udp6|tcp|mptcp|sctp]\fP
     \fBfilter\fP {
         ...
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBprotocols\fP plugin collects a lot of information about various
 network protocols, such as \fIIP\fP, \fITCP\fP, \fIUDP\fP, etc.
-.PP
+.Pp
 Available configuration options:
-.PP
-.TP
-\fBcollect\fP \fI[ip|icmp|udp|udplite|udplite6|ip6|icmp6|udp6|tcp|mptcp|sctp]\fP
-.RS
-.TP
-\fBip\fP
-.TP
-\fBicmp\fP
-.TP
-\fBudp\fP
-.TP
-\fBudplite\fP
-.TP
-\fBudplite6\fP
-.TP
-\fBip6\fP
-.TP
-\fBicmp6\fP
-.TP
-\fBudp6\fP
-.TP
-\fBtcp\fP
-.TP
-\fBmptcp\fP
-.TP
-\fBsctp\fP
-.RE
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Bl -tag -width Ds
+.It \fBcollect\fP \fI[ip|icmp|udp|udplite|udplite6|ip6|icmp6|udp6|tcp|mptcp|sctp]\fP
+.Bl -tag -width Ds
+.It \fBip\fP
+.It \fBicmp\fP
+.It \fBudp\fP
+.It \fBudplite\fP
+.It \fBudplite6\fP
+.It \fBip6\fP
+.It \fBicmp6\fP
+.It \fBudp6\fP
+.It \fBtcp\fP
+.It \fBmptcp\fP
+.It \fBsctp\fP
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

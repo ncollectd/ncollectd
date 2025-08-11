@@ -1,28 +1,34 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-irq 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd irq man page"
-.SH NAME
-ncollectd-irq \- Documentation of ncollectd's irq plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-IRQ 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-irq
+.Nd Documentation of ncollectd's irq plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP irq
-.br
 \fBplugin\fP irq {
     \fBirq\fP [\fIincl|include|excl|exclude\fP] \fIirq\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBirq\fP plugin collects the number of times each interrupt
 has been handled by the operating system.
-.PP
+.Pp
 The plugin has the following options:
-.PP
-.TP
-\fBirq\fP [\fIincl|include|excl|exclude\fP] \fIirq\fP
-Select this \fIirq\fP. By default these irqs will then be collected.
+.Bl -tag -width Ds
+.It \fBirq\fP [\fIincl|include|excl|exclude\fP] \fIirq\fP
+Select this \fIirq\fP.
+By default these irqs will then be collected.
 If no configuration if given, the \fBirq\fP plugin will collect data from all
-irqs. This may not be practical, especially if no interrupts happen. Thus, you
-can use the \fBirq\fP option to pick the interrupt you're interested in.
+irqs.
+This may not be practical, especially if no interrupts happen.
+Thus, you can use the \fBirq\fP option to pick the interrupt you're
+interested in.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

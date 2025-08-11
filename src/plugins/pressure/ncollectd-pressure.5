@@ -1,13 +1,20 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-pressure 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd pressure man page"
-.SH NAME
-ncollectd-pressure \- Documentation of ncollectd's pressure plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PRESSURE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-pressure
+.Nd Documentation of ncollectd's pressure plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP pressure
-.SH DESCRIPTION
+\fBplugin\fP pressure
+.Ed
+.Sh DESCRIPTION
 The \fBpressure\fP plugin monitors the pressure stall information (PSI) for cpu,
-io and memory. Avaliable for Linux since kernel 4.20. This provides visibility
-into how resource-constrained the system is.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+io and memory.
+Avaliable for Linux since kernel 4.20.
+This provides visibility into how resource-constrained the system is.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

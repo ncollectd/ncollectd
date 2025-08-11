@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-db2 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd db2 man page"
-.SH NAME
-ncollectd-db2 \- Documentation of ncollectd's db2 plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DB2 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-db2
+.Nd Documentation of ncollectd's db2 plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP db2
-.br
 \fBplugin\fP db2 {
     \fBquery\fP \fIquery-name\fP {
         \fBstatement\fP \fIsql\fP
@@ -41,147 +44,124 @@ ncollectd-db2 \- Documentation of ncollectd's db2 plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBdb2\fP plugin connect to a DB2 database, execute \fISQL\fP statements and read back the
-results. You can configure how each column is to be interpreted and the
-plugin will generate one or more data sets from each row returned according
-to these rules.
-.TP
-\fBinstance\fP \fIdatabase\fP
-Instance blocks define a connection to a database and which queries should be sent to that
-database. Each database needs a "name" as string argument in the starting tag of the
-block.
-.RS
-.TP
-\fBalias\fP \fIdatabase-alias\fP
+.Ed
+.Sh DESCRIPTION
+The \fBdb2\fP plugin connect to a DB2 database, execute \fISQL\fP statements
+and read back the results.
+You can configure how each column is to be interpreted and the plugin will
+generate one or more data sets from each row returned according to these rules.
+.Bl -tag -width Ds
+.It \fBinstance\fP \fIdatabase\fP
+Instance blocks define a connection to a database and which queries should be
+sent to that database.
+Each database needs a "name" as string argument in the starting
+tag of the block.
+.Bl -tag -width Ds
+.It \fBalias\fP \fIdatabase-alias\fP
 It's the alternative name of the database object in the catalog.
-.TP
-\fBuser\fP \fIuser\fP
+.It \fBuser\fP \fIuser\fP
 User to connecto to database
-.TP
-\fBuser-env\fP \fIenv-name\fP
-Get the user to connecto to database from the environment variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBuser-env\fP \fIenv-name\fP
+Get the user to connecto to database from the environment variable
+\fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
 User password to connecto to database
-.TP
-\fBpassword-env\fP \fIenv-name\fP
-Get the user password to connecto to database from the environment variable \fIenv-name\fP.
-.TP
-\fBconnection\fP \fIconnection-string\fP
-Specifies the connection string to use to connect to the database. A connection
-string consists of a series of keyword value pairs separated by semicolons (\f(CW;\fP).
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the user password to connecto to database from the environment
+variable \fIenv-name\fP.
+.It \fBconnection\fP \fIconnection-string\fP
+Specifies the connection string to use to connect to the database.
+A connection string consists of a series of keyword value pairs separated by
+semicolons (\f(CW;\fP).
 The equal sign (\f(CW=\fP) connects each keyword and its value.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBdatabase\fP block.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBdatabase\fP block.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-database. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBquery\fP \fIquery-name\fP
-Associates the query named \fIquery-name\fP with this database connection. The
-query needs to be defined \fIbefore\fP this statement, i. e. all query
-blocks you want to refer to must be placed above the database block you want to
-refer to them from.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.TP
-.RE
-.TP
-\fBquery\fP \fIquery-name\fP
+database.
+By default the global \fBinterval\fP setting will be used.
+.It \fBquery\fP \fIquery-name\fP
+Associates the query named \fIquery-name\fP with this database connection.
+The query needs to be defined \fIbefore\fP this statement, i. e. all query
+blocks you want to refer to must be placed above the database block you
+want to refer to them from.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.It \fBquery\fP \fIquery-name\fP
 Query blocks define \fISQL\fP statements and how the returned data should be
-interpreted. They are identified by the name that is given in the opening line
-of the block. Thus the name needs to be unique. Other than that, the name is
-not used in ncollectd.
-
-In each \fBquery\fP block, there is one or more \fBresult\fP blocks. \fBresult\fP blocks
-define which column holds which value or instance information. You can use
-multiple \fBresult\fP blocks to create multiple values from one returned row. This
-is especially useful, when queries take a long time and sending almost the same
-query again and again is not desirable.
-.RS
-.TP
-\fBstatement\fP \fIsql\fP
-Sets the statement that should be executed on the server. This is \fBnot\fP
-interpreted by ncollectd, but simply passed to the database server. Therefore,
-the SQL dialect that's used depends on the server collectd is connected to.
-
-The query has to return at least two columns, one for the instance and one
-value. You cannot omit the instance, even if the statement is guaranteed to
-always return exactly one line. In that case, you can usually specify something
-like this:
-.TP
-\fBmin-version\fP \fIversion\fP
-.TP
-\fBmax-version\fP \fIversion\fP
-Only use this query for the specified database version. You can use these
-options to provide multiple queries with the same name but with a slightly
-different syntax. The plugin will use only those queries, where the specified
-minimum and maximum versions fit the version of the database in use.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+interpreted.
+They are identified by the name that is given in the opening line of the block.
+Thus the name needs to be unique.
+Other than that, the name is not used in ncollectd.
+.Pp
+In each \fBquery\fP block, there is one or more \fBresult\fP blocks.
+\fBresult\fP blocks define which column holds which value or instance
+information.
+You can use multiple \fBresult\fP blocks to create multiple values
+from one returned row.
+This is especially useful, when queries take a long time and sending almost
+the same query again and again is not desirable.
+.Bl -tag -width Ds
+.It \fBstatement\fP \fIsql\fP
+Sets the statement that should be executed on the server.
+This is \fBnot\fP interpreted by ncollectd, but simply passed to the
+database server.
+.It \fBmin-version\fP \fIversion\fP
+.It \fBmax-version\fP \fIversion\fP
+Only use this query for the specified database version.
+You can use these options to provide multiple queries with the same name but
+with a slightly different syntax.
+The plugin will use only those queries, where the specified minimum
+and maximum versions fit the version of the database in use.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBquery\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBquery\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
 Specifies the columns whose values will be used to create the labels.
-.TP
-\fBresult\fP
-.RS
-.TP
-\fBtype\fP \fIgauge|counter|info|unknow\fP
-The \fBtype\fP that's used for each metric returned. Must be \fIgauge\fP, \fIcounter\fP,
-\fIinfo\fP or \fPunknow\fP.  If not set is \fPunknow\fP.
+.It \fBresult\fP
+.Bl -tag -width Ds
+.It \fBtype\fP \fIgauge|counter|info|unknow\fP
+The \fBtype\fP that's used for each metric returned.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
+If not set is \fPunknow\fP.
 There must be exactly one \fBtype\fP option inside each \fBResult\fP block.
-.TP
-\fBtype-from\fP \fIcolumn-name\fP
-Read the type from \fIcolumn\fP. The column value must be \fIgauge\fP, \fIcounter\fP,
+.It \fBtype-from\fP \fIcolumn-name\fP
+Read the type from \fIcolumn\fP.
+The column value must be \fIgauge\fP, \fIcounter\fP,
 \fIinfo\fP or \fPunknow\fP.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
-.TP
-\fBhelp-from\fP \fIcolumn-name\fP
+.It \fBhelp-from\fP \fIcolumn-name\fP
 Read the \fBhelp\fP text for the the metric from the named column.
-.TP
-\fBmetric\fP \fImetric-name\fP
+.It \fBmetric\fP \fImetric-name\fP
 Set the metric name.
-.TP
-\fBmetric-prefix\fP \fI prefix\fP
+.It \fBmetric-prefix\fP \fI prefix\fP
 Prepends \fIprefix\fP to the metric name in the \fBresult\fP.
-.TP
-\fBmetric-from\fP \fIcolumn-name\fP
+.It \fBmetric-from\fP \fIcolumn-name\fP
 Read the metric name from the named column.
 There must be at least one \fBmetric\fP or \fBmetric-from\fP option inside
 each \fBresult\fP block.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple times in the \fBresult\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times in the \fBresult\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
 Specifies the columns whose values will be used to create the labels.
-.TP
-\fBvalue-from\fP \fIcolumn-name\fP
+.It \fBvalue-from\fP \fIcolumn-name\fP
 Name of the column whose content is used as the actual data for the metric
 that are dispatched to the daemon.
-
 There must be only one \fBvalue-from\fP option inside each \fBresult\fP block.
-.RE
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

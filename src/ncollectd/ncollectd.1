@@ -1,77 +1,82 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd 1 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd man page"
-.SH NAME
-ncollectd \- System statistics collection daemon
-.SH SYNOPSIS
-.B ncollectd [OPTION]...
-.SH DESCRIPTION
-.B ncollectd
-is a daemon that receives system statistics and makes them available
-in a number of ways. The main daemon itself doesn't have any real functionality
-apart from loading, querying and submitting to plugins. For a description of
-available plugins please see
-.B PLUGINS
-below.
-.SH OPTIONS
-Most of ncollectd's configuration is done using using a configfile. See
-.BR ncollectd.conf (5)
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD 1
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd
+.Nd System statistics collection daemon
+.Sh SYNOPSIS
+.Nm ncollectd
+.Op Fl tTfh
+.Op Fl C Ar config-file
+.Op Fl P Ar pid-file
+.Sh DESCRIPTION
+\fBncollectd\fP is a daemon that receives system statistics and makes them
+available in a number of ways.
+The main daemon itself doesn't have any real functionality apart from loading,
+querying and submitting to plugins.
+For a description of available plugins please see \fBPLUGINS\fP below.
+.Sh OPTIONS
+Most of ncollectd's configuration is done using using a configfile.
+See
+.Xr ncollectd.conf 5
 for an in-depth description of all options.
-.TP
-\fB\-C\fR \fI\,config\-file\/\fR
-Specify an alternative config file. This is the place to go when you wish to
-change \fBncollectd\fR's behavior. The path may be relative to the current working
-directory.
-.TP
-\fB\-t\fR
-Test the configuration only. The program immediately exits after parsing the
-config file. A return code not equal to zero indicates an error.
-.TP
-\fB\-T\fR
-Test the plugin read callbacks only. The program immediately exits after invoking
-the read callbacks once. A return code not equal to zero indicates an error.
-.TP
-\fB\-P\fR \fI\,pid\-file\/\fR
-Specify an alternative pid file. This overwrites any settings in the config
-file. This is thought for init-scripts that require the PID\-file in a certain
-directory to work correctly. For everyday-usage use the \fBpid\-file\fR
-config\-option.
-.TP
-\fB\-B\fR
-If set, ncollectd will \fI\,not\/\fR try to create its base directory. If the base
-directory does not exist, it will exit rather than trying to create the
-directory.
-.TP
-\fB\-f\fR
-Don't fork to the background. \fIncollectd\fR will also \fB\,not\/\fR close standard file
-descriptors, detach from the session nor write a pid file. This is mainly
-thought for 'supervising' init replacements such as \fIrunit\fP. If using
-\fIupstart\fP or \fIsystemd\fP though.
-.TP
-\fB\-h\fR
+.Bl -tag -width Ds
+.It \fB\-C\fR \fI\,config\-file\/\fR
+Specify an alternative config file.
+This is the place to go when you wish to change \fBncollectd\fP's behavior.
+The path may be relative to the current working directory.
+.It \fB\-t\fR
+Test the configuration only.
+The program immediately exits after parsing the config file.
+A return code not equal to zero indicates an error.
+.It \fB\-T\fR
+Test the plugin read callbacks only.
+The program immediately exits after invoking the read callbacks once.
+A return code not equal to zero indicates an error.
+.It \fB\-P\fR \fI\,pid\-file\/\fR
+Specify an alternative pid file.
+This overwrites any settings in the config file.
+This is thought for init-scripts that require the PID\-file in a certain
+directory to work correctly.
+For everyday-usage use the \fBpid\-file\fR config\-option.
+.It \fB\-B\fR
+If set, ncollectd will \fI\,not\/\fR try to create its base directory.
+If the base directory does not exist, it will exit rather than trying
+to create the directory.
+.It \fB\-f\fR
+Don't fork to the background.
+\fIncollectd\fR will also \fB\,not\/\fR close standard file descriptors,
+detach from the session nor write a pid file.
+This is mainly thought for 'supervising' init replacements such as \fIrunit\fP.
+If using \fIupstart\fP or \fIsystemd\fP though.
+.It \fB\-h\fR
 Output usage information and exit.
-.SS PLUGINS
-As noted above, the real power of ncollectd lies within its plugins. A
-(hopefully complete) list of plugins and short descriptions can be found in the
-\f(CWREADME\fP file that is distributed with the sourcecode.
-
+.El
+.Sh PLUGINS
+As noted above, the real power of ncollectd lies within its plugins.
+A (hopefully complete) list of plugins and short descriptions can be found
+in the \f(CWREADME\fP file that is distributed with the sourcecode.
+.Pp
 There are two big groups of plugins, \fIinput\fP and \fIoutput\fP plugins:
-.TP
-\fBinput\fP
-Input plugins are queried periodically. They somehow acquire the current value
-of whatever they where designed to work with and submit these values back to
-the daemon, i. e. they "dispatch" the values. As an example, the \f(CWcpu plugin\fP
-reads the current cpu-counters of time spent in the various modes (user,
-system, nice, ...) and dispatches these counters to the daemon.
-.TP
-\fBoutput\fP
+.Bl -tag -width Ds
+.It \fBinput\fP
+Input plugins are queried periodically.
+They somehow acquire the current value of whatever they where designed to
+work with and submit these values back to the daemon, i. e. they "dispatch"
+the values.
+As an example, the \f(CWcpu plugin\fP reads the current cpu-counters of time
+spent in the various modes (user, system, nice, ...) and dispatches these
+counters to the daemon.
+.It \fBoutput\fP
 Output plugins get the dispatched values from the daemon and does something
 with them, can handle notifications and logging.
-
-.SH SIGNALS
+.El
+.Sh SIGNALS
 \fB\,ncollectd\/\fR accepts the following signals:
-.TP
-\fB\,SIGINT\/\fR, \fB\,SIGTERM\/\fR
+.Bl -tag -width Ds
+.It \fB\,SIGINT\/\fR, \fB\,SIGTERM\/\fR
 These signals cause \fBncollectd\fP to shut down all plugins and terminate.
-.TP
-.SH "SEE ALSO"
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd.conf 5

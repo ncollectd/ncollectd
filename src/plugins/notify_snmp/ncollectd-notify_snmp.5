@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-notify-snmp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd notify-snmp man page"
-.SH NAME
-ncollectd-notify-snmp \- Documentation of ncollectd's notify_snmp plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NOTIFY_SNMP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-notify_snmp
+.Nd Documentation of ncollectd's notify_snmp plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP notify_snmp
-.br
 \fBplugin\fP notify_snmp {
     \fBoids\fP \fIoids-name\fP {
         \fBenterprise-oid\fB \fIoid\fP
@@ -15,80 +18,73 @@ ncollectd-notify-snmp \- Documentation of ncollectd's notify_snmp plugin
         \fBlabels-oid\fB \fIoid\fP
         \fBannotations-oid\fB \fIoid\fP
     }
-    \fBtarger\fP \fItarget\fP {
+    \fBtarget\fP \fItarget\fP {
         \fBaddress\fP \fIaddress\fP
         \fBversion\fP [\fI1|2\fP]
         \fBcommunity\fP \fIcommunity\fP
         \fBsession-reuse\fP \fIsession-reuse\fP
         \fBoids\fP \fIoids-name\fP
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBnotify_snmp\fP plugin use the Net-SNMP library to send notifications as
 \fISNMP Traps\fP.
-.PP
-The plugin's configuration consists of a number of \fBoids\fP and \fBtarget\fP blocks.
-.PP
-.TP
-\fBoids\fP \fIoids-name\fP
+.Pp
+The plugin's configuration consists of a number of \fBoids\fP and
+\fBtarget\fP blocks.
+.Bl -tag -width Ds
+.It \fBoids\fP \fIoids-name\fP
 The \fBoids\fP block configure the list of object identifiers to send in the
-\fISNMP Trap\fP. There are sent in the order show.
+\fISNMP Trap\fP.
+There are sent in the order show.
 They are identified by the name that is given in the opening line of the block.
-.RS
-.TP
-\fBenterprise-oid\fB \fIoid\fP
+.Bl -tag -width Ds
+.It \fBenterprise-oid\fB \fIoid\fP
 Set the Enterprise \fIoid\fP, used in SNMP version 1.
-.TP
-\fBtrap-oid\fB \fIoid\fP
+.It \fBtrap-oid\fB \fIoid\fP
 Set the Trap \fIoid\fP, used in SNMP version 2.
-.TP
-\fBname-oid\fB \fIoid\fP
+.It \fBname-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification name.
-.TP
-\fBtimeStamp-oid\fB \fIoid\fP
+.It \fBtimeStamp-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification timestamp.
-.TP
-\fBseverity-oid\fB \fIoid\fP
+.It \fBseverity-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification severity.
-.TP
-\fBlabels-oid\fB \fIoid\fP
+.It \fBlabels-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification labels.
-.TP
-\fBannotations-oid\fB \fIoid\fP
+.It \fBannotations-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification annotations.
-.RE
-.TP
-\fBtarger\fP \fItarget\fP
+.El
+.It \fBtarget\fP \fItarget\fP
 The \fBtarget\fP block configure the destination of the \fISNMP Trap\fP and
 which OIDs should be send in the trap.
 They are identified by the name that is given in the opening line of the block.
-.RS
-.TP
-\fBaddress\fP \fPaddress\fP
-Set the address of the target to connect to. The default protocol is udp and
-the port is 161. See the
-BR snmpcmd (1)
+.Bl -tag -width Ds
+.It \fBaddress\fP \fPaddress\fP
+Set the address of the target to connect to.
+The default protocol is udp and the port is 161.
+See the
+.Xr snmpcmd 1
 manual page for more details.
-.TP
-\fBversion\fP [\fI1|2\fP]
-Set the SNMP version to use. When giving \fB2\fP version \fB2c\fP is actually used.
-Version 3 is not supported by this plugin. TODO
-.TP
-\fBcommunity\fP \fIcommunity\fP
+.It \fBversion\fP [\fI1|2\fP]
+Set the SNMP version to use.
+When giving \fB2\fP version \fB2c\fP is actually used.
+Version 3 is not supported by this plugin.
+TODO
+.It \fBcommunity\fP \fIcommunity\fP
 Pass the \fIcommunity\fP to the target.
-.TP
-\fBsession-reuse\fP \fIsession-reuse\fP
+.It \fBsession-reuse\fP \fIsession-reuse\fP
 Keep SNMP session open between notifications send.
-.TP
-\fBoids\fP \fIoids-name\fP
-Defines which OIDs are used in the Trap. \fIname\fP refers to one of the \fBoids\fP
-block above. Since the config file is read top-down you need to define the data
+.It \fBoids\fP \fIoids-name\fP
+Defines which OIDs are used in the Trap. \fIname\fP refers to one of the
+\fBoids\fP block above.
+Since the config file is read top-down you need to define the data
 before using it here.
-
+.Pp
 If option \fBoids\fP is not specified the default values defined in the plugin
 are used.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

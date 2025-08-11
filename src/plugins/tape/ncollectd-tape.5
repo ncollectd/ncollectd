@@ -1,21 +1,25 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-tape 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd tape man page"
-.SH NAME
-ncollectd-tape \- Documentation of ncollectd's tape plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-TAPE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-tape
+.Nd Documentation of ncollectd's tape plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP tape
-.br
 \fBplugin\fP tape {
     \fBtape\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBtape\fP plugin collects information about the usage of tapes.
-.TP
-\fBtape\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+.Bl -tag -width Ds
+.It \fBtape\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
 Select tape based on the devicename.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

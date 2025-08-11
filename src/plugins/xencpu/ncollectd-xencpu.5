@@ -1,15 +1,22 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-xencpu 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd xencpu man page"
-.SH NAME
-ncollectd-xencpu \- Documentation of ncollectd's xencpu plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-XENCPU 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-xencpu
+.Nd Documentation of ncollectd's xencpu plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP xencpu
-.SH DESCRIPTION
-The \fBxencpu\fP plugin collects metrics of hardware CPU load for machine running Xen
-hypervisor. Load is calculated from 'idle time' value, provided by Xen.
+\fBplugin\fP xencpu
+.Ed
+.Sh DESCRIPTION
+The \fBxencpu\fP plugin collects metrics of hardware CPU load for machine
+running Xen hypervisor.
+Load is calculated from 'idle time' value, provided by Xen.
 Result is reported using the C<percent> type, for each CPU (core).
-
-This plugin doesn't have any options (yet).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Pp
+This plugin doesn't have any options.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

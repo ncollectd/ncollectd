@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-recursor 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd recursor man page"
-.SH NAME
-ncollectd-recursor \- Documentation of ncollectd's recursor plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-RECURSOR 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-recursor
+.Nd Documentation of ncollectd's recursor plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP recursor
-.br
 \fBplugin\fP recursor {
     \fBinstance\fP \fIname\fP {
         \fBsocket\fP "\fIpath-to-socket\fP"
@@ -17,53 +20,48 @@ ncollectd-recursor \- Documentation of ncollectd's recursor plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBrecursor\fP plugin queries statistics from a PowerDNS recursor.
-
-The configuration of the \fBrecursor\fP plugin consists of one or more \fBinstance\fP
-blocks. Each block requires one string argument as the instance name.
+.Pp
+The configuration of the \fBrecursor\fP plugin consists of one or more
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
 The following options are accepted within each block:
-.PP
-.TP
-\fBsocket\fP "\fIpath-to-socket\fP"
+.Bl -tag -width Ds
+.It \fBsocket\fP "\fIpath-to-socket\fP"
 Configures the path to the UNIX domain socket to be used when connecting to the
-daemon. By default \f(CW/run/pdns-recursor/pdns_recursor.controlsocket\fP will be used.
-.TP
-\fBlocal-socket\fP "\fIpath-to-socket\fP"
-Querying the recursor is done using UDP. When using UDP over UNIX domain
-sockets, the client socket needs a name in the file system, too.
+daemon.
+By default \f(CW/run/pdns-recursor/pdns_recursor.controlsocket\fP will be used.
+.It \fBlocal-socket\fP "\fIpath-to-socket\fP"
+Querying the recursor is done using UDP.
+When using UDP over UNIX domain sockets, the client socket needs a name
+in the file system, too.
 This is used for PowerDNS Recursor versions less than 4.6.0.
 The default is \f(CW/var/run/ncollectd-powerdns\fP.
-.TP
-\fBtimeout\fP \fIseconds\fP
+.It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for the requests.
-.TP
-\fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+.It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected.
-.TP
-\fBprotocol\fP \fI1|2|3\fP
-.RS
+.It \fBprotocol\fP \fI1|2|3\fP
 The PowerDNS Recursor has diferents protocols to query depending on the version:
-.TP
-\fB1\fP
+.Bl -tag -width Ds
+.It \fB1\fP
 For PowerDNS Recursor versions less than 4.5.0.
 This is the default option.
-.TP
-\fB2\fP
+.It \fB2\fP
 For PowerDNS Recursor versions between 4.5.0 and 4.5.11.
-.TP
-\fB3\fP
+.It \fB3\fP
 For PowerDNS Recursor versions great than 4.6.0.
-.RE
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

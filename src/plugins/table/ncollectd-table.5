@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-table 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd table man page"
-.SH NAME
-ncollectd-table \- Documentation of ncollectd's table plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-TABLE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-table
+.Nd Documentation of ncollectd's table plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP table
-.br
 \fBplugin\fP table {
     \fBtable\fP \fI/path/to/file\fP {
         \fBseparator\fP  \fIstring\fP
@@ -24,70 +27,60 @@ ncollectd-table \- Documentation of ncollectd's table plugin
             \fBshift\fP \fIvalue\fP
             \fBscale\fP \fIvalue\fP
         }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBtable\fP plugin provides generic means to parse tabular data and dispatch
-user specified values. Values are selected based on column numbers.
-.PP
+user specified values.
+Values are selected based on column numbers.
+.Pp
 The configuration consists of one or more \fBtable\fP blocks, each of which
-configures one file to parse. Within each \fBtable\fP block, there are one or
-more \fBresult\fP blocks, which configure which data to select and how to
-interpret it.
-.PP
+configures one file to parse.
+Within each \fBtable\fP block, there are one or more \fBresult\fP blocks,
+which configure which data to select and how to interpret it.
+.Pp
 The following options are available inside a \fBtable\fP block:
-.PP
-.TP
-\fBseparator\fP \fIstring\fP
+.Bl -tag -width Ds
+.It \fBseparator\fP \fIstring\fP
 Any character of string is interpreted as a delimiter between the different
-columns of the table. A sequence of two or more contiguous delimiters in the
-table is considered to be a single delimiter, i. e. there cannot be any
-empty columns. The default separator is a space.
-
+columns of the table.
+A sequence of two or more contiguous delimiters in the table is considered
+to be a single delimiter, i. e. there cannot be any empty columns.
+The default separator is a space.
+.Pp
 A horizontal tab, newline and carriage return may be specified by \f(CW\\t\fP,
-\f(CW\\n\fP and \f(CW\\r\fP respectively. Please note that the double backslashes are
-required because of collectd's config parsing.
-.TP
-\fBskip-lines\fP \fIlines\fP
+\f(CW\\n\fP and \f(CW\\r\fP respectively.
+Please note that the double backslashes are required because of ncollectd's
+config parsing.
+.It \fBskip-lines\fP \fIlines\fP
 Skip the number of \fIlines\fP at the beginning of the file.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends the \fIprefix\fP to the metric name in the block \fBresult\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBtable\fP block.
-.TP
-\fBinterval\fP \fIseconds\fP
-The \fBinterval\fP option allows you to define the length of time between reads. If
-this is not set, the global \fBinterval\fP will be used.
-.TP
-\fBresult\fP
-.RS
-.TP
-\fBtype\fP \fIgauge|unknow|counter|info\fP
-.TP
-\fBhelp\fP \fIhelp\fP
-.TP
-\fBmetric\fP \fIname\fP
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
-.TP
-\fBmetric-from\fP \fIcolumn\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBlabel-from\fP \fIcolumn\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBvalue-from\fP \fIcolumn\fP
-.TP
-\fBshift\fP \fIvalue\fP
-Value is added to gauge metrics values. This value is not applied to counters.
-.TP
-\fBscale\fP \fIvalue\fP
-The gauge metric value are multiplied by this value. This value is not applied to counters.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+Can appear multiple time in the \fBtable\fP block.
+.It \fBinterval\fP \fIseconds\fP
+The \fBinterval\fP option allows you to define the length of time between reads.
+If this is not set, the global \fBinterval\fP will be used.
+.It \fBresult\fP
+.Bl -tag -width Ds
+.It \fBtype\fP \fIgauge|unknow|counter|info\fP
+.It \fBhelp\fP \fIhelp\fP
+.It \fBmetric\fP \fIname\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
+.It \fBmetric-from\fP \fIcolumn\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel-from\fP \fIcolumn\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.It \fBvalue-from\fP \fIcolumn\fP
+.It \fBshift\fP \fIvalue\fP
+Value is added to gauge metrics values.
+This value is not applied to counters.
+.It \fBscale\fP \fIvalue\fP
+The gauge metric value are multiplied by this value.
+This value is not applied to counters.
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

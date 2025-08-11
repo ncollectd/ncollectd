@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-statsd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd statsd man page"
-.SH NAME
-ncollectd-statsd \- Documentation of ncollectd's statsd plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-STATSD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-statsd
+.Nd Documentation of ncollectd's statsd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP statsd
-.br
 \fBplugin\fP statsd {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
@@ -21,54 +24,52 @@ ncollectd-statsd \- Documentation of ncollectd's statsd plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBstatsd\fP plugin listens to a UDP socket, reads "events" in the statsd
 protocol and dispatches rates or other aggregates of these numbers periodically.
-.PP
-The plugin implements the \fIcounter\fP, \fItimer\fP, \fIgauge\fP and \fIset\fP statds metrics.
-.PP
+.Pp
+The plugin implements the \fIcounter\fP, \fItimer\fP, \fIgauge\fP and \fIset\fP
+statds metrics.
+.Pp
 The configuration of the \fBstatsd\fP plugin consists of one or more
-\fBinstance\fP blocks. Each block requires one string argument
-as the instance name.  The following configuration options are valid:
-.TP
-\fBhost\fP \fIhost\fP
-Bind to the hostname / address \fIhost\fP. By default, the plugin will bind to the
-"any" address, i.e. accept packets sent to any of the hosts addresses.
-.TP
-\fBport\fP \fIport\fP
-UDP port to listen to. This can be either a service name or a port number.
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
+The following configuration options are valid:
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
+Bind to the hostname / address \fIhost\fP.
+By default, the plugin will bind to the "any" address, i.e. accept packets sent
+to any of the hosts addresses.
+.It \fBport\fP \fIport\fP
+UDP port to listen to.
+This can be either a service name or a port number.
 Defaults to \f(CW8125\fP.
-.TP
-\fBdelete-counters\fP \fItrue|false\fP
-.TP
-\fBdelete-timers\fP \fItrue|false\fP
-.TP
-\fBdelete-gauges\fP \fItrue|false\fP
-.TP
-\fBdelete-sets\fP \fItrue|false\fP
+.It \fBdelete-counters\fP \fItrue|false\fP
+.It \fBdelete-timers\fP \fItrue|false\fP
+.It \fBdelete-gauges\fP \fItrue|false\fP
+.It \fBdelete-sets\fP \fItrue|false\fP
 These options control what happens if metrics are not updated in an interval.
 If set to \fIfalse\fP, the default, metrics are dispatched unchanged, i.e. the
-rate of counters and size of sets will be zero, timers report \f(CWNaN\fP and gauges
-are unchanged. If set to \fBtrue\fP, the such metrics are not dispatched and
-removed from the internal cache.
-.TP
-\fBtimer-buckets\fP \fIbucket\fP [[\fIbucket\fP] ...]
+rate of counters and size of sets will be zero, timers report \f(CWNaN\fP
+and gauges are unchanged.
+If set to \fBtrue\fP, the such metrics are not dispatched and removed from
+the internal cache.
+.It \fBtimer-buckets\fP \fIbucket\fP [[\fIbucket\fP] ...]
 Config the buckets for the timer histograms.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prefix the metrics name with this strings.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

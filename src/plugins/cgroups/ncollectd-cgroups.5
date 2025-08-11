@@ -1,26 +1,30 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-cgroups 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cgroups man page"
-.SH NAME
-ncollectd-cgroups \- Documentation of ncollectd's cgroups plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CGROUPS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-cgroups
+.Nd Documentation of ncollectd's cgroups plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP cgroups
-.br
 \fBplugin\fP cgroups {
     \fBcgroup\fP [\fIincl|include|excl|exclude\fP] \fIcgroup\fP
-.br
 }
-.SH DESCRIPTION
-The \fBcgroups\fP plugin collects the CPU user/system time for each \fIcgroup\fP by
-reading the \fIcpuacct.stat\fP files in the first cpuacct-mountpoint (typically
-\fI/sys/fs/cgroup/cpu.cpuacct\fP on machines using systemd).
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBcgroups\fP plugin collects the CPU user/system time for each
+\fIcgroup\fP by reading the \fIcpuacct.stat\fP files in the first
+cpuacct-mountpoint (typically \fI/sys/fs/cgroup/cpu.cpuacct\fP on
+machines using systemd).
+.Pp
 The plugin has the following options:
-.PP
-.TP
-\fBcgroup\fP [\fIincl|include|excl|exclude\fP] \fIcgroup\fP
+.Bl -tag -width Ds
+.It \fBcgroup\fP [\fIincl|include|excl|exclude\fP] \fIcgroup\fP
 Select \fIcgroup\fP based on the name.
 By default only selected cgroups are collected if a selection is made.
 If no selection is configured at all, \fBall\fP cgroups are selected.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

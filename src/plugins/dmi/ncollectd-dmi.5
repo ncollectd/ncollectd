@@ -1,12 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-dmi 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd dmi man page"
-.SH NAME
-ncollectd-dmi \- Documentation of ncollectd's dmi plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DMI 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-dmi
+.Nd Documentation of ncollectd's dmi plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP dmi
-.SH DESCRIPTION
-The \fBdmi\fP plugin collects DMI information that is found at \fI/sys/class/dmi/id\fP:
-\*(lqBIOS\*(rq, \*(lqBase Board\*(rq, \*(lqChassis\*(rq, and \*(lqSystem Information\*(rq sections.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP dmi
+.Ed
+.Sh DESCRIPTION
+The \fBdmi\fP plugin collects DMI information that is found at
+\fI/sys/class/dmi/id\fP: \*(lqBIOS\*(rq, \*(lqBase Board\*(rq,
+\*(lqChassis\*(rq, and \*(lqSystem Information\*(rq sections.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

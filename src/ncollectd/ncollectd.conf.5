@@ -1,74 +1,49 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd.conf 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd.conf man page"
-.SH NAME
-ncollectd.conf - Configuration for the system statistics collection daemon
-.B ncollectd
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD.CONF 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd.conf
+.Nd Configuration for the system statistics collection daemon
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBbase-dir\fP \fI/path/to/base\fP
-.br
 \fBpid-file\fP \fI/path/to/pid\fP
-.br
 \fBhostname\fP \fIhostname.domain\fP
-.br
 \fBfqdn-lookup\fP \fItrue|fase\fP
-.br
 \fBinterval\fP \fIseconds\fP
-.br
 \fBread-threads\fP \fIthreads\fP
-.br
 \fBwrite-queue-limit-high\fP \fIhigh\fP
-.br
 \fBwrite-queue-limit-low\fP \fIlow\fP
-.br
 \fBauto-load-plugin\fP \fItrue|fase\fP
-.br
 \fBcollect-internal-stats\fP \fItrue|fase\fP
-.br
 \fBpre-cache-filter\fP \fIpre-cache\fP
-.br
 \fBpost-cache-filter\fP \fIpost-cache\fP
-.br
 \fBmax-read-interval\fP \fIseconds\fP
-.br
 \fBnormalize-interval\fP \fItrue|fase\fP
-.br
 \fBsocket-file\fP \fI/path/to/socket\fP
-.br
 \fBsocket-group\fP \fIgroup-name\fP
-.br
 \fBsocket-perms\fP \fIperms-octal\fP
-.br
 \fBsocket-delete\fP \fItrue|false\fP
-.br
 \fBproc-path\fP \fI/path/to/proc\fP
-.br
 \fBsys-path\fP \fI/path/to/sys\fP
-.br
 \fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
-.br
 \fBlabel\fP \fIkey\fP \fIvalue\fP
-.br
 \fBplugin-dir\fP \fI/path/to/plugins\fP
-.br
 \fBinclude\fP \fI/path/to/config\fP
-.sp 2
 \fBfilter\fP \fIfilter-name\fP {
     \fBif\fP \fImatch\fP {
         ...
     }
-.sp 2
     \fBunless\fP \fImatch\fP {
         ...
     }
-.sp 2
     \fBelif\fP \fImatch\fP {
         ...
     }
-.sp 2
     \fBelse\fP {
         ...
     }
-.sp 2
     \fBdrop\fP
     \fBstop\fP
     \fBreturn\fP
@@ -86,417 +61,384 @@ ncollectd.conf - Configuration for the system statistics collection daemon
     \fBlabel-gsub\fP \fI/regex/\fP \fIreplace\fP
     \fBlabel-value-sub\fP \fIlabel\fP \fI/regex/\fP \fIreplace\fP
     \fBlabel-value-gsub\fP \fIlabel\fP \fI/regex/\fP \fIreplace\fP
-.sp 2
     \fBmetric-match\fP \fI/regex/\fP {
         \fBmetric-rename\fP \fIname\fP
         \fBlabel-set\fP \fIlabel\fP \fIvalue\fP
         \fBlabel-unset\fP \fIlabel\fP
         \fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
     }
-.sp 2
     \fBlabel-value-match\fP \fIlabel\fP \fI/regex/\fP {
         \fBmetric-rename\fP \fIname\fP
         \fBlabel-set\fP \fIlabel\fP \fIvalue\fP
         \fBlabel-unset\fP \fIlabel\fP
         \fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
     }
-.br
 }
-.sp 2
 \fBload-plugin\fP \fIplugin-name\fP {
     \fBinterval\fP \fIseconds\fP
     \fBnormalize-interval\fP \fItrue|false\fP
     \fBglobals\fP \fItrue|false\fP
-.br
 }
-.sp 2
 \fBplugin\fP \fIplugin-name\fP {
     ...
-.br
 }
-.SH DESCRIPTION
-
+.Ed
+.Sh DESCRIPTION
 This config file controls how the system statistics collection daemon
-\fBncollectd\fP behaves. The most significant option is \fBload-plugin\fP, which
-controls which plugins to load. These plugins ultimately define ncollectd's
-behavior. If the \fBauto-load-plugin\fP option has been enabled, the explicit
-\fBload-plugin\fP lines may be omitted for all plugins with a configuration block,
-i. e. \fBplugin\fP block.
-
+\fBncollectd\fP behaves.
+The most significant option is \fBload-plugin\fP, which controls which
+plugins to load.
+These plugins ultimately define ncollectd's behavior.
+If the \fBauto-load-plugin\fP option has been enabled, the explicit
+\fBload-plugin\fP lines may be omitted for all plugins with a configuration
+block, i. e. \fBplugin\fP block.
+.Pp
 Each line of the config file contains either an option (a key and a list of
 one or more values) or a block begin with \f(CW{\fP and end with \f(CW}\fP.
-Empty lines and everything after a non-quoted hash-symbol (\f(CW#\fP) are ignored.
-\fIKeys\fP are unquoted strings, consisting only of alphanumeric characters and the underscore
-character (\f(CW_\fP) or minus character (\f(CW-\fP).
+Empty lines and everything after a non-quoted hash-symbol (\f(CW#\fP) are
+ignored.
+\fIKeys\fP are unquoted strings, consisting only of alphanumeric characters
+and the underscore character (\f(CW_\fP) or minus character (\f(CW-\fP).
 Keys are handled case insensitive by \fIncollectd\fP itself and all
-plugins included with it. \fIValues\fP can either be an \fIunquoted string\fP, a
-\fIquoted string\fP (enclosed in double-quotes) a \fInumber\fP or a \fIboolean\fP
-expression. \fIUnquoted strings\fP consist of only alphanumeric characters and
-underscores (\f(CW_\fP) and do not need to be quoted. \fIQuoted strings\fP are
-enclosed in double quotes (\f(CW"\fP). You can use the backslash character (\f(CW\\\fP)
-to include double quotes as part of the string. \fINumbers\fP can be specified in
-decimal and floating point format (using a dot \f(CW.\fP as decimal separator),
-hexadecimal when using the \f(CW0x\fP prefix and octal with a leading zero (\f(CW0\fP).
+plugins included with it.
+\fIValues\fP can either be an \fIunquoted string\fP, a \fIquoted string\fP
+(enclosed in double-quotes) a \fInumber\fP or a \fIboolean\fP expression.
+\fIUnquoted strings\fP consist of only alphanumeric characters and
+underscores (\f(CW_\fP) and do not need to be quoted.
+\fIQuoted strings\fP are enclosed in double quotes (\f(CW"\fP).
+You can use the backslash character (\f(CW\\\fP) to include double quotes
+as part of the string.
+\fINumbers\fP can be specified in decimal and floating point format
+(using a dot \f(CW.\fP as decimal separator), hexadecimal when using the
+\f(CW0x\fP prefix and octal with a leading zero (\f(CW0\fP).
 \fIBoolean\fP values are either \fBtrue\fP or \fBfalse\fP.
-
-Lines may be wrapped by using \f(CW\\\fP as the last character before the newline.
-This allows long lines to be split into multiple lines. Quoted strings may be
-wrapped as well. However, those are treated special in that whitespace at the
-beginning of the following lines will be ignored, which allows for nicely
+.Pp
+Lines may be wrapped by using \f(CW\\\fP as the last character before
+the newline.
+This allows long lines to be split into multiple lines.
+Quoted strings may be wrapped as well.
+However, those are treated special in that whitespace at the beginning of
+the following lines will be ignored, which allows for nicely
 indenting the wrapped lines.
-
-The configuration is read and processed in order, i. e. from top to bottom. So
-the plugins are loaded in the order listed in this config file. It is a good
-idea to load any logging plugins first in order to catch messages from plugins
-during configuration. Also, unless \fBauto-load-plugin\fP is enabled, the
-\fBload-plugin\fP option \fImust\fP occur \fIbefore\fP the appropriate
-\fBplugin\fP block.
-
-.SS GLOBAL OPTIONS
-
-.TP
-\fBbase-dir\fP \fI/path/to/base\fP
-Sets the base directory. This is also the working
-directory for the daemon.
-.TP
-\fBpid-file\fP \fI/path/to/pid\fP
-Sets where to write the PID file to. This file is overwritten when it exists
-and deleted when the program is stopped. Some init-scripts might override this
-setting using the \fB-P\fP command-line option.
-.TP
-\fBhostname\fP \fIhostname.domain\fP
-Sets the hostname that identifies a host. If you omit this setting, the
-hostname will be determined using the
-.BR gethostname (2)
+.Pp
+The configuration is read and processed in order, i. e. from top to bottom.o
+So the plugins are loaded in the order listed in this config file.
+It is a good idea to load any logging plugins first in order to catch messages
+from plugins during configuration.
+Also, unless \fBauto-load-plugin\fP is enabled, the \fBload-plugin\fP option
+\fImust\fP occur \fIbefore\fP the appropriate \fBplugin\fP block.
+.Ss GLOBAL OPTIONS
+.Bl -tag -width Ds
+.It \fBbase-dir\fP \fI/path/to/base\fP
+Sets the base directory.
+This is also the working directory for the daemon.
+.It \fBpid-file\fP \fI/path/to/pid\fP
+Sets where to write the PID file to.
+This file is overwritten when it exists and deleted when the program is stopped.
+Some init-scripts might override this setting using the \fB-P\fP command-line
+option.
+.It \fBhostname\fP \fIhostname.domain\fP
+Sets the hostname that identifies a host.
+If you omit this setting, the hostname will be determined using the
+.Xr gethostname 2
 system call.
-.TP
-\fBfqdn-lookup\fP \fItrue|fase\fP
-If \fBhostname\fP is determined automatically this setting controls whether or not
-the daemon should try to figure out the "fully qualified domain name", FQDN.
-This is done using a lookup of the name returned by \f(CWgethostname\fP. This option
-is enabled by default.
-.TP
-\fBinterval\fP \fIseconds\fP
-Configures the interval in which to query the read plugins. Obviously smaller
-values lead to a higher system load produced by collectd, while higher values
-lead to more coarse statistics.
-.TP
-\fBread-threads\fP \fIthreads\fP
-Number of threads to start for reading plugins. The default value is \fB5\fP, but
-you may want to increase this if you have more than five plugins that take a
-long time to read. Mostly those are plugins that do network-IO. Setting this to
-a value higher than the number of registered read callbacks is not recommended.
-.TP
-\fBwrite-queue-limit-high\fP \fIhigh\fP
-.TP
-\fBwrite-queue-limit-low\fP \fIlow\fP
-Metrics are read by the \fIread threads\fP and then put into a queue to be handled
-by the \fIwrite plugin's thread\fP. If one of the \fIwrite plugins\fP is slow (e.g. network
-timeouts, I/O saturation of the disk) this queue will grow. In order to avoid
-running into memory issues in such a case, you can limit the size of this
-queue.
-
+.It \fBfqdn-lookup\fP \fItrue|fase\fP
+If \fBhostname\fP is determined automatically this setting controls whether
+or not the daemon should try to figure out the "fully qualified domain name",
+FQDN.
+This is done using a lookup of the name returned by \f(CWgethostname\fP.
+This option is enabled by default.
+.It \fBinterval\fP \fIseconds\fP
+Configures the interval in which to query the read plugins.
+Obviously smaller values lead to a higher system load produced by collectd,
+while higher values lead to more coarse statistics.
+.It \fBread-threads\fP \fIthreads\fP
+Number of threads to start for reading plugins.
+The default value is \fB5\fP, but you may want to increase this if you have
+more than five plugins that take a long time to read.
+Mostly those are plugins that do network-IO.
+Setting this to a value higher than the number of registered read callbacks
+is not recommended.
+.It \fBwrite-queue-limit-high\fP \fIhigh\fP
+.It \fBwrite-queue-limit-low\fP \fIlow\fP
+Metrics are read by the \fIread threads\fP and then put into a queue to be
+handled by the \fIwrite plugin's thread\fP.
+If one of the \fIwrite plugins\fP is slow (e.g. network timeouts, I/O
+saturation of the disk) this queue will grow.
+In order to avoid running into memory issues in such a case, you can limit
+the size of this queue.
+.Pp
 By default, there is no limit and memory may grow indefinitely.
-
-You can set the limits using \fBwrite-queue-limit-high\fP and \fBwrite-queue-limit-low\fP.
+.Pp
+You can set the limits using \fBwrite-queue-limit-high\fP and
+\fBwrite-queue-limit-low\fP.
 Each of them takes a numerical argument which is the number of metrics in the
-queue. If there are \fIhigh num\fP metrics in the queue, any new metrics \fIwill\fP be
-dropped. If there are less than \fIlow num\fP metrics in the queue, all new metrics
-\fIwill\fP be enqueued. If the number of metrics currently in the queue is between
-\fIlow num\fP and \fIhigh num\fP, the metric is dropped with a probability that is
+queue.
+If there are \fIhigh num\fP metrics in the queue, any new metrics \fIwill\fP be
+dropped.
+If there are less than \fIlow num\fP metrics in the queue, all new metrics
+\fIwill\fP be enqueued.
+If the number of metrics currently in the queue is between \fIlow num\fP and
+\fIhigh num\fP, the metric is dropped with a probability that is
 proportional to the number of metrics in the queue (i. e. it increases linearly
 until it reaches 100%.)
-
-If \fBwrite-queue-limit-high\fP is set to non-zero and \fBwrite-queue-limit-low\fP is
-unset, the latter will default to half of \fBwrite-queue-limit-high\fP.
-
+.Pp
+If \fBwrite-queue-limit-high\fP is set to non-zero and
+\fBwrite-queue-limit-low\fP is unset, the latter will default to half of
+\fBwrite-queue-limit-high\fP.
+.Pp
 If you do not want to randomly drop values when the queue size is between
-\fIlow num\fP and \fIhigh num\fP, set \fBwrite-queue-limit-high\fP and \fBwrite-queue-limit-low\fP
-to the same value.
-
-Enabling the \fBcollect-internal-stats\fP option is of great help to figure out the
-values to set \fBwrite-queue-limit-high\fP and \fBwrite-queue-limit-low\fP to.
-.TP
-\fBauto-load-plugin\fP \fItrue|fase\fP
-When set to \fBfalse\fP (the default), each plugin needs to be loaded explicitly,
-using the \fBload-plugin\fP statement documented above. If a
-\fBplugin\fP block is encountered and no configuration
-handling callback for this plugin has been registered, a warning is logged and
-the block is ignored.
-
-When set to \fBtrue\fP, explicit \fBload-plugin\fP statements are not required. Each
-\fBplugin\fP block acts as if it was immediately preceded by a
-\fBload-plugin\fP statement. \fBload-plugin\fP statements are still required for
-plugins that don't provide any configuration, e.g. the \fIload plugin\fP.
-.TP
-\fBcollect-internal-stats\fP \fItrue|fase\fP
-When set to \fItrue\fP, various statistics about the \fBncollectd\fP daemon will be
-collected. Defaults to \fIfalse\fP.
-.TP
-\fBpre-cache-filter\fP \fIpre-cache\fP
-.TP
-\fBpost-cache-filter\fP \fIpost-cache\fP
-Configure the name of the \fBpre-cache-filter\fP and the \fBpost-cache-filter\fP.
-The argument is the name of a \fIfilter\fP that should be executed before and/or after
-the values have been added to the cache.
-Please see \fBFILTER CONFIGURATION\fP below on information on filters and how these
-setting change the daemon's behavior.
-.TP
-\fBmax-read-interval\fP \fIseconds\fP
+\fIlow num\fP and \fIhigh num\fP, set \fBwrite-queue-limit-high\fP and
+\fBwrite-queue-limit-low\fP to the same value.
+.Pp
+Enabling the \fBcollect-internal-stats\fP option is of great help to figure
+out the values to set \fBwrite-queue-limit-high\fP and
+\fBwrite-queue-limit-low\fP to.
+.It \fBauto-load-plugin\fP \fItrue|fase\fP
+When set to \fBfalse\fP (the default), each plugin needs to be loaded
+explicitly, using the \fBload-plugin\fP statement documented above.
+If a \fBplugin\fP block is encountered and no configuration
+handling callback for this plugin has been registered, a warning is logged
+and the block is ignored.
+.Pp
+When set to \fBtrue\fP, explicit \fBload-plugin\fP statements are not required.
+Each \fBplugin\fP block acts as if it was immediately preceded by a
+\fBload-plugin\fP statement. \fBload-plugin\fP statements are still required
+for plugins that don't provide any configuration, e.g. the \fIload plugin\fP.
+.It \fBcollect-internal-stats\fP \fItrue|fase\fP
+When set to \fItrue\fP, various statistics about the \fBncollectd\fP daemon
+will be collected.
+Defaults to \fIfalse\fP.
+.It \fBpre-cache-filter\fP \fIpre-cache\fP
+.It \fBpost-cache-filter\fP \fIpost-cache\fP
+Configure the name of the \fBpre-cache-filter\fP and the
+\fBpost-cache-filter\fP.
+The argument is the name of a \fIfilter\fP that should be executed before
+and/or after the values have been added to the cache.
+Please see \fBFILTER CONFIGURATION\fP below on information on filters and
+how these setting change the daemon's behavior.
+.It \fBmax-read-interval\fP \fIseconds\fP
 A read plugin doubles the interval between queries after each failed attempt
 to get data.
-This options limits the maximum value of the interval. The default value is
-\fB86400\fP.
-.TP
-\fBnormalize-interval\fP \fItrue|fase\fP
+This options limits the maximum value of the interval.
+The default value is \fB86400\fP.
+.It \fBnormalize-interval\fP \fItrue|fase\fP
 When set to \fBtrue\fP will normalize the time in which collect metrics as
-a multiple of the interval. The default value is \fBfalse\fP.
-.TP
-\fBsocket-file\fP \fI/path/to/socket\fP
-.TP
-\fBsocket-group\fP \fIgroup-name\fP
-.TP
-\fBsocket-perms\fP \fIperms-octal\fP
-.TP
-\fBsocket-delete\fP \fItrue|false\fP
-.TP
-\fBproc-path\fP \fI/path/to/proc\fP
-.TP
-\fBsys-path\fP \fI/path/to/sys\fP
-.TP
-\fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
+a multiple of the interval.
+The default value is \fBfalse\fP.
+.It \fBsocket-file\fP \fI/path/to/socket\fP
+.It \fBsocket-group\fP \fIgroup-name\fP
+.It \fBsocket-perms\fP \fIperms-octal\fP
+.It \fBsocket-delete\fP \fItrue|false\fP
+.It \fBproc-path\fP \fI/path/to/proc\fP
+.It \fBsys-path\fP \fI/path/to/sys\fP
+.It \fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
 Bind a thread to a specific cpu.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBplugin-dir\fP \fI/path/to/plugins\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBplugin-dir\fP \fI/path/to/plugins\fP
 Path to the plugins (shared objects) of collectd.
-.TP
-\fBinclude\fP \fI/path/to/config\fP
+.It \fBinclude\fP \fI/path/to/config\fP
 If \fI/path/to/config\fP points to a file, includes that file.
 If \fI/path/to/config\fP points to a directory, recursively includes all files
 within that directory and its subdirectories.
 If the \f(CWwordexp\fP function is available on your system,
-shell-like wildcards are expanded before files are included. This means you can
-use statements like the following:
-.EX
-
-include "/etc/ncollectd.d/*.conf"
-
-.EE
+shell-like wildcards are expanded before files are included.
+This means you can use statements like the following:
+.Bd -literal
+    include "/etc/ncollectd.d/*.conf"
+.Ed
+.Pp
 This may also be a block in which further options affecting the behavior
 of \fBinclude\fP may be specified.
-.EX
-
-include "/etc/ncollectd.d" {
-    filter "*.conf"
-}
-
-.EE
-.RS
-.TP
-\fBfilter\fP \fIpattern\fP
-If the \f(CWfnmatch\fP function is available on your system, a shell-like wildcard
-\fIpattern\fP may be specified to filter which files to include. This may be used
-in combination with recursively including a directory to easily be able to
-arbitrarily mix configuration files and other documents (e.g. README files).
+.Bd -literal
+    include "/etc/ncollectd.d" {
+        filter "*.conf"
+    }
+.Ed
+.Bl -tag -width Ds
+.It \fBfilter\fP \fIpattern\fP
+If the \f(CWfnmatch\fP function is available on your system, a shell-like
+wildcard \fIpattern\fP may be specified to filter which files to include.
+This may be used in combination with recursively including a directory to
+easily be able to arbitrarily mix configuration files and other documents
+(e.g. README files).
 The given example is similar to the first example above but includes all files
 matching \f(CW*.conf\fP in any subdirectory of \f(CW/etc/ncollectd.d\fP.
-.RE
-
+.El
+.Pp
 If more than one file is included by a single \fBinclude\fP option, the files
 will be included in lexicographical order (as defined by the \f(CWstrcmp\fP
-function). Thus, you can e. g. use numbered prefixes to specify the
-order in which the files are loaded.
-
+function).
+Thus, you can e. g. use numbered prefixes to specify the order in which the
+files are loaded.
+.Pp
 To prevent loops and shooting yourself in the foot in interesting ways the
 nesting is limited to a depth of 8 levels, which should be sufficient for
-most uses. Since symlinks are followed it is still possible to crash the daemon
-by looping symlinks. In our opinion significant stupidity should result in an
-appropriate amount of pain.
-
+most uses.
+Since symlinks are followed it is still possible to crash the daemon
+by looping symlinks.
+In our opinion significant stupidity should result in an appropriate amount
+of pain.
+.Pp
 It is no problem to have a block like \f(CWplugin foo\fP in more than one
 file, but you cannot include files from within blocks.
-.RE
-.SS LOAD PLUGIN
-.TP
-\fBload-plugin\fP \fIplugin-name\fP
-Loads the plugin \fIplugin-name\fP. This is required to load plugins, unless the
-\fBauto-load-plugin\fP option is enabled (see below).
-
-Only the first \fBload-plugin\fP statement or block for a given plugin name has any
-effect. This is useful when you want to split up the configuration into smaller
-files and want each file to be "self contained", i. e. it contains a \fBplugin\fP
-block \fIand\fP the appropriate \fBload-plugin\fP statement. The downside is that if
-you have multiple conflicting \fBload-plugin\fP blocks, e.g. when they specify
-different intervals, only one of them (the first one encountered) will take
-effect and all others will be silently ignored.
-
-\fBload-plugin\fP may either be a simple configuration \fIstatement\fP or a \fIblock\fP
-with additional options, affecting the behavior of \fBload-plugin\fP. A simple
-statement looks like this:
-.EX
-
-load-plugin cpu
-
-.EE
+.El
+.Ss LOAD PLUGIN
+.Bl -tag -width Ds
+.It \fBload-plugin\fP \fIplugin-name\fP
+Loads the plugin \fIplugin-name\fP.
+This is required to load plugins, unless the \fBauto-load-plugin\fP option
+is enabled (see below).
+.Pp
+Only the first \fBload-plugin\fP statement or block for a given plugin name has
+any effect.
+This is useful when you want to split up the configuration into smaller files
+and want each file to be "self contained", i. e. it contains a \fBplugin\fP
+block \fIand\fP the appropriate \fBload-plugin\fP statement.
+The downside is that if you have multiple conflicting \fBload-plugin\fP blocks,
+e.g. when they specify different intervals, only one of them (the first one
+encountered) will take effect and all others will be silently ignored.
+.Pp
+\fBload-plugin\fP may either be a simple configuration \fIstatement\fP or
+a \fIblock\fP with additional options, affecting the behavior of
+\fBload-plugin\fP.
+A simple statement looks like this:
+.Bd -literal
+    load-plugin cpu
+.Ed
+.Pp
 Options inside a \fBload-plugin\fP block can override default settings and
 influence the way plugins are loaded, e.g.:
-.EX
-
-load-plugin perl {
-   interval 60
-}
-
-.EE
+.Bd -literal
+    load-plugin perl {
+        interval 60
+    }
+.Ed
+.Pp
 The following options are valid inside \fBload-plugin\fP blocks:
-.RS
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets a plugin-specific interval for collecting metrics. This overrides the
-global B<Interval> setting. If a plugin provides its own support for specifying
-an interval, that setting will take precedence.
-.TP
-\fBnormalize-interval\fP \fItrue|fase\fP
+.Bl -tag -width Ds
+.It \fBinterval\fP \fIseconds\fP
+Sets a plugin-specific interval for collecting metrics.
+This overrides the global \fBinterval\fP setting.
+If a plugin provides its own support for specifying an interval, that setting
+will take precedence.
+.It \fBnormalize-interval\fP \fItrue|fase\fP
 When set to \fBtrue\fP will normalize the time in which collect metrics as
-a multiple of the interval for this plugin. The default value is \fBfalse\fP.
-.TP
-\fBglobals\fP \fItrue|false\fP
+a multiple of the interval for this plugin.
+The default value is \fBfalse\fP.
+.It \fBglobals\fP \fItrue|false\fP
 If enabled, ncollectd will export all global symbols of the plugin (and of all
 libraries loaded as dependencies of the plugin) and, thus, makes those symbols
 available for resolving unresolved symbols in subsequently loaded plugins if
 that is supported by your system.
-
+.Pp
 This is useful (or possibly even required), e.g., when loading a plugin that
 embeds some scripting language into the daemon (e.g. the \fIPerl\fP and
-\fIPython plugins\fP). Scripting languages usually provide means to load
-extensions written in C. Those extensions require symbols provided by the
-interpreter, which is loaded as a dependency of the respective collectd plugin.
+\fIPython plugins\fP).
+Scripting languages usually provide means to load extensions written in C.
+Those extensions require symbols provided by the interpreter, which is loaded
+as a dependency of the respective collectd plugin.
 See the documentation of those plugins (e.g.,
-.BR ncollectd-perl(5)
+.Xr ncollectd-perl 5
 or
-.BR ncollectd-python(5)
+.Xr ncollectd-python 5
 ) for details.
-
-By default, this is disabled. As a special exception, if the plugin name is
-either \f(CWperl\fP or \f(CWpython\fP, the default is changed to enabled in order to keep
+.Pp
+By default, this is disabled.
+As a special exception, if the plugin name is either \f(CWperl\fP or
+\f(CWpython\fP, the default is changed to enabled in order to keep
 the average user from ever having to deal with this low level linking stuff.
-.RE
-.SS PLUGIN OPTIONS
-Some plugins may register own options. These options must be enclosed in a
-\fBplugin\fP section. Which options exist depends on the plugin used. Some plugins
-require external configuration, too. The \fBapache plugin\fP, for example,
-required \f(CWmod_status\fP to be configured in the webserver you're going to
-collect data from. These plugins are listed below as well, even if they don't
-require any configuration within collectd's configuration file.
-
+.El
+.El
+.Ss PLUGIN OPTIONS
+Some plugins may register own options.
+These options must be enclosed in a \fBplugin\fP section.
+Which options exist depends on the plugin used.
+Some plugins require external configuration, too.
+The \fBapache plugin\fP, for example, required \f(CWmod_status\fP to be
+configured in the webserver you're going to collect data from.
+These plugins are listed below as well, even if they don't require any
+configuration within ncollectd's configuration file.
+.Pp
 A list of all plugins and a short summary for each plugin can be found in the
 F<README> file shipped with the sourcecode and hopefully binary packets as
 well.
-
-.SS FILTER CONFIGURATION
+.Ss FILTER CONFIGURATION
 After the values are passed from the "read" plugins to the dispatch functions,
-the pre-cache chain is run first. The values are added to the internal cache
-afterwards. The post-cache chain is run after the values have been added to the
-cache. So why is it such a huge deal if filters are run before or after the
+the pre-cache chain is run first.
+The values are added to the internal cache afterwards.
+The post-cache chain is run after the values have been added to the cache.
+So why is it such a huge deal if filters are run before or after the
 values have been added to this cache?
-
-Filters that change the metric should be executed before
-the metrics are added to the cache, so that the name in the cache matches the
-name that is used in the "write" plugins. If you change the
-identifier after the value list has been added to the cache, this may easily
-lead to confusion, but it's not forbidden of course.
-
-.TP
-\fBdrop\fP
-The drop statement causes the metric to be dropped and all processing to be stopped immediately.
-.TP
-\fBstop\fP
-The stop statement causes all processing of the metric to be stopped immediately.
-.TP
-\fBreturn\fP
+.Pp
+Filters that change the metric should be executed before the metrics are added
+to the cache, so that the name in the cache matches the name that is used in
+the "write" plugins.
+If you change the identifier after the value list has been added to the cache,
+this may easily lead to confusion, but it's not forbidden of course.
+.Bl -tag -width Ds
+.It \fBdrop\fP
+The drop statement causes the metric to be dropped and all processing to be
+stopped immediately.
+.It \fBstop\fP
+The stop statement causes all processing of the metric to be stopped
+immediately.
+.It \fBreturn\fP
 Causes processing in the current filter to be aborted, but processing of the
-value generally will continue. This means that if the \fIfilter\fP was called via
-\fBcall\fP, the next target or rule after the jump will be executed. If the chain
-was not called by another chain, control will be returned to the daemon and it
-may pass the value to another chain.
-.TP
-\fBcall\fP \fIfilter-name\fP
+value generally will continue.
+This means that if the \fIfilter\fP was called via \fBcall\fP, the next filter
+statement after the jump will be executed.
+If the filter was not called by another filter, control will be returned to the
+daemon.
+.It \fBcall\fP \fIfilter-name\fP
 The \fBcall\fP statement can be used to "call" another filter, i. e.
-process the metric with another filter. When the called filter finishes, usually
-the next statement after the call is executed.
-.TP
-\fBwrite\fP [\fIplugin\fP] ...
+process the metric with another filter.
+When the called filter finishes, usually the next statement after the call
+is executed.
+.It \fBwrite\fP [\fIplugin\fP] ...
 Sends the metric to "write" plugins.
 Can be specified the name of the write plugin to which the data should be sent.
-The name of the write plugin may be given multiple times to send the data to more
-than one write plugin.
-If the plugin supports multiple instances, the plugin's instance(s) must also be
-specified.
-.TP
-\fBmetric-rename\fP \fIname\fP
-.TP
-\fBlabel-set\fP \fIlabel\fP \fIvalue\fP
-.TP
-\fBlabel-unset\fP \fIlabel\fP
-.TP
-\fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
-.TP
-\fBlabel-allow\fP [\fIlabel\fP|\fI/regex/\fP] ...
-.TP
-\fBlabel-ignore\fP [\fIlabel\fP|\fI/regex/\fP]  ...
-.TP
-\fBmetric-sub\fP \fI/regex/\fP \fIreplace\fP
-.TP
-\fBmetric-gsub\fP \fI/regex/\fP \fIreplace\fP
-.TP
-\fBlabel-sub\fP \fI/regex/\fP \fIreplace\fP
-.TP
-\fBlabel-gsub\fP \fI/regex/\fP \fIreplace\fP
-.TP
-\fBlabel-value-sub\fP \fIlabel\fP \fI/regex/\fP \fIreplace\fP
-.TP
-\fBlabel-value-gsub\fP \fIlabel\fP \fI/regex/\fP \fIreplace\fP
-.TP
-\fBif\fP \fImatch\fP
-.TP
-\fBunless\fP \fImatch\fP
-.TP
-\fBelif\fP \fImatch\fP
-.TP
-\fBelse\fP
-.TP
-\fBmetric-match\fP \fI/regex/\fP
-.RS
-.TP
-\fBmetric-rename\fP \fIname\fP
-.TP
-\fBlabel-set\fP \fIlabel\fP \fIvalue\fP
-.TP
-\fBlabel-unset\fP \fIlabel\fP
-.TP
-\fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
-.RE
-.TP
-\fBlabel-value-match\fP \fIlabel\fP \fI/regex/\fP
-.RS
-\fBmetric-rename\fP \fIname\fP
-.TP
-\fBlabel-set\fP \fIlabel\fP \fIvalue\fP
-.TP
-\fBlabel-unset\fP \fIlabel\fP
-.TP
-\fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
-.RE
-
-.SS INCLUDE AND EXCLUDE LISTS
+The name of the write plugin may be given multiple times to send the data to
+more than one write plugin.
+If the plugin supports multiple instances, the plugin's instance(s) must also
+be specified.
+.It \fBmetric-rename\fP \fIname\fP
+.It \fBlabel-set\fP \fIlabel\fP \fIvalue\fP
+.It \fBlabel-unset\fP \fIlabel\fP
+.It \fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
+.It \fBlabel-allow\fP [\fIlabel\fP|\fI/regex/\fP] ...
+.It \fBlabel-ignore\fP [\fIlabel\fP|\fI/regex/\fP]  ...
+.It \fBmetric-sub\fP \fI/regex/\fP \fIreplace\fP
+.It \fBmetric-gsub\fP \fI/regex/\fP \fIreplace\fP
+.It \fBlabel-sub\fP \fI/regex/\fP \fIreplace\fP
+.It \fBlabel-gsub\fP \fI/regex/\fP \fIreplace\fP
+.It \fBlabel-value-sub\fP \fIlabel\fP \fI/regex/\fP \fIreplace\fP
+.It \fBlabel-value-gsub\fP \fIlabel\fP \fI/regex/\fP \fIreplace\fP
+.It \fBif\fP \fImatch\fP
+.It \fBunless\fP \fImatch\fP
+.It \fBelif\fP \fImatch\fP
+.It \fBelse\fP
+.It \fBmetric-match\fP \fI/regex/\fP
+.Bl -tag -width Ds
+.It \fBmetric-rename\fP \fIname\fP
+.It \fBlabel-set\fP \fIlabel\fP \fIvalue\fP
+.It \fBlabel-unset\fP \fIlabel\fP
+.It \fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
+.El
+.It \fBlabel-value-match\fP \fIlabel\fP \fI/regex/\fP
+.Bl -tag -width Ds
+.It \fBmetric-rename\fP \fIname\fP
+.It \fBlabel-set\fP \fIlabel\fP \fIvalue\fP
+.It \fBlabel-unset\fP \fIlabel\fP
+.It \fBlabel-rename\fP \fIlabel-from\fP \fIlabel-to\fP
+.El
+.El
+.Ss INCLUDE AND EXCLUDE LISTS
 \fBInclude/Exclude lists\fP are a generic framework to either ignore some metrics or report
 specific metrics only.
-
-.TP
-\fBselect\fP [\fIincl|include|excl|exclude\fP] \fIstring\fP
-.TP
-\fBselect\fP [\fIincl|include|excl|exclude\fP] \fI/regex/\fP
-
-.SH "SEE ALSO"
-.BR ncollectd.conf (5)
+.Bl -tag -width Ds
+.It \fBselect\fP [\fIincl|include|excl|exclude\fP] \fIstring\fP
+.It \fBselect\fP [\fIincl|include|excl|exclude\fP] \fI/regex/\fP
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1

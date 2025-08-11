@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-info 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd info man page"
-.SH NAME
-ncollectd-info \- Documentation of ncollectd's info plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-APACHE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-apache
+.Nd Documentation of ncollectd's apache plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP info
-.br
 \fBplugin\fP info {
     \fBmetric\fP "\fIname\fP" {
         \fBhelp\fP "\fIhelp\fP"
@@ -12,30 +15,31 @@ ncollectd-info \- Documentation of ncollectd's info plugin
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBvalue\fP \fIvalue\fP
     }
-.br
 }
-.SH DESCRIPTION
-The \fBinfo\fP plugin allow to define static metrics. By default sends the metric
-\fBncollectd_info\fP with the ncollectd version.
-.PP
-The configuration of the \fBinfo\fP plugin consists of one or more \fBmetric\fP blocks.
+.Ed
+.Sh DESCRIPTION
+The \fBinfo\fP plugin allow to define static metrics.
+By default sends the metric \fBncollectd_info\fP with the ncollectd version.
+.Pp
+The configuration of the \fBinfo\fP plugin consists of one or more \fBmetric\fP
+blocks.
 Each block requires one string argument as the metric name.
-.PP
+.Pp
 The following options are accepted within each \fBmetric\fP mblock:
-.TP
-\fBhelp\fP \fIhelp\fP
+.Bl -tag -width Ds
+.It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
-.TP
-\fBtype\fP \fIgauge|counter|unknow|info\fP
-Defines the metric type, must be \fIgauge\fP, \fIcounter\fP, \fPunknow\fI or \fIinfo\fP.
+.It \fBtype\fP \fIgauge|counter|unknow|info\fP
+Defines the metric type, must be \fIgauge\fP, \fIcounter\fP, \fIunknow\fP or
+\fIinfo\fP.
 If not set is \fIInfo\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times.
-.TP
-\fBvalue\fP \fIvalue\fP
-Set the value of the metric. If not set is 1.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBvalue\fP \fIvalue\fP
+Set the value of the metric.
+If not set is 1.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,43 +1,46 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-df 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd df man page"
-.SH NAME
-ncollectd-df \- Documentation of ncollectd's df plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DF 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-df
+.Nd Documentation of ncollectd's df plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP df
-.br
 \fBplugin\fP df {
     \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
     \fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
     \fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
     \fBlog-once\fP \fItrue|false\fP
-.br
 }
-.SH DESCRIPTION
-The \fBdf\fP plugin collects file system usage information, i. e. basically how much space
-on a mounted partition is used and how much is available. It's named after and very similar
-to the
-.BR df (1)
+.Ed
+.Sh DESCRIPTION
+The \fBdf\fP plugin collects file system usage information, i. e. basically
+how much space on a mounted partition is used and how much is available.
+It's named after and very similar to the
+.Xr df 1
 UNIX command that's been around forever.
-.PP
+.Pp
 The \fBdf\fP plugin supports the following options:
-.TP
-\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+.Bl -tag -width Ds
+.It \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
 Select partitions based on the devicename.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
+.Xr ncollectd.conf 5 .
+.It \fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
 Select partitions based on the mountpoint.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
+.Xr ncollectd.conf 5 .
+.It \fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
 Select partitions based on the filesystem type.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBlog-once\fP \fItrue|false\fP
-Only log stat() errors once.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.It \fBlog-once\fP \fItrue|false\fP
+Only log
+.Fn stat
+errors once.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

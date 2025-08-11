@@ -1,18 +1,23 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-cpufreq 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cpufreq man page"
-.SH NAME
-ncollectd-cpufreq \- Documentation of ncollectd's cpufreq plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CPUFREQ 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-cpufreq
+.Nd Documentation of ncollectd's cpufreq plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP cpufreq
-.SH DESCRIPTION
+\fBplugin\fP cpufreq
+.Ed
+.Sh DESCRIPTION
 The \fBcpufreq\fP plugin is available on Linux and FreeBSD only.
 It doesn't have any options.
 On Linux it reads
 \fI/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq\fP (for the first CPU
 installed) to get the current CPU frequency. If this file does not exist make
 sure \fBcpufreqd\fP (
-.UR http://cpufreqd.sourceforge.net
-.UR
+.Lk http://cpufreqd.sourceforge.net
 ) or a similar tool is
 installed and an "cpu governor" (that's a kernel module) is loaded.
 
@@ -23,12 +28,12 @@ percentage of time spent in each p-state.
 On FreeBSD it does a sysctl dev.cpu.0.freq and submits this as instance 0.
 At this time FreeBSD only has one frequency setting for all cores.
 See the BUGS section in the FreeBSD man page for
-.BR cpufreq (4)
+.Xr cpufreq 4
 for more details.
 
 On FreeBSD the plugin checks the success of sysctl dev.cpu.0.freq and
 unregisters the plugin when this fails.  A message will be logged to indicate
 this.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

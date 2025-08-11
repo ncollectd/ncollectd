@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-arp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd arp man page"
-.SH NAME
-ncollectd-arp \- Documentation of ncollectd's arp plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ARP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-arp
+.Nd Documentation of ncollectd's arp plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP arp
-.SH DESCRIPTION
-The \fBarp\fP plugin counts the number or entries in the kernel ARP table per interface,
-reading the file \fI/proc/net/arp\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP arp
+.Ed
+.Sh DESCRIPTION
+The \fBarp\fP plugin counts the number or entries in the kernel ARP table per
+interface, reading the file \fI/proc/net/arp\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

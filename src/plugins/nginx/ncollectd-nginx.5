@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nginx 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nginx man page"
-.SH NAME
-ncollectd-nginx \- Documentation of ncollectd's nginx plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NGINX 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nginx
+.Nd Documentation of ncollectd's nginx plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nginx
-.br
 \fBplugin\fP nginx {
     \fBinstance\fP "\fIhost\fP" {
         \fBurl\fP "\fIhttp://host/nginx_status\fP"
@@ -24,97 +27,103 @@ ncollectd-nginx \- Documentation of ncollectd's nginx plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBnginx\fP plugin collects the number of connections and requests handled by the
-\fInginx daemon\fP, a HTTP and mail server/proxy.
-It queries the page provided by the \f(CBngx_http_stub_status_module\fP module, which
-isn't compiled by default.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBnginx\fP plugin collects the number of connections and requests handled
+by the \fInginx daemon\fP, a HTTP and mail server/proxy.
+It queries the page provided by the \f(CBngx_http_stub_status_module\fP module,
+which isn't compiled by default.
+.Pp
+You can use the following snipped to base your Ningx config upon:
+.Bd -literal
+location = /nginx_status {
+    stub_status;
+}
+.Ed
+.Pp
 Please refer to
-.UR http://nginx.org/en/docs/http/ngx_http_stub_status_module.html
-.UE
+.Lk http://nginx.org/en/docs/http/ngx_http_stub_status_module.html
 for more information on how to compile and configure nginx and this module.
-.PP
-The configuration of the \fBnginx\fP plugin consists of one or more \fBinstance\fP blocks.
-Each block requires one string argument as the instance name.  For example:
-.PP
-.EX
-    plugin nginx {
-        instance "www1" {
-            url "http://www1.example.com/nginx_status"
-        }
-        instance "www2" {
-            url "http://www2.example.com/nginx_status"
-        }
+.Pp
+The configuration of the \fBnginx\fP plugin consists of one or more
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
+For example:
+.Bd -literal
+plugin nginx {
+    instance "www1" {
+        url "http://www1.example.com/nginx_status"
     }
-.EE
-.PP
+    instance "www2" {
+        url "http://www2.example.com/nginx_status"
+    }
+}
+.Ed
+.Pp
 The instance name will be used as \fIinstance\fP label in the metrics.
 In order for the plugin to work correctly, each instance name must be unique.
 This is not enforced by the plugin and it is your responsibility to ensure it.
-.PP
+.Pp
 The following options are accepted within each \fBinstance\fP block:
-.PP
-.TP
-\fBurl\fP \fIhttp://host/nginx_status\fP
-Sets the URL of the \f/CBngx_http_stub_status_module\fP output.
-.TP
-\fBsocket-path\fP "\fI/path/to/unix/socket\fP"
-Will connect to the Unix domain socket instead of establishing a TCP connection to a host.
-.TP
-\fBuser\fP \fIusername\fP
+.Bl -tag -width Ds
+.It \fBurl\fP \fIhttp://host/nginx_status\fP
+Sets the URL of the \f(CBngx_http_stub_status_module\fP output.
+.It \fBsocket-path\fP "\fI/path/to/unix/socket\fP"
+Will connect to the Unix domain socket instead of establishing a TCP connection
+to a host.
+.It \fBuser\fP \fIusername\fP
 Optional user name needed for authentication.
-.TP
-\fBuser-env\fP \fIenv-name\fP
-Get the user name needed for authentication from the environment variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBuser-env\fP \fIenv-name\fP
+Get the user name needed for authentication from the environment variable
+\fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
 Optional password needed for authentication.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
-Get the password needed for authentication from the environment variable \fIenv-name\fP.
-.TP
-\fBverify\-peer\fP \fBtrue|false\fP
-Enable or disable peer SSL certificate verification. See
-.UR http://curl.haxx.se/docs/sslcerts.html
-.UE
-for details. Enabled by default.
-.TP
-\fBverify-host\fP \fItrue|false\fP
-Enable or disable peer host name verification. If enabled, the plugin checks
-if the \fICommon Name\fP or a \fISubject Alternate Name\fP field of the SSL
-certificate matches the host name provided by the \fBURL\fP option. If this
-identity check fails, the connection is aborted. Obviously, only works when
-connecting to a SSL enabled server. Enabled by default.
-.TP
-\fBca-cert\fP \fIfile\fP
-File that holds one or more SSL certificates. If you want to use HTTPS you will
-possibly need this option. What CA certificates come bundled with \fIlibcurl\fP
-and are checked by default depends on the distribution you use.
-.TP
-\fBssl-ciphers\fP \fIlist of ciphers\fP
-Specifies which ciphers to use in the connection. The list of ciphers
-must specify valid ciphers. See
-.UR http://www.openssl.org/docs/apps/ciphers.html
-.UE
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password needed for authentication from the environment variable
+\fIenv-name\fP.
+.It \fBverify\-peer\fP \fBtrue|false\fP
+Enable or disable peer SSL certificate verification.
+See
+.Lk http://curl.haxx.se/docs/sslcerts.html
 for details.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBURL\fP, in
-seconds. By default, the configured \fBinterval\fP is used to set the timeout.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification.
+If enabled, the plugin checks if the \fICommon Name\fP or a
+\fISubject Alternate Name\fP field of the SSL certificate matches the host
+name provided by the \fBURL\fP option.
+If this identity check fails, the connection is aborted.
+Obviously, only works when connecting to a SSL enabled server.
+Enabled by default.
+.It \fBca-cert\fP \fIfile\fP
+File that holds one or more SSL certificates.
+If you want to use HTTPS you will possibly need this option.
+What CA certificates come bundled with \fIlibcurl\fP and are checked by
+default depends on the distribution you use.
+.It \fBssl-ciphers\fP \fIlist of ciphers\fP
+Specifies which ciphers to use in the connection.
+The list of ciphers must specify valid ciphers.
+See
+.Lk http://www.openssl.org/docs/apps/ciphers.html
+for details.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to
+\fBURL\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-URL. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+URL.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh DEPENDENCIES
+.Xr libcurl 3
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

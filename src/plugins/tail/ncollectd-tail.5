@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-tail 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd tail man page"
-.SH NAME
-ncollectd-tail \- Documentation of ncollectd's tail plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-TAIL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-tail
+.Nd Documentation of ncollectd's tail plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP tail
-.br
 \fBplugin\fP tail {
     \fBfile\fP \fIfilename\fP {
         \fBinterval\fP \fIseconds\fP
@@ -15,26 +18,25 @@ ncollectd-tail \- Documentation of ncollectd's tail plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBtail\fP plugin reads files and process the lines using a match plugin.
-
+.Pp
 The configuration consists of one or more \fBfile\fP blocks that define a
 \fBfilename\fP to read and a match plugin to process the lines.
-
 The \fBfile\fP block has the following options:
-.TP
-\fBinterval\fP \fIseconds\fP
+.Bl -tag -width Ds
+.It \fBinterval\fP \fIseconds\fP
 Configures the interval in which to read lines from this file.
 Defaults to the plugin's default interval.
-.TP
-\fBmatch\fP \fImatch\fP
+.It \fBmatch\fP \fImatch\fP
 Configure the \fImatch\fP plugin to process the lines of the file.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

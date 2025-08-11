@@ -1,8 +1,12 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-match_csv 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd match_csv man page"
-.SH NAME
-ncollectd-match_csv \- Documentation of ncollectd's csv match plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MATCH_CSV 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-match_csv
+.Nd Documentation of ncollectd's csv match plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBmatch\fP csv {
     \fBmetric-prefix\fP \fIprefix\fP
     \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -18,94 +22,71 @@ ncollectd-match_csv \- Documentation of ncollectd's csv match plugin
         \fBlabel-from\fP \fIkey\fP \fIindex\fP
         \fBvalue-from\fP \fIindex\fP
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBmatch_csv\fP plugin parse lines in the CSV format,
-.PP
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.Bl -tag -width Ds
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepend the \fIprefix\fP to the metrics found in the \fBmetric\fP blocks.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBtime-from\fP \fIindex\fP
-Configure to read the timestamp of the metric from the field with the zero-based index.
-.TP
-\fBfield-separator\fP \fIchar\fP
+.It \fBtime-from\fP \fIindex\fP
+Configure to read the timestamp of the metric from the field with the
+zero-based index.
+.It \fBfield-separator\fP \fIchar\fP
 Any character a delimiter between the different columns of the table.
-.TP
-\fBmetric\fP
-.RS
-.TP
-\fBmetric\fP \fImetric\fP
+.It \fBmetric\fP
+.Bl -tag -width Ds
+.It \fBmetric\fP \fImetric\fP
 Set metric name.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBhelp\fP \fIhelp\fP
 Set metric help.
-.TP
-\fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
-.RS
-.TP
-\fBgauge\fP
+.It \fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
+.Bl -tag -width Ds
+.It \fBgauge\fP
 The value is a gauge, you must specify also the type of the gauge:
-.RS
-.TP
-\fBaverage\fP
+.Bl -tag -width Ds
+.It \fBaverage\fP
 Calculate the average
-.TP
-\fBmin\fP
+.It \fBmin\fP
 Use the smallest number only.
-.TP
-\fBmax\fP
+.It \fBmax\fP
 Use the greatest number only.
-.TP
-\fBlast\fP
+.It \fBlast\fP
 Use the last number found.
-.TP
-\fBinc\fP
+.It \fBinc\fP
 Increase the internal counter by one.
-.TP
-\fBadd\fP
+.It \fBadd\fP
 Add the matched value to the internal counter.
-.TP
-\fBpersist\fP
+.It \fBpersist\fP
 Use the last number found.
 The number is not reset at the end of an interval.
 It is continously reported until another number is matched.
-.RE
-.TP
-\fBcounter\fP
+.El
+.It \fBcounter\fP
 The value is a counter, you must specify also the type of the counter:
-.RS
-.TP
-\fBset\fP
+.Bl -tag -width Ds
+.It \fBset\fP
 Simply sets the internal counter to this value.
-.TP
-\fBadd\fP
+.It \fBadd\fP
 Add the matched value to the internal counter.
-.TP
-\fBinc\fP
+.It \fBinc\fP
 Increase the internal counter by one.
-.RE
-.RE
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.El
+.El
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepend the \fIprefix\fP to the metrics found in the \fBmetric-from\fP.
-.TP
-\fBmetric-from\fP \fIindex\fP
+.It \fBmetric-from\fP \fIindex\fP
 Configure to read the metric from the field with the zero-based index.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIindex\fP
+.It \fBlabel-from\fP \fIkey\fP \fIindex\fP
 Set the label \fIkey\fP with the value from the field with the zero-based index.
-.TP
-\fBvalue-from\fP \fIindex\fP
+.It \fBvalue-from\fP \fIindex\fP
 Configure to read the value from the field with the zero-based index.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,12 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-arpcache 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd arpcache man page"
-.SH NAME
-ncollectd-arpcache \- Documentation of ncollectd's arpcache plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ARPCACHE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-arpcache
+.Nd Documentation of ncollectd's arpcache plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP arpcache
-.SH DESCRIPTION
-The \fBarpcache\fP plugin collect statistics around neighbor cache and ARP, reading the files
-\fI/proc/net/stat/arp_cache\fP for IPv4 and \fI/proc/net/stat/ndisc_cache\fP for IPV6.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP arpcache
+.Ed
+.Sh DESCRIPTION
+The \fBarpcache\fP plugin collect statistics around neighbor cache and ARP,
+reading the files \fI/proc/net/stat/arp_cache\fP for IPv4 and
+\fI/proc/net/stat/ndisc_cache\fP for IPV6.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

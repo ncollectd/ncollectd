@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-synproxy 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd synproxy man page"
-.SH NAME
-ncollectd-synproxy \- Documentation of ncollectd's synproxy plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SYNPROXY 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-synproxy
+.Nd Documentation of ncollectd's synproxy plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP synproxy
-.SH DESCRIPTION
-The \fBsynproxy\fP plugin collect metrics from the netfilter module Synproxy reading
-the file \f(CW/proc/net/stat/synproxy\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP synproxy
+.Ed
+.Sh DESCRIPTION
+The \fBsynproxy\fP plugin collect metrics from the netfilter module Synproxy
+reading the file \f(CW/proc/net/stat/synproxy\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-write_http 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_http man page"
-.SH NAME
-ncollectd-write_http \- Documentation of ncollectd's http write plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WRITE_HTTP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-write_http
+.Nd Documentation of ncollectd's write_http plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP write_http
-.br
 \fBplugin\fP write_http {
     \fBinstance\fP \fIinstance\fP {
         \fBurl\fP \fIurl\fP
@@ -33,195 +36,160 @@ ncollectd-write_http \- Documentation of ncollectd's http write plugin
         \fBformat-notification\fP \fItext|json|protob\fP
         \fBwrite\fP \fImetrics|notifications\fP
     }
-.br
 }
-.SH DESCRIPTION
-The \fBwrite_http plugin\fP submits values to an HTTP server using POST requests.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBwrite_http plugin\fP submits values to an HTTP server using
+POST requests.
+.Pp
 The plugin can send values to multiple HTTP servers by specifying one
-\fBinstance\fP block for each server. Within each \fBinstance\fP block,
-the following options are available:
-.TP
-\fBurl\fP \fIurl\fP
-URL to which the values are submitted to. Mandatory.
-.TP
-\fBuser\fP \fIusername\fP
+\fBinstance\fP block for each server.
+Within each \fBinstance\fP block, the following options are available:
+.Bl -tag -width Ds
+.It \fBurl\fP \fIurl\fP
+URL to which the values are submitted to.
+Mandatory.
+.It \fBuser\fP \fIusername\fP
 Optional user name needed for authentication.
-.TP
-\fBuser-env\fP \fIenv-name\fP
-Get the user name for authentication from the enviroment variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBuser-env\fP \fIenv-name\fP
+Get the user name for authentication from the enviroment variable
+\fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
 Optional password needed for authentication.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
-Get the password for authentication from the enviroment variable \fIenv-name\fP.
-.TP
-\fBverify-peer\fP \fItrue|false\fP
-Enable or disable peer SSL certificate verification. Enabled by default.
-.TP
-\fBverify-host\fP \fItrue|false\fP
-Enable or disable peer host name verification. If enabled, the plugin checks if
-the \f(CWCommon Name\fP or a \f(CWSubject Alternate Name\fP field of the SSL certificate
-matches the host name provided by the \fBurl\fP option. If this identity check
-fails, the connection is aborted. Obviously, only works when connecting to a
-SSL enabled server. Enabled by default.
-.TP
-\fBca-cert\fP \fI/path/to/ca-cert\fP
-File that holds one or more SSL certificates. If you want to use HTTPS you will
-possibly need this option.  What CA certificates come in your system
-and are checked by default depends on the distribution you use.
-.TP
-\fBca-path\fP \fI/path/to/ca/\fP
-Directory holding one or more CA certificate files. You can use this if for
-some reason all the needed CA certificates aren't in the same file and can't be
-pointed to using the \fBca-cert\fP option.
-.TP
-\fBclient-key\fP \fI/path/to/client-key\fP
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password for authentication from the enviroment variable
+\fIenv-name\fP.
+.It \fBverify-peer\fP \fItrue|false\fP
+Enable or disable peer SSL certificate verification.
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification.
+If enabled, the plugin checks if the \f(CWCommon Name\fP or a
+\f(CWSubject Alternate Name\fP field of the SSL certificate matches the
+host name provided by the \fBurl\fP option.
+If this identity check fails, the connection is aborted.
+Obviously, only works when connecting to a SSL enabled server.
+Enabled by default.
+.It \fBca-cert\fP \fI/path/to/ca-cert\fP
+File that holds one or more SSL certificates.
+If you want to use HTTPS you will possibly need this option.
+What CA certificates come in your system and are checked by default
+depends on the distribution you use.
+.It \fBca-path\fP \fI/path/to/ca/\fP
+Directory holding one or more CA certificate files.
+You can use this if for some reason all the needed CA certificates aren't
+in the same file and can't be pointed to using the \fBca-cert\fP option.
+.It \fBclient-key\fP \fI/path/to/client-key\fP
 File that holds the private key in PEM format to be used for certificate-based
 authentication.
-.TP
-\fBclient-cert\fP \fI/path/to/client-cert\fP
-File that holds the SSL certificate to be used for certificate-based authentication.
-.TP
-\fBclient-key-pass\fP \fIkey-pass\fP
+.It \fBclient-cert\fP \fI/path/to/client-cert\fP
+File that holds the SSL certificate to be used for certificate-based
+authentication.
+.It \fBclient-key-pass\fP \fIkey-pass\fP
 Password required to load the private key in \fBclient-key\fP.
-.TP
-\fBssl-version\fP \fIdefault|sslv2|sslv3|tlsv1|tlsv1_0|tlsv1_1|tlsv1_2|tlsv1_3\fP
+.It \fBssl-version\fP \fIdefault|sslv2|sslv3|tlsv1|tlsv1_0|tlsv1_1|tlsv1_2|tlsv1_3\fP
 Define which SSL protocol version must be used.
-.TP
-\fBcompress\fP \fInone|snappy|gzip|zlib|deflate\fP
-.TP
-\fBcollect\fP \fIflags\fP
-.RS
-.TP
-\fBtotal_time\fP
+.It \fBcompress\fP \fInone|snappy|gzip|zlib|deflate\fP
+.It \fBcollect\fP \fIflags\fP
+.Bl -tag -width Ds
+.It \fBtotal_time\fP
 Total time of the transfer, including name resolving, TCP connect, etc.
-.TP
-\fBnamelookup_time\fP
+.It \fBnamelookup_time\fP
 Time it took from the start until name resolving was completed.
-.TP
-\fBconnect_time\fP
+.It \fBconnect_time\fP
 Time it took from the start until the connect to the remote host (or proxy)
 was completed.
-.TP
-\fBpretransfer_time\fP
+.It \fBpretransfer_time\fP
 Time it took from the start until just before the transfer begins.
-.TP
-\fBsize_upload\fP
+.It \fBsize_upload\fP
 The total amount of bytes that were uploaded.
-.TP
-\fBsize_download\fP
+.It \fBsize_download\fP
 The total amount of bytes that were downloaded.
-.TP
-\fBspeed_download\fP
+.It \fBspeed_download\fP
 The average download speed that curl measured for the complete download.
-.TP
-\fBspeed_upload\fP
+.It \fBspeed_upload\fP
 The average upload speed that curl measured for the complete upload.
-.TP
-\fBheader_size\fP
+.It \fBheader_size\fP
 The total size of all the headers received.
-.TP
-\fBrequest_size\fP
+.It \fBrequest_size\fP
 The total size of the issued requests.
-.TP
-\fBcontent_length_download\fP
+.It \fBcontent_length_download\fP
 The content-length of the download.
-.TP
-\fBcontent_length_upload\fP
+.It \fBcontent_length_upload\fP
 The specified size of the upload.
-.TP
-\fBstarttransfer_time\fP
+.It \fBstarttransfer_time\fP
 Time it took from the start until the first byte was received.
-.TP
-\fBredirect_time\fP
+.It \fBredirect_time\fP
 Time it took for all redirection steps include name lookup, connect,
 pre-transfer and transfer before final transaction was started.
-.TP
-\fBredirect_count\fP
+.It \fBredirect_count\fP
 The total number of redirections that were actually followed.
-.TP
-\fBnum_connects\fP
+.It \fBnum_connects\fP
 The number of new connections that were created to achieve the transfer.
-.TP
-\fBappconnect_time\fP
+.It \fBappconnect_time\fP
 Time it took from the start until the SSL connect/handshake to the remote
 host was completed.
-.RE
-.TP
-\fBstore-rates\fP \fItrue|false\fP
-If set to \fBtrue\fP, convert counter values to rates. If set to \fBfalse\fP (the
-default) counter values are stored as is, i.e. as an increasing integer number.
-.TP
-\fBbuffer-size\fP \fIsize\fP
-Sets the send buffer size to \fIbytes\fP. By increasing this buffer, less HTTP
-requests will be generated, but more metrics will be batched / metrics are
-cached for longer before being sent, introducing additional delay until they
-are available on the server side. \fIBytes\fP must be at least 1024 and cannot
-exceed the size of an \f(CWint\fP, i.e. 2 GByte.
+.El
+.It \fBstore-rates\fP \fItrue|false\fP
+If set to \fBtrue\fP, convert counter values to rates.
+If set to \fBfalse\fP (the default) counter values are stored as is,
+i.e. as an increasing integer number.
+.It \fBbuffer-size\fP \fIsize\fP
+Sets the send buffer size to \fIbytes\fP.
+By increasing this buffer, less HTTP requests will be generated, but more
+metrics will be batched / metrics are cached for longer before being sent,
+introducing additional delay until they are available on the server side.
+\fIBytes\fP must be at least 1024 and cannot exceed the size of an
+\f(CWint\fP, i.e. 2 GByte.
 Defaults to \f(CW4096\fP.
-.TP
-\fBlow-speed-limit\fP \fIlimit\fP
+.It \fBlow-speed-limit\fP \fIlimit\fP
 Sets the minimal transfer rate in I<Bytes per Second> below which the
-connection with the HTTP server will be considered too slow and aborted. All
-the data submitted over this connection will probably be lost. Defaults to 0,
-which means no minimum transfer rate is enforced.
-.TP
-\fBtimeout\fP \fIseconds\fP
+connection with the HTTP server will be considered too slow and aborted.
+All the data submitted over this connection will probably be lost.
+Defaults to 0, which means no minimum transfer rate is enforced.
+.It \fBtimeout\fP \fIseconds\fP
 Sets the maximum time in milliseconds given for HTTP POST operations to
-complete. When this limit is reached, the POST operation will be aborted, and
-all the data in the current send buffer will probably be lost. Defaults to 0,
-which means the connection never times out.
-.TP
-\fBlog-http-error\fP \fItrue|false\fP
-Enables printing of HTTP error code to log. Turned off by default.
-.TP
-\fBheader\fP \fIheader\fP
+complete.
+When this limit is reached, the POST operation will be aborted, and all
+the data in the current send buffer will probably be lost.
+Defaults to 0, which means the connection never times out.
+.It \fBlog-http-error\fP \fItrue|false\fP
+Enables printing of HTTP error code to log.
+Turned off by default.
+.It \fBheader\fP \fIheader\fP
 A HTTP header to add to the request.
 Multiple headers are added if this option is specified more than once.
 Example:
-.EX
+.Bd -literal
     header "X-Custom-Header: custom_value"
-.EE
-.TP
-\fBflush-interval\fP \fIseconds\fP
-.TP
-\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+.Ed
+.It \fBflush-interval\fP \fIseconds\fP
+.It \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
 Selects the format in which metrics are written.
-.RS
-.TP
-\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.Bl -tag -width Ds
+.It \fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
 Format the metrics with the influxdb line format.
-.TP
-\fBgraphite\fP
+.It \fBgraphite\fP
 Format the metrics with the graphite plaintext format.
-.TP
-\fBjson\fP
+.It \fBjson\fP
 Format the metrics as json message.
-.TP
-\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.It \fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
 Format the metrics with the karirosdb text format or json format.
-.TP
-\fBopentsdb\fP [telnet|json]
+.It \fBopentsdb\fP [telnet|json]
 Format the metrics with the opentsdb text format or json format.
-.TP
-\fBopenmetrics\fP [text|protob]
+.It \fBopenmetrics\fP [text|protob]
 Format the metrics with the openmetrics text format.
-.TP
-\fBopentelemetry\fP [json]
+.It \fBopentelemetry\fP [json]
 Format the metrics with the opentelemetry json format.
-.TP
-\fBremote\fP [metadata]
+.It \fBremote\fP [metadata]
 Format the metrics with the protocol buffer remote format.
-.RE
-.TP
-\fBformat-notification\fP \fItext|json|protob\fP
+.El
+.It \fBformat-notification\fP \fItext|json|protob\fP
 Selects the format in which notifications are written.
-.TP
-\fBwrite\fP \fImetrics|notifications\fP
+.It \fBwrite\fP \fImetrics|notifications\fP
 If set to \fImetrics\fP (the default) the plugin will handle metrics.
 If set to \fInotifications\fP the plugin will handle notifications.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

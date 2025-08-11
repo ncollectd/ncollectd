@@ -1,11 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-wireless 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd wireless man page"
-.SH NAME
-ncollectd-wireless \- Documentation of ncollectd's wireless plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WIRELESS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-wireless
+.Nd Documentation of ncollectd's wireless plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP wireless
-.SH DESCRIPTION
-The \fBwireless\fP plugin collectd statistics of the signal in wireless interfaces.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP wireless
+.Ed
+.Sh DESCRIPTION
+The \fBwireless\fP plugin collectd statistics of the signal
+in wireless interfaces.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

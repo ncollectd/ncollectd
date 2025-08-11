@@ -1,25 +1,28 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nftables 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nftables man page"
-.SH NAME
-ncollectd-nftables \- Documentation of ncollectd's nftables plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NFTABLES 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nftables
+.Nd Documentation of ncollectd's nftables plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nftables
-.br
 \fBplugin\fP nftables {
     \fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
-.br
 }
+.Ed
 .SH DESCRIPTION
 The \fBnftables\fP plugin collects information about the packet and byte count
 of named counters inside your ruleset.
-.PP
+.Pp
 The plugin has the following options:
-.PP
-.TP
-\fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
+.Bl -tag -width Ds
+.It \fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
 If only the \fIfamily\fP is specified all named counters on the family tables are collected.
 If \fIfamily\fP and \fItable\fP are specified, only the counters for this table are collectd.
 You can optionally specify the \fIcounter\fP name to collect a specific counter.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

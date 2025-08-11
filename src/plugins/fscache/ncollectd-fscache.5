@@ -1,13 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-fscache 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd fscache man page"
-.SH NAME
-ncollectd-fscache \- Documentation of ncollectd's fscache plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-FSCACHE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-fscache
+.Nd Documentation of ncollectd's fscache plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP fscache
-.SH DESCRIPTION
-The \fBfscache\fP plugin collects information about the file-system based caching
-infrastructure for network file-systems and other slow media.
+\fBplugin\fP fscache
+.Ed
+.Sh DESCRIPTION
+The \fBfscache\fP plugin collects information about the file-system based
+caching infrastructure for network file-systems and other slow media.
 The cache was introduced into the Linux kernel in version 2.6.30.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

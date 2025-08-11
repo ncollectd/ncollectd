@@ -1,40 +1,49 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectdmon 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd man page"
-.SH NAME
-ncollectdmon \- Monitoring daemon for ncollectd
-.SH SYNOPSIS
-\fBncollectdmon\fP \fIoptions\fP [-- \fIncollectd options\fP]
-.SH DESCRIPTION
-ncollectdmon is a small \fIwrapper\fP daemon which starts and monitors the ncollectd
-daemon. If collectd terminates it will automatically be restarted, unless
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTDMON 1
+.Os ncollectdmon @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectdmon
+.Nd Monitoring daemon for ncollectd
+.Sh SYNOPSIS
+.Nm ncollectdmon
+.Op Fl c Ar path
+.Op Fl P Ar pid-file
+.Op Fl h
+.Op Ar -- ncollectd options
+.Sh DESCRIPTION
+ncollectdmon is a small \fIwrapper\fP daemon which starts and monitors
+the ncollectd daemon.
+If ncollectd terminates it will automatically be restarted, unless
 ncollectdmon was told to shut it down.
-.SH OPTIONS
+.Sh OPTIONS
 ncollectdmon supports the following options:
-.TP
-\fB\-c\fR \fI\,path\/\fR
-Specify the pathname of the ncollectd binary. You may either specify an
-absolute path or simply the name of the binary in which case the \fBPATH\fP
-variable will be searched for it. The default is "\fBncollectd\fP".
-.TP
-\fB\-P\fR \fI\,pid-file\fR
-Specify the pid file. The default is "\fI/var/run/ncollectdmon.pid\fP".
-.TP
-\fB\-h\fR
+.Bl -tag -width Ds
+.It \fB\-c\fR \fI\,path\/\fR
+Specify the pathname of the ncollectd binary.
+You may either specify an absolute path or simply the name of the binary
+in which case the \fBPATH\fP variable will be searched for it.
+The default is "\fBncollectd\fP".
+.It \fB\-P\fR \fI\,pid-file\fR
+Specify the pid file.
+The default is "\fI/var/run/ncollectdmon.pid\fP".
+.It \fB\-h\fR
 Output usage information and exit.
-.TP
-\fI\,ncollectd options\/\fR
-Specify options that are passed on to ncollectd. If it is not already included,
-\fB\-f\fR will be added to these options. See
-.BR ncollectd (1)
-.SH SIGNALS
+.It \fI\,ncollectd options\/\fR
+Specify options that are passed on to ncollectd.
+If it is not already included, \fB\-f\fR will be added to these options.
+See
+.Xr ncollectd 1 .
+.El
+.Sh SIGNALS
 \fB\,ncollectdmon\/\fP accepts the following signals:
-.TP
-\fB\,SIGINT\/\fR, \fB\,SIGTERM\/\fR
-These signals cause \fBncollectdmon\fP to terminate \fBncollectd\fP, wait for its
-termination and then shut down.
-.TP
-\fB\,SIGHUP\/\fR
-This signal causes \fBncollectdmon\fP to terminate \fBncollectd\fP, wait for its
-termination and then restart it.
-.SH "SEE ALSO"
-.BR ncollectd (1)
+.Bl -tag -width Ds
+.It \fB\,SIGINT\/\fR, \fB\,SIGTERM\/\fR
+These signals cause \fBncollectdmon\fP to terminate \fBncollectd\fP, wait for
+its termination and then shut down.
+.It \fB\,SIGHUP\/\fR
+This signal causes \fBncollectdmon\fP to terminate \fBncollectd\fP, wait for
+its termination and then restart it.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1

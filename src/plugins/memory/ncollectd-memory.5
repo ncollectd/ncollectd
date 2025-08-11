@@ -1,11 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-memory 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd memory man page"
-.SH NAME
-ncollectd-memory \- Documentation of ncollectd's memory plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MEMORY 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-memory
+.Nd Documentation of ncollectd's memory plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP memory
-.SH DESCRIPTION
-The \fBmemory\fP plugin reports the free memory and different kinds of used memory in the system.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP memory
+.Ed
+.Sh DESCRIPTION
+The \fBmemory\fP plugin reports the free memory and different kinds
+of used memory in the system.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

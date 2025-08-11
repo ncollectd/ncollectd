@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-scraper 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd scraper man page"
-.SH NAME
-ncollectd-scraper \- Documentation of ncollectd's \*(lqscraper plugin\*(rq
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SCRAPER 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-scraper
+.Nd Documentation of ncollectd's scraper plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP scraper
-.br
 \fBplugin\fP scraper {
     \fBinstance\fP \fIname\fP {
         \fBurl\fP \fIurl\fP
@@ -27,140 +30,115 @@ ncollectd-scraper \- Documentation of ncollectd's \*(lqscraper plugin\*(rq
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The scraper plugin collect metrics from a http endpoint.
-.PP
-.TP
-\fBurl\fP \fIurl\fP
+.Bl -tag -width Ds
+.It \fBurl\fP \fIurl\fP
 URL of the web site to retrieve the metrics.
-.TP
-\fBuser\fP \fIusername\fP
+.It \fBuser\fP \fIusername\fP
 Username to use if authorization is required to read the page.
-.TP
-\fBuser-env\fP \fIenv-name\fP
+.It \fBuser-env\fP \fIenv-name\fP
 Get the username to use if authorization is required to read the page from the
 environment variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBpassword\fP \fIpassword\fP
 Password to use if authorization is required to read the page.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
+.It \fBpassword-env\fP \fIenv-name\fP
 Get the password to use if authorization is required to read the page from the
 environment variable \fIenv-name\fP.
-.TP
-\fBdigest\fP \fItrue|false\fP
+.It \fBdigest\fP \fItrue|false\fP
 Enable HTTP digest authentication.
-.TP
-\fBverify-peer\fP \fItrue|false\fP
-Enable or disable peer SSL certificate verification. See
-.UR http://curl.haxx.se/docs/sslcerts.html
-.UE
-for details. Enabled by default.
-.TP
-\fBverify-host\fP \fItrue|false\fP
-Enable or disable peer host name verification. If enabled, the plugin checks if
-the \f(CWCommon Name\fP or a \f(CWSubject Alternate Name\fP field of the SSL certificate
-matches the host name provided by the \fBurl\fP option. If this identity check
-fails, the connection is aborted. Obviously, only works when connecting to a
-SSL enabled server. Enabled by default.
-.TP
-\fBca-cert\fP \fI/path/to/ca-cert\fP
-File that holds one or more SSL certificates. If you want to use HTTPS you will
-possibly need this option. What CA certificates come bundled with \fBlibcurl\fP
-and are checked by default depends on the distribution you use.
-.TP
-\fBheader\fP \fIheader\fP
-A HTTP header to add to the request. Multiple headers are added if this option
-is specified more than once.
-.TP
-\fBpost\fP \fIdata\fP
-Specifies that the HTTP operation should be a POST instead of a GET. The
-complete data to be posted is given as the argument.  This option will usually
-need to be accompanied by a \fBheader\fP option to set an appropriate
-\f(CWContent-Type\fP for the post body (e.g. to \f(CWapplication/x-www-form-urlencoded\fP).
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBverify-peer\fP \fItrue|false\fP
+Enable or disable peer SSL certificate verification.
+See
+.Lk http://curl.haxx.se/docs/sslcerts.html
+for details.
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification.
+If enabled, the plugin checks if the \f(CWCommon Name\fP or a
+\f(CWSubject Alternate Name\fP field of the SSL certificate matches the host
+name provided by the \fBurl\fP option.
+If this identity check fails, the connection is aborted.
+Obviously, only works when connecting to a SSL enabled server.
+Enabled by default.
+.It \fBca-cert\fP \fI/path/to/ca-cert\fP
+File that holds one or more SSL certificates.
+If you want to use HTTPS you will possibly need this option.
+What CA certificates come bundled with \fBlibcurl\fP and are checked by default
+depends on the distribution you use.
+.It \fBheader\fP \fIheader\fP
+A HTTP header to add to the request.
+Multiple headers are added if this option is specified more than once.
+.It \fBpost\fP \fIdata\fP
+Specifies that the HTTP operation should be a POST instead of a GET.
+The complete data to be posted is given as the argument.
+This option will usually need to be accompanied by a \fBheader\fP
+option to set an appropriate \f(CWContent-Type\fP for the post
+body (e.g. to \f(CWapplication/x-www-form-urlencoded\fP).
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBurl\fP, in
-seconds. By default, the configured \fBinterval\fP is used to set the
-timeout.
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests
+to \fBurl\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
 If \fBtimeout\fP is bigger than the \fBinterval\fP, keep in mind that each slow
-network connection will stall one read thread. Adjust the \fBread-threads\fP global
-setting accordingly to prevent this from blocking other plugins.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+network connection will stall one read thread.
+Adjust the \fBread-threads\fP global setting accordingly to prevent this from
+blocking other plugins.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metric name in the \fBmatch\fP.
-.TP
-\fBcollect\fP \fIflags\fP
-.RS
-.TP
-\fBtotal_time\fP
+.It \fBcollect\fP \fIflags\fP
+.Bl -tag -width Ds
+.It \fBtotal_time\fP
 Total time of the transfer, including name resolving, TCP connect, etc.
-.TP
-\fBnamelookup_time\fP
+.It \fBnamelookup_time\fP
 Time it took from the start until name resolving was completed.
-.TP
-\fBconnect_time\fP
+.It \fBconnect_time\fP
 Time it took from the start until the connect to the remote host (or proxy)
 was completed.
-.TP
-\fBpretransfer_time\fP
+.It \fBpretransfer_time\fP
 Time it took from the start until just before the transfer begins.
-.TP
-\fBsize_upload\fP
+.It \fBsize_upload\fP
 The total amount of bytes that were uploaded.
-.TP
-\fBsize_download\fP
+.It \fBsize_download\fP
 The total amount of bytes that were downloaded.
-.TP
-\fBspeed_download\fP
+.It \fBspeed_download\fP
 The average download speed that curl measured for the complete download.
-.TP
-\fBspeed_upload\fP
+.It \fBspeed_upload\fP
 The average upload speed that curl measured for the complete upload.
-.TP
-\fBheader_size\fP
+.It \fBheader_size\fP
 The total size of all the headers received.
-.TP
-\fBrequest_size\fP
+.It \fBrequest_size\fP
 The total size of the issued requests.
-.TP
-\fBcontent_length_download\fP
+.It \fBcontent_length_download\fP
 The content-length of the download.
-.TP
-\fBcontent_length_upload\fP
+.It \fBcontent_length_upload\fP
 The specified size of the upload.
-.TP
-\fBstarttransfer_time\fP
+.It \fBstarttransfer_time\fP
 Time it took from the start until the first byte was received.
-.TP
-\fBredirect_time\fP
+.It \fBredirect_time\fP
 Time it took for all redirection steps include name lookup, connect,
 pre-transfer and transfer before final transaction was started.
-.TP
-\fBredirect_count\fP
+.It \fBredirect_count\fP
 The total number of redirections that were actually followed.
-.TP
-\fBnum_connects\fP
+.It \fBnum_connects\fP
 The number of new connections that were created to achieve the transfer.
-.TP
-\fBappconnect_time\fP
+.It \fBappconnect_time\fP
 Time it took from the start until the SSL connect/handshake to the remote
 host was completed.
-.RE
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

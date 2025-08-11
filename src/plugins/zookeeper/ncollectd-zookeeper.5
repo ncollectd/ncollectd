@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-zookeeper 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd zookeeper man page"
-.SH NAME
-ncollectd-zookeeper \- Documentation of ncollectd's zookeeper plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ZOOKEEPER 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-zookeeper
+.Nd Documentation of ncollectd's zookeeper plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP zookeeper
-.br
 \fBplugin\fP zookeeper {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
@@ -15,33 +18,34 @@ ncollectd-zookeeper \- Documentation of ncollectd's zookeeper plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBzookeeper\fP plugin will collect statistics from a \fIzookeeper\fP server
-using the mntr command.  It requires Zookeeper 3.4.0+ and access to the
-client port.
-
+.Ed
+.Sh DESCRIPTION
+The \fBzookeeper\fP plugin will collect statistics from a \fIzookeeper\fP
+server using the \fImntr\fP command.
+It requires Zookeeper 3.4.0+ and access to the client port.
+.Pp
 The plugin configuration consists of one or more \fBinstance\fP blocks which
-specify one \fIzookeper\fP connection each. Within the \fBinstance\fP blocks, the
-following options are allowed:
-.TP
-\fBhost\fP \fIhost\fP
-Hostname or address to connect to. Defaults to \f(CWlocalhost\fP.
-.TP
-\fBport\fP \fIservice\fP
-Service name or port number to connect to. Defaults to \f(CW2181\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+specify one \fIzookeper\fP connection each.
+Within the \fBinstance\fP blocks, the following options are allowed:
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
+Hostname or address to connect to.
+Defaults to \f(CWlocalhost\fP.
+.It \fBport\fP \fIservice\fP
+Service name or port number to connect to.
+Defaults to \f(CW2181\fP.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIinterval\fP
+.It \fBinterval\fP \fIinterval\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instance. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+instance.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

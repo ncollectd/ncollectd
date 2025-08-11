@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-avccache 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd avccache man page"
-.SH NAME
-ncollectd-avccache \- Documentation of ncollectd's avccache plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-AVCCACHE  5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-avccache
+.Nd Documentation of ncollectd's avccache plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP avccache
-.SH DESCRIPTION
+\fBplugin\fP avccache
+.Ed
+.Sh DESCRIPTION
 The \fBavccache\fP plugin collect statistics of SELinux AVC from the file
 \fI/sys/fs/selinux/avc/cache_stats\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

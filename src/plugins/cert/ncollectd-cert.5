@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-cert 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cert man page"
-.SH NAME
-ncollectd-cert \- Documentation of ncollectd's cert plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CERT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-cert
+.Nd Documentation of ncollectd's cert plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP cert
-.br
 \fBplugin\fP cert {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
@@ -16,31 +19,31 @@ ncollectd-cert \- Documentation of ncollectd's cert plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBcert\fP plugin obtain the date of certification expiration.
-.PP
-The configuration to obtain the certificate expiration data is put in a \fBinstance\fP block:
-.TP
-\fBhost\fP \fIhost\fP
+.Pp
+The configuration to obtain the certificate expiration data is put
+in a \fBinstance\fP block:
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
 Hostname to connect.
-.TP
-\fBport\fP \fIport\fP
+.It \fBport\fP \fIport\fP
 Port to connect.
-.TP
-\fBserver-name\fP \fIservername\fP
-Set the server name at the start of the handshaking process in the TLS connection.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBserver-name\fP \fIservername\fP
+Set the server name at the start of the handshaking process in the
+TLS connection.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

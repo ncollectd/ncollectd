@@ -1,23 +1,27 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-wlm 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd wlm man page"
-.SH NAME
-ncollectd-wlm \- Documentation of ncollectd's wlm plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WLM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-wlm
+.Nd Documentation of ncollectd's wlm plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP wlm
-.br
 \fBplugin\fP wlm {
     \fBclass\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBwlm\fP plugin reads statistics from the \fIWorkload Manager\fP.
-.PP
+.Pp
 The following configuration options are available:
-.TP
-\fBclass\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+.Bl -tag -width Ds
+.It \fBclass\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
 Select worload manager class based on the class name.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

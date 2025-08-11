@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-xfrm 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd xfrm man page"
-.SH NAME
-ncollectd-xfrm \- Documentation of ncollectd's xfrm plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-XFRM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-xfrm
+.Nd Documentation of ncollectd's xfrm plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP xfrm
-.SH DESCRIPTION
-The \fBxfrm\fP plugin collectd metrics from IP framework for transforming packets
-in the Linux Kernel.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP xfrm
+.Ed
+.Sh DESCRIPTION
+The \fBxfrm\fP plugin collectd metrics from IP framework for transforming
+packets in the Linux Kernel.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

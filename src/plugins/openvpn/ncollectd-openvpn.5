@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-openvpn 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd openvpn man page"
-.SH NAME
-ncollectd-openvpn \- Documentation of ncollectd's openvpn plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-OPENVPN 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-openvpn
+.Nd Documentation of ncollectd's openvpn plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP openvpn
-.br
 \fBplugin\fP openvpn {
     \fBinstance\fP \fIname\fP {
         \fBstatus-file\fP \fI/path/to/status\fP
@@ -14,34 +17,33 @@ ncollectd-openvpn \- Documentation of ncollectd's openvpn plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBopenvpn\fP plugin reads a status file maintained by OpenVPN and gathers
 traffic statistics about connected clients.
-.PP
+.Pp
 To set up OpenVPN to write to the status file periodically, use the
-\f(CW--status\fP option of OpenVPN.  So, in a nutshell you need:
-.EX
-
-openvpn $OTHER_OPTIONS --status "/var/run/openvpn-status" 10
-
-.EE
-The plugin has the following options:
-.PP
-.TP
-\fBstatus-file\fP \fI/path/to/status\fP
+\f(CW--status\fP option of OpenVPN.
+So, in a nutshell you need:
+.Bd -literal
+  $ openvpn $OTHER_OPTIONS --status "/var/run/openvpn-status" 10
+.Ed
+.Pp
+The \fBinstance\fP block has the following options:
+.Bl -tag -width Ds
+.It \fBstatus-file\fP \fI/path/to/status\fP
 Specifies the location of the status file.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

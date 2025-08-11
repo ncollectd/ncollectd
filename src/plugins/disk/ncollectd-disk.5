@@ -1,53 +1,53 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-disk 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd disk man page"
-.SH NAME
-ncollectd-disk \- Documentation of ncollectd's disk plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DISK 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-disk
+.Nd Documentation of ncollectd's disk plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP disk
-.br
 \fBplugin\fP disk {
     \fBdisk\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
     \fBuse-bsd-name\fP \fItrue|false\fP
     \fBudev-name-attr\fP \fIattribute\fP
-.br
 }
-.SH DESCRIPTION
-The \fBdisk\fP plugin collects information about the usage of physical disks and
-logical disks (partitions). Values collected are the number of octets written
-to and read from a disk or partition, the number of read/write operations
-issued to the disk and a rather complex "time" it took for these commands to be
-issued.
-
+.Ed
+.Sh DESCRIPTION
+The \fBdisk\fP plugin collects information about the usage of physical
+disks and logical disks (partitions).
+Values collected are the number of octets written to and read from a disk
+or partition, the number of read/write operations issued to the disk and a
+rather complex "time" it took for these commands to be issued.
+.Pp
 Using the following options you can ignore some disks or configure the
 collection only of specific disks.
-.TP
-\fBdisk\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+.Bl -tag -width Ds
+.It \fBdisk\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
 Select the disk \fIname\fP.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBuse-bsd-name\fP \fItrue|false\fP
+.Xr ncollectd.conf 5 .
+.It \fBuse-bsd-name\fP \fItrue|false\fP
 Whether to use the device's "BSD Name", on MacOSX, instead of the
-default major/minor numbers. Requires collectd to be built with Apple's
-IOKitLib support.
-.TP
-\fBudev-name-attr\fP \fIattribute\fP
+default major/minor numbers.
+Requires collectd to be built with Apple's IOKitLib support.
+.It \fBudev-name-attr\fP \fIattribute\fP
 Attempt to override disk instance name with the value of a specified udev
-attribute when built with \fBlibudev\fP.  If the attribute is not defined for the
-given device, the default name is used. Example:
-
-.EX
-    UdevNameAttr "DM_NAME"
-.EE
-
+attribute when built with \fBlibudev\fP.
+If the attribute is not defined for the given device, the default name is used.
+Example:
+.Bd -literal
+UdevNameAttr "DM_NAME"
+.Ed
+.Pp
 Please note that using an attribute that does not differentiate between the
 whole disk and its particular partitions (like \fBID_SERIAL\fP) will result in
 data about the whole disk and each partition being mixed together incorrectly.
-
+.Pp
 The rules below provide a \fBID_NCOLLECTD\fP attribute instead, which
 differentiates between the whole disk and its particular partitions.
-
-.EX
+.Bd -literal
 ACTION=="remove", GOTO="ncollectd_end"
 
 SUBSYSTEM!="block", GOTO="ncollectd_end"
@@ -58,7 +58,8 @@ ENV{DEVTYPE}=="partition", ENV{ID_SERIAL}=="?*", ENV{PARTN}=="?*", \\
     ENV{ID_NCOLLECTD}="$env{ID_SERIAL}-part$env{PARTN}"
 
 LABEL="ncollectd_end"
-.EE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Ed
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

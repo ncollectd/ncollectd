@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-ipc 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ipc man page"
-.SH NAME
-ncollectd-ipc \- Documentation of ncollectd's ipc plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-IPC 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-ipc
+.Nd Documentation of ncollectd's ipc plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP ipc
-.SH DESCRIPTION
-The \fBipc\fP plugin collect metrics from the System V IPC about messages, semaphores,
-and shared memory.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP ipc
+.Ed
+.Sh DESCRIPTION
+The \fBipc\fP plugin collect metrics from the System V IPC about messages,
+semaphores, and shared memory.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

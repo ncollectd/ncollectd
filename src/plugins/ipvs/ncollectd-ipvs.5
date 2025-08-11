@@ -1,14 +1,21 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-ipvs 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ipvs man page"
-.SH NAME
-ncollectd-ipvs \- Documentation of ncollectd's ipvs plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-IPVS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-ipvs
+.Nd Documentation of ncollectd's ipvs plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP ipvs
-.SH DESCRIPTION
+\fBplugin\fP ipvs
+.Ed
+.Sh DESCRIPTION
 The \fBipvs\fP plugin extracts statistics from IP Virtual Server (IPVS),
 the transport-layer load-balancer of the Linux Virtual Server (LVS) project.
 It stores traffic and connections history for each of the Real Servers (RS)
-behind a local Virtual Server (VS). Ncollectd must be run on Directors (in LVS jargon).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+behind a local Virtual Server (VS).
+Ncollectd must be run on Directors (in LVS jargon).
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

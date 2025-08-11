@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-fchost 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd fchost man page"
-.SH NAME
-ncollectd-fchost \- Documentation of ncollectd's fchost plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-FCHOST 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-fchost
+.Nd Documentation of ncollectd's fchost plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP fchost
-.SH DESCRIPTION
+\fBplugin\fP fchost
+.Ed
+.Sh DESCRIPTION
 The \fBfchost\fP plugin collectd information about HBA/Fibre Channel used
 in the system, collecting data from files in path \fI/sys/class/fchost\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

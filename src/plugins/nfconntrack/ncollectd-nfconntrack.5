@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nfconntrack 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nfconntrack man page"
-.SH NAME
-ncollectd-nfconntrack \- Documentation of ncollectd's nfconntrack plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD- NFCONNTRACK 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nfconntrack
+.Nd Documentation of ncollectd's nfconntrack plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nfconntrack
-.SH DESCRIPTION
-The \fBnfconntrack\fP plugin collect statistics from the conntrack table reading the file
-\fI/proc/net/stat/nf_conntrack\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP nfconntrack
+.Ed
+.Sh DESCRIPTION
+The \fBnfconntrack\fP plugin collect statistics from the conntrack table
+reading the file \fI/proc/net/stat/nf_conntrack\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

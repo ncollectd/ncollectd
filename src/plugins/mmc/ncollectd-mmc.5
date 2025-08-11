@@ -1,19 +1,23 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-mmc 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd mmc man page"
-.SH NAME
-ncollectd-mmc \- Documentation of ncollectd's mmc plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MMC 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-mmc
+.Nd Documentation of ncollectd's mmc plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP mmc
-.br
 \fBplugin\fP mmc {
     \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice-name\fP
-.br
 }
-.SH DESCRIPTION
-The \fBmmc\fP plugin reads the percentage of bad blocks on mmc device. The additional values
-for block erases and power cycles are also read.
-.TP
-\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice-name\fP
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Ed
+.Sh DESCRIPTION
+The \fBmmc\fP plugin reads the percentage of bad blocks on mmc device.
+The additional values for block erases and power cycles are also read.
+.Bl -tag -width Ds
+.It \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice-name\fP
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-ats 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ats man page"
-.SH NAME
-ncollectd-ats \- Documentation of ncollectd's ats plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ATS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-ats
+.Nd Documentation of ncollectd's ats plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP ats
-.br
 \fBplugin\fP ats {
     \fBinstance\fP \fIname\fP {
         \fBurl\fP "\fIhttp://host/path\fP"
@@ -15,35 +18,33 @@ ncollectd-ats \- Documentation of ncollectd's ats plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBats\fP plugin collect metris from Apache Traffic Server.
-.PP
-In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
-a ATS instance.
-.PP
+.Pp
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks,
+each defining a ATS instance.
 The following options are valid within \fBinstance\fP blocks:
-.PP
-.TP
-\fBurl\fP "\fIhttp://host/path\fP"
+.Bl -tag -width Ds
+.It \fBurl\fP "\fIhttp://host/path\fP"
 URL of the ATS instance to retrieve metrics.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBurl\fP, in
-seconds. By default, the configured \fBinterval\fP is used to set the timeout.
-.TP
-\fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to
+\fBurl\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+.It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

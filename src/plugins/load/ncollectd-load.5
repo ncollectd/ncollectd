@@ -1,14 +1,20 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-load 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd load man page"
-.SH NAME
-ncollectd-load \- Documentation of ncollectd's load plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-LOAD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-load
+.Nd Documentation of ncollectd's load plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP load
-.SH DESCRIPTION
-The \fBload\fP plugin collects the system load. These numbers give a rough overview
-over the utilization of a machine. The system load is defined as the number of
-runnable tasks in the run-queue and is provided by many operating systems as a
-one, five or fifteen minute average.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP load
+.Ed
+.Sh DESCRIPTION
+The \fBload\fP plugin collects the system load.
+These numbers give a rough overview over the utilization of a machine.
+The system load is defined as the number of runnable tasks in the run-queue and
+is provided by many operating systems as a one, five or fifteen minute average.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

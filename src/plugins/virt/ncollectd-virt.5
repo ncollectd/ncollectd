@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-virt 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd virt man page"
-.SH NAME
-ncollectd-virt \- Documentation of ncollectd's virt plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-VIRT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-virt
+.Nd Documentation of ncollectd's virt plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP virt
-.br
 \fBplugin\fP virt {
     \fBinstance\fP \fIname\fP {
         \fBconnection\fP \fIuri\fP
@@ -22,144 +25,141 @@ ncollectd-virt \- Documentation of ncollectd's virt plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBvirt\fP plugin allows CPU, disk, network load and other metrics to be collected for
-virtualized guests on the machine. The statistics are collected through libvirt.
-Majority of metrics can be gathered without installing any additional software on guests,
-especially ncollectd, which runs only on the host system.
-
+.Ed
+.Sh DESCRIPTION
+The \fBvirt\fP plugin allows CPU, disk, network load and other metrics to
+be collected for virtualized guests on the machine.
+The statistics are collected through libvirt.
+Majority of metrics can be gathered without installing any additional
+software on guests, especially ncollectd, which runs only on the host system.
+.Pp
 In the \fBinstance\fP block only \fBconnection\fP is required.
 The following options are accepted within each \fBinstance\fP block:
-.TP
-\fBconnection\fP \fIuri\fP
-Connect to the hypervisor given by \fIuri\fP. For example if using Xen use:
-
+.Bl -tag -width Ds
+.It \fBconnection\fP \fIuri\fP
+Connect to the hypervisor given by \fIuri\fP.
+For example if using Xen use:
+.Bd -literal
     \fBconnection\fP "xen:///"
-
+.Ed
+.Pp
 Details which URIs allowed are given at
-.UR http://libvirt.org/uri.html
-.UE
-.TP
-\fBdomain\fP [\fIincl|include|excl|exclude\fP] \fIdomain\fP
+.Lk http://libvirt.org/uri.html
+.It \fBdomain\fP [\fIincl|include|excl|exclude\fP] \fIdomain\fP
 Select which domains collected.
-.TP
-\fBblock-device\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+.It \fBblock-device\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
 Select which block devices are collected.
-.TP
-\fBblock-device-format\fP \fItarget|source\fP
-If \fBblock-device-format\fP is set to \fItarget\fP, the default, then the device name
-seen by the guest will be used for reporting metrics.
-This corresponds to the \f(CW<target>\fP node in the XML definition of the domain.
-
-If \fBBlockDeviceFormat\fP is set to \fIsource\fP, then metrics will be reported
-using the path of the source, e.g. an image file.
-This corresponds to the \f(CW<source>\fP node in the XML definition of the domain.
-.TP
-\fBinterface-device\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+.It \fBblock-device-format\fP \fItarget|source\fP
+If \fBblock-device-format\fP is set to \fItarget\fP, the default, then the
+device name seen by the guest will be used for reporting metrics.
+This corresponds to the \f(CW<target>\fP node in the XML definition of
+he domain.
+.Pp
+If \fBBlockDeviceFormat\fP is set to \fIsource\fP, then metrics will be
+reported using the path of the source, e.g. an image file.
+This corresponds to the \f(CW<source>\fP node in the XML definition of
+the domain.
+.It \fBinterface-device\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
 Select which interface devices are collected.
-.TP
-\fBinterface-format\fP \fIname|address|number\fP
+.It \fBinterface-format\fP \fIname|address|number\fP
 When the virt plugin logs interface data, it sets the name of the collected
-data according to this setting. The default is to use the path as provided by
-the hypervisor (the "dev" property of the target node), which is equal to
-setting \fIname\fP.
-
-\fIaddress\fP means use the interface's mac address. This is useful since the
-interface path might change between reboots of a guest or across migrations.
-
+data according to this setting.
+The default is to use the path as provided by the hypervisor
+(the "dev" property of the target node), which is equal to setting \fIname\fP.
+.Pp
+\fIaddress\fP means use the interface's mac address.
+This is useful since the interface path might change between reboots of a
+guest or across migrations.
+.Pp
 \fInumber\fP means use the interface's number in guest.
-
+.Pp
 \fBNote\fP: this option determines also what field will be used for
 filtering over interface device (filter value in \fBinterface-device\fP
-will be applied to name, address or number).  More info about filtering
-interfaces can be found in the description of \fBinterface-device\fP.
-.TP
-\fBpersistent-notification\fP \fItrue|false\fP
-Override default configuration to only send notifications when there is a change
-in the lifecycle state of a domain. When set to true notifications will be sent
-for every read cycle. Default is false. Does not affect the stats being dispatched.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+will be applied to name, address or number).
+More info about filtering interfaces can be found in the description of
+\fBinterface-device\fP.
+.It \fBpersistent-notification\fP \fItrue|false\fP
+Override default configuration to only send notifications when there is
+a change in the lifecycle state of a domain.
+When set to true notifications will be sent for every read cycle.
+Default is false.
+Does not affect the stats being dispatched.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBcollect\fP \fIflags\fP
-.RS
-.TP
-\fBdisk\fP
+.It \fBcollect\fP \fIflags\fP
+.Bl -tag -width Ds
+.It \fBdisk\fP
 Report extra statistics like number of flush operations and total
-service time for read, write and flush operations. Requires libvirt API version
-\fI0.9.5\fP or later.
-.TP
-\fBpcpu\fP
+service time for read, write and flush operations.
+Requires libvirt API version \fI0.9.5\fP or later.
+.It \fBpcpu\fP
 Report the physical user/system cpu time consumed by the hypervisor, per-vm.
 Requires libvirt API version \fI0.9.11\fP or later.
-.TP
-\fBcpu_util\fP
+.It \fBcpu_util\fP
 Report CPU utilization per domain in percentage.
-.TP
-\fBdomain_state\fP
+.It \fBdomain_state\fP
 Report domain state and reason.
-.TP
-\fBperf\fP
-Report performance monitoring events. To collect performance
-metrics they must be enabled for domain and supported by the platform. Requires
-libvirt API version \fI1.3.3\fP :or later.
-
-Note: \fIperf\fP metrics can't be collected if \fIintel_rdt\fP plugin is enabled.
-.TP
-\fBvcpupin\fP
+.It \fBperf\fP
+Report performance monitoring events.
+To collect performance metrics they must be enabled for domain and supported
+by the platform.
+Requires libvirt API version \fI1.3.3\fP :or later.
+.Pp
+Note: \fIperf\fP metrics can't be collected if \fIintel_rdt\fP plugin
+is enabled.
+.It \fBvcpupin\fP
 Report pinning of domain VCPUs to host physical CPUs.
-.TP
-\fBdisk_err\fP
-Report disk errors if any occured. Requires libvirt API version \fI0.9.10\fP or later.
-.TP
-\fBfs_info\fP
-Report file system information as a notification. Requires
-libvirt API version \fI1.2.11\fP or later. Can be collected only if \fIGuest Agent\fP
-is installed and configured inside VM. Make sure that installed \fIGuest Agent\fP
-version supports retrieving  file system information.
-.TP
-\fBdisk_allocation\fP
+.It \fBdisk_err\fP
+Report disk errors if any occured.
+Requires libvirt API version \fI0.9.10\fP or later.
+.It \fBfs_info\fP
+Report file system information as a notification.
+Requires libvirt API version \fI1.2.11\fP or later.
+Can be collected only if \fIGuest Agent\fP is installed and configured
+inside VM.
+Make sure that installed \fIGuest Agent\fP version supports retrieving
+file system information.
+.It \fBdisk_allocation\fP
 Report 'disk_allocation' statistic for disk device.
-
-Note: This statistic is only reported for disk devices with 'source' property available.
-.TP
-\fBdisk_capacity\fP
+.Pp
+Note: This statistic is only reported for disk devices with 'source' property
+available.
+.It \fBdisk_capacity\fP
 Report statistic for disk device.
-
-Note: This statistic is only reported for disk devices with 'source' property available.
-.TP
-\fBdisk_physical\fP
+.Pp
+Note: This statistic is only reported for disk devices with 'source' property
+available.
+.It \fBdisk_physical\fP
 Report statistic for disk device.
-
-Note: This statistic is only reported for disk devices with 'source' property available.
-.TP
-\fBmemory\fP
-Report statistics about memory usage details, provided
-by libvirt virDomainMemoryStats() function.
-.TP
-\fBvcpu\fP
+.Pp
+Note: This statistic is only reported for disk devices with 'source' property
+available.
+.It \fBmemory\fP
+Report statistics about memory usage details, provided by libvirt
+.Fn virDomainMemoryStats
+function.
+.It \fBvcpu\fP
 Report domain virtual CPUs utilisation.
-.RE
-.TP
-\fBrefresh-interval\fP \fIseconds\fP
-Refresh the list of domains and devices every \fIseconds\fP. The default is 60
-seconds. Setting this to be the same or smaller than the \fIInterval\fP will cause
-the list of domains and devices to be refreshed on every iteration.
-
+.El
+.It \fBrefresh-interval\fP \fIseconds\fP
+Refresh the list of domains and devices every \fIseconds\fP.
+The default is 60 seconds.
+Setting this to be the same or smaller than the \fIInterval\fP will cause the
+list of domains and devices to be refreshed on every iteration.
+.Pp
 Refreshing the devices in particular is quite a costly operation, so if your
-virtualization setup is static you might consider increasing this. If this
-option is set to 0, refreshing is disabled completely.
-.TP
-\fBinterval\fP \fIseconds\fP
+virtualization setup is static you might consider increasing this.
+If this option is set to 0, refreshing is disabled completely.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

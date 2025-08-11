@@ -1,11 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-schedstat 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd schedstat man page"
-.SH NAME
-ncollectd-schedstat \- Documentation of ncollectd's schedstat plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SCHEDSTAT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-schedstat
+.Nd Documentation of ncollectd's schedstat plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP schedstat
-.SH DESCRIPTION
-The \fBschedstat\fP plugin collectd scheduling metrics from \fI/proc/schedstat\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP schedstat
+.Ed
+.Sh DESCRIPTION
+The \fBschedstat\fP plugin collectd scheduling metrics from
+\fI/proc/schedstat\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

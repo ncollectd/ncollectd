@@ -1,12 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nfacct 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nfacct man page"
-.SH NAME
-ncollectd-nfacct \- Documentation of ncollectd's nfacct plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NFACCT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nfacct
+.Nd Documentation of ncollectd's nfacct plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nfacct
-.SH DESCRIPTION
+\fBplugin\fP nfacct
+.Ed
+.Sh DESCRIPTION
 The \fBnfacct\fP plugin retrive netfilter accounting objects.
-With the command \f(CWnfacct\fP you can create/retrieve/delete this accounting objects.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+With the command \f(CWnfacct\fP you can create/retrieve/delete
+this accounting objects.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

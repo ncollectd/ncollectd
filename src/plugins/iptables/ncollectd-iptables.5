@@ -1,42 +1,46 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-iptables 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd iptables man page"
-.SH NAME
-ncollectd-iptables \- Documentation of ncollectd's iptables plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-IPTABLES 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-iptables
+.Nd Documentation of ncollectd's iptables plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP iptables
-.br
 \fBplugin\fP iptables {
     \fBchain\fP \fIfable\fP \fIchain\fP [\fIcomment|number\fP [\fIname\fP]]
     \fBchain6\fP \fIfable\fP \fIchain\fP [\fIcomment|number\fP [\fIname\fP]]
-.br
 }
-.SH DESCRIPTION
-The \fBiptables\fP plugin can gather statistics from your ip_tables based packet
-filter (aka. firewall) for both the IPv4 and the IPv6 protocol.
-It can collect the byte- and packet-counters of selected rules and submit them to ncollectd.
+.Ed
+.Sh DESCRIPTION
+The \fBiptables\fP plugin can gather statistics from your ip_tables based
+packet filter (aka. firewall) for both the IPv4 and the IPv6 protocol.
+It can collect the byte-counters and packet-counters of selected rules
+and submit them to ncollectd.
 You can select rules that should be collected either by their position
-(e. g. “the fourth rule in the ‘INPUT’ queue in the ‘filter’ table”)
-or by its comment (using the “COMMENT” match). This means that depending on your firewall
-layout you can collect certain services (such as the amount of web-traffic),
-source or destination hosts or networks, dropped packets and much more.
-.PP
+(e. g. “the fourth rule in the ‘INPUT’ queue in the
+‘filter’ table”) or by its comment (using the “COMMENT” match).
+This means that depending on your firewall layout you can collect certain
+services (such as the amount of web-traffic), source or destination hosts
+or networks, dropped packets and much more.
+.Pp
 The plugin support the following options:
-.PP
-.TP
-\fBchain\fP \fIfable\fP \fIchain\fP [\fIcomment|number\fP [\fIname\fP]]
-.TP
-\fBchain6\fP \fIfable\fP \fIchain\fP [\fIcomment|number\fP [\fIname\fP]]
+.Bl -tag -width Ds
+.It \fBchain\fP \fIfable\fP \fIchain\fP [\fIcomment|number\fP [\fIname\fP]]
+.It \fBchain6\fP \fIfable\fP \fIchain\fP [\fIcomment|number\fP [\fIname\fP]]
 Select the iptables/ip6tables filter rules to count packets and bytes from.
-
-If only \fItable\fP and \fIchain\fP are given, this plugin will collect the counters
-of all rules which have a comment-match.
-
-If \fIcomment\fP or \fInumber\fP is given, only the rule with the matching comment or
-the \fIn\fPth rule will be collected. Again, the comment (or the number) will be
-used as the type-instance.
-
+.Pp
+If only \fItable\fP and \fIchain\fP are given, this plugin will collect
+the counters of all rules which have a comment-match.
+.Pp
+If \fIcomment\fP or \fInumber\fP is given, only the rule with the matching
+comment or the \fIn\fPth rule will be collected.
+Again, the comment (or the number) will be used as the type-instance.
+.Pp
 If \fIname\fP is supplied, it will be used as the type-instance instead of the
 comment or the number.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

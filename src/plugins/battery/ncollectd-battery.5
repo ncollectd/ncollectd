@@ -1,14 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-battery 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd battery man page"
-.SH NAME
-ncollectd-battery \- Documentation of ncollectd's battery plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-BATTERY 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-battery
+.Nd Documentation of ncollectd's battery plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP battery
-.br
 \fBplugin\fP battery
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBbattery\fP plugin reports the remaining capacity, power and voltage of
 laptop batteries.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

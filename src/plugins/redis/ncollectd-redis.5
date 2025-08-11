@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-redis 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd redis man page"
-.SH NAME
-ncollectd-redis \- Documentation of ncollectd's redis plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-REDIS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-redis
+.Nd Documentation of ncollectd's redis plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP redis
-.br
 \fBplugin\fP redis {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhostname\fP
@@ -25,75 +28,67 @@ ncollectd-redis \- Documentation of ncollectd's redis plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBredis\fP plugin connects to one or more Redis servers, gathers
 information about each server's state and executes user-defined queries.
 For each server there is a I<Instance> block which configures the connection
 parameters and set of user-defined queries for this node.
-.PP
-The \fBinstance\fP block identifies a new Redis node, that is a new Redis instance
-running in an specified host and port.
-.PP
-.TP
-\fBhost\fP \fIhostname\fP
-The \fBhost\fP option is the hostname or IP-address where the Redis instance is
-running on.
-.TP
-\fBport\fP  \fIport\fP
+.Pp
+The \fBinstance\fP block identifies a new Redis node, that is a new Redis
+instance running in an specified host and port.
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
+The \fBhost\fP option is the hostname or IP-address where the Redis instance
+is running on.
+.It \fBport\fP  \fIport\fP
 The \fBport\fP option is the TCP port on which the Redis instance accepts
-connections. Either a service name of a port number may be given. Please note
-that numerical port numbers must be given as a string, too.
-.TP
-\fBsocket\fP \fIpath\fP
-Connect to Redis using the UNIX domain socket at \fIpath\fP. If this
-setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option set the socket timeout for node response. Since the Redis
-read function is blocking, you should keep this value as low as possible.
-It is expected what \fBtimeout\fP values should be lower than \fBinterval\fP defined
-globally.  Defaults to 2000 (2 seconds).
-.TP
-\fBpassword\fP \fIpassword\fP
+connections.
+Either a service name of a port number may be given.
+Please note that numerical port numbers must be given as a string, too.
+.It \fBsocket\fP \fIpath\fP
+Connect to Redis using the UNIX domain socket at \fIpath\fP.
+If this setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option set the socket timeout for node response.
+Since the Redis read function is blocking, you should keep this value
+as low as possible.
+It is expected what \fBtimeout\fP values should be lower than \fBinterval\fP
+defined globally.
+Defaults to 2 seconds.
+.It \fBpassword\fP \fIpassword\fP
 Use \fIpassword\fP to authenticate when connecting to \fIredis\fP.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
+.It \fBpassword-env\fP \fIenv-name\fP
 Get the \fIpassword\fP to authenticate when connecting to \fIredis\fP from the
 environment variable \fIenv-name\fP.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBquery\fP \fIquery-string\fP
+.It \fBquery\fP \fIquery-string\fP
 The \fBquery\fP block identifies a query to execute against the redis server.
-There may be an arbitrary number of queries to execute. Each query should
-return single string or integer.
-.RS
-.TP
-\fBmetric\fP \fIname\fP
+There may be an arbitrary number of queries to execute.
+Each query should return single string or integer.
+.Bl -tag -width Ds
+.It \fBmetric\fP \fIname\fP
 Set the metric name.
-.TP
-\fBtype\fP \fIgauge|counter|unknow\fP
-The \fBtype\fP that's used for the metric. Must be \fIgauge\fP, \fIcounter\fP,
-or \fPunknow\fP.  If not set is \fPunknow\fP.
+.It \fBtype\fP \fIgauge|counter|unknow\fP
+The \fBtype\fP that's used for the metric.
+Must be \fIgauge\fP, \fIcounter\fP, or \fPunknow\fP.
+If not set is \fPunknow\fP.
 There must be exactly one \fBtype\fP option inside each \fBResult\fP block.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBdatabase\fP \fIindex\fP
-This index selects the Redis logical database to use for query. Defaults
-to \fB0\fP.
-.RE
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBdatabase\fP \fIindex\fP
+This index selects the Redis logical database to use for query.
+Defaults to \fB0\fP.
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

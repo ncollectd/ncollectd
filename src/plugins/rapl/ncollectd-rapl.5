@@ -1,15 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-rapl 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd rapl man page"
-.SH NAME
-ncollectd-rapl \- Documentation of ncollectd's rapl plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-RAPL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-rapl
+.Nd Documentation of ncollectd's rapl plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP rapl
-.br
 \fBplugin\fP rapl
-.SH DESCRIPTION
-Modern processors provide Running Average Power Limit (RAPL) interfaces for reporting
-the accumulated energy consumption of various power domains, the \fBrapl\fP plugin collects
-this information.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Ed
+.Sh DESCRIPTION
+Modern processors provide Running Average Power Limit (RAPL) interfaces for
+reporting the accumulated energy consumption of various power domains,
+the \fBrapl\fP plugin collects this information.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

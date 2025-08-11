@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-uname 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd uname man page"
-.SH NAME
-ncollectd-uname \- Documentation of ncollectd's uname plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-UNAME 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-uname
+.Nd Documentation of ncollectd's uname plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP uname
-.SH DESCRIPTION
+\fBplugin\fP uname
+.Ed
+.Sh DESCRIPTION
 The \fBuname\fP plugin allow to get the system information info.
 The same that the \f(CWuname\fP commands returns.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,27 +1,28 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-java 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd java man page"
-.SH NAME
-ncollectd-java \- Documentation of ncollectd's java plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-JAVA 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-java
+.Nd Documentation of ncollectd's java plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP java
-.br
 \fBplugin\fP java {
     \fBjvm-arg\fP "\fIarg\fP"
-.sp 2
     \fBload-plugin\fP "\fIjava-class\fP"
     \fBplugin\fP "\fIname\fP" {
         # To be parsed by the plugin
     }
-.br
 }
-.SH DESCRIPTION
-The \fBjava\fP plugin embeds a \fIJava Virtual Machine\fP (JVM) into \fBncollectd\fP and
-provides a Java interface to part of ncollectd's API. This makes it possible to
-write additions to the daemon in Java.
-
+.Ed
+.Sh DESCRIPTION
+The \fBjava\fP plugin embeds a \fIJava Virtual Machine\fP (JVM) into
+\fBncollectd\fP and provides a Java interface to part of ncollectd's API.
+This makes it possible to write additions to the daemon in Java.
+.Pp
 Example:
-
-.EX
+.Bd -literal
 plugin "java" {
     jvm-arg "-verbose:jni"
     jvm-arg "-Djava.class.path=/opt/ncollectd/lib/ncollectd/bindings/java"
@@ -30,362 +31,337 @@ plugin "java" {
         # To be parsed by the plugin
     }
 }
-.EE
-
+.Ed
+.Pp
 Available configuration options:
-.TP
-\fBjvm-arg\fP "\fIarg\fP"
-Argument that is to be passed to the \fIJava Virtual Machine\fP (JVM). This works
-exactly the way the arguments to the \fIjava\fP binary on the command line work.
+.Bl -tag -width Ds
+.It \fBjvm-arg\fP "\fIarg\fP"
+Argument that is to be passed to the \fIJava Virtual Machine\fP (JVM).
+This works exactly the way the arguments to the \fIjava\fP binary on the
+command line work.
 Execute \f(CWjava --help\fP for details.
-
+.Pp
 Please note that \fBall\fP these options must appear \fBbefore\fP (i. e. above)
 any other options! When another option is found, the JVM will be started and
-later options will have to be ignored!
-.TP
-\fBload-plugin\fP "\fIjava-class\fP"
-Instantiates a new \fIjava-class\fP object. The constructor of this object very
-likely then registers one or more callback methods with the server.
-
-When the first such option is found, the virtual machine (JVM) is created. This
-means that all \fBjvm-arg\fP options must appear before (i. e. above) all
-\fBload-plugin\fP options!
-.TP
-\fBplugin\fP "\fIname\fP"
+later options will have to be ignored!.
+.It \fBload-plugin\fP "\fIjava-class\fP"
+Instantiates a new \fIjava-class\fP object.
+The constructor of this object very likely then registers one or more callback
+methods with the server.
+.Pp
+When the first such option is found, the virtual machine (JVM) is created.
+This means that all \fBjvm-arg\fP options must appear before (i. e. above) all
+\fBload-plugin\fP options!.
+.It \fBplugin\fP "\fIname\fP"
 The entire block is passed to the Java plugin as an
 \f(CWorg.ncollectd.api.ConfigItem\fP object.
-
+.Pp
 For this to work, the plugin has to register a configuration callback first,
-see. This means, that the \fBplugin\fP block
-must appear after the appropriate \fBload-plugin\fP block. Also note, that \fIname\fP
-depends on the (Java) plugin registering the callback and is completely
-independent from the \fIjava-class\fP argument passed to \fBload-plugin\fP.
-
-.SH OVERVIEW
-
+see.
+This means, that the \fBplugin\fP block must appear after the appropriate
+\fBload-plugin\fP block.
+Also note, that \fIname\fP depends on the (Java) plugin registering the
+callback and is completely independent from the \fIjava-class\fP argument
+passed to \fBload-plugin\fP.
+.El
+.Sh OVERVIEW
 When writing additions for ncollectd in Java, the underlying C base is mostly
-hidden from you. All complex data types are converted to their Java counterparts
-before they're passed to your functions. These Java classes reside in the
-\f(CWorg.ncollectd.api\fP namespace.
-
+hidden from you.
+All complex data types are converted to their Java counterparts before
+they're passed to your functions.
+These Java classes reside in the \f(CWorg.ncollectd.api\fP namespace.
+.Pp
 The \fBjava\fP plugin will create one object of each class configured with the
-\fBload-plugin\fP option. The constructor of this class can then register "callback
-methods", i. e. methods that will be called by the daemon when appropriate.
-
+\fBload-plugin\fP option.
+The constructor of this class can then register "callback methods",
+i. e. methods that will be called by the daemon when appropriate.
+.Pp
 The available classes are:
-
-.TP
-\fBorg.ncollectd.api.NCollectd\fP
+.Bl -tag -width Ds
+.It \fBorg.ncollectd.api.NCollectd\fP
 All API functions exported to Java are implemented as static functions of this
-class. See \fBEXPORTED API FUNCTIONS\fP below.
-.TP
-\fBorg.ncollectd.api.ConfigValue\fP
-Corresponds to \f(CWconfig_value_t\fP, defined in \f(CWsrc/libconfig/config.h\fP.
-.TP
-\fBorg.ncollectd.api.ConfigItem\fP
-Corresponds to \f(CWconfig_item_t\fP, defined in \f(CWsrc/libconfig/config.h\fP.
-.TP
-\fBorg.ncollectd.api.Notification\fP
-Corresponds to \f(CWnotification_t\fP, defined in \f(CWsrc/libmetric/notification.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricFamily\fP
-Corresponds to \f(CWmetric_family_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricUnknown\fP
-Corresponds to \f(CWunknown_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricGauge\fP
-Corresponds to \f(CWgauge_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricCounter\fP
-Corresponds to \f(CWcounter_t\fP, defined in \f(CWsrc/libmetric/metric.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricInfo\fP
-Corresponds to \f(CWlabel_set_t\fP, defined in \f(CWsrc/libmetric/label_set.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricStateSet\fP
-Corresponds to \f(CWstate_set_t\fP, defined in \f(CWsrc/libmetric/state_set.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricHistogram\fP
-Corresponds to \f(CWhistogram_t\fP, defined in \f(CWsrc/libmetric/histogram.h\fP.
-.TP
-\fBorg.ncollectd.api.MetricSummary\fP
-Corresponds to \f(CWsummary_t\fP, defined in \f(CWsrc/libmetric/histogram.h\fP.
-
-.PP
-
+class.
+See \fBEXPORTED API FUNCTIONS\fP below.
+.It \fBorg.ncollectd.api.ConfigValue\fP
+Corresponds to \f(CWconfig_value_t\fP,
+defined in \f(CWsrc/libconfig/config.h\fP.
+.It \fBorg.ncollectd.api.ConfigItem\fP
+Corresponds to \f(CWconfig_item_t\fP,
+defined in \f(CWsrc/libconfig/config.h\fP.
+.It \fBorg.ncollectd.api.Notification\fP
+Corresponds to \f(CWnotification_t\fP,
+defined in \f(CWsrc/libmetric/notification.h\fP.
+.It \fBorg.ncollectd.api.MetricFamily\fP
+Corresponds to \f(CWmetric_family_t\fP,
+defined in \f(CWsrc/libmetric/metric.h\fP.
+.It \fBorg.ncollectd.api.MetricUnknown\fP
+Corresponds to \f(CWunknown_t\fP,
+defined in \f(CWsrc/libmetric/metric.h\fP.
+.It \fBorg.ncollectd.api.MetricGauge\fP
+Corresponds to \f(CWgauge_t\fP,
+defined in \f(CWsrc/libmetric/metric.h\fP.
+.It \fBorg.ncollectd.api.MetricCounter\fP
+Corresponds to \f(CWcounter_t\fP,
+defined in \f(CWsrc/libmetric/metric.h\fP.
+.It \fBorg.ncollectd.api.MetricInfo\fP
+Corresponds to \f(CWlabel_set_t\fP,
+defined in \f(CWsrc/libmetric/label_set.h\fP.
+.It \fBorg.ncollectd.api.MetricStateSet\fP
+Corresponds to \f(CWstate_set_t\fP,
+defined in \f(CWsrc/libmetric/state_set.h\fP.
+.It \fBorg.ncollectd.api.MetricHistogram\fP
+Corresponds to \f(CWhistogram_t\fP,
+defined in \f(CWsrc/libmetric/histogram.h\fP.
+.It \fBorg.ncollectd.api.MetricSummary\fP
+Corresponds to \f(CWsummary_t\fP,
+defined in \f(CWsrc/libmetric/histogram.h\fP.
+.El
+.Pp
 In the remainder of this document, we'll use the short form of these names, for
-example \fBNotification\fP. In order to be able to use these abbreviated names, you
-need to \fBimport\fP the classes.
-
-.SH EXPORTED API FUNCTIONS
-
+example \fBNotification\fP.
+In order to be able to use these abbreviated names, you need to \fBimport\fP
+the classes.
+.Sh EXPORTED API FUNCTIONS
 All ncollectd API functions that are available to Java plugins are implemented
-as \fIpublic static\fP functions of the \fNBCollectd\fP class. This makes
-calling these functions pretty straight forward. For example, to send an error
-message to the daemon, you'd do something like this:
-
+as \fIpublic static\fP functions of the \fBCollectd\fP class.
+This makes calling these functions pretty straight forward.
+For example, to send an error message to the daemon,
+you'd do something like this:
+.Bd -literal
   NCollectd.logError ("That wasn't chicken!");
-
+.Ed
+.Pp
 The following are the currently exported functions.
-.SS registerConfig
-
-Signature: \fIint\fP \fBregisterConfig\fP (\fIString\fP name, \fINCollectdConfigInterface\fP object);
-
+.Ss registerConfig
+Signature: \fIint\fP \fBregisterConfig\fP (\fIString\fP name,
+\fINCollectdConfigInterface\fP object);
+.Pp
 Registers the \fBconfig\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"config callback"\fP below.
-
-.SS registerInit
-
-Signature: \fIint\fP \fBregisterInit\fP (\fIString\fP name, \fINCollectdInitInterface\fP object);
-
+.Ss registerInit
+Signature: \fIint\fP \fBregisterInit\fP (\fIString\fP name,
+\fINCollectdInitInterface\fP object);
+.Pp
 Registers the \fBinit\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"init callback"\fP below.
-
-.SS registerRead
-
-Signature: \fIint\fP \fBregisterRead\fP (\fIString\fP name, \fINCollectdReadInterface\fP object)
-
+.Ss registerRead
+Signature: \fIint\fP \fBregisterRead\fP (\fIString\fP name,
+\fINCollectdReadInterface\fP object)
+.Pp
 Registers the \fBread\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"read callback"\fP below.
-
-.SS registerWrite
-
-Signature: \fIint\fP \fBregisterWrite\fP (\fIString\fP name, \fINCollectdWriteInterface\fP object)
-
+.Ss registerWrite
+Signature: \fIint\fP \fBregisterWrite\fP (\fIString\fP name,
+\fINCollectdWriteInterface\fP object)
+.Pp
 Registers the \fBwrite\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"write callback"\fP below.
-
-.SS registerShutdown
-
-Signature: \fIint\fP \fBregisterShutdown\fP (\fIString\fP name, \fINCollectdShutdownInterface\fP object);
-
+.Ss registerShutdown
+Signature: \fIint\fP \fBregisterShutdown\fP (\fIString\fP name,
+\fINCollectdShutdownInterface\fP object);
+.Pp
 Registers the \fBshutdown\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"shutdown callback"\fP below.
-
-.SS registerLog
-
-Signature: \fIint\fP \fBregisterLog\fP (\fIString\fP name, \fINCollectdLogInterface\fP object);
-
+.Ss registerLog
+Signature: \fIint\fP \fBregisterLog\fP (\fIString\fP name,
+\fINCollectdLogInterface\fP object);
+.Pp
 Registers the \fBlog\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"log callback"\fP below.
-
-.SS registerNotification
-
-Signature: \fIint\fP \fBregisterNotification\fP (\fIString\fP name, \fINCollectdNotificationInterface\fP object);
-
+.Ss registerNotification
+Signature: \fIint\fP \fBregisterNotification\fP (\fIString\fP name,
+\fINCollectdNotificationInterface\fP object);
+.Pp
 Registers the \fBnotification\fP function of \fIobject\fP with the daemon.
-
+.Pp
 Returns zero upon success and non-zero when an error occurred.
-
+.Pp
 See \fB"notification callback"\fP below.
-
-.SS dispatchMetricFamily
-
+.Ss dispatchMetricFamily
 Signature: \fIint\fP \fBdispatchMetricFamily\fP (\fIMetricFamily\fP object)
-
+.Pp
 Passes the metrics represented by the \fBMetricFamily\fP object to the
 \fBplugin_dispatch_metric_family\fP function of the daemon.
-
+.Pp
 Returns zero upon success or non-zero upon failure.
-
-.SS dispatchNotification
-
+.Ss dispatchNotification
 Signature: \fIint\fP \fBdispatchNotification\fP (\fINotification\fP object);
-
+.Pp
 Returns zero upon success or non-zero upon failure.
-
-.SS logError
-
+.Ss logError
 Signature: \fIvoid\fP \fBlogError\fP (\fIString\fP)
-
+.Pp
 Sends a log message with severity \fBERROR\fP to the daemon.
-
-.SS logWarning
-
+.Ss logWarning
 Signature: \fIvoid\fP \fBlogWarning\fP (\fIString\fP)
-
+.Pp
 Sends a log message with severity \fBWARNING\fP to the daemon.
-
-.SS logNotice
-
+.Ss logNotice
 Signature: \fIvoid\fP \fBlogNotice\fP (\fIString\fP)
-
+.Pp
 Sends a log message with severity \fBNOTICE\fP to the daemon.
-
-.SS logInfo
-
+.Ss logInfo
 Signature: \fIvoid\fP \fBlogInfo\fP (\fIString\fP)
-
+.Pp
 Sends a log message with severity \fBINFO\fP to the daemon.
-
-.SS logDebug
-
+.Ss logDebug
 Signature: \fIvoid\fP \fBlogDebug\fP (\fIString\fP)
-
+.Pp
 Sends a log message with severity \fBDEBUG\fP to the daemon.
-
-.SH REGISTERING CALLBACKS
-
-When starting up, ncollectd creates an object of each configured class. The
-constructor of this class should then register "callbacks" with the daemon,
+.Sh REGISTERING CALLBACKS
+When starting up, ncollectd creates an object of each configured class.
+The constructor of this class should then register "callbacks" with the daemon,
 using the appropriate static functions in \fBncollectd\fP,
-see \fBEXPORTED API FUNCTIONS\fP above. To register a callback, the object being
-passed to one of the register functions must implement an appropriate
-interface, which are all in the \fBorg.ncollectd.api\fP namespace.
-
-A constructor may register any number of these callbacks, even none. An object
-without callback methods is never actively called by ncollectd, but may still
-call the exported API functions. One could, for example, start a new thread in
-the constructor and dispatch (submit to the daemon) values asynchronously,
-whenever one is available.
-
+see \fBEXPORTED API FUNCTIONS\fP above.
+To register a callback, the object being passed to one of the register
+functions must implement an appropriate interface, which are all in the
+\fBorg.ncollectd.api\fP namespace.
+.Pp
+A constructor may register any number of these callbacks, even none.
+An object without callback methods is never actively called by ncollectd,
+but may still call the exported API functions.
+One could, for example, start a new thread in the constructor and dispatch
+(submit to the daemon) values asynchronously, whenever one is available.
+.Pp
 Each callback method is now explained in more detail:
-
-.SS config callback
-
+.Ss config callback
 Interface: \fBorg.ncollectd.api.NCollectdConfigInterface\fP
-
+.Pp
 Signature: \fIint\fP \fBconfig\fP (\fIOConfigItem\fP ci)
-
+.Pp
 This method is passed a \fBOConfigItem\fP object, if both, method and
-configuration, are available. \fBOConfigItem\fP is the root of a tree representing
-the configuration for this plugin. The root itself is the representation of the
-\fBE<lt\fPPlugin /E<gt\fP\fP block, so in next to all cases the children of the
-root are the first interesting objects.
-
-To signal success, this method has to return zero. Anything else will be
-considered an error condition and the plugin will be disabled entirely.
-
+configuration, are available.
+\fBOConfigItem\fP is the root of a tree representing the configuration
+for this plugin.
+The root itself is the representation of the \fBPlugin\fP block,
+so in next to all cases the children of the root are the first
+interesting objects.
+.Pp
+To signal success, this method has to return zero.
+Anything else will be considered an error condition and the plugin will be
+disabled entirely.
+.Pp
 See \fB"registerConfig"\fP above.
-
-.SS init callback
-
+.Ss init callback
 Interface: \fBorg.ncollectd.api.NCollectdInitInterface\fP
-
+.Pp
 Signature: \fIint\fP \fBinit\fP ()
-
-This method is called after the configuration has been handled. It is
-supposed to set up the plugin. e. g. start threads, open connections, or
-check if can do anything useful at all.
-
-To signal success, this method has to return zero. Anything else will be
-considered an error condition and the plugin will be disabled entirely.
-
+.Pp
+This method is called after the configuration has been handled.
+It is supposed to set up the plugin. e. g. start threads, open connections,
+or check if can do anything useful at all.
+.Pp
+To signal success, this method has to return zero.
+Anything else will be considered an error condition and the plugin will be
+disabled entirely.
+.Pp
 See \fB"registerInit"\fP above.
-
-.SS read callback
-
+.Ss read callback
 Interface: \fBorg.ncollectd.api.NCollectdReadInterface\fP
-
+.Pp
 Signature: \fIint\fP \fBread\fP ()
-
+.Pp
 This method is called periodically and is supposed to gather statistics in
-whatever fashion. These statistics are represented as a \fBMetricFamily\fP object and
-sent to the daemon using \fBddispatchMetricFamily\fP.
-
-To signal success, this method has to return zero. Anything else will be
-considered an error condition and cause an appropriate message to be logged.
-Currently, returning non-zero does not have any other effects. In particular,
-Java "read"-methods are not suspended for increasing intervals like C
-"read"-functions.
-
+whatever fashion.
+These statistics are represented as a \fBMetricFamily\fP object and sent to
+the daemon using \fBddispatchMetricFamily\fP.
+.Pp
+To signal success, this method has to return zero.
+Anything else will be considered an error condition and cause an appropriate
+message to be logged.
+Currently, returning non-zero does not have any other effects.
+In particular, Java "read"-methods are not suspended for increasing intervals
+like C "read"-functions.
+.Pp
 See \fB"registerRead"\fP above.
-
-.SS write callback
-
+.Ss write callback
 Interface: \fBorg.ncollectd.api.NCollectdWriteInterface\fP
-
+.Pp
 Signature: \fIint\fP \fBwrite\fP (\fIMetricFamily\fP object)
-
-This method is called whenever a value is dispatched to the daemon. The
-corresponding C "write"-functions are passed a C<data_set_t\fP, so they can
+.Pp
+This method is called whenever a value is dispatched to the daemon.
+The corresponding C "write"-functions are passed a C<data_set_t\fP, so they can
 decide which values are absolute values (gauge) and which are counter values.
-To get the corresponding C<ListE<lt\fPDataSourceE<gt\fP\fP, call the \fBgetDataSource\fP
-method of the \fBValueList\fP object.
-
-To signal success, this method has to return zero. Anything else will be
-considered an error condition and cause an appropriate message to be logged.
-
+To get the corresponding C<ListE<lt\fPDataSourceE<gt\fP\fP,
+call the \fBgetDataSource\fP method of the \fBValueList\fP object.
+.Pp
+To signal success, this method has to return zero.
+Anything else will be considered an error condition and cause an appropriate
+message to be logged.
+.Pp
 See \fB"registerWrite"\fP above.
-
-.SS shutdown callback
-
+.Ss shutdown callback
 Interface: \fBorg.ncollectd.api.NCollectdShutdownInterface\fP
-
+.Pp
 Signature: \fIint\fP \fBshutdown\fP ()
-
-This method is called when the daemon is shutting down. You should not rely on
-the destructor to clean up behind the object but use this function instead.
-
-To signal success, this method has to return zero. Anything else will be
-considered an error condition and cause an appropriate message to be logged.
-
+.Pp
+This method is called when the daemon is shutting down.
+You should not rely on the destructor to clean up behind the object but use
+this function instead.
+.Pp
+To signal success, this method has to return zero.
+Anything else will be considered an error condition and cause an appropriate
+message to be logged.
+.Pp
 See \fB"registerShutdown"\fP above.
-
-.SS log callback
-
+.Ss log callback
 Interface: \fBorg.ncollectd.api.NCollectdLogInterface\fP
-
+.Pp
 Signature: \fIvoid\fP \fBlog\fP (\fIint\fP severity, \fIString\fP message)
-
+.Pp
 This callback can be used to receive log messages from the daemon.
-
+.Pp
 The argument \fIseverity\fP is one of:
-
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 \fBorg.ncollectd.api.Collectd.LOG_ERR\fP
-.IP \(bu 2
+.It
 \fBorg.ncollectd.api.Collectd.LOG_WARNING\fP
-.IP \(bu 2
+.It
 \fBorg.ncollectd.api.Collectd.LOG_NOTICE\fP
-.IP \(bu 2
+.It
 \fBorg.ncollectd.api.Collectd.LOG_INFO\fP
-.IP \(bu 2
+.It
 \fBorg.ncollectd.api.Collectd.LOG_DEBUG\fP
-.RE
-
+.El
+.Pp
 The function does not return any value.
-
+.Pp
 See \fB"registerLog"\fP above.
-
-.SS notification callback
-
+.Ss notification callback
 Interface: \fBorg.ncollectd.api.NCollectdNotificationInterface\fP
-
+.Pp
 Signature: \fIint\fP \fBnotification\fP (\fINotification\fP n)
-
+.Pp
 This callback can be used to receive notifications from the daemon.
-
-To signal success, this method has to return zero. Anything else will be
-considered an error condition and cause an appropriate message to be logged.
-
+.Pp
+To signal success, this method has to return zero.
+Anything else will be considered an error condition and cause an appropriate
+message to be logged.
+.Pp
 See \fB"registerNotification"\fP above.
-
-.SH EXAMPLE
-
+.Sh EXAMPLES
 This short example demonstrates how to register a read callback with the
 daemon:
-
+.Bd -literal
   import org.ncollectd.api.NCollectd;
   import org.ncollectd.api.MetricFamily;
   import org.ncollectd.api.MetricGauge;
@@ -409,25 +385,27 @@ daemon:
       NCollectd.dispatchMetricFamily (fam);
     }
   }
-
-.SH PLUGINS
-The following plugins are implemented in \fIJava\fP. Both, the \fBload-plugin\fP
-option and the \fBplugin\fP block must be inside the
-\fBplugin\fP \fIjava\fP block (see above).
-
-.SS GenericJMX plugin
-The GenericJMX plugin reads \fIManaged Beans\fP (MBeans) from an \fIMBeanServer\fP
-using JMX. JMX is a generic framework to provide and query various management
-information. The interface is used by Java processes to provide internal
-statistics as well as by the \fIJava Virtual Machine\fP (JVM) to provide
-information about the memory used, threads and so on.
-
-The configuration of the \fIGenericJMX plugin\fP consists of two blocks: \fIMBean\fP
-blocks that define a mapping of MBean attributes to the “metrics” used by
-\fBncollectd\fP, and \fBConnection\fP blocks which define the parameters needed to
-connect to an \fIMBeanServer\fP and what data to collect. The configuration of the
-\fISNMP plugin\fP is similar in nature, in case you know it.
-.PP
+.Ed
+.Sh PLUGINS
+The following plugins are implemented in \fIJava\fP.
+Both, the \fBload-plugin\fP option and the \fBplugin\fP block must be inside
+the \fBplugin\fP \fIjava\fP block (see above).
+.Ss GenericJMX plugin
+The GenericJMX plugin reads \fIManaged Beans\fP (MBeans) from an
+\fIMBeanServer\fP using JMX.
+JMX is a generic framework to provide and query various management information.
+The interface is used by Java processes to provide internal statistics as well
+as by the \fIJava Virtual Machine\fP (JVM) to provide information about the
+memory used, threads and so on.
+.Pp
+The configuration of the \fIGenericJMX plugin\fP consists of two blocks:
+\fIMBean\fP blocks that define a mapping of MBean attributes to the “metrics”
+used by \fBncollectd\fP, and \fBConnection\fP blocks which define the
+parameters needed to connect to an \fIMBeanServer\fP and what data to collect.
+The configuration of the \fISNMP plugin\fP is similar in nature,
+in case you know it.
+.Pp
+.Bd -literal -compact
 \fBplugin\fP \fIjava\fP {
     \fBjvm-arg\fP "\fI-Djava.class.path=/usr/share/ncollectd/java/ncollectd-api.jar:/usr/share/ncollectd/java/generic-jmx.jar\fP"
     \fBload-plugin\fP  "\fIorg.ncollectd.java.GenericJMX\fP"
@@ -453,86 +431,73 @@ connect to an \fIMBeanServer\fP and what data to collect. The configuration of t
             \fBpassword\fP \fIpassword\fP
         }
     }
-.br
 }
-.PP
-.TP
-\fBmbean blocks\fP
-
-\fImbean\fP blocks specify what data is retrieved from \fImbeans\fP and how that data
-is mapped on the \fIncollectd\f\fP metrics. The block requires one string
-argument, a name. This name is used in the \fIConnection\fP blocks (see below) to
-refer to a specific \fImbean\fP block. Therefore, the names must be unique.
-
+.Ed
+.Bl -tag -width Ds
+.It \fBmbean\fP
+\fImbean\fP blocks specify what data is retrieved from \fImbeans\fP and
+how that data is mapped on the \fIncollectd\fP metrics.
+The block requires one string argument, a name.
+This name is used in the \fIConnection\fP blocks (see below) to refer to
+a specific \fImbean\fP block.
+Therefore, the names must be unique.
+.Pp
 The following options are recognized within \fImbean\fP blocks:
-.RS
-.TP
-\fBobject-name\fP \fIpattern\fP
-Sets the pattern which is used to retrieve \fIMBeans\fP from the \fIMBeanServer\fP.
+.Bl -tag -width Ds
+.It \fBobject-name\fP \fIpattern\fP
+Sets the pattern which is used to retrieve \fIMBeans\fP from the
+\fIMBeanServer\fP.
 If more than one MBean is returned you should use the \fBlabel-from\fP option
 (see below) to make the identifiers unique.
-
+.Pp
 See also:
-\fBhttp://java.sun.com/javase/6/docs/api/javax/management/ObjectName.html\fP
-
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBlabel-from\fP \fIkey\fP \fIproperty\fP
+.Lk http://java.sun.com/javase/6/docs/api/javax/management/ObjectName.html
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel-from\fP \fIkey\fP \fIproperty\fP
 The \fIobject names\fP used by JMX to identify \fIMBeans\fP include so called
-“\fIproperties\fP” which are basically key-value-pairs. If the given object name
-is not unique and multiple MBeans are returned, the values of those properties
-usually differ.
-.TP
-\fBmetrix-prefix\fP "\fIprefix\fP"
-.TP
-\fBmetric\fP \fIname\fP
-The \fBmetric\fP blocks map one or more attributes of an \fImben\fP to a value list
-in \fIncollectd\fP. There must be at least one Value block within each \fIMBean\fP
-block.
-.RS
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBlabel-from\fP \fIkey\fP \fIproperty\fP
-.TP
-\fBtype\fP \fIunknown|gauge|counter\fP
-.TP
-\fBattribute\fP \fIattribute\fP
-Sets the name of the attribute from which to read the value. You can access the
-keys of composite types by using a dot to concatenate the key name to the
-attribute name. For example: “attrib0.key42”.
-.RE
-.RE
-.TP
-\fBconnection\fP
-Connection blocks specify \fIhow\fP to connect to an \fIMBeanServer\fP and what data
-to retrieve. The following configuration options are available:
-.RS
-.TP
-\fBservice-url\fP \fIurl\fP
-Specifies how the \fIMBeanServer\fP can be reached. Any string accepted by the
-\fIJMXServiceURL\fP is valid.
-
+“\fIproperties\fP” which are basically key-value-pairs.
+If the given object name is not unique and multiple MBeans are returned,
+the values of those properties usually differ.
+.It \fBmetrix-prefix\fP "\fIprefix\fP"
+.It \fBmetric\fP \fIname\fP
+The \fBmetric\fP blocks map one or more attributes of an \fImben\fP
+to a value list in \fIncollectd\fP.
+There must be at least one Value block within each \fIMBean\fP block.
+.Bl -tag -width Ds
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel-from\fP \fIkey\fP \fIproperty\fP
+.It \fBtype\fP \fIunknown|gauge|counter\fP
+.It \fBattribute\fP \fIattribute\fP
+Sets the name of the attribute from which to read the value.
+You can access the keys of composite types by using a dot to concatenate
+the key name to the attribute name.
+For example: “attrib0.key42”.
+.El
+.El
+.It \fBconnection\fP
+Connection blocks specify \fIhow\fP to connect to an \fIMBeanServer\fP and
+what data to retrieve.
+The following configuration options are available:
+.Bl -tag -width Ds
+.It \fBservice-url\fP \fIurl\fP
+Specifies how the \fIMBeanServer\fP can be reached.
+Any string accepted by the \fIJMXServiceURL\fP is valid.
+.Pp
 See also:
-\fBhttp://java.sun.com/javase/6/docs/api/javax/management/remote/JMXServiceURL.html\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBmetrix-prefix\fP "\fIprefix\fP"
-.TP
-\fBcollect\fP \fImbean\fP
-Configures which of the \fIMBean\fP blocks to use with this connection. May be
-repeated to collect multiple \fIMBeans\fP from this server.
-.TP
-\fBuser\fP \fIuser\fP
-Use \fIuser\fP to authenticate to the server. If not configured, “monitorRole”
-will be used.
-.TP
-\fBpassword\fP \fIpassword\fP
-Use \fIpassword\fP to authenticate to the server. If not given, unauthenticated
-access is used.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Lk http://java.sun.com/javase/6/docs/api/javax/management/remote/JMXServiceURL.html
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBmetrix-prefix\fP "\fIprefix\fP"
+.It \fBcollect\fP \fImbean\fP
+Configures which of the \fIMBean\fP blocks to use with this connection.
+May be repeated to collect multiple \fIMBeans\fP from this server.
+.It \fBuser\fP \fIuser\fP
+Use \fIuser\fP to authenticate to the server.
+If not configured, “monitorRole” will be used.
+.It \fBpassword\fP \fIpassword\fP
+Use \fIpassword\fP to authenticate to the server.
+If not given, unauthenticated access is used.
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

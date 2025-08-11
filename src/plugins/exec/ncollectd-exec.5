@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-exec 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd exec man page"
-.SH NAME
-ncollectd-exec \- Documentation of ncollectd's exec plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-EXEC 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-exec
+.Nd Documentation of ncollectd's exec plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP exec
-.br
 \fBplugin\fP exec {
     \fBinstance\fP \fIname\fP {
         \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
@@ -18,70 +21,75 @@ ncollectd-exec \- Documentation of ncollectd's exec plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBexec\fP plugin forks off an executable either to receive values or to
 dispatch notifications to the outside world.
-.PP
+.Pp
 The \fBinstance\fP defines an program to exec.
-These programs are forked and values that it writes to \f(CWSTDOUT\fP are read back.
-The executable is forked in a fashion similar to \f(CWinit\fP: It is forked once and
-not again until it exits. If it exited, it will be forked again after at most
-\fIinterval\fP seconds. It is perfectly legal for the executable to run for a long
-time and continuously write values to \f(CWSTDOUT\fP.
-.PP
+These programs are forked and values that it writes to \f(CWSTDOUT\fP are
+read back.
+The executable is forked in a fashion similar to \f(CWinit\fP: It is forked
+once and not again until it exits.
+If it exited, it will be forked again after at most \fIinterval\fP seconds.
+It is perfectly legal for the executable to run for a long time and
+continuously write values to \f(CWSTDOUT\fP.
+.Pp
 The environment variable \f(CWNCOLLECTD_INTERVAL\fP is set by the plugin before
 calling \fIexec\fP, with the \fBinterval\fP configured for this \fBexec\fP or
 the global \fBinterval\fP value if not set.
-.PP
+.Pp
 If the executable only writes one value and then exits it will be
-executed every \fBinterval\fP seconds. If \fBinterval\fP is short (the default is 10
-seconds) this may result in serious system load.
-.PP
-The forked executable is expected to print metrics to \f(WCSTDOUT\fP. The expected
-format is as follows:
-.PP
+executed every \fBinterval\fP seconds.
+If \fBinterval\fP is short (the default is 10 seconds) this may result in
+serious system load.
+.Pp
+The forked executable is expected to print metrics to \f(CWSTDOUT\fP.
+The expected format is as follows:
+.Pp
 When ncollectd exits it sends a \f(CWSIGTERM\fP to all still running
 child-processes upon which they have to quit.
-.TP
-\fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
-The program to execute it may be followed by optional arguments that are passed to the
-program. Please note that due to the configuration parsing numbers and boolean
-values may be changed. If you want to be absolutely sure that something is
-passed as-is please enclose it in quotes.
-.TP
-\fBuser\fP \fIusername\fP
+.Bl -tag -width Ds
+.It \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
+The program to execute it may be followed by optional arguments that are passed
+to the program.
+Please note that due to the configuration parsing numbers and boolean values
+may be changed.
+If you want to be absolutely sure that something is passed as-is please
+enclose it in quotes.
+.It \fBuser\fP \fIusername\fP
 Execute the executable \fBcmd\fP as user \fIuser\fP.
-.TP
-\fBgroup\fP \fIgroupname\fP
+.It \fBgroup\fP \fIgroupname\fP
 Execute the executable \fBcmd\fP as user \fIuser\fP.
-If the \fBgroup\fP is set, the effective group of the executed program is set to that group.
+If the \fBgroup\fP is set, the effective group of the executed program is set
+to that group.
 Please note that in order to change the user and/or group the daemon needs
-superuser privileges. If the daemon is run as an unprivileged user you must
-specify the same user/group here. If the daemon is run with superuser
-privileges, you must supply a non-root user here.
-.TP
-\fBenv\fP \fIkey\fP \fIvalue\fP
+superuser privileges.
+If the daemon is run as an unprivileged user you must specify the same
+user/group here.
+If the daemon is run with superuser privileges, you must supply a
+non-root user here.
+.It \fBenv\fP \fIkey\fP \fIvalue\fP
 Set the eviroment variable \f(CWkey=value\fP for the executed program.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepend the \fIprefix\fP to the metrics read from the exec program.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.PP
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Pp
 The user, the binary is executed as, may not have root privileges, i.e.
-must have an UID that is non-zero. This is for your own good.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+must have an UID that is non-zero.
+This is for your own good.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

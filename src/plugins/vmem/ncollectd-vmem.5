@@ -1,13 +1,17 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-vmem 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd vmem man page"
-.SH NAME
-ncollectd-vmem \- Documentation of ncollectd's vmem plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-VMEM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-vmem
+.Nd Documentation of ncollectd's vmem plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP vmem
-.br
 \fBplugin\fP vmem
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBvmem\fP plugin collects information about the usage of virtual memory.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

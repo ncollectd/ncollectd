@@ -1,11 +1,17 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-meminfo 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd meminfo man page"
-.SH NAME
-ncollectd-meminfo \- Documentation of ncollectd's meminfo plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MEMINFO 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-meminfo
+.Nd Documentation of ncollectd's meminfo plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP meminfo
-.SH DESCRIPTION
+\fBplugin\fP meminfo
+.Ed
+.Sh DESCRIPTION
 The \fBmeminfo\fP plugin reports the metrics from the \fI/proc/meminfo\fP file.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
