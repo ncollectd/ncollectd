@@ -1,390 +1,256 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectdctl 1 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectdctl man page"
-.SH NAME
-ncollectdctl \- Control interface for ncollectd
-.SH SYNOPSIS
-.B ncollectdctl command [command options]
-.SH DESCRIPTION
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTDCTL 1
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectdctl
+.Nd Control interface for ncollectd
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBncollectdctl\fP \fIcommand\fP [\fIcommand options\fP]
+.Ed
+.Sh DESCRIPTION
 ncollectdctl provides a control interface for ncollectd, which may be used to
 interact with the daemon.
-.SH OPTIONS
+.Sh OPTIONS
 ncollectdctl supports the following commands:
-
-.TP
-\fBhelp\fP
+.Bl -tag -width Ds
+.It \fBhelp\fP
 Display usage information and exit.
-.TP
-\fBreaders\fP \fB[OPTIONS]\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fBreaders\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
 Path to the UNIX socket opened by ncollectd.
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
 Display usage information for this command and exit.
-.RE
-.TP
-\fBwriters\fP \fB[OPTIONS]\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.El
+.It \fBwriters\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
 Path to the UNIX socket opened by ncollectd.
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
 Display usage information for this command and exit.
-.RE
-.TP
-\fBloggers\fP \fB[OPTIONS]\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.El
+.It \fBloggers\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
 Path to the UNIX socket opened by ncollectd.
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
 Display usage information for this command and exit.
-.RE
-.TP
-\fBnotifiers\fP \fB[OPTIONS]\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.El
+.It \fBnotifiers\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
 Path to the UNIX socket opened by ncollectd.
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
 Display usage information for this command and exit.
-.RE
-.TP
-\fBwrite\fP \fB[OPTIONS]\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-d\fR \fI\,FILENAME\/\fR, \fB\-\-data\fR=\fI\,FILENAME\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBread\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
- -s  --start
- -e  --end
- -r  --resolution
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBnotification\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-n\fR \fI\,NAME\/\fR, \fB\-\-name\fR=\fI\,NAME\/\fR
-.TP
-\fB\-l\fR \fI\,KEY=VALUE\/\fR, \fB\-\-label\fR=\fI\,KEY=VALUE\/\fR
-.TP
-\fB\-a\fR \fI\,KEY=VALUE\/\fR, \fB\-\-annotation\fR=\fI\,KEY=VALUE\/\fR
-.TP
-\fB\-s\fR \fI\,OKAY|WARNING|FAILURE\/\fR, \fB\-\-severity\fR=\fI\,OKAY|WARNING|FAILURE\/\fR
-.TP
-\fB\-t\fR \fI\,TIMESTAMP\/\fR, \fB\-\-time\fR=\fI\,TIMESTAMP\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBseries\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-m\fR \fI\,MATCH\/\fR, \fB\-\-match\fR=\fI\,MATCH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBfamily-metrics\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-m\fR \fI\,MATCH\/\fR, \fB\-\-match\fR=\fI\,MATCH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBmetrics\fP [\fIOPTIONS\fP]
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBlabels\fP [\fIOPTIONS\fP] \fImetric\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBlabel-values\fP [OPTION] \fImetric\fP \fIlabel\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBquery\fP [\fBoptions\fP] \fBquery\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-t\fR \fI\,TIME\/\fR, \fB\-\-time\fR=\fI\,TIME\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBquery-range\fP [\fBoptions\fP] \fBquery\fP
-.RS
-.TP
-\fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
-.TP
-\fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-s\fR \fI\,START\/\fR, \fB\-\-start\fR=\fI\,START\/\fR
-.TP
-\fB\-e\fR \fI\,END\/\fR, \fB\-\-end\fR=\fI\,END\/\fR
-.TP
-\fB\-S\fR \fI\,STEP\/\fR, \fB\-\-step\fR=\fI\,STEP\/\fR
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-.RE
-.TP
-\fBgraph\fP [\fBoptions\fP]
-.RS
-.TP
-\fB\-s\fR \fI\,START\/\fR, \fB\-\-start\fR=\fI\,START\/\fR
-.TP
-\fB\-e\fR \fI\,END\/\fR, \fB\-\-end\fR=\fI\,END\/\fR
-.TP
-\fB\-S\fR \fI\,STEP\/\fR, \fB\-\-step\fR=\fI\,STEP\/\fR
-.TP
-\fB\-t\fR \fI\,TITLE\/\fR, \fB\-\-title\fR=\fI\,TITLE\/\fR
-.TP
-\fB\-v\fR \fI\,LABEL\/\fR, \fB\-\-vertical-label\fR=\fI\,LABEL\/\fR
-.TP
-\fB\-\-right-axis\fR
-.TP
-\fB\-\-right-axis-label\fR
-.TP
-\fB\-\-right-axis-formatter\fR
-.TP
-\fB\-\-right-axis-format\fR
-.TP
-\fB\-w\fR \fI\,WIDTH\/\fR, \fB\-\-width\fR=\fI\,WIDTH\/\fR
-.TP
-\fB\-h\fR \fI\,HEIGHT\/\fR, \fB\-\-height\fR=\fI\,HEIGHT\/\fR
-.TP
-\fB\-j\fR, \fB\-\-only-graph\fR
-.TP
-\fB\-D\fR, \fB\-\-full-size-mode\fR
-.TP
-\fB\-u\fR \fI\,UPPER\/\fR, \fB\-\-upper-limit\fR=\fI\,UPPER\/\fR
-.TP
-\fB\-l\fR \fI\,LOWER\/\fR, \fB\-\-lower-limit\fR=\fI\,LOWER\/\fR
-.TP
-\fB\-r\fR, \fB\-\-rigid\fR
-.TP
-\fB\-\-allow-shrink\fR
-.TP
-\fB\-A\fR, \fB\-\-alt-autoscale\fR
-.TP
-\fB\-J\fR, \fB\-\-alt-autoscale-min\fR
-.TP
-\fB\-M\fR, \fB\-\-alt-autoscale-max\fR
-.TP
-\fB\-N\fR, \fB\-\-no-gridfit\fR
-.TP
-\fB\-x\fR XXX, \fB\-\-x-grid\fR=XXX
-.TP
-\fB\-\-week-fmt\fR \fI\,FORMAT\/\fR
-.TP
-\fB\-y\fR XXX, \fB\-\-y-grid\fR=XXX
-.TP
-\fB\-\-left-axis-formatter\fR \fI\,FORMAT\/\fR
-.TP
-\fB\-Y\fR  XXX, \fB\-\-alt-y-grid\fR=XXX
-.TP
-\fB\-o\fR  XXX, \fB\-\-logarithmic\fR=XXX
-.TP
-\fB\-X\fR  XXX, \fB\-\-units-exponent\fR=XXX
-.TP
-\fB\-L\fR  XXX, \fB\-\-units-length\fR=XXX
-.TP
-\fB\-\-units\fR
-.TP
-\fB\-c\fR \fI\,COLOR\/\fR, \fB\-\-color\fR=\fI\,COLOR\/\fR
-.TP
-\fB\-\-grid-dash\fR
-.TP
-\fB\-\-border\fR
-.TP
-\fB\-\-dynamic-labels\fR
-.TP
-\fB\-n\fR XXX, \fB\-\-font\fR=XXX
-.TP
-\fB\-\-zoom\fR
-.TP
-\fB\-R\fR XXX, \fB\-\-font-render-mode\fR=XXX
-.TP
-\fB\-B\fR XXX, \fB\-\-font-smoothing-threshold\fR=XXX
-.TP
-\fB\-G\fR XXX, \fB\-\-graph-render-mode\fR=XXX
-.TP
-\fB\-E\fR, \fB\-\-slope-mode\fR
-.TP
-\fB\-g\fR, \fB\-\-no-legend\fR
-.TP
-\fB\-\-legend-position\fR
-.TP
-\fB\-\-legend-direction\fR
-.TP
-\fB\-F\fR XXX, \fB\-\-force-rules-legend\fR=XXX
-.TP
-\fB\-T\fR XXX, \fB\-\-tabwidth\fR=XXX
-.TP
-\fB\-b\fR XXX, \fB\-\-base\fR=XXX
-.TP
-.TP
-\fB\-W\fR \fI\,WATERMARK\/\fR, \fB\-\-watermark\fR=\fI\,WATERMARK\/\fR
-.TP
-\fB\-a\fR \fI\,FORMAT\/\fR, \fB\-\-format\fR=\fI\,FORMAT\/\fR
-.TP
-\fB\-\-line\fR
-.TP
-\fB\-\-area\fR
-.TP
-\fB\-\-vrule\fR
-.TP
-\fB\-\-hrule\fR
-.TP
-\fB\-\-tick\fR
-.TP
-\fB\-H\fR \fB\-\-help\fR
-.RE
-
-
-.TP
-\fBtemplate\fP
-
-
-.SH "OUTPUT FORMAT"
-
-.TP
-\fBjson\fP
-.TP
-\fBjson-pretty\fP
-.TP
-\fByaml\fP
-.TP
-\fBtext\fP
-.TP
-\fBtxt\fP
-.TP
-\fBtable\fP
-.EX
-┌────────┐
-│ HEADER │
-├────────┤
-│ cell   │
-└────────┘
-.EE
-.TP
-\fBtable-bold\fP
-.EX
-┏━━━━━━━━┓
-┃ HEADER ┃
-┣━━━━━━━━┫
-┃ cell   ┃
-┗━━━━━━━━┛
-.EE
-.TP
-\fBtable-border-bold\fP
-.EX
-┏━━━━━━━━┓
-┃ HEADER ┃
-┠────────┨
-┃ cell   ┃
-┗━━━━━━━━┛
-.EE
-.TP
-\fBtable-double\fP
-.EX
-╔════════╗
-║ HEADER ║
-╠════════╣
-║ cell   ║
-╚════════╝
-.EE
-.TP
-\fBtable-border-double\fP
-.EX
-╔════════╗
-║ HEADER ║
-╟────────╢
-║ cell   ║
-╚════════╝
-.EE
-.TP
-\fBtable-round\fP
-.EX
-╭────────╮
-│ HEADER │
-├────────┤
-│ cell   │
-╰────────╯
-.EE
-.TP
-\fBtable-ascii\fP
-.EX
-+--------+
-| HEADER |
-+--------+
-| cell   |
-+--------+
-.EE
-
-
-.SH ENVIRONMENT
-The behavior of \fBncollectctl\fP is affected by the following environment variables.
-
-.TP
-\fBNCOLLECTDCTL_UNIX_SOCKET\fP
-.TP
-\fBNCOLLECTDCTL_OUTPUT_FORMAT\fP
-
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.It \fBwrite\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-d\fR \fI\,FILENAME\/\fR, \fB\-\-data\fR=\fI\,FILENAME\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBread\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-s\fR \fB\-\-start\fR
+.It \fB\-e\fR \fB\-\-end\fR
+.It \fB\-r\fR \fB\-\-resolution\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBnotification\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-n\fR \fI\,NAME\/\fR, \fB\-\-name\fR=\fI\,NAME\/\fR
+.It \fB\-l\fR \fI\,KEY=VALUE\/\fR, \fB\-\-label\fR=\fI\,KEY=VALUE\/\fR
+.It \fB\-a\fR \fI\,KEY=VALUE\/\fR, \fB\-\-annotation\fR=\fI\,KEY=VALUE\/\fR
+.It \fB\-s\fR \fI\,OKAY|WARNING|FAILURE\/\fR, \fB\-\-severity\fR=\fI\,OKAY|WARNING|FAILURE\/\fR
+.It \fB\-t\fR \fI\,TIMESTAMP\/\fR, \fB\-\-time\fR=\fI\,TIMESTAMP\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBseries\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-m\fR \fI\,MATCH\/\fR, \fB\-\-match\fR=\fI\,MATCH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBfamily-metrics\fP \fB[OPTIONS]\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-m\fR \fI\,MATCH\/\fR, \fB\-\-match\fR=\fI\,MATCH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBmetrics\fP [\fIOPTIONS\fP]
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBlabels\fP [\fIOPTIONS\fP] \fImetric\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBlabel-values\fP [OPTION] \fImetric\fP \fIlabel\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBquery\fP [\fBoptions\fP] \fBquery\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-t\fR \fI\,TIME\/\fR, \fB\-\-time\fR=\fI\,TIME\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBquery-range\fP [\fBoptions\fP] \fBquery\fP
+.Bl -tag -width Ds
+.It \fB\-u\fR \fI\,PATH\/\fR, \fB\-\-unix-socket\fR=\fI\,PATH\/\fR
+.It \fB\-o\fR \fI\,FORMAT\/\fR, \fB\-\-output\fR=\fI\,FORMAT\/\fR
+.It \fB\-s\fR \fI\,START\/\fR, \fB\-\-start\fR=\fI\,START\/\fR
+.It \fB\-e\fR \fI\,END\/\fR, \fB\-\-end\fR=\fI\,END\/\fR
+.It \fB\-S\fR \fI\,STEP\/\fR, \fB\-\-step\fR=\fI\,STEP\/\fR
+.It \fB\-h\fR, \fB\-\-help\fR
+.El
+.It \fBgraph\fP [\fBoptions\fP]
+.Bl -tag -width Ds
+.It \fB\-s\fR \fI\,START\/\fR, \fB\-\-start\fR=\fI\,START\/\fR
+.It \fB\-e\fR \fI\,END\/\fR, \fB\-\-end\fR=\fI\,END\/\fR
+.It \fB\-S\fR \fI\,STEP\/\fR, \fB\-\-step\fR=\fI\,STEP\/\fR
+.It \fB\-t\fR \fI\,TITLE\/\fR, \fB\-\-title\fR=\fI\,TITLE\/\fR
+.It \fB\-v\fR \fI\,LABEL\/\fR, \fB\-\-vertical-label\fR=\fI\,LABEL\/\fR
+.It \fB\-\-right-axis\fR
+.It \fB\-\-right-axis-label\fR
+.It \fB\-\-right-axis-formatter\fR
+.It \fB\-\-right-axis-format\fR
+.It \fB\-w\fR \fI\,WIDTH\/\fR, \fB\-\-width\fR=\fI\,WIDTH\/\fR
+.It \fB\-h\fR \fI\,HEIGHT\/\fR, \fB\-\-height\fR=\fI\,HEIGHT\/\fR
+.It \fB\-j\fR, \fB\-\-only-graph\fR
+.It \fB\-D\fR, \fB\-\-full-size-mode\fR
+.It \fB\-u\fR \fI\,UPPER\/\fR, \fB\-\-upper-limit\fR=\fI\,UPPER\/\fR
+.It \fB\-l\fR \fI\,LOWER\/\fR, \fB\-\-lower-limit\fR=\fI\,LOWER\/\fR
+.It \fB\-r\fR, \fB\-\-rigid\fR
+.It \fB\-\-allow-shrink\fR
+.It \fB\-A\fR, \fB\-\-alt-autoscale\fR
+.It \fB\-J\fR, \fB\-\-alt-autoscale-min\fR
+.It \fB\-M\fR, \fB\-\-alt-autoscale-max\fR
+.It \fB\-N\fR, \fB\-\-no-gridfit\fR
+.It \fB\-x\fR XXX, \fB\-\-x-grid\fR=XXX
+.It \fB\-\-week-fmt\fR \fI\,FORMAT\/\fR
+.It \fB\-y\fR XXX, \fB\-\-y-grid\fR=XXX
+.It \fB\-\-left-axis-formatter\fR \fI\,FORMAT\/\fR
+.It \fB\-Y\fR  XXX, \fB\-\-alt-y-grid\fR=XXX
+.It \fB\-o\fR  XXX, \fB\-\-logarithmic\fR=XXX
+.It \fB\-X\fR  XXX, \fB\-\-units-exponent\fR=XXX
+.It \fB\-L\fR  XXX, \fB\-\-units-length\fR=XXX
+.It \fB\-\-units\fR
+.It \fB\-c\fR \fI\,COLOR\/\fR, \fB\-\-color\fR=\fI\,COLOR\/\fR
+.It \fB\-\-grid-dash\fR
+.It \fB\-\-border\fR
+.It \fB\-\-dynamic-labels\fR
+.It \fB\-n\fR XXX, \fB\-\-font\fR=XXX
+.It \fB\-\-zoom\fR
+.It \fB\-R\fR XXX, \fB\-\-font-render-mode\fR=XXX
+.It \fB\-B\fR XXX, \fB\-\-font-smoothing-threshold\fR=XXX
+.It \fB\-G\fR XXX, \fB\-\-graph-render-mode\fR=XXX
+.It \fB\-E\fR, \fB\-\-slope-mode\fR
+.It \fB\-g\fR, \fB\-\-no-legend\fR
+.It \fB\-\-legend-position\fR
+.It \fB\-\-legend-direction\fR
+.It \fB\-F\fR XXX, \fB\-\-force-rules-legend\fR=XXX
+.It \fB\-T\fR XXX, \fB\-\-tabwidth\fR=XXX
+.It \fB\-b\fR XXX, \fB\-\-base\fR=XXX
+.It \fB\-W\fR \fI\,WATERMARK\/\fR, \fB\-\-watermark\fR=\fI\,WATERMARK\/\fR
+.It \fB\-a\fR \fI\,FORMAT\/\fR, \fB\-\-format\fR=\fI\,FORMAT\/\fR
+.It \fB\-\-line\fR
+.It \fB\-\-area\fR
+.It \fB\-\-vrule\fR
+.It \fB\-\-hrule\fR
+.It \fB\-\-tick\fR
+.It \fB\-H\fR \fB\-\-help\fR
+.El
+.It \fBtemplate\fP
+.El
+.Sh "OUTPUT FORMAT"
+.Bl -tag -width Ds
+.It \fBjson\fP
+.It \fBjson-pretty\fP
+.It \fByaml\fP
+.It \fBtext\fP
+.It \fBtxt\fP
+.It \fBtable\fP
+.Bd -literal
+    ┌────────┐
+    │ HEADER │
+    ├────────┤
+    │ cell   │
+    └────────┘
+.Ed
+.It \fBtable-bold\fP
+.Bd -literal
+    ┏━━━━━━━━┓
+    ┃ HEADER ┃
+    ┣━━━━━━━━┫
+    ┃ cell   ┃
+    ┗━━━━━━━━┛
+.Ed
+.It \fBtable-border-bold\fP
+.Bd -literal
+    ┏━━━━━━━━┓
+    ┃ HEADER ┃
+    ┠────────┨
+    ┃ cell   ┃
+    ┗━━━━━━━━┛
+.Ed
+.It \fBtable-double\fP
+.Bd -literal
+    ╔════════╗
+    ║ HEADER ║
+    ╠════════╣
+    ║ cell   ║
+    ╚════════╝
+.Ed
+.It \fBtable-border-double\fP
+.Bd -literal
+    ╔════════╗
+    ║ HEADER ║
+    ╟────────╢
+    ║ cell   ║
+    ╚════════╝
+.Ed
+.It \fBtable-round\fP
+.Bd -literal
+    ╭────────╮
+    │ HEADER │
+    ├────────┤
+    │ cell   │
+    ╰────────╯
+.Ed
+.It \fBtable-ascii\fP
+.Bd -literal
+    +--------+
+    | HEADER |
+    +--------+
+    | cell   |
+    +--------+
+.Ed
+.El
+.Sh ENVIRONMENT
+The behavior of \fBncollectctl\fP is affected by the following
+environment variables.
+.Bl -tag -width Ds
+.It \fBNCOLLECTDCTL_UNIX_SOCKET\fP
+.It \fBNCOLLECTDCTL_OUTPUT_FORMAT\fP
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1
