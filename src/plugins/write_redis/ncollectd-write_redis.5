@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-write_redis 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_redis man page"
-.SH NAME
-ncollectd-write_redis \- Documentation of ncollectd's write_redis plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WRITE_REDIS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-write_redis
+.Nd Documentation of ncollectd's write_redis plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP write_redis
-.br
 \fBplugin\fP write_redis {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhostname\fP
@@ -17,42 +20,36 @@ ncollectd-write_redis \- Documentation of ncollectd's write_redis plugin
         \fBretention\fP \fIseconds\fP
         \fBstore-rates\fP \fItrue|false\fP
     }
-.br
 }
-.SH DESCRIPTION
-The \fBwrite_redis\fP plugin writes metrics to a redis db with the RedisTimeSeries module.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBwrite_redis\fP plugin writes metrics to a redis db with the
+RedisTimeSeries module.
+.Pp
 The plugin has the following options:
-.TP
-\fBhost\fP \fIhostname\fP
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
 The \fBhost\fP option is the hostname or IP-address where the Redis instance is
 running on.
-.TP
-\fBport\fP \fIport\fP
+.It \fBport\fP \fIport\fP
 The \fBport\fP option is the TCP port on which the Redis instance accepts
-connections. Either a service name of a port number may be given.
-.TP
-\fBsocket\fP \fIsocket-path\fP
-Connect to Redis using the UNIX domain socket at \fIpath\fP. If this
-setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
-.TP
-\fBpassword\fP \fIpassword\fP
+connections.
+Either a service name of a port number may be given.
+.It \fBsocket\fP \fIsocket-path\fP
+Connect to Redis using the UNIX domain socket at \fIpath\fP.
+If this setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
+.It \fBpassword\fP \fIpassword\fP
 Use \fIpassword\fP to authenticate when connecting to \fIredis\fP.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
+.It \fBpassword-env\fP \fIenv-name\fP
 Get the password to authenticate from the environment variable \fIenv-name\fP.
-.TP
-\fBtimeout\fP \fIseconds\fP
-.TP
-\fBdatabase\fP \fIdatabase\fP
-This index selects the Redis logical database to use for query. Defaults
-to \fB0\fP.
-.TP
-\fBretention\fP \fIseconds\fP
+.It \fBtimeout\fP \fIseconds\fP
+.It \fBdatabase\fP \fIdatabase\fP
+This index selects the Redis logical database to use for query.
+Defaults to \fB0\fP.
+.It \fBretention\fP \fIseconds\fP
 The maximum retention period for the metrics.
-.TP
-\fBstore-rates\fP \fItrue|false\fP
-
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBstore-rates\fP \fItrue|false\fP
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

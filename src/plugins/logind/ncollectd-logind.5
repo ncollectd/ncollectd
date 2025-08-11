@@ -1,22 +1,28 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-logind 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd logind man page"
-.SH NAME
-ncollectd-logind \- Documentation of ncollectd's logind plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-LOGIND 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-logind
+.Nd Documentation of ncollectd's logind plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP logind
-.br
 \fBplugin\fP logind {
     \fBgroup-by\fP \fI[seat|remote|type|class] ...\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBlogind\fP plugin collects information from systemd-login logins.
-.PP
+.Pp
 The following configuration options are available:
-.TP
-\fBgroup-by\fP \fI[seat|remote|type|class] ...\fP
-Select how login grouping is performed. Multiple criteria can be specified.
-If the string \fIAll\fP is used, al criterias are selected. If a criterion begins with "!" it is deselected.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Bl -tag -width Ds
+.It \fBgroup-by\fP \fI[seat|remote|type|class] ...\fP
+Select how login grouping is performed.
+Multiple criteria can be specified.
+If the string \fIAll\fP is used, al criterias are selected.
+If a criterion begins with "!" it is deselected.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

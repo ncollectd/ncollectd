@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-dnsmasq 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd dnsmasq man page"
-.SH NAME
-ncollectd-dnsmasq \- Documentation of ncollectd's dnsmasq plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DNSMASQ 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-dnsmasq
+.Nd Documentation of ncollectd's dnsmasq plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP dnsmasq
-.br
 \fBplugin\fP dnsmasq {
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhostname\fP
@@ -17,37 +20,38 @@ ncollectd-dnsmasq \- Documentation of ncollectd's dnsmasq plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBdnsmasq\fP plugin collect statistics of dnsmasq daemon.
-.PP
+.Pp
 The plugin configuration consists of one or more \fBinstance\fP blocks which
-specify one \fIdnsmasq\fP server each. Within the \fBinstance\fP blocks, the
-following options are allowed:
-.PP
-.TP
-\fBhost\fP \fIhostname\fP
-Hostname or address to connect to. Default to \f(CW127.0.0.1\fP
-.TP
-\fBport\fP \fIport\fP
-Service name or port number to connect to. Defaults to \f(CW43\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+specify one \fIdnsmasq\fP server each.
+Within the \fBinstance\fP blocks, the following options are allowed:
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
+Hostname or address to connect to.
+Default to \f(CW127.0.0.1\fP
+.It \fBport\fP \fIport\fP
+Service name or port number to connect to.
+Defaults to \f(CW43\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBtimeout\fP \fIseconds\fP
-Set the timeout for the DNS query to get metrics from dnsmasq. TODO
-.TP
-\fBleases\fP \fI/path/to/leases\fP
-Leases file path. Default to \fI/var/lib/misc/dnsmasq.leases\fP. TODO
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBtimeout\fP \fIseconds\fP
+Set the timeout for the DNS query to get metrics from dnsmasq.
+TODO
+.It \fBleases\fP \fI/path/to/leases\fP
+Leases file path.
+Default to \fI/var/lib/misc/dnsmasq.leases\fP.
+TODO
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

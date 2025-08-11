@@ -1,11 +1,17 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-pf 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd pf man page"
-.SH NAME
-ncollectd-pf \- Documentation of ncollectd's pf plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PF 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-pf
+.Nd Documentation of ncollectd's pf plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP pf
-.SH DESCRIPTION
+\fBplugin\fP pf
+.Ed
+.Sh DESCRIPTION
 The \fBpf\fP plugin collects statistics about BSD's packet filter, PF.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

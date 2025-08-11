@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-podman 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd podman man page"
-.SH NAME
-ncollectd-podman \- Documentation of ncollectd's podman plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PODMAN 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-podman
+.Nd Documentation of ncollectd's podman plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP podman
-.br
 \fBplugin\fP podman {
     \fBinstance\fP \fIinstance\fP {
         \fBurl\fP \fIurl\fP
@@ -15,33 +18,32 @@ ncollectd-podman \- Documentation of ncollectd's podman plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBpodman\fP plugin collect metrics from podman managed containers.
-.PP
-In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining a podman
-daemon.
-.PP
+.Pp
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks,
+each defining a podman daemon.
 The following options are valid within \fBinstance\fP blocks:
-.TP
-\fBurl\fP \fIurl\fP
+.Bl -tag -width Ds
+.It \fBurl\fP \fIurl\fP
 Podman instance \fIurl\fP to connect.
-.TP
-\fBlabels\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for request to the podman instance.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBlabels\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for request to the podman
+instance.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

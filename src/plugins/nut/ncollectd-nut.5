@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nut 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nut man page"
-.SH NAME
-ncollectd-nut \- Documentation of ncollectd's nut plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NUT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nut
+.Nd Documentation of ncollectd's nut plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nut
-.br
 \fBplugin\fP nut {
     \fBca-path\fP "\fI/path/to/certs/folder\fP"
     \fBinstance\fP \fIname\fP {
@@ -18,65 +21,64 @@ ncollectd-nut \- Documentation of ncollectd's nut plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBnut\fP plugin collects uninterruptible power supply (UPS) statistics using
-the Network UPS Tools (NUT). These statistics include basically everything NUT
-will give us, including voltages, currents, power, frequencies, load, and temperatures.
-.TP
-\fBca-path\fP "\fI/path/to/certs/folder\fP"
-If \fBverify-peer\fP is set to \fItrue\fP, this is required. Otherwise this is ignored.
+.Ed
+.Sh DESCRIPTION
+The \fBnut\fP plugin collects uninterruptible power supply (UPS) statistics
+using the Network UPS Tools (NUT).
+These statistics include basically everything NUT will give us, including
+voltages, currents, power, frequencies, load, and temperatures.
+.Bl -tag -width Ds
+.It \fBca-path\fP "\fI/path/to/certs/folder\fP"
+If \fBverify-peer\fP is set to \fItrue\fP, this is required.
+Otherwise this is ignored.
 The folder pointed at must contain certificate(s) named according to their hash.
-Ex: XXXXXXXX.Y where X is the hash value of a cert and Y is 0. If name collisions
-occur because two different certs have the same hash value, Y can be  incremented
-in order to avoid conflict. To create a symbolic link to a certificate the following
-command can be used from within the directory where the cert resides:
-.EX
-
-ln -s some.crt ./$(openssl x509 -hash -noout -in some.crt).0
-
-.EE
-Alternatively, the package openssl-perl provides a command \f(CWc_rehash\fP that will
-generate links like the one described above for ALL certs in a given folder.
+Ex: XXXXXXXX.Y where X is the hash value of a cert and Y is 0.
+If name collisions occur because two different certs have the same hash value,
+it can be incremented in order to avoid conflict.
+To create a symbolic link to a certificate the following command can be used
+from within the directory where the cert resides:
+.Bd -literal
+  $ ln -s some.crt ./$(openssl x509 -hash -noout -in some.crt).0
+.Ed
+.Pp
+Alternatively, the package openssl-perl provides a command \f(CWc_rehash\fP
+that will generate links like the one described above for ALL certs in a
+given folder.
 Example usage:
-.EX
-
-c_rehash /path/to/certs/folder
-
-.EE
-.TP
-\fBinstance\fP \fIname\fP
-.RS
-.TP
-\fBups\fP \fIupsname@hostname\fP[\fI:port\fP]
+.Bd -literal
+  $ c_rehash /path/to/certs/folder
+.Ed
+.It \fBinstance\fP \fIname\fP
+.Bl -tag -width Ds
+.It \fBups\fP \fIupsname@hostname\fP[\fI:port\fP]
 Add a UPS to ncollect data from.
-.TP
-\fBforce-ssl\fP \fItrue|false\fP
+.It \fBforce-ssl\fP \fItrue|false\fP
 Stops connections from falling back to unsecured if an SSL connection
-cannot be established. Defaults to \fIfalse\fP.
-.TP
-\fBverify-peer\fP \fItrue|false\fP
-If set to \fItrue\fP, requires a \fBca-path\fP be provided. Will use the \fBca-path\fP to find
-certificates to use as Trusted Certificates to validate a upsd server certificate.
+cannot be established.
+Defaults to \fIfalse\fP.
+.It \fBverify-peer\fP \fItrue|false\fP
+If set to \fItrue\fP, requires a \fBca-path\fP be provided.
+Will use the \fBca-path\fP to find certificates to use as Trusted Certificates
+to validate a upsd server certificate.
 If validation of the upsd server certificate fails, the connection will not be
-established. If \fBforce-ssl\fP is undeclared or set to \fIfalse\fP,
-setting \fBverify-peer\fP to true will override and set \fBforce-ssl\fP to \fItrue\fP.
-.TP
-\fBconnect-timeout\fP \fIseconds\fP
+established.
+If \fBforce-ssl\fP is undeclared or set to \fIfalse\fP, setting
+\fBverify-peer\fP to true will override and set \fBforce-ssl\fP to \fItrue\fP.
+.It \fBconnect-timeout\fP \fIseconds\fP
 Sets the connect timeout.
 By default, the configured \fBinterval\fP is used to set the timeout.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

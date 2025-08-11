@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-pdns 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd pdns man page"
-.SH NAME
-ncollectd-powerdns \- Documentation of ncollectd's powerdns plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PDNS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-pdns
+.Nd Documentation of ncollectd's pdns plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP pdns
-.br
 \fBplugin\fP pdns {
     \fBinstance\fP \fIname\fP {
         \fBsocket\fP "\fIpath-to-socket\fP"
@@ -15,34 +18,34 @@ ncollectd-powerdns \- Documentation of ncollectd's powerdns plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBpdns\fP plugin queries statistics from an authoritative PowerDNS nameserver.
-
-The configuration of the \fBpdns\fP plugin consists of one or more \fBinstance\fP
-blocks. Each block requires one string argument as the instance name.
-.PP
-The \fBinstance\fP block defines one authoritative server to query, the following options
-are accepted within each block:
-.PP
-.TP
-\fBsocket\fP "\fIpath-to-socket\fP"
+.Ed
+.Sh DESCRIPTION
+The \fBpdns\fP plugin queries statistics from an authoritative PowerDNS
+nameserver.
+.Pp
+The configuration of the \fBpdns\fP plugin consists of one or more
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
+.Pp
+The \fBinstance\fP block defines one authoritative server to query,
+the following options are accepted within each block:
+.Bl -tag -width Ds
+.It \fBsocket\fP "\fIpath-to-socket\fP"
 Configures the path to the UNIX domain socket to be used when connecting to the
-daemon. By default \f(CW/run/pdns/pdns.controlsocket\fP will be used.
-.TP
-\fBtimeout\fP \fIseconds\fP
+daemon.
+By default \f(CW/run/pdns/pdns.controlsocket\fP will be used.
+.It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for the requests.
-.TP
-\fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+.It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
  Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

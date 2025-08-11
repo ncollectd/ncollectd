@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-epics 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd epics man page"
-.SH NAME
-ncollectd-epics \- Documentation of ncollectd's epics plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-EPICS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-epics
+.Nd Documentation of ncollectd's epics plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP epics
-.br
 \fBplugin\fP epics {
     \fBmetric-prefix\fP \fIprefix\fP
     \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -16,55 +19,47 @@ ncollectd-epics \- Documentation of ncollectd's epics plugin
         \fBlabel-from\fP \fIkey\fP \fIpv-name\fP
         \fBvalue-from\fP \fIpv-name\fP [\fIindex\fP]
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBepics\fP plugin collects data from EPICS (Experimental Physics and
 Industrial Control System) message bus.
-.PP
+.Pp
 Note that in addition to the plugin configuration, the host OS has to be
 configured to be part of the message bus: caRepeater daemon is up and running
-and appropriate EPICS environment variables are set, if required. Consult EPICS
-documentation for details.
-.PP
+and appropriate EPICS environment variables are set, if required.
+Consult EPICS documentation for details.
+.Pp
 The plugin configuration consists of multiple \fBmetric\fP blocks,
-each per monitored EPICS Process Variable (PV). The variables are constantly
-monitored and their values are latched once per plugin interval.
-.PP
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+each per monitored EPICS Process Variable (PV).
+The variables are constantly monitored and their values are latched once per
+plugin interval.
+.Bl -tag -width Ds
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to all metrics.
-.TP
-\fBmetric\fP
+.It \fBmetric\fP
 The metric block defines a metric to collect from the EPICS message bus.
-.RS
-.TP
-\fBmetric\fP \fImetric\fP
+.Bl -tag -width Ds
+.It \fBmetric\fP \fImetric\fP
 Set the metric name.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
-.TP
-\fBtype\fP [\fIgauge\fP | \fIcounter\fP]
-The \fBtype\fP that's used for each metric returned. Must be \fIgauge\fP or \fIcounter\fP,
-.TP
-\fBlabel\fP \fIkey\fP \fIindex\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear 
-multiple time in the \fBmetric\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIpv-name\fP
-String-typed PV can be monitored as a label. For instance,
-this can potentially be useful for tracking an experiment ID.
-.TP
-\fBvalue-from\fP \fIpv-name\fP [\fIindex\fP]
+.It \fBtype\fP [\fIgauge\fP | \fIcounter\fP]
+The \fBtype\fP that's used for each metric returned.
+Must be \fIgauge\fP or \fIcounter\fP,
+.It \fBlabel\fP \fIkey\fP \fIindex\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBmetric\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIpv-name\fP
+String-typed PV can be monitored as a label.
+For instance, this can potentially be useful for tracking an experiment ID.
+.It \fBvalue-from\fP \fIpv-name\fP [\fIindex\fP]
 Especifies the PV to collect the value of the metric.
 If the index not set is 0.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
-
-
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

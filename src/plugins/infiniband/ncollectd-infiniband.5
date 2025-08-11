@@ -1,27 +1,30 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-infiniband 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd infiniband man page"
-.SH NAME
-ncollectd-infiniband \- Documentation of ncollectd's infiniband plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-INFINIBAND 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-infiniband
+.Nd Documentation of ncollectd's infiniband plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP infiniband
-.br
 \fBplugin\fP infiniband {
     \fBport\fP [\fIincl|include|excl|exclude\fP] \fIport\fP
-.br
 }
-.SH DESCRIPTION
-The \fBinfiniband\fP plugin collects information about IB ports. Metrics are
-gathered from \fI/sys/class/infiniband/DEVICE/port/PORTNUM/*\fP, and \fIport\fP names
-are formatted like \f(CWDEVICE:PORTNUM\fP.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBinfiniband\fP plugin collects information about IB ports.
+Metrics are gathered from \fI/sys/class/infiniband/DEVICE/port/PORTNUM/*\fP,
+and \fIport\fP names are formatted like \f(CWDEVICE:PORTNUM\fP.
+.Pp
 The plugin support the following options:
-.PP
-.TP
-\fBport\fP [\fIincl|include|excl|exclude\fP] \fIport\fP
+.Bl -tag -width Ds
+.It \fBport\fP [\fIincl|include|excl|exclude\fP] \fIport\fP
 Select the \fIport\fP to collectd data from.
 If no \fBport\fP option is configured, all ports are collected.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

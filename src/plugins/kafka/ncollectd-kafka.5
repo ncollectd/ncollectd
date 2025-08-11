@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-kafka 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd kafka man page"
-.SH NAME
-ncollectd-kafka \- Documentation of ncollectd's kafka plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-KAFKA 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-kafka
+.Nd Documentation of ncollectd's kafka plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP kafka
-.br
 \fBplugin\fP kafka {
     \fBinstance\fP \fIinstance\fP {
         \fBproperty\fP \fIkey\fP \fIvalue\fP
@@ -14,27 +17,26 @@ ncollectd-kafka \- Documentation of ncollectd's kafka plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBkafka\fP plugin collect metrics from a kafka cluster.
-.PP
+.Pp
 The plugin support the following options:
-.PP
-.TP
-\fBproperty\fP \fIkey\fP \fIvalue\fP
+.Bl -tag -width Ds
+.It \fBproperty\fP \fIkey\fP \fIvalue\fP
 Configure the kafka client through properties, you almost always will
 want to set \fBmetadata.broker.list\fP to your Kafka broker list.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

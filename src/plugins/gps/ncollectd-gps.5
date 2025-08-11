@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-gps 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd gps man page"
-.SH NAME
-ncollectd-gps \- Documentation of ncollectd's gps plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-GPS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-gps
+.Nd Documentation of ncollectd's gps plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP gps
-.br
 \fBplugin\fP gps {
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhostname\fP
@@ -17,35 +20,32 @@ ncollectd-gps \- Documentation of ncollectd's gps plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBgps\fP plugin connects to gpsd on the host machine. This is useful if you run an
-NTP server using a GPS for source and you want to monitor it.
+.Ed
+.Sh DESCRIPTION
+The \fBgps\fP plugin connects to gpsd on the host machine.
+This is useful if you run an NTP server using a GPS for source and you
+want to monitor it.
 Mind your GPS must send \f(CW$--GSA\fP for having the data reported!
-.PP
+.Pp
 The following elements are collected:
-.PP
-.TP
-\fBsatellites\fP
+.Bl -tag -width Ds
+.It \fBsatellites\fP
 Number of satellites used for fix (type instance "used") and in view (type
 instance "visible"). 0 means no GPS satellites are visible.
-.TP
-\fBdilution_of_precision\fP
+.It \fBdilution_of_precision\fP
 Vertical and horizontal dilution (type instance "horizontal" or "vertical").
 It should be between 0 and 3.
 Look at the documentation of your GPS to know more.
-.PP
+.Pp
 The available configuration options in the block \fBinstance\fP are:
-.PP
-.TP
-\fBhost\fP \fIhostname\fP
-The host on which gpsd daemon runs. Defaults to \fBlocalhost\fP.
-.TP
-\fBport\fP \fIport\fP
-Port to connect to gpsd on the host machine. Defaults to \fB2947\fP.
-.TP
-\fBtimeout\fP \fIseconds\fP
+.It \fBhost\fP \fIhostname\fP
+The host on which gpsd daemon runs.
+Defaults to \fBlocalhost\fP.
+.It \fBport\fP \fIport\fP
+Port to connect to gpsd on the host machine.
+Defaults to \fB2947\fP.
+.It \fBtimeout\fP \fIseconds\fP
 Timeout in seconds (default 0.015 sec).
 The GPS data stream is fetch by the plugin form the daemon.
 It waits for data to be available, if none arrives it times out
@@ -55,19 +55,19 @@ Mind to put a low value gpsd expects value in the micro-seconds area
 Value must be between 500 us and 5 sec., if outside that range the
 default value is applied.
 This only applies from gpsd release-2.95.
-.TP
-\fBpause-connect\fP \fIseconds\fP
-Pause to apply between attempts of connection to gpsd in seconds (default 5 sec).
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBpause-connect\fP \fIseconds\fP
+Pause to apply between attempts of connection to gpsd in seconds
+(default 5 sec).
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from
+this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

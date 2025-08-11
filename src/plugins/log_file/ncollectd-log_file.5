@@ -1,50 +1,58 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-log_file 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd log_file man page"
-.SH NAME
-ncollectd-log_file \- Documentation of ncollectd's log_file plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-LOG_FILE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-log_file
+.Nd Documentation of ncollectd's log_file plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP log_file
-.br
 \fBplugin\fP log_file {
     \fBlog-level\fP \fIdebug|info|notice|warning|err\fP
     \fBfile\fP \fI/path/to/file\fP
     \fBprint-timestamp\fP \fItrue|false\fP
     \fBprint-severity\fP \fItrue|false\fP
-.br
 }
-.SH DESCRIPTION
-The \fBlog_file\fP plugin receives log messages from the daemon and writes them to a text file.
-.PP
-In order for other plugins to be able to report errors and warnings during initialization,
-the \fBlog_file\fP plugin should be loaded as one of the first plugins,
-if not as the first plugin. This means that its \fBload-plugin\fP line should be one
-of the first lines in the configuration file.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBlog_file\fP plugin receives log messages from the daemon and
+writes them to a text file.
+.Pp
+In order for other plugins to be able to report errors and warnings
+during initialization, the \fBlog_file\fP plugin should be loaded as
+one of the first plugins, if not as the first plugin.
+This means that its \fBload-plugin\fP line should be one of the first
+lines in the configuration file.
+.Pp
 The plugin has de following options:
-.TP
-\fBlog-level\fP \fIdebug|info|notice|warning|err\fP
-Sets the log-level. If, for example, set to \fBnotice\fP, then all events with
-severity \fBnotice\fP, \fBwarning\fP, or \fBerr\fP will be written to the logfile.
-
-Please note that \fBdebug\fP is only available if ncollectd has been compiled with
-debugging support.
-.TP
-\fBfile\fP \fI/path/to/file\fP
-Sets the file to write log messages to. The special strings \fBstdout\fP and
-\fBstderr\fP can be used to write to the standard output and standard error
-channels, respectively. This, of course, only makes much sense when ncollectd
-is running in foreground or non-daemon-mode.
-.TP
-\fBprint-timestamp\fP \fItrue|false\fP
-Prefix all lines printed by the current time. Defaults to \fBtrue\fP.
-.TP
-\fBprint-severity\fP \fItrue|false\fP
+.Bl -tag -width Ds
+.It \fBlog-level\fP \fIdebug|info|notice|warning|err\fP
+Sets the log-level.
+If, for example, set to \fBnotice\fP, then all events with
+severity \fBnotice\fP, \fBwarning\fP, or \fBerr\fP will
+be written to the logfile.
+.Pp
+Please note that \fBdebug\fP is only available if ncollectd
+has been compiled with debugging support.
+.It \fBfile\fP \fI/path/to/file\fP
+Sets the file to write log messages to.
+The special strings \fBstdout\fP and \fBstderr\fP can be used to write to
+the standard output and standard error channels, respectively.
+This, of course, only makes much sense when ncollectd is running in
+foreground or non-daemon-mode.
+.It \fBprint-timestamp\fP \fItrue|false\fP
+Prefix all lines printed by the current time.
+Defaults to \fBtrue\fP.
+.It \fBprint-severity\fP \fItrue|false\fP
 When enabled, all lines are prefixed by the severity of the log message, for
-example "warning". Defaults to \fBfalse\fP.
-.PP
+example "warning".
+Defaults to \fBfalse\fP.
+.El
+.Pp
 There is no need to notify the daemon after moving or removing the
-log file (e. g. when rotating the logs). The plugin reopens the file
-for each line it writes.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+log file (e. g. when rotating the logs).
+The plugin reopens the file for each line it writes.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

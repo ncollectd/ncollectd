@@ -1,8 +1,12 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-match_regex 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd match_regex man page"
-.SH NAME
-ncollectd-match_regex \- Documentation of ncollectd's match_regex plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MATCH_REGEX 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-match_regex
+.Nd Documentation of ncollectd's regex match plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBmatch\fP regex {
     \fBmetric-prefix\fP \fIprefix\fP
     \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -19,88 +23,62 @@ ncollectd-match_regex \- Documentation of ncollectd's match_regex plugin
         \fBvalue-from\fP \fIindex\fP
         \fBtime-from\fP \fIindex\fP
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBmatch_regex\fP plugin parses data matching regular expressions.
-.PP
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBmetric\fP
-.RS
-.TP
-\fBregex\fP \fIregex\fP
+.Bl -tag -width Ds
+.It \fBmetric-prefix\fP \fIprefix\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBmetric\fP
+.Bl -tag -width Ds
+.It \fBregex\fP \fIregex\fP
 Sets the regular expression to use for matching against a line.
-.TP
-\fBexclude-regex\fP \fIregexp\fP
+.It \fBexclude-regex\fP \fIregexp\fP
 Sets an optional regular expression to use for excluding lines from the match.
-.TP
-\fBtype\fP [\fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP] | \fIcounter\fP [\fIset|add|inc\fP]]
-.RS
-.TP
-\fBgauge\fP
+.It \fBtype\fP [\fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP] | \fIcounter\fP [\fIset|add|inc\fP]]
+.Bl -tag -width Ds
+.It \fBgauge\fP
 The value is a gauge, you must specify also the type of the gauge:
-.RS
-.TP
-\fBaverage\fP
+.Bl -tag -width Ds
+.It \fBaverage\fP
 Calculate the average
-.TP
-\fBmin\fP
+.It \fBmin\fP
 Use the smallest number only.
-.TP
-\fBmax\fP
+.It \fBmax\fP
 Use the greatest number only.
-.TP
-\fBlast\fP
+.It \fBlast\fP
 Use the last number found.
-.TP
-\fBinc\fP
+.It \fBinc\fP
 Increase the internal counter by one.
-.TP
-\fBadd\fP
+.It \fBadd\fP
 Add the matched value to the internal counter.
-.TP
-\fBpersist\fP
+.It \fBpersist\fP
 Use the last number found.
 The number is not reset at the end of an interval.
 It is continously reported until another number is matched.
-.RE
-.TP
-\fBcounter\fP
+.El
+.It \fBcounter\fP
 The value is a counter, you must specify also the type of the counter:
-.RS
-.TP
-\fBset\fP
+.Bl -tag -width Ds
+.It \fBset\fP
 Simply sets the internal counter to this value.
-.TP
-\fBadd\fP
+.It \fBadd\fP
 Add the matched value to the internal counter.
-.TP
-\fBinc\fP
+.It \fBinc\fP
 Increase the internal counter by one.
-.RE
-.RE
-.TP
-\fBmetric\fP \fImetric\FP
-.TP
-\fBhelp\fP \fIhelp\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIindex\fP
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
-.TP
-\fBmetric-from\fP \fIindex\fP
-.TP
-\fBlabel-from\fP \fIkey\fP \fIindex\fP
-.TP
-\fBvalue-from\fP \fIindex\fP
-.TP
-\fBtime-from\fP \fIindex\fP
-.TP
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.It \fBmetric\fP \fImetric\FP
+.It \fBhelp\fP \fIhelp\fP
+.It \fBlabel\fP \fIkey\fP \fIindex\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
+.It \fBmetric-from\fP \fIindex\fP
+.It \fBlabel-from\fP \fIkey\fP \fIindex\fP
+.It \fBvalue-from\fP \fIindex\fP
+.It \fBtime-from\fP \fIindex\fP
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

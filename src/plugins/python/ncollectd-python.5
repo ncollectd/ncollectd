@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-python 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd python man page"
-.SH NAME
-ncollectd-python \- Documentation of ncollectd's python plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PYTHON 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-python
+.Nd Documentation of ncollectd's python plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP plugin
-.br
 \fBplugin\fP plugin {
     \fBencoding\fP \fIencoding\fP
     \fBmodule-path\fP \fI/path/to/your/python/modules\fP
@@ -14,713 +17,604 @@ ncollectd-python \- Documentation of ncollectd's python plugin
     \fBmodule\fP spam  {
       spam "wonderful" "lovely"
     }
-.br
 }
-.SH DESCRIPTION
-The \fBpython\fP plugin embeds a Python-interpreter into ncollectd and provides an
-interface to ncollectd's plugin system. This makes it possible to write plugins
-for ncollectd in Python.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBpython\fP plugin embeds a Python-interpreter into ncollectd and provides
+an interface to ncollectd's plugin system.
+This makes it possible to write plugins for ncollectd in Python.
+.Pp
 The minimum required Python version is \fI2.6\fP.
-.PP
+.Pp
 Available configuration options:
-.TP
-\fBencoding\fP \fIencoding\fP
-The default encoding for Unicode objects you pass to ncollectd. If you omit this
-option it will default to \fBascii\fP on \fIPython 2\fP. On \fIPython 3\fP it will
-always be \fButf-8\fP, as this function was removed, so this will be silently
-ignored.
-
+.Bl -tag -width Ds
+.It \fBencoding\fP \fIencoding\fP
+The default encoding for Unicode objects you pass to ncollectd.
+If you omit this option it will default to \fBascii\fP on \fIPython 2\fP.
+On \fIPython 3\fP it will always be \fButf-8\fP, as this function was removed,
+so this will be silently ignored.
+.Pp
 These defaults are hardcoded in Python and will ignore everything else,
 including your locale.
-.TP
-\fBmodule-path\fP \fI/path/to/your/python/modules\fP
+.It \fBmodule-path\fP \fI/path/to/your/python/modules\fP
 Prepends \fI/path/to/your/python/modules\fP to \f(CWsys.path\fP.
-You won't be able to import any scripts you
-wrote unless they are located in one of the directories in this list. Please
-note that it only has effect on plugins loaded after this option. You can
-use multiple \fBmodule-path\fP lines to add more than one directory.
-.TP
-\fBlog-traces\fP \fItrue|false\fP
+You won't be able to import any scripts you wrote unless they are located in
+one of the directories in this list.
+Please note that it only has effect on plugins loaded after this option.
+You can use multiple \fBmodule-path\fP lines to add more than one directory.
+.It \fBlog-traces\fP \fItrue|false\fP
 If a Python script throws an exception it will be logged by ncollectd with the
-name of the exception and the message. If you set this option to true it will
-also log the full stacktrace just like the default output of an interactive
-Python interpreter. This does not apply to the CollectError exception, which
-will never log a stacktrace.
-
+name of the exception and the message.
+If you set this option to true it will also log the full stacktrace just like
+the default output of an interactive Python interpreter.
+This does not apply to the CollectError exception, which will never log a
+stacktrace.
+.Pp
 This should probably be set to false most of the time but is very useful for
 development and debugging of new modules.
-.TP
-\fBinteractive\fP \fItrue|false\fP
+.It \fBinteractive\fP \fItrue|false\fP
 This option will cause the module to launch an interactive Python interpreter
-that reads from and writes to the terminal. Note that ncollectd will terminate
-right after starting up if you try to run it as a daemon while this option is
-enabled so make sure to start ncollectd with the \f(CW-f\fP option.
-
-The \fBncollectd\fP module is \fBnot\fP imported into the interpreter's globals. You
-have to do it manually. Be sure to read the help text of the module, it can be
-used as a reference guide during coding.
-
+that reads from and writes to the terminal.
+Note that ncollectd will terminate right after starting up if you try to run
+it as a daemon while this option is enabled so make sure to start ncollectd
+with the \f(CW-f\fP option.
+.Pp
+The \fBncollectd\fP module is \fBnot\fP imported into the interpreter's
+globals.
+You have to do it manually.
+Be sure to read the help text of the module, it can be used as a reference
+guide during coding.
+.Pp
 This interactive session will behave slightly differently from a daemonized
 ncollectd script as well as from a normal Python interpreter:
-.RS
-.TP
-\fB1.\fP
+.Bl -tag -width Ds
+.It \fB1.\fP
 ncollectd will try to import the \f(CWreadline\fP module to give you a decent
-way of entering your commands. The daemonized ncollectd won't do that.
-.TP
-\fB2.\fP
-Python will be handling \fBSIGINT\fP. Pressing \f(CWCtrl+C\fP will usually cause
-ncollectd to shut down. This would be problematic in an interactive session,
-therefore Python will be handling it in interactive sessions. This allows you
-to use \f(CWCtrl+C\fP to interrupt Python code without killing ncollectd. This also
-means you can catch \fCWKeyboardInterrupt\fP exceptions which does not work during
-normal operation.
-
-To quit ncollectd send \fBEOF\fP (press \f(CWCtrl+D\fP at the beginning of a new line).
-.RE
-.TP
-\fBimport\fP "name"
+way of entering your commands.
+The daemonized ncollectd won't do that.
+.It \fB2.\fP
+Python will be handling \fBSIGINT\fP.
+Pressing \f(CWCtrl+C\fP will usually cause ncollectd to shut down.
+This would be problematic in an interactive session, therefore Python will be
+handling it in interactive sessions.
+This allows you to use \f(CWCtrl+C\fP to interrupt Python code without killing
+ncollectd.
+This also means you can catch \f(CWKeyboardInterrupt\fP exceptions which does
+not work during normal operation.
+.Pp
+To quit ncollectd send \fBEOF\fP (press \f(CWCtrl+D\fP at the beginning
+of a new line).
+.El
+.It \fBimport\fP "name"
 Imports the python script \fIname\fP and loads it into the ncollectd
-python process. If your python script is not found, be sure its
-directory exists in python's \f(CWsys.path\fP. You can prepend to the
-\f(CWsys.path\fP using the \fBmodule-path\fP configuration option.
-.TP
-\fBmodule\fP name
+python process.
+If your python script is not found, be sure its directory exists in
+python's \f(CWsys.path\fP.
+You can prepend to the \f(CWsys.path\fP using the \fBmodule-path\fP
+configuration option.
+.It \fBmodule\fP name
 This block may be used to pass on configuration settings to a Python module.
-The configuration is converted into an instance of the \fBConfig\fP class which is
-passed to the registered configuration callback. See below for details about
-the \fBConfig\fP class and how to register callbacks.
-
+The configuration is converted into an instance of the \fBConfig\fP class
+which is passed to the registered configuration callback.
+See below for details about the \fBConfig\fP class and how to register
+callbacks.
+.Pp
 The \fIname\fP identifies the callback.
-
-.SH STRINGS
+.El
+.Sh STRINGS
 There are a lot of places where strings are sent from ncollectd to Python and
-from Python to ncollectd. How exactly this works depends on whether byte or
-unicode strings or Python2 or Python3 are used.
-
-Python2 has \fIstr\fP, which is just bytes, and \fIunicode\fP. Python3 has \fIstr\fP,
-which is a unicode object, and \fIbytes\fP.
-
+from Python to ncollectd.
+How exactly this works depends on whether byte or unicode strings or Python2
+or Python3 are used.
+.Pp
+Python2 has \fIstr\fP, which is just bytes, and \fIunicode\fP.
+Python3 has \fIstr\fP, which is a unicode object, and \fIbytes\fP.
+.Pp
 When passing strings from Python to ncollectd all of these object are supported
-in all places, however \fIstr\fP should be used if possible. These strings must
-not contain a NUL byte. Ignoring this will result in a \fITypeError\fP exception.
-If a byte string was used it will be used as is by ncollectd. If a unicode
-object was used it will be encoded using the default encoding (see above). If
-this is not possible Python will raise a \fIUnicodeEncodeError\fP exception.
-
+in all places, however \fIstr\fP should be used if possible.
+These strings must not contain a NUL byte.
+Ignoring this will result in a \fITypeError\fP exception.
+If a byte string was used it will be used as is by ncollectd.
+If a unicode object was used it will be encoded using the default encoding
+(see above).
+If this is not possible Python will raise a \fIUnicodeEncodeError\fP exception.
+.Pp
 When passing strings from ncollectd to Python the behavior depends on the
-Python version used. Python2 will always receive a \fIstr\fP object. Python3 will
-usually receive a \fIstr\fP object as well, however the original string will be
-decoded to unicode using the default encoding. If this fails because the
-string is not a valid sequence for this encoding a \fIbytes\fP object will be
-returned instead.
-
-.SH WRITING YOUR OWN PLUGINS
+Python version used.
+Python2 will always receive a \fIstr\fP object.
+Python3 will usually receive a \fIstr\fP object as well, however the original
+string will be decoded to unicode using the default encoding.
+If this fails because the string is not a valid sequence for this encoding a
+\fIbytes\fP object will be returned instead.
+.Sh WRITING YOUR OWN PLUGINS
 Writing your own plugins is quite simple. ncollectd manages plugins by means of
 \fBdispatch functions\fP which call the appropriate \fBcallback functions\fP
-registered by the plugins. Any plugin basically consists of the implementation
-of these callback functions and initializing code which registers the
-functions with ncollectd. See the section \fBEXAMPLES\fP below for a really basic
-example. The following types of \fBcallback functions\fP are known to ncollectd
+registered by the plugins.
+Any plugin basically consists of the implementation of these callback functions
+and initializing code which registers the functions with ncollectd.
+See the section \fBEXAMPLES\fP below for a really basic example.
+The following types of \fBcallback functions\fP are known to ncollectd
 (all of them are optional):
-
-.TP
-\fBconfiguration functions\fP
+.Bl -tag -width Ds
+.It \fBconfiguration functions\fP
 These are called during configuration if an appropriate
-\fBmodule\fP block has been encountered. It is called once for each \fBmodule\fP
-block which matches the name of the callback as provided with the
-\f(CWregister_config\fP method - see below.
-
+\fBmodule\fP block has been encountered.
+It is called once for each \fBmodule\fP block which matches the name of
+the callback as provided with the \f(CWregister_config\fP method - see below.
+.Pp
 Python thread support has not been initialized at this point so do not use any
 threading functions here!
-.TP
-\fBinit functions\fP
+.It \fBinit functions\fP
 These are called once after loading the module and before any
-calls to the read and write functions. It should be used to initialize the
-internal state of the plugin (e. g. open sockets, ...). This is the
-earliest point where you may use threads.
-.TP
-\fBread functions\fP
-These are used to collect the actual data. It is called once
-per interval (see the \fBinterval\fP configuration option of ncollectd). Usually
-it will call \f(CWplugin_dispatch_metric_family\fP to dispatch the metrics to ncollectd
-which will pass them on to all registered \fBwrite functions\fP. If this function
-throws any kind of exception the plugin will be skipped for an increasing
-amount of time until it returns normally again.
-.TP
-\fBwrite functions\fP
-These are used to write the dispatched values. It is called
-once for every value that was dispatched by any plugin.
-.TP
-\fBlog functions\fP
-These are used to pass messages of plugins or the daemon itself
-to the user.
-.TP
-\fBnotification function\fP
-These are used to act upon notifications. In general, a notification is a status
-message that may be associated with a data instance.
-.TP
-\fBshutdown functions\fP
-These are called once before the daemon shuts down. It should
-be used to clean up the plugin (e.g. close sockets, ...).
-.PP
-
+calls to the read and write functions.
+It should be used to initialize the internal state of the plugin
+(e. g. open sockets, ...).
+This is the earliest point where you may use threads.
+.It \fBread functions\fP
+These are used to collect the actual data.
+It is called once per interval (see the \fBinterval\fP configuration
+option of ncollectd).
+Usually it will call \f(CWplugin_dispatch_metric_family\fP to dispatch the
+metrics to ncollectd which will pass them on to all registered
+\fBwrite functions\fP.
+If this function throws any kind of exception the plugin will be skipped for an
+increasing amount of time until it returns normally again.
+.It \fBwrite functions\fP
+These are used to write the dispatched values.
+It is called once for every value that was dispatched by any plugin.
+.It \fBlog functions\fP
+These are used to pass messages of plugins or the daemon itself to the user.
+.It \fBnotification function\fP
+These are used to act upon notifications.
+In general, a notification is a status message that may be associated with
+a data instance.
+.It \fBshutdown functions\fP
+These are called once before the daemon shuts down.
+It should be used to clean up the plugin (e.g. close sockets, ...).
+.El
+.Pp
 Any function (except log functions) may throw an exception in case of
-errors. The exception will be passed on to the user using ncollectd's logging
-mechanism. If a log callback throws an exception it will be printed to standard
+errors.
+The exception will be passed on to the user using ncollectd's logging mechanism.
+If a log callback throws an exception it will be printed to standard
 error instead.
-
+.Pp
 See the documentation of the various \fBregister_\fP methods in the section
 \fBFUNCTIONS\fP below for the number and types of arguments passed to each
-\fBcallback function\fP. This section also explains how to register \fBcallback functions\fP
+\fBcallback function\fP.
+This section also explains how to register \fBcallback functions\fP
 with ncollectd.
-
+.Pp
 To enable a module, copy it to a place where Python can find it (i. e. a
 directory listed in \f(CWsys.path\fP) just as any other Python plugin and add
-an appropriate \fBimport\fP option to the configuration file. After restarting
-ncollectd you're done.
-
-.SH CLASSES
+an appropriate \fBimport\fP option to the configuration file.
+After restarting ncollectd you're done.
+.Sh CLASSES
 The following complex types are used to pass values between the Python plugin
 and ncollectd:
-.TP
-\fBNCollectdError\fP
-This is an exception. If any Python script raises this exception it will
-still be treated like an error by ncollectd but it will be logged as a
-warning instead of an error and it will never generate a stacktrace.
-.EX
-
+.Bl -tag -width Ds
+.It \fBNCollectdError\fP
+This is an exception.
+If any Python script raises this exception it will still be treated like an
+error by ncollectd but it will be logged as a warning instead of an error
+and it will never generate a stacktrace.
+.Bd -literal
     class NCollectdError(Exception)
-
-.EE
-
+.Ed
+.Pp
 Basic exception for ncollectd Python scripts.
 Throwing this exception will not cause a stacktrace to be logged, even if
 LogTraces is enabled in the config.
-.TP
-\fBConfig\fP
+.It \fBConfig\fP
 The Config class is an object which keeps the information provided in the
-configuration file. The sequence of children keeps one entry for each
-configuration option. Each such entry is another Config instance, which
-may nest further if nested blocks are used.
-.EX
-
- class Config(object)
-
-.EE
-
-This represents a piece of ncollectd's config file. It is passed to scripts with
-config callbacks (see \f(CWregister_config\fP) and is of little use if created
-somewhere else.
-
+configuration file.
+The sequence of children keeps one entry for each configuration option.
+Each such entry is another Config instance, which may nest further if
+nested blocks are used.
+.Bd -literal
+    class Config(object)
+.Ed
+.Pp
+This represents a piece of ncollectd's config file.
+It is passed to scripts with config callbacks (see \f(CWregister_config\fP)
+and is of little use if created somewhere else.
+.Pp
 It has no methods beyond the bare minimum and only exists for its data members.
-
+.Pp
 Data descriptors defined here:
-.RS
-.TP
-\fBkey\fP
+.Bl -tag -width Ds
+.It \fBkey\fP
 This is the keyword of this item, i.e. the first word of any given line in the
-config file. It will always be a string.
-.TP
-\fBvalues\fP
+config file.
+It will always be a string.
+.It \fBvalues\fP
 This is a tuple (which might be empty) of all value, i.e. words following the
 keyword in any given line in the config file.
-
+.Pp
 Every item in this tuple will be either a string, a float or a boolean,
 depending on the contents of the configuration file.
-.TP
-\fBchildren\fP
-This is a tuple of child nodes. For most nodes this will be empty. If this node
-represents a block instead of a single line of the config file it will contain
-all nodes in this block.
-.RE
-
-.TP
-\fBMetric\fP
-.EX
-
- class Metric([labels][, time][, interval])
-
-.EE
-
-.RS
-.TP
-\fBlables\fP
-It has to be a dictionary of numbers, strings or bools. All keys must be
-strings.
-.TP
-\fBtime\fP
+.It \fBchildren\fP
+This is a tuple of child nodes.
+For most nodes this will be empty.
+If this node represents a block instead of a single line of the config file
+it will contain all nodes in this block.
+.El
+.It \fBMetric\fP
+.Bd -literal
+    class Metric([labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBlables\fP
+It has to be a dictionary of numbers, strings or bools.
+All keys must be strings.
+.It \fBtime\fP
 This is the Unix timestamp of the time this metric was read.
 For dispatching metrics this can be set to zero which means "now".
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 The interval is the timespan in seconds between two submits for the same data
-source. This value has to be a positive integer, so you can't submit more than
-one value per second. If this member is set to a non-positive value, the
-default value as specified in the config file will be used (default: 10).
-
+source.
+This value has to be a positive integer, so you can't submit more than
+one value per second.
+If this member is set to a non-positive value, the default value as specified
+in the config file will be used (default: 10).
+.Pp
 If you submit values more often than the specified interval, the average will
-be used. If you submit less values, your graphs will have gaps.
-.RE
-.TP
-\fBMetricUnknownDouble\fP
-
-.EX
-
- class MetricUnknownDouble(value[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBvalue\fP
-.TP
-\fBlables\fP
+be used.
+If you submit less values, your graphs will have gaps.
+.El
+.It \fBMetricUnknownDouble\fP
+.Bd -literal
+    class MetricUnknownDouble(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricUnknownLong\fP
-.EX
-
- class MetricUnknownLong(value[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBvalue\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricUnknownLong\fP
+.Bd -literal
+    class MetricUnknownLong(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricGaugeDouble\fP
-.EX
-
- class MetricGaugeDouble(value[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBvalue\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricGaugeDouble\fP
+.Bd -literal
+    class MetricGaugeDouble(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricGaugeLong\fP
-.EX
-
- class MetricGaugeLong(value[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBvalue\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricGaugeLong\fP
+.Bd -literal
+    class MetricGaugeLong(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricCounterDouble\fP
-.EX
-
- class MetricCounterDouble(value[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBvalue\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricCounterDouble\fP
+.Bd -literal
+    class MetricCounterDouble(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricCounterULong\fP
-.EX
-
- class MetricCounterUlong(value[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBvalue\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricCounterULong\fP
+.Bd -literal
+    class MetricCounterUlong(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricInfo\fP
-.EX
-
- class MetricInfo(info[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBinfo\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricInfo\fP
+.Bd -literal
+    class MetricInfo(info[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBinfo\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricStateSet\fP
-.EX
-
- class MetricStateSet(set[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBset\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricStateSet\fP
+.Bd -literal
+    class MetricStateSet(set[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBset\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricSummary\fP
-.EX
-
- class MetricSummary(sum, count, quantiles[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBsum\fP
-.TP
-\fBcount\fP
-.TP
-\fBquantiles\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricSummary\fP
+.Bd -literal
+    class MetricSummary(sum, count, quantiles[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBsum\fP
+.It \fBcount\fP
+.It \fBquantiles\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricHistorgram\fP
-.EX
-
- class MetricHistorgram(sum, buckets[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBsum\fP
-.TP
-\fBbuckets\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricHistorgram\fP
+.Bd -literal
+    class MetricHistorgram(sum, buckets[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBsum\fP
+.It \fBbuckets\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricGaugeHistorgram\fP
-.EX
-
- class MetricGaugeHistorgram(sum, buckets[, labels][, time][, interval])
-
-.EE
-.RS
-.TP
-\fBsum\fP
-.TP
-\fBbuckets\fP
-.TP
-\fBlables\fP
+.El
+.It \fBMetricGaugeHistorgram\fP
+.Bd -literal
+    class MetricGaugeHistorgram(sum, buckets[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBsum\fP
+.It \fBbuckets\fP
+.It \fBlables\fP
 See \fBclass Metric\fP.
-.TP
-\fBtime\fP
+.It \fBtime\fP
 See \fBclass Metric\fP.
-.TP
-\fBinterval\fP
+.It \fBinterval\fP
 See \fBclass Metric\fP.
-.RE
-.TP
-\fBMetricFamily\fP
-.EX
-
-class MetricFamily(type, name[, help][, unit][, metrics])
-
-.EE
-
+.El
+.It \fBMetricFamily\fP
+.Bd -literal
+    class MetricFamily(type, name[, help][, unit][, metrics])
+.Ed
+.Pp
 Methods defined here:
-
-.EX
-
-dispatch([metrics][, time]) -> None.
-
-append(metrics) -> None.
-
-.EE
-
-Dispatch this instance to the ncollectd process. The object has members for each
-of the possible arguments for this method. For a detailed explanation of these
-parameters see the member of the same same.
-
+.Bd -literal
+    dispatch([metrics][, time]) -> None.
+    append(metrics) -> None.
+.Ed
+.Pp
+Dispatch this instance to the ncollectd process.
+The object has members for each of the possible arguments for this method.
+For a detailed explanation of these parameters see the member of the same same.
+.Pp
 If you do not submit a parameter the value saved in its member will be
-submitted. If you do provide a parameter it will be used instead, without
-altering the member.
-
+submitted.
+If you do provide a parameter it will be used instead,
+without altering the member.
+.Pp
 Data descriptors defined here:
-
-.RS
-.TP
-\fBtype\fP
-The type of this metric family. Assign or compare to \fBMETRIC_TYPE_UNKNOWN\fP,
-\fBMETRIC_TYPE_GAUGE\fP, \fBMETRIC_TYPE_COUNTER\fP, \fBMETRIC_TYPE_STATE_SET\fP,
+.Bl -tag -width Ds
+.It \fBtype\fP
+The type of this metric family.
+Assign or compare to \fBMETRIC_TYPE_UNKNOWN\fP, \fBMETRIC_TYPE_GAUGE\fP,
+\fBMETRIC_TYPE_COUNTER\fP, \fBMETRIC_TYPE_STATE_SET\fP,
 \fBMETRIC_TYPE_INFO\fP, \fBMETRIC_TYPE_SUMMARY\fP, \fBMETRIC_TYPE_HISTOGRAM\fP
 or \fBMETRIC_TYPE_GAUGE_HISTOGRAM\fP.
-.TP
-\fBname\fP
-.TP
-\fBhelp\fP
-.TP
-\fBunit\fP
-.TP
-\fBmetrics\fP
-.RE
-
-.TP
-\fBNotification\fP
+.It \fBname\fP
+.It \fBhelp\fP
+.It \fBunit\fP
+.It \fBmetrics\fP
+.El
+.It \fBNotification\fP
 A notification is an object defining the severity and message of the status
 message as well as an identification of a data instance.
-.EX
-
-class Notification(name[, severity][, time][, labels][, annotations])
-
-.EE
-
+.Bd -literal
+    class Notification(name[, severity][, time][, labels][, annotations])
+.Ed
+.Pp
 The Notification class is a wrapper around the ncollectd notification.
-It can be used to notify other plugins about bad stuff happening. It works
-similar to Values but has a severity and a message instead of interval
+It can be used to notify other plugins about bad stuff happening.
+It works similar to Values but has a severity and a message instead of interval
 and time.
 Notifications can be dispatched at any time and can be received with
 register_notification.
-
+.Pp
 Methods defined here:
-
-
-name[, severity][, time][, labels][, annotations]
-
-
-dispatch([name][, severity][, time][, labels][, annotations]) -> None.
-
-Dispatch this instance to the ncollectd process. The object has members for each
-of the possible arguments for this method. For a detailed explanation of these
-parameters see the member of the same same.
-
+.Bd -literal
+    dispatch([name][, severity][, time][, labels][, annotations]) -> None.
+.Ed
+.Pp
+Dispatch this instance to the ncollectd process.
+The object has members for each of the possible arguments for this method.
+For a detailed explanation of these parameters see the member of the same same.
+.Pp
 If you do not submit a parameter the value saved in its member will be
-submitted. If you do provide a parameter it will be used instead, without
-altering the member.
-
+submitted.
+If you do provide a parameter it will be used instead, without altering
+the member.
+.Pp
 Data descriptors defined here:
-
-.RS
-.TP
-\fBname\fP
+.Bl -tag -width Ds
+.It \fBname\fP
 Name of the notification.
-.TP
-\fBseverity\fP
-The severity of this notification. Assign or compare to \fBNOTIF_FAILURE\fP,
-\fBNOTIF_WARNING\fP or \fBNOTIF_OKAY\fP.
-.TP
-\fBtime\fP
-.TP
-\fBlabel\fP
-.TP
-\fBannotations\fP
-.RE
-
-.SH FUNCTIONS
+.It \fBseverity\fP
+The severity of this notification.
+Assign or compare to \fBNOTIF_FAILURE\fP, \fBNOTIF_WARNING\fP or
+\fBNOTIF_OKAY\fP.
+.It \fBtime\fP
+.It \fBlabel\fP
+.It \fBannotations\fP
+.El
+.El
+.Sh FUNCTIONS
 The following functions provide the C-interface to Python-modules.
-
-.TP
-\fBregister_*\fP(\fIcallback\fP[, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+.Bl -tag -width Ds
+.It \fBregister_*\fP(\fIcallback\fP[, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
 There are seven different register functions to get callback for seven
-different events. With one exception all of them are called as shown above.
-.RS
-\fIcallback\fP is a callable object that will be called every time the event is
+different events.
+With one exception all of them are called as shown above.
+.Bl -tag -width Ds
+.It \fIcallback\fP
+Is a callable object that will be called every time the event is
 triggered.
-
-\fIdata\fP is an optional object that will be passed back to the callback function
-every time it is called. If you omit this parameter no object is passed back to
-your callback, not even None.
-
-\fIname\fP is an optional identifier for this callback. The default name is
-\fBpython\fP.\fImodule\fP. \fImodule\fP is taken from the \fB__module__\fP attribute of
-your callback function. Every callback needs a unique identifier, so if you
-want to register the same callback multiple times in the same module you need to
-specify a name here. Otherwise it's safe to ignore this parameter.
-
-\fIidentifier\fP is the full identifier assigned to this callback.
-.RE
+.It \fIdata\fP
+Is an optional object that will be passed back to the callback function
+every time it is called.
+If you omit this parameter no object is passed back to your callback,
+not even None.
+.It \fIname\fP
+Is an optional identifier for this callback.
+The default name is \fBpython\fP.\fImodule\fP.
+\fImodule\fP is taken from the \fB__module__\fP attribute of your
+callback function.
+Every callback needs a unique identifier, so if you want to register the same
+callback multiple times in the same module you need to
+specify a name here.
+Otherwise it's safe to ignore this parameter.
+.It \fIidentifier\fP
+Is the full identifier assigned to this callback.
+.El
+.Pp
 These functions are called in the various stages of the daemon (see the section
 \fBWRITING YOUR OWN PLUGINS\fP above) and are passed the following arguments:
-
-.TP
-\fBregister_config\fP
-The only argument passed is a \fIConfig\fP object. See above for the layout of this
-data type.
+.Bl -tag -width Ds
+.It \fBregister_config\fP
+The only argument passed is a \fIConfig\fP object.
+See above for the layout of this data type.
 Note that you cannot receive the whole config files this way, only \fBmodule\fP
-blocks inside the Python configuration block. Additionally you will only
-receive blocks where your callback identifier matches \fBpython\fP.\fIblockname\fP.
-.TP
-\fBregister_init\fP
+blocks inside the Python configuration block.
+Additionally you will only receive blocks where your callback identifier
+matches \fBpython\fP.\fIblockname\fP.
+.It \fBregister_init\fP
 The callback will be called without arguments.
-.TP
-\fBregister_read\fP(\fIcallback\fP[, \fIinterval\fI][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
-This function takes an additional parameter: \fIinterval\fP. It specifies the
-time between calls to the callback function.
-
+.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fI][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+This function takes an additional parameter: \fIinterval\fP.
+It specifies the time between calls to the callback function.
+.Pp
 The callback will be called without arguments.
-.TP
-\fBregister_shutdown\fP
+.It \fBregister_shutdown\fP
 The callback will be called without arguments.
-.TP
-\fBregister_write\fP
+.It \fBregister_write\fP
 The callback function will be called with one argument passed, which will be a
-\fIMetricFamily\fP object. For the layout of \fIMetricFamily\fP see above.
+\fIMetricFamily\fP object.
+For the layout of \fIMetricFamily\fP see above.
 If this callback function throws an exception the next call will be delayed by
 an increasing interval.
-.TP
-\fBregister_log\fP
-The arguments are \fIseverity\fP and \fImessage\fP. The severity is an integer and
-small for important messages and high for less important messages. The least
-important level is \fBLOG_DEBUG\fP, the most important level is \fBLOG_ERR\fP. In
-between there are (from least to most important): \fBLOG_INFO\fP, \fBLOG_NOTICE\fP,
-and \fBLOG_WARNING\fP. \fImessage\fP is simply a string \fBwithout\fP a newline at the
-end.
-
-If this callback throws an exception it will \fBnot\fP be logged. It will just be
-printed to \fBsys.stderr\fP which usually means silently ignored.
-.TP
-\fBregister_notification\fP
-The only argument passed is a \fINotification\fP object. See above for the layout of this
-data type.
-.TP
-\fBunregister_*\fP(\fIidentifier\fP) -> None
+.It \fBregister_log\fP
+The arguments are \fIseverity\fP and \fImessage\fP.
+The severity is an integer and small for important messages and high for less
+important messages.
+The least important level is \fBLOG_DEBUG\fP, the most important level
+is \fBLOG_ERR\fP.
+In between there are (from least to most important): \fBLOG_INFO\fP,
+\fBLOG_NOTICE\fP, and \fBLOG_WARNING\fP.
+\fImessage\fP is simply a string \fBwithout\fP a newline at the end.
+.Pp
+If this callback throws an exception it will \fBnot\fP be logged.
+It will just be printed to \fBsys.stderr\fP which usually means
+silently ignored.
+.It \fBregister_notification\fP
+The only argument passed is a \fINotification\fP object.
+See above for the layout of this data type.
+.El
+.It \fBunregister_*\fP(\fIidentifier\fP) -> None
 Removes a callback or data-set from collectd's internal list of callback
-functions. Every \fIregister_*\fP function has an \fIunregister_*\fP function.
+functions.
+Every \fIregister_*\fP function has an \fIunregister_*\fP function.
 \fIidentifier\fP is either the string that was returned by the register function
-or a callback function. The identifier will be constructed in the same way as
-for the register functions.
-.TP
-\fBerror\fP, \fBwarning\fP, \fBnotice\fP, \fBinfo\fP, \fBdebug\fP(\fImessage\fP)
+or a callback function.
+The identifier will be constructed in the same way as for the register
+functions.
+.It \fBerror\fP, \fBwarning\fP, \fBnotice\fP, \fBinfo\fP, \fBdebug\fP(\fImessage\fP)
 Log a message with the specified severity.
-
-.SH EXAMPLES
+.El
+.Sh EXAMPLES
 Any Python module will start similar to:
-.EX
-
-  import ncollectd
-
-.EE
-
+.Bd -literal
+    import ncollectd
+.Ed
+.Pp
 A very simple read function might look like:
-.EX
+.Bd -literal
+    import random
 
-  import random
-
-  def read(data=None):
-    fam = ncollectd.MetricFamily(ncollectd.METRIC_TYPE_GAUGE, 'python.spam')
-    fam.dispatch([ncollectd.MetricGaugeDouble(random.random() * 100)])
-.EE
-
+    def read(data=None):
+        fam = ncollectd.MetricFamily(ncollectd.METRIC_TYPE_GAUGE, 'python.spam')
+        fam.dispatch([ncollectd.MetricGaugeDouble(random.random() * 100)])
+.Ed
+.Pp
 A very simple write function might look like:
-.EX
-
-  def write(fam, data=None):
-    for i in vl.values:
-      print "%s (%s): %f" % (vl.plugin, vl.type, i)
-
-.EE
-
+.Bd -literal
+    def write(fam, data=None):
+        for i in vl.values:
+            print "%s (%s): %f" % (vl.plugin, vl.type, i)
+.Ed
+.Pp
 To register those functions with collectd:
-.EX
-
-  ncollectd.register_read(read)
-  ncollectd.register_write(write)
-
-.EE
-
+.Bd -literal
+    ncollectd.register_read(read)
+    ncollectd.register_write(write)
+.Ed
+.Pp
 See the section \fBCLASSES\fP above for a complete documentation of the data
 types used by the read, write and match functions.
-
-.SH CAVEATS
-ncollectd is heavily multi-threaded. Each ncollectd thread accessing the Python
-plugin will be mapped to a Python interpreter thread. Any such thread will be
-created and destroyed transparently and on-the-fly.
-.PP
+.Sh CAVEATS
+ncollectd is heavily multi-threaded.
+Each ncollectd thread accessing the Python plugin will be mapped to a Python
+interpreter thread.
+Any such thread will be created and destroyed transparently and on-the-fly.
+.Pp
 Hence, any plugin has to be thread-safe if it provides several entry points
 from ncollectd (i. e. if it registers more than one callback or if a
 registered callback may be called more than once in parallel).
-.PP
+.Pp
 The Python thread module is initialized just before calling the init callbacks.
-This means you must not use Python's threading module prior to this point. This
-includes all config and possibly other callback as well.
-.PP
+This means you must not use Python's threading module prior to this point.
+This includes all config and possibly other callback as well.
+.Pp
 The python plugin exports the internal API of ncollectd which is considered
-unstable and subject to change at any time. We try hard to not break backwards
-compatibility in the Python API during the life cycle of one major release.
-However, this cannot be guaranteed at all times. Watch out for warnings
-dispatched by the python plugin after upgrades.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+unstable and subject to change at any time.
+We try hard to not break backwards compatibility in the Python API during
+the life cycle of one major release.
+However, this cannot be guaranteed at all times.
+Watch out for warnings dispatched by the python plugin after upgrades.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

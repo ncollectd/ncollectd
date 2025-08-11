@@ -1,12 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-dcpmm 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd dcpmm man page"
-.SH NAME
-ncollectd-dcpmm \- Documentation of ncollectd's dcpmm plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DCPMM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-dcpmm
+.Nd Documentation of ncollectd's dcpmm plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP dcpmm
-.SH DESCRIPTION
-The \fBdcpmm\fP plugin will collect Intel(R) Optane(TM) DC Persistent Memory related performance
-statistics. The plugin requires root privileges to perform the statistics collection.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP dcpmm
+.Ed
+.Sh DESCRIPTION
+The \fBdcpmm\fP plugin will collect Intel(R) Optane(TM) DC Persistent Memory
+related performance statistics.
+The plugin requires root privileges to perform the statistics collection.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,8 +1,12 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-match_xpath 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd match_xpath man page"
-.SH NAME
-ncollectd-match_xpath \- Documentation of ncollectd's xpath match plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MATCH_XPATH 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-match_xpath
+.Nd Documentation of ncollectd's xpath match plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBmatch\fP xpath {
     \fBmetric-prefix\fP \fIprefix\fP
     \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -19,110 +23,89 @@ ncollectd-match_xpath \- Documentation of ncollectd's xpath match plugin
         \fBvalue-from\fP \fIxpath-expresion\fP
         \fBtime-from\fP \fIxpath-expresion\fP
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBxpath\fP match plugin parser data as Extensible Markup Language (XML).
 The parsed tree is then traversed according to the user's configuration,
 using the XML Path Language (XPath).
-
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.Bl -tag -width Ds
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepend the \fIprefix\fP to the metrics found in the \fBmetric\fP blocks.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBnamespace\fP \fIprefix\fP \fIurl\fP
-If an XPath expression references namespaces, they must be specified with this option.
+.It \fBnamespace\fP \fIprefix\fP \fIurl\fP
+If an XPath expression references namespaces, they must be specified with
+this option.
 \fIPrefix\fP is the "namespace prefix" used in the XML document.
-\fIURL\fP is the "namespace name", an URI reference uniquely identifying the namespace.
+\fIURL\fP is the "namespace name", an URI reference uniquely identifying
+the namespace.
 The option can be repeated to register multiple namespaces.
-
+.Pp
 Examples:
-.EX
-
+.Bd -literal
     namespace "s" "http://schemas.xmlsoap.org/soap/envelope/";
     namespace "m" "http://www.w3.org/1998/Math/MathML";
-
-.EE
-.TP
-\fBmetric\fP
-.RS
-.TP
-\fBxpath\fP \fIxpath-expresion\fP
+.Ed
+.It \fBmetric\fP
+.Bl -tag -width Ds
+.It \fBxpath\fP \fIxpath-expresion\fP
 Specifies how to get one type of information.
-The string argument must be a valid XPath expression which returns a list of "base elements".
-.TP
-\fBtype\fP [\fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fI] | \fIcounter\fP [\fIset|add|inc\fP]]
-.RS
-.TP
-\fBgauge\fP
+The string argument must be a valid XPath expression which returns a list
+of "base elements".
+.It \fBtype\fP [\fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fI] | \fIcounter\fP [\fIset|add|inc\fP]]
+.Bl -tag -width Ds
+.It \fBgauge\fP
 The value is a gauge, you must specify also the type of the gauge:
-.RS
-.TP
-\fBaverage\fP
+.Bl -tag -width Ds
+.It \fBaverage\fP
 Calculate the average
-.TP
-\fBmin\fP
+.It \fBmin\fP
 Use the smallest number only.
-.TP
-\fBmax\fP
+.It \fBmax\fP
 Use the greatest number only.
-.TP
-\fBlast\fP
+.It \fBlast\fP
 Use the last number found.
-.TP
-\fBinc\fP
+.It \fBinc\fP
 Increase the internal counter by one.
-.TP
-\fBadd\fP
+.It \fBadd\fP
 Add the matched value to the internal counter.
-.TP
-\fBpersist\fP
+.It \fBpersist\fP
 Use the last number found.
 The number is not reset at the end of an interval.
 It is continously reported until another number is matched.
-.RE
-.TP
-\fBcounter\fP
+.El
+.It \fBcounter\fP
 The value is a counter, you must specify also the type of the counter:
-.RS
-.TP
-\fBset\fP
+.Bl -tag -width Ds
+.It \fBset\fP
 Simply sets the internal counter to this value.
-.TP
-\fBadd\fP
+.It \fBadd\fP
 Add the matched value to the internal counter.
-.TP
-\fBinc\fP
+.It \fBinc\fP
 Increase the internal counter by one.
-.RE
-.RE
-.TP
-\fBmetric\fP \fImetric\fP
+.El
+.El
+.It \fBmetric\fP \fImetric\fP
 Set the metric name.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBhelp\fP \fIhelp\fP
 Set the  metric help.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
 The prefix to prepend to the metric name obtained with \fBmetric-from\fP.
-.TP
-\fBmetric-from\fP \fIxpath-expresion\fP
+.It \fBmetric-from\fP \fIxpath-expresion\fP
 Specifies a XPath expression to use for the metric name.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIxpath-expresion\fP
+.It \fBlabel-from\fP \fIkey\fP \fIxpath-expresion\fP
 Specifies a XPath expression to use for value of the label \fIkey\fP.
-.TP
-\fBvalue-from\fP \fIxpath-expresion\fP
-Specifies a XPath expression to use for reading the value. This option is required.
-\fBtime-from\fP \fIxpath-expresion\fP
+.It \fBvalue-from\fP \fIxpath-expresion\fP
+Specifies a XPath expression to use for reading the value.
+This option is required.
+.It \fBtime-from\fP \fIxpath-expresion\fP
 Specifies a XPath expression to use for determining the
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+timestamp of the metric.
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

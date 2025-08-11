@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-write_kafka 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_kafka man page"
-.SH NAME
-ncollectd-write_kafka \- Documentation of ncollectd's write_kafka plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WRITE_KAFKA 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-write_kafka
+.Nd Documentation of ncollectd's write_kafka plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP write_kafka
-.br
 \fBplugin\fP write_kafka {
     \fBinstance\fP \fIname\fP {
         \fBtopic\fP \fItopic\fP
@@ -14,67 +17,54 @@ ncollectd-write_kafka \- Documentation of ncollectd's write_kafka plugin
         \fBformat-notification\fP \fItext|json|protob\fP
         \fBwrite\fP \fImetrics|notifications\fP
     }
-.br
 }
-.SH DESCRIPTION
-The \fBwrite_kafka\fP plugin send metric and notifications to a \fIKafka\fP topic, a distributed
-queue.
-.PP
-The plugin's configuration consists of one or more \fBinstance\fP blocks. Each block
-is given a unique \fIname\fP and specifies one kafka producer.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBwrite_kafka\fP plugin send metric and notifications to a \fIKafka\fP
+topic, a distributed queue.
+.Pp
+The plugin's configuration consists of one or more \fBinstance\fP blocks.
+Each block is given a unique \fIname\fP and specifies one kafka producer.
+.Pp
 Inside the \fBinstance\fP block, the following options are understood:
-.PP
-.TP
-\fBtopic\fP \fItopic\fP
+.Bl -tag -width Ds
+.It \fBtopic\fP \fItopic\fP
 Set the topic to send messages.
-.TP
-\fBproperty\fP \fIkey\fP \fIvalue\fP
+.It \fBproperty\fP \fIkey\fP \fIvalue\fP
 Configure the kafka producer through properties, you almost always will
 want to set \fBmetadata.broker.list\fP to your Kafka broker list.
-.TP
-\fBkey\fP \fIkey\fP
-Use the specified string as a partitioning key for the topic. Kafka breaks
-topic into partitions and guarantees that for a given topology, the same
-consumer will be used for a specific key. The special (case insensitive)
-string \fBrandom\fP can be used to specify that an arbitrary partition should
-be used.
-.TP
-\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+.It \fBkey\fP \fIkey\fP
+Use the specified string as a partitioning key for the topic.
+Kafka breaks topic into partitions and guarantees that for a given topology,
+the same consumer will be used for a specific key.
+The special (case insensitive) string \fBrandom\fP can be used to specify
+that an arbitrary partition should be used.
+.It \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
 Selects the format in which metrics are written.
-.RS
-.TP
-\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.Bl -tag -width Ds
+.It \fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
 Format the metrics with the influxdb line format.
-.TP
-\fBgraphite\fP
+.It \fBgraphite\fP
 Format the metrics with the graphite plaintext format.
-.TP
-\fBjson\fP
+.It \fBjson\fP
 Format the metrics as json message.
-.TP
-\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.It \fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
 Format the metrics with the karirosdb text format or json format.
-.TP
-\fBopentsdb\fP [telnet|json]
+.It \fBopentsdb\fP [telnet|json]
 Format the metrics with the opentsdb text format or json format.
-.TP
-\fBopenmetrics\fP [text|protob]
+.It \fBopenmetrics\fP [text|protob]
 Format the metrics with the openmetrics text format.
-.TP
-\fBopentelemetry\fP [json]
+.It \fBopentelemetry\fP [json]
 Format the metrics with the opentelemetry json format.
-.TP
-\fBremote\fP [metadata]
+.It \fBremote\fP [metadata]
 Format the metrics with the protocol buffer remote format.
-.RE
-.TP
-\fBformat-notification\fP \fItext|json|protob\fP
+.El
+.It \fBformat-notification\fP \fItext|json|protob\fP
 Selects the format in which notifications are written.
-.TP
-\fBwrite\fP \fImetrics|notifications\fP
+.It \fBwrite\fP \fImetrics|notifications\fP
 If set to \fImetrics\fP (the default) the plugin will handle metrics.
 If set to \fInotifications\fP the plugin will handle notifications.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

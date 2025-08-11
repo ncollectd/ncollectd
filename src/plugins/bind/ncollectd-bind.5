@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-bind 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd bind man page"
-.SH NAME
-ncollectd-bind \- Documentation of ncollectd's bind plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-BIND 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-bind
+.Nd Documentation of ncollectd's bind plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP bind
-.br
 \fBplugin\fP bind {
     \fBinstance\fP \fIname\fP {
         \fBurl\fP "\fIhttp://host/path\fP"
@@ -15,46 +18,44 @@ ncollectd-bind \- Documentation of ncollectd's bind plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-Starting with BIND 9.5.0, it provides extensive statistics about queries, responses and
-lots of other information.
-The \fPbind\fP plugin retrieves this information that's encoded in XML or JSON and provided
-via HTTP and submits the values to ncollectd.
+.Ed
+.Sh DESCRIPTION
+Starting with BIND 9.5.0, it provides extensive statistics about queries,
+responses and lots of other information.
+The \fPbind\fP plugin retrieves this information that's encoded in XML or
+JSON and provided via HTTP and submits the values to ncollectd.
 To use this plugin, you first need to tell BIND to make this information
-available. This is done with the \f(CWstatistics-channels\fP configuration option:
-.PP
-.EX
+available.
+This is done with the \f(CWstatistics-channels\fP configuration option:
+.Bd -literal
 statistics-channels {
     inet localhost port 8053;
 };
-.EE
-.PP
-In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
-a BIND instance.
-.PP
+.Ed
+.Pp
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks,
+each defining a BIND instance.
 The following options are valid within \fBinstance\fP blocks:
-.PP
-.TP
-\fBurl\fP "\fIhttp://host/path\fP"
+.Bl -tag -width Ds
+.It \fBurl\fP "\fIhttp://host/path\fP"
 URL of the BIND instance to retrieve metrics.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBurl\fP, in
-seconds. By default, the configured \fBinterval\fP is used to set the timeout.
-.TP
-\fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests
+to \fBurl\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+.It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd  1 ,
+.Xr ncollectd.conf 5

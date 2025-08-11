@@ -1,74 +1,85 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-intel_rdt 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd intel_rdt man page"
-.SH NAME
-ncollectd-intel_rdt \- Documentation of ncollectd's intel_rdt plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-APACHE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-apache
+.Nd Documentation of ncollectd's apache plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP intel_rdt
-.br
 \fBplugin\fP intel_rdt {
     \fBcores\fP \fIcores\fP ...
     \fBprocesses\fP "\fIprocess\fP" ...
     \fBmon-ipc-enabled\fP \fItrue|false\fP
     \fBmon-llc-ref-enabled\fP \fItrue|false\fP
-.br
 }
-.SH DESCRIPTION
-The \fBintel_rdt\fP plugin collects information provided by monitoring features of
-Intel Resource Director Technology (Intel(R) RDT) like Cache Monitoring
+.Ed
+.Sh DESCRIPTION
+The \fBintel_rdt\fP plugin collects information provided by monitoring features
+of Intel Resource Director Technology (Intel(R) RDT) like Cache Monitoring
 Technology (CMT), Memory Bandwidth Monitoring (MBM). These features provide
-information about utilization of shared resources. CMT monitors last level cache
-occupancy (LLC). MBM supports two types of events reporting local and remote
-memory bandwidth. Local memory bandwidth (MBL) reports the bandwidth of
-accessing memory associated with the local socket. Remote memory bandwidth (MBR)
-reports the bandwidth of accessing the remote socket. Also this technology
-allows to monitor instructions per clock (IPC).
-Monitor events are hardware dependant. Monitoring capabilities are detected on
-plugin initialization and only supported events are monitored.
-.PP
+information about utilization of shared resources.
+CMT monitors last level cache occupancy (LLC).
+MBM supports two types of events reporting local and remote memory bandwidth.
+Local memory bandwidth (MBL) reports the bandwidth of accessing memory
+associated with the local socket.
+Remote memory bandwidth (MBR) reports the bandwidth of accessing the remote
+socket.
+Also this technology allows to monitor instructions per clock (IPC).
+Monitor events are hardware dependant.
+Monitoring capabilities are detected on plugin initialization and only
+supported events are monitored.
+.Pp
 \fBintel_rdt\fP plugin is using model-specific registers (MSRs), which
-require an additional capability (\fBCAP_SYS_RAWIO\fP) to be enabled if ncollectd
-is run as a service.
-.PP
+require an additional capability (\fBCAP_SYS_RAWIO\fP) to be enabled if
+ncollectd is run as a service.
+.Pp
 By default global interval is used to retrieve statistics on monitored
-events. To configure a plugin specific interval use \fBinterval\fP option of the
-intel_rdt \fBload-plugin\fP block. For milliseconds divide the time by 1000 for
-example if the desired interval is 50ms, set interval to 0.05.
+events.
+To configure a plugin specific interval use \fBinterval\fP option of the
+intel_rdt \fBload-plugin\fP block.
+For milliseconds divide the time by 1000 for example if the desired interval
+is 50ms, set interval to 0.05.
 Due to limited capacity of counters it is not recommended to set interval higher
 than 1 sec.
-.PP
+.Pp
 The following configuration options are available:
-.TP
-\fBcores\fP \fIcores\fP ...
+.Bl -tag -width Ds
+.It \fBcores\fP \fIcores\fP ...
 Monitoring of the events can be configured for group of cores
-(aggregated statistics). This field defines groups of cores on which to monitor
-supported events. The field is represented as list of strings with core group
-values. Each string represents a list of cores in a group. Allowed formats are:
-.EX
+(aggregated statistics).
+This field defines groups of cores on which to monitor supported events.
+The field is represented as list of strings with core group values.
+Each string represents a list of cores in a group.
+Allowed formats are:
+.Bd -literal
     0,1,2,3
     0-10,20-18
     1,3,5-8,10,0x10-12
-.EE
+.Ed
+.Pp
 If an empty string is provided as value for this field default cores
 configuration is applied - a separate group is created for each core.
-.TP
-\fBprocesses\fP "\fIprocess\fP" ...
+.It \fBprocesses\fP "\fIprocess\fP" ...
 Monitoring of the events can be configured for group of processes
-(aggregated statistics). This field defines groups of processes on which to
-monitor supported events. The field is represented as list of strings with
-process names group values. Each string represents a list of processes in a
-group. Allowed format is:
-.EX
+(aggregated statistics).
+This field defines groups of processes on which to monitor supported events.
+The field is represented as list of strings with process names group values.
+Each string represents a list of processes in a group.
+Allowed format is:
+.Bd -literal
     sshd,bash,qemu
-.EE
-.TP
-\fBmon-ipc-enabled\fP \fItrue|false\fP
-Determines whether or not to enable IPC monitoring. If set to \fItrue\fP (the
-default), IPC monitoring statistics will be collected by intel_rdt plugin.
-.TP
-\fBmon-llc-ref-enabled\fP \fItrue|false\fP
-Determines whether or not to enable LLC references monitoring. If set to
-\fIfalse\fP (the default), LLC references monitoring statistics will not be
+.Ed
+.It \fBmon-ipc-enabled\fP \fItrue|false\fP
+Determines whether or not to enable IPC monitoring.
+If set to \fItrue\fP (the default), IPC monitoring statistics will be
 collected by intel_rdt plugin.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBmon-llc-ref-enabled\fP \fItrue|false\fP
+Determines whether or not to enable LLC references monitoring.
+If set to \fIfalse\fP (the default), LLC references monitoring statistics
+will not be collected by intel_rdt plugin.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

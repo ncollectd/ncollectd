@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nginx_vts 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nginx_vts man page"
-.SH NAME
-ncollectd-nginx_vts \- Documentation of ncollectd's nginx_vts plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NGINX_VTS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nginx_vts
+.Nd Documentation of ncollectd's nginx_vts plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP \fInginx_vts\fP
-.br
 \fBplugin\fP \fInginx_vts\fP
     \fBinstance\fP \fIinstance\fP {
         \fBurl\fP  \fIurl\fP
@@ -15,28 +18,29 @@ ncollectd-nginx_vts \- Documentation of ncollectd's nginx_vts plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBnginx_vts\fP collect the metrics exposed from the Nginx virtual host traffic status module.
-.TP
-\fBurl\fP  \fIurl\fP
+.Ed
+.Sh DESCRIPTION
+The \fBnginx_vts\fP collect the metrics exposed from the Nginx virtual
+host traffic status module.
+.Bl -tag -width Ds
+.It \fBurl\fP  \fIurl\fP
 Sets the URL of the Nginx virtual host traffic status module.
-.TP
-\fBlabels\fP \fIkey\fP \fIvalue\fP
+.It \fBlabels\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBURL\fP, in
-seconds. By default, the configured \fBinterval\fP is used to set the timeout.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this
-URL. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests
+to \fBURL\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this URL.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5  .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

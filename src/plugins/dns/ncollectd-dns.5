@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-load 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd dns man page"
-.SH NAME
-ncollectd-load \- Documentation of ncollectd's dns plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DNS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-dns
+.Nd Documentation of ncollectd's dns plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP dns
-.br
 \fBplugin\fP dns {
     \fBinstance\fP \fIinstance\fP {
         \fBserver\fP \fIserver\fP
@@ -39,234 +42,162 @@ ncollectd-load \- Documentation of ncollectd's dns plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBdns\fP plugin
-
-
-.TP
-\fBserver\fP \fIserver\fP
-The servers to contact, instead of the servers specified in resolv.conf or the local named.
-.TP
-\fBdomain\fP \fIdomain\fP
-The domains to search, instead of the domains specified in resolv.conf or the domain derived
-from the kernel hostname variable.
-.TP
-\fBudp-port\fP \fIport\fP
+.Ed
+.Sh DESCRIPTION
+The \fBdns\fP plugin generare metrics with dns queries.
+.Pp
+The following options are accepted within each \fBinstance\fP block:
+.Bl -tag -width Ds
+.It \fBserver\fP \fIserver\fP
+The servers to contact, instead of the servers specified in resolv.conf
+or the local named.
+.It \fBdomain\fP \fIdomain\fP
+The domains to search, instead of the domains specified in resolv.conf
+or the domain derived from the kernel hostname variable.
+.It \fBudp-port\fP \fIport\fP
 The port to use for queries over UDP, in network byte order.
 The default value is 53, the standard name service port.
-.TP
-\fBtcp-port\fP \fIport\fP
+.It \fBtcp-port\fP \fIport\fP
 The port to use for queries over TCP, in network byte order.
 The default value is 53, the standard name service port.
-.TP
-\fBuse-vc\fP \fItrue|false\fP
-.TP
-\fBuse-tcp\fP \fItrue|false\fP
- Always use TCP queries (the "virtual circuit") instead of UDP queries.
+.It \fBuse-vc\fP \fItrue|false\fP
+.It \fBuse-tcp\fP \fItrue|false\fP
+Always use TCP queries (the "virtual circuit") instead of UDP queries.
 Normally, TCP is only used if a UDP query yields a truncated result.
-.TP
-\fBprimary\fP \fItrue|false\fP
+.It \fBprimary\fP \fItrue|false\fP
 Only query the first server in the list of servers to query.
-.TP
-\fBignore-truncated\fP \fItrue|false\fP
+.It \fBignore-truncated\fP \fItrue|false\fP
 If a truncated response to a UDP query is received, do not fall back to TCP;
 simply continue on with the truncated response.
-.TP
-\fBrecurse\fP \fItrue|false\fP
+.It \fBrecurse\fP \fItrue|false\fP
 If false do not set the "recursion desired" bit on outgoing queries,
 so that the name server being contacted will not try to fetch the answer
-from other servers if it doesn't know the answer locally. Default is true.
-.TP
-\fBsearch\fP \fItrue|false\fP
-If false do not use the default search domains; only query hostnames as-is or as aliases.
+from other servers if it doesn't know the answer locally.
 Default is true.
-.TP
-\fBaliases\fP \fItrue|false\fP
-If false do not honor the HOSTALIASES environment variable, which normally specifies a
-file of hostname translations. Default is true.
-.TP
-\fBedns\fP \fItrue|false\fP
+.It \fBsearch\fP \fItrue|false\fP
+If false do not use the default search domains; only query hostnames as-is or
+as aliases.
+Default is true.
+.It \fBaliases\fP \fItrue|false\fP
+If false do not honor the HOSTALIASES environment variable, which normally
+specifies a file of hostname translations.
+Default is true.
+.It \fBedns\fP \fItrue|false\fP
 Include an EDNS pseudo-resource record (RFC 2671) in generated requests.
-.TP
-\fBedns-size\fP \fIsize\fP
+.It \fBedns-size\fP \fIsize\fP
 The message size to be advertized in EDNS.
-.TP
-\fBresolvconf-path\fP \fIpath-to-resolv.conf\fP
-The path to use for reading the resolv.conf file. The default is /etc/resolv.conf
-.TP
-\fBtimeout\fP \fIseconds\fP
-The number of seconds (with a resolution of milliseconds) each name server is given to respond
-to a query on the first try.
+.It \fBresolvconf-path\fP \fIpath-to-resolv.conf\fP
+The path to use for reading the resolv.conf file.
+The default is /etc/resolv.conf
+.It \fBtimeout\fP \fIseconds\fP
+The number of seconds (with a resolution of milliseconds) each name server is
+given to respond to a query on the first try.
 (After the first try, the timeout algorithm becomes more complicated,
-but scales linearly with the value of timeout.) The default is five seconds.
-.TP
-\fBtries\fP \fItries\fP
-The number of tries the resolver will try contacting each name server before giving up.
+but scales linearly with the value of timeout.)
+The default is five seconds.
+.It \fBtries\fP \fItries\fP
+The number of tries the resolver will try contacting each name server before
+giving up.
 The default is four tries.
-.TP
-\fBndots\fP \fIndots\fP
-The number of dots which must be present in a domain name for it to be queried
-for "as is" prior to querying for it with the default domain extensions appended.
-The default value is 1 unless set otherwise by resolv.conf or the RES_OPTIONS environment variable.
-.TP
-\fBrotate\fP \fItrue|false\fP
-If true perform round-robin selection of the nameservers configured for each resolution,
-if false always use the list of nameservers in the same order.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBndots\fP \fIndots\fP
+The number of dots which must be present in a domain name for it to be
+queried for "as is" prior to querying for it with the default domain
+extensions appended.
+The default value is 1 unless set otherwise by resolv.conf or the RES_OPTIONS
+environment variable.
+.It \fBrotate\fP \fItrue|false\fP
+If true perform round-robin selection of the nameservers configured for
+each resolution, if false always use the list of nameservers in the same order.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-
-.TP
-\fBquery\fP \fIquery\fP
-.RS
-.TP
-\fBclass\fP \fIIN|CHAOS|HS|ANY\fP
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBquery\fP \fIquery\fP
+.Bl -tag -width Ds
+.It \fBclass\fP \fIIN|CHAOS|HS|ANY\fP
 IN CHAOS HS ANY
-.TP
-\fBtype\fP \fIA|AAAA|NS|MX|...\fP
-A NS MD MF CNAME SOA MB MG MR NULL WKS PTR HINFO MINFO MX TXT RP AFSDB X25 ISDN RT NSAP NSAP_PTR SIG KEY PX GPOS AAAA LOC SRV AXFR MAILB MAILA NAPTR DS SSHFP RRSIG NSEC DNSKEY CAA URI ANY
-.TP
-\fBconvert-ptr\fP \fItrue|false\fP
-.TP
-\fBconvert-ptr-bit-string\fP \fItrue|false\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-.TP
-\fBvalidate\fP \fIexpression\fP
-.RS
-.TP
-\fBresponse.id\fP
-.TP
-\fBresponse.flags.qr\fP
-.TP
-\fBresponse.flags.aa\fP
-.TP
-\fBresponse.flags.tc\fP
-.TP
-\fBresponse.flags.rd\fP
-.TP
-\fBresponse.flags.ra\fP
-.TP
-\fBresponse.rtime\fP
-.TP
-\fBresponse.rcode\fP
-.TP
-\fBresponse.opcode\fP
-.TP
-\fBresponse.query.length\fP
-.RS
-.TP
-\fBname\fP
-.TP
-\fBtype\fP
-.TP
-\fBclass\fP
-.RE
-.TP
-\fBresponse.answer.length\fP
-.TP
-\fBresponse.authority.lenth\fP
-.TP
-\fBresponse.additional.length\fP
-.RS
-.TP
-\fBname\fP
-.TP
-\fBtype\fP
-.TP
-\fBclass\fP
-.TP
-\fBttl\fP
-.TP
-\fBcname.name\fP
-.TP
-\fBmb.name\fP
-.TP
-\fBmd.name\fP
-.TP
-\fBmf.name\fP
-.TP
-\fBmg.name\fP
-.TP
-\fBmr.name\fP
-.TP
-\fBns.name\fP
-.TP
-\fBptr.name\fP
-.TP
-\fBhinfo.hardware\fP
-.TP
-\fBhinfo.os\fP
-.TP
-\fBminfo.mailbox\fP
-.TP
-\fBminfo.error_mailbox\fP
-.TP
-\fBmx.priority\fP
-.TP
-\fBmx.mailserver\fP
-.TP
-\fBsoa.master\fP
-.TP
-\fBsoa.responsible\fP
-.TP
-\fBsoa.serial\fP
-.TP
-\fBsoa.refresh_interval\fP
-.TP
-\fBsoa.retry_interval\fP
-.TP
-\fBsoa.expire\fP
-.TP
-\fBsoa.negative_caching_ttl\fP
-.TP
-\fBtxt.\fP
-.TP
-\fBcaa.\fP
-.TP
-\fBa.address\fP
-.TP
-\fBaaaa.address\fP
-.TP
-\fBsrv.priority\fP
-.TP
-\fBsrv.weight\fP
-.TP
-\fBsrv.port\fP
-.TP
-\fBsrv.target\fP
-.TP
-\fBuri.priority\fP
-.TP
-\fBuri.weight\fP
-.TP
-\fBuri.target\fP
-.TP
-\fBnaptr.order\fP
-.TP
-\fBnaptr.preference\fP
-.TP
-\fBnaptr.flags\fP
-.TP
-\fBnaptr.service\fP
-.TP
-\fBnaptr.regex\fP
-.TP
-\fBnaptr.replacement\fP
-.RE
-.RE
-.RE
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBtype\fP \fIA|AAAA|NS|MX|...\fP
+A NS MD MF CNAME SOA MB MG MR NULL WKS PTR HINFO MINFO MX TXT RP AFSDB X25
+ISDN RT NSAP NSAP_PTR SIG KEY PX GPOS AAAA LOC SRV AXFR MAILB MAILA NAPTR
+DS SSHFP RRSIG NSEC DNSKEY CAA URI ANY
+.It \fBconvert-ptr\fP \fItrue|false\fP
+.It \fBconvert-ptr-bit-string\fP \fItrue|false\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBvalidate\fP \fIexpression\fP
+.Bl -tag -width Ds
+.It \fBresponse.id\fP
+.It \fBresponse.flags.qr\fP
+.It \fBresponse.flags.aa\fP
+.It \fBresponse.flags.tc\fP
+.It \fBresponse.flags.rd\fP
+.It \fBresponse.flags.ra\fP
+.It \fBresponse.rtime\fP
+.It \fBresponse.rcode\fP
+.It \fBresponse.opcode\fP
+.It \fBresponse.query.length\fP
+.Bl -tag -width Ds
+.It \fBname\fP
+.It \fBtype\fP
+.It \fBclass\fP
+.El
+.It \fBresponse.answer.length\fP
+.It \fBresponse.authority.lenth\fP
+.It \fBresponse.additional.length\fP
+.Bl -tag -width Ds
+.It \fBname\fP
+.It \fBtype\fP
+.It \fBclass\fP
+.It \fBttl\fP
+.It \fBcname.name\fP
+.It \fBmb.name\fP
+.It \fBmd.name\fP
+.It \fBmf.name\fP
+.It \fBmg.name\fP
+.It \fBmr.name\fP
+.It \fBns.name\fP
+.It \fBptr.name\fP
+.It \fBhinfo.hardware\fP
+.It \fBhinfo.os\fP
+.It \fBminfo.mailbox\fP
+.It \fBminfo.error_mailbox\fP
+.It \fBmx.priority\fP
+.It \fBmx.mailserver\fP
+.It \fBsoa.master\fP
+.It \fBsoa.responsible\fP
+.It \fBsoa.serial\fP
+.It \fBsoa.refresh_interval\fP
+.It \fBsoa.retry_interval\fP
+.It \fBsoa.expire\fP
+.It \fBsoa.negative_caching_ttl\fP
+.It \fBtxt.\fP
+.It \fBcaa.\fP
+.It \fBa.address\fP
+.It \fBaaaa.address\fP
+.It \fBsrv.priority\fP
+.It \fBsrv.weight\fP
+.It \fBsrv.port\fP
+.It \fBsrv.target\fP
+.It \fBuri.priority\fP
+.It \fBuri.weight\fP
+.It \fBuri.target\fP
+.It \fBnaptr.order\fP
+.It \fBnaptr.preference\fP
+.It \fBnaptr.flags\fP
+.It \fBnaptr.service\fP
+.It \fBnaptr.regex\fP
+.It \fBnaptr.replacement\fP
+.El
+.El
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

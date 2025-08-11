@@ -1,28 +1,32 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-hba 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd hba man page"
-.SH NAME
-ncollectd-hba \- Documentation of ncollectd's hba plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-HBA 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-hba
+.Nd Documentation of ncollectd's hba plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP hba
-.br
 \fBplugin\fP hba {
     \fBhba\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
     \fBrefresh-interval\fP \fIseconds\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBhba\fP plugin collect  information about the usage of host bus adapters.
 The plugin only collect data from Fibre Channel adapters.
-.PP
+.Pp
 The following configuration options are available:
-.TP
-\fBhba\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+.Bl -tag -width Ds
+.It \fBhba\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
 Select the hba \fIdevice\fP.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBrefresh-interval\fP \fIseconds\fP
-Interval to refresh the hba list from the ODM. The default value is 300 seconds.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.It \fBrefresh-interval\fP \fIseconds\fP
+Interval to refresh the hba list from the ODM.
+The default value is 300 seconds.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

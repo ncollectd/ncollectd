@@ -1,29 +1,32 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nfsd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nfsd man page"
-.SH NAME
-ncollectd-nfsd \- Documentation of ncollectd's \*nfsd plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NFSD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nfsd
+.Nd Documentation of ncollectd's nfsd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nfsd
-.br
 \fBplugin\fP nfsd {
     \fBreport-v2\fP \fItrue|false\fP
     \fBreport-v3\fP \fItrue|false\fP
     \fBreport-v4\fP \fItrue|false\fP
-.br
 }
-.SH DESCRIPTION
-The \fBnfsd\fP plugin collects information about the server statistics of the Network
-File System (NFS). It counts the number of procedure calls for each procedure,
+.Ed
+.Sh DESCRIPTION
+The \fBnfsd\fP plugin collects information about the server statistics
+of the Network File System (NFS).
+It counts the number of procedure calls for each procedure,
 grouped by version.
-.TP
-\fBreport-v2\fP \fItrue|false\fP
+.Bl -tag -width Ds
+.It \fBreport-v2\fP \fItrue|false\fP
 Collect NFS v2 procedure calls metrics.
-.TP
-\fBreport-v3\fP \fItrue|false\fP
+.It \fBreport-v3\fP \fItrue|false\fP
 Collect NFS v3 procedure calls metrics.
-.TP
-\fBreport-v4\fP \fItrue|false\fP
+.It \fBreport-v4\fP \fItrue|false\fP
 Collect NFS v4 procedure calls metrics.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

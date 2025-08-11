@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-jolokia 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd jolokia man page"
-.SH NAME
-ncollectd-jolokia \- Documentation of ncollectd's jolokia plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-JOLOKIA 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-jolokia
+.Nd Documentation of ncollectd's jolokia plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP jolokia
-.br
 \fBplugin\fP jolokia {
     \fBinstance\fP \fIname\fP {
         \fBurl\fP \fIurl\fP
@@ -37,105 +40,97 @@ ncollectd-jolokia \- Documentation of ncollectd's jolokia plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBjolokia\fP plugin collects values from MBeanServevr - servlet engines equipped
-with the jolokia (L<https://jolokia.org>) MBean. It sends a pre-configured
-JSON-Postbody to the servlet via HTTP commanding the jolokia Bean to reply with
-a singe JSON equipped with all JMX counters requested.
+.Ed
+.Sh DESCRIPTION
+The \fBjolokia\fP plugin collects values from MBeanServevr - servlet engines
+equipped with the jolokia (
+.Lk https://jolokia.org
+) MBean.
+It sends a pre-configured JSON-Postbody to the servlet via HTTP commanding
+the jolokia Bean to reply with a singe JSON equipped with all JMX counters
+requested.
 By reducing TCP roundtrips in comparison to conventional JMX clients that
-query one value via tcp at a time, it can return hundrets of values in one roundtrip.
+query one value via tcp at a time, it can return hundrets of values in one
+roundtrip.
 Moreof - no java binding is required in collectd to do so.
-
-.TP
-\fBurl\fP \fIurl\fP
-.TP
-\fBuser\fP \fIuser\fP
+.Bl -tag -width Ds
+.It \fBurl\fP \fIurl\fP
+.It \fBuser\fP \fIuser\fP
 Username to use if authorization is required to read the page.
-.TP
-\fBuser-env\fP \fIenv-name\fP
+.It \fBuser-env\fP \fIenv-name\fP
 Get the username to use if authorization is required to read the page from the
 environment variable \fIenv-name\fP
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBpassword\fP \fIpassword\fP
 Password to use if authorization is required to read the page.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
+.It \fBpassword-env\fP \fIenv-name\fP
 Get the Password to use if authorization is required to read the page from the
 environment variable \fIenv-name\fP
-.TP
-\fBverify-peer\fP \fItrue|false\fP
-Enable or disable peer SSL certificate verification. See
-.UR http://curl.haxx.se/docs/sslcerts.html
-.UE
-for details. Enabled by default.
-.TP
-\fBverify-host\fP \fItrue|false\fP
-Enable or disable peer host name verification. If enabled, the plugin checks if
-the \f(CWCommon Name\fP or a \f(CWSubject Alternate Name\fP field of the SSL certificate
-matches the host name provided by the \fBurl\fP option. If this identity check
-fails, the connection is aborted. Obviously, only works when connecting to a
-SSL enabled server. Enabled by default.
-.TP
-\fBca-cert\fP \fI/path/to/ca\fP
-File that holds one or more SSL certificates. If you want to use HTTPS you will
-possibly need this option. What CA certificates come bundled with \fBlibcurl\fP
+.It \fBverify-peer\fP \fItrue|false\fP
+Enable or disable peer SSL certificate verification.
+See
+.Lk http://curl.haxx.se/docs/sslcerts.html
+for details.
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification.
+If enabled, the plugin checks if the \f(CWCommon Name\fP or a
+\f(CWSubject Alternate Name\fP field of the SSL certificate matches the host
+name provided by the \fBurl\fP option.
+If this identity check fails, the connection is aborted.
+Obviously, only works when connecting to a SSL enabled server.
+Enabled by default.
+.It \fBca-cert\fP \fI/path/to/ca\fP
+File that holds one or more SSL certificates.
+If you want to use HTTPS you will possibly need this option.
+What CA certificates come bundled with \fBlibcurl\fP
 and are checked by default depends on the distribution you use.
-.TP
-\fBheader\fP \fIheader\fP
-A HTTP header to add to the request. Multiple headers are added if this option
+.It \fBheader\fP \fIheader\fP
+A HTTP header to add to the request.
+Multiple headers are added if this option
 is specified more than once.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for HTTP requests to \fBurl\fP, in
-seconds. By default, the configured \fBinterval\fP is used to set the timeout.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear multiple times.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests
+to \fBurl\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-URL. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+URL.
+By default the global \fBinterval\fP setting will be used.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metric name.
-.TP
-\fBmbean\fP \fIname\fP
-One B<BeanName> block configures the translation of the gauges of one bean
-to their respective collectd names, where BeanName sets the main name.
-.RS
-.TP
-\fBpath\fP \fIpath\fP
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBmbean\fP \fIname\fP
+One \fBmbean\fP block configures the translation of the gauges of one bean
+to their respective collectd names, where \fIname\fP sets the main name.
+.Bl -tag -width Ds
+.It \fBpath\fP \fIpath\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metric name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear multiple times.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
-.TP
-\fBattribute\fP \fIname\fP
-A bean can contain several attributes. Each one can be matched by a attribute block or be ignored.
-.RS
-.TP
-\fBmetric\fP \fImetric\fP
-.TP
-\fBtype\fP \fIgauge|unknow|counter|info\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear multiple times.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
-.TP
-\fBhelp\fP \fIhelp\fP
-.RE
-.RE
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times.
+.It \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
+.It \fBattribute\fP \fIname\fP
+A bean can contain several attributes.
+Each one can be matched by a attribute block or be ignored.
+.Bl -tag -width Ds
+.It \fBmetric\fP \fImetric\fP
+.It \fBtype\fP \fIgauge|unknow|counter|info\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times.
+.It \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
+.It \fBhelp\fP \fIhelp\fP
+.El
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

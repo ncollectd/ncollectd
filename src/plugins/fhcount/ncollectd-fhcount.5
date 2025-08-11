@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-fhcount 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd fhcount man page"
-.SH NAME
-ncollectd-fhcount \- Documentation of ncollectd's fhcount plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-FHCOUNT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-fhcount
+.Nd Documentation of ncollectd's fhcount plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP fhcount
-.SH DESCRIPTION
-The \fBfhcount\fP plugin provides statistics about used, unused and total number of
-file handles on Linux.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP fhcount
+.Ed
+.Sh DESCRIPTION
+The \fBfhcount\fP plugin provides statistics about used, unused and total
+number of file handles on Linux.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

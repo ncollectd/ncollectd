@@ -1,78 +1,56 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-xfs 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd xfs man page"
-.SH NAME
-ncollectd-xfs \- Documentation of ncollectd's xfs plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-XFS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-xfs
+.Nd Documentation of ncollectd's xfs plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP xfs
-.br
 \fBplugin\fP xfs {
     \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
     \fBcollect\fP \fIflags\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBxfs\fP plugin collect metrics from xfs filesystems.
-.PP
+.Pp
 The following configuration options are available:
-.TP
-\fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+.Bl -tag -width Ds
+.It \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
 Select the filesystem based on the devicename.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBcollect\fP \fIflags\fP
-.RS
-.TP
-\fIextentalloc\fP
-.TP
-\fIabt\fP
-.TP
-\fIblkmap\fP
-.TP
-\fIbmbt\fP
-.TP
-\fIdir\fP
-.TP
-\fItrans\fP
-.TP
-\fIig\fP
-.TP
-\fIlog\fP
-.TP
-\fIpushail\fP
-.TP
-\fIsstrat\fP
-.TP
-\fIrw\fP
-.TP
-\fIattr\fP
-.TP
-\fIicluster\fP
-.TP
-\fIvnodes\fP
-.TP
-\fIbuf\fP
-.TP
-\fIabtb2\fP
-.TP
-\fIabtc2\fP
-.TP
-\fIbmbt2\fP
-.TP
-\fIibt2\fP
-.TP
-\fIfibt2\fP
-.TP
-\fIrmapbt\fP
-.TP
-\fIrefcntbt\fP
-.TP
-\fIqm\fP
-.TP
-\fIxpc\fP
-.TP
-\fIdefer_relog\fP
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Xr ncollectd.conf 5 .
+.It \fBcollect\fP \fIflags\fP
+.Bl -tag -width Ds
+.It \fIextentalloc\fP
+.It \fIabt\fP
+.It \fIblkmap\fP
+.It \fIbmbt\fP
+.It \fIdir\fP
+.It \fItrans\fP
+.It \fIig\fP
+.It \fIlog\fP
+.It \fIpushail\fP
+.It \fIsstrat\fP
+.It \fIrw\fP
+.It \fIattr\fP
+.It \fIicluster\fP
+.It \fIvnodes\fP
+.It \fIbuf\fP
+.It \fIabtb2\fP
+.It \fIabtc2\fP
+.It \fIbmbt2\fP
+.It \fIibt2\fP
+.It \fIfibt2\fP
+.It \fIrmapbt\fP
+.It \fIrefcntbt\fP
+.It \fIqm\fP
+.It \fIxpc\fP
+.It \fIdefer_relog\fP
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

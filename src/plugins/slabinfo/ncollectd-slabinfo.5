@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-slabinfo 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd slabinfo man page"
-.SH NAME
-ncollectd-slabinfo \- Documentation of ncollectd's slabinfo plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SLABINFO 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-slabinfo
+.Nd Documentation of ncollectd's slabinfo plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP slabinfo
-.SH DESCRIPTION
-The \fBslabinfo\fP plugin collect information about kernel caches reading the file
-\f(CW/proc/slabinfo\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP slabinfo
+.Ed
+.Sh DESCRIPTION
+The \fBslabinfo\fP plugin collect information about kernel caches reading the
+file \f(CW/proc/slabinfo\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

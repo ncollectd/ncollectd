@@ -1,11 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-zram 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd zram man page"
-.SH NAME
-ncollectd-zram \- Documentation of ncollectd's zram plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ZRAM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-zram
+.Nd Documentation of ncollectd's zram plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP zram
-.SH DESCRIPTION
-The \fBzram\fP plugin report metrics from the compressed block device in RAM (zram).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP zram
+.Ed
+.Sh DESCRIPTION
+The \fBzram\fP plugin report metrics from the compressed block device
+in RAM (zram).
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

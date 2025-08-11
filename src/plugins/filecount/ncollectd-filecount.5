@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-filecount 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd filecount man page"
-.SH NAME
-ncollectd-filecount \- Documentation of ncollectd's filecount plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-FILECOUNT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-filecount
+.Nd Documentation of ncollectd's filecount plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP filecount
-.br
 \fBplugin\fP filecount {
     \fBdirectory\fP \fIpath\fP {
         \fBmetric-files-size\fP \fImetric\fP
@@ -20,152 +23,128 @@ ncollectd-filecount \- Documentation of ncollectd's filecount plugin
         \fBinclude-hidden\fP \fItrue|false\fP
         \fBregular-only\fP \fItrue|false\fP
     }
-.br
 }
-.SH DESCRIPTION
-The \fBfilecount\fP plugin counts the number of files in a certain directory (and
-its subdirectories) and their combined size.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBfilecount\fP plugin counts the number of files in a certain directory
+(and its subdirectories) and their combined size.
+.Pp
 The configuration consists of one or more \fBdirectory\fP blocks,
-each of which specifies a directory in which to count the files. Within those
-blocks, the following options are recognized:
-.PP
-.TP
-\fBmetric-files-size\fP \fImetric\fP
+each of which specifies a directory in which to count the files.
+Within those blocks, the following options are recognized:
+.Bl -tag -width Ds
+.It \fBmetric-files-size\fP \fImetric\fP
 Use \fImetric\fP as the metric name to dispatch files combined size, the type of
 the metric is \fBgauge\fP.
-.TP
-\fBhelp-files-size\fP \fIhelp\fP
+.It \fBhelp-files-size\fP \fIhelp\fP
 Set the metric help for \fBmetric-files-size\fP.
-.TP
-\fBmetric-files-count\fP \fImetric\fP
+.It \fBmetric-files-count\fP \fImetric\fP
 Use \fImetric\fP as the metric name to dispatch number of files, the type of the
 metric is \fBgauge\fP.
-.TP
-\fBhelp-files-count\fP \fIhelp\fP
+.It \fBhelp-files-count\fP \fIhelp\fP
 Set the metric help for \fBmetric-files-count\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBexpr\fP \fIexpression\fP
+.It \fBexpr\fP \fIexpression\fP
 Evaluate expression with the following variables:
-.RS
-.TP
-\fBlinks\fP
+.Bl -tag -width Ds
+.It \fBlinks\fP
 The number of hard links to the file.
-.TP
-\fBtype\fP
+.It \fBtype\fP
 The file is of type:
-.RS
-.TP
-\fBb\fP
+.Bl -tag -width Ds
+.It \fBb\fP
 block (buffered) special
-.TP
-\fBc\fP
+.It \fBc\fP
 character (unbuffered) special
-.TP
-\fBd\fP
+.It \fBd\fP
 directory
-.TP
-\fBp\fP
+.It \fBp\fP
 named pipe (FIFO)
-.TP
-\fBf\fP
+.It \fBf\fP
 regular file
-.TP
-\fBl\fP
+.It \fBl\fP
 symbolic  link
-.TP
-\fBs\fP
+.It \fBs\fP
 socket
-.RE
-.TP
-\fBmode\fP
+.El
+.It \fBmode\fP
 File's permission  bits.
-.TP
-\fBpath\fP
+.It \fBpath\fP
 Full path file name.
-.TP
-\fBname\fP
+.It \fBname\fP
 Base of file name, the path with the leading directories are removed.
-.TP
-\fBinode\fP
+.It \fBinode\fP
 File's inode number.
-.TP
-\fBsize\fP
+.It \fBsize\fP
 Size in bytes of the file.
-.TP
-\fBuid\fP
+.It \fBuid\fP
 User Id of the owner of the file.
-.TP
-\fBgid\fP
+.It \fBgid\fP
 Group Id of the owner of the file.
-.TP
-\fBatime\fP
+.It \fBatime\fP
 The time of the last access of file data.
-.TP
-\fBmtime\fP
+.It \fBmtime\fP
 The time of last modification of file data.
-.TP
-\fBctime\fP
+.It \fBctime\fP
 The file's last status change timestamp (time of last change to the inode).
-.TP
-\fBnow\fP
+.It \fBnow\fP
 Current timestamp.
-.TP
-\fBminor\fP
+.It \fBminor\fP
 Minor number of the device on which this file resides.
-.TP
-\fBmajor\fP
+.It \fBmajor\fP
 Major number of the device on which this file resides.
-.RE
-.TP
-\fBname\fP \fIpattern\fP
+.El
+.It \fBname\fP \fIpattern\fP
 Only count files that match \fIpattern\fP, where \fIpattern\fP is a shell-like
 wildcard as understood by
-.BR fnmatch (3).
+.Xr fnmatch 3 .
 Only the \fBfilename\fP is checked against the pattern, not the entire path.
-In case this makes it easier for you: This option has been named after the \fB-name\fP
-parameter to
-.BR find (1).
-.TP
-\fBmtime\fP \fIage\fP
-Count only files of a specific age: If \fIage\fP is greater than zero, only files
-that haven't been touched in the last \fIage\fP seconds are counted. If \fIage\fP is
-a negative number, this is inversed. For example, if \fB-60\fP is specified, only
-files that have been modified in the last minute will be counted.
-
+In case this makes it easier for you: This option has been named after the
+\fB-name\fP parameter to
+.Xr find 1 .
+.It \fBmtime\fP \fIage\fP
+Count only files of a specific age: If \fIage\fP is greater than zero, only
+files that haven't been touched in the last \fIage\fP seconds are counted.
+If \fIage\fP is a negative number, this is inversed.
+For example, if \fB-60\fP is specified, only files that have been modified
+in the last minute will be counted.
+.Pp
 The number can also be followed by a "multiplier" to easily specify a larger
-timespan. When given in this notation, the argument must in quoted, i. e.
-must be passed as string. So the \fB-60\fP could also be written as \fB"-1m"\fP (one
-minute). Valid multipliers are \fBs\fP (second), \fBm\fP (minute), \fBh\fP (hour),
-\fBd\fP (day), \fBw\fP (week), and \fBy\fP (year). There is no "month" multiplier.
+timespan.
+When given in this notation, the argument must in quoted, i. e.  must be
+passed as string.
+So the \fB-60\fP could also be written as \fB"-1m"\fP (one minute).
+Valid multipliers are \fBs\fP (second), \fBm\fP (minute), \fBh\fP (hour),
+\fBd\fP (day), \fBw\fP (week), and \fBy\fP (year).
+There is no "month" multiplier.
 You can also specify fractional numbers, e.g. \fB"0.5d"\fP is identical to
 \fB"12h"\fP.
-.TP
-\fBsize\fP \fIsize\fP
-Count only files of a specific size. When \fIsize\fP is a positive number, only
-files that are at least this big are counted. If \fIsize\fP is a negative number,
-this is inversed, i. e. only files smaller than the absolute value of
-\fIsize\fP are counted.
-
-As with the \fBmTime\fP option, a "multiplier" may be added. For a detailed
-description see above. Valid multipliers here are \fBb\fP (byte), \fBk\fP (kilobyte),
-\fBm\fP (megabyte), \fBg\fP (gigabyte), \fBt\fP (terabyte), and \fBp\fP (petabyte).
+.It \fBsize\fP \fIsize\fP
+Count only files of a specific size.
+When \fIsize\fP is a positive number, only files that are at least this big
+are counted.
+If \fIsize\fP is a negative number, this is inversed, i. e. only files smaller
+than the absolute value of \fIsize\fP are counted.
+.Pp
+As with the \fBmTime\fP option, a "multiplier" may be added.
+For a detailed description see above.
+Valid multipliers here are \fBb\fP (byte), \fBk\fP (kilobyte),
+\fBm\fP (megabyte), \fBg\fP (gigabyte), \fBt\fP (terabyte),
+and \fBp\fP (petabyte).
 Please note that there are 1000 bytes in a kilobyte, not 1024.
-.TP
-\fBrecursive\fP \fItrue|false\fP
-Controls whether or not to recurse into subdirectories. Enabled by default.
-.TP
-\fBinclude-hidden\fP \fItrue|false\fP
+.It \fBrecursive\fP \fItrue|false\fP
+Controls whether or not to recurse into subdirectories.
+Enabled by default.
+.It \fBinclude-hidden\fP \fItrue|false\fP
 Controls whether or not to include "hidden" files and directories in the count.
 "Hidden" files and directories are those, whose name begins with a dot.
-Defaults to \fIfalse\fP, i.e. by default hidden files and directories are ignored.
-.TP
-\fBregular-only\fP \fItrue|false\fP
+Defaults to \fIfalse\fP, i.e. by default hidden files and directories
+are ignored.
+.It \fBregular-only\fP \fItrue|false\fP
 Controls whether or not to include only regular files in the count.
 Defaults to \fItrue\fP, i.e. by default non regular files are ignored.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

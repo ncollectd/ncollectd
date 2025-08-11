@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-drbd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd drbd man page"
-.SH NAME
-ncollectd-drbd \- Documentation of ncollectd's drbd plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DRBD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-drbd
+.Nd Documentation of ncollectd's drbd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP drbd
-.SH DESCRIPTION
-The \fBdrbd\fP plugin collect statistics from the Distributed Replicated Block Device (DRBD)
-reading the file \fI/proc/drbd\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP drbd
+.Ed
+.Sh DESCRIPTION
+The \fBdrbd\fP plugin collect statistics from the Distributed Replicated
+Block Device (DRBD) reading the file \fI/proc/drbd\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

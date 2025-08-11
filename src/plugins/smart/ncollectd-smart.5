@@ -1,48 +1,52 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-smart 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd smart man page"
-.SH NAME
-ncollectd-smart \- Documentation of ncollectd's smart plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SMART 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-smart
+.Nd Documentation of ncollectd's smart plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP smart
-.br
 \fBplugin\fP smart {
     \fBdisk\fP [\fIincl|include|excl|exclude\fP] \fBdisk-name\fP
     \fBserial\fP [\fIincl|include|excl|exclude\fP] \fBserial-number\fP
     \fBignore-sleep-mode\fP \fItrue|false\fP
 }
-.br
-}
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBsmart\fP plugin collects SMART information from physical
-disks. Values collectd include temperature, power cycle count, poweron
-time and bad sectors. Also, all SMART attributes are collected along
-with the normalized current value, the worst value, the threshold and
-a human readable value. The plugin can also collect SMART attributes
-for NVMe disks (present in accordance with NVMe 1.4 spec) and Additional
+disks.
+Values collectd include temperature, power cycle count, poweron
+time and bad sectors.
+Also, all SMART attributes are collected along with the normalized current
+value, the worst value, the threshold and a human readable value.
+The plugin can also collect SMART attributes for NVMe disks
+(present in accordance with NVMe 1.4 spec) and additional
 SMART Attributes from Intel® NVMe disks.
-.PP
+.Pp
 Using the following two options you can ignore some disks or configure the
 collection only of specific disks.
-.PP
-.TP
-\fBdisk\fP [\fIincl|include|excl|exclude\fP] \fBdisk-name\fP
+.Bl -tag -width Ds
+.It \fBdisk\fP [\fIincl|include|excl|exclude\fP] \fBdisk-name\fP
 Select the disk \fIdisk-name\fP to collect metrics.
 If no \fBdisk\fP option is configured, all disks are collected.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBserial\fP [\fIincl|include|excl|exclude\fP] \fBserial-number\fP
+.Xr ncollectd.conf 5 .
+.It \fBserial\fP [\fIincl|include|excl|exclude\fP] \fBserial-number\fP
 Select the disk serial number \fIserial-name\fP to collect metrics.
 If no \fBserial\fP option is configured, all disks are collected.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
-.BR ncollectd.conf (5).
-.TP
-\fBignore-sleep-mode\fP \fItrue|false\fP
-Normally, the \fBsmart\fP plugin will ignore disks that are reported to be asleep.
-This option disables the sleep mode check and allows the plugin to collect data
-from these disks anyway. This is useful in cases where libatasmart mistakenly
-reports disks as asleep because it has not been updated to incorporate support
+.Xr ncollectd.conf 5 .
+.It \fBignore-sleep-mode\fP \fItrue|false\fP
+Normally, the \fBsmart\fP plugin will ignore disks that are reported
+to be asleep.
+This option disables the sleep mode check and allows the plugin to collect
+data from these disks anyway.
+This is useful in cases where libatasmart mistakenly reports disks as asleep
+because it has not been updated to incorporate support
 for newer idle states in the ATA spec.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-memcached 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd memcached man page"
-.SH NAME
-ncollectd-memcached \- Documentation of ncollectd's memcached plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MEMCACHED 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-memcached
+.Nd Documentation of ncollectd's memcached plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP memcached
-.br
 \fBplugin\fP memcached {
     \fBinstance\fP \fIname\fP {
         \fBsocket\fP \fI/path/to/socket\fP
@@ -16,37 +19,37 @@ ncollectd-memcached \- Documentation of ncollectd's memcached plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBmemcached\fP plugin connects to a memcached server and queries statistics
-about cache utilization, memory and bandwidth used.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBmemcached\fP plugin connects to a memcached server and queries
+statistics about cache utilization, memory and bandwidth used.
+.Pp
 The plugin configuration consists of one or more \fBinstance\fP blocks which
-specify one \fImemcached\fP connection each. Within the \fBinstance\fP blocks, the
-following options are allowed:
-.PP
-.TP
-\fBsocket\fP \fI/path/to/socket\fP
-Connect to \fImemcached\fP using the UNIX domain socket at \fI/path/to/socket\fP. If this
-setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
-.TP
-\fBhost\fP \fIhostname\fP
-Hostname or IP to connect to. Defaults to \fB127.0.0.1\fP.
-.TP
-\fBport\fP \fIport\fP
-TCP port to connect to. Defaults to \fB11211\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+specify one \fImemcached\fP connection each.
+Within the \fBinstance\fP blocks, the following options are allowed:
+.Bl -tag -width Ds
+.It \fBsocket\fP \fI/path/to/socket\fP
+Connect to \fImemcached\fP using the UNIX domain socket
+at \fI/path/to/socket\fP.
+If this setting is given, the \fBhost\fP and \fBport\fP settings are ignored.
+.It \fBhost\fP \fIhostname\fP
+Hostname or IP to connect to.
+Defaults to \fB127.0.0.1\fP.
+.It \fBport\fP \fIport\fP
+TCP port to connect to.
+Defaults to \fB11211\fP.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
 By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

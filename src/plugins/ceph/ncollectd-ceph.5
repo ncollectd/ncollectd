@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-ceph 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ceph man page"
-.SH NAME
-ncollectd-ceph \- Documentation of ncollectd's ceph plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CEPH 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-ceph
+.Nd Documentation of ncollectd's ceph plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP ceph
-.br
 \fBplugin\fP ceph {
     \fBdaemon\fP \fIdeamon-name\fP {
         \fBsocket-path\fP \fIadmin-socket\fP
@@ -15,52 +18,50 @@ ncollectd-ceph \- Documentation of ncollectd's ceph plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBceph\fP plugin collects values retrieved from ceph daemon admin sockets.
-.PP
+.Pp
 A separate \fBdaemon\fP block must be configured for each ceph daemon to be
-monitored. The following example will read daemon statistics from four
-separate ceph daemons running on the same device (two OSDs, one MON, one MDS) :
-.EX
-
-    plugin ceph {
-        daemon "osd.0" {
-            socket-path "/var/run/ceph/ceph-osd.0.asok"
-        }
-        daemon "osd.1" {
-            socket-path "/var/run/ceph/ceph-osd.1.asok"
-        }
-        daemon "mon.a" {
-            socket-path "/var/run/ceph/ceph-mon.ceph1.asok"
-        }
-        daemon "mds.a" {
-            socket-path "/var/run/ceph/ceph-mds.ceph1.asok"
-        }
+monitored.
+The following example will read daemon statistics from four separate ceph
+daemons running on the same device (two OSDs, one MON, one MDS):
+.Bd -literal
+plugin ceph {
+    daemon "osd.0" {
+        socket-path "/var/run/ceph/ceph-osd.0.asok"
     }
-
-.EE
-.PP
+    daemon "osd.1" {
+        socket-path "/var/run/ceph/ceph-osd.1.asok"
+    }
+    daemon "mon.a" {
+        socket-path "/var/run/ceph/ceph-mon.ceph1.asok"
+    }
+    daemon "mds.a" {
+        socket-path "/var/run/ceph/ceph-mds.ceph1.asok"
+    }
+}
+.Ed
+.Pp
 Each \fBdaemon\fP block must have a string argument.
 A \fBsocket-path\fP is also required for each \fBdaemon\fP block:
-.PP
-.TP
-\fBsocket-path\fP \fIadmin-socket\fP
+.Bl -tag -width Ds
+.It \fBsocket-path\fP \fIadmin-socket\fP
 Specifies the path to the UNIX admin socket of the ceph daemon.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBtimeout\fP \fIseconds\fP
-Set the timeout to connect to the admin socket. Default to \fB1\fP.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this daemon.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBtimeout\fP \fIseconds\fP
+Set the timeout to connect to the admin socket.
+Default to \fB1\fP.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this daemon.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

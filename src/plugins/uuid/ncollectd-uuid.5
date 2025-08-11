@@ -1,40 +1,45 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-uuid 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd uuid man page"
-.SH NAME
-ncollectd-uuid \- Documentation of ncollectd's uuid plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-UUID 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-uuid
+.Nd Documentation of ncollectd's uuid plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP uuid
-.br
 \fBplugin\fP uuid {
     \fBuuid-file\fP \fIpath\fP
-.br
 }
-.SH DESCRIPTION
-The \fBuuid\fP plugin if loaded, causes the Hostname to be taken from the machine's
-UUID. The UUID is a universally unique designation for the machine, usually
-taken from the machine's BIOS. This is most useful if the machine is running in
-a virtual environment such as Xen, in which case the UUID is preserved across
-shutdowns and migration.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBuuid\fP plugin if loaded, causes the Hostname to be taken from
+the machine's UUID.
+The UUID is a universally unique designation for the machine, usually
+taken from the machine's BIOS.
+This is most useful if the machine is running in a virtual environment
+such as Xen, in which case the UUID is preserved across shutdowns and
+migration.
+.Pp
 The following methods are used to find the machine's UUID, in order:
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 Check \fI/etc/uuid\fP (or \fBuuid-file\fP).
-.IP \(bu 2
+.It
 Check for UUID from HAL (
-.UR http://www.freedesktop.org/wiki/Software/hal
-.UE
+.Lk http://www.freedesktop.org/wiki/Software/hal
 ) if present.
-.IP \(bu 2
+.It
 Check for UUID from Xen hypervisor.
-.IP \(bu 2
+.It
 If no UUID can be found then the hostname is not modified.
-.RE
-.PP
+.El
+.Pp
 The plugin has de following options:
-.TP
-\fBuuid-file\fP \fIpath\fP
+.Bl -tag -width Ds
+.It \fBuuid-file\fP \fIpath\fP
 Take the UUID from the given file (default \fI/etc/uuid\fP).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

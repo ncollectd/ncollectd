@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-proxysql 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd proxysql man page"
-.SH NAME
-ncollectd-proxysql \- Documentation of ncollectd's proxysql plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PROXYSQL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-proxysql
+.Nd Documentation of ncollectd's proxysql plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP proxysql
-.br
 \fBplugin\fP proxysql {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhostname\fP
@@ -26,73 +29,70 @@ ncollectd-proxysql \- Documentation of ncollectd's proxysql plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBproxysql\fP plugin requires \fBmysqlclient\fP to be installed. It connects to
-one or more proxysql server when started and keeps the connection up as long as
-possible. When the connection is interrupted for whatever reason it will try
-to re-connect. The plugin will complain loudly in case anything goes wrong.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBproxysql\fP plugin requires \fBmysqlclient\fP to be installed.
+It connects to one or more proxysql server when started and keeps the
+connection up as long as possible.
+When the connection is interrupted for whatever reason it will try
+to re-connect.
+The plugin will complain loudly in case anything goes wrong.
+.Pp
 The configuration of the \fBproxysql\fP plugin consists of one or more
-\fBinstance\fP blocks. Each block requires one string argument
-as the instance name.
-.TP
-\fBhost\fP \fIhostname\fP
-Hostname of the proxsql server. Defaults to \fBlocalhost\fP.
-.TP
-\fBuser\fP \fIusername\fP
-Username to use when connecting to the proxysql. The user does not have to be
-granted any privileges (which is synonym to granting the \f(CWUSAGE\fP privilege),
-unless you want to collect replication statistics.
-.TP
-\fBuser-env\fP \fIenv-name\fP
-Get the username to use when connecting to the proxysql from the environment
-variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
+Hostname of the proxsql server.
+Defaults to \fBlocalhost\fP.
+.It \fBuser\fP \fIusername\fP
+Username to use when connecting to the proxysql.
+The user does not have to be granted any privileges
+(which is synonym to granting the \f(CWUSAGE\fP privilege), unless you
+want to collect replication statistics.
+.It \fBuser-env\fP \fIenv-name\fP
+Get the username to use when connecting to the proxysql from the
+environment variable \fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
 Password needed to log into the proxysql.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
-Get the password needed to log into the proxysql from the environment variable \fIenv-name\fP.
-.TP
-\fBport\fP \fIport\fP
-TCP-port to connect to. If \fBhost\fP is set to \fBlocalhost\fP (the default), this setting
-has no effect.  See the documentation for the \f(CWproxysql_real_connect\fP function for details.
-.TP
-\fBsocket\fP \fIsocket-path\fP
-Specifies the path to the UNIX domain socket of the proxysql server. This option
-only has any effect, if \fBhost\fP is set to \fBlocalhost\fP (the default).
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password needed to log into the proxysql from the environment
+variable \fIenv-name\fP.
+.It \fBport\fP \fIport\fP
+TCP-port to connect to.
+If \fBhost\fP is set to \fBlocalhost\fP (the default), this setting
+has no effect.
+See the documentation for the \f(CWproxysql_real_connect\fP function
+for details.
+.It \fBsocket\fP \fIsocket-path\fP
+Specifies the path to the UNIX domain socket of the proxysql server.
+This option only has any effect, if \fBhost\fP is set to \fBlocalhost\fP
+(the default).
 Otherwise, use the \fBport\fP option above.
-.TP
-\fBssl-key\fP "\fI/path/to/key.pem\fP"
+.It \fBssl-key\fP "\fI/path/to/key.pem\fP"
 If provided, the X509 key in PEM format.
-.TP
-\fBssl-cert\fP "\fI/path/to/cert.pem\fP"
+.It \fBssl-cert\fP "\fI/path/to/cert.pem\fP"
 If provided, the X509 cert in PEM format.
-.TP
-\fBssl-ca\fP "\fI/path/to/ca.pem\fP"
+.It \fBssl-ca\fP "\fI/path/to/ca.pem\fP"
 If provided, the CA file in PEM format (check OpenSSL docs).
-.TP
-\fBssl-ca-path\fP "\fI/path/to/cas/\fP"
+.It \fBssl-ca-path\fP "\fI/path/to/cas/\fP"
 If provided, the CA directory (check OpenSSL docs).
-.TP
-\fBssl-cipher\fP \fIcyphers\fP
+.It \fBssl-cipher\fP \fIcyphers\fP
 If provided, the SSL cipher to use.
-.TP
-\fBconnect-timeout\fP \fIseconds\fP
+.It \fBconnect-timeout\fP \fIseconds\fP
 Sets the connect timeout for the client.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this proxysql server.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from
+this proxysql server.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

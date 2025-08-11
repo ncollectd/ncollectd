@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-bonding 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd bonding man page"
-.SH NAME
-ncollectd-bonding \- Documentation of ncollectd's \bonding plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-BONDING 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-bonding
+.Nd Documentation of ncollectd's bonding plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP bonding
-.SH DESCRIPTION
-The \fBbonding plugin\fP reports the number of slave interfaces on a bonding device and the
-number of those interfaces that are active.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP bonding
+.Ed
+.Sh DESCRIPTION
+The \fBbonding\fP plugin reports the number of slave interfaces on
+a bonding device and the number of those interfaces that are active.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

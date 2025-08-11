@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-mysql 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd mysql man page"
-.SH NAME
-ncollectd-mysql \- Documentation of ncollectd's mysql plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-MYSQL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-mysql
+.Nd Documentation of ncollectd's mysql plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP mysql
-.br
 \fBplugin\fP mysql {
     \fBquery\fP \fIquery-name\fP {
         \fBstatement\fP \fIsql\fP
@@ -53,288 +56,239 @@ ncollectd-mysql \- Documentation of ncollectd's mysql plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBmysql\fP plugin requires \fBmysqlclient\fP to be installed. It connects to
-one or more databases when started and keeps the connection up as long as
-possible. When the connection is interrupted for whatever reason it will try
-to re-connect. The plugin will complain loudly in case anything goes wrong.
-.TP
-\fBinstance\fP \fIdatabase\fP
-A \fBinstance\fP block defines one connection to a MySQL database. It accepts a
-single argument which specifies the name of the database. None of the other
-options are required. MySQL will use default values as documented in the
+.Ed
+.Sh DESCRIPTION
+The \fBmysql\fP plugin requires \fBmysqlclient\fP to be installed.
+It connects to one or more databases when started and keeps the connection
+up as long as possible.
+When the connection is interrupted for whatever reason it will try
+to re-connect.
+The plugin will complain loudly in case anything goes wrong.
+.Bl -tag -width Ds
+.It \fBinstance\fP \fIname\fP
+A \fBinstance\fP block defines one connection to a MySQL database.
+It accepts a single argument which specifies the name of the database.
+None of the other options are required.
+MySQL will use default values as documented in the
 \f(CWmysql_real_connect()\fP and \f(CWmysql_ssl_set()\fP sections in the
 \fBMySQL reference manual\fP.
-Each database needs a \fIdatabase-name\fP as string argument in the starting tag of the
-block.
-.RS
-.TP
-\fBhost\fP \fIhostname\fP
-Hostname of the database server. Defaults to \fBlocalhost\fP.
-.TP
-\fBuser\fP \fIusername\fP
-Username to use when connecting to the database. The user does not have to be
-granted any privileges (which is synonym to granting the \f(CWUSAGE\fP privilege),
+Each database needs a \fIinstance-name\fP as string argument in the starting
+tag of the block.
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
+Hostname of the database server.
+Defaults to \fBlocalhost\fP.
+.It \fBuser\fP \fIusername\fP
+Username to use when connecting to the database.
+The user does not have to be granted any privileges
+(which is synonym to granting the \f(CWUSAGE\fP privilege),
 unless you want to collect replication statistics.
-.TP
-\fBuser-env\fP \fIenv-name\fP
+.It \fBuser-env\fP \fIenv-name\fP
 Get the username to use when connecting to the database from the environment
 variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBpassword\fP \fIpassword\fP
 Password needed to log into the database.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
-Get the password needed to log into the database from the environment variable \fIenv-name\fP.
-.TP
-\fBport\fP \fIport\fP
-TCP-port to connect to. If \fBhost\fP is set to \fBlocalhost\fP (the default), this setting
-has no effect.  See the documentation for the \f(CWmysql_real_connect\fP function for details.
-.TP
-\fBsocket\fP \fIsocket-path\fP
-Specifies the path to the UNIX domain socket of the MySQL server. This option
-only has any effect, if \fBhost\fP is set to \fBlocalhost\fP (the default).
-Otherwise, use the \fBport\fP option above. See the documentation for the
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password needed to log into the database from the environment
+variable \fIenv-name\fP.
+.It \fBport\fP \fIport\fP
+TCP-port to connect to.
+If \fBhost\fP is set to \fBlocalhost\fP (the default), this setting
+has no effect.
+See the documentation for the \f(CWmysql_real_connect\fP function for details.
+.It \fBsocket\fP \fIsocket-path\fP
+Specifies the path to the UNIX domain socket of the MySQL server.
+This option only has any effect, if \fBhost\fP is set to
+\fBlocalhost\fP (the default).
+Otherwise, use the \fBport\fP option above.
+See the documentation for the
 \f(CWmysql_real_connect\fP function for details.
-.TP
-\fBdatabase\fP \fIdatabase\fP
-Select this database. Defaults to \fIno database\fP which is a perfectly reasonable
+.It \fBdatabase\fP \fIdatabase\fP
+Select this database.
+Defaults to \fIno database\fP which is a perfectly reasonable
 option for what this plugin does.
-.TP
-\fBssl-key\fP "\fI/path/to/key.pem\fP"
+.It \fBssl-key\fP "\fI/path/to/key.pem\fP"
 If provided, the X509 key in PEM format.
-.TP
-\fBssl-cert\fP "\fI/path/to/cert.pem\fP"
+.It \fBssl-cert\fP "\fI/path/to/cert.pem\fP"
 If provided, the X509 cert in PEM format.
-.TP
-\fBssl-ca\fP "\fI/path/to/ca.pem\fP"
+.It \fBssl-ca\fP "\fI/path/to/ca.pem\fP"
 If provided, the CA file in PEM format (check OpenSSL docs).
-.TP
-\fBssl-ca-path\fP "\fI/path/to/cas/\fP"
+.It \fBssl-ca-path\fP "\fI/path/to/cas/\fP"
 If provided, the CA directory (check OpenSSL docs).
-.TP
-\fBssl-cipher\fP \fIcyphers\fP
+.It \fBssl-cipher\fP \fIcyphers\fP
 If provided, the SSL cipher to use.
-.TP
-\fBconnect-timeout\fP \fIseconds\fP
+.It \fBconnect-timeout\fP \fIseconds\fP
 Sets the connect timeout for the MySQL client.
-.TP
-\fBheartbeat-utc\fP  \fItrue|false\fP
-Use UTC for timestamps of the current server. Defauilt if \fIfalse\fP.
-.TP
-\fBheartbeat-schema\fP \fIschema\fP
-Schema from where to collect heartbeat data. Default is \fIheartbeat\fP.
-.TP
-\fBheartbeat-table\fP \fItable\fP
-Table from where to collect heartbeat data. Default is \fIheartbeat\fP.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this database.
-.TP
-\fBcollect\fP \fIflags\fP ...
-
-.RS
-.TP
-\fBglobals\fP
+.It \fBheartbeat-utc\fP  \fItrue|false\fP
+Use UTC for timestamps of the current server.
+Defauilt if \fIfalse\fP.
+.It \fBheartbeat-schema\fP \fIschema\fP
+Schema from where to collect heartbeat data.
+Default is \fIheartbeat\fP.
+.It \fBheartbeat-table\fP \fItable\fP
+Table from where to collect heartbeat data.
+Default is \fIheartbeat\fP.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be
+collected from this database.
+.It \fBcollect\fP \fIflags\fP ...
+.Bl -tag -width Ds
+.It \fBglobals\fP
 Collect global values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBacl\fP
+.It \fBacl\fP
 Collect \f(CWAcl_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBaria\fP
+.It \fBaria\fP
 Collect \f(CWAria_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBbinlog\fP
+.It \fBbinlog\fP
 Collect \f(CWBinlog_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBcommands\fP
+.It \fBcommands\fP
 Collect \f(CWCom_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBfeatures\fP
+.It \fBfeatures\fP
 Collect \f(CWFeature_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBhandlers\fP
+.It \fBhandlers\fP
 Collect \f(CWHandler_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBinnodb\fP
+.It \fBinnodb\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_METRICS\fP table.
-.TP
-\fBinnodb_cmp\fP
+.It \fBinnodb_cmp\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_CMPMEM\fP table.
-.TP
-\fBinnodb_cmpmem\fP
+.It \fBinnodb_cmpmem\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_CMP\fP table.
-.TP
-\fBinnodb_tablespace\fP
+.It \fBinnodb_tablespace\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_SYS_TABLESPACES\fP table.
-.TP
-\fBmyisam\fP
+.It \fBmyisam\fP
 Collect \f(CWKey_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBperfomance_lost\fP
-Collect \f(CWPerformance_schema_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBqcache\fP
+.It \fBperfomance_lost\fP
+Collect \f(CWPerformance_schema_*\fP values
+from \f(CWSHOW GLOBAL STATUS\fP command.
+.It \fBqcache\fP
 Collect \f(CWQcache_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBslave\fP
+.It \fBslave\fP
 Collect \f(CWSlave*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBssl\fP
+.It \fBssl\fP
 Collect \f(CWSsl_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.TP
-\fBwsrep\fP
+.It \fBwsrep\fP
 Enable the collection of wsrep plugin statistics, used in Master-Master
 replication setups like in MySQL Galera/Percona XtraDB Cluster.
 User needs only privileges to execute 'SHOW GLOBAL STATUS'.
-Defaults to B<false>.
-.TP
-\fBclient\fP
+Defaults to \fBfalse\fP.
+.It \fBclient\fP
 Collect values from \f(CWINFORMATION_SCHEMA.CLIENT_STATISTICS\fP table.
-.TP
-\fBuser\fP
+.It \fBuser\fP
 Collect values from \f(CWINFORMATION_SCHEMA.USER_STATISTICS\fP table.
-.TP
-\fBindex\fP
+.It \fBindex\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INDEX_STATISTICS\fP table.
-.TP
-\fBtable\fP
+.It \fBtable\fP
 Collect values from \f(CWINFORMATION_SCHEMA.TABLE_STATISTICS\fP table.
-.TP
-\fBtable\fP
+.It \fBtable\fP
 Collect values from \f(CWINFORMATION_SCHEMA.TABLES\fP table.
-.TP
-\fBresponse_time\fP
+.It \fBresponse_time\fP
 Collect values from \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME\fP table.
-In Percona server collect values fron \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_READ\fP
+In Percona server collect values fron
+\f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_READ\fP
 and \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_WRITE\fP and table.
-.TP
-\fBmaster\fP
-.TP
-\fBslave\fP
-Enable the collection of primary / replica statistics in a replication setup. In
-order to be able to get access to these statistics, the user needs special
+.It \fBmaster\fP
+.It \fBslave\fP
+Enable the collection of primary / replica statistics in a replication setup.
+In order to be able to get access to these statistics, the user needs special
 privileges.
-.TP
-\fBheartbeat\fP
+.It \fBheartbeat\fP
 Collect replication delay measured by a heartbeat mechanism.
 The reference implementation supported is \fBpt-heartbeat\fP.
-You can control the table name with \fBheartbeat-schema\fP and \fBheartbeat-table\fP options.
+You can control the table name with \fBheartbeat-schema\fP
+and \fBheartbeat-table\fP options.
 The heartbeat table must have at least this two columns:
-.EX
-
-    CREATE TABLE heartbeat (
-        ts        varchar(26)  NOT NULL,
-        server_id int unsigned NOT NULL PRIMARY KEY,
-    );
-
-.EE
-.RE
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.Bd -literal
+  CREATE TABLE heartbeat (
+      ts        varchar(26)  NOT NULL,
+      server_id int unsigned NOT NULL PRIMARY KEY,
+  );
+.Ed
+.El
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBdatabase\fP block.
-.TP
-\fBquery\fP \fIquery-name\fP
-Associates the query named \fIquery-name\fP with this database connection. The
-query needs to be defined \fIbefore\fP this statement, i. e. all query
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBdatabase\fP block.
+.It \fBquery\fP \fIquery-name\fP
+Associates the query named \fIquery-name\fP with this database connection.
+The query needs to be defined \fIbefore\fP this statement, i. e. all query
 blocks you want to refer to must be placed above the database block you want to
 refer to them from.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.TP
-.RE
-.TP
-\fBquery\fP \fIquery-name\fP
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.It \fBquery\fP \fIquery-name\fP
 Query blocks define \fISQL\fP statements and how the returned data should be
-interpreted. They are identified by the name that is given in the opening line
-of the block. Thus the name needs to be unique. Other than that, the name is
-not used in ncollectd.
-
-In each \fBquery\fP block, there is one or more \fBresult\fP blocks. \fBresult\fP blocks
-define which column holds which value or instance information. You can use
-multiple \fBresult\fP blocks to create multiple values from one returned row. This
-is especially useful, when queries take a long time and sending almost the same
-query again and again is not desirable.
-.RS
-.TP
-\fBstatement\fP \fIsql\fP
-Sets the statement that should be executed on the server. This is \fBnot\fP
-interpreted by ncollectd, but simply passed to the database server. Therefore,
-the SQL dialect that's used depends on the server collectd is connected to.
-
-The query has to return at least two columns, one for the instance and one
-value. You cannot omit the instance, even if the statement is guaranteed to
-always return exactly one line. In that case, you can usually specify something
-like this:
-.TP
-\fBmin-version\fP \fIversion\fP
-.TP
-\fBmax-version\fP \fIversion\fP
-Only use this query for the specified database version. You can use these
-options to provide multiple queries with the same name but with a slightly
-different syntax. The plugin will use only those queries, where the specified
+interpreted.
+They are identified by the name that is given in the opening line of the block.
+Thus the name needs to be unique.
+Other than that, the name is not used in ncollectd.
+.Pp
+In each \fBquery\fP block, there is one or more \fBresult\fP blocks.
+\fBresult\fP blocks define which column holds which value or instance
+information.
+You can use multiple \fBresult\fP blocks to create multiple values from one
+returned row.
+This is especially useful, when queries take a long time and sending almost
+the same query again and again is not desirable.
+.Bl -tag -width Ds
+.It \fBstatement\fP \fIsql\fP
+Sets the statement that should be executed on the server.
+This is \fBnot\fP interpreted by ncollectd, but simply passed to the
+database server.
+Therefore, the SQL dialect that's used depends on the server collectd
+is connected to.
+.It \fBmin-version\fP \fIversion\fP
+.It \fBmax-version\fP \fIversion\fP
+Only use this query for the specified database version.
+You can use these options to provide multiple queries with the same name
+but with a slightly different syntax.
+The plugin will use only those queries, where the specified
 minimum and maximum versions fit the version of the database in use.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBquery\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBquery\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
 Specifies the columns whose values will be used to create the labels.
-.TP
-\fBresult\fP
-.RS
-.TP
-\fBtype\fP \fIgauge|counter|info|unknow\fP
-The \fBtype\fP that's used for each line returned. Must be \fIgauge\fP, \fIcounter\fP,
-\fIinfo\fP or \fPunknow\fP.  If not set is \fPunknow\fP.
-There must be exactly one \fBtype\fP option inside each \fBResult\fP block.
-.TP
-\fBtype-from\fP \fIcolumn-name\fP
-Read the type from \fIcolumn\fP. The column value must be \fIgauge\fP, \fIcounter\fP,
-\fIinfo\fP or \fPunknow\fP.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBresult\fP
+.Bl -tag -width Ds
+.It \fBtype\fP \fIgauge|counter|info|unknow\fP
+The \fBtype\fP that's used for each line returned.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
+If not set is \fPunknow\fP.
+There must be exactly one \fBtype\fP option inside each \fBresult\fP block.
+.It \fBtype-from\fP \fIcolumn-name\fP
+Read the type from \fIcolumn\fP.
+The column value must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
+.It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
-.TP
-\fBhelp-from\fP \fIcolumn-name\fP
+.It \fBhelp-from\fP \fIcolumn-name\fP
 Read the \fBhelp\fP text for the the metric from the named column.
-.TP
-\fBmetric\fP \fImetric-name\fP
+.It \fBmetric\fP \fImetric-name\fP
 Set the metric name.
-.TP
-\fBmetric-prefix\fP \fI prefix\fP
+.It \fBmetric-prefix\fP \fI prefix\fP
 Prepends \fIprefix\fP to the metric name in the \fBresult\fP.
-.TP
-\fBmetric-from\fP \fIcolumn-name\fP
+.It \fBmetric-from\fP \fIcolumn-name\fP
 Read the metric name from the named column.
 There must be at least one \fBmetric\fP or \fBmetric-from\fP option inside
 each \fBresult\fP block.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple times in the \fBresult\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times in the \fBresult\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
 Specifies the columns whose values will be used to create the labels.
-.TP
-\fBvalue-from\fP \fIcolumn-name\fP
+.It \fBvalue-from\fP \fIcolumn-name\fP
 Name of the column whose content is used as the actual data for the metric
 that are dispatched to the daemon.
 There must be only one \fBvalue-from\fP option inside each \fBresult\fP block.
-.RE
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

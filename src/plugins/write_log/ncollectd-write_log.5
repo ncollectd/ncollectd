@@ -1,47 +1,43 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-write_log 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd write_log man page"
-.SH NAME
-ncollectd-write_log \- Documentation of ncollectd's write_log plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-WRITE_LOG 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-write_log
+.Nd Documentation of ncollectd's write_log plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP write_log
-.br
 \fBplugin\fP write_log {
     \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote\fP
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBwrite_log plugin\fP plugin writes metrics as INFO log messages.
-.PP
+.Pp
 The plugin has the following options:
-.TP
-\fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
+.Bl -tag -width Ds
+.It \fBformat-metric\fP \fIinfluxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote\fP
 Selects the format in which metrics are written.
-.RS
-.TP
-\fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
+.Bl -tag -width Ds
+.It \fBinfluxdb\fP [\fIsec|msec|usec|nsec\fP]
 Format the metrics with the influxdb line format.
-.TP
-\fBgraphite\fP
+.It \fBgraphite\fP
 Format the metrics with the graphite plaintext format.
-.TP
-\fBjson\fP
+.It \fBjson\fP
 Format the metrics as json message.
-.TP
-\fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
+.It \fBkairosdb\fP [\fItelnet [sec|msec]|json\fP]
 Format the metrics with the karirosdb text format or json format.
-.TP
-\fBopentsdb\fP [telnet|json]
+.It \fBopentsdb\fP [telnet|json]
 Format the metrics with the opentsdb text format or json format.
-.TP
-\fBopenmetrics\fP [text|protob]
+.It \fBopenmetrics\fP [text|protob]
 Format the metrics with the openmetrics text format.
-.TP
-\fBopentelemetry\fP [json]
+.It \fBopentelemetry\fP [json]
 Format the metrics with the opentelemetry json format.
-.TP
-\fBremote\fP [metadata]
+.It \fBremote\fP [metadata]
 Format the metrics with the protocol buffer remote format.
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

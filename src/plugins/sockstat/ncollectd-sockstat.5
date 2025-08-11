@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-sockstat 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd sockstat man page"
-.SH NAME
-ncollectd-sockstat \- Documentation of ncollectd's sockstat plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SOCKSTAT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-sockstat
+.Nd Documentation of ncollectd's sockstat plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP sockstat
-.SH DESCRIPTION
+\fBplugin\fP sockstat
+.Ed
+.Sh DESCRIPTION
 The \fBsockstat\fP plugin collect socket statistics from the files
 \fI/proc/net/sockstat\fP and \fI/proc/net/sockstat6\fP
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

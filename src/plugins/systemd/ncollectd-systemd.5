@@ -1,43 +1,44 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-systemd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd systemd man page"
-.SH NAME
-ncollectd-systemd \- Documentation of ncollectd's systemd plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SYSTEMD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-systemd
+.Nd Documentation of ncollectd's systemd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP systemd
-.br
 \fBplugin\fP systemd {
     \fBunit\fP \fIunit-name\fP ...
     \fBslice\fP \fIslice-name\fP ...
     \fBservice\fP \fIservice-name\fP ...
     \fBsocket\fP \fIsocket-name\fP ...
     \fBtimer\fP \fItimer-name\fP ...
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBsystemd\fP plugin collects information from systemd supervised unit.
 If no units are specified then all units are collected.
-.PP
+.Pp
 The following configuration options are available:
-.TP
-\fBunit\fP \fIunit-name\fP ...
-Collect information of the specified units names. The unit name consist of a unit name prefix
-and a suffix specifying the unit type which begins with a dot.
-.TP
-\fBslice\fP \fIslice-name\fP ...
+.Bl -tag -width Ds
+.It \fBunit\fP \fIunit-name\fP ...
+Collect information of the specified units names.
+The unit name consist of a unit name prefix and a suffix specifying the unit
+type which begins with a dot.
+.It \fBslice\fP \fIslice-name\fP ...
 Collect information of the specified slices names.
-It is not necessary to add the suffix ".slice".
-.TP
-\fBservice\fP \fIservice-name\fP ...
+It is not necessary to add the ".slice" suffix.
+.It \fBservice\fP \fIservice-name\fP ...
 Collect information of the specified services names.
-It is not necessary to add the suffix ".service".
-.TP
-\fBsocket\fP \fIsocket-name\fP ...
+It is not necessary to add the ".service" suffix.
+.It \fBsocket\fP \fIsocket-name\fP ...
 Collect information of the specified sockets names.
-It is not necessary to add the suffix ".socket".
-.TP
-\fBtimer\fP \fItimer-name\fP ...
+It is not necessary to add the ".socket" suffix.
+.It \fBtimer\fP \fItimer-name\fP ...
 Collect information of the specified timers names.
-It is not necessary to add the suffix ".timer".
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+It is not necessary to add the ".timer" suffix.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

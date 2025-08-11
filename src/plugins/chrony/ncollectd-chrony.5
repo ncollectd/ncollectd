@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-chrony 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd chrony man page"
-.SH NAME
-ncollectd-chrony \- Documentation of ncollectd's chrony plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CHRONY 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-chrony
+.Nd Documentation of ncollectd's chrony plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP chrony
-.br
 \fBplugin\fP chrony {
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhostname\fP
@@ -16,39 +19,40 @@ ncollectd-chrony \- Documentation of ncollectd's chrony plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBchrony\fP plugin collects ntp data from a \fBchronyd\fP server, such as clock
-skew and per-peer stratum.
-.PP
-For talking to \fBchronyd\fP, it mimics what the \fBchronyc\fP control program does
-on the wire.
-.PP
-The configuration of the \fBchrony\fP plugin consists of one or more \fBinstance\fP blocks.
+.Ed
+.Sh DESCRIPTION
+The \fBchrony\fP plugin collects ntp data from a \fBchronyd\fP server,
+such as clock skew and per-peer stratum.
+.Pp
+For talking to \fBchronyd\fP, it mimics what the \fBchronyc\fP control
+program does on the wire.
+.Pp
+The configuration of the \fBchrony\fP plugin consists of one or more
+\fBinstance\fP blocks.
 Each block requires one string argument as the instance name.
-.PP
+.Pp
 The following options are accepted within each \fBinstance\fP block:
-.PP
-.TP
-\fBhost\fP \fIhostname\fP
-Hostname of the host running \fBchronyd\fP. Defaults to \fBlocalhost\fP.
-.TP
-\fBport\fP \fIport\fP
-UDP port to connect to. Defaults to \fB323\fP.
-.TP
-\fBtimeout\fP \fIseconds\fP
-Connection timeout in seconds. Defaults to \fB2\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
+Hostname of the host running \fBchronyd\fP.
+Defaults to \fBlocalhost\fP.
+.It \fBport\fP \fIport\fP
+UDP port to connect to.
+Defaults to \fB323\fP.
+.It \fBtimeout\fP \fIseconds\fP
+Connection timeout in seconds.
+Defaults to \fB2\fP.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this server.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from
+this server.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

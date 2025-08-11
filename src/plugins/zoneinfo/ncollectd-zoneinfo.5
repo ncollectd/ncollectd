@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-zoneinfo 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd zoneinfo man page"
-.SH NAME
-ncollectd-zoneinfo \- Documentation of ncollectd's zoneinfo plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ZONEINFO 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-zoneinfo
+.Nd Documentation of ncollectd's zoneinfo plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP zoneinfo
-.SH DESCRIPTION
-The \fBzoneinfo\fP plugin collectd information about memory zones reading the file
-\fI/proc/zoneinfo\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP zoneinfo
+.Ed
+.Sh DESCRIPTION
+The \fBzoneinfo\fP plugin collectd information about memory zones reading
+the file \fI/proc/zoneinfo\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

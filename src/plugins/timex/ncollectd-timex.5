@@ -1,13 +1,19 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-timex 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd timex man page"
-.SH NAME
-ncollectd-timex \- Documentation of ncollectd's timex plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-TIMEX 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-timex
+.Nd Documentation of ncollectd's timex plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP timex
-.SH DESCRIPTION
+\fBplugin\fP timex
+.Ed
+.Sh DESCRIPTION
 The \fBtimex\fP plugin exports state of kernel time synchronization flag
 that should be maintained by time-keeping daemon and is eventually raised
 by Linux kernel if time-keeping daemon does not update it regularly.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

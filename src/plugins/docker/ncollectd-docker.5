@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-docker 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd docker man page"
-.SH NAME
-ncollectd-docker \- Documentation of ncollectd's docker plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-DOCKER 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-docker
+.Nd Documentation of ncollectd's docker plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP docker
-.br
 \fBplugin\fP docker {
     \fBinterval\fP \fIinterval\fP {
         \fBurl\fP \fIurl\fP
@@ -16,35 +19,33 @@ ncollectd-docker \- Documentation of ncollectd's docker plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBdocker\fP plugin collect statistics from docker running containers.
-.PP
-In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks, each defining
-a docker daemon.
-.PP
+.Pp
+In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks,
+each defining a docker daemon.
+.Pp
 The following options are valid within \fBinstance\fP blocks:
-.TP
-\fBurl\fP \fIurl\fP
-.TP
-\fBsocket-path\fP \fIpath\fP
-.TP
-\fBlabels\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBinstance\fP block.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for requests to the docker daemon.
-seconds.
-.TP
-\fBinterval\fP \fIseconds\fP
+.Bl -tag -width Ds
+.It \fBurl\fP \fIurl\fP
+.It \fBsocket-path\fP \fIpath\fP
+.It \fBlabels\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for requests to the
+docker daemon in seconds.
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced. By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-ping 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd ping man page"
-.SH NAME
-ncollectd-ping \- Documentation of ncollectd's ping plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PING 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-ping
+.Nd Documentation of ncollectd's ping plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP ping
-.br
 \fBplugin\fP ping {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIip-address\fP
@@ -23,75 +26,73 @@ ncollectd-ping \- Documentation of ncollectd's ping plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBping\fP plugin starts a new thread which sends ICMP "ping" packets to the
-configured hosts periodically and measures the network latency. Whenever the
-\f(CWread\fP function of the plugin is called, it submits the average latency, the
-standard deviation and the drop rate for each host.
-
+.Ed
+.Sh DESCRIPTION
+The \fBping\fP plugin starts a new thread which sends ICMP "ping" packets to
+the configured hosts periodically and measures the network latency.
+Whenever the \f(CWread\fP function of the plugin is called, it submits the
+average latency, the standard deviation and the drop rate for each host.
+.Pp
 Available configuration options for a \fBinstance\fP block:
-
-.TP
-\fBhost\fP \fIip-address\fP
-Host to ping periodically. This option may be repeated several times to ping
-multiple hosts.
-.TP
-\fBaddress-family\fP [\fIany|ipv4|ipv6\fP]
-Sets the address family to use. \fBaddress-family\fP may be \fIany\fP, \fIipv4\fP or \fIipv6\fP.
+.Bl -tag -width Ds
+.It \fBhost\fP \fIip-address\fP
+Host to ping periodically.
+This option may be repeated several times to ping multiple hosts.
+.It \fBaddress-family\fP [\fIany|ipv4|ipv6\fP]
+Sets the address family to use. \fBaddress-family\fP may be \fIany\fP,
+\fIipv4\fP or \fIipv6\fP.
 This option will be ignored if you set a \fBsource-address\fP.
-.TP
-\fBsource-address\fP \fIhost\fP
-Sets the source address to use. \fIhost\fP may either be a numerical network
-address or a network hostname.
-.TP
-\fBdevice\fP \fIname\fP
-Sets the outgoing network device to be used. \fIname\fP has to specify an
-interface name. This might not be supported by all operating systems.
-.TP
-\fBttl\fP [\fI0-255\fP]
+.It \fBsource-address\fP \fIhost\fP
+Sets the source address to use.
+\fIhost\fP may either be a numerical network address or a network hostname.
+.It \fBdevice\fP \fIname\fP
+Sets the outgoing network device to be used.
+\fIname\fP has to specify an interface name.
+This might not be supported by all operating systems.
+.It \fBttl\fP [\fI0-255\fP]
 Sets the Time-To-Live of generated ICMP packets.
-.TP
-\fBping-interval\fP \fIseconds\fP
+.It \fBping-interval\fP \fIseconds\fP
 Sets the interval in which to send ICMP echo packets to the configured hosts.
 This is \fBnot\fP the interval in which metrics are read from the plugin but the
-interval in which the hosts are "pinged". Therefore, the setting here should be
-smaller than or equal to the global \fBinterval\fP setting. Fractional times, such
-as "1.24" are allowed.  Default to \fB1.0\fP.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBsize\fP \fIsize\fP
+interval in which the hosts are "pinged".
+Therefore, the setting here should be smaller than or equal to the global
+\fBinterval\fP setting.
+Fractional times, such as "1.24" are allowed.
+Default to \fB1.0\fP.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instance.
+.It \fBsize\fP \fIsize\fP
 Sets the size of the data payload in ICMP packet to specified \fIsize\fP (it
-will be filled with regular ASCII pattern). If not set, default 56 byte
-long string is used so that the packet size of an ICMPv4 packet is exactly
-64 bytes, similar to the behaviour of normal
-.BR ping (1)
+will be filled with regular ASCII pattern).
+If not set, default 56 byte long string is used so that the packet size of an
+ICMPv4 packet is exactly 64 bytes, similar to the behaviour of normal
+.Xr ping 1
 command.
-.TP
-\fBtimeout\fP \fIseconds\fP
+.It \fBtimeout\fP \fIseconds\fP
 Time to wait for a response from the host to which an ICMP packet had been
-sent. If a reply was not received after \fIsecond\fP seconds, the host is assumed
-to be down or the packet to be dropped. This setting must be smaller than the
-\fBinterval\fP setting above for the plugin to work correctly. Fractional
-arguments are accepted.  Default to \fB0.9\fP.
-.TP
-\fBmax-missed\fP \fIpackets\fP
-Trigger a DNS resolve after the host has not replied to \fIpackets\fP packets. This
-enables the use of dynamic DNS services (like dyndns.org) with the ping plugin.
+sent.
+If a reply was not received after \fIsecond\fP seconds, the host is assumed
+to be down or the packet to be dropped.
+This setting must be smaller than the \fBinterval\fP setting above for the
+plugin to work correctly.
+Fractional arguments are accepted.
+Default to \fB0.9\fP.
+.It \fBmax-missed\fP \fIpackets\fP
+Trigger a DNS resolve after the host has not replied to \fIpackets\fP packets.
+This enables the use of dynamic DNS services (like dyndns.org) with the
+ping plugin.
 Default to \fB-1\fP (disabled).
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBhistogram-buckets\fP [\fIbucket\fP] ...
+.It \fBhistogram-buckets\fP [\fIbucket\fP] ...
 Define the list of buckets for the ICMP response time histogram.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

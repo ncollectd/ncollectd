@@ -1,13 +1,20 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-zfs 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd zfs man page"
-.SH NAME
-ncollectd-zfs \- Documentation of ncollectd's zfs plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-ZFS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-zfs
+.Nd Documentation of ncollectd's zfs plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP zfs
-.SH DESCRIPTION
-The \fBzfs\fP plugin collects information about the Adaptive Replacement Cache (ARC)
-of the Zeta File-System (ZFS). It reports information such as the cache size, the various
-hits and misses and the transferred data.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP zfs
+.Ed
+.Sh DESCRIPTION
+The \fBzfs\fP plugin collects information about the Adaptive Replacement
+Cache (ARC) of the Zeta File-System (ZFS).
+It reports information such as the cache size, the various hits and misses
+and the transferred data.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,9 +1,17 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-netstat_udp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd netstat_udp man page"
-.SH NAME
-ncollectd-netstat_udp \- Documentation of ncollectd's netstat_udp plugin
-.SH DESCRIPTION
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NETSTAT_UDP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-netstat_udp
+.Nd Documentation of ncollectd's netstat_udp plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP netstat_udp
+\fBplugin\fP netstat_udp
+.Ed
+.Sh DESCRIPTION
 The \fBnetstat_udp\fP plugin read udp metrics in NetBSD systems.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

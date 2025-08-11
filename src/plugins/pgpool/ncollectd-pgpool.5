@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-pgpool 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd pgpool man page"
-.SH NAME
-ncollectd-pgpool \- Documentation of ncollectd's pgpool plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PGPOOL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-pgpool
+.Nd Documentation of ncollectd's pgpool plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP pgpool
-.br
 \fBplugin\fP pgpool {
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhost\fP
@@ -21,74 +24,65 @@ ncollectd-pgpool \- Documentation of ncollectd's pgpool plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBpgpool\fP plugin queries statistics from Pgpool-II server. It
-keeps a persistent connection to all configured databases and tries to
-reconnect if the connection has been interrupted. A connection is configured by
-specifying a \fBinstance\fP block as described below.
-.TP
-\fBinstance\fP \fIinstance\fP
+.Ed
+.Sh DESCRIPTION
+The \fBpgpool\fP plugin queries statistics from Pgpool-II server.
+It keeps a persistent connection to all configured databases and tries to
+reconnect if the connection has been interrupted.
+A connection is configured by specifying a \fBinstance\fP block as
+described below.
+.Bl -tag -width Ds
+.It \fBinstance\fP \fIinstance\fP
 The \fBinstance\fP block defines one Pgpool-II server for which to collect
 statistics.
-.RS
-.TP
-\fBhost\fP \fIhost\fP
-Specify the hostname or IP of the Pgpool-II server to connect to. If the
-value begins with a slash, it is interpreted as the directory name in which to
-look for the UNIX domain socket.
-.TP
-\fBport\fP \fIport\fP
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
+Specify the hostname or IP of the Pgpool-II server to connect to.
+If the value begins with a slash, it is interpreted as the directory name
+in which to look for the UNIX domain socket.
+.It \fBport\fP \fIport\fP
 Specify the TCP port or the local UNIX domain socket file extension of the
 server.
-.TP
-\fBdatabase\fP \fIdatabase\fP
+.It \fBdatabase\fP \fIdatabase\fP
 The database to connect.
-.TP
-\fBuser\fP \fIuser\fP
+.It \fBuser\fP \fIuser\fP
 Specify the username to be used when connecting to the server.
-.TP
-\fBuser-env\fP \fIenv-name\fP
+.It \fBuser-env\fP \fIenv-name\fP
 Get the username to be used when connecting to the server from the
 environment variable \fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBpassword\fP \fIpassword\fP
 Specify the password to be used when connecting to the server.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
+.It \fBpassword-env\fP \fIenv-name\fP
 Get the password to be used when connecting to the server from the
 environment variable \fIenv-name\fP.
-.TP
-\fBssl-mode\fP \fIdisable|allow|prefer|require\fP
-Specify whether to use an SSL connection when contacting the server. The
-following modes are supported:
-.RS
-.TP
-\fBdisable\fP
+.It \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+Specify whether to use an SSL connection when contacting the server.
+The following modes are supported:
+.Bl -tag -width Ds
+.It \fBdisable\fP
 Do not use SSL at all.
-.TP
-\fBallow\fP
-First, try to connect without using SSL. If that fails, try using SSL.
-.TP
-\fBprefer\fP \fI(default)\fP
-First, try to connect using SSL. If that fails, try without using SSL.
-.TP
-\fBrequire\fP
+.It \fBallow\fP
+First, try to connect without using SSL.
+If that fails, try using SSL.
+.It \fBprefer\fP \fI(default)\fP
+First, try to connect using SSL.
+If that fails, try without using SSL.
+.It \fBrequire\fP
 Use SSL only.
-.RE
-.TP
-\fBinterval\fP \fIseconds\fP
+.El
+.It \fBinterval\fP \fIseconds\fP
 Specify the interval with which the database should be queried.
 The default is to use the global \fBinterval\fP setting.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBdatabase\fP block.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBdatabase\fP block.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-snmp 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd snmp man page"
-.SH NAME
-ncollectd-snmp \- Documentation of ncollectd's snmp plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SNMP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-snmp
+.Nd Documentation of ncollectd's snmp plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP snmp
-.br
 \fBplugin\fP snmp {
     \fBdata\fP \fIdata\fP {
         \fBtable\fP \fItrue|false\fP
@@ -43,288 +46,282 @@ ncollectd-snmp \- Documentation of ncollectd's snmp plugin
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBcollect\fP \fIdata\fP [\fIdata\fP ...]
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fPsnmp\fP plugin queries other hosts using SNMP, the simple network
 management protocol, and translates the value it receives to ncollectd's
-internal format and dispatches them. Depending on the write plugins you have
-loaded they may be written to disk or submitted to another instance or
-whatever you configured.
-.PP
+internal format and dispatches them.
+Depending on the write plugins you have loaded they may be written to disk
+or submitted to another instance or whatever you configured.
+.Pp
 Because querying a host via SNMP may produce a timeout the "complex reads"
-polling method is used. The \fBread-threads\fP parameter in the main configuration
-influences the number of parallel polling jobs which can be undertaken. If
-you expect timeouts or some polling to take a long time, you should increase
-this parameter. Note that other plugins also use the same threads.
-.PP
-Since the aim of the \fBsnmp\fP plugin is to provide a generic interface to SNMP,
-its configuration is not trivial and may take some time.
-
-Since the \f(CWNet-SNMP\fP library is used you can use all the environment variables
-that are interpreted by that package. See
-.BR snmpcmd(1)
+polling method is used.
+The \fBread-threads\fP parameter in the main configuration influences the
+number of parallel polling jobs which can be undertaken.
+If you expect timeouts or some polling to take a long time, you should
+increase this parameter.
+Note that other plugins also use the same threads.
+.Pp
+Since the aim of the \fBsnmp\fP plugin is to provide a generic interface
+to SNMP, its configuration is not trivial and may take some time.
+.Pp
+Since the \f(CWNet-SNMP\fP library is used you can use all the environment
+variables that are interpreted by that package.
+See
+.Xr snmpcmd 1
 for more details.
-.PP
+.Pp
 There are two types of blocks that can be contained in the \fBsnmp\fP plugin
 block: \fBdata\fP and \fBhost\fP:
-.TP
-\fBdata\fP \fIdata\fP
-The \fBdata\fP block defines a list of values or a table of values that are to be
-queried. The following options can be set:
-.RS
-.TP
-\fBtable\fP \fItrue|false\fP
-Define if this is a single list of values or a table of values. The difference
-is the following:
-
-When \fBtable\fP is set to \fIfalse\fP, the OID given to \fBvalue\fP (see below) are
-queried using the \f(CWNGET\fP SNMP command (see
-.BR snmpget(1)
+.Bl -tag -width Ds
+.It \fBdata\fP \fIdata\fP
+The \fBdata\fP block defines a list of values or a table of values that are
+to be queried.
+The following options can be set:
+.Bl -tag -width Ds
+.It \fBtable\fP \fItrue|false\fP
+Define if this is a single list of values or a table of values.
+The difference is the following:
+.Pp
+When \fBtable\fP is set to \fIfalse\fP, the OID given to \fBvalue\fP
+(see below) are queried using the \f(CWNGET\fP SNMP command (see
+.Xr snmpget 1
 ) and transmitted to
-collectd. \fBOne\fP value list is dispatched and, eventually, one file will be
-written.
-
-When \fBtable\fP is set to \fItrue\fP, the OIDs given to \fBvalues\fP, \fBlabel-from\fP
-\fBfilter-ioid\fP (see below) are queried using the \f(CWGETNEXT\fP SNMP command until
-the subtree is left. After all the lists
-(think: all columns of the table) have been read, either (\fBcount\fP set to \fIfalse\fP)
-\fBseveral\fP value sets will be dispatched and, eventually, several files will be
-written, or (\fBcount\fP set to \fItrue\fP) one single value will be dispatched.
-
+collectd. \fBOne\fP value list is dispatched and, eventually,
+one file will be written.
+.Pp
+When \fBtable\fP is set to \fItrue\fP, the OIDs given to \fBvalues\fP,
+\fBlabel-from\fP \fBfilter-ioid\fP (see below) are queried using the
+\f(CWGETNEXT\fP SNMP command until the subtree is left.
+After all the lists (think: all columns of the table) have been read,
+either (\fBcount\fP set to \fIfalse\fP) \fBseveral\fP value sets will
+be dispatched and, eventually, several files will be written,
+or (\fBcount\fP set to \fItrue\fP) one single value will be dispatched.
+.Pp
 For example, if you want to query the number of users on a system, you can use
-\f(CWHOST-RESOURCES-MIB::hrSystemNumUsers.0\fP. This is one value and belongs to one
-value list, therefore \fBtable\fP must be set to \fIfalse\fP. Please note that, in
-this case, you have to include the sequence number (zero in this case) in the
-OID.
-
+\f(CWHOST-RESOURCES-MIB::hrSystemNumUsers.0\fP.
+This is one value and belongs to one value list, therefore \fBtable\fP must be
+set to \fIfalse\fP.
+Please note that, in this case, you have to include the sequence number
+(zero in this case) in the OID.
+.Pp
 Counter example: If you want to query the interface table provided by the
-\f(CWIF-MIB\fP, e.g. the bytes transmitted. There are potentially many
-interfaces, so you will want to set \fBtable\fP to \fItrue\fP.
-.TP
-\fBcount\fP \fItrue|false\fP
+\f(CWIF-MIB\fP, e.g. the bytes transmitted.
+There are potentially many interfaces, so you will want to set \fBtable\fP
+to \fItrue\fP.
+.It \fBcount\fP \fItrue|false\fP
 Instead of dispatching one value per table entry containing the \fIOID\fP given
 in the \fBvalue\fP option, just dispatch a single count giving the
-number of entries that would have been dispatched. This is especially useful when
-combined with the filtering options (see below) to count the number of entries in
-a Table matching certain criteria.
-
+number of entries that would have been dispatched.
+This is especially useful when combined with the filtering options (see below)
+to count the number of entries in a Table matching certain criteria.
+.Pp
 When \fBtable\fP is set to \fIfalse\fP, this option has no effect.
-.TP
-\fBtype\fP \fIcounter|gauge|unknow\fP
-The \fBtype\fP that's used for each value read. Must be \fIgauge\fP, \fIcounter\fP or
-\fPunknow\fP.  If not set is \fPunknow\fP.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBtype\fP \fIcounter|gauge|unknow\fP
+The \fBtype\fP that's used for each value read.
+Must be \fIgauge\fP, \fIcounter\fP or \fPunknow\fP.
+If not set is \fPunknow\fP.
+.It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
-.TP
-\fBmetric\fP \fImetric\fP
+.It \fBmetric\fP \fImetric\fP
 Set the metric name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear multiple times.
-.TP
-\fBlabels-from\fP \fIkey\fP \fIOID\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times.
+.It \fBlabels-from\fP \fIkey\fP \fIOID\fP
 Append the label with \fIkey\fP and value from the queried \fIOID\fP.
-If \fBtable\fP is set to \fItrue\fP, \fIOID\fP is interpreted as an SNMP-prefix that will
-return a list of values.
-Those values are then used as the actual type-instance,
-plugin-instance or host of dispatched metrics.
+If \fBtable\fP is set to \fItrue\fP, \fIOID\fP is interpreted as an
+SNMP-prefix that will return a list of values.
+Those values are then used as the actual type-instance, plugin-instance or host
+of dispatched metrics.
 An example would be the \f(CWIF-MIB::ifDescr\fP subtree.
-.BR variables(5)
+.Xr variables 5
 from the SNMP distribution describes the format of OIDs.
-.TP
-\fBvalue\fP \fIOID\fP
-Configures the values to be queried from the SNMP host. The meaning slightly
-changes with the \fBtable\fP setting.
-.BR variables(5)
+.It \fBvalue\fP \fIOID\fP
+Configures the values to be queried from the SNMP host.
+The meaning slightly changes with the \fBtable\fP setting.
+.Xr variables 5
 from the SNMP distribution describes the format of OIDs.
-
-If \fBtable\fP is set to \fItrue\fP, each \fIOID\fP must be the prefix of all the
-values to query, e.g. \f(CWIF-MIB::ifInOctets\fP for all the counters of
-incoming traffic. This subtree is walked (using \f(CWGETNEXT\fP) until a value from
-outside the subtree is returned.
-
-If \fBtable\fP is set to \fIfalse\fP, the \fIOID\fP must be the OID of exactly one
-value, e.g. \f(CWIF-MIB::ifInOctets.3\fP for the third counter of incoming traffic.
-.TP
-\fBshift\fP \fIvalue\fP
+.Pp
+If \fBtable\fP is set to \fItrue\fP, each \fIOID\fP must be the prefix of all
+the values to query, e.g. \f(CWIF-MIB::ifInOctets\fP for all the counters of
+incoming traffic.
+This subtree is walked (using \f(CWGETNEXT\fP) until a value from outside the
+subtree is returned.
+.Pp
+If \fBtable\fP is set to \fIfalse\fP, the \fIOID\fP must be the OID of exactly
+one value, e.g. \f(CWIF-MIB::ifInOctets.3\fP for the third counter of incoming
+traffic.
+.It \fBshift\fP \fIvalue\fP
 \fIValue\fP is added to gauge-values returned by the SNMP-agent after they have
-been multiplied by any \fBscale\fP value. If, for example, a thermometer returns
-degrees Kelvin you could specify a shift of \fB273.15\fP here to store values in
-degrees Celsius. The default value is, of course, \fB0.0\fP.
-
+been multiplied by any \fBscale\fP value.
+If, for example, a thermometer returns degrees Kelvin you could specify a shift
+of \fB273.15\fP here to store values in degrees Celsius.
+The default value is, of course, \fB0.0\fP.
+.Pp
 This value is not applied to counter-values.
-.TP
-\fBscale\fP \fIvalue\fP
-The gauge-values returned by the SNMP-agent are multiplied by  \fIvalue\fP.  This
-is useful when values are transferred as a fixed point real number. For example,
-thermometers may transfer \fB243\fP but actually mean \fB24.3\fP, so you can specify
-a scale value of \fB0.1\fP to correct this. The default value is, of course,
-\fB1.0\fP.
-
+.It \fBscale\fP \fIvalue\fP
+The gauge-values returned by the SNMP-agent are multiplied by  \fIvalue\fP.
+This is useful when values are transferred as a fixed point real number.
+For example, thermometers may transfer \fB243\fP but actually mean \fB24.3\fP,
+so you can specify a scale value of \fB0.1\fP to correct this.
+The default value is, of course, \fB1.0\fP.
+.Pp
 This value is not applied to counter-values.
-.TP
-\fBfilter-oid\fP \fIOID\fP
-.TP
-\fBfilter-value\fP  [\fIincl|include|excl|exclude\fP] \fIvalue\fP
-When \fBtable\fP is set to \fItrue\fP, these options allow to configure filtering
-based on MIB values.
-
+.It \fBfilter-oid\fP \fIOID\fP
+.It \fBfilter-value\fP  [\fIincl|include|excl|exclude\fP] \fIvalue\fP
+When \fBtable\fP is set to \fItrue\fP, these options allow to configure
+filtering based on MIB values.
+.Pp
 The \fBfilter-oid\fP declares \fIOID\fP to fill table column with values.
-The \fBfilter-value\fP declares values to do match. Whether table row will be
-collected or ignored depends on the \fBfilter-value\fP setting.
+The \fBfilter-value\fP declares values to do match.
+Whether table row will be collected or ignored depends on the
+\fBfilter-value\fP setting.
 As with other plugins that use the daemon's ignorelist functionality, a string
 that starts and ends with a slash is interpreted as a regular expression.
-
+.Pp
 If no selection is configured at all, \fBall\fP table rows are selected.
-
+.Pp
 When \fBtable\fP is set to \fIfalse\fP then these options has no effect.
-.RE
-.TP
-\fBhost\fP \fIhost\fP
+.El
+.It \fBhost\fP \fIhost\fP
 The \fBhost\fP block defines which hosts to query, which SNMP community and
 version to use and which of the defined \fBdata\fP to query.
-.PP
-.RS
-.TP
-\fBaddress\fP \fIip-address|hostname\fP
-Set the address to connect to. Address may include transport specifier and/or port number.
-.TP
-\fBcommunity\fP \fIcommunity\fP
+.Bl -tag -width Ds
+.It \fBaddress\fP \fIip-address|hostname\fP
+Set the address to connect to.
+Address may include transport specifier and/or port number.
+.It \fBcommunity\fP \fIcommunity\fP
 Pass \fIcommunity\fP to the host. (ignored for SNMPv3).
-.TP
-\fBversion\fP \fI1|2|3\fP
-Set the SNMP version to use. When giving \fI2\fP version \fI2c\fP is actually used.
-.TP
-\fBtimeout\fP \fIseconds\fP
-How long to wait for a response. The \f(CWNet-SNMP\fP library default is 1 second.
-.TP
-\fBretries\fP \fIinteger\fP
-The number of times that a query should be retried after the Timeout expires.
+.It \fBversion\fP \fI1|2|3\fP
+Set the SNMP version to use.
+When giving \fI2\fP version \fI2c\fP is actually used.
+.It \fBtimeout\fP \fIseconds\fP
+How long to wait for a response.
+The \f(CWNet-SNMP\fP library default is 1 second.
+.It \fBretries\fP \fIinteger\fP
+The number of times that a query should be retried after the timeout expires.
 The \f(CWNet-SNMP\fP library default is 5.
-.TP
-\fBinterval\fP \fIseconds\fP
-Collect data from this host every \fIseconds\fP seconds. This option is meant for
-devices with not much CPU power, e.g. network equipment such as
-switches, embedded devices, rack monitoring systems and so on.
-.TP
-\fBusername\fP \fIusername\fP
-Sets the \fIusername\fP to use for SNMPv3 User-based Security Model (USM) security.
-.TP
-\fBauth-protocol\fP \fImd5|sha\fP
-Selects the authentication protocol for SNMPv3 User-based Security Model (USM) security.
-.TP
-\fBprivacy-protocol\fP \fIaes|des\fP
-Selects the privacy (encryption) protocol for SNMPv3 User-based Security Model (USM) security.
-.TP
-\fBauth-passphrase\fP \fIpassphrase\fP
-Sets the authentication passphrase for SNMPv3 User-based Security Model (USM) security.
-.TP
-\fBprivacy-passphrase\fP \fIpassphrase\fP
-Sets the privacy (encryption) passphrase for SNMPv3 User-based Security Model (USM) security.
-.TP
-\fBsecurity-level\fP \fIauthpriv|authnopriv|noauthnopriv\fP
+.It \fBinterval\fP \fIseconds\fP
+Collect data from this host every \fIseconds\fP seconds.
+This option is meant for devices with not much CPU power, e.g. network
+equipment such as switches, embedded devices, rack monitoring systems and so on.
+.It \fBusername\fP \fIusername\fP
+Sets the \fIusername\fP to use for SNMPv3 User-based Security Model
+(USM) security.
+.It \fBauth-protocol\fP \fImd5|sha\fP
+Selects the authentication protocol for SNMPv3 User-based Security Model
+(USM) security.
+.It \fBprivacy-protocol\fP \fIaes|des\fP
+Selects the privacy (encryption) protocol for SNMPv3 User-based Security Model
+(USM) security.
+.It \fBauth-passphrase\fP \fIpassphrase\fP
+Sets the authentication passphrase for SNMPv3 User-based Security Model
+(USM) security.
+.It \fBprivacy-passphrase\fP \fIpassphrase\fP
+Sets the privacy (encryption) passphrase for SNMPv3 User-based Security Model
+(USM) security.
+.It \fBsecurity-level\fP \fIauthpriv|authnopriv|noauthnopriv\fP
 Selects the security level for SNMPv3 User-based Security Model (USM) security.
-.TP
-\fBlocal-cert\fP \fIfingerprint|fileprefix\fP
+.It \fBlocal-cert\fP \fIfingerprint|fileprefix\fP
 Sets the fingerprint or the filename prefix of the local certificate,
 key, and (if supported) intermediate certificates for SNMPv3 Transport
 Security Model (TSM) security.
-.TP
-\fBpeer-cert\fP \fIfingerprint|fileprefix\fP
+.It \fBpeer-cert\fP \fIfingerprint|fileprefix\fP
 Sets the fingerprint or the filename prefix of the self signed remote peer
 certificate to be accepted as presented by the SNMPv3 server for SNMPv3
 Transport Security Model (TSM) security.
-.TP
-\fBtrust-cert\fP \fIfingerprint|fileprefix\fP
+.It \fBtrust-cert\fP \fIfingerprint|fileprefix\fP
 Sets the fingerprint or the filename prefix of the certificate authority
 certificates to be trusted by ncollectd-snmp for SNMPv3 Transport Security
 Model (TSM) security.
-This option can only be specified once. From \f(CWNet-SNMP\fP v5.10 onwards,
-all certificates in files matching the given filename prefix are trusted.
-.TP
-\fBpeer-hostname\fP \fIhostname\fP
+This option can only be specified once.
+From \f(CWNet-SNMP\fP v5.10 onwards, all certificates in files matching the
+given filename prefix are trusted.
+.It \fBpeer-hostname\fP \fIhostname\fP
 If specified, the hostname of the SNMPv3 server will be checked against the
 peer certificate presented by the SNMPv3 server.
-.TP
-\fBcontext\fP \fIcontext\fP
+.It \fBcontext\fP \fIcontext\fP
 Sets the \fIcontext\fP for SNMPv3 security.
-.TP
-\fBbulk-size\fP \fIinteger\fP
+.It \fBbulk-size\fP \fIinteger\fP
 Configures the size of SNMP bulk transfers.
 The default is 0, which disables bulk transfers altogether.
-.TP
-\fBmetric-prefix\fP \fImetric-prefix\fP
+.It \fBmetric-prefix\fP \fImetric-prefix\fP
 Prepends \fIprefix\fP to the metric name in the \fBdata\fP block.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear multiple times.
-.TP
-\fBcollect\fP \fIdata\fP [\fIdata\fP ...]
-Defines which values to collect. \fIdata\fP refers to one of the \fBdata\fP block
-above. Since the config file is read top-down you need to define the data before using it here.
-.RE
-.SH SECURITY
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times.
+.It \fBcollect\fP \fIdata\fP [\fIdata\fP ...]
+Defines which values to collect. \fIdata\fP refers to one of the
+\fBdata\fP block above.
+Since the config file is read top-down you need to define the data before
+using it here.
+.El
+.El
+.Sh SECURITY
 SNMP provides various security levels, ranging from open SNMPv1 and SNMPv2c,
 to the secure SNMPv3 User-based Security Model (USM) and Transport Security
 Model (TSM) options.
-
-.SS "SNMPv1 / SNMPv2c Security"
+.Ss "SNMPv1 / SNMPv2c Security"
 When \fBversion\fP 1 or 2 is used, anyone with knowledge of the community
 string can connect to the SNMP server.
-
+.Pp
 No authentication or privacy is supported in these modes.
-
-.SS "SNMPv3 User-based Security Model (USM) Security"
-When \fBaddress\fP prefixes such as \fIudp:\fP or \fIudp6:\fP are used along with
-\fBversion\fP 3 and the \fBusername\fP option, USM security is enabled.
-
+.Ss "SNMPv3 User-based Security Model (USM) Security"
+When \fBaddress\fP prefixes such as \fIudp:\fP or \fIudp6:\fP are used
+along with \fBversion\fP 3 and the \fBusername\fP option, USM security
+is enabled.
+.Pp
 Security in this mode is based on shared secrets, and can offer
 optional authentication and privacy.
-
+.Pp
 The digest and encryption algorithms specified by \fBauth-protocol\fP and
 \fBprivacy-protocol\fP must match those on the SNMPv3 server.
-
+.Pp
 The user credentials used by the SNMPv3 server are specified by the
 \fBusername\fP option.
-
-.SS "SNMPv3 Transport Security Model (TSM) Security"
-When TLS/DTLS \fBaddress\fP prefixes such as \fIdtlsudp:\fP or \fIdtlsudp6:\fP are
-used along with the \fBlocal-cert\fP option, TSM security is enabled.
-.PP
+.Ss "SNMPv3 Transport Security Model (TSM) Security"
+When TLS/DTLS \fBaddress\fP prefixes such as \fIdtlsudp:\fP or \fIdtlsudp6:\fP
+are used along with the \fBlocal-cert\fP option, TSM security is enabled.
+.Pp
 Security in this mode is based on X509 certificates and public/private keys.
 The SNMPv3 server and ncollectd-snmp client authenticate and secure the
-connection through server and client certificates. The SNMPv3 server will
-decide the user credentials to be applied based on the attributes of the
-client certificate presented by ncollectd-snmp in \fBlocal-cert\fP.
-.PP
+connection through server and client certificates.
+The SNMPv3 server will decide the user credentials to be applied based on
+the attributes of the client certificate presented by ncollectd-snmp in
+\fBlocal-cert\fP.
+.Pp
 The certificates and keys are stored in any of the series of certificate
-store paths supported by the \f(CWNet-SNMP\fP library, and are scanned and indexed
-for performance. The path cannot be specified directly via ncollectd-snmp.
-.PP
+store paths supported by the \f(CWNet-SNMP\fP library, and are scanned and
+indexed for performance.
+The path cannot be specified directly via ncollectd-snmp.
+.Pp
 Certificates are chosen by specifying the fingerprint of the certificate
-or the name prefix of the file the certificate is stored in. The algorithm
-used for the fingerprint matches the algorithm used to sign the certificate.
-.PP
+or the name prefix of the file the certificate is stored in.
+The algorithm used for the fingerprint matches the algorithm used to sign
+the certificate.
+.Pp
 Files containing keys must have no group or world permissions, otherwise the
 contents of the files will be silently ignored.
-.PP
+.Pp
 If a filename prefix is used, certificates are picked up from files with
-specific prefixes known to \f(CWNet-SNMP\fP matching the filename prefix. This value
-is not a path. For example, if a filename prefix of "router-cert" is specified,
-files called \fIrouter-cert.pem\fP, \fIrouter-cert.crt\fP, \fIrouter-cert.cer\fP,
+specific prefixes known to \f(CWNet-SNMP\fP matching the filename prefix.
+This value is not a path.
+For example, if a filename prefix of "router-cert" is specified, files called
+\fIrouter-cert.pem\fP, \fIrouter-cert.crt\fP, \fIrouter-cert.cer\fP,
 \fIrouter-cert.cert\fP, \fIrouter-cert.der\fP, \fIrouter-cert.key\fP and
 \fIrouter-cert.private\fP will be scanned for certificates and keys.
-.PP
+.Pp
 The \f(CWNet-SNMP\fP library v5.9 and older has limited support for certificates
-other than self signed certificates. Intermediate certificates are ignored
-by these older versions of \f(CWNet-SNMP\fP, and only the first certificate in
-each file is recognised. \f(CWNet-SNMP\fP v5.10 and higher recognise concatenated
-intermediate certificates in files, as well as multiple CA certificates
-specified in one file, such as the \fItls-ca-bundle.pem\fP available on many
-platforms. This allows certificates to be used that have been provided by a
+other than self signed certificates.
+Intermediate certificates are ignored by these older versions of
+\f(CWNet-SNMP\fP, and only the first certificate in each file is recognised.
+\f(CWNet-SNMP\fP v5.10 and higher recognise concatenated intermediate
+certificates in files, as well as multiple CA certificates specified in
+one file, such as the \fItls-ca-bundle.pem\fP available on many platforms.
+This allows certificates to be used that have been provided by a
 PKI, either privately or through a public certificate authority.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

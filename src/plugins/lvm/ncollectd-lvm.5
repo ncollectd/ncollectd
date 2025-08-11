@@ -1,13 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-lvm 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd lvm man page"
-.SH NAME
-ncollectd-lvm \- Documentation of ncollectd's lvm plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-LVM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-lvm
+.Nd Documentation of ncollectd's lvm plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP lvm
 \fBplugin\fP lvm
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBlvm\fP plugin collects metrics form the Logical Volume Manager (LVM),
 of the usage of Volume Grousp (VG) and Logical Volumes (LV).
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

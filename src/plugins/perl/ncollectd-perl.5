@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-perl 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd perl man page"
-.SH NAME
-ncollectd-perl \- Documentation of ncollectd's perl plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-PERL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-perl
+.Nd Documentation of ncollectd's perl plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP perl
-.br
 \fBplugin\fP perl {
     \fBinclude-dir\fI \fI/path/to/perl/plugins\fP
     \fBbase-name\fI \fIname\fP
@@ -13,156 +16,150 @@ ncollectd-perl \- Documentation of ncollectd's perl plugin
     \fBplugin\fP \fIplugin-name\fP {
         ...
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBperl\fP plugin embeds a Perl-interpreter into collectd and provides an
-interface to ncollectd's plugin system. This makes it possible to write plugins
-for collectd in Perl.
-
-.TP
-\fBinclude-dir\fI \fI/path/to/perl/plugins\fP
+interface to ncollectd's plugin system.
+This makes it possible to write plugins for collectd in Perl.
+.Bl -tag -width Ds
+.It \fBinclude-dir\fI \fI/path/to/perl/plugins\fP
 Adds \fI/path/to/perl/plugins\fP to the \fB@INC\fP array.
-This is the same as using the \f(CW-IDir\fP command line option or \f(CWuse lib Dir\fP
-in the source code. Please note that it
-only has effect on plugins loaded after this option.
-.TP
-\fBbase-name\fI \fIname\fP
-Prepends \fIname\fP\fB::\fP to all plugin names loaded after this option. This is
-provided for convenience to keep plugin names short. All Perl-based plugins
-provided with the \fBncollectd\fP distributions reside in the \f(CWNCollectd::Plugins\fP
-namespace.
-.TP
-\fBenable-debugger\fP [\fIpackage\fP]
-Run collectd under the control of the Perl source debugger. If \fIpackage\fP is
-not the empty string, control is passed to the debugging, profiling, or
-tracing module installed as Devel::\fIpackage\fP. A comma-separated list of
-options may be specified after the "=" character. Please note that you may not
-leave out the \fIpackage\fP option even if you specify \fB""\fP. This is the same as
-using the \f(CW-d:Package\fP command line option.
-
+This is the same as using the \f(CW-IDir\fP command line option
+or \f(CWuse lib Dir\fP in the source code.
+Please note that it only has effect on plugins loaded after this option.
+.It \fBbase-name\fI \fIname\fP
+Prepends \fIname\fP\fB::\fP to all plugin names loaded after this option.
+This is provided for convenience to keep plugin names short.
+All Perl-based plugins provided with the \fBncollectd\fP distributions
+reside in the \f(CWNCollectd::Plugins\fP namespace.
+.It \fBenable-debugger\fP [\fIpackage\fP]
+Run collectd under the control of the Perl source debugger.
+If \fIpackage\fP is not the empty string, control is passed to the debugging,
+profiling, or tracing module installed as Devel::\fIpackage\fP.
+A comma-separated list of options may be specified after the "=" character.
+Please note that you may not leave out the \fIpackage\fP option even if you
+specify \fB""\fP.
+This is the same as using the \f(CW-d:Package\fP command line option.
+.Pp
 See \fBperldebug\fP for detailed documentation about debugging Perl.
-
+.Pp
 This option does not prevent collectd from daemonizing, so you should start
-collectd with the \f(CW-f\fP command line option. Else you will not be able to use
-the command line driven interface of the debugger.
-.TP
-\fBload-plugin\fP \fIplugin-name\fP
-Loads the Perl plugin \fIplugin-name\fP. This does basically the same as \f(CWuse\fP would
-do in a Perl program. As a side effect, the first occurrence of this option
-causes the Perl-interpreter to be initialized.
-.TP
-\fBplugin\fP \fIplugin-name\fP
-This block may be used to pass on configuration settings to a Perl plugin. The
-configuration is converted into a config-item data type which is passed to the
-registered configuration callback. See below for details about the config-item
-data type and how to register callbacks.
-
-The \fIplugin-name\fP identifies the callback. It is used literally and independent of
-the \fBbase-name\fP setting.
-
-.SH WRITING YOUR OWN PLUGINS
-
-Writing your own plugins is quite simple. ncollectd manages plugins by means of
-dispatch functions which call the appropriate \fBcallback functions\fP
-registered by the plugins. Any plugin basically consists of the implementation
-of these callback functions and initializing code which registers the
-functions with collectd. See the section "EXAMPLES" below for a really basic
-example. The following types of \fBcallback functions\fP are known to collectd
+ncollectd with the \f(CW-f\fP command line option.
+Else you will not be able to use the command line driven interface of the
+debugger.
+.It \fBload-plugin\fP \fIplugin-name\fP
+Loads the Perl plugin \fIplugin-name\fP.
+This does basically the same as \f(CWuse\fP would do in a Perl program.
+As a side effect, the first occurrence of this option causes the
+Perl-interpreter to be initialized.
+.It \fBplugin\fP \fIplugin-name\fP
+This block may be used to pass on configuration settings to a Perl plugin.
+The configuration is converted into a config-item data type which is passed
+to the registered configuration callback.
+See below for details about the config-item data type and how to register
+callbacks.
+.Pp
+The \fIplugin-name\fP identifies the callback.
+It is used literally and independent of the \fBbase-name\fP setting.
+.El
+.Sh WRITING YOUR OWN PLUGINS
+Writing your own plugins is quite simple.
+Ncollectd manages plugins by means of dispatch functions which call
+the appropriate \fBcallback functions\fP registered by the plugins.
+Any plugin basically consists of the implementation of these callback
+functions and initializing code which registers the functions with
+collectd.
+See the section "EXAMPLES" below for a really basic example.
+The following types of \fBcallback functions\fP are known to ncollectd
 (all of them are optional):
-
-.TP
-\fBconfiguration functions\fP
+.Bl -tag -width Ds
+.It \fBconfiguration functions\fP
 This type of functions is called during configuration if an appropriate
-\fBplugin\fP block has been encountered. It is called once for each \fBplugin\fP
-block which matches the name of the callback as provided with the
-\fBplugin_register\fP method - see below.
-.TP
-\fBinit functions\fP
+\fBplugin\fP block has been encountered.
+It is called once for each \fBplugin\fP block which matches the name of
+the callback as provided with the \fBplugin_register\fP method - see below.
+.It \fBinit functions\fP
 This type of functions is called once after loading the module and before any
-calls to the read and write functions. It should be used to initialize the
-internal state of the plugin (e. g. open sockets, ...). If the return
-value evaluates to \fBfalse\fP, the plugin will be disabled.
-.TP
-\fBread functions\fP
-This type of function is used to collect the actual data. It is called once
-per interval (see the \fBinterval\fP configuration option of collectd). Usually
-it will call \fBplugin_dispatch_values\fP to dispatch the values to collectd
-which will pass them on to all registered \fBwrite functions\fP. If the return
-value evaluates to \fBfalse\fP the plugin will be skipped for an increasing
-amount of time until it returns \fBtrue\fP again.
-.TP
-\fBwrite functions\fP
-This type of function is used to write the dispatched values. It is called
-once for each call to \fBplugin_dispatch_values\fP.
-.TP
-\fBlog functions\fP
+calls to the read and write functions.
+It should be used to initialize the internal state of the plugin
+(e. g. open sockets, ...).
+If the return value evaluates to \fBfalse\fP, the plugin will be disabled.
+.It \fBread functions\fP
+This type of function is used to collect the actual data.
+It is called once per interval (see the \fBinterval\fP configuration option
+of collectd).
+Usually it will call \fBplugin_dispatch_values\fP to dispatch the values to
+collectd which will pass them on to all registered \fBwrite functions\fP.
+If the return value evaluates to \fBfalse\fP the plugin will be skipped for
+an increasing amount of time until it returns \fBtrue\fP again.
+.It \fBwrite functions\fP
+This type of function is used to write the dispatched values.
+It is called once for each call to \fBplugin_dispatch_values\fP.
+.It \fBlog functions\fP
 This type of function is used to pass messages of plugins or the daemon itself
 to the user.
-.TP
-\fBnotification function\fP
-This type of function is used to act upon notifications. In general, a
-notification is a status message that may be associated with a data instance.
+.It \fBnotification function\fP
+This type of function is used to act upon notifications.
+In general, a notification is a status message that may be associated with a
+data instance.
 Usually, a notification is generated by the daemon or any plugin.
-.TP
-\fBshutdown functions\fP
-This type of function is called once before the daemon shuts down. It should
-be used to clean up the plugin (e.g. close sockets, ...).
-.PP
+.It \fBshutdown functions\fP
+This type of function is called once before the daemon shuts down.
+It should be used to clean up the plugin (e.g. close sockets, ...).
+.El
+.Pp
 Any function (except log functions) may set the \f(CW$@\fP variable to describe
-errors in more detail. The message will be passed on to the user using
-collectd's logging mechanism.
-.PP
+errors in more detail.
+The message will be passed on to the user using ncollectd's logging mechanism.
+.Pp
 See the documentation of the \fBplugin_register\fP method in the section
 \fBMETHODS\fP below for the number and types of arguments passed to each
-\fBcallback function\fP. This section also explains how to register
-\fBcallback functions\fP with ncollectd.
-.PP
+\fBcallback function\fP.
+This section also explains how to register \fBcallback functions\fP with
+ncollectd.
+.Pp
 To enable a plugin, copy it to a place where Perl can find it (i. e. a
-directory listed in the \f(CW@INC\fP array) just as any other Perl plugin and add
-an appropriate \fBload-plugin> option to the configuration file. After
-restarting collectd you're done.
-
-.SH DATA TYPES
+directory listed in the \f(CW@INC\fP array) just as any other Perl plugin
+and add an appropriate \fBload-plugin\fP option to the configuration file.
+After restarting collectd you're done.
+.Sh DATA TYPES
 The following complex types are used to pass values between the Perl plugin
 and ncollectd:
-
-.TP
-\fBConfig-Item\fP
+.Bl -tag -width Ds
+.It \fBConfig-Item\fP
 A config-item is one structure which keeps the information provided in the
-configuration file. The array of children keeps one entry for each
-configuration option. Each such entry is another config-item structure, which
-may nest further if nested blocks are used.
-
-.EX
+configuration file.
+The array of children keeps one entry for each configuration option.
+Each such entry is another config-item structure, which may nest further
+if nested blocks are used.
+.Bd -literal
     {
         key      => key,
         values   => [ val1, val2, ... ],
         children => [ { ... }, { ... }, ... ]
     }
-.EE
-.TP
-\fBMetric Family\fP
-
-A data-set is a list of one or more data-sources. Each data-source defines a
-name, type, min- and max-value and the data-set wraps them up into one
-structure. The general layout looks like this:
-
+.Ed
+.It \fBMetric Family\fP
+A data-set is a list of one or more data-sources.
+Each data-source defines a name, type, min- and max-value and the data-set
+wraps them up into one structure.
+The general layout looks like this:
+.Bd -literal
   [{
     name => 'data_source_name',
     type => DS_TYPE_COUNTER || DS_TYPE_GAUGE || DS_TYPE_DERIVE,
     min  => value || undef,
     max  => value || undef
   }, ...]
-
-=item Value-List
-
+.Ed
+.It \fBValue-List\fP
 A value-list is one structure which features an array of values and fields to
-identify the values, i.E<nbsp>e. time and host, plugin name and
-plugin-instance as well as a type and type-instance. Since the "type" is not
-included in the value-list but is passed as an extra argument, the general
-layout looks like this:
-
+identify the values, i. e. time and host, plugin name and plugin-instance as
+well as a type and type-instance.
+Since the "type" is not included in the value-list but is passed as an extra
+argument, the general layout looks like this:
+.Bd -literal
   {
     values => [123, 0.5],
     time   => time (),
@@ -173,332 +170,319 @@ layout looks like this:
     plugin_instance => '',
     type_instance   => ''
   }
-
-.TP
-\fBNotification\fP
+.Ed
+.It \fBNotification\fP
 A notification is one structure defining the severity, time and message of the
-status message as well as an identification of a data instance. Also, it
-includes an optional list of user-defined meta information represented as
-(name, value) pairs:
-
-.EX
-    {
-        severity => NOTIF_FAILURE || NOTIF_WARNING || NOTIF_OKAY,
-        time     => time (),
-        name     => 'notification_name',
-        labels      => [ { name => <name>, value => <value> }, ... ]
-        annotations => [ { name => <name>, value => <value> }, ... ]
-    }
-.EE
-.SH METHODS
-
-The following functions provide the C-interface to Perl-modules. They are
-exported by the ":plugin" export tag (see the section "EXPORTS" below).
-
-.TP
-\fBplugin_register\fP (\fItype\fP, \fIname\fP, \fIdata\fP)
-
+status message as well as an identification of a data instance.
+Also, it includes an optional list of user-defined meta information
+represented as (name, value) pairs:
+.Bd -literal
+  {
+      severity => NOTIF_FAILURE || NOTIF_WARNING || NOTIF_OKAY,
+      time     => time (),
+      name     => 'notification_name',
+      labels      => [ { name => <name>, value => <value> }, ... ]
+      annotations => [ { name => <name>, value => <value> }, ... ]
+  }
+.Ed
+.El
+.Sh METHODS
+The following functions provide the C-interface to Perl-modules.
+They are exported by the ":plugin" export tag (see the section "EXPORTS" below).
+.Bl -tag -width Ds
+.It \fBplugin_register\fP (\fItype\fP, \fIname\fP, \fIdata\fP)
 Registers a callback-function or data-set.
-
-\fItype\fP can be one of:
-.RS
-.TP
-TYPE_CONFIG
-.TP
-TYPE_INIT
-.TP
-TYPE_READ
-.TP
-TYPE_WRITE
-.TP
-TYPE_LOG
-.TP
-TYPE_NOTIF
-.TP
-TYPE_SHUTDOWN
-.RE
-
+.Pp
+\fIType\fP can be one of:
+.Bl -bullet
+.It
+\fBTYPE_CONFIG\fP
+.It
+\fBTYPE_INIT\fP
+.It
+\fBTYPE_READ\fP
+.It
+\fBTYPE_WRITE\fP
+.It
+\fBTYPE_LOG\fP
+.It
+\fBTYPE_NOTIF\fP
+.It
+\fBTYPE_SHUTDOWN\fP
+.El
+.Pp
 \fIname\fP is the name of the callback-function or the type of the data-set,
-depending on the value of \fItype\fP. (Please note that the type of the data-set
-is the value passed as I<name> here and has nothing to do with the I<type>
-argument which simply tells B<plugin_register> what is being registered.)
-
-The last argument, I<data>, is either a function name or an array-reference.
-If I<type> is B<TYPE_DATASET>, then the I<data> argument must be an
-array-reference which points to an array of hashes. Each hash describes one
-data-set. For the exact layout see B<Data-Set> above. Please note that
-there is a large number of predefined data-sets available in the B<types.db>
-file which are automatically registered with collectd - see L<types.db(5)> for
-a description of the format of this file.
-
-B<Note>: Using B<plugin_register> to register a data-set is deprecated. Add
-the new type to a custom L<types.db(5)> file instead. This functionality might
-be removed in a future version of collectd.
-
-If the I<type> argument is any of the other types (B<TYPE_INIT>, B<TYPE_READ>,
-...) then I<data> is expected to be a function name. If the name is not
-prefixed with the plugin's package name collectd will add it automatically.
+depending on the value of \fItype\fP.
+(Please note that the type of the data-set is the value passed as \fIname\fP
+here and has nothing to do with the \fItype\fP argument which simply tells
+\fBplugin_register\fP what is being registered.)
+.Pp
+The last argument, \fIdata\fP, is either a function name or an array-reference.
+If \fItype\fP is \fBTYPE_DATASET\fP, then the \fIdata\fP argument must be an
+array-reference which points to an array of hashes.
+Each hash describes one data-set.
+For the exact layout see \fBData-Set\fP above.
+Please note that there is a large number of predefined data-sets available
+in the \fBtypes.db\fP file which are automatically registered with ncollectd
+- see types.db(5) for a description of the format of this file.
+.Pp
+\fBNote\fP: Using \fBplugin_register\fP to register a data-set is deprecated.
+Add the new type to a custom types.db(5) file instead.
+This functionality might be removed in a future version of ncollectd.
+.Pp
+If the \fItype\fP argument is any of the other types (\fBTYPE_INIT\fP,
+\fBTYPE_READ\fP, ...) then \fIdata\fP is expected to be a function name.
+If the name is not prefixed with the plugin's package name collectd will add
+it automatically.
 The interface slightly differs from the C interface (which expects a function
 pointer instead) because Perl does not support to share references to
 subroutines between threads.
-
+.Pp
 These functions are called in the various stages of the daemon (see the
 section "WRITING YOUR OWN PLUGINS" above) and are passed the following
 arguments:
-
-=over 4
-
-=item TYPE_CONFIG
-
-The only argument passed is I<config-item>. See above for the layout of this
-data type.
-
-=item TYPE_INIT
-
-=item TYPE_READ
-
-=item TYPE_SHUTDOWN
-
+.Bl -tag -width Ds
+.It \fBTYPE_CONFIG\fP
+The only argument passed is \fIconfig-item\fP.
+See above for the layout of this data type.
+.It \fBTYPE_INIT\fP
+.It \fBTYPE_READ\fP
+.It \fBTYPE_SHUTDOWN\fP
 No arguments are passed.
-
-=item TYPE_WRITE
-
-The arguments passed are I<type>, I<data-set>, and I<value-list>. I<type> is a
-string. For the layout of I<data-set> and I<value-list> see above.
-
-=item TYPE_FLUSH
-
-The arguments passed are I<timeout> and I<identifier>. I<timeout> indicates
-that only data older than I<timeout> seconds is to be flushed. I<identifier>
-specifies which values are to be flushed.
-
-=item TYPE_LOG
-
-The arguments are I<log-level> and I<message>. The log level is small for
-important messages and high for less important messages. The least important
-level is B<LOG_DEBUG>, the most important level is B<LOG_ERR>. In between there
-are (from least to most important): B<LOG_INFO>, B<LOG_NOTICE>, and
-B<LOG_WARNING>. I<message> is simply a string B<without> a newline at the end.
-
-=item TYPE_NOTIF
-
-The only argument passed is I<notification>. See above for the layout of this
-data type.
-
-.TP
-\fBplugin_unregister\fP (\fItype\fP, \fIplugin\fP)
+.It \fBTYPE_WRITE\fP
+The arguments passed are \fItype\fP, \fIdata-set\fP, and \fIvalue-list\fP.
+\fItype\fP is a string.
+For the layout of \fIdata-set\fP and \fIvalue-list\fP see above.
+.It \fBTYPE_FLUSH\fP
+The arguments passed are \fItimeout\fP and \fIidentifier\fP.
+\fItimeout\fP indicates that only data older than \fItimeout\fP seconds is
+to be flushed.
+\fIidentifier\fP specifies which values are to be flushed.
+.It \fBTYPE_LOG\fP
+The arguments are \fIlog-level\fP and \fImessage\fP.
+The log level is small for important messages and high for less important
+messages.
+The least important level is \fBLOG_DEBUG\fP, the most important level is
+\fBLOG_ERR\fP.
+In between there are (from least to most important): \fBLOG_INFO\fP,
+\fBLOG_NOTICE\fP, and \fBLOG_WARNING\fP.
+\fImessage\fP is simply a string \fBwithout\fP a newline at the end.
+.It \fBTYPE_NOTIF\fP
+The only argument passed is \fInotification\fP.
+See above for the layout of this data type.
+.El
+.It \fBplugin_unregister\fP (\fItype\fP, \fIplugin\fP)
 Removes a callback or data-set from collectd's internal list of functions.
-.TP
-\fBplugin_dispatch_values\fP (\fImetric-family\fP)
-
-Submits a I<value-list> to the daemon. If the data-set identified by
-I<value-list>->{I<type>}
+.It \fBplugin_dispatch_values\fP (\fImetric-family\fP)
+Submits a \fIvalue-list\fP to the daemon.
+If the data-set identified by \fIvalue-list\fP->{\fItype\fP}
 is found (and the number of values matches the number of data-sources) then the
 type, data-set and value-list is passed to all write-callbacks that are
 registered with the daemon.
-.TP
-\fBplugin_dispatch_notification\fP (\fInotification\fP)
-
-Submits a I<notification> to the daemon which will then pass it to all
+.It \fBplugin_dispatch_notification\fP (\fInotification\fP)
+Submits a \fInotification\fP to the daemon which will then pass it to all
 notification-callbacks that are registered.
-.TP
-\fBplugin_log (\fIlog-level\fP, \fImessage\fP)
-
-Submits a \fImessage\fP of level \fIlog-level\fP to ncollectd's logging mechanism.
+.It \fBplugin_log (\fIlog-level\fP, \fImessage\fP)
+Submits a \fImessage\fP of level \fIlog-level\fP to ncollectd's
+logging mechanism.
 The message is passed to all log-callbacks that are registered with ncollectd.
-.TP
-\fBERROR\fP, \fBWARNING\fP, \fBNOTICE\fP, \fBINFO\fP, \fBDEBUG\fP (\fImessage\fP)
-
+.It \fBERROR\fP, \fBWARNING\fP, \fBNOTICE\fP, \fBINFO\fP, \fBDEBUG\fP (\fImessage\fP)
 Wrappers around \fBplugin_log\fP, using \fBLOG_ERR\fP, \fBLOG_WARNING\fP,
-\fBLOG_NOTICE\fP, \fBLOG_INFO\fP and \fBLOG_DEBUG\fP respectively as \fIlog-level\fP.
-.TP
-\fBplugin_get_interval\fP ()
+\fBLOG_NOTICE\fP, \fBLOG_INFO\fP and \fBLOG_DEBUG\fP respectively as
+\fIlog-level\fP.
+.It \fBplugin_get_interval\fP ()
 Returns the interval of the current plugin as a floating point number in
-seconds. This value depends on the interval configured within the
+seconds.
+This value depends on the interval configured within the
 \f(CWload-plugin perl\fP block or the global interval (see
-.BR ncollectd.conf(5)
+.Xr ncollectd.conf 5
 for details).
-
-.SH GLOBAL VARIABLES
-.TP
-\fB$hostname_g\fP
+.El
+.Sh GLOBAL VARIABLES
+.Bl -tag -width Ds
+.It \fB$hostname_g\fP
 As the name suggests this variable keeps the hostname of the system collectd
-is running on. The value might be influenced by the \fBhostname\fP or
-\fBfqdn-lookup\fP configuration options (see
-.BR ncollectd.conf(5)
+is running on.
+The value might be influenced by the \fBhostname\fP or \fBfqdn-lookup\fP
+configuration options (see
+.Xr ncollectd.conf 5
 for details).
-.TP
-\fB$interval_g\fP
+.It \fB$interval_g\fP
 This variable keeps the interval in seconds in which the read functions are
 queried (see the \fBinterval\fP configuration option).
-
+.Pp
 \fBNote:\fP This variable should no longer be used in favor of
-\f(CWplugin_get_interval()\fP (see above). This function takes any plugin-specific
-interval settings into account (see the \fBinterval\fP option of \fBload-plugin\fP
-.BR ncollectd.conf(5)
+\f(CWplugin_get_interval()\fP (see above).
+This function takes any plugin-specific interval settings into account
+(see the \fBinterval\fP option of \fBload-plugin\fP
+.Xr ncollectd.conf 5
 for details).
-.PP
+.El
+.Pp
 Any changes to these variables will be globally visible in ncollectd.
-
-.SH EXPORTS
-By default no symbols are exported. However, the following export tags are
-available (\fB:all\fP will export all of them):
-
-.RS
-.IP \(bu 2
+.Sh EXPORTS
+By default no symbols are exported.
+However, the following export tags are available
+(\fB:all\fP will export all of them):
+.Bl -bullet
+.It
 \fB:plugin\fP
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 \fBplugin_register\fP ()
-.IP \(bu 2
+.It
 \fBplugin_unregister\fP ()
-.IP \(bu 2
+.It
 \fBplugin_dispatch_values\fP ()
-.IP \(bu 2
+.It
 \fBplugin_flush\fP ()
-.IP \(bu 2
+.It
 \fBplugin_flush_one\fP ()
-.IP \(bu 2
+.It
 \fBplugin_flush_all\fP ()
-.IP \(bu 2
+.It
 \fBplugin_dispatch_notification\fP ()
-.IP \(bu 2
+.It
 \fBplugin_log\fP ()
-.RE
-.IP \(bu 2
+.El
+.It
 \fB:types\fP
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 \fBTYPE_CONFIG\fP
-.IP \(bu 2
+.It
 \fBTYPE_INIT\fP
-.IP \(bu 2
+.It
 \fBTYPE_READ\fP
-.IP \(bu 2
+.It
 \fBTYPE_WRITE\fP
-.IP \(bu 2
+.It
 \fBTYPE_FLUSH\fP
-.IP \(bu 2
+.It
 \fBTYPE_SHUTDOWN\fP
-.IP \(bu 2
+.It
 \fBTYPE_LOG\fP
-.RE
-.IP \(bu 2
+.El
+.It
 \fB:log\fP
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 \fBERROR\fP ()
-.IP \(bu 2
+.It
 \fBWARNING\fP ()
-.IP \(bu 2
+.It
 \fBNOTICE\fP ()
-.IP \(bu 2
+.It
 \fBINFO\fP ()
-.IP \(bu 2
+.It
 \fBDEBUG\fP ()
-.IP \(bu 2
+.It
 \fBLOG_ERR\fP
-.IP \(bu 2
+.It
 \fBLOG_WARNING\fP
-.IP \(bu 2
+.It
 \fBLOG_NOTICE\fP
-.IP \(bu 2
+.It
 \fBLOG_INFO\fP
-.IP \(bu 2
+.It
 \fBLOG_DEBUG\fP
-.RE
-.IP \(bu 2
+.El
+.It
 \fB:notif\fP
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 \fBNOTIF_FAILURE\fP
-.IP \(bu 2
+.It
 \fBNOTIF_WARNING\fP
-.IP \(bu 2
+.It
 \fBNOTIF_OKAY\fP
-.RE
-.IP \(bu 2
+.El
+.It
 \fB:globals\fP
-.RS
-.IP \(bu 2
+.Bl -bullet
+.It
 \fB$hostname_g\fP
-.IP \(bu 2
+.It
 \fB$interval_g\fP
-.RE
-.RE
-
-.SH EXAMPLES
-
+.El
+.El
+.Sh EXAMPLES
 Any Perl plugin will start similar to:
-.EX
+.Bd -literal
     package NCollectd::Plugins::FooBar;
 
     use strict;
     use warnings;
 
     use NCollectd qw( :all );
-.EE
-
+.Ed
+.Pp
 A very simple read function might look like:
-
-  sub foobar_read
-  {
-    my $vl = { plugin => 'foobar', type => 'gauge' };
-    $vl->{'values'} = [ rand(42) ];
-    plugin_dispatch_values ($vl);
-    return 1;
-  }
-
-A very simple write function might look like:
-
-  sub foobar_write
-  {
-    my ($type, $ds, $vl) = @_;
-    for (my $i = 0; $i < scalar (@$ds); ++$i) {
-      print "$vl->{'plugin'} ($vl->{'type'}): $vl->{'values'}->[$i]\n";
+.Bd -literal
+    sub foobar_read
+    {
+      my $vl = { plugin => 'foobar', type => 'gauge' };
+      $vl->{'values'} = [ rand(42) ];
+      plugin_dispatch_values ($vl);
+      return 1;
     }
-    return 1;
-  }
-
-
+.Ed
+.Pp
+A very simple write function might look like:
+.Bd -literal
+    sub foobar_write
+    {
+      my ($type, $ds, $vl) = @_;
+      for (my $i = 0; $i < scalar (@$ds); ++$i) {
+        print "$vl->{'plugin'} ($vl->{'type'}): $vl->{'values'}->[$i]\n";
+      }
+      return 1;
+    }
+.Ed
+.Pp
 To register those functions with collectd:
-
-  plugin_register (TYPE_READ, "foobar", "foobar_read");
-  plugin_register (TYPE_WRITE, "foobar", "foobar_write");
-
+.Bd -literal
+    plugin_register (TYPE_READ, "foobar", "foobar_read");
+    plugin_register (TYPE_WRITE, "foobar", "foobar_write");
+.Ed
+.Pp
 See the section "DATA TYPES" above for a complete documentation of the data
 types used by the read, write and match functions.
-
-.SH CAVEATS
-ncollectd is heavily multi-threaded. Each collectd thread accessing the perl
-plugin will be mapped to a Perl interpreter thread (see
-.BR threads(3perl)
-). Any such thread will be created and destroyed transparently and on-the-fly.
-.PP
+.Sh CAVEATS
+ncollectd is heavily multi-threaded.
+Each collectd thread accessing the perl plugin will be mapped to a Perl
+interpreter thread (see
+.Xr threads (3perl)
+).
+Any such thread will be created and destroyed transparently and on-the-fly.
+.Pp
 Hence, any plugin has to be thread-safe if it provides several entry points
 from collectd (i. e. if it registers more than one callback or if a
-registered callback may be called more than once in parallel). Please note
-that no data is shared between threads by default. You have to use the
-\fBthreads::shared\fP module to do so.
-.PP
+registered callback may be called more than once in parallel).
+Please note that no data is shared between threads by default.
+You have to use the \fBthreads::shared\fP module to do so.
+.Pp
 Each function name registered with collectd has to be available before the
-first thread has been created (i. e. basically at compile time). This
-basically means that hacks (yes, I really consider this to be a hack) like
-\f(CW*foo = \&bar; plugin_register (TYPE_READ, "plugin", "foo");\fP most likely
-will not work. This is due to the fact that the symbol table is not shared
-across different threads.
-.PP
+first thread has been created (i. e. basically at compile time).
+This basically means that hacks (yes, I really consider this to be a hack)
+like \f(CW*foo = \&bar; plugin_register (TYPE_READ, "plugin", "foo");\fP
+most likely will not work.
+This is due to the fact that the symbol table is not shared across
+different threads.
+.Pp
 Each plugin is usually only loaded once and kept in memory for performance
-reasons. Therefore, END blocks are only executed once when collectd shuts
-down. You should not rely on END blocks anyway - use \fBshutdown functions\fP
+reasons.
+Therefore, END blocks are only executed once when collectd shuts down.
+You should not rely on END blocks anyway - use \fBshutdown functions\fP
 instead.
-.PP
+.Pp
 The perl plugin exports the internal API of collectd which is considered
-unstable and subject to change at any time. We try hard to not break backwards
-compatibility in the Perl API during the life cycle of one major release.
-However, this cannot be guaranteed at all times. Watch out for warnings
-dispatched by the perl plugin after upgrades.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
-.BR perl(1)
+unstable and subject to change at any time.
+We try hard to not break backwards compatibility in the Perl API during
+the life cycle of one major release.
+However, this cannot be guaranteed at all times.
+Watch out for warnings dispatched by the perl plugin after upgrades.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr perl 1 ,
+.Xr ncollectd.conf 5

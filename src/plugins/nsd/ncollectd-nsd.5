@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-nsd 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd nsd man page"
-.SH NAME
-ncollectd-nsd \- Documentation of ncollectd's nsd plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-NSD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-nsd
+.Nd Documentation of ncollectd's nsd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP nsd
-.br
 \fBplugin\fP nsd {
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
@@ -15,30 +18,28 @@ ncollectd-nsd \- Documentation of ncollectd's nsd plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBnsd\fP plugin obtain the date of nsdification expiration.
-.PP
-The configuration to obtain the nsdificate expiration data is put in a \fBinstance\fP block:
-.TP
-\fBhost\fP \fIhost\fP
+.Ed
+.Sh DESCRIPTION
+The \fBnsd\fP plugin collect metrics from the NSD authoritative DNS Name Server.
+.Pp
+The configuration consists of one or more \fBinstance\fP blocks:
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
 Hostname to connect.
-.TP
-\fBport\fP \fIport\fP
+.It \fBport\fP \fIport\fP
 Port to connect.
-.TP
-\fBserver-name\fP \fIservername\fP
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBserver-name\fP \fIservername\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected
+from this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

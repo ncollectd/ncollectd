@@ -1,16 +1,23 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-slurm 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd slurm man page"
-.SH NAME
-ncollectd-slurm \- Documentation of ncollectd's slurm plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-SLURM 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-slurm
+.Nd Documentation of ncollectd's slurm plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP slurm
-.SH DESCRIPTION
-The \fBslurm\fP plugin collects per-partition SLURM node and job state information, as
-well as internal health statistics.
-It takes no options. It should run on a node that is capable of running the
-\fIsinfo\fP and \fIsqueue\fP commands, i.e. it has a running slurmd and a valid slurm.conf.
-Note that this plugin needs the \fBglobals\fP option set to \fBtrue\fP in order to
-function properly.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP slurm
+.Ed
+.Sh DESCRIPTION
+The \fBslurm\fP plugin collects per-partition SLURM node and job state
+information, as well as internal health statistics.
+It takes no options.
+It should run on a node that is capable of running the \fIsinfo\fP and
+\fIsqueue\fP commands, i.e. it has a running slurmd and a valid slurm.conf.
+Note that this plugin needs the \fBglobals\fP option set to \fBtrue\fP in
+order to function properly.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

@@ -1,43 +1,44 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-hugepages 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd hugepages man page"
-.SH NAME
-ncollectd-hugepages \- Documentation of ncollectd's hugepages plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-HUGEPAGES 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-hugepages
+.Nd Documentation of ncollectd's hugepages plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP hugepages
-.br
 \fBplugin\fP hugepages {
     \fBreport-per-node-hp\fP \fItrue|false\fP
     \fBreport-root-hp\fP \fItrue|false\fP
     \fBvalues-pages\fP \fItrue|false\fP
     \fBvalues-bytes\fP \fItrue|false\fP
-.br
 }
-.SH DESCRIPTION
-The \fBhugepages\fP plugin collect \fIhugepages\fP information, ncollectd reads directories
-\fI/sys/devices/system/node/*/hugepages\fP and \fI/sys/kernel/mm/hugepages\fP.
+.Ed
+.Sh DESCRIPTION
+The \fBhugepages\fP plugin collect \fIhugepages\fP information, ncollectd
+reads directories \fI/sys/devices/system/node/*/hugepages\fP and
+\fI/sys/kernel/mm/hugepages\fP.
 Reading of these directories can be disabled by the following
 options (default is enabled).
-
-.TP
-\fBreport-per-node-hp\fP \fItrue|false\fP
+.Bl -tag -width Ds
+.It \fBreport-per-node-hp\fP \fItrue|false\fP
 If enabled, information will be collected from the hugepage
 counters in \fI/sys/devices/system/node/*/hugepages\fP.
 This is used to check the per-node hugepage statistics on
 a NUMA system.
-.TP
-\fBreport-root-hp\fP \fItrue|false\fP
+.It \fBreport-root-hp\fP \fItrue|false\fP
 If enabled, information will be collected from the hugepage
 counters in \fI/sys/kernel/mm/hugepages\fP.
 This can be used on both NUMA and non-NUMA systems to check
 the overall hugepage statistics.
-.TP
-\fBvalues-pages\fP \fItrue|false\fP
+.It \fBvalues-pages\fP \fItrue|false\fP
 Whether to report hugepages metrics in number of pages.
 Defaults to \fBtrue\fP.
-.TP
-\fBvalues-bytes\fP \fItrue|false\fP
+.It \fBvalues-bytes\fP \fItrue|false\fP
 Whether to report hugepages metrics in bytes.
 Defaults to \fBfalse\fP.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

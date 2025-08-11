@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-postgresql 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd postgresql man page"
-.SH NAME
-ncollectd-postgresql \- Documentation of ncollectd's postgresql plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-POSTGRESQL 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-postgresql
+.Nd Documentation of ncollectd's postgresql plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP postgresql
-.br
 \fBplugin\fP postgresql {
     \fBquery\fP \fIquery-name\fP {
         \fBstatement\fP \fIsql\fP
@@ -33,7 +36,7 @@ ncollectd-postgresql \- Documentation of ncollectd's postgresql plugin
         \fBuser\fP \fIuser\fP
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
-        \fBpassword-env\fP \fenv-name\fP
+        \fBpassword-env\fP \fIenv-name\fP
         \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
         \fBkrb-srv-name\fP \fIname\fP
         \fBservice\fP \fIservice\fP
@@ -46,301 +49,238 @@ ncollectd-postgresql \- Documentation of ncollectd's postgresql plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBpostgresql\fP plugin queries statistics from PostgreSQL databases. It
-keeps a persistent connection to all configured databases and tries to
-reconnect if the connection has been interrupted. A database is configured by
-specifying a \fBinstance\fP block as described below.
-
+.Ed
+.Sh DESCRIPTION
+The \fBpostgresql\fP plugin queries statistics from PostgreSQL databases.
+It keeps a persistent connection to all configured databases and tries to
+reconnect if the connection has been interrupted.
+A database is configured by specifying a \fBinstance\fP block as described
+below.
+.Pp
 By specifying custom database queries using a \fBquery\fP block as described
 below, you may collect any data that is available from some PostgreSQL
-database. This way, you are able to access statistics of external daemons
+database.
+This way, you are able to access statistics of external daemons
 which are available in a PostgreSQL database or use future or special
-statistics provided by PostgreSQL without the need to upgrade your collectd
+statistics provided by PostgreSQL without the need to upgrade your ncollectd
 installation.
-.TP
-\fBinstance\fP \fIinstance\fP
+.Bl -tag -width Ds
+.It \fBinstance\fP \fIinstance\fP
 The \fBinstance\fP block defines one PostgreSQL database for which to collect
-statistics. It accepts a single mandatory argument which specifies the
-database name. None of the other options are required. PostgreSQL will use
-default values as documented in the section "CONNECTING TO A DATABASE" in the
-.BR psql (1)
-manpage. However, be aware that those defaults may be influenced by
-the user collectd is run as and special environment variables. See the manpage
-for details.
-.RS
-.TP
-\fBhost\fP \fIhost\fP
-Specify the hostname or IP of the PostgreSQL server to connect to. If the
-value begins with a slash, it is interpreted as the directory name in which to
-look for the UNIX domain socket.
-
+statistics.
+It accepts a single mandatory argument which specifies the database name.
+None of the other options are required.
+PostgreSQL will use default values as documented in the section
+"CONNECTING TO A DATABASE" in the
+.Xr psql 1
+manpage.
+However, be aware that those defaults may be influenced by
+the user collectd is run as and special environment variables.
+See the manpage for details.
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
+Specify the hostname or IP of the PostgreSQL server to connect to.
+If the value begins with a slash, it is interpreted as the directory name
+in which to look for the UNIX domain socket.
+.Pp
 This option is also used to determine the hostname that is associated with a
-collected data set. If it has been omitted or either begins with with a slash
-or equals \fBlocalhost\fP it will be replaced with the global hostname definition
-of collectd. Any other value will be passed literally to collectd when
-dispatching values. Also see the global \fBhostname\fP and \fBfqdn-lookup\fP options.
-.TP
-\fBdatabase\fP \fIdatabase\fP
-
-.TP
-\fBport\fP \fIport\fP
+collected data set.
+If it has been omitted or either begins with with a slash or equals
+\fBlocalhost\fP it will be replaced with the global hostname definition
+of ncollectd.
+Any other value will be passed literally to collectd when dispatching values.
+Also see the global \fBhostname\fP and \fBfqdn-lookup\fP options.
+.It \fBdatabase\fP \fIdatabase\fP
+.It \fBport\fP \fIport\fP
 Specify the TCP port or the local UNIX domain socket file extension of the
 server.
-.TP
-\fBuser\fP \fIuser\fP
+.It \fBuser\fP \fIuser\fP
 Specify the username to be used when connecting to the server.
-.TP
-\fBuser-env\fP \fIenv-name\fP
-Get the username to be used when connecting to the server from the environment variable
-\fIenv-name\fP.
-.TP
-\fBpassword\fP \fIpassword\fP
+.It \fBuser-env\fP \fIenv-name\fP
+Get the username to be used when connecting to the server from the environment
+variable \fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
 Specify the password to be used when connecting to the server.
-.TP
-\fBpassword-env\fP \fIenv-name\fP
-Get the password to be used when connecting to the server from the environment variable
-\fIenv-name\fP.
-.TP
-\fBssl-mode\fP \fIdisable|allow|prefer|require\fP
-Specify whether to use an SSL connection when contacting the server. The
-following modes are supported:
-.RS
-.TP
-\fBdisable\fP
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password to be used when connecting to the server from the environment
+variable \fIenv-name\fP.
+.It \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+Specify whether to use an SSL connection when contacting the server.
+The following modes are supported:
+.Bl -tag -width Ds
+.It \fBdisable\fP
 Do not use SSL at all.
-.TP
-\fBallow\fP
-First, try to connect without using SSL. If that fails, try using SSL.
-.TP
-\fBprefer\fP \fI(default)\fP
-First, try to connect using SSL. If that fails, try without using SSL.
-.TP
-\fBrequire\fP
+.It \fBallow\fP
+First, try to connect without using SSL.
+If that fails, try using SSL.
+.It \fBprefer\fP \fI(default)\fP
+First, try to connect using SSL.
+If that fails, try without using SSL.
+.It \fBrequire\fP
 Use SSL only.
-.RE
-.TP
-\fBkrb-srv-name\fP \fIname\fP
+.El
+.It \fBkrb-srv-name\fP \fIname\fP
 Specify the Kerberos service name to use when authenticating with Kerberos 5
-or GSSAPI. See the sections "Kerberos authentication" and "GSSAPI" of the
+or GSSAPI.
+See the sections "Kerberos authentication" and "GSSAPI" of the
 \fBPostgreSQL Documentation\fP for details.
-.TP
-\fBservice\fP \fIservice\fP
-Specify the PostgreSQL service name to use for additional parameters. That
-service has to be defined in \fIpg_service.conf\fP and holds additional
-connection parameters. See the section "The Connection Service File" in the
+.It \fBservice\fP \fIservice\fP
+Specify the PostgreSQL service name to use for additional parameters.
+That service has to be defined in \fIpg_service.conf\fP and holds additional
+connection parameters.
+See the section "The Connection Service File" in the
 \fBPostgreSQL Documentation\fP for details.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Specify the interval with which the database should be queried.
 The default is to use the global \fBinterval\fP setting.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBdatabase\fP block.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBdatabase\fP block.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics in the queries.
-.TP
-\fBcollect\fP \fIflags\fP ...
-.RS
-.TP
-\fBsettings\fP
+.It \fBcollect\fP \fIflags\fP ...
+.Bl -tag -width Ds
+.It \fBsettings\fP
 Read run-time parameters of the server from \f(CWpg_settings\fP.
-.TP
-\fBdatabase\fP
+.It \fBdatabase\fP
 Read database stats from \f(CWpg_stat_database\fP for all databases.
-.TP
-\fBdatabase(database)\fP
+.It \fBdatabase(database)\fP
 Read database stats from \f(CWpg_stat_database\fP for the specific database.
-.TP
-\fBdatabase_size\fP
+.It \fBdatabase_size\fP
 Read database size from \f(CWpg_database_size\fP for all databases.
-.TP
-\fBdatabase_size(database)\fP
+.It \fBdatabase_size(database)\fP
 Read database size from \f(CWpg_database_size\fP for the specific database.
-.TP
-\fBdatabase_locks\fP
+.It \fBdatabase_locks\fP
 Read database locks from \f(CWpg_locks\fP for all databases.
-.TP
-\fBdatabase_locks(database)\fP
+.It \fBdatabase_locks(database)\fP
 Read database locks from \f(CWpg_locks\fP for the specific database.
-.TP
-\fBdatabase_conflicts\fP
-Read database conflicts from \f(CWpg_stat_database_conflicts\fP for all databases.
-.TP
-\fBdatabase_conflicts(database)\fP
-Read database conflicts from \f(CWpg_stat_database_conflicts\fP for the specific database.
-.TP
-\fBdatabase_checkpointer\fP
-Read database checkpointer from \f(CWpg_stat_checkpointer\fP for all databases.
-.TP
-\fBdatabase_checkpointer(database)\fP
-Read database checkpointer from \f(CWpg_stat_checkpointer\fP for the specific database.
-.TP
-\fBactivity\fP
-.TP
-\fBactivity(database)\fP
-.TP
-\fBreplication_slots\fP
-.TP
-\fBreplication_slots(database)\fP
-.TP
-\fBreplication\fP
-.TP
-\fBarchiver\fP
-.TP
-\fBbgwriter\fP
+.It \fBdatabase_conflicts\fP
+Read database conflicts from \f(CWpg_stat_database_conflicts\fP for
+all databases.
+.It \fBdatabase_conflicts(database)\fP
+Read database conflicts from \f(CWpg_stat_database_conflicts\fP for
+the specific database.
+.It \fBdatabase_checkpointer\fP
+Read database checkpointer from \f(CWpg_stat_checkpointer\fP for
+all databases.
+.It \fBdatabase_checkpointer(database)\fP
+Read database checkpointer from \f(CWpg_stat_checkpointer\fP for
+the specific database.
+.It \fBactivity\fP
+.It \fBactivity(database)\fP
+.It \fBreplication_slots\fP
+.It \fBreplication_slots(database)\fP
+.It \fBreplication\fP
+.It \fBarchiver\fP
+.It \fBbgwriter\fP
 Read bgwriter stats from \f(CWpg_stat_bgwriter\fP.
-.TP
-\fBslru\fP
-.TP
-\fBio\fP
-.TP
-\fBtable\fP
-.TP
-\fBtable(schema)\fP
-.TP
-\fBtable(schema,table)\fP
-.TP
-\fBtable_io\fP
-.TP
-\fBtable_io(schema)\fP
-.TP
-\fBtable_io(schema,table)\fP
-.TP
-\fBtable_size\fP
-.TP
-\fBtable_size(schema)\fP
-.TP
-\fBtable_size(schema,table)\fP
+.It \fBslru\fP
+.It \fBio\fP
+.It \fBtable\fP
+.It \fBtable(schema)\fP
+.It \fBtable(schema,table)\fP
+.It \fBtable_io\fP
+.It \fBtable_io(schema)\fP
+.It \fBtable_io(schema,table)\fP
+.It \fBtable_size\fP
+.It \fBtable_size(schema)\fP
+.It \fBtable_size(schema,table)\fP
 Get table size using \f(CWpg_table_size()\fP and \f(CWpg_indexes_size()\fP.
-An ACCESS EXCLUSIVE lock on the table will block ncollectd until lock is released.
-.TP
-\fBindexes\fP
-.TP
-\fBindexes(schema)\fP
-.TP
-\fBindexes(schema,table)\fP
-.TP
-\fBindexes(schema,table,index)\fP
-.TP
-\fBindexes_io\fP
-.TP
-\fBindexes_io(schema)\fP
-.TP
-\fBindexes_io(schema,table)\fP
-.TP
-\fBindexes_io(schema,table,index)\fP
-.TP
-\fBsequences_io\fP
-.TP
-\fBsequences_io(schema)\fP
-.TP
-\fBsequences_io(schema,sequence)\fP
-.TP
-\fBfunctions\fP
-.TP
-\fBfunctions(schema)\fP
-.TP
-\fBfunctions(schema,function)\fP
-.RE
-.TP
-\fBquery\fP \fIquery-name\fP
+An ACCESS EXCLUSIVE lock on the table will block ncollectd until lock
+is released.
+.It \fBindexes\fP
+.It \fBindexes(schema)\fP
+.It \fBindexes(schema,table)\fP
+.It \fBindexes(schema,table,index)\fP
+.It \fBindexes_io\fP
+.It \fBindexes_io(schema)\fP
+.It \fBindexes_io(schema,table)\fP
+.It \fBindexes_io(schema,table,index)\fP
+.It \fBsequences_io\fP
+.It \fBsequences_io(schema)\fP
+.It \fBsequences_io(schema,sequence)\fP
+.It \fBfunctions\fP
+.It \fBfunctions(schema)\fP
+.It \fBfunctions(schema,function)\fP
+.El
+.It \fBquery\fP \fIquery-name\fP
 Specifies a \fIquery\fP which should be executed in the context of the database
 connection.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.RE
-.TP
-\fBquery\fP \fIquery-name\fP
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.It \fBquery\fP \fIquery-name\fP
 Query blocks define \fISQL\fP statements and how the returned data should be
-interpreted. They are identified by the name that is given in the opening line
-of the block. Thus the name needs to be unique. Other than that, the name is
-not used in ncollectd.
-
-In each \fBquery\fP block, there is one or more \fBresult\fP blocks. \fBresult\fP blocks
-define which column holds which value or instance information. You can use
-multiple \fBresult\fP blocks to create multiple values from one returned row. This
-is especially useful, when queries take a long time and sending almost the same
-query again and again is not desirable.
-.RS
-.TP
-\fBstatement\fP \fIsql\fP
-Sets the statement that should be executed on the server. This is \fBnot\fP
-interpreted by ncollectd, but simply passed to the database server. Therefore,
-the SQL dialect that's used depends on the server collectd is connected to.
-
-The query has to return at least two columns, one for the instance and one
-value. You cannot omit the instance, even if the statement is guaranteed to
-always return exactly one line. In that case, you can usually specify something
-like this:
-.TP
-\fBmin-version\fP \fIversion\fP
-.TP
-\fBmax-version\fP \fIversion\fP
-Only use this query for the specified database version. You can use these
-options to provide multiple queries with the same name but with a slightly
-different syntax. The plugin will use only those queries, where the specified
-minimum and maximum versions fit the version of the database in use.
-.TP
-\fBmetric-prefix\fP \fIprefix\fP
+interpreted.
+They are identified by the name that is given in the opening line of the block.
+Thus the name needs to be unique.
+Other than that, the name is not used in ncollectd.
+.Pp
+In each \fBquery\fP block, there is one or more \fBresult\fP blocks.
+\fBresult\fP blocks define which column holds which value or instance
+information.
+You can use multiple \fBresult\fP blocks to create multiple values from one
+returned row.
+This is especially useful, when queries take a long time and sending almost
+the same query again and again is not desirable.
+.Bl -tag -width Ds
+.It \fBstatement\fP \fIsql\fP
+Sets the statement that should be executed on the server.
+This is \fBnot\fP interpreted by ncollectd, but simply passed to the
+database server.
+.It \fBmin-version\fP \fIversion\fP
+.It \fBmax-version\fP \fIversion\fP
+Only use this query for the specified database version.
+You can use these options to provide multiple queries with the same name
+but with a slightly different syntax.
+The plugin will use only those queries, where the specified minimum and
+maximum versions fit the version of the database in use.
+.It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple time in the \fBquery\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBquery\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
 Specifies the columns whose values will be used to create the labels.
-.TP
-\fBresult\fP
-.RS
-.TP
-\fBtype\fP \fIgauge|counter|info|unknow\fP
-The \fBtype\fP that's used for each line returned. Must be \fIgauge\fP, \fIcounter\fP,
-\fIinfo\fP or \fPunknow\fP.  If not set is \fPunknow\fP.
+.It \fBresult\fP
+.Bl -tag -width Ds
+.It \fBtype\fP \fIgauge|counter|info|unknow\fP
+The \fBtype\fP that's used for each line returned.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
+If not set is \fPunknow\fP.
 There must be exactly one \fBtype\fP option inside each \fBResult\fP block.
-.TP
-\fBtype-from\fP \fIcolumn-name\fP
-Read the type from \fIcolumn\fP. The column value must be \fIgauge\fP, \fIcounter\fP,
+.It \fBtype-from\fP \fIcolumn-name\fP
+Read the type from \fIcolumn\fP.
+The column value must be \fIgauge\fP, \fIcounter\fP,
 \fIinfo\fP or \fPunknow\fP.
-.TP
-\fBhelp\fP \fIhelp\fP
+.It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
-.TP
-\fBhelp-from\fP \fIcolumn-name\fP
+.It \fBhelp-from\fP \fIcolumn-name\fP
 Read the \fBhelp\fP text for the the metric from the named column.
-.TP
-\fBmetric\fP \fImetric-name\fP
+.It \fBmetric\fP \fImetric-name\fP
 Set the metric name.
-.TP
-\fBmetric-prefix\fP \fI prefix\fP
+.It \fBmetric-prefix\fP \fI prefix\fP
 Prepends \fIprefix\fP to the metric name in the \fBresult\fP.
-.TP
-\fBmetric-from\fP \fIcolumn-name\fP
+.It \fBmetric-from\fP \fIcolumn-name\fP
 Read the metric name from the named column.
 There must be at least one \fBmetric\fP or \fBmetric-from\fP option inside
 each \fBresult\fP block.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics. Can appear
-multiple times in the \fBresult\fP block.
-.TP
-\fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times in the \fBresult\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
 Specifies the columns whose values will be used to create the labels.
-.TP
-\fBvalue-from\fP \fIcolumn-name\fP
+.It \fBvalue-from\fP \fIcolumn-name\fP
 Name of the column whose content is used as the actual data for the metric
 that are dispatched to the daemon.
-
+.Pp
 There must be only one \fBvalue-from\fP option inside each \fBresult\fP block.
-.RE
-.RE
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.El
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

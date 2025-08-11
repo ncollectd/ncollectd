@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-cups 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd cups man page"
-.SH NAME
-ncollectd-cups \- Documentation of ncollectd's cups plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CUPS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-cups
+.Nd Documentation of ncollectd's cups plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP cups
-.br
 \fBplugin\fP cups {
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhost\fP
@@ -15,34 +18,35 @@ ncollectd-cups \- Documentation of ncollectd's cups plugin
             ...
         }
     }
-.br
 }
-.SH DESCRIPTION
+.Ed
+.Sh DESCRIPTION
 The \fBcups\fP plugin collect printer and jobs metrics from a cups server.
-.PP
+.Pp
 The plugin configuration consists of one or more \fBinstance\fP blocks which
-specify one \fIcups\fP connection each. Within the \fBinstance\fP blocks, the
-following options are allowed:
-.PP
-.TP
-\fBhost\fP \fIhost\fP
+specify one \fIcups\fP connection each.
+Within the \fBinstance\fP blocks, the following options are allowed:
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhost\fP
 Hostname or address to connect to.
 The default server comes from the \f(CWCUPS_SERVER\fP environment variable,
-then the \fI~/.cups/client.conf\fP file, and finally the \fI/etc/cups/client.conf\fP file.
-If not set, the default is the local system - either \f(CWlocalhost\fP or a domain socket path.
-.TP
-\fBport\fP \fIport\fP
-Service name or port number to connect to. Defaults to \f(CW631\fP.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+then the \fI~/.cups/client.conf\fP file, and finally the
+\fI/etc/cups/client.conf\fP file.
+If not set, the default is the local system - either \f(CWlocalhost\fP or
+a domain socket path.
+.It \fBport\fP \fIport\fP
+Service name or port number to connect to.
+Defaults to \f(CW631\fP.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this instance.
-.TP
-\fBfilter\fP
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from
+this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

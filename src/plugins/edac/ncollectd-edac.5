@@ -1,12 +1,18 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-edac 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd edac man page"
-.SH NAME
-ncollectd-edac \- Documentation of ncollectd's edac plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-EDAC 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-edac
+.Nd Documentation of ncollectd's edac plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP edac
-.SH DESCRIPTION
-The \fBedac\fP plugin collect report correctable and uncorrectable memory errors from
-the Error Detection And Correction (EDAC) kernel subsystem.
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+\fBplugin\fP edac
+.Ed
+.Sh DESCRIPTION
+The \fBedac\fP plugin collect report correctable and uncorrectable memory
+errors from the Error Detection And Correction (EDAC) kernel subsystem.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

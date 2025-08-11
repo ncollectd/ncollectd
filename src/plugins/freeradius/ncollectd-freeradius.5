@@ -1,10 +1,13 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
-.TH ncollectd-freeradius 5 "@NCOLLECTD_DATE@" "@NCOLLECTD_VERSION@" "ncollectd freeradius man page"
-.SH NAME
-ncollectd-freeradius \- Documentation of ncollectd's freeradius plugin
-.SH SYNOPSIS
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-FREERADIUS 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-freeradius
+.Nd Documentation of ncollectd's freeradius plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
 \fBload-plugin\fP freeradius
-.br
 \fBplugin\fP freeradius {
     \fBinstance\fP \fIinstance\fP {
         \fBhost\fP \fIhostname\fP
@@ -18,44 +21,45 @@ ncollectd-freeradius \- Documentation of ncollectd's freeradius plugin
              ...
         }
     }
-.br
 }
-.SH DESCRIPTION
-The \fBfreeradius\fP plugin connects to an instance of \fBfreeradius\fP to collect
-server statistics about certain operations it is doing, such as the number of authentication
-and accounting requests, how many accepts and failures, and server queue lengths.
-Sending a specially-crafted RADIUS Status-Server packet to a "status" virtual server.
-.PP
+.Ed
+.Sh DESCRIPTION
+The \fBfreeradius\fP plugin connects to an instance of \fBfreeradius\fP
+to collect server statistics about certain operations it is doing, such as
+the number of authentication and accounting requests, how many accepts and
+failures, and server queue lengths.
+Sending a specially-crafted RADIUS Status-Server packet to a "status"
+virtual server.
+.Pp
 The configuration of the \fBfreeradius\fP plugin consists of one or more
-\fBinstance\fP blocks. Each block requires one string argument
-as the instance name.
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
 The following options are accepted within each \fBinstance\fP block:
-.TP
-\fBhost\fP \fIhostname\fP
-Hostname of the host running \fBfreeradius\fP "status" virtual server. Defaults to \fIlocalhost\fP.
-.TP
-\fBport\fP \fIport\fP
-TCP port of the "status" virtual server to connect to. Defaults to \fB18121\fP.
-.TP
-\fBsecret\fP \fIsecret\fP
+.Bl -tag -width Ds
+.It \fBhost\fP \fIhostname\fP
+Hostname of the host running \fBfreeradius\fP "status" virtual server.
+Defaults to \fIlocalhost\fP.
+.It \fBport\fP \fIport\fP
+TCP port of the "status" virtual server to connect to.
+Defaults to \fB18121\fP.
+.It \fBsecret\fP \fIsecret\fP
 \fISecret\fP used to calculate message-authenticator.
-.TP
-\fBsecret-env\fP \fIenv-name\fP
-Get the secret used to calculate message-authenticator from the environment variable \fIenv-name\fP.
-.TP
-\fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for the request to the freeradius server.
-.TP
-\fBlabel\fP \fIkey\fP \fIvalue\fP
+.It \fBsecret-env\fP \fIenv-name\fP
+Get the secret used to calculate message-authenticator from the environment
+variable \fIenv-name\fP.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for the request to the
+freeradius server.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-.TP
-\fBinterval\fP \fIseconds\fP
+.It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected.
 By default the global \fBinterval\fP setting will be used.
-.TP
-\fBfilter\fP ...
-Configure a filter to modify or drop the metrics. See \fBFILTER CONFIGURATION\fP in
-.BR ncollectd.conf(5)
-.SH "SEE ALSO"
-.BR ncollectd (1)
-.BR ncollectd.conf (5)
+.It \fBfilter\fP ...
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
