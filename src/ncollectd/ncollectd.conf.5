@@ -150,7 +150,7 @@ This is done using a lookup of the name returned by \f(CWgethostname\fP.
 This option is enabled by default.
 .It \fBinterval\fP \fIseconds\fP
 Configures the interval in which to query the read plugins.
-Obviously smaller values lead to a higher system load produced by collectd,
+Obviously smaller values lead to a higher system load produced by ncollectd,
 while higher values lead to more coarse statistics.
 .It \fBread-threads\fP \fIthreads\fP
 Number of threads to start for reading plugins.
@@ -236,7 +236,7 @@ The default value is \fBfalse\fP.
 Bind a thread to a specific cpu.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 .It \fBplugin-dir\fP \fI/path/to/plugins\fP
-Path to the plugins (shared objects) of collectd.
+Path to the plugins (shared objects) of ncollectd.
 .It \fBinclude\fP \fI/path/to/config\fP
 If \fI/path/to/config\fP points to a file, includes that file.
 If \fI/path/to/config\fP points to a directory, recursively includes all files
@@ -337,7 +337,7 @@ embeds some scripting language into the daemon (e.g. the \fIPerl\fP and
 \fIPython plugins\fP).
 Scripting languages usually provide means to load extensions written in C.
 Those extensions require symbols provided by the interpreter, which is loaded
-as a dependency of the respective collectd plugin.
+as a dependency of the respective ncollectd plugin.
 See the documentation of those plugins (e.g.,
 .Xr ncollectd-perl 5
 or
