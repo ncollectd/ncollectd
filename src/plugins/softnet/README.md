@@ -11,7 +11,7 @@ NCOLLECTD-SOFTNET(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **softnet** plugin collect data of the packets recived based on CPU cores,
+The **softnet** plugin collect data of the packets received based on CPU cores,
 reading the file */proc/net/softnet\_stat*.
 
 # SEE ALSO

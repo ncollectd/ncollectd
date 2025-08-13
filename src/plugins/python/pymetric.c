@@ -1616,7 +1616,7 @@ static char MetricHistogram_sum_doc[] =
 
 static char MetricHistogram_buckets_doc[] =
     "Buckets are a list of tuples, each tuple is a bucket covers the values\n"
-    "less and or equal to it, it has two items: the coutner and the maximum value.\n";
+    "less and or equal to it, it has two items: the counter and the maximum value.\n";
 
 static char MetricHistogram_doc[] =
     "The MetricHistogram class is a wrapper around the ncollectd histogram metric.";
@@ -1806,7 +1806,7 @@ static char MetricGaugeHistogram_sum_doc[] =
 
 static char MetricGaugeHistogram_buckets_doc[] =
     "Buckets are a list of tuples, each tuple is a bucket covers the values\n"
-    "less and or equal to it, it has two items: the coutner and the maximum value.\n";
+    "less and or equal to it, it has two items: the counter and the maximum value.\n";
 
 static char MetricGaugeHistogram_doc[] =
     "The MetricGaugeHistogram class is a wrapper around the ncollectd gaugehistogram metric.";

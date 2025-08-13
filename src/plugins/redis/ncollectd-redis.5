@@ -20,7 +20,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBquery\fP \fIquery-string\fP {
             \fBmetric\fP \fIname\fP
-            \fBtype\fP \fIgauge|counter|unknow\fP
+            \fBtype\fP \fIgauge|counter|unknown\fP
             \fBlabel\fP \fIkey\fP \fIvalue\fP
             \fBdatabase\fP \fIindex\fP
         }
@@ -73,10 +73,10 @@ Each query should return single string or integer.
 .Bl -tag -width Ds
 .It \fBmetric\fP \fIname\fP
 Set the metric name.
-.It \fBtype\fP \fIgauge|counter|unknow\fP
+.It \fBtype\fP \fIgauge|counter|unknown\fP
 The \fBtype\fP that's used for the metric.
-Must be \fIgauge\fP, \fIcounter\fP, or \fPunknow\fP.
-If not set is \fPunknow\fP.
+Must be \fIgauge\fP, \fIcounter\fP, or \fPunknown\fP.
+If not set is \fPunknown\fP.
 There must be exactly one \fBtype\fP option inside each \fBResult\fP block.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.

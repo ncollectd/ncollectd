@@ -359,7 +359,7 @@ __attribute__((nonnull(1))) size_t strstripnewline(char *buffer);
  *   timeval_cmp
  *
  * DESCRIPTION
- *   Compare the two time values `tv0' and `tv1' and store the absolut value
+ *   Compare the two time values `tv0' and `tv1' and store the absolute value
  *   of the difference in the time value pointed to by `delta' if it does not
  *   equal NULL.
  *

@@ -351,7 +351,7 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
     [FAM_REDIS_MEMORY_FRAGMENTATION_BYTES] = {
         .name = "redis_memory_fragmentation_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Diference between used_memory_rss and used_memory.",
+        .help = "Difference between used_memory_rss and used_memory.",
     },
     [FAM_REDIS_MEMORY_NOT_COUNTED_FOR_EVICT_BYTES] = {
         .name = "redis_memory_not_counted_for_evict_bytes",

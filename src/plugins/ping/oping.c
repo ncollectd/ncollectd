@@ -187,7 +187,7 @@ static pinghost_t *ping_receive_ipv4 (pingobj_t *obj, char *buffer, size_t buffe
     calc_checksum = ping_icmp4_checksum(buffer, buffer_len);
 
     if (recv_checksum != calc_checksum) {
-        PLUGIN_DEBUG("Checksum missmatch: Got 0x%04"PRIx16", calculated 0x%04"PRIx16"\n",
+        PLUGIN_DEBUG("Checksum mismatch: Got 0x%04"PRIx16", calculated 0x%04"PRIx16"\n",
                      recv_checksum, calc_checksum);
         return NULL;
     }
@@ -1284,7 +1284,7 @@ int ping_host_add (pingobj_t *obj, const char *host)
         return -1;
     }
 
-    /* obj->data is not garuanteed to be != NULL */
+    /* obj->data is not guaranteed to be != NULL */
     if ((ph->data = strdup(obj->data == NULL ? PING_DEF_DATA : obj->data)) == NULL) {
         PLUGIN_DEBUG("Out of memory!\n");
         ping_set_errno(obj, errno);

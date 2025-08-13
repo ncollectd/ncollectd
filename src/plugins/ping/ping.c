@@ -146,7 +146,7 @@ static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
             PLUGIN_WARNING("host %s has not answered %d PING requests, triggering resolve",
                             hl->host, inst->ping_max_missed);
 
-            /* we trigger the resolv simply be removeing and adding the host to our
+            /* we trigger the resolv simply be removing and adding the host to our
              * ping object */
             status = ping_host_remove(pingobj, hl->host);
             if (status != 0) {

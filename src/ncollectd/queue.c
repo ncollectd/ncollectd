@@ -87,7 +87,7 @@ int queue_enqueue(queue_t *queue, const char *plugin, queue_elem_t *ins_head)
                         "if you want the collected data to be stored.", queue->kind);
 
         /* Element in the ins_head queue already have zero reference count
-         * but without any write threads there is noone to free them.
+         * but without any write threads there is no one to free them.
          * make sure they are freed by de-refing them 0 times. */
         queue_ref_all(queue, ins_head, 0);
         pthread_mutex_unlock(&queue->lock);
@@ -135,7 +135,7 @@ int queue_enqueue(queue_t *queue, const char *plugin, queue_elem_t *ins_head)
     /* Enforce limit_high (unless it is infinite (e.g. == 0)) */
     while ((queue->limit_high != 0) && (slowest_thread->queue_length > queue->limit_high)) {
         /* Select a random element to drop between the last position in the slowest
-         * thread's queue and queue positon "limit_low". This makes sure that
+         * thread's queue and queue posititon "limit_low". This makes sure that
          * write plugins that do not let the queue get longer than "limit_low"
          * will never drop values, regardless of what other plugins do. */
         long drop_pos = cdrand_u() % (slowest_thread->queue_length - queue->limit_low)

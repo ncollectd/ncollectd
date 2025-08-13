@@ -214,7 +214,7 @@ static int add_ignorelist(const char *dev, const char *type, const char *inst)
 }
 
 /*
- * Checks wether a data set should be ignored. Returns `true' is the value
+ * Checks whether a data set should be ignored. Returns `true' is the value
  * should be ignored, `false' otherwise.
  */
 static int check_ignorelist(const char *dev, const char *type, const char *type_instance)

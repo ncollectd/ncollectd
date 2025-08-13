@@ -78,7 +78,7 @@ static char *ps_get_cmdline(long pid, char *name __attribute__((unused)),
  * Reads process information on the Solaris OS. The information comes mainly
  * from
  * /proc/PID/status, /proc/PID/psinfo and /proc/PID/usage
- * The values for input and ouput chars are calculated "by hand"
+ * The values for input and output chars are calculated "by hand"
  * Added a few "solaris" specific process states as well
  */
 static int ps_read_process(long pid, process_entry_t *ps, char *state)
@@ -155,7 +155,7 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
     ps->num_maps = 0;
 
     /*
-     * Calculating input/ouput chars
+     * Calculating input/output chars
      * Formula used is total chars / total blocks => chars/block
      * then convert input/output blocks to chars
      */

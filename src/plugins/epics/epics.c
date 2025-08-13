@@ -125,7 +125,7 @@ static int epics_pv_tree_add(c_avl_tree_t **tree, char *name, epics_pv_type_t ty
     if (status == 0) {
         if (pv->type == type)
             return 0;
-        PLUGIN_ERROR("Existing PV with diferent type: '%s'.", name);
+        PLUGIN_ERROR("Existing PV with different type: '%s'.", name);
         return -1;
     }   
 
@@ -301,7 +301,7 @@ static void connection_handler(struct connection_handler_args args)
                 pv->ch_type = DBR_DOUBLE;
                 break;
             default:
-                PLUGIN_ERROR("Unsuported channel type '%s' for channel '%s'.",
+                PLUGIN_ERROR("Unsupported channel type '%s' for channel '%s'.",
                              dbf_type_to_text(pv->ch_type), pv->name);
                 pthread_mutex_unlock(&pv_lock);
                 break;

@@ -16,7 +16,7 @@ NCOLLECTD-MYSQL(5) - File Formats Manual
 	        label key value
 	        label-from key column-name
 	        result {
-	            type gauge|counter|info|unknow
+	            type gauge|counter|info|unknown
 	            type-from column-name
 	            help help
 	            help-from column-name
@@ -219,7 +219,7 @@ The plugin will complain loudly in case anything goes wrong.
 
 > > > Collect Key\_\* values from SHOW GLOBAL STATUS command.
 
-> > **perfomance\_lost**
+> > **performance\_lost**
 
 > > > Collect Performance\_schema\_\* values
 > > > from SHOW GLOBAL STATUS command.
@@ -266,7 +266,7 @@ The plugin will complain loudly in case anything goes wrong.
 > > **response\_time**
 
 > > > Collect values from INFORMATION\_SCHEMA.QUERY\_RESPONSE\_TIME table.
-> > > In Percona server collect values fron
+> > > In Percona server collect values from
 > > > INFORMATION\_SCHEMA.QUERY\_RESPONSE\_TIME\_READ
 > > > and INFORMATION\_SCHEMA.QUERY\_RESPONSE\_TIME\_WRITE and table.
 
@@ -362,17 +362,17 @@ The plugin will complain loudly in case anything goes wrong.
 
 > **result**
 
-> > **type** *gauge|counter|info|unknow*
+> > **type** *gauge|counter|info|unknown*
 
 > > > The **type** that's used for each line returned.
-> > > Must be *gauge*, *counter*, *info* or *unknow*.
-> > > If not set is unknow.
+> > > Must be *gauge*, *counter*, *info* or *unknown*.
+> > > If not set is unknown.
 > > > There must be exactly one **type** option inside each **result** block.
 
 > > **type-from** *column-name*
 
 > > > Read the type from *column*.
-> > > The column value must be *gauge*, *counter*, *info* or *unknow*.
+> > > The column value must be *gauge*, *counter*, *info* or *unknown*.
 
 > > **help** *help*
 

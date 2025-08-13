@@ -10,7 +10,7 @@ NCOLLECTD-KEEPALIVED(5) - File Formats Manual
 	plugin keepalived {
 	    instance instance {
 	        pid-path /path/to/pid
-	        stats-path /path/fo/stats
+	        stats-path /path/to/stats
 	        data-path /path/to/data
 	        label key value
 	        interval seconds

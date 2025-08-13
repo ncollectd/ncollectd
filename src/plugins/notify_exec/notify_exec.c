@@ -121,7 +121,7 @@ static char **notify_exec_notification2env(notification_t *n, char **default_env
         status |= strbuf_putstr(&buf, "OKAY");
         break;
     default:
-        status |= strbuf_putstr(&buf, "UNKNOW");
+        status |= strbuf_putstr(&buf, "UNKNOWN");
         break;
     }
     envp[i] = strdup(buf.ptr);
@@ -178,7 +178,7 @@ static char **notify_exec_notification2env(notification_t *n, char **default_env
 
     if (status != 0) {
         notify_exec_free_envp(envp);
-        PLUGIN_ERROR("Failed to build enviroment.");
+        PLUGIN_ERROR("Failed to build environment.");
         return NULL;
     }
 

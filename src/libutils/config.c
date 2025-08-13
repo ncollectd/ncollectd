@@ -374,7 +374,7 @@ int cf_util_get_metric_type(const config_item_t *ci, metric_type_t *ret_metric)
 
     if (!strcasecmp(ci->values[0].value.string, "gauge")) {
         *ret_metric = METRIC_TYPE_GAUGE;
-    } else if (!strcasecmp(ci->values[0].value.string, "unknow")) {
+    } else if (!strcasecmp(ci->values[0].value.string, "unknown")) {
         *ret_metric = METRIC_TYPE_UNKNOWN;
     } else if (!strcasecmp(ci->values[0].value.string, "counter")) {
         *ret_metric = METRIC_TYPE_COUNTER;

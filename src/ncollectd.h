@@ -88,7 +88,7 @@
 #    endif
 #endif
 
-/* Try really, really hard to determine endianess. Under NexentaStor 1.0.2 this
+/* Try really, really hard to determine endianness. Under NexentaStor 1.0.2 this
  * information is in <sys/isa_defs.h>, possibly some other Solaris versions do
  * this too.. */
 #ifdef HAVE_ENDIAN_H

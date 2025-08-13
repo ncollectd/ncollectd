@@ -45,7 +45,7 @@ NCOLLECTD-DNS(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **dns** plugin generare metrics with dns queries.
+The **dns** plugin generate metrics with dns queries.
 
 The following options are accepted within each **instance** block:
 
@@ -110,7 +110,7 @@ The following options are accepted within each **instance** block:
 
 **edns-size** *size*
 
-> The message size to be advertized in EDNS.
+> The message size to be advertised in EDNS.
 
 **resolvconf-path** *path-to-resolv.conf*
 
@@ -203,7 +203,7 @@ The following options are accepted within each **instance** block:
 
 > > **response.answer.length**
 
-> > **response.authority.lenth**
+> > **response.authority.length**
 
 > > **response.additional.length**
 

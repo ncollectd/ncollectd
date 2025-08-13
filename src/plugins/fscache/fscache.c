@@ -162,7 +162,7 @@ static metric_family_t fams[FAM_FSCACHE_MAX] = {
     [FAM_FSCACHE_OBJECT_DEAD] = {
         .name = "system_fscache_object_dead",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total mumber of objects that reached the dead state.",
+        .help = "Total number of objects that reached the dead state.",
     },
     [FAM_FSCACHE_CHECKAUX_NONE] = {
         .name = "system_fscache_checkaux_none",

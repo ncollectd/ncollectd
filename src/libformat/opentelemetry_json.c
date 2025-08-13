@@ -295,7 +295,7 @@ int opentelemetry_json_metric(xson_render_t *r, metric_family_t const *fam)
 
 int opentelemetry_json_metric_family(strbuf_t *buf, metric_family_t const *fam)
 {
-    if (fam->type == METRIC_TYPE_GAUGE_HISTOGRAM) /* unsuported */
+    if (fam->type == METRIC_TYPE_GAUGE_HISTOGRAM) /* unsupported */
         return 0;
 
     int status = 0;

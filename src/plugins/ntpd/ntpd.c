@@ -592,7 +592,7 @@ static int ntpd_send_request(ntpd_ctx_t *ctx, int req_code, int req_items,
  * ntpd_do_query:
  *
  * req_code:            Type of request packet
- * req_items:           Numver of items in the request
+ * req_items:           Number of items in the request
  * req_size:            Size of one item in the request
  * req_data:            Data of the request packet
  * res_items:           Pointer to where the number returned items will be stored.

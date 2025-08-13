@@ -16,8 +16,8 @@ NCOLLECTD-WRITE\_MQTT(5) - File Formats Manual
 	        user user
 	        password user
 	        qos 0|1|2
-	        store-rates true|flase
-	        retain true|flase
+	        store-rates true|false
+	        retain true|false
 	        ca-cert file
 	        certificate-file file
 	        certificate-key-file file
@@ -89,9 +89,9 @@ Within each **instance** block, the following options are available:
 
 > > Exactly once
 
-**store-rates** *true|flase*
+**store-rates** *true|false*
 
-**retain** *true|flase*
+**retain** *true|false*
 
 > Controls whether the MQTT broker will retain (keep a copy of) the last message
 > sent to each topic and deliver it to new subscribers.

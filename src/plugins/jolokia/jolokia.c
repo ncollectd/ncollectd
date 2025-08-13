@@ -236,7 +236,7 @@ static void jlk_submit(char *metric_prefix, label_set_t *labels, plugin_filter_t
     object_name_t on = {0};
     int status = jlk_object_name_parse(&on, response->request_mbean);
     if (status != 0) {
-        PLUGIN_ERROR("Failed to parse objet name: '%s'.", response->request_mbean);
+        PLUGIN_ERROR("Failed to parse object name: '%s'.", response->request_mbean);
         return;
     }
 

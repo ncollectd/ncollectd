@@ -32,7 +32,7 @@ NCOLLECTD-HAPROXY(5) - File Formats Manual
 
 The **haproxy** plugin plugin uses the **libcurl** to read HAProxy
 metrics over http.
-Also can retrive HAProxy metrics from an unix socket.
+Also can retrieve HAProxy metrics from an unix socket.
 
 In the **plugin** block, there may be one or more **instance** blocks.
 The following options are valid within **instance** blocks:

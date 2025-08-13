@@ -136,7 +136,7 @@ The following options are accepted within each **instance** block:
 > When the connection to the AMQP broker is lost, defines the time in seconds to
 > wait before attempting to reconnect.
 > Defaults to 0, which implies ncollectd will attempt to reconnect at each time
-> metric is submited.
+> metric is submitted.
 
 **format-metric** *influxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote*
 

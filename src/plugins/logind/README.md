@@ -21,7 +21,7 @@ The following configuration options are available:
 
 > Select how login grouping is performed.
 > Multiple criteria can be specified.
-> If the string *All* is used, al criterias are selected.
+> If the string *All* is used, all criterias are selected.
 > If a criterion begins with "!" it is deselected.
 
 # SEE ALSO

@@ -32,7 +32,7 @@ int notification_init_metric(notification_t *n, severity_t severity,
 
 /* notification_marshal writes the notifiaciton "n" to the "buf" using
  * the following format:
- *   name{labels}{annotations} serverity timestamp
+ *   name{labels}{annotations} severity timestamp
  *
  * Example:
  *   "http_requests_total{method=\"post\",code=\"500\"}{summary=\"Too manny errors\"}

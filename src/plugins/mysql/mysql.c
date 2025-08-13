@@ -39,7 +39,7 @@ static cf_flags_t cmysql_flags[] = {
     { "innodb_cmpmem",       COLLECT_INNODB_CMPMEM     },
     { "innodb_tablespace",   COLLECT_INNODB_TABLESPACE },
     { "myisam",              COLLECT_MYISAM            },
-    { "perfomance_lost",     COLLECT_PERF_LOST         },
+    { "performance_lost",    COLLECT_PERF_LOST         },
     { "qcache",              COLLECT_QCACHE            },
     { "slave",               COLLECT_SLAVE             },
     { "ssl",                 COLLECT_SSL               },

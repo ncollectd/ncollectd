@@ -30,7 +30,7 @@
             \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
             \fBattribute\fP \fIname\fP {
                 \fBmetric\fP \fImetric\fP
-                \fBtype\fP \fIgauge|unknow|counter|info\fP
+                \fBtype\fP \fIgauge|unknown|counter|info\fP
                 \fBlabel\fP \fIkey\fP \fIvalue\fP
                 \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
                 \fBhelp\fP \fIhelp\fP
@@ -48,10 +48,10 @@ equipped with the jolokia (
 .Lk https://jolokia.org
 ) MBean.
 It sends a pre-configured JSON-Postbody to the servlet via HTTP commanding
-the jolokia Bean to reply with a singe JSON equipped with all JMX counters
+the jolokia Bean to reply with a single JSON equipped with all JMX counters
 requested.
 By reducing TCP roundtrips in comparison to conventional JMX clients that
-query one value via tcp at a time, it can return hundrets of values in one
+query one value via tcp at a time, it can return hundreds of values in one
 roundtrip.
 Moreof - no java binding is required in collectd to do so.
 .Bl -tag -width Ds
@@ -118,7 +118,7 @@ A bean can contain several attributes.
 Each one can be matched by a attribute block or be ignored.
 .Bl -tag -width Ds
 .It \fBmetric\fP \fImetric\fP
-.It \fBtype\fP \fIgauge|unknow|counter|info\fP
+.It \fBtype\fP \fIgauge|unknown|counter|info\fP
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times.

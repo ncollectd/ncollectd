@@ -639,7 +639,7 @@ static char *dns_type_name(int type)
             return dns_types[i].name;
     }
 
-    return "(unknow)";
+    return "(unknown)";
 }
 
 static char *dns_class_name(int class)
@@ -649,7 +649,7 @@ static char *dns_class_name(int class)
             return dns_classes[i].name;
     }
 
-    return "(unknow)";
+    return "(unknown)";
 }
 
 static char *dns_opcode_name(int opcode)
@@ -657,7 +657,7 @@ static char *dns_opcode_name(int opcode)
     if ((opcode >= 0) && (opcode < (int)dns_opcodes_size))
         return dns_opcodes[opcode];
 
-    return "(unknow)";
+    return "(unknown)";
 }
 
 static char *dns_rcode_name(int rcode)
@@ -665,7 +665,7 @@ static char *dns_rcode_name(int rcode)
     if ((rcode >= 0) && (rcode < (int)dns_rcodes_size))
         return dns_rcodes[rcode];
 
-    return "(unknow)";
+    return "(unknown)";
 }
 #endif
 
@@ -1279,7 +1279,7 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
         break;
 
     default:
-        PLUGIN_DEBUG("Unknow RR type %hu, parsing unavailable.", rr->type);
+        PLUGIN_DEBUG("Unknown RR type %hu, parsing unavailable.", rr->type);
         break;
     }
 
@@ -1510,7 +1510,7 @@ static int dns_config_query_class(config_item_t *ci, dns_query_t *query)
     }
 
     if (class_value < 0) {
-        PLUGIN_ERROR("Unknow dns class '%s' in %s:%d.", class, cf_get_file(ci), cf_get_lineno(ci));
+        PLUGIN_ERROR("Unknown dns class '%s' in %s:%d.", class, cf_get_file(ci), cf_get_lineno(ci));
         return -1;
     }
 
@@ -1538,7 +1538,7 @@ static int dns_config_query_type(config_item_t *ci, dns_query_t *query)
     }
 
     if (type_value < 0) {
-        PLUGIN_ERROR("Unknow dns type '%s' in %s:%d.", type, cf_get_file(ci), cf_get_lineno(ci));
+        PLUGIN_ERROR("Unknown dns type '%s' in %s:%d.", type, cf_get_file(ci), cf_get_lineno(ci));
         return -1;
     }
 
@@ -1943,7 +1943,7 @@ static int dns_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &ctx->options.resolvconf_path);
             ctx->options.flags |= ARES_OPT_RESOLVCONF;
 #else
-            PLUGIN_WARNING("Option 'resolvconf-path' is not suported in this version of c-ares");
+            PLUGIN_WARNING("Option 'resolvconf-path' is not supported in this version of c-ares");
 #endif
         } else if (strcasecmp("timeout", child->key) == 0) {
             cdtime_t timeout = 0;

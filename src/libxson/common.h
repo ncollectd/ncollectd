@@ -58,7 +58,7 @@ typedef enum {
 } json_lex_error_t;
 
 typedef struct {
-    /* the overal line and char offset into the data */
+    /* the overall line and char offset into the data */
     size_t line_offset;
     size_t char_offset;
     /* error */
@@ -79,7 +79,7 @@ typedef enum {
     JSON_STATUS_OK,
     /** a client callback returned zero, stopping the parse */
     JSON_STATUS_CLIENT_CANCELED,
-    /** An error occured during the parse.  Call json_get_error for
+    /** An error occurred during the parse.  Call json_get_error for
      *  more information about the encountered error */
     JSON_STATUS_ERROR
 } json_status_t;
@@ -181,7 +181,7 @@ typedef enum {
     JSON_ALLOW_TRAILING_GARBAGE = 0X02,
     /**
      * Allow multiple values to be parsed by a single handle.  The
-     * entire text must be valid JSON, and values can be seperated
+     * entire text must be valid JSON, and values can be separated
      * by any kind of whitespace.  This flag will change the
      * behavior of the parser, and cause it continue parsing after
      * a value is parsed, rather than transitioning into a

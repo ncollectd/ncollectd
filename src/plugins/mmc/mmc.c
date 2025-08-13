@@ -292,7 +292,7 @@ static int mmc_open_block_dev(const char *dev_name, const char *dev_path)
         return -1;
     }
 
-    // And add it to the cache of already openend block devices:
+    // And add it to the cache of already opened block devices:
     dev_cache_entry_t *cache_entry = calloc(1, sizeof(*cache_entry));
     if (cache_entry == NULL) {
         close(block_fd);
@@ -521,7 +521,7 @@ static int mmc_read_ssr_swissbit(struct udev_device *mmc_dev)
     }
 
     if (oemid != OEMID_SWISSBIT_1) {
-        PLUGIN_INFO("(%s): The mmc device is not suppored by this plugin (oemid: 0x%x)",
+        PLUGIN_INFO("(%s): The mmc device is not supported by this plugin (oemid: 0x%x)",
                     dev_name, (unsigned int)oemid);
         return 1;
     }

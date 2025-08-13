@@ -17,7 +17,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
         \fBresult\fP {
-            \fBtype\fP \fIgauge|counter|info|unknow\fP
+            \fBtype\fP \fIgauge|counter|info|unknown\fP
             \fBtype-from\fP \fIcolumn-name\fP
             \fBhelp\fP \fIhelp\fP
             \fBhelp-from\fP \fIcolumn-name\fP
@@ -68,14 +68,14 @@ Each instance needs a \fIinstance-name\fP as string argument.
 .It \fBdsn\fP \fIdatabase-dsn\fP
 Specifies the  \fIdsn\fP (Data Source Name) that you configure in unixODBC.
 .It \fBuser\fP \fIuser\fP
-User to connecto to database
+User to connect to database
 .It \fBuser-env\fP \fIenv-name\fP
-Get the user to connecto to database from the environment variable
+Get the user to connect to database from the environment variable
 \fIenv-name\fP.
 .It \fBpassword\fP \fIpassword\fP
-User password to connecto to database
+User password to connect to database
 .It \fBpassword-env\fP \fIenv-name\fP
-Get the user password to connecto to database from the environment
+Get the user password to connect to database from the environment
 variable \fIenv-name\fP.
 .It \fBconnection\fP \fIconnection-string\fP
 Specifies the connection string to use to connect to the database.
@@ -140,15 +140,15 @@ Can appear multiple time in the \fBquery\fP block.
 Specifies the columns whose values will be used to create the labels.
 .It \fBresult\fP
 .Bl -tag -width Ds
-.It \fBtype\fP \fIgauge|counter|info|unknow\fP
+.It \fBtype\fP \fIgauge|counter|info|unknown\fP
 The \fBtype\fP that's used for each line returned.
-Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
-If not set is \fPunknow\fP.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknown\fP.
+If not set is \fPunknown\fP.
 There must be exactly one \fBtype\fP option inside each \fBResult\fP block.
 .It \fBtype-from\fP \fIcolumn-name\fP
 Read the type from \fIcolumn\fP.
 The column value must be \fIgauge\fP, \fIcounter\fP,
-\fIinfo\fP or \fPunknow\fP.
+\fIinfo\fP or \fPunknown\fP.
 .It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
 .It \fBhelp-from\fP \fIcolumn-name\fP

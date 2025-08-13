@@ -17,7 +17,7 @@
 #elif defined(HAVE_PERFSTAT)
 #include <libperfstat.h>
 #include <sys/protosw.h>
-/* Using perfstat_cpu_total to retrive the boot time in AIX */
+/* Using perfstat_cpu_total to retrieve the boot time in AIX */
 #else
 #error "No applicable input method."
 #endif

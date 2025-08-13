@@ -212,7 +212,7 @@ static metric_family_t fams[FAM_MEMINFO_MAX] = {
     [FAM_MEMINFO_MAPPED_BYTES] = {
         .name = "system_meminfo_mapped_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Files which have been mmaped, such as libraries.",
+        .help = "Files which have been mapped, such as libraries.",
     },
     [FAM_MEMINFO_SHMEM_BYTES] = {
         .name = "system_meminfo_shmem_bytes",

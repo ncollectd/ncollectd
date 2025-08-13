@@ -29,7 +29,7 @@ NCOLLECTD-JOLOKIA(5) - File Formats Manual
 	            label-from key value-from
 	            attribute name {
 	                metric metric
-	                type gauge|unknow|counter|info
+	                type gauge|unknown|counter|info
 	                label key value
 	                label-from key value-from
 	                help help
@@ -48,10 +48,10 @@ equipped with the jolokia (
 [https://jolokia.org](https://jolokia.org)
 ) MBean.
 It sends a pre-configured JSON-Postbody to the servlet via HTTP commanding
-the jolokia Bean to reply with a singe JSON equipped with all JMX counters
+the jolokia Bean to reply with a single JSON equipped with all JMX counters
 requested.
 By reducing TCP roundtrips in comparison to conventional JMX clients that
-query one value via tcp at a time, it can return hundrets of values in one
+query one value via tcp at a time, it can return hundreds of values in one
 roundtrip.
 Moreof - no java binding is required in collectd to do so.
 
@@ -152,7 +152,7 @@ Moreof - no java binding is required in collectd to do so.
 
 > > **metric** *metric*
 
-> > **type** *gauge|unknow|counter|info*
+> > **type** *gauge|unknown|counter|info*
 
 > > **label** *key* *value*
 

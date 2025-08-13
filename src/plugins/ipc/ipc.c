@@ -219,7 +219,7 @@ static caddr_t ipc_get_info(cid_t cid, int cmd, int version, int stsize, int *nm
         return NULL;
 
     if (size % stsize) {
-        PLUGIN_ERROR("ipc_get_info: missmatch struct size and buffer size");
+        PLUGIN_ERROR("ipc_get_info: mismatch struct size and buffer size");
         return NULL;
     }
 

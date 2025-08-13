@@ -11,7 +11,7 @@ NCOLLECTD-NFACCT(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **nfacct** plugin retrive netfilter accounting objects.
+The **nfacct** plugin retrieve netfilter accounting objects.
 With the command nfacct you can create/retrieve/delete
 this accounting objects.
 

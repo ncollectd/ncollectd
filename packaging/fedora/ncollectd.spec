@@ -385,7 +385,7 @@ Summary: DB2 plugin for ncollectd
 Group: System Environment/Daemons
 Requires: %{name}%{?_isa} = %{version}-%{release}
 %description db2
-The db2 plugin retrives information from a DB2 database,
+The db2 plugin retrieves information from a DB2 database,
 %endif
 
 %if %{build_with_dcpmm}
@@ -406,7 +406,7 @@ Group: System Environment/Daemons
 Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: c-ares-devel
 %description dns
-This dns plugin retrives information from dns server responses.
+This dns plugin retrieves information from dns server responses.
 %endif
 
 %if %{build_with_docker}
@@ -543,7 +543,7 @@ Group: System Environment/Daemons
 Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: librdkafka-devel
 %description kafka
-The kafka plugin collect metrics fron a kafka broker.
+The kafka plugin collect metrics from a kafka broker.
 %endif
 
 %if %{build_with_lua}
@@ -643,7 +643,7 @@ Group: System Environment/Daemons
 Requires: %{name}%{?_isa} = %{version}-%{release}
 BuildRequires: libnftnl-devel
 %description nftables
-The nftables plugin get counters fron nftables.
+The nftables plugin get counters from nftables.
 %endif
 
 %if %{build_with_nginx}

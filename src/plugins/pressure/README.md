@@ -13,7 +13,7 @@ NCOLLECTD-PRESSURE(5) - File Formats Manual
 
 The **pressure** plugin monitors the pressure stall information (PSI) for cpu,
 io and memory.
-Avaliable for Linux since kernel 4.20.
+Available for Linux since kernel 4.20.
 This provides visibility into how resource-constrained the system is.
 
 # SEE ALSO

@@ -739,7 +739,7 @@ int global_option_set(const char *option, const char *value, bool from_cli)
 
     if (cf_global_options[i].from_cli && (!from_cli)) {
         DEBUG("configfile: Ignoring %s '%s' option because "
-              "it was overriden by a command-line option.", option, value);
+              "it was overridden by a command-line option.", option, value);
         return 0;
     }
 

@@ -206,7 +206,7 @@ interface(`ncollectd_admin',`
 ########################################
 ## <summary>
 ##    Allow the caller to directly read from a fixed disk device.
-##    This is extremly dangerous as it can bypass the
+##    This is extremely dangerous as it can bypass the
 ##    SELinux protections for filesystem objects, and
 ##    should only be used by trusted domains.
 ## </summary>

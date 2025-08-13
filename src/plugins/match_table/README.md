@@ -12,7 +12,7 @@ NCOLLECTD-MATCH\_TABLE(5) - File Formats Manual
 	    metric-prefix prefix
 	    label key value
 	    metric {
-	        type gauge|unknow|counter|info
+	        type gauge|unknown|counter|info
 	        help help
 	        metric name
 	        metric-prefix prefix
@@ -64,7 +64,7 @@ The following options are available inside a **match** block:
 
 **result**
 
-> **type** *gauge|unknow|counter|info*
+> **type** *gauge|unknown|counter|info*
 
 > **help** *help*
 

@@ -128,7 +128,7 @@ unsigned char *json_render_error_string(json_parser_t *hand, const unsigned char
     return str;
 }
 
-/* check for client cancelation */
+/* check for client cancellation */
 #define _CC_CHK(x)                                                              \
     if (!(x)) {                                                                 \
         json_bs_set(hand->state_stack, JSON_PARSER_STATE_PARSE_ERROR);          \
@@ -200,7 +200,7 @@ around_again:
         /* for arrays and maps, we advance the state for this
          * depth, then push the state of the next depth.
          * If an error occurs during the parsing of the nesting
-         * enitity, the state at this level will not matter.
+         * entity, the state at this level will not matter.
          * a state that needs pushing will be anything other
          * than state_start */
 

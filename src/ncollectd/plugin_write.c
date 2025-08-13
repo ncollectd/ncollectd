@@ -484,9 +484,9 @@ void plugin_write_stats(metric_family_t *fams)
     uint64_t dropped = queue_dropped(&write_queue);
     metric_family_append(&fams[FAM_NCOLLECTD_WRITE_QUEUE_DROPPED],
                          VALUE_COUNTER(dropped), NULL, NULL);
-    unsigned long long dispached = atomic_load(&metrics_dispatched);
+    unsigned long long dispatched = atomic_load(&metrics_dispatched);
     metric_family_append(&fams[FAM_NCOLLECTD_METRICS_DISPACHED],
-                         VALUE_COUNTER(dispached), NULL, NULL);
+                         VALUE_COUNTER(dispatched), NULL, NULL);
 
     pthread_mutex_lock(&write_queue_stats_lock);
 

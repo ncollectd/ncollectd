@@ -50,7 +50,7 @@ json_status_t json_parser_complete(json_parser_t *hand);
  *  parse.
  *
  *  If verbose is non-zero, the message will include the JSON
- *  text where the error occured, along with an arrow pointing to
+ *  text where the error occurred, along with an arrow pointing to
  *  the specific char.
  *
  *  \returns A dynamically allocated string will be returned which should
@@ -68,7 +68,7 @@ unsigned char * json_parser_get_error(json_parser_t *hand, int verbose,
  *
  * In the event an error is encountered during parsing, this function
  * affords the client a way to get the offset into the most recent
- * chunk where the error occured.  0 will be returned if no error
+ * chunk where the error occurred.  0 will be returned if no error
  * was encountered.
  */
 size_t json_parser_get_bytes_consumed(json_parser_t *hand);

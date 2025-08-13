@@ -33,7 +33,7 @@ const char *xson_value_type_name(xson_value_t *val)
         break;
     }
 
-    return "unknow";
+    return "unknown";
 }
 
 static void xson_object_free (xson_value_t *v);

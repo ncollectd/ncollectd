@@ -14,7 +14,7 @@ NCOLLECTD-LDAP(5) - File Formats Manual
 	        filter filter
 	        attrs attribute [attribute ...]
 	        label key value
-	        label-from atribute
+	        label-from attribute
 	        metric-prefix prefix
 	        metric {
 	            dn DN
@@ -187,7 +187,7 @@ Each block requires one string argument as the name.
 
 > > Append the label *key*=*value* to the submitting metrics.
 
-> **label-from** *atribute*
+> **label-from** *attribute*
 
 > > Specifies the attribute whose values will be used to create the labels.
 

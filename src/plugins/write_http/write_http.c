@@ -235,10 +235,10 @@ static int wh_callback_init(wh_callback_t *cb)
         cb->headers = curl_slist_append(cb->headers, buffer);
     }
 
-    const char *enconding = compress_get_encoding(cb->compress);
-    if (enconding != NULL) {
+    const char *encoding = compress_get_encoding(cb->compress);
+    if (encoding != NULL) {
         char buffer[256];
-        ssnprintf(buffer, sizeof(buffer), "Content-Encoding: %s", enconding);
+        ssnprintf(buffer, sizeof(buffer), "Content-Encoding: %s", encoding);
         cb->headers = curl_slist_append(cb->headers, buffer);
     }
 

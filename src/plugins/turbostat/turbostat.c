@@ -237,7 +237,7 @@ static unsigned int config_core_cstate;
 static bool apply_config_core_cstate;
 
 /*
- * Bitmask of the list of pacages C states supported by the processor.
+ * Bitmask of the list of packages C states supported by the processor.
  * Currently supported C-states (by this plugin): 2, 3, 6, 7, 8, 9, 10
  */
 static unsigned int do_pkg_cstate;
@@ -470,7 +470,7 @@ static ssize_t __attribute__((warn_unused_result)) get_msr(unsigned int cpu, off
  ********************************/
 
 /*
- * Read every data avalaible for a single CPU
+ * Read every data available for a single CPU
  *
  * Core data is shared for all threads in one core: extracted only for the first
  * thread

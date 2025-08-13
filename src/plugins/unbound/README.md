@@ -21,7 +21,7 @@ NCOLLECTD-UNBOUND(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **unbound** plugin collect metrics fron the Unbound resolver.
+The **unbound** plugin collect metrics from the Unbound resolver.
 
 The configuration consists of one or more **instance** blocks:
 

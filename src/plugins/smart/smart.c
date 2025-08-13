@@ -214,7 +214,7 @@ static int smart_read_nvme_disk(const char *dev, metric_family_t *fams, label_se
      * Fill following fields (see NVMe 2.1 spec, section 5.1.12)
      * - Number of DWORDS (bits 31:16) - 0's based value.
      *   This means that the value will be 0x7F for a 512 byte structure (0x80 DWORD)
-     * - Log Page Indentifier (bits 7:0) - for SMART the id is 0x02
+     * - Log Page Identifier (bits 7:0) - for SMART the id is 0x02
      */
 
     int status = ioctl(fd, NVME_IOCTL_ADMIN_CMD,

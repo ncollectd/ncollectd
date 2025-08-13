@@ -24,7 +24,7 @@ enum {
     FAM_POSTFIX_CLEANUP_MESSAGES_NOT_ACCEPTED,
     FAM_POSTFIX_LMTP_DELIVERY_DELAY_SECONDS,
     FAM_POSTFIX_PIPE_DELIVERY_DELAY_SECONDS,
-    FAM_POSTFIX_QMGR_MESSAGES_INSERTED_RECEIPIENTS,
+    FAM_POSTFIX_QMGR_MESSAGES_INSERTED_RECIPIENTS,
     FAM_POSTFIX_QMGR_MESSAGES_INSERTED_SIZE_BYTES,
     FAM_POSTFIX_QMGR_MESSAGES_REMOVED,
     FAM_POSTFIX_QMGR_MESSAGES_EXPIRED,
@@ -214,10 +214,10 @@ static metric_family_t fams[FAM_POSTFIX_MAX] = {
         .type = METRIC_TYPE_HISTOGRAM,
         .help = "Pipe message processing time in seconds.",
     },
-    [FAM_POSTFIX_QMGR_MESSAGES_INSERTED_RECEIPIENTS] = {
-        .name = "postfix_qmgr_messages_inserted_receipients",
+    [FAM_POSTFIX_QMGR_MESSAGES_INSERTED_RECIPIENTS] = {
+        .name = "postfix_qmgr_messages_inserted_recipients",
         .type = METRIC_TYPE_HISTOGRAM,
-        .help = "Number of receipients per message inserted into the mail queues.",
+        .help = "Number of recipients per message inserted into the mail queues.",
     },
     [FAM_POSTFIX_QMGR_MESSAGES_INSERTED_SIZE_BYTES] = {
         .name = "postfix_qmgr_messages_inserted_size_bytes",
@@ -1084,7 +1084,7 @@ static int postfix_read(user_data_t *user_data)
                                        &ctx->fams[FAM_POSTFIX_SMTPD_MESSAGES_REJECTED],
                                        &ctx->labels, "code");
 
-    metric_family_append(&ctx->fams[FAM_POSTFIX_QMGR_MESSAGES_INSERTED_RECEIPIENTS],
+    metric_family_append(&ctx->fams[FAM_POSTFIX_QMGR_MESSAGES_INSERTED_RECIPIENTS],
                          VALUE_HISTOGRAM(ctx->stats.qmgr_inserts_nrcpt), &ctx->labels, NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_QMGR_MESSAGES_INSERTED_SIZE_BYTES],
                          VALUE_HISTOGRAM(ctx->stats.qmgr_inserts_size), &ctx->labels, NULL);

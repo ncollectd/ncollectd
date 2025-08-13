@@ -165,7 +165,7 @@ typedef struct __attribute__((packed)) {
                         /* 3 = RPY_SD_ST_JITTERY, 4 = RPY_SD_ST_CANDIDATE, 5 = RPY_SD_ST_OUTLIER */
     uint16_t f_mode;    /* 0 = RPY_SD_MD_CLIENT, 1 = RPY_SD_MD_PEER, 2 = RPY_SD_MD_REF */
     uint16_t f_flags;   /* unused */
-    uint16_t f_reachability; /* Bit mask of successfull tries to reach the source */
+    uint16_t f_reachability; /* Bit mask of successful tries to reach the source */
 
     uint32_t f_since_sample;     /* Time since last sample (s) */
     value_float_t f_origin_latest_meas; /*  */

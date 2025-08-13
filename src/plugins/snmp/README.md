@@ -123,11 +123,11 @@ block: **data** and **host**:
 
 > > When **table** is set to *false*, this option has no effect.
 
-> **type** *counter|gauge|unknow*
+> **type** *counter|gauge|unknown*
 
 > > The **type** that's used for each value read.
-> > Must be *gauge*, *counter* or *unknow*.
-> > If not set is unknow.
+> > Must be *gauge*, *counter* or *unknown*.
+> > If not set is unknown.
 
 > **help** *help*
 

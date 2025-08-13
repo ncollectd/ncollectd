@@ -42,12 +42,12 @@ The plugin has de following options:
 
 **port** *port*
 
-> Set the destionation port.
+> Set the destination port.
 > The default port is 12201.
 
 **packet-size** *size*
 
-> Set maxinum packet size in bytes.
+> Set maximum packet size in bytes.
 > Default to 1420 bytes.
 
 **ttl** *ttl*

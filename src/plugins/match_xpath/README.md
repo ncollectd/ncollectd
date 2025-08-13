@@ -94,7 +94,7 @@ using the XML Path Language (XPath).
 
 > > > > Use the last number found.
 > > > > The number is not reset at the end of an interval.
-> > > > It is continously reported until another number is matched.
+> > > > It is continuously reported until another number is matched.
 
 > > **counter**
 

@@ -748,7 +748,7 @@ static int ds389_read(user_data_t *ud)
 
     status = ds389_list_backends(ctx);
     if (status < 0)
-        PLUGIN_ERROR("error reading bakend metrics");
+        PLUGIN_ERROR("error reading backend metrics");
 
     status = ds389_list_links(ctx);
     if (status < 0)

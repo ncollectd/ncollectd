@@ -21,7 +21,7 @@ apache_scoreboard{hostname="localhost.localdomain",instance="local",state="finis
 apache_scoreboard{hostname="localhost.localdomain",instance="local",state="idle_cleanup"} 0
 # TYPE apache_connections gauge
 apache_connections{hostname="localhost.localdomain",instance="local",state="total"} 233
-apache_connections{hostname="localhost.localdomain",instance="local",state="writting"} 0
+apache_connections{hostname="localhost.localdomain",instance="local",state="writing"} 0
 apache_connections{hostname="localhost.localdomain",instance="local",state="keepalive"} 0
 apache_connections{hostname="localhost.localdomain",instance="local",state="closing"} 218
 # TYPE apache_processes gauge

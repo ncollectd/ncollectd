@@ -44,7 +44,7 @@ enum spng__internal {
                             SPNG_STR(SPNG_VERSION_MINOR) "." \
                             SPNG_STR(SPNG_VERSION_PATCH)
 
-/* Determine if the spng_option can be overriden/optimized */
+/* Determine if the spng_option can be overridden/optimized */
 #define spng__optimize(option) (ctx->optimize_option & (1 << option))
 
 struct spng_subimage {
@@ -2728,7 +2728,7 @@ int spng_set_option(spng_ctx *ctx, enum spng_option option, int value)
         return 1;
     }
 
-    /* Option can no longer be overriden by the library */
+    /* Option can no longer be overridden by the library */
     if (option < 32)
         ctx->optimize_option &= ~(1 << option);
 

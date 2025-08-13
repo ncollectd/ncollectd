@@ -80,7 +80,7 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
     [FAM_NGINX_VTS_SERVER_OUT_BYTES] = {
         .name = "nginx_vts_server_out_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of reponse bytes in seconds.",
+        .help = "Total number of response bytes in seconds.",
     },
     [FAM_NGINX_VTS_SERVER_REQUESTS] = {
         .name = "nginx_vts_server_requests",
@@ -100,7 +100,7 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
     [FAM_NGINX_VTS_SERVER_RESPONSES] = {
         .name = "nginx_vts_server_responses",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of reponses by code.",
+        .help = "Total number of responses by code.",
     },
     [FAM_NGINX_VTS_SERVER_CACHE] = {
         .name = "nginx_vts_server_cache",

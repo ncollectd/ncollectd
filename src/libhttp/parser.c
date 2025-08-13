@@ -467,7 +467,7 @@ int http_parse_request(http_parse_request_t *request,
     request->num_headers = 0;
 
     /* if last_len != 0, check if the request is complete (a fast countermeasure
-       againt slowloris */
+       against slowloris */
     if (last_len != 0 && is_complete(buf, buf_end, last_len, &r) == NULL) {
         return r;
     }

@@ -591,7 +591,7 @@ static metric_family_t fams[FAM_VM_MAX] = {
     [FAM_VM_THP_FAULT_FALLBACK] = {
         .name = "system_vm_thp_fault_fallback",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Icremented if a page fault fails to allocate a huge page "
+        .help = "Incremented if a page fault fails to allocate a huge page "
                 "and instead falls back to using small pages."
     },
     [FAM_VM_THP_FAULT_FALLBACK_CHARGE] = {
