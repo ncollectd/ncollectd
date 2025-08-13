@@ -19,7 +19,7 @@ to the
 systemd(1)
 journal.
 
-The plugin suports the following options:
+The plugin supports the following options:
 
 **log-level** *debug|info|notice|warning|err*
 

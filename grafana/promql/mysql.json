@@ -2367,7 +2367,7 @@
           "editorMode": "code",
           "expr": "mysql_open_table_definitions{hostname=\"${hostname}\",instance=\"${instance}\"}",
           "instant": false,
-          "legendFormat": "open table definitios",
+          "legendFormat": "open table definitions",
           "range": true,
           "refId": "A"
         }

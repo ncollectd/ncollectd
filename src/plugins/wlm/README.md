@@ -19,7 +19,7 @@ The following configuration options are available:
 
 **class** \[*incl|include|excl|exclude*] *name*
 
-> Select worload manager class based on the class name.
+> Select workload manager class based on the class name.
 > See **INCLUDE AND EXCLUDE LISTS** in
 > ncollectd.conf(5).
 

@@ -666,7 +666,7 @@ static int hv2metric_family(pTHX_ HV *hash, metric_family_t *fam)
         case METRIC_TYPE_GAUGE_HISTOGRAM:
             break;
         default:
-            PLUGIN_ERROR("Unknow metric type: %d", type);
+            PLUGIN_ERROR("Unknown metric type: %d", type);
             return -1;
             break;
         }
@@ -854,7 +854,7 @@ static int hv2notification(pTHX_ HV *hash, notification_t *n)
     if ((tmp = hv_fetch(hash, "severity", 8, 0)) != NULL) {
         unsigned int severity = SvIV(*tmp);
         if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) && (severity != NOTIF_OKAY)) {
-            PLUGIN_ERROR("Invalid notification sevirity.");
+            PLUGIN_ERROR("Invalid notification severity.");
             return -1;
         }
         n->severity = severity;

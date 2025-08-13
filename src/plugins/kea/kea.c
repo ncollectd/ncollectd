@@ -519,7 +519,7 @@ static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
 
     const struct kea_stats *ks = kea_stats_get_key(skey, strlen(skey));
     if (ks == NULL) {
-        PLUGIN_DEBUG("Unknow key: '%s'", skey);
+        PLUGIN_DEBUG("Unknown key: '%s'", skey);
         return true;
     }
 

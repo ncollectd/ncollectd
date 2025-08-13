@@ -527,7 +527,7 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
     [FAM_VARNISH_SHM_FLUSHES] = {
         .name = "varnish_shm_flushes",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of writes performed before the end of a bufferred task "
+        .help = "Number of writes performed before the end of a buffered task "
                 "because adding a record to a batch would exceed vsl_buffer.",
     },
     [FAM_VARNISH_SHM_CONTENTION] = {

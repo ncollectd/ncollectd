@@ -70,7 +70,7 @@ static metric_family_t fams[FAM_DF_MAX] = {
     [FAM_DF_RESERVED_INODES] = {
         .name = "system_df_reserved_inodes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Inodes reserverd in the filesystem.",
+        .help = "Inodes reserved in the filesystem.",
     },
     [FAM_DF_USED_INODES] = {
         .name = "system_df_used_inodes",

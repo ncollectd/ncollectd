@@ -153,7 +153,7 @@ Summary: DB2 plugin for ncollectd
 Group: System Environment/Daemons
 Requires: %{name}%{?_isa} = %{version}-%{release}
 %description db2
-The db2 plugin retrives information from a DB2 database,
+The db2 plugin retrieves information from a DB2 database,
 %endif
 
 %if %{build_with_haproxy}

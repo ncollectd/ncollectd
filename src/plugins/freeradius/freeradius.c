@@ -446,7 +446,7 @@ static metric_family_t fams[FAM_FREERADIUS_MAX] = {
     [FAM_FREERADIUS_QUEUE_LEN_INTERNAL] = {
         .name = "freeradius_queue_len_internal",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Interal queue length",
+        .help = "Internal queue length",
     },
     [FAM_FREERADIUS_QUEUE_LEN_PROXY] = {
         .name = "freeradius_queue_len_proxy",

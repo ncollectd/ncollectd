@@ -245,7 +245,7 @@ static int nftables_config_counter(config_item_t *ci)
         family = NFPROTO_INET;
     } else {
         PLUGIN_ERROR("The '%s' option in %s:%d has a unknown family: '%s', "
-                     "must be ip, ip6, arp, birdge, netdev or inet.",
+                     "must be ip, ip6, arp, bridge, netdev or inet.",
                       ci->key, cf_get_file(ci), cf_get_lineno(ci), ci->values[0].value.string);
         return -1;
     }

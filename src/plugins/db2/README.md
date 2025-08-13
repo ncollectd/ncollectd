@@ -16,7 +16,7 @@ NCOLLECTD-DB2(5) - File Formats Manual
 	        label key value
 	        label-from key column-name
 	        result {
-	            type gauge|counter|info|unknow
+	            type gauge|counter|info|unknown
 	            type-from column-name
 	            help help
 	            help-from column-name
@@ -65,20 +65,20 @@ generate one or more data sets from each row returned according to these rules.
 
 > **user** *user*
 
-> > User to connecto to database
+> > User to connect to database
 
 > **user-env** *env-name*
 
-> > Get the user to connecto to database from the environment variable
+> > Get the user to connect to database from the environment variable
 > > *env-name*.
 
 > **password** *password*
 
-> > User password to connecto to database
+> > User password to connect to database
 
 > **password-env** *env-name*
 
-> > Get the user password to connecto to database from the environment
+> > Get the user password to connect to database from the environment
 > > variable *env-name*.
 
 > **connection** *connection-string*
@@ -163,18 +163,18 @@ generate one or more data sets from each row returned according to these rules.
 
 > **result**
 
-> > **type** *gauge|counter|info|unknow*
+> > **type** *gauge|counter|info|unknown*
 
 > > > The **type** that's used for each metric returned.
-> > > Must be *gauge*, *counter*, *info* or *unknow*.
-> > > If not set is unknow.
+> > > Must be *gauge*, *counter*, *info* or *unknown*.
+> > > If not set is unknown.
 > > > There must be exactly one **type** option inside each **Result** block.
 
 > > **type-from** *column-name*
 
 > > > Read the type from *column*.
 > > > The column value must be *gauge*, *counter*,
-> > > *info* or *unknow*.
+> > > *info* or *unknown*.
 
 > > **help** *help*
 

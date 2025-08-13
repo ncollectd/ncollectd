@@ -195,28 +195,28 @@ static int handle_interface(__attribute__((unused)) ros_connection_t *c,
 
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_RX_PACKETS],
                              VALUE_COUNTER(i->rx_packets), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_TX_PACKETS],
                              VALUE_COUNTER(i->tx_packets), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_RX_BYTES],
                              VALUE_COUNTER(i->rx_bytes), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_TX_BYTES],
                              VALUE_COUNTER(i->tx_bytes), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_RX_ERRORS],
                              VALUE_COUNTER(i->rx_errors), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_TX_ERRORS],
                              VALUE_COUNTER(i->tx_errors), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_RX_DROPPED],
                              VALUE_COUNTER(i->rx_drops), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_IF_TX_DROPPED],
                              VALUE_COUNTER(i->tx_drops), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=i->name}, NULL);
+                             &(label_pair_const_t){.name="interface", .value=i->name}, NULL);
 
         i = i->next;
     }
@@ -240,47 +240,47 @@ static int handle_regtable(__attribute__((unused)) ros_connection_t *c,
 
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_RX_BITRATE],
                              VALUE_GAUGE(1000000.0 * r->rx_rate), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_TX_BITRATE],
                              VALUE_GAUGE(1000000.0 * r->tx_rate), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_RX_SIGNAL_POWER],
                              VALUE_GAUGE(r->rx_signal_strength), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_TX_SIGNAL_POWER],
                              VALUE_GAUGE(r->tx_signal_strength), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_RX_SIGNAL_QUALITY],
                              VALUE_GAUGE(r->rx_ccq), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_TX_SIGNAL_QUALITY],
                              VALUE_GAUGE(r->tx_ccq), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_RX_BYTES],
                              VALUE_COUNTER(r->rx_bytes), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_TX_BYTES],
                              VALUE_COUNTER(r->tx_bytes), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_SIGNAL_TO_NOISE],
                              VALUE_GAUGE(r->signal_to_noise), &rd->labels,
-                             &(label_pair_const_t){.name="inteface", .value=r->interface},
+                             &(label_pair_const_t){.name="interface", .value=r->interface},
                              &(label_pair_const_t){.name="radio", .value=name},
                              NULL);
         r = r->next;

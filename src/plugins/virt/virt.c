@@ -171,7 +171,7 @@ static metric_family_t fams_virt[FAM_VIRT_MAX] = {
     [FAM_VIRT_UP] = {
         .name = "virt_up",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Can connecto to libvirt."
+        .help = "Can connect to libvirt."
     },
     [FAM_VIRT_DOMAIN_STATE] = {
         .name = "virt_domain_state",

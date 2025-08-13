@@ -19,7 +19,7 @@ Reading the file */proc/softirq*.
 
 **soft-irq** \[*incl|include|excl|exclude*] *soft-irq*
 
-> Select this softirq to collectd coutners.
+> Select this softirq to collectd counters.
 > If no configuration if given, the **softirq** plugin will collect data
 > from all irqs.
 > See **INCLUDE AND EXCLUDE LISTS** in

@@ -628,7 +628,7 @@ int ps_read(void)
 
     /* get procs_running from /proc/stat
      * scanning /proc/stat AND computing other process stats takes too much time.
-     * Consequently, the number of running processes based on the occurences
+     * Consequently, the number of running processes based on the occurrences
      * of 'R' as character indicating the running state is typically zero. Due
      * to processes are actually changing state during the evaluation of it's
      * stat(s).

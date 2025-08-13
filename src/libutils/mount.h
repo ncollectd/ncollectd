@@ -81,7 +81,7 @@ cu_mount_t *cu_mount_getlist(cu_mount_t **list);
   RETURN VALUE
         The cu_mount_getlist() function returns a pointer to
         the last entry of the list, or NULL if an error has
-        occured.
+        occurred.
 
   NOTES
         In case of an error, *list is not modified.
@@ -122,10 +122,10 @@ char *cu_mount_checkoption(char *line, const char *keyword, int full);
 
   EXAMPLES
         If line is "rw,usrquota,grpquota", keyword is "quota", NULL
-        will be returned (independend of full).
+        will be returned (independent of full).
 
         If line is "rw,usrquota,grpquota", keyword is "usrquota",
-        a pointer to "usrquota,grpquota" is returned (independend
+        a pointer to "usrquota,grpquota" is returned (independent
         of full).
 
         If line is "rw,loop=/dev/loop1,quota", keyword is "loop="

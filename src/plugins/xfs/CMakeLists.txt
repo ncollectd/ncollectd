@@ -1,4 +1,4 @@
-plugin_option(PLUGIN_XFS "XFS filesytem statistics" ON)
+plugin_option(PLUGIN_XFS "XFS filesystem statistics" ON)
 
 set(BUILD_PLUGIN_XFS 0)
 

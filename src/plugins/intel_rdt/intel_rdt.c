@@ -376,7 +376,7 @@ static int strlisttoarray(char *str_list, char ***names, size_t *names_num)
     if (strstr(str_list, ",,")) {
         /* strtok ignores empty words between separators.
          * This condition handles that by rejecting strings
-         * with consecutive seprators */
+         * with consecutive separators */
         PLUGIN_ERROR("Empty process name");
         return -EINVAL;
     }

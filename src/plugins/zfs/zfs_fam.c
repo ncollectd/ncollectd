@@ -222,7 +222,7 @@ metric_family_t fams_zfs[FAM_ZFS_MAX] = {
     [FAM_ZFS_ARC_EVICT_L2_SKIP] = {
         .name = "system_zfs_arc_evict_l2_skip",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of evictions skiped due to L2 writes.",
+        .help = "Number of evictions skipped due to L2 writes.",
     },
     [FAM_ZFS_ARC_HASH_ELEMENTS] = {
         .name = "system_zfs_arc_hash_elements",
@@ -527,19 +527,19 @@ metric_family_t fams_zfs[FAM_ZFS_MAX] = {
     [FAM_ZFS_ARC_L2_PREFETCH_ASIZE_BYTES] = {
         .name = "system_zfs_arc_l2_prefetch_asize_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Alinged size in bytes of L2ARC buffers that were cached "
+        .help = "Aligned size in bytes of L2ARC buffers that were cached "
                 "while they had the prefetch flag set in ARC.",
     },
     [FAM_ZFS_ARC_L2_MRU_ASIZE_BYTES] = {
         .name = "system_zfs_arc_l2_mru_asize_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Alinged size in bytes of L2ARC buffers that were cached "
+        .help = "Aligned size in bytes of L2ARC buffers that were cached "
                 "while they had the mru flag set in ARC.",
     },
     [FAM_ZFS_ARC_L2_MFU_ASIZE_BYTES] = {
         .name = "system_zfs_arc_l2_mfu_asize_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Alinged size in bytes of L2ARC buffers that were cached "
+        .help = "Aligned size in bytes of L2ARC buffers that were cached "
                 "while they had the mfu flag set in ARC.",
     },
     [FAM_ZFS_ARC_L2_BUFC_DATA_ASIZE_BYTES] = {

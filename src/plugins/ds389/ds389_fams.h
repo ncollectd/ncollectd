@@ -726,16 +726,16 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
     [FAM_DS389_REPLICA_LAST_UPDATE_STATUS] = {
         .name = "ds389_replica_last_update_status",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Replica last update staus",
+        .help = "Replica last update status.",
     },
     [FAM_DS389_REPLICA_LAST_UPDATE_START_SECONDS] = {
         .name = "ds389_replica_last_update_start",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Replica last update start time in unix epoch",
+        .help = "Replica last update start time in unix epoch.",
     },
     [FAM_DS389_REPLICA_LAST_UPDATE_END_SECONDS] = {
         .name = "ds389_replica_last_update_end",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Replica last update end time in unix epoch",
+        .help = "Replica last update end time in unix epoch.",
     },
 };

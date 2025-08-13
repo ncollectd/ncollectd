@@ -103,7 +103,7 @@ static metric_family_t fams[FAM_CIFS_MAX] = {
     [FAM_CIFS_SMB1_FLUSHES] = {
         .name = "system_cifs_smb1_flushes",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total mumber of cache flushes for each CIFS filesystem mounted..",
+        .help = "Total number of cache flushes for each CIFS filesystem mounted..",
     },
     [FAM_CIFS_SMB1_LOCKS] = {
         .name = "system_cifs_smb1_locks",
@@ -380,18 +380,18 @@ static int cifs_read(void)
             if (ptr[len] == '\n')
                 ptr[len] = '\0';
 
-            double connectd = 1;
+            double connected = 1;
             if (len >= strlen("\tDISCONNECTED ")) {
                 if (strcmp(ptr + (len - strlen("\tDISCONNECTED ")), "\tDISCONNECTED ") == 0) {
                     len -= strlen("\tDISCONNECTED ");
                     ptr[len] = '\0';
-                    connectd = 0;
+                    connected = 0;
                 }
             }
 
             sstrncpy(share, ptr, sizeof(share));
             metric_family_append(&fams[FAM_CIFS_CONNECTED],
-                                 VALUE_GAUGE(connectd), NULL,
+                                 VALUE_GAUGE(connected), NULL,
                                  &(label_pair_const_t){.name="share", .value=share},
                                  &(label_pair_const_t){.name="connection", .value=conn}, NULL);
             continue;

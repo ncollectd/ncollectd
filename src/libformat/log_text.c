@@ -48,7 +48,7 @@ int log_text(strbuf_t *buf, size_t flags, const log_msg_t *msg)
             status |= strbuf_putstr(buf, "[debug]");
             break;
         default:
-            status |= strbuf_putstr(buf, "[unknow]");
+            status |= strbuf_putstr(buf, "[unknown]");
             break;
         }
         fields++;

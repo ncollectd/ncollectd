@@ -65,7 +65,7 @@ static metric_family_t fams_docker[FAM_DOCKER_MAX] = {
     [FAM_DOCKER_CONTAINER_ONLINE_CPUS] = {
         .name = "docker_container_online_cpus",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Cpus avilable inside the container.",
+        .help = "Cpus available inside the container.",
     },
     [FAM_DOCKER_CONTAINER_PROCESSES] = {
         .name = "docker_container_processes",
@@ -80,7 +80,7 @@ static metric_family_t fams_docker[FAM_DOCKER_MAX] = {
     [FAM_DOCKER_CONTAINER_MEMORY_USAGE_BYTES] = {
         .name = "docker_container_memory_usage_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Number of bytes used by the conainter.",
+        .help = "Number of bytes used by the container.",
     },
     [FAM_DOCKER_CONTAINER_MEMORY_LIMIT_BYTES] = {
         .name = "docker_container_memory_limit_bytes",

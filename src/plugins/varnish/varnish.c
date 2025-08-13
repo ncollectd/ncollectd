@@ -165,7 +165,7 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
     char mname[256];
     int size = ssnprintf(mname, sizeof(mname), "%s.%s", tokens[0], tokens[tokens_num-1]);
     if (size >= (int)sizeof(mname)) {
-        PLUGIN_ERROR("overflow in the contatenation \"%s.%s\"", tokens[0], tokens[tokens_num-1]);
+        PLUGIN_ERROR("overflow in the concatenation \"%s.%s\"", tokens[0], tokens[tokens_num-1]);
         return -1;
     }
 

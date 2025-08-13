@@ -816,7 +816,7 @@ static size_t interface_get_buffer_size(void)
     PLUGIN_DEBUG("max sriov_totalvfs = %u", max_num);
 
     unsigned int mp = NETLINK_VF_DEFAULT_BUF_SIZE_KB;
-    /* allign to power of two, buffer size should be at least totalvfs/2 kb */
+    /* align to power of two, buffer size should be at least totalvfs/2 kb */
     while (mp < max_num / 2)
         mp *= 2;
 

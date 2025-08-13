@@ -279,7 +279,7 @@ and ncollectd:
 
 > >     class Metric(\[labels]\[, time]\[, interval])
 
-> **lables**
+> **labels**
 
 > > It has to be a dictionary of numbers, strings or bools.
 > > All keys must be strings.
@@ -308,7 +308,7 @@ and ncollectd:
 
 > **value**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -326,7 +326,7 @@ and ncollectd:
 
 > **value**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -344,7 +344,7 @@ and ncollectd:
 
 > **value**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -362,7 +362,7 @@ and ncollectd:
 
 > **value**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -380,7 +380,7 @@ and ncollectd:
 
 > **value**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -398,7 +398,7 @@ and ncollectd:
 
 > **value**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -416,7 +416,7 @@ and ncollectd:
 
 > **info**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -434,7 +434,7 @@ and ncollectd:
 
 > **set**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -456,7 +456,7 @@ and ncollectd:
 
 > **quantiles**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -476,7 +476,7 @@ and ncollectd:
 
 > **buckets**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 
@@ -496,7 +496,7 @@ and ncollectd:
 
 > **buckets**
 
-> **lables**
+> **labels**
 
 > > See **class Metric**.
 

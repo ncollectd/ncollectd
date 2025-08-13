@@ -9,7 +9,7 @@
 .Bd -literal -compact
 \fBload-plugin\fP nftables
 \fBplugin\fP nftables {
-    \fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
+    \fBcounter\fP  \fIip|ip6|arp|bridge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
 }
 .Ed
 .SH DESCRIPTION
@@ -18,7 +18,7 @@ of named counters inside your ruleset.
 .Pp
 The plugin has the following options:
 .Bl -tag -width Ds
-.It \fBcounter\fP  \fIip|ip6|arp|birdge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
+.It \fBcounter\fP  \fIip|ip6|arp|bridge|netdev|inet\fP [\fItable\fP] [\fIcounter\fP]
 If only the \fIfamily\fP is specified all named counters on the family tables are collected.
 If \fIfamily\fP and \fItable\fP are specified, only the counters for this table are collectd.
 You can optionally specify the \fIcounter\fP name to collect a specific counter.

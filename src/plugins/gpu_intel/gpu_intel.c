@@ -733,7 +733,7 @@ static void gpu_submit(gpu_device_t *gpu, metric_family_t *fam)
 }
 
 /* because of family name change, each RAS metric needs to be submitted +
- * reseted separately */
+ * reset separately */
 static void ras_submit(gpu_device_t *gpu, const char *name, const char *help,
                                           const char *type, const char *subdev, double value)
 {
@@ -2277,7 +2277,7 @@ static bool gpu_engines(gpu_device_t *gpu)
             type = "render";
             break;
 
-        /* Following defines require at least Level-Zero relase v1.1 */
+        /* Following defines require at least Level-Zero release v1.1 */
         case ZES_ENGINE_GROUP_RENDER_ALL:
             type = "render";
             all = true;

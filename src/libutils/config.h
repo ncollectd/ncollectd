@@ -41,7 +41,7 @@ int cf_util_get_unsigned_int(const config_item_t *ci, unsigned int *ret_value);
 int cf_util_get_double(const config_item_t *ci, double *ret_value);
 int cf_util_get_double_array(const config_item_t *ci, size_t *ret_size, double **ret_values);
 
-/* Assures the config option is a boolean and assignes it to `ret_bool'.
+/* Assures the config option is a boolean and assigns it to `ret_bool'.
  * Otherwise, `ret_bool' is not changed and non-zero is returned. */
 int cf_util_get_boolean(const config_item_t *ci, bool *ret_bool);
 

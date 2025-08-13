@@ -119,7 +119,7 @@ static void close_pipe(int fd_pipe[2])
  *             pl  :program list struct with group name
  *             gid :group id to fallback in case egid cannot be determined.
  * Returns:
- *             egid effective group id if successfull,
+ *             egid effective group id if successful,
  *                        -1 if group is not defined/not found.
  *                        -2 for any buffer allocation error.
  */

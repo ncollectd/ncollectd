@@ -17,7 +17,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBlabel-from\fP \fIkey\fP \fIcolumn-name\fP
         \fBresult\fP {
-            \fBtype\fP \fIgauge|counter|info|unknow\fP
+            \fBtype\fP \fIgauge|counter|info|unknown\fP
             \fBtype-from\fP \fIcolumn-name\fP
             \fBhelp\fP \fIhelp\fP
             \fBhelp-from\fP \fIcolumn-name\fP
@@ -158,7 +158,7 @@ Collect values from \f(CWINFORMATION_SCHEMA.INNODB_CMP\fP table.
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_SYS_TABLESPACES\fP table.
 .It \fBmyisam\fP
 Collect \f(CWKey_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
-.It \fBperfomance_lost\fP
+.It \fBperformance_lost\fP
 Collect \f(CWPerformance_schema_*\fP values
 from \f(CWSHOW GLOBAL STATUS\fP command.
 .It \fBqcache\fP
@@ -184,7 +184,7 @@ Collect values from \f(CWINFORMATION_SCHEMA.TABLE_STATISTICS\fP table.
 Collect values from \f(CWINFORMATION_SCHEMA.TABLES\fP table.
 .It \fBresponse_time\fP
 Collect values from \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME\fP table.
-In Percona server collect values fron
+In Percona server collect values from
 \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_READ\fP
 and \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_WRITE\fP and table.
 .It \fBmaster\fP
@@ -257,14 +257,14 @@ Can appear multiple time in the \fBquery\fP block.
 Specifies the columns whose values will be used to create the labels.
 .It \fBresult\fP
 .Bl -tag -width Ds
-.It \fBtype\fP \fIgauge|counter|info|unknow\fP
+.It \fBtype\fP \fIgauge|counter|info|unknown\fP
 The \fBtype\fP that's used for each line returned.
-Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
-If not set is \fPunknow\fP.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknown\fP.
+If not set is \fPunknown\fP.
 There must be exactly one \fBtype\fP option inside each \fBresult\fP block.
 .It \fBtype-from\fP \fIcolumn-name\fP
 Read the type from \fIcolumn\fP.
-The column value must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknow\fP.
+The column value must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknown\fP.
 .It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
 .It \fBhelp-from\fP \fIcolumn-name\fP

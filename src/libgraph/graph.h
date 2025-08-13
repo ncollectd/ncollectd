@@ -340,7 +340,7 @@ typedef struct image_desc_t {
     double    second_axis_scale; /* relative to the first axis (0 to disable) */
     double    second_axis_shift; /* how much is it shifted vs the first axis */
     char      *second_axis_legend; /* label to put on the second axis */
-    char      *second_axis_format; /* format for the numbers on the scond axis */
+    char      *second_axis_format; /* format for the numbers on the second axis */
     enum value_formatter_en second_axis_formatter;  /* How to format axis values */
     char      *primary_axis_format; /* format for the numbers on the primary axis */
     enum value_formatter_en primary_axis_formatter; /* How to format axis values */

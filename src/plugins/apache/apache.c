@@ -563,7 +563,7 @@ static int apache_read(user_data_t *user_data)
     if ((status == CURLE_OK) && (content_type != NULL) &&
         (strncasecmp(content_type, text_plain, strlen(text_plain)) != 0)) {
         PLUGIN_WARNING("`Content-Type' response header is not `%s' "
-                        "(received: `%s'). Expecting unparseable data. Please check `URL' "
+                        "(received: `%s'). Expecting unparsable data. Please check `URL' "
                         "parameter (missing `?auto' suffix ?)",
                         text_plain, content_type);
     }
@@ -620,7 +620,7 @@ static int apache_read(user_data_t *user_data)
             } else if (strcmp(fields[0], "ConnsAsyncWriting:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="writting"}, NULL);
+                                     &(label_pair_const_t){.name="state", .value="writing"}, NULL);
             } else if (strcmp(fields[0], "ConnsAsyncKeepAlive:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,

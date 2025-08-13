@@ -336,7 +336,7 @@ static json_tok_t json_lex_string(json_lexer_t *lexer, const unsigned char * jso
         /* accept it, and move on */
     }
   finish_string_lex:
-    /* tell our buddy, the parser, wether he needs to process this string
+    /* tell our buddy, the parser, whether he needs to process this string
      * again */
     if (has_escapes && tok == JSON_TOK_STRING)
         tok = JSON_TOK_STRING_WITH_ESCAPES;

@@ -123,9 +123,9 @@ static const char *cmq_mqccstr(MQLONG mqcc)
     case MQCC_FAILED:
         return "Failed";
     case MQCC_UNKNOWN:
-        return "Unknow MQCC";
+        return "Unknown MQCC";
     }
-    return "Unknow MQCC";
+    return "Unknown MQCC";
 }
 
 static void cmq_reason(char *msg, MQLONG mqcc, MQLONG mqrc)

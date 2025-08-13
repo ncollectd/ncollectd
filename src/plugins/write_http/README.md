@@ -57,7 +57,7 @@ Within each **instance** block, the following options are available:
 
 **user-env** *env-name*
 
-> Get the user name for authentication from the enviroment variable
+> Get the user name for authentication from the environment variable
 > *env-name*.
 
 **password** *password*
@@ -66,7 +66,7 @@ Within each **instance** block, the following options are available:
 
 **password-env** *env-name*
 
-> Get the password for authentication from the enviroment variable
+> Get the password for authentication from the environment variable
 > *env-name*.
 
 **verify-peer** *true|false*

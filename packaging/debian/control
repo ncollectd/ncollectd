@@ -96,7 +96,7 @@ Package: ncollectd-dns
 Section: utils
 Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: This dns plugin retrives information from dns server responses.
+Description: This dns plugin retrieves information from dns server responses.
 
 Package: ncollectd-docker
 Section: utils
@@ -168,7 +168,7 @@ Package: ncollectd-kafka
 Section: utils
 Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: The kafka plugin collect metrics fron a kafka broker.
+Description: The kafka plugin collect metrics from a kafka broker.
 
 Package: ncollectd-lua
 Section: utils
@@ -219,7 +219,7 @@ Package: ncollectd-nftables
 Section: utils
 Architecture: any
 Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: The nftables plugin get counters fron nftables.
+Description: The nftables plugin get counters from nftables.
 
 Package: ncollectd-nginx
 Section: utils

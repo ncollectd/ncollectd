@@ -10,7 +10,7 @@ NCOLLECTD-APACHE(5) - File Formats Manual
 	plugin info {
 	    metric "name" {
 	        help "help"
-	        type gauge|counter|unknow|info
+	        type gauge|counter|unknown|info
 	        label key value
 	        value value
 	    }
@@ -31,9 +31,9 @@ The following options are accepted within each **metric** mblock:
 
 > Set the **help** text for the metric.
 
-**type** *gauge|counter|unknow|info*
+**type** *gauge|counter|unknown|info*
 
-> Defines the metric type, must be *gauge*, *counter*, *unknow* or
+> Defines the metric type, must be *gauge*, *counter*, *unknown* or
 > *info*.
 > If not set is *Info*.
 

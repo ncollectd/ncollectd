@@ -191,7 +191,7 @@ int proc_pids_update(const char *procfs_path, proc_pids_t *proc_pids[],
  *   proc_pids_free
  *
  * DESCRIPTION
- *   Releses memory allocatd for proc_pids
+ *   Releases memory allocatd for proc_pids
  *
  * PARAMETERS
  *   `proc_pids'       Array of proc_pids

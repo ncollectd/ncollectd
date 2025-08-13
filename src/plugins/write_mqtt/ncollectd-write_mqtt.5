@@ -17,8 +17,8 @@
         \fBuser\fP \fIuser\fP
         \fBpassword\fP \fIuser\fP
         \fBqos\fP \fI0|1|2\fP
-        \fBstore-rates\fP \fItrue|flase\fP
-        \fBretain\fP \fItrue|flase\fP
+        \fBstore-rates\fP \fItrue|false\fP
+        \fBretain\fP \fItrue|false\fP
         \fBca-cert\fP \fIfile\fP
         \fBcertificate-file\fP \fIfile\fP
         \fBcertificate-key-file\fP \fIfile\fP
@@ -67,8 +67,8 @@ At least once
 .It \fB2\fP
 Exactly once
 .El
-.It \fBstore-rates\fP \fItrue|flase\fP
-.It \fBretain\fP \fItrue|flase\fP
+.It \fBstore-rates\fP \fItrue|false\fP
+.It \fBretain\fP \fItrue|false\fP
 Controls whether the MQTT broker will retain (keep a copy of) the last message
 sent to each topic and deliver it to new subscribers.
 Defaults to \fIfalse\fP.

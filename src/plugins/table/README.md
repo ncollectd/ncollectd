@@ -15,7 +15,7 @@ NCOLLECTD-TABLE(5) - File Formats Manual
 	        label key value
 	        interval seconds
 	        result {
-	            type gauge|unknow|counter|info
+	            type gauge|unknown|counter|info
 	            help help
 	            metric name
 	            metric-prefix prefix
@@ -74,7 +74,7 @@ The following options are available inside a **table** block:
 
 **result**
 
-> **type** *gauge|unknow|counter|info*
+> **type** *gauge|unknown|counter|info*
 
 > **help** *help*
 

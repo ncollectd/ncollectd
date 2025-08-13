@@ -139,7 +139,7 @@ The following options are accepted within each **instance** block:
 
 > **disk\_err**
 
-> > Report disk errors if any occured.
+> > Report disk errors if any occurred.
 > > Requires libvirt API version *0.9.10* or later.
 
 > **fs\_info**

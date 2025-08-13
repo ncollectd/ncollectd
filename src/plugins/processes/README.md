@@ -86,7 +86,7 @@ The **processes** plugin has the following options:
 
 > **delay-accounting**
 
-> > If enabled, collect Linux Delay Accounding information for matching processes.
+> > If enabled, collect Linux Delay Accounting information for matching processes.
 > > Delay Accounting provides the time processes wait for the CPU to become
 > > available, for I/O operations to finish, for pages to be swapped in and for
 > > freed pages to be reclaimed.

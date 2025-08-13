@@ -86,7 +86,7 @@ int sensors_read(void)
         if (!CFStringGetCString(property, location, sizeof(location), kCFStringEncodingASCII))
             continue;
 
-        /* Get the actual value. Some computation, based on the `type' is neccessary. */
+        /* Get the actual value. Some computation, based on the `type' is necessary. */
         property = NULL;
         int value_int = 0;
         if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("current-value"), &property))

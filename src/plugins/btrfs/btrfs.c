@@ -52,7 +52,7 @@ static metric_family_t fams[FAM_BTRFS_MAX] = {
     [FAM_BTRFS_GENERATION_ERRORS] = {
         .name = "system_brtfs_generation_errors",
         .type = METRIC_TYPE_COUNTER,
-        .help = "An indication that blocks have not been writte.",
+        .help = "An indication that blocks have not been written.",
     },
 };
 

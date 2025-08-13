@@ -184,7 +184,7 @@ static metric_family_t fams[FAM_ZOOKEEPER_MAX] = {
     [FAM_ZOOKEEPER_LATENCY_MIN_SECONDS] = {
         .name = "zookeeper_latency_min_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Minimun time in seconds for requests to be processed.",
+        .help = "Minimum time in seconds for requests to be processed.",
     },
     [FAM_ZOOKEEPER_MAX_FILE_DESCRIPTORS] = {
         .name = "zookeeper_max_file_descriptors",
@@ -214,7 +214,7 @@ static metric_family_t fams[FAM_ZOOKEEPER_MAX] = {
     [FAM_ZOOKEEPER_LATENCY_MAX_SECONDS] = {
         .name = "zookeeper_latency_max_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Maximun time in seconds for requests to be processed.",
+        .help = "Maximum time in seconds for requests to be processed.",
     },
     [FAM_ZOOKEEPER_OUTSTANDING_TLS_HANDSHAKE] = {
         .name = "zookeeper_outstanding_tls_handshake",

@@ -240,7 +240,7 @@ static int set_output_format(char *format)
         output_format = OUTPUT_FORMAT_TABLE;
         table_style = TABLE_STYLE_ASCII;
     } else {
-        fprintf(stderr, "Unknow output format: \"%s\"\n"
+        fprintf(stderr, "Unknown output format: \"%s\"\n"
                         "Must be one of:\n"
                         "    json\n    json-pretty\n    yaml\n    text\n    table\n"
                         "    table-bold\n    table-border-bold\n    table-double\n"

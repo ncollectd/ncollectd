@@ -69,7 +69,7 @@ macro(check_large_files VARIABLE)
             endif()
 
             if(NOT FSEEKO_COMPILE_OK)
-                # glibc 2.2 neds _LARGEFILE_SOURCE for fseeko (but not 64-bit off_t...)
+                # glibc 2.2 needs _LARGEFILE_SOURCE for fseeko (but not 64-bit off_t...)
                 try_compile(FSEEKO_COMPILE_OK "${CMAKE_BINARY_DIR}"
                             "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/TestLargeFiles.c"
                             COMPILE_DEFINITIONS "-D_LARGEFILE_SOURCE" )

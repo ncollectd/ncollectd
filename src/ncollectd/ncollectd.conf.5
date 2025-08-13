@@ -10,17 +10,17 @@
 \fBbase-dir\fP \fI/path/to/base\fP
 \fBpid-file\fP \fI/path/to/pid\fP
 \fBhostname\fP \fIhostname.domain\fP
-\fBfqdn-lookup\fP \fItrue|fase\fP
+\fBfqdn-lookup\fP \fItrue|false\fP
 \fBinterval\fP \fIseconds\fP
 \fBread-threads\fP \fIthreads\fP
 \fBwrite-queue-limit-high\fP \fIhigh\fP
 \fBwrite-queue-limit-low\fP \fIlow\fP
-\fBauto-load-plugin\fP \fItrue|fase\fP
-\fBcollect-internal-stats\fP \fItrue|fase\fP
+\fBauto-load-plugin\fP \fItrue|false\fP
+\fBcollect-internal-stats\fP \fItrue|false\fP
 \fBpre-cache-filter\fP \fIpre-cache\fP
 \fBpost-cache-filter\fP \fIpost-cache\fP
 \fBmax-read-interval\fP \fIseconds\fP
-\fBnormalize-interval\fP \fItrue|fase\fP
+\fBnormalize-interval\fP \fItrue|false\fP
 \fBsocket-file\fP \fI/path/to/socket\fP
 \fBsocket-group\fP \fIgroup-name\fP
 \fBsocket-perms\fP \fIperms-octal\fP
@@ -142,7 +142,7 @@ Sets the hostname that identifies a host.
 If you omit this setting, the hostname will be determined using the
 .Xr gethostname 2
 system call.
-.It \fBfqdn-lookup\fP \fItrue|fase\fP
+.It \fBfqdn-lookup\fP \fItrue|false\fP
 If \fBhostname\fP is determined automatically this setting controls whether
 or not the daemon should try to figure out the "fully qualified domain name",
 FQDN.
@@ -194,7 +194,7 @@ If you do not want to randomly drop values when the queue size is between
 Enabling the \fBcollect-internal-stats\fP option is of great help to figure
 out the values to set \fBwrite-queue-limit-high\fP and
 \fBwrite-queue-limit-low\fP to.
-.It \fBauto-load-plugin\fP \fItrue|fase\fP
+.It \fBauto-load-plugin\fP \fItrue|false\fP
 When set to \fBfalse\fP (the default), each plugin needs to be loaded
 explicitly, using the \fBload-plugin\fP statement documented above.
 If a \fBplugin\fP block is encountered and no configuration
@@ -205,7 +205,7 @@ When set to \fBtrue\fP, explicit \fBload-plugin\fP statements are not required.
 Each \fBplugin\fP block acts as if it was immediately preceded by a
 \fBload-plugin\fP statement. \fBload-plugin\fP statements are still required
 for plugins that don't provide any configuration, e.g. the \fIload plugin\fP.
-.It \fBcollect-internal-stats\fP \fItrue|fase\fP
+.It \fBcollect-internal-stats\fP \fItrue|false\fP
 When set to \fItrue\fP, various statistics about the \fBncollectd\fP daemon
 will be collected.
 Defaults to \fIfalse\fP.
@@ -222,7 +222,7 @@ A read plugin doubles the interval between queries after each failed attempt
 to get data.
 This options limits the maximum value of the interval.
 The default value is \fB86400\fP.
-.It \fBnormalize-interval\fP \fItrue|fase\fP
+.It \fBnormalize-interval\fP \fItrue|false\fP
 When set to \fBtrue\fP will normalize the time in which collect metrics as
 a multiple of the interval.
 The default value is \fBfalse\fP.
@@ -322,7 +322,7 @@ Sets a plugin-specific interval for collecting metrics.
 This overrides the global \fBinterval\fP setting.
 If a plugin provides its own support for specifying an interval, that setting
 will take precedence.
-.It \fBnormalize-interval\fP \fItrue|fase\fP
+.It \fBnormalize-interval\fP \fItrue|false\fP
 When set to \fBtrue\fP will normalize the time in which collect metrics as
 a multiple of the interval for this plugin.
 The default value is \fBfalse\fP.

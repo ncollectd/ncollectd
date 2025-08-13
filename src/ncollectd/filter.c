@@ -1003,7 +1003,7 @@ static filter_stmt_t *filter_config_stmt(const config_item_t *ci, bool *error, b
             if ((prev_stmt == NULL) ||
                     ((prev_stmt->type != FILTER_STMT_TYPE_IF) &&
                      (prev_stmt->type != FILTER_STMT_TYPE_UNLESS))) {
-                ERROR("'elif' block without previus 'if', 'unless' or 'elif' block in %s:%d.",
+                ERROR("'elif' block without previous 'if', 'unless' or 'elif' block in %s:%d.",
                        cf_get_file(cstmt), cf_get_lineno(cstmt));
                 filter_stmt_free(root_stmt);
                 return NULL;
@@ -1014,7 +1014,7 @@ static filter_stmt_t *filter_config_stmt(const config_item_t *ci, bool *error, b
                 while (last->next != NULL)
                     last = last->next;
                 if (last->type != FILTER_STMT_TYPE_ELIF) {
-                    ERROR("'elif' block without previus 'if', 'unless' or 'elif' block in %s:%d.",
+                    ERROR("'elif' block without previous 'if', 'unless' or 'elif' block in %s:%d.",
                           cf_get_file(cstmt), cf_get_lineno(cstmt));
                     filter_stmt_free(root_stmt);
                     return NULL;
@@ -1034,7 +1034,7 @@ static filter_stmt_t *filter_config_stmt(const config_item_t *ci, bool *error, b
             if ((prev_stmt == NULL) ||
                     ((prev_stmt->type != FILTER_STMT_TYPE_IF) &&
                      (prev_stmt->type != FILTER_STMT_TYPE_UNLESS))) {
-                ERROR("'else' block without previus 'if', 'unless' or 'elif' block in %s:%d.",
+                ERROR("'else' block without previous 'if', 'unless' or 'elif' block in %s:%d.",
                       cf_get_file(cstmt), cf_get_lineno(cstmt));
                 filter_stmt_free(root_stmt);
                 return NULL;
@@ -1045,7 +1045,7 @@ static filter_stmt_t *filter_config_stmt(const config_item_t *ci, bool *error, b
                 while (last->next != NULL)
                     last = last->next;
                 if (last->type != FILTER_STMT_TYPE_ELIF) {
-                    ERROR("'else' block without previus 'if', 'unless' or 'elif' block in %s:%d.",
+                    ERROR("'else' block without previous 'if', 'unless' or 'elif' block in %s:%d.",
                           cf_get_file(cstmt), cf_get_lineno(cstmt));
                     filter_stmt_free(root_stmt);
                     return NULL;

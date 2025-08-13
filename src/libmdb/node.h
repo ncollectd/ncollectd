@@ -196,7 +196,7 @@ mql_node_t *mql_node_subquery (mql_node_t *expr, uint64_t range, uint64_t step);
 
 mql_node_t *mql_node_matrix (mql_node_t *expr, uint64_t range);
 
-mql_node_t *mql_node_call (char *idenfier, mql_node_list_t *args);
+mql_node_t *mql_node_call (char *identifier, mql_node_list_t *args);
 
 mql_node_t *mql_node_string (char *string);
 

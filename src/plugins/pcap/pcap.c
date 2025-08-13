@@ -179,7 +179,7 @@ const char *get_pcap_error(pcap_t *p, int status)
         return pcap_geterr(p);
 #endif
     /* coverity[UNREACHABLE] */
-    return "unknow error";
+    return "unknown error";
 }
 
 static int cmp_in6_addr(const struct in6_addr *a, const struct in6_addr *b)
@@ -215,7 +215,7 @@ static void ignore_list_add(ip_list_t **list, const struct in6_addr *addr)
 
     ip_list_t *new = malloc(sizeof(*new));
     if (new == NULL) {
-        PLUGIN_ERROR("malloc falied");
+        PLUGIN_ERROR("malloc failed");
         return;
     }
 

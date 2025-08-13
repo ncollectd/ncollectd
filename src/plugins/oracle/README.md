@@ -16,7 +16,7 @@ NCOLLECTD-ORACLE(5) - File Formats Manual
 	        label key value
 	        label-from key column-name
 	        result {
-	            type gauge|counter|info|unknow
+	            type gauge|counter|info|unknown
 	            type-from column-name
 	            help help
 	            help-from column-name
@@ -66,20 +66,20 @@ connect to an Oracle&#174; Database and lets you execute SQL statements there.
 
 > **user** *user*
 
-> > User to connecto to database
+> > User to connect to database
 
 > **user-env** *env-name*
 
-> > Get the user to connecto to database from the environment
+> > Get the user to connect to database from the environment
 > > variable *env-name*.
 
 > **password** *password*
 
-> > User password to connecto to database
+> > User password to connect to database
 
 > **password-env** *env-name*
 
-> > Get the user password to connecto to database from the environment
+> > Get the user password to connect to database from the environment
 > > variable *env-name*.
 
 > **label** *key* *value*
@@ -159,17 +159,17 @@ connect to an Oracle&#174; Database and lets you execute SQL statements there.
 
 > **result**
 
-> > **type** *gauge|counter|info|unknow*
+> > **type** *gauge|counter|info|unknown*
 
 > > > The **type** that's used for each line returned.
-> > > Must be *gauge*, *counter*, *info* or *unknow*.
-> > > If not set is unknow.
+> > > Must be *gauge*, *counter*, *info* or *unknown*.
+> > > If not set is unknown.
 > > > There must be exactly one **type** option inside each **Result** block.
 
 > > **type-from** *column-name*
 
 > > > Read the type from *column*.
-> > > The column value must be *gauge*, *counter*, *info* or *unknow*.
+> > > The column value must be *gauge*, *counter*, *info* or *unknown*.
 
 > > **help** *help*
 

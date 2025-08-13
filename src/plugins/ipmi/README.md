@@ -68,7 +68,7 @@ Within the **instance** blocks, the following options are allowed:
 **auth-type** *MD5|rmcp+*
 
 > Forces the authentication type to use for the connection to remote BMC.
-> By default most secure type is seleted.
+> By default most secure type is selected.
 
 **host** *hostname*
 

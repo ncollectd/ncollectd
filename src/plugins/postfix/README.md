@@ -70,7 +70,7 @@ Within the **instance** blocks, the following options are allowed:
 
 **histogram-qmgr-inserts-nrcpt-buckets** \[*bucket*] ...
 
-> Define the list of buckets for qmgr number of receipients per message histogram.
+> Define the list of buckets for qmgr number of recipients per message histogram.
 
 **histogram-qmgr-inserts-size-buckets** \[*bucket*] ...
 
