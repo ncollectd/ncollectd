@@ -2158,7 +2158,7 @@ static int domain_lifecycle_event_cb(__attribute__((unused)) virConnectPtr con_,
     return 0;
 }
 
-static void virt_eventloop_timeout_cb(int timer ATTRIBUTE_UNUSED,
+static void virt_eventloop_timeout_cb(__attribute__((unused)) int timer,
                                       __attribute__((unused)) void *timer_info)
 {
 }
