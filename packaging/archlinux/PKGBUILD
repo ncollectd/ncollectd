@@ -1,0 +1,92 @@
+pkgname=ncollectd
+pkgver=0.0.0.208.gd8e36308
+pkgrel=1
+pkgdesc='Daemon which collects system performance statistics periodically'
+url='https://ncollectd.org/'
+arch=('x86_64' 'aarch64')
+license=('GPL-2.0-only')
+
+optdepends=('c-ares: dns plugin'
+            'libcurl-compat: apache, ats, bind, docker, haproxy, http, jolokia, nginx, nginx_vts, podman, scraper, squid and write_http plugins'
+            'jdk-openjdk: java plugin'
+            'libatasmart: smart plugin'
+            'libmicrohttpd: write_exporter plugin'
+            'libnftnl: nftables plugin'
+            'librabbitmq-c: write_amqp plugin'
+            'librdkafka: kafka and write_kafka plugins'
+            'libvirt: virt plugin'
+            'libxml2: virt, bind and match_xpath plugins'
+            'lm_sensors: sensor plugin'
+            'lua: lua plugin'
+            'mariadb-libs: proxysql and mysql plugin'
+            'net-snmp: snmp and notify_snmp plugins' 
+            'openipmi: ipmi plugin'
+            'libldap: ldap, ds389 and openldap plugins'
+            'openssl: cert, nsd and unbound plugins'
+            'postgresql-libs: pgbouncer, pgpool, postgresql and write_postgresql plugins'
+            'perl: perl plugin'
+            'python: python plugin'
+            'unixodbc: odbc plugin'
+            'varnish: varnish plugin'
+            'libcups: cups plugin'
+            'libatasmart: smart plugin'
+            'libesmtp: notify_email plugin'
+            'mosquitto: mosquitto amd write_mqtt plugins'
+            'mongo-c-driver: mongodb and write_mongo plugins'
+            'libsigrok: sigrok plugin'
+            'gpsd: gps plugin'
+            'hiredis: redis and write_redis plugins'
+            'nut: nut plugin'
+            'libpcap: pcap plugin'
+            'iptables: iptables plugin'
+            'freetds: mssql plugin')
+
+makedepends=('gcc' 'binutils' 'glibc' 'cmake' 'bison' 'flex' 'gperf' 'pkgconf'
+             'libmnl' 'systemd-libs' 'libcap' 'systemd' 'btrfs-progs' 'xfsprogs'
+             ${optdepends[@]%:*})
+depends=('libmnl' 'systemd-libs' 'libcap')
+
+source=("${pkgname}-${pkgver}.tar.xz"
+        'service')
+
+sha256sums=('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            '6f51a4ac7dbad15aecf13a0e106e562844a18369506575de5171958fbef048b1')
+
+backup=('etc/ncollectd.conf')
+
+build() {
+    cmake \
+        -G 'Unix Makefiles' \
+        -B "${pkgname}-${pkgver}/build" \
+        -S "${pkgname}-${pkgver}" \
+        -DCMAKE_INSTALL_PREFIX:PATH='/usr' \
+        -DCMAKE_INSTALL_SYSCONFDIR:STRING=/etc \
+        -DENABLE_ALL_PLUGINS:BOOL=ON \
+        -DPLUGIN_DB2:BOOL=OFF \
+        -DPLUGIN_DCPMM:BOOL=OFF \
+        -DPLUGIN_EPICS:BOOL=OFF \
+        -DPLUGIN_GPU_INTEL:BOOL=OFF \
+        -DPLUGIN_GPU_NVIDIA:BOOL=OFF \
+        -DPLUGIN_HBA:BOOL=OFF \
+        -DPLUGIN_INTEL_RDT:BOOL=OFF \
+        -DPLUGIN_IPSTATS:BOOL=OFF \
+        -DPLUGIN_LPAR:BOOL=OFF \
+        -DPLUGIN_MODBUS:BOOL=OFF \
+        -DPLUGIN_MQ:BOOL=OFF \
+        -DPLUGIN_NETSTAT_UDP:BOOL=OFF \
+        -DPLUGIN_ORACLE:BOOL=OFF \
+        -DPLUGIN_PF:BOOL=OFF \
+        -DPLUGIN_SLURM:BOOL=OFF \
+        -DPLUGIN_WLM:BOOL=OFF \
+        -DPLUGIN_WRITE_AMQP1:BOOL=OFF \
+        -DPLUGIN_XENCPU:BOOL=OFF \
+        -DPLUGIN_ZONE:BOOL=OFF
+
+    cmake --build "${pkgname}-${pkgver}/build"
+}
+
+package() {
+    DESTDIR="${pkgdir}" cmake --install "${pkgname}-${pkgver}/build"
+    cd ${pkgname}-${pkgver}
+    install -Dm644 ../service "${pkgdir}"/usr/lib/systemd/system/ncollectd.service
+}

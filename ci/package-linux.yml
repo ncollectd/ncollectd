@@ -154,6 +154,20 @@ steps:
       - dpkg-buildpackage
       - cd ..
       - rm -rf ncollectd-$${TAG}
+  package-archlinux-base-devel:
+    image: ncollectd/ci-archlinux:base-devel
+    commands:
+      - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
+      - mkdir -p package-archlinux-base-devel
+      - cp packaging/archlinux/service package-archlinux-base-devel/
+      - cp packaging/archlinux/PKGBUILD package-archlinux-base-devel/
+      - cp package-dist/ncollectd-$${TAG}.tar.xz package-archlinux-base-devel/
+      - cd package-archlinux-base-devel
+      - sed -i 's/^pkgver=.*$/pkgver='$${TAG}'/' PKGBUILD
+      - makepkg --skipchecksums
+      - rm -rf src pkg
+      - cd ..
   package-opensuse-leap:
     image: ncollectd/ci-opensuse:leap
     commands:
