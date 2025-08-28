@@ -190,7 +190,7 @@ static int cc_page_init_curl(chttp_ctx_t *ctx)
         return -1;
     }
 
-    rcode = curl_easy_setopt(ctx->curl, CURLOPT_IPRESOLVE, ctx->address_family);
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_IPRESOLVE, (long)ctx->address_family);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_IPRESOLVE failed: %s",
                      curl_easy_strerror(rcode));

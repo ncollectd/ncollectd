@@ -5,5 +5,7 @@ RUN pacman -Sy && \
                           libxml2 lm_sensors lua mariadb-libs net-snmp openipmi libldap openssl \
                           postgresql-libs unixodbc varnish xfsprogs yajl libcups systemd-libs \
                           libatasmart libesmtp mosquitto mongo-c-driver libsigrok gpsd hiredis \
-                          nut iptables libmnl btrfs-progs libmemcached-awesome freetds && \
+                          nut iptables libmnl btrfs-progs libmemcached-awesome freetds \
+                          devtools && \
+    sed -i '/exit $E_ROOT/d' /usr/bin/makepkg && \
     find /var/cache/pacman/ -type f -delete
