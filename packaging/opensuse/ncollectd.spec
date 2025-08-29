@@ -974,7 +974,7 @@ The xencpu plugin collects CPU statistics from Xen.
 %endif
 
 %prep
-%setup -q -n %{name}-%{version}
+%setup -q -n %{name}-%{_bundle_version}
 
 %build
 
