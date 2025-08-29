@@ -7,7 +7,7 @@
 %define _bundle_version 0.0.0+git
 %endif
 
-%define _pkg_version %(echo %{_bundle_version} | sed -E 's/-rc/~rc/;s/\+([0-9]+)\.g([a-f0-9]+)$/^\1.git\2/')
+%define _pkg_version %(echo %{_bundle_version} | sed -E 's/-rc/~rc/;s/\\+([0-9]+)\\.g([a-f0-9]+)$/^\\1.git\\2/')
 
 %define build_with_arp 0%{!?_without_arp:1}
 %define build_with_arpcache 0%{!?_without_arpcache:1}
