@@ -1,0 +1,6 @@
+#!/bin/sh
+
+addgroup -S ncollectd 2>/dev/null
+adduser -S -D -h /var/lib/ncollectd -s /sbin/nologin -g ncollectd -G ncollectd ncollectd 2>/dev/null
+
+exit 0

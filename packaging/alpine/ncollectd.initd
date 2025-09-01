@@ -1,0 +1,17 @@
+#!/sbin/openrc-run
+
+NCOLLECTD_USER=${NCOLLECTD_USER:-"ncollectd"}
+NCOLLECTD_GROUP=${NCOLLECTD_GROUP:-"ncollectd"}
+NCOLLECTD_ARGS=${NCOLLECTD_ARGS:-""}
+NCOLLECTD_PIDFILE=${NCOLLECTD_PIDFILE:-"/run/ncollectd/ncollectd.pid"}
+
+command=/usr/sbin/ncollectd
+pidfile="$NCOLLECTD_PIDFILE"
+command_args="${NCOLLECTD_ARGS} -P $pidfile"
+start_stop_daemon_args="--user ${NCOLLECTD_USER}:${NCOLLECTD_GROUP}"
+retry=${NCOLLECTD_TERMTIMEOUT:-"TERM/25/KILL/5"}
+
+start_pre() {
+	checkpath --directory --owner "$NCOLLECTD_USER":"$NCOLLECTD_GROUP" \
+		--mode 0770 "$(dirname $pidfile)" /var/lib/ncollectd
+}

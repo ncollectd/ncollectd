@@ -199,3 +199,23 @@ steps:
       - cp packaging/opensuse/systemd.ncollectd.service package-opensuse-tumbleweed/SOURCES
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-opensuse-tumbleweed/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-opensuse-tumbleweed" --define "bundle_version $${VERSION}" -ba packaging/opensuse/ncollectd.spec
+  package-alpine-edge:
+    image: ncollectd/ci-alpine:edge
+    commands:
+      - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/_rc/;s/\+([0-9]+)\.g([a-f0-9]+)$/_git\1/'`
+      - mkdir -p package-alpine-edge
+      - cp packaging/alpine/ncollectd.pre-install package-alpine-edge/
+      - cp packaging/alpine/ncollectd.initd package-alpine-edge/
+      - cp packaging/alpine/APKBUILD package-alpine-edge/
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-alpine-edge/
+      - echo "permit nopass :wheel as root" > /etc/doas.d/doas.conf
+      - echo "REPODEST=$${CI_WORKSPACE}/package-alpine-edge/packages/" >> /etc/abuild.conf
+      - cd package-alpine-edge
+      - sed -i 's/^_pkgver=.*$/_pkgver='$${VERSION}'/' APKBUILD
+      - sed -i 's/^pkgver=.*$/pkgver='$${PKGVERSION}'/' APKBUILD
+      - abuild -F checksum
+      - abuild-keygen -a -i -n
+      - abuild -F -r
+      - cd ..
