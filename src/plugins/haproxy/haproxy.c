@@ -1082,7 +1082,7 @@ static int haproxy_init_curl(haproxy_t *ha)
         return -1;
     }
 
-    rcode = curl_easy_setopt(ha->curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER);
+    rcode = curl_easy_setopt(ha->curl, CURLOPT_IPRESOLVE, (long)CURL_IPRESOLVE_WHATEVER);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_IPRESOLVE failed: %s", curl_easy_strerror(rcode));
         return -1;
