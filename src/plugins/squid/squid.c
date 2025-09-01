@@ -170,7 +170,7 @@ static int squid_init_curl(squid_t *sq)
         return -1;
     }
 
-    rcode = curl_easy_setopt(sq->curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER);
+    rcode = curl_easy_setopt(sq->curl, CURLOPT_IPRESOLVE, (long)CURL_IPRESOLVE_WHATEVER);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_IPRESOLVE failed: %s",
                      curl_easy_strerror(rcode));
