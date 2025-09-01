@@ -1,11 +1,13 @@
 %global _hardened_build 1
 %global __requires_exclude ^.*(libdb2|libmqic_r|libmqm_r|libclntsh)[.](so|a).*$
 
-%if 0%{?git_tag:1}
-%define _version %{git_tag}
+%if 0%{?bundle_version:1}
+%define _bundle_version %{bundle_version}
 %else
-%define _version 0.0.0.git
+%define _bundle_version 0.0.0+git
 %endif
+
+%define _pkg_version %(echo %{_bundle_version} | sed -E 's/-rc/~rc/;s/\+([0-9]+)\.g([a-f0-9]+)$/^\1.git\2/')
 
 %define build_with_apache 0%{!?_without_apache:1}
 %define build_with_apcups 0%{!?_without_apcups:1}
@@ -96,10 +98,10 @@
 
 Summary: Statistics collection and monitoring daemon
 Name: ncollectd
-Version: %{_version}
+Version: %{_pkg_version}
 Release: 1%{?dist}
 URL: https://ncollectd.org
-Source: https://ncollectd.org/files/%{name}-%{version}.tar.xz
+Source: https://ncollectd.org/files/%{name}-%{_bundle_version}.tar.xz
 License: GPLv2
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
@@ -394,7 +396,7 @@ database.
 %endif
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{_bundle_version}
 
 %build
 

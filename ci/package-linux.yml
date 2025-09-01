@@ -8,8 +8,8 @@ steps:
     commands:
       - cmake -B package-dist -S .
       - cmake --build package-dist -- dist
-      - TAG=`git describe --tags --match "v*" | sed 's/^v//;s/-/./g'`
-      - echo "TAG=$${TAG}" > package-dist/envvars
+      - VERSION=`git describe --tags --match "v*" | sed -r 's/^v//;s/-([0-9]+)-g([a-f0-9]+)$/+\1.g\2/g'`
+      - echo "VERSION=$${VERSION}" > package-dist/envvars
   package-fedora-42:
     image: ncollectd/ci-fedora:42
     commands:
@@ -18,8 +18,8 @@ steps:
       - mkdir -p package-fedora-42/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-fedora-42/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-42/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-42/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-42" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-fedora-42/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-42" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
   package-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:
@@ -28,8 +28,8 @@ steps:
       - mkdir -p package-fedora-rawhide/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-fedora-rawhide/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-rawhide/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-fedora-rawhide/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-rawhide" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-fedora-rawhide/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-rawhide" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
   package-centos-stream8:
     image: ncollectd/ci-centos:stream8
     commands:
@@ -38,8 +38,8 @@ steps:
       - mkdir -p package-centos-stream8/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-centos-stream8/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream8/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream8/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-centos-stream8/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
       - rm -rf package-centos-stream8/BUILD
   package-centos-stream9:
     image: ncollectd/ci-centos:stream9
@@ -49,8 +49,8 @@ steps:
       - mkdir -p package-centos-stream9/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-centos-stream9/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream9/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-centos-stream9/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
       - rm -rf package-centos-stream9/BUILD
   package-centos-stream10:
     image: ncollectd/ci-centos:stream10
@@ -60,100 +60,112 @@ steps:
       - mkdir -p package-centos-stream10/SOURCES
       - cp packaging/fedora/init.d-ncollectd package-centos-stream10/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-centos-stream10/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-centos-stream10/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream10" --define "git_tag $${TAG}" -ba packaging/fedora/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-centos-stream10/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-centos-stream10" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
   package-debian-bullseye:
     image: ncollectd/ci-debian:bullseye
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-debian-bullseye
-      - tar -C package-debian-bullseye -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-bullseye/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-debian-bullseye/ncollectd-$${TAG}/
-      - cd package-debian-bullseye/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
+      - tar -C package-debian-bullseye -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-bullseye/ncollectd-$${VERSION} package-debian-bullseye/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-bullseye/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-debian-bullseye/ncollectd-$${PKGVERSION}/
+      - cd package-debian-bullseye/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${TAG}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-debian-bookworm:
     image: ncollectd/ci-debian:bookworm
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-debian-bookworm
-      - tar -C package-debian-bookworm -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-bookworm/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-debian-bookworm/ncollectd-$${TAG}/
-      - cd package-debian-bookworm/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
+      - tar -C package-debian-bookworm -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-bookworm/ncollectd-$${VERSION} package-debian-bookworm/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-bookworm/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-debian-bookworm/ncollectd-$${PKGVERSION}/
+      - cd package-debian-bookworm/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${TAG}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-debian-trixie:
     image: ncollectd/ci-debian:trixie
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-debian-trixie
-      - tar -C package-debian-trixie -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-debian-trixie/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-debian-trixie/ncollectd-$${TAG}/
-      - cd package-debian-trixie/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
+      - tar -C package-debian-trixie -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-trixie/ncollectd-$${VERSION} package-debian-trixie/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-trixie/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-debian-trixie/ncollectd-$${PKGVERSION}/
+      - cd package-debian-trixie/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - sed -i '/libvarnishapi-dev/d' debian/control
       - rm -f debian/ncollectd-varnish.install
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${TAG}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-ubuntu-focal:
     image: ncollectd/ci-ubuntu:focal
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-ubuntu-focal
-      - tar -C package-ubuntu-focal -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-focal/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-ubuntu-focal/ncollectd-$${TAG}/
-      - cd package-ubuntu-focal/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
+      - tar -C package-ubuntu-focal -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-focal/ncollectd-$${VERSION} package-ubuntu-focal/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-focal/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-ubuntu-focal/ncollectd-$${PKGVERSION}/
+      - cd package-ubuntu-focal/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${TAG}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-ubuntu-jammy:
     image: ncollectd/ci-ubuntu:jammy
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-ubuntu-jammy
-      - tar -C package-ubuntu-jammy -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-jammy/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-ubuntu-jammy/ncollectd-$${TAG}/
-      - cd package-ubuntu-jammy/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
+      - tar -C package-ubuntu-jammy -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-jammy/ncollectd-$${VERSION} package-ubuntu-jammy/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-jammy/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-ubuntu-jammy/ncollectd-$${PKGVERSION}/
+      - cd package-ubuntu-jammy/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${TAG}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-ubuntu-noble:
     image: ncollectd/ci-ubuntu:noble
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-ubuntu-noble
-      - tar -C package-ubuntu-noble -xJf package-dist/ncollectd-$${TAG}.tar.xz
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-ubuntu-noble/ncollectd_$${TAG}.orig.tar.xz
-      - cp -r packaging/debian package-ubuntu-noble/ncollectd-$${TAG}/
-      - cd package-ubuntu-noble/ncollectd-$${TAG}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${TAG}'-1)/' debian/NEWS
+      - tar -C package-ubuntu-noble -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-noble/ncollectd-$${VERSION} package-ubuntu-noble/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-noble/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-ubuntu-noble/ncollectd-$${PKGVERSION}/
+      - cd package-ubuntu-noble/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${TAG}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-archlinux-base-devel:
     image: ncollectd/ci-archlinux:base-devel
     commands:
@@ -162,9 +174,9 @@ steps:
       - mkdir -p package-archlinux-base-devel
       - cp packaging/archlinux/service package-archlinux-base-devel/
       - cp packaging/archlinux/PKGBUILD package-archlinux-base-devel/
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-archlinux-base-devel/
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-archlinux-base-devel/
       - cd package-archlinux-base-devel
-      - sed -i 's/^pkgver=.*$/pkgver='$${TAG}'/' PKGBUILD
+      - sed -i 's/^pkgver=.*$/pkgver='$${VERSION}'/' PKGBUILD
       - makepkg --skipchecksums
       - rm -rf src pkg
       - cd ..
@@ -175,8 +187,8 @@ steps:
       - export GIT_DIR=.do-not-find-it
       - mkdir -p package-opensuse-leap/SOURCES
       - cp packaging/opensuse/systemd.ncollectd.service package-opensuse-leap/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-opensuse-leap/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-opensuse-leap" --define "git_tag $${TAG}" -ba packaging/opensuse/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-opensuse-leap/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-opensuse-leap" --define "bundle_version $${VERSION}" -ba packaging/opensuse/ncollectd.spec
       - rm -rf package-opensuse-leap/BUILD
   package-opensuse-tumbleweed:
     image: ncollectd/ci-opensuse:tumbleweed
@@ -185,5 +197,5 @@ steps:
       - export GIT_DIR=.do-not-find-it
       - mkdir -p package-opensuse-tumbleweed/SOURCES
       - cp packaging/opensuse/systemd.ncollectd.service package-opensuse-tumbleweed/SOURCES
-      - cp package-dist/ncollectd-$${TAG}.tar.xz package-opensuse-tumbleweed/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-opensuse-tumbleweed" --define "git_tag $${TAG}" -ba packaging/opensuse/ncollectd.spec
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-opensuse-tumbleweed/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-opensuse-tumbleweed" --define "bundle_version $${VERSION}" -ba packaging/opensuse/ncollectd.spec
