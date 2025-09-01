@@ -70,6 +70,7 @@ steps:
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-debian-bullseye
       - tar -C package-debian-bullseye -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-bullseye/ncollectd-$${VERSION} package-debian-bullseye/ncollectd-$${PKGVERSION}
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-bullseye/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-debian-bullseye/ncollectd-$${PKGVERSION}/
       - cd package-debian-bullseye/ncollectd-$${PKGVERSION}
@@ -77,7 +78,7 @@ steps:
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${VERSION}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-debian-bookworm:
     image: ncollectd/ci-debian:bookworm
     commands:
@@ -86,6 +87,7 @@ steps:
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-debian-bookworm
       - tar -C package-debian-bookworm -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-bookworm/ncollectd-$${VERSION} package-debian-bookworm/ncollectd-$${PKGVERSION}
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-bookworm/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-debian-bookworm/ncollectd-$${PKGVERSION}/
       - cd package-debian-bookworm/ncollectd-$${PKGVERSION}
@@ -93,7 +95,7 @@ steps:
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${VERSION}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-debian-trixie:
     image: ncollectd/ci-debian:trixie
     commands:
@@ -102,6 +104,7 @@ steps:
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-debian-trixie
       - tar -C package-debian-trixie -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-trixie/ncollectd-$${VERSION} package-debian-trixie/ncollectd-$${PKGVERSION}
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-trixie/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-debian-trixie/ncollectd-$${PKGVERSION}/
       - cd package-debian-trixie/ncollectd-$${PKGVERSION}
@@ -111,7 +114,7 @@ steps:
       - rm -f debian/ncollectd-varnish.install
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${VERSION}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-ubuntu-focal:
     image: ncollectd/ci-ubuntu:focal
     commands:
@@ -120,6 +123,7 @@ steps:
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-ubuntu-focal
       - tar -C package-ubuntu-focal -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-focal/ncollectd-$${VERSION} package-ubuntu-focal/ncollectd-$${PKGVERSION}
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-focal/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-ubuntu-focal/ncollectd-$${PKGVERSION}/
       - cd package-ubuntu-focal/ncollectd-$${PKGVERSION}
@@ -127,7 +131,7 @@ steps:
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${VERSION}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-ubuntu-jammy:
     image: ncollectd/ci-ubuntu:jammy
     commands:
@@ -136,6 +140,7 @@ steps:
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-ubuntu-jammy
       - tar -C package-ubuntu-jammy -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-jammy/ncollectd-$${VERSION} package-ubuntu-jammy/ncollectd-$${PKGVERSION}
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-jammy/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-ubuntu-jammy/ncollectd-$${PKGVERSION}/
       - cd package-ubuntu-jammy/ncollectd-$${PKGVERSION}
@@ -143,7 +148,7 @@ steps:
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${VERSION}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-ubuntu-noble:
     image: ncollectd/ci-ubuntu:noble
     commands:
@@ -152,6 +157,7 @@ steps:
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
       - mkdir -p package-ubuntu-noble
       - tar -C package-ubuntu-noble -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-noble/ncollectd-$${VERSION} package-ubuntu-noble/ncollectd-$${PKGVERSION}
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-noble/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-ubuntu-noble/ncollectd-$${PKGVERSION}/
       - cd package-ubuntu-noble/ncollectd-$${PKGVERSION}
@@ -159,7 +165,7 @@ steps:
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
       - cd ..
-      - rm -rf ncollectd-$${VERSION}
+      - rm -rf ncollectd-$${PKGVERSION}
   package-archlinux-base-devel:
     image: ncollectd/ci-archlinux:base-devel
     commands:
