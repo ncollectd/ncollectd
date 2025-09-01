@@ -1,0 +1,223 @@
+# Contributor: Łukasz Jendrysik <scadu@yandex.com>
+# Contributor: Jakub Jirutka <jakub@jirutka.cz>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=ncollectd
+pkgver=0.0.1
+_pkgver=0.0.1
+pkgrel=1
+pkgdesc="The system statistics collection daemon"
+url="https://ncollectd.org/"
+arch="all"
+license="GPL-2.0-only"
+pkgusers="ncollectd"
+pkggroups="ncollectd"
+makedepends="
+	gcc
+	make
+	cmake
+	flex
+	bison 
+	gperf
+	pkgconf
+	c-ares-dev
+	curl-dev
+	libatasmart-dev
+	libmicrohttpd-dev
+	libnftnl-dev
+	libpcap-dev
+	rabbitmq-c-dev
+	librdkafka-dev
+	libxml2-dev
+	lm-sensors-dev
+	mariadb-connector-c-dev
+	net-snmp-dev
+	openipmi-dev
+	openldap-dev
+	openssl-dev>3
+	libpq-dev
+	unixodbc-dev
+	varnish-dev
+	xfsprogs-dev
+	cups-dev
+	mosquitto-dev
+	mongo-c-driver-dev
+	libmodbus-dev
+	hiredis-dev
+	iptables-dev
+	libmnl-dev
+	btrfs-progs-dev
+	gpsd-dev
+	libmemcached-dev
+	freetds-dev 
+	python3-dev
+	perl-dev
+	lua-dev
+	java-jdk
+"
+
+#	$pkgname-java
+
+subpackages="
+	$pkgname-doc
+	$pkgname-openrc
+	$pkgname-perl
+	$pkgname-plugins-all:_all:noarch
+"
+
+install="$pkgname.pre-install"
+source="
+	ncollectd-$_pkgver.tar.xz
+	ncollectd.initd
+"
+
+builddir="$srcdir/ncollectd-$_pkgver"
+
+options="!check"  # test_common fails
+
+_plugins="
+	apache
+	ats
+	bind
+	cert
+	cups
+	dns
+	docker
+	ds389
+	gps
+	haproxy
+	http
+	ipmi
+	iptables
+	jolokia
+	kafka
+	ldap
+	lua
+	match_xpath
+	modbus
+	mongodb
+	mosquitto
+	mssql
+	mysql
+	nftables
+	nginx
+	nginx_vts
+	notify_snmp
+	nsd
+	odbc
+	openldap
+	pcap
+	pgbouncer
+	pgpool
+	podman
+	postgresql
+	proxysql
+	python
+	redis
+	scraper
+	sensors
+	smart
+	snmp
+	squid
+	unbound
+	varnish
+	write_amqp
+	write_exporter
+	write_http
+	write_kafka
+	write_mongodb
+	write_mqtt
+	write_postgresql
+	write_redis
+"
+
+_flags=
+case "$CARCH" in
+	x86 | x86_64) ;;
+	*) _flags="-DPLUGIN_TURBOSTAT:BOOL=OFF";;
+esac
+case "$CARCH" in
+	s390x | riscv64) _flags="$_flags -DPLUGIN_VIRT:BOOL=OFF";;
+	*) _plugins="$_plugins virt"; makedepends="$makedepends libvirt-dev";;
+esac
+
+for _i in $_plugins; do
+	subpackages="$subpackages $pkgname-${_i}:_plugin"
+done
+
+prepare() {
+	default_prepare
+}
+
+build() {
+	cmake \
+	-G 'Unix Makefiles' \
+	-B build \
+	-S . \
+    -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+	-DCMAKE_INSTALL_SYSCONFDIR:STRING=/etc \
+	-DCMAKE_INSTALL_LOCALSTATEDIR:STRING=/var \
+	-DENABLE_WERROR:BOOL=OFF \
+	-DENABLE_ALL_PLUGINS:BOOL=ON \
+	-DPLUGIN_DB2:BOOL=OFF \
+	-DPLUGIN_DCPMM:BOOL=OFF \
+	-DPLUGIN_EPICS:BOOL=OFF \
+	-DPLUGIN_GPU_INTEL:BOOL=OFF \
+	-DPLUGIN_GPU_NVIDIA:BOOL=OFF \
+	-DPLUGIN_HBA:BOOL=OFF \
+	-DPLUGIN_INTEL_RDT:BOOL=OFF \
+	-DPLUGIN_IPSTATS:BOOL=OFF \
+	-DPLUGIN_JAVA:BOOL=OFF \
+	-DPLUGIN_LPAR:BOOL=OFF \
+	-DPLUGIN_MQ:BOOL=OFF \
+	-DPLUGIN_NETSTAT_UDP:BOOL=OFF \
+	-DPLUGIN_NUT:BOOL=OFF \
+	-DPLUGIN_ORACLE:BOOL=OFF \
+	-DPLUGIN_PF:BOOL=OFF \
+	-DPLUGIN_SIGROK:BOOL=OFF \
+	-DPLUGIN_SLURM:BOOL=OFF \
+	-DPLUGIN_WLM:BOOL=OFF \
+	-DPLUGIN_WRITE_AMQP1:BOOL=OFF \
+	-DPLUGIN_XENCPU:BOOL=OFF \
+	-DPLUGIN_ZONE:BOOL=OFF \
+	$_flags
+
+	cmake --build build
+}
+
+package() {
+	local header path
+
+	DESTDIR="${pkgdir}" cmake --install build
+
+	chown root:ncollectd "$pkgdir"/etc/ncollectd.conf
+	mkdir -p "$pkgdir"/etc/ncollectd.d
+
+	install -D -m755 "$srcdir"/$pkgname.initd "$pkgdir"/etc/init.d/$pkgname
+}
+
+perl() {
+	pkgdesc="perl bindings to ncollectd"
+
+	amove usr/lib/ncollectd/perl.so
+}
+
+_all() {
+	pkgdesc="Meta package for all ncollectd plugins"
+	depends=""
+
+	local plugin; for plugin in $_plugins; do
+		depends="$depends $pkgname-${plugin}"
+	done
+
+	mkdir -p "$subpkgdir"
+}
+
+_plugin() {
+	local name="${subpkgname#$pkgname-}"
+	pkgdesc="$name plugin for ncollectd"
+	depends="ncollectd"
+
+	amove usr/lib/ncollectd/$name.so
+}
+
+sha512sums=""
