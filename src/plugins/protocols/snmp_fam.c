@@ -327,8 +327,8 @@ static metric_family_t fams[FAM_SNMP_MAX] = {
         .help = "The number of times TCP connections have made a direct transition "
                 "to the CLOSED state from either the ESTABLISHED state or the CLOSE-WAIT state.",
     },
-    [FAM_TCP_ESTABLISHED] = {
-        .name = "system_tcp_established",
+    [FAM_TCP_CURR_ESTABLISHED] = {
+        .name = "system_tcp_current_established",
         .type = METRIC_TYPE_GAUGE,
         .help = "The number of TCP connections for which the current state is "
                 "either ESTABLISHED or CLOSE- WAIT."

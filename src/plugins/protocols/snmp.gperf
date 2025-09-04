@@ -76,7 +76,7 @@ TcpActiveOpens,             COLLECT_TCP,     FAM_TCP_ACTIVE_OPENS
 TcpPassiveOpens,            COLLECT_TCP,     FAM_TCP_PASSIVE_OPENS
 TcpAttemptFails,            COLLECT_TCP,     FAM_TCP_ATTEMPT_FAILS
 TcpEstabResets,             COLLECT_TCP,     FAM_TCP_ESTABLISHED_RESETS
-TcpCurrEstab,               COLLECT_TCP,     FAM_TCP_ESTABLISHED
+TcpCurrEstab,               COLLECT_TCP,     FAM_TCP_CURR_ESTABLISHED
 TcpInSegs,                  COLLECT_TCP,     FAM_TCP_IN_SEGMENTS
 TcpOutSegs,                 COLLECT_TCP,     FAM_TCP_OUT_SEGMENTS
 TcpRetransSegs,             COLLECT_TCP,     FAM_TCP_RETRANS_SEGMENTS
