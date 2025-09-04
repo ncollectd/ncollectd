@@ -878,10 +878,20 @@ These 4 counters calculate how many packets received per ECN status. They count 
         .type = METRIC_TYPE_COUNTER,
         .help = "Received a SYN + MP_JOIN.",
     },
+    [FAM_MPTCP_MP_JOIN_SYN_BACKUP_RX] = {
+        .name = "system_mptcp_mp_join_syn_backup_rx",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Received a SYN + MP_JOIN + backup flag.",
+    },
     [FAM_MPTCP_MP_JOIN_SYN_ACK_RX] = {
         .name = "system_mptcp_mp_join_syn_ack_rx",
         .type = METRIC_TYPE_COUNTER,
         .help = "Received a SYN/ACK + MP_JOIN.",
+    },
+    [FAM_MPTCP_MP_JOIN_SYN_ACK_BACKUP_RX] = {
+        .name = "system_mptcp_mp_join_syn_ack_backup_rx",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Received a SYN/ACK + MP_JOIN + backup flag.",
     },
     [FAM_MPTCP_MP_JOIN_SYN_ACK_HMAC_FAILURE] = {
         .name = "system_mptcp_mp_join_syn_ack_hmac_failure",
@@ -893,16 +903,52 @@ These 4 counters calculate how many packets received per ECN status. They count 
         .type = METRIC_TYPE_COUNTER,
         .help = "Received an ACK + MP_JOIN.",
     },
-    [FAM_MPTCP_JOIN_ACK_HMAC_FAILURE] = {
-        .name = "system_mptcp_join_ack_hmac_failure",
+    [FAM_MPTCP_MP_JOIN_ACK_HMAC_FAILURE] = {
+        .name = "system_mptcp_mp_join_ack_hmac_failure",
         .type = METRIC_TYPE_COUNTER,
         .help = "HMAC was wrong on ACK + MP_JOIN.",
+    },
+    [FAM_MPTCP_MP_JOIN_REJECTED] = {
+        .name = "system_mptcp_mp_join_rejected",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The PM rejected the JOIN request.",
+    },
+    [FAM_MPTCP_MP_SYN_TX] = {
+        .name = "system_mptcp_mp_syn_tx",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Sending a SYN + MP_JOIN.",
+    },
+    [FAM_MPTCP_MP_SYN_TX_CREAT_SK_ERR] = {
+        .name = "system_mptcp_mp_syn_tx_creat_sk_err",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Not able to create a socket when sending a SYN + MP_JOIN.",
+    },
+    [FAM_MPTCP_MP_SYN_TX_BIND_ERR] = {
+        .name = "system_mptcp_mp_syn_tx_bind_err",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Not able to bind() the address when sending a SYN + MP_JOIN.",
+    },
+    [FAM_MPTCP_MP_SYN_TX_CONNECT_ERR] = {
+        .name = "system_mptcp_mp_syn_tx_connect_err",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Not able to connect() when sending a SYN + MP_JOIN.",
     },
     [FAM_MPTCP_DSS_NOT_MATCHING] = {
         .name = "system_mptcp_dss_not_matching",
         .type = METRIC_TYPE_COUNTER,
         .help = "Received a new mapping that did not match the previous one.",
     },
+    [FAM_MPTCP_DSS_CORRUPTION_FALLBACK] = {
+        .name = "system_mptcp_dss_corruption_fallback",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "DSS corruption detected, fallback.",
+    },
+    [FAM_MPTCP_DSS_CORRUPTION_RESET] = {
+        .name = "system_mptcp_dss_corruption_reset",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "DSS corruption detected, MPJ subflow reset.",
+    },
+
     [FAM_MPTCP_INFINITE_MAX_TX] = {
         .name = "system_mptcp_infinite_max_tx",
         .type = METRIC_TYPE_COUNTER,
@@ -953,10 +999,30 @@ These 4 counters calculate how many packets received per ECN status. They count 
         .type = METRIC_TYPE_COUNTER,
         .help = "Received ADD_ADDR with echo-flag=0.",
     },
+    [FAM_MPTCP_ADD_ADDR_TX] = {
+        .name = "system_mptcp_add_addr_tx",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Sent ADD_ADDR with echo-flag=0.",
+    },
+    [FAM_MPTCP_ADD_ADDR_TX_DROP] = {
+        .name = "system_mptcp_add_addr_tx_drop",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "ADD_ADDR with echo-flag=0 not send due to resource exhaustion.",
+    },
     [FAM_MPTCP_ECHO_ADD] = {
         .name = "system_mptcp_echo_add",
         .type = METRIC_TYPE_COUNTER,
         .help = "Received ADD_ADDR with echo-flag=1.",
+    },
+    [FAM_MPTCP_ECHO_ADD_TX] = {
+        .name = "system_mptcp_echo_add_tx",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Send ADD_ADDR with echo-flag=1.",
+    },
+    [FAM_MPTCP_ECHO_ADD_TX_DROP] = {
+        .name = "system_mptcp_echo_add_tx_drop",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "ADD_ADDR with echo-flag=1 not send due to resource exhaustion.",
     },
     [FAM_MPTCP_PORT_ADD] = {
         .name = "system_mptcp_port_add",
@@ -1002,6 +1068,16 @@ These 4 counters calculate how many packets received per ECN status. They count 
         .name = "system_mptcp_rm_addr_drop",
         .type = METRIC_TYPE_COUNTER,
         .help = "Dropped incoming RM_ADDR.",
+    },
+    [FAM_MPTCP_RM_ADDR_TX] = {
+        .name = "system_mptcp_rm_addr_tx",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Sent RM_ADDR.",
+    },
+    [FAM_MPTCP_RM_ADDR_TX_DROP] = {
+        .name = "system_mptcp_rm_addr_tx_drop",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "RM_ADDR not sent due to resource exhaustion.",
     },
     [FAM_MPTCP_RM_SUBFLOW] = {
         .name = "system_mptcp_rm_subflow",
@@ -1083,6 +1159,41 @@ These 4 counters calculate how many packets received per ECN status. They count 
         .name = "system_mptcp_rcv_wnd_conflict",
         .type = METRIC_TYPE_COUNTER,
         .help = "Conflict with while updating msk rcv wnd.",
+    },
+    [FAM_MPTCP_MP_CURR_ESTAB] = {
+        .name = "system_mptcp_mp_current_established",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Current established MPTCP connections.",
+    },
+    [FAM_MPTCP_BLACKHOLE] = {
+        .name = "system_mptcp_blackhole",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "A blackhole has been detected.",
+    },
+    [FAM_MPTCP_MP_CAPABLE_DATA_FALLBACK] = {
+        .name = "system_mptcp_mp_capable_data_fallback",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Missing DSS/MPC+data on first  established packet.",
+    },
+    [FAM_MPTCP_MD5_SIG_FALLBACK] = {
+        .name = "system_mptcp_md5_sig_fallback",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Conflicting TCP option enabled.",
+    },
+    [FAM_MPTCP_DSS_FALLBACK] = {
+        .name = "system_mptcp_dss_fallback",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Bad or missing DSS.",
+    },
+    [FAM_MPTCP_SIMULT_CONNECT_FALLBACK] = {
+        .name = "system_mptcp_simult_connect_fallback",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Simultaneous connect.",
+    },
+    [FAM_MPTCP_FALLBACK_FAILED] = {
+        .name = "system_mptcp_fallback_failed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Can't fallback due to msk status.",
     },
 };
 
