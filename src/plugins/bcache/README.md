@@ -6,8 +6,8 @@ NCOLLECTD-BCACHE(5) - File Formats Manual
 
 # SYNOPSIS
 
-**load-plugin** bache
-**plugin** bache
+	load-plugin bache
+	plugin bache
 
 # DESCRIPTION
 
