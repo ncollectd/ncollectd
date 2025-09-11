@@ -8,19 +8,29 @@ NCOLLECTD-SNMP(5) - File Formats Manual
 
 	load-plugin snmp
 	plugin snmp {
-	    data data {
-	        table true|false
-	        count true|false
+	    table table {
 	        type counter|gauge
 	        help help
 	        metric metric
 	        label key value
-	        labels-from key OID
+	        label-from key OID
+	        label-suffix key
 	        value OID
 	        shift value
 	        scale value
+	        count true|false
 	        filter-oid OID
 	        filter-value  [incl|include|excl|exclude] value
+	    }
+	    data data {
+	        type counter|gauge
+	        help help
+	        metric metric
+	        label key value
+	        label-from key OID
+	        value OID
+	        shift value
+	        scale value
 	    }
 	    host host {
 	        address ip-address|hostname
@@ -43,7 +53,7 @@ NCOLLECTD-SNMP(5) - File Formats Manual
 	        bulk-size integer
 	        metric-prefix metric-prefix
 	        label key value
-	        collect data [data ...]
+	        collect data|table [data|table ...]
 	    }
 	}
 
@@ -72,46 +82,14 @@ See
 snmpcmd(1)
 for more details.
 
-There are two types of blocks that can be contained in the **snmp** plugin
-block: **data** and **host**:
+There are three types of blocks that can be contained in the **snmp** plugin
+block: **table**, **data**, and **host**:
 
-**data** *data*
+**table** *table*
 
-> The **data** block defines a list of values or a table of values that are
+> The **table** block defines a list of table of values that are
 > to be queried.
 > The following options can be set:
-
-> **table** *true|false*
-
-> > Define if this is a single list of values or a table of values.
-> > The difference is the following:
-
-> > When **table** is set to *false*, the OID given to **value**
-> > (see below) are queried using the NGET SNMP command (see
-> > snmpget(1)
-> > ) and transmitted to
-> > collectd. **One** value list is dispatched and, eventually,
-> > one file will be written.
-
-> > When **table** is set to *true*, the OIDs given to **values**,
-> > **label-from** **filter-ioid** (see below) are queried using the
-> > GETNEXT SNMP command until the subtree is left.
-> > After all the lists (think: all columns of the table) have been read,
-> > either (**count** set to *false*) **several** value sets will
-> > be dispatched and, eventually, several files will be written,
-> > or (**count** set to *true*) one single value will be dispatched.
-
-> > For example, if you want to query the number of users on a system, you can use
-> > HOST-RESOURCES-MIB::hrSystemNumUsers.0.
-> > This is one value and belongs to one value list, therefore **table** must be
-> > set to *false*.
-> > Please note that, in this case, you have to include the sequence number
-> > (zero in this case) in the OID.
-
-> > Counter example: If you want to query the interface table provided by the
-> > IF-MIB, e.g. the bytes transmitted.
-> > There are potentially many interfaces, so you will want to set **table**
-> > to *true*.
 
 > **count** *true|false*
 
@@ -121,7 +99,25 @@ block: **data** and **host**:
 > > This is especially useful when combined with the filtering options (see below)
 > > to count the number of entries in a Table matching certain criteria.
 
-> > When **table** is set to *false*, this option has no effect.
+> > When **table** is used, the OIDs given to **values**,
+> > **label-from** **filter-ioid** (see below) are queried using the
+> > GETNEXT SNMP command until the subtree is left.
+> > After all the lists (think: all columns of the table) have been read,
+> > either (**count** set to *false*) **several** value sets will
+> > be dispatched or (**count** set to *true*) one single value will
+> > be dispatched.
+
+> > For example, if you want to query the number of users on a system, you can use
+> > HOST-RESOURCES-MIB::hrSystemNumUsers.0.
+> > This is one value and belongs to one value list, therefore you  must use
+> > **data** block.
+> > Please note that, in this case, you have to include the sequence number
+> > (zero in this case) in the OID.
+
+> > Counter example: If you want to query the interface table provided by the
+> > IF-MIB, e.g. the bytes transmitted.
+> > There are potentially many interfaces, so you will want to user is a **table**
+> > block.
 
 > **type** *counter|gauge|unknown*
 
@@ -142,33 +138,30 @@ block: **data** and **host**:
 > > Append the label *key*=*value* to the submitting metrics.
 > > Can appear multiple times.
 
-> **labels-from** *key* *OID*
+> **label-from** *key* *OID*
 
 > > Append the label with *key* and value from the queried *OID*.
-> > If **table** is set to *true*, *OID* is interpreted as an
-> > SNMP-prefix that will return a list of values.
-> > Those values are then used as the actual type-instance, plugin-instance or host
-> > of dispatched metrics.
+> > The *OID* is interpreted as an SNMP-prefix that will return a list
+> > of values.
 > > An example would be the IF-MIB::ifDescr subtree.
 > > variables(5)
 > > from the SNMP distribution describes the format of OIDs.
 
+> **label-suffix** *key*
+
+> > Append the label with *key* and the *value*&zwnj;** the suffix from**
+> > the queried *OID*.
+
 > **value** *OID*
 
 > > Configures the values to be queried from the SNMP host.
-> > The meaning slightly changes with the **table** setting.
 > > variables(5)
 > > from the SNMP distribution describes the format of OIDs.
 
-> > If **table** is set to *true*, each *OID* must be the prefix of all
-> > the values to query, e.g. IF-MIB::ifInOctets for all the counters of
-> > incoming traffic.
+> > The *OID* must be the prefix of all the values to query, e.g.
+> > IF-MIB::ifInOctets for all the counters of incoming traffic.
 > > This subtree is walked (using GETNEXT) until a value from outside the
 > > subtree is returned.
-
-> > If **table** is set to *false*, the *OID* must be the OID of exactly
-> > one value, e.g. IF-MIB::ifInOctets.3 for the third counter of incoming
-> > traffic.
 
 > **shift** *value*
 
@@ -201,12 +194,73 @@ block: **data** and **host**:
 > > The **filter-value** declares values to do match.
 > > Whether table row will be collected or ignored depends on the
 > > **filter-value** setting.
-> > As with other plugins that use the daemon's ignorelist functionality, a string
-> > that starts and ends with a slash is interpreted as a regular expression.
+> > As with other plugins that use the daemon's include/exclude functionality,
+> > a string that starts and ends with a slash is interpreted as a
+> > regular expression.
 
 > > If no selection is configured at all, **all** table rows are selected.
 
-> > When **table** is set to *false* then these options has no effect.
+**data** *data*
+
+> The **data** block defines a list of values or a table of values that are
+> to be queried.
+> The OID given to **value** (see below) are queried using the NGET
+> SNMP command (see
+> snmpget(1)
+> ) and transmitted to mcollectd.
+> The following options can be set:
+
+> **type** *counter|gauge|unknown*
+
+> > The **type** that's used for each value read.
+> > Must be *gauge*, *counter* or *unknown*.
+> > If not set is unknown.
+
+> **help** *help*
+
+> > Set the **help** text for the metric.
+
+> **metric** *metric*
+
+> > Set the metric name.
+
+> **label** *key* *value*
+
+> > Append the label *key*=*value* to the submitting metrics.
+> > Can appear multiple times.
+
+> **label-from** *key* *OID*
+
+> > Append the label with *key* and value from the queried *OID*.
+
+> **value** *OID*
+
+> > Configures the values to be queried from the SNMP host.
+> > variables(5)
+> > from the SNMP distribution describes the format of OIDs.
+
+> > The *OID* must be the OID of exactly one value, e.g.
+> > IF-MIB::ifInOctets.3 for the third counter of incoming traffic.
+
+> **shift** *value*
+
+> > *Value* is added to gauge-values returned by the SNMP-agent after they have
+> > been multiplied by any **scale** value.
+> > If, for example, a thermometer returns degrees Kelvin you could specify a shift
+> > of **273.15** here to store values in degrees Celsius.
+> > The default value is, of course, **0.0**.
+
+> > This value is not applied to counter-values.
+
+> **scale** *value*
+
+> > The gauge-values returned by the SNMP-agent are multiplied by  *value*.
+> > This is useful when values are transferred as a fixed point real number.
+> > For example, thermometers may transfer **243** but actually mean **24.3**,
+> > so you can specify a scale value of **0.1** to correct this.
+> > The default value is, of course, **1.0**.
+
+> > This value is not applied to counter-values.
 
 **host** *host*
 
@@ -399,4 +453,4 @@ PKI, either privately or through a public certificate authority.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -
+ncollectd @NCOLLECTD\_VERSION@ - @NCOLLECTD\_DATE@
