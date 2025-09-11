@@ -45,6 +45,7 @@ struct data_definition_s {
 
     label_set_t labels;
     label_oid_set_t labels_from;
+    char *label_suffix;
 
     oid_t filter_oid;
     exclist_t exclist;
@@ -133,6 +134,20 @@ static int csnmp_oid_compare(oid_t const *left, oid_t const *right)
     return snmp_oid_compare(left->oid, left->len, right->oid, right->len);
 }
 
+static int csnmp_oid_to_string(char *buffer, size_t buffer_size, oid_t const *o)
+{
+    char oid_str[MAX_OID_LEN][ITOA_MAX];
+    char *oid_str_ptr[MAX_OID_LEN];
+
+    for (size_t i = 0; i < o->len; i++) {
+        ssnprintf(oid_str[i], sizeof(oid_str[i]), "%lu", (unsigned long)o->oid[i]);
+        uitoa((unsigned long)o->oid[i], oid_str[i]);
+        oid_str_ptr[i] = oid_str[i];
+    }
+
+    return strjoin(buffer, buffer_size, oid_str_ptr, o->len, ".");
+}
+
 static int csnmp_oid_suffix(oid_t *dst, oid_t const *src, oid_t const *root)
 {
     /* Make sure "src" is in "root"s subtree. */
@@ -194,7 +209,7 @@ static void csnmp_data_definition_destroy(data_definition_t *dd)
         free(dd->labels_from.ptr[i].label);
     }
     free(dd->labels_from.ptr);
-
+    free(dd->label_suffix);
     exclist_reset(&dd->exclist);
 
     free(dd);
@@ -358,11 +373,15 @@ static value_t csnmp_value_list_to_value(const struct variable_list *vl,
         snprint_objid(oid_buffer, sizeof(oid_buffer) - 1, vl->name, vl->name_length);
 #ifdef ASN_NULL
         if (vl->type == ASN_NULL)
-            PLUGIN_INFO("OID \"%s\" is undefined (type ASN_NULL)", oid_buffer);
+            PLUGIN_INFO("(OID \"%s\" data/table block \"%s\", host block \"%s\") "
+                         "is undefined (type ASN_NULL).",
+                         oid_buffer,
+                         (data_name != NULL) ? data_name : "UNKNOWN",
+                         (host_name != NULL) ? host_name : "UNKNOWN");
         else
 #endif
             PLUGIN_WARNING("I don't know the ASN type #%i "
-                           "(OID: \"%s\", data block \"%s\", host block \"%s\")",
+                           "(OID: \"%s\", data/table block \"%s\", host block \"%s\")",
                            (int)vl->type, oid_buffer,
                            (data_name != NULL) ? data_name : "UNKNOWN",
                            (host_name != NULL) ? host_name : "UNKNOWN");
@@ -719,6 +738,12 @@ static int csnmp_dispatch_table(host_definition_t *host, data_definition_t *data
 
             for (size_t i = 0; i < data->labels.num; i++) {
                 metric_label_set(&m, data->labels.ptr[i].name, data->labels.ptr[i].value);
+            }
+
+            if (data->label_suffix != NULL) {
+                char temp[DATA_MAX_NAME_LEN];
+                csnmp_oid_to_string(temp, sizeof(temp), &current_suffix);
+                metric_label_set(&m, data->label_suffix, temp);
             }
 
             for (size_t i = 0; i < data->labels_from.num; i++) {
@@ -1200,7 +1225,6 @@ static int csnmp_read_value(host_definition_t *host, data_definition_t *data)
     fam.type = data->type;
     fam.help = data->help;
 
-
     metric_family_metric_append(&fam, m);
     metric_reset(&m, fam.type);
     plugin_dispatch_metric_family(&fam, 0);
@@ -1306,7 +1330,7 @@ static int csnmp_config_add_data_filter_oid(data_definition_t *data, config_item
     return 0;
 }
 
-static int csnmp_config_add_data(config_item_t *ci)
+static int csnmp_config_add_data(config_item_t *ci, bool table)
 {
     data_definition_t *dd = calloc(1, sizeof(*dd));
     if (dd == NULL)
@@ -1318,6 +1342,7 @@ static int csnmp_config_add_data(config_item_t *ci)
         return -1;
     }
 
+    dd->is_table = table;
     dd->scale = 1.0;
     dd->shift = 0.0;
     dd->type = METRIC_TYPE_GAUGE;
@@ -1325,9 +1350,7 @@ static int csnmp_config_add_data(config_item_t *ci)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *option = ci->children + i;
 
-        if (strcasecmp("table", option->key) == 0) {
-            status = cf_util_get_boolean(option, &dd->is_table);
-        } else if (strcasecmp("type", option->key) == 0) {
+        if (strcasecmp("type", option->key) == 0) {
             status = cf_util_get_metric_type(option, &dd->type);
         } else if (strcasecmp("help", option->key) == 0) {
             status = cf_util_get_string(option, &dd->help);
@@ -1335,6 +1358,8 @@ static int csnmp_config_add_data(config_item_t *ci)
             status = cf_util_get_string(option, &dd->metric);
         } else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &dd->labels);
+        } else if (dd->is_table && strcasecmp("label-suffix", option->key) == 0) {
+            status = cf_util_get_string(option, &dd->label_suffix);
         } else if (strcasecmp("label-from", option->key) == 0) {
             status = csnmp_config_get_label_oid(option, &dd->labels_from);
         } else if (strcasecmp("value", option->key) == 0) {
@@ -1343,11 +1368,11 @@ static int csnmp_config_add_data(config_item_t *ci)
             status = cf_util_get_double(option, &dd->shift);
         } else if (strcasecmp("scale", option->key) == 0) {
             status = cf_util_get_double(option, &dd->scale);
-        } else if (strcasecmp("filter-oid", option->key) == 0) {
+        } else if (dd->is_table && strcasecmp("filter-oid", option->key) == 0) {
             status = csnmp_config_add_data_filter_oid(dd, option);
-        } else if (strcasecmp("filter-value", option->key) == 0) {
+        } else if (dd->is_table && strcasecmp("filter-value", option->key) == 0) {
             status = cf_util_exclist(option, &dd->exclist);
-        } else if (strcasecmp("count", option->key) == 0) {
+        } else if (dd->is_table && strcasecmp("count", option->key) == 0) {
             status = cf_util_get_boolean(option, &dd->count);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
@@ -1794,7 +1819,9 @@ static int csnmp_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("data", child->key) == 0) {
-            status = csnmp_config_add_data(child);
+            status = csnmp_config_add_data(child, false);
+        } else if (strcasecmp("table", child->key) == 0) {
+            status = csnmp_config_add_data(child, true);
         } else if (strcasecmp("host", child->key) == 0) {
             status = csnmp_config_add_host(child);
         } else {

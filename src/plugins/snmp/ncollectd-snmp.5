@@ -9,19 +9,29 @@
 .Bd -literal -compact
 \fBload-plugin\fP snmp
 \fBplugin\fP snmp {
-    \fBdata\fP \fIdata\fP {
-        \fBtable\fP \fItrue|false\fP
-        \fBcount\fP \fItrue|false\fP
+    \fBtable\fP \fItable\fP {
         \fBtype\fP \fIcounter|gauge\fP
         \fBhelp\fP \fIhelp\fP
         \fBmetric\fP \fImetric\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
-        \fBlabels-from\fP \fIkey\fP \fIOID\fP
+        \fBlabel-from\fP \fIkey\fP \fIOID\fP
+        \fBlabel-suffix\fP \fIkey\fP
         \fBvalue\fP \fIOID\fP
         \fBshift\fP \fIvalue\fP
         \fBscale\fP \fIvalue\fP
+        \fBcount\fP \fItrue|false\fP
         \fBfilter-oid\fP \fIOID\fP
         \fBfilter-value\fP  [\fIincl|include|excl|exclude\fP] \fIvalue\fP
+    }
+    \fBdata\fP \fIdata\fP {
+        \fBtype\fP \fIcounter|gauge\fP
+        \fBhelp\fP \fIhelp\fP
+        \fBmetric\fP \fImetric\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBlabel-from\fP \fIkey\fP \fIOID\fP
+        \fBvalue\fP \fIOID\fP
+        \fBshift\fP \fIvalue\fP
+        \fBscale\fP \fIvalue\fP
     }
     \fBhost\fP \fIhost\fP {
         \fBaddress\fP \fIip-address|hostname\fP
@@ -44,7 +54,7 @@
         \fBbulk-size\fP \fIinteger\fP
         \fBmetric-prefix\fP \fImetric-prefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
-        \fBcollect\fP \fIdata\fP [\fIdata\fP ...]
+        \fBcollect\fP \fIdata|table\fP [\fIdata|table\fP ...]
     }
 }
 .Ed
@@ -72,44 +82,14 @@ See
 .Xr snmpcmd 1
 for more details.
 .Pp
-There are two types of blocks that can be contained in the \fBsnmp\fP plugin
-block: \fBdata\fP and \fBhost\fP:
+There are three types of blocks that can be contained in the \fBsnmp\fP plugin
+block: \fBtable\fP, \fBdata\fP, and \fBhost\fP:
 .Bl -tag -width Ds
-.It \fBdata\fP \fIdata\fP
-The \fBdata\fP block defines a list of values or a table of values that are
+.It \fBtable\fP \fItable\fP
+The \fBtable\fP block defines a list of table of values that are
 to be queried.
 The following options can be set:
 .Bl -tag -width Ds
-.It \fBtable\fP \fItrue|false\fP
-Define if this is a single list of values or a table of values.
-The difference is the following:
-.Pp
-When \fBtable\fP is set to \fIfalse\fP, the OID given to \fBvalue\fP
-(see below) are queried using the \f(CWNGET\fP SNMP command (see
-.Xr snmpget 1
-) and transmitted to
-collectd. \fBOne\fP value list is dispatched and, eventually,
-one file will be written.
-.Pp
-When \fBtable\fP is set to \fItrue\fP, the OIDs given to \fBvalues\fP,
-\fBlabel-from\fP \fBfilter-ioid\fP (see below) are queried using the
-\f(CWGETNEXT\fP SNMP command until the subtree is left.
-After all the lists (think: all columns of the table) have been read,
-either (\fBcount\fP set to \fIfalse\fP) \fBseveral\fP value sets will
-be dispatched and, eventually, several files will be written,
-or (\fBcount\fP set to \fItrue\fP) one single value will be dispatched.
-.Pp
-For example, if you want to query the number of users on a system, you can use
-\f(CWHOST-RESOURCES-MIB::hrSystemNumUsers.0\fP.
-This is one value and belongs to one value list, therefore \fBtable\fP must be
-set to \fIfalse\fP.
-Please note that, in this case, you have to include the sequence number
-(zero in this case) in the OID.
-.Pp
-Counter example: If you want to query the interface table provided by the
-\f(CWIF-MIB\fP, e.g. the bytes transmitted.
-There are potentially many interfaces, so you will want to set \fBtable\fP
-to \fItrue\fP.
 .It \fBcount\fP \fItrue|false\fP
 Instead of dispatching one value per table entry containing the \fIOID\fP given
 in the \fBvalue\fP option, just dispatch a single count giving the
@@ -117,7 +97,25 @@ number of entries that would have been dispatched.
 This is especially useful when combined with the filtering options (see below)
 to count the number of entries in a Table matching certain criteria.
 .Pp
-When \fBtable\fP is set to \fIfalse\fP, this option has no effect.
+When \fBtable\fP is used, the OIDs given to \fBvalues\fP,
+\fBlabel-from\fP \fBfilter-ioid\fP (see below) are queried using the
+\f(CWGETNEXT\fP SNMP command until the subtree is left.
+After all the lists (think: all columns of the table) have been read,
+either (\fBcount\fP set to \fIfalse\fP) \fBseveral\fP value sets will
+be dispatched or (\fBcount\fP set to \fItrue\fP) one single value will
+be dispatched.
+.Pp
+For example, if you want to query the number of users on a system, you can use
+\f(CWHOST-RESOURCES-MIB::hrSystemNumUsers.0\fP.
+This is one value and belongs to one value list, therefore you  must use
+\fBdata\fP block.
+Please note that, in this case, you have to include the sequence number
+(zero in this case) in the OID.
+.Pp
+Counter example: If you want to query the interface table provided by the
+\f(CWIF-MIB\fP, e.g. the bytes transmitted.
+There are potentially many interfaces, so you will want to user is a \fBtable\fP
+block.
 .It \fBtype\fP \fIcounter|gauge|unknown\fP
 The \fBtype\fP that's used for each value read.
 Must be \fIgauge\fP, \fIcounter\fP or \fPunknown\fP.
@@ -129,30 +127,25 @@ Set the metric name.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times.
-.It \fBlabels-from\fP \fIkey\fP \fIOID\fP
+.It \fBlabel-from\fP \fIkey\fP \fIOID\fP
 Append the label with \fIkey\fP and value from the queried \fIOID\fP.
-If \fBtable\fP is set to \fItrue\fP, \fIOID\fP is interpreted as an
-SNMP-prefix that will return a list of values.
-Those values are then used as the actual type-instance, plugin-instance or host
-of dispatched metrics.
+The \fIOID\fP is interpreted as an SNMP-prefix that will return a list
+of values.
 An example would be the \f(CWIF-MIB::ifDescr\fP subtree.
 .Xr variables 5
 from the SNMP distribution describes the format of OIDs.
+.It \fBlabel-suffix\fP \fIkey\fP
+Append the label with \fIkey\fP and the \fIvalue\fB the suffix from
+the queried \fIOID\fP.
 .It \fBvalue\fP \fIOID\fP
 Configures the values to be queried from the SNMP host.
-The meaning slightly changes with the \fBtable\fP setting.
 .Xr variables 5
 from the SNMP distribution describes the format of OIDs.
 .Pp
-If \fBtable\fP is set to \fItrue\fP, each \fIOID\fP must be the prefix of all
-the values to query, e.g. \f(CWIF-MIB::ifInOctets\fP for all the counters of
-incoming traffic.
+The \fIOID\fP must be the prefix of all the values to query, e.g.
+\f(CWIF-MIB::ifInOctets\fP for all the counters of incoming traffic.
 This subtree is walked (using \f(CWGETNEXT\fP) until a value from outside the
 subtree is returned.
-.Pp
-If \fBtable\fP is set to \fIfalse\fP, the \fIOID\fP must be the OID of exactly
-one value, e.g. \f(CWIF-MIB::ifInOctets.3\fP for the third counter of incoming
-traffic.
 .It \fBshift\fP \fIvalue\fP
 \fIValue\fP is added to gauge-values returned by the SNMP-agent after they have
 been multiplied by any \fBscale\fP value.
@@ -178,12 +171,57 @@ The \fBfilter-oid\fP declares \fIOID\fP to fill table column with values.
 The \fBfilter-value\fP declares values to do match.
 Whether table row will be collected or ignored depends on the
 \fBfilter-value\fP setting.
-As with other plugins that use the daemon's ignorelist functionality, a string
-that starts and ends with a slash is interpreted as a regular expression.
+As with other plugins that use the daemon's include/exclude functionality,
+a string that starts and ends with a slash is interpreted as a
+regular expression.
 .Pp
 If no selection is configured at all, \fBall\fP table rows are selected.
+.El
+.It \fBdata\fP \fIdata\fP
+The \fBdata\fP block defines a list of values or a table of values that are
+to be queried.
+The OID given to \fBvalue\fP (see below) are queried using the \f(CWNGET\fP
+SNMP command (see
+.Xr snmpget 1
+) and transmitted to mcollectd.
+The following options can be set:
+.Bl -tag -width Ds
+.It \fBtype\fP \fIcounter|gauge|unknown\fP
+The \fBtype\fP that's used for each value read.
+Must be \fIgauge\fP, \fIcounter\fP or \fPunknown\fP.
+If not set is \fPunknown\fP.
+.It \fBhelp\fP \fIhelp\fP
+Set the \fBhelp\fP text for the metric.
+.It \fBmetric\fP \fImetric\fP
+Set the metric name.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times.
+.It \fBlabel-from\fP \fIkey\fP \fIOID\fP
+Append the label with \fIkey\fP and value from the queried \fIOID\fP.
+.It \fBvalue\fP \fIOID\fP
+Configures the values to be queried from the SNMP host.
+.Xr variables 5
+from the SNMP distribution describes the format of OIDs.
 .Pp
-When \fBtable\fP is set to \fIfalse\fP then these options has no effect.
+The \fIOID\fP must be the OID of exactly one value, e.g.
+\f(CWIF-MIB::ifInOctets.3\fP for the third counter of incoming traffic.
+.It \fBshift\fP \fIvalue\fP
+\fIValue\fP is added to gauge-values returned by the SNMP-agent after they have
+been multiplied by any \fBscale\fP value.
+If, for example, a thermometer returns degrees Kelvin you could specify a shift
+of \fB273.15\fP here to store values in degrees Celsius.
+The default value is, of course, \fB0.0\fP.
+.Pp
+This value is not applied to counter-values.
+.It \fBscale\fP \fIvalue\fP
+The gauge-values returned by the SNMP-agent are multiplied by  \fIvalue\fP.
+This is useful when values are transferred as a fixed point real number.
+For example, thermometers may transfer \fB243\fP but actually mean \fB24.3\fP,
+so you can specify a scale value of \fB0.1\fP to correct this.
+The default value is, of course, \fB1.0\fP.
+.Pp
+This value is not applied to counter-values.
 .El
 .It \fBhost\fP \fIhost\fP
 The \fBhost\fP block defines which hosts to query, which SNMP community and
