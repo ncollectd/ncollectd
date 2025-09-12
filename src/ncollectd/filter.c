@@ -23,6 +23,8 @@ typedef enum {
     FILTER_STMT_TYPE_RETURN,
     FILTER_STMT_TYPE_CALL,
     FILTER_STMT_TYPE_WRITE,
+    FILTER_STMT_TYPE_SCALE,
+    FILTER_STMT_TYPE_SHIFT,
     FILTER_STMT_TYPE_METRIC_RENAME,
     FILTER_STMT_TYPE_LABEL_SET,
     FILTER_STMT_TYPE_LABEL_UNSET,
@@ -102,6 +104,12 @@ struct filter_stmt_s {
             size_t num;
             filter_stmt_write_plugin_t *ptr;
         } stmt_write;
+        struct {
+            double value;
+        } stmt_scale;
+        struct {
+            double value;
+        } stmt_shift;
         struct {
             filter_sub_list_t to;
         } stmt_metric_rename;
@@ -554,6 +562,42 @@ static filter_stmt_t *filter_config_stmt_write(const config_item_t *ci)
     return stmt;
 }
 
+static filter_stmt_t *filter_config_stmt_scale(const config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_NUMBER)) {
+        ERROR("'%s' statement require exactly one numeric argument in %s:%d.",
+              ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return NULL;
+    }
+
+    filter_stmt_t *stmt = filter_stmt_alloc(FILTER_STMT_TYPE_SCALE);
+    if (stmt == NULL) {
+        return NULL;
+    }
+
+    stmt->stmt_scale.value = ci->values[0].value.number;
+
+    return stmt;
+}
+
+static filter_stmt_t *filter_config_stmt_shift(const config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_NUMBER)) {
+        ERROR("'%s' statement require exactly one numeric argument in %s:%d.",
+              ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return NULL;
+    }
+
+    filter_stmt_t *stmt = filter_stmt_alloc(FILTER_STMT_TYPE_SHIFT);
+    if (stmt == NULL) {
+        return NULL;
+    }
+
+    stmt->stmt_shift.value = ci->values[0].value.number;
+
+    return stmt;
+}
+
 static filter_stmt_t *filter_config_stmt_metric_rename(const config_item_t *ci)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
@@ -928,6 +972,10 @@ void filter_stmt_free(filter_stmt_t *root)
                 free(root->stmt_write.ptr);
             }
             break;
+        case FILTER_STMT_TYPE_SCALE:
+            break;
+        case FILTER_STMT_TYPE_SHIFT:
+            break;
         case FILTER_STMT_TYPE_METRIC_RENAME:
             filter_sub_list_reset(&root->stmt_metric_rename.to);
             break;
@@ -1085,6 +1133,10 @@ static filter_stmt_t *filter_config_stmt(const config_item_t *ci, bool *error, b
                 filter_stmt_free(root_stmt);
                 return NULL;
             }
+        } else if (strcasecmp("scale", cstmt->key) == 0) {
+            stmt = filter_config_stmt_scale(cstmt);
+        } else if (strcasecmp("shift", cstmt->key) == 0) {
+            stmt = filter_config_stmt_shift(cstmt);
         } else if (strcasecmp("metric-rename", cstmt->key) == 0) {
             stmt = filter_config_stmt_metric_rename(cstmt);
         } else if (strcasecmp("label-set", cstmt->key) == 0) {
@@ -1264,6 +1316,66 @@ static void filter_write(filter_stmt_t *stmt, metric_family_t *fam, metric_t *m)
                           stmt->stmt_write.ptr[i].plugin);
             }
         }
+    }
+}
+
+static void filter_scale(filter_stmt_t *stmt, metric_family_t *fam, metric_t *m)
+{
+    switch (fam->type) {
+    case METRIC_TYPE_UNKNOWN:
+        if (m->value.unknown.type == UNKNOWN_FLOAT64) {
+            m->value.unknown.float64 *= stmt->stmt_scale.value;
+        } else {
+            m->value.unknown.int64 *= (int64_t)stmt->stmt_scale.value;
+        }
+        break;
+    case METRIC_TYPE_GAUGE:
+        if (m->value.gauge.type == GAUGE_FLOAT64) {
+            m->value.gauge.float64 *= stmt->stmt_scale.value;
+        } else {
+            m->value.gauge.int64 *= (int64_t)stmt->stmt_scale.value;
+        }
+        break;
+    case METRIC_TYPE_COUNTER:
+        if (m->value.counter.type == COUNTER_UINT64) {
+            m->value.counter.uint64 *= (uint64_t)stmt->stmt_scale.value;
+        } else {
+            m->value.counter.float64 *= stmt->stmt_scale.value;
+        }
+        break;
+    case METRIC_TYPE_STATE_SET:
+    case METRIC_TYPE_INFO:
+    case METRIC_TYPE_SUMMARY:
+    case METRIC_TYPE_HISTOGRAM:
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        break;
+    }
+}
+
+static void filter_shift(filter_stmt_t *stmt, metric_family_t *fam, metric_t *m)
+{
+    switch (fam->type) {
+    case METRIC_TYPE_UNKNOWN:
+        if (m->value.unknown.type == UNKNOWN_FLOAT64) {
+            m->value.unknown.float64 += stmt->stmt_shift.value;
+        } else {
+            m->value.unknown.int64 += (int64_t)stmt->stmt_shift.value;
+        }
+        break;
+    case METRIC_TYPE_GAUGE:
+        if (m->value.gauge.type == GAUGE_FLOAT64) {
+            m->value.gauge.float64 += stmt->stmt_shift.value;
+        } else {
+            m->value.gauge.int64 += (int64_t)stmt->stmt_shift.value;
+        }
+        break;
+    case METRIC_TYPE_COUNTER:
+    case METRIC_TYPE_STATE_SET:
+    case METRIC_TYPE_INFO:
+    case METRIC_TYPE_SUMMARY:
+    case METRIC_TYPE_HISTOGRAM:
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        break;
     }
 }
 
@@ -1599,6 +1711,12 @@ filter_result_t filter_process_stmt(filter_stmt_t *stmt, uint64_t *flags,
             break;
         case FILTER_STMT_TYPE_WRITE:
             filter_write(stmt, fam, m);
+            break;
+        case FILTER_STMT_TYPE_SCALE:
+            filter_scale(stmt, fam, m);
+            break;
+        case FILTER_STMT_TYPE_SHIFT:
+            filter_shift(stmt, fam, m);
             break;
         case FILTER_STMT_TYPE_METRIC_RENAME:
             filter_stmt_metric_rename(stmt, NULL, 0, NULL, 0, flags, fam, m);
