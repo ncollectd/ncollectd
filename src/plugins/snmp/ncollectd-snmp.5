@@ -54,6 +54,9 @@
         \fBbulk-size\fP \fIinteger\fP
         \fBmetric-prefix\fP \fImetric-prefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBfilter\fP {
+            ...
+        }
         \fBcollect\fP \fIdata|table\fP [\fIdata|table\fP ...]
     }
 }
@@ -135,7 +138,7 @@ An example would be the \f(CWIF-MIB::ifDescr\fP subtree.
 .Xr variables 5
 from the SNMP distribution describes the format of OIDs.
 .It \fBlabel-suffix\fP \fIkey\fP
-Append the label with \fIkey\fP and the \fIvalue\fB the suffix from
+Append the label with \fIkey\fP and the \fIvalue\fP the suffix from
 the queried \fIOID\fP.
 .It \fBvalue\fP \fIOID\fP
 Configures the values to be queried from the SNMP host.
@@ -290,6 +293,10 @@ Prepends \fIprefix\fP to the metric name in the \fBdata\fP block.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .It \fBcollect\fP \fIdata\fP [\fIdata\fP ...]
 Defines which values to collect. \fIdata\fP refers to one of the
 \fBdata\fP block above.

@@ -89,6 +89,7 @@ typedef struct {
     char *trust_cert;
     char *context;
 
+    plugin_filter_t *filter;
     void *sess_handle;
     c_complain_t complaint;
     data_definition_t **data_list;
@@ -191,9 +192,9 @@ static void csnmp_host_definition_destroy(void *arg)
     free(hd->trust_cert);
     free(hd->context);
     free(hd->data_list);
-
     free(hd->metric_prefix);
     label_set_reset(&hd->labels);
+    plugin_filter_free(hd->filter);
 
     free(hd);
 }
@@ -757,7 +758,7 @@ static int csnmp_dispatch_table(host_definition_t *host, data_definition_t *data
 
             metric_family_metric_append(&fam, m);
             metric_reset(&m, fam.type);
-            plugin_dispatch_metric_family(&fam, 0);
+            plugin_dispatch_metric_family_filtered(&fam, host->filter, 0);
 
             strbuf_destroy(&buf);
         }
@@ -794,7 +795,7 @@ static int csnmp_dispatch_table(host_definition_t *host, data_definition_t *data
 
         metric_family_metric_append(&fam, m);
         metric_reset(&m, fam.type);
-        plugin_dispatch_metric_family(&fam, 0);
+        plugin_dispatch_metric_family_filtered(&fam, host->filter, 0);
         strbuf_destroy(&buf);
     }
 
@@ -1227,7 +1228,7 @@ static int csnmp_read_value(host_definition_t *host, data_definition_t *data)
 
     metric_family_metric_append(&fam, m);
     metric_reset(&m, fam.type);
-    plugin_dispatch_metric_family(&fam, 0);
+    plugin_dispatch_metric_family_filtered(&fam, host->filter, 0);
     strbuf_destroy(&buf);
     return 0;
 }
@@ -1709,6 +1710,8 @@ static int csnmp_config_add_host(config_item_t *ci)
             status = cf_util_get_string(option, &hd->metric_prefix);
         } else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &hd->labels);
+        } else if (strcasecmp("filter", option->key) == 0) {
+            status = plugin_filter_configure(option, &hd->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           option->key, cf_get_file(option), cf_get_lineno(option));

@@ -53,6 +53,9 @@ NCOLLECTD-SNMP(5) - File Formats Manual
 	        bulk-size integer
 	        metric-prefix metric-prefix
 	        label key value
+	        filter {
+	            ...
+	        }
 	        collect data|table [data|table ...]
 	    }
 	}
@@ -149,7 +152,7 @@ block: **table**, **data**, and **host**:
 
 > **label-suffix** *key*
 
-> > Append the label with *key* and the *value*&zwnj;** the suffix from**
+> > Append the label with *key* and the *value* the suffix from
 > > the queried *OID*.
 
 > **value** *OID*
@@ -370,6 +373,12 @@ block: **table**, **data**, and **host**:
 > > Append the label *key*=*value* to the submitting metrics.
 > > Can appear multiple times.
 
+> **filter**
+
+> > Configure a filter to modify or drop the metrics.
+> > See **FILTER CONFIGURATION** in
+> > ncollectd.conf(5)
+
 > **collect** *data* \[*data* ...]
 
 > > Defines which values to collect. *data* refers to one of the
@@ -453,4 +462,3 @@ PKI, either privately or through a public certificate authority.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd @NCOLLECTD\_VERSION@ - @NCOLLECTD\_DATE@
