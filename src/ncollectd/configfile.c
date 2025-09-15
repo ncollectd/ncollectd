@@ -536,10 +536,9 @@ static config_item_t *cf_read_file(const char *file, const char *pattern, int de
 
     return root;
 }
-
 static int cf_compare_string(const void *p1, const void *p2)
 {
-    return strcmp((const char *)p1, (const char *)p2);
+    return strcmp(*(const char * const *)p1, *(const char * const *)p2);
 }
 
 static config_item_t *cf_read_dir(const char *dir, const char *pattern, int depth)
