@@ -1326,19 +1326,22 @@ static void filter_scale(filter_stmt_t *stmt, metric_family_t *fam, metric_t *m)
         if (m->value.unknown.type == UNKNOWN_FLOAT64) {
             m->value.unknown.float64 *= stmt->stmt_scale.value;
         } else {
-            m->value.unknown.int64 *= (int64_t)stmt->stmt_scale.value;
+            m->value.unknown.int64 = (int64_t)((double)m->value.unknown.int64 *
+                                               stmt->stmt_scale.value);
         }
         break;
     case METRIC_TYPE_GAUGE:
         if (m->value.gauge.type == GAUGE_FLOAT64) {
             m->value.gauge.float64 *= stmt->stmt_scale.value;
         } else {
-            m->value.gauge.int64 *= (int64_t)stmt->stmt_scale.value;
+            m->value.gauge.int64 = (int64_t)((double)m->value.gauge.int64 *
+                                             stmt->stmt_scale.value);
         }
         break;
     case METRIC_TYPE_COUNTER:
         if (m->value.counter.type == COUNTER_UINT64) {
-            m->value.counter.uint64 *= (uint64_t)stmt->stmt_scale.value;
+            m->value.counter.uint64 = (uint64_t)((double)m->value.counter.uint64 *
+                                                 stmt->stmt_scale.value);
         } else {
             m->value.counter.float64 *= stmt->stmt_scale.value;
         }
