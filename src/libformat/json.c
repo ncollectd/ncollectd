@@ -152,7 +152,7 @@ static int json_gauge_histogram(xson_render_t *r, metric_t const *m)
     xson_render_array_open(r);
     for (int i = m->value.histogram->num - 1; i >= 0; i--) {
         xson_render_array_open(r);
-        status |= xson_render_double(r, m->value.histogram->buckets[i].counter);
+        status |= xson_render_double(r, m->value.histogram->buckets[i].maximum);
         status |= xson_render_integer(r, m->value.histogram->buckets[i].counter);
         xson_render_array_close(r);
     }
