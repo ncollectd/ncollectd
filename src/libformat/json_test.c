@@ -302,7 +302,7 @@ DEF_TEST(json_guage_histogram)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"metric\":\"gauge_histogram\",\"type\":\"gaugehistogram\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"buckets\":[[4,4],[10,10],[22,22],[26,26],[42,42],[61,61],[85,85],[96,96],[98,98],[107,107],[115,115],[120,120]],\"gcount\":120,\"gsum\":120}]}", buf.ptr);
+    EXPECT_EQ_STR("{\"metric\":\"gauge_histogram\",\"type\":\"gaugehistogram\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"buckets\":[[1024,4],[4096,10],[8192,22],[16384,26],[32768,42],[65536,61],[131072,85],[262144,96],[524288,98],[786432,107],[1048576,115],[inf,120]],\"gcount\":120,\"gsum\":120}]}", buf.ptr);
 
     strbuf_destroy(&buf);
     histogram_destroy(histogram);
