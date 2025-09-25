@@ -357,6 +357,8 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         } else if (sstrncmpend(metric, metric_size, "_created", strlen("_created")) == 0) {
             metric_fixed_size -= strlen("_created");
             metric_sub_type = METRIC_SUB_TYPE_COUNTER_CREATED;
+        } else {
+            return -1;
         }
     break;
     case METRIC_TYPE_STATE_SET:
@@ -368,6 +370,8 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         if (sstrncmpend(metric, metric_size, "_info", strlen("_info")) == 0) {
             metric_fixed_size -= strlen("_info");
             metric_sub_type = METRIC_SUB_TYPE_INFO;
+        } else {
+            return -1;
         }
     break;
     case METRIC_TYPE_SUMMARY:
@@ -460,19 +464,19 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
             return -1;
         }
         ptr += size;
-    }
 
-    ptr++;
+        ptr++;
+
+        sc = scan_code[(unsigned char)*ptr];
+        if (sc != SC_SPACE) {
+        // label free
+            return -1;
+        }
+    }
 
     // FIX add extra labels
     if (labels_extra != NULL)
         label_set_add_set(&labels, true, *labels_extra);
-
-    sc = scan_code[(unsigned char)*ptr];
-    if (sc != SC_SPACE) {
-        // label free
-        return -1;
-    }
 
     while ((sc = scan_code[(unsigned char)*ptr]) == SC_SPACE)
         ptr++;
@@ -524,10 +528,11 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         metric_list_append(&fam->metric, (metric_t){.label = labels, .value = value, .interval = interval, .time = time});
         break;
     case METRIC_SUB_TYPE_COUNTER_TOTAL:
-        if(isinteger(number))
+        if(isinteger(number)) {
             value = VALUE_COUNTER(strtoull(number, NULL, 10));
-        else
+        } else {
             value = VALUE_COUNTER_FLOAT64(strtod(number, NULL));
+        }
         metric_list_append(&fam->metric, (metric_t){.label = labels, .value = value, .interval = interval, .time = time});
         break;
     case METRIC_SUB_TYPE_COUNTER_CREATED:
