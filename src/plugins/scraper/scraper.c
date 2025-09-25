@@ -49,7 +49,6 @@ typedef struct {
     scraper_parser_t parser;
 } scraper_instance_t;
 
-
 int metric_parse_buffer(strbuf_t *buf, char *buffer, size_t buffer_len, size_t *lineno,
                         metric_family_t *fam, const char *prefix, size_t prefix_size,
                         label_set_t *labels, plugin_filter_t *filter, cdtime_t time)
@@ -64,8 +63,9 @@ int metric_parse_buffer(strbuf_t *buf, char *buffer, size_t buffer_len, size_t *
 
                 int status = metric_parse_line(fam, plugin_dispatch_metric_family_filtered, filter,
                                                prefix, prefix_size, labels, 0, time, buf->ptr);
-                if (status < 0)
+                if (status < 0) {
                     return status;
+                }
             }
 
             strbuf_reset(buf);
@@ -163,6 +163,9 @@ static int scaper_read(user_data_t *ud)
     scraper_instance_t *target = (scraper_instance_t *)ud->data;
 
     strbuf_reset(&target->parser.buf);
+    metric_family_metric_reset(&target->parser.fam);
+    target->parser.time = 0;
+    target->parser.lineno = 0;
 
     CURLcode rcode = curl_easy_setopt(target->curl, CURLOPT_URL, target->url);
     if (rcode != CURLE_OK) {
