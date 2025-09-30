@@ -167,6 +167,8 @@ static int ps_read_io(process_entry_t *ps)
             val = &(ps->io_diskr);
         else if (strncasecmp(buffer, "write_bytes:", 12) == 0)
             val = &(ps->io_diskw);
+        else if (strncasecmp(buffer, "cancelled_write_bytes:", 22) == 0)
+            val = &(ps->io_cancelled_diskw);
         else
             continue;
 
@@ -181,7 +183,7 @@ static int ps_read_io(process_entry_t *ps)
         if ((errno != 0) || (endptr == fields[1]))
             *val = -1;
         else
-            *val = (int64_t)tmp;
+            *val = tmp;
     }
 
     if (fclose(fh))
@@ -288,7 +290,12 @@ static int ps_delay(process_entry_t *ps)
 
 void ps_fill_details(procstat_t *ps, process_entry_t *entry)
 {
-    ps_read_status(entry);
+    if (entry->state != PROC_STATE_ZOMBIES) {
+        if (entry->has_status == false) {
+            ps_read_status(entry);
+            entry->has_status = true;
+        }
+    }
 
     if (entry->has_io == false) {
         ps_read_io(entry);
@@ -301,23 +308,29 @@ void ps_fill_details(procstat_t *ps, process_entry_t *entry)
     }
 
     if (ps->flags & COLLECT_MEMORY_MAPS) {
-        int num_maps;
-        if (entry->has_maps == false && (num_maps = ps_count_maps(entry->id)) >= 0)
-            entry->num_maps = num_maps;
-        entry->has_maps = true;
+        if (entry->has_maps == false) {
+            int num_maps = ps_count_maps(entry->id);
+            if (num_maps >= 0)
+                entry->num_maps = num_maps;
+            entry->has_maps = true;
+        }
     }
 
     if (ps->flags & COLLECT_FILE_DESCRIPTORS) {
-        int num_fd;
-        if (entry->has_fd == false && (num_fd = ps_count_fd(entry->id)) >= 0)
-            entry->num_fd = num_fd;
-        entry->has_fd = true;
+        if (entry->has_fd == false) {
+            int num_fd = ps_count_fd(entry->id);
+            if (num_fd >= 0)
+                entry->num_fd = num_fd;
+            entry->has_fd = true;
+        }
     }
 
 #ifdef HAVE_TASKSTATS
-    if ((ps->flags & COLLECT_DELAY_ACCOUNTING) && !entry->has_delay) {
-        if (ps_delay(entry) == 0)
+    if (ps->flags & COLLECT_DELAY_ACCOUNTING) {
+        if (entry->has_delay == false) {
+            ps_delay(entry);
             entry->has_delay = true;
+        }
     }
 #endif
 }
@@ -423,6 +436,7 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
     ps->io_syscw = -1;
     ps->io_diskr = -1;
     ps->io_diskw = -1;
+    ps->io_cancelled_diskw = -1;
 
     ps->vmem_data = -1;
     ps->vmem_code = -1;
@@ -564,8 +578,10 @@ int ps_read(void)
     int sleeping = 0;
     int zombies = 0;
     int stopped = 0;
-    int paging = 0;
     int blocked = 0;
+    int traced = 0;
+    int dead = 0;
+    int idle = 0;
 
     struct dirent *ent;
     DIR *proc;
@@ -574,9 +590,7 @@ int ps_read(void)
     char cmdline[CMDLINE_BUFFER_SIZE];
 
     process_entry_t pse;
-    char state;
 
-    running = sleeping = zombies = stopped = paging = blocked = 0;
     ps_list_reset();
 
     if ((proc = opendir(path_proc)) == NULL) {
@@ -594,6 +608,8 @@ int ps_read(void)
         memset(&pse, 0, sizeof(pse));
         pse.id = pid;
 
+        char state;
+
         int status = ps_read_process(pid, &pse, &state);
         if (status != 0) {
             DEBUG("ps_read_process failed: %i", status);
@@ -603,21 +619,35 @@ int ps_read(void)
         switch (state) {
         case 'R':
             running++;
+            pse.state = PROC_STATE_RUNNING;
             break;
         case 'S':
             sleeping++;
+            pse.state = PROC_STATE_SLEEPING;
             break;
         case 'D':
             blocked++;
+            pse.state = PROC_STATE_BLOCKED;
             break;
         case 'Z':
             zombies++;
+            pse.state = PROC_STATE_ZOMBIES;
             break;
         case 'T':
             stopped++;
+            pse.state = PROC_STATE_STOPPED;
             break;
-        case 'W':
-            paging++;
+        case 't':
+            traced++;
+            pse.state = PROC_STATE_TRACED;
+            break;
+        case 'X':
+            dead++;
+            pse.state = PROC_STATE_DEAD;
+            break;
+        case 'I':
+            idle++;
+            pse.state = PROC_STATE_IDLE;
             break;
         }
 
@@ -644,8 +674,10 @@ int ps_read(void)
     proc_state[PROC_STATE_SLEEPING] = sleeping;
     proc_state[PROC_STATE_ZOMBIES] = zombies;
     proc_state[PROC_STATE_STOPPED] = stopped;
-    proc_state[PROC_STATE_PAGING] = paging;
     proc_state[PROC_STATE_BLOCKED] = blocked;
+    proc_state[PROC_STATE_TRACED] = traced;
+    proc_state[PROC_STATE_DEAD] = dead;
+    proc_state[PROC_STATE_IDLE] = idle;
     ps_submit_state(proc_state);
 
     for (procstat_t *ps_ptr = list_head_g; ps_ptr != NULL; ps_ptr = ps_ptr->next)

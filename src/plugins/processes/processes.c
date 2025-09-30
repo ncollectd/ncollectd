@@ -142,6 +142,11 @@ metric_family_t fams[FAM_PROC_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of bytes really sent to the storage layer.",
     },
+    [FAM_PROC_IO_CANCELLED_DISKW] = {
+        .name = "system_process_io_cancelled_diskw_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of bytes \"saved\" from I/O writeback.",
+    },
     [FAM_PROC_FILE_HANDLES] = {
         .name = "system_process_file_handles",
         .type = METRIC_TYPE_GAUGE,
@@ -233,7 +238,8 @@ static char const *proc_state_name[PROC_STATE_MAX] = {
     [PROC_STATE_STOPPED]  = "stopped",
     [PROC_STATE_SYSTEM]   = "system",
     [PROC_STATE_WAIT]     = "wait",
-    [PROC_STATE_ZOMBIES]  = "zombies"
+    [PROC_STATE_ZOMBIES]  = "zombies",
+    [PROC_STATE_TRACED]   = "traced"
 };
 
 /* put name of process from config to list_head_g tree
@@ -255,6 +261,7 @@ static procstat_t *ps_list_register(const char *name, const char *regexp, const 
     new->io_syscw = -1;
     new->io_diskr = -1;
     new->io_diskw = -1;
+    new->io_cancelled_diskw = -1;
     new->cswitch_vol = -1;
     new->cswitch_invol = -1;
     new->sched_running = -1;
@@ -356,6 +363,13 @@ static void ps_update_counter(int64_t *group_counter, int64_t *curr_counter, int
     *group_counter += curr_value;
 }
 
+__attribute__(( weak ))
+void ps_fill_details(__attribute__((unused)) procstat_t *ps,
+                     __attribute__((unused)) process_entry_t *entry)
+{
+    return;
+}
+
 /* add process entry to 'instances' of process 'name' (or refresh it) */
 void ps_list_add(const char *name, const char *cmdline, unsigned long pid, process_entry_t *entry)
 {
@@ -368,9 +382,7 @@ void ps_list_add(const char *name, const char *cmdline, unsigned long pid, proce
         if ((ps_list_match(name, cmdline, pid, ps)) == 0)
             continue;
 
-#ifdef KERNEL_LINUX
         ps_fill_details(ps, entry);
-#endif
 
         for (pse = ps->instances; pse != NULL; pse = pse->next)
             if ((pse->id == entry->id) || (pse->next == NULL))
@@ -423,6 +435,10 @@ void ps_list_add(const char *name, const char *cmdline, unsigned long pid, proce
             ps_update_counter(&ps->io_diskr, &pse->io_diskr, entry->io_diskr);
             ps_update_counter(&ps->io_diskw, &pse->io_diskw, entry->io_diskw);
         }
+
+        if (entry->io_cancelled_diskw != -1)
+            ps_update_counter(&ps->io_cancelled_diskw, &pse->io_cancelled_diskw,
+                                                       entry->io_cancelled_diskw);
 
         if ((entry->cswitch_vol != -1) && (entry->cswitch_invol != -1)) {
             ps_update_counter(&ps->cswitch_vol, &pse->cswitch_vol, entry->cswitch_vol);
@@ -723,6 +739,9 @@ void ps_metric_append_proc_list(procstat_t *ps)
         metric_family_append(&fams[FAM_PROC_IO_DISKR], VALUE_COUNTER(ps->io_diskr), &labels, NULL);
     if (ps->io_diskw != -1)
         metric_family_append(&fams[FAM_PROC_IO_DISKW], VALUE_COUNTER(ps->io_diskw), &labels, NULL);
+    if (ps->io_cancelled_diskw != -1)
+        metric_family_append(&fams[FAM_PROC_IO_CANCELLED_DISKW],
+                             VALUE_COUNTER(ps->io_cancelled_diskw), &labels, NULL);
 
     if (ps->flags & COLLECT_FILE_DESCRIPTORS)
         metric_family_append(&fams[FAM_PROC_FILE_HANDLES],
@@ -780,6 +799,7 @@ void ps_metric_append_proc_list(procstat_t *ps)
                  "io_rchar = %" PRIi64 "; io_wchar = %" PRIi64 "; "
                  "io_syscr = %" PRIi64 "; io_syscw = %" PRIi64 "; "
                  "io_diskr = %" PRIi64 "; io_diskw = %" PRIi64 "; "
+                 "io_cancelled_diskw = %" PRIi64 "; "
                  "cswitch_vol = %" PRIi64 "; cswitch_invol = %" PRIi64 "; "
                  "sched_running = %" PRIi64 "; sched_waiting = %" PRIi64 "; "
                  "sched_timeslices= %" PRIi64 "; delay_cpu = %g; delay_blkio = %g; "
@@ -788,7 +808,8 @@ void ps_metric_append_proc_list(procstat_t *ps)
                  ps->vmem_size, ps->vmem_rss, ps->vmem_data, ps->vmem_code,
                  ps->vmem_minflt_counter, ps->vmem_majflt_counter,
                  ps->cpu_user_counter, ps->cpu_system_counter,
-                 ps->io_rchar, ps->io_wchar, ps->io_syscr, ps->io_syscw, ps->io_diskr, ps->io_diskw,
+                 ps->io_rchar, ps->io_wchar, ps->io_syscr, ps->io_syscw,
+                 ps->io_diskr, ps->io_diskw, ps->io_cancelled_diskw,
                  ps->cswitch_vol, ps->cswitch_invol,
                  ps->sched_running, ps->sched_waiting, ps->sched_timeslices,
                  ps->delay_cpu, ps->delay_blkio, ps->delay_swapin, ps->delay_freepages);
