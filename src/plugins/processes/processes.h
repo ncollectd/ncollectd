@@ -45,6 +45,7 @@ enum {
     FAM_PROC_IO_SYSCW,
     FAM_PROC_IO_DISKR,
     FAM_PROC_IO_DISKW,
+    FAM_PROC_IO_CANCELLED_DISKW,
     FAM_PROC_FILE_HANDLES,
     FAM_PROC_MEMORY_MAPPED_REGIONS,
     FAM_PROC_CTX_VOLUNTARY,
@@ -75,6 +76,7 @@ enum {
     PROC_STATE_SYSTEM,
     PROC_STATE_WAIT,
     PROC_STATE_ZOMBIES,
+    PROC_STATE_TRACED,
     PROC_STATE_MAX
 };
 
@@ -82,6 +84,7 @@ enum {
 
 typedef struct process_entry_s {
     unsigned long id;
+    int state;
     char name[PROCSTAT_NAME_LEN];
     unsigned long long starttime;
 
@@ -108,6 +111,7 @@ typedef struct process_entry_s {
     int64_t io_syscw;
     int64_t io_diskr;
     int64_t io_diskw;
+    int64_t io_cancelled_diskw;
     bool has_io;
 
     int64_t cswitch_vol;
@@ -118,14 +122,14 @@ typedef struct process_entry_s {
     int64_t sched_timeslices;
     bool has_sched;
 
+    bool has_maps;
+    bool has_fd;
+    bool has_status;
+
 #ifdef HAVE_TASKSTATS
+    bool has_delay;
     ts_delay_t delay;
 #endif
-    bool has_delay;
-
-    bool has_fd;
-
-    bool has_maps;
 } process_entry_t;
 
 typedef struct procstat_entry_s {
@@ -146,6 +150,7 @@ typedef struct procstat_entry_s {
     int64_t io_syscw;
     int64_t io_diskr;
     int64_t io_diskw;
+    int64_t io_cancelled_diskw;
 
     int64_t cswitch_vol;
     int64_t cswitch_invol;
@@ -193,6 +198,7 @@ typedef struct procstat_s {
     int64_t io_syscw;
     int64_t io_diskr;
     int64_t io_diskw;
+    int64_t io_cancelled_diskw;
 
     int64_t cswitch_vol;
     int64_t cswitch_invol;
