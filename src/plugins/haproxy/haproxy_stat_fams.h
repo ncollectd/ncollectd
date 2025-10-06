@@ -679,12 +679,12 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
         .help = "Total number of failed handshake in this frontend."
     },
     [FAM_HAPROXY_FRONTEND_SSL_OCSP_STAPLE] = {
-        .name = "ssl_ocsp_staple",
+        .name = "haproxy_frontend_ssl_ocsp_staple",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of stapled OCSP responses in this frontend."
     },
     [FAM_HAPROXY_FRONTEND_SSL_FAILED_OCSP_STAPLE] = {
-        .name = "ssl_failed_ocsp_staple",
+        .name = "haproxy_frontend_ssl_failed_ocsp_staple",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of failed OCSP stapling (expired or error) in this frontend.",
     },
