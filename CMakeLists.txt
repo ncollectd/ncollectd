@@ -306,6 +306,7 @@ add_subdirectory(src/libcompress)
 add_subdirectory(src/libdbquery)
 add_subdirectory(src/libexpr)
 add_subdirectory(src/libgraph)
+add_subdirectory(src/libquickjs)
 add_subdirectory(src/libtest)
 
 add_subdirectory(src/ncollectdmon)
