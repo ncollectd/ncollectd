@@ -82,7 +82,14 @@ int plugin_register_read(__attribute__((unused)) const char *name,
 
 int plugin_unregister_read(__attribute__((unused)) char const *name)
 {
-    g_simple_read_cb = NULL;
+    if (g_simple_read_cb != NULL)
+        g_simple_read_cb = NULL;
+    if (g_complex_read_cb != NULL) {
+        g_complex_read_cb = NULL;
+        if (g_complex_read_ud.free_func != NULL)
+            g_complex_read_ud.free_func(g_complex_read_ud.data);
+        memset(&g_complex_read_ud, 0, sizeof(g_complex_read_ud));
+    }
     return 0;
 }
 
@@ -296,6 +303,13 @@ int plugin_test_notification(const notification_t *n)
 
 int plugin_test_shutdown(void)
 {
+    if (g_complex_read_cb != NULL) {
+        g_complex_read_cb = NULL;
+        if (g_complex_read_ud.free_func != NULL)
+            g_complex_read_ud.free_func(g_complex_read_ud.data);
+        memset(&g_complex_read_ud, 0, sizeof(g_complex_read_ud));
+    }
+
     if (g_shutdown_cb == NULL)
         return 0;
     return g_shutdown_cb();

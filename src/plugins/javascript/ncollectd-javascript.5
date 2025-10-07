@@ -1,0 +1,50 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-JAVASCRIPT 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-javascript
+.Nd Documentation of ncollectd's javascript plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP javascript
+\fBplugin\fP javascript {
+    \fBinstance\fP \fIinstance\fP {
+        \fBmemory-limit\fP \fIbytes\fP
+        \fBstack-size\fP \fIbytes\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBload-std\fP \fItrue|false\fP
+        \fBinclude\fP \fIfilename\fP
+        \fBscript\fP \fIfilename\fP
+        \fBconfig\fP {
+            ...
+        }
+    }
+}
+.Ed
+.Sh DESCRIPTION
+The \fBjavascript\fP plugin embeds a javascript interpreter into ncollectd
+and provides an interface to ncollectd's plugin system.
+This makes it possible to write plugins for ncollectd in javascript.
+.Pp
+Each instance is a javascript interpreter, the following options are accepted
+within each \fBinstance\fP block:
+.Bl -tag -width Ds
+.It \fBmemory-limit\fP \fIbytes\fP
+Limit the memory usage of the javascript interpreter.
+.It \fBstack-size\fP \fIbytes\fP
+Limit the stack size of the javscript interpreter.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which read callbacks will be called.
+.It \fBload-std\fP \fItrue|false\fP
+Make 'std' and 'os' modules available to the loaded script.
+.It \fBinclude\fP \fIfilename\fP
+Load file as ES6 module, the file extension must be 'mjs'.
+.It \fBscript\fP \fIfilename\fP
+Load file as ES6 script.
+.It \fBconfig\fP
+Configuration for the config callback in the script.
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
