@@ -86,6 +86,20 @@ static int db_config_set_uint(unsigned int *ret_value, config_item_t *ci)
     return 0;
 }
 
+static bool isinteger(const char *str)
+{
+    if ((str[0] == '-') || (str[0] == '+'))
+        str++;
+
+    while(*str != '\0') {
+        if(!isdigit(*str))
+            return false;
+        str++;
+    }
+
+    return true;
+}
+
 static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area,
                             db_query_t const *q, db_query_preparation_area_t *q_area,
                             plugin_filter_t *filter)
@@ -151,21 +165,31 @@ static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area
     int ret = 0;
     char *value_str = r_area->value_str;
     if (fam.type == METRIC_TYPE_GAUGE) {
-        double value;
-        if (0 != parse_double(value_str, &value)) {
+        double value = 0;
+        if (parse_double(value_str, &value) != 0) {
             PLUGIN_ERROR("Parsing '%s' as gauge failed.", value_str);
             errno = EINVAL;
             ret = -1;
         }
-        m.value.gauge.float64 = value;
+        m.value = VALUE_GAUGE(value);
     } else if (fam.type == METRIC_TYPE_COUNTER) {
-        uint64_t value;
-        if (0 != parse_uinteger(value_str, &value)) {
-            PLUGIN_ERROR("Parsing '%s' as counter failed.", value_str);
-            errno = EINVAL;
-            ret = -1;
+        if (isinteger(value_str)) {
+            uint64_t value = 0;
+            if (parse_uinteger(value_str, &value) != 0) {
+                PLUGIN_ERROR("Parsing '%s' as integer counter failed.", value_str);
+                errno = EINVAL;
+                ret = -1;
+            }
+            m.value = VALUE_COUNTER_UINT64(value);
+        } else {
+            double value = 0;
+            if (parse_double(value_str, &value) != 0) {
+                PLUGIN_ERROR("Parsing '%s' as gauge failed.", value_str);
+                errno = EINVAL;
+                ret = -1;
+            }
+            m.value = VALUE_COUNTER_FLOAT64(value);
         }
-        m.value.counter.uint64 = value;
     }
 
     if (ret == 0) {
