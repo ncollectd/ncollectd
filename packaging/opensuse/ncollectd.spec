@@ -66,6 +66,7 @@
 %define build_with_ipvs 0%{!?_without_ipvs:1}
 %define build_with_irq 0%{!?_without_irq:1}
 %define build_with_iscsi 0%{!?_without_iscsi:1}
+%define build_with_javascript 0%{!?_without_javascript:1}
 %define build_with_java 0%{!?_without_java:1}
 %define build_with_jolokia 0%{!?_without_jolokia:1}
 %define build_with_journal 0%{!?_without_journal:1}
@@ -1354,6 +1355,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_java -DPLUGIN_JAVA:BOOL=OFF
 %endif
 
+%if %{build_with_javascript}
+%define _build_with_javascript -DPLUGIN_JAVASCRIPT:BOOL=ON
+%else
+%define _build_with_javascript -DPLUGIN_JAVASCRIPT:BOOL=OFF
+%endif
+
 %if %{build_with_jolokia}
 %define _build_with_jolokia -DPLUGIN_JOLOKIA:BOOL=ON
 %else
@@ -2238,6 +2245,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_irq} \
     %{?_build_with_iscsi} \
     %{?_build_with_java} \
+    %{?_build_with_javascript} \
     %{?_build_with_jolokia} \
     %{?_build_with_journal} \
     %{?_build_with_kafka} \
@@ -2590,6 +2598,10 @@ rm -rf %{buildroot}
 %if %{build_with_iscsi}
 %{_libdir}/%{name}/iscsi.so
 %{_mandir}/man5/ncollectd-iscsi.5*
+%endif
+%if %{build_with_javascript}
+%{_libdir}/%{name}/javascript.so
+%{_mandir}/man5/ncollectd-javascript.5*
 %endif
 %if %{build_with_journal}
 %{_libdir}/%{name}/journal.so
