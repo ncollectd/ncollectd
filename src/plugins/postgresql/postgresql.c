@@ -803,6 +803,15 @@ static void psql_database_delete(void *data)
     pg_stat_filter_free(db->pg_stat_sequence_io);
     pg_stat_filter_free(db->pg_stat_function);
 
+
+    if (db->q_prep_areas != NULL) {
+        for (size_t i = 0; i < db->queries_num; i++) {
+            db_query_delete_preparation_area(db->q_prep_areas[i]);
+        }
+        free(db->q_prep_areas);
+    }
+    free(db->queries);
+
     free(db);
 }
 
@@ -1510,6 +1519,31 @@ static int psql_config_database(config_item_t *ci)
 
     if (db->database == NULL) {
         PLUGIN_ERROR("Instance '%s': No 'database' has been configured.", db->instance);
+        psql_database_delete(db);
+        return -1;
+    }
+
+    while ((status == 0) && (db->queries_num > 0)) {
+        db->q_prep_areas = calloc(db->queries_num, sizeof(*db->q_prep_areas));
+        if (db->q_prep_areas == NULL) {
+            PLUGIN_WARNING("calloc failed");
+            status = -1;
+            break;
+        }
+
+        for (size_t i = 0; i < db->queries_num; ++i) {
+            db->q_prep_areas[i] = db_query_allocate_preparation_area(db->queries[i]);
+            if (db->q_prep_areas[i] == NULL) {
+                PLUGIN_WARNING("db_query_allocate_preparation_area failed");
+                status = -1;
+                break;
+            }
+        }
+
+        break;
+    }
+
+    if (status != 0) {
         psql_database_delete(db);
         return -1;
     }
