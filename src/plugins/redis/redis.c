@@ -540,6 +540,12 @@ static void redis_read_info(redis_node_t *rn)
                 }
                 value = VALUE_COUNTER_FLOAT64(raw);
             }   break;
+            case FAM_REDIS_MASTER_LINK_UP:
+                if (strcmp(val, "up") == 0)
+                    value = VALUE_GAUGE(1);
+                else
+                    value = VALUE_GAUGE(0);
+                break;
             default:
                 if (rn->fams[ri->fam].type == METRIC_TYPE_GAUGE) {
                     double raw = 0;
