@@ -70,6 +70,9 @@ static void logind_session_free(logind_session_t *ls)
 
 static char *get_session_type(char *type)
 {
+    if (type == NULL)
+        return session_types[0];
+
     for (size_t i = 1; i < session_types_size; i++) {
         if (strcmp(type, session_types[i]) == 0)
             return type;
@@ -80,6 +83,9 @@ static char *get_session_type(char *type)
 
 static char *get_session_class(char *class)
 {
+    if (class == NULL)
+        return session_classes[0];
+
     for (size_t i = 1; i < session_classes_size; i++) {
         if (strcmp(class, session_classes[i]) == 0)
             return class;
@@ -133,13 +139,13 @@ static int logind_session_cmp(void *a, void *b)
     return 0;
 }
 
-static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char *type, char *class)
+static int logind_session_inc(c_avl_tree_t *tree, char *seat, int remote, char *type, char *class)
 {
     logind_session_t lk = {0};
     logind_session_t *lv = NULL;
 
     if (logind_group_by & LOGIND_GROUP_BY_SEAT) {
-        if (seat[0] == '\0')
+        if ((seat == NULL) || (seat[0] == '\0'))
             lk.seat = "none";
         else
             lk.seat = seat;
@@ -148,17 +154,11 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
     if (logind_group_by & LOGIND_GROUP_BY_REMOTE)
         lk.remote = remote == 0 ? 0 : 1;
 
-    if (logind_group_by & LOGIND_GROUP_BY_TYPE) {
-        if (type == NULL)
-            return -1;
+    if (logind_group_by & LOGIND_GROUP_BY_TYPE)
         lk.type = get_session_type(type);
-    }
 
-    if (logind_group_by & LOGIND_GROUP_BY_CLASS) {
-        if (class == NULL)
-            return -1;
+    if (logind_group_by & LOGIND_GROUP_BY_CLASS)
         lk.class = get_session_class(class);
-    }
 
     int status = c_avl_get(tree, &lk, (void *)&lv);
     if (status == 0) {
@@ -171,12 +171,7 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
         return -1;
 
     if (logind_group_by & LOGIND_GROUP_BY_SEAT) {
-        if (seat == NULL) {
-            logind_session_free(ls);
-            return -1;
-        }
-
-        if (seat[0] == '\0')
+        if ((seat == NULL) || (seat[0] == '\0'))
             ls->seat = strdup("none");
         else
             ls->seat = strdup(seat);
@@ -191,11 +186,6 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
         ls->remote = remote == 0 ? 0 : 1;
 
     if (logind_group_by & LOGIND_GROUP_BY_TYPE) {
-        if (ls->type == NULL) {
-            logind_session_free(ls);
-            return -1;
-        }
-
         ls->type = strdup(get_session_type(type));
         if (ls->type == NULL) {
             logind_session_free(ls);
@@ -204,11 +194,6 @@ static int logind_session_inc (c_avl_tree_t *tree, char *seat, int remote, char 
     }
 
     if (logind_group_by & LOGIND_GROUP_BY_CLASS) {
-        if (ls->class == NULL) {
-            logind_session_free(ls);
-            return -1;
-        }
-
         ls->class = strdup(get_session_class(class));
         if (ls->class == NULL) {
             logind_session_free(ls);
