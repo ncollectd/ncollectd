@@ -418,8 +418,8 @@ static int bind_traffic_histograms(metric_family_t *fams, label_set_t *labels, h
         h->buckets[0].counter = total;
 
         metric_family_append(&fams[tf[i].fam], VALUE_HISTOGRAM(h), labels, NULL);
-        histogram_destroy(ah[i]);
-        ah[i] = NULL;
+        histogram_destroy(ah[tf[i].traffic]);
+        ah[tf[i].traffic] = NULL;
     }
 
     return 0;
