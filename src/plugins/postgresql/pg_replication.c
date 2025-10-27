@@ -116,9 +116,10 @@ int pg_replication_slots(PGconn *conn, int version, metric_family_t *fams, label
     int param_lengths[1] = {0};
     int param_formats[1] = {0};
 
-    int status = strbuf_putstr(&buf, "SELECT slot_name, database, active, "
-                                     "       pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)"
-                                     "  FROM pg_replication_slots");
+    int status = strbuf_putstr(&buf,
+        "SELECT slot_name, database, active, "
+        "       (case pg_is_in_recovery() when 't' then 0::float else pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)::float end) AS pg_wal_lsn_diff"
+        "  FROM pg_replication_slots");
 
     if (db != NULL) {
         status |= strbuf_putstr(&buf, " WHERE database = $1");
@@ -161,9 +162,9 @@ int pg_replication_slots(PGconn *conn, int version, metric_family_t *fams, label
             continue;
         char *col_slot_name = PQgetvalue(res, i, 0);
 
-        if (PQgetisnull(res, i, 1))
-            continue;
-        char *col_database = PQgetvalue(res, i, 1);
+        char *col_database = "null";
+        if (!PQgetisnull(res, i, 1))
+            col_database = PQgetvalue(res, i, 1);
 
         if (!PQgetisnull(res, i, 2))
             metric_family_append(&fams[FAM_PG_REPLICATION_SLOT_ACTIVE],
