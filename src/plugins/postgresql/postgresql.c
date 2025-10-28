@@ -618,6 +618,26 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help= "Time spent in fsync operations in seconds.",
     },
+    [FAM_PG_BUFFERCACHE_BUFFERS_USED] = {
+        .name = "pg_buffercache_buffers_used",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of used shared buffers."
+    },
+    [FAM_PG_BUFFERCACHE_BUFFERS_UNUSED] = {
+        .name = "pg_buffercache_buffers_unused",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of unused shared buffers."
+    },
+    [FAM_PG_BUFFERCACHE_BUFFERS_DIRTY] = {
+        .name = "pg_buffercache_buffers_dirty",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of dirty shared buffers."
+    },
+    [FAM_PG_BUFFERCACHE_BUFFERS_PINNED] = {
+        .name = "pg_buffercache_buffers_pinned",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of pinned shared buffers."
+    },
 };
 
 /* Appends the (parameter, value) pair to the string pointed to by 'buf' suitable
@@ -659,6 +679,7 @@ typedef enum {
     COLLECT_IO                 = (1 <<  17),
     COLLECT_CHECKPOINTER       = (1 <<  18),
     COLLECT_SETTINGS           = (1 <<  19),
+    COLLECT_BUFFERCACHE        = (1 <<  20),
 } pg_flag_t;
 
 typedef struct pg_stat_filter {
@@ -743,6 +764,7 @@ static pg_flags_t pg_flags[] = {
     { "io",                 COLLECT_SLRU               },
     { "checkpointer",       COLLECT_CHECKPOINTER       },
     { "settings",           COLLECT_SETTINGS           },
+    { "buffercache",        COLLECT_BUFFERCACHE        },
 };
 static size_t pg_flags_size = STATIC_ARRAY_SIZE(pg_flags);
 
@@ -1200,6 +1222,8 @@ static int psql_read(user_data_t *ud)
         pg_stat_checkpointer(db->conn, db->server_version, db->fams, &db->labels);
     if (db->flags & COLLECT_SETTINGS)
         pg_settings(db->conn, db->server_version, &db->labels, submit);
+    if (db->flags & COLLECT_BUFFERCACHE)
+        pg_buffercache(db->conn, db->server_version, db->fams, &db->labels);
 
     plugin_dispatch_metric_family_array_filtered(db->fams, FAM_PG_MAX, db->filter, submit);
 
