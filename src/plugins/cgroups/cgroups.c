@@ -997,18 +997,8 @@ static int  read_cgroup_file(int dir_fd, const char *filename,
     return 0;
 }
 
-static int read_cgroup(int dir_fd, const char *filename,
-                       const char *cgroup_name, kind_cgroup_t kind)
+static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup_t kind)
 {
-    if (!exclist_match(&excl_cgroup, cgroup_name))
-        return 0;
-
-    DIR *dir = opendirat(dir_fd, filename);
-    if (dir == NULL)
-        return 0;
-
-    int cgroup_fd = dirfd(dir);
-
     switch(kind) {
         case KIND_CGROUP_V2:
             read_cpu_stat_v2(cgroup_fd, cgroup_name);
@@ -1062,6 +1052,21 @@ static int read_cgroup(int dir_fd, const char *filename,
             break;
     }
 
+    return 0;
+}
+
+static int read_cgroup(int dir_fd, const char *filename,
+                       const char *cgroup_name, kind_cgroup_t kind)
+{
+    DIR *dir = opendirat(dir_fd, filename);
+    if (dir == NULL)
+        return 0;
+
+    int cgroup_fd = dirfd(dir);
+
+    if (exclist_match(&excl_cgroup, cgroup_name))
+        read_cgroup_stats(cgroup_fd, cgroup_name, kind);
+
     struct dirent *dirent;
     while ((dirent = readdir(dir)) != NULL) {
         if ((dirent->d_type == DT_DIR) && (dirent->d_name[0] != '.')) {
@@ -1070,6 +1075,7 @@ static int read_cgroup(int dir_fd, const char *filename,
             read_cgroup(cgroup_fd, dirent->d_name, path, kind);
         }
     }
+
     closedir(dir);
 
     return 0;
