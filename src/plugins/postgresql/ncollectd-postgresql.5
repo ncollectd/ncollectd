@@ -175,6 +175,10 @@ the specific database.
 .It \fBarchiver\fP
 .It \fBbgwriter\fP
 Read bgwriter stats from \f(CWpg_stat_bgwriter\fP.
+.It \fBbuffercache\fP
+Since version 16 of PostgreSQL.
+Read the state of the shared buffer cache. The user needs the privileges of the pg_monitor role.
+You need to install the extension pg_buffercache.
 .It \fBslru\fP
 .It \fBio\fP
 .It \fBtable\fP

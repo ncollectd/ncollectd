@@ -43,3 +43,5 @@ int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *
 int pg_stat_io(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels);
 
 int pg_settings(PGconn *conn, int version, label_set_t *labels, cdtime_t submit);
+
+int pg_buffercache(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels);
