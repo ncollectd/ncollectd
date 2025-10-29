@@ -48,12 +48,12 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
 
     int fields = PQnfields(res);
     if (version >= 100000)  {
-        if (fields < 7) {
+        if (fields < 6) {
             PQclear(res);
             return 0;
         }
     } else {
-        if (fields < 6) {
+        if (fields < 5) {
             PQclear(res);
             return 0;
         }
@@ -72,26 +72,25 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
             continue;
         char *col_state = PQgetvalue(res, i, 2);
 
+        char *col_current_wal_lsn = NULL;
         if (!PQgetisnull(res, i, 3))
-            metric_family_append(&fams[FAM_PG_REPLICATION_CURRENT_WAL_LSN],
-                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
-                                 &(label_pair_const_t){.name="application", .value=col_application_name},
-                                 &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
-                                 &(label_pair_const_t){.name="state", .value=col_state},
-                                 NULL);
-        if (!PQgetisnull(res, i, 5))
+            col_current_wal_lsn = PQgetvalue(res, i, 3);
+
+        if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_REPLICATION_WAL_LSN_DIFF],
-                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 5))), labels,
+                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
                                  &(label_pair_const_t){.name="application", .value=col_application_name},
                                  &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
+                                 &(label_pair_const_t){.name="wal", .value= col_current_wal_lsn},
                                  &(label_pair_const_t){.name="state", .value=col_state},
                                  NULL);
         if (version >= 100000) {
-            if (!PQgetisnull(res, i, 4))
+            if (!PQgetisnull(res, i, 5))
                 metric_family_append(&fams[FAM_PG_REPLICATION_CURRENT_WAL_LSN_BYTES],
-                                     VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
+                                     VALUE_GAUGE(atof(PQgetvalue(res, i, 5))), labels,
                                      &(label_pair_const_t){.name="application", .value=col_application_name},
                                      &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
+                                     &(label_pair_const_t){.name="wal", .value= col_current_wal_lsn},
                                      &(label_pair_const_t){.name="state", .value=col_state},
                                      NULL);
         }
@@ -117,7 +116,7 @@ int pg_replication_slots(PGconn *conn, int version, metric_family_t *fams, label
     int param_formats[1] = {0};
 
     int status = strbuf_putstr(&buf,
-        "SELECT slot_name, database, active, "
+        "SELECT slot_name, database, active::int,"
         "       (case pg_is_in_recovery() when 't' then 0::float else pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)::float end) AS pg_wal_lsn_diff"
         "  FROM pg_replication_slots");
 
