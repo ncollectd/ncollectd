@@ -420,11 +420,6 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Max duration in seconds any active transaction has been running",
     },
-    [FAM_PG_REPLICATION_CURRENT_WAL_LSN] = {
-        .name = "pg_replication_current_wal_lsn",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "WAL position.",
-    },
     [FAM_PG_REPLICATION_CURRENT_WAL_LSN_BYTES] = {
         .name = "pg_replication_current_wal_lsn_bytes",
         .type = METRIC_TYPE_GAUGE,
