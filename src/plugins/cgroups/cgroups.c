@@ -24,6 +24,7 @@ enum {
     FAM_CGROUPS_CPU_THROTTLED_SECONDS,
     FAM_CGROUPS_PROCESSES,
     FAM_CGROUPS_MEMORY_BYTES,
+    FAM_CGROUPS_SWAP_BYTES,
     FAM_CGROUPS_MEMORY_SWAP_BYTES,
     FAM_CGROUPS_MEMORY_ANONYMOUS_BYTES,
     FAM_CGROUPS_MEMORY_PAGE_CACHE_BYTES,
@@ -147,6 +148,11 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "The total amount of memory currently being used "
                 "by the cgroup and its descendants.",
+    },
+    [FAM_CGROUPS_SWAP_BYTES] = {
+        .name = "system_cgroups_swap_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The total amount of swap currently being used by the cgroup and its descendants.",
     },
     [FAM_CGROUPS_MEMORY_SWAP_BYTES] = {
         .name = "system_cgroups_memory_swap_bytes",
@@ -1012,7 +1018,7 @@ static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup
                                         &fams[FAM_CGROUPS_MEMORY_BYTES]);
 
             read_cgroup_file(cgroup_fd, "memory.swap.current", cgroup_name,
-                                        &fams[FAM_CGROUPS_MEMORY_SWAP_BYTES]);
+                                        &fams[FAM_CGROUPS_SWAP_BYTES]);
 
             read_memory_stat(cgroup_fd, cgroup_name);
 
