@@ -12,11 +12,11 @@ if(BUILD_PLUGIN_PDNS)
     gperf_generate(pdns.gperf "${CMAKE_CURRENT_BINARY_DIR}/pdns.h" PDNS_H)
     set(PLUGIN_PDNS_SRC pdns.c)
     add_library(pdns MODULE ${PLUGIN_PDNS_SRC} ${PDNS_H})
-    target_link_libraries(pdns PRIVATE libutils libmetric)
+    target_link_libraries(pdns PRIVATE libmetric libutils)
     set_target_properties(pdns PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_pdns EXCLUDE_FROM_ALL pdns_test.c ${PLUGIN_PDNS_SRC})
-#    target_link_libraries(test_plugin_pdns libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_pdns libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_pdns)
 #    add_test(NAME test_plugin_pdns COMMAND test_plugin_pdns WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

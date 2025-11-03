@@ -125,7 +125,7 @@ set(BUILD_PLUGIN_PROCESSES ${BUILD_PLUGIN_PROCESSES} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_PROCESSES)
     set(PLUGIN_PROCESSES_SRC processes.c processes.h)
-    set(PLUGIN_PROCESSES_LIBS libutils libmetric)
+    set(PLUGIN_PROCESSES_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         list(APPEND PLUGIN_PROCESSES_SRC processes_linux.c taskstats.c taskstats.h)
@@ -172,7 +172,7 @@ if(BUILD_PLUGIN_PROCESSES)
     set_target_properties(processes PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_processes EXCLUDE_FROM_ALL processes_test.c ${PLUGIN_PROCESSES_SRC})
-#    target_link_libraries(test_plugin_processes libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_processes libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_processes)
 #    add_test(NAME test_plugin_processes COMMAND test_plugin_processes WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

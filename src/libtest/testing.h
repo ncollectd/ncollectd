@@ -126,6 +126,15 @@ static int check_count__;
 #define EXPECT_EQ_DOUBLE(expect, actual)                                                 \
     EXPECT_EQ_DOUBLE_STR(expect, actual, #actual)
 
+#define EXPECT_EQ_FAM_LIST(expect, expect_size, actual, actual_size)                     \
+    do {                                                                                 \
+        if (test_metric_family_list_cmp(expect, expect_size, actual, actual_size)) {     \
+            printf("not ok %i - %s = %s\n", ++check_count__, #actual, #expect);          \
+            return -1;                                                                   \
+        }                                                                                \
+        printf("ok %i - %s = %s\n", ++check_count__, #actual, #expect);                  \
+    } while (0)                                                                          \
+
 #define CHECK_NOT_NULL(expr)                                                             \
     do {                                                                                 \
         void const *ptr_;                                                                \
@@ -140,6 +149,8 @@ static int check_count__;
         OK1(status_ == 0L, #expr);                                                       \
     } while (0)
 
+int test_metric_family_list_cmp(metric_family_t *a, size_t size_a,
+                               metric_family_t *b, size_t size_b);
 
 int plugin_test_set_procpath(const char *path);
 int plugin_test_set_syspath(const char *path);

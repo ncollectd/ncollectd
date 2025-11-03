@@ -12,11 +12,11 @@ if(BUILD_PLUGIN_KEA)
     gperf_generate(kea_stats.gperf "${CMAKE_CURRENT_BINARY_DIR}/kea_stats.h" KEA_STATS_H)
     set(PLUGIN_KEA_SRC kea.c ${KEA_STATS_H})
     add_library(kea MODULE ${PLUGIN_KEA_SRC})
-    target_link_libraries(kea PRIVATE libutils libmetric libxson)
+    target_link_libraries(kea PRIVATE libmetric libutils libxson)
     set_target_properties(kea PROPERTIES PREFIX "")
 
     add_executable(test_plugin_kea EXCLUDE_FROM_ALL kea_test.c ${PLUGIN_KEA_SRC})
-    target_link_libraries(test_plugin_kea libtest libutils libmetric libxson -lm -lpthread)
+    target_link_libraries(test_plugin_kea libtest libmetric libutils libxson -lm -lpthread)
     add_dependencies(build_tests test_plugin_kea)
     add_test(NAME test_plugin_kea COMMAND test_plugin_kea WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

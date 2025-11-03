@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_UNAME ${BUILD_PLUGIN_UNAME} PARENT_SCOPE)
 if(BUILD_PLUGIN_UNAME)
     set(PLUGIN_UNAME_SRC uname.c)
     add_library(uname MODULE ${PLUGIN_UNAME_SRC})
-    target_link_libraries(uname PRIVATE libutils libmetric)
+    target_link_libraries(uname PRIVATE libmetric libutils)
     set_target_properties(uname PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_uname EXCLUDE_FROM_ALL uname_test.c ${PLUGIN_UNAME_SRC})
-#    target_link_libraries(test_plugin_uname libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_uname libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_uname)
 #    add_test(NAME test_plugin_uname COMMAND test_plugin_uname WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

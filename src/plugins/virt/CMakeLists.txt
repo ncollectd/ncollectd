@@ -21,11 +21,11 @@ set(BUILD_PLUGIN_VIRT ${BUILD_PLUGIN_VIRT} PARENT_SCOPE)
 if(BUILD_PLUGIN_VIRT)
     set(PLUGIN_VIRT_SRC virt.c)
     add_library(virt MODULE ${PLUGIN_VIRT_SRC})
-    target_link_libraries(virt PRIVATE libutils libmetric LibVirt::LibVirt LibXml2::LibXml2)
+    target_link_libraries(virt PRIVATE libmetric libutils LibVirt::LibVirt LibXml2::LibXml2)
     set_target_properties(virt PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_virt EXCLUDE_FROM_ALL virt_test.c ${PLUGIN_VIRT_SRC})
-#    target_link_libraries(test_plugin_virt libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_virt libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_virt)
 #    add_test(NAME test_plugin_virt COMMAND test_plugin_virt WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

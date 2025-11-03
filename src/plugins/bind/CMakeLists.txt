@@ -24,7 +24,7 @@ if(BUILD_PLUGIN_BIND)
         bind_json.c
         bind_json.h)
     add_library(bind MODULE ${PLUGIN_BIND_SRC} ${BIND_FAMS_C})
-    target_link_libraries(bind PRIVATE libutils libmetric libxson LibCurl::LibCurl LibXml2::LibXml2)
+    target_link_libraries(bind PRIVATE libmetric libutils libxson LibCurl::LibCurl LibXml2::LibXml2)
     set_target_properties(bind PROPERTIES PREFIX "")
     install(TARGETS bind DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
     configure_file(ncollectd-bind.5 ncollectd-bind.5 @ONLY)

@@ -32,7 +32,7 @@ set(BUILD_PLUGIN_TAPE ${BUILD_PLUGIN_TAPE} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_TAPE)
     set(PLUGIN_TAPE_SRC tape.c)
-    set(PLUGIN_TAPE_LIBS libutils libmetric)
+    set(PLUGIN_TAPE_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         list(APPEND PLUGIN_TAPE_SRC tape_linux.c)

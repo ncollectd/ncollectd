@@ -12,11 +12,11 @@ if(BUILD_PLUGIN_RECURSOR)
     gperf_generate(recursor.gperf "${CMAKE_CURRENT_BINARY_DIR}/recursor.h" RECURSOR_H)
     set(PLUGIN_RECURSOR_SRC recursor.c)
     add_library(recursor MODULE ${PLUGIN_RECURSOR_SRC} ${RECURSOR_H})
-    target_link_libraries(recursor PRIVATE libutils libmetric)
+    target_link_libraries(recursor PRIVATE libmetric libutils)
     set_target_properties(recursor PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_recursor EXCLUDE_FROM_ALL recursor_test.c ${PLUGIN_RECURSOR_SRC})
-#    target_link_libraries(test_plugin_recursor libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_recursor libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_recursor)
 #    add_test(NAME test_plugin_recursor COMMAND test_plugin_recursor WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_THERMAL ${BUILD_PLUGIN_THERMAL} PARENT_SCOPE)
 if(BUILD_PLUGIN_THERMAL)
     set(PLUGIN_THERMAL_SRC thermal.c)
     add_library(thermal MODULE ${PLUGIN_THERMAL_SRC})
-    target_link_libraries(thermal PRIVATE libutils libmetric)
+    target_link_libraries(thermal PRIVATE libmetric libutils)
     set_target_properties(thermal PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_thermal EXCLUDE_FROM_ALL thermal_test.c ${PLUGIN_THERMAL_SRC})
-#    target_link_libraries(test_plugin_thermal libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_thermal libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_thermal)
 #    add_test(NAME test_plugin_thermal COMMAND test_plugin_thermal WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

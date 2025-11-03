@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_UUID ${BUILD_PLUGIN_UUID} PARENT_SCOPE)
 if(BUILD_PLUGIN_UUID)
     set(PLUGIN_UUID_SRC uuid.c)
     add_library(uuid MODULE ${PLUGIN_UUID_SRC})
-    target_link_libraries(uuid PRIVATE libutils libmetric)
+    target_link_libraries(uuid PRIVATE libmetric libutils)
     set_target_properties(uuid PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_uuid EXCLUDE_FROM_ALL uuid_test.c ${PLUGIN_UUID_SRC})
-#    target_link_libraries(test_plugin_uuid libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_uuid libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_uuid)
 #    add_test(NAME test_plugin_uuid COMMAND test_plugin_uuid WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_EDAC ${BUILD_PLUGIN_EDAC} PARENT_SCOPE)
 if(BUILD_PLUGIN_EDAC)
     set(PLUGIN_EDAC_SRC edac.c)
     add_library(edac MODULE ${PLUGIN_EDAC_SRC})
-    target_link_libraries(edac PRIVATE libutils libmetric)
+    target_link_libraries(edac PRIVATE libmetric libutils)
     set_target_properties(edac PROPERTIES PREFIX "")
 
     add_executable(test_plugin_edac EXCLUDE_FROM_ALL edac_test.c ${PLUGIN_EDAC_SRC})
-    target_link_libraries(test_plugin_edac libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_edac libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_edac)
     add_test(NAME test_plugin_edac COMMAND test_plugin_edac WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

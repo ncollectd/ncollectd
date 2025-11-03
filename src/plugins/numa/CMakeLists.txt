@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_NUMA ${BUILD_PLUGIN_NUMA} PARENT_SCOPE)
 if(BUILD_PLUGIN_NUMA)
     set(PLUGIN_NUMA_SRC numa.c)
     add_library(numa MODULE ${PLUGIN_NUMA_SRC})
-    target_link_libraries(numa PRIVATE libutils libmetric)
+    target_link_libraries(numa PRIVATE libmetric libutils)
     set_target_properties(numa PROPERTIES PREFIX "")
 
     add_executable(test_plugin_numa EXCLUDE_FROM_ALL numa_test.c ${PLUGIN_NUMA_SRC})
-    target_link_libraries(test_plugin_numa libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_numa libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_numa)
     add_test(NAME test_plugin_numa COMMAND test_plugin_numa WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

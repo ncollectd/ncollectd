@@ -26,7 +26,7 @@ set(BUILD_PLUGIN_SENSORS ${BUILD_PLUGIN_SENSORS} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_SENSORS)
     set(PLUGIN_SENSORS_SRC sensors.c)
-    set(PLUGIN_SENSORS_LIBS libutils libmetric)
+    set(PLUGIN_SENSORS_LIBS libmetric libutils)
 
     if(BUILD_DARWIN)
         list(APPEND PLUGIN_SENSORS_SRC sensors_darwin.c)

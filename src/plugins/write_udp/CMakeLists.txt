@@ -13,11 +13,11 @@ set(BUILD_PLUGIN_WRITE_UDP ${BUILD_PLUGIN_WRITE_UDP} PARENT_SCOPE)
 if(BUILD_PLUGIN_WRITE_UDP)
     set(PLUGIN_WRITE_UDP_SRC write_udp.c)
     add_library(write_udp MODULE ${PLUGIN_WRITE_UDP_SRC})
-    target_link_libraries(write_udp PRIVATE libutils libmetric libxson libformat)
+    target_link_libraries(write_udp PRIVATE libmetric libutils libxson libformat)
     set_target_properties(write_udp PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_write_udp EXCLUDE_FROM_ALL write_udp_test.c ${PLUGIN_WRITE_UDP_SRC})
-#    target_link_libraries(test_plugin_write_udp libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_write_udp libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_write_udp)
 #    add_test(NAME test_plugin_write_udp COMMAND test_plugin_write_udp WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -16,11 +16,11 @@ if(BUILD_PLUGIN_MEMINFO)
     gperf_generate(meminfo.gperf "${CMAKE_CURRENT_BINARY_DIR}/meminfo.h" MEMINFO_H)
     set(PLUGIN_MEMINFO_SRC meminfo.c)
     add_library(meminfo MODULE ${PLUGIN_MEMINFO_SRC} ${MEMINFO_H})
-    target_link_libraries(meminfo PRIVATE libutils libmetric)
+    target_link_libraries(meminfo PRIVATE libmetric libutils)
     set_target_properties(meminfo PROPERTIES PREFIX "")
 
     add_executable(test_plugin_meminfo EXCLUDE_FROM_ALL meminfo_test.c ${PLUGIN_MEMINFO_SRC})
-    target_link_libraries(test_plugin_meminfo libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_meminfo libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_meminfo)
     add_test(NAME test_plugin_meminfo COMMAND test_plugin_meminfo WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

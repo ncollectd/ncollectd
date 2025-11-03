@@ -72,7 +72,7 @@ set(BUILD_PLUGIN_INTERFACE ${BUILD_PLUGIN_INTERFACE} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_INTERFACE)
     set(PLUGIN_INTERFACE_SRC interface.c interface.h)
-    set(PLUGIN_INTERFACE_LIBS libutils libmetric)
+    set(PLUGIN_INTERFACE_LIBS libmetric libutils)
 
     if(HAVE_IFADDRS_H)
         list(APPEND PLUGIN_INTERFACE_DEFINITIONS HAVE_IFADDRS_H)
@@ -142,7 +142,7 @@ if(BUILD_PLUGIN_INTERFACE)
     set_target_properties(interface PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_interface EXCLUDE_FROM_ALL interface_test.c ${PLUGIN_INTERFACE_SRC})
-#    target_link_libraries(test_plugin_interface libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_interface libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_interface)
 #    add_test(NAME test_plugin_interface COMMAND test_plugin_interface WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

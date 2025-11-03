@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_MATCH_CSV ${BUILD_PLUGIN_MATCH_CSV} PARENT_SCOPE)
 if(BUILD_PLUGIN_MATCH_CSV)
     set(PLUGIN_MATCH_CSV_SRC match_csv.c)
     add_library(match_csv MODULE ${PLUGIN_MATCH_CSV_SRC})
-    target_link_libraries(match_csv PRIVATE libutils libmetric)
+    target_link_libraries(match_csv PRIVATE libmetric libutils)
     set_target_properties(match_csv PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_match_csv EXCLUDE_FROM_ALL match_csv_test.c ${PLUGIN_MATCH_CSV_SRC})
-#    target_link_libraries(test_plugin_match_csv libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_match_csv libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_match_csv)
 #    add_test(NAME test_plugin_match_csv COMMAND test_plugin_match_csv WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

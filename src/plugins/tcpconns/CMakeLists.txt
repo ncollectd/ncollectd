@@ -62,7 +62,7 @@ set(BUILD_PLUGIN_TCPCONNS ${BUILD_PLUGIN_TCPCONNS} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_TCPCONNS)
     set(PLUGIN_TCPCONNS_SRC tcpconns.c)
-    set(PLUGIN_TCPCONNS_LIBS libutils libmetric)
+    set(PLUGIN_TCPCONNS_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         if(HAVE_LINUX_INET_DIAG_H)
@@ -90,7 +90,7 @@ if(BUILD_PLUGIN_TCPCONNS)
     set_target_properties(tcpconns PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_tcpconns EXCLUDE_FROM_ALL tcpconns_test.c ${PLUGIN_TCPCONNS_SRC})
-#    target_link_libraries(test_plugin_tcpconns libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_tcpconns libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_tcpconns)
 #    add_test(NAME test_plugin_tcpconns COMMAND test_plugin_tcpconns WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

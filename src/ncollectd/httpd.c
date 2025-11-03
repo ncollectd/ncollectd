@@ -12,6 +12,7 @@
 #include "libxson/render.h"
 #include "libmdb/mdb.h"
 #include "libformat/notification_json.h"
+#include "libmetric/parser.h"
 
 
 #ifndef UNIX_PATH_MAX
@@ -199,6 +200,10 @@ fprintf(stderr, "httpd_request : [%s] %d\n", pfields[2], (int)plen);
             if (http_method != HTTP_METHOD_POST)
                 goto error_501;
 
+            metric_parser_t *mp = metric_parser_alloc(NULL, NULL);
+            if (mp == NULL)
+                goto error_501;
+
             plugin_ctx_t ctx = { .interval = interval_g };
             plugin_ctx_t old_ctx = plugin_set_ctx(ctx);
 
@@ -207,7 +212,7 @@ fprintf(stderr, "httpd_request : [%s] %d\n", pfields[2], (int)plen);
             cdtime_t time = cdtime();
 fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
             size_t lineno = 0;
-            metric_family_t fam  = {0};
+
 
             while (buffer_len > 0) {
                 char *end = memchr(buffer, '\n', buffer_len);
@@ -219,8 +224,7 @@ fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
                 buffer[line_size] = '\0';
                 lineno += 1;
                 if (line_size > 0) {
-                    status = metric_parse_line(&fam, plugin_dispatch_metric_family_filtered, NULL,
-                                                     NULL, 0, NULL, interval_g, time, line);
+                    status = metric_parse_line(mp, line);
                     if (status < 0)
                         break;
                 }
@@ -229,7 +233,9 @@ fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
                 buffer = end + 1;              // +1
             }
 
-            metric_parser_dispatch(&fam, plugin_dispatch_metric_family_filtered, NULL);
+            metric_parser_dispatch(mp, plugin_dispatch_metric_family_filtered, NULL, time);
+
+            metric_parser_free(mp);
 
             plugin_set_ctx(old_ctx);
 

@@ -21,7 +21,7 @@ set(BUILD_PLUGIN_BATTERY ${BUILD_PLUGIN_BATTERY} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_BATTERY)
     set(PLUGIN_BATTERY_SRC battery.c)
-    set(PLUGIN_BATTERY_LIBS libutils libmetric)
+    set(PLUGIN_BATTERY_LIBS libmetric libutils)
 
     if(BUILD_DARWIN)
         list(APPEND PLUGIN_BATTERY_LIBS LibIokit::LibIokit)
@@ -32,7 +32,7 @@ if(BUILD_PLUGIN_BATTERY)
     set_target_properties(battery PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_battery EXCLUDE_FROM_ALL battery_test.c ${PLUGIN_BATTERY_SRC})
-#    target_link_libraries(test_plugin_battery libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_battery libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_battery)
 #    add_test(NAME test_plugin_battery COMMAND test_plugin_battery WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

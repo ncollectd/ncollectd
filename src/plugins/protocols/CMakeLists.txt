@@ -23,11 +23,11 @@ if(BUILD_PLUGIN_PROTOCOLS)
                              snmp6_fam.c snmp6_fam.h
                              sctp_fam.c sctp_fam.h)
     add_library(protocols MODULE ${PLUGIN_PROTOCOLS_SRC} ${NETSTAT_C} ${SNMP_C} ${SNMP6_C} ${SCTP_C})
-    target_link_libraries(protocols PRIVATE libutils libmetric)
+    target_link_libraries(protocols PRIVATE libmetric libutils)
     set_target_properties(protocols PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_protocols EXCLUDE_FROM_ALL protocols_test.c ${PLUGIN_PROTOCOLS_SRC})
-#    target_link_libraries(test_plugin_protocols libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_protocols libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_protocols)
 #    add_test(NAME test_plugin_protocols COMMAND test_plugin_protocols WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

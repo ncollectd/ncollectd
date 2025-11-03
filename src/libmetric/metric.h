@@ -171,16 +171,6 @@ int metric_value_clone(value_t *dst, value_t src, metric_type_t type);
 struct plugin_filter_s;
 typedef struct plugin_filter_s plugin_filter_t;
 
-typedef int (*dispatch_metric_family_t)(metric_family_t *fam, plugin_filter_t *filter,
-                                        cdtime_t time);
-
-int metric_parse_line(metric_family_t *fam,  dispatch_metric_family_t dispatch,
-                      plugin_filter_t *filter, const char *prefix, size_t prefix_size,
-                      label_set_t *labels_extra, cdtime_t interval, cdtime_t ts,
-                      const char *line);
-
-int metric_parser_dispatch(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                           plugin_filter_t *filter);
 
 typedef struct {
     bool fixed;

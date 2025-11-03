@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_OLSRD ${BUILD_PLUGIN_OLSRD} PARENT_SCOPE)
 if(BUILD_PLUGIN_OLSRD)
     set(PLUGIN_OLSRD_SRC olsrd.c)
     add_library(olsrd MODULE ${PLUGIN_OLSRD_SRC})
-    target_link_libraries(olsrd PRIVATE libutils libmetric)
+    target_link_libraries(olsrd PRIVATE libmetric libutils)
     set_target_properties(olsrd PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_olsrd EXCLUDE_FROM_ALL olsrd_test.c ${PLUGIN_OLSRD_SRC})
-#    target_link_libraries(test_plugin_olsrd libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_olsrd libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_olsrd)
 #    add_test(NAME test_plugin_olsrd COMMAND test_plugin_olsrd WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

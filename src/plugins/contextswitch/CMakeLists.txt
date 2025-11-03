@@ -31,7 +31,7 @@ set(BUILD_PLUGIN_CONTEXTSWITCH ${BUILD_PLUGIN_CONTEXTSWITCH} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_CONTEXTSWITCH)
     set(PLUGIN_CONTEXTSWITCH_SRC contextswitch.c)
-    set(PLUGIN_CONTEXTSWITCH_LIBS libutils libmetric)
+    set(PLUGIN_CONTEXTSWITCH_LIBS libmetric libutils)
 
     if(BUILD_AIX)
         list(APPEND PLUGIN_CONTEXTSWITCH_LIBS LibPerfstat::LibPerfstat)
@@ -43,7 +43,7 @@ if(BUILD_PLUGIN_CONTEXTSWITCH)
 
     if(BUILD_LINUX)
         add_executable(test_plugin_contextswitch EXCLUDE_FROM_ALL contextswitch_linux_test.c ${PLUGIN_CONTEXTSWITCH_SRC})
-        target_link_libraries(test_plugin_contextswitch libtest libutils libmetric m)
+        target_link_libraries(test_plugin_contextswitch libtest libmetric libutils m)
         add_dependencies(build_tests test_plugin_contextswitch)
         add_test(NAME test_plugin_contextswitch COMMAND test_plugin_contextswitch WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif()

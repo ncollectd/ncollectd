@@ -38,11 +38,11 @@ set(BUILD_PLUGIN_PERL ${BUILD_PLUGIN_PERL} PARENT_SCOPE)
 if(BUILD_PLUGIN_PERL)
     set(PLUGIN_PERL_SRC perl.c)
     add_library(perl MODULE ${PLUGIN_PERL_SRC})
-    target_link_libraries(perl PRIVATE libutils libmetric LibPerl::LibPerl)
+    target_link_libraries(perl PRIVATE libmetric libutils LibPerl::LibPerl)
     set_target_properties(perl PROPERTIES PREFIX "")
 
     add_executable(test_plugin_perl EXCLUDE_FROM_ALL perl_test.c ${PLUGIN_PERL_SRC})
-    target_link_libraries(test_plugin_perl libtest libutils libmetric LibPerl::LibPerl Threads::Threads)
+    target_link_libraries(test_plugin_perl libtest libmetric libutils LibPerl::LibPerl Threads::Threads)
     add_dependencies(build_tests test_plugin_perl)
     add_test(NAME test_plugin_perl COMMAND test_plugin_perl WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

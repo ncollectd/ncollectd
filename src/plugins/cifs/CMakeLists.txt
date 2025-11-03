@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_CIFS ${BUILD_PLUGIN_CIFS} PARENT_SCOPE)
 if(BUILD_PLUGIN_CIFS)
     set(PLUGIN_CIFS_SRC cifs.c)
     add_library(cifs MODULE ${PLUGIN_CIFS_SRC})
-    target_link_libraries(cifs PRIVATE libutils libmetric)
+    target_link_libraries(cifs PRIVATE libmetric libutils)
     set_target_properties(cifs PROPERTIES PREFIX "")
 
     add_executable(test_plugin_cifs EXCLUDE_FROM_ALL cifs_test.c ${PLUGIN_CIFS_SRC})
-    target_link_libraries(test_plugin_cifs libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_cifs libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_cifs)
     add_test(NAME test_plugin_cifs COMMAND test_plugin_cifs WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

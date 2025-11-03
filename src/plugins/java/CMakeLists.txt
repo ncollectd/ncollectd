@@ -20,7 +20,7 @@ if(BUILD_PLUGIN_JAVA)
     set(PLUGIN_JAVA_SRC java.c jutil.c jutil.h notification.c metric.c config.c)
     add_library(java MODULE ${PLUGIN_JAVA_SRC})
     target_include_directories(java PRIVATE ${JNI_INCLUDE_DIRS})
-    target_link_libraries(java PRIVATE libutils libmetric ${JAVA_JVM_LIBRARY})
+    target_link_libraries(java PRIVATE libmetric libutils ${JAVA_JVM_LIBRARY})
     set_target_properties(java PROPERTIES PREFIX "")
 
     set(NCOLLECTD_API_SRC
@@ -58,7 +58,7 @@ if(BUILD_PLUGIN_JAVA)
     add_jar("generic-jmx" ${GENERIC_JMX_SRC})
 
 #    add_executable(test_plugin_java EXCLUDE_FROM_ALL java_test.c ${PLUGIN_JAVA_SRC})
-#    target_link_libraries(test_plugin_java libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_java libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_java)
 #    add_test(NAME test_plugin_java COMMAND test_plugin_java WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

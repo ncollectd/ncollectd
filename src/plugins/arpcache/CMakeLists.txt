@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_ARPCACHE ${BUILD_PLUGIN_ARPCACHE} PARENT_SCOPE)
 if(BUILD_PLUGIN_ARPCACHE)
     set(PLUGIN_ARPCACHE_SRC arpcache.c)
     add_library(arpcache MODULE ${PLUGIN_ARPCACHE_SRC})
-    target_link_libraries(arpcache PRIVATE libutils libmetric)
+    target_link_libraries(arpcache PRIVATE libmetric libutils)
     set_target_properties(arpcache PROPERTIES PREFIX "")
 
     add_executable(test_plugin_arpcache EXCLUDE_FROM_ALL arpcache_test.c ${PLUGIN_ARPCACHE_SRC})
-    target_link_libraries(test_plugin_arpcache libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_arpcache libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_arpcache)
     add_test(NAME test_plugin_arpcache COMMAND test_plugin_arpcache WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

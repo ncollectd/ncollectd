@@ -20,11 +20,11 @@ set(BUILD_PLUGIN_ZONE ${BUILD_PLUGIN_ZONE} PARENT_SCOPE)
 if(BUILD_PLUGIN_ZONE)
     set(PLUGIN_ZONE_SRC zone.c)
     add_library(zone MODULE ${PLUGIN_ZONE_SRC})
-    target_link_libraries(zone PRIVATE libutils libmetric LibKstat::LibKstat)
+    target_link_libraries(zone PRIVATE libmetric libutils LibKstat::LibKstat)
     set_target_properties(zone PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_zone EXCLUDE_FROM_ALL zone_test.c ${PLUGIN_ZONE_SRC})
-#    target_link_libraries(test_plugin_zone libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_zone libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_zone)
 #    add_test(NAME test_plugin_zone COMMAND test_plugin_zone WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -61,7 +61,7 @@ set(BUILD_PLUGIN_CPU ${BUILD_PLUGIN_CPU} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_CPU)
     set(PLUGIN_CPU_SRC cpu.c cpu.h)
-    set(PLUGIN_CPU_LIBS libutils libmetric)
+    set(PLUGIN_CPU_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         list(APPEND PLUGIN_CPU_SRC cpu_linux.c)
@@ -93,7 +93,7 @@ if(BUILD_PLUGIN_CPU)
 
     if(BUILD_LINUX)
         add_executable(test_plugin_cpu EXCLUDE_FROM_ALL cpu_linux_test.c ${PLUGIN_CPU_SRC})
-        target_link_libraries(test_plugin_cpu libtest libutils libmetric m)
+        target_link_libraries(test_plugin_cpu libtest libmetric libutils m)
         add_dependencies(build_tests test_plugin_cpu)
         add_test(NAME test_plugin_cpu COMMAND test_plugin_cpu WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif()

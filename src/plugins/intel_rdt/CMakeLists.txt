@@ -16,11 +16,11 @@ set(BUILD_PLUGIN_INTEL_RDT ${BUILD_PLUGIN_INTEL_RDT} PARENT_SCOPE)
 if(BUILD_PLUGIN_INTEL_RDT)
     set(PLUGIN_INTEL_RDT_SRC intel_rdt.c proc_pids.c proc_pids.h config_cores.h config_cores.c)
     add_library(intel_rdt MODULE ${PLUGIN_INTEL_RDT_SRC})
-    target_link_libraries(intel_rdt PRIVATE libutils libmetric LibPqos::LibPqos)
+    target_link_libraries(intel_rdt PRIVATE libmetric libutils LibPqos::LibPqos)
     set_target_properties(intel_rdt PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_intel_rdt EXCLUDE_FROM_ALL intel_rdt_test.c ${PLUGIN_INTEL_RDT_SRC})
-#    target_link_libraries(test_plugin_intel_rdt libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_intel_rdt libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_intel_rdt)
 #    add_test(NAME test_plugin_intel_rdt COMMAND test_plugin_intel_rdt WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

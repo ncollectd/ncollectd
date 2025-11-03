@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_NFCONNTRACK ${BUILD_PLUGIN_NFCONNTRACK} PARENT_SCOPE)
 if(BUILD_PLUGIN_NFCONNTRACK)
     set(PLUGIN_NFCONNTRACK_SRC nfconntrack.c)
     add_library(nfconntrack MODULE ${PLUGIN_NFCONNTRACK_SRC})
-    target_link_libraries(nfconntrack PRIVATE libutils libmetric)
+    target_link_libraries(nfconntrack PRIVATE libmetric libutils)
     set_target_properties(nfconntrack PROPERTIES PREFIX "")
 
     add_executable(test_plugin_nfconntrack EXCLUDE_FROM_ALL nfconntrack_test.c ${PLUGIN_NFCONNTRACK_SRC})
-    target_link_libraries(test_plugin_nfconntrack libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_nfconntrack libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_nfconntrack)
     add_test(NAME test_plugin_nfconntrack COMMAND test_plugin_nfconntrack WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

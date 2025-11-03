@@ -8,6 +8,7 @@
 #include "ncollectd.h"
 #include "log.h"
 #include "libutils/common.h"
+#include "libutils/strbuf.h"
 #include "libmetric/label_set.h"
 #include "libmetric/metric_chars.h"
 
@@ -359,3 +360,108 @@ int label_set_qsort(label_set_t *labels)
     qsort(labels->ptr, labels->num, sizeof(*labels->ptr), label_pair_compare);
     return 0;
 }
+
+/* parse_label_value reads a label value, unescapes it and prints it to buf. On
+ * success, inout is updated to point to the character just *after* the label
+ * value, i.e. the character *following* the ending quotes - either a comma or
+ * closing curlies. */
+static int parse_label_value(strbuf_t *buf, char const **inout)
+{
+    char const *ptr = *inout;
+
+    if (ptr[0] != '"')
+        return EINVAL;
+    ptr++;
+
+    while (ptr[0] != '"') {
+        size_t valid_len = strcspn(ptr, "\\\"\n");
+        if (valid_len != 0) {
+            strbuf_putstrn(buf, ptr, valid_len);
+            ptr += valid_len;
+            continue;
+        }
+
+        if ((ptr[0] == 0) || (ptr[0] == '\n')) {
+            return EINVAL;
+        }
+
+        assert(ptr[0] == '\\');
+        if (ptr[1] == 0)
+            return EINVAL;
+
+        char tmp;
+        if (ptr[1] == 'n') {
+            tmp = '\n';
+        } else if (ptr[1] == 'r') {
+            tmp = '\r';
+        } else if (ptr[1] == 't') {
+            tmp = '\t';
+        } else {
+            tmp = ptr[1];
+        }
+
+        strbuf_putchar(buf, tmp);
+
+        ptr += 2;
+    }
+
+    assert(ptr[0] == '"');
+    ptr++;
+    *inout = ptr;
+    return 0;
+}
+
+int label_set_unmarshal(label_set_t *labels, char const **inout)
+{
+    int ret = 0;
+    char const *ptr = *inout;
+
+    if (ptr[0] != '{')
+        return EINVAL;
+
+    strbuf_t value = STRBUF_CREATE;
+    while ((ptr[0] == '{') || (ptr[0] == ',')) {
+        ptr++;
+
+        size_t key_len = label_valid_name_len(ptr);
+        if (key_len == 0) {
+            ret = EINVAL;
+            break;
+        }
+        char key[key_len + 1];
+        strncpy(key, ptr, key_len);
+        key[key_len] = 0;
+        ptr += key_len;
+
+        if (ptr[0] != '=') {
+            ret = EINVAL;
+            break;
+        }
+        ptr++;
+
+        strbuf_reset(&value);
+        int status = parse_label_value(&value, &ptr);
+        if (status != 0) {
+            ret = status;
+            break;
+        }
+
+        status = label_set_add(labels, true, key, value.ptr);
+        if (status != 0) {
+            ret = status;
+            break;
+        }
+    }
+    strbuf_destroy(&value);
+
+    if (ret != 0)
+        return ret;
+
+    if (ptr[0] != '}')
+        return EINVAL;
+
+    *inout = &ptr[1];
+
+    return 0;
+}
+

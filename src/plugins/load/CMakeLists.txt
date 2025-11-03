@@ -36,7 +36,7 @@ set(BUILD_PLUGIN_LOAD ${BUILD_PLUGIN_LOAD} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_LOAD)
     set(PLUGIN_LOAD_SRC load.c)
-    set(PLUGIN_LOAD_LIBS libutils libmetric)
+    set(PLUGIN_LOAD_LIBS libmetric libutils)
 
     if(HAVE_GETLOADAVG)
         list(APPEND PLUGIN_LOAD_DEFINITIONS HAVE_GETLOADAVG)
@@ -55,7 +55,7 @@ if(BUILD_PLUGIN_LOAD)
 
     if(BUILD_LINUX)
         add_executable(test_plugin_load EXCLUDE_FROM_ALL load_linux_test.c ${PLUGIN_LOAD_SRC})
-        target_link_libraries(test_plugin_load libtest libutils libmetric -lm)
+        target_link_libraries(test_plugin_load libtest libmetric libutils -lm)
         add_dependencies(build_tests test_plugin_load)
         add_test(NAME test_plugin_load COMMAND test_plugin_load WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif()

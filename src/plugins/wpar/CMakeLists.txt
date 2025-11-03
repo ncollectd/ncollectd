@@ -20,11 +20,11 @@ set(BUILD_PLUGIN_WPAR ${BUILD_PLUGIN_WPAR} PARENT_SCOPE)
 if(BUILD_PLUGIN_WPAR)
     set(PLUGIN_WPAR_SRC wpar.c)
     add_library(wpar MODULE ${PLUGIN_WPAR_SRC})
-    target_link_libraries(wpar PRIVATE libutils libmetric LibPerfstat::LibPerfstat)
+    target_link_libraries(wpar PRIVATE libmetric libutils LibPerfstat::LibPerfstat)
     set_target_properties(wpar PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_wpar EXCLUDE_FROM_ALL wpar_test.c ${PLUGIN_WPAR_SRC})
-#    target_link_libraries(test_plugin_wpar libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_wpar libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_wpar)
 #    add_test(NAME test_plugin_wpar COMMAND test_plugin_wpar WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

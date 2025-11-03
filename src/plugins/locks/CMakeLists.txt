@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_LOCKS ${BUILD_PLUGIN_LOCKS} PARENT_SCOPE)
 if(BUILD_PLUGIN_LOCKS)
     set(PLUGIN_LOCKS_SRC locks.c)
     add_library(locks MODULE ${PLUGIN_LOCKS_SRC})
-    target_link_libraries(locks PRIVATE libutils libmetric)
+    target_link_libraries(locks PRIVATE libmetric libutils)
     set_target_properties(locks PROPERTIES PREFIX "")
 
     add_executable(test_plugin_locks EXCLUDE_FROM_ALL locks_test.c ${PLUGIN_LOCKS_SRC})
-    target_link_libraries(test_plugin_locks libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_locks libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_locks)
     add_test(NAME test_plugin_locks COMMAND test_plugin_locks WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

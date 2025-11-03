@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_CONNTRACK ${BUILD_PLUGIN_CONNTRACK} PARENT_SCOPE)
 if(BUILD_PLUGIN_CONNTRACK)
     set(PLUGIN_CONNTRACK_SRC conntrack.c)
     add_library(conntrack MODULE ${PLUGIN_CONNTRACK_SRC})
-    target_link_libraries(conntrack PRIVATE libutils libmetric)
+    target_link_libraries(conntrack PRIVATE libmetric libutils)
     set_target_properties(conntrack PROPERTIES PREFIX "")
 
     add_executable(test_plugin_conntrack EXCLUDE_FROM_ALL conntrack_test.c ${PLUGIN_CONNTRACK_SRC})
-    target_link_libraries(test_plugin_conntrack libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_conntrack libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_conntrack)
     add_test(NAME test_plugin_conntrack COMMAND test_plugin_conntrack WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

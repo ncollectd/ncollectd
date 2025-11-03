@@ -19,7 +19,7 @@ if(BUILD_PLUGIN_CGROUPS)
     gperf_generate(memorystat.gperf "${CMAKE_CURRENT_BINARY_DIR}/memorystat.h" MEMORYSTAT_H)
     set(PLUGIN_CGROUPS_SRC cgroups.c)
     add_library(cgroups MODULE ${PLUGIN_CGROUPS_SRC} ${MEMORYSTAT_H})
-    target_link_libraries(cgroups PRIVATE libutils libmetric)
+    target_link_libraries(cgroups PRIVATE libmetric libutils)
     set_target_properties(cgroups PROPERTIES PREFIX "")
 
     if(HAVE_LINUX_CONFIG_H)
@@ -27,7 +27,7 @@ if(BUILD_PLUGIN_CGROUPS)
     endif()
 
 #    add_executable(test_plugin_cgroups EXCLUDE_FROM_ALL cgroups_test.c ${PLUGIN_CGROUPS_SRC})
-#    target_link_libraries(test_plugin_cgroups libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_cgroups libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_cgroups)
 #    add_test(NAME test_plugin_cgroups COMMAND test_plugin_cgroups WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -4,6 +4,7 @@ system_hugepages_nr{hostname="localhost.localdomain",page_size="2048kB"} 20
 # TYPE system_hugepages_free gauge
 system_hugepages_free{hostname="localhost.localdomain",page_size="1048576kB"} 6
 system_hugepages_free{hostname="localhost.localdomain",page_size="2048kB"} 16
+# TYPE system_hugepages_reserved gauge
 system_hugepages_reserved{hostname="localhost.localdomain",page_size="1048576kB"} 1
 system_hugepages_reserved{hostname="localhost.localdomain",page_size="2048kB"} 2
 # TYPE system_hugepages_surplus gauge

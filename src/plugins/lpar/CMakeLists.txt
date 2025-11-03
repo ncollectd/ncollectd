@@ -26,11 +26,11 @@ if(BUILD_PLUGIN_LPAR)
     if(PERFSTAT_SUPPORTS_DONATION)
         target_compile_definitions(lpar PUBLIC PERFSTAT_SUPPORTS_DONATION)
     endif(PERFSTAT_SUPPORTS_DONATION)
-    target_link_libraries(lpar PRIVATE libutils libmetric LibPerfstat::LibPerfstat)
+    target_link_libraries(lpar PRIVATE libmetric libutils LibPerfstat::LibPerfstat)
     set_target_properties(lpar PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_lpar EXCLUDE_FROM_ALL lpar_test.c ${PLUGIN_LPAR_SRC})
-#    target_link_libraries(test_plugin_lpar libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_lpar libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_lpar)
 #    add_test(NAME test_plugin_lpar COMMAND test_plugin_lpar WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

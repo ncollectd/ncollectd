@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_NOTIFY_NAGIOS ${BUILD_PLUGIN_NOTIFY_NAGIOS} PARENT_SCOPE)
 if(BUILD_PLUGIN_NOTIFY_NAGIOS)
     set(PLUGIN_NOTIFY_NAGIOS_SRC notify_nagios.c)
     add_library(notify_nagios MODULE ${PLUGIN_NOTIFY_NAGIOS_SRC})
-    target_link_libraries(notify_nagios PRIVATE libutils libmetric)
+    target_link_libraries(notify_nagios PRIVATE libmetric libutils)
     set_target_properties(notify_nagios PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_notify_nagios EXCLUDE_FROM_ALL notify_nagios_test.c ${PLUGIN_NOTIFY_NAGIOS_SRC})
-#    target_link_libraries(test_plugin_notify_nagios libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_notify_nagios libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_notify_nagios)
 #    add_test(NAME test_plugin_notify_nagios COMMAND test_plugin_notify_nagios WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

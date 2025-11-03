@@ -27,11 +27,11 @@ set(BUILD_PLUGIN_WIREGUARD ${BUILD_PLUGIN_WIREGUARD} PARENT_SCOPE)
 if(BUILD_PLUGIN_WIREGUARD)
     set(PLUGIN_WIREGUARD_SRC wireguard.c)
     add_library(wireguard MODULE ${PLUGIN_WIREGUARD_SRC})
-    target_link_libraries(wireguard PRIVATE libutils libmetric LibMnl::LibMnl)
+    target_link_libraries(wireguard PRIVATE libmetric libutils LibMnl::LibMnl)
     set_target_properties(wireguard PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_wireguard EXCLUDE_FROM_ALL wireguard_test.c ${PLUGIN_WIREGUARD_SRC})
-#    target_link_libraries(test_plugin_wireguard libtest libutils libmetric m)
+#    target_link_libraries(test_plugin_wireguard libtest libmetric libutils m)
 #    add_dependencies(build_tests test_plugin_wireguard)
 #    add_test(NAME test_plugin_wireguard COMMAND test_plugin_wireguard WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

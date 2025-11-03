@@ -10,7 +10,7 @@ set(BUILD_PLUGIN_APCUPS ${BUILD_PLUGIN_APCUPS} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_APCUPS)
     set(PLUGIN_APCUPS_SRC apcups.c)
-    set(PLUGIN_APCUPS_LIBS libutils libmetric)
+    set(PLUGIN_APCUPS_LIBS libmetric libutils)
 
     add_library(apcups MODULE ${PLUGIN_APCUPS_SRC})
     target_link_libraries(apcups PRIVATE ${PLUGIN_APCUPS_LIBS})

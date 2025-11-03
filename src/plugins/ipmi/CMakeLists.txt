@@ -16,11 +16,11 @@ set(BUILD_PLUGIN_IPMI ${BUILD_PLUGIN_IPMI} PARENT_SCOPE)
 if(BUILD_PLUGIN_IPMI)
     set(PLUGIN_IPMI_SRC ipmi.c)
     add_library(ipmi MODULE ${PLUGIN_IPMI_SRC})
-    target_link_libraries(ipmi PRIVATE libutils libmetric LibOpenipmi::LibOpenipmi)
+    target_link_libraries(ipmi PRIVATE libmetric libutils LibOpenipmi::LibOpenipmi)
     set_target_properties(ipmi PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_ipmi EXCLUDE_FROM_ALL ipmi_test.c ${PLUGIN_IPMI_SRC})
-#    target_link_libraries(test_plugin_ipmi libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_ipmi libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_ipmi)
 #    add_test(NAME test_plugin_ipmi COMMAND test_plugin_ipmi WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

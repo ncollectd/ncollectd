@@ -61,3 +61,5 @@ int label_set_cmp(label_set_t *l1, label_set_t *l2);
 int label_set_rename(label_set_t *labels, char *from, char *to);
 
 int label_set_qsort(label_set_t *labels);
+
+int label_set_unmarshal(label_set_t *labels, char const **inout);

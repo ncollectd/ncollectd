@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_NAGIOS_CHECK ${BUILD_PLUGIN_NAGIOS_CHECK} PARENT_SCOPE)
 if(BUILD_PLUGIN_NAGIOS_CHECK)
     set(PLUGIN_NAGIOS_CHECK_SRC nagios_check.c)
     add_library(nagios_check MODULE ${PLUGIN_NAGIOS_CHECK_SRC})
-    target_link_libraries(nagios_check PRIVATE libutils libmetric)
+    target_link_libraries(nagios_check PRIVATE libmetric libutils)
     set_target_properties(nagios_check PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_nagios_check EXCLUDE_FROM_ALL nagios_check_test.c ${PLUGIN_NAGIOS_CHECK_SRC})
-#    target_link_libraries(test_plugin_nagios_check libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_nagios_check libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_nagios_check)
 #    add_test(NAME test_plugin_nagios_check COMMAND test_plugin_nagios_check WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

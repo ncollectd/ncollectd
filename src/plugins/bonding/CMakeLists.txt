@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_BONDING ${BUILD_PLUGIN_BONDING} PARENT_SCOPE)
 if(BUILD_PLUGIN_BONDING)
     set(PLUGIN_BONDING_SRC bonding.c)
     add_library(bonding MODULE ${PLUGIN_BONDING_SRC})
-    target_link_libraries(bonding PRIVATE libutils libmetric)
+    target_link_libraries(bonding PRIVATE libmetric libutils)
     set_target_properties(bonding PROPERTIES PREFIX "")
 
     add_executable(test_plugin_bonding EXCLUDE_FROM_ALL bonding_test.c ${PLUGIN_BONDING_SRC})
-    target_link_libraries(test_plugin_bonding libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_bonding libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_bonding)
     add_test(NAME test_plugin_bonding COMMAND test_plugin_bonding WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

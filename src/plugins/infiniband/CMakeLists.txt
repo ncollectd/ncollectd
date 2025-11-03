@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_INFINIBAND ${BUILD_PLUGIN_INFINIBAND} PARENT_SCOPE)
 if(BUILD_PLUGIN_INFINIBAND)
     set(PLUGIN_INFINIBAND_SRC infiniband.c)
     add_library(infiniband MODULE ${PLUGIN_INFINIBAND_SRC})
-    target_link_libraries(infiniband PRIVATE libutils libmetric)
+    target_link_libraries(infiniband PRIVATE libmetric libutils)
     set_target_properties(infiniband PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_infiniband EXCLUDE_FROM_ALL infiniband_test.c ${PLUGIN_INFINIBAND_SRC})
-#    target_link_libraries(test_plugin_infiniband libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_infiniband libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_infiniband)
 #    add_test(NAME test_plugin_infiniband COMMAND test_plugin_infiniband WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

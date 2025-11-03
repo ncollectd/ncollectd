@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_SLABINFO ${BUILD_PLUGIN_SLABINFO} PARENT_SCOPE)
 if(BUILD_PLUGIN_SLABINFO)
     set(PLUGIN_SLABINFO_SRC slabinfo.c)
     add_library(slabinfo MODULE ${PLUGIN_SLABINFO_SRC})
-    target_link_libraries(slabinfo PRIVATE libutils libmetric)
+    target_link_libraries(slabinfo PRIVATE libmetric libutils)
     set_target_properties(slabinfo PROPERTIES PREFIX "")
 
     add_executable(test_plugin_slabinfo EXCLUDE_FROM_ALL slabinfo_test.c ${PLUGIN_SLABINFO_SRC})
-    target_link_libraries(test_plugin_slabinfo libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_slabinfo libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_slabinfo)
     add_test(NAME test_plugin_slabinfo COMMAND test_plugin_slabinfo WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

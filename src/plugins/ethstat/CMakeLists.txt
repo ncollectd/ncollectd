@@ -29,11 +29,11 @@ if(BUILD_PLUGIN_ETHSTAT)
         target_compile_definitions(ethstat PUBLIC HAVE_LINUX_ETHTOOL_H)
     endif()
 
-    target_link_libraries(ethstat PRIVATE libutils libmetric)
+    target_link_libraries(ethstat PRIVATE libmetric libutils)
     set_target_properties(ethstat PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_ethstat EXCLUDE_FROM_ALL ethstat_test.c ${PLUGIN_ETHSTAT_SRC})
-#    target_link_libraries(test_plugin_ethstat libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_ethstat libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_ethstat)
 #    add_test(NAME test_plugin_ethstat COMMAND test_plugin_ethstat WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
