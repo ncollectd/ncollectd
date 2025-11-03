@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_TAIL ${BUILD_PLUGIN_TAIL} PARENT_SCOPE)
 if(BUILD_PLUGIN_TAIL)
     set(PLUGIN_TAIL_SRC tail.c)
     add_library(tail MODULE ${PLUGIN_TAIL_SRC})
-    target_link_libraries(tail PRIVATE libutils libmetric)
+    target_link_libraries(tail PRIVATE libmetric libutils)
     set_target_properties(tail PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_tail EXCLUDE_FROM_ALL tail_test.c ${PLUGIN_TAIL_SRC})
-#    target_link_libraries(test_plugin_tail libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_tail libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_tail)
 #    add_test(NAME test_plugin_tail COMMAND test_plugin_tail WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

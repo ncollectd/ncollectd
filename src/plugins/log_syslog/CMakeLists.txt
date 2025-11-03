@@ -23,11 +23,11 @@ if(BUILD_PLUGIN_LOG_SYSLOG)
     if(HAVE_SYSLOG_H)
         target_compile_definitions(log_syslog PUBLIC HAVE_SYSLOG_H)
     endif()
-    target_link_libraries(log_syslog PRIVATE libutils libmetric)
+    target_link_libraries(log_syslog PRIVATE libmetric libutils)
     set_target_properties(log_syslog PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_log_syslog EXCLUDE_FROM_ALL log_syslog_test.c ${PLUGIN_LOG_SYSLOG_SRC})
-#    target_link_libraries(test_plugin_log_syslog libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_log_syslog libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_log_syslog)
 #    add_test(NAME test_plugin_log_syslog COMMAND test_plugin_log_syslog WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

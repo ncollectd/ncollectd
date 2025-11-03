@@ -16,11 +16,11 @@ if(BUILD_PLUGIN_ZONEINFO)
     gperf_generate(zoneinfo.gperf "${CMAKE_CURRENT_BINARY_DIR}/zoneinfo.h" ZONEINFO_H)
     set(PLUGIN_ZONEINFO_SRC zoneinfo.c)
     add_library(zoneinfo MODULE ${PLUGIN_ZONEINFO_SRC} ${ZONEINFO_H})
-    target_link_libraries(zoneinfo PRIVATE libutils libmetric)
+    target_link_libraries(zoneinfo PRIVATE libmetric libutils)
     set_target_properties(zoneinfo PROPERTIES PREFIX "")
 
     add_executable(test_plugin_zoneinfo EXCLUDE_FROM_ALL zoneinfo_test.c ${PLUGIN_ZONEINFO_SRC})
-    target_link_libraries(test_plugin_zoneinfo libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_zoneinfo libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_zoneinfo)
     add_test(NAME test_plugin_zoneinfo COMMAND test_plugin_zoneinfo WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

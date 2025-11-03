@@ -16,11 +16,16 @@ set_target_properties(libmetric PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # add_dependencies(libmetric libutils)
 
 add_executable(test_libmetric_metric EXCLUDE_FROM_ALL metric_test.c)
-target_link_libraries(test_libmetric_metric libutils libmetric libtest)
+target_link_libraries(test_libmetric_metric libmetric libutils libtest)
 add_dependencies(build_tests test_libmetric_metric)
 add_test(NAME test_libmetric_metric COMMAND test_libmetric_metric)
 
 add_executable(test_libmetric_label_set EXCLUDE_FROM_ALL label_set_test.c)
-target_link_libraries(test_libmetric_label_set libutils libmetric libtest)
+target_link_libraries(test_libmetric_label_set libmetric libutils libtest)
 add_dependencies(build_tests test_libmetric_label_set)
 add_test(NAME test_libmetric_label_set COMMAND test_libmetric_label_set)
+
+add_executable(test_libmetric_parser EXCLUDE_FROM_ALL parser_test.c)
+target_link_libraries(test_libmetric_parser libmetric libutils libtest)
+add_dependencies(build_tests test_libmetric_parser)
+add_test(NAME test_libmetric_parser COMMAND test_libmetric_parser)

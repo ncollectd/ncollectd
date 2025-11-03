@@ -6,8 +6,10 @@
 #include "log.h"
 #include "libutils/strbuf.h"
 #include "libutils/common.h"
+#include "libutils/avltree.h"
 #include "libmetric/metric.h"
 #include "libmetric/metric_chars.h"
+#include "libmetric/parser.h"
 
 typedef enum {
     METRIC_COMMENT_HELP,
@@ -36,6 +38,15 @@ typedef enum {
     METRIC_SUB_TYPE_GAUGE_HISTOGRAM_BUCKET,
     METRIC_SUB_TYPE_GAUGE_HISTOGRAM_CREATED,
 } metric_sub_type_t;
+
+typedef struct metric_parser_s {
+    char *metric_prefix;
+    label_set_t labels;
+    c_avl_tree_t *fams;
+    size_t lineno;
+    strbuf_t buf;
+    metric_family_t *last_fam;
+} metric_parser_t;
 
 enum {
     SC_SPACE      = 1,
@@ -119,34 +130,62 @@ static inline int sstrncmpend(const char *str, size_t size, const char *suffix, 
     return sstrncmp(str + (size - suffix_size), suffix_size, suffix, suffix_size);
 }
 
-int metric_parser_dispatch(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                           plugin_filter_t *filter)
+static int metric_parser_fam_cmp(const void *a, const void *b)
 {
-    if ((fam->metric.num > 0) && (dispatch != NULL))
-        dispatch(fam, filter, 0);
-
-    if (fam->name != NULL) {
-        free(fam->name);
-        fam->name = NULL;
-    }
-
-    if (fam->help != NULL) {
-        free(fam->help);
-        fam->help = NULL;
-    }
-
-    if (fam->unit != NULL) {
-        free(fam->unit);
-        fam->unit = NULL;
-    }
-
-    // FIXME clean metrics
-
-    return 0;
+    const metric_family_t *fam_a = a;
+    const metric_family_t *fam_b = b;
+    return strcmp(fam_a->name, fam_b->name);
 }
 
-static value_t *metric_familty_get_metric_value(metric_family_t *fam, label_set_t *labels,
-                                                                      cdtime_t time)
+static metric_family_t *metric_parser_get_family(metric_parser_t *mp, bool create,
+                                                 const char *name, size_t name_size)
+{
+    char bname[4096];
+
+    if (name_size > (sizeof(bname)-1)) {
+        ERROR("family name greater than %zu.", sizeof(bname)-1);
+        return NULL;
+    }
+
+    sstrnncpy(bname, sizeof(bname), name, name_size);
+
+    metric_family_t qfam = { .name = bname };
+    metric_family_t *fam = NULL;
+    int status = c_avl_get(mp->fams, &qfam, (void *)&fam);
+    if (status == 0) {
+        return fam;
+    }
+
+    if (!create)
+        return NULL;
+
+    fam = calloc(1, sizeof (*fam));
+    if (fam == NULL) {
+        ERROR("calloc failed.");
+        return NULL;
+    }
+
+    fam->type = METRIC_TYPE_UNKNOWN;
+
+    fam->name = strdup(bname);
+    if (fam->name == NULL) {
+        free(fam);
+        ERROR("strdup failed.");
+        return NULL;
+    }
+
+    status = c_avl_insert(mp->fams, fam, (void *)fam);
+    if (status != 0) {
+        free(fam->name);
+        free(fam);
+        ERROR("c_avl_insert failed.");
+        return NULL;
+    }
+
+    return fam;
+}
+
+static value_t *metric_familty_get_value(metric_family_t *fam, label_set_t *labels, cdtime_t time)
 {
     if (fam->metric.num > 0) {
         metric_t *m = &fam->metric.ptr[fam->metric.num -1];
@@ -154,7 +193,9 @@ static value_t *metric_familty_get_metric_value(metric_family_t *fam, label_set_
             return &m->value;
     }
 
-    int status = metric_list_append(&fam->metric, (metric_t){.label = *labels, .time = time});
+    metric_t metric = (metric_t){.time = time};
+    label_set_clone(&metric.label, *labels);
+    int status = metric_list_append(&fam->metric, metric);
     if ((status == 0) && (fam->metric.num > 0)) {
         metric_t *m = &fam->metric.ptr[fam->metric.num -1];
 
@@ -164,66 +205,26 @@ static value_t *metric_familty_get_metric_value(metric_family_t *fam, label_set_
         case METRIC_TYPE_COUNTER:
         case METRIC_TYPE_INFO:
         case METRIC_TYPE_STATE_SET:
-        break;
+            break;
         case METRIC_TYPE_SUMMARY:
             m->value.summary = summary_new();
             if (m->value.summary == NULL)
                 return NULL;
-        break;
+            break;
         case METRIC_TYPE_HISTOGRAM:
         case METRIC_TYPE_GAUGE_HISTOGRAM:
             m->value.histogram = histogram_new();
             if (m->value.histogram == NULL)
                 return NULL;
-        break;
+            break;
         }
 
         return &m->value;
+    } else {
+        label_set_reset(&metric.label); //FIXME
     }
 
     return NULL;
-}
-static int metric_parser_set_family_name(metric_family_t *fam,
-                                         const char *prefix, size_t prefix_size,
-                                         const char *name, size_t name_size)
-{
-    if (fam->name != NULL)
-        free(fam->name);
-
-    size_t fam_name_size = prefix_size + name_size;
-    fam->name = malloc(fam_name_size + 1);
-    if (fam->name == NULL)
-        return -1;
-    if (prefix_size > 0)
-        memcpy(fam->name, prefix, prefix_size);
-    memcpy(fam->name + prefix_size, name, name_size);
-    fam->name[fam_name_size] = '\0';
-
-    return 0;
-}
-
-static int metric_parser_push(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                              plugin_filter_t *filter, const char *prefix, size_t prefix_size,
-                              const char *name, size_t name_size)
-{
-    size_t fixed_name_size = name_size;
-
-    if (sstrncmpend(name, name_size, "_total", strlen("_total")) == 0) {
-        fixed_name_size -= strlen("_total");
-    } else if ( sstrncmpend(name, name_size, "_info", strlen("_info")) == 0) {
-        fixed_name_size -= strlen("_info");
-    }
-
-    if (fam->name == NULL)
-        return metric_parser_set_family_name(fam, prefix, prefix_size, name, fixed_name_size);
-
-   if ((strlen(fam->name) - prefix_size == fixed_name_size) &&
-       (strncmp(fam->name + prefix_size, name, fixed_name_size) == 0))
-       return 0;
-
-    metric_parser_dispatch(fam, dispatch, filter);
-
-    return metric_parser_set_family_name(fam, prefix, prefix_size, name, fixed_name_size);
 }
 
 static ssize_t metric_parser_labels(label_set_t *labels, const char *line,
@@ -307,10 +308,142 @@ static ssize_t metric_parser_labels(label_set_t *labels, const char *line,
     return -8;
 }
 
-static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                               plugin_filter_t *filter, const char *prefix, size_t prefix_size,
-                               label_set_t *labels_extra, cdtime_t interval, cdtime_t ts,
-                               const char *line)
+static size_t metric_parser_type_metric_len(metric_type_t type, const char *metric, size_t len)
+{
+    switch(type) {
+    case METRIC_TYPE_UNKNOWN:
+        return len;
+        break;
+    case METRIC_TYPE_GAUGE:
+        return len;
+        break;
+    case METRIC_TYPE_COUNTER:
+        if (sstrncmpend(metric, len, "_total", strlen("_total")) == 0) {
+            return len - strlen("_total");
+        } else if (sstrncmpend(metric, len, "_created", strlen("_created")) == 0) {
+            return len - strlen("_created");
+        } else {
+            return len;
+        }
+        break;
+    case METRIC_TYPE_STATE_SET:
+        return len;
+        break;
+    case METRIC_TYPE_INFO:
+        if (sstrncmpend(metric, len, "_info", strlen("_info")) == 0) {
+            return len - strlen("_info");
+        } else {
+            return len;
+        }
+        break;
+    case METRIC_TYPE_SUMMARY:
+        if (sstrncmpend(metric, len, "_count", strlen("_count")) == 0) {
+            return len - strlen("_count");
+        } else if (sstrncmpend(metric, len, "_sum", strlen("_sum")) == 0) {
+            return len - strlen("_sum");
+        } else if (sstrncmpend(metric, len, "_created", strlen("_created")) == 0) {
+            return len - strlen("_created");
+        } else {
+            return len;
+        }
+        break;
+    case METRIC_TYPE_HISTOGRAM:
+        if (sstrncmpend(metric, len, "_count", strlen("_count")) == 0) {
+            return len - strlen("_count");
+        } else if (sstrncmpend(metric, len, "_sum", strlen("_sum")) == 0) {
+            return len - strlen("_sum");
+        } else if (sstrncmpend(metric, len, "_bucket", strlen("_bucket")) == 0) {
+            return len - strlen("_bucket");
+        } else if (sstrncmpend(metric, len, "_created", strlen("_created")) == 0) {
+            return len - strlen("_created");
+        } else {
+            return len;
+        }
+        break;
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        if (sstrncmpend(metric, len, "_gcount", strlen("_gcount")) == 0) {
+            return len - strlen("_gcount");
+        } else if (sstrncmpend(metric, len, "_gsum", strlen("_gsum")) == 0) {
+            return len - strlen("_gsum");
+        } else if (sstrncmpend(metric, len, "_bucket", strlen("_bucket")) == 0) {
+            return len - strlen("_bucket");
+        } else if (sstrncmpend(metric, len, "_created", strlen("_created")) == 0) {
+            return len - strlen("_created");
+        } else {
+            return len;
+        }
+        break;
+    }
+
+    return len;
+}
+
+static size_t metric_parser_guest_metric_len(const char *metric, size_t len)
+{
+    if (sstrncmpend(metric, len, "_total", strlen("_total")) == 0) {
+        return len - strlen("_total");
+    } else if (sstrncmpend(metric, len, "_created", strlen("_created")) == 0) {
+        return len - strlen("_created");
+    } else if (sstrncmpend(metric, len, "_info", strlen("_info")) == 0) {
+        return len - strlen("_info");
+    } else if (sstrncmpend(metric, len, "_count", strlen("_count")) == 0) {
+        return len - strlen("_count");
+    } else if (sstrncmpend(metric, len, "_sum", strlen("_sum")) == 0) {
+        return len - strlen("_sum");
+    } else if (sstrncmpend(metric, len, "_bucket", strlen("_bucket")) == 0) {
+        return len - strlen("_bucket");
+    } else if (sstrncmpend(metric, len, "_created", strlen("_created")) == 0) {
+        return len - strlen("_created");
+    } else if (sstrncmpend(metric, len, "_gcount", strlen("_gcount")) == 0) {
+        return len - strlen("_gcount");
+    } else if (sstrncmpend(metric, len, "_gsum", strlen("_gsum")) == 0) {
+        return len - strlen("_gsum");
+    }
+
+    return len;
+}
+
+static metric_family_t *metric_parse_find_family(metric_parser_t *mp,
+                                                 const char *metric, size_t metric_size)
+{
+    metric_family_t *fam = mp->last_fam;
+    if (fam != NULL) {
+        size_t metric_len = metric_parser_type_metric_len(fam->type, metric, metric_size);
+        size_t name_len = strlen(fam->name);
+        if (metric_len == name_len) {
+            if (strncmp(metric, fam->name, name_len) == 0)
+                return fam;
+        }
+
+        if (metric_size == name_len) {
+            if (strncmp(metric, fam->name, name_len) == 0)
+                return fam;
+        }
+    }
+
+    mp->last_fam = NULL;
+
+    size_t metric_len = metric_parser_guest_metric_len(metric, metric_size);
+    if (metric_len != metric_size) {
+        // maybe a suffixed metric
+        //  XXX
+    }
+
+    fam = metric_parser_get_family(mp, false, metric, metric_len);
+    if (fam != NULL) {
+        mp->last_fam = fam;
+        return fam;
+    }
+
+    fam = metric_parser_get_family(mp, true, metric, metric_size);
+    if (fam != NULL) {
+        mp->last_fam = fam;
+        return fam;
+    }
+    return NULL;
+}
+
+static int metric_parse_metric(metric_parser_t *mp, const char *line)
 {
     const char *ptr = line;
     unsigned char sc = 0;
@@ -329,9 +462,15 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
     } else {
         return -1; // FIXME __name__ ???
     }
+
     size_t metric_size = ptr - metric; // FIXME
     if (metric_size == 0)
         return -1;
+
+    metric_family_t *fam = metric_parse_find_family(mp, metric, metric_size);
+    if (fam == NULL) {// FIXME
+        return -1;
+    }
 
     while ((sc = scan_code[(unsigned char)*ptr]) == SC_SPACE)
         ptr++;
@@ -346,10 +485,10 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
     switch(fam->type) {
     case METRIC_TYPE_UNKNOWN:
         metric_sub_type = METRIC_SUB_TYPE_UNKNOWN;
-    break;
+        break;
     case METRIC_TYPE_GAUGE:
         metric_sub_type = METRIC_SUB_TYPE_GAUGE;
-    break;
+        break;
     case METRIC_TYPE_COUNTER:
         if (sstrncmpend(metric, metric_size, "_total", strlen("_total")) == 0) {
             metric_fixed_size -= strlen("_total");
@@ -358,22 +497,22 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
             metric_fixed_size -= strlen("_created");
             metric_sub_type = METRIC_SUB_TYPE_COUNTER_CREATED;
         } else {
-            return -1;
+            metric_sub_type = METRIC_SUB_TYPE_COUNTER_TOTAL;
         }
-    break;
+        break;
     case METRIC_TYPE_STATE_SET:
         metric_sub_type = METRIC_SUB_TYPE_STATE_SET;
         label_name = metric;
         label_name_size = metric_size;
-    break;
+        break;
     case METRIC_TYPE_INFO:
         if (sstrncmpend(metric, metric_size, "_info", strlen("_info")) == 0) {
             metric_fixed_size -= strlen("_info");
             metric_sub_type = METRIC_SUB_TYPE_INFO;
         } else {
-            return -1;
+            metric_sub_type = METRIC_SUB_TYPE_INFO;
         }
-    break;
+        break;
     case METRIC_TYPE_SUMMARY:
         if (sstrncmpend(metric, metric_size, "_count", strlen("_count")) == 0) {
             metric_fixed_size -= strlen("_count");
@@ -389,7 +528,7 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
             label_name = "quantile";
             label_name_size = strlen("quantile");
         }
-    break;
+        break;
     case METRIC_TYPE_HISTOGRAM:
         if (sstrncmpend(metric, metric_size, "_count", strlen("_count")) == 0) {
             metric_fixed_size -= strlen("_count");
@@ -408,7 +547,7 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         } else {
             return -1;
         }
-    break;
+        break;
     case METRIC_TYPE_GAUGE_HISTOGRAM:
         if (sstrncmpend(metric, metric_size, "_gcount", strlen("_gcount")) == 0) {
             metric_fixed_size -= strlen("_gcount");
@@ -427,7 +566,7 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         } else {
             return -1;
         }
-    break;
+        break;
     }
 
     if (metric_sub_type == METRIC_SUB_TYPE_COUNTER_CREATED) {
@@ -440,17 +579,6 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         return 0;
     }
 
-    if (fam->name != NULL) {
-        if ((strlen(fam->name) - prefix_size) != metric_fixed_size) {
-            metric_parser_dispatch(fam, dispatch, filter);
-        } else if (strncmp(fam->name + prefix_size, metric, metric_fixed_size) != 0) {
-            metric_parser_dispatch(fam, dispatch, filter);
-        }
-    }
-
-    if (fam->name == NULL)
-        metric_parser_set_family_name(fam, prefix, prefix_size, metric, metric_fixed_size);
-
     label_set_t labels = {0};
     const char *label_value = NULL;
     size_t label_value_size = 0;
@@ -460,7 +588,7 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         ssize_t size = metric_parser_labels(&labels, ptr, label_name, label_name_size,
                                             &label_value, &label_value_size);
         if (size < 0) {
-            // label free
+            label_set_reset(&labels);
             return -1;
         }
         ptr += size;
@@ -469,19 +597,15 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
 
         sc = scan_code[(unsigned char)*ptr];
         if (sc != SC_SPACE) {
-        // label free
+            label_set_reset(&labels);
             return -1;
         }
     }
 
-    // FIX add extra labels
-    if (labels_extra != NULL)
-        label_set_add_set(&labels, true, *labels_extra);
-
     while ((sc = scan_code[(unsigned char)*ptr]) == SC_SPACE)
         ptr++;
     if (sc == 0) {
-        // label free
+        label_set_reset(&labels);
         return -1;
     }
 
@@ -497,99 +621,120 @@ static int metric_parse_metric(metric_family_t *fam, dispatch_metric_family_t di
         sstrnncpy(number, sizeof(number), value_number, value_size);
 
     cdtime_t time = 0;
-    if (ts != 0) {
-        time = ts;
-    } else {
-        if (sc == SC_SPACE) {
-            while (scan_code[(unsigned char)*ptr] == SC_SPACE)
-                ptr++;
+    if (sc == SC_SPACE) {
+        while (scan_code[(unsigned char)*ptr] == SC_SPACE)
+            ptr++;
 
-            const char *timestamp = ptr;
-            while (scan_code[(unsigned char)*ptr] == SC_DIGIT)
-                ptr++;
-            size_t timestamp_size = ptr - timestamp;
-            if (timestamp_size > 0) {
-                char buffer[16];
-                sstrnncpy(buffer, sizeof(buffer), timestamp, timestamp_size);
-                unsigned long long tms = strtoull(buffer, NULL, 10);
-                time = MS_TO_CDTIME_T(tms);
-            }
+        const char *timestamp = ptr;
+        while (scan_code[(unsigned char)*ptr] == SC_DIGIT)
+            ptr++;
+        size_t timestamp_size = ptr - timestamp;
+        if (timestamp_size > 0) {
+            char buffer[16];
+            sstrnncpy(buffer, sizeof(buffer), timestamp, timestamp_size);
+            unsigned long long tms = strtoull(buffer, NULL, 10);
+            time = MS_TO_CDTIME_T(tms);
         }
     }
 
-    value_t value = {0};
     switch (metric_sub_type) {
-    case METRIC_SUB_TYPE_UNKNOWN:
-        value = VALUE_UNKNOWN(strtod(number, NULL));
-        metric_list_append(&fam->metric, (metric_t){.label = labels, .value = value, .interval = interval, .time = time});
-        break;
-    case METRIC_SUB_TYPE_GAUGE:
-        value = VALUE_GAUGE(strtod(number, NULL));
-        metric_list_append(&fam->metric, (metric_t){.label = labels, .value = value, .interval = interval, .time = time});
-        break;
-    case METRIC_SUB_TYPE_COUNTER_TOTAL:
+    case METRIC_SUB_TYPE_UNKNOWN: {
+        value_t value = VALUE_UNKNOWN(strtod(number, NULL));
+        metric_t m = (metric_t){.value = value, .time = time};
+        label_set_clone(&m.label, labels);
+        metric_list_append(&fam->metric, m);
+    }   break;
+    case METRIC_SUB_TYPE_GAUGE: {
+        value_t value = VALUE_GAUGE(strtod(number, NULL));
+        metric_t m = (metric_t){.value = value, .time = time};
+        label_set_clone(&m.label, labels);
+        metric_list_append(&fam->metric, m);
+    }   break;
+    case METRIC_SUB_TYPE_COUNTER_TOTAL: {
+        value_t value = {0};
         if(isinteger(number)) {
             value = VALUE_COUNTER(strtoull(number, NULL, 10));
         } else {
             value = VALUE_COUNTER_FLOAT64(strtod(number, NULL));
         }
-        metric_list_append(&fam->metric, (metric_t){.label = labels, .value = value, .interval = interval, .time = time});
-        break;
+        metric_t m = (metric_t){.value = value, .time = time};
+        label_set_clone(&m.label, labels);
+        metric_list_append(&fam->metric, m);
+    }   break;
     case METRIC_SUB_TYPE_COUNTER_CREATED:
         break;
-    case METRIC_SUB_TYPE_STATE_SET: {
-        value_t *fvalue = metric_familty_get_metric_value(fam, &labels, time);
-        if (fvalue != NULL) {
-//        int state_set_add(state_set_t *set, char const *name, bool enabled);
+    case METRIC_SUB_TYPE_STATE_SET:
+        if (label_value != NULL) {
+            value_t *value = metric_familty_get_value(fam, &labels, time);
+            if (value != NULL) {
+                char bname[4096];
+                sstrnncpy(bname, sizeof(bname), label_value, label_value_size);
+                unsigned long long enabled = strtoull(number, NULL, 10);
+                state_set_add(&(value->state_set), bname, enabled == 0 ? false : true);
+            }
         }
-//        value.state_set
-//    state_set_t state_set;
-//        int state_set_add(state_set_t *set, char const *name, bool enabled);
+        break;
+    case METRIC_SUB_TYPE_INFO: {
+        metric_t m = (metric_t){.time = time};
+        label_set_clone(&m.label, labels);
+        metric_list_append(&fam->metric, m);
     }   break;
-    case METRIC_SUB_TYPE_INFO:
-        metric_list_append(&fam->metric, (metric_t){.label = labels, .value = value, .interval = interval, .time = time});
-        break;
-    case METRIC_SUB_TYPE_SUMMARY_COUNT:
-        // uint64_t
-//        value.summary->count =
-//    state_set_t state_set;
-//    label_set_t info;
-//    histogram_t *histogram;
-//    summary_t *summary;
-        break;
-    case METRIC_SUB_TYPE_SUMMARY_SUM:
-//        value.summary->sum =
-        break;
+    case METRIC_SUB_TYPE_SUMMARY_COUNT: {
+        value_t *value = metric_familty_get_value(fam, &labels, time);
+        if (value != NULL)
+            value->summary->count = strtod(number, NULL);
+    }   break;
+    case METRIC_SUB_TYPE_SUMMARY_SUM: {
+        value_t *value = metric_familty_get_value(fam, &labels, time);
+        if (value != NULL)
+            value->summary->sum = strtoull(number, NULL, 10);
+    }   break;
     case METRIC_SUB_TYPE_SUMMARY_CREATED:
         break;
-    case METRIC_SUB_TYPE_SUMMARY: {
-//        value_t *svalue = metric_parse_get_value(fam, labels, time);
-//        if (svalue == NULL)
-//            return -1;
-//        summary_t *tmp = summary_quantile_append(svalue->summary, double quantile, double value);
-    }   break;
+    case METRIC_SUB_TYPE_SUMMARY:
+        if (label_value != NULL) {
+            value_t *value = metric_familty_get_value(fam, &labels, time);
+            if (value != NULL) {
+                char vnumber[64] = {'0','\0'};
+                sstrnncpy(vnumber, sizeof(vnumber), label_value, label_value_size);
+                double quantile = strtod(vnumber, NULL);
+                double qvalue = strtod(number, NULL);
+                summary_t *summary = summary_quantile_append(value->summary, quantile, qvalue);
+                if (summary != NULL)
+                    value->summary = summary;
+            }
+        }
+        break;
     case METRIC_SUB_TYPE_HISTOGRAM_COUNT:
-//        value.histogram->count
+    case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_GCOUNT:
         break;
     case METRIC_SUB_TYPE_HISTOGRAM_SUM:
-//        value.histogram->sum
-        break;
+    case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_GSUM: {
+        value_t *value = metric_familty_get_value(fam, &labels, time);
+        if (value != NULL)
+            value->histogram->sum = strtod(number, NULL);
+    }   break;
     case METRIC_SUB_TYPE_HISTOGRAM_BUCKET:
-//        histogram_t *histogram_bucket_append(histogram_t *h, double maximum, uint64_t counter);
+    case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_BUCKET:
+        if (label_value != NULL) {
+            value_t *value = metric_familty_get_value(fam, &labels, time);
+            if (value != NULL) {
+                char vnumber[64] = {'0','\0'};
+                sstrnncpy(vnumber, sizeof(vnumber), label_value, label_value_size);
+                double maximum = strtod(vnumber, NULL);
+                uint64_t counter = strtoull(number, NULL, 10);
+                histogram_t *histogram = histogram_bucket_append(value->histogram, maximum, counter);
+                if (histogram != NULL)
+                    value->histogram = histogram;
+            }
+        }
         break;
     case METRIC_SUB_TYPE_HISTOGRAM_CREATED:
-        break;
-    case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_GCOUNT:
-//        value.histogram->count
-        break;
-    case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_GSUM:
-//        value.histogram->sum
-        break;
-    case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_BUCKET:
-        break;
     case METRIC_SUB_TYPE_GAUGE_HISTOGRAM_CREATED:
         break;
     }
+
+    label_set_reset(&labels);
 
     return 0;
 }
@@ -643,12 +788,11 @@ static int metric_parse_type(const char *str, size_t len, metric_type_t *type)
         }
         break;
     }
+
     return -1;
 }
 
-int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
-                      plugin_filter_t *filter, const char *prefix, size_t prefix_size,
-                      label_set_t *labels_extra, cdtime_t interval, cdtime_t ts, const char *line)
+int metric_parse_line(metric_parser_t *mp, const char *line)
 {
     const char *ptr = line;
     unsigned char sc;
@@ -660,8 +804,7 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
         return 0;
 
     if ((sc == SC_COLON) || (sc == SC_ALPHA))
-        return metric_parse_metric(fam, dispatch, filter, prefix, prefix_size,
-                                   labels_extra, interval, ts, line);
+        return metric_parse_metric(mp, line);
 
     if (sc != SC_COMMENT)
         return -1;
@@ -698,10 +841,8 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
     if (comment_type == METRIC_COMMENT_END) {
         while ((sc = scan_code[(unsigned char)*ptr]) == SC_SPACE)
             ptr++;
-        if (sc == 0) {
-            metric_parser_dispatch(fam, dispatch, filter);
+        if (sc == 0)
             return 1;
-        }
         return 0;
     }
 
@@ -725,7 +866,12 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
     if (metric_size == 0)
         return -1;
 
-    metric_parser_push(fam, dispatch, filter, prefix, prefix_size, metric, metric_size);
+    metric_family_t *fam = metric_parser_get_family(mp, true, metric, metric_size);
+    if (fam == NULL) {
+        //  FIXME
+        return -1;
+    }
+    mp->last_fam = fam;
 
     if (sc == SC_SPACE) {
         while (scan_code[(unsigned char)*ptr] == SC_SPACE)
@@ -743,20 +889,26 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
 
     switch (comment_type) {
     case METRIC_COMMENT_HELP:
-        if (fam->help != NULL)
+        if (fam->help != NULL) // FIXME
             free(fam->help);
         fam->help = sstrndup(text, text_size);
         if (fam->help == NULL)
             return -1;
         break;
-    case METRIC_COMMENT_TYPE:
-        if (fam->metric.num != 0)
+    case METRIC_COMMENT_TYPE: {
+        metric_type_t type = 0;
+        if (metric_parse_type(text, text_size, &type) != 0)
             return -1;
-        if (metric_parse_type(text, text_size, &fam->type) != 0)
-            return -1;
-        break;
+        if (fam->metric.num != 0) {
+            if (fam->type != type) {
+                return -1; // FIXME
+            }
+        } else {
+            fam->type = type;
+        }
+    }    break;
     case METRIC_COMMENT_UNIT:
-        if (fam->unit != NULL)
+        if (fam->unit != NULL) // FIXME
             free(fam->unit);
         fam->unit = sstrndup(text, text_size);
         if (fam->unit == NULL)
@@ -769,106 +921,156 @@ int metric_parse_line(metric_family_t *fam, dispatch_metric_family_t dispatch,
     return 0;
 }
 
-/* parse_label_value reads a label value, unescapes it and prints it to buf. On
- * success, inout is updated to point to the character just *after* the label
- * value, i.e. the character *following* the ending quotes - either a comma or
- * closing curlies. */
-static int parse_label_value(strbuf_t *buf, char const **inout)
+int metric_parse_buffer(metric_parser_t *mp, char *buffer, size_t buffer_len)
 {
-    char const *ptr = *inout;
-
-    if (ptr[0] != '"')
-        return EINVAL;
-    ptr++;
-
-    while (ptr[0] != '"') {
-        size_t valid_len = strcspn(ptr, "\\\"\n");
-        if (valid_len != 0) {
-            strbuf_putstrn(buf, ptr, valid_len);
-            ptr += valid_len;
-            continue;
+    if (buffer == NULL) {
+        if (strbuf_len(&mp->buf) > 0) {
+            int status = metric_parse_line(mp, mp->buf.ptr);
+            if (status < 0)
+                return status;
         }
-
-        if ((ptr[0] == 0) || (ptr[0] == '\n')) {
-            return EINVAL;
-        }
-
-        assert(ptr[0] == '\\');
-        if (ptr[1] == 0)
-            return EINVAL;
-
-        char tmp;
-        if (ptr[1] == 'n') {
-            tmp = '\n';
-        } else if (ptr[1] == 'r') {
-            tmp = '\r';
-        } else if (ptr[1] == 't') {
-            tmp = '\t';
-        } else {
-            tmp = ptr[1];
-        }
-
-        strbuf_putchar(buf, tmp);
-
-        ptr += 2;
+        return 0;
     }
 
-    assert(ptr[0] == '"');
-    ptr++;
-    *inout = ptr;
+    while (buffer_len > 0) {
+        char *end = memchr(buffer, '\n', buffer_len);
+        if (end != NULL) {
+            size_t line_size = end - buffer;
+            mp->lineno += 1;
+            if (line_size > 0) { // FIXME
+                strbuf_putstrn(&mp->buf, buffer, line_size);
+
+                int status = metric_parse_line(mp, mp->buf.ptr);
+                if (status < 0) {
+                    return status;
+                }
+            }
+
+            strbuf_reset(&mp->buf);
+            buffer_len -= line_size; // FIXME +1
+            buffer = end + 1;              // +1
+        } else {
+            strbuf_putstrn(&mp->buf, buffer, buffer_len);
+            buffer_len = 0;
+        }
+    }
+
     return 0;
 }
 
-int label_set_unmarshal(label_set_t *labels, char const **inout)
+void metric_parser_reset(metric_parser_t *mp)
 {
-    int ret = 0;
-    char const *ptr = *inout;
-
-    if (ptr[0] != '{')
-        return EINVAL;
-
-    strbuf_t value = STRBUF_CREATE;
-    while ((ptr[0] == '{') || (ptr[0] == ',')) {
-        ptr++;
-
-        size_t key_len = label_valid_name_len(ptr);
-        if (key_len == 0) {
-            ret = EINVAL;
+    while (true) {
+        metric_family_t *fam;
+        int status = c_avl_pick(mp->fams, (void *)&fam,  NULL);
+        if (status != 0)
             break;
-        }
-        char key[key_len + 1];
-        strncpy(key, ptr, key_len);
-        key[key_len] = 0;
-        ptr += key_len;
+        metric_family_free(fam);
+    }
 
-        if (ptr[0] != '=') {
-            ret = EINVAL;
-            break;
-        }
-        ptr++;
+    mp->lineno = 0;
+    strbuf_reset(&mp->buf);
+}
 
-        strbuf_reset(&value);
-        int status = parse_label_value(&value, &ptr);
-        if (status != 0) {
-            ret = status;
-            break;
-        }
+void metric_parser_free(metric_parser_t *mp)
+{
+    if (mp == NULL)
+        return;
 
-        status = label_set_add(labels, true, key, value.ptr);
-        if (status != 0) {
-            ret = status;
-            break;
+    metric_parser_reset(mp);
+
+    free(mp->metric_prefix);
+    label_set_reset(&mp->labels);
+
+    c_avl_destroy(mp->fams);
+
+    strbuf_destroy(&mp->buf);
+
+    free(mp);
+}
+
+metric_parser_t *metric_parser_alloc(char *metric_prefix, label_set_t *labels)
+{
+    metric_parser_t *mp = calloc(1, sizeof(*mp));
+    if (mp == NULL)
+        return NULL;
+
+    if (metric_prefix != NULL) {
+        mp->metric_prefix = strdup(metric_prefix);
+        if (mp->metric_prefix == NULL) {
+            ERROR("strdup failed");
+            metric_parser_free(mp);
+            return NULL;
         }
     }
-    strbuf_destroy(&value);
 
-    if (ret != 0)
-        return ret;
+    if ((labels != NULL) && (labels->num > 0))
+        label_set_clone(&mp->labels, *labels);
 
-    if (ptr[0] != '}')
-        return EINVAL;
+    mp->fams = c_avl_create(metric_parser_fam_cmp);
+    if (mp->fams == NULL) {
+        metric_parser_free(mp);
+        return NULL;
+    }
 
-    *inout = &ptr[1];
+    mp->buf = STRBUF_CREATE;
+
+    return mp;
+}
+
+int metric_parser_dispatch(metric_parser_t *mp, dispatch_metric_family_t dispatch,
+                                                plugin_filter_t *filter, cdtime_t time)
+{
+    size_t metric_prefix_size = 0;
+
+    if (mp->metric_prefix != NULL)
+        metric_prefix_size = strlen(mp->metric_prefix);
+
+    if (time == 0)
+        time = cdtime();
+
+    while (true) {
+        metric_family_t *fam;
+        int status = c_avl_pick(mp->fams, (void *)&fam,  NULL);
+        if (status != 0)
+            break;
+
+        if (mp->metric_prefix != NULL) {
+            size_t len = strlen(fam->name);
+            char *name = malloc(len + metric_prefix_size + 1);
+            if (name == NULL) {
+                ERROR("malloc failed.");
+                metric_family_free(fam);
+                continue;
+            }
+            memcpy(name, fam->name, len);
+            memcpy(name+len, mp->metric_prefix, metric_prefix_size);
+            name[len + metric_prefix_size] = '\0';
+            free(fam->name);
+            fam->name = name;
+        }
+
+        if (fam->type == METRIC_TYPE_COUNTER) {
+            size_t len = strlen(fam->name);
+            if (sstrncmpend(fam->name, len, "_total", strlen("_total")) == 0)
+                fam->name[len - strlen("_total")] = '\0';
+        } else if (fam->type == METRIC_TYPE_INFO) {
+            size_t len = strlen(fam->name);
+            if (sstrncmpend(fam->name, len, "_info", strlen("_info")) == 0)
+                fam->name[len - strlen("_info")] = '\0';
+        }
+
+        if (mp->labels.num > 0) {
+            for (size_t i = 0; i < fam->metric.num; i++) {
+                metric_t *m = &fam->metric.ptr[i];
+                label_set_add_set(&m->label, true, mp->labels);
+            }
+        }
+
+        dispatch(fam, filter, time);
+
+        metric_family_free(fam);
+    }
 
     return 0;
 }

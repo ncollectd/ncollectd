@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_TIMEX ${BUILD_PLUGIN_TIMEX} PARENT_SCOPE)
 if(BUILD_PLUGIN_TIMEX)
     set(PLUGIN_TIMEX_SRC timex.c)
     add_library(timex MODULE ${PLUGIN_TIMEX_SRC})
-    target_link_libraries(timex PRIVATE libutils libmetric)
+    target_link_libraries(timex PRIVATE libmetric libutils)
     set_target_properties(timex PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_timex EXCLUDE_FROM_ALL timex_test.c ${PLUGIN_TIMEX_SRC})
-#    target_link_libraries(test_plugin_timex libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_timex libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_timex)
 #    add_test(NAME test_plugin_timex COMMAND test_plugin_timex WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_SCHEDSTAT ${BUILD_PLUGIN_SCHEDSTAT} PARENT_SCOPE)
 if(BUILD_PLUGIN_SCHEDSTAT)
     set(PLUGIN_SCHEDSTAT_SRC schedstat.c)
     add_library(schedstat MODULE ${PLUGIN_SCHEDSTAT_SRC})
-    target_link_libraries(schedstat PRIVATE libutils libmetric)
+    target_link_libraries(schedstat PRIVATE libmetric libutils)
     set_target_properties(schedstat PROPERTIES PREFIX "")
 
     add_executable(test_plugin_schedstat EXCLUDE_FROM_ALL schedstat_test.c ${PLUGIN_SCHEDSTAT_SRC})
-    target_link_libraries(test_plugin_schedstat libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_schedstat libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_schedstat)
     add_test(NAME test_plugin_schedstat COMMAND test_plugin_schedstat WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

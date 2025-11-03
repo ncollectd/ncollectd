@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_BCACHE ${BUILD_PLUGIN_BCACHE} PARENT_SCOPE)
 if(BUILD_PLUGIN_BCACHE)
     set(PLUGIN_BCACHE_SRC bcache.c)
     add_library(bcache MODULE ${PLUGIN_BCACHE_SRC})
-    target_link_libraries(bcache PRIVATE libutils libmetric)
+    target_link_libraries(bcache PRIVATE libmetric libutils)
     set_target_properties(bcache PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_bcache EXCLUDE_FROM_ALL bcache_test.c ${PLUGIN_BCACHE_SRC})
-#    target_link_libraries(test_plugin_bcache libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_bcache libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_bcache)
 #    add_test(NAME test_plugin_bcache COMMAND test_plugin_bcache WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

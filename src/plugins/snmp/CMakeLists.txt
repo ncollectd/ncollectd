@@ -16,11 +16,11 @@ set(BUILD_PLUGIN_SNMP ${BUILD_PLUGIN_SNMP} PARENT_SCOPE)
 if(BUILD_PLUGIN_SNMP)
     set(PLUGIN_SNMP_SRC snmp.c)
     add_library(snmp MODULE ${PLUGIN_SNMP_SRC})
-    target_link_libraries(snmp PRIVATE libutils libmetric LibNetsnmp::LibNetsnmp)
+    target_link_libraries(snmp PRIVATE libmetric libutils LibNetsnmp::LibNetsnmp)
     set_target_properties(snmp PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_snmp EXCLUDE_FROM_ALL snmp_test.c ${PLUGIN_SNMP_SRC})
-#    target_link_libraries(test_plugin_snmp libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_snmp libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_snmp)
 #    add_test(NAME test_plugin_snmp COMMAND test_plugin_snmp WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

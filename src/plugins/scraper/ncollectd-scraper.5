@@ -10,22 +10,27 @@
 \fBload-plugin\fP scraper
 \fBplugin\fP scraper {
     \fBinstance\fP \fIname\fP {
-        \fBurl\fP \fIurl\fP
-        \fBuser\fP \fIusername\fP
-        \fBuser-env\fP \fIenv-name\fP
-        \fBpassword\fP \fIpassword\fP
-        \fBpassword-env\fP \fIenv-name\fP
-        \fBdigest\fP \fItrue|false\fP
-        \fBverify-peer\fP \fItrue|false\fP
-        \fBverify-host\fP \fItrue|false\fP
-        \fBca-cert\fP \fI/path/to/ca-cert\fP
-        \fBheader\fP \fIheader\fP
-        \fBpost\fP \fIdata\fP
+        \fBurl\fP \fIurl\fP {
+            \fBuser\fP \fIusername\fP
+            \fBuser-env\fP \fIenv-name\fP
+            \fBpassword\fP \fIpassword\fP
+            \fBpassword-env\fP \fIenv-name\fP
+            \fBdigest\fP \fItrue|false\fP
+            \fBverify-peer\fP \fItrue|false\fP
+            \fBverify-host\fP \fItrue|false\fP
+            \fBca-cert\fP \fI/path/to/ca-cert\fP
+            \fBheader\fP \fIheader\fP
+            \fBpost\fP \fIdata\fP
+            \fBtimeout\fP \fIseconds\fP
+            \fBcollect\fP \fIflags\fP
+        }
+        \fBfile\fP \fIpath\fP
+        \fBsocket\fP \fIpath\fP {
+            \fBtimeout\fP \fIseconds\fP
+        }
         \fBinterval\fP \fIseconds\fP
-        \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
-        \fBcollect\fP \fIflags\fP
         \fBfilter\fP {
             ...
         }
@@ -37,6 +42,7 @@ The scraper plugin collect metrics from a http endpoint.
 .Bl -tag -width Ds
 .It \fBurl\fP \fIurl\fP
 URL of the web site to retrieve the metrics.
+.Bl -tag -width Ds
 .It \fBuser\fP \fIusername\fP
 Username to use if authorization is required to read the page.
 .It \fBuser-env\fP \fIenv-name\fP
@@ -77,10 +83,6 @@ The complete data to be posted is given as the argument.
 This option will usually need to be accompanied by a \fBheader\fP
 option to set an appropriate \f(CWContent-Type\fP for the post
 body (e.g. to \f(CWapplication/x-www-form-urlencoded\fP).
-.It \fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which the values will be collected from this
-instanced.
-By default the global \fBinterval\fP setting will be used.
 .It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for HTTP requests
 to \fBurl\fP, in seconds.
@@ -89,11 +91,6 @@ If \fBtimeout\fP is bigger than the \fBinterval\fP, keep in mind that each slow
 network connection will stall one read thread.
 Adjust the \fBread-threads\fP global setting accordingly to prevent this from
 blocking other plugins.
-.It \fBlabel\fP \fIkey\fP \fIvalue\fP
-Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
-Can appear multiple time in the \fBinstance\fP block.
-.It \fBmetric-prefix\fP \fIprefix\fP
-Prepends \fIprefix\fP to the metric name in the \fBmatch\fP.
 .It \fBcollect\fP \fIflags\fP
 .Bl -tag -width Ds
 .It \fBtotal_time\fP
@@ -134,6 +131,29 @@ The number of new connections that were created to achieve the transfer.
 Time it took from the start until the SSL connect/handshake to the remote
 host was completed.
 .El
+.El
+.It \fBfile\fP \fIpath\fP
+Path to the file to get the metrics.
+.It \fBsocket\fP \fIpath\fP
+Path to the socket file to get the metrics.
+.Bl -tag -width Ds
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the timeout to read metrics, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+If \fBtimeout\fP is bigger than the \fBinterval\fP, keep in mind that each slow
+connection will stall one read thread.
+Adjust the \fBread-threads\fP global setting accordingly to prevent this from
+blocking other plugins.
+.El
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBinstance\fP block.
+.It \fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instance.
+By default the global \fBinterval\fP setting will be used.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
 See \fBFILTER CONFIGURATION\fP in

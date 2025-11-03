@@ -22,11 +22,11 @@ set(BUILD_PLUGIN_TURBOSTAT ${BUILD_PLUGIN_TURBOSTAT} PARENT_SCOPE)
 if(BUILD_PLUGIN_TURBOSTAT)
     set(PLUGIN_TURBOSTAT_SRC turbostat.c msr-index.h)
     add_library(turbostat MODULE ${PLUGIN_TURBOSTAT_SRC})
-    target_link_libraries(turbostat PRIVATE libutils libmetric)
+    target_link_libraries(turbostat PRIVATE libmetric libutils)
     set_target_properties(turbostat PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_turbostat EXCLUDE_FROM_ALL turbostat_test.c ${PLUGIN_TURBOSTAT_SRC})
-#    target_link_libraries(test_plugin_turbostat libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_turbostat libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_turbostat)
 #    add_test(NAME test_plugin_turbostat COMMAND test_plugin_turbostat WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

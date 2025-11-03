@@ -30,11 +30,11 @@ set(BUILD_PLUGIN_CPUSLEEP ${BUILD_PLUGIN_CPUSLEEP} PARENT_SCOPE)
 if(BUILD_PLUGIN_CPUSLEEP)
     set(PLUGIN_CPUSLEEP_SRC cpusleep.c)
     add_library(cpusleep MODULE ${PLUGIN_CPUSLEEP_SRC})
-    target_link_libraries(cpusleep PRIVATE libutils libmetric)
+    target_link_libraries(cpusleep PRIVATE libmetric libutils)
     set_target_properties(cpusleep PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_cpusleep EXCLUDE_FROM_ALL cpusleep_test.c ${PLUGIN_CPUSLEEP_SRC})
-#    target_link_libraries(test_plugin_cpusleep libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_cpusleep libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_cpusleep)
 #    add_test(NAME test_plugin_cpusleep COMMAND test_plugin_cpusleep WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

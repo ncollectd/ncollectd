@@ -18,6 +18,7 @@
 #include "libutils/common.h"
 #include "libutils/dtoa.h"
 #include "libutils/exec.h"
+#include "libmetric/parser.h"
 
 #include <poll.h>
 
@@ -30,9 +31,9 @@ typedef struct {
     cexec_t exec;
     cdtime_t interval;
     char *metric_prefix;
-    size_t metric_prefix_size;
     label_set_t labels;
     plugin_filter_t *filter;
+    metric_parser_t *mp;
     int status;
     pid_t pid;
     bool running;
@@ -67,8 +68,6 @@ static void *exec_read_one(void *arg)
     fds[1].fd = fd_err;
     fds[1].events = POLLIN;
 
-    metric_family_t fam = {0};
-
     while (true) {
         status = poll(fds, STATIC_ARRAY_SIZE(fds), -1);
         if (status < 0) {
@@ -98,11 +97,14 @@ static void *exec_read_one(void *arg)
                 if (*(pnl - 1) == '\r')
                     *(pnl - 1) = '\0';
 
-                status = metric_parse_line(&fam, plugin_dispatch_metric_family_filtered, pm->filter,
-                                                 pm->metric_prefix, pm->metric_prefix_size,
-                                                 &pm->labels, 0, 0, pbuffer);
-                if (status < 0)
+                status = metric_parse_line(pm->mp, pbuffer);
+                if (status < 0) {
                     PLUGIN_WARNING("Cannot parse '%s'.", pbuffer);
+                } else if (status == 1) { // FIXME
+                    metric_parser_dispatch(pm->mp, plugin_dispatch_metric_family_filtered,
+                                                   pm->filter, 0);
+                    metric_parser_reset(pm->mp);
+                }
 
                 pbuffer = ++pnl;
             }
@@ -175,6 +177,9 @@ static void *exec_read_one(void *arg)
         }
     }
 
+    metric_parser_dispatch(pm->mp, plugin_dispatch_metric_family_filtered, pm->filter, 0);
+    metric_parser_reset(pm->mp);
+
     PLUGIN_DEBUG("exec_read_one: Waiting for '%s' to exit.", pm->exec.exec);
     if (waitpid(pm->pid, &status, 0) < 0) {
         PLUGIN_DEBUG("waitpid failed: %s", STRERRNO);
@@ -243,6 +248,8 @@ static void exec_free(void *arg)
 
     free(pm->metric_prefix);
 
+    metric_parser_free(pm->mp);
+
     free(pm);
 }
 
@@ -301,8 +308,12 @@ static int exec_config_exec(config_item_t *ci)
         return -1;
     }
 
-    if (pm->metric_prefix != NULL)
-        pm->metric_prefix_size = strlen(pm->metric_prefix);
+    pm->mp = metric_parser_alloc(pm->metric_prefix, pm->labels.num > 0 ? &pm->labels : NULL);
+    if (pm->mp == NULL) {
+        PLUGIN_ERROR("Cannot alloc metric parser.");
+        exec_free(pm);
+        return -1;
+    }
 
     pthread_mutex_init(&pm->lock, NULL);
 

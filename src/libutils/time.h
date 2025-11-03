@@ -17,6 +17,8 @@
 
 typedef uint64_t cdtime_t;
 
+#define CDTIME_DOOMSDAY (uint64_t){0xffffffffffffffff}
+
 /* 2^30 = 1073741824 */
 #define TIME_T_TO_CDTIME_T_STATIC(t) (((cdtime_t)(t)) << 30)
 #define TIME_T_TO_CDTIME_T(t)                                                  \

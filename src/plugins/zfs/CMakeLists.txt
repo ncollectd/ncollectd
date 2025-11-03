@@ -23,7 +23,7 @@ set(BUILD_PLUGIN_ZFS ${BUILD_PLUGIN_ZFS} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_ZFS)
     set(PLUGIN_ZFS_SRC zfs.c zfs_flags.h zfs_fam.c zfs_fam.h)
-    set(PLUGIN_ZFS_LIBS libutils libmetric)
+    set(PLUGIN_ZFS_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         gperf_generate(zfs_stats.gperf "${CMAKE_CURRENT_BINARY_DIR}/zfs_stats.h" ZFS_STATS_H)
@@ -41,7 +41,7 @@ if(BUILD_PLUGIN_ZFS)
     set_target_properties(zfs PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_zfs EXCLUDE_FROM_ALL zfs_test.c ${PLUGIN_ZFS_SRC})
-#    target_link_libraries(test_plugin_zfs libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_zfs libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_zfs)
 #    add_test(NAME test_plugin_zfs COMMAND test_plugin_zfs WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

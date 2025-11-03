@@ -20,11 +20,11 @@ set(BUILD_PLUGIN_MMC ${BUILD_PLUGIN_MMC} PARENT_SCOPE)
 if(BUILD_PLUGIN_MMC)
     set(PLUGIN_MMC_SRC mmc.c)
     add_library(mmc MODULE ${PLUGIN_MMC_SRC})
-    target_link_libraries(mmc PRIVATE libutils libmetric LibUdev::LibUdev)
+    target_link_libraries(mmc PRIVATE libmetric libutils LibUdev::LibUdev)
     set_target_properties(mmc PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_mmc EXCLUDE_FROM_ALL mmc_test.c ${PLUGIN_MMC_SRC})
-#    target_link_libraries(test_plugin_mmc libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_mmc libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_mmc)
 #    add_test(NAME test_plugin_mmc COMMAND test_plugin_mmc WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

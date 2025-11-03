@@ -45,7 +45,7 @@ set(BUILD_PLUGIN_MEMORY ${BUILD_PLUGIN_MEMORY} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_MEMORY)
     set(PLUGIN_MEMORY_SRC memory.c memory.h)
-    set(PLUGIN_MEMORY_LIBS libutils libmetric)
+    set(PLUGIN_MEMORY_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         list(APPEND PLUGIN_MEMORY_SRC memory_linux.c)
@@ -73,7 +73,7 @@ if(BUILD_PLUGIN_MEMORY)
 
     if(BUILD_LINUX)
         add_executable(test_plugin_memory EXCLUDE_FROM_ALL memory_linux_test.c ${PLUGIN_MEMORY_SRC})
-        target_link_libraries(test_plugin_memory libtest libutils libmetric m)
+        target_link_libraries(test_plugin_memory libtest libmetric libutils m)
         add_dependencies(build_tests test_plugin_memory)
         add_test(NAME test_plugin_memory COMMAND test_plugin_memory WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif()

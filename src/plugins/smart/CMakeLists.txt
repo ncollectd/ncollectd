@@ -25,7 +25,7 @@ if(BUILD_PLUGIN_SMART)
         nvme.h
         intel-nvme.h)
     add_library(smart MODULE ${PLUGIN_SMART_SRC})
-    target_link_libraries(smart PRIVATE libutils libmetric LibAtasmart::LibAtasmart LibUdev::LibUdev)
+    target_link_libraries(smart PRIVATE libmetric libutils LibAtasmart::LibAtasmart LibUdev::LibUdev)
     set_target_properties(smart PROPERTIES PREFIX "")
     install(TARGETS smart DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
     configure_file(ncollectd-smart.5 ncollectd-smart.5 @ONLY)

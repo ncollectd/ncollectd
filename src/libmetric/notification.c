@@ -13,7 +13,6 @@
 #include "libmetric/metric_chars.h"
 #include "libmetric/notification.h"
 #include "libmetric/marshal.h"
-#include "libmetric/parser.h"
 
 int notification_marshal(strbuf_t *buf, notification_t const *n)
 {

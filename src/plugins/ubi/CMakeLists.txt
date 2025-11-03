@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_UBI ${BUILD_PLUGIN_UBI} PARENT_SCOPE)
 if(BUILD_PLUGIN_UBI)
     set(PLUGIN_UBI_SRC ubi.c)
     add_library(ubi MODULE ${PLUGIN_UBI_SRC})
-    target_link_libraries(ubi PRIVATE libutils libmetric)
+    target_link_libraries(ubi PRIVATE libmetric libutils)
     set_target_properties(ubi PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_ubi EXCLUDE_FROM_ALL ubi_test.c ${PLUGIN_UBI_SRC})
-#    target_link_libraries(test_plugin_ubi libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_ubi libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_ubi)
 #    add_test(NAME test_plugin_ubi COMMAND test_plugin_ubi WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

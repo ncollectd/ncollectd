@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_ZSWAP ${BUILD_PLUGIN_ZSWAP} PARENT_SCOPE)
 if(BUILD_PLUGIN_ZSWAP)
     set(PLUGIN_ZSWAP_SRC zswap.c)
     add_library(zswap MODULE ${PLUGIN_ZSWAP_SRC})
-    target_link_libraries(zswap PRIVATE libutils libmetric)
+    target_link_libraries(zswap PRIVATE libmetric libutils)
     set_target_properties(zswap PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_zswap EXCLUDE_FROM_ALL zswap_test.c ${PLUGIN_ZSWAP_SRC})
-#    target_link_libraries(test_plugin_zswap libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_zswap libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_zswap)
 #    add_test(NAME test_plugin_zswap COMMAND test_plugin_zswap WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

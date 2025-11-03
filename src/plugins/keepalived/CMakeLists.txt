@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_KEEPALIVED ${BUILD_PLUGIN_KEEPALIVED} PARENT_SCOPE)
 if(BUILD_PLUGIN_KEEPALIVED)
     set(PLUGIN_KEEPALIVED_SRC keepalived.c)
     add_library(keepalived MODULE ${PLUGIN_KEEPALIVED_SRC})
-    target_link_libraries(keepalived PRIVATE libutils libmetric)
+    target_link_libraries(keepalived PRIVATE libmetric libutils)
     set_target_properties(keepalived PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_keepalived EXCLUDE_FROM_ALL keepalived_test.c ${PLUGIN_KEEPALIVED_SRC})
-#    target_link_libraries(test_plugin_keepalived libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_keepalived libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_keepalived)
 #    add_test(NAME test_plugin_keepalived COMMAND test_plugin_keepalived WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

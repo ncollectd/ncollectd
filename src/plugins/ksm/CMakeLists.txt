@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_KSM ${BUILD_PLUGIN_KSM} PARENT_SCOPE)
 if(BUILD_PLUGIN_KSM)
     set(PLUGIN_KSM_SRC ksm.c)
     add_library(ksm MODULE ${PLUGIN_KSM_SRC})
-    target_link_libraries(ksm PRIVATE libutils libmetric)
+    target_link_libraries(ksm PRIVATE libmetric libutils)
     set_target_properties(ksm PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_ksm EXCLUDE_FROM_ALL ksm_test.c ${PLUGIN_KSM_SRC})
-#    target_link_libraries(test_plugin_ksm libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_ksm libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_ksm)
 #    add_test(NAME test_plugin_ksm COMMAND test_plugin_ksm WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

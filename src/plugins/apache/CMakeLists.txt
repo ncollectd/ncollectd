@@ -16,11 +16,11 @@ set(BUILD_PLUGIN_APACHE ${BUILD_PLUGIN_APACHE} PARENT_SCOPE)
 if(BUILD_PLUGIN_APACHE)
     set(PLUGIN_APACHE_SRC apache.c)
     add_library(apache MODULE ${PLUGIN_APACHE_SRC})
-    target_link_libraries(apache PRIVATE libutils libmetric LibCurl::LibCurl)
+    target_link_libraries(apache PRIVATE libmetric libutils LibCurl::LibCurl)
     set_target_properties(apache PROPERTIES PREFIX "")
 
     add_executable(test_plugin_apache EXCLUDE_FROM_ALL apache_test.c ${PLUGIN_APACHE_SRC})
-    target_link_libraries(test_plugin_apache libtest libutils libmetric LibCurl::LibCurl -lm -lpthread)
+    target_link_libraries(test_plugin_apache libtest libmetric libutils LibCurl::LibCurl -lm -lpthread)
     add_dependencies(build_tests test_plugin_apache)
     add_test(NAME test_plugin_apache COMMAND test_plugin_apache WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

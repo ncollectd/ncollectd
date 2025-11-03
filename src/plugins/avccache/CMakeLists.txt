@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_AVCCACHE ${BUILD_PLUGIN_AVCCACHE} PARENT_SCOPE)
 if(BUILD_PLUGIN_AVCCACHE)
     set(PLUGIN_AVCCACHE_SRC avccache.c)
     add_library(avccache MODULE ${PLUGIN_AVCCACHE_SRC})
-    target_link_libraries(avccache PRIVATE libutils libmetric)
+    target_link_libraries(avccache PRIVATE libmetric libutils)
     set_target_properties(avccache PROPERTIES PREFIX "")
 
     add_executable(test_plugin_avccache EXCLUDE_FROM_ALL avccache_test.c ${PLUGIN_AVCCACHE_SRC})
-    target_link_libraries(test_plugin_avccache libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_avccache libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_avccache)
     add_test(NAME test_plugin_avccache COMMAND test_plugin_avccache WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

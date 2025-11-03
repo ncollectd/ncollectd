@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_SOCKSTAT ${BUILD_PLUGIN_SOCKSTAT} PARENT_SCOPE)
 if(BUILD_PLUGIN_SOCKSTAT)
     set(PLUGIN_SOCKSTAT_SRC sockstat.c)
     add_library(sockstat MODULE ${PLUGIN_SOCKSTAT_SRC})
-    target_link_libraries(sockstat PRIVATE libutils libmetric)
+    target_link_libraries(sockstat PRIVATE libmetric libutils)
     set_target_properties(sockstat PROPERTIES PREFIX "")
 
     add_executable(test_plugin_sockstat EXCLUDE_FROM_ALL sockstat_test.c ${PLUGIN_SOCKSTAT_SRC})
-    target_link_libraries(test_plugin_sockstat libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_sockstat libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_sockstat)
     add_test(NAME test_plugin_sockstat COMMAND test_plugin_sockstat WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -10,7 +10,7 @@ set(BUILD_PLUGIN_FREERADIUS ${BUILD_PLUGIN_FREERADIUS} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_FREERADIUS)
     set(PLUGIN_FREERADIUS_SRC freeradius.c hmac.c hmac.h md5.c md5.h)
-    set(PLUGIN_FREERADIUS_LIBS libutils libmetric)
+    set(PLUGIN_FREERADIUS_LIBS libmetric libutils)
 
     add_library(freeradius MODULE ${PLUGIN_FREERADIUS_SRC})
     target_link_libraries(freeradius PRIVATE ${PLUGIN_FREERADIUS_LIBS})

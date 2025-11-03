@@ -34,11 +34,11 @@ set(BUILD_PLUGIN_DF ${BUILD_PLUGIN_DF} PARENT_SCOPE)
 if(BUILD_PLUGIN_DF)
     set(PLUGIN_DF_SRC df.c)
     add_library(df MODULE ${PLUGIN_DF_SRC})
-    target_link_libraries(df PRIVATE libutils libmetric)
+    target_link_libraries(df PRIVATE libmetric libutils)
     set_target_properties(df PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_df EXCLUDE_FROM_ALL df_test.c ${PLUGIN_DF_SRC})
-#    target_link_libraries(test_plugin_df libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_df libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_df)
 #    add_test(NAME test_plugin_df COMMAND test_plugin_df WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

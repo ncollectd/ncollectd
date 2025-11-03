@@ -27,11 +27,11 @@ set(BUILD_PLUGIN_NFACCT ${BUILD_PLUGIN_NFACCT} PARENT_SCOPE)
 if(BUILD_PLUGIN_NFACCT)
     set(PLUGIN_NFACCT_SRC nfacct.c)
     add_library(nfacct MODULE ${PLUGIN_NFACCT_SRC})
-    target_link_libraries(nfacct PRIVATE libutils libmetric LibMnl::LibMnl)
+    target_link_libraries(nfacct PRIVATE libmetric libutils LibMnl::LibMnl)
     set_target_properties(nfacct PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_nfacct EXCLUDE_FROM_ALL nfacct_test.c ${PLUGIN_NFACCT_SRC})
-#    target_link_libraries(test_plugin_nfacct libtest libutils libmetric m)
+#    target_link_libraries(test_plugin_nfacct libtest libmetric libutils m)
 #    add_dependencies(build_tests test_plugin_nfacct)
 #    add_test(NAME test_plugin_nfacct COMMAND test_plugin_nfacct WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

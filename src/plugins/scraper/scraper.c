@@ -9,21 +9,19 @@
 #include "plugin.h"
 #include "libutils/common.h"
 #include "libutils/time.h"
+#include "libutils/socket.h"
+#include "libmetric/parser.h"
 
 #include <curl/curl.h>
 
 #include "curl_stats.h"
 
 typedef struct {
-    cdtime_t time;
-    metric_family_t fam;
-    strbuf_t buf;
-    size_t lineno;
-} scraper_parser_t;
-
-typedef struct {
     char *instance;
-    char *host;
+
+    char *file_path;
+    char *socket_path;
+
     char *url;
     char *user;
     char *pass;
@@ -32,11 +30,11 @@ typedef struct {
     bool verify_peer;
     bool verify_host;
     char *cacert;
-    cdtime_t interval;
-    int timeout;
 
+    cdtime_t timeout;
+
+    cdtime_t interval;
     char *metric_prefix;
-    size_t metric_prefix_size;
     label_set_t label;
     plugin_filter_t *filter;
 
@@ -46,39 +44,9 @@ typedef struct {
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
 
-    scraper_parser_t parser;
+    metric_parser_t *mp;
+
 } scraper_instance_t;
-
-int metric_parse_buffer(strbuf_t *buf, char *buffer, size_t buffer_len, size_t *lineno,
-                        metric_family_t *fam, const char *prefix, size_t prefix_size,
-                        label_set_t *labels, plugin_filter_t *filter, cdtime_t time)
-{
-    while (buffer_len > 0) {
-        char *end = memchr(buffer, '\n', buffer_len);
-        if (end != NULL) {
-            size_t line_size = end - buffer;
-            *lineno += 1;
-            if (line_size > 0) { // FIXME
-                strbuf_putstrn(buf, buffer, line_size);
-
-                int status = metric_parse_line(fam, plugin_dispatch_metric_family_filtered, filter,
-                                               prefix, prefix_size, labels, 0, time, buf->ptr);
-                if (status < 0) {
-                    return status;
-                }
-            }
-
-            strbuf_reset(buf);
-            buffer_len -= line_size; // FIXME +1
-            buffer = end + 1;              // +1
-        } else {
-            strbuf_putstrn(buf, buffer, buffer_len);
-            buffer_len = 0;
-        }
-    }
-
-    return 0;
-}
 
 static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
 {
@@ -91,117 +59,12 @@ static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *
     size_t len = size * nmemb;
     size_t buf_len = len;
 
-    int status = metric_parse_buffer(&target->parser.buf, buf, buf_len, &target->parser.lineno,
-                                     &target->parser.fam,
-                                     target->metric_prefix, target->metric_prefix_size,
-                                     &target->label, target->filter, target->parser.time);
+    int status = metric_parse_buffer(target->mp, buf, buf_len);
     if (status < 0) {
-
+        // FIXME
     }
 
-#if 0
-    while (buf_len > 0) {
-        unsigned char *end = memchr(buf, '\n', buf_len);
-        if (end != NULL) {
-            size_t line_size = end - (unsigned char *)buf;
-            strbuf_putstrn(&target->parser.buf, buf, line_size);
-
-            int status = metric_parse_line(&target->parser.fam,
-                                            target->metric_prefix, target->metric_prefix_size,
-                                            &target->label, target->parser.time,
-                                            target->parser.buf.ptr);
-            if (status < 0) {
-
-            }
-
-            strbuf_reset(&target->parser.buf);
-            buf_len -= line_size; // FIXME +1
-            buf = end + 1;              // +1
-        } else {
-            strbuf_putstrn(&target->parser.buf, buf, buf_len);
-            buf_len = 0;
-        }
-    }
-#endif
     return len;
-}
-
-static void scraper_instance_free(void *arg)
-{
-    scraper_instance_t *target = (scraper_instance_t *)arg;
-    if (target == NULL)
-        return;
-
-    if (target->curl != NULL)
-        curl_easy_cleanup(target->curl);
-    target->curl = NULL;
-
-    free(target->instance);
-    free(target->url);
-    free(target->user);
-    free(target->pass);
-    free(target->credentials);
-    free(target->cacert);
-    free(target->post_body);
-
-    curl_slist_free_all(target->headers);
-    free(target->metric_prefix);
-    label_set_reset(&target->label);
-    plugin_filter_free(target->filter);
-
-    strbuf_destroy(&target->parser.buf);
-    free(target);
-}
-
-static int scaper_read(user_data_t *ud)
-{
-    if ((ud == NULL) || (ud->data == NULL)) {
-        PLUGIN_ERROR("Invalid user data.");
-        return -1;
-    }
-
-    scraper_instance_t *target = (scraper_instance_t *)ud->data;
-
-    strbuf_reset(&target->parser.buf);
-    metric_family_metric_reset(&target->parser.fam);
-    target->parser.time = 0;
-    target->parser.lineno = 0;
-
-    CURLcode rcode = curl_easy_setopt(target->curl, CURLOPT_URL, target->url);
-    if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                     curl_easy_strerror(rcode));
-        return -1;
-    }
-
-    int status = curl_easy_perform(target->curl);
-    if (status != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_perform failed with status %i: %s (%s)",
-                    status, target->curl_errbuf, target->url);
-        return -1;
-    }
-
-    //  if (target->stats != NULL)
-    //      curl_stats_dispatch(target->stats, target->curl, cjq_host(db),
-    //      "prometheus", target->instance);
-
-    char *url = NULL;
-    curl_easy_getinfo(target->curl, CURLINFO_EFFECTIVE_URL, &url);
-    long rc = 0;
-    curl_easy_getinfo(target->curl, CURLINFO_RESPONSE_CODE, &rc);
-    /* The response code is zero if a non-HTTP transport was used. */
-    if ((rc != 0) && (rc != 200)) {
-        PLUGIN_ERROR("curl_easy_perform failed with response code %ld (%s)", rc, url);
-        return -1;
-    }
-
-    /* parse remain line */
-    //status = prom_parser(&target->parser, NULL);
-    //if (status < 0) {
-    //}
-    //prom_push_metric(&target->parser, NULL, 0);
-
-    return 0;
 }
 
 static int scraper_init_curl(scraper_instance_t *target)
@@ -354,8 +217,9 @@ static int scraper_init_curl(scraper_instance_t *target)
     }
 
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
-    if (target->timeout >= 0) {
-        rcode = curl_easy_setopt(target->curl, CURLOPT_TIMEOUT_MS, (long)target->timeout);
+    if (target->timeout != CDTIME_DOOMSDAY) {
+        rcode = curl_easy_setopt(target->curl, CURLOPT_TIMEOUT_MS,
+                                               (long)CDTIME_T_TO_MS(target->timeout));
         if (rcode != CURLE_OK) {
             PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                          curl_easy_strerror(rcode));
@@ -363,7 +227,7 @@ static int scraper_init_curl(scraper_instance_t *target)
         }
     } else if (target->interval > 0) {
         rcode = curl_easy_setopt(target->curl, CURLOPT_TIMEOUT_MS,
-                                         (long)CDTIME_T_TO_MS(target->interval));
+                                               (long)CDTIME_T_TO_MS(target->interval));
         if (rcode != CURLE_OK) {
             PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                          curl_easy_strerror(rcode));
@@ -371,7 +235,7 @@ static int scraper_init_curl(scraper_instance_t *target)
         }
     } else {
         rcode = curl_easy_setopt(target->curl, CURLOPT_TIMEOUT_MS,
-                                         (long)CDTIME_T_TO_MS(plugin_get_interval()));
+                                               (long)CDTIME_T_TO_MS(plugin_get_interval()));
         if (rcode != CURLE_OK) {
             PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                          curl_easy_strerror(rcode));
@@ -381,6 +245,167 @@ static int scraper_init_curl(scraper_instance_t *target)
 #endif
 
     return 0;
+}
+
+
+static int scaper_read_url(scraper_instance_t *target)
+{
+    if (target->curl == NULL) {
+        if (scraper_init_curl(target) < 0)
+            return -1;
+    }
+
+    CURLcode rcode = curl_easy_setopt(target->curl, CURLOPT_URL, target->url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    int status = curl_easy_perform(target->curl);
+    if (status != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_perform failed with status %i: %s (%s)",
+                    status, target->curl_errbuf, target->url);
+        metric_parser_reset(target->mp);
+        return -1;
+    }
+
+    label_set_t lstats = {0};
+    label_set_clone(&lstats, target->label);
+    label_set_add(&lstats, false, "instance", target->instance);
+    curl_stats_dispatch(target->curl, target->curl_stats_flags,
+                        target->metric_prefix != NULL ? target->metric_prefix : "scraper_",
+                        &lstats);
+    label_set_reset(&lstats);
+
+    //  if (target->stats != NULL)
+    //      curl_stats_dispatch(target->stats, target->curl, cjq_host(db),
+    //      "prometheus", target->instance);
+
+    char *url = NULL;
+    curl_easy_getinfo(target->curl, CURLINFO_EFFECTIVE_URL, &url);
+    long rc = 0;
+    curl_easy_getinfo(target->curl, CURLINFO_RESPONSE_CODE, &rc);
+    /* The response code is zero if a non-HTTP transport was used. */
+    if ((rc != 0) && (rc != 200)) {
+        PLUGIN_ERROR("curl_easy_perform failed with response code %ld (%s)", rc, url);
+        metric_parser_reset(target->mp);
+        return -1;
+    }
+
+    metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);
+    metric_parser_reset(target->mp);
+
+    return 0;
+}
+
+static int scaper_read_file(scraper_instance_t *target)
+{
+    int fd = open(target->file_path, O_RDONLY);
+    if (fd < 0) {
+        PLUGIN_ERROR("open (%s): %s", target->file_path, STRERRNO);
+        return -1;
+    }
+
+    char buffer[8192];
+    ssize_t len = 0;
+    while ((len = read(fd, buffer, sizeof(buffer))) > 0) {
+        int status = metric_parse_buffer(target->mp, buffer, len);
+        if (status < 0) {
+            // FIXME
+        }
+    }
+
+    close(fd);
+
+    metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);
+    metric_parser_reset(target->mp);
+
+    return 0;
+}
+
+static int scaper_read_socket(scraper_instance_t *target)
+{
+    cdtime_t timeout = 0;
+
+    if (target->timeout != CDTIME_DOOMSDAY) {
+        timeout = target->timeout;
+    } else if (target->interval > 0) {
+        timeout = target->interval;
+    } else {
+        timeout = plugin_get_interval();
+    }
+
+    int fd = socket_connect_unix_stream(target->socket_path, timeout);
+    if (fd < 0)
+        return -1;
+
+    char buffer[8192];
+    ssize_t len = 0;
+    while ((len = read(fd, buffer, sizeof(buffer))) > 0) {
+        int status = metric_parse_buffer(target->mp, buffer, len);
+        if (status < 0) {
+            // FIXME
+        }
+    }
+
+    close(fd);
+
+    metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);
+    metric_parser_reset(target->mp);
+
+    return 0;
+}
+
+static int scaper_read(user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+
+    scraper_instance_t *target = (scraper_instance_t *)ud->data;
+
+    if (target->url != NULL)
+        return scaper_read_url(target);
+
+    if (target->file_path != NULL)
+        return scaper_read_file(target);
+
+    if (target->socket_path != NULL)
+        return scaper_read_socket(target);
+
+    return 0;
+}
+
+static void scraper_instance_free(void *arg)
+{
+    scraper_instance_t *target = (scraper_instance_t *)arg;
+    if (target == NULL)
+        return;
+
+    if (target->curl != NULL)
+        curl_easy_cleanup(target->curl);
+    target->curl = NULL;
+
+    free(target->instance);
+    free(target->file_path);
+    free(target->socket_path);
+    free(target->url);
+    free(target->user);
+    free(target->pass);
+    free(target->credentials);
+    free(target->cacert);
+    free(target->post_body);
+
+    curl_slist_free_all(target->headers);
+    free(target->metric_prefix);
+    label_set_reset(&target->label);
+    plugin_filter_free(target->filter);
+
+    metric_parser_free(target->mp);
+
+    free(target);
 }
 
 static int scraper_config_append_string(const char *name, struct curl_slist **dest,
@@ -400,34 +425,25 @@ static int scraper_config_append_string(const char *name, struct curl_slist **de
     return 0;
 }
 
-static int scraper_config_target(config_item_t *ci)
+static int scraper_config_url(scraper_instance_t *target, config_item_t *ci)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
-        PLUGIN_WARNING("The 'instance' block needs exactly one string argument.");
+        PLUGIN_WARNING("The 'url' block needs exactly one string argument.");
         return -1;
     }
 
-    scraper_instance_t *target = calloc(1, sizeof(scraper_instance_t));
-    if (target == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        return -1;
-    }
-
-    target->timeout = -1;
-
-    int status = cf_util_get_string(ci, &target->instance);
+    int status = cf_util_get_string(ci, &target->url);
     if (status != 0) {
-        PLUGIN_ERROR("Invalid instance name.");
-        scraper_instance_free(target);
+        PLUGIN_ERROR("Invalid url name.");
         return -1;
     }
+
+    target->timeout = CDTIME_DOOMSDAY;
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
-        if (strcasecmp("url", child->key) == 0) {
-            status = cf_util_get_string(child, &target->url);
-        } else if (strcasecmp("user", child->key) == 0) {
+        if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &target->user);
         } else if (strcasecmp("user-env", child->key) == 0) {
             status = cf_util_get_string_env(child, &target->user);
@@ -447,16 +463,84 @@ static int scraper_config_target(config_item_t *ci)
             status = scraper_config_append_string("Header", &target->headers, child);
         } else if (strcasecmp("post", child->key) == 0) {
             status = cf_util_get_string(child, &target->post_body);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &target->timeout);
+        } else if (strcasecmp("collect", child->key) == 0) {
+            status = curl_stats_from_config(child, &target->curl_stats_flags);
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    return status;
+}
+
+static int scraper_config_socket(scraper_instance_t *target, config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_WARNING("The 'socket' block needs exactly one string argument.");
+        return -1;
+    }
+
+    int status = cf_util_get_string(ci, &target->socket_path);
+    if (status != 0) {
+        PLUGIN_ERROR("Invalid socket name.");
+        return -1;
+    }
+
+    target->timeout = CDTIME_DOOMSDAY;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &target->timeout);
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    return status;
+}
+
+static int scraper_config_target(config_item_t *ci)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_WARNING("The 'instance' block needs exactly one string argument.");
+        return -1;
+    }
+
+    scraper_instance_t *target = calloc(1, sizeof(scraper_instance_t));
+    if (target == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
+
+
+    int status = cf_util_get_string(ci, &target->instance);
+    if (status != 0) {
+        PLUGIN_ERROR("Invalid instance name.");
+        scraper_instance_free(target);
+        return -1;
+    }
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("url", child->key) == 0) {
+            status = scraper_config_url(target, child);
+        } else if (strcasecmp("file", child->key) == 0) {
+            status = cf_util_get_string(child, &target->file_path);
+        } else if (strcasecmp("socket", child->key) == 0) {
+            status = scraper_config_socket(target, child);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &target->interval);
-        } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &target->timeout);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &target->label);
         } else if (strcasecmp("metric-prefix", child->key) == 0) {
             status = cf_util_get_string(child, &target->metric_prefix);
-        } else if (strcasecmp("collect", child->key) == 0) {
-            status = curl_stats_from_config(child, &target->curl_stats_flags);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &target->filter);
         } else {
@@ -468,13 +552,36 @@ static int scraper_config_target(config_item_t *ci)
             break;
     }
 
-    if (target->metric_prefix != NULL)
-        target->metric_prefix_size = strlen(target->metric_prefix);
+    if (status == 0) {
+        int count = 0;
+        if (target->url != NULL)
+            count++;
+        if (target->file_path != NULL)
+            count++;
+        if (target->socket_path != NULL)
+            count++;
 
-    if (status == 0 && target->url)
-        status = scraper_init_curl(target);
+        if (count == 0)  {
+            PLUGIN_ERROR("Only one of 'url', 'file' or 'socket' can be set.");
+            scraper_instance_free(target);
+            return -1;
+        }
+
+        if (count > 1)  {
+            PLUGIN_ERROR("At least one of 'url', 'file' or 'socket' must be set.");
+            scraper_instance_free(target);
+            return -1;
+        }
+    }
 
     if (status != 0) {
+        scraper_instance_free(target);
+        return -1;
+    }
+
+    target->mp = metric_parser_alloc(target->metric_prefix, &target->label);
+    if (target->mp == NULL) {
+        PLUGIN_ERROR("Cannot alloc metric parser.");
         scraper_instance_free(target);
         return -1;
     }

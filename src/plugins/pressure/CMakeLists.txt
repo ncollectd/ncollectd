@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_PRESSURE ${BUILD_PLUGIN_PRESSURE} PARENT_SCOPE)
 if(BUILD_PLUGIN_PRESSURE)
     set(PLUGIN_PRESSURE_SRC pressure.c)
     add_library(pressure MODULE ${PLUGIN_PRESSURE_SRC})
-    target_link_libraries(pressure PRIVATE libutils libmetric)
+    target_link_libraries(pressure PRIVATE libmetric libutils)
     set_target_properties(pressure PROPERTIES PREFIX "")
 
     add_executable(test_plugin_pressure EXCLUDE_FROM_ALL pressure_test.c ${PLUGIN_PRESSURE_SRC})
-    target_link_libraries(test_plugin_pressure libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_pressure libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_pressure)
     add_test(NAME test_plugin_pressure COMMAND test_plugin_pressure WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

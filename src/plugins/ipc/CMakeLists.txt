@@ -21,7 +21,7 @@ set(BUILD_PLUGIN_IPC ${BUILD_PLUGIN_IPC} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_IPC)
     set(PLUGIN_IPC_SRC ipc.c)
-    set(PLUGIN_IPC_LIBS libutils libmetric)
+    set(PLUGIN_IPC_LIBS libmetric libutils)
 
     if(BUILD_AIX)
         list(APPEND PLUGIN_IPC_LIBS LibPerfstat::LibPerfstat)
@@ -32,7 +32,7 @@ if(BUILD_PLUGIN_IPC)
     set_target_properties(ipc PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_ipc EXCLUDE_FROM_ALL ipc_test.c ${PLUGIN_IPC_SRC})
-#    target_link_libraries(test_plugin_ipc libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_ipc libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_ipc)
 #    add_test(NAME test_plugin_ipc COMMAND test_plugin_ipc WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

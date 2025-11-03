@@ -9,6 +9,7 @@
 #include "libutils/dtoa.h"
 #include "libmetric/metric.h"
 #include "libmetric/label_set.h"
+#include "libmetric/parser.h"
 
 static metric_family_t *fam_dispatch;
 static size_t fam_dispatch_size;
@@ -508,8 +509,8 @@ static int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
     return test_metric_list_cmp(&a->metric, &b->metric, a->type);
 }
 
-static int test_metric_family_list_cmp(metric_family_t *a, size_t size_a,
-                                       metric_family_t *b, size_t size_b)
+int test_metric_family_list_cmp(metric_family_t *a, size_t size_a,
+                                metric_family_t *b, size_t size_b)
 {
     size_t fa_size = 0;
     for (size_t i = 0; i < size_a; i++) {
@@ -568,23 +569,28 @@ int plugin_test_metrics_cmp(const char *filename)
         return -1;
     }
 
-    metric_family_t fam = {0};
+    metric_parser_t *mp = metric_parser_alloc(NULL, NULL);
+    if (mp == NULL) {
+        fprintf(stderr, "Cannot alloc metric parser.\n");
+        return -1;
+    }
 
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), fp) != NULL) {
         strnrtrim(buffer, strlen(buffer));
-        int status = metric_parse_line(&fam, test_metric_expect_add,
-                                       NULL, NULL, 0, NULL, 0, 0, buffer);
+        int status = metric_parse_line(mp, buffer);
         if (status != 0) {
             fprintf(stderr, "Cannot parse '%s'.", buffer);
             fclose(fp);
+            metric_parser_free(mp);
             return -1;
         }
     }
 
-    metric_parser_dispatch(&fam, test_metric_expect_add, NULL);
+    metric_parser_dispatch(mp, test_metric_expect_add, NULL, 0);
 
     fclose(fp);
+    metric_parser_free(mp);
 
     char *env_dump = getenv("TEST_DUMP_METRICS");
     if (env_dump != NULL)

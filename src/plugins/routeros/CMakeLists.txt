@@ -14,11 +14,11 @@ if(BUILD_PLUGIN_ROUTEROS)
                             ros_parse.c ros_parse.h ros_interface.c
                             ros_registration_table.c ros_system_health.c ros_system_resource.c)
     add_library(routeros MODULE ${PLUGIN_ROUTEROS_SRC})
-    target_link_libraries(routeros PRIVATE libutils libmetric)
+    target_link_libraries(routeros PRIVATE libmetric libutils)
     set_target_properties(routeros PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_routeros EXCLUDE_FROM_ALL routeros_test.c ${PLUGIN_ROUTEROS_SRC})
-#    target_link_libraries(test_plugin_routeros libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_routeros libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_routeros)
 #    add_test(NAME test_plugin_routeros COMMAND test_plugin_routeros WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_ISCSI ${BUILD_PLUGIN_ISCSI} PARENT_SCOPE)
 if(BUILD_PLUGIN_ISCSI)
     set(PLUGIN_ISCSI_SRC iscsi.c)
     add_library(iscsi MODULE ${PLUGIN_ISCSI_SRC})
-    target_link_libraries(iscsi PRIVATE libutils libmetric)
+    target_link_libraries(iscsi PRIVATE libmetric libutils)
     set_target_properties(iscsi PROPERTIES PREFIX "")
 
     add_executable(test_plugin_iscsi EXCLUDE_FROM_ALL iscsi_test.c ${PLUGIN_ISCSI_SRC})
-    target_link_libraries(test_plugin_iscsi libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_iscsi libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_iscsi)
     add_test(NAME test_plugin_iscsi COMMAND test_plugin_iscsi WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -20,11 +20,11 @@ set(BUILD_PLUGIN_HBA ${BUILD_PLUGIN_HBA} PARENT_SCOPE)
 if(BUILD_PLUGIN_HBA)
     set(PLUGIN_HBA_SRC hba.c)
     add_library(hba MODULE ${PLUGIN_HBA_SRC})
-    target_link_libraries(hba PRIVATE libutils libmetric LibOdm::LibOdm)
+    target_link_libraries(hba PRIVATE libmetric libutils LibOdm::LibOdm)
     set_target_properties(hba PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_hba EXCLUDE_FROM_ALL hba_test.c ${PLUGIN_HBA_SRC})
-#    target_link_libraries(test_plugin_hba libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_hba libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_hba)
 #    add_test(NAME test_plugin_hba COMMAND test_plugin_hba WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

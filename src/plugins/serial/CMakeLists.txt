@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_SERIAL ${BUILD_PLUGIN_SERIAL} PARENT_SCOPE)
 if(BUILD_PLUGIN_SERIAL)
     set(PLUGIN_SERIAL_SRC serial.c)
     add_library(serial MODULE ${PLUGIN_SERIAL_SRC})
-    target_link_libraries(serial PRIVATE libutils libmetric)
+    target_link_libraries(serial PRIVATE libmetric libutils)
     set_target_properties(serial PROPERTIES PREFIX "")
 
     add_executable(test_plugin_serial EXCLUDE_FROM_ALL serial_test.c ${PLUGIN_SERIAL_SRC})
-    target_link_libraries(test_plugin_serial libtest libutils libmetric)
+    target_link_libraries(test_plugin_serial libtest libmetric libutils)
     add_dependencies(build_tests test_plugin_serial)
     add_test(NAME test_plugin_serial COMMAND test_plugin_serial WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

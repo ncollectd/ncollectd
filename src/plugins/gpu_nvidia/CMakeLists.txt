@@ -16,11 +16,11 @@ set(BUILD_PLUGIN_GPU_NVIDIA ${BUILD_PLUGIN_GPU_NVIDIA} PARENT_SCOPE)
 if(BUILD_PLUGIN_GPU_NVIDIA)
     set(PLUGIN_GPU_NVIDIA_SRC gpu_nvidia.c)
     add_library(gpu_nvidia MODULE ${PLUGIN_GPU_NVIDIA_SRC})
-    target_link_libraries(gpu_nvidia PRIVATE libutils libmetric LibCuda::LibCuda)
+    target_link_libraries(gpu_nvidia PRIVATE libmetric libutils LibCuda::LibCuda)
     set_target_properties(gpu_nvidia PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_gpu_nvidia EXCLUDE_FROM_ALL gpu_nvidia_test.c ${PLUGIN_GPU_NVIDIA_SRC})
-#    target_link_libraries(test_plugin_gpu_nvidia libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_gpu_nvidia libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_gpu_nvidia)
 #    add_test(NAME test_plugin_gpu_nvidia COMMAND test_plugin_gpu_nvidia WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

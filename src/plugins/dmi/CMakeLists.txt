@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_DMI ${BUILD_PLUGIN_DMI} PARENT_SCOPE)
 if(BUILD_PLUGIN_DMI)
     set(PLUGIN_DMI_SRC dmi.c)
     add_library(dmi MODULE ${PLUGIN_DMI_SRC})
-    target_link_libraries(dmi PRIVATE libutils libmetric)
+    target_link_libraries(dmi PRIVATE libmetric libutils)
     set_target_properties(dmi PROPERTIES PREFIX "")
 
     add_executable(test_plugin_dmi EXCLUDE_FROM_ALL dmi_test.c ${PLUGIN_DMI_SRC})
-    target_link_libraries(test_plugin_dmi libtest libutils libmetric m)
+    target_link_libraries(test_plugin_dmi libtest libmetric libutils m)
     add_dependencies(build_tests test_plugin_dmi)
     add_test(NAME test_plugin_dmi COMMAND test_plugin_dmi WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

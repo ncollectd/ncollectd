@@ -7,7 +7,20 @@
 #include "libutils/strbuf.h"
 #include "libmetric/metric.h"
 
-int label_set_unmarshal(label_set_t *labels, char const **inout);
+typedef struct metric_parser_s metric_parser_t;
 
-/* value_marshal_text prints a text representation of v to buf. */
-int value_marshal_text(strbuf_t *buf, value_t v, metric_type_t type);
+metric_parser_t *metric_parser_alloc(char *metric_prefix, label_set_t *labels);
+
+void metric_parser_free(metric_parser_t *mp);
+
+void metric_parser_reset(metric_parser_t *mp);
+
+int metric_parse_line(metric_parser_t *mp, const char *line);
+
+int metric_parse_buffer(metric_parser_t *mp, char *buffer, size_t buffer_len);
+
+typedef int (*dispatch_metric_family_t)(metric_family_t *fam, plugin_filter_t *filter,
+                                        cdtime_t time);
+
+int metric_parser_dispatch(metric_parser_t *mp, dispatch_metric_family_t dispatch,
+                                                plugin_filter_t *filter, cdtime_t time);

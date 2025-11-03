@@ -22,11 +22,11 @@ set(BUILD_PLUGIN_MD ${BUILD_PLUGIN_MD} PARENT_SCOPE)
 if(BUILD_PLUGIN_MD)
     set(PLUGIN_MD_SRC md.c)
     add_library(md MODULE ${PLUGIN_MD_SRC})
-    target_link_libraries(md PRIVATE libutils libmetric)
+    target_link_libraries(md PRIVATE libmetric libutils)
     set_target_properties(md PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_md EXCLUDE_FROM_ALL md_test.c ${PLUGIN_MD_SRC})
-#    target_link_libraries(test_plugin_md libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_md libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_md)
 #    add_test(NAME test_plugin_md COMMAND test_plugin_md WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

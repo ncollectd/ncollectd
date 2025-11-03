@@ -12,11 +12,11 @@ if(BUILD_PLUGIN_ZOOKEEPER)
     gperf_generate(zookeeper_stats.gperf "${CMAKE_CURRENT_BINARY_DIR}/zookeeper_stats.h" ZOOKEEPER_STATS_H)
     set(PLUGIN_ZOOKEEPER_SRC zookeeper.c)
     add_library(zookeeper MODULE ${PLUGIN_ZOOKEEPER_SRC} ${ZOOKEEPER_STATS_H})
-    target_link_libraries(zookeeper PRIVATE libutils libmetric)
+    target_link_libraries(zookeeper PRIVATE libmetric libutils)
     set_target_properties(zookeeper PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_zookeeper EXCLUDE_FROM_ALL zookeeper_test.c ${PLUGIN_ZOOKEEPER_SRC})
-#    target_link_libraries(test_plugin_zookeeper libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_zookeeper libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_zookeeper)
 #    add_test(NAME test_plugin_zookeeper COMMAND test_plugin_zookeeper WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

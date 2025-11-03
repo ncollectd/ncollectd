@@ -11,11 +11,11 @@ set(BUILD_PLUGIN_OPENVPN ${BUILD_PLUGIN_OPENVPN} PARENT_SCOPE)
 if(BUILD_PLUGIN_OPENVPN)
     set(PLUGIN_OPENVPN_SRC openvpn.c)
     add_library(openvpn MODULE ${PLUGIN_OPENVPN_SRC})
-    target_link_libraries(openvpn PRIVATE libutils libmetric)
+    target_link_libraries(openvpn PRIVATE libmetric libutils)
     set_target_properties(openvpn PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_openvpn EXCLUDE_FROM_ALL openvpn_test.c ${PLUGIN_OPENVPN_SRC})
-#    target_link_libraries(test_plugin_openvpn libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_openvpn libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_openvpn)
 #    add_test(NAME test_plugin_openvpn COMMAND test_plugin_openvpn WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

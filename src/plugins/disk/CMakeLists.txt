@@ -48,7 +48,7 @@ set(BUILD_PLUGIN_DISK ${BUILD_PLUGIN_DISK} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_DISK)
     set(PLUGIN_DISK_SRC disk.c)
-    set(PLUGIN_DISK_LIBS libutils libmetric)
+    set(PLUGIN_DISK_LIBS libmetric libutils)
 
     if(BUILD_LINUX)
         list(APPEND PLUGIN_DISK_SRC disk_linux.c)

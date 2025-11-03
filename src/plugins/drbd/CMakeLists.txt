@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_DRBD ${BUILD_PLUGIN_DRBD} PARENT_SCOPE)
 if(BUILD_PLUGIN_DRBD)
     set(PLUGIN_DRBD_SRC drbd.c)
     add_library(drbd MODULE ${PLUGIN_DRBD_SRC})
-    target_link_libraries(drbd PRIVATE libutils libmetric)
+    target_link_libraries(drbd PRIVATE libmetric libutils)
     set_target_properties(drbd PROPERTIES PREFIX "")
 
     add_executable(test_plugin_drbd EXCLUDE_FROM_ALL drbd_test.c ${PLUGIN_DRBD_SRC})
-    target_link_libraries(test_plugin_drbd libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_drbd libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_drbd)
     add_test(NAME test_plugin_drbd COMMAND test_plugin_drbd WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

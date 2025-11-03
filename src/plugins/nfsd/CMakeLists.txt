@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_NFSD ${BUILD_PLUGIN_NFSD} PARENT_SCOPE)
 if(BUILD_PLUGIN_NFSD)
     set(PLUGIN_NFSD_SRC nfsd.c)
     add_library(nfsd MODULE ${PLUGIN_NFSD_SRC})
-    target_link_libraries(nfsd PRIVATE libutils libmetric)
+    target_link_libraries(nfsd PRIVATE libmetric libutils)
     set_target_properties(nfsd PROPERTIES PREFIX "")
 
     add_executable(test_plugin_nfsd EXCLUDE_FROM_ALL nfsd_test.c ${PLUGIN_NFSD_SRC})
-    target_link_libraries(test_plugin_nfsd libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_nfsd libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_nfsd)
     add_test(NAME test_plugin_nfsd COMMAND test_plugin_nfsd WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

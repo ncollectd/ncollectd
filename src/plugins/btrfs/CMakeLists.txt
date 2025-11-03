@@ -22,11 +22,11 @@ set(BUILD_PLUGIN_BTRFS ${BUILD_PLUGIN_BTRFS} PARENT_SCOPE)
 if(BUILD_PLUGIN_BTRFS)
     set(PLUGIN_BTRFS_SRC btrfs.c)
     add_library(btrfs MODULE ${PLUGIN_BTRFS_SRC})
-    target_link_libraries(btrfs PRIVATE libutils libmetric)
+    target_link_libraries(btrfs PRIVATE libmetric libutils)
     set_target_properties(btrfs PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_btrfs EXCLUDE_FROM_ALL btrfs_test.c ${PLUGIN_BTRFS_SRC})
-#    target_link_libraries(test_plugin_btrfs libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_btrfs libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_btrfs)
 #    add_test(NAME test_plugin_btrfs COMMAND test_plugin_btrfs WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

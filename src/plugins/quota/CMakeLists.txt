@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_QUOTA ${BUILD_PLUGIN_QUOTA} PARENT_SCOPE)
 if(BUILD_PLUGIN_QUOTA)
     set(PLUGIN_QUOTA_SRC quota.c)
     add_library(quota MODULE ${PLUGIN_QUOTA_SRC})
-    target_link_libraries(quota PRIVATE libutils libmetric)
+    target_link_libraries(quota PRIVATE libmetric libutils)
     set_target_properties(quota PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_quota EXCLUDE_FROM_ALL quota_test.c ${PLUGIN_QUOTA_SRC})
-#    target_link_libraries(test_plugin_quota libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_quota libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_quota)
 #    add_test(NAME test_plugin_quota COMMAND test_plugin_quota WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

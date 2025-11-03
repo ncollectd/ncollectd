@@ -41,11 +41,11 @@ if(BUILD_PLUGIN_TC)
         target_compile_definitions(tc PUBLIC HAVE_TCA_STATS2)
     endif()
 
-    target_link_libraries(tc PRIVATE libutils libmetric LibMnl::LibMnl)
+    target_link_libraries(tc PRIVATE libmetric libutils LibMnl::LibMnl)
     set_target_properties(tc PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_tc EXCLUDE_FROM_ALL tc_test.c ${PLUGIN_TC_SRC})
-#    target_link_libraries(test_plugin_tc libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_tc libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_tc)
 #    add_test(NAME test_plugin_tc COMMAND test_plugin_tc WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

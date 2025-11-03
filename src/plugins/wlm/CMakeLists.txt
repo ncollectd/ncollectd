@@ -22,11 +22,11 @@ set(BUILD_PLUGIN_WLM ${BUILD_PLUGIN_WLM} PARENT_SCOPE)
 if(BUILD_PLUGIN_WLM)
     set(PLUGIN_WLM_SRC wlm.c)
     add_library(wlm MODULE ${PLUGIN_WLM_SRC})
-    target_link_libraries(wlm PRIVATE libutils libmetric LibWlm::LibWlm)
+    target_link_libraries(wlm PRIVATE libmetric libutils LibWlm::LibWlm)
     set_target_properties(wlm PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_wlm EXCLUDE_FROM_ALL wlm_test.c ${PLUGIN_WLM_SRC})
-#    target_link_libraries(test_plugin_wlm libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_wlm libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_wlm)
 #    add_test(NAME test_plugin_wlm COMMAND test_plugin_wlm WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

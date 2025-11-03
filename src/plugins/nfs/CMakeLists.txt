@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_NFS ${BUILD_PLUGIN_NFS} PARENT_SCOPE)
 if(BUILD_PLUGIN_NFS)
     set(PLUGIN_NFS_SRC nfs.c)
     add_library(nfs MODULE ${PLUGIN_NFS_SRC})
-    target_link_libraries(nfs PRIVATE libutils libmetric)
+    target_link_libraries(nfs PRIVATE libmetric libutils)
     set_target_properties(nfs PROPERTIES PREFIX "")
 
     add_executable(test_plugin_nfs EXCLUDE_FROM_ALL nfs_test.c ${PLUGIN_NFS_SRC})
-    target_link_libraries(test_plugin_nfs libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_nfs libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_nfs)
     add_test(NAME test_plugin_nfs COMMAND test_plugin_nfs WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

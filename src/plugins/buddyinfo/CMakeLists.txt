@@ -15,11 +15,11 @@ set(BUILD_PLUGIN_BUDDYINFO ${BUILD_PLUGIN_BUDDYINFO} PARENT_SCOPE)
 if(BUILD_PLUGIN_BUDDYINFO)
     set(PLUGIN_BUDDYINFO_SRC buddyinfo.c)
     add_library(buddyinfo MODULE ${PLUGIN_BUDDYINFO_SRC})
-    target_link_libraries(buddyinfo PRIVATE libutils libmetric)
+    target_link_libraries(buddyinfo PRIVATE libmetric libutils)
     set_target_properties(buddyinfo PROPERTIES PREFIX "")
 
     add_executable(test_plugin_buddyinfo EXCLUDE_FROM_ALL buddyinfo_test.c ${PLUGIN_BUDDYINFO_SRC})
-    target_link_libraries(test_plugin_buddyinfo libtest libutils libmetric -lm)
+    target_link_libraries(test_plugin_buddyinfo libtest libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_buddyinfo)
     add_test(NAME test_plugin_buddyinfo COMMAND test_plugin_buddyinfo WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -16,11 +16,11 @@ set(BUILD_PLUGIN_GPU_INTEL ${BUILD_PLUGIN_GPU_INTEL} PARENT_SCOPE)
 if(BUILD_PLUGIN_GPU_INTEL)
     set(PLUGIN_GPU_INTEL_SRC gpu_intel.c)
     add_library(gpu_intel MODULE ${PLUGIN_GPU_INTEL_SRC})
-    target_link_libraries(gpu_intel PRIVATE libutils libmetric LibSysman::LibSysman)
+    target_link_libraries(gpu_intel PRIVATE libmetric libutils LibSysman::LibSysman)
     set_target_properties(gpu_intel PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_gpu_intel EXCLUDE_FROM_ALL gpu_intel_test.c ${PLUGIN_GPU_INTEL_SRC})
-#    target_link_libraries(test_plugin_gpu_intel libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_gpu_intel libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_gpu_intel)
 #    add_test(NAME test_plugin_gpu_intel COMMAND test_plugin_gpu_intel WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -34,7 +34,7 @@ set(BUILD_PLUGIN_UPTIME ${BUILD_PLUGIN_UPTIME} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_UPTIME)
     set(PLUGIN_UPTIME_SRC uptime.c)
-    set(PLUGIN_UPTIME_LIBS libutils libmetric)
+    set(PLUGIN_UPTIME_LIBS libmetric libutils)
 
     if(BUILD_AIX)
         list(APPEND PLUGIN_UPTIME_LIBS LibPerfstat::LibPerfstat)
@@ -47,7 +47,7 @@ if(BUILD_PLUGIN_UPTIME)
     set_target_properties(uptime PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_uptime EXCLUDE_FROM_ALL uptime_test.c ${PLUGIN_UPTIME_SRC})
-#    target_link_libraries(test_plugin_uptime libtest libutils libmetric -lm)
+#    target_link_libraries(test_plugin_uptime libtest libmetric libutils -lm)
 #    add_dependencies(build_tests test_plugin_uptime)
 #    add_test(NAME test_plugin_uptime COMMAND test_plugin_uptime WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
