@@ -12,23 +12,19 @@
 
 int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels)
 {
-    if (version < 90200)
+    if (version < 100000)
         return 0;
 
-    char *stmt = NULL;
-
-    if (version >= 100000)  {
-        stmt = "SELECT application_name, client_addr, state,"
-               "       (case pg_is_in_recovery() when 't' then null else pg_current_wal_lsn() end) AS pg_current_wal_lsn,"
-               "       (case pg_is_in_recovery() when 't' then null else pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::float end) AS pg_wal_lsn_diff,"
-               "       (case pg_is_in_recovery() when 't' then null else pg_wal_lsn_diff(pg_current_wal_lsn(), pg_lsn('0/0'))::float end) AS pg_current_wal_lsn_bytes"
-               "  FROM pg_stat_replication";
-    } else {
-        stmt = "SELECT application_name, client_addr, state,"
-               "       (case pg_is_in_recovery() when 't' then null else pg_current_xlog_location() end) AS pg_current_xlog_location,"
-               "       (case pg_is_in_recovery() when 't' then null else pg_xlog_location_diff(pg_current_xlog_location(), replay_location)::float end) AS pg_xlog_location_diff"
-               "  FROM pg_stat_replication";
-    }
+    char *stmt = "SELECT application_name, client_addr, state, sync_state,"
+                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, sent_lsn) AS sent_lsn_lag,"
+                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, write_lsn) AS write_lsn_lag,"
+                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, flush_lsn) AS flush_lsn_lag,"
+                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, replay_lsn) AS replay_lsn_lag,"
+                 "       EXTRACT(EPOCH from write_lag) as write_lag,"
+                 "       EXTRACT(EPOCH from flush_lag) as flush_lag,"
+                 "       EXTRACT(EPOCH from replay_lag) as replay_lag"
+                 "  FROM pg_stat_replication"
+                 " WHERE application_name NOT IN ('pg_basebackup', 'pg_rewind');";
 
     PGresult *res = PQprepare(conn, "", stmt, 0, NULL);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -47,17 +43,24 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
     }
 
     int fields = PQnfields(res);
-    if (version >= 100000)  {
-        if (fields < 6) {
-            PQclear(res);
-            return 0;
-        }
-    } else {
-        if (fields < 5) {
-            PQclear(res);
-            return 0;
-        }
+    if (fields < 11) {
+        PQclear(res);
+        return 0;
     }
+
+    struct {
+        int field;
+        int fam;
+    } pg_fields[] = {
+        {  4, FAM_PG_REPLICATION_WAL_SEND_LAG_BYTES },
+        {  5, FAM_PG_REPLICATION_WAL_WRITE_LAG_BYTES },
+        {  6, FAM_PG_REPLICATION_WAL_FLUSH_LAG_BYTES },
+        {  7, FAM_PG_REPLICATION_WAL_REPLAY_LAG_BYTES },
+        {  8, FAM_PG_REPLICATION_WAL_WRITE_LAG_SECONDS },
+        {  9, FAM_PG_REPLICATION_WAL_FLUSH_LAG_SECONDS },
+        { 10, FAM_PG_REPLICATION_WAL_REPLAY_LAG_SECONDS },
+    };
+    size_t pg_fields_size = STATIC_ARRAY_SIZE(pg_fields);
 
     for (int i = 0; i < PQntuples(res); i++) {
         if (PQgetisnull(res, i, 0))
@@ -68,31 +71,73 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
         if (!PQgetisnull(res, i, 1))
             col_client_addr = PQgetvalue(res, i, 1);
 
-        if (PQgetisnull(res, i, 2))
-            continue;
-        char *col_state = PQgetvalue(res, i, 2);
-
-        char *col_current_wal_lsn = NULL;
-        if (!PQgetisnull(res, i, 3))
-            col_current_wal_lsn = PQgetvalue(res, i, 3);
-
-        if (!PQgetisnull(res, i, 4))
-            metric_family_append(&fams[FAM_PG_REPLICATION_WAL_LSN_DIFF],
-                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
-                                 &(label_pair_const_t){.name="application", .value=col_application_name},
-                                 &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
-                                 &(label_pair_const_t){.name="wal", .value= col_current_wal_lsn},
-                                 &(label_pair_const_t){.name="state", .value=col_state},
+        if (!PQgetisnull(res, i, 2)) {
+            char *col_state = PQgetvalue(res, i, 2);
+            state_t states[] = {
+                { .name = "startup",   .enabled = false },
+                { .name = "catchup",   .enabled = false },
+                { .name = "streaming", .enabled = false },
+                { .name = "backup",    .enabled = false },
+                { .name = "stopping",  .enabled = false },
+            };
+            state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+            for (size_t j = 0; j < set.num ; j++) {
+                if (strncmp(set.ptr[j].name, col_state, strlen(set.ptr[j].name)) == 0) {
+                    set.ptr[j].enabled = true;
+                    break;
+                }
+            }
+            metric_family_append(&fams[FAM_PG_REPLICATION_STATE], VALUE_STATE_SET(set), labels,
+                                 &(label_pair_const_t){.name="application",
+                                                       .value=col_application_name},
+                                 &(label_pair_const_t){.name="client_addr",
+                                                       .value=col_client_addr},
                                  NULL);
-        if (version >= 100000) {
-            if (!PQgetisnull(res, i, 5))
-                metric_family_append(&fams[FAM_PG_REPLICATION_CURRENT_WAL_LSN_BYTES],
-                                     VALUE_GAUGE(atof(PQgetvalue(res, i, 5))), labels,
-                                     &(label_pair_const_t){.name="application", .value=col_application_name},
-                                     &(label_pair_const_t){.name="client_addr", .value=col_client_addr},
-                                     &(label_pair_const_t){.name="wal", .value= col_current_wal_lsn},
-                                     &(label_pair_const_t){.name="state", .value=col_state},
+        }
+
+        if (!PQgetisnull(res, i, 3)) {
+            char *col_sync_state = PQgetvalue(res, i, 3);
+            state_t states[] = {
+                { .name = "async",     .enabled = false },
+                { .name = "potential", .enabled = false },
+                { .name = "sync",      .enabled = false },
+                { .name = "quorum",    .enabled = false },
+            };
+            state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+            for (size_t j = 0; j < set.num ; j++) {
+                if (strncmp(set.ptr[j].name, col_sync_state, strlen(set.ptr[j].name)) == 0) {
+                    set.ptr[j].enabled = true;
+                    break;
+                }
+            }
+            metric_family_append(&fams[FAM_PG_REPLICATION_SYNC_STATE], VALUE_STATE_SET(set), labels,
+                                 &(label_pair_const_t){.name="application",
+                                                       .value=col_application_name},
+                                 &(label_pair_const_t){.name="client_addr",
+                                                       .value=col_client_addr},
+                                 NULL);
+        }
+
+        for (size_t n = 0; n < pg_fields_size ; n++) {
+            int field = pg_fields[n].field;
+            if (!PQgetisnull(res, i, field)) {
+                metric_family_t *fam = &fams[pg_fields[n].fam];
+                value_t value = {0};
+                if (fam->type == METRIC_TYPE_GAUGE) {
+                    value = VALUE_GAUGE(atof(PQgetvalue(res, i, field)));
+                } else if (fam->type == METRIC_TYPE_COUNTER) {
+                    value = VALUE_COUNTER(atol(PQgetvalue(res, i, field)));
+                } else {
+                    continue;
+                }
+
+                metric_family_append(fam, value, labels,
+                                     &(label_pair_const_t){.name="application",
+                                                           .value=col_application_name},
+                                     &(label_pair_const_t){.name="client_addr",
+                                                           .value=col_client_addr},
                                      NULL);
+            }
         }
     }
 

@@ -420,15 +420,57 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Max duration in seconds any active transaction has been running",
     },
-    [FAM_PG_REPLICATION_CURRENT_WAL_LSN_BYTES] = {
-        .name = "pg_replication_current_wal_lsn_bytes",
+    [FAM_PG_REPLICATION_WAL_SEND_LAG_BYTES] = {
+        .name = "pg_replication_wal_send_lag_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "WAL position in bytes.",
+        .help = "Difference in bytes between the current local WAL location and "
+                "last WAL location sent on this connection."
     },
-    [FAM_PG_REPLICATION_WAL_LSN_DIFF] = {
-        .name = "pg_replication_wal_lsn_diff",
+    [FAM_PG_REPLICATION_WAL_WRITE_LAG_BYTES] = {
+        .name = "pg_replication_wal_write_lag_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Lag in bytes between master and slave.",
+        .help = "Difference in bytes between the current local WAL location and "
+                "last WAL location written to disk by this standby server."
+    },
+    [FAM_PG_REPLICATION_WAL_FLUSH_LAG_BYTES] = {
+        .name = "pg_replication_wal_flush_lag_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Difference in bytes between the current local WAL location and "
+                "last WAL location flushed to disk by this standby server."
+    },
+    [FAM_PG_REPLICATION_WAL_REPLAY_LAG_BYTES] = {
+        .name = "pg_replication_wal_replay_lag_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Difference in bytes between the current local WAL location and "
+                "last WAL location replayed into the database on this standby server.",
+    },
+    [FAM_PG_REPLICATION_WAL_WRITE_LAG_SECONDS] = {
+        .name = "pg_replication_wal_write_lag_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Time elapsed between flushing recent WAL locally and receiving notification "
+                "that this standby server has written it (but not yet flushed it or applied it)."
+    },
+    [FAM_PG_REPLICATION_WAL_FLUSH_LAG_SECONDS] = {
+        .name = "pg_replication_wal_flush_lag_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Time elapsed between flushing recent WAL locally and receiving notification "
+                "that this standby server has written and flushed it (but not yet applied it).",
+    },
+    [FAM_PG_REPLICATION_WAL_REPLAY_LAG_SECONDS] = {
+        .name = "pg_replication_wal_replay_lag_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Time elapsed between flushing recent WAL locally and receiving notification "
+                "that this standby server has written, flushed and applied it."
+    },
+    [FAM_PG_REPLICATION_STATE] = {
+        .name = "pg_replication_state",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Current WAL sender state.",
+    },
+    [FAM_PG_REPLICATION_SYNC_STATE] = {
+        .name = "pg_replication_sync_state",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Synchronous state of this standby server.",
     },
     [FAM_PG_REPLICATION_SLOT_ACTIVE] = {
         .name = "pg_replication_slot_active",
