@@ -48,7 +48,7 @@ function reader() {
     }
     fam.add_metric(new ncollectd.MetricStateSet(state, labels, 1592748157.125))
     fam.dispatch()
-/*
+
     fam = new ncollectd.MetricFamily("summary", ncollectd.SUMMARY)
     quantiles = [[0.5,  0.232227334],
                  [0.90, 0.821139321],
@@ -98,7 +98,7 @@ function reader() {
     }
     fam.add_metric(new ncollectd.MetricGaugeHistogram(120, buckets, labels, 1592748157.125))
     fam.dispatch()
-*/
+
 }
 
 
