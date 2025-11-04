@@ -13,9 +13,10 @@
 
 void http_response_reset(http_response_t *response)
 {
-    if (response)
-        response = NULL; // XXX
+    if (response == NULL)
+        return;
 
+    http_header_reset(&(response->headers));
 }
 
 ssize_t http_write(int fd, const void *buf, size_t count, int *timeout)
@@ -147,7 +148,7 @@ int http_read_response(int fd, http_response_t *response, int *timeout)
                 if (parse_response.headers[i].value_len < len)
                     len = parse_response.headers[i].value_len;
                 memcpy(cbuf, parse_response.headers[i].value, len);
-                buf[len] = '\0';
+                cbuf[len] = '\0';
                 content_length = atoi(cbuf);
             }
         }
