@@ -158,6 +158,7 @@
 %define build_with_swap 0%{!?_without_swap:1}
 %define build_with_synproxy 0%{!?_without_synproxy:1}
 %define build_with_systemd 0%{!?_without_systemd:1}
+%define build_with_sssd 0%{!?_without_sssd:1}
 %define build_with_table 0%{!?_without_table:1}
 %define build_with_tail 0%{!?_without_tail:1}
 %define build_with_tape 0%{!?_without_tape:1}
@@ -1935,6 +1936,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_systemd -DPLUGIN_SYSTEMD:BOOL=OFF
 %endif
 
+%if %{build_with_sssd}
+%define _build_with_sssd -DPLUGIN_SSSD:BOOL=ON
+%else
+%define _build_with_sssd -DPLUGIN_SSSD:BOOL=OFF
+%endif
+
 %if %{build_with_table}
 %define _build_with_table -DPLUGIN_TABLE:BOOL=ON
 %else
@@ -2341,6 +2348,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_swap} \
     %{?_build_with_synproxy} \
     %{?_build_with_systemd} \
+    %{?_build_with_sssd} \
     %{?_build_with_table} \
     %{?_build_with_tail} \
     %{?_build_with_tape} \
@@ -2834,6 +2842,10 @@ rm -rf %{buildroot}
 %if %{build_with_systemd}
 %{_libdir}/%{name}/systemd.so
 %{_mandir}/man5/ncollectd-systemd.5*
+%endif
+%if %{build_with_sssd}
+%{_libdir}/%{name}/sssd.so
+%{_mandir}/man5/ncollectd-sssd.5*
 %endif
 %if %{build_with_table}
 %{_libdir}/%{name}/table.so
