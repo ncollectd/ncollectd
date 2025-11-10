@@ -140,11 +140,8 @@ static int sssd_list_services(sd_bus *bus, char *domain, char *decode_domain)
         char *service = NULL;
 
         status = sd_bus_message_read(reply, "s", &service);
-        if (status <= 0) {
-            PLUGIN_ERROR("Failed to read service from "
-                         "org.freedesktop.sssd.infopipe.Domains.Domain.ListServices.");
+        if (status <= 0)
             break;
-        }
 
         sssd_active_server(bus, domain, decode_domain, service);
     }
@@ -215,14 +212,10 @@ static int sssd_list_domains(sd_bus *bus)
         char *domain = NULL;
 
         status = sd_bus_message_read(reply, "o", &domain);
-        if (status <= 0) {
-            PLUGIN_ERROR("Failed to read domain from org.freedesktop.sssd.infopipe.ListDomains.");
+        if (status <= 0)
             break;
-        }
-        if (domain == NULL) {
-            PLUGIN_ERROR("Missing domain from org.freedesktop.sssd.infopipe.ListDomains.");
+        if (domain == NULL)
             break;
-        }
 
         char *decode_domain = NULL;
         status = sd_bus_path_decode(domain, "/org/freedesktop/sssd/infopipe/Domains",
