@@ -16,10 +16,10 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
         return 0;
 
     char *stmt = "SELECT application_name, client_addr, state, sync_state,"
-                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, sent_lsn) AS sent_lsn_lag,"
-                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, write_lsn) AS write_lsn_lag,"
-                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, flush_lsn) AS flush_lsn_lag,"
-                 "       pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, replay_lsn) AS replay_lsn_lag,"
+                 "       COALESCE(pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, sent_lsn), 0) AS sent_lsn_lag,"
+                 "       COALESCE(pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, write_lsn), 0) AS write_lsn_lag,"
+                 "       COALESCE(pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, flush_lsn), 0) AS flush_lsn_lag,"
+                 "       COALESCE(pg_wal_lsn_diff(CASE WHEN pg_is_in_recovery() THEN pg_last_wal_receive_lsn() ELSE pg_current_wal_lsn() END, replay_lsn), 0) AS replay_lsn_lag,"
                  "       EXTRACT(EPOCH from write_lag) as write_lag,"
                  "       EXTRACT(EPOCH from flush_lag) as flush_lag,"
                  "       EXTRACT(EPOCH from replay_lag) as replay_lag"
