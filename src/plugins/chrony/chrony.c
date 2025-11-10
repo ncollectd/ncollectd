@@ -231,12 +231,10 @@ typedef struct __attribute__((packed)) {
 } chrony_response_t;
 
 enum {
-    FAM_CHRONY_CLOCK_MODE = 0,
+    FAM_CHRONY_UP,
     FAM_CHRONY_CLOCK_LAST_MEAS,
     FAM_CHRONY_CLOCK_LAST_UPDATE,
-    FAM_CHRONY_CLOCK_REACHABILITY,
     FAM_CHRONY_CLOCK_SKEW,
-    FAM_CHRONY_CLOCK_STATE,
     FAM_CHRONY_CLOCK_STRATUM,
     FAM_CHRONY_FREQUENCY_ERROR,
     FAM_CHRONY_ROOT_DELAY,
@@ -245,65 +243,132 @@ enum {
     FAM_CHRONY_TIME_OFFSET_RMS,
     FAM_CHRONY_TIME_OFFSET,
     FAM_CHRONY_TIME_REF,
+    FAM_CHRONY_LEAP_STATUS,
+    FAM_CHRONY_SOURCE_CLOCK_MODE,
+    FAM_CHRONY_SOURCE_CLOCK_LAST_MEAS,
+    FAM_CHRONY_SOURCE_CLOCK_REACHABILITY,
+    FAM_CHRONY_SOURCE_CLOCK_SKEW,
+    FAM_CHRONY_SOURCE_CLOCK_STATE,
+    FAM_CHRONY_SOURCE_CLOCK_STRATUM,
+    FAM_CHRONY_SOURCE_FREQUENCY_ERROR,
+    FAM_CHRONY_SOURCE_TIME_OFFSET,
     FAM_CHRONY_MAX,
 };
 
 static metric_family_t fams[FAM_CHRONY_MAX] = {
-    [FAM_CHRONY_CLOCK_MODE] = {
-        .name = "chrony_clock_mode",
+    [FAM_CHRONY_UP] = {
+        .name = "chrony_up",
         .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_CHRONY_CLOCK_LAST_MEAS] = {
-        .name = "chrony_clock_last_measurement_seconds",
-        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the chrony server be reached.",
     },
     [FAM_CHRONY_CLOCK_LAST_UPDATE] = {
         .name = "chrony_clock_last_update_seconds",
         .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_CHRONY_CLOCK_REACHABILITY] = {
-        .name = "chrony_clock_reachability",
-        .type = METRIC_TYPE_GAUGE,
+        .help = "This is the interval between the last two clock updates in seconds."
     },
     [FAM_CHRONY_CLOCK_SKEW] = {
         .name = "chrony_clock_skew_ppm",
         .type = METRIC_TYPE_GAUGE,
-    },
-    [FAM_CHRONY_CLOCK_STATE] = {
-        .name = "chrony_clock_state",
-        .type = METRIC_TYPE_GAUGE,
+        .help = "The estimated error bounds on the frequency in parts per million."
     },
     [FAM_CHRONY_CLOCK_STRATUM] = {
         .name = "chrony_clock_stratum",
         .type = METRIC_TYPE_GAUGE,
+        .help = "The distance from the reference clock."
     },
     [FAM_CHRONY_FREQUENCY_ERROR] = {
         .name = "chrony_frequency_error_ppm",
         .type = METRIC_TYPE_GAUGE,
+        .help = "Frequency error of the local oscilator, in parts per million."
     },
     [FAM_CHRONY_ROOT_DELAY] = {
         .name = "chrony_root_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
+        .help = "Network latency between local daemon and the current source in seconds."
     },
     [FAM_CHRONY_ROOT_DISPERSION] = {
         .name = "chrony_root_dispersion_seconds",
         .type = METRIC_TYPE_GAUGE,
+        .help = "Estimate of the total amount of error/variance between "
+                "that server and the correct time in seconds."
     },
     [FAM_CHRONY_TIME_OFFSET_NTP] = {
         .name = "chrony_time_offset_ntp_seconds",
         .type = METRIC_TYPE_GAUGE,
+        .help = "Offset between system time and NTP in seconds."
     },
     [FAM_CHRONY_TIME_OFFSET_RMS] = {
         .name = "chrony_time_offset_rms_seconds",
         .type = METRIC_TYPE_GAUGE,
+        .help = "Averaged value of the estimated Offset of the NTP time in seconds."
     },
     [FAM_CHRONY_TIME_OFFSET] = {
         .name = "chrony_time_offset_seconds",
         .type = METRIC_TYPE_GAUGE,
+        .help = "Estimated Offset of the NTP time in seconds."
     },
     [FAM_CHRONY_TIME_REF] = {
         .name = "chrony_time_ref_seconds",
         .type = METRIC_TYPE_GAUGE,
+        .help = "This is the time (UTC) at which the last measurement "
+                "from the reference source was processed."
+    },
+    [FAM_CHRONY_LEAP_STATUS] = {
+        .name = "chrony_leap_status",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The leap status can be: 0 Normal, 1 Insert second, 2 Delete second or "
+                "3 Not synchronized.",
+    },
+    [FAM_CHRONY_SOURCE_CLOCK_MODE] = {
+        .name = "chrony_source_clock_mode",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Indicates the mode of the source. 0 means a server, 1 means a peer and "
+                "2 indicates a locally connected reference clock."
+    },
+    [FAM_CHRONY_SOURCE_CLOCK_LAST_MEAS] = {
+        .name = "chrony_source_clock_last_measurement_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The offset between the local clock and the source at the last measurement "
+                "in seconds."
+    },
+    [FAM_CHRONY_SOURCE_CLOCK_REACHABILITY] = {
+        .name = "chrony_source_clock_reachability",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The source’s reach register. The register has 8 bits and is updated on "
+                "every received or missed packet from the source."
+    },
+    [FAM_CHRONY_SOURCE_CLOCK_SKEW] = {
+        .name = "chrony_source_clock_skew_ppm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The estimated error bounds on the frequency in parts per million."
+    },
+    [FAM_CHRONY_SOURCE_CLOCK_STATE] = {
+        .name = "chrony_source_clock_state",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The state of the source. "
+                "0 indicates the source to which chronyd is currently synchronized. "
+                "1 indicates sources to which connectivity has been lost "
+                "or whose packets do not pass all tests. "
+                "2 indicates a clock which chronyd thinks is a falseticker "
+                "(its time is inconsistent with a majority of other sources). "
+                "3 indicates a source whose time appears to have too much variability. "
+                "4 indicates acceptable sources which are combined with the selected source. "
+                "5 indicates acceptable sources which are excluded by the combining algorithm."
+    },
+    [FAM_CHRONY_SOURCE_CLOCK_STRATUM] = {
+        .name = "chrony_source_clock_stratum",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The stratum of the source, as reported in its most recently received sample."
+    },
+    [FAM_CHRONY_SOURCE_FREQUENCY_ERROR] = {
+        .name = "chrony_source_frequency_error_ppm",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The estimated residual frequency for the server, in parts per million."
+    },
+    [FAM_CHRONY_SOURCE_TIME_OFFSET] = {
+        .name = "chrony_source_time_offset_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Estimated Offset of the NTP time in seconds."
     },
 };
 
@@ -719,48 +784,41 @@ static int chrony_request_daemon_stats(chrony_ctx_t *ctx)
     value_t value = {0};
 
     value = VALUE_GAUGE(ntohs(chrony_resp.body.tracking.f_stratum));
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_STRATUM], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_STRATUM], value, &ctx->labels, NULL);
 
     value = VALUE_GAUGE(time_ref); /* unit: s */
-    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_REF], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_REF], value, &ctx->labels, NULL);
 
     /* Offset between system time and NTP, unit: s */
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_current_correction));
-    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET_NTP], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET_NTP], value, &ctx->labels, NULL);
 
     /* Estimated Offset of the NTP time, unit: s */
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_last_offset));
-    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET], value, &ctx->labels, NULL);
 
     /* averaged value of the above, unit: s */
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_rms_offset));
-    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET_RMS], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET_RMS], value, &ctx->labels, NULL);
 
     /* Frequency error of the local osc, unit: ppm */
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_freq_ppm));
-    metric_family_append(&ctx->fams[FAM_CHRONY_FREQUENCY_ERROR], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_FREQUENCY_ERROR], value, &ctx->labels, NULL);
 
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_skew_ppm));
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_SKEW], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_SKEW], value, &ctx->labels, NULL);
     /* Network latency between local daemon and the current source */
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_root_delay));
-    metric_family_append(&ctx->fams[FAM_CHRONY_ROOT_DELAY], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_ROOT_DELAY], value, &ctx->labels, NULL);
 
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_root_dispersion));
-    metric_family_append(&ctx->fams[FAM_CHRONY_ROOT_DISPERSION], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_ROOT_DISPERSION], value, &ctx->labels, NULL);
 
     value = VALUE_GAUGE(ntohf(chrony_resp.body.tracking.f_last_update_interval));
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_LAST_UPDATE], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value="chrony"}, NULL);
+    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_LAST_UPDATE], value, &ctx->labels, NULL);
+
+    value = VALUE_GAUGE(ntohs(chrony_resp.body.tracking.f_leap_status));
+    metric_family_append(&ctx->fams[FAM_CHRONY_LEAP_STATUS], value, &ctx->labels, NULL);
 
     return 0;
 }
@@ -828,29 +886,29 @@ static int chrony_request_source_data(chrony_ctx_t *ctx, int src_idx, char *src_
     /* Forward results to ncollectd-daemon */
     value_t value = {0};
 
-    value = VALUE_GAUGE(is_reachable ? ntohs(chrony_resp.body.source_data.f_stratum) : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_STRATUM], value, &ctx->labels,
+    value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_stratum) : NAN);
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_STRATUM], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
-    value = VALUE_GAUGE(is_reachable ? ntohs(chrony_resp.body.source_data.f_state) : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_STATE], value, &ctx->labels,
+    value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_state) : NAN);
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_STATE], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
-    value = VALUE_GAUGE(is_reachable ? ntohs(chrony_resp.body.source_data.f_mode) : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_MODE], value, &ctx->labels,
+    value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_mode) : NAN);
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_MODE], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
-    value = VALUE_GAUGE(is_reachable ? ntohs(chrony_resp.body.source_data.f_reachability) : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_REACHABILITY], value, &ctx->labels,
+    value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_reachability) : NAN);
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_REACHABILITY], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
-    value = VALUE_GAUGE(is_reachable ? ntohl(chrony_resp.body.source_data.f_since_sample) : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_LAST_MEAS], value, &ctx->labels,
+    value = VALUE_GAUGE(*is_reachable ? ntohl(chrony_resp.body.source_data.f_since_sample) : NAN);
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_LAST_MEAS], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
-    value = VALUE_GAUGE(is_reachable ? ntohf(chrony_resp.body.source_data.f_origin_latest_meas)
-                                       : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_TIME_OFFSET], value, &ctx->labels,
+    value = VALUE_GAUGE(*is_reachable ? ntohf(chrony_resp.body.source_data.f_origin_latest_meas)
+                                      : NAN);
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_TIME_OFFSET], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
     return 0;
@@ -900,11 +958,11 @@ static int chrony_request_source_stats(chrony_ctx_t *ctx, int src_idx,
     value_t value = {0};
 
     value = VALUE_GAUGE(is_reachable ? skew_ppm : NAN);
-    metric_family_append(&ctx->fams[FAM_CHRONY_CLOCK_SKEW], value, &ctx->labels,
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_SKEW], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
     value = VALUE_GAUGE(is_reachable ? frequency_error : NAN); /* unit: ppm */
-    metric_family_append(&ctx->fams[FAM_CHRONY_FREQUENCY_ERROR], value, &ctx->labels,
+    metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_FREQUENCY_ERROR], value, &ctx->labels,
                          &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
 
     return 0;
@@ -931,24 +989,29 @@ static int chrony_read(user_data_t *user_data)
 
     /* Get daemon stats */
     int status = chrony_request_daemon_stats(ctx);
-    if (status != 0)
-        return status;
+    if (status != 0) {
+        metric_family_append(&ctx->fams[FAM_CHRONY_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
+        plugin_dispatch_metric_family(&ctx->fams[FAM_CHRONY_UP], 0);
+        return 0;
+    }
+
+    metric_family_append(&ctx->fams[FAM_CHRONY_UP], VALUE_GAUGE(1), &ctx->labels, NULL);
 
     /* Get number of time sources, then check every source for status */
     status = chrony_request_sources_count(ctx, &n_sources);
-    if (status != 0)
-        return status;
+    if (status == 0) {
+        for (unsigned int now_src = 0; now_src < n_sources; ++now_src) {
+            char src_addr[IPV6_STR_MAX_SIZE] = {0};
+            int is_reachable = 0;
+            status = chrony_request_source_data(ctx, now_src, src_addr, sizeof(src_addr),
+                                                &is_reachable);
+            if (status != 0)
+                break;
 
-    for (unsigned int now_src = 0; now_src < n_sources; ++now_src) {
-        char src_addr[IPV6_STR_MAX_SIZE] = {0};
-        int is_reachable = 0;
-        status = chrony_request_source_data(ctx, now_src, src_addr, sizeof(src_addr), &is_reachable);
-        if (status != 0)
-            return status;
-
-        status = chrony_request_source_stats(ctx, now_src, src_addr, is_reachable);
-        if (status != 0)
-            return status;
+            status = chrony_request_source_stats(ctx, now_src, src_addr, is_reachable);
+            if (status != 0)
+                break;
+        }
     }
 
     plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_CHRONY_MAX, ctx->filter, 0);
