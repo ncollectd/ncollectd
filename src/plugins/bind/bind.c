@@ -733,7 +733,7 @@ static int bind_read(user_data_t *user_data)
         PLUGIN_ERROR("curl_easy_perform failed: %s", bi->bind_curl_error);
         metric_family_append(&bi->fams[FAM_BIND_UP], VALUE_GAUGE(0), &bi->labels, NULL);
         plugin_dispatch_metric_family(&bi->fams[FAM_BIND_UP], 0);
-        return -1;
+        return 0;
     }
 
     metric_family_append(&bi->fams[FAM_BIND_UP], VALUE_GAUGE(1), &bi->labels, NULL);
