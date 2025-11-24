@@ -20,13 +20,19 @@
 int socket_listen_unix_stream(const char *file, int backlog, char const *group, int perms,
                               bool delete, cdtime_t timeout)
 {
+    struct sockaddr_un sa = {0};
+
+    if (strlen(file) >= sizeof(sa.sun_path)) {
+        ERROR("Unix socket name '%s': too long.", file);
+        return -1;
+    }
+
     int fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         ERROR("socket failed: %s", STRERRNO);
         return -1;
     }
 
-    struct sockaddr_un sa = {0};
     sa.sun_family = AF_UNIX;
     sstrncpy(sa.sun_path, file, sizeof(sa.sun_path));
 
@@ -102,6 +108,13 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
 
 int socket_connect_unix_stream(const char *path, cdtime_t timeout)
 {
+    struct sockaddr_un sa = {0};
+
+    if (strlen(path) >= sizeof(sa.sun_path)) {
+        ERROR("Unix socket name '%s': too long.", path);
+        return -1;
+    }
+
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         ERROR("socket failed: %s", STRERRNO);
@@ -118,13 +131,12 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
         }
     }
 
-    struct sockaddr_un sa = {0};
     sa.sun_family = AF_UNIX;
     sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
 
     int status = connect(fd, (const struct sockaddr *) &sa, sizeof(sa));
     if (status < 0) {
-        ERROR("unix socket connect failed: %s", STRERRNO);
+        ERROR("unix socket '%s' connect failed: %s", path, STRERRNO);
         close(fd);
         return -1;
     }
@@ -134,13 +146,23 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
 
 int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t timeout)
 {
+    struct sockaddr_un lsa = {0};
+
+    if (strlen(localpath) >= sizeof(lsa.sun_path)) {
+        ERROR("Unix socket name '%s': too long.", localpath);
+        return -1;
+    }
+    if (strlen(path) >= sizeof(lsa.sun_path)) {
+        ERROR("Unix socket name '%s': too long.", path);
+        return -1;
+    }
+
     int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (fd < 0) {
         ERROR("socket failed: %s", STRERRNO);
         return -1;
     }
 
-    struct sockaddr_un lsa = {0};
     lsa.sun_family = AF_UNIX;
     sstrncpy(lsa.sun_path, localpath, sizeof(lsa.sun_path));
 
