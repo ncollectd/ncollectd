@@ -15,7 +15,7 @@ set(BUILD_PLUGIN_TIMEX ${BUILD_PLUGIN_TIMEX} PARENT_SCOPE)
 if(BUILD_PLUGIN_TIMEX)
     set(PLUGIN_TIMEX_SRC timex.c)
     add_library(timex MODULE ${PLUGIN_TIMEX_SRC})
-    target_link_libraries(timex PRIVATE libmetric libutils)
+    target_link_libraries(timex PRIVATE libmetric libutils m)
     set_target_properties(timex PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_timex EXCLUDE_FROM_ALL timex_test.c ${PLUGIN_TIMEX_SRC})
