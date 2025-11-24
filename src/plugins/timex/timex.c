@@ -13,20 +13,20 @@
 
 enum {
     FAM_TIMEX_SYNC_STATUS,
-    FAM_TIMEX_OFFSET_SECONDS,
-    FAM_TIMEX_FREQUENCY_ADJUSTMENT_RATIO,
-    FAM_TIMEX_MAXERROR_SECONDS,
-    FAM_TIMEX_ESTIMATED_ERROR_SECONDS,
+    FAM_TIMEX_PLL_OFFSET_SECONDS,
+    FAM_TIMEX_PLL_FREQUENCY_PPM,
+    FAM_TIMEX_PLL_MAXIMUM_ERROR_SECONDS,
+    FAM_TIMEX_PLL_ESTIMATED_ERROR_SECONDS,
     FAM_TIMEX_STATUS,
     FAM_TIMEX_LOOP_TIME_CONSTANT,
     FAM_TIMEX_TICK_SECONDS,
-    FAM_TIMEX_PPS_FREQUENCY_HERTZ,
+    FAM_TIMEX_PPS_FREQUENCY_PPM,
     FAM_TIMEX_PPS_JITTER_SECONDS,
-    FAM_TIMEX_PPS_SHIFT_SECONDS,
-    FAM_TIMEX_PPS_STABILITY_HERTZ,
-    FAM_TIMEX_PPS_JITTER,
-    FAM_TIMEX_PPS_CALIBRATION,
-    FAM_TIMEX_PPS_ERROR,
+    FAM_TIMEX_PPS_CALIBRATION_INTERVAL,
+    FAM_TIMEX_PPS_STABILITY_PPM,
+    FAM_TIMEX_PPS_JITTER_LIMIT,
+    FAM_TIMEX_PPS_CALIBRATION_CICLES,
+    FAM_TIMEX_PPS_CALIBRATION_ERROR,
     FAM_TIMEX_PPS_STABILITY_EXCEEDED,
     FAM_TIMEX_TAI_OFFSET_SECONDS,
     FAM_TIMEX_MAX,
@@ -38,25 +38,26 @@ static metric_family_t fams[FAM_TIMEX_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Is clock synchronized to a reliable server (1 = yes, 0 = no).",
     },
-    [FAM_TIMEX_OFFSET_SECONDS] = {
-        .name = "system_timex_offset_seconds",
+    [FAM_TIMEX_PLL_OFFSET_SECONDS] = {
+        .name = "system_timex_pll_offset_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Time offset in between local system and reference clock.",
+        .help = "Kernel phase-locked loop offset  between local system "
+                "and reference clock in seconds.",
     },
-    [FAM_TIMEX_FREQUENCY_ADJUSTMENT_RATIO] = {
-        .name = "system_timex_frequency_adjustment_ratio",
+    [FAM_TIMEX_PLL_FREQUENCY_PPM] = {
+        .name = "system_timex_pll_frequency_ppm",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Local clock frequency adjustment.",
+        .help = "Kernel phase-locked loop frequency in parts per million.",
     },
-    [FAM_TIMEX_MAXERROR_SECONDS] = {
-        .name = "system_timex_maxerror_seconds",
+    [FAM_TIMEX_PLL_MAXIMUM_ERROR_SECONDS] = {
+        .name = "system_timex_pll_maximum_error_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Maximum error in seconds.",
+        .help = "Maximum error for the kernel phase-locked loop in seconds.",
     },
-    [FAM_TIMEX_ESTIMATED_ERROR_SECONDS] = {
-        .name = "system_timex_estimated_error_seconds",
+    [FAM_TIMEX_PLL_ESTIMATED_ERROR_SECONDS] = {
+        .name = "system_timex_pll_estimated_error_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Estimated error in seconds.",
+        .help = "Estimated error for the kernel phase-locked loop in seconds."
     },
     [FAM_TIMEX_STATUS] = {
         .name = "system_timex_status",
@@ -73,38 +74,38 @@ static metric_family_t fams[FAM_TIMEX_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Seconds between clock ticks.",
     },
-    [FAM_TIMEX_PPS_FREQUENCY_HERTZ] = {
-        .name = "system_timex_pps_frequency_hertz",
+    [FAM_TIMEX_PPS_FREQUENCY_PPM] = {
+        .name = "system_timex_pps_frequency_ppm",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Pulse per second frequency.",
+        .help = "Pulse per second frequency in Parts Per Million.",
     },
     [FAM_TIMEX_PPS_JITTER_SECONDS] = {
         .name = "system_timex_pps_jitter_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Pulse per second jitter.",
+        .help = "Pulse per second jitter in seconds.",
     },
-    [FAM_TIMEX_PPS_SHIFT_SECONDS] = {
-        .name = "system_timex_pps_shift_seconds",
+    [FAM_TIMEX_PPS_CALIBRATION_INTERVAL] = {
+        .name = "system_timex_pps_calibration_interval_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Pulse per second interval duration.",
     },
-    [FAM_TIMEX_PPS_STABILITY_HERTZ] = {
-        .name = "system_timex_pps_stability_hertz",
+    [FAM_TIMEX_PPS_STABILITY_PPM] = {
+        .name = "system_timex_pps_stability_ppm",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Pulse per second stability, average of recent frequency changes.",
+        .help = "Pulse per second stability in Parts Per Million."
     },
-    [FAM_TIMEX_PPS_JITTER] = {
-        .name = "system_timex_pps_jitter",
+    [FAM_TIMEX_PPS_JITTER_LIMIT] = {
+        .name = "system_timex_pps_jitter_limit",
         .type = METRIC_TYPE_COUNTER,
         .help = "Pulse per second count of jitter limit exceeded events.",
     },
-    [FAM_TIMEX_PPS_CALIBRATION] = {
-        .name = "system_timex_pps_calibration",
+    [FAM_TIMEX_PPS_CALIBRATION_CICLES] = {
+        .name = "system_timex_pps_calibration_clicles",
         .type = METRIC_TYPE_COUNTER,
         .help = "Pulse per second count of calibration intervals.",
     },
-    [FAM_TIMEX_PPS_ERROR] = {
-        .name = "system_timex_pps_error",
+    [FAM_TIMEX_PPS_CALIBRATION_ERROR] = {
+        .name = "system_timex_pps_calibration_error",
         .type = METRIC_TYPE_COUNTER,
         .help = "Pulse per second count of calibration errors.",
     },
@@ -132,15 +133,15 @@ static int timex_read(void)
 
     metric_family_append(&fams[FAM_TIMEX_SYNC_STATUS],
                          VALUE_GAUGE(status == TIME_ERROR ? 0 : 1), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_OFFSET_SECONDS],
+    metric_family_append(&fams[FAM_TIMEX_PLL_OFFSET_SECONDS],
                         VALUE_GAUGE((double)timex.offset /
                                     (timex.status & ADJ_NANO ? 1000000000L : 1000000L)),
                         NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_FREQUENCY_ADJUSTMENT_RATIO],
-                         VALUE_GAUGE((double)timex.freq / 65536000000L), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_MAXERROR_SECONDS],
+    metric_family_append(&fams[FAM_TIMEX_PLL_FREQUENCY_PPM],
+                         VALUE_GAUGE(ldexp((double)timex.freq, -16)), NULL, NULL);
+    metric_family_append(&fams[FAM_TIMEX_PLL_MAXIMUM_ERROR_SECONDS],
                          VALUE_GAUGE((double)timex.maxerror / 1000000L), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_ESTIMATED_ERROR_SECONDS],
+    metric_family_append(&fams[FAM_TIMEX_PLL_ESTIMATED_ERROR_SECONDS],
                          VALUE_GAUGE((double)timex.esterror / 1000000L), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_STATUS],
                          VALUE_GAUGE(timex.status), NULL, NULL);
@@ -148,21 +149,21 @@ static int timex_read(void)
                          VALUE_GAUGE(timex.constant), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_TICK_SECONDS],
                          VALUE_GAUGE((double)timex.tick / 1000000L), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_FREQUENCY_HERTZ],
-                         VALUE_GAUGE((double)timex.ppsfreq / 65536000000L), NULL, NULL);
+    metric_family_append(&fams[FAM_TIMEX_PPS_FREQUENCY_PPM],
+                         VALUE_GAUGE(ldexp((double)timex.ppsfreq, -16)), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_JITTER_SECONDS],
                          VALUE_GAUGE((double)timex.jitter /
                                      (timex.status & ADJ_NANO ? 1000000000L : 1000000L)),
                          NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_SHIFT_SECONDS],
+    metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_INTERVAL],
                          VALUE_GAUGE(timex.shift), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_STABILITY_HERTZ],
-                         VALUE_GAUGE((double)timex.stabil / 65536000000L), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_JITTER],
+    metric_family_append(&fams[FAM_TIMEX_PPS_STABILITY_PPM],
+                         VALUE_GAUGE(ldexp((double)timex.stabil, -16)), NULL, NULL);
+    metric_family_append(&fams[FAM_TIMEX_PPS_JITTER_LIMIT],
                          VALUE_COUNTER(timex.jitcnt), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION],
+    metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_CICLES],
                          VALUE_COUNTER(timex.calcnt), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_ERROR],
+    metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_ERROR],
                          VALUE_COUNTER(timex.errcnt), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_STABILITY_EXCEEDED],
                          VALUE_COUNTER(timex.stbcnt), NULL, NULL);
