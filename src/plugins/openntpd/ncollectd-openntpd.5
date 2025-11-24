@@ -1,0 +1,50 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-OPENNTPD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-openntpd
+.Nd Documentation of ncollectd's openntpd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP openntpd
+\fBplugin\fP openntpd {
+    \fBinstance\fP \fIinstance\fP {
+        \fBsocket-path\fP \fIpath\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
+}
+.Ed
+.Sh DESCRIPTION
+The \fBopenntpd\fP plugin collects per-peer ntp data such as time offset and time
+dispersion.
+.Pp
+For talking to \fBopenntpd\fP, it mimics what the \fBntpdctl\fP control program does.
+.Pp
+The configuration of the \fBopenntpd\fP plugin consists of one or more
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
+.Pp
+The following options are accepted within each \fBinstance\fP block:
+.Bl -tag -width Ds
+.It \fBsocket-path\fP \fIpath\fP
+Path to the \f(CWntpd.sock\fP file. The default value is \f(CW/var/run/ntpd.sock\fP.
+.It \fBtimeout\fP \fIseconds\fP
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from
+this instance.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
