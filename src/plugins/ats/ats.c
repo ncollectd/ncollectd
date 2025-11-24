@@ -423,7 +423,6 @@ static bool ats_json_map_key(void * ctx, const char *ukey, size_t key_len)
             } else {
                 sctx->stack[1] = ATS_JSON_NONE;
                 sctx->nfam = -1;
-// fprintf(stderr, "** [%d] <%.*s>\n", (int)sctx->depth, (int)key_len, pkey);
             }
         } else {
             sctx->stack[1] = ATS_JSON_NONE;
