@@ -77,6 +77,14 @@ static metric_family_t internal_fams[FAM_NCOLLECTD_MAX] = {
         .name = "ncollectd_plugin_write_failures",
         .type = METRIC_TYPE_COUNTER,
     },
+    [FAM_NCOLLECTD_PLUGIN_WRITE_CPU_USER] = {
+        .name = "ncollectd_plugin_write_cpu_user_seconds",
+        .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NCOLLECTD_PLUGIN_WRITE_CPU_SYSTEM] = {
+        .name = "ncollectd_plugin_write_cpu_system_seconds",
+        .type = METRIC_TYPE_COUNTER,
+    },
     [FAM_NCOLLECTD_NOTIFICATIONS_DISPACHED] = {
         .name = "ncollectd_notifications_dispached",
         .type = METRIC_TYPE_COUNTER,
@@ -101,6 +109,14 @@ static metric_family_t internal_fams[FAM_NCOLLECTD_MAX] = {
         .name = "ncollectd_plugin_notify_failures",
         .type = METRIC_TYPE_COUNTER,
     },
+    [FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_USER] = {
+        .name = "ncollectd_plugin_notify_cpu_user_seconds",
+        .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_SYSTEM] = {
+        .name = "ncollectd_plugin_notify_cpu_system_seconds",
+        .type = METRIC_TYPE_COUNTER,
+    },
     [FAM_NCOLLECTD_PLUGIN_READ_TIME_SECONDS] = {
         .name = "ncollectd_plugin_read_time_seconds",
         .type = METRIC_TYPE_COUNTER,
@@ -111,6 +127,14 @@ static metric_family_t internal_fams[FAM_NCOLLECTD_MAX] = {
     },
     [FAM_NCOLLECTD_PLUGIN_READ_FAILURES] = {
         .name = "ncollectd_plugin_read_failures",
+        .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NCOLLECTD_PLUGIN_READ_CPU_USER] = {
+        .name = "ncollectd_plugin_read_cpu_user_seconds",
+        .type = METRIC_TYPE_COUNTER,
+    },
+    [FAM_NCOLLECTD_PLUGIN_READ_CPU_SYSTEM] = {
+        .name = "ncollectd_plugin_read_cpu_system_seconds",
         .type = METRIC_TYPE_COUNTER,
     },
     [FAM_NCOLLECTD_CACHE_SIZE] = {
