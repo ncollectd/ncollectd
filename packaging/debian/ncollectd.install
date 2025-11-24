@@ -148,6 +148,8 @@ usr/lib/ncollectd/numa.so
 usr/share/man/man5/ncollectd-numa.5
 usr/lib/ncollectd/olsrd.so
 usr/share/man/man5/ncollectd-olsrd.5
+usr/lib/ncollectd/openntpd.so
+usr/share/man/man5/ncollectd-openntpd.5
 usr/lib/ncollectd/openvpn.so
 usr/share/man/man5/ncollectd-openvpn.5
 usr/lib/ncollectd/ping.so

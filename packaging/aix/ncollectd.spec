@@ -55,6 +55,7 @@
 %define build_with_ntpd 0%{!?_without_ntpd:1}
 %define build_with_odbc 0%{!?_without_odbc:1}
 %define build_with_olsrd 0%{!?_without_olsrd:1}
+%define build_with_openntpd 0%{!?_without_openntpd:1}
 %define build_with_openvpn 0%{!?_without_openvpn:1}
 %define build_with_pdns 0%{!?_without_pdns:1}
 %define build_with_ping 0%{!?_without_ping:1}
@@ -676,6 +677,12 @@ database.
 %define _build_with_olsrd -DPLUGIN_OLSRD:BOOL==OFF
 %endif
 
+%if %{build_with_openntpd}
+%define _build_with_openntpd -DPLUGIN_OPENNTPD:BOOL=ON
+%else
+%define _build_with_openntpd -DPLUGIN_OPENNTPD:BOOL==OFF
+%endif
+
 %if %{build_with_openvpn}
 %define _build_with_openvpn -DPLUGIN_OPENVPN:BOOL=ON
 %else
@@ -976,6 +983,7 @@ export OBJECT_MODE=64
         %{?_build_with_ntpd} \
         %{?_build_with_odbc} \
         %{?_build_with_olsrd} \
+        %{?_build_with_openntpd} \
         %{?_build_with_openvpn} \
         %{?_build_with_pdns} \
         %{?_build_with_ping} \
@@ -1316,6 +1324,10 @@ fi
 %if %{build_with_olsrd}
 %{_libdir}/%{name}/olsrd.so
 %{_datadir}/man/man5/ncollectd-olsrd.5*
+%endif
+%if %{build_with_openntpd}
+%{_libdir}/%{name}/openntpd.so
+%{_datadir}/man/man5/ncollectd-openntpd.5*
 %endif
 %if %{build_with_openvpn}
 %{_libdir}/%{name}/openvpn.so
