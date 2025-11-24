@@ -21,6 +21,7 @@
 #include "libutils/time.h"
 
 #include <stdatomic.h>
+#include <sys/resource.h>
 
 struct read_stats_s;
 typedef struct read_stats_s read_stats_t;
@@ -29,6 +30,8 @@ struct read_stats_s {
     atomic_ullong read_time;
     atomic_ullong read_calls;
     atomic_ullong read_calls_failures;
+    atomic_ullong read_cpu_user;
+    atomic_ullong read_cpu_sys;
     read_stats_t *next;
 };
 
@@ -186,6 +189,11 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
 
         DEBUG("Handling '%s'.", rf->rf_name);
 
+
+#ifdef HAVE_RUSAGE_THREAD
+        struct rusage usage_start = {0};
+        getrusage(RUSAGE_THREAD, &usage_start);
+#endif
         cdtime_t start = cdtime();
 
         plugin_ctx_t old_ctx = plugin_set_ctx(rf->rf_ctx);
@@ -203,6 +211,21 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
 
         plugin_set_ctx(old_ctx);
 
+        /* update the ''next read due'' field */
+        cdtime_t now = cdtime();
+
+#ifdef HAVE_RUSAGE_THREAD
+        struct rusage usage_finish = {0};
+        getrusage(RUSAGE_THREAD, &usage_finish);
+        cdtime_t cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
+                                 TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
+        cdtime_t cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
+                                TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
+
+        atomic_fetch_add(&rf->stats->read_cpu_user, cpu_user_time);
+        atomic_fetch_add(&rf->stats->read_cpu_sys, cpu_sys_time);
+#endif
+
         /* If the function signals failure, we will increase the
          * intervals in which it will be called. */
         if (status != 0) {
@@ -216,9 +239,6 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
             /* Success: Restore the interval, if it was changed. */
             rf->rf_effective_interval = rf->rf_interval;
         }
-
-        /* update the ''next read due'' field */
-        cdtime_t now = cdtime();
 
         /* calculate the time spent in the read function */
         cdtime_t elapsed = (now - start);
@@ -651,18 +671,26 @@ void plugin_read_stats(metric_family_t *fams)
 
     read_stats_t *stats = read_stats;
     while(stats != NULL) {
-        unsigned long long write_time = atomic_load(&stats->read_time);
-        unsigned long long write_calls = atomic_load(&stats->read_calls);
-        unsigned long long write_calls_failures = atomic_load(&stats->read_calls_failures);
+        unsigned long long read_time = atomic_load(&stats->read_time);
+        unsigned long long read_calls = atomic_load(&stats->read_calls);
+        unsigned long long read_calls_failures = atomic_load(&stats->read_calls_failures);
+        unsigned long long read_cpu_user = atomic_load(&stats->read_cpu_user);
+        unsigned long long read_cpu_sys = atomic_load(&stats->read_cpu_sys);
 
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_TIME_SECONDS],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)write_time)), NULL,
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)read_time)), NULL,
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_CALLS],
-                             VALUE_COUNTER(write_calls), NULL,
+                             VALUE_COUNTER(read_calls), NULL,
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_FAILURES],
-                             VALUE_COUNTER(write_calls_failures), NULL,
+                             VALUE_COUNTER(read_calls_failures), NULL,
+                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_CPU_USER],
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(read_cpu_user)), NULL,
+                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_CPU_SYSTEM],
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(read_cpu_sys)), NULL,
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
 
         stats = stats->next;

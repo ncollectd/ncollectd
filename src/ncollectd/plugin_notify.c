@@ -6,6 +6,8 @@
 // SPDX-FileContributor: Manoj Srivastava <srivasta at google.com>
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
+#define _GNU_SOURCE
+
 #include "ncollectd.h"
 #include "globals.h"
 #include "configfile.h"
@@ -17,6 +19,7 @@
 #include "queue.h"
 
 #include <stdatomic.h>
+#include <sys/resource.h>
 
 typedef struct {
     queue_elem_t super;
@@ -30,6 +33,8 @@ struct notify_queue_stats_s {
     atomic_ullong notify_time;
     atomic_ullong notify_calls;
     atomic_ullong notify_calls_failures;
+    atomic_ullong notify_cpu_user;
+    atomic_ullong notify_cpu_sys;
     notify_queue_stats_t *next;
 };
 
@@ -115,7 +120,10 @@ static void *plugin_notify_thread(void *args)
         /* Should elem be written to all plugins or this plugin in particular? */
         if ((elem->super.plugin == NULL) ||
             (strcasecmp(elem->super.plugin, notifier->super.name) == 0)) {
-
+#ifdef HAVE_RUSAGE_THREAD
+            struct rusage usage_start = {0};
+            getrusage(RUSAGE_THREAD, &usage_start);
+#endif
             plugin_ctx_t ctx = elem->super.ctx;
             ctx.name = (char *)notifier->super.name;
             plugin_set_ctx(ctx);
@@ -123,6 +131,18 @@ static void *plugin_notify_thread(void *args)
             cdtime_t start = cdtime();
             int status = notifier->notify_cb(elem->n, &notifier->ud);
             cdtime_t end = cdtime();
+
+#ifdef HAVE_RUSAGE_THREAD
+            struct rusage usage_finish = {0};
+            getrusage(RUSAGE_THREAD, &usage_finish);
+            cdtime_t cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
+                                     TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
+            cdtime_t cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
+                                    TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
+
+            atomic_fetch_add(&notifier->stats->notify_cpu_user, cpu_user_time);
+            atomic_fetch_add(&notifier->stats->notify_cpu_sys, cpu_sys_time);
+#endif
 
             cdtime_t diff = end - start;
 
@@ -307,6 +327,8 @@ void plugin_notify_stats(metric_family_t *fams)
         unsigned long long notify_time = atomic_load(&stats->notify_time);
         unsigned long long notify_calls = atomic_load(&stats->notify_calls);
         unsigned long long notify_calls_failures = atomic_load(&stats->notify_calls_failures);
+        unsigned long long notify_cpu_user = atomic_load(&stats->notify_cpu_user);
+        unsigned long long notify_cpu_sys = atomic_load(&stats->notify_cpu_sys);
 
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_TIME_SECONDS],
                              VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)notify_time)), NULL,
@@ -316,6 +338,12 @@ void plugin_notify_stats(metric_family_t *fams)
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_FAILURES],
                              VALUE_COUNTER(notify_calls_failures), NULL,
+                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_USER],
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(notify_cpu_user)), NULL,
+                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_SYSTEM],
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(notify_cpu_sys)), NULL,
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
 
         stats = stats->next;

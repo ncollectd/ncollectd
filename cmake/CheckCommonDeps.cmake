@@ -355,4 +355,16 @@ int main(void) {
     endif()
     cmake_pop_check_state()
 
+    check_c_source_compiles("
+#define _GNU_SOURCE
+#include <sys/time.h>
+#include <sys/resource.h>
+int main (void)
+{
+    struct rusage usage = {0};
+    getrusage (RUSAGE_THREAD, &usage);
+    return 0;
+}
+" HAVE_RUSAGE_THREAD)
+
 endfunction()

@@ -251,6 +251,9 @@
 #ifndef HAVE_FCNTL_CLOSEM
 #cmakedefine HAVE_FCNTL_CLOSEM
 #endif
+#ifndef HAVE_RUSAGE_THREAD
+#cmakedefine HAVE_RUSAGE_THREAD
+#endif
 
 #ifndef HAVE_CLOCK_GETTIME
 #cmakedefine HAVE_CLOCK_GETTIME

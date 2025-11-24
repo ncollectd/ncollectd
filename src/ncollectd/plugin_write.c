@@ -6,6 +6,8 @@
 // SPDX-FileContributor: Manoj Srivastava <srivasta at google.com>
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
+ #define _GNU_SOURCE
+
 #include "ncollectd.h"
 #include "globals.h"
 #include "configfile.h"
@@ -19,6 +21,7 @@
 #include "queue.h"
 
 #include <stdatomic.h>
+#include <sys/resource.h>
 
 typedef struct {
     queue_elem_t super;
@@ -32,6 +35,8 @@ struct write_queue_stats_s {
     atomic_ullong write_time;
     atomic_ullong write_calls;
     atomic_ullong write_calls_failures;
+    atomic_ullong write_cpu_user;
+    atomic_ullong write_cpu_sys;
     write_queue_stats_t *next;
 };
 
@@ -133,12 +138,28 @@ static void *plugin_write_thread(void *args)
                 ctx.name = (char *)writer->super.name;
                 plugin_set_ctx(ctx);
 
+#ifdef HAVE_RUSAGE_THREAD
+                struct rusage usage_start = {0};
+                getrusage(RUSAGE_THREAD, &usage_start);
+#endif
+
                 cdtime_t start = cdtime();
                 int status = writer->write_cb(elem->fam, &writer->ud);
                 cdtime_t end = cdtime();
 
                 cdtime_t diff = end - start;
 
+#ifdef HAVE_RUSAGE_THREAD
+                struct rusage usage_finish = {0};
+                getrusage(RUSAGE_THREAD, &usage_finish);
+                cdtime_t cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
+                                         TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
+                cdtime_t cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
+                                        TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
+
+                atomic_fetch_add(&writer->stats->write_cpu_user, cpu_user_time);
+                atomic_fetch_add(&writer->stats->write_cpu_sys, cpu_sys_time);
+#endif
                 atomic_fetch_add(&writer->stats->write_time, diff);
                 atomic_fetch_add(&writer->stats->write_calls, 1);
                 if (status != 0)
@@ -495,6 +516,8 @@ void plugin_write_stats(metric_family_t *fams)
         unsigned long long write_time = atomic_load(&stats->write_time);
         unsigned long long write_calls = atomic_load(&stats->write_calls);
         unsigned long long write_calls_failures = atomic_load(&stats->write_calls_failures);
+        unsigned long long write_cpu_user = atomic_load(&stats->write_cpu_user);
+        unsigned long long write_cpu_sys = atomic_load(&stats->write_cpu_sys);
 
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_TIME_SECONDS],
                              VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)write_time)), NULL,
@@ -504,6 +527,12 @@ void plugin_write_stats(metric_family_t *fams)
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_FAILURES],
                              VALUE_COUNTER(write_calls_failures), NULL,
+                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_CPU_USER],
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(write_cpu_user)), NULL,
+                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_CPU_SYSTEM],
+                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(write_cpu_sys)), NULL,
                              &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
 
         stats = stats->next;
