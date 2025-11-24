@@ -117,6 +117,7 @@
 %define build_with_nut 0%{!?_without_nut:1}
 %define build_with_odbc 0%{!?_without_odbc:1}
 %define build_with_olsrd 0%{!?_without_olsrd:1}
+%define build_with_openntpd 0%{!?_without_openntpd:1}
 %define build_with_openldap 0%{!?_without_openldap:1}
 %define build_with_openvpn 0%{!?_without_openvpn:1}
 %define build_with_pcap 0%{!?_without_pcap:1}
@@ -1678,6 +1679,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_olsrd -DPLUGIN_OLSRD:BOOL=OFF
 %endif
 
+%if %{build_with_openntpd}
+%define _build_with_openntpd -DPLUGIN_OPENNTPD:BOOL=ON
+%else
+%define _build_with_openntpd -DPLUGIN_OPENNTPD:BOOL=OFF
+%endif
+
 %if %{build_with_openldap}
 %define _build_with_openldap -DPLUGIN_OPENLDAP:BOOL=ON
 %else
@@ -2305,6 +2312,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_nut} \
     %{?_build_with_odbc} \
     %{?_build_with_olsrd} \
+    %{?_build_with_openntpd} \
     %{?_build_with_openldap} \
     %{?_build_with_openvpn} \
     %{?_build_with_oracle} \
@@ -2742,6 +2750,10 @@ rm -rf %{buildroot}
 %if %{build_with_olsrd}
 %{_libdir}/%{name}/olsrd.so
 %{_mandir}/man5/ncollectd-olsrd.5*
+%endif
+%if %{build_with_openntpd}
+%{_libdir}/%{name}/openntpd.so
+%{_mandir}/man5/ncollectd-openntpd.5*
 %endif
 %if %{build_with_openvpn}
 %{_libdir}/%{name}/openvpn.so
