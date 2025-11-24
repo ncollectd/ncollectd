@@ -9,8 +9,9 @@ endif()
 set(BUILD_PLUGIN_NTPD ${BUILD_PLUGIN_NTPD} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_NTPD)
+    gperf_generate(ntpd_vars.gperf "${CMAKE_CURRENT_BINARY_DIR}/ntpd_vars.h" NTPD_VARS_H)
     set(PLUGIN_NTPD_SRC ntpd.c)
-    add_library(ntpd MODULE ${PLUGIN_NTPD_SRC})
+    add_library(ntpd MODULE ${PLUGIN_NTPD_SRC} ${NTPD_VARS_H})
     target_link_libraries(ntpd PRIVATE libmetric libutils)
     set_target_properties(ntpd PROPERTIES PREFIX "")
 
