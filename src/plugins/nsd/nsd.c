@@ -392,33 +392,6 @@ static int nsd_read_ssl(nsd_t *nsd)
         PLUGIN_ERROR("could not SSL_write %s", ERR_reason_error_string(err) );
         goto error;
     }
-#if 0
-    BIO *rbio = SSL_get_rbio(ssl);
-    if (rbio == NULL) {
-        PLUGIN_ERROR("SSL_get_rbio failed");
-        goto error;
-    }
-
-    BIO *bbio = BIO_new(BIO_f_buffer());
-    if (bbio == NULL) {
-        PLUGIN_ERROR("BIO_new failed");
-        goto error;
-    }
-
-    BIO_push(bbio, rbio);
-
-    while (true) {
-        char buffer[256];
-        status = BIO_gets(bbio, buffer, sizeof(buffer));
-        if (status == 0)
-            break;
-        if (status < 0) {
-            fprintf(stderr,  "*** %d\n", status);
-            break;
-        }
-        fprintf(stderr, "[%s]\n", buffer);
-    }
-#endif
 
     char buffer[1024];
     while (true) {
