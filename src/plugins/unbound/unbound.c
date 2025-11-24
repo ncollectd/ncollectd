@@ -212,7 +212,8 @@ static metric_family_t fams[FAM_UNBOUND_MAX] = {
     [FAM_UNBOUND_THREAD_RECURSION_TIME_MEDIAN] = {
         .name = "unbound_thread_recursion_time_median",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The median of the time it took to answer queries that needed recursive processing.",
+        .help = "The median of the time it took to answer queries that "
+                "needed recursive processing.",
     },
     [FAM_UNBOUND_THREAD_TCP_BUFFERS_USAGE] = {
         .name = "unbound_thread_tcp_buffers_usage",
@@ -309,7 +310,8 @@ static metric_family_t fams[FAM_UNBOUND_MAX] = {
     [FAM_UNBOUND_RECURSION_TIME_MEDIAN] = {
         .name = "unbound_recursion_time_median",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The median of the time it took to answer queries that needed recursive processing.",
+        .help = "The median of the time it took to answer queries "
+                "that needed recursive processing.",
     },
     [FAM_UNBOUND_TCP_BUFFERS_USAGE] = {
         .name = "unbound_tcp_buffers_usage",
@@ -650,11 +652,6 @@ static int unbound_parse_metric(unbound_t *unbound, char *line)
         }
     }
 
-#if 0
-histogram.<sec>.<usec>.to.<sec>.<usec>
-    Shows a histogram, summed over all threads. Every element counts the recursive queries whose reply time fit between the lower and upper bound.  Times larger or equal to the lowerbound, and smaller than the upper bound.  There are 40 buckets, with bucket sizes doubling.
-#endif
-
     const struct unbound_metric *um = unbound_get_key(key, key_len);
     if (um == NULL)
         return 0;
@@ -739,7 +736,8 @@ static int unbound_read_ssl(unbound_t *unbound)
 
     status = SSL_CTX_load_verify_locations(ctx, unbound->server_cert_file, NULL);
     if (status != 1) {
-        PLUGIN_ERROR("Error setting up SSL_CTX verify, server cert for '%s'", unbound->server_cert_file);
+        PLUGIN_ERROR("Error setting up SSL_CTX verify, server cert for '%s'",
+                     unbound->server_cert_file);
         goto error;
     }
 
@@ -794,33 +792,6 @@ static int unbound_read_ssl(unbound_t *unbound)
         status = -1;
         goto error;
     }
-#if 0
-    BIO *rbio = SSL_get_rbio(ssl);
-    if (rbio == NULL) {
-        PLUGIN_ERROR("SSL_get_rbio failed");
-        goto error;
-    }
-
-    BIO *bbio = BIO_new(BIO_f_buffer());
-    if (bbio == NULL) {
-        PLUGIN_ERROR("BIO_new failed");
-        goto error;
-    }
-
-    BIO_push(bbio, rbio);
-
-    while (true) {
-        char buffer[256];
-        status = BIO_gets(bbio, buffer, sizeof(buffer));
-        if (status == 0)
-            break;
-        if (status < 0) {
-            fprintf(stderr,  "*** %d\n", status);
-            break;
-        }
-        fprintf(stderr, "[%s]\n", buffer);
-    }
-#endif
 
     char buffer[1024];
     while (true) {
@@ -903,7 +874,8 @@ static int unbound_read(user_data_t *user_data)
     metric_family_append(&unbound->fams[FAM_UNBOUND_UP], VALUE_GAUGE(status == 0 ? 1 : 0),
                          &unbound->labels, NULL);
 
-    plugin_dispatch_metric_family_array_filtered(unbound->fams, FAM_UNBOUND_MAX, unbound->filter, 0);
+    plugin_dispatch_metric_family_array_filtered(unbound->fams, FAM_UNBOUND_MAX,
+                                                 unbound->filter, 0);
 
     return 0;
 }
