@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2025 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix NTPD_VARS_
+%define hash-function-name ntpd_vars_hash
+%define lookup-function-name ntpd_vars_get_key
+%define slot-name key
+%{
+%}
+struct ntpd_vars {
+    char *key;
+    uint64_t flags;
+    int fam;
+    double scale;
+};
+%%
+leap,                     COLLECT_SYSINFO,   FAM_NTPD_LEAP_STATUS,                      0
+stratum,                  COLLECT_SYSINFO,   FAM_NTPD_STRATUM,                          0
+rootdelay,                COLLECT_SYSINFO,   FAM_NPTD_ROOT_DELAY,                       0.001
+rootdisp,                 COLLECT_SYSINFO,   FAM_NPTD_ROOT_DISPERSION,                  0.001
+rootdist,                 COLLECT_SYSINFO,   FAM_NPTD_ROOT_DISTANCE,                    0.001
+sys_jitter,               COLLECT_SYSINFO,   FAM_NTPD_SYSTEM_JITTER,                    0.001
+clk_jitter,               COLLECT_SYSINFO,   FAM_NTPD_CLOCK_JITTER,                     0.001
+clk_wander,               COLLECT_SYSINFO,   FAM_NTPD_CLOCK_FREQUENCY_WANDER,           0
+koffset,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_OFFSET,                0.001
+kfreq,                    COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_FREQUENCY,             0
+kmaxerr,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_MAXIMUM_ERROR,         0.001
+kesterr,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_ESTIMATED_ERROR,       0.001
+kstflags,                 COLLECT_KERNINFO,  FAM_NTPD_KERNEL_CLOCK_STATUS,              0
+ktimeconst,               COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_TIME_CONSTANT,         0
+kprecis,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_CLOCK_PRECISION,           0.001
+kfreqtol,                 COLLECT_KERNINFO,  FAM_NTPD_KERNEL_CLOCK_FREQUENCY_TOLERANCE, 0
+kppsfreq,                 COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_FREQUENCY,             0
+kppsstab,                 COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_STABILITY,             0
+kppsjitter,               COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_JITTER,                0.001
+kppscalibdur,             COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_CALIBRATION_INTERVAL,  0
+kppscalibs,               COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_CALIBRATION_CICLES,    0
+kppsjitexc,               COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_JITTER_LIMIT,          0
+kppsstbexc,               COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_STABILITY_EXCEEDED,    0
+kppscaliberrs,            COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PPS_CALIBRATION_ERROR,     0
+ss_uptime,                COLLECT_SYSSTATS,  FAM_NTPD_UPTIME,                           0
+ss_numctlreq,             COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_CONTROL,                 0
+ss_received,              COLLECT_SYSSTATS,  FAM_NTPD_PACKETS_RECEIVED,                 0
+ss_thisver,               COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_CURRENT_VERSION,         0
+ss_oldver,                COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_OLDER_VERSION,           0
+ss_badformat,             COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_BAD,                     0
+ss_badauth,               COLLECT_SYSSTATS,  FAM_NTPD_AUTHENTICATION_FAILED,            0
+ss_declined,              COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_DECLINED,                0
+ss_restricted,            COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_RESTRICTED,              0
+ss_limited,               COLLECT_SYSSTATS,  FAM_NTPD_REQUESTS_RATE_LIMITED,            0
+ss_kodsent,               COLLECT_SYSSTATS,  FAM_NTPD_RESPONSES_KODS,                   0
+ss_processed,             COLLECT_SYSSTATS,  FAM_NTPD_PACKETS_PROCESSED,                0
+total_rbuf,               COLLECT_IOSTATS,   FAM_NTPD_RECEIVE_BUFFERS,                  0
+free_rbuf,                COLLECT_IOSTATS,   FAM_NTPD_RECEIVE_BUFFERS_FREE,             0
+io_dropped,               COLLECT_IOSTATS,   FAM_NTPD_IO_PACKETS_DROPPED,               0
+io_ignored,               COLLECT_IOSTATS,   FAM_NTPD_IO_PACKETS_IGNORED,               0
+io_received,              COLLECT_IOSTATS,   FAM_NTPD_IO_PACKETS_RECEIVED,              0
+io_sent,                  COLLECT_IOSTATS,   FAM_NTPD_IO_PACKETS_SEND,                  0
+io_sendfailed,            COLLECT_IOSTATS,   FAM_NTPD_IO_PACKETS_SEND_FAILURES,         0
+io_wakeups,               COLLECT_IOSTATS,   FAM_NTPD_IO_WAKEUPS,                       0
+io_goodwakeups,           COLLECT_IOSTATS,   FAM_NTPD_IO_GOOOD_WAKEUPS,                 0
+authkeys,                 COLLECT_AUTHINFO,  FAM_NTPD_AUTH_KEYS,                        0           
+authfreek,                COLLECT_AUTHINFO,  FAM_NTPD_AUTH_KEYS_FREE,                   0
+authklookups,             COLLECT_AUTHINFO,  FAM_NTPD_AUTH_KEYS_LOOKUPS,                0
+authknotfound,            COLLECT_AUTHINFO,  FAM_NTPD_AUTH_KEYS_NOTFOUND,               0
+authencrypts,             COLLECT_AUTHINFO,  FAM_NTPD_AUTH_ENCRYPTS,                    0
+authdigestencrypts,       COLLECT_AUTHINFO,  FAM_NTPD_AUTH_DIGEST_ENCRYPTS,             0
+authcmacencrypts,         COLLECT_AUTHINFO,  FAM_NTPD_AUTH_CMAC_ENCRYPTS,               0
+authdecrypts,             COLLECT_AUTHINFO,  FAM_NTPD_AUTH_DECRYPTS,                    0
+authdigestdecrypts,       COLLECT_AUTHINFO,  FAM_NTPD_AUTH_DIGEST_DECRYPTS,             0
+authdigestfails,          COLLECT_AUTHINFO,  FAM_NTPD_AUTH_DIGEST_FAILS,                0
+authcmacdecrypts,         COLLECT_AUTHINFO,  FAM_NTPD_AUTH_CMAC_DECRYPTS,               0
+authcmacfails,            COLLECT_AUTHINFO,  FAM_NTPD_AUTH_CMAC_FAILS,                  0
+nts_client_send,          COLLECT_NTSINFO,   FAM_NTPD_NTS_CLIENT_SENDS,                 0
+nts_client_recv_good,     COLLECT_NTSINFO,   FAM_NTPD_NTS_CLIENT_RECVS_GOOD,            0
+nts_client_recv_bad,      COLLECT_NTSINFO,   FAM_NTPD_NTS_CLIENT_RECVS_BAD,             0
+nts_server_recv_good,     COLLECT_NTSINFO,   FAM_NTPD_NTS_SERVER_RECVS_GOOD,            0
+nts_server_recv_bad,      COLLECT_NTSINFO,   FAM_NTPD_NTS_SERVER_RECVS_BAD,             0
+nts_server_send,          COLLECT_NTSINFO,   FAM_NTPD_NTS_SERVER_SENDS,                 0
+nts_cookie_make,          COLLECT_NTSINFO,   FAM_NTPD_NTS_COOKIE_MAKE,                  0
+nts_cookie_not_server,    COLLECT_NTSINFO,   FAM_NTPD_NTS_COOKIE_NOT_SERVER,            0
+nts_cookie_decode_total,  COLLECT_NTSINFO,   FAM_NTPD_NTS_COOKIE_DECODE,                0
+nts_cookie_decode_error,  COLLECT_NTSINFO,   FAM_NTPD_NTS_COOKIE_DECODE_ERROR,          0
+nts_ke_serves_good,       COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_GOOD,               0 
+nts_ke_serves_good_wall,  COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_GOOD_WALL,          0
+nts_ke_serves_good_cpu,   COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_GOOD_CPU,           0
+nts_ke_serves_nossl,      COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_NO_TLS,             0
+nts_ke_serves_nossl_wall, COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_NO_TLS_WALL,        0
+nts_ke_serves_nossl_cpu,  COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_NO_TLS_CPU,         0
+nts_ke_serves_bad,        COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_BAD,                0
+nts_ke_serves_bad_wall,   COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_BAD_WALL,           0
+nts_ke_serves_bad_cpu,    COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_SERVES_BAD_CPU,            0
+nts_ke_probes_good,       COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_PROBES_GOOD,               0
+nts_ke_probes_bad,        COLLECT_NTSKEINFO, FAM_NTPD_NTS_KE_PROBES_BAD,                0
