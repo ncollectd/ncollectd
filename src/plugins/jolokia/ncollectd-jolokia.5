@@ -9,6 +9,21 @@
 .Bd -literal -compact
 \fBload-plugin\fP jolokia
 \fBplugin\fP jolokia {
+    \fBmbeans\fP \fIname\fP {
+        \fBmbean\fP \fIname\fP {
+            \fBpath\fP \fIpath\fP
+            \fBmetric-prefix\fP \fIprefix\fP
+            \fBlabel\fP \fIkey\fP \fIvalue\fP
+            \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
+            \fBattribute\fP \fIname\fP {
+                \fBmetric\fP \fImetric\fP
+                \fBtype\fP \fIgauge|counter\fP
+                \fBlabel\fP \fIkey\fP \fIvalue\fP
+                \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
+                \fBhelp\fP \fIhelp\fP
+            }
+        }
+    }
     \fBinstance\fP \fIname\fP {
         \fBurl\fP \fIurl\fP
         \fBuser\fP \fIuser\fP
@@ -23,19 +38,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
         \fBmetric-prefix\fP \fIprefix\fP
-        \fBmbean\fP \fIname\fP {
-            \fBpath\fP \fIpath\fP
-            \fBmetric-prefix\fP \fIprefix\fP
-            \fBlabel\fP \fIkey\fP \fIvalue\fP
-            \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
-            \fBattribute\fP \fIname\fP {
-                \fBmetric\fP \fImetric\fP
-                \fBtype\fP \fIgauge|unknown|counter|info\fP
-                \fBlabel\fP \fIkey\fP \fIvalue\fP
-                \fBlabel-from\fP \fIkey\fP \fIvalue-from\fP
-                \fBhelp\fP \fIhelp\fP
-            }
-        }
+        \fBcollect\fP \fImbeans-name\fP ...
         \fBfilter\fP {
             ...
         }
@@ -102,6 +105,20 @@ URL.
 By default the global \fBinterval\fP setting will be used.
 .It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metric name.
+.It \fBcollect\fP \fImbeans-name\fP ...
+Associates the mbeans named with this jolokia instance.
+The mbeans needs to be defined before this statement, i. e. all mbeans block
+you want to refer to, must be placed above the instance block you want to
+refer to them from.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.It \fBmbeans\fP \fIname\fP
+Mbeans block define a list of mbeans and how the returned data should be
+interpreted.
+The name of the the mbeans block needs to be unique.
+.Bl -tag -width Ds
 .It \fBmbean\fP \fIname\fP
 One \fBmbean\fP block configures the translation of the gauges of one bean
 to their respective collectd names, where \fIname\fP sets the main name.
@@ -118,7 +135,7 @@ A bean can contain several attributes.
 Each one can be matched by a attribute block or be ignored.
 .Bl -tag -width Ds
 .It \fBmetric\fP \fImetric\fP
-.It \fBtype\fP \fIgauge|unknown|counter|info\fP
+.It \fBtype\fP \fIgauge|counter\fP
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times.
@@ -126,10 +143,7 @@ Can appear multiple times.
 .It \fBhelp\fP \fIhelp\fP
 .El
 .El
-.It \fBfilter\fP
-Configure a filter to modify or drop the metrics.
-See \fBFILTER CONFIGURATION\fP in
-.Xr ncollectd.conf 5 .
+.El
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
