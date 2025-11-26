@@ -25,6 +25,14 @@ typedef struct {
     size_t errbuf_size;
 } context_t;
 
+struct xson_tree_parser {
+    context_t ctx;
+    json_parser_t handle;
+};
+
+typedef struct xson_tree_parser xson_tree_parser_t;
+
+
 #define JSON_ERROR(ctx,...)                                             \
     do {                                                                \
         if ((ctx)->errbuf != NULL)                                      \
@@ -258,11 +266,87 @@ xson_value_t *xson_tree_parser(const char *input, char *error_buffer, size_t err
             json_parser_free_error(errmsg);
         }
         json_parser_free (&handle);
+        xson_value_free(ctx.root);
         return NULL;
     }
 
     json_parser_free (&handle);
     return ctx.root;
+}
+
+xson_tree_parser_t *xson_tree_parser_init(char *error_buffer, size_t error_buffer_size)
+{
+    xson_tree_parser_t *parser = calloc(1, sizeof(*parser));
+    if (parser == NULL)
+        return NULL;
+
+    parser->ctx.errbuf = error_buffer;
+    parser->ctx.errbuf_size = error_buffer_size;
+
+    if (error_buffer != NULL)
+        memset (error_buffer, 0, error_buffer_size);
+
+    parser->ctx.root = xson_value_alloc(XSON_TYPE_NULL);
+    parser->ctx.stack[0].value = parser->ctx.root;
+    parser->ctx.depth = 0;
+
+    json_parser_init(&parser->handle, 0, &callbacks, &parser->ctx);
+
+    return parser;
+}
+
+int xson_tree_parser_chunk(xson_tree_parser_t *parser, const unsigned char *input, size_t len)
+{
+    if (parser == NULL)
+        return -1;
+
+    json_status_t status = json_parser_parse(&parser->handle, input, len);
+    if (status != JSON_STATUS_OK) {
+        if ((parser->ctx.errbuf != NULL) && (parser->ctx.errbuf_size > 0)) {
+            unsigned char *errmsg = json_parser_get_error(&parser->handle, 1, input, len);
+            ssnprintf(parser->ctx.errbuf, parser->ctx.errbuf_size, "%s", (char *)errmsg);
+            json_parser_free_error(errmsg);
+        }
+        xson_value_free(parser->ctx.root);
+        json_parser_free (&parser->handle);
+        free(parser);
+        return -1;
+    }
+
+    return 0;
+}
+
+xson_value_t *xson_tree_parser_complete(xson_tree_parser_t *parser)
+{
+    if (parser == NULL)
+        return NULL;
+
+    int status = json_parser_complete(&parser->handle);
+    if (status != JSON_STATUS_OK) {
+        if ((parser->ctx.errbuf != NULL) && (parser->ctx.errbuf_size > 0)) {
+            unsigned char *errmsg = json_parser_get_error(&parser->handle, 1, NULL, 0);
+            ssnprintf(parser->ctx.errbuf, parser->ctx.errbuf_size, "%s", (char *)errmsg);
+            json_parser_free_error(errmsg);
+        }
+        return NULL;
+    }
+
+
+    xson_value_t *tree = parser->ctx.root;
+    parser->ctx.root = NULL;
+
+    return tree;
+}
+
+void xson_tree_parser_free(xson_tree_parser_t *parser)
+{
+    if (parser == NULL)
+        return;
+
+    if (parser->ctx.root != NULL)
+        xson_value_free(parser->ctx.root);
+    json_parser_free(&parser->handle);
+    free(parser);
 }
 
 static xson_render_status_t render_value(xson_render_t *r, xson_value_t *v)

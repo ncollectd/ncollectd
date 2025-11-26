@@ -8,6 +8,21 @@ NCOLLECTD-JOLOKIA(5) - File Formats Manual
 
 	load-plugin jolokia
 	plugin jolokia {
+	    mbeans name {
+	        mbean name {
+	            path path
+	            metric-prefix prefix
+	            label key value
+	            label-from key value-from
+	            attribute name {
+	                metric metric
+	                type gauge|counter
+	                label key value
+	                label-from key value-from
+	                help help
+	            }
+	        }
+	    }
 	    instance name {
 	        url url
 	        user user
@@ -22,19 +37,7 @@ NCOLLECTD-JOLOKIA(5) - File Formats Manual
 	        label key value
 	        interval seconds
 	        metric-prefix prefix
-	        mbean name {
-	            path path
-	            metric-prefix prefix
-	            label key value
-	            label-from key value-from
-	            attribute name {
-	                metric metric
-	                type gauge|unknown|counter|info
-	                label key value
-	                label-from key value-from
-	                help help
-	            }
-	        }
+	        collect mbeans-name ...
 	        filter {
 	            ...
 	        }
@@ -127,32 +130,35 @@ Moreof - no java binding is required in collectd to do so.
 
 > Prepends *prefix* to the metric name.
 
-**mbean** *name*
+**collect** *mbeans-name* ...
 
-> One **mbean** block configures the translation of the gauges of one bean
-> to their respective collectd names, where *name* sets the main name.
+> Associates the mbeans named with this jolokia instance.
+> The mbeans needs to be defined before this statement, i. e. all mbeans block
+> you want to refer to, must be placed above the instance block you want to
+> refer to them from.
 
-> **path** *path*
+**filter**
 
-> **metric-prefix** *prefix*
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5).
 
-> > Prepends *prefix* to the metric name.
+**mbeans** *name*
 
-> **label** *key* *value*
+> Mbeans block define a list of mbeans and how the returned data should be
+> interpreted.
+> The name of the the mbeans block needs to be unique.
 
-> > Append the label *key*=*value* to the submitting metrics.
-> > Can appear multiple times.
+> **mbean** *name*
 
-> **label-from** *key* *value-from*
+> > One **mbean** block configures the translation of the gauges of one bean
+> > to their respective collectd names, where *name* sets the main name.
 
-> **attribute** *name*
+> > **path** *path*
 
-> > A bean can contain several attributes.
-> > Each one can be matched by a attribute block or be ignored.
+> > **metric-prefix** *prefix*
 
-> > **metric** *metric*
-
-> > **type** *gauge|unknown|counter|info*
+> > > Prepends *prefix* to the metric name.
 
 > > **label** *key* *value*
 
@@ -161,17 +167,26 @@ Moreof - no java binding is required in collectd to do so.
 
 > > **label-from** *key* *value-from*
 
-> > **help** *help*
+> > **attribute** *name*
 
-**filter**
+> > > A bean can contain several attributes.
+> > > Each one can be matched by a attribute block or be ignored.
 
-> Configure a filter to modify or drop the metrics.
-> See **FILTER CONFIGURATION** in
-> ncollectd.conf(5).
+> > > **metric** *metric*
+
+> > > **type** *gauge|counter*
+
+> > > **label** *key* *value*
+
+> > > > Append the label *key*=*value* to the submitting metrics.
+> > > > Can appear multiple times.
+
+> > > **label-from** *key* *value-from*
+
+> > > **help** *help*
 
 # SEE ALSO
 
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

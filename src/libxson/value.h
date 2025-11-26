@@ -240,6 +240,27 @@ static inline xson_value_t *xson_value_object_find(xson_value_t *val, char *key)
     return NULL;
 }
 
+static inline xson_keyval_t *xson_value_object_at(xson_value_t *val, size_t n)
+{
+    if (val->type == XSON_TYPE_OBJECT) {
+        if (n >= val->object.len)
+            return NULL;
+        return &val->object.keyval[n];
+    }
+
+    return NULL;
+}
+
+static inline char *xson_keyval_key(xson_keyval_t *kv)
+{
+    return kv->key;
+}
+
+static inline xson_value_t *xson_keyval_value(xson_keyval_t *kv)
+{
+    return &kv->value;
+}
+
 static inline  xson_value_t *xson_value_array_at(xson_value_t *val, size_t n)
 {
     if (val->type == XSON_TYPE_ARRAY) {
@@ -249,6 +270,29 @@ static inline  xson_value_t *xson_value_array_at(xson_value_t *val, size_t n)
     }
 
     return NULL;
+}
+
+static inline double xson_value_get_number(xson_value_t *val)
+{
+    if (val->type == XSON_TYPE_NUMBER)
+        return val->number;
+    return NAN;
+}
+
+static inline char *xson_value_get_string(xson_value_t *val)
+{
+    if (val->type == XSON_TYPE_STRING)
+        return val->string;
+    return NULL;
+}
+
+static inline bool xson_value_get_boolean(xson_value_t *val)
+{
+    if (val->type == XSON_TYPE_TRUE)
+        return true;
+    else if (val->type == XSON_TYPE_FALSE)
+        return false;
+    return false;
 }
 
 int xson_value_to_number(xson_value_t *val);

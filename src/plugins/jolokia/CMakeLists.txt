@@ -1,4 +1,4 @@
-plugin_option(PLUGIN_JOLOKIA "Nginx statistics" ON)
+plugin_option(PLUGIN_JOLOKIA "Jolokia statistics" ON)
 
 set(BUILD_PLUGIN_JOLOKIA 0)
 
