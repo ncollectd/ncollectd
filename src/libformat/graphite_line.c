@@ -7,29 +7,25 @@
 #include "libutils/dtoa.h"
 #include "libutils/strbuf.h"
 
-/*
-my.series;tag1=value1;tag2=value2
-
-Tag names must have a length >= 1 and may contain any ascii characters except ;!^=.
-
-Tag values must also have a length >= 1, they may contain any ascii characters except ; and
-the first character must not be ~. UTF-8 characters may work for names and values, but
-they are not well tested and it is not recommended to use non-ascii characters in metric
-names or tags. Metric names get indexed under the special tag name, if a metric name starts
-with one or multiple ~ they simply get removed from the derived tag value
-because the ~ character is not allowed to be in the first position of the tag value.
-If a metric name consists of no other characters than ~,
-then it is considered invalid and may get dropped.
-*/
-/*
- metric name: [a-zA-Z_:][a-zA-Z0-9_:]*
- Label name: [a-zA-Z_][a-zA-Z0-9_]*
-*/
-
-#define GRAPHITE_FORBIDDEN " \t\"\\:!,/()\n\r"
-
-/* Utils functions to format data sets in graphite format.
- * Largely taken from write_graphite.c as it remains the same formatting */
+// "!$^&*()`'\"[]{};<>?\\|=\t\n\r"
+static char graphite_replace[256] = {
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
 
 typedef union {
     double   float64;
@@ -75,7 +71,7 @@ static int graphite_render_metric(strbuf_t *buf,
             status |= strbuf_putchar(buf, ';');
             status |= strbuf_putstr(buf, pair->name);
             status |= strbuf_putchar(buf, '=');
-            status |= strbuf_print_escaped(buf, pair->value, "\\\"\n\r\t", '\\'); // FIXME
+            status |= strbuf_putreplace_set(buf, pair->value, graphite_replace, '_');
         }
     }
 

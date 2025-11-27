@@ -318,8 +318,8 @@ int strbuf_putnescape_json(strbuf_t *buf, char const *str, size_t len)
     size_t n = 0;
     while (n < len) {
         if (unlikely(strbuf_avail(buf) < 6)) {
-          if (strbuf_resize(buf, 6) != 0)
-            return ENOMEM;
+            if (strbuf_resize(buf, 6) != 0)
+                return ENOMEM;
         }
 
         unsigned char c = (unsigned char)str[n];
@@ -400,8 +400,8 @@ int strbuf_putnurlencode(strbuf_t *buf, char const *str, size_t len)
     size_t n = 0;
     while (n < len) {
         if (unlikely(strbuf_avail(buf) < 3)) {
-          if (strbuf_resize(buf, 3) != 0)
-            return ENOMEM;
+            if (strbuf_resize(buf, 3) != 0)
+                return ENOMEM;
         }
 
         unsigned char c = (unsigned char)str[n];
@@ -433,8 +433,8 @@ int strbuf_putnescape_label(strbuf_t *buf, char const *str, size_t len)
     size_t n = 0;
     while (n < len) {
         if (unlikely(strbuf_avail(buf) < 2)) {
-          if (strbuf_resize(buf, 2) != 0)
-            return ENOMEM;
+            if (strbuf_resize(buf, 2) != 0)
+                return ENOMEM;
         }
 
         unsigned char c = (unsigned char)str[n];
@@ -483,8 +483,8 @@ int strbuf_putnescape_squote(strbuf_t *buf, char const *str, size_t len)
     size_t n = 0;
     while (n < len) {
         if (unlikely(strbuf_avail(buf) < 2)) {
-          if (strbuf_resize(buf, 2) != 0)
-            return ENOMEM;
+            if (strbuf_resize(buf, 2) != 0)
+                return ENOMEM;
         }
 
         unsigned char c = (unsigned char)str[n];
@@ -514,6 +514,37 @@ int strbuf_putnescape_squote(strbuf_t *buf, char const *str, size_t len)
             break;
         }
 
+        n++;
+    }
+
+    buf->ptr[buf->pos] = '\0';
+    return 0;
+}
+
+int strbuf_putnreplace_set(strbuf_t *buf, char const *str, size_t len, char rset[256], char rchar)
+{
+    if (unlikely(strbuf_avail(buf) < len)) {
+        if (strbuf_resize(buf, len) != 0)
+            return ENOMEM;
+    }
+
+    if (unlikely(buf->ptr == NULL))
+        return ENOMEM;
+
+    size_t n = 0;
+    while (n < len) {
+        if (unlikely(strbuf_avail(buf) < 2)) {
+            if (strbuf_resize(buf, 2) != 0)
+                return ENOMEM;
+        }
+
+        unsigned char c = (unsigned char)str[n];
+
+        if (rset[c]) {
+            buf->ptr[buf->pos++] = rchar;
+        } else {
+            buf->ptr[buf->pos++] = c;
+        }
         n++;
     }
 
