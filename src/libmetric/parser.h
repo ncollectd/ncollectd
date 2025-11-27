@@ -24,3 +24,5 @@ typedef int (*dispatch_metric_family_t)(metric_family_t *fam, plugin_filter_t *f
 
 int metric_parser_dispatch(metric_parser_t *mp, dispatch_metric_family_t dispatch,
                                                 plugin_filter_t *filter, cdtime_t time);
+
+int metric_parser_size(metric_parser_t *mp);
