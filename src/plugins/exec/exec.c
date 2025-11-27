@@ -68,12 +68,41 @@ static void *exec_read_one(void *arg)
     fds[1].fd = fd_err;
     fds[1].events = POLLIN;
 
+    cdtime_t last_dispatch = cdtime();
+    cdtime_t last_read = cdtime();
+    cdtime_t timeout = pm->interval/2;
+
     while (true) {
-        status = poll(fds, STATIC_ARRAY_SIZE(fds), -1);
+        status = poll(fds, STATIC_ARRAY_SIZE(fds), CDTIME_T_TO_MS(timeout));
         if (status < 0) {
-            if (errno == EINTR)
+            if ((errno == EINTR) || (errno == EAGAIN))
                 continue;
             break;
+        }
+
+        cdtime_t now = cdtime();
+
+        if (status == 0) { /* timeout */
+            if ((now - last_dispatch) > pm->interval) {
+                if (metric_parser_size(pm->mp) > 0) {
+                    PLUGIN_WARNING("There are metrics pending to be dispatched. Missing '#EOF'?");
+                    metric_parser_dispatch(pm->mp, plugin_dispatch_metric_family_filtered,
+                                                   pm->filter, 0);
+                    metric_parser_reset(pm->mp);
+                    last_dispatch = now;
+                }
+            }
+            continue;
+        }
+
+        if (((now - last_dispatch) > pm->interval) && ((now - last_read) > pm->interval/2)) {
+            if (metric_parser_size(pm->mp) > 0) {
+                PLUGIN_WARNING("There are metrics pending to be dispatched. Missing '#EOF'?");
+                metric_parser_dispatch(pm->mp, plugin_dispatch_metric_family_filtered,
+                                               pm->filter, 0);
+                metric_parser_reset(pm->mp);
+                last_dispatch = now;
+            }
         }
 
         if (fds[0].revents & (POLLIN | POLLHUP)) {
@@ -85,6 +114,8 @@ static void *exec_read_one(void *arg)
             } else if (len == 0) {
                 break; /* We've reached EOF */
             }
+
+            last_read = now;
 
             pbuffer[len] = '\0';
 
@@ -99,11 +130,12 @@ static void *exec_read_one(void *arg)
 
                 status = metric_parse_line(pm->mp, pbuffer);
                 if (status < 0) {
-                    PLUGIN_WARNING("Cannot parse '%s'.", pbuffer);
-                } else if (status == 1) { // FIXME
+                    PLUGIN_WARNING("Cannot parse line: '%s'.", pbuffer);
+                } else if (status == 1) { // #EOF FIXME
                     metric_parser_dispatch(pm->mp, plugin_dispatch_metric_family_filtered,
                                                    pm->filter, 0);
                     metric_parser_reset(pm->mp);
+                    last_dispatch = now;
                 }
 
                 pbuffer = ++pnl;
@@ -234,7 +266,7 @@ static void exec_free(void *arg)
 
     if (pm->pid > 0) {
         kill(pm->pid, SIGTERM);
-        PLUGIN_INFO("Sent SIGTERM to %hu", (unsigned short int)pm->pid);
+        PLUGIN_INFO("Sent SIGTERM to %d", (int)pm->pid);
 
         waitpid(pm->pid, NULL, 0);
     }

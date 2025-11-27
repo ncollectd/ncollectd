@@ -969,6 +969,7 @@ void metric_parser_reset(metric_parser_t *mp)
     }
 
     mp->lineno = 0;
+    mp->last_fam = NULL;
     strbuf_reset(&mp->buf);
 }
 
@@ -1074,3 +1075,11 @@ int metric_parser_dispatch(metric_parser_t *mp, dispatch_metric_family_t dispatc
 
     return 0;
 }
+
+int metric_parser_size(metric_parser_t *mp)
+{
+    if (mp == NULL)
+        return 0;
+    return c_avl_size(mp->fams);
+}
+
