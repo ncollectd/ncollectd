@@ -12,17 +12,6 @@
 #include "libutils/dtoa.h"
 #include "libutils/strbuf.h"
 #include "libformat/opentsdb_telnet.h"
-/*
-putm <metric name> <time stamp> <value> <tag> <tag>... \n
-
-Metric name must be one word and is limited to utf8 characters.
-Time stamp milliseconds since Jan 1, 1970 (unix epoch)
-Value can either be a long or double value.
-Tag is in the form of key=value.
-*/
-
-//putm <metric name> <time stamp> <value> <tag> <tag>... \n
-//Metric names, tag names and values are case sensitive and can contain any character except spaces and in the case of tags anything except ‘=’.
 
 typedef union {
     double   float64;

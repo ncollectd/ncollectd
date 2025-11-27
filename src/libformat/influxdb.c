@@ -9,29 +9,6 @@
 #include "libutils/dtoa.h"
 #include "libformat/influxdb.h"
 
-/*
-<measurement>[,<tag_key>=<tag_value>[,<tag_key>=<tag_value>]] <field_key>=<field_value>[,<field_key>=<field_value>] [<timestamp>]
-
-Measurement    Comma, Space
-Tag key        Comma, Equals Sign, Space
-Tag value    Comma, Equals Sign, Space
-Field key    Comma, Equals Sign, Space
-Field value    Double quote, Backslash
-
-float     1.0
-integet   9223372036854775807i
-uinterger 18446744073709551615u
-
-Unix timestamp ns
-
-string[src_pos] == ' '
-string[src_pos] == ','
-string[src_pos] == '='
-
-string[src_pos] == '\\'
-string[src_pos] == '"'
-*/
-
 typedef union {
     double   float64;
     uint64_t uint64;
