@@ -8,19 +8,19 @@
 #include "libutils/dtoa.h"
 #include "libxson/render.h"
 
-static inline int opentelemetry_label_pair(xson_render_t *r, label_pair_t label) 
+static inline int opentelemetry_label_pair(xson_render_t *r, label_pair_t label)
 {
     int status = 0;
- 
-    status |= xson_render_map_open(r); 
+
+    status |= xson_render_map_open(r);
     status |= xson_render_key_string(r, "key");
     status |= xson_render_string(r, label.name);
     status |= xson_render_key_string(r, "value");
-    status |= xson_render_map_open(r); 
+    status |= xson_render_map_open(r);
     status |= xson_render_key_string(r, "stringValue");
     status |= xson_render_string(r, label.value);
-    status |= xson_render_map_close(r); 
-    status |= xson_render_map_close(r); 
+    status |= xson_render_map_close(r);
+    status |= xson_render_map_close(r);
 
     return status;
 }
@@ -29,7 +29,7 @@ static inline int opentelemetry_attributes(xson_render_t *r, const label_set_t *
                                                              const label_set_t *labels2)
 {
     int status = 0;
- 
+
     if (((labels1 != NULL) && (labels1->num > 0)) || ((labels2 != NULL) && (labels2->num > 0))) {
         status |= xson_render_key_string(r, "attributes");
         status |= xson_render_array_open(r);
@@ -160,13 +160,13 @@ static int opentelemetry_histogram(xson_render_t *r, metric_t const *m)
 {
     int status = xson_render_map_open(r);
 
-    status |= xson_render_key_string(r, "bucketCounts");   
+    status |= xson_render_key_string(r, "bucketCounts");
     status |= xson_render_array_open(r);
     for (int i = m->value.histogram->num - 1; i >= 0; i--) {
         status |= xson_render_integer(r, m->value.histogram->buckets[i].counter);
-    }    
+    }
     status |= xson_render_array_close(r);
-    
+
     status |= xson_render_key_string(r, "explicitBounds");
     status |= xson_render_array_open(r);
     for (int i = m->value.histogram->num - 1; i > 0; i--) {
@@ -228,7 +228,7 @@ int opentelemetry_json_metric(xson_render_t *r, metric_family_t const *fam)
     case METRIC_TYPE_COUNTER:
         status |= xson_render_key_string(r, "sum");
         status |= xson_render_map_open(r);
-        status |= xson_render_key_string(r, "aggregationTemporality"); 
+        status |= xson_render_key_string(r, "aggregationTemporality");
         status |= xson_render_integer(r, 2); /* AGGREGATION_TEMPORALITY_CUMULATIVE */
         status |= xson_render_key_string(r, "dataPoints");
         status |= xson_render_array_open(r);
@@ -274,7 +274,7 @@ int opentelemetry_json_metric(xson_render_t *r, metric_family_t const *fam)
     case METRIC_TYPE_HISTOGRAM:
         status |= xson_render_key_string(r, "histogram");
         status |= xson_render_map_open(r);
-        status |= xson_render_key_string(r, "aggregationTemporality"); 
+        status |= xson_render_key_string(r, "aggregationTemporality");
         status |= xson_render_integer(r, 2); /* AGGREGATION_TEMPORALITY_CUMULATIVE */
         status |= xson_render_key_string(r, "dataPoints");
         status |= xson_render_array_open(r);
@@ -306,7 +306,7 @@ int opentelemetry_json_metric_family(strbuf_t *buf, metric_family_t const *fam)
     status |= xson_render_map_open(&r);
     status |= xson_render_key_string(&r, "resourceMetrics");
     status |= xson_render_array_open(&r);
-   
+
     status |= xson_render_map_open(&r);
 #if 0
     status |= xson_render_key_string(&r, "resource");
