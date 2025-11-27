@@ -246,3 +246,10 @@ static inline int strbuf_putescape_label(strbuf_t *buf, char const *str)
 {
     return strbuf_putnescape_label(buf, str, strlen(str));
 }
+
+int strbuf_putnreplace_set(strbuf_t *buf, char const *str, size_t len, char rset[256], char rchar);
+
+static inline int strbuf_putreplace_set(strbuf_t *buf, char const *str, char rset[256], char rchar)
+{
+    return  strbuf_putnreplace_set(buf, str, strlen(str), rset, rchar);
+}
