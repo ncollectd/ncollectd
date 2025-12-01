@@ -30,10 +30,6 @@
 
 #include "processes.h"
 
-extern metric_family_t fams[];
-extern procstat_t *list_head_g;
-extern bool want_init;
-
 static struct procentry64 procentry[MAXPROCENTRY];
 static struct thrdentry64 thrdentry[MAXTHRDENTRY];
 static int pagesize;
@@ -185,12 +181,8 @@ int ps_read(void)
     proc_state[PROC_STATE_BLOCKED] = blocked;
     ps_submit_state(proc_state);
 
-    for (procstat_t *ps = list_head_g; ps != NULL; ps = ps->next)
-        ps_metric_append_proc_list(ps);
+    ps_dispatch();
 
-    want_init = false;
-
-    plugin_dispatch_metric_family_array(fams, FAM_PROC_MAX, 0);
     return 0;
 }
 

@@ -8,6 +8,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/time.h"
 
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
@@ -22,12 +23,18 @@
 #include <linux/ethtool.h>
 #endif
 
-static char **interfaces;
+typedef struct {
+    char *device;
+    plugin_filter_t *filter;
+} interface_t;
+
+static interface_t *interfaces;
 static size_t interfaces_num;
 
-static void ethstat_submit_value(const char *device, const char *name, uint64_t value)
+static void ethstat_submit_value(interface_t *interface, const char *name, uint64_t value,
+                                                         cdtime_t ts)
 {
-    char fam_name[256];
+    char fam_name[ETH_GSTRING_LEN + 32];
     ssnprintf(fam_name, sizeof(fam_name), "system_ethstat_%s", name);
 
     metric_family_t fam = {
@@ -36,12 +43,12 @@ static void ethstat_submit_value(const char *device, const char *name, uint64_t 
     };
 
     metric_family_append(&fam, VALUE_COUNTER(value), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &(label_pair_const_t){.name="device", .value=interface->device}, NULL);
 
-    plugin_dispatch_metric_family(&fam, 0);
+    plugin_dispatch_metric_family_filtered(&fam, interface->filter, ts);
 }
 
-static int ethstat_read_interface(char *device)
+static int ethstat_read_interface(interface_t *interface)
 {
     int fd = socket(AF_INET, SOCK_DGRAM, /* protocol = */ 0);
     if (fd < 0) {
@@ -52,27 +59,27 @@ static int ethstat_read_interface(char *device)
     struct ethtool_drvinfo drvinfo = {.cmd = ETHTOOL_GDRVINFO};
     struct ifreq req = {.ifr_data = (void *)&drvinfo};
 
-    sstrncpy(req.ifr_name, device, sizeof(req.ifr_name));
+    sstrncpy(req.ifr_name, interface->device, sizeof(req.ifr_name));
 
     int status = ioctl(fd, SIOCETHTOOL, &req);
     if (status < 0) {
         close(fd);
-        PLUGIN_ERROR("Failed to get driver information from %s: %s", device, STRERRNO);
+        PLUGIN_ERROR("Failed to get driver information from %s: %s", interface->device, STRERRNO);
         return -1;
     }
 
     size_t n_stats = (size_t)drvinfo.n_stats;
     if (n_stats < 1) {
         close(fd);
-        PLUGIN_ERROR("No stats available for %s", device);
+        PLUGIN_ERROR("No stats available for %s", interface->device);
         return -1;
     }
 
     size_t strings_size = sizeof(struct ethtool_gstrings) + (n_stats * ETH_GSTRING_LEN);
     size_t stats_size = sizeof(struct ethtool_stats) + (n_stats * sizeof(uint64_t));
 
-    struct ethtool_gstrings *strings = malloc(strings_size);
-    struct ethtool_stats *stats = malloc(stats_size);
+    struct ethtool_gstrings *strings = calloc(1, strings_size);
+    struct ethtool_stats *stats = calloc(1, stats_size);
     if ((strings == NULL) || (stats == NULL)) {
         close(fd);
         free(strings);
@@ -90,7 +97,7 @@ static int ethstat_read_interface(char *device)
         close(fd);
         free(strings);
         free(stats);
-        PLUGIN_ERROR("Cannot get strings from %s: %s", device, STRERRNO);
+        PLUGIN_ERROR("Cannot get strings from %s: %s", interface->device, STRERRNO);
         return -1;
     }
 
@@ -102,20 +109,22 @@ static int ethstat_read_interface(char *device)
         close(fd);
         free(strings);
         free(stats);
-        PLUGIN_ERROR("Reading statistics from %s failed: %s", device, STRERRNO);
+        PLUGIN_ERROR("Reading statistics from %s failed: %s", interface->device, STRERRNO);
         return -1;
     }
 
-    for (size_t i = 0; i < n_stats; i++) {
-        char *stat_name;
+    cdtime_t ts = cdtime();
 
-        stat_name = (void *)&strings->data[i * ETH_GSTRING_LEN];
-        /* Remove leading spaces in key name */
+    for (size_t i = 0; i < n_stats; i++) {
+        char *stat_name = (char *)&strings->data[i * ETH_GSTRING_LEN];
+
+        stat_name[ETH_GSTRING_LEN-1] = '\0';
         while (isspace((int)*stat_name))
             stat_name++;
 
-        PLUGIN_DEBUG("device = '%s': %s = %" PRIu64, device, stat_name, (uint64_t)stats->data[i]);
-        ethstat_submit_value(device, stat_name, (uint64_t)stats->data[i]);
+        PLUGIN_DEBUG("device = '%s': %s = %" PRIu64, interface->device, stat_name,
+                                                     (uint64_t)stats->data[i]);
+        ethstat_submit_value(interface, stat_name, (uint64_t)stats->data[i], ts);
     }
 
     close(fd);
@@ -128,25 +137,49 @@ static int ethstat_read_interface(char *device)
 static int ethstat_read(void)
 {
     for (size_t i = 0; i < interfaces_num; i++)
-        ethstat_read_interface(interfaces[i]);
+        ethstat_read_interface(&interfaces[i]);
 
     return 0;
 }
 
-static int ethstat_add_interface(const config_item_t *ci)
+static int ethstat_config_interface(const config_item_t *ci)
 {
-    char **tmp = realloc(interfaces, sizeof(*interfaces) * (interfaces_num + 1));
+    interface_t *tmp = realloc(interfaces, sizeof(*interfaces) * (interfaces_num + 1));
     if (tmp == NULL)
         return -1;
     interfaces = tmp;
-    interfaces[interfaces_num] = NULL;
+    interface_t *interface = &interfaces[interfaces_num];
+    interface->device = NULL;
+    interface->filter = NULL;
 
-    int status = cf_util_get_string(ci, interfaces + interfaces_num);
+    int status = cf_util_get_string(ci, &interface->device);
     if (status != 0)
         return status;
 
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &interface->filter);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0) {
+        free(interface->device);
+        plugin_filter_free(interface->filter);
+        return -1;
+    }
+
     interfaces_num++;
-    PLUGIN_INFO("Registered interface %s", interfaces[interfaces_num - 1]);
+
+    PLUGIN_INFO("Registered interface %s", interface->device);
 
     return 0;
 }
@@ -159,7 +192,7 @@ static int ethstat_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("interface", child->key) == 0) {
-            ethstat_add_interface(child);
+            ethstat_config_interface(child);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                          child->key, cf_get_file(child), cf_get_lineno(child));
@@ -178,8 +211,10 @@ static int ethstat_shutdown(void)
     if (interfaces == NULL)
         return 0;
 
-    for (size_t i = 0; i < interfaces_num; i++)
-        free(interfaces[i]);
+    for (size_t i = 0; i < interfaces_num; i++) {
+        free(interfaces[i].device);
+        plugin_filter_free(interfaces[i].filter);
+    }
 
     free(interfaces);
     return 0;

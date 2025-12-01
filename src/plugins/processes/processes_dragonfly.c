@@ -30,12 +30,6 @@
 
 static int pagesize;
 
-extern metric_family_t fams[];
-
-extern procstat_t *list_head_g;
-
-extern bool want_init;
-
 int ps_read(void)
 {
     double proc_state[PROC_STATE_MAX];
@@ -184,12 +178,8 @@ int ps_read(void)
     proc_state[PROC_STATE_WAIT] = wait;
     ps_submit_state(proc_state);
 
-    for (procstat_t *ps_ptr = list_head_g; ps_ptr != NULL; ps_ptr = ps_ptr->next)
-        ps_metric_append_proc_list(ps_ptr);
+    ps_dispatch();
 
-    want_init = false;
-
-    plugin_dispatch_metric_family_array(fams, FAM_PROC_MAX, 0);
     return 0;
 }
 
