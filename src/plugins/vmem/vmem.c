@@ -10,6 +10,7 @@
 #endif
 
 static char *path_proc_vmstat;
+static plugin_filter_t *filter;
 
 enum {
     FAM_VM_ZONE_PAGE_STATE,
@@ -845,7 +846,29 @@ static int vmem_read(void)
 
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_VM_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_VM_MAX, filter, 0);
+
+    return 0;
+}
+
+static int vmem_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
 
     return 0;
 }
@@ -864,6 +887,7 @@ static int vmem_init(void)
 static int vmem_shutdown(void)
 {
     free(path_proc_vmstat);
+    plugin_filter_free(filter);
 
     return 0;
 }
@@ -871,6 +895,7 @@ static int vmem_shutdown(void)
 void module_register(void)
 {
     plugin_register_init("vmem", vmem_init);
+    plugin_register_config("vmem", vmem_config);
     plugin_register_read("vmem", vmem_read);
     plugin_register_shutdown("vmem", vmem_shutdown);
 }

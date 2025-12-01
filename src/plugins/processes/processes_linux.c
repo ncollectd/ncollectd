@@ -46,15 +46,6 @@ static char *path_proc_stat;
 
 void ps_fill_details(procstat_t *ps, process_entry_t *entry);
 
-extern metric_family_t fams[];
-
-extern procstat_t *list_head_g;
-
-extern bool want_init;
-extern bool report_fd_num;
-extern bool report_maps_num;
-extern bool report_delay;
-
 static int ps_read_schedstat(process_entry_t *ps)
 {
     char filename[PATH_MAX];
@@ -680,15 +671,11 @@ int ps_read(void)
     proc_state[PROC_STATE_IDLE] = idle;
     ps_submit_state(proc_state);
 
-    for (procstat_t *ps_ptr = list_head_g; ps_ptr != NULL; ps_ptr = ps_ptr->next)
-        ps_metric_append_proc_list(ps_ptr);
-
     ps_submit_forks(stat_forks);
     ps_submit_ctxt(stat_ctxt);
 
-    want_init = false;
+    ps_dispatch();
 
-    plugin_dispatch_metric_family_array(fams, FAM_PROC_MAX, 0);
     return 0;
 }
 

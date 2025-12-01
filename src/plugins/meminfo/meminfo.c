@@ -10,6 +10,7 @@
 #endif
 
 static char *path_proc_meminfo;
+static plugin_filter_t *filter;
 
 enum {
     FAM_MEMINFO_MEMORY_TOTAL_BYTES,
@@ -431,7 +432,30 @@ static int meminfo_read(void)
     }
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_MEMINFO_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_MEMINFO_MAX, filter, 0);
+
+
+    return 0;
+}
+
+static int meminfo_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
 
     return 0;
 }
@@ -450,12 +474,14 @@ static int meminfo_init(void)
 static int meminfo_shutdown(void)
 {
     free(path_proc_meminfo);
+    plugin_filter_free(filter);
     return 0;
 }
 
 void module_register(void)
 {
     plugin_register_init("meminfo", meminfo_init);
+    plugin_register_config("meminfo", meminfo_config);
     plugin_register_read("meminfo", meminfo_read);
     plugin_register_shutdown("meminfo", meminfo_shutdown);
 }

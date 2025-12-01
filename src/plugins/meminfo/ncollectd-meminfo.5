@@ -8,10 +8,22 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP meminfo
-\fBplugin\fP meminfo
+\fBplugin\fP meminfo {
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBmeminfo\fP plugin reports the metrics from the \fI/proc/meminfo\fP file.
+.Pp
+The following options are accepted:
+.Bl -tag -width Ds
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

@@ -12,12 +12,21 @@
     \fBcollect\fP \fIflags\fP ...
     \fBprocess\fP \fIname\fP {
         \fBcollect\fP \fIflags\fP ...
+        \fBfilter\fP {
+            ...
+        }
     }
     \fBprocess-match\fP \fIname\fP \fI/regex/\fP {
         \fBcollect\fP \fIflags\fP ...
+        \fBfilter\fP {
+            ...
+        }
     }
     \fBprocess-pidfile\fP \fIname\fP \fIpidfile-path\fP {
         \fBcollect\fP \fIflags\fP ...
+        \fBfilter\fP {
+            ...
+        }
     }
 }
 .Ed
@@ -102,8 +111,17 @@ The \fBcollect\fP options may be used inside
 \fBprocess\fP and \fBprocess-match\fP blocks.
 When used there, these options affect reporting the corresponding processes
 only.
-Outside of \fBprocess\fP and \fBprocess-match\fP blocks these options set the
-default value for subsequent matches.
+Outside of \fBprocess\fP, \fBprocess-match\fP and \fBprocess-pidfile\fP blocks
+these options set the default value for subsequent matches.
+.El
+.Pp
+.Bl -tag -width Ds
+Inside \fBprocess\fP, \fBprocess-match\fP and \fBprocess-pidfile\fP blocks
+we can define a filter:
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,

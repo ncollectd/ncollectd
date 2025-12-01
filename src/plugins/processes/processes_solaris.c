@@ -49,10 +49,6 @@
 
 static kstat_ctl_t *kc;
 
-extern metric_family_t fams[];
-extern procstat_t *list_head_g;
-extern bool want_init;
-
 static char *ps_get_cmdline(long pid, char *name __attribute__((unused)),
                             char *buffer, size_t buffer_size)
 {
@@ -343,14 +339,10 @@ int ps_read(void)
     proc_state[PROC_STATE_ORPHAN] = orphan;
     ps_submit_state(proc_state);
 
-    for (procstat_t *ps_ptr = list_head_g; ps_ptr != NULL; ps_ptr = ps_ptr->next)
-        ps_metric_append_proc_list(ps_ptr);
-
     read_fork_rate();
 
-    want_init = false;
+    ps_dispatch();
 
-    plugin_dispatch_metric_family_array(fams, FAM_PROC_MAX, 0);
     return 0;
 }
 

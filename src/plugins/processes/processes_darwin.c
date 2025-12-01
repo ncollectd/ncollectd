@@ -73,10 +73,6 @@ static mach_msg_type_number_t pset_list_len;
 
 #include "processes.h"
 
-extern metric_family_t fams[];
-extern procstat_t *list_head_g;
-extern bool want_init;
-
 static int mach_get_task_name(task_t t, int *pid, char *name, size_t name_max_len)
 {
     int mib[4];
@@ -347,12 +343,7 @@ int ps_read(void)
     proc_state[PROC_STATE_BLOCKED] = blocked;
     ps_submit_state(proc_state);
 
-    for (ps = list_head_g; ps != NULL; ps = ps->next)
-        ps_metric_append_proc_list(ps);
-
-    want_init = false;
-
-    plugin_dispatch_metric_family_array(fams, FAM_PROC_MAX, 0);
+    ps_dispatch();
 
     return 0;
 }

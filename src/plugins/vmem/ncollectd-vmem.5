@@ -8,10 +8,22 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP vmem
-\fBplugin\fP vmem
+\fBplugin\fP vmem {
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBvmem\fP plugin collects information about the usage of virtual memory.
+.Pp
+The following options are accepted:
+.Bl -tag -width Ds
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

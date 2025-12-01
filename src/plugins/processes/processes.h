@@ -21,13 +21,17 @@
 enum {
     COLLECT_FILE_DESCRIPTORS = (1 <<  0),
     COLLECT_MEMORY_MAPS      = (1 <<  1),
-    COLLECT_DELAY_ACCOUNTING = (1 <<  2),
+    COLLECT_DELAY_ACCOUNTING = (1 <<  2)
 };
 
 enum {
     FAM_PROCESSES_CTX,
     FAM_PROCESSES_FORKS,
     FAM_PROCESSES_STATE,
+    FAM_PROCESSES_MAX,
+};
+
+enum {
     FAM_PROC_VMEM_SIZE,
     FAM_PROC_VMEM_RSS,
     FAM_PROC_VMEM_DATA,
@@ -216,6 +220,10 @@ typedef struct procstat_s {
 
     uint64_t flags;
 
+    plugin_filter_t *filter;
+
+    metric_family_t fams[FAM_PROC_MAX];
+
     struct procstat_s *next;
     struct procstat_entry_s *instances;
 } procstat_t;
@@ -229,8 +237,9 @@ void ps_list_free(void);
 void ps_list_add(const char *name, const char *cmdline, unsigned long pid, process_entry_t *entry);
 
 void ps_submit_state(double *proc_state);
-
 void ps_submit_forks(uint64_t value);
 void ps_submit_ctxt(uint64_t value);
 
 void ps_metric_append_proc_list(procstat_t *ps);
+
+void ps_dispatch(void);

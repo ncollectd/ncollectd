@@ -37,7 +37,7 @@
 #    endif
 #endif
 
-metric_family_t fams[FAM_PROC_MAX] = {
+static metric_family_t fams_processes[FAM_PROCESSES_MAX] = {
     [FAM_PROCESSES_CTX] = {
           .name = "system_processes_contextswitch",
           .type = METRIC_TYPE_COUNTER,
@@ -53,6 +53,9 @@ metric_family_t fams[FAM_PROC_MAX] = {
          .type = METRIC_TYPE_GAUGE,
          .help = "Summary of processes state.",
     },
+};
+
+static metric_family_t fams_proc[FAM_PROC_MAX] = {
     [FAM_PROC_VMEM_SIZE] = {
         .name = "system_process_vmem_size_bytes",
         .type = METRIC_TYPE_GAUGE,
@@ -218,11 +221,10 @@ static cf_flags_t processes_flags[] = {
 
 static size_t processes_flags_size = STATIC_ARRAY_SIZE(processes_flags);
 
-procstat_t *list_head_g = NULL;
+static procstat_t *list_head_g = NULL;
+static bool want_init = true;
 
-bool want_init = true;
-
-uint64_t flags;
+static uint64_t flags;
 
 static char const *proc_state_name[PROC_STATE_MAX] = {
     [PROC_STATE_BLOCKED]  = "blocked",
@@ -269,6 +271,7 @@ static procstat_t *ps_list_register(const char *name, const char *regexp, const 
     new->sched_timeslices = -1;
 
     new->flags = flags;
+    memcpy(new->fams, fams_proc, sizeof(new->fams[0])*FAM_PROC_MAX);
 
     if (regexp != NULL) {
         PLUGIN_DEBUG("process-match: adding \"%s\" as criteria to process %s.", regexp, name);
@@ -559,6 +562,8 @@ void ps_list_free(void)
             pse = pse_next;
         }
 
+        plugin_filter_free(ps->filter);
+
         procstat_t *ps_next = ps->next;
         free(ps);
         ps = ps_next;
@@ -575,6 +580,8 @@ static int ps_tune_instance(config_item_t *ci, procstat_t *ps)
 
         if (strcasecmp("collect", c->key) == 0) {
             status = cf_util_get_flags(c, processes_flags, processes_flags_size, &ps->flags);
+        } else if (strcasecmp("filter", c->key) == 0) {
+            status = plugin_filter_configure(c, &ps->filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           c->key, cf_get_file(c), cf_get_lineno(c));
@@ -683,12 +690,12 @@ static int ps_config(config_item_t *ci)
 
 void ps_submit_ctxt(uint64_t value)
 {
-    metric_family_append(&fams[FAM_PROCESSES_CTX], VALUE_COUNTER(value), NULL, NULL);
+    metric_family_append(&fams_processes[FAM_PROCESSES_CTX], VALUE_COUNTER(value), NULL, NULL);
 }
 
 void ps_submit_forks(uint64_t value)
 {
-    metric_family_append(&fams[FAM_PROCESSES_FORKS], VALUE_COUNTER(value), NULL, NULL);
+    metric_family_append(&fams_processes[FAM_PROCESSES_FORKS], VALUE_COUNTER(value), NULL, NULL);
 }
 
 /* submit global state (e.g.: qty of zombies, running, etc..) */
@@ -696,8 +703,10 @@ void ps_submit_state(double *proc_state)
 {
     for (size_t i = 0; i < PROC_STATE_MAX; i++) {
         if (!isnan(proc_state[i])) {
-            metric_family_append(&fams[FAM_PROCESSES_STATE], VALUE_GAUGE(proc_state[i]), NULL,
-                            &(label_pair_const_t){.name="state", .value=proc_state_name[i]}, NULL);
+            metric_family_append(&fams_processes[FAM_PROCESSES_STATE],
+                                 VALUE_GAUGE(proc_state[i]), NULL,
+                                 &(label_pair_const_t){.name="state", .value=proc_state_name[i]},
+                                 NULL);
         }
     }
 }
@@ -707,88 +716,88 @@ void ps_metric_append_proc_list(procstat_t *ps)
 {
     label_set_t labels = {.num=1, .ptr=(label_pair_t[]){{.name="name", .value=ps->name}}};
 
-    metric_family_append(&fams[FAM_PROC_VMEM_SIZE], VALUE_GAUGE(ps->vmem_size), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_VMEM_RSS], VALUE_GAUGE(ps->vmem_rss), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_VMEM_DATA], VALUE_GAUGE(ps->vmem_data), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_VMEM_CODE], VALUE_GAUGE(ps->vmem_code), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_VMEM_STACK], VALUE_GAUGE(ps->stack_size), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_CPU_USER],
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_SIZE], VALUE_GAUGE(ps->vmem_size), &labels, NULL);
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_RSS], VALUE_GAUGE(ps->vmem_rss), &labels, NULL);
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_DATA], VALUE_GAUGE(ps->vmem_data), &labels, NULL);
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_CODE], VALUE_GAUGE(ps->vmem_code), &labels, NULL);
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_STACK], VALUE_GAUGE(ps->stack_size), &labels, NULL);
+    metric_family_append(&ps->fams[FAM_PROC_CPU_USER],
                          VALUE_COUNTER_FLOAT64((double)ps->cpu_user_counter * 1e-6),
                          &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_CPU_SYSTEM],
+    metric_family_append(&ps->fams[FAM_PROC_CPU_SYSTEM],
                          VALUE_COUNTER_FLOAT64((double)ps->cpu_system_counter * 1e-6),
                          &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_NUM_PROCESSS],
+    metric_family_append(&ps->fams[FAM_PROC_NUM_PROCESSS],
                          VALUE_GAUGE(ps->num_proc), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_NUM_THREADS],
+    metric_family_append(&ps->fams[FAM_PROC_NUM_THREADS],
                          VALUE_GAUGE(ps->num_lwp), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_VMEM_MINFLT],
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_MINFLT],
                          VALUE_COUNTER(ps->vmem_minflt_counter), &labels, NULL);
-    metric_family_append(&fams[FAM_PROC_VMEM_MAJFLT],
+    metric_family_append(&ps->fams[FAM_PROC_VMEM_MAJFLT],
                          VALUE_COUNTER(ps->vmem_majflt_counter), &labels, NULL);
 
     if (ps->io_rchar != -1)
-        metric_family_append(&fams[FAM_PROC_IO_RCHAR], VALUE_COUNTER(ps->io_rchar), &labels, NULL);
+        metric_family_append(&ps->fams[FAM_PROC_IO_RCHAR], VALUE_COUNTER(ps->io_rchar), &labels, NULL);
     if (ps->io_wchar != -1)
-        metric_family_append(&fams[FAM_PROC_IO_WCHAR], VALUE_COUNTER(ps->io_wchar), &labels, NULL);
+        metric_family_append(&ps->fams[FAM_PROC_IO_WCHAR], VALUE_COUNTER(ps->io_wchar), &labels, NULL);
     if (ps->io_syscr != -1)
-        metric_family_append(&fams[FAM_PROC_IO_SYSCR], VALUE_COUNTER(ps->io_syscr), &labels, NULL);
+        metric_family_append(&ps->fams[FAM_PROC_IO_SYSCR], VALUE_COUNTER(ps->io_syscr), &labels, NULL);
     if (ps->io_syscw != -1)
-        metric_family_append(&fams[FAM_PROC_IO_SYSCW], VALUE_COUNTER(ps->io_syscw), &labels, NULL);
+        metric_family_append(&ps->fams[FAM_PROC_IO_SYSCW], VALUE_COUNTER(ps->io_syscw), &labels, NULL);
     if (ps->io_diskr != -1)
-        metric_family_append(&fams[FAM_PROC_IO_DISKR], VALUE_COUNTER(ps->io_diskr), &labels, NULL);
+        metric_family_append(&ps->fams[FAM_PROC_IO_DISKR], VALUE_COUNTER(ps->io_diskr), &labels, NULL);
     if (ps->io_diskw != -1)
-        metric_family_append(&fams[FAM_PROC_IO_DISKW], VALUE_COUNTER(ps->io_diskw), &labels, NULL);
+        metric_family_append(&ps->fams[FAM_PROC_IO_DISKW], VALUE_COUNTER(ps->io_diskw), &labels, NULL);
     if (ps->io_cancelled_diskw != -1)
-        metric_family_append(&fams[FAM_PROC_IO_CANCELLED_DISKW],
+        metric_family_append(&ps->fams[FAM_PROC_IO_CANCELLED_DISKW],
                              VALUE_COUNTER(ps->io_cancelled_diskw), &labels, NULL);
 
     if (ps->flags & COLLECT_FILE_DESCRIPTORS)
-        metric_family_append(&fams[FAM_PROC_FILE_HANDLES],
+        metric_family_append(&ps->fams[FAM_PROC_FILE_HANDLES],
                              VALUE_GAUGE(ps->num_fd), &labels, NULL);
     if (ps->flags & COLLECT_MEMORY_MAPS)
-        metric_family_append(&fams[FAM_PROC_MEMORY_MAPPED_REGIONS],
+        metric_family_append(&ps->fams[FAM_PROC_MEMORY_MAPPED_REGIONS],
                              VALUE_GAUGE(ps->num_maps), &labels, NULL);
 
     if (ps->cswitch_vol != -1)
-        metric_family_append(&fams[FAM_PROC_CTX_VOLUNTARY],
+        metric_family_append(&ps->fams[FAM_PROC_CTX_VOLUNTARY],
                              VALUE_COUNTER(ps->cswitch_vol), &labels, NULL);
     if (ps->cswitch_invol != -1)
-        metric_family_append(&fams[FAM_PROC_CTX_INVOLUNTARY],
+        metric_family_append(&ps->fams[FAM_PROC_CTX_INVOLUNTARY],
                              VALUE_COUNTER(ps->cswitch_invol), &labels, NULL);
     if (ps->sched_running != -1)
-        metric_family_append(&fams[FAM_PROC_SCHED_RUNNING],
+        metric_family_append(&ps->fams[FAM_PROC_SCHED_RUNNING],
                              VALUE_COUNTER_FLOAT64((double)ps->sched_running * 1e-9),
                              &labels, NULL);
     if (ps->sched_waiting!= -1)
-        metric_family_append(&fams[FAM_PROC_SCHED_WAITING],
+        metric_family_append(&ps->fams[FAM_PROC_SCHED_WAITING],
                              VALUE_COUNTER_FLOAT64((double)ps->sched_waiting * 1e-9),
                              &labels, NULL);
     if (ps->sched_timeslices!= -1)
-        metric_family_append(&fams[FAM_PROC_SCHED_TIMESLICES],
+        metric_family_append(&ps->fams[FAM_PROC_SCHED_TIMESLICES],
                              VALUE_COUNTER(ps->sched_timeslices), &labels, NULL);
 
     /* The ps->delay_* metrics are in nanoseconds. Convert to seconds. */
     double const delay_factor = 1000000000.0;
 
     if (!isnan(ps->delay_cpu))
-        metric_family_append(&fams[FAM_PROC_DELAY_CPU],
+        metric_family_append(&ps->fams[FAM_PROC_DELAY_CPU],
                              VALUE_COUNTER_FLOAT64(ps->delay_cpu / delay_factor),
                              &labels, NULL);
     if (!isnan(ps->delay_blkio))
-        metric_family_append(&fams[FAM_PROC_DELAY_BLKIO],
+        metric_family_append(&ps->fams[FAM_PROC_DELAY_BLKIO],
                              VALUE_COUNTER_FLOAT64(ps->delay_blkio / delay_factor),
                              &labels, NULL);
     if (!isnan(ps->delay_swapin))
-        metric_family_append(&fams[FAM_PROC_DELAY_SWAPIN],
+        metric_family_append(&ps->fams[FAM_PROC_DELAY_SWAPIN],
                              VALUE_COUNTER_FLOAT64(ps->delay_swapin / delay_factor),
                              &labels, NULL);
     if (!isnan(ps->delay_freepages))
-        metric_family_append(&fams[FAM_PROC_DELAY_FREEPAGES],
+        metric_family_append(&ps->fams[FAM_PROC_DELAY_FREEPAGES],
                              VALUE_COUNTER_FLOAT64(ps->delay_freepages / delay_factor),
                              &labels, NULL);
     if (!isnan(ps->delay_irq))
-        metric_family_append(&fams[FAM_PROC_DELAY_IRQ],
+        metric_family_append(&ps->fams[FAM_PROC_DELAY_IRQ],
                              VALUE_COUNTER_FLOAT64(ps->delay_irq / delay_factor),
                              &labels, NULL);
 
@@ -814,6 +823,20 @@ void ps_metric_append_proc_list(procstat_t *ps)
                  ps->sched_running, ps->sched_waiting, ps->sched_timeslices,
                  ps->delay_cpu, ps->delay_blkio, ps->delay_swapin, ps->delay_freepages);
 
+}
+
+void ps_dispatch(void)
+{
+    cdtime_t ts = cdtime();
+
+    plugin_dispatch_metric_family_array(fams_processes, FAM_PROCESSES_MAX, ts);
+
+    for (procstat_t *ps = list_head_g; ps != NULL; ps = ps->next) {
+        ps_metric_append_proc_list(ps);
+        plugin_dispatch_metric_family_array_filtered(ps->fams, FAM_PROC_MAX, ps->filter, ts);
+    }
+
+    want_init = false;
 }
 
 __attribute__(( weak ))
