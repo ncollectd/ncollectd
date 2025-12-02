@@ -525,7 +525,7 @@ int plugin_load(char const *plugin_name, bool global)
             continue;
         }
 
-        void *dlh;
+        void *dlh = NULL;
         status = plugin_load_file(filename, global, &dlh);
         if (status == 0) {
             /* success */
@@ -861,7 +861,7 @@ void plugin_init_ctx(void)
 {
     pthread_key_create(&plugin_ctx_key, plugin_ctx_destructor);
     plugin_ctx_key_initialized = true;
-} /* void plugin_init_ctx */
+}
 
 plugin_ctx_t plugin_get_ctx(void)
 {

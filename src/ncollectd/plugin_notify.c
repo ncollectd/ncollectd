@@ -108,6 +108,13 @@ static void *plugin_notify_thread(void *args)
 
     DEBUG("start", notifier->name);
 
+    plugin_ctx_t ctx = {
+        .name = (char *)notifier->super.name,
+        .interval = 0,
+        .normalize_interval = 0,
+    };
+    plugin_set_ctx(ctx);
+
     while (notifier->super.loop) {
         notify_queue_elem_t *elem = (notify_queue_elem_t *)
                                    queue_dequeue(&notify_queue, (queue_thread_t *)notifier, 0);
@@ -124,9 +131,6 @@ static void *plugin_notify_thread(void *args)
             struct rusage usage_start = {0};
             getrusage(RUSAGE_THREAD, &usage_start);
 #endif
-            plugin_ctx_t ctx = elem->super.ctx;
-            ctx.name = (char *)notifier->super.name;
-            plugin_set_ctx(ctx);
 
             cdtime_t start = cdtime();
             int status = notifier->notify_cb(elem->n, &notifier->ud);
