@@ -290,9 +290,9 @@ int queue_thread_start(queue_t *queue, queue_thread_t *thread, char *name,
     char thread_name[THREAD_NAME_MAX];
     ssnprintf(thread_name, sizeof(thread_name), "%s", name);
 
-     pthread_attr_t attr;
-     pthread_attr_init(&attr);
-     set_thread_setaffinity(&attr, thread_name);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    set_thread_setaffinity(&attr, thread_name);
 
     int status = pthread_create(&thread->thread, &attr, start_routine, arg);
     pthread_attr_destroy(&attr);

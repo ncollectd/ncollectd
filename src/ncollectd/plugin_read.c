@@ -181,7 +181,6 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
         if (rf_type == RF_REMOVE) {
             DEBUG("Destroying the '%s' callback.", rf->rf_name);
             free(rf->rf_name);
-            plugin_read_stats_remove(rf->stats);
             destroy_callback((callback_func_t *)rf);
             rf = NULL;
             continue;
@@ -377,6 +376,7 @@ static void destroy_read_heap(void)
         if (rf == NULL)
             break;
         free(rf->rf_name);
+        free(rf->stats);
         destroy_callback((callback_func_t *)rf);
     }
 
@@ -555,6 +555,7 @@ int plugin_register_complex_read(const char *group, const char *name, plugin_rea
     if (status != 0) {
         free_userdata(&rf->rf_udata);
         free(rf->rf_name);
+        free(rf->stats);
         free(rf);
     }
 
@@ -590,6 +591,9 @@ int plugin_unregister_read(const char *name)
     read_func_t *rf = le->value;
     assert(rf != NULL);
     rf->rf_type = RF_REMOVE;
+
+    plugin_read_stats_remove(rf->stats);
+    rf->stats = NULL;
 
     pthread_mutex_unlock(&read_lock);
 

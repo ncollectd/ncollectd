@@ -53,6 +53,9 @@ typedef struct {
 static int cf_cpumap_num;
 static cf_cpumap_t *cf_cpumap;
 
+static char **plugin_ctx_names;
+static size_t plugin_ctx_names_num;
+
 /* Prototypes of callback functions */
 static int dispatch_value_plugindir(config_item_t *ci);
 static int dispatch_loadplugin(config_item_t *ci);
@@ -98,6 +101,28 @@ static cf_global_option_t cf_global_options[] = {
     {"sys-path",                NULL, 0, "/sys"            }
 };
 static int cf_global_options_num = STATIC_ARRAY_SIZE(cf_global_options);
+
+static char *plugin_name_alloc(const char *name)
+{
+    char *plugin_name = strdup(name);
+    if (plugin_name == NULL) {
+        ERROR("strdup failed.");
+        return NULL;
+    }
+
+    char **tmp = realloc(plugin_ctx_names, sizeof(*tmp) * (plugin_ctx_names_num + 1));
+    if (tmp == NULL) {
+        free(plugin_name);
+        ERROR("realloc failed.");
+        return NULL;
+    }
+
+    plugin_ctx_names = tmp;
+    plugin_ctx_names[plugin_ctx_names_num] = plugin_name;
+    plugin_ctx_names_num++;
+
+    return plugin_name;
+}
 
 static int dispatch_global_option(const config_item_t *ci)
 {
@@ -156,14 +181,16 @@ static int dispatch_loadplugin(config_item_t *ci)
 
     bool normalize = IS_TRUE(global_option_get("normalize-interval"));
 
+    char *plugin_name = plugin_name_alloc(name);
+    if (plugin_name == NULL)
+        return -1;
+
     /* default to the global interval set before loading this plugin */
     plugin_ctx_t ctx = {
-            .interval = cf_get_default_interval(),
-            .name = strdup(name),
-            .normalize_interval = normalize,
+        .interval = cf_get_default_interval(),
+        .name = plugin_name,
+        .normalize_interval = normalize,
     };
-    if (ctx.name == NULL)
-        return ENOMEM;
 
     int status = 0;
     for (int i = 0; i < ci->children_num; ++i) {
@@ -239,9 +266,13 @@ static int dispatch_block_plugin(config_item_t *ci)
     if (!plugin_loaded && IS_TRUE(global_option_get("auto-load-plugin"))) {
         plugin_ctx_t ctx = {0};
 
+        char *plugin_name_dup = plugin_name_alloc(plugin_name);
+        if (plugin_name_dup == NULL)
+            return -1;
+
         /* default to the global interval set before loading this plugin */
         ctx.interval = cf_get_default_interval();
-        ctx.name = strdup(plugin_name);
+        ctx.name = plugin_name_dup;
         ctx.normalize_interval = IS_TRUE(global_option_get("normalize-interval"));
 
         plugin_ctx_t old_ctx = plugin_set_ctx(ctx);
@@ -921,4 +952,10 @@ void global_options_free (void)
         free(cf_cpumap[i].name);
     }
     free(cf_cpumap);
+
+    for (size_t i = 0; i < plugin_ctx_names_num; i++) {
+        free(plugin_ctx_names[i]);
+    }
+    free(plugin_ctx_names);
+
 }
