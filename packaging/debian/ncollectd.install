@@ -132,6 +132,8 @@ usr/lib/ncollectd/memory.so
 usr/share/man/man5/ncollectd-memory.5
 usr/lib/ncollectd/mmc.so
 usr/share/man/man5/ncollectd-mmc.5
+usr/lib/ncollectd/multipathd.so
+usr/share/man/man5/ncollectd-multipathd.5
 usr/lib/ncollectd/nfacct.so
 usr/share/man/man5/ncollectd-nfacct.5
 usr/lib/ncollectd/nfconntrack.so

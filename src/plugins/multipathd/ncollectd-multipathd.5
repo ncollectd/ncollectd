@@ -1,0 +1,23 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.DT NCOLLECTD-MULTIPATHD 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-zswap
+.Nd Documentation of ncollectd's multipathd plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP multipathd
+\fBplugin\fP multipathd {
+    \fBtimeout\fP \fIseconds\fP
+}
+.Ed
+.Sh DESCRIPTION
+The \fBmultipathd\fP plugin collect statistics related to multipath devices from multipathd.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the timeout for request to the multipathd daemon to show the paths.
+\fBURL\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5

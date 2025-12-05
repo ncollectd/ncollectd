@@ -35,16 +35,23 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
 
     sa.sun_family = AF_UNIX;
     sstrncpy(sa.sun_path, file, sizeof(sa.sun_path));
+    socklen_t sa_len = strlen(file) + sizeof(sa_family_t);
 
-    DEBUG("socket path = %s", sa.sun_path);
+    bool abstract = false;
+    if (sa.sun_path[0] == '@') {
+        sa.sun_path[0] = '\0';
+        abstract = true;
+    }
 
-    if (delete) {
+    DEBUG("socket path = %s", file);
+
+    if (!abstract && delete) {
         errno = 0;
-        int status = unlink(sa.sun_path);
+        int status = unlink(file);
         if ((status != 0) && (errno != ENOENT)) {
-            WARNING("Deleting socket file \"%s\" failed: %s", sa.sun_path, STRERRNO);
+            WARNING("Deleting socket file \"%s\" failed: %s", file, STRERRNO);
         } else if (status == 0) {
-            INFO("Successfully deleted socket file \"%s\".", sa.sun_path);
+            INFO("Successfully deleted socket file \"%s\".", file);
         }
     }
 
@@ -58,18 +65,21 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
         }
     }
 
-    int status = bind(fd, (struct sockaddr *)&sa, sizeof(sa));
+
+    int status = bind(fd, (struct sockaddr *)&sa, sa_len);
     if (status != 0) {
         ERROR("bind failed: %s", STRERRNO);
         close(fd);
         return -1;
     }
 
-    status = chmod(sa.sun_path, perms);
-    if (status == -1) {
-        ERROR("chmod failed: %s", STRERRNO);
-        close(fd);
-        return -1;
+    if (!abstract) {
+        status = chmod(file, perms);
+        if (status == -1) {
+            ERROR("chmod failed: %s", STRERRNO);
+            close(fd);
+            return -1;
+        }
     }
 
     status = listen(fd, backlog);
@@ -79,7 +89,7 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
         return -1;
     }
 
-    if (group != NULL) {
+    if (!abstract && (group != NULL)) {
         long int grbuf_size = sysconf(_SC_GETGR_R_SIZE_MAX);
         if (grbuf_size <= 0)
             grbuf_size = sysconf(_SC_PAGESIZE);
@@ -133,8 +143,11 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
 
     sa.sun_family = AF_UNIX;
     sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
+    if (sa.sun_path[0] == '@')
+        sa.sun_path[0] = '\0';
+    socklen_t sa_len = strlen(path) + sizeof(sa_family_t);
 
-    int status = connect(fd, (const struct sockaddr *) &sa, sizeof(sa));
+    int status = connect(fd, (const struct sockaddr *) &sa, sa_len);
     if (status < 0) {
         ERROR("unix socket '%s' connect failed: %s", path, STRERRNO);
         close(fd);
@@ -165,29 +178,29 @@ int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t 
 
     lsa.sun_family = AF_UNIX;
     sstrncpy(lsa.sun_path, localpath, sizeof(lsa.sun_path));
+    socklen_t lsa_len = strlen(localpath) + sizeof(sa_family_t);
 
-    int status = unlink(lsa.sun_path);
-    if ((status != 0) && (errno != ENOENT)) {
-        ERROR("Socket '%s' unlink failed: %s", lsa.sun_path, STRERRNO);
-        close(fd);
-        return -1;
+    bool labstract = false;
+    if (lsa.sun_path[0] == '@') {
+        lsa.sun_path[0] = '\0';
+        labstract = true;
     }
 
-    /* We need to bind to a specific path, because this is a datagram socket
-     * and otherwise the daemon cannot answer. */
-    status = bind(fd, (struct sockaddr *)&lsa, sizeof(lsa));
+    int status = bind(fd, (struct sockaddr *)&lsa, lsa_len);
     if (status != 0) {
         ERROR("Socket '%s' bind failed: %s", lsa.sun_path, STRERRNO);
         close(fd);
         return -1;
     }
 
-    /* Make the socket writeable by the daemon.. */
-    status = chmod(lsa.sun_path, 0666);
-    if (status != 0) {
-        ERROR("Socket '%s' chmod failed: %s", lsa.sun_path, STRERRNO);
-        close(fd);
-        return -1;
+    if (!labstract) {
+        /* Make the socket writeable by the daemon.. */
+        status = chmod(lsa.sun_path, 0666);
+        if (status != 0) {
+            ERROR("Socket '%s' chmod failed: %s", lsa.sun_path, STRERRNO);
+            close(fd);
+            return -1;
+        }
     }
 
     if (timeout > 0) {
@@ -203,15 +216,16 @@ int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t 
     struct sockaddr_un sa = {0};
     sa.sun_family = AF_UNIX;
     sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
+    if (sa.sun_path[0] == '@')
+        sa.sun_path[0] = '\0';
+    socklen_t sa_len = strlen(path) + sizeof(sa_family_t);
 
-    status = connect(fd, (struct sockaddr *)&sa, sizeof(sa));
+    status = connect(fd, (struct sockaddr *)&sa, sa_len);
     if (status != 0) {
         ERROR("Socket '%s' connect failed: %s", sa.sun_path, STRERRNO);
         close(fd);
         return -1;
     }
-
-    unlink(lsa.sun_path);
 
     return fd;
 }
@@ -228,8 +242,7 @@ int socket_connect_udp(const char *host, short port, int ttl)
     struct addrinfo *ai_list;
     int status = getaddrinfo(host, service, &ai_hints, &ai_list);
     if (status != 0) {
-        ERROR("getaddrinfo (%s, %s) failed: %s",
-                     host, service, gai_strerror(status));
+        ERROR("getaddrinfo (%s, %s) failed: %s", host, service, gai_strerror(status));
         return -1;
     }
 
