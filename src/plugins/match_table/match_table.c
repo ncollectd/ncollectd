@@ -311,7 +311,11 @@ static int match_table_config(const config_item_t *ci, void **user_data)
     }
 
     if (tbl->sep == NULL) {
-        PLUGIN_ERROR("match_table does not specify any separator.");
+        tbl->sep = strdup(" \t");
+        if (tbl->sep == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            status = -1;
+        }
         status = -1;
     } else {
         strunescape(tbl->sep, strlen(tbl->sep) + 1);

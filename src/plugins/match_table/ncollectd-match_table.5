@@ -8,18 +8,18 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBmatch\fP table {
-    \fBseparator\fP  \fIstring\fP
+    \fBseparator\fP \fIstring\fP
     \fBskip-lines\fP \fIlines\fP
     \fBmetric-prefix\fP \fIprefix\fP
     \fBlabel\fP \fIkey\fP \fIvalue\fP
     \fBmetric\fP {
-        \fBtype\fP \fIgauge|unknown|counter|info\fP
+        \fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
         \fBhelp\fP \fIhelp\fP
         \fBmetric\fP \fIname\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBmetric-from\fP \fIcolumn\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
-        \fBlabel-from\fP \fIcolumn\fP
+        \fBlabel-from\fP \fIkey\fP \fIcolumn\fP
         \fBvalue-from\fP \fIcolumn\fP
     }
 }
@@ -41,11 +41,11 @@ Any character of string is interpreted as a delimiter between the different
 columns of the table.
 A sequence of two or more contiguous delimiters in the table is considered
 to be a single delimiter, i. e. there cannot be any empty columns.
-This option is mandatory.
+The default value is \f(CW" \\t"\fP.
 .Pp
 A horizontal tab, newline and carriage return may be specified by \f(CW\\t\fP,
 \f(CW\\n\fP and \f(CW\\r\fP respectively.
-Please note that the double backslashes are required because of collectd's
+Please note that the double backslashes are required because of ncollectd's
 config parsing.
 .It \fBskip-lines\fP \fIlines\fP
 Skip the number of \fIlines\fP at the beginning of the file.
@@ -54,17 +54,55 @@ Prepends the \fIprefix\fP to the metric name in the block \fBresult\fP.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBtable\fP block.
-.It \fBresult\fP
+.It \fBmetric\fP
 .Bl -tag -width Ds
-.It \fBtype\fP \fIgauge|unknown|counter|info\fP
+.It \fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
+.Bl -tag -width Ds
+.It \fBgauge\fP
+The value is a gauge, you must specify also the type of the gauge:
+.Bl -tag -width Ds
+.It \fBaverage\fP
+Calculate the average
+.It \fBmin\fP
+Use the smallest number only.
+.It \fBmax\fP
+Use the greatest number only.
+.It \fBlast\fP
+Use the last number found.
+.It \fBinc\fP
+Increase the internal counter by one.
+.It \fBadd\fP
+Add the matched value to the internal counter.
+.It \fBpersist\fP
+Use the last number found.
+The number is not reset at the end of an interval.
+It is continuously reported until another number is matched.
+.El
+.It \fBcounter\fP
+The value is a counter, you must specify also the type of the counter:
+.Bl -tag -width Ds
+.It \fBset\fP
+Simply sets the internal counter to this value.
+.It \fBadd\fP
+Add the matched value to the internal counter.
+.It \fBinc\fP
+Increase the internal counter by one.
+.El
+.El
 .It \fBhelp\fP \fIhelp\fP
+Set metric help.
 .It \fBmetric\fP \fIname\fP
-.It \fBmetric-prefix\fP \fIprefix\fP
-.It \fBmetric-from\fP \fIcolumn\fP
+Set metric name.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
-.It \fBlabel-from\fP \fIcolumn\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.It \fBmetric-prefix\fP \fIprefix\fP
+Prepend the \fIprefix\fP to the metrics found in the \fBmetric-from\fP.
+.It \fBmetric-from\fP \fIcolumn\fP
+Configure to read the metric from the column with the zero-based index.
+.It \fBlabel-from\fP \fIkey\fP \fIcolumn\fP
+Set the label \fIkey\fP with the value from the column with the zero-based index.
 .It \fBvalue-from\fP \fIcolumn\fP
+Configure to read the value from the column with the zero-based index.
 .El
 .El
 .Sh "SEE ALSO"
