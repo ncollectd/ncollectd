@@ -98,6 +98,7 @@
 %define build_with_mongodb 0%{!?_without_mongodb:1}
 %define build_with_mosquitto 0%{!?_without_mosquitto:1}
 %define build_with_mssql 0%{!?_without_mssql:1}
+%define build_with_multipathd 0%{!?_without_mutipathd:1}
 %define build_with_mysql 0%{!?_without_mysql:1}
 %define build_with_nagios_check 0%{!?_without_nagios_check:1}
 %define build_with_nfacct 0%{!?_without_nfacct:1}
@@ -1559,6 +1560,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_mssql -DPLUGIN_MSSQL:BOOL=OFF
 %endif
 
+%if %{build_with_multipathd}
+%define _build_with_multipathd -DPLUGIN_MULTIPATHD:BOOL=ON
+%else
+%define _build_with_multipathd -DPLUGIN_MULTIPATHD:BOOL=OFF
+%endif
+
 %if %{build_with_mysql}
 %define _build_with_mysql -DPLUGIN_MYSQL:BOOL=ON
 %else
@@ -2292,6 +2299,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_mosquitto} \
     %{?_build_with_mq} \
     %{?_build_with_mssql} \
+    %{?_build_with_multipathd} \
     %{?_build_with_mysql} \
     %{?_build_with_netstat_udp} \
     %{?_build_with_nagios_check} \
@@ -2706,6 +2714,10 @@ rm -rf %{buildroot}
 %if %{build_with_mmc}
 %{_libdir}/%{name}/mmc.so
 %{_mandir}/man5/ncollectd-mmc.5*
+%endif
+%if %{build_with_multipathd}
+%{_libdir}/%{name}/multipathd.so
+%{_mandir}/man5/ncollectd-multipathd.5*
 %endif
 %if %{build_with_netstat_udp}
 %{_libdir}/%{name}/netstat_udp.so
