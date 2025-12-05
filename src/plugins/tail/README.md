@@ -9,6 +9,8 @@ NCOLLECTD-TAIL(5) - File Formats Manual
 	load-plugin tail
 	plugin tail {
 	    file filename {
+	        whole true|false
+	        label key value
 	        interval seconds
 	        match match {
 	            ...
@@ -26,6 +28,14 @@ The **tail** plugin reads files and process the lines using a match plugin.
 The configuration consists of one or more **file** blocks that define a
 **filename** to read and a match plugin to process the lines.
 The **file** block has the following options:
+
+**whole** *true|false*
+
+> Read the whole file in each interval.
+
+**label** *key* *value*
+
+> Append the label *key*=*value* to the submitting metrics.
 
 **interval** *seconds*
 
@@ -47,4 +57,3 @@ The **file** block has the following options:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

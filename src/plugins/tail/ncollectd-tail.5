@@ -10,6 +10,8 @@
 \fBload-plugin\fP tail
 \fBplugin\fP tail {
     \fBfile\fP \fIfilename\fP {
+        \fBwhole\fP \fItrue|false\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
         \fBmatch\fP \fImatch\fP {
             ...
@@ -27,6 +29,10 @@ The configuration consists of one or more \fBfile\fP blocks that define a
 \fBfilename\fP to read and a match plugin to process the lines.
 The \fBfile\fP block has the following options:
 .Bl -tag -width Ds
+.It \fBwhole\fP \fItrue|false\fP
+Read the whole file in each interval.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
 Configures the interval in which to read lines from this file.
 Defaults to the plugin's default interval.
