@@ -39,7 +39,7 @@ Querying the recursor is done using UDP.
 When using UDP over UNIX domain sockets, the client socket needs a name
 in the file system, too.
 This is used for PowerDNS Recursor versions less than 4.6.0.
-The default is \f(CW/var/run/ncollectd-powerdns\fP.
+The default is \f(CW/var/run/ncollectd-recursor\fP with the suffix of the instance name.
 .It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for the requests.
 .It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
@@ -51,11 +51,11 @@ The PowerDNS Recursor has diferents protocols to query depending on the version:
 .Bl -tag -width Ds
 .It \fB1\fP
 For PowerDNS Recursor versions less than 4.5.0.
-This is the default option.
 .It \fB2\fP
 For PowerDNS Recursor versions between 4.5.0 and 4.5.11.
 .It \fB3\fP
 For PowerDNS Recursor versions great than 4.6.0.
+This is the default option.
 .El
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.

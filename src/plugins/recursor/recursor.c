@@ -7,14 +7,14 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
-#include <sys/un.h>
 #include "libutils/common.h"
+#include "libutils/socket.h"
 
-// #define RECURSOR_SOCKET LOCALSTATEDIR "/run/pdns_recursor.controlsocket"
-#define RECURSOR_SOCKET LOCALSTATEDIR "/run/pdns-recursor/pdns_recursor.controlsocket"
-#define PDNS_LOCAL_SOCKPATH LOCALSTATEDIR "/run/" PACKAGE_NAME "-recursor"
+#define RECURSOR_SOCKET "/var/run/pdns-recursor/pdns_recursor.controlsocket"
+#define LOCAL_SOCKPATH "/var/run/" PACKAGE_NAME "-recursor"
 
 enum {
+    FAM_RECURSOR_UP,
     FAM_RECURSOR_ALL_OUTQUERIES,
     FAM_RECURSOR_ANSWERS,
     FAM_RECURSOR_AUTH4_ANSWERS,
@@ -29,7 +29,7 @@ enum {
     FAM_RECURSOR_CHAIN_RESENDS,
     FAM_RECURSOR_CLIENT_PARSE_ERRORS,
     FAM_RECURSOR_CONCURRENT_QUERIES,
-    FAM_RECURSOR_THREAD_CPU_MSEC,
+    FAM_RECURSOR_THREAD_CPU_SECONDS,
     FAM_RECURSOR_ZONE_DISALLOWED_NOTIFY,
     FAM_RECURSOR_DNSSEC_AUTHENTIC_DATA_QUERIES,
     FAM_RECURSOR_DNSSEC_CHECK_DISABLED_QUERIES,
@@ -58,7 +58,6 @@ enum {
     FAM_RECURSOR_IGNORED_PACKETS,
     FAM_RECURSOR_IPV6_OUTQUERIES,
     FAM_RECURSOR_IPV6_QUESTIONS,
-    FAM_RECURSOR_MALLOC_BYTES,
     FAM_RECURSOR_MAX_CACHE_ENTRIES,
     FAM_RECURSOR_MAX_PACKETCACHE_ENTRIES,
     FAM_RECURSOR_MAX_MTHREAD_STACK,
@@ -90,7 +89,7 @@ enum {
     FAM_RECURSOR_SERVER_PARSE_ERRORS,
     FAM_RECURSOR_SERVFAIL_ANSWERS,
     FAM_RECURSOR_SPOOF_PREVENTS,
-    FAM_RECURSOR_SYS_MSEC,
+    FAM_RECURSOR_CPU_SYS_SECONDS,
     FAM_RECURSOR_TCP_CLIENT_OVERFLOW,
     FAM_RECURSOR_TCP_CLIENTS,
     FAM_RECURSOR_TCP_OUTQUERIES,
@@ -107,7 +106,7 @@ enum {
     FAM_RECURSOR_UNEXPECTED_PACKETS,
     FAM_RECURSOR_UNREACHABLES,
     FAM_RECURSOR_UPTIME,
-    FAM_RECURSOR_USER_MSEC,
+    FAM_RECURSOR_CPU_USER_SECONDS,
     FAM_RECURSOR_VARIABLE_RESPONSES,
     FAM_RECURSOR_X_OUR_LATENCY,
     FAM_RECURSOR_X_OUR_TIME,
@@ -148,10 +147,18 @@ enum {
     FAM_RECURSOR_MAINTENANCE_CALLS,
     FAM_RECURSOR_NOD_EVENTS,
     FAM_RECURSOR_UDR_EVENTS,
+    FAM_RECURSOR_MAX_CHAIN_LENGTH,
+    FAM_RECURSOR_MAX_CHAIN_WEIGTH,
+    FAM_RECURSOR_TCP_OVERFLOW,
     FAM_RECURSOR_MAX,
 };
 
 static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
+    [FAM_RECURSOR_UP] = {
+        .name = "recursor_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the recursor server be reached.",
+    },
     [FAM_RECURSOR_ALL_OUTQUERIES] = {
         .name = "recursor_all_outqueries",
         .type = METRIC_TYPE_COUNTER,
@@ -224,10 +231,10 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of MThreads currently running.",
     },
-    [FAM_RECURSOR_THREAD_CPU_MSEC] = {
-        .name = "recursor_thread_cpu_msec",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "Number of milliseconds spent in thread.",
+    [FAM_RECURSOR_THREAD_CPU_SECONDS] = {
+        .name = "recursor_thread_cpu_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of seconds spent in this thread.",
     },
     [FAM_RECURSOR_ZONE_DISALLOWED_NOTIFY] = {
         .name = "recursor_zone_disallowed_notify",
@@ -387,11 +394,6 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
         .help = "Number of end-user initiated queries with the RD bit set, "
                 "received over IPv6 UDP.",
     },
-    [FAM_RECURSOR_MALLOC_BYTES] = {
-        .name = "recursor_malloc_bytes",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "Number of bytes allocated by the process (broken, always returns 0).",
-    },
     [FAM_RECURSOR_MAX_CACHE_ENTRIES] = {
         .name = "recursor_max_cache_entries",
         .type = METRIC_TYPE_GAUGE,
@@ -550,10 +552,10 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of times PowerDNS considered itself spoofed, and dropped the data.",
     },
-    [FAM_RECURSOR_SYS_MSEC] = {
-        .name = "recursor_sys_msec",
+    [FAM_RECURSOR_CPU_SYS_SECONDS] = {
+        .name = "recursor_cpu_sys_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of CPU milliseconds spent in 'system' mode.",
+        .help = "Total CPU seconds spent in 'system' mode.",
     },
     [FAM_RECURSOR_TCP_CLIENT_OVERFLOW] = {
         .name = "recursor_tcp_client_overflow",
@@ -633,13 +635,13 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
     },
     [FAM_RECURSOR_UPTIME] = {
         .name = "recursor_uptime",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of seconds process has been running.",
     },
-    [FAM_RECURSOR_USER_MSEC] = {
-        .name = "recursor_user_msec",
+    [FAM_RECURSOR_CPU_USER_SECONDS] = {
+        .name = "recursor_cpu_user_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of CPU milliseconds spent in 'user' mode.",
+        .help = "Total CPU seconds spent in 'user' mode.",
     },
     [FAM_RECURSOR_VARIABLE_RESPONSES] = {
         .name = "recursor_variable_responses",
@@ -819,7 +821,6 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of almost-expired tasks that caused an exception.",
     },
-
     [FAM_RECURSOR_IDLE_TCPOUT_CONNECTIONS] = {
         .name = "recursor_idle_tcpout_connections",
         .type = METRIC_TYPE_GAUGE,
@@ -844,6 +845,21 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
         .name = "recursor_udr_events",
         .type = METRIC_TYPE_COUNTER,
         .help = "Count of UDR events.",
+    },
+    [FAM_RECURSOR_MAX_CHAIN_LENGTH] = {
+        .name = "recursor_max_chain_length",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Maximum chain length.",
+    },
+    [FAM_RECURSOR_MAX_CHAIN_WEIGTH] = {
+        .name = "recursor_max_chain_weight",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Maximum chain weight.",
+    },
+    [FAM_RECURSOR_TCP_OVERFLOW] = {
+        .name = "recursor_tcp_overflow",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times max number of TCP connections limit reached.",
     }
 };
 
@@ -864,34 +880,9 @@ typedef struct {
     char command[24];
     size_t command_size;
     char *local_sockpath;
-    struct sockaddr_un local_sockaddr;
     char *sockpath;
-    struct sockaddr_un sockaddr;
     metric_family_t fams[FAM_RECURSOR_MAX];
 } recursor_t;
-
-#if 0
-// For cumulative histogram, state the xxx_count name where xxx matches the name in rec_channel_rec
-cumul-clientanswers-count,
-histogram,
-"histogram of our answer times to clients",
-// For cumulative histogram, state the xxx_count name where xxx matches the name in rec_channel_rec
-cumul-authanswers-count4,
-histogram,
-"histogram of answer times of authoritative servers",
-// For multicounters, state the first
-policy_hits,
-multicounter,
-"Number of filter or RPZ policy hits",
-// For multicounters, state the first
-proxy_mapping_total_n_0,
-multicounter,
-"Number of queries matching proxyMappings",
-// For multicounters, state the first
-remote_logger_count_o_0,
-multicounter,
-"Number of remote logging events",
-#endif
 
 static void recursor_free(void *arg)
 {
@@ -904,7 +895,101 @@ static void recursor_free(void *arg)
     plugin_filter_free(recursor->filter);
     free(recursor->local_sockpath);
     free(recursor->sockpath);
+
     free(recursor);
+}
+
+
+static char *recursor_cmd(recursor_t *recursor, char *buffer, size_t size)
+{
+    int sd = -1;
+
+    switch (recursor->version) {
+    case RECURSOR_PROTOCOL_V1:
+    case RECURSOR_PROTOCOL_V2:
+        sd = socket_connect_unix_dgram(recursor->local_sockpath, recursor->sockpath,
+                                       recursor->timeout);
+        break;
+    case RECURSOR_PROTOCOL_V3:
+        sd = socket_connect_unix_stream(recursor->sockpath, recursor->timeout);
+        break;
+    }
+
+    if (sd < 0)
+        return NULL;
+
+    if (recursor->version == RECURSOR_PROTOCOL_V2) {
+        uint32_t zero = 0;
+        int status = send(sd, &zero, sizeof(zero), 0);
+        if (status < 0) {
+           PLUGIN_ERROR("Socket '%s' send failed: %s", recursor->sockpath, STRERRNO);
+            close(sd);
+            return NULL;
+        }
+    }
+
+    int status = send(sd, recursor->command, recursor->command_size, 0);
+    if (status < 0) {
+        PLUGIN_ERROR("Socket '%s' send failed: %s", recursor->sockpath, STRERRNO);
+        close(sd);
+        return NULL;
+    }
+
+    status = recv(sd, buffer, size - 1, /* flags = */ 0);
+    if (status < 0) {
+        close(sd);
+        return NULL;
+    }
+
+    if (recursor->version == RECURSOR_PROTOCOL_V2) {
+        uint32_t response = 0;
+        if (status == sizeof(response)) {
+            memcpy(&response, buffer, sizeof(response));
+            if (response == 0) {
+                status = recv(sd, buffer, size - 1, /* flags = */ 0);
+                if (status < 0) {
+                    close(sd);
+                    return NULL;
+                }
+                close(sd);
+                buffer[status] = '\0';
+                return buffer;
+            }
+        }
+    }
+
+    size_t buffer_size = status;
+    buffer[buffer_size] = '\0';
+
+    close(sd);
+
+    switch (recursor->version) {
+    case RECURSOR_PROTOCOL_V1:
+        return buffer;
+        break;
+    case RECURSOR_PROTOCOL_V2:
+        if (buffer_size <= 4) {
+            PLUGIN_ERROR("Response too small.");
+            return NULL;
+        }
+        return buffer + 4;
+        break;
+    case RECURSOR_PROTOCOL_V3: {
+        if (buffer_size <= (4 + sizeof(size_t))) {
+            PLUGIN_ERROR("Response too small.");
+            return NULL;
+        }
+        size_t response_size = 0;
+        memcpy(&response_size, buffer + 4, sizeof(size_t));
+        if (response_size != (buffer_size - 4 - sizeof(size_t))) {
+            PLUGIN_ERROR("Invalid data size.");
+            return NULL;
+        }
+        return buffer + 4 + sizeof(size_t);
+    }   break;
+    }
+
+    return NULL;
 }
 
 static int recursor_read(user_data_t *user_data)
@@ -914,123 +999,18 @@ static int recursor_read(user_data_t *user_data)
 
     recursor_t *recursor = user_data->data;
 
-    int sd = -1;
-
-    switch (recursor->version) {
-    case RECURSOR_PROTOCOL_V1:
-    case RECURSOR_PROTOCOL_V2: {
-        sd = socket(PF_UNIX, SOCK_DGRAM, 0);
-        if (sd < 0) {
-            PLUGIN_ERROR("socket failed: %s", STRERRNO);
-            return -1;
-        }
-
-        int status = unlink(recursor->local_sockaddr.sun_path);
-        if ((status != 0) && (errno != ENOENT)) {
-            PLUGIN_ERROR("Socket '%s' unlink failed: %s",
-                         recursor->local_sockaddr.sun_path, STRERRNO);
-            close(sd);
-            return -1;
-        }
-
-        /* We need to bind to a specific path, because this is a datagram socket
-         * and otherwise the daemon cannot answer. */
-        status = bind(sd, (struct sockaddr *)&recursor->local_sockaddr,
-                          sizeof(recursor->local_sockaddr));
-        if (status != 0) {
-            PLUGIN_ERROR("Socket '%s' bind failed: %s",
-                         recursor->local_sockaddr.sun_path, STRERRNO);
-            close(sd);
-            return -1;
-        }
-
-        /* Make the socket writeable by the daemon.. */
-        status = chmod(recursor->local_sockaddr.sun_path, 0666);
-        if (status != 0) {
-            PLUGIN_ERROR("Socket '%s' chmod failed: %s",
-                         recursor->local_sockaddr.sun_path, STRERRNO);
-            close(sd);
-            return -1;
-        }
-
-    }   break;
-    case RECURSOR_PROTOCOL_V3: {
-        sd = socket(PF_UNIX, SOCK_STREAM, 0);
-        if (sd < 0) {
-            PLUGIN_ERROR("socket failed: %s", STRERRNO);
-            return -1;
-        }
-    }   break;
-    }
-
-    struct timeval timeout =  CDTIME_T_TO_TIMEVAL(recursor->timeout);
-    int status = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(struct timeval));
-    if (status != 0) {
-        PLUGIN_ERROR("Socket '%s' setsockopt failed: %s",
-                     recursor->local_sockaddr.sun_path, STRERRNO);
-        close(sd);
-        return -1;
-    }
-
-    status = connect(sd, (struct sockaddr *)&recursor->sockaddr, sizeof(recursor->sockaddr));
-    if (status != 0) {
-        PLUGIN_ERROR("Socket '%s' connect failed: %s", recursor->sockaddr.sun_path, STRERRNO);
-        close(sd);
-        return -1;
-    }
-
-    status = send(sd, recursor->command, recursor->command_size, 0);
-    if (status < 0) {
-        PLUGIN_ERROR("Socket '%s' send failed: %s", recursor->sockaddr.sun_path, STRERRNO);
-        close(sd);
-        return -1;
-    }
-
     char buffer[65536];
-    status = recv(sd, buffer, sizeof(buffer) - 1, /* flags = */ 0);
-    if (status < 0) {
-        PLUGIN_ERROR("Socket '%s' recv failed: %s", recursor->sockaddr.sun_path, STRERRNO);
-        close(sd);
-        return -1;
-    }
-
-    size_t buffer_size = status;
-    buffer[buffer_size] = '\0';
-
-    close(sd);
-
-    char *response = NULL;
-
-    switch (recursor->version) {
-    case RECURSOR_PROTOCOL_V1:
-        unlink(recursor->local_sockaddr.sun_path);
-        response = buffer;
-        break;
-    case RECURSOR_PROTOCOL_V2:
-        unlink(recursor->local_sockaddr.sun_path);
-        if (buffer_size <= 4) {
-            PLUGIN_ERROR("Response too small.");
-            return -1;
-        }
-        response = buffer + 4;
-        break;
-    case RECURSOR_PROTOCOL_V3: {
-        if (buffer_size <= (4 + sizeof(size_t))) {
-            PLUGIN_ERROR("Response too small.");
-            return -1;
-        }
-        size_t response_size = 0;
-        memcpy(&response_size, buffer + 4, sizeof(size_t));
-        if (response_size != (buffer_size - 4 - sizeof(size_t))) {
-            PLUGIN_ERROR("Invalid data size.");
-            return -1;
-        }
-        response = buffer + 4 + sizeof(size_t);
-    }   break;
-    }
-
-    if (response == NULL)
+    char *response = recursor_cmd(recursor, buffer, sizeof(buffer));
+    if ((recursor->version == RECURSOR_PROTOCOL_V1) || (recursor->version == RECURSOR_PROTOCOL_V2))
+        unlink(recursor->local_sockpath);
+    if (response == NULL) {
+        metric_family_append(&recursor->fams[FAM_RECURSOR_UP], VALUE_GAUGE(0),
+                             &recursor->labels, NULL);
+        plugin_dispatch_metric_family(&recursor->fams[FAM_RECURSOR_UP], 0);
         return 0;
+    }
+
+    metric_family_append(&recursor->fams[FAM_RECURSOR_UP], VALUE_GAUGE(1), &recursor->labels, NULL);
 
     /* Skip the `get' at the beginning ¿? */
     char *saveptr = NULL;
@@ -1041,7 +1021,6 @@ static int recursor_read(user_data_t *user_data)
         char *value = strtok_r(NULL, " \t\n\r", &saveptr);
         if (value == NULL)
             break;
-
 
         const struct recursor_metric *m = recursor_get_key(key, strlen(key));
         if (m == NULL) {
@@ -1058,8 +1037,14 @@ static int recursor_read(user_data_t *user_data)
                     continue;
                 key[key_len] = '\0';
 
+                uint64_t num = 0;
+                if (parse_uinteger(value, &num) != 0) {
+                    PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+                    continue;
+                }
+
                 metric_family_append(&recursor->fams[FAM_RECURSOR_AUTH_ANSWERS],
-                                     VALUE_COUNTER(atoll(value)), &recursor->labels,
+                                     VALUE_COUNTER(num), &recursor->labels,
                                      &(label_pair_const_t){.name="rcode", .value=key}, NULL);
                 continue;
             }   break;
@@ -1068,8 +1053,15 @@ static int recursor_read(user_data_t *user_data)
                     continue;
                 key += strlen("cpu-msec-thread-");
 
-                metric_family_append(&recursor->fams[FAM_RECURSOR_THREAD_CPU_MSEC],
-                                     VALUE_COUNTER(atoll(value)), &recursor->labels,
+                uint64_t num = 0;
+                if (parse_uinteger(value, &num) != 0) {
+                    PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+                    continue;
+                }
+
+                metric_family_append(&recursor->fams[FAM_RECURSOR_THREAD_CPU_SECONDS],
+                                     VALUE_COUNTER_FLOAT64((double)num * 0.001),
+                                     &recursor->labels,
                                      &(label_pair_const_t){.name="thread", .value=key}, NULL);
 
                 continue;
@@ -1082,10 +1074,29 @@ static int recursor_read(user_data_t *user_data)
         metric_family_t *fam = &recursor->fams[m->fam];
 
         value_t mvalue = {0};
+
         if (fam->type == METRIC_TYPE_COUNTER) {
-            mvalue = VALUE_COUNTER(atoll(value));
+            uint64_t num = 0;
+            if (parse_uinteger(value, &num) != 0) {
+                PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+               continue;
+            }
+            if (m->scale == 0) {
+                mvalue = VALUE_COUNTER(num);
+            } else {
+                mvalue = VALUE_COUNTER_FLOAT64((double)num * m->scale);
+            }
         } else if (fam->type == METRIC_TYPE_GAUGE) {
-            mvalue = VALUE_GAUGE(atof(value));
+            double num = 0;
+            if (parse_double(value, &num) != 0) {
+                PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+               continue;
+            }
+            if (m->scale == 0) {
+                mvalue = VALUE_GAUGE(num);
+            } else {
+                mvalue = VALUE_GAUGE(num * m->scale);
+            }
         } else {
             continue;
         }
@@ -1119,6 +1130,8 @@ int recursor_config_instance(config_item_t *ci)
         free(recursor);
         return status;
     }
+
+    recursor->version = RECURSOR_PROTOCOL_V3;
 
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
@@ -1172,9 +1185,8 @@ int recursor_config_instance(config_item_t *ci)
         recursor->command_size = strlen(recursor->command);
         break;
     case RECURSOR_PROTOCOL_V2:
-        memcpy(recursor->command, &zero, sizeof(uint32_t));
-        sstrncpy(recursor->command + sizeof(uint32_t), "get-all", sizeof(recursor->command)-4);
-        recursor->command_size = sizeof(uint32_t) + strlen("get-all");
+        sstrncpy(recursor->command, "get-all", sizeof(recursor->command));
+        recursor->command_size = strlen(recursor->command);
         break;
     case RECURSOR_PROTOCOL_V3:
         memcpy(recursor->command, &zero, sizeof(uint32_t));
@@ -1195,21 +1207,16 @@ int recursor_config_instance(config_item_t *ci)
         }
     }
 
-    recursor->sockaddr.sun_family = AF_UNIX;
-    sstrncpy(recursor->sockaddr.sun_path, recursor->sockpath, sizeof(recursor->sockaddr.sun_path));
-
     if (recursor->local_sockpath == NULL) {
-        recursor->local_sockpath = strdup(PDNS_LOCAL_SOCKPATH);
+        size_t len = strlen(LOCAL_SOCKPATH) + strlen(recursor->name) + 2;
+        recursor->local_sockpath = malloc(len);
         if (recursor->local_sockpath == NULL) {
-           PLUGIN_ERROR("strdup failed.");
+           PLUGIN_ERROR("malloc failed.");
            recursor_free(recursor);
            return -1;
         }
+        ssnprintf(recursor->local_sockpath, len, "%s-%s", LOCAL_SOCKPATH, recursor->name);
     }
-
-    recursor->local_sockaddr.sun_family = AF_UNIX;
-    sstrncpy(recursor->local_sockaddr.sun_path, recursor->local_sockpath,
-                                                sizeof(recursor->local_sockaddr.sun_path));
 
     if (recursor->timeout == 0) {
         if (interval == 0) {
