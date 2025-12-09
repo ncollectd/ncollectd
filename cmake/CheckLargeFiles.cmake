@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.1-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 # SPDX-FileCopyrightText: Copyright 2009- The GROMACS Authors and the project initiators Erik Lindahl, Berk Hess and David van der Spoel.
 
 include(CheckTypeSize)
