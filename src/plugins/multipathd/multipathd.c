@@ -95,129 +95,129 @@ static cdtime_t g_timeout = 0;
 
 static ssize_t mpath_read(int fd, void *buf, size_t len, cdtime_t timeout)
 {
-	size_t total = 0;
+    size_t total = 0;
 
     cdtime_t start = cdtime();
 
-	while (len) {
-    	struct pollfd pfd = {
-		    .fd = fd,
-		    .events = POLLIN
+    while (len) {
+        struct pollfd pfd = {
+            .fd = fd,
+            .events = POLLIN
         };
 
         cdtime_t elapsed = cdtime() - start;
         if (elapsed >= timeout) {
             PLUGIN_ERROR("Timeout waiting for response.");
-			return -1;
+            return -1;
         }
 
-		int ret = poll(&pfd, 1, CDTIME_T_TO_MS(timeout - elapsed));
-		if (!ret) {
+        int ret = poll(&pfd, 1, CDTIME_T_TO_MS(timeout - elapsed));
+        if (!ret) {
             PLUGIN_ERROR("Timeout waiting for response.");
-			return -1;
-		} else if (ret < 0) {
-			if (errno == EINTR)
-				continue;
+            return -1;
+        } else if (ret < 0) {
+            if (errno == EINTR)
+                continue;
             PLUGIN_ERROR("Error polling for response: %s", STRERRNO);
-			return -1;
-		} else if (!(pfd.revents & POLLIN)) {
-			continue;
+            return -1;
+        } else if (!(pfd.revents & POLLIN)) {
+            continue;
         }
 
-		ssize_t n = recv(fd, buf, len, 0);
-		if (n < 0) {
-			if ((errno == EINTR) || (errno == EAGAIN))
-				continue;
+        ssize_t n = recv(fd, buf, len, 0);
+        if (n < 0) {
+            if ((errno == EINTR) || (errno == EAGAIN))
+                continue;
             PLUGIN_ERROR("Error reading response: %s", STRERRNO);
-			return -1;
-		}
+            return -1;
+        }
 
-		if (n == 0)
-			return total;
+        if (n == 0)
+            return total;
 
-		buf = n + (char *)buf;
-		len -= n;
-		total += n;
-	}
+        buf = n + (char *)buf;
+        len -= n;
+        total += n;
+    }
 
-	return total;
+    return total;
 }
 
 static size_t mpath_write(int fd, const void *buf, size_t len)
 {
-	size_t total = 0;
+    size_t total = 0;
 
-	while (len) {
-		ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
-		if (n < 0) {
-			if ((errno == EINTR) || (errno == EAGAIN))
-				continue;
+    while (len) {
+        ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
+        if (n < 0) {
+            if ((errno == EINTR) || (errno == EAGAIN))
+                continue;
             PLUGIN_ERROR("Error send request: %s", STRERRNO);
-			return total;
-		}
-		if (n == 0)
-			return total;
+            return total;
+        }
+        if (n == 0)
+            return total;
 
-		buf = n + (const char *)buf;
-		len -= n;
-		total += n;
-	}
+        buf = n + (const char *)buf;
+        len -= n;
+        total += n;
+    }
 
-	return total;
+    return total;
 }
 
 static char *mpath_recv_reply(int fd, cdtime_t timeout)
 {
-	size_t len = 0;
+    size_t len = 0;
 
-	ssize_t ret = mpath_read(fd, &len, sizeof(len), timeout);
-	if (ret < 0)
-		return NULL;
+    ssize_t ret = mpath_read(fd, &len, sizeof(len), timeout);
+    if (ret < 0)
+        return NULL;
 
-	if (ret != sizeof(len)) {
-        PLUGIN_ERROR("Unexpected response size, expected %zu got: %zu.", sizeof(len), ret);
-		return NULL;
-	}
+    if (ret != sizeof(len)) {
+        PLUGIN_ERROR("Unexpected response size, expected %zu got: %zi.", sizeof(len), ret);
+        return NULL;
+    }
 
-	if (len <= 0 || len >= MAX_REPLY_LEN) {
+    if (len <= 0 || len >= MAX_REPLY_LEN) {
         PLUGIN_ERROR("Response size (%zu) is greather than max reply size (%d).",
                      len, MAX_REPLY_LEN);
-		return NULL;
-	}
-
-	char *reply = malloc(len);
-	if (reply == NULL) {
-        PLUGIN_ERROR("malloc failed.");   
-		return NULL;
+        return NULL;
     }
 
-	ret = mpath_read(fd, reply, len, timeout);
-	if (ret < 0) {
-		free(reply);
-		return NULL;
+    char *reply = malloc(len);
+    if (reply == NULL) {
+        PLUGIN_ERROR("malloc failed.");
+        return NULL;
     }
 
-	if ((size_t)ret != len) {
+    ret = mpath_read(fd, reply, len, timeout);
+    if (ret < 0) {
+        free(reply);
+        return NULL;
+    }
+
+    if ((size_t)ret != len) {
         PLUGIN_ERROR("Got less bytes (%zi) than expected (%zu).", ret, len);
-		free(reply);
-		return NULL;
-	}
+        free(reply);
+        return NULL;
+    }
 
-	reply[len - 1] = '\0';
-	return reply;
+    reply[len - 1] = '\0';
+    return reply;
 }
 
 int mpath_send_cmd(int fd, const char *cmd)
 {
-	size_t len = strlen(cmd) + 1;
+    size_t len = strlen(cmd) + 1;
 
-	if (mpath_write(fd, &len, sizeof(len)) != sizeof(len))
-		return -1;
+    if (mpath_write(fd, &len, sizeof(len)) != sizeof(len))
+        return -1;
 
-	if (mpath_write(fd, cmd, len) != len)
-		return -1;
+    if (mpath_write(fd, cmd, len) != len)
+        return -1;
 
-	return 0;
+    return 0;
 }
 
 static void multipathd_parse_path(xson_value_t *path, char *map_name, char *map_uuid,
@@ -541,7 +541,7 @@ static int multipathd_read(void)
         close(fd);
         metric_family_append(&fams[FAM_MULTIPATHD_UP], VALUE_GAUGE(0), NULL, NULL);
         plugin_dispatch_metric_family(&fams[FAM_MULTIPATHD_UP], 0);
-		return -1;
+        return -1;
     }
 
     char *reply = mpath_recv_reply(fd, g_timeout);
