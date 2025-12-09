@@ -14,189 +14,192 @@
 struct recursor_metric {
     char *key;
     int fam;
+    double scale;
     char *lkey;
     char *lvalue;
 };
 %%
-all-outqueries,                FAM_RECURSOR_ALL_OUTQUERIES, NULL, NULL
-answers-slow,                  FAM_RECURSOR_ANSWERS, "time", "slow"
-answers0-1,                    FAM_RECURSOR_ANSWERS, "time", "0-1"
-answers1-10,                   FAM_RECURSOR_ANSWERS, "time", "1-10"
-answers10-100,                 FAM_RECURSOR_ANSWERS, "time", "10-100"
-answers100-1000,               FAM_RECURSOR_ANSWERS, "time", "100-1000"
-auth4-answers-slow,            FAM_RECURSOR_AUTH4_ANSWERS, "time", "slow"
-auth4-answers0-1,              FAM_RECURSOR_AUTH4_ANSWERS, "time", "0-1"
-auth4-answers1-10,             FAM_RECURSOR_AUTH4_ANSWERS, "time", "1-10"
-auth4-answers10-100,           FAM_RECURSOR_AUTH4_ANSWERS, "time", "10-100"
-auth4-answers100-1000,         FAM_RECURSOR_AUTH4_ANSWERS, "time", "100-1000"
-auth6-answers-slow,            FAM_RECURSOR_AUTH6_ANSWERS, "time", "slow"
-auth6-answers0-1,              FAM_RECURSOR_AUTH6_ANSWERS, "time", "0-1"
-auth6-answers1-10,             FAM_RECURSOR_AUTH6_ANSWERS, "time", "1-10"
-auth6-answers10-100,           FAM_RECURSOR_AUTH6_ANSWERS, "time", "10-100"
-auth6-answers100-1000,         FAM_RECURSOR_AUTH6_ANSWERS, "time", "100-1000"
-auth-zone-queries,             FAM_RECURSOR_AUTH_ZONE_QUERIES, NULL, NULL
-cache-bytes,                   FAM_RECURSOR_CACHE_BYTES, NULL, NULL
-cache-entries,                 FAM_RECURSOR_CACHE_ENTRIES, NULL, NULL
-cache-hits,                    FAM_RECURSOR_CACHE_HITS, NULL, NULL
-cache-misses,                  FAM_RECURSOR_CACHE_MISSES, NULL, NULL
-case-mismatches,               FAM_RECURSOR_CASE_MISMATCHES, NULL, NULL
-chain-resends,                 FAM_RECURSOR_CHAIN_RESENDS, NULL, NULL
-client-parse-errors,           FAM_RECURSOR_CLIENT_PARSE_ERRORS, NULL, NULL
-concurrent-queries,            FAM_RECURSOR_CONCURRENT_QUERIES, NULL, NULL
-zone-disallowed-notify,        FAM_RECURSOR_ZONE_DISALLOWED_NOTIFY, NULL, NULL
-dnssec-authentic-data-queries, FAM_RECURSOR_DNSSEC_AUTHENTIC_DATA_QUERIES, NULL, NULL
-dnssec-check-disabled-queries, FAM_RECURSOR_DNSSEC_CHECK_DISABLED_QUERIES, NULL, NULL
-dnssec-queries,                FAM_RECURSOR_DNSSEC_QUERIES, NULL, NULL
-dnssec-result-bogus,           FAM_RECURSOR_DNSSEC_RESULT_BOGUS, NULL, NULL
-dnssec-result-bogus-invalid-denial,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "invalid-denial"
-dnssec-result-bogus-invalid-dnskey-protocol,     FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "invalid-dnskey-protocol"
-dnssec-result-bogus-missing-negative-indication, FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "missing-negative-indication"
-dnssec-result-bogus-no-rrsig,                    FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-rrsig"
-dnssec-result-bogus-no-valid-dnskey,             FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-valid-dnskey"
-dnssec-result-bogus-no-valid-rrsig,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-valid-rrsig"
-dnssec-result-bogus-no-zone-key-bit-set,         FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-zone-key-bit-set"
-dnssec-result-bogus-revoked-dnskey,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "revoked-dnskey"
-dnssec-result-bogus-self-signed-ds,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "self-signed-ds"
-dnssec-result-bogus-signature-expired,           FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "signature-expired"
-dnssec-result-bogus-signature-not-yet-valid,     FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "signature-not-yet-valid"
-dnssec-result-bogus-unable-to-get-dnskeys,       FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "unable-to-get-dnskeys"
-dnssec-result-bogus-unable-to-get-dss,           FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "unable-to-get-dss"
-dnssec-result-bogus-unsupported-dnskey-algo,     FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "unsupported-dnskey-algo"
-dnssec-result-bogus-unsupported-ds-digest-type,  FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, "reason", "unsupported-ds-digest-type"
-dnssec-result-indeterminate,    FAM_RECURSOR_DNSSEC_RESULT_INDETERMINATE, NULL, NULL
-dnssec-result-insecure,         FAM_RECURSOR_DNSSEC_RESULT_INSECURE, NULL, NULL
-dnssec-result-nta,              FAM_RECURSOR_DNSSEC_RESULT_NTA, NULL, NULL
-dnssec-result-secure,           FAM_RECURSOR_DNSSEC_RESULT_SECURE, NULL, NULL
-x-dnssec-result-bogus,          FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS, NULL, NULL
-x-dnssec-result-bogus-invalid-denial,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "invalid-denial"
-x-dnssec-result-bogus-invalid-dnskey-protocol,     FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "invalid-dnskey-protocol"
-x-dnssec-result-bogus-missing-negative-indication, FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "missing-negative-indication"
-x-dnssec-result-bogus-no-rrsig,                    FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-rrsig"
-x-dnssec-result-bogus-no-valid-dnskey,             FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-valid-dnskey"
-x-dnssec-result-bogus-no-valid-rrsig,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-valid-rrsig"
-x-dnssec-result-bogus-no-zone-key-bit-set,         FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "no-zone-key-bit-set"
-x-dnssec-result-bogus-revoked-dnskey,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "revoked-dnskey"
-x-dnssec-result-bogus-self-signed-ds,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "self-signed-ds"
-x-dnssec-result-bogus-signature-expired,           FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "signature-expired"
-x-dnssec-result-bogus-signature-not-yet-valid,     FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "signature-not-yet-valid"
-x-dnssec-result-bogus-unable-to-get-dnskeys,       FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "unable-to-get-dnskeys"
-x-dnssec-result-bogus-unable-to-get-dss,           FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "unable-to-get-dss"
-x-dnssec-result-bogus-unsupported-dnskey-algo,     FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "unsupported-dnskey-algo"
-x-dnssec-result-bogus-unsupported-ds-digest-type,  FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, "reason", "unsupported-ds-digest-type"
-x-dnssec-result-indeterminate,       FAM_RECURSOR_X_DNSSEC_RESULT_INDETERMINATE, NULL, NULL
-x-dnssec-result-insecure,            FAM_RECURSOR_X_DNSSEC_RESULT_INSECURE, NULL, NULL
-x-dnssec-result-nta,                 FAM_RECURSOR_X_DNSSEC_RESULT_NTA, NULL, NULL
-x-dnssec-result-secure,              FAM_RECURSOR_X_DNSSEC_RESULT_SECURE, NULL, NULL
-dnssec-validations,                  FAM_RECURSOR_DNSSEC_VALIDATIONS, NULL, NULL
-dont-outqueries,                     FAM_RECURSOR_DONT_OUTQUERIES, NULL, NULL
-qname-min-fallback-success,          FAM_RECURSOR_QNAME_MIN_FALLBACK_SUCCESS, NULL, NULL
-ecs-queries,                         FAM_RECURSOR_ECS_QUERIES, NULL, NULL
-ecs-responses,                       FAM_RECURSOR_ECS_RESPONSES, NULL, NULL
-edns-ping-matches,                   FAM_RECURSOR_EDNS_PING_MATCHES, NULL, NULL
-edns-ping-mismatches,                FAM_RECURSOR_EDNS_PING_MISMATCHES, NULL, NULL
-failed-host-entries,                 FAM_RECURSOR_FAILED_HOST_ENTRIES, NULL, NULL
-non-resolving-nameserver-entries,    FAM_RECURSOR_NON_RESOLVING_NAMESERVER_ENTRIES, NULL, NULL
-ignored-packets,                     FAM_RECURSOR_IGNORED_PACKETS, NULL, NULL
-ipv6-outqueries,                     FAM_RECURSOR_IPV6_OUTQUERIES, NULL, NULL
-ipv6-questions,                      FAM_RECURSOR_IPV6_QUESTIONS, NULL, NULL
-malloc-bytes,                        FAM_RECURSOR_MALLOC_BYTES, NULL, NULL
-max-cache-entries,                   FAM_RECURSOR_MAX_CACHE_ENTRIES, NULL, NULL
-max-packetcache-entries,             FAM_RECURSOR_MAX_PACKETCACHE_ENTRIES, NULL, NULL
-max-mthread-stack,                   FAM_RECURSOR_MAX_MTHREAD_STACK, NULL, NULL
-negcache-entries,                    FAM_RECURSOR_NEGCACHE_ENTRIES, NULL, NULL
-no-packet-error,                     FAM_RECURSOR_NO_PACKET_ERROR, NULL, NULL
-nod-lookups-dropped-oversize,        FAM_RECURSOR_NOD_LOOKUPS_DROPPED_OVERSIZE, NULL, NULL
-noedns-outqueries,                   FAM_RECURSOR_NOEDNS_OUTQUERIES, NULL, NULL
-noerror-answers,                     FAM_RECURSOR_NOERROR_ANSWERS, NULL, NULL
-noping-outqueries,                   FAM_RECURSOR_NOPING_OUTQUERIES, NULL, NULL
-nsset-invalidations,                 FAM_RECURSOR_NSSET_INVALIDATIONS, NULL, NULL
-nsspeeds-entries,                    FAM_RECURSOR_NSSPEEDS_ENTRIES, NULL, NULL
-nxdomain-answers,                    FAM_RECURSOR_NXDOMAIN_ANSWERS, NULL, NULL
-outgoing-timeouts,                   FAM_RECURSOR_OUTGOING_TIMEOUTS, NULL, NULL
-outgoing4-timeouts,                  FAM_RECURSOR_OUTGOING4_TIMEOUTS, NULL, NULL
-outgoing6-timeouts,                  FAM_RECURSOR_OUTGOING6_TIMEOUTS, NULL, NULL
-over-capacity-drops,                 FAM_RECURSOR_OVER_CAPACITY_DROPS, NULL, NULL
-packetcache-bytes,                   FAM_RECURSOR_PACKETCACHE_BYTES, NULL, NULL
-packetcache-entries,                 FAM_RECURSOR_PACKETCACHE_ENTRIES, NULL, NULL
-packetcache-hits,                    FAM_RECURSOR_PACKETCACHE_HITS, NULL, NULL
-packetcache-misses,                  FAM_RECURSOR_PACKETCACHE_MISSES, NULL, NULL
-policy-drops,                        FAM_RECURSOR_POLICY_DROPS, NULL, NULL
-policy-result-noaction,              FAM_RECURSOR_POLICY_RESULT, "result", "noaction"
-policy-result-drop,                  FAM_RECURSOR_POLICY_RESULT, "result", "drop"
-policy-result-nxdomain,              FAM_RECURSOR_POLICY_RESULT, "result", "nxdomain"
-policy-result-nodata,                FAM_RECURSOR_POLICY_RESULT, "result", "nodata"
-policy-result-truncate,              FAM_RECURSOR_POLICY_RESULT, "result", "truncate"
-policy-result-custom,                FAM_RECURSOR_POLICY_RESULT, "result", "custom"
-qa-latency,                          FAM_RECURSOR_QA_LATENCY, NULL, NULL
-query-pipe-full-drops,               FAM_RECURSOR_QUERY_PIPE_FULL_DROPS, NULL, NULL
-questions,                           FAM_RECURSOR_QUESTIONS, NULL, NULL
-rebalanced-queries,                  FAM_RECURSOR_REBALANCED_QUERIES, NULL, NULL
-resource-limits,                     FAM_RECURSOR_RESOURCE_LIMITS, NULL, NULL
-security-status,                     FAM_RECURSOR_SECURITY_STATUS, NULL, NULL
-server-parse-errors,                 FAM_RECURSOR_SERVER_PARSE_ERRORS, NULL, NULL
-servfail-answers,                    FAM_RECURSOR_SERVFAIL_ANSWERS, NULL, NULL
-spoof-prevents,                      FAM_RECURSOR_SPOOF_PREVENTS, NULL, NULL
-sys-msec,                            FAM_RECURSOR_SYS_MSEC, NULL, NULL
-tcp-client-overflow,                 FAM_RECURSOR_TCP_CLIENT_OVERFLOW, NULL, NULL
-tcp-clients,                         FAM_RECURSOR_TCP_CLIENTS, NULL, NULL
-tcp-outqueries,                      FAM_RECURSOR_TCP_OUTQUERIES, NULL, NULL
-tcp-questions,                       FAM_RECURSOR_THROTTLE_ENTRIES, NULL, NULL
-throttle-entries,                    FAM_RECURSOR_THROTTLED_OUT, NULL, NULL
-throttled-out,                       FAM_RECURSOR_THROTTLED_OUTQUERIES, NULL, NULL
-throttled-outqueries,                FAM_RECURSOR_TOO_OLD_DROPS, NULL, NULL
-too-old-drops,                       FAM_RECURSOR_TRUNCATED_DROPS, NULL, NULL
-truncated-drops,                     FAM_RECURSOR_EMPTY_QUERIES, NULL, NULL
-empty-queries,                       FAM_RECURSOR_UNAUTHORIZED_TCP, NULL, NULL
-unauthorized-tcp,                    FAM_RECURSOR_UNAUTHORIZED_UDP, NULL, NULL
-unauthorized-udp,                    FAM_RECURSOR_SOURCE_DISALLOWED_NOTIFY, NULL, NULL
-source-disallowed-notify,            FAM_RECURSOR_UNEXPECTED_PACKETS, NULL, NULL
-unexpected-packets,                  FAM_RECURSOR_UNREACHABLES, NULL, NULL
-unreachables,                        FAM_RECURSOR_UPTIME, NULL, NULL
-uptime,                              FAM_RECURSOR_USER_MSEC, NULL, NULL
-user-msec,                           FAM_RECURSOR_VARIABLE_RESPONSES, NULL, NULL
-variable-responses,                  FAM_RECURSOR_X_OUR_LATENCY, NULL, NULL
-x-our-latency,                       FAM_RECURSOR_X_OUR_LATENCY, NULL, NULL
-x-ourtime0-1,                        FAM_RECURSOR_X_OUR_TIME, "time", "0-1"
-x-ourtime1-2,                        FAM_RECURSOR_X_OUR_TIME, "time", "1-2"
-x-ourtime2-4,                        FAM_RECURSOR_X_OUR_TIME, "time", "2-4"
-x-ourtime4-8,                        FAM_RECURSOR_X_OUR_TIME, "time", "4-8"
-x-ourtime8-16,                       FAM_RECURSOR_X_OUR_TIME, "time", "8-16"
-x-ourtime16-32,                      FAM_RECURSOR_X_OUR_TIME, "time", "16-32"
-x-ourtime-slow,                      FAM_RECURSOR_X_OUR_TIME, "time", "slow"
-fd-usage,                            FAM_RECURSOR_FD_USAGE, NULL, NULL
-real-memory-usage,                   FAM_RECURSOR_REAL_MEMORY_USAGE, NULL, NULL
-udp-in-errors,                       FAM_RECURSOR_UDP_IN_ERRORS, NULL, NULL
-udp-noport-errors,                   FAM_RECURSOR_UDP_NOPORT_ERRORS, NULL, NULL
-udp-recvbuf-errors,                  FAM_RECURSOR_UDP_RECVBUF_ERRORS, NULL, NULL
-udp-sndbuf-errors,                   FAM_RECURSOR_UDP_SNDBUF_ERRORS, NULL, NULL
-udp-in-csum-errors,                  FAM_RECURSOR_UDP_IN_CSUM_ERRORS, NULL, NULL
-udp6-in-errors,                      FAM_RECURSOR_UDP6_IN_ERRORS, NULL, NULL
-udp6-noport-errors,                  FAM_RECURSOR_UDP6_NOPORT_ERRORS, NULL, NULL
-udp6-recvbuf-errors,                 FAM_RECURSOR_UDP6_RECVBUF_ERRORS, NULL, NULL
-udp6-sndbuf-errors,                  FAM_RECURSOR_UDP6_SNDBUF_ERRORS, NULL, NULL
-udp6-in-csum-errors,                 FAM_RECURSOR_UDP6_IN_CSUM_ERRORS, NULL, NULL
-cpu-iowait,                          FAM_RECURSOR_CPU_IOWAIT, NULL, NULL
-cpu-steal,                           FAM_RECURSOR_CPU_STEAL, NULL, NULL
-proxy-protocol-invalid,              FAM_RECURSOR_PROXY_PROTOCOL_INVALID, NULL, NULL
-record-cache-acquired,               FAM_RECURSOR_RECORD_CACHE_ACQUIRED, NULL, NULL
-record-cache-contended,              FAM_RECURSOR_RECORD_CACHE_CONTENDED, NULL, NULL
-packetcache-acquired,                FAM_RECURSOR_PACKETCACHE_ACQUIRED, NULL, NULL
-packetcache-contended,               FAM_RECURSOR_PACKETCACHE_CONTENDED, NULL, NULL
-taskqueue-expired,                   FAM_RECURSOR_TASKQUEUE_EXPIRED, NULL, NULL
-taskqueue-pushed,                    FAM_RECURSOR_TASKQUEUE_PUSHED, NULL, NULL
-taskqueue-size,                      FAM_RECURSOR_TASKQUEUE_SIZE, NULL, NULL
-dot-outqueries,                      FAM_RECURSOR_DOT_OUTQUERIES, NULL, NULL
-dns64-prefix-answers,                FAM_RECURSOR_DNS64_PREFIX_ANSWERS, NULL, NULL
-aggressive-nsec-cache-entries,       FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_ENTRIES, NULL, NULL
-aggressive-nsec-cache-nsec-hits,     FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC_HITS, NULL, NULL
-aggressive-nsec-cache-nsec-wc-hits,  FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC_WC_HITS, NULL, NULL
-aggressive-nsec-cache-nsec3-hits,    FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC3_HITS, NULL, NULL
-aggressive-nsec-cache-nsec3-wc-hits, FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC3_WC_HITS, NULL, NULL
-almost-expired-pushed,               FAM_RECURSOR_ALMOST_EXPIRED_PUSHED, NULL, NULL
-almost-expired-run,                  FAM_RECURSOR_ALMOST_EXPIRED_RUN, NULL, NULL
-almost-expired-exceptions,           FAM_RECURSOR_ALMOST_EXPIRED_EXCEPTIONS, NULL, NULL
-idle-tcpout-connections,             FAM_RECURSOR_IDLE_TCPOUT_CONNECTIONS , NULL, NULL
-maintenance-usec,                    FAM_RECURSOR_MAINTENANCE_USEC, NULL, NULL
-maintenance-calls,                   FAM_RECURSOR_MAINTENANCE_CALLS, NULL, NULL
-nod-events,                          FAM_RECURSOR_NOD_EVENTS, NULL, NULL
-udr-events,                          FAM_RECURSOR_UDR_EVENTS, NULL, NULL
+all-outqueries,                FAM_RECURSOR_ALL_OUTQUERIES, 0, NULL, NULL
+answers-slow,                  FAM_RECURSOR_ANSWERS, 0, "time", "slow"
+answers0-1,                    FAM_RECURSOR_ANSWERS, 0, "time", "0-1"
+answers1-10,                   FAM_RECURSOR_ANSWERS, 0, "time", "1-10"
+answers10-100,                 FAM_RECURSOR_ANSWERS, 0, "time", "10-100"
+answers100-1000,               FAM_RECURSOR_ANSWERS, 0, "time", "100-1000"
+auth4-answers-slow,            FAM_RECURSOR_AUTH4_ANSWERS, 0, "time", "slow"
+auth4-answers0-1,              FAM_RECURSOR_AUTH4_ANSWERS, 0, "time", "0-1"
+auth4-answers1-10,             FAM_RECURSOR_AUTH4_ANSWERS, 0, "time", "1-10"
+auth4-answers10-100,           FAM_RECURSOR_AUTH4_ANSWERS, 0, "time", "10-100"
+auth4-answers100-1000,         FAM_RECURSOR_AUTH4_ANSWERS, 0, "time", "100-1000"
+auth6-answers-slow,            FAM_RECURSOR_AUTH6_ANSWERS, 0, "time", "slow"
+auth6-answers0-1,              FAM_RECURSOR_AUTH6_ANSWERS, 0, "time", "0-1"
+auth6-answers1-10,             FAM_RECURSOR_AUTH6_ANSWERS, 0, "time", "1-10"
+auth6-answers10-100,           FAM_RECURSOR_AUTH6_ANSWERS, 0, "time", "10-100"
+auth6-answers100-1000,         FAM_RECURSOR_AUTH6_ANSWERS, 0, "time", "100-1000"
+auth-zone-queries,             FAM_RECURSOR_AUTH_ZONE_QUERIES, 0, NULL, NULL
+cache-bytes,                   FAM_RECURSOR_CACHE_BYTES, 0, NULL, NULL
+cache-entries,                 FAM_RECURSOR_CACHE_ENTRIES, 0, NULL, NULL
+cache-hits,                    FAM_RECURSOR_CACHE_HITS, 0, NULL, NULL
+cache-misses,                  FAM_RECURSOR_CACHE_MISSES, 0, NULL, NULL
+case-mismatches,               FAM_RECURSOR_CASE_MISMATCHES, 0, NULL, NULL
+chain-resends,                 FAM_RECURSOR_CHAIN_RESENDS, 0, NULL, NULL
+client-parse-errors,           FAM_RECURSOR_CLIENT_PARSE_ERRORS, 0, NULL, NULL
+concurrent-queries,            FAM_RECURSOR_CONCURRENT_QUERIES, 0, NULL, NULL
+zone-disallowed-notify,        FAM_RECURSOR_ZONE_DISALLOWED_NOTIFY, 0, NULL, NULL
+dnssec-authentic-data-queries, FAM_RECURSOR_DNSSEC_AUTHENTIC_DATA_QUERIES, 0, NULL, NULL
+dnssec-check-disabled-queries, FAM_RECURSOR_DNSSEC_CHECK_DISABLED_QUERIES, 0, NULL, NULL
+dnssec-queries,                FAM_RECURSOR_DNSSEC_QUERIES, 0, NULL, NULL
+dnssec-result-bogus,           FAM_RECURSOR_DNSSEC_RESULT_BOGUS, 0, NULL, NULL
+dnssec-result-bogus-invalid-denial,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "invalid-denial"
+dnssec-result-bogus-invalid-dnskey-protocol,     FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "invalid-dnskey-protocol"
+dnssec-result-bogus-missing-negative-indication, FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "missing-negative-indication"
+dnssec-result-bogus-no-rrsig,                    FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-rrsig"
+dnssec-result-bogus-no-valid-dnskey,             FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-valid-dnskey"
+dnssec-result-bogus-no-valid-rrsig,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-valid-rrsig"
+dnssec-result-bogus-no-zone-key-bit-set,         FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-zone-key-bit-set"
+dnssec-result-bogus-revoked-dnskey,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "revoked-dnskey"
+dnssec-result-bogus-self-signed-ds,              FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "self-signed-ds"
+dnssec-result-bogus-signature-expired,           FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "signature-expired"
+dnssec-result-bogus-signature-not-yet-valid,     FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "signature-not-yet-valid"
+dnssec-result-bogus-unable-to-get-dnskeys,       FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unable-to-get-dnskeys"
+dnssec-result-bogus-unable-to-get-dss,           FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unable-to-get-dss"
+dnssec-result-bogus-unsupported-dnskey-algo,     FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unsupported-dnskey-algo"
+dnssec-result-bogus-unsupported-ds-digest-type,  FAM_RECURSOR_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unsupported-ds-digest-type"
+dnssec-result-indeterminate,    FAM_RECURSOR_DNSSEC_RESULT_INDETERMINATE, 0, NULL, NULL
+dnssec-result-insecure,         FAM_RECURSOR_DNSSEC_RESULT_INSECURE, 0, NULL, NULL
+dnssec-result-nta,              FAM_RECURSOR_DNSSEC_RESULT_NTA, 0, NULL, NULL
+dnssec-result-secure,           FAM_RECURSOR_DNSSEC_RESULT_SECURE, 0, NULL, NULL
+x-dnssec-result-bogus,          FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS, 0, NULL, NULL
+x-dnssec-result-bogus-invalid-denial,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "invalid-denial"
+x-dnssec-result-bogus-invalid-dnskey-protocol,     FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "invalid-dnskey-protocol"
+x-dnssec-result-bogus-missing-negative-indication, FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "missing-negative-indication"
+x-dnssec-result-bogus-no-rrsig,                    FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-rrsig"
+x-dnssec-result-bogus-no-valid-dnskey,             FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-valid-dnskey"
+x-dnssec-result-bogus-no-valid-rrsig,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-valid-rrsig"
+x-dnssec-result-bogus-no-zone-key-bit-set,         FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "no-zone-key-bit-set"
+x-dnssec-result-bogus-revoked-dnskey,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "revoked-dnskey"
+x-dnssec-result-bogus-self-signed-ds,              FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "self-signed-ds"
+x-dnssec-result-bogus-signature-expired,           FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "signature-expired"
+x-dnssec-result-bogus-signature-not-yet-valid,     FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "signature-not-yet-valid"
+x-dnssec-result-bogus-unable-to-get-dnskeys,       FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unable-to-get-dnskeys"
+x-dnssec-result-bogus-unable-to-get-dss,           FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unable-to-get-dss"
+x-dnssec-result-bogus-unsupported-dnskey-algo,     FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unsupported-dnskey-algo"
+x-dnssec-result-bogus-unsupported-ds-digest-type,  FAM_RECURSOR_X_DNSSEC_RESULT_BOGUS_REASON, 0, "reason", "unsupported-ds-digest-type"
+x-dnssec-result-indeterminate,       FAM_RECURSOR_X_DNSSEC_RESULT_INDETERMINATE, 0, NULL, NULL
+x-dnssec-result-insecure,            FAM_RECURSOR_X_DNSSEC_RESULT_INSECURE, 0, NULL, NULL
+x-dnssec-result-nta,                 FAM_RECURSOR_X_DNSSEC_RESULT_NTA, 0, NULL, NULL
+x-dnssec-result-secure,              FAM_RECURSOR_X_DNSSEC_RESULT_SECURE, 0, NULL, NULL
+dnssec-validations,                  FAM_RECURSOR_DNSSEC_VALIDATIONS, 0, NULL, NULL
+dont-outqueries,                     FAM_RECURSOR_DONT_OUTQUERIES, 0, NULL, NULL
+qname-min-fallback-success,          FAM_RECURSOR_QNAME_MIN_FALLBACK_SUCCESS, 0, NULL, NULL
+ecs-queries,                         FAM_RECURSOR_ECS_QUERIES, 0, NULL, NULL
+ecs-responses,                       FAM_RECURSOR_ECS_RESPONSES, 0, NULL, NULL
+edns-ping-matches,                   FAM_RECURSOR_EDNS_PING_MATCHES, 0, NULL, NULL
+edns-ping-mismatches,                FAM_RECURSOR_EDNS_PING_MISMATCHES, 0, NULL, NULL
+failed-host-entries,                 FAM_RECURSOR_FAILED_HOST_ENTRIES, 0, NULL, NULL
+non-resolving-nameserver-entries,    FAM_RECURSOR_NON_RESOLVING_NAMESERVER_ENTRIES, 0, NULL, NULL
+ignored-packets,                     FAM_RECURSOR_IGNORED_PACKETS, 0, NULL, NULL
+ipv6-outqueries,                     FAM_RECURSOR_IPV6_OUTQUERIES, 0, NULL, NULL
+ipv6-questions,                      FAM_RECURSOR_IPV6_QUESTIONS, 0, NULL, NULL
+max-cache-entries,                   FAM_RECURSOR_MAX_CACHE_ENTRIES, 0, NULL, NULL
+max-packetcache-entries,             FAM_RECURSOR_MAX_PACKETCACHE_ENTRIES, 0, NULL, NULL
+max-mthread-stack,                   FAM_RECURSOR_MAX_MTHREAD_STACK, 0, NULL, NULL
+negcache-entries,                    FAM_RECURSOR_NEGCACHE_ENTRIES, 0, NULL, NULL
+no-packet-error,                     FAM_RECURSOR_NO_PACKET_ERROR, 0, NULL, NULL
+nod-lookups-dropped-oversize,        FAM_RECURSOR_NOD_LOOKUPS_DROPPED_OVERSIZE, 0, NULL, NULL
+noedns-outqueries,                   FAM_RECURSOR_NOEDNS_OUTQUERIES, 0, NULL, NULL
+noerror-answers,                     FAM_RECURSOR_NOERROR_ANSWERS, 0, NULL, NULL
+noping-outqueries,                   FAM_RECURSOR_NOPING_OUTQUERIES, 0, NULL, NULL
+nsset-invalidations,                 FAM_RECURSOR_NSSET_INVALIDATIONS, 0, NULL, NULL
+nsspeeds-entries,                    FAM_RECURSOR_NSSPEEDS_ENTRIES, 0, NULL, NULL
+nxdomain-answers,                    FAM_RECURSOR_NXDOMAIN_ANSWERS, 0, NULL, NULL
+outgoing-timeouts,                   FAM_RECURSOR_OUTGOING_TIMEOUTS, 0, NULL, NULL
+outgoing4-timeouts,                  FAM_RECURSOR_OUTGOING4_TIMEOUTS, 0, NULL, NULL
+outgoing6-timeouts,                  FAM_RECURSOR_OUTGOING6_TIMEOUTS, 0, NULL, NULL
+over-capacity-drops,                 FAM_RECURSOR_OVER_CAPACITY_DROPS, 0, NULL, NULL
+packetcache-bytes,                   FAM_RECURSOR_PACKETCACHE_BYTES, 0, NULL, NULL
+packetcache-entries,                 FAM_RECURSOR_PACKETCACHE_ENTRIES, 0, NULL, NULL
+packetcache-hits,                    FAM_RECURSOR_PACKETCACHE_HITS, 0, NULL, NULL
+packetcache-misses,                  FAM_RECURSOR_PACKETCACHE_MISSES, 0, NULL, NULL
+policy-drops,                        FAM_RECURSOR_POLICY_DROPS, 0, NULL, NULL
+policy-result-noaction,              FAM_RECURSOR_POLICY_RESULT, 0, "result", "noaction"
+policy-result-drop,                  FAM_RECURSOR_POLICY_RESULT, 0, "result", "drop"
+policy-result-nxdomain,              FAM_RECURSOR_POLICY_RESULT, 0, "result", "nxdomain"
+policy-result-nodata,                FAM_RECURSOR_POLICY_RESULT, 0, "result", "nodata"
+policy-result-truncate,              FAM_RECURSOR_POLICY_RESULT, 0, "result", "truncate"
+policy-result-custom,                FAM_RECURSOR_POLICY_RESULT, 0, "result", "custom"
+qa-latency,                          FAM_RECURSOR_QA_LATENCY, 0, NULL, NULL
+query-pipe-full-drops,               FAM_RECURSOR_QUERY_PIPE_FULL_DROPS, 0, NULL, NULL
+questions,                           FAM_RECURSOR_QUESTIONS, 0, NULL, NULL
+rebalanced-queries,                  FAM_RECURSOR_REBALANCED_QUERIES, 0, NULL, NULL
+resource-limits,                     FAM_RECURSOR_RESOURCE_LIMITS, 0, NULL, NULL
+security-status,                     FAM_RECURSOR_SECURITY_STATUS, 0, NULL, NULL
+server-parse-errors,                 FAM_RECURSOR_SERVER_PARSE_ERRORS, 0, NULL, NULL
+servfail-answers,                    FAM_RECURSOR_SERVFAIL_ANSWERS, 0, NULL, NULL
+spoof-prevents,                      FAM_RECURSOR_SPOOF_PREVENTS, 0, NULL, NULL
+sys-msec,                            FAM_RECURSOR_CPU_SYS_SECONDS, 0.001, NULL, NULL
+tcp-client-overflow,                 FAM_RECURSOR_TCP_CLIENT_OVERFLOW, 0, NULL, NULL
+tcp-clients,                         FAM_RECURSOR_TCP_CLIENTS, 0, NULL, NULL
+tcp-outqueries,                      FAM_RECURSOR_TCP_OUTQUERIES, 0, NULL, NULL
+tcp-questions,                       FAM_RECURSOR_TCP_QUESTIONS, 0, NULL, NULL
+throttle-entries,                    FAM_RECURSOR_THROTTLE_ENTRIES, 0, NULL, NULL
+throttled-out,                       FAM_RECURSOR_THROTTLED_OUT, 0, NULL, NULL
+throttled-outqueries,                FAM_RECURSOR_THROTTLED_OUTQUERIES, 0, NULL, NULL
+too-old-drops,                       FAM_RECURSOR_TOO_OLD_DROPS, 0, NULL, NULL
+truncated-drops,                     FAM_RECURSOR_TRUNCATED_DROPS, 0, NULL, NULL
+empty-queries,                       FAM_RECURSOR_EMPTY_QUERIES, 0, NULL, NULL
+unauthorized-tcp,                    FAM_RECURSOR_UNAUTHORIZED_TCP, 0, NULL, NULL
+unauthorized-udp,                    FAM_RECURSOR_UNAUTHORIZED_UDP, 0, NULL, NULL
+source-disallowed-notify,            FAM_RECURSOR_SOURCE_DISALLOWED_NOTIFY, 0, NULL, NULL
+unexpected-packets,                  FAM_RECURSOR_UNEXPECTED_PACKETS, 0, NULL, NULL
+unreachables,                        FAM_RECURSOR_UNREACHABLES, 0, NULL, NULL
+uptime,                              FAM_RECURSOR_UPTIME, 0, NULL, NULL
+user-msec,                           FAM_RECURSOR_CPU_USER_SECONDS, 0.001, NULL, NULL
+variable-responses,                  FAM_RECURSOR_VARIABLE_RESPONSES, 0, NULL, NULL
+x-our-latency,                       FAM_RECURSOR_X_OUR_LATENCY, 0, NULL, NULL
+x-ourtime0-1,                        FAM_RECURSOR_X_OUR_TIME, 0, "time", "0-1"
+x-ourtime1-2,                        FAM_RECURSOR_X_OUR_TIME, 0, "time", "1-2"
+x-ourtime2-4,                        FAM_RECURSOR_X_OUR_TIME, 0, "time", "2-4"
+x-ourtime4-8,                        FAM_RECURSOR_X_OUR_TIME, 0, "time", "4-8"
+x-ourtime8-16,                       FAM_RECURSOR_X_OUR_TIME, 0, "time", "8-16"
+x-ourtime16-32,                      FAM_RECURSOR_X_OUR_TIME, 0, "time", "16-32"
+x-ourtime-slow,                      FAM_RECURSOR_X_OUR_TIME, 0, "time", "slow"
+fd-usage,                            FAM_RECURSOR_FD_USAGE, 0, NULL, NULL
+real-memory-usage,                   FAM_RECURSOR_REAL_MEMORY_USAGE, 0, NULL, NULL
+udp-in-errors,                       FAM_RECURSOR_UDP_IN_ERRORS, 0, NULL, NULL
+udp-noport-errors,                   FAM_RECURSOR_UDP_NOPORT_ERRORS, 0, NULL, NULL
+udp-recvbuf-errors,                  FAM_RECURSOR_UDP_RECVBUF_ERRORS, 0, NULL, NULL
+udp-sndbuf-errors,                   FAM_RECURSOR_UDP_SNDBUF_ERRORS, 0, NULL, NULL
+udp-in-csum-errors,                  FAM_RECURSOR_UDP_IN_CSUM_ERRORS, 0, NULL, NULL
+udp6-in-errors,                      FAM_RECURSOR_UDP6_IN_ERRORS, 0, NULL, NULL
+udp6-noport-errors,                  FAM_RECURSOR_UDP6_NOPORT_ERRORS, 0, NULL, NULL
+udp6-recvbuf-errors,                 FAM_RECURSOR_UDP6_RECVBUF_ERRORS, 0, NULL, NULL
+udp6-sndbuf-errors,                  FAM_RECURSOR_UDP6_SNDBUF_ERRORS, 0, NULL, NULL
+udp6-in-csum-errors,                 FAM_RECURSOR_UDP6_IN_CSUM_ERRORS, 0, NULL, NULL
+cpu-iowait,                          FAM_RECURSOR_CPU_IOWAIT, 0, NULL, NULL
+cpu-steal,                           FAM_RECURSOR_CPU_STEAL, 0, NULL, NULL
+proxy-protocol-invalid,              FAM_RECURSOR_PROXY_PROTOCOL_INVALID, 0, NULL, NULL
+record-cache-acquired,               FAM_RECURSOR_RECORD_CACHE_ACQUIRED, 0, NULL, NULL
+record-cache-contended,              FAM_RECURSOR_RECORD_CACHE_CONTENDED, 0, NULL, NULL
+packetcache-acquired,                FAM_RECURSOR_PACKETCACHE_ACQUIRED, 0, NULL, NULL
+packetcache-contended,               FAM_RECURSOR_PACKETCACHE_CONTENDED, 0, NULL, NULL
+taskqueue-expired,                   FAM_RECURSOR_TASKQUEUE_EXPIRED, 0, NULL, NULL
+taskqueue-pushed,                    FAM_RECURSOR_TASKQUEUE_PUSHED, 0, NULL, NULL
+taskqueue-size,                      FAM_RECURSOR_TASKQUEUE_SIZE, 0, NULL, NULL
+dot-outqueries,                      FAM_RECURSOR_DOT_OUTQUERIES, 0, NULL, NULL
+dns64-prefix-answers,                FAM_RECURSOR_DNS64_PREFIX_ANSWERS, 0, NULL, NULL
+aggressive-nsec-cache-entries,       FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_ENTRIES, 0, NULL, NULL
+aggressive-nsec-cache-nsec-hits,     FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC_HITS, 0, NULL, NULL
+aggressive-nsec-cache-nsec-wc-hits,  FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC_WC_HITS, 0, NULL, NULL
+aggressive-nsec-cache-nsec3-hits,    FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC3_HITS, 0, NULL, NULL
+aggressive-nsec-cache-nsec3-wc-hits, FAM_RECURSOR_AGGRESSIVE_NSEC_CACHE_NSEC3_WC_HITS, 0, NULL, NULL
+almost-expired-pushed,               FAM_RECURSOR_ALMOST_EXPIRED_PUSHED, 0, NULL, NULL
+almost-expired-run,                  FAM_RECURSOR_ALMOST_EXPIRED_RUN, 0, NULL, NULL
+almost-expired-exceptions,           FAM_RECURSOR_ALMOST_EXPIRED_EXCEPTIONS, 0, NULL, NULL
+idle-tcpout-connections,             FAM_RECURSOR_IDLE_TCPOUT_CONNECTIONS , 0, NULL, NULL
+maintenance-usec,                    FAM_RECURSOR_MAINTENANCE_USEC, 0, NULL, NULL
+maintenance-calls,                   FAM_RECURSOR_MAINTENANCE_CALLS, 0, NULL, NULL
+nod-events,                          FAM_RECURSOR_NOD_EVENTS, 0, NULL, NULL
+udr-events,                          FAM_RECURSOR_UDR_EVENTS, 0, NULL, NULL
+max-chain-length,                    FAM_RECURSOR_MAX_CHAIN_LENGTH, 0, NULL, NULL
+max-chain-weight,                    FAM_RECURSOR_MAX_CHAIN_WEIGTH, 0, NULL, NULL
+tcp-overflow,                        FAM_RECURSOR_TCP_OVERFLOW, 0, NULL, NULL
