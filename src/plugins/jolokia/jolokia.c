@@ -1106,21 +1106,21 @@ static int jlk_config_add_instance(config_item_t *ci)
 
         if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &jlk->url);
-        } else if (jlk->url && strcasecmp("user", child->key) == 0) {
+        } else if (strcasecmp("user", child->key) == 0) {
             status = cf_util_get_string(child, &jlk->user);
-        } else if (jlk->url && strcasecmp("user-env", child->key) == 0) {
+        } else if (strcasecmp("user-env", child->key) == 0) {
             status = cf_util_get_string_env(child, &jlk->user);
-        } else if (jlk->url && strcasecmp("password", child->key) == 0) {
+        } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &jlk->pass);
-        } else if (jlk->url && strcasecmp("password-env", child->key) == 0) {
+        } else if (strcasecmp("password-env", child->key) == 0) {
             status = cf_util_get_string_env(child, &jlk->pass);
-        } else if (jlk->url && strcasecmp("verify-peer", child->key) == 0) {
+        } else if (strcasecmp("verify-peer", child->key) == 0) {
             status = cf_util_get_boolean(child, &jlk->verify_peer);
-        } else if (jlk->url && strcasecmp("verify-host", child->key) == 0) {
+        } else if (strcasecmp("verify-host", child->key) == 0) {
             status = cf_util_get_boolean(child, &jlk->verify_host);
-        } else if (jlk->url && strcasecmp("ca-cert", child->key) == 0) {
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
             status = cf_util_get_string(child, &jlk->cacert);
-        } else if (jlk->url && strcasecmp("header", child->key) == 0) {
+        } else if (strcasecmp("header", child->key) == 0) {
             status = jlk_config_append_string("Header", &jlk->headers, child);
         } else if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_cdtime(child, &jlk->timeout);
@@ -1145,6 +1145,12 @@ static int jlk_config_add_instance(config_item_t *ci)
     }
 
     if (status != 0) {
+        jlk_free(jlk);
+        return -1;
+    }
+
+    if (jlk->url == NULL) {
+        PLUGIN_ERROR("Missing url.");
         jlk_free(jlk);
         return -1;
     }
