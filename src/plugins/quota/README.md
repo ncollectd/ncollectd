@@ -59,4 +59,3 @@ The plugin supports the following options:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

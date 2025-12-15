@@ -218,4 +218,3 @@ generate one or more data sets from each row returned according to these rules.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

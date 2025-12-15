@@ -113,4 +113,3 @@ The plugin's configuration consists of a number of **oids** and
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

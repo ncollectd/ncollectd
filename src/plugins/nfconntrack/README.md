@@ -19,4 +19,3 @@ reading the file */proc/net/stat/nf\_conntrack*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -131,4 +131,3 @@ The **match\_csv** plugin parse lines in the CSV format,
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

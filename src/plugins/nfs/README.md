@@ -44,4 +44,3 @@ The **nfs** plugin the the following option:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

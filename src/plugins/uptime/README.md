@@ -21,4 +21,3 @@ It can be useful especially on Linux based routers/firewalls.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

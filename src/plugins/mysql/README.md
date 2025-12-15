@@ -416,4 +416,3 @@ The plugin will complain loudly in case anything goes wrong.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

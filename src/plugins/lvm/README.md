@@ -19,4 +19,3 @@ of the usage of Volume Grousp (VG) and Logical Volumes (LV).
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

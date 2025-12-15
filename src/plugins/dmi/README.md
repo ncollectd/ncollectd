@@ -20,4 +20,3 @@ The **dmi** plugin collects DMI information that is found at
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -19,4 +19,3 @@ The **avccache** plugin collect statistics of SELinux AVC from the file
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

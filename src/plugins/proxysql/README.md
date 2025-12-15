@@ -129,4 +129,3 @@ Each block requires one string argument as the instance name.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

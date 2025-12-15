@@ -19,4 +19,3 @@ interface, reading the file */proc/net/arp*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

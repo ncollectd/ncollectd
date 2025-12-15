@@ -21,4 +21,3 @@ This provides visibility into how resource-constrained the system is.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -18,4 +18,3 @@ The **cifs** plugin collectd statistics of mounted cifs filesystems.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

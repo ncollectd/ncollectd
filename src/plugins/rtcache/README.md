@@ -19,4 +19,3 @@ from the file */proc/net/stat/rt\_cache*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

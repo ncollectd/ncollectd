@@ -23,4 +23,3 @@ previously been suspended.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

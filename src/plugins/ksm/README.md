@@ -18,4 +18,3 @@ The **ksm** plugin collect statistics from the Kernel Same-page Merging (KSM).
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -19,4 +19,3 @@ reading the file /proc/net/stat/synproxy.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

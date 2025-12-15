@@ -55,4 +55,3 @@ The configuration consists of one or more **instance** blocks:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

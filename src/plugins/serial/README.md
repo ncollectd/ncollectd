@@ -19,4 +19,3 @@ reading the file /proc/tty/driver/serial.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

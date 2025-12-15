@@ -65,4 +65,3 @@ The plugin reopens the file for each line it writes.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

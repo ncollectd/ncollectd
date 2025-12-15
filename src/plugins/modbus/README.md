@@ -201,4 +201,3 @@ values (unsigned 32 bit and 64 bit values) and floating point values
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

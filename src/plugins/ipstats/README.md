@@ -20,4 +20,3 @@ At the moment it's only supported on FreeBSD.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -22,4 +22,3 @@ Ncollectd must be run on Directors (in LVS jargon).
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

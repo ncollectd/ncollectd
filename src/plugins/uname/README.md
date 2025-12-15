@@ -19,4 +19,3 @@ The same that the uname commands returns.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

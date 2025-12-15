@@ -37,4 +37,3 @@ memory used, compute and memory frequencies, and power consumption.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

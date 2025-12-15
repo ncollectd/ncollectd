@@ -18,4 +18,3 @@ The **iscsi** plugin collect metrics from the kernels iSCSI target interface.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

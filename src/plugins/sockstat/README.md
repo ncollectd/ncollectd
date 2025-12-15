@@ -19,4 +19,3 @@ The **sockstat** plugin collect socket statistics from the files
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

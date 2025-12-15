@@ -19,4 +19,3 @@ The **schedstat** plugin collectd scheduling metrics from
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

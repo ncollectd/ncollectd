@@ -19,4 +19,3 @@ reading the file */proc/net/softnet\_stat*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

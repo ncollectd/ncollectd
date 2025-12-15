@@ -95,4 +95,3 @@ Inside the **instance** block, the following options are understood:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

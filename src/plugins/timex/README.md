@@ -20,4 +20,3 @@ by Linux kernel if time-keeping daemon does not update it regularly.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

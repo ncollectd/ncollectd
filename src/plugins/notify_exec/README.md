@@ -61,4 +61,3 @@ notifications to the outside world.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

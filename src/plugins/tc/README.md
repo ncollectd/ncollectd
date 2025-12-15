@@ -95,4 +95,3 @@ The **tc** plugin collect metrics of Traffic Control in the Linux kernel.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

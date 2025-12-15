@@ -21,4 +21,3 @@ is provided by many operating systems as a one, five or fifteen minute average.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

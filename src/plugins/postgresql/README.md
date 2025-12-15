@@ -237,6 +237,12 @@ installation.
 
 > > > Read bgwriter stats from pg\_stat\_bgwriter.
 
+> > **buffercache**
+
+> > > Since version 16 of PostgreSQL.
+> > > Read the state of the shared buffer cache. The user needs the privileges of the pg\_monitor role.
+> > > You need to install the extension pg\_buffercache.
+
 > > **slru**
 
 > > **io**
@@ -405,4 +411,3 @@ installation.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

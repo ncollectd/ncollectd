@@ -18,4 +18,3 @@ The **zone** plugin collect metrics of cpu and memory from Solaris zones.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -
