@@ -213,4 +213,3 @@ Inside each **instance** blocks, the following options are recognized:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

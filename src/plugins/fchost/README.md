@@ -19,4 +19,3 @@ in the system, collecting data from files in path */sys/class/fchost*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

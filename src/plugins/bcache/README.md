@@ -18,4 +18,3 @@ The **bcache** plugin collect statistics from the block layer cache Bcache.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

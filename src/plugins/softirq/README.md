@@ -30,4 +30,3 @@ Reading the file */proc/softirq*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

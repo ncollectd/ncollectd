@@ -24,4 +24,3 @@ order to function properly.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

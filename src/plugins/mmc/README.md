@@ -23,4 +23,3 @@ The additional values for block erases and power cycles are also read.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

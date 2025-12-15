@@ -19,4 +19,3 @@ errors from the Error Detection And Correction (EDAC) kernel subsystem.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

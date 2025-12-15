@@ -20,4 +20,3 @@ the **rapl** plugin collects this information.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

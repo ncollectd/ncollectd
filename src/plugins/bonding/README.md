@@ -19,4 +19,3 @@ a bonding device and the number of those interfaces that are active.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -252,4 +252,3 @@ Each block requires one string argument as the name.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

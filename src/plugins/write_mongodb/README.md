@@ -138,4 +138,3 @@ Within each **instance** block, the following options are available:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

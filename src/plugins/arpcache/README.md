@@ -20,4 +20,3 @@ reading the files */proc/net/stat/arp\_cache* for IPv4 and
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

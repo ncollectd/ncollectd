@@ -93,4 +93,3 @@ The following configuration options are valid:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

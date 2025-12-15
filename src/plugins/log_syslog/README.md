@@ -64,4 +64,3 @@ if the **notify-level** option is provided.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

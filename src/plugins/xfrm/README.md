@@ -19,4 +19,3 @@ packets in the Linux Kernel.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

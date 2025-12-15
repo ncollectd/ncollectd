@@ -52,4 +52,3 @@ The following options are accepted within each **metric** mblock:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

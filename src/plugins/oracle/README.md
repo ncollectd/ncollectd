@@ -213,4 +213,3 @@ connect to an Oracle&#174; Database and lets you execute SQL statements there.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

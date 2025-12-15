@@ -107,4 +107,3 @@ The following options are available inside a **table** block:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

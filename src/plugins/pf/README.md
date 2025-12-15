@@ -18,4 +18,3 @@ The **pf** plugin collects statistics about BSD's packet filter, PF.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

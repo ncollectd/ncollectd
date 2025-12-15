@@ -750,4 +750,3 @@ Watch out for warnings dispatched by the python plugin after upgrades.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

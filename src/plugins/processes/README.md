@@ -11,12 +11,21 @@ NCOLLECTD-PROCESSES(5) - File Formats Manual
 	    collect flags ...
 	    process name {
 	        collect flags ...
+	        filter {
+	            ...
+	        }
 	    }
 	    process-match name /regex/ {
 	        collect flags ...
+	        filter {
+	            ...
+	        }
 	    }
 	    process-pidfile name pidfile-path {
 	        collect flags ...
+	        filter {
+	            ...
+	        }
 	    }
 	}
 
@@ -45,7 +54,8 @@ The statistics collected for matched processes are:
 
 *	number of memory mapped files (under Linux)
 
-*	io data (where available)
+*	io data (under Linux),
+	requires the capabilities: CAP\_DAC\_OVERRIDE and CAP\_SYS\_PTRACE
 
 *	context switches (under Linux)
 
@@ -110,12 +120,20 @@ The **processes** plugin has the following options:
 > **process** and **process-match** blocks.
 > When used there, these options affect reporting the corresponding processes
 > only.
-> Outside of **process** and **process-match** blocks these options set the
-> default value for subsequent matches.
+> Outside of **process**, **process-match** and **process-pidfile** blocks
+> these options set the default value for subsequent matches.
+
+Inside **process**, **process-match** and **process-pidfile** blocks
+we can define a filter:
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

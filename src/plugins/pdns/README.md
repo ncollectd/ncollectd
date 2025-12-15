@@ -60,4 +60,3 @@ the following options are accepted within each block:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

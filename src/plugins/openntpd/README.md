@@ -1,16 +1,15 @@
-NCOLLECTD-CHRONY(5) - File Formats Manual
+NCOLLECTD-OPENNTPD(5) - File Formats Manual
 
 # NAME
 
-**ncollectd-chrony** - Documentation of ncollectd's chrony plugin
+**ncollectd-openntpd** - Documentation of ncollectd's openntpd plugin
 
 # SYNOPSIS
 
-	load-plugin chrony
-	plugin chrony {
+	load-plugin openntpd
+	plugin openntpd {
 	    instance instance {
-	        host hostname
-	        port port
+	        socket-path path
 	        timeout seconds
 	        label key value
 	        interval seconds
@@ -22,32 +21,22 @@ NCOLLECTD-CHRONY(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **chrony** plugin collects ntp data from a **chronyd** server,
-such as clock skew and per-peer stratum.
+The **openntpd** plugin collects per-peer ntp data such as time offset and time
+dispersion.
 
-For talking to **chronyd**, it mimics what the **chronyc** control
-program does on the wire.
+For talking to **openntpd**, it mimics what the **ntpdctl** control program does.
 
-The configuration of the **chrony** plugin consists of one or more
+The configuration of the **openntpd** plugin consists of one or more
 **instance** blocks.
 Each block requires one string argument as the instance name.
 
 The following options are accepted within each **instance** block:
 
-**host** *hostname*
+**socket-path** *path*
 
-> Hostname of the host running **chronyd**.
-> Defaults to **localhost**.
-
-**port** *port*
-
-> UDP port to connect to.
-> Defaults to **323**.
+> Path to the ntpd.sock file. The default value is /var/run/ntpd.sock.
 
 **timeout** *seconds*
-
-> Connection timeout in seconds.
-> Defaults to **2**.
 
 **label** *key* *value*
 
@@ -56,13 +45,13 @@ The following options are accepted within each **instance** block:
 **interval** *seconds*
 
 > Sets the interval (in seconds) in which the values will be collected from
-> this server.
+> this instance.
 
 **filter**
 
 > Configure a filter to modify or drop the metrics.
 > See **FILTER CONFIGURATION** in
-> ncollectd.conf(5)
+> ncollectd.conf(5).
 
 # SEE ALSO
 

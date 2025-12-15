@@ -18,4 +18,3 @@ The **netstat\_udp** plugin read udp metrics in NetBSD systems.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

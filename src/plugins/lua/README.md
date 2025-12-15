@@ -116,4 +116,3 @@ To register those functions with collectd:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

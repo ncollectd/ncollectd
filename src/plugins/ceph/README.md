@@ -75,4 +75,3 @@ A **socket-path** is also required for each **daemon** block:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

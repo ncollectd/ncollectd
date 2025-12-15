@@ -20,4 +20,3 @@ The **conntrack plugin** collects IP conntrack statistics reading the files:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

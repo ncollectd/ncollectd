@@ -26,4 +26,3 @@ The **tape** plugin collects information about the usage of tapes.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

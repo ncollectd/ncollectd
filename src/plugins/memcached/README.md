@@ -66,4 +66,3 @@ Within the **instance** blocks, the following options are allowed:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

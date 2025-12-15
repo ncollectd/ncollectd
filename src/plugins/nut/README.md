@@ -96,4 +96,3 @@ voltages, currents, power, frequencies, load, and temperatures.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

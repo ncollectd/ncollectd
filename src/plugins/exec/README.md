@@ -110,4 +110,3 @@ This is for your own good.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

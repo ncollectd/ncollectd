@@ -20,4 +20,3 @@ The cache was introduced into the Linux kernel in version 2.6.30.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

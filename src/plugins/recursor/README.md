@@ -42,7 +42,7 @@ The following options are accepted within each block:
 > When using UDP over UNIX domain sockets, the client socket needs a name
 > in the file system, too.
 > This is used for PowerDNS Recursor versions less than 4.6.0.
-> The default is /var/run/ncollectd-powerdns.
+> The default is /var/run/ncollectd-recursor with the suffix of the instance name.
 
 **timeout** *seconds*
 
@@ -63,7 +63,6 @@ The following options are accepted within each block:
 > **1**
 
 > > For PowerDNS Recursor versions less than 4.5.0.
-> > This is the default option.
 
 > **2**
 
@@ -72,6 +71,7 @@ The following options are accepted within each block:
 > **3**
 
 > > For PowerDNS Recursor versions great than 4.6.0.
+> > This is the default option.
 
 **filter**
 
@@ -84,4 +84,3 @@ The following options are accepted within each block:
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -20,4 +20,3 @@ The plugin requires root privileges to perform the statistics collection.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

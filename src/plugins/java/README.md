@@ -596,4 +596,3 @@ in case you know it.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

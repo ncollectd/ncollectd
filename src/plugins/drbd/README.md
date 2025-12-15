@@ -19,4 +19,3 @@ Block Device (DRBD) reading the file */proc/drbd*.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -

@@ -532,4 +532,3 @@ ncollectd(1),
 perl(1),
 ncollectd.conf(5)
 
-ncollectd - - -

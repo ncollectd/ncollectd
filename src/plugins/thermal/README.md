@@ -37,4 +37,3 @@ procfs file system, i. e. mostly system temperature information.
 ncollectd(1),
 ncollectd.conf(5)
 
-ncollectd - - -
