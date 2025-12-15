@@ -9,46 +9,36 @@
 .Bd -literal -compact
 \fBload-plugin\fP tcpconns
 \fBplugin\fP tcpconns {
-    \fBlistening-ports\fP \fItrue|false\fP
-    \fBlocal-port\fP \fIport\fP
-    \fBremote-port\fP \fIport\fP
-    \fBall-port-summary\fP \fItrue|false\fP
+    \fBcounter\fP \fIcounter-name\fP {
+        \fBlocal-ip\fP \fIaddress\fP|\fIaddress\fP/\fIprefix\fP
+        \fBlocal-port\fP \fIport\fP[,\fIport\fP][,\fIstart-end\fP]...
+        \fBremote-ip\fP \fIaddress\fP|\fIaddress\fP/\fIprefix\fP
+        \fBremote-port\fP \fIport\fP[,\fIport\fP][,\fIstart-end\fP]...
+    }
 }
 .Ed
 .Sh DESCRIPTION
 The \fBtcpconns\fP plugin counts the number of currently established TCP
-connections based on the local port and/or the remote port.
-Since there may be a lot of connections the default if to count all connections
-with a local port, for which a listening socket is opened.
-You can use the following options to fine-tune the ports you are interested in:
+connections based on the local ip, local port, remote ip and/or remote port.
+
+By default count all system connections grouped by tcp state.
+
+You can define multiple \fIcounters\fP blocks to fine-tune the connections
+you are interested in:
 .Bl -tag -width Ds
-.It \fBlistening-ports\fP \fItrue|false\fP
-If this option is set to \fItrue\fP, statistics for all local ports for which a
-listening socket exists are collected.
-The default depends on \fBlocal-port\fP and \fBremote-port\fP (see below):
-If no port at all is specifically selected, the default is to collect
-listening ports.
-If specific ports (no matter if local or remote ports) are selected,
-this option defaults to \fIfalse\fP, i. e. only the selected ports will be
-collected unless this option is set to \fItrue\fP specifically.
-.It \fBlocal-port\fP \fIport\fP
-Count the connections to a specific local port.
-This can be used to see how many connections are handled by a specific daemon,
-e. g. the mailserver.
-You have to specify the port in numeric form, so for the mailserver example
-you'd need to set \fB25\fP.
-.It \fBremote-port\fP \fIport\fP
-Count the connections to a specific remote port.
-This is useful to see how much a remote service is used.
-This is most useful if you want to know how many connections a local service
-has opened to remote services, e. g. how many connections a mail server or
-news server has to other mail or news servers, or how many connections a web
-proxy holds to web servers.
-You have to give the port in numeric form.
-.It \fBall-port-summary\fP \fItrue|false\fP
-If this option is set to \fItrue\fP a summary of statistics from
-all connections are collected.
-This option defaults to \fIfalse\fP.
+.It \fBcounter\fP \fIcounter-name\fP
+.Bl -tag -width Ds
+.It \fBlocal-ip\fP \fIaddress\fP|\fIaddress\fP/\fIprefix\fP
+Filter tcp connections for this local ip or network (with the CIDR notation).
+.It \fBlocal-port\fP \fIport\fP[,\fIport\fP][,\fIstart-end\fP]...
+Filter tcp connections for this local port, a range of ports
+(two ports separated by a dash) or list of ports (separated by a comma).
+.It \fBremote-ip\fP \fIaddress\fP|\fIaddress\fP/\fIprefix\fP
+Filter tcp connections for this remote ip or network (with the CIDR notation).
+.It \fBremote-port\fP \fIport\fP[,\fIport\fP][,\fIstart-end\fP]...
+Filter tcp connections for this repote port, a range of ports
+(two ports separated by a dash) or list of ports (separated by a comma).
+.El
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
