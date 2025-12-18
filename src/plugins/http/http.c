@@ -20,9 +20,6 @@ typedef struct {
     label_set_t labels;
     plugin_filter_t *filter;
 
-    char *metric_response_time;
-    char *metric_response_code;
-
     char *url;
     int address_family;
     char *user;
@@ -34,8 +31,6 @@ typedef struct {
     char *cacert;
     struct curl_slist *headers;
     char *post_body;
-    bool response_time;
-    bool response_code;
     int timeout;
     uint64_t curl_stats_flags;
 
@@ -96,8 +91,6 @@ static void chttp_free(void *arg)
     label_set_reset(&ctx->labels);
     plugin_filter_free(ctx->filter);
 
-    free(ctx->metric_response_time);
-    free(ctx->metric_response_code);
     free(ctx->url);
     free(ctx->user);
     free(ctx->pass);
@@ -131,7 +124,7 @@ static int chttp_config_append_string(const char *name, struct curl_slist **dest
     return 0;
 }
 
-static int cc_page_init_curl(chttp_ctx_t *ctx)
+static int chttp_init_curl(chttp_ctx_t *ctx)
 {
     ctx->curl = curl_easy_init();
     if (ctx->curl == NULL) {
@@ -320,10 +313,6 @@ static int chttp_read(user_data_t *ud)
 
     chttp_ctx_t *ctx = ud->data;
 
-    cdtime_t start = 0;
-    if (ctx->response_time)
-        start = cdtime();
-
     ctx->buffer_fill = 0;
 
     CURLcode rcode = curl_easy_setopt(ctx->curl, CURLOPT_URL, ctx->url);
@@ -339,33 +328,8 @@ static int chttp_read(user_data_t *ud)
         return -1;
     }
 
-    if (ctx->response_time) {
-        metric_family_t fam = {
-            .name = ctx->metric_response_time,
-            .type = METRIC_TYPE_GAUGE,
-        };
-        double value = CDTIME_T_TO_DOUBLE(cdtime() - start);
-        metric_family_append(&fam, VALUE_GAUGE(value), &ctx->labels, NULL);
-        plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
-    }
-
-    curl_stats_dispatch(ctx->curl, ctx->curl_stats_flags,
-                        ctx->metric_prefix != NULL ? ctx->metric_prefix : "http_", &ctx->labels);
-
-    if (ctx->response_code) {
-        long response_code = 0;
-        status = curl_easy_getinfo(ctx->curl, CURLINFO_RESPONSE_CODE, &response_code);
-        if (status != CURLE_OK) {
-            PLUGIN_ERROR("Fetching response code failed with status %i: %s", status, ctx->curl_errbuf);
-        } else {
-            metric_family_t fam = {
-             .name = ctx->metric_response_code,
-             .type = METRIC_TYPE_GAUGE,
-            };
-            metric_family_append(&fam, VALUE_GAUGE(response_code), &ctx->labels, NULL);
-            plugin_dispatch_metric_family_filtered(&fam, ctx->filter, 0);
-        }
-    }
+    curl_stats_dispatch(ctx->curl, ctx->curl_stats_flags, ctx->filter,
+                                   ctx->metric_prefix, &ctx->labels);
 
     status = plugin_match(ctx->matches, ctx->buffer);
     if (status != 0)
@@ -379,7 +343,7 @@ static int chttp_read(user_data_t *ud)
 static int chttp_config_instance(config_item_t *ci)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
-        PLUGIN_WARNING("`Page' blocks need exactly one string argument.");
+        PLUGIN_WARNING("'Instance' blocks need exactly one string argument.");
         return -1;
     }
 
@@ -392,8 +356,6 @@ static int chttp_config_instance(config_item_t *ci)
     ctx->digest = false;
     ctx->verify_peer = true;
     ctx->verify_host = true;
-    ctx->response_time = false;
-    ctx->response_code = false;
     ctx->timeout = -1;
 
     ctx->instance = strdup(ci->values[0].value.string);
@@ -456,10 +418,6 @@ static int chttp_config_instance(config_item_t *ci)
             status = cf_util_get_boolean(child, &ctx->verify_peer);
         } else if (strcasecmp("verify-host", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctx->verify_host);
-        } else if (strcasecmp("measure-response-time", child->key) == 0) {
-            status = cf_util_get_boolean(child, &ctx->response_time);
-        } else if (strcasecmp("measure-response-code", child->key) == 0) {
-            status = cf_util_get_boolean(child, &ctx->response_code);
         } else if (strcasecmp("ca-cert", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->cacert);
         } else if (strcasecmp("match", child->key) == 0) {
@@ -477,7 +435,7 @@ static int chttp_config_instance(config_item_t *ci)
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &ctx->filter);
         } else {
-            PLUGIN_WARNING("Option `%s' not allowed here.", child->key);
+            PLUGIN_ERROR("Option `%s' not allowed here.", child->key);
             status = -1;
         }
 
@@ -488,52 +446,30 @@ static int chttp_config_instance(config_item_t *ci)
     /* Additionial sanity checks and libCURL initialization. */
     while (status == 0) {
         if (ctx->url == NULL) {
-            PLUGIN_WARNING("`URL' missing in `Page' block.");
+            PLUGIN_ERROR("'url' missing in 'instance' block.");
             status = -1;
             break;
         }
 
-        if ((ctx->matches == NULL) && (ctx->curl_stats_flags == 0) &&
-            !ctx->response_time && !ctx->response_code) {
+        if ((ctx->matches == NULL) && (ctx->curl_stats_flags == 0)) {
             assert(ctx->instance != NULL);
-            PLUGIN_WARNING("No (valid) 'match' block "
-                           "or 'statistics' or 'measure-response-time' or 'measure-response-code' "
-                           "within `Page' block `%s'.",
-                           ctx->instance);
+            PLUGIN_ERROR("No (valid) 'match' block or 'collect' flags "
+                         "within 'instance' block `%s'.", ctx->instance);
             status = -1;
             break;
         }
 
-        if (ctx->response_time) {
-            if (ctx->metric_prefix == NULL)
-                ctx->metric_response_time = strdup("http_response_time_seconds");
-            else
-                ctx->metric_response_time = ssnprintf_alloc("%s_response_time_seconds",
-                                                             ctx->metric_prefix);
-
-            if (ctx->metric_response_time == NULL) {
-                PLUGIN_ERROR("alloc metric response time string failed.");
-                status = -1;
-                break;
-            }
-        }
-
-        if (ctx->response_code) {
-            if (ctx->metric_prefix == NULL)
-                ctx->metric_response_code = strdup("http_response_code");
-            else
-                ctx->metric_response_code = ssnprintf_alloc("%s_response_code",
-                                                             ctx->metric_prefix);
-
-            if (ctx->metric_response_code == NULL) {
-                PLUGIN_ERROR("alloc metric response code string failed.");
+        if (ctx->metric_prefix == NULL) {
+            ctx->metric_prefix = strdup("http_");
+            if (ctx->metric_prefix == NULL) {
+                PLUGIN_ERROR("strdup failed");
                 status = -1;
                 break;
             }
         }
 
         if (status == 0)
-            status = cc_page_init_curl(ctx);
+            status = chttp_init_curl(ctx);
 
         break;
     }

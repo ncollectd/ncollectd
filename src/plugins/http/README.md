@@ -18,8 +18,6 @@ NCOLLECTD-HTTP(5) - File Formats Manual
 	        digest true|false
 	        verify-peer true|false
 	        verify-host true|false
-	        measure-response-time true|false
-	        measure-response-code true|false
 	        ca-cert /path/to/ca-cert
 	        header header
 	        post data
@@ -103,25 +101,6 @@ The following options are valid within **instance** blocks:
 > If this identity check fails, the connection is aborted.
 > Obviously, only works when connecting to a SSL enabled server.
 > Enabled by default.
-
-**measure-response-time** *true|false*
-
-> Measure response time for the request.
-> If this setting is enabled, **match** blocks (see below) are optional.
-> Disabled by default.
-
-> Beware that requests will get aborted if they take too long to complete.
-> Adjust **timeout** accordingly if you expect **measure-response-time**
-> to report such slow requests.
-
-> This option is similar to enabling the **total-time** statistic but it's
-> measured by ncollectd instead of cURL.
-
-**measure-response-code** *true|false*
-
-> Measure response code for the request.
-> If this setting is enabled, **match** blocks (see below) are optional.
-> Disabled by default.
 
 **ca-cert** */path/to/ca-cert*
 
@@ -242,6 +221,10 @@ The following options are valid within **instance** blocks:
 > **num\_connects**
 
 > > The number of new connections that were created to achieve the transfer.
+
+> **reponse\_code**
+
+> > Measure response code for the request.
 
 > **appconnect\_time**
 

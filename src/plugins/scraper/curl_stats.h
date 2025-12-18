@@ -22,4 +22,5 @@ int curl_stats_from_config(config_item_t *ci, uint64_t *flags);
  * curl_stats_dispatch dispatches performance values from the the specified
  * cURL session to the daemon.
  */
-int curl_stats_dispatch(CURL *curl, uint64_t flags, char *metric_prefix, label_set_t *labels);
+int curl_stats_dispatch(CURL *curl, uint64_t flags, plugin_filter_t *filter,
+                                    char *metric_prefix, label_set_t *labels);

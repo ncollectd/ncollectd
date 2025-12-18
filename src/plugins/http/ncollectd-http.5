@@ -19,8 +19,6 @@
         \fBdigest\fP \fItrue|false\fP
         \fBverify-peer\fP \fItrue|false\fP
         \fBverify-host\fP \fItrue|false\fP
-        \fBmeasure-response-time\fP \fItrue|false\fP
-        \fBmeasure-response-code\fP \fItrue|false\fP
         \fBca-cert\fP \fI/path/to/ca-cert\fP
         \fBheader\fP \fIheader\fP
         \fBpost\fP \fIdata\fP
@@ -86,21 +84,6 @@ host name provided by the \fBurl\fP option.
 If this identity check fails, the connection is aborted.
 Obviously, only works when connecting to a SSL enabled server.
 Enabled by default.
-.It \fBmeasure-response-time\fP \fItrue|false\fP
-Measure response time for the request.
-If this setting is enabled, \fBmatch\fP blocks (see below) are optional.
-Disabled by default.
-.Pp
-Beware that requests will get aborted if they take too long to complete.
-Adjust \fBtimeout\fP accordingly if you expect \fBmeasure-response-time\fP
-to report such slow requests.
-.Pp
-This option is similar to enabling the \fBtotal-time\fP statistic but it's
-measured by ncollectd instead of cURL.
-.It \fBmeasure-response-code\fP \fItrue|false\fP
-Measure response code for the request.
-If this setting is enabled, \fBmatch\fP blocks (see below) are optional.
-Disabled by default.
 .It \fBca-cert\fP \fI/path/to/ca-cert\fP
 File that holds one or more SSL certificates.
 If you want to use HTTPS you will possibly need this option.
@@ -173,6 +156,8 @@ pre-transfer and transfer before final transaction was started.
 The total number of redirections that were actually followed.
 .It \fBnum_connects\fP
 The number of new connections that were created to achieve the transfer.
+.It \fBreponse_code\fP
+Measure response code for the request.
 .It \fBappconnect_time\fP
 Time it took from the start until the SSL connect/handshake to the remote
 host was completed.
