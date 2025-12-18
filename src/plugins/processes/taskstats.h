@@ -13,7 +13,12 @@ typedef struct {
     uint64_t cpu_ns;
     uint64_t blkio_ns;
     uint64_t swapin_ns;
+    uint64_t thrashing_ns;
     uint64_t freepages_ns;
+    /* v11: Delay waiting for memory compact */
+    uint64_t compact_ns;
+    /* v13: Delay waiting for write-protect copy */
+    uint64_t wpcopy_ns;
     /* v14: Delay waiting for IRQ/SOFTIRQ */
     uint64_t irq_ns;
 } ts_delay_t;

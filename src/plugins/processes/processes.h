@@ -59,6 +59,9 @@ enum {
     FAM_PROC_DELAY_SWAPIN,
     FAM_PROC_DELAY_FREEPAGES,
     FAM_PROC_DELAY_IRQ,
+    FAM_PROC_DELAY_THRASHING,
+    FAM_PROC_DELAY_COMPACT,
+    FAM_PROC_DELAY_WPCOPY,
     FAM_PROC_SCHED_RUNNING,
     FAM_PROC_SCHED_WAITING,
     FAM_PROC_SCHED_TIMESLICES,
@@ -217,6 +220,9 @@ typedef struct procstat_s {
     double delay_swapin;
     double delay_freepages;
     double delay_irq;
+    double delay_thrashing;
+    double delay_compact;
+    double delay_wpcopy;
 
     uint64_t flags;
 

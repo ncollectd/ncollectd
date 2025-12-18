@@ -196,6 +196,21 @@ static metric_family_t fams_proc[FAM_PROC_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Delay waiting for IRQ/SOFTIRQ.",
     },
+    [FAM_PROC_DELAY_THRASHING] = {
+        .name = "system_process_delay_thrashing_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Delay waiting for thrashing page.",
+    },
+    [FAM_PROC_DELAY_COMPACT] = {
+        .name = "system_process_delay_compact_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Delay waiting for memory compact.",
+    },
+    [FAM_PROC_DELAY_WPCOPY] = {
+        .name = "system_process_delay_wpcopy_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Delay waiting for write-protect copy.",
+    },
     [FAM_PROC_SCHED_RUNNING] = {
         .name = "system_process_sched_running_seconds",
         .type = METRIC_TYPE_COUNTER,
@@ -487,6 +502,21 @@ void ps_list_add(const char *name, const char *cmdline, unsigned long pid, proce
                 ps->delay_irq = entry->delay.irq_ns;
             else
                 ps->delay_irq += entry->delay.irq_ns;
+
+            if (isnan(ps->delay_thrashing))
+                ps->delay_thrashing = entry->delay.thrashing_ns;
+            else
+                ps->delay_thrashing += entry->delay.thrashing_ns;
+
+            if (isnan(ps->delay_compact))
+                ps->delay_compact = entry->delay.compact_ns;
+            else
+                ps->delay_compact += entry->delay.compact_ns;
+
+            if (isnan(ps->delay_wpcopy))
+                ps->delay_wpcopy = entry->delay.wpcopy_ns;
+            else
+                ps->delay_wpcopy += entry->delay.wpcopy_ns;
         }
 #endif
     }
@@ -512,6 +542,10 @@ void ps_list_reset(void)
         ps->delay_blkio = NAN;
         ps->delay_swapin = NAN;
         ps->delay_freepages = NAN;
+        ps->delay_irq = NAN;
+        ps->delay_thrashing = NAN;
+        ps->delay_compact = NAN;
+        ps->delay_wpcopy = NAN;
 
         procstat_entry_t *pse_prev = NULL;
         procstat_entry_t *pse = ps->instances;
@@ -777,29 +811,43 @@ void ps_metric_append_proc_list(procstat_t *ps)
         metric_family_append(&ps->fams[FAM_PROC_SCHED_TIMESLICES],
                              VALUE_COUNTER(ps->sched_timeslices), &labels, NULL);
 
-    /* The ps->delay_* metrics are in nanoseconds. Convert to seconds. */
-    double const delay_factor = 1000000000.0;
+    if (ps->flags & COLLECT_DELAY_ACCOUNTING) {
+        /* The ps->delay_* metrics are in nanoseconds. Convert to seconds. */
+        double const delay_factor = 1000000000.0;
 
-    if (!isnan(ps->delay_cpu))
-        metric_family_append(&ps->fams[FAM_PROC_DELAY_CPU],
-                             VALUE_COUNTER_FLOAT64(ps->delay_cpu / delay_factor),
-                             &labels, NULL);
-    if (!isnan(ps->delay_blkio))
-        metric_family_append(&ps->fams[FAM_PROC_DELAY_BLKIO],
-                             VALUE_COUNTER_FLOAT64(ps->delay_blkio / delay_factor),
-                             &labels, NULL);
-    if (!isnan(ps->delay_swapin))
-        metric_family_append(&ps->fams[FAM_PROC_DELAY_SWAPIN],
-                             VALUE_COUNTER_FLOAT64(ps->delay_swapin / delay_factor),
-                             &labels, NULL);
-    if (!isnan(ps->delay_freepages))
-        metric_family_append(&ps->fams[FAM_PROC_DELAY_FREEPAGES],
-                             VALUE_COUNTER_FLOAT64(ps->delay_freepages / delay_factor),
-                             &labels, NULL);
-    if (!isnan(ps->delay_irq))
-        metric_family_append(&ps->fams[FAM_PROC_DELAY_IRQ],
-                             VALUE_COUNTER_FLOAT64(ps->delay_irq / delay_factor),
-                             &labels, NULL);
+        if (!isnan(ps->delay_cpu))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_CPU],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_cpu / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_blkio))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_BLKIO],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_blkio / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_swapin))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_SWAPIN],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_swapin / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_freepages))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_FREEPAGES],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_freepages / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_irq))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_IRQ],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_irq / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_thrashing))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_THRASHING],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_thrashing / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_compact))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_COMPACT],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_compact / delay_factor),
+                                 &labels, NULL);
+        if (!isnan(ps->delay_wpcopy))
+            metric_family_append(&ps->fams[FAM_PROC_DELAY_WPCOPY],
+                                 VALUE_COUNTER_FLOAT64(ps->delay_wpcopy / delay_factor),
+                                 &labels, NULL);
+    }
 
     PLUGIN_DEBUG("name = %s; num_proc = %lu; num_lwp = %lu; num_fd = %lu; num_maps = %lu; "
                  "vmem_size = %lu; vmem_rss = %lu; vmem_data = %lu; vmem_code = %lu; "
@@ -812,7 +860,8 @@ void ps_metric_append_proc_list(procstat_t *ps)
                  "cswitch_vol = %" PRIi64 "; cswitch_invol = %" PRIi64 "; "
                  "sched_running = %" PRIi64 "; sched_waiting = %" PRIi64 "; "
                  "sched_timeslices= %" PRIi64 "; delay_cpu = %g; delay_blkio = %g; "
-                 "delay_swapin = %g; delay_freepages = %g;",
+                 "delay_swapin = %g; delay_freepages = %g; delay_irq = %g; "
+                 "delay_thrashing = %g; delay_compact = %g; delay_wpcopy = %g;",
                  ps->name, ps->num_proc, ps->num_lwp, ps->num_fd, ps->num_maps,
                  ps->vmem_size, ps->vmem_rss, ps->vmem_data, ps->vmem_code,
                  ps->vmem_minflt_counter, ps->vmem_majflt_counter,
@@ -821,7 +870,8 @@ void ps_metric_append_proc_list(procstat_t *ps)
                  ps->io_diskr, ps->io_diskw, ps->io_cancelled_diskw,
                  ps->cswitch_vol, ps->cswitch_invol,
                  ps->sched_running, ps->sched_waiting, ps->sched_timeslices,
-                 ps->delay_cpu, ps->delay_blkio, ps->delay_swapin, ps->delay_freepages);
+                 ps->delay_cpu, ps->delay_blkio, ps->delay_swapin, ps->delay_freepages,
+                 ps->delay_irq, ps->delay_thrashing, ps->delay_compact, ps->delay_wpcopy);
 
 }
 
