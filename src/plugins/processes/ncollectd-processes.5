@@ -89,7 +89,7 @@ Must be defined before \fBprocess\fP and \fBprocess-match\fP.
 See \fBCOLLECT FLAGS\fP from
 .Xr ncollectd.conf 5 .
 .Bl -tag -width Ds
-.It \fBdelay-accounting\fP
+.It \fBdelay_accounting\fP
 If enabled, collect Linux Delay Accounting information for matching processes.
 Delay Accounting provides the time processes wait for the CPU to become
 available, for I/O operations to finish, for pages to be swapped in and for
@@ -98,10 +98,10 @@ Disabled by default.
 .Pp
 This option is only available on Linux, requires the \fBlibmnl\fP library and
 requires the \f(CWCAP_NET_ADMIN\fP capability at runtime.
-.It \fBfile-descriptor\fP
+.It \fBfile_descriptor\fP
 Collect number of file descriptors of matched processes.
 Disabled by default.
-.It \fBmemory-maps\fP
+.It \fBmemory_maps\fP
 Collect the number of memory mapped files of the process.
 The limit for this number is configured via \fI/proc/sys/vm/max_map_count\fP in
 the Linux kernel.

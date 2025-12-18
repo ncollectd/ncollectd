@@ -94,7 +94,7 @@ The **processes** plugin has the following options:
 > See **COLLECT FLAGS** from
 > ncollectd.conf(5).
 
-> **delay-accounting**
+> **delay\_accounting**
 
 > > If enabled, collect Linux Delay Accounting information for matching processes.
 > > Delay Accounting provides the time processes wait for the CPU to become
@@ -105,12 +105,12 @@ The **processes** plugin has the following options:
 > > This option is only available on Linux, requires the **libmnl** library and
 > > requires the CAP\_NET\_ADMIN capability at runtime.
 
-> **file-descriptor**
+> **file\_descriptor**
 
 > > Collect number of file descriptors of matched processes.
 > > Disabled by default.
 
-> **memory-maps**
+> **memory\_maps**
 
 > > Collect the number of memory mapped files of the process.
 > > The limit for this number is configured via */proc/sys/vm/max\_map\_count* in
