@@ -12,10 +12,6 @@
 
 static char *path_proc_nfsd;
 
-static bool report_v2 = true;
-static bool report_v3 = true;
-static bool report_v4 = true;
-
 static const char *nfs2_procedures_names[] = {
     "null", "getattr", "setattr", "root",   "lookup",  "readlink",
     "read", "wrcache", "write",   "create", "remove",  "rename",
@@ -149,6 +145,21 @@ static metric_family_t fams[FAM_NFSD_MAX] = {
     },
 };
 
+enum {
+    COLLECT_NFS_V2      = (1 <<  0),
+    COLLECT_NFS_V3      = (1 <<  1),
+    COLLECT_NFS_V4      = (1 <<  2)
+};
+
+static cf_flags_t nfsd_flags[] = {
+    { "nfs-v2",      COLLECT_NFS_V2      },
+    { "nfs-v3",      COLLECT_NFS_V3      },
+    { "nfs-v4",      COLLECT_NFS_V4      }
+};
+static size_t nfsd_flags_size = STATIC_ARRAY_SIZE(nfsd_flags);
+
+static uint64_t flags = COLLECT_NFS_V2 | COLLECT_NFS_V3 | COLLECT_NFS_V4;
+
 static int nfsd_read(void)
 {
     FILE *fh = fopen(path_proc_nfsd, "r");
@@ -246,14 +257,14 @@ static int nfsd_read(void)
             char *proto = NULL;
             switch (*(fields[0] + strlen("proc"))) {
             case '2':
-                if (!report_v2)
+                if (!(flags & COLLECT_NFS_V2))
                     continue;
                 proto = "2";
                 procedures_names = nfs2_procedures_names;
                 procedures_names_num = nfs2_procedures_names_num;
                 break;
             case '3':
-                if (!report_v3)
+                if (!(flags & COLLECT_NFS_V3))
                     continue;
                 proto = "3";
                 procedures_names = nfs3_procedures_names;
@@ -262,7 +273,7 @@ static int nfsd_read(void)
             case '4':
                 if (strcmp(fields[0], "proc4ops") != 0)
                     continue;
-                if (!report_v4)
+                if (!(flags & COLLECT_NFS_V4))
                     continue;
                 proto = "4";
                 procedures_names = nfs4_procedures_names;
@@ -302,12 +313,8 @@ static int nfsd_config(config_item_t *ci)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
-        if (strcasecmp(child->key, "report-v2") == 0) {
-            status = cf_util_get_boolean(child, &report_v2);
-        } else if (strcasecmp(child->key, "report-v3") == 0) {
-            status = cf_util_get_boolean(child, &report_v3);
-        } else if (strcasecmp(child->key, "report-v4") == 0) {
-            status = cf_util_get_boolean(child, &report_v4);
+        if (strcasecmp("collect", child->key) == 0) {
+            status = cf_util_get_flags(child, nfsd_flags, nfsd_flags_size, &flags);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

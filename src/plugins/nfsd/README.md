@@ -8,9 +8,7 @@ NCOLLECTD-NFSD(5) - File Formats Manual
 
 	load-plugin nfsd
 	plugin nfsd {
-	    report-v2 true|false
-	    report-v3 true|false
-	    report-v4 true|false
+	    collect nfs-v2|nfs-v3|nfs-v4
 	}
 
 # DESCRIPTION
@@ -20,17 +18,18 @@ of the Network File System (NFS).
 It counts the number of procedure calls for each procedure,
 grouped by version.
 
-**report-v2** *true|false*
+**collect** *nfs-v2|nfs-v3|nfs-v4*
 
-> Collect NFS v2 procedure calls metrics.
+> The option *nfs-v2* collect NFSv2 procedure call statistics, *nfs-v3*
+> collect NFSv3 procedure call statistics and *nfs-v4* collect NFSv4
+> procedure call statistics.
+> Putting up **!** in front of an option you disable that option,
+> for example: *!nfs-v2*.
+> You can put multiple options in one line for example:
 
-**report-v3** *true|false*
+> >   **collect** *"!all"* *nfs-v4*
 
-> Collect NFS v3 procedure calls metrics.
-
-**report-v4** *true|false*
-
-> Collect NFS v4 procedure calls metrics.
+> By default all options are enabled.
 
 # SEE ALSO
 
