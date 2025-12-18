@@ -182,6 +182,10 @@ The scraper plugin collect metrics from a http endpoint.
 
 > > > The number of new connections that were created to achieve the transfer.
 
+> > **reponse\_code**
+
+> > > Measure response code for the request.
+
 > > **appconnect\_time**
 
 > > > Time it took from the start until the SSL connect/handshake to the remote

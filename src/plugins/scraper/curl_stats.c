@@ -26,8 +26,9 @@ enum {
     COLLECT_REDIRECT_TIME           = (1 << 13),
     COLLECT_REDIRECT_COUNT          = (1 << 14),
     COLLECT_NUM_CONNECTS            = (1 << 15),
+    COLLECT_RESPONSE_CODE           = (1 << 16),
 #ifdef HAVE_CURLINFO_APPCONNECT_TIME
-    COLLECT_APPCONNECT_TIME         = (1 << 16),
+    COLLECT_APPCONNECT_TIME         = (1 << 17),
 #endif
 };
 
@@ -48,6 +49,7 @@ static cf_flags_t curl_stats_flags[] = {
     { "redirect_time",           COLLECT_REDIRECT_TIME           },
     { "redirect_count",          COLLECT_REDIRECT_COUNT          },
     { "num_connects",            COLLECT_NUM_CONNECTS            },
+    { "response_code",           COLLECT_RESPONSE_CODE           },
 #ifdef HAVE_CURLINFO_APPCONNECT_TIME
     { "appconnect_time",         COLLECT_APPCONNECT_TIME         },
 #endif
@@ -107,6 +109,7 @@ static struct {
     { COLLECT_REDIRECT_TIME,           CURLINFO_REDIRECT_TIME,             DISPATCH_GAUGE, "redirect_seconds"       },
     { COLLECT_REDIRECT_COUNT,          CURLINFO_REDIRECT_COUNT,            DISPATCH_SIZE,  "redirects"              },
     { COLLECT_NUM_CONNECTS,            CURLINFO_NUM_CONNECTS,              DISPATCH_SIZE,  "connects"               },
+    { COLLECT_RESPONSE_CODE,           CURLINFO_RESPONSE_CODE,             DISPATCH_SIZE,  "response_code"          },
 #ifdef HAVE_CURLINFO_APPCONNECT_TIME
     { COLLECT_APPCONNECT_TIME,         CURLINFO_APPCONNECT_TIME,           DISPATCH_GAUGE, "appconnect_seconds"     },
 #endif
@@ -118,7 +121,8 @@ int curl_stats_from_config(config_item_t *ci, uint64_t *flags)
     return cf_util_get_flags(ci, curl_stats_flags, curl_stats_flags_size, flags);
 }
 
-int curl_stats_dispatch(CURL *curl, uint64_t flags, char *metric_prefix ,label_set_t *labels)
+int curl_stats_dispatch(CURL *curl, uint64_t flags, plugin_filter_t *filter,
+                                    char *metric_prefix ,label_set_t *labels)
 {
     if (curl == NULL) {
         PLUGIN_ERROR("dispatch() called with missing arguments (curl=%p)", curl);
@@ -130,7 +134,7 @@ int curl_stats_dispatch(CURL *curl, uint64_t flags, char *metric_prefix ,label_s
             continue;
 
         CURLcode code;
-        value_t value = {0};
+        value_t value = VALUE_GAUGE(0);
         switch (curl_stats_field_specs[field].type) {
             case DISPATCH_SPEED: {
                 double raw;
@@ -177,7 +181,7 @@ int curl_stats_dispatch(CURL *curl, uint64_t flags, char *metric_prefix ,label_s
 
         metric_family_append(&fam, value, labels, NULL);
 
-        plugin_dispatch_metric_family(&fam, 0);
+        plugin_dispatch_metric_family_filtered(&fam, filter, 0);
     }
 
     return 0;

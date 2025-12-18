@@ -273,7 +273,7 @@ static int scaper_read_url(scraper_instance_t *target)
     label_set_t lstats = {0};
     label_set_clone(&lstats, target->label);
     label_set_add(&lstats, false, "instance", target->instance);
-    curl_stats_dispatch(target->curl, target->curl_stats_flags,
+    curl_stats_dispatch(target->curl, target->curl_stats_flags, target->filter,
                         target->metric_prefix != NULL ? target->metric_prefix : "scraper_",
                         &lstats);
     label_set_reset(&lstats);
