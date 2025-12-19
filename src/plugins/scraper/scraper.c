@@ -30,6 +30,8 @@ typedef struct {
     bool verify_peer;
     bool verify_host;
     char *cacert;
+    char *proxy;
+    bool proxy_tunnel;
 
     cdtime_t timeout;
 
@@ -262,6 +264,23 @@ static int scaper_read_url(scraper_instance_t *target)
         return -1;
     }
 
+    if (target->proxy != NULL) {
+        rcode = curl_easy_setopt(target->curl, CURLOPT_PROXY, target->proxy);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_PROXY failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(target->curl, CURLOPT_HTTPPROXYTUNNEL,
+                                               target->proxy_tunnel ? 1L : 0L);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HTTPPROXYTUNNEL failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
     int status = curl_easy_perform(target->curl);
     if (status != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed with status %i: %s (%s)",
@@ -397,6 +416,7 @@ static void scraper_instance_free(void *arg)
     free(target->credentials);
     free(target->cacert);
     free(target->post_body);
+    free(target->proxy);
 
     curl_slist_free_all(target->headers);
     free(target->metric_prefix);
@@ -467,6 +487,10 @@ static int scraper_config_url(scraper_instance_t *target, config_item_t *ci)
             status = cf_util_get_cdtime(child, &target->timeout);
         } else if (strcasecmp("collect", child->key) == 0) {
             status = curl_stats_from_config(child, &target->curl_stats_flags);
+        } else if (strcasecmp("proxy", child->key) == 0) {
+            status = cf_util_get_string(child, &target->proxy);
+        } else if (strcasecmp("proxy-tunnel", child->key) == 0) {
+            status = cf_util_get_boolean(child, &target->proxy_tunnel);
         }
 
         if (status != 0)

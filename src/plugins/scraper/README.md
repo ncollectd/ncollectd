@@ -21,6 +21,8 @@ NCOLLECTD-SCRAPER(5) - File Formats Manual
 	            header header
 	            post data
 	            timeout seconds
+	            proxy proxy-url
+	            proxy-tunnel true|false
 	            collect flags
 	        }
 	        file path
@@ -113,6 +115,14 @@ The scraper plugin collect metrics from a http endpoint.
 > > network connection will stall one read thread.
 > > Adjust the **read-threads** global setting accordingly to prevent this from
 > > blocking other plugins.
+
+> **proxy** *proxy-url*
+
+> > Set the proxy URL to send requests through the HTTP proxy.
+
+> **proxy-tunnel** *true|false*
+
+> > If set to *true* tunnel all operations through the HTTP proxy.
 
 > **collect** *flags*
 
