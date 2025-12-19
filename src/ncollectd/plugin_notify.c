@@ -106,8 +106,6 @@ static void *plugin_notify_thread(void *args)
 {
     notify_queue_thread_t *notifier = args;
 
-    DEBUG("start", notifier->name);
-
     plugin_ctx_t ctx = {
         .name = (char *)notifier->super.name,
         .interval = 0,
@@ -122,7 +120,7 @@ static void *plugin_notify_thread(void *args)
             continue;
 
         DEBUG("%s: de-queue %p (remaining queue length: %ld)",
-              notifier->super.name, elem, notifier->super.queue_length);
+              notifier->super.name, (void *)elem, notifier->super.queue_length);
 
         /* Should elem be written to all plugins or this plugin in particular? */
         if ((elem->super.plugin == NULL) ||
