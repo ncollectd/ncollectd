@@ -239,8 +239,22 @@ endif()
 
 if(BUILD_SOLARIS)
     add_definitions(-D_POSIX_PTHREAD_SEMANTICS)
+    set(CMAKE_MODULE_LINKER_FLAGS
+        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-M,${CMAKE_SOURCE_DIR}/src/plugins.script")
 elseif(BUILD_AIX)
     add_definitions(-D_THREAD_SAFE_ERRNO)
+    set(CMAKE_C_LINK_EXECUTABLE_WITH_EXPORTS "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> \
+-Wl,-brtl -Wl,-bexpall <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+    set(CMAKE_C_CREATE_SHARED_MODULE "<CMAKE_C_COMPILER> <CMAKE_SHARED_MODULE_C_FLAGS> \
+-Wl,-brtl -Wl,-G -Wl,-bexport:${CMAKE_SOURCE_DIR}/src/plugins.export \
+-Wl,-bnoentry -Wl,-berok <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> \
+<CMAKE_SHARED_MODULE_CREATE_C_FLAGS> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>")
+elseif(BUILD_DARWIN)
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,dynamic_lookup \
+-Wl,-exported_symbol,_module_register")
+else()
+    set(CMAKE_MODULE_LINKER_FLAGS
+        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--version-script=${CMAKE_SOURCE_DIR}/src/plugins.script")
 endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "")
@@ -290,11 +304,6 @@ add_custom_target(dist
             | xz -9 > "${CMAKE_BINARY_DIR}/${NCOLLECTD_ARCHIVE_NAME}.tar.xz"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
-if(BUILD_AIX)
-    set(CMAKE_C_LINK_EXECUTABLE_WITH_EXPORTS "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> \
--Wl,-brtl -Wl,-bexpall <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-endif()
-
 add_subdirectory(src/libutils)
 add_subdirectory(src/libmetric)
 add_subdirectory(src/libxson)
@@ -328,22 +337,6 @@ function(plugin_option _PLUGIN_VAR _PLUGIN_HELP _PLUGIN_ENABLED)
 
     option(${_PLUGIN_VAR} ${_PLUGIN_HELP} ${_ENABLE_PLUGIN})
 endfunction()
-
-if(BUILD_SOLARIS)
-    set(CMAKE_MODULE_LINKER_FLAGS
-        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-M,${CMAKE_SOURCE_DIR}/src/plugins.script")
-elseif(BUILD_DARWIN)
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,dynamic_lookup \
--Wl,-exported_symbol,_module_register")
-elseif(BUILD_AIX)
-    set(CMAKE_C_CREATE_SHARED_MODULE "<CMAKE_C_COMPILER> <CMAKE_SHARED_MODULE_C_FLAGS> \
--Wl,-brtl -Wl,-G -Wl,-bexport:${CMAKE_SOURCE_DIR}/src/plugins.export \
--Wl,-bnoentry -Wl,-berok <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> \
-<CMAKE_SHARED_MODULE_CREATE_C_FLAGS> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>")
-else()
-    set(CMAKE_MODULE_LINKER_FLAGS
-        "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--version-script=${CMAKE_SOURCE_DIR}/src/plugins.script")
-endif()
 
 file(GLOB plugin_list LIST_DIRECTORIES true src/plugins/*)
 foreach(dir ${plugin_list})
