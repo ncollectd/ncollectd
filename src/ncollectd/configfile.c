@@ -674,8 +674,27 @@ static config_item_t *cf_read_generic(const char *path, const char *pattern, int
         return NULL;
     }
 
+    size_t path_len = strlen(path);
+
+    if (path_len > (PATH_MAX-1)) {
+        ERROR("configfile: path '%s' exceeds PATH_MAX.", path);
+        return NULL;
+    }
+
+    char path_spc[PATH_MAX];
+    size_t n,m;
+    for (n = 0, m = 0; n < path_len; n++) {
+        if ((path[n] == ' ') && ((n == 0) || ((n > 0) && (path[n-1] != '\\')))) {
+            path_spc[m++] = '\\';
+            path_spc[m++] = ' ';
+        } else {
+            path_spc[m++] = path[n];
+        }
+    }
+    path_spc[m] = '\0';
+
     wordexp_t we;
-    int status = wordexp(path, &we, WRDE_NOCMD);
+    int status = wordexp(path_spc, &we, WRDE_NOCMD);
     if (status != 0) {
         ERROR("configfile: wordexp (%s) failed.", path);
         return NULL;
@@ -683,6 +702,7 @@ static config_item_t *cf_read_generic(const char *path, const char *pattern, int
 
     config_item_t *root = calloc(1, sizeof(*root));
     if (root == NULL) {
+        wordfree(&we);
         ERROR("configfile: calloc failed.");
         return NULL;
     }
