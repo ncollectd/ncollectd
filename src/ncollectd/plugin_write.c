@@ -117,8 +117,6 @@ static void *plugin_write_thread(void *args)
 {
     write_queue_thread_t *writer = args;
 
-    DEBUG("start", writer->name);
-
     cdtime_t next_flush = 0;
     if (writer->flush_cb != NULL)
         next_flush = cdtime() + writer->flush_interval;
@@ -136,7 +134,7 @@ static void *plugin_write_thread(void *args)
                                                                        next_flush);
         if (elem != NULL) {
             DEBUG("%s: de-queue %p (remaining queue length: %ld)",
-                  writer->super.name, elem, writer->super.queue_length);
+                  writer->super.name, (void *)elem, writer->super.queue_length);
 
             /* Should elem be written to all plugins or this plugin in particular? */
             if ((elem->super.plugin == NULL) ||
