@@ -21,6 +21,8 @@ NCOLLECTD-HTTP(5) - File Formats Manual
 	        ca-cert /path/to/ca-cert
 	        header header
 	        post data
+	        proxy proxy-url
+	        proxy-tunnel true|false
 	        interval seconds
 	        timeout seconds
 	        metric-prefix prefix
@@ -75,7 +77,7 @@ The following options are valid within **instance** blocks:
 
 > Password to use if authorization is required to read the page.
 
-**password** *env-name*
+**password-env** *env-name*
 
 > Get the password to use if authorization is required to read the page from
 > the environment variable *env-name*.
@@ -121,6 +123,14 @@ The following options are valid within **instance** blocks:
 > This option will usually need to be accompanied by a **header** option
 > to set an appropriate Content-Type for the post body
 > (e.g. to application/x-www-form-urlencoded).
+
+**proxy** *proxy-url*
+
+> Set the proxy URL to send requests through the HTTP proxy.
+
+**proxy-tunnel** *true|false*
+
+> If set to *true* tunnel all operations through the HTTP proxy.
 
 **interval** *seconds*
 

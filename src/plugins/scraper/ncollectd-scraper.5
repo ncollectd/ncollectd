@@ -22,6 +22,8 @@
             \fBheader\fP \fIheader\fP
             \fBpost\fP \fIdata\fP
             \fBtimeout\fP \fIseconds\fP
+            \fBproxy\fP \fIproxy-url\fP
+            \fBproxy-tunnel\fP \fItrue|false\fP
             \fBcollect\fP \fIflags\fP
         }
         \fBfile\fP \fIpath\fP
@@ -91,6 +93,10 @@ If \fBtimeout\fP is bigger than the \fBinterval\fP, keep in mind that each slow
 network connection will stall one read thread.
 Adjust the \fBread-threads\fP global setting accordingly to prevent this from
 blocking other plugins.
+.It \fBproxy\fP \fIproxy-url\fP
+Set the proxy URL to send requests through the HTTP proxy.
+.It \fBproxy-tunnel\fP \fItrue|false\fP
+If set to \fItrue\fP tunnel all operations through the HTTP proxy.
 .It \fBcollect\fP \fIflags\fP
 .Bl -tag -width Ds
 .It \fBtotal_time\fP

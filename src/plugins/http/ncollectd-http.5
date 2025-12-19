@@ -22,6 +22,8 @@
         \fBca-cert\fP \fI/path/to/ca-cert\fP
         \fBheader\fP \fIheader\fP
         \fBpost\fP \fIdata\fP
+        \fBproxy\fP \fIproxy-url\fP
+        \fBproxy-tunnel\fP \fItrue|false\fP
         \fBinterval\fP \fIseconds\fP
         \fBtimeout\fP \fIseconds\fP
         \fBmetric-prefix\fP \fIprefix\fP
@@ -65,7 +67,7 @@ Get the username to use if authorization is required to read the page from
 the environment variable \fIenv-name\fP.
 .It \fBpassword\fP \fIpassword\fP
 Password to use if authorization is required to read the page.
-.It \fBpassword\fP \fIenv-name\fP
+.It \fBpassword-env\fP \fIenv-name\fP
 Get the password to use if authorization is required to read the page from
 the environment variable \fIenv-name\fP.
 .It \fBdigest\fP \fItrue|false\fP
@@ -98,6 +100,10 @@ The complete data to be posted is given as the argument.
 This option will usually need to be accompanied by a \fBheader\fP option
 to set an appropriate \f(CWContent-Type\fP for the post body
 (e.g. to \f(CWapplication/x-www-form-urlencoded\fP).
+.It \fBproxy\fP \fIproxy-url\fP
+Set the proxy URL to send requests through the HTTP proxy.
+.It \fBproxy-tunnel\fP \fItrue|false\fP
+If set to \fItrue\fP tunnel all operations through the HTTP proxy.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
 instanced.

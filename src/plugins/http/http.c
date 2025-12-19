@@ -33,6 +33,8 @@ typedef struct {
     char *post_body;
     int timeout;
     uint64_t curl_stats_flags;
+    char *proxy;
+    bool proxy_tunnel;
 
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
@@ -100,6 +102,7 @@ static void chttp_free(void *arg)
     curl_slist_free_all(ctx->headers);
 
     free(ctx->buffer);
+    free(ctx->proxy);
 
     if (ctx->matches != NULL)
         plugin_match_shutdown(ctx->matches);
@@ -322,6 +325,22 @@ static int chttp_read(user_data_t *ud)
         return -1;
     }
 
+    if (ctx->proxy != NULL) {
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_PROXY, ctx->proxy);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_PROXY failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(ctx->curl, CURLOPT_HTTPPROXYTUNNEL, ctx->proxy_tunnel ? 1L : 0L);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HTTPPROXYTUNNEL failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
     int status = curl_easy_perform(ctx->curl);
     if (status != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed with status %i: %s", status, ctx->curl_errbuf);
@@ -426,6 +445,10 @@ static int chttp_config_instance(config_item_t *ci)
             status = chttp_config_append_string("Header", &ctx->headers, child);
         } else if (strcasecmp("post", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->post_body);
+        } else if (strcasecmp("proxy", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->proxy);
+        } else if (strcasecmp("proxy-tunnel", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->proxy_tunnel);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("timeout", child->key) == 0) {
