@@ -1,7 +1,7 @@
 include(FindPackageHandleStandardArgs)
 
 find_path(LIBCUDA_INCLUDE_DIR NAMES nvml.h)
-find_library(LIBCUDA_LIBRARIES NAMES nvidia-ml)
+find_library(LIBCUDA_LIBRARIES NAMES nvidia-ml PATH_SUFFIXES "lib64/stubs")
 
 find_package_handle_standard_args(LibCuda DEFAULT_MSG LIBCUDA_LIBRARIES LIBCUDA_INCLUDE_DIR)
 

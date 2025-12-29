@@ -143,7 +143,14 @@ static int nvml_read(void)
                                  NULL);
 
         unsigned int core_temp;
+#if NVML_API_VERSION >= 13
+        nvmlTemperature_t core_temp_s = {.version = nvmlTemperature_v1,
+                                         .sensorType = NVML_TEMPERATURE_GPU };
+        nv_status = nvmlDeviceGetTemperatureV(dev, &core_temp_s);
+        core_temp = core_temp_s.temperature;
+#else
         nv_status = nvmlDeviceGetTemperature(dev, NVML_TEMPERATURE_GPU, &core_temp);
+#endif
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_TEMPERATURE_CELSIUS],
                                  VALUE_GAUGE(core_temp), NULL,
