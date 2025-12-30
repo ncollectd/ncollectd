@@ -429,6 +429,7 @@ in case you know it.
             \fBcollect\fP \fImbean\fP
             \fBuser\fP \fIuser\fP
             \fBpassword\fP \fIpassword\fP
+            \fBssl\fP \fItrue|false\fP
         }
     }
 }
@@ -496,6 +497,10 @@ If not configured, “monitorRole” will be used.
 .It \fBpassword\fP \fIpassword\fP
 Use \fIpassword\fP to authenticate to the server.
 If not given, unauthenticated access is used.
+.It \fBssl\fP \fItrue|false\fP
+Use \fISSL\fP to connect to the jmx ssl server configured with
+\f(CWcom.sun.management.jmxremote.ssl\fP.
+If not given, plain connection is used.
 .El
 .El
 .Sh "SEE ALSO"

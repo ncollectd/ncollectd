@@ -55,6 +55,25 @@ public class GenericJMX implements NCollectdConfigInterface,
         return v.getString();
     }
 
+    public static Boolean getConfigBoolean (ConfigItem ci)
+    {
+        List<ConfigValue> values = ci.getValues();
+        if (values.size() != 1) {
+            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+                    + " configuration option needs exactly one boolean argument.");
+            return (null);
+        }
+
+        ConfigValue v = values.get(0);
+        if (v.getType() != ConfigValue.CONFIG_TYPE_BOOLEAN) {
+            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+                    + " configuration option needs exactly one boolean argument.");
+            return (null);
+        }
+
+        return v.getBoolean();
+    }
+
     public static void getConfigLabel(ConfigItem ci, HashMap<String, String> labels)
     {
         List<ConfigValue> values = ci.getValues();
