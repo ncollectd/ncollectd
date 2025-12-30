@@ -18,6 +18,9 @@ import javax.management.remote.JMXServiceURL;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 
+import static javax.management.remote.rmi.RMIConnectorServer.RMI_CLIENT_SOCKET_FACTORY_ATTRIBUTE;
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+
 import org.ncollectd.api.NCollectd;
 import org.ncollectd.api.MetricFamily;
 import org.ncollectd.api.ConfigValue;
@@ -29,6 +32,7 @@ class GenericJMXConfConnection
     private String _password = null;
     private String _host = null;
     private String _service_url = null;
+    private boolean _ssl = false;
     private String _metric_prefix = null;
     private HashMap<String, String> _labels = null;
     private JMXConnector _jmx_connector = null;
@@ -71,6 +75,12 @@ class GenericJMXConfConnection
             environment.put(JMXConnector.CREDENTIALS, credentials);
             environment.put(JMXConnectorFactory.PROTOCOL_PROVIDER_CLASS_LOADER,
                             this.getClass().getClassLoader());
+        }
+
+        if (this._ssl) {
+            SslRMIClientSocketFactory rmiClientSocketFactory = new SslRMIClientSocketFactory();
+            environment.put(RMI_CLIENT_SOCKET_FACTORY_ATTRIBUTE, rmiClientSocketFactory);
+            environment.put("com.sun.jndi.rmi.factory.socket", rmiClientSocketFactory);
         }
 
         try {
@@ -139,6 +149,8 @@ class GenericJMXConfConnection
                 String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null)
                     this._metric_prefix = tmp;
+            } else if (child.getKey().equalsIgnoreCase("ssl")) {
+                this._ssl = GenericJMX.getConfigBoolean(child);
             } else if (child.getKey().equalsIgnoreCase("label")) {
                 GenericJMX.getConfigLabel(child, this._labels);
             } else if (child.getKey().equalsIgnoreCase("collect")) {
