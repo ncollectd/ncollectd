@@ -8,25 +8,19 @@
 #include "libutils/common.h"
 
 enum {
-    FAM_HOST_FILE_HANDLES_USED,
-    FAM_HOST_FILE_HANDLES_UNUSED,
-    FAM_HOST_FILE_HANDLES_MAX,
+    FAM_HOST_FILE_HANDLES_ALLOCATED,
+    FAM_HOST_FILE_HANDLES_MAXIMUN,
     FAM_HOST_FILE_MAX,
 };
 
 static metric_family_t fams[FAM_HOST_FILE_MAX] = {
-    [FAM_HOST_FILE_HANDLES_USED] = {
-        .name = "system_file_handles_used",
+    [FAM_HOST_FILE_HANDLES_ALLOCATED] = {
+        .name = "system_file_handles_allocated",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
-    [FAM_HOST_FILE_HANDLES_UNUSED] = {
-        .name = "system_file_handles_unused",
-        .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
-    },
-    [FAM_HOST_FILE_HANDLES_MAX] = {
-        .name = "system_file_handles_max",
+    [FAM_HOST_FILE_HANDLES_MAXIMUN] = {
+        .name = "system_file_handles_maximun",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
@@ -57,18 +51,13 @@ static int fhcount_read(void)
         return -1;
     }
 
-    // Define the values
     double used = 0;
     strtodouble(fields[0], &used);
-    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_USED], VALUE_GAUGE(used), NULL, NULL);
-
-    double unused = 0;
-    strtodouble(fields[1], &unused);
-    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_UNUSED], VALUE_GAUGE(unused), NULL, NULL);
+    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_ALLOCATED], VALUE_GAUGE(used), NULL, NULL);
 
     double max = 0;
     strtodouble(fields[2], &max);
-    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_MAX], VALUE_GAUGE(max), NULL, NULL);
+    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_MAXIMUN], VALUE_GAUGE(max), NULL, NULL);
 
     plugin_dispatch_metric_family_array(fams, FAM_HOST_FILE_MAX, 0);
     return 0;

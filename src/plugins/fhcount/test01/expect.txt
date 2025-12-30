@@ -1,6 +1,4 @@
-# TYPE system_file_handles_used gauge
-system_file_handles_used{hostname="localhost.localdomain"} 11168
-# TYPE system_file_handles_max gauge
-system_file_handles_max{hostname="localhost.localdomain"} 9.223372036854776e+18
-# TYPE system_file_handles_unused gauge
-system_file_handles_unused{hostname="localhost.localdomain"} 0
+# TYPE system_file_handles_allocated gauge
+system_file_handles_allocated{hostname="localhost.localdomain"} 11168
+# TYPE system_file_handles_maximun gauge
+system_file_handles_maximun{hostname="localhost.localdomain"} 9.223372036854776e+18
