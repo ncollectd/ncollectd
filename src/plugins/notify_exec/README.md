@@ -1,8 +1,8 @@
-NCOLLECTD-APACHE(5) - File Formats Manual
+NCOLLECTD-NOTIFY\_EXEC(5) - File Formats Manual
 
 # NAME
 
-**ncollectd-apache** - Documentation of ncollectd's apache plugin
+**ncollectd-notify\_exec** - Documentation of ncollectd's notify\_exec plugin
 
 # SYNOPSIS
 
@@ -12,7 +12,7 @@ NCOLLECTD-APACHE(5) - File Formats Manual
 	    if-match match {
 	        cmd program [args] ...
 	        user username
-	        group Ugroupname
+	        group groupname
 	        env key value
 	        format text|json|protob|env|environment
 	    }
@@ -37,7 +37,7 @@ notifications to the outside world.
 
 > > Execute the executable **cmd** as user *user*.
 
-> **group** *Ugroupname*
+> **group** *groupname*
 
 > > If the **group** is set, the effective group of the executed program
 > > is set to that group.

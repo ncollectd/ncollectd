@@ -1,8 +1,8 @@
-NCOLLECTD-APACHE(5) - File Formats Manual
+NCOLLECTD-INTERL\_RDT(5) - File Formats Manual
 
 # NAME
 
-**ncollectd-apache** - Documentation of ncollectd's apache plugin
+**ncollectd-intel\_rdt** - Documentation of ncollectd's intel\_rdt plugin
 
 # SYNOPSIS
 
