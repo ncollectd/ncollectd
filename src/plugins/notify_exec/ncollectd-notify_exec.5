@@ -1,10 +1,10 @@
 .\" SPDX-License-Identifier: GPL-2.0-only
 .Dd @NCOLLECTD_DATE@
-.Dt NCOLLECTD-APACHE 5
+.Dt NCOLLECTD-NOTIFY_EXEC 5
 .Os ncollectd @NCOLLECTD_VERSION@
 .Sh NAME
-.Nm ncollectd-apache
-.Nd Documentation of ncollectd's apache plugin
+.Nm ncollectd-notify_exec
+.Nd Documentation of ncollectd's notify_exec plugin
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP notify_exec
@@ -13,7 +13,7 @@
     \fBif-match\fP \fImatch\fP {
         \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
         \fBuser\fP \fIusername\fP
-        \fBgroup\fP \fIUgroupname\fP
+        \fBgroup\fP \fIgroupname\fP
         \fBenv\fP \fIkey\fP \fIvalue\fP
         \fBformat\fP \fItext|json|protob|env|environment\fP
     }
@@ -33,7 +33,7 @@ run at once if multiple notifications are received.
 .It \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
 .It \fBuser\fP \fIusername\fP
 Execute the executable \fBcmd\fP as user \fIuser\fP.
-.It \fBgroup\fP \fIUgroupname\fP
+.It \fBgroup\fP \fIgroupname\fP
 If the \fBgroup\fP is set, the effective group of the executed program
 is set to that group.
 Please note that in order to change the user and/or group the daemon needs

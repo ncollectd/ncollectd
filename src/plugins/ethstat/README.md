@@ -2,7 +2,7 @@ NCOLLECTD-ETHSTAT(5) - File Formats Manual
 
 # NAME
 
-**ncollectd-ethstat** - Documentation of ncollectd's apache plugin
+**ncollectd-ethstat** - Documentation of ncollectd's ethstat plugin
 
 # SYNOPSIS
 

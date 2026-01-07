@@ -1,8 +1,8 @@
-NCOLLECTD-APACHE(5) - File Formats Manual
+NCOLLECTD-INFO(5) - File Formats Manual
 
 # NAME
 
-**ncollectd-apache** - Documentation of ncollectd's apache plugin
+**ncollectd-info** - Documentation of ncollectd's info plugin
 
 # SYNOPSIS
 
@@ -10,15 +10,14 @@ NCOLLECTD-APACHE(5) - File Formats Manual
 	plugin info {
 	    metric "name" {
 	        help "help"
-	        type gauge|counter|unknown|info
 	        label key value
-	        value value
+	        info key value
 	    }
 	}
 
 # DESCRIPTION
 
-The **info** plugin allow to define static metrics.
+The **info** plugin allow to define static info metrics.
 By default sends the metric **ncollectd\_info** with the ncollectd version.
 
 The configuration of the **info** plugin consists of one or more **metric**
@@ -31,21 +30,15 @@ The following options are accepted within each **metric** mblock:
 
 > Set the **help** text for the metric.
 
-**type** *gauge|counter|unknown|info*
-
-> Defines the metric type, must be *gauge*, *counter*, *unknown* or
-> *info*.
-> If not set is *Info*.
-
 **label** *key* *value*
 
-> Append the label *key*=*value* to the submitting metrics.
+> Append the label *key*=*value* to the metric.
 > Can appear multiple times.
 
-**value** *value*
+**info** *key* *value*
 
-> Set the value of the metric.
-> If not set is 1.
+> Append the info *key*=*value* to the metric.
+> Can appear multiple times.
 
 # SEE ALSO
 
