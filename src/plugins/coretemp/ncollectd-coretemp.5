@@ -1,0 +1,21 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-CORETEMP 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-coretemp
+.Nd Documentation of ncollectd's coretemp plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP coretemp
+\fBplugin\fP coretemp
+.Ed
+.Sh DESCRIPTION
+The \fBcoretemp\fP plugin collects temperature info per-core and per-package
+in Linux systems from the DTS (Digital Temperature Sensor) embedded inside
+Intel CPUs.
+This info is exposed by the coretemp driver in
+\f(CW/sys/devices/platform/coretemp.X\fP.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
