@@ -1,0 +1,19 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.DT NCOLLECTD-THERMAL_THROTTLE 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-thermal_throttle
+.Nd Documentation of ncollectd's thermal_throttle plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBthermal_throttle-plugin\fP thermal_throttle
+\fBplugin\fP thermal_throttle
+.Ed
+.Sh DESCRIPTION
+The \fBthermal_throttle\fP plugin collects thermal throttling events
+from Intel processors that have built in automatic and adaptive thermal
+monitoring mechanisms.
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
