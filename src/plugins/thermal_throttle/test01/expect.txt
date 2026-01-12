@@ -1,0 +1,14 @@
+# TYPE system_thermal_throttle_core_count counter
+system_thermal_throttle_core_count_total{core="0",hostname="localhost.localdomain"} 621
+system_thermal_throttle_core_count_total{core="1",hostname="localhost.localdomain"} 882
+system_thermal_throttle_core_count_total{core="2",hostname="localhost.localdomain"} 0
+system_thermal_throttle_core_count_total{core="3",hostname="localhost.localdomain"} 534
+# TYPE system_thermal_throttle_core_time_seconds counter
+system_thermal_throttle_core_time_seconds_total{core="0",hostname="localhost.localdomain"} 1.385
+system_thermal_throttle_core_time_seconds_total{core="1",hostname="localhost.localdomain"} 2.643
+system_thermal_throttle_core_time_seconds_total{core="2",hostname="localhost.localdomain"} 0
+system_thermal_throttle_core_time_seconds_total{core="3",hostname="localhost.localdomain"} 1.327
+# TYPE system_thermal_throttle_package_count counter
+system_thermal_throttle_package_count_total{hostname="localhost.localdomain",package="0"} 1325
+# TYPE system_thermal_throttle_package_time_seconds counter
+system_thermal_throttle_package_time_seconds_total{hostname="localhost.localdomain",package="0"} 3.666
