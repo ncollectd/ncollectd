@@ -69,7 +69,7 @@ static int coretemp_read_temp(int dir_fd, __attribute__((unused)) const char *di
 
     const char *suffix = filename + strlen("temp");
     while(isdigit(*suffix)) suffix++;
-        
+
     if (*suffix != '_')
         return 0;
 
@@ -85,7 +85,7 @@ static int coretemp_read_temp(int dir_fd, __attribute__((unused)) const char *di
     strnrtrim(label, len);
 
     coretemp_t *coretemp = (coretemp_t *)user_data;
-    
+
     char prefix[256];
     size_t prefix_len = suffix - filename;
     if (prefix_len > (sizeof(prefix) - 1))
@@ -111,7 +111,7 @@ static int coretemp_read_temp(int dir_fd, __attribute__((unused)) const char *di
     status = filetodouble_at(dir_fd, path_temp, &crit);
     if (status != 0)
         return 0;
-    
+
     if (strncmp(label, "Package id ", strlen("Package id ")) == 0) {
         char *package_id = label + strlen("Package id ");
         metric_family_append(&fams[FAM_CORETEMP_PACKAGE_TEMPERATURE_CELSIUS],
@@ -194,7 +194,7 @@ static int coretemp_read_coretemp(int dir_fd, __attribute__((unused)) const char
 static int coretemp_read (void)
 {
     walk_directory(path_sys_devices, coretemp_read_coretemp, NULL, 0);
-    
+
     plugin_dispatch_metric_family_array(fams, FAM_CORETEMP_MAX, 0);
 
     return 0;
