@@ -313,7 +313,7 @@ static JSValue qjs_register_read(JSContext *ctx, JSValueConst this_val, int argc
     JSValue dup_func = JS_DupValue(ctx, func);
     if (JS_IsNull(dup_func)) {
         free(qjc);
-
+        return JS_ThrowTypeError(ctx, "function is null");
     }
 
     qjc->qjs = qjs;
@@ -424,7 +424,7 @@ static JSValue qjs_register_write(JSContext *ctx, JSValueConst this_val, int arg
     JSValue dup_func = JS_DupValue(ctx, func);
     if (JS_IsNull(dup_func)) {
         free(qjc);
-
+        return JS_ThrowTypeError(ctx, "function is null");
     }
 
     qjc->qjs = qjs;
@@ -577,7 +577,7 @@ static JSValue qjs_register_notification(JSContext *ctx, JSValueConst this_val, 
     JSValue dup_func = JS_DupValue(ctx, func);
     if (JS_IsNull(dup_func)) {
         free(qjc);
-
+        return JS_ThrowTypeError(ctx, "function is null");
     }
 
     qjc->qjs = qjs;
@@ -860,6 +860,7 @@ static int qjs_config_script_add_include(qjs_script_t *qjs, config_item_t *ci)
         return -1;
     }
 
+    qjs->includes = tmp;
     qjs->includes[qjs->includes_num] = include;
     qjs->includes_num++;
 
