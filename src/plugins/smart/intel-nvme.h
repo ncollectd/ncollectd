@@ -12,7 +12,6 @@
 #define __force
 #endif
 
-#define NVME_SMART_INTEL_CDW10 0x008000ca
 #define INTEL_VENDOR_ID 0x8086
 
 struct __attribute__((packed)) nvme_additional_smart_log_item {
@@ -58,3 +57,6 @@ struct nvme_additional_smart_log {
     struct nvme_additional_smart_log_item media_bytes_read;
     struct nvme_additional_smart_log_item avail_fw_downgrades;
 };
+
+#define NVME_SMART_INTEL_CDW10 ((((sizeof(struct nvme_additional_smart_log) >> 2) - 1) << 16) | 0x000000ca)
+
