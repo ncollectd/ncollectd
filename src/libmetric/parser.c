@@ -477,7 +477,6 @@ static int metric_parse_metric(metric_parser_t *mp, const char *line)
     if (sc == 0)
         return -1;
 
-    size_t metric_fixed_size = metric_size;
     metric_sub_type_t metric_sub_type = METRIC_SUB_TYPE_UNKNOWN;
     const char *label_name = NULL;
     size_t label_name_size = 0;
@@ -491,10 +490,8 @@ static int metric_parse_metric(metric_parser_t *mp, const char *line)
         break;
     case METRIC_TYPE_COUNTER:
         if (sstrncmpend(metric, metric_size, "_total", strlen("_total")) == 0) {
-            metric_fixed_size -= strlen("_total");
             metric_sub_type = METRIC_SUB_TYPE_COUNTER_TOTAL;
         } else if (sstrncmpend(metric, metric_size, "_created", strlen("_created")) == 0) {
-            metric_fixed_size -= strlen("_created");
             metric_sub_type = METRIC_SUB_TYPE_COUNTER_CREATED;
         } else {
             metric_sub_type = METRIC_SUB_TYPE_COUNTER_TOTAL;
@@ -506,22 +503,14 @@ static int metric_parse_metric(metric_parser_t *mp, const char *line)
         label_name_size = metric_size;
         break;
     case METRIC_TYPE_INFO:
-        if (sstrncmpend(metric, metric_size, "_info", strlen("_info")) == 0) {
-            metric_fixed_size -= strlen("_info");
-            metric_sub_type = METRIC_SUB_TYPE_INFO;
-        } else {
-            metric_sub_type = METRIC_SUB_TYPE_INFO;
-        }
+        metric_sub_type = METRIC_SUB_TYPE_INFO;
         break;
     case METRIC_TYPE_SUMMARY:
         if (sstrncmpend(metric, metric_size, "_count", strlen("_count")) == 0) {
-            metric_fixed_size -= strlen("_count");
             metric_sub_type = METRIC_SUB_TYPE_SUMMARY_COUNT;
         } else if (sstrncmpend(metric, metric_size, "_sum", strlen("_sum")) == 0) {
-            metric_fixed_size -= strlen("_sum");
             metric_sub_type = METRIC_SUB_TYPE_SUMMARY_SUM;
         } else if (sstrncmpend(metric, metric_size, "_created", strlen("_created")) == 0) {
-            metric_fixed_size -= strlen("_created");
             metric_sub_type = METRIC_SUB_TYPE_SUMMARY_CREATED;
         } else {
             metric_sub_type = METRIC_SUB_TYPE_SUMMARY;
@@ -531,18 +520,14 @@ static int metric_parse_metric(metric_parser_t *mp, const char *line)
         break;
     case METRIC_TYPE_HISTOGRAM:
         if (sstrncmpend(metric, metric_size, "_count", strlen("_count")) == 0) {
-            metric_fixed_size -= strlen("_count");
             metric_sub_type = METRIC_SUB_TYPE_HISTOGRAM_COUNT;
         } else if (sstrncmpend(metric, metric_size, "_sum", strlen("_sum")) == 0) {
-            metric_fixed_size -= strlen("_sum");
             metric_sub_type = METRIC_SUB_TYPE_HISTOGRAM_SUM;
         } else if (sstrncmpend(metric, metric_size, "_bucket", strlen("_bucket")) == 0) {
-            metric_fixed_size -= strlen("_bucket");
             metric_sub_type = METRIC_SUB_TYPE_HISTOGRAM_BUCKET;
             label_name = "le";
             label_name_size = strlen("le");
         } else if (sstrncmpend(metric, metric_size, "_created", strlen("_created")) == 0) {
-            metric_fixed_size -= strlen("_created");
             metric_sub_type = METRIC_SUB_TYPE_HISTOGRAM_CREATED;
         } else {
             return -1;
@@ -550,18 +535,14 @@ static int metric_parse_metric(metric_parser_t *mp, const char *line)
         break;
     case METRIC_TYPE_GAUGE_HISTOGRAM:
         if (sstrncmpend(metric, metric_size, "_gcount", strlen("_gcount")) == 0) {
-            metric_fixed_size -= strlen("_gcount");
             metric_sub_type = METRIC_SUB_TYPE_GAUGE_HISTOGRAM_GCOUNT;
         } else if (sstrncmpend(metric, metric_size, "_gsum", strlen("_gsum")) == 0) {
-            metric_fixed_size -= strlen("_gsum");
             metric_sub_type = METRIC_SUB_TYPE_GAUGE_HISTOGRAM_GSUM;
         } else if (sstrncmpend(metric, metric_size, "_bucket", strlen("_bucket")) == 0) {
-            metric_fixed_size -= strlen("_bucket");
             metric_sub_type = METRIC_SUB_TYPE_GAUGE_HISTOGRAM_BUCKET;
             label_name = "le";
             label_name_size = strlen("le");
         } else if (sstrncmpend(metric, metric_size, "_created", strlen("_created")) == 0) {
-            metric_fixed_size -= strlen("_created");
             metric_sub_type = METRIC_SUB_TYPE_GAUGE_HISTOGRAM_CREATED;
         } else {
             return -1;
