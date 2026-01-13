@@ -233,7 +233,8 @@ void config_dump(FILE *fh, config_item_t *ci)
         config_dump_config_item(&buf, 0, ci->children + i);
     }
 
-    fputs(buf.ptr, fh);
+    if (buf.ptr != NULL)
+        fputs(buf.ptr, fh);
 
     strbuf_destroy(&buf);
 }
