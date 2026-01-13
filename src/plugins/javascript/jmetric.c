@@ -132,35 +132,35 @@ static JSValue qjs_metric_unknown_ctor(JSContext *ctx, JSValueConst new_target, 
         if (JS_IsNumber(argv[0])) {
             double value = 0;
             if (JS_ToFloat64(ctx, &value, argv[0]))
-                return JS_EXCEPTION;
+                goto fail;
             m->value = VALUE_UNKNOWN_FLOAT64(value);
         } else if (JS_IsBigInt(ctx, argv[0])) {
             int64_t value = 0;
             if (JS_ToBigInt64(ctx, &value, argv[0]))
-                return JS_EXCEPTION;
+                goto fail;
             m->value = VALUE_UNKNOWN_INT64(value);
         } else {
-            return JS_EXCEPTION;
+            goto fail;
         }
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         JSValue ret = qjs_to_label_set(ctx, argv[1], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[2]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[3]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
@@ -347,35 +347,35 @@ static JSValue qjs_metric_gauge_ctor(JSContext *ctx, JSValueConst new_target, in
         if (JS_IsNumber(argv[0])) {
             double value = 0;
             if (JS_ToFloat64(ctx, &value, argv[0]))
-                return JS_EXCEPTION;
+                goto fail;
             m->value = VALUE_GAUGE_FLOAT64(value);
         } else if (JS_IsBigInt(ctx, argv[0])) {
             int64_t value = 0;
             if (JS_ToBigInt64(ctx, &value, argv[0]))
-                return JS_EXCEPTION;
+                goto fail;
             m->value = VALUE_GAUGE_INT64(value);
         } else {
-            return JS_EXCEPTION;
+            goto fail;
         }
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         JSValue ret = qjs_to_label_set(ctx, argv[1], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[2]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[3]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
@@ -562,35 +562,35 @@ static JSValue qjs_metric_counter_ctor(JSContext *ctx, JSValueConst new_target, 
         if (JS_IsBigInt(ctx, argv[0])) {
             int64_t value = 0;
             if (JS_ToBigInt64(ctx, &value, argv[0]))
-                return JS_EXCEPTION;
+                goto fail;
             m->value = VALUE_COUNTER_UINT64(value);
         } else if (JS_IsNumber(argv[0])) {
             double value = 0;
             if (JS_ToFloat64(ctx, &value, argv[0]))
-                return JS_EXCEPTION;
+                goto fail;
             m->value = VALUE_COUNTER_FLOAT64(value);
         } else {
-            return JS_EXCEPTION;
+            goto fail;
         }
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         JSValue ret = qjs_to_label_set(ctx, argv[1], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[2]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[3]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
@@ -776,26 +776,26 @@ static JSValue qjs_metric_info_ctor(JSContext *ctx, JSValueConst new_target, int
     if (!JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
         JSValue ret = qjs_to_label_set(ctx, argv[0], &m->value.info);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         JSValue ret = qjs_to_label_set(ctx, argv[1], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[2]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[3]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
@@ -1013,26 +1013,26 @@ static JSValue qjs_metric_state_set_ctor(JSContext *ctx, JSValueConst new_target
     if (!JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
         JSValue ret = qjs_to_state_set(ctx, argv[0], &m->value.state_set);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         JSValue ret = qjs_to_label_set(ctx, argv[1], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[2]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[3]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
@@ -1319,40 +1319,40 @@ static JSValue qjs_metric_summary_ctor(JSContext *ctx, JSValueConst new_target, 
     if (!JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
         double sum = 0;
         if (JS_ToFloat64(ctx, &sum, argv[0]))
-            return JS_EXCEPTION;
+            goto fail;
         m->value.summary->sum = sum;
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         int64_t count = 0;
         if (JS_ToInt64(ctx, &count, argv[1])) 
-            return JS_EXCEPTION;
+            goto fail;
         m->value.summary->count = count;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         JSValue ret = qjs_to_quantiles(ctx, argv[2], &m->value.summary);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         JSValue ret = qjs_to_label_set(ctx, argv[3], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[4]) && !JS_IsNull(argv[4])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[4]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[5]) && !JS_IsNull(argv[5])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[5]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
@@ -1658,33 +1658,33 @@ static JSValue qjs_metric_generic_histogram_ctor(JSContext *ctx, JSValueConst ne
     if (!JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
         double sum = 0;
         if (JS_ToFloat64(ctx, &sum, argv[0]))
-            return JS_EXCEPTION;
+            goto fail;
         m->value.summary->sum = sum;
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         JSValue ret = qjs_to_buckets(ctx, argv[1], &m->value.histogram);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         JSValue ret = qjs_to_label_set(ctx, argv[2], &m->label);
         if (!JS_IsUndefined(ret))
-            return JS_EXCEPTION;
+            goto fail;
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         double mtime = 0;
         if (JS_ToFloat64(ctx, &mtime, argv[3]))
-            return JS_EXCEPTION;
+            goto fail;
         m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[4]) && !JS_IsNull(argv[4])) {
         double minterval = 0;
         if (JS_ToFloat64(ctx, &minterval, argv[4]))
-            return JS_EXCEPTION;
+            goto fail;
         m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
