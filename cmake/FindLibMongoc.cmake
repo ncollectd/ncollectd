@@ -8,7 +8,7 @@ foreach(LIBMONGOC_NAME "libmongoc-1.0" "mongoc2")
     endif()
 endforeach()
 
-find_path(LIBMONGOC_INCLUDE_DIR NAMES mongoc.h
+find_path(LIBMONGOC_INCLUDE_DIR NAMES "mongoc.h" "mongoc/mongoc.h"
           HINTS ${PC_LIBMONGOC_INCLUDEDIR} ${PC_LIBMONGOC_INCLUDE_DIRS})
 find_library(LIBMONGOC_LIBRARIES NAMES "mongoc-1.0" "mongoc2"
              HINTS ${PC_LIBMONGOC_LIBDIR} ${PC_LIBMONGOC_LIBRARY_DIRS})
