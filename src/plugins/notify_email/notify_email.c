@@ -192,6 +192,12 @@ static int notify_email_notification(const notification_t *n,
         status |= strbuf_putstr(&buf, "\r\n");
     }
 
+    if (status != 0) {
+        strbuf_destroy(&buf);
+        PLUGIN_ERROR("failed to build message");
+        return -1;
+    }
+
     pthread_mutex_lock(&session_lock);
 
     if (session == NULL) {

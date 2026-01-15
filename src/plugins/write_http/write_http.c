@@ -470,6 +470,12 @@ static int wh_write(metric_family_t const *fam, user_data_t *user_data)
     status |= format_stream_metric_family(&ctx, fam);
     status |= format_stream_metric_end(&ctx);
 
+    if (status != 0) {
+        strbuf_reset(&cb->send_buffer);
+        PLUGIN_ERROR("Failed to format message.");
+        return -1;
+    }
+
     return wh_flush_internal(cb, cb->flush_timeout);
 }
 
