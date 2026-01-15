@@ -2305,11 +2305,15 @@ static int persistent_domains_state_notification(virt_ctx_t *ctx)
     } else {
         PLUGIN_DEBUG("getting state of %i persistent domains", n);
         /* Fetch each persistent domain's state and notify it */
+#ifdef NCOLLECTD_DEBUG
         int n_notified = n;
+#endif
         for (int i = 0; i < n; ++i) {
             status = get_domain_state_notify(domains[i]);
             if (status != 0) {
+#ifdef NCOLLECTD_DEBUG
                 n_notified--;
+#endif
                 PLUGIN_ERROR("could not notify state of domain %s", virDomainGetName(domains[i]));
             }
             virDomainFree(domains[i]);

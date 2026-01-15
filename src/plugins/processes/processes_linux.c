@@ -564,8 +564,9 @@ int ps_read(void)
     for (size_t i = 0; i < PROC_STATE_MAX; i++) {
         proc_state[i] = NAN;
     }
-
+#if 0
     int running = 0;
+#endif
     int sleeping = 0;
     int zombies = 0;
     int stopped = 0;
@@ -609,7 +610,9 @@ int ps_read(void)
 
         switch (state) {
         case 'R':
+#if 0
             running++;
+#endif
             pse.state = PROC_STATE_RUNNING;
             break;
         case 'S':

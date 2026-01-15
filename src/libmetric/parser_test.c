@@ -285,6 +285,8 @@ DEF_TEST(metric_parser)
         int status =  metric_parse_buffer(mp, cases[i].input, strlen(cases[i].input));
         status |= metric_parse_buffer(mp, NULL, 0);
 
+        EXPECT_EQ_INT(0, status);
+
         metric_parser_dispatch(mp, dispatch_metric_family, NULL, 0);
 
         EXPECT_EQ_FAM_LIST(cases[i].fams, cases[i].num, g_fams, g_fams_num);

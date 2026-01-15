@@ -14,6 +14,8 @@
 #include "libmdb/parser.h"
 #include "libmdb/scanner.h"
 
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 void mql_yyerror (YYLTYPE *yylloc, __attribute__((unused)) void *scanner,
                                      mql_status_t *status, const char *msg)
 {

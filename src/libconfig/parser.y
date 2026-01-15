@@ -11,6 +11,8 @@
 #include "libconfig/parser.h"
 #include "libconfig/scanner.h"
 
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 static char *unsquote (const char *orig);
 static char *undquote (const char *orig);
 static char *unrquote (const char *orig);

@@ -211,8 +211,7 @@ fprintf(stderr, "httpd_request : [%s] %d\n", pfields[2], (int)plen);
             char *buffer = content;
             cdtime_t time = cdtime();
 fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
-            size_t lineno = 0;
-
+//            size_t lineno = 0;
 
             while (buffer_len > 0) {
                 char *end = memchr(buffer, '\n', buffer_len);
@@ -222,7 +221,7 @@ fprintf(stderr, "httpd_request:  write: %d\n",(int)content_length);
                 size_t line_size = end - buffer;
                 char *line = buffer;
                 buffer[line_size] = '\0';
-                lineno += 1;
+//                lineno += 1;
                 if (line_size > 0) {
                     status = metric_parse_line(mp, line);
                     if (status < 0)
