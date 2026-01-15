@@ -29,6 +29,7 @@
 %define build_with_cifs 0%{!?_without_cifs:1}
 %define build_with_conntrack 0%{!?_without_conntrack:1}
 %define build_with_contextswitch 0%{!?_without_contextswitch:1}
+%define build_with_coretemp 0%{!?_without_coretemp:1}
 %define build_with_cpu 0%{!?_without_cpu:1}
 %define build_with_cpufreq 0%{!?_without_cpufreq:1}
 %define build_with_cpusleep 0%{!?_without_cpusleep:1}
@@ -168,6 +169,7 @@
 %define build_with_tcpconns 0%{!?_without_tcpconns:1}
 %define build_with_timex 0%{!?_without_timex:1}
 %define build_with_thermal 0%{!?_without_thermal:1}
+%define build_with_thermal_throttle 0%{!?_without_thermal_throttle:1}
 %define build_with_turbostat 0%{!?_without_turbostat:1}
 %define build_with_ubi 0%{!?_without_ubi:1}
 %define build_with_uname 0%{!?_without_uname:1}
@@ -1102,6 +1104,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_contextswitch -DPLUGIN_CONTEXTSWITCH:BOOL=OFF
 %endif
 
+%if %{build_with_coretemp}
+%define _build_with_coretemp -DPLUGIN_CORETEMP:BOOL=ON
+%else
+%define _build_with_coretemp -DPLUGIN_CORETEMP:BOOL=OFF
+%endif
+
 %if %{build_with_cpu}
 %define _build_with_cpu -DPLUGIN_CPU:BOOL=ON
 %else
@@ -1998,6 +2006,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_thermal -DPLUGIN_THERMAL:BOOL=OFF
 %endif
 
+%if %{build_with_thermal_throttle}
+%define _build_with_thermal_throttle -DPLUGIN_THERMAL_THROTTLE:BOOL=ON
+%else
+%define _build_with_thermal_throttle -DPLUGIN_THERMAL_THROTTLE:BOOL=OFF
+%endif
+
 %if %{build_with_turbostat}
 %define _build_with_turbostat -DPLUGIN_TURBOSTAT:BOOL=ON
 %else
@@ -2224,6 +2238,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_cifs} \
     %{?_build_with_conntrack} \
     %{?_build_with_contextswitch} \
+    %{?_build_with_coretemp} \
     %{?_build_with_cpu} \
     %{?_build_with_cpufreq} \
     %{?_build_with_cpusleep} \
@@ -2372,6 +2387,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_tcpconns} \
     %{?_build_with_timex} \
     %{?_build_with_thermal} \
+    %{?_build_with_thermal_throttle} \
     %{?_build_with_turbostat} \
     %{?_build_with_ubi} \
     %{?_build_with_uname} \
@@ -2514,6 +2530,10 @@ rm -rf %{buildroot}
 %if %{build_with_contextswitch}
 %{_libdir}/%{name}/contextswitch.so
 %{_mandir}/man5/ncollectd-contextswitch.5*
+%endif
+%if %{build_with_coretemp}
+%{_libdir}/%{name}/coretemp.so
+%{_mandir}/man5/ncollectd-coretemp.5*
 %endif
 %if %{build_with_cpu}
 %{_libdir}/%{name}/cpu.so
@@ -2898,6 +2918,10 @@ rm -rf %{buildroot}
 %if %{build_with_thermal}
 %{_libdir}/%{name}/thermal.so
 %{_mandir}/man5/ncollectd-thermal.5*
+%endif
+%if %{build_with_thermal_throttle}
+%{_libdir}/%{name}/thermal_throttle.so
+%{_mandir}/man5/ncollectd-thermal_throttle.5*
 %endif
 %if %{build_with_turbostat}
 %{_libdir}/%{name}/turbostat.so
