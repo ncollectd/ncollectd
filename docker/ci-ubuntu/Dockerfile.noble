@@ -7,7 +7,7 @@ RUN apt-get update && \
         libnftnl-dev libpcap-dev librabbitmq-dev librdkafka-dev libvirt-dev \
         libxml2-dev libsensors-dev liblua5.4-dev libmysqlclient-dev libsnmp-dev \
         libopenipmi-dev libldap-dev libssl-dev libpq-dev unixodbc-dev \
-        libvarnishapi-dev xfslibs-dev libyajl-dev libcups2-dev libsystemd-dev \
+        libvarnishapi-dev xfslibs-dev libcups2-dev libsystemd-dev \
         libesmtp-dev libmosquitto-dev libmongoc-dev libqpid-proton11-dev \
         libsigrok-dev libmodbus-dev libgps-dev libhiredis-dev libnutclient-dev \
         libiptc-dev libmnl-dev libipmctl-dev libupsclient-dev libbtrfs-dev \

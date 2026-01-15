@@ -8,7 +8,7 @@ RUN emerge-webrsync && \
            sys-fs/btrfs-progs net-libs/libnftnl net-libs/libesmtp net-libs/libpcap \
            net-libs/libmicrohttpd dev-libs/hiredis dev-libs/libmodbus dev-libs/openssl \
            dev-libs/librdkafka dev-libs/mongo-c-driver dev-libs/libxml2 \
-           dev-libs/libmemcached-awesome dev-libs/libatasmart dev-libs/yajl net-misc/curl \
+           dev-libs/libmemcached-awesome dev-libs/libatasmart net-misc/curl \
            net-analyzer/net-snmp app-misc/mosquitto dev-lang/lua sys-power/nut \
            net-firewall/iptables net-nds/openldap sci-geosciences/gpsd net-print/cups \
            dev-db/unixODBC sys-apps/systemd sys-libs/openipmi dev-db/postgresql \
