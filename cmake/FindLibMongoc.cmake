@@ -5,6 +5,7 @@ find_package(PkgConfig QUIET)
 pkg_check_modules(PC_LIBMONGOC QUIET "libmongoc-1.0")
 if(NOT PC_LIBMONGOC_FOUND)
     pkg_check_modules(PC_LIBMONGOC QUIET "mongoc2")
+endif()
 
 find_path(LIBMONGOC_INCLUDE_DIR NAMES "mongoc.h" "mongoc/mongoc.h"
           HINTS ${PC_LIBMONGOC_INCLUDEDIR} ${PC_LIBMONGOC_INCLUDE_DIRS})

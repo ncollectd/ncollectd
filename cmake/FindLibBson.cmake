@@ -5,6 +5,7 @@ find_package(PkgConfig QUIET)
 pkg_check_modules(PC_LIBBSON QUIET "libbson-1.0")
 if (NOT PC_LIBBSON_FOUND)
     pkg_check_modules(PC_LIBBSON QUIET "bson2")
+endif()
 
 find_path(LIBBSON_INCLUDE_DIR NAMES "bson/bson.h"
           HINTS ${PC_LIBBSON_INCLUDEDIR} ${PC_LIBBSON_INCLUDE_DIRS})
