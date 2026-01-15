@@ -1,12 +1,10 @@
 include(FindPackageHandleStandardArgs)
 
 find_package(PkgConfig QUIET)
-foreach(LIBMONGOC_NAME "libmongoc-1.0" "mongoc2")
-    pkg_check_modules(PC_LIBMONGOC QUIET "${LIBMONGOC_NAME}")
-    if(PC_LIBMONGOC_FOUND)
-        break()
-    endif()
-endforeach()
+
+pkg_check_modules(PC_LIBMONGOC QUIET "libmongoc-1.0")
+if(NOT PC_LIBMONGOC_FOUND)
+    pkg_check_modules(PC_LIBMONGOC QUIET "mongoc2")
 
 find_path(LIBMONGOC_INCLUDE_DIR NAMES "mongoc.h" "mongoc/mongoc.h"
           HINTS ${PC_LIBMONGOC_INCLUDEDIR} ${PC_LIBMONGOC_INCLUDE_DIRS})

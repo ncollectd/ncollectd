@@ -1,11 +1,14 @@
 include(FindPackageHandleStandardArgs)
 
 find_package(PkgConfig QUIET)
+
 pkg_check_modules(PC_LIBBSON QUIET "libbson-1.0")
+if (NOT PC_LIBBSON_FOUND)
+    pkg_check_modules(PC_LIBBSON QUIET "bson2")
 
 find_path(LIBBSON_INCLUDE_DIR NAMES "bson/bson.h"
           HINTS ${PC_LIBBSON_INCLUDEDIR} ${PC_LIBBSON_INCLUDE_DIRS})
-find_library(LIBBSON_LIBRARIES NAMES "bson-1.0"
+find_library(LIBBSON_LIBRARIES NAMES "bson-1.0" "bson2"
              HINTS ${PC_LIBBSON_LIBDIR} ${PC_LIBBSON_LIBRARY_DIRS})
 
 find_package_handle_standard_args(LibBson DEFAULT_MSG LIBBSON_LIBRARIES LIBBSON_INCLUDE_DIR)
