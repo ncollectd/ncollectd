@@ -40,6 +40,8 @@ usr/lib/ncollectd/conntrack.so
 usr/share/man/man5/ncollectd-conntrack.5
 usr/lib/ncollectd/contextswitch.so
 usr/share/man/man5/ncollectd-contextswitch.5
+usr/lib/ncollectd/coretemp.so
+usr/share/man/man5/ncollectd-coretemp.5
 usr/lib/ncollectd/cpu.so
 usr/share/man/man5/ncollectd-cpu.5
 usr/lib/ncollectd/cpufreq.so
@@ -210,6 +212,8 @@ usr/lib/ncollectd/timex.so
 usr/share/man/man5/ncollectd-timex.5
 usr/lib/ncollectd/thermal.so
 usr/share/man/man5/ncollectd-thermal.5
+usr/lib/ncollectd/thermal_throttle.so
+usr/share/man/man5/ncollectd-thermal_throttle.5
 usr/lib/ncollectd/turbostat.so
 usr/share/man/man5/ncollectd-turbostat.5
 usr/lib/ncollectd/ubi.so
