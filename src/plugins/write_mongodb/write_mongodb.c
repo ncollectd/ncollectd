@@ -16,7 +16,11 @@
 #include "libmetric/marshal.h"
 
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#ifdef HAVE_MONGOC_H
 #include <mongoc.h>
+#elif defined(HAVE_MONGOC_MONGOC_H)
+#include <mongoc/mongoc.h>
+#endif
 
 typedef struct {
     char *name;

@@ -14,8 +14,11 @@
 
 #pragma GCC diagnostic ignored "-Wcast-qual"
 
+#ifdef HAVE_MONGOC_H
 #include <mongoc.h>
-#include <bson.h>
+#elif defined(HAVE_MONGOC_MONGOC_H)
+#include <mongoc/mongoc.h>
+#endif
 
 #include "plugins/mongodb/mongodb_fam.h"
 #include "plugins/mongodb/mongodb_stats.h"
