@@ -4,56 +4,47 @@ when:
   - event: manual
 
 steps:
-  build-fedora-42:
-    image: ncollectd/ci-fedora:42
+  build-fedora-43:
+    image: ncollectd/ci-fedora:43
     commands:
-      - cmake -B build-fedora-42 -S .
-      - cmake --build build-fedora-42 $${MAKE_FLAGS}
-      - cmake --build build-fedora-42 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-fedora-42 -- test
+      - cmake -B build-fedora-43 -S . -DNCOLLECTD_DEBUG=ON
+      - cmake --build build-fedora-43 $${MAKE_FLAGS}
+      - cmake --build build-fedora-43 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-fedora-43 -- test
   build-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:
-      - cmake -B build-fedora-rawhide -S .
+      - cmake -B build-fedora-rawhide -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-fedora-rawhide $${MAKE_FLAGS}
       - cmake --build build-fedora-rawhide -- build_tests $${MAKE_FLAGS}
       - cmake --build build-fedora-rawhide -- test
-  build-centos-stream8:
-    image: ncollectd/ci-centos:stream8
+  build-rockylinux-8:
+    image: ncollectd/ci-rockylinux:8
     commands:
-      - cmake -B build-centos-stream8 -S .
-      - cmake --build build-centos-stream8 $${MAKE_FLAGS}
-      - cmake --build build-centos-stream8 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-centos-stream8 -- test
-  build-centos-stream9:
-    image: ncollectd/ci-centos:stream9
+      - cmake -B build-rockylinux-8 -S . -DNCOLLECTD_DEBUG=ON
+      - cmake --build build-rockylinux-8 $${MAKE_FLAGS}
+      - cmake --build build-rockylinux-8 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-rockylinux-8 -- test
+  build-rockylinux-9:
+    image: ncollectd/ci-rockylinux:9
     commands:
-      - cmake -B build-centos-stream9 -S .
-      - cmake --build build-centos-stream9 $${MAKE_FLAGS}
-      - cmake --build build-centos-stream9 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-centos-stream9 -- test
-  build-centos-stream10:
-    image: ncollectd/ci-centos:stream10
+      - cmake -B build-rockylinux-9 -S . -DNCOLLECTD_DEBUG=ON
+      - cmake --build build-rockylinux-9 $${MAKE_FLAGS}
+      - cmake --build build-rockylinux-9 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-rockylinux-9 -- test
+  build-rockylinux-10:
+    image: ncollectd/ci-rockylinux:10
     commands:
-      - cmake -B build-centos-stream10 -S .
-      - cmake --build build-centos-stream10 $${MAKE_FLAGS}
-      - cmake --build build-centos-stream10 -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-centos-stream10 -- test
-  build-ubuntu-focal:
-    image: ncollectd/ci-ubuntu:focal
-    environment:
-      DEBIAN_FRONTEND: noninteractive
-    commands:
-      - cmake -B build-ubuntu-focal -S .
-      - cmake --build build-ubuntu-focal $${MAKE_FLAGS}
-      - cmake --build build-ubuntu-focal -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-ubuntu-focal -- test
+      - cmake -B build-rockylinux-10 -S . -DNCOLLECTD_DEBUG=ON
+      - cmake --build build-rockylinux-10 $${MAKE_FLAGS}
+      - cmake --build build-rockylinux-10 -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-rockylinux-10 -- test
   build-ubuntu-jammy:
     image: ncollectd/ci-ubuntu:jammy
     environment:
       DEBIAN_FRONTEND: noninteractive
     commands:
-      - cmake -B build-ubuntu-jammy -S .
+      - cmake -B build-ubuntu-jammy -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-ubuntu-jammy $${MAKE_FLAGS}
       - cmake --build build-ubuntu-jammy -- build_tests $${MAKE_FLAGS}
       - cmake --build build-ubuntu-jammy -- test
@@ -62,25 +53,25 @@ steps:
     environment:
       DEBIAN_FRONTEND: noninteractive
     commands:
-      - cmake -B build-ubuntu-noble -S .
+      - cmake -B build-ubuntu-noble -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-ubuntu-noble $${MAKE_FLAGS}
       - cmake --build build-ubuntu-noble -- build_tests $${MAKE_FLAGS}
       - cmake --build build-ubuntu-noble -- test
-  build-debian-bullseye:
-    image: ncollectd/ci-debian:bullseye
+  build-ubuntu-devel:
+    image: ncollectd/ci-ubuntu:devel
     environment:
       DEBIAN_FRONTEND: noninteractive
     commands:
-      - cmake -B build-debian-bullseye -S .
-      - cmake --build build-debian-bullseye $${MAKE_FLAGS}
-      - cmake --build build-debian-bullseye -- build_tests $${MAKE_FLAGS}
-      - cmake --build build-debian-bullseye -- test
+      - cmake -B build-ubuntu-devel -S . -DNCOLLECTD_DEBUG=ON
+      - cmake --build build-ubuntu-devel $${MAKE_FLAGS}
+      - cmake --build build-ubuntu-devel -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-ubuntu-devel -- test
   build-debian-bookworm:
     image: ncollectd/ci-debian:bookworm
     environment:
       DEBIAN_FRONTEND: noninteractive
     commands:
-      - cmake -B build-debian-bookworm -S .
+      - cmake -B build-debian-bookworm -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-debian-bookworm $${MAKE_FLAGS}
       - cmake --build build-debian-bookworm -- build_tests $${MAKE_FLAGS}
       - cmake --build build-debian-bookworm -- test
@@ -89,14 +80,23 @@ steps:
     environment:
       DEBIAN_FRONTEND: noninteractive
     commands:
-      - cmake -B build-debian-trixie -S .
+      - cmake -B build-debian-trixie -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-debian-trixie $${MAKE_FLAGS}
       - cmake --build build-debian-trixie -- build_tests $${MAKE_FLAGS}
       - cmake --build build-debian-trixie -- test
+  build-debian-testing:
+    image: ncollectd/ci-debian:testing
+    environment:
+      DEBIAN_FRONTEND: noninteractive
+    commands:
+      - cmake -B build-debian-testing -S . -DNCOLLECTD_DEBUG=ON
+      - cmake --build build-debian-testing $${MAKE_FLAGS}
+      - cmake --build build-debian-testing -- build_tests $${MAKE_FLAGS}
+      - cmake --build build-debian-testing -- test
   build-archlinux-base-devel:
     image: ncollectd/ci-archlinux:base-devel
     commands:
-      - cmake -B build-archlinux-base-devel -S .
+      - cmake -B build-archlinux-base-devel -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-archlinux-base-devel $${MAKE_FLAGS}
       - cmake --build build-archlinux-base-devel -- build_tests $${MAKE_FLAGS}
       - cmake --build build-archlinux-base-devel -- test
@@ -110,21 +110,21 @@ steps:
   build-opensuse-leap:
     image: ncollectd/ci-opensuse:leap
     commands:
-      - cmake -B build-opensuse-leap -S .
+      - cmake -B build-opensuse-leap -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-opensuse-leap $${MAKE_FLAGS}
       - cmake --build build-opensuse-leap -- build_tests $${MAKE_FLAGS}
       - cmake --build build-opensuse-leap -- test
   build-opensuse-tumbleweed:
     image: ncollectd/ci-opensuse:tumbleweed
     commands:
-      - cmake -B build-opensuse-tumbleweed -S .
+      - cmake -B build-opensuse-tumbleweed -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-opensuse-tumbleweed $${MAKE_FLAGS}
       - cmake --build build-opensuse-tumbleweed -- build_tests $${MAKE_FLAGS}
       - cmake --build build-opensuse-tumbleweed -- test
   build-gentoo-latest:
     image: ncollectd/ci-gentoo:latest
     commands:
-      - cmake -B build-gentoo-latest -S .
+      - cmake -B build-gentoo-latest -S . -DNCOLLECTD_DEBUG=ON
       - cmake --build build-gentoo-latest $${MAKE_FLAGS}
       - cmake --build build-gentoo-latest -- build_tests $${MAKE_FLAGS}
       - cmake --build build-gentoo-latest -- test

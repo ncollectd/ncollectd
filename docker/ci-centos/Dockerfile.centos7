@@ -9,7 +9,7 @@ RUN ulimit -n 1024000 && \
                    lm_sensors-devel lua-devel varnish-libs-devel net-snmp-devel OpenIPMI-devel \
                    openldap-devel openldap-devel openssl-devel openssl-devel openssl-devel \
                    postgresql-devel postgresql-devel unixODBC-devel varnish-libs-devel \
-                   xfsprogs-devel yajl-devel cups-devel systemd-devel libesmtp-devel \
+                   xfsprogs-devel cups-devel systemd-devel libesmtp-devel \
                    libipmctl-devel hiredis-devel libmodbus-devel mongo-c-driver-devel \
                    mosquitto-devel nut-devel gpsd-devel libmemcached-devel qpid-proton-c-devel \
                    slurm-devel libmnl-devel freetds-devel && \

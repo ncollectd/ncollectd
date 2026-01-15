@@ -4,22 +4,22 @@ when:
 
 steps:
   package-dist:
-    image: ncollectd/ci-fedora:42
+    image: ncollectd/ci-fedora:43
     commands:
       - cmake -B package-dist -S .
       - cmake --build package-dist -- dist
       - VERSION=`git describe --tags --match "v*" | sed -r 's/^v//;s/-([0-9]+)-g([a-f0-9]+)$/+\1.g\2/g'`
       - echo "VERSION=$${VERSION}" > package-dist/envvars
-  package-fedora-42:
-    image: ncollectd/ci-fedora:42
+  package-fedora-43:
+    image: ncollectd/ci-fedora:43
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-fedora-42/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-fedora-42/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-fedora-42/SOURCES
-      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-fedora-42/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-42" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
+      - mkdir -p package-fedora-43/SOURCES
+      - cp packaging/fedora/init.d-ncollectd package-fedora-43/SOURCES
+      - cp packaging/fedora/systemd.ncollectd.service package-fedora-43/SOURCES
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-fedora-43/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-fedora-43" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
   package-fedora-rawhide:
     image: ncollectd/ci-fedora:rawhide
     commands:
@@ -30,55 +30,38 @@ steps:
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-rawhide/SOURCES
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-fedora-rawhide/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-fedora-rawhide" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
-  package-centos-stream8:
-    image: ncollectd/ci-centos:stream8
+  package-rockylinux-8:
+    image: ncollectd/ci-rockylinux:8
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-centos-stream8/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-centos-stream8/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-centos-stream8/SOURCES
-      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-centos-stream8/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream8" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
-      - rm -rf package-centos-stream8/BUILD
-  package-centos-stream9:
-    image: ncollectd/ci-centos:stream9
+      - mkdir -p package-rockylinux-8/SOURCES
+      - cp packaging/fedora/init.d-ncollectd package-rockylinux-8/SOURCES
+      - cp packaging/fedora/systemd.ncollectd.service package-rockylinux-8/SOURCES
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-rockylinux-8/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-rockylinux-8" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
+      - rm -rf package-rockylinux-8/BUILD
+  package-rockylinux-9:
+    image: ncollectd/ci-rockylinux:9
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-centos-stream9/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-centos-stream9/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-centos-stream9/SOURCES
-      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-centos-stream9/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream9" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
-      - rm -rf package-centos-stream9/BUILD
-  package-centos-stream10:
-    image: ncollectd/ci-centos:stream10
+      - mkdir -p package-rockylinux-9/SOURCES
+      - cp packaging/fedora/init.d-ncollectd package-rockylinux-9/SOURCES
+      - cp packaging/fedora/systemd.ncollectd.service package-rockylinux-9/SOURCES
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-rockylinux-9/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-rockylinux-9" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
+      - rm -rf package-rockylinux-9/BUILD
+  package-rockylinux-10:
+    image: ncollectd/ci-rockylinux:10
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
-      - mkdir -p package-centos-stream10/SOURCES
-      - cp packaging/fedora/init.d-ncollectd package-centos-stream10/SOURCES
-      - cp packaging/fedora/systemd.ncollectd.service package-centos-stream10/SOURCES
-      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-centos-stream10/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-centos-stream10" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
-  package-debian-bullseye:
-    image: ncollectd/ci-debian:bullseye
-    commands:
-      - . ./package-dist/envvars
-      - export GIT_DIR=.do-not-find-it
-      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
-      - mkdir -p package-debian-bullseye
-      - tar -C package-debian-bullseye -xJf package-dist/ncollectd-$${VERSION}.tar.xz
-      - mv package-debian-bullseye/ncollectd-$${VERSION} package-debian-bullseye/ncollectd-$${PKGVERSION}
-      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-bullseye/ncollectd_$${PKGVERSION}.orig.tar.xz
-      - cp -r packaging/debian package-debian-bullseye/ncollectd-$${PKGVERSION}/
-      - cd package-debian-bullseye/ncollectd-$${PKGVERSION}
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
-      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
-      - dpkg-buildpackage
-      - cd ..
-      - rm -rf ncollectd-$${PKGVERSION}
+      - mkdir -p package-rockylinux-10/SOURCES
+      - cp packaging/fedora/init.d-ncollectd package-rockylinux-10/SOURCES
+      - cp packaging/fedora/systemd.ncollectd.service package-rockylinux-10/SOURCES
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-rockylinux-10/SOURCES
+      - rpmbuild --define "_topdir `pwd`/package-rockylinux-10" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
   package-debian-bookworm:
     image: ncollectd/ci-debian:bookworm
     commands:
@@ -115,18 +98,18 @@ steps:
       - dpkg-buildpackage
       - cd ..
       - rm -rf ncollectd-$${PKGVERSION}
-  package-ubuntu-focal:
-    image: ncollectd/ci-ubuntu:focal
+  package-debian-testing:
+    image: ncollectd/ci-debian:testing
     commands:
       - . ./package-dist/envvars
       - export GIT_DIR=.do-not-find-it
       - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
-      - mkdir -p package-ubuntu-focal
-      - tar -C package-ubuntu-focal -xJf package-dist/ncollectd-$${VERSION}.tar.xz
-      - mv package-ubuntu-focal/ncollectd-$${VERSION} package-ubuntu-focal/ncollectd-$${PKGVERSION}
-      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-focal/ncollectd_$${PKGVERSION}.orig.tar.xz
-      - cp -r packaging/debian package-ubuntu-focal/ncollectd-$${PKGVERSION}/
-      - cd package-ubuntu-focal/ncollectd-$${PKGVERSION}
+      - mkdir -p package-debian-testing
+      - tar -C package-debian-testing -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-debian-testing/ncollectd-$${VERSION} package-debian-testing/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-debian-testing/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-debian-testing/ncollectd-$${PKGVERSION}/
+      - cd package-debian-testing/ncollectd-$${PKGVERSION}
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage
@@ -161,6 +144,23 @@ steps:
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-noble/ncollectd_$${PKGVERSION}.orig.tar.xz
       - cp -r packaging/debian package-ubuntu-noble/ncollectd-$${PKGVERSION}/
       - cd package-ubuntu-noble/ncollectd-$${PKGVERSION}
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
+      - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
+      - dpkg-buildpackage
+      - cd ..
+      - rm -rf ncollectd-$${PKGVERSION}
+  package-ubuntu-devel:
+    image: ncollectd/ci-ubuntu:devel
+    commands:
+      - . ./package-dist/envvars
+      - export GIT_DIR=.do-not-find-it
+      - PKGVERSION=`echo $${VERSION} | sed -r 's/-rc/~pre/;s/\+([0-9]+)\.g([a-f0-9]+)$/+git\1.\2/'`
+      - mkdir -p package-ubuntu-devel
+      - tar -C package-ubuntu-devel -xJf package-dist/ncollectd-$${VERSION}.tar.xz
+      - mv package-ubuntu-devel/ncollectd-$${VERSION} package-ubuntu-devel/ncollectd-$${PKGVERSION}
+      - cp package-dist/ncollectd-$${VERSION}.tar.xz package-ubuntu-devel/ncollectd_$${PKGVERSION}.orig.tar.xz
+      - cp -r packaging/debian package-ubuntu-devel/ncollectd-$${PKGVERSION}/
+      - cd package-ubuntu-devel/ncollectd-$${PKGVERSION}
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/changelog
       - sed -i '1s/^ncollectd (0.0.0-1)/ncollectd ('$${PKGVERSION}'-1)/' debian/NEWS
       - dpkg-buildpackage

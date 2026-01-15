@@ -1,5 +1,6 @@
-FROM quay.io/centos/centos:stream9
-RUN dnf install -y dnf-plugins-core epel-release epel-next-release && \
+FROM rockylinux/rockylinux:9
+# epel-next-release
+RUN dnf install -y dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled crb && \
     dnf install -y rpm-build git xz gcc cpp make cmake flex bison gperf kernel-headers \
                    pkgconf-pkg-config c-ares-devel curl-devel java-devel \

@@ -1,13 +1,8 @@
-FROM quay.io/centos/centos:stream8
+FROM rockylinux/rockylinux:8
 ENV LC_CTYPE=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
-RUN sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo && \
-    sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo && \
-    sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/*.repo && \
-    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && \
-    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* && \
-    dnf install -y dnf-plugins-core epel-release epel-next-release && \
+RUN dnf install -y dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled powertools && \
     dnf install -y rpm-build git gcc cpp make cmake flex bison gperf kernel-headers \
                    pkgconf-pkg-config c-ares-devel curl-devel  iptables-devel java-devel \
