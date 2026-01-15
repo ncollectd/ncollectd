@@ -29,7 +29,7 @@ steps:
       - cp packaging/fedora/init.d-ncollectd package-fedora-rawhide/SOURCES
       - cp packaging/fedora/systemd.ncollectd.service package-fedora-rawhide/SOURCES
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-fedora-rawhide/SOURCES
-      - rpmbuild --define "_topdir `pwd`/package-fedora-rawhide" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
+      - rpmbuild --define "_topdir `pwd`/package-fedora-rawhide" --define "bundle_version $${VERSION}" --without dcpmm --without gpu_intel -ba packaging/fedora/ncollectd.spec
   package-rockylinux-8:
     image: ncollectd/ci-rockylinux:8
     commands:
@@ -62,6 +62,7 @@ steps:
       - cp packaging/fedora/systemd.ncollectd.service package-rockylinux-10/SOURCES
       - cp package-dist/ncollectd-$${VERSION}.tar.xz package-rockylinux-10/SOURCES
       - rpmbuild --define "_topdir `pwd`/package-rockylinux-10" --define "bundle_version $${VERSION}" -ba packaging/fedora/ncollectd.spec
+      - rm -rf package-rockylinux-10/BUILD
   package-debian-bookworm:
     image: ncollectd/ci-debian:bookworm
     commands:
