@@ -9,7 +9,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/exclist.h"
 
 #include <sensors/sensors.h>
 
@@ -17,6 +16,10 @@
 
 #if !defined(SENSORS_API_VERSION)
 #define SENSORS_API_VERSION 0x000
+#endif
+
+#if SENSORS_API_VERSION < 0x400
+#error "Invalid libsensors API version."
 #endif
 
 typedef struct featurelist {
@@ -29,10 +32,10 @@ static featurelist_t *first_feature;
 
 extern char *conffile;
 extern bool use_labels;
-extern exclist_t excl_sensor;
+extern plugin_filter_t *filter;
 extern metric_family_t fams[FAM_SENSOR_MAX];
 
-static void sensors_free_features(void)
+static void ncsensors_free_features(void)
 {
     featurelist_t *nextft;
 
@@ -48,7 +51,7 @@ static void sensors_free_features(void)
     first_feature = NULL;
 }
 
-static int sensors_load_conf(void)
+static int ncsensors_load_conf(void)
 {
     static int call_once;
 
@@ -90,15 +93,19 @@ static int sensors_load_conf(void)
             /* Only handle voltage, fanspeeds and temperatures */
             if ((feature->type != SENSORS_FEATURE_IN) &&
                 (feature->type != SENSORS_FEATURE_FAN) &&
-                (feature->type != SENSORS_FEATURE_TEMP) &&
-#if SENSORS_API_VERSION >= 0x402
+#if SENSORS_API_VERSION >= 0x401
+                (feature->type != SENSORS_FEATURE_POWER) &&
+#endif
+#if SENSORS_API_VERSION >= 0x410
                 (feature->type != SENSORS_FEATURE_CURR) &&
 #endif
 #if SENSORS_API_VERSION >= 0x431
                 (feature->type != SENSORS_FEATURE_HUMIDITY) &&
+                (feature->type != SENSORS_FEATURE_INTRUSION) &&
 #endif
-                (feature->type != SENSORS_FEATURE_POWER)) {
-                PLUGIN_DEBUG("sensors_load_conf: Ignoring feature `%s', "
+                (feature->type != SENSORS_FEATURE_TEMP)
+            ) {
+                PLUGIN_DEBUG("Ignoring feature `%s', "
                              "because its type is not supported.", feature->name);
                 continue;
             }
@@ -107,14 +114,19 @@ static int sensors_load_conf(void)
                                  chip, feature, &subfeature_num)) != NULL) {
                 if ((subfeature->type != SENSORS_SUBFEATURE_IN_INPUT) &&
                     (subfeature->type != SENSORS_SUBFEATURE_FAN_INPUT) &&
-                    (subfeature->type != SENSORS_SUBFEATURE_TEMP_INPUT) &&
-#if SENSORS_API_VERSION >= 0x402
+#if SENSORS_API_VERSION >= 0x401
+                    (subfeature->type != SENSORS_SUBFEATURE_POWER_AVERAGE) &&
+#endif
+#if SENSORS_API_VERSION >= 0x410
+                    (subfeature->type != SENSORS_SUBFEATURE_POWER_INPUT) &&
                     (subfeature->type != SENSORS_SUBFEATURE_CURR_INPUT) &&
 #endif
 #if SENSORS_API_VERSION >= 0x431
                     (subfeature->type != SENSORS_SUBFEATURE_HUMIDITY_INPUT) &&
+                    (subfeature->type != SENSORS_SUBFEATURE_INTRUSION_ALARM) &&
 #endif
-                    (subfeature->type != SENSORS_SUBFEATURE_POWER_INPUT))
+                    (subfeature->type != SENSORS_SUBFEATURE_TEMP_INPUT)
+                    )
                     continue;
 
                 featurelist_t *fl = calloc(1, sizeof(*fl));
@@ -145,9 +157,9 @@ static int sensors_load_conf(void)
     return 0;
 }
 
-int sensors_read(void)
+int ncsensors_read(void)
 {
-    if (sensors_load_conf() != 0)
+    if (ncsensors_load_conf() != 0)
         return -1;
 
     for (featurelist_t *fl = first_feature; fl != NULL; fl = fl->next) {
@@ -163,23 +175,36 @@ int sensors_read(void)
             continue;
 
         metric_family_t *fam = NULL;
-        if (fl->feature->type == SENSORS_FEATURE_IN)
+        if (fl->feature->type == SENSORS_FEATURE_IN) {
             fam = &fams[FAM_SENSOR_VOLTAGE_VOLTS];
-        else if (fl->feature->type == SENSORS_FEATURE_FAN)
+        } else if (fl->feature->type == SENSORS_FEATURE_FAN) {
             fam = &fams[FAM_SENSOR_FAN_SPEED_RPM];
-        else if (fl->feature->type == SENSORS_FEATURE_TEMP)
+        } else if (fl->feature->type == SENSORS_FEATURE_TEMP) {
             fam = &fams[FAM_SENSOR_TEMPERATURE_CELSIUS];
-        else if (fl->feature->type == SENSORS_FEATURE_POWER)
-            fam = &fams[FAM_SENSOR_POWER_WATTS];
-#if SENSORS_API_VERSION >= 0x402
-        else if (fl->feature->type == SENSORS_FEATURE_CURR)
+#if SENSORS_API_VERSION >= 0x401
+        } else if (fl->feature->type == SENSORS_FEATURE_POWER) {
+#if SENSORS_API_VERSION >= 0x410
+            if (fl->subfeature->type == SENSORS_SUBFEATURE_POWER_INPUT) {
+                fam = &fams[FAM_SENSOR_POWER_WATTS];
+            }
+#endif
+            if (fl->subfeature->type == SENSORS_SUBFEATURE_POWER_AVERAGE) {
+                fam = &fams[FAM_SENSOR_POWER_AVERAGE_WATTS];
+            }
+#endif
+#if SENSORS_API_VERSION >= 0x410
+        } else if (fl->feature->type == SENSORS_FEATURE_CURR) {
             fam = &fams[FAM_SENSOR_CURRENT_AMPS];
 #endif
 #if SENSORS_API_VERSION >= 0x431
-        else if (fl->feature->type == SENSORS_FEATURE_HUMIDITY)
+        } else if (fl->feature->type == SENSORS_FEATURE_HUMIDITY) {
             fam = &fams[FAM_SENSOR_HUMIDITY];
+        } else if (fl->feature->type == SENSORS_FEATURE_INTRUSION) {
+            fam = &fams[FAM_SENSOR_INTRUSION_ALARM];
 #endif
-        else
+        }
+
+        if (fam == NULL)
             continue;
 
         metric_t tmpl = {0};
@@ -202,14 +227,14 @@ int sensors_read(void)
         metric_reset(&tmpl, METRIC_TYPE_GAUGE);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_SENSOR_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_SENSOR_MAX, filter, 0);
 
     return 0;
 }
 
-int sensors_shutdown(void)
+int ncsensors_shutdown(void)
 {
-    sensors_free_features();
-    exclist_reset(&excl_sensor);
+    ncsensors_free_features();
+    plugin_filter_free(filter);
     return 0;
 }

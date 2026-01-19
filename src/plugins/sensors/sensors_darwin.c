@@ -6,7 +6,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/exclist.h"
 #include "sensor.h"
 
 
@@ -38,10 +37,10 @@
 
 static mach_port_t io_main_port = MACH_PORT_NULL;
 
-extern exclist_t excl_sensor;
+extern plugin_filter_t *filter;
 extern metric_family_t fams[FAM_SENSOR_MAX];
 
-int sensors_read(void)
+int ncsensors_read(void)
 {
     if (!io_main_port || (io_main_port == MACH_PORT_NULL))
         return -1;
@@ -127,12 +126,12 @@ int sensors_read(void)
 
     IOObjectRelease(iterator);
 
-    plugin_dispatch_metric_family_array(fams, FAM_SENSOR_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_SENSOR_MAX, filter, 0);
 
     return 0;
 }
 
-int sensors_init(void)
+int ncsensors_init(void)
 {
     if (io_main_port != MACH_PORT_NULL) {
         mach_port_deallocate(mach_task_self(), io_main_port);
@@ -149,8 +148,8 @@ int sensors_init(void)
     return 0;
 }
 
-int sensors_shutdown(void)
+int ncsensors_shutdown(void)
 {
-    exclist_reset(&excl_sensor);
+    plugin_filter_free(filter);
     return 0;
 }

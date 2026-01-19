@@ -9,40 +9,29 @@
 .Bd -literal -compact
 \fBload-plugin\fP sensors
 \fBplugin\fP sensors {
-    \fBsensor\fP [\fIincl|include|excl|exclude\fP] \fIsensor\fP
     \fBsensor-config-file\fP \fI/path/to/config\fP
     \fBuse-labels\fP \fItrue|false\fP
 }
 .Ed
 .Sh DESCRIPTION
-The \fBsensors\fP plugin uses \fIlm_sensors\fP to retrieve sensor-values.
+The \fBsensors\fP plugin uses \fIlm_sensors\fP in Linux systems
+to retrieve sensor-values.
 This means that all the needed modules have to be loaded and lm_sensors
 has to be configured (most likely by editing \f(CW/etc/sensors.conf\fP.
 Read
 .Xr sensors.conf 5
 for details.
 .Bl -tag -width Ds
-.It \fBsensor\fP [\fIincl|include|excl|exclude\fP] \fIsensor\fP
-Selects the name of the sensor which you want to collect or ignore
-For example, the option:
-.Bd -literal
-    sensor "it8712-isa-0290/voltage-in1"
-.Ed
-.Pp
-will cause collectd to gather data for the voltage sensor \fIin1\fP of
-the \fIit8712\fP on the isa bus at the address 0290.
-.Pp
-If no configuration if given, the \fBsensors\fP plugin will collect
-data from all sensors.
-This may not be practical, especially for uninteresting sensors.
 .It \fBsensor-config-file\fP \fI/path/to/config\fP
 Read the \fIlm_sensors\fP configuration from \fI/path/to/config\fP.
 When unset (recommended), the library's default will be used.
+Only for Linux systems.
 .It \fBuse-labels\fP \fItrue|false\fP
 Configures how sensor readings are reported.
 When set to \fBtrue\fP, sensor readings are reported using their descriptive
 label (e.g. "VCore").
 When set to \fBfalse\fP (the default) the sensor name is used ("in0").
+Only for Linux systems.
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
