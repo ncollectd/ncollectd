@@ -7,7 +7,7 @@ arch=('x86_64' 'aarch64')
 license=('GPL-2.0-only')
 
 optdepends=('c-ares: dns plugin'
-            'libcurl-compat: apache, ats, bind, docker, haproxy, http, jolokia, nginx, nginx_vts, podman, scraper, squid and write_http plugins'
+            'libcurl-compat: apache, ats, bind, docker, haproxy, http, jolokia, nginx, nginx_vts, podman, redfish, scraper, squid and write_http plugins'
             'jdk-openjdk: java plugin'
             'libatasmart: smart plugin'
             'libmicrohttpd: write_exporter plugin'

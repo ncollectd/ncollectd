@@ -140,6 +140,7 @@
 %define build_with_rapl 0%{!?_without_rapl:1}
 %define build_with_recursor 0%{!?_without_recursor:1}
 %define build_with_redis 0%{!?_without_redis:1}
+%define build_with_redfish 0%{!?_without_redfish:1}
 %define build_with_resctrl 0%{!?_without_resctrl:1}
 %define build_with_routeros 0%{!?_without_routeros:1}
 %define build_with_rtcache 0%{!?_without_rtcache:1}
@@ -769,6 +770,16 @@ BuildRequires: hiredis-devel
 %description redis
 The Redis plugin connects to one or more instances of Redis, a key-value store,
 and collects usage information using the hiredis library.
+%endif
+
+%if %{build_with_redfish}
+%package redfish
+Summary: Redfish plugin for ncollectd
+Group: System Environment/Daemons
+Requires: %{name}%{?_isa} = %{version}-%{release}
+BuildRequires: curl-devel
+%description redfish
+The Redfish plugin collects sensor data from BMCs using REST protocol called Redfish.
 %endif
 
 %if %{build_with_scraper}
@@ -1832,6 +1843,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_redis -DPLUGIN_REDIS:BOOL=OFF
 %endif
 
+%if %{build_with_redfish}
+%define _build_with_redfish -DPLUGIN_REDFISH:BOOL=ON
+%else
+%define _build_with_redfish -DPLUGIN_REDFISH:BOOL=OFF
+%endif
+
 %if %{build_with_resctrl}
 %define _build_with_resctrl -DPLUGIN_RESCTRL:BOOL=ON
 %else
@@ -2358,6 +2375,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_rapl} \
     %{?_build_with_recursor} \
     %{?_build_with_redis} \
+    %{?_build_with_redfish} \
     %{?_build_with_resctrl} \
     %{?_build_with_routeros} \
     %{?_build_with_rtcache} \
@@ -3303,6 +3321,12 @@ rm -rf %{buildroot}
 %files redis
 %{_libdir}/%{name}/redis.so
 %{_mandir}/man5/ncollectd-redis.5*
+%endif
+
+%if %{build_with_redfish}
+%files redfish
+%{_libdir}/%{name}/redfish.so
+%{_mandir}/man5/ncollectd-redfish.5*
 %endif
 
 %if %{build_with_scraper}

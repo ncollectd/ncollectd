@@ -110,6 +110,7 @@ _plugins="
 	proxysql
 	python
 	redis
+	redfish
 	scraper
 	sensors
 	smart
