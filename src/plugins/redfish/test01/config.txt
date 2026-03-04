@@ -1,0 +1,53 @@
+plugin redfish {
+    query "Power" {
+        end-point "/Chassis/1/Power"
+        resource "PowerSupplies" {
+            property "LastPowerOutputWatts" {
+                metric "bmc_powersupply_output_watts"
+                type gauge
+                label-from "id" "MemberId"
+                label-from "sn" "SerialNumber"
+            }
+            property "PowerCapacityWatts" {
+                metric "bmc_powersupply_capacity_watts"
+                type gauge
+                label-from "id" "MemberId"
+                label-from "sn" "SerialNumber"
+            }
+            property "LineInputVoltage" {
+                metric "bmc_powersupply_input_volts"
+                type gauge
+                label-from "id" "MemberId"
+                label-from "sn" "SerialNumber"
+            }
+            property "Status" {
+                metric "bmc_powersupply_status"
+                type gauge
+                label-from "id" "MemberId"
+                label-from "sn" "SerialNumber"
+            }
+        }
+        resource "Redundancy" {
+            property "Status" {
+                metric "bmc_power_redundancy_status"
+                type gauge
+            }
+        }
+        resource "PowerControl" {
+            property "PowerConsumedWatts" {
+                metric "bmc_powercontrol_consumed_watts"
+                type gauge
+                label-from "id" "MemberId"
+            }
+            property "PowerCapacityWatts" {
+                metric "bmc_powercontrol_capacity_watts"
+                type gauge
+                label-from "id" "MemberId"
+            }
+        }
+    }
+    instance "local" {
+        url "http://127.0.0.1:32222"
+        query "Power"
+    }
+}
