@@ -328,6 +328,12 @@ Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: The Redis plugin connects to one or more instances of Redis, a key-value store,
  and collects usage information using the hiredis library.
 
+Package: ncollectd-redfish
+Section: utils
+Architecture: any
+Depends: ncollectd (= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: The Redfish plugin collects sensor data from BMCs using REST protocol called Redfish.
+
 Package: ncollectd-scraper
 Section: utils
 Architecture: any
