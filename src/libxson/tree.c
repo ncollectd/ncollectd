@@ -307,9 +307,6 @@ int xson_tree_parser_chunk(xson_tree_parser_t *parser, const unsigned char *inpu
             ssnprintf(parser->ctx.errbuf, parser->ctx.errbuf_size, "%s", (char *)errmsg);
             json_parser_free_error(errmsg);
         }
-        xson_value_free(parser->ctx.root);
-        json_parser_free (&parser->handle);
-        free(parser);
         return -1;
     }
 
