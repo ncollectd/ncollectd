@@ -642,7 +642,7 @@ static int jlk_curl_perform(jlk_t *jlk, char *post_body, void *data)
     curl_easy_getinfo(jlk->curl, CURLINFO_RESPONSE_CODE, &rc);
 
     /* The response code is zero if a non-HTTP transport was used. */
-    if ((rc != 0) && (rc != 200)) {
+    if ((rc != 0) && ((rc < 200) || (rc > 299))) {
         char *url = NULL;
         curl_easy_getinfo(jlk->curl, CURLINFO_EFFECTIVE_URL, &url);
         PLUGIN_ERROR("curl_easy_perform failed with response code %ld (%s)",

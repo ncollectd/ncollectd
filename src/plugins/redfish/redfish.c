@@ -752,7 +752,10 @@ static int redfish_request_end(redfish_request_t *request)
         return -1;
     }
 
-    if ((code < 200) || (code > 299)) {
+    if ((code != 0) && ((code < 200) || (code > 299))) {
+        char *url = NULL;
+        curl_easy_getinfo(request->curl, CURLINFO_EFFECTIVE_URL, &url);
+        PLUGIN_ERROR("curl response code for '%s' != 2XX: %ld.\n", url, code);
         xson_tree_parser_free(request->parser);
         request->parser = NULL;
         return -1;
@@ -831,37 +834,48 @@ static int redfish_read(user_data_t *user_data)
     int still_running = 0;
 
     do {
-        int numfds;
-
         CURLMcode mc = curl_multi_perform(instance->curl_multi, &still_running);
         if (mc != CURLM_OK)
             break;
 
-        struct CURLMsg *m;
+        struct CURLMsg *m = NULL;
         do {
             int msgq = 0;
             m = curl_multi_info_read(instance->curl_multi, &msgq);
-            if(m && (m->msg == CURLMSG_DONE)) {
+            if((m != NULL) && (m->msg == CURLMSG_DONE)) {
                 CURL *e = m->easy_handle;
-                redfish_request_t *request = NULL;
-                curl_easy_getinfo(e, CURLINFO_PRIVATE, &request);
-                redfish_request_end(request);
-                curl_multi_remove_handle(instance->curl_multi, e);
-                redfish_request_reset(request);
+                if (e != NULL) {
+                    redfish_request_t *request = NULL;
+                    curl_easy_getinfo(e, CURLINFO_PRIVATE, &request);
+                    if (request != NULL) {
+                        if (m->data.result != CURLE_OK) {
+                            PLUGIN_ERROR("curl perform failed with status %u: %s.",
+                                         m->data.result, request->curl_error);
+                            curl_multi_remove_handle(instance->curl_multi, e);
+                            redfish_request_reset(request);
+                        } else {
+                            redfish_request_end(request);
+                            curl_multi_remove_handle(instance->curl_multi, e);
+                            redfish_request_reset(request);
+                        }
+                    }
+                }
             }
         } while(m);
 
+        int numfds;
         mc = curl_multi_poll(instance->curl_multi, NULL, 0, 100, &numfds);
         if (mc != CURLM_OK) {
-
+            PLUGIN_ERROR("curl_multi_poll with status %i.", mc);
+            break;
         }
-
     } while (still_running);
 
     for (size_t i = 0; i < instance->requests_num; i++) {
-        if (instance->requests[i].curl != NULL) {
-            curl_multi_remove_handle(instance->curl_multi, instance->requests[i].curl);
-            redfish_request_reset(&instance->requests[i]);
+        redfish_request_t *request = &instance->requests[i];
+        if (request->curl != NULL) {
+            curl_multi_remove_handle(instance->curl_multi, request->curl);
+            redfish_request_reset(request);
         }
     }
 
