@@ -1,0 +1,22 @@
+# TYPE bmc_powersupply_output_watts gauge
+bmc_powersupply_output_watts{hostname="localhost.localdomain",id="0",instance="local",sn="XXXXXXXXXXXXXX"} 153
+# TYPE bmc_powersupply_output_watts gauge
+bmc_powersupply_output_watts{hostname="localhost.localdomain",id="1",instance="local",sn="YYYYYYYYYYYYYY"} 104
+# TYPE bmc_powersupply_capacity_watts gauge
+bmc_powersupply_capacity_watts{hostname="localhost.localdomain",id="0",instance="local",sn="XXXXXXXXXXXXXX"} 800
+# TYPE bmc_powersupply_capacity_watts gauge
+bmc_powersupply_capacity_watts{hostname="localhost.localdomain",id="1",instance="local",sn="YYYYYYYYYYYYYY"} 800
+# TYPE bmc_powersupply_input_volts gauge
+bmc_powersupply_input_volts{hostname="localhost.localdomain",id="0",instance="local",sn="XXXXXXXXXXXXXX"} 228
+# TYPE bmc_powersupply_input_volts gauge
+bmc_powersupply_input_volts{hostname="localhost.localdomain",id="1",instance="local",sn="YYYYYYYYYYYYYY"} 228
+# TYPE bmc_powersupply_status gauge
+bmc_powersupply_status{hostname="localhost.localdomain",id="0",instance="local",sn="XXXXXXXXXXXXXX"} 1
+# TYPE bmc_powersupply_status gauge
+bmc_powersupply_status{hostname="localhost.localdomain",id="1",instance="local",sn="YYYYYYYYYYYYYY"} 1
+# TYPE bmc_power_redundancy_status gauge
+bmc_power_redundancy_status{hostname="localhost.localdomain",instance="local"} 1
+# TYPE bmc_powercontrol_consumed_watts gauge
+bmc_powercontrol_consumed_watts{hostname="localhost.localdomain",id="0",instance="local"} 258
+# TYPE bmc_powercontrol_capacity_watts gauge
+bmc_powercontrol_capacity_watts{hostname="localhost.localdomain",id="0",instance="local"} 1600

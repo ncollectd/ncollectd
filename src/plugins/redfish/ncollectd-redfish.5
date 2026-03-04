@@ -1,0 +1,261 @@
+.\" SPDX-License-Identifier: GPL-2.0-only
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-REDFISH 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-redfish
+.Nd Documentation of ncollectd's redfish plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP redfish
+\fBplugin\fP redfish {
+    \fBquery\fP \fIquery\fP {
+        \fBend-point\fP \fIurl\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBresource\fP \fIresource\fP {
+            \fBproperty\fP \fIproperty\fP {
+                \fBtype\fP \fIcounter|gauge\fP
+                \fBhelp\fP \fIhelp\fP
+                \fBmetric\fP \fImetric\fP
+                \fBlabel\fP \fIkey\fP \fIvalue\fP
+                \fBlabel-from\fP \fIkey\fP \fIattribute\fP
+                \fBscale\fP \fIvalue\fP
+                \fBshift\fP \fIvalue\fP
+                \fBselect-id\fP \fIid\fP ...
+                \fBselect-attr\fP \fIattribute\fP ...
+                \fBselect-attr-value\fP \fIkey\fP \fIvalue\fP
+            }
+        }
+        \fBattribute\fP \fIattribute\fP {
+            \fBtype\fP \fIcounter|gauge\fP
+            \fBhelp\fP \fIhelp\fP
+            \fBmetric\fP \fImetric\fP
+            \fBlabel\fP \fIkey\fP \fIvalue\fP
+            \fBlabel-from\fP \fIkey\fP \fIattribute\fP
+            \fBscale\fP \fIvalue\fP
+            \fBshift\fP \fIvalue\fP
+        }
+    }
+    \fBinstance\fP \fIinstance\fP {
+        \fBurl\fP \fIurl\fP
+        \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
+        \fBtoken\fP \fItoken\fP
+        \fBversion\fP \fIversion\fP
+        \fBverify-peer\fP \fItrue|false\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBca-cert\fP \fI/path/to/ca-cert\fP
+        \fBheader\fP \fIheader\fP
+        \fBproxy\fP \fIproxy-url\fP
+        \fBproxy-tunnel\fP \fItrue|false\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
+        \fBmetric-prefix\fP \fIprefix\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBquery\fP \fIquery\fP
+        \fBfilter\fP {
+            ...
+        }
+    }
+}
+.Ed
+.Sh DESCRIPTION
+The \fBredfish\fP plugin was designed to collect data and metrics exposed by a
+Redfish interface, which implements a structured REST API specified by the
+.Lk https://www.dmtf.org/standards/redfish DMTF
+\&.
+.Bl -tag -width Ds
+.It \fBquery\fP \fIquery\fP
+A \fBquery\fP is identified by a unique key, and groups \fBresource\fP and
+\fBattribute\fP objects associated with a given endpoint.
+.Pp
+A \fBquery\fP is shared by all the instances.
+.Pp
+For each query specified in the \fBquery\fP field of a \fBinstance\fP,
+there must be a matching \fBquery\fP.
+.Bl -tag -width Ds
+.It \fBend-point\fP \fIurl\fP
+An \fBend-point\fP is a partial URI designated one specific resource
+exposed by the Redfish interface to query.
+.Pp
+This URI is qualified as "partial" since the root path of every resource
+exposed by a Redfish interface (namely \f(CW/redfish/v1\fP for the first
+version of the protocol) should be omitted.
+.It \fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metrics name.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBquery\fP block.
+.It \fBresource\fP \fIresource\fP
+A \fBresource\fP represents one composite object or an anonymous collection
+of a resource exposed by a Redfish interface.
+.Pp
+A \fBresource\fP should contain at least one \fBproperty\fP, but possibly
+more than one.
+.Bl -tag -width Ds
+.It \fBproperty\fP \fIproperty\fP
+A \fBproperty\fP represents one property of a composite object or of a
+member of an anonymous collection which should value should be collected
+as a metric.
+.Pp
+In the case of the property "Status", the metric type will be forced to
+gauge and the value will be 1 if "Health" is "OK" and "State" id "Enabled";
+otherwise it will be 0.
+.Bl -tag -width Ds
+.It \fBtype\fP \fIcounter|gauge\fP
+The \fBtype\fP that's used for each metric returned.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknown\fP.
+If not set is \fPunknown\fP.
+There must be exactly one \fBtype\fP option inside each \fBproperty\fP block.
+.It \fBhelp\fP \fIhelp\fP
+Set the \fBhelp\fP text for the metric.
+.It \fBmetric\fP \fImetric\fP
+Set the metric name.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBproperty\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIattribute\fP
+Specifies the attributes whose values will be used to create the labels.
+.It \fBscale\fP \fIvalue\fP
+The values of metrics are multiplied by \fIvalue\fP.
+.It \fBshift\fP \fIvalue\fP
+The values of metrics are added or subtracted by \fIvalue\fP.
+.It \fBselect-id\fP \fIid\fP ...
+If the "item" associated with the \fBproperty\fP is an anonymous collection,
+only the members which IDs belong to the specified list are selected.
+Note that the IDs start at 0.
+.Pp
+If the "item" associated with the \fBproperty\fP is a composite object,
+this field is ignored.
+.It \fBselect-attr\fP \fIattribute\fP ...
+If the "item" associated with the \fBproperty\fP is an anonymous collection,
+only the members which exhibit attributes which names belong to the specified
+list are selected.
+In other words, this field makes it possible to select members of anonymous
+collections based on a set of attributes they must have.
+.Pp
+If the "item" associated with the \fBproperty\fP is a composite object,
+this field is ignored.
+.It \fBselect-attr-value\fP \fIkey\fP \fIvalue\fP
+If the "item" associated with the \fBproperty\fP is an anonymous collection,
+only the members which exhibit an attribute which name is \fIkey\fP and
+value is \fIvalue\fP.
+In other words, this field makes it possible to select members of anonymous
+collections based on the fact that they have a specific attribute,
+which is equal to a specific value.
+Note that it is possible to specify several \fBselect-attr-value\fP fields
+so as to base the member selection on several attributes.
+.Pp
+If the "item" associated with the \fBproperty\fP is a composite object,
+this field is ignored.
+.El
+.El
+.It \fBattribute\fP \fIattribute\fP
+An \fBattribute\fP represents one attribute of a resource exposed by a Redfish
+interface.
+.Pp
+In the case of the property "Status", the metric type will be forced to
+gauge and the value will be 1 if "Health" is "OK" and "State" id "Enabled";
+otherwise it will be 0.
+.Bl -tag -width Ds
+.It \fBtype\fP \fIcounter|gauge\fP
+The \fBtype\fP that's used for each metric returned.
+Must be \fIgauge\fP, \fIcounter\fP, \fIinfo\fP or \fPunknown\fP.
+If not set is \fPunknown\fP.
+There must be exactly one \fBtype\fP option inside each \fBattribute\fP block.
+.It \fBhelp\fP \fIhelp\fP
+Set the \fBhelp\fP text for the metric.
+.It \fBmetric\fP \fImetric\fP
+Set the metric name.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple time in the \fBproperty\fP block.
+.It \fBlabel-from\fP \fIkey\fP \fIattribute\fP
+Specifies the attributes whose values will be used to create the labels.
+.It \fBscale\fP \fIvalue\fP
+The values of metrics are multiplied by \fIvalue\fP.
+.It \fBshift\fP \fIvalue\fP
+The values of metrics are added or subtracted by \fIvalue\fP.
+.El
+.El
+.It \fBinstance\fP \fIinstance\fP
+A \fBinstance\fP groups the information associated with a host exhibiting
+a Redfish interface to query.
+Each declared \fBinstance\fP should be identified by a unique key.
+.Pp
+If a \fBuser\fP field is specified, a \fBpasswd\fP field must be specified too.
+.Pp
+Several instances can be specified.
+If there is none, nothing will be collected.
+.Bl -tag -width Ds
+.It \fBurl\fP \fIurl\fP
+\fBurl\fP is the url of the node exhibiting a Redfish interface to query.
+.It \fBuser\fP \fIusername\fP
+\fBuser\fP is the username of an account with appropriate privileges to
+submit the intended queries to the concerned Redfish interface.
+.It \fBuser-env\fP \fIenv-name\fP
+Get the username to use if authorization is required from the environment
+variable \fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
+\fBpassword\fP is the password of an account with appropriate privileges
+to submit the intended queries to the concerned Redfish interface.
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password to use if authorization is required from the environment
+variable \fIenv-name\fP.
+.It \fBtoken\fP \fItoken\fP
+\fBtoken\fP is the \f(CWX-Auth\fP token associated with a session opened
+on the target Redfish interface.
+.It \fBversion\fP \fIversion\fP
+Version of redfish protocol to build the request path (\f(CW/redfish/v1\fP).
+The default value is \f(CWv1\fP.
+.It \fBverify-peer\fP \fItrue|false\fP
+Enable or disable peer SSL certificate verification.
+See
+.Lk http://curl.haxx.se/docs/sslcerts.html
+for details.
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification.
+If enabled, the plugin checks if the \f(CWCommon Name\fP or a
+\f(CWSubject Alternate Name\fP field of the SSL certificate matches the
+host name provided by the \fBurl\fP option.
+If this identity check fails, the connection is aborted.
+Obviously, only works when connecting to a SSL enabled server.
+Enabled by default.
+.It \fBca-cert\fP \fI/path/to/ca-cert\fP
+File that holds one or more SSL certificates.
+If you want to use HTTPS you will possibly need this option.
+What CA certificates come bundled with \fBlibcurl\fP and are checked by
+default depends on the distribution you use.
+.It \fBproxy\fP \fIproxy-url\fP
+Set the proxy URL to send requests through the HTTP proxy.
+.It \fBproxy-tunnel\fP \fItrue|false\fP
+If set to \fItrue\fP tunnel all operations through the HTTP proxy.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from this
+instanced.
+By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests
+to \fBurl\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
+If \fBtimeout\fP is bigger than the \fBinterval\fP, keep in mind that each slow
+network connection will stall one read thread.
+Adjust the \fBread-threads\fP global setting accordingly to prevent this from
+blocking other plugins.
+.It \fBmetric-prefix\fP \fIprefix\fP
+Prepends \fIprefix\fP to the metric name.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+Can appear multiple times in the \fBinstance\fP block.
+.It \fBquery\fP \fIquery\fP
+\fBquery\fP should contain the space-separated list of unique keys associated
+with the queries to be submitted to the concerned Redfish interface.
+.El
+.El
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
