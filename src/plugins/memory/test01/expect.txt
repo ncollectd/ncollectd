@@ -1,5 +1,5 @@
-# TYPE system_memory_bytes gauge
-system_memory_bytes{hostname="localhost.localdomain"} 33490624512
+# TYPE system_memory_total_bytes gauge
+system_memory_total_bytes{hostname="localhost.localdomain"} 33490624512
 # TYPE system_memory_used_bytes gauge
 system_memory_used_bytes{hostname="localhost.localdomain"} 5595688960
 # TYPE system_memory_free_bytes gauge
