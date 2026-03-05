@@ -32,6 +32,8 @@ int memory_read(void)
     double mem_slab_unrecl = NAN;
     double mem_total = 0;
     double mem_not_used = 0;
+    double mem_available = NAN;
+    double mem_shmem = NAN;
 
     char buffer[256];
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
@@ -59,6 +61,8 @@ int memory_read(void)
             } else if (strcmp(fields[0], "MemFree:") == 0) {
                 mem_free = 1024.0 * atoll(fields[1]);
                 mem_not_used += mem_free;
+            } else if (strcmp(fields[0], "MemAvailable:") == 0) {
+                mem_available = 1024.0 * atoll(fields[1]);
             }
             break;
         case 'S':
@@ -68,6 +72,8 @@ int memory_read(void)
                 mem_slab_recl = 1024.0 * atoll(fields[1]);
             } else if (strcmp(fields[0], "SUnreclaim:") == 0) {
                 mem_slab_unrecl = 1024.0 * atoll(fields[1]);
+            } else if (strcmp(fields[0], "Shmem:") == 0) {
+                mem_shmem = 1024.0 * atoll(fields[1]);
             }
             break;
         }
@@ -78,20 +84,31 @@ int memory_read(void)
     if (isnan(mem_total) || (mem_total == 0))
         return EINVAL;
 
-    if (!isnan(mem_slab_recl))
-        mem_not_used += mem_slab_recl;
-    else if (!isnan(mem_slab))
-        mem_not_used += mem_slab;
+    double mem_used = 0;
 
-    if (mem_total < mem_not_used)
-        return EINVAL;
+    if (isnan(mem_available) || (mem_available == 0)) {
+        if (!isnan(mem_slab_recl))
+            mem_not_used += mem_slab_recl;
+        else if (!isnan(mem_slab))
+            mem_not_used += mem_slab;
 
-    /* "used" is not explicitly reported. It is calculated as everything that is
-     * not "not used", e.g. cached, buffers, ... */
-    double mem_used = mem_total - mem_not_used;
+        if (mem_total < mem_not_used)
+            return EINVAL;
 
+        /* "used" is not explicitly reported. It is calculated as everything that is
+         * not "not used", e.g. cached, buffers, ... */
+        mem_used = mem_total - mem_not_used;
+    } else {
+        if (mem_available > mem_total)
+            mem_used = mem_total - mem_free;
+        else
+            mem_used = mem_total - mem_available;
+    }
+
+    metric_family_append(&fams[FAM_MEMORY_BYTES], VALUE_GAUGE(mem_total), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_USED_BYTES], VALUE_GAUGE(mem_used), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_FREE_BYTES], VALUE_GAUGE(mem_free), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_SHARED_BYTES], VALUE_GAUGE(mem_shmem), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_BUFFERS_BYTES], VALUE_GAUGE(mem_buffers), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_CACHED_BYTES], VALUE_GAUGE(mem_cached), NULL, NULL);
 
@@ -108,6 +125,10 @@ int memory_read(void)
         metric_family_append(&fams[FAM_MEMORY_SLAB_BYTES],
                              VALUE_GAUGE(mem_slab), NULL, NULL);
     }
+
+    if (!isnan(mem_available) && (mem_available != 0))
+        metric_family_append(&fams[FAM_MEMORY_AVAILABLE_BYTES],
+                             VALUE_GAUGE(mem_available), NULL, NULL);
 
     plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
 

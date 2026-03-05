@@ -12,6 +12,11 @@
 #include "memory.h"
 
 metric_family_t fams[FAM_MEMORY_MAX] = {
+    [FAM_MEMORY_BYTES] = {
+        .name = "system_memory_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Total usable memory in bytes."
+    },
     [FAM_MEMORY_USED_BYTES] = {
         .name = "system_memory_used_bytes",
         .type = METRIC_TYPE_GAUGE,
@@ -22,6 +27,11 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Unused memory in bytes.",
     },
+    [FAM_MEMORY_SHARED_BYTES] = {
+        .name = "system_memory_shared_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory used (mostly) by tmpfs in bytes.",
+    },
     [FAM_MEMORY_BUFFERS_BYTES] = {
         .name = "system_memory_buffers_bytes",
         .type = METRIC_TYPE_GAUGE,
@@ -30,7 +40,7 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
     [FAM_MEMORY_CACHED_BYTES] = {
         .name = "system_memory_cached_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Memory used by the page cache and slabs in bytes.",
+        .help = "Memory used by the page cache in bytes.",
     },
     [FAM_MEMORY_SLAB_BYTES] = {
         .name = "system_memory_slab_bytes",
@@ -46,6 +56,11 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
         .name = "system_memory_slab_unreclaimable_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Part of Slab, that cannot be reclaimed on memory pressure.",
+    },
+    [FAM_MEMORY_AVAILABLE_BYTES] = {
+        .name = "system_memory_available_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Estimation of how much memory is available for starting new applications.",
     },
     [FAM_MEMORY_WIRED_BYTES] = {
         .name = "system_memory_wired_bytes",
