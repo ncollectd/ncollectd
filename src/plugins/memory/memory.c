@@ -12,8 +12,8 @@
 #include "memory.h"
 
 metric_family_t fams[FAM_MEMORY_MAX] = {
-    [FAM_MEMORY_BYTES] = {
-        .name = "system_memory_bytes",
+    [FAM_MEMORY_TOTAL_BYTES] = {
+        .name = "system_memory_total_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Total usable memory in bytes."
     },

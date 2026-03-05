@@ -105,7 +105,7 @@ int memory_read(void)
             mem_used = mem_total - mem_available;
     }
 
-    metric_family_append(&fams[FAM_MEMORY_BYTES], VALUE_GAUGE(mem_total), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_TOTAL_BYTES], VALUE_GAUGE(mem_total), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_USED_BYTES], VALUE_GAUGE(mem_used), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_FREE_BYTES], VALUE_GAUGE(mem_free), NULL, NULL);
     metric_family_append(&fams[FAM_MEMORY_SHARED_BYTES], VALUE_GAUGE(mem_shmem), NULL, NULL);
