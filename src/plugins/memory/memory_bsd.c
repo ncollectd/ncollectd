@@ -97,12 +97,15 @@ int memory_read(void)
         char const *sysctl_key;
         int fam;
     } metrics[] = {
-        {"vm.stats.vm.v_page_size"},
-        {"vm.stats.vm.v_free_count",     FAM_MEMORY_FREE_BYTES    },
-        {"vm.stats.vm.v_wire_count",     FAM_MEMORY_WIRED_BYTES   },
-        {"vm.stats.vm.v_active_count",   FAM_MEMORY_ACTIVE_BYTES  },
-        {"vm.stats.vm.v_inactive_count", FAM_MEMORY_INACTIVE_BYTES},
-        {"vm.stats.vm.v_cache_count",    FAM_MEMORY_CACHED_BYTES  },
+        {"vm.stats.vm.v_page_size",       -1                         },
+        {"vm.stats.vm.v_page_count",      FAM_MEMORY_BYTES           },
+        {"vm.stats.vm.v_free_count",      FAM_MEMORY_FREE_BYTES      },
+        {"vm.stats.vm.v_wire_count",      FAM_MEMORY_WIRED_BYTES     },
+        {"vm.stats.vm.v_active_count",    FAM_MEMORY_ACTIVE_BYTES    },
+        {"vm.stats.vm.v_inactive_count",  FAM_MEMORY_INACTIVE_BYTES  },
+        {"vm.stats.vm.v_cache_count",     FAM_MEMORY_CACHED_BYTES    },
+        {"vm.stats.vm.v_user_wire_count", FAM_MEMORY_USER_WIRED_BYTES},
+        {"vm.stats.vm.v_laundry_count",   FAM_MEMORY_LAUNDRY_BYTES   },
     };
 
     double page_size = 0;
