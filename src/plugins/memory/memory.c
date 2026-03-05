@@ -67,6 +67,11 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
+    [FAM_MEMORY_USER_WIRED_BYTES] = {
+        .name = "system_memory_user_wired_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
     [FAM_MEMORY_ACTIVE_BYTES] = {
         .name = "system_memory_active_bytes",
         .type = METRIC_TYPE_GAUGE,
@@ -94,6 +99,11 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
     },
     [FAM_MEMORY_UNUSED_BYTES] = {
         .name = "system_memory_unused_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_MEMORY_LAUNDRY_BYTES] = {
+        .name = "system_memory_laundry_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
