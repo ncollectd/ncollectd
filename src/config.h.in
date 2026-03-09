@@ -251,6 +251,12 @@
 #ifndef HAVE_FCNTL_CLOSEM
 #cmakedefine HAVE_FCNTL_CLOSEM
 #endif
+#ifndef HAVE_PWRITEV
+#cmakedefine HAVE_PWRITEV
+#endif
+#ifndef HAVE_FDATASYNC
+#cmakedefine HAVE_FDATASYNC
+#endif
 #ifndef HAVE_RUSAGE_THREAD
 #cmakedefine HAVE_RUSAGE_THREAD
 #endif

@@ -444,15 +444,15 @@ static void *httpd_server(__attribute__((unused)) void *arg)
 
 int http_server_init(void)
 {
-    httpd_sock_file = global_option_get("socket-file");
-    char const *group = global_option_get("socket-group");
-    int perms = (int)strtol(global_option_get("socket-perms"), NULL, 8);
-    bool delete = IS_TRUE(global_option_get("socket-delete"));
+    const cf_control_socket_t *http_server = global_option_get_control_socket();
 
+    if (http_server->path == NULL)
+        return 0;
 
     httpd_listen = httpd_listen_init();
 
-    int status = httpd_open_unix_socket(httpd_listen, httpd_sock_file, 128, group, perms, delete);
+    int status = httpd_open_unix_socket(httpd_listen, http_server->path, 128, http_server->group,
+                                        http_server->perms, http_server->delete);
     if (status != 0) {
 
     }

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ncollectd.h"
+#include "libutils/pack.h"
 
 typedef struct {
     double quantile;
@@ -25,3 +26,7 @@ void summary_destroy(summary_t *s);
 summary_t *summary_new(void);
 
 summary_t *summary_quantile_append(summary_t *s, double quantile, double value);
+
+int summary_pack(buf_t *buf, uint8_t id, summary_t *s);
+
+int summary_unpack(rbuf_t *rbuf, summary_t **s);

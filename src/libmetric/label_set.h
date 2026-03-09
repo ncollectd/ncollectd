@@ -10,6 +10,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "libutils/buf.h"
+
 /* label_pair_t represents a label, i.e. a key/value pair. */
 typedef struct {
   const char *name;
@@ -63,3 +65,8 @@ int label_set_rename(label_set_t *labels, char *from, char *to);
 int label_set_qsort(label_set_t *labels);
 
 int label_set_unmarshal(label_set_t *labels, char const **inout);
+
+int label_set_pack(buf_t *buf, uint8_t id, const label_set_t *set);
+
+int label_set_unpack(rbuf_t *rbuf, uint8_t id, label_set_t *set);
+

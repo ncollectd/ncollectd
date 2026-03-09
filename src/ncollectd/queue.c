@@ -133,7 +133,8 @@ int queue_enqueue(queue_t *queue, const char *plugin, queue_elem_t *ins_head)
     }
 
     /* Enforce limit_high (unless it is infinite (e.g. == 0)) */
-    while ((queue->limit_high != 0) && (slowest_thread->queue_length > queue->limit_high)) {
+    while ((queue->limit_high != 0) &&
+           (slowest_thread->queue_length > queue->limit_high)) {
         /* Select a random element to drop between the last position in the slowest
          * thread's queue and queue posititon "limit_low". This makes sure that
          * write plugins that do not let the queue get longer than "limit_low"
@@ -358,7 +359,6 @@ int queue_thread_stop(queue_t *queue, const char *name)
             ERROR("pthread_join failed for %s.", to_stop->name);
             status = ret;
         }
-
         free(to_stop->name);
 
         /* Drop references to all remaining queue elements */
@@ -376,4 +376,40 @@ int queue_thread_stop(queue_t *queue, const char *name)
     }
 
     return status;
+}
+
+queue_t *queue_new(char *kind)
+{
+    queue_t *queue = calloc(1, sizeof(*queue));
+    if (queue == NULL) {
+        ERROR("calloc failed.");
+        return NULL;
+    }
+
+    queue->kind = strdup(kind);
+    if (queue->kind == NULL) {
+        free(queue);
+        ERROR("strdup failed.");
+        return NULL;
+    }
+
+    C_COMPLAIN_INIT(&(queue->complaint));
+    pthread_mutex_init(&queue->lock, NULL);
+    pthread_cond_init(&queue->cond, NULL);
+    queue->tail = NULL;
+    queue->threads = NULL;
+
+    return queue;
+}
+
+void queue_free(queue_t *queue)
+{
+    if (queue == NULL)
+        return;
+
+    free(queue->kind);
+    pthread_mutex_destroy(&queue->lock);
+    pthread_cond_destroy(&queue->cond);
+
+    free(queue);
 }

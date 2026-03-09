@@ -19,6 +19,12 @@ typedef struct {
     bool fixed;
 } buf_t;
 
+typedef struct {
+    uint8_t *ptr;
+    size_t pos;
+    size_t size;
+} rbuf_t;
+
 /* BUF_CREATE allocates a new buf_t on the stack, which must be freed
  * using BUF_DESTROY before returning from the function. Failure to call
  * BUF_DESTROY will leak the memory allocated to (buf_t).ptr. */
@@ -235,6 +241,15 @@ static inline int buf_putdoublehton(buf_t *buf, double n)
 int buf_putitoa(buf_t *buf, int64_t n);
 int buf_putdtoa(buf_t *buf, double n);
 
+static inline int buf_putuint32at(buf_t *buf, size_t pos, uint32_t n)
+{
+    if (pos > buf->pos)
+        return EINVAL;
+
+    memcpy(buf->ptr + pos, &n, sizeof(n));
+    return 0;
+}
+
 static inline void buf_reset(buf_t *buf)
 {
     buf->pos = 0;
@@ -260,4 +275,154 @@ static inline void buf_destroy(buf_t *buf)
         free(buf->ptr);
         buf->ptr = NULL;
     }
+}
+
+static inline void buf2rbuf(buf_t *buf, rbuf_t *rbuf)
+{
+    rbuf->ptr = buf->ptr;
+    rbuf->size = buf->pos;
+    rbuf->pos = 0;
+}
+
+static inline void rbuf_init(rbuf_t *rbuf, char *ptr, size_t size)
+{
+    rbuf->ptr = (uint8_t *)ptr;
+    rbuf->size = size;
+    rbuf->pos = 0;
+}
+
+static inline int rbuf_sub(rbuf_t *rbuf, size_t size, rbuf_t *srbuf)
+{
+    srbuf->ptr = rbuf->ptr + rbuf->pos;
+    size_t remain = rbuf->size - rbuf->pos;
+    if (size > remain)
+        return EINVAL;
+    srbuf->size = size;
+    srbuf->pos = 0;
+    return 0;
+}
+
+static inline size_t rbuf_remain(rbuf_t const *rbuf)
+{
+    return rbuf->size ? rbuf->size - rbuf->pos : 0;
+}
+
+static inline int rbuf_get(rbuf_t *rbuf, void *s, size_t len)
+{
+    if (unlikely(rbuf_remain(rbuf) < len))
+        return ENOMEM;
+
+    memcpy(s, rbuf->ptr + rbuf->pos, len);
+    rbuf->pos += len;
+    return 0;
+}
+
+static inline int rbuf_getuint8(rbuf_t *rbuf, uint8_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getuint16(rbuf_t *rbuf, uint16_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getuint32(rbuf_t *rbuf, uint32_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getuint64(rbuf_t *rbuf, uint64_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getint8(rbuf_t *rbuf, int8_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getint16(rbuf_t *rbuf, int16_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getint32(rbuf_t *rbuf, int32_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getint64(rbuf_t *rbuf, int64_t *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getfloat(rbuf_t *rbuf, float *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_getdouble(rbuf_t *rbuf, double *value)
+{
+    if (unlikely(rbuf_remain(rbuf) < sizeof(*value)))
+        return ENOMEM;
+
+    memcpy(value, rbuf->ptr + rbuf->pos, sizeof(*value));
+    rbuf->pos += sizeof(*value);
+    return 0;
+}
+
+static inline int rbuf_refstring(rbuf_t *rbuf, char **str, size_t len)
+{
+    if (unlikely(rbuf_remain(rbuf) < len))
+        return ENOMEM;
+
+    *str = (char *)(rbuf->ptr + rbuf->pos);
+    rbuf->pos += len;
+    return 0;
 }

@@ -72,6 +72,53 @@ csnappy_compress(
 	const int workmem_bytes_power_of_two);
 
 /*
+ * Reads header of compressed data to get stored length of uncompressed data.
+ * REQUIRES: start points to compressed data.
+ * REQUIRES: n is length of available compressed data.
+ *
+ * Returns SNAPPY_E_HEADER_BAD on error.
+ * Returns number of bytes read from input on success.
+ * Stores decoded length into *result.
+ */
+int
+csnappy_get_uncompressed_length(
+	const char *start,
+	uint32_t n,
+	uint32_t *result);
+
+/*
+ * Safely decompresses all data from array "src" of length "src_len" containing
+ * entire compressed stream (with header) into array "dst" of size "dst_len".
+ * REQUIRES: dst_len is at least csnappy_get_uncompressed_length(...).
+ *
+ * Iff successful, returns CSNAPPY_E_OK.
+ * If recorded length in header is greater than dst_len, returns
+ *  CSNAPPY_E_OUTPUT_INSUF.
+ * If compressed data is malformed, does not write more than dst_len into dst.
+ */
+int
+csnappy_decompress(
+	const char *src,
+	uint32_t src_len,
+	char *dst,
+	uint32_t dst_len);
+
+/*
+ * Safely decompresses stream src_len bytes long read from src to dst.
+ * Amount of available space at dst must be provided in *dst_len by caller.
+ * If compressed stream needs more space, it will not overflow and return
+ *  CSNAPPY_E_OUTPUT_OVERRUN.
+ * On success, sets *dst_len to actal number of bytes decompressed.
+ * Iff successful, returns CSNAPPY_E_OK.
+ */
+int
+csnappy_decompress_noheader(
+	const char *src,
+	uint32_t src_len,
+	char *dst,
+	uint32_t *dst_len);
+
+/*
  * Return values (< 0 = Error)
  */
 #define CSNAPPY_E_OK			0

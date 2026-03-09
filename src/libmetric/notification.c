@@ -9,10 +9,12 @@
 #include "ncollectd.h"
 #include "log.h"
 #include "libutils/common.h"
+#include "libutils/pack.h"
 #include "libmetric/metric.h"
 #include "libmetric/metric_chars.h"
 #include "libmetric/notification.h"
 #include "libmetric/marshal.h"
+#include "libmetric/parser.h"
 
 int notification_marshal(strbuf_t *buf, notification_t const *n)
 {
@@ -196,3 +198,83 @@ int notitication_unmarshal(notification_t *n, char const *buf)
 
     return 0;
 }
+
+enum {
+    NOTITICATION_SEVERITY_ID   = 0x10,
+    NOTITICATION_TIME_ID       = 0x20,
+    NOTITICATION_NAME_ID       = 0x30,
+    NOTITICATION_LABEL_ID      = 0x40,
+    NOTITICATION_ANNOTATION_ID = 0x50
+};
+
+int notification_pack(buf_t *buf, const notification_t *n)
+{
+    size_t begin = 0;
+
+    int status = pack_block_begin(buf, &begin);
+    status |= pack_uint8(buf, NOTITICATION_SEVERITY_ID, n->severity);
+    status |= pack_uint64(buf, NOTITICATION_TIME_ID, n->time);
+    status |= pack_string(buf, NOTITICATION_NAME_ID, n->name);
+    status |= label_set_pack(buf, NOTITICATION_LABEL_ID, &n->label);
+    status |= label_set_pack(buf, NOTITICATION_ANNOTATION_ID, &n->annotation);
+    status |= pack_block_end(buf, begin);
+
+    return status;
+}
+
+notification_t *notification_unpack(rbuf_t *rbuf)
+{
+    rbuf_t srbuf = {0};
+    int status = unpack_block(rbuf, &srbuf);
+    if (status != 0) {
+        return NULL;
+    }
+
+    notification_t *n = calloc(1, sizeof(*n));
+    if (n == NULL) {
+        ERROR("calloc failed.");
+        return NULL;
+    }
+
+    while (true) {
+        uint8_t id = 0;
+
+        status = unpack_id(rbuf, &id);
+
+        switch (id & 0xf0) {
+        case NOTITICATION_SEVERITY_ID: {
+            uint8_t severity = 0;
+            status = unpack_uint8(rbuf, &severity);
+            n->severity = severity;
+        }   break;
+        case NOTITICATION_TIME_ID:
+            status = unpack_uint64(rbuf, &n->time);
+            break;
+        case NOTITICATION_NAME_ID:
+            status = unpack_string(rbuf, id, &n->name);
+            break;
+        case NOTITICATION_LABEL_ID:
+            status = label_set_unpack(rbuf, id, &n->label);
+            break;
+        case NOTITICATION_ANNOTATION_ID:
+            status = label_set_unpack(rbuf, id, &n->annotation);
+            break;
+        }
+
+        if (status != 0)
+            break;
+
+        if (rbuf_remain(&srbuf) == 0)
+            break;
+    }
+
+    if (status != 0) {
+        notification_free(n);
+        return NULL;
+    }
+
+    unpack_avance_block(rbuf, &srbuf);
+
+    return n;
+}
+

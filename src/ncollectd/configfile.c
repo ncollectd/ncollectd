@@ -12,6 +12,8 @@
 #include "libutils/config.h"
 #include "libmetric/label_set.h"
 
+#include <regex.h>
+
 #ifdef HAVE_WORDEXP_H
 #include <wordexp.h>
 #endif /* HAVE_WORDEXP_H */
@@ -33,10 +35,10 @@ typedef struct cf_callback_s {
     struct cf_callback_s *next;
 } cf_callback_t;
 
-typedef struct cf_value_map_s {
+typedef struct {
     const char *key;
-    int (*func)(config_item_t *);
-} cf_value_map_t;
+    int (*func)(const config_item_t *);
+} cf_map_t;
 
 typedef struct cf_global_option_s {
     const char *key;
@@ -47,60 +49,81 @@ typedef struct cf_global_option_s {
 
 typedef struct {
     char *name;
+    regex_t *regex;
     int num;
 } cf_cpumap_t;
 
 static int cf_cpumap_num;
 static cf_cpumap_t *cf_cpumap;
 
+static cf_control_socket_t cf_control_socket;
+static cf_queue_t cf_queue_metric;
+static cf_queue_t cf_queue_notification;
+
+typedef enum {
+    QUEUE_METRICS,
+    QUEUE_NOTIFICATIONS
+} queue_type_t;
+
+#define QUEUE_METRICS_MEMORY_LIMIT_HIGH       50000
+#define QUEUE_METRICS_MEMORY_LIMIT_LOW        25000
+#define QUEUE_NOTIFICATIONS_MEMORY_LIMIT_HIGH  1000
+#define QUEUE_NOTIFICATIONS_MEMORY_LIMIT_LOW    500
+
 static char **plugin_ctx_names;
 static size_t plugin_ctx_names_num;
 
 /* Prototypes of callback functions */
-static int dispatch_value_plugindir(config_item_t *ci);
-static int dispatch_loadplugin(config_item_t *ci);
-static int dispatch_block_plugin(config_item_t *ci);
-static int dispatch_label(config_item_t *ci);
-static int dispatch_cpumap(config_item_t *ci);
+static int dispatch_plugindir(const config_item_t *ci);
+static int dispatch_label(const config_item_t *ci);
+static int dispatch_block_loadplugin(const config_item_t *ci);
+static int dispatch_block_plugin(const config_item_t *ci);
+static int dispatch_block_cpumap(const config_item_t *ci);
+static int dispatch_block_control_socket(const config_item_t *ci);
+static int dispatch_block_metric_queue(const config_item_t *ci);
+static int dispatch_block_notifications_queue(const config_item_t *ci);
 
 /* Private variables */
 static cf_callback_t *callback_head;
 
-static cf_value_map_t cf_value_map[] = {
-    {"plugin-dir",  dispatch_value_plugindir},
-    {"load-plugin", dispatch_loadplugin     },
-    {"plugin",      dispatch_block_plugin   },
-    {"label",       dispatch_label          },
-    {"cpu-map",     dispatch_cpumap         }
+static cf_map_t cf_value_map[] = {
+    { "plugin-dir",  dispatch_plugindir        },
+    { "load-plugin", NULL                      },
+    { "plugin",      NULL                      },
+    { "label",       dispatch_label            }
 };
 static int cf_value_map_num = STATIC_ARRAY_SIZE(cf_value_map);
 
+static cf_map_t cf_block_map[] = {
+    { "load-plugin",         NULL                               },
+    { "plugin",              NULL                               },
+    { "filter",              filter_global_configure            },
+    { "control-socket",      dispatch_block_control_socket      },
+    { "cpu-map",             dispatch_block_cpumap              },
+    { "metric-queue",        dispatch_block_metric_queue        },
+    { "notification-queue",  dispatch_block_notifications_queue }
+};
+static int cf_block_map_num = STATIC_ARRAY_SIZE(cf_block_map);
+
 static cf_global_option_t cf_global_options[] = {
-    {"base-dir",                NULL, 0, PKGLOCALSTATEDIR  },
-    {"pid-file",                NULL, 0, PIDFILE           },
-    {"hostname",                NULL, 0, NULL              },
-    {"fqdn-lookup",             NULL, 0, "true"            },
-    {"interval",                NULL, 0, NULL              },
-    {"read-threads",            NULL, 0, "5"               },
-    {"write-queue-limit-high",  NULL, 0, NULL              },
-    {"write-queue-limit-low",   NULL, 0, NULL              },
-    {"notify-queue-limit-high", NULL, 0, NULL              },
-    {"notify-queue-limit-low",  NULL, 0, NULL              },
-    {"timeout",                 NULL, 0, "2"               },
-    {"auto-load-plugin",        NULL, 0, "false"           },
-    {"collect-internal-stats",  NULL, 0, "false"           },
-    {"pre-cache-filter",        NULL, 0, "pre-cache"       },
-    {"post-cache-filter",       NULL, 0, "post-cache"      },
-    {"max-read-interval",       NULL, 0, "86400"           },
-    {"normalize-interval",      NULL, 0, "false"           },
-    {"socket-file",             NULL, 0, UNIXSOCKETPATH    },
-    {"socket-group",            NULL, 0, NCOLLECTD_GRP_NAME},
-    {"socket-perms",            NULL, 0, "0770"            },
-    {"socket-delete",           NULL, 0, "false"           },
-    {"proc-path",               NULL, 0, "/proc"           },
-    {"sys-path",                NULL, 0, "/sys"            }
+    { "base-dir",               NULL, 0, PKGLOCALSTATEDIR },
+    { "pid-file",               NULL, 0, PIDFILE          },
+    { "hostname",               NULL, 0, NULL             },
+    { "fqdn-lookup",            NULL, 0, "true"           },
+    { "interval",               NULL, 0, NULL             },
+    { "read-threads",           NULL, 0, "5"              },
+    { "timeout",                NULL, 0, "2"              },
+    { "auto-load-plugin",       NULL, 0, "false"          },
+    { "collect-internal-stats", NULL, 0, "false"          },
+    { "pre-cache-filter",       NULL, 0, "pre-cache"      },
+    { "post-cache-filter",      NULL, 0, "post-cache"     },
+    { "max-read-interval",      NULL, 0, "86400"          },
+    { "normalize-interval",     NULL, 0, "false"          },
+    { "proc-path",              NULL, 0, "/proc"          },
+    { "sys-path",               NULL, 0, "/sys"           },
 };
 static int cf_global_options_num = STATIC_ARRAY_SIZE(cf_global_options);
+
 
 static char *plugin_name_alloc(const char *name)
 {
@@ -151,7 +174,7 @@ static int dispatch_global_option(const config_item_t *ci)
     return -1;
 }
 
-static int dispatch_value_plugindir(config_item_t *ci)
+static int dispatch_plugindir(const config_item_t *ci)
 {
     assert(strcasecmp(ci->key, "plugin-dir") == 0);
 
@@ -165,7 +188,7 @@ static int dispatch_value_plugindir(config_item_t *ci)
     return 0;
 }
 
-static int dispatch_loadplugin(config_item_t *ci)
+static int dispatch_block_loadplugin(const config_item_t *ci)
 {
     bool global = false;
 
@@ -229,7 +252,11 @@ static int dispatch_value(config_item_t *ci)
 {
     for (int i = 0; i < cf_value_map_num; i++) {
         if (strcasecmp(cf_value_map[i].key, ci->key) == 0) {
-            return cf_value_map[i].func(ci);
+            if (cf_value_map[i].func == NULL) {
+                return 0;
+            } else {
+                return cf_value_map[i].func(ci);
+            }
         }
     }
 
@@ -245,7 +272,7 @@ static int dispatch_value(config_item_t *ci)
     return -1;
 }
 
-static int dispatch_block_plugin(config_item_t *ci)
+static int dispatch_block_plugin(const config_item_t *ci)
 {
     assert(strcasecmp(ci->key, "plugin") == 0);
 
@@ -296,7 +323,7 @@ static int dispatch_block_plugin(config_item_t *ci)
     for (cf_callback_t *cb = callback_head; cb != NULL; cb = cb->next) {
         if (strcasecmp(plugin_name, cb->type) == 0) {
             plugin_ctx_t old_ctx = plugin_set_ctx(cb->ctx);
-            int ret_val = (cb->callback(ci));
+            int ret_val = cb->callback(discard_const(ci));
             plugin_set_ctx(old_ctx);
             return ret_val;
         }
@@ -311,21 +338,22 @@ static int dispatch_block_plugin(config_item_t *ci)
     return 0;
 }
 
-static int dispatch_block(config_item_t *ci)
+static int dispatch_block(const config_item_t *ci)
 {
-    if (strcasecmp(ci->key, "load-plugin") == 0)
-        return dispatch_loadplugin(ci);
-    else if (strcasecmp(ci->key, "plugin") == 0)
-        return dispatch_block_plugin(ci);
-    else if (strcasecmp(ci->key, "filter") == 0)
-        return filter_global_configure(ci);
-    else
-        return -1;
+    for (int i = 0; i < cf_block_map_num; i++) {
+        if (strcasecmp(cf_block_map[i].key, ci->key) == 0) {
+            if (cf_block_map[i].func == NULL) {
+                return 0;
+            } else {
+                return cf_block_map[i].func(ci);
+            }
+        }
+    }
 
     return 0;
 }
 
-static int dispatch_label(config_item_t *ci)
+static int dispatch_label(const config_item_t *ci)
 {
     assert(strcasecmp(ci->key, "label") == 0);
 
@@ -344,23 +372,21 @@ static int dispatch_label(config_item_t *ci)
     return label_set_add(&labels_g, true, ci->values[0].value.string, ci->values[1].value.string);
 }
 
-static int dispatch_cpumap(config_item_t *ci)
+static int dispatch_cpumap_bind(const config_item_t *ci)
 {
-    assert(strcasecmp(ci->key, "cpu-map") == 0);
-
     if (ci->values_num != 2) {
-        ERROR("configfile: The 'cpu-map' in %s:%d option requires two arguments.",
+        ERROR("configfile: The 'bind' option in %s:%d requires two arguments.",
               cf_get_file(ci), cf_get_lineno(ci));
         return -1;
     }
-    if (ci->values[0].type != CONFIG_TYPE_STRING) {
-        ERROR("configfile: The first argument of 'cpu-map' option in %s:%d must be a string.",
+    if ((ci->values[0].type != CONFIG_TYPE_STRING) && (ci->values[0].type != CONFIG_TYPE_REGEX)) {
+        ERROR("configfile: The first argument of 'bind' option in %s:%d must be a string or regex.",
               cf_get_file(ci), cf_get_lineno(ci));
         return -1;
     }
 
     if (ci->values[1].type != CONFIG_TYPE_NUMBER) {
-        ERROR("configfile: The seconds argument of 'cpu-map' option in %s:%d must be a number.",
+        ERROR("configfile: The seconds argument of 'bind' option in %s:%d must be a number.",
               cf_get_file(ci), cf_get_lineno(ci));
         return -1;
     }
@@ -372,15 +398,276 @@ static int dispatch_cpumap(config_item_t *ci)
     }
 
     cf_cpumap = tmp;
-    cf_cpumap[cf_cpumap_num].name = strdup(ci->values[0].value.string);
-    if (cf_cpumap[cf_cpumap_num].name == NULL) {
-        ERROR("configfile: strdup failed.");
-        return -1;
+    cf_cpumap[cf_cpumap_num].name = NULL;
+    cf_cpumap[cf_cpumap_num].regex = NULL;
+    if (ci->values[0].type == CONFIG_TYPE_STRING) {
+        cf_cpumap[cf_cpumap_num].name = strdup(ci->values[0].value.string);
+        if (cf_cpumap[cf_cpumap_num].name == NULL) {
+            ERROR("configfile: strdup failed.");
+            return -1;
+        }
+    } else {
+        cf_cpumap[cf_cpumap_num].regex = calloc(1, sizeof(*cf_cpumap[cf_cpumap_num].regex));
+        if (cf_cpumap[cf_cpumap_num].regex == NULL) {
+            ERROR("configfile: calloc failed.");
+            return -1;
+        }
+
+        int status = regcomp(cf_cpumap[cf_cpumap_num].regex, ci->values[0].value.string,
+                             REG_EXTENDED);
+        if (status != 0) {
+            ERROR("regcom '%s' failed in %s:%d: %s.", ci->values[0].value.string,
+                  cf_get_file(ci), cf_get_lineno(ci), STRERRNO);
+            free(cf_cpumap[cf_cpumap_num].regex);
+            return -1;
+        }
     }
 
     cf_cpumap[cf_cpumap_num].num = ci->values[1].value.number;
     cf_cpumap_num++;
     return 0;
+}
+
+static int dispatch_block_cpumap(const config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "cpu-map") == 0);
+
+    int status = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("bind", child->key) == 0) {
+            status = dispatch_cpumap_bind(child);
+        } else {
+            ERROR("Unknown cpu-map option '%s' in %s:%d",
+                  child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
+
+    return 0;
+}
+
+static int dispatch_block_control_socket(const config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "control-socket") == 0);
+
+    free(cf_control_socket.path);
+    cf_control_socket.path = strdup(UNIXSOCKETPATH);
+    if (cf_control_socket.path == NULL) {
+        ERROR("configfile: strdup failed.");
+        return -1;
+    }
+
+    free(cf_control_socket.group);
+    cf_control_socket.group = strdup(NCOLLECTD_GRP_NAME);
+    if (cf_control_socket.group == NULL) {
+        ERROR("configfile: strdup failed.");
+        return -1;
+    }
+
+    cf_control_socket.perms = S_IRWXU | S_IRWXG;
+    cf_control_socket.delete = false;
+
+    int status = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("path", child->key) == 0) {
+            status = cf_util_get_string(child, &cf_control_socket.path);
+        } else if (strcasecmp("group", child->key) == 0) {
+            status = cf_util_get_string(child, &cf_control_socket.group);
+        } else if (strcasecmp("delete", child->key) == 0) {
+            status = cf_util_get_boolean(child, &cf_control_socket.delete);
+        } else if (strcasecmp("perms", child->key) == 0) {
+            char *tmp = NULL;
+            status = cf_util_get_string(child, &tmp);
+            if (status != 0) {
+                cf_control_socket.perms = (int)strtol(tmp, NULL, 8);
+                free(tmp);
+            }
+        } else {
+            ERROR("Unknown control-socket option '%s' in %s:%d",
+                  child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
+
+    return 0;
+}
+
+static int dispatch_block_queue_memory(const config_item_t *ci, queue_type_t type, cf_queue_t *queue)
+{
+    queue->type = CF_QUEUE_MEMORY;
+
+    if (type == QUEUE_METRICS) {
+        queue->memory.limit_high = QUEUE_METRICS_MEMORY_LIMIT_HIGH;
+        queue->memory.limit_low = QUEUE_METRICS_MEMORY_LIMIT_LOW;
+    } else {
+        queue->memory.limit_high = QUEUE_NOTIFICATIONS_MEMORY_LIMIT_HIGH;
+        queue->memory.limit_low = QUEUE_NOTIFICATIONS_MEMORY_LIMIT_LOW;
+    }
+
+    int status = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        const config_item_t *child = ci->children + i;
+
+        if (strcasecmp("limit-high", child->key) == 0) {
+            int value = 0;
+            status = cf_util_get_int(child, &value);
+            queue->memory.limit_high = value;
+        } else if (strcasecmp("limit-low", child->key) == 0) {
+            int value = 0;
+            status = cf_util_get_int(child, &value);
+            queue->memory.limit_low = value;
+        } else {
+            ERROR("Unknown memory option '%s' in %s:%d",
+                  child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+
+    }
+
+    if (status != 0)
+        return -1;
+
+    if (queue->memory.limit_high < 0) {
+        ERROR("queue 'limit-high' must be positive or zero.");
+        return -1;
+    }
+
+    if (queue->memory.limit_low < 0) {
+        ERROR("queue 'limit-low' must be positive or zero.");
+        return -1;
+    }
+
+    if (queue->memory.limit_low > queue->memory.limit_high) {
+        ERROR("queue 'limit-low' must not be larger than 'limit-high'.");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int dispatch_block_queue_journal(const config_item_t *ci, queue_type_t type, cf_queue_t *queue)
+{
+    queue->type = CF_QUEUE_JOURNAL;
+
+    if (type == QUEUE_METRICS) {
+        free(queue->journal.path);
+        queue->journal.path = strdup(PKGLOCALSTATEDIR "/metrics");
+        if (queue->journal.path == NULL) {
+            ERROR("configfile: strdup failed.");
+            return -1;
+        }
+        queue->journal.checksum = true;
+        queue->journal.compress = 0;
+        queue->journal.retention_size = 10;
+        queue->journal.retention_time = TIME_T_TO_CDTIME_T(60*60*24);
+        queue->journal.segment_size = 1024*1024*10;
+    } else {
+        free(queue->journal.path);
+        queue->journal.path = strdup(PKGLOCALSTATEDIR "/notifications");
+        if (queue->journal.path == NULL) {
+            ERROR("configfile: strdup failed.");
+            return -1;
+        }
+        queue->journal.checksum = true;
+        queue->journal.compress = 0;
+        queue->journal.retention_size = 10;
+        queue->journal.retention_time = TIME_T_TO_CDTIME_T(60*60*24);
+        queue->journal.segment_size = 1024*1024*10;
+    }
+
+    int status = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        const config_item_t *child = ci->children + i;
+
+        if (strcasecmp("path", child->key) == 0) {
+            status = cf_util_get_string(child, &queue->journal.path);
+        } else if (strcasecmp("checksum", child->key) == 0) {
+            status = cf_util_get_boolean(child, &queue->journal.checksum);
+        } else if (strcasecmp("compress", child->key) == 0) {
+            // FIXME
+        } else if (strcasecmp("retention-size", child->key) == 0) {
+            int value = 0;
+            status = cf_util_get_int(child, &value);
+            queue->journal.retention_size = value;
+        } else if (strcasecmp("retention-time", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &queue->journal.retention_time);
+        } else if (strcasecmp("segment-size", child->key) == 0) {
+            int value = 0;
+            status = cf_util_get_int(child, &value);
+            queue->journal.segment_size = value;
+        } else {
+            ERROR("Unknown journal option '%s' in %s:%d",
+                  child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
+
+    return 0;
+}
+
+static int dispatch_block_queue(const config_item_t *ci, queue_type_t type, cf_queue_t *queue)
+{
+    int status = 0;
+    for (int i = 0; i < ci->children_num; ++i) {
+        const config_item_t *child = ci->children + i;
+
+        if (strcasecmp("memory", child->key) == 0) {
+            status = dispatch_block_queue_memory(child, type, queue);
+        } else if (strcasecmp("journal", child->key) == 0) {
+            status = dispatch_block_queue_journal(child, type, queue);
+        } else {
+            ERROR("Unknown http-server option '%s' in %s:%d",
+                  child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
+
+    return 0;
+}
+
+static int dispatch_block_metric_queue(const config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "metric-queue") == 0);
+
+    return dispatch_block_queue(ci, QUEUE_METRICS, &cf_queue_metric);
+}
+
+static int dispatch_block_notifications_queue(const config_item_t *ci)
+{
+    assert(strcasecmp(ci->key, "notification-queue") == 0);
+
+    return dispatch_block_queue(ci, QUEUE_NOTIFICATIONS, &cf_queue_notification);
 }
 
 static int cf_ci_replace_child(config_item_t *dst, config_item_t *src, int offset)
@@ -858,11 +1145,32 @@ int global_option_get_cpumap(const char *name)
         return -1;
 
     for(int i=0; i < cf_cpumap_num; i++) {
-        if (strcasecmp(cf_cpumap[i].name, name) == 0)
-            return cf_cpumap[i].num;
+        if (cf_cpumap[i].name != NULL) {
+            if (strcasecmp(cf_cpumap[i].name, name) == 0)
+                return cf_cpumap[i].num;
+        }
+        if (cf_cpumap[i].regex != NULL) {
+            if (regexec(cf_cpumap[i].regex, name, 0, NULL, 0) == 0)
+                return cf_cpumap[i].num;
+        }
     }
 
     return -1;
+}
+
+cf_queue_t *global_option_get_metric_queue(void)
+{
+    return &cf_queue_metric;
+}
+
+cf_queue_t *global_option_get_notification_queue(void)
+{
+    return &cf_queue_notification;
+}
+
+cf_control_socket_t *global_option_get_control_socket(void)
+{
+    return &cf_control_socket;
 }
 
 cdtime_t cf_get_default_interval(void)
@@ -927,55 +1235,97 @@ int cf_register(const char *type, int (*callback)(config_item_t *))
     return 0;
 }
 
-int cf_read(const char *filename, bool dump)
+config_item_t *cf_read(const char *filename)
 {
-    config_item_t * conf = cf_read_generic(filename, /* pattern = */ NULL, /* depth = */ 0);
+    config_item_t *conf = cf_read_generic(filename, /* pattern = */ NULL, /* depth = */ 0);
     if (conf == NULL) {
         ERROR("Unable to read config file %s.", filename);
-        return -1;
+        return NULL;
     } else if (conf->children_num == 0) {
         ERROR("Configuration file %s is empty.", filename);
         config_free(conf);
-        return -1;
+        return NULL;
     }
 
+    return conf;
+}
+
+int cf_config_globals(config_item_t *conf)
+{
     int status = 0;
+
     for (int i = 0; i < conf->children_num; i++) {
-        if (conf->children[i].children == NULL)
+        if (conf->children[i].children == NULL) {
             status = dispatch_value(conf->children + i);
-        else
+        } else {
             status = dispatch_block(conf->children + i);
+        }
 
         if (status != 0)
             break;
     }
 
-    if (dump)
-        config_dump(stdout, conf);
+    return status;
+}
 
-    config_free(conf);
+int cf_config_plugins(config_item_t *conf)
+{
+    int status = 0;
+
+    for (int i = 0; i < conf->children_num; i++) {
+        config_item_t *child = conf->children + i;
+
+        if (strcasecmp("load-plugin", child->key) == 0) {
+            status = dispatch_block_loadplugin(child);
+        } else if (strcasecmp("plugin", child->key) == 0) {
+            status = dispatch_block_plugin(child);
+        }
+
+        if (status != 0)
+            break;
+    }
 
     return status;
+}
+
+void global_options_init (void)
+{
+    cf_queue_metric.type = CF_QUEUE_MEMORY;
+    cf_queue_metric.memory.limit_high = QUEUE_METRICS_MEMORY_LIMIT_HIGH;
+    cf_queue_metric.memory.limit_low = QUEUE_METRICS_MEMORY_LIMIT_LOW;
+
+    cf_queue_notification.type = CF_QUEUE_MEMORY;
+    cf_queue_notification.memory.limit_high = QUEUE_NOTIFICATIONS_MEMORY_LIMIT_HIGH;
+    cf_queue_notification.memory.limit_low = QUEUE_NOTIFICATIONS_MEMORY_LIMIT_LOW;
 }
 
 void global_options_free (void)
 {
     for (int i = 0; i < cf_global_options_num; i++) {
         free(cf_global_options[i].value);
+        cf_global_options[i].value = NULL;
     }
 
     free(hostname_g);
+    hostname_g = NULL;
 
     label_set_reset(&labels_g);
 
     for(int i = 0; i < cf_cpumap_num; i++) {
-        free(cf_cpumap[i].name);
+        if (cf_cpumap[i].name != NULL) {
+            free(cf_cpumap[i].name);
+        }
+        if (cf_cpumap[i].regex != NULL) {
+            regfree(cf_cpumap[i].regex);
+            free(cf_cpumap[i].regex);
+        }
     }
     free(cf_cpumap);
+    cf_cpumap = NULL;
+    cf_cpumap_num = 0;
 
-    for (size_t i = 0; i < plugin_ctx_names_num; i++) {
-        free(plugin_ctx_names[i]);
-    }
-    free(plugin_ctx_names);
-
+    free(cf_control_socket.path);
+    cf_control_socket.path = NULL;
+    free(cf_control_socket.group);
+    cf_control_socket.group = NULL;
 }

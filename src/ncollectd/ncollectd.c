@@ -234,10 +234,12 @@ static void read_cmdline(int argc, char **argv, struct cmdline_config *config)
             break;
         case 't':
             config->test_config = true;
+            plugin_write_test_mode(true);
             break;
         case 'T':
             config->test_readall = true;
             global_option_set("read-threads", "-1", 1);
+            plugin_write_test_mode(true);
             config->daemonize = false;
             break;
         case 'P':
@@ -257,30 +259,26 @@ static void read_cmdline(int argc, char **argv, struct cmdline_config *config)
     }
 }
 
-static int configure_collectd(struct cmdline_config *config)
+static int configure_ncollectd(struct cmdline_config *config)
 {
+    global_options_init();
+
     /*
      * Read options from the config file, the environment and the command
      * line (in that order, with later options overwriting previous ones in
      * general).
      * Also, this will automatically load modules.
      */
-    if (cf_read(config->configfile, config->dump_config)) {
+    config_item_t *conf = cf_read(config->configfile);
+    if (conf == NULL) {
         fprintf(stderr, "Error: Parsing the config file failed!\n");
-        return 1;
+        return -1;
     }
 
-    /*
-     * Change directory. We do this _after_ reading the config and loading
-     * modules to relative paths work as expected.
-     */
-    const char *basedir = global_option_get("base-dir");
-    if (basedir == NULL) {
-        fprintf(stderr, "Don't have a basedir to use. This should not happen. Ever.");
-        return 1;
-    } else if (change_basedir(basedir, config->create_basedir)) {
-        fprintf(stderr, "Error: Unable to change to directory '%s'.\n", basedir);
-        return 1;
+    int status = cf_config_globals(conf);
+    if (status != 0) {
+        config_free(conf);
+        return -1;
     }
 
     /*
@@ -289,8 +287,44 @@ static int configure_collectd(struct cmdline_config *config)
      * are being used. So this means that the user has actually done
      * something wrong.
      */
-    if (init_global_variables() != 0)
-        return 1;
+    if (init_global_variables() != 0) {
+        config_free(conf);
+        return -1;
+    }
+
+    if (plugin_config_write() != 0) {
+        config_free(conf);
+        return -1;
+    }
+
+    if (plugin_config_notify() != 0) {
+        config_free(conf);
+        return -1;
+    }
+
+    status = cf_config_plugins(conf);
+    if (status != 0) {
+        config_free(conf);
+        return -1;
+    }
+
+    if (config->dump_config)
+        config_dump(stdout, conf);
+
+    config_free(conf);
+
+    /*
+     * Change directory. We do this _after_ reading the config and loading
+     * modules to relative paths work as expected.
+     */
+    const char *basedir = global_option_get("base-dir");
+    if (basedir == NULL) {
+        fprintf(stderr, "Don't have a basedir to use. This should not happen. Ever.");
+        return -1;
+    } else if (change_basedir(basedir, config->create_basedir)) {
+        fprintf(stderr, "Error: Unable to change to directory '%s'.\n", basedir);
+        return -1;
+    }
 
     return 0;
 }
@@ -312,7 +346,7 @@ struct cmdline_config init_config(int argc, char **argv)
 
     plugin_init_ctx();
 
-    if (configure_collectd(&config) != 0)
+    if (configure_ncollectd(&config) != 0)
         exit(EXIT_FAILURE);
 
     if (config.test_config)

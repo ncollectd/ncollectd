@@ -147,6 +147,8 @@ int main(void) {
     check_function_exists(sysctlbyname     HAVE_SYSCTLBYNAME)
     check_function_exists(close_range      HAVE_CLOSE_RANGE)
     check_function_exists(closefrom        HAVE_CLOSEFROM)
+    check_function_exists(pwritev          HAVE_PWRITEV)
+    check_function_exists(fdatasync        HAVE_FDATASYNC)
 
     check_symbol_exists(F_CLOSEM "fcntl.h" HAVE_FCNTL_CLOSEM)
 

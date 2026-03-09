@@ -400,9 +400,8 @@ void set_thread_setaffinity(pthread_attr_t *attr, char const *name)
     CPU_ZERO(&cpuset);
     CPU_SET(ncpu, &cpuset);
     int status = pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), &cpuset);
-    if (status != 0) {
+    if (status != 0)
         ERROR("pthread_attr_setaffinity_np(\"%s\"): %s", name, STRERROR(status));
-    }
 #else
     (void)attr;
     (void)name;
@@ -485,7 +484,10 @@ int plugin_load(char const *plugin_name, bool global)
      * So in order to save everyone's sanity use a different default for a
      * handful of special plugins. --octo
      */
-    if ((strcasecmp("perl", plugin_name) == 0) || (strcasecmp("python", plugin_name) == 0))
+    if ((strcasecmp("perl", plugin_name) == 0) ||
+        (strcasecmp("lua", plugin_name) == 0) ||
+        (strcasecmp("javascript", plugin_name) == 0) ||
+        (strcasecmp("python", plugin_name) == 0))
         global = true;
 
     /* 'cpu' should not match 'cpufreq'. To solve this we add SHLIB_SUFFIX to the
@@ -635,6 +637,14 @@ int plugin_init_all(void)
         return -1;
     }
 
+    status = plugin_init_notify();
+    if (status != 0)
+        return -1;
+
+    status = plugin_init_write();
+    if (status != 0)
+        return -1;
+
     if (IS_TRUE(global_option_get("collect-internal-stats")))
         plugin_register_read("ncollectd", plugin_update_internal_statistics);
 
@@ -663,9 +673,9 @@ int plugin_init_all(void)
         le = le->next;
     }
 
-    plugin_init_notify();
-    plugin_init_write();
-    plugin_init_read();
+    status = plugin_init_read();
+    if (status != 0)
+        return -1;
 
     return ret;
 }

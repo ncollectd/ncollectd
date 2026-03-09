@@ -3,6 +3,7 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "ncollectd.h"
+#include "libutils/pack.h"
 #include "libmetric/state_set.h"
 
 static const char valid_label_chars[256] = {
@@ -150,4 +151,61 @@ int state_set_clone(state_set_t *dest, state_set_t src)
 
     *dest = ret;
     return 0;
+}
+
+
+enum {
+    STATE_NAME_ID   = 0x10,
+    STATE_ENABLE_ID = 0x20
+};
+
+int state_set_pack(buf_t *buf, uint8_t id, state_set_t *set)
+{
+    if (set->num == 0)
+        return 0;
+
+    int status = pack_size(buf, id, set->num);
+
+    for (size_t i = 0; i < set->num; i++) {
+        state_t *state = &set->ptr[i];
+
+        size_t begin = 0;
+        status |= pack_block_begin(buf, &begin);
+        status |= pack_string(buf, STATE_NAME_ID, state->name);
+        status |= pack_uint8(buf, STATE_ENABLE_ID, state->enabled ? 1 : 0);
+        status |= pack_block_end(buf, begin);
+    }
+
+    return status;
+}
+
+int state_set_unpack(rbuf_t *rbuf, uint8_t id, state_set_t *set)
+{
+    size_t len = 0;
+    int status = unpack_size(rbuf, id, &len);
+    if (status != 0)
+        return status;
+
+    for (size_t i = 0; i < len; i++) {
+        rbuf_t srbuf = {0};
+        status = unpack_block(rbuf, &srbuf);
+        if (status != 0)
+            return -1;
+
+        char *name = NULL;
+        status = unpack_id_refstring(&srbuf, STATE_NAME_ID, &name);
+        if (status != 0)
+            return -1;
+
+        uint8_t enable = 0;
+        status = unpack_id_uint8(&srbuf, STATE_ENABLE_ID, &enable);
+        if (status != 0)
+            return -1;
+
+        state_set_add(set, name, enable ? true : false);
+
+        unpack_avance_block(rbuf, &srbuf);
+    }
+
+    return status;
 }

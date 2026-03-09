@@ -9,6 +9,7 @@
 #include "log.h"
 #include "libutils/common.h"
 #include "libutils/strbuf.h"
+#include "libutils/pack.h"
 #include "libmetric/label_set.h"
 #include "libmetric/metric_chars.h"
 
@@ -465,3 +466,77 @@ int label_set_unmarshal(label_set_t *labels, char const **inout)
     return 0;
 }
 
+enum {
+    LABEL_PAIR_NAME_ID  = 0x10,
+    LABEL_PAIR_VALUE_ID = 0x20
+};
+
+int label_set_pack(buf_t *buf, uint8_t id, const label_set_t *set)
+{
+    if (set->num == 0)
+        return 0;
+
+    int status = pack_size(buf, id, set->num);
+
+    for (size_t i = 0; i < set->num; i++) {
+        label_pair_t *pair = &set->ptr[i];
+        size_t begin = 0;
+        status |= pack_block_begin(buf, &begin);
+        status |= pack_string(buf, LABEL_PAIR_NAME_ID, pair->name);
+        status |= pack_string(buf, LABEL_PAIR_VALUE_ID, pair->value);
+        status |= pack_block_end(buf, begin);
+    }
+
+    return status;
+}
+
+static int label_set_unpack_pair(rbuf_t *rbuf, char **rname, char **rvalue)
+{
+    rbuf_t srbuf = {0};
+    int status = unpack_block(rbuf, &srbuf);
+    if (status != 0)
+        return -1;
+
+    char *name = NULL;
+    status = unpack_id_refstring(&srbuf, LABEL_PAIR_NAME_ID, &name);
+    if (status != 0)
+        return -1;
+
+    char *value = NULL;
+    status = unpack_id_refstring(&srbuf, LABEL_PAIR_VALUE_ID, &value);
+    if (status != 0)
+        return -1;
+
+    if ((name == NULL) || (value == NULL))
+        return -1;
+
+    if (rbuf_remain(&srbuf) != 0)
+        return -1;
+
+    *rname = name;
+    *rvalue = value;
+
+    unpack_avance_block(rbuf, &srbuf);
+
+    return 0;
+}
+
+int label_set_unpack(rbuf_t *rbuf, uint8_t id, label_set_t *set)
+{
+    size_t len = 0;
+    int status = unpack_size(rbuf, id, &len);
+    if (status != 0)
+        return status;
+
+    for (size_t i = 0; i < len; i++) {
+        char *name = NULL;
+        char *value = NULL;
+        status |= label_set_unpack_pair(rbuf, &name, &value);
+        if (status != 0)
+            break;
+
+        label_set_add(set, false, name, value);
+    }
+
+    return status;
+}

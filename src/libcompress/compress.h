@@ -8,9 +8,10 @@
 typedef enum {
     COMPRESS_FORMAT_NONE,
     COMPRESS_FORMAT_SNAPPY,
+    COMPRESS_FORMAT_LZ4,
     COMPRESS_FORMAT_GZIP,
     COMPRESS_FORMAT_ZLIB,
-    COMPRESS_FORMAT_DEFLATE
+    COMPRESS_FORMAT_DEFLATE,
 } compress_format_t;
 
 int config_compress(config_item_t *ci, compress_format_t *format);

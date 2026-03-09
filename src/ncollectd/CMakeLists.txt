@@ -7,6 +7,7 @@ set(NCOLLECTD_SRC ../plugin.h
                   filter.c filter.h
                   globals.c globals.h
                   queue.c queue.h
+                  journal.c journal.h
                   plugin.c plugin_internal.h
                   plugin_match.c plugin_match.h
                   plugin_read.c
@@ -16,7 +17,7 @@ set(NCOLLECTD_SRC ../plugin.h
 
 add_executable(ncollectd ${NCOLLECTD_SRC})
 
-set(NCOLLECTD_LIBS libhttp libmetric libutils libmdb libformat libxson libutils libconfig)
+set(NCOLLECTD_LIBS libhttp libmetric libutils libmdb libformat libxson libutils libconfig libcompress)
 if(BUILD_LINUX)
     find_package(LibCap)
     if(LIBCAP_FOUND)

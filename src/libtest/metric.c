@@ -477,7 +477,7 @@ static int test_metric_list_cmp(metric_list_t *a, metric_list_t *b, metric_type_
     return 0;
 }
 
-static int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
+int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
 {
     if ((a == NULL) || (b == NULL))
         return -1;

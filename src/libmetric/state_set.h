@@ -6,6 +6,8 @@
 
 #include <errno.h>
 
+#include "libutils/buf.h"
+
 typedef struct {
     char *name;
     bool enabled;
@@ -40,3 +42,8 @@ static inline int state_set_enable(state_set_t set, char const *name)
 void state_set_reset(state_set_t *set);
 
 int state_set_clone(state_set_t *dest, state_set_t src);
+
+int state_set_pack(buf_t *buf, uint8_t id, state_set_t *set);
+
+int state_set_unpack(rbuf_t *rbuf, uint8_t id, state_set_t *set);
+

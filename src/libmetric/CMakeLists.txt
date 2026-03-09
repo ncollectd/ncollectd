@@ -20,6 +20,11 @@ target_link_libraries(test_libmetric_metric libmetric libutils libtest)
 add_dependencies(build_tests test_libmetric_metric)
 add_test(NAME test_libmetric_metric COMMAND test_libmetric_metric)
 
+add_executable(test_libmetric_pack EXCLUDE_FROM_ALL pack_test.c)
+target_link_libraries(test_libmetric_pack libmetric libutils libtest)
+add_dependencies(build_tests test_libmetric_pack)
+add_test(NAME test_libmetric_pack COMMAND test_libmetric_pack)
+
 add_executable(test_libmetric_label_set EXCLUDE_FROM_ALL label_set_test.c)
 target_link_libraries(test_libmetric_label_set libmetric libutils libtest)
 add_dependencies(build_tests test_libmetric_label_set)

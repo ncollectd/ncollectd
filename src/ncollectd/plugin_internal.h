@@ -138,10 +138,13 @@ void stop_read_threads(void);
 int plugin_init_read(void);
 
 int plugin_init_write(void);
+int plugin_config_write(void);
 void plugin_shutdown_write(void);
 void plugin_write_stats(metric_family_t *fams);
+void plugin_write_test_mode(bool mode);
 
 int plugin_init_notify(void);
+int plugin_config_notify(void);
 void plugin_shutdown_notify(void);
 void plugin_notify_stats(metric_family_t *fams);
 

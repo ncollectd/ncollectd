@@ -13,24 +13,54 @@
 \fBfqdn-lookup\fP \fItrue|false\fP
 \fBinterval\fP \fIseconds\fP
 \fBread-threads\fP \fIthreads\fP
-\fBwrite-queue-limit-high\fP \fIhigh\fP
-\fBwrite-queue-limit-low\fP \fIlow\fP
 \fBauto-load-plugin\fP \fItrue|false\fP
 \fBcollect-internal-stats\fP \fItrue|false\fP
 \fBpre-cache-filter\fP \fIpre-cache\fP
 \fBpost-cache-filter\fP \fIpost-cache\fP
 \fBmax-read-interval\fP \fIseconds\fP
 \fBnormalize-interval\fP \fItrue|false\fP
-\fBsocket-file\fP \fI/path/to/socket\fP
-\fBsocket-group\fP \fIgroup-name\fP
-\fBsocket-perms\fP \fIperms-octal\fP
-\fBsocket-delete\fP \fItrue|false\fP
 \fBproc-path\fP \fI/path/to/proc\fP
 \fBsys-path\fP \fI/path/to/sys\fP
-\fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
 \fBlabel\fP \fIkey\fP \fIvalue\fP
 \fBplugin-dir\fP \fI/path/to/plugins\fP
 \fBinclude\fP \fI/path/to/config\fP
+\fBcpu-map\fP {
+    \fBbind\fP \fIthread-name\fP|/\fIthread-regex\fP/ \fIcpu\fP
+}
+\fBmetric-queue\fP {
+    \fBmemory\fP {
+        \fBlimit-high\fP \fIhigh\fP
+        \fBlimit-low\fP \fIlow\fP
+    }
+    \fBjournal\fP {
+        \fBpath\fP \fI/path/to/journal\fP
+        \fBchecksum\fP \fItrue|false\fP
+        \fBcompress\fP
+        \fBretention-size\fP
+        \fBsegment-size\fP
+        \fBretention-time\fP
+    }
+}
+\fBnotification-queue\fP {
+    \fBmemory\fP {
+        \fBlimit-high\fP \fIhigh\fP
+        \fBlimit-low\fP \fIlow\fP
+    }
+    \fBjournal\fP {
+        \fBpath\fP \fI/path/to/journal\fP
+        \fBchecksum\fP \fItrue|false\fP
+        \fBcompress\fP
+        \fBretention-size\fP
+        \fBsegment-size\fP
+        \fBretention-time\fP
+    }
+}
+\fBcontrol-socket\fP {
+    \fBpath\fP \fI/path/to/socket\fP
+    \fBgroup\fP \fIgroup-name\fP
+    \fBperms\fP \fIperms-octal\fP
+    \fBdelete\fP \fItrue|false\fP
+}
 \fBfilter\fP \fIfilter-name\fP {
     \fBif\fP \fImatch\fP {
         ...
@@ -226,14 +256,20 @@ The default value is \fB86400\fP.
 When set to \fBtrue\fP will normalize the time in which collect metrics as
 a multiple of the interval.
 The default value is \fBfalse\fP.
-.It \fBsocket-file\fP \fI/path/to/socket\fP
-.It \fBsocket-group\fP \fIgroup-name\fP
-.It \fBsocket-perms\fP \fIperms-octal\fP
-.It \fBsocket-delete\fP \fItrue|false\fP
 .It \fBproc-path\fP \fI/path/to/proc\fP
 .It \fBsys-path\fP \fI/path/to/sys\fP
-.It \fBcpu-map\fP \fIthread-name\fP \fIcpu\fP
+.It \fBcpu-map\fP
+.Bl -tag -width Ds
+.It \fBbind\fP \fIthread-name\fP|/\fIthread-regex\fP/ \fIcpu\fP
 Bind a thread to a specific cpu.
+.El
+.It \fBcontrol-socket\fP
+.Bl -tag -width Ds
+.It \fBpath\fP \fI/path/to/socket\fP
+.It \fBgroup\fP \fIgroup-name\fP
+.It \fBperms\fP \fIperms-octal\fP
+.It \fBsocket\fP \fItrue|false\fP
+.El
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 .It \fBplugin-dir\fP \fI/path/to/plugins\fP
 Path to the plugins (shared objects) of ncollectd.
