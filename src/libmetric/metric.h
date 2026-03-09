@@ -8,6 +8,7 @@
 #pragma once
 
 #include "libutils/time.h"
+#include "libutils/buf.h"
 #include "libmetric/label_set.h"
 #include "libmetric/state_set.h"
 #include "libmetric/histogram.h"
@@ -171,7 +172,6 @@ int metric_value_clone(value_t *dst, value_t src, metric_type_t type);
 struct plugin_filter_s;
 typedef struct plugin_filter_s plugin_filter_t;
 
-
 typedef struct {
     bool fixed;
     size_t pos;
@@ -198,3 +198,9 @@ static inline int metric_family_list_append(metric_family_list_t *faml, metric_f
     faml->pos++;
     return 0;
 }
+
+
+int metric_family_pack(buf_t *buf, metric_family_t *fam);
+
+metric_family_t *metric_family_unpack(rbuf_t *rbuf);
+

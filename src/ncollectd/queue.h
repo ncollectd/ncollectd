@@ -20,25 +20,29 @@ typedef struct queue_thread_s queue_thread_t;
 struct queue_thread_s {
     char *name;
     bool loop;
-    long queue_length;
     pthread_t thread;
     queue_elem_t *head;
+    long queue_length;
     queue_thread_t *next;
 };
 
 typedef struct {
-    const char *kind;
+    char *kind;
     long limit_high;
     long limit_low;
     uint64_t dropped;
-    c_complain_t complaint;
+    queue_elem_t *tail;
     void (*free_elem_cb)(void *);
     void (*free_thread_cb)(void *);
+    c_complain_t complaint;
     pthread_mutex_t lock;
     pthread_cond_t cond;
-    queue_elem_t *tail;
     queue_thread_t *threads;
 } queue_t;
+
+queue_t *queue_new(char *kind);
+
+void queue_free(queue_t *queue);
 
 int queue_ref_single(queue_t *queue, queue_elem_t *elem, long dir);
 

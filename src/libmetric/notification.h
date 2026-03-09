@@ -6,9 +6,10 @@
 #pragma once
 
 #include "libutils/time.h"
+#include "libutils/strbuf.h"
+#include "libutils/buf.h"
 #include "libmetric/label_set.h"
 #include "libmetric/metric.h"
-#include "libutils/strbuf.h"
 
 
 typedef enum {
@@ -66,3 +67,8 @@ notification_t *notification_clone(notification_t const *src);
 
 /* notification_reset frees labels, annotations and meta data in the notification */
 int notification_reset(notification_t *n);
+
+int notification_pack(buf_t *buf, const notification_t *n);
+
+notification_t *notification_unpack(rbuf_t *rbuf);
+

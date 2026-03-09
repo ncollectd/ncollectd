@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
+#include "libutils/pack.h"
 #include "libmetric/histogram.h"
 
 histogram_t *histogram_new_linear(size_t num_buckets, double size)
@@ -203,3 +204,110 @@ histogram_t *histogram_bucket_append(histogram_t *h, double maximum, uint64_t co
     return nh;
 }
 
+enum {
+    HISTOGRAM_COUNTER_ID = 0x10,
+    HISTOGRAM_MAXIMUN_ID = 0x20
+};
+
+enum {
+    HISTOGRAM_SUM_ID     = 0x10,
+    HISTOGRAM_BUCKETS_ID = 0x20
+};
+
+int histogram_pack(buf_t *buf, uint8_t id, histogram_t *h)
+{
+    size_t begin = 0;
+    int status = pack_id(buf, id);
+    status |= pack_block_begin(buf, &begin);
+    status |= pack_double(buf, HISTOGRAM_SUM_ID, h->sum);
+    status |= pack_size(buf, HISTOGRAM_BUCKETS_ID, h->num);
+
+    for (size_t i = 0; i < h->num; i++) {
+        histogram_bucket_t *b = &h->buckets[i];
+        size_t bucket_begin = 0;
+        status |= pack_block_begin(buf, &bucket_begin);
+        status |= pack_uint64(buf, HISTOGRAM_COUNTER_ID, b->counter);
+        status |= pack_double(buf, HISTOGRAM_MAXIMUN_ID, b->maximum);
+        status |= pack_block_end(buf, bucket_begin);
+    }
+
+    status |= pack_block_end(buf, begin);
+
+    return status;
+}
+
+static int histogram_buckets_unpack(rbuf_t *rbuf, uint8_t id, histogram_t **h)
+{
+    size_t len = 0;
+    int status = unpack_size(rbuf, id, &len);
+    if (status != 0)
+        return status;
+
+    for (size_t i = 0; i < len; i++) {
+        rbuf_t srbuf = {0};
+        status = unpack_block(rbuf, &srbuf);
+        if (status != 0)
+            return -1;
+
+        uint64_t counter = 0;
+        status |= unpack_id_uint64(&srbuf, HISTOGRAM_COUNTER_ID, &counter);
+        if (status != 0)
+            return -1;
+
+        double maximun = 0;
+        status |= unpack_id_double(&srbuf, HISTOGRAM_MAXIMUN_ID, &maximun);
+        if (status != 0)
+            return -1;
+
+        *h = histogram_bucket_append(*h, maximun, counter);
+
+        unpack_avance_block(rbuf, &srbuf);
+    }
+
+    return 0;
+}
+
+int histogram_unpack(rbuf_t *rbuf, histogram_t **href)
+{
+    rbuf_t srbuf = {0};
+    int status = unpack_block(rbuf, &srbuf);
+    if (status != 0) {
+        return 1;
+    }
+
+    histogram_t *h = histogram_new();
+    if (h == NULL)
+        return 1;
+
+    while (true) {
+        uint8_t id = 0;
+
+        status = unpack_id(&srbuf, &id);
+
+        switch(id & 0xf0) {
+        case HISTOGRAM_SUM_ID:
+            status = unpack_double(&srbuf, &h->sum);
+            break;
+        case HISTOGRAM_BUCKETS_ID:
+            status = histogram_buckets_unpack(&srbuf, id, &h);
+            break;
+        }
+
+        if (status != 0)
+            break;
+
+        if (rbuf_remain(&srbuf) == 0)
+            break;
+    }
+
+    if (status != 0) {
+        histogram_destroy(h);
+        return -1;
+    }
+
+    *href = h;
+
+    unpack_avance_block(rbuf, &srbuf);
+
+    return 0;
+}

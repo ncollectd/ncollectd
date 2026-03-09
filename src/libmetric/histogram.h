@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ncollectd.h"
+#include "libutils/buf.h"
 
 typedef struct {
     uint64_t counter;
@@ -61,3 +62,8 @@ static inline uint64_t histogram_counter(histogram_t *h)
 #define HISTOGRAM_DEFAULT_TIME historgram_new_custom(7, (double[]){0.05, 0.1, 0.2, 0.5, 1, 10, 100})
 
 histogram_t *histogram_bucket_append(histogram_t *h, double maximum, uint64_t counter);
+
+int histogram_pack(buf_t *buf, uint8_t id, histogram_t *h);
+
+int histogram_unpack(rbuf_t *rbuf, histogram_t **h);
+

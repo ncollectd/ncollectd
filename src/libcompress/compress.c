@@ -5,6 +5,7 @@
 #include "libutils/config.h"
 #include "libcompress/compress.h"
 #include "libcompress/csnappy.h"
+#include "libcompress/lz4.h"
 #include "libcompress/slz.h"
 
 int config_compress(config_item_t *ci, compress_format_t *format)
@@ -19,6 +20,8 @@ int config_compress(config_item_t *ci, compress_format_t *format)
     if (strcasecmp(fmt, "none") == 0) {
         *format = COMPRESS_FORMAT_NONE;
     } else if (strcasecmp(fmt, "snappy") == 0) {
+        *format = COMPRESS_FORMAT_SNAPPY;
+    } else if (strcasecmp(fmt, "lz4") == 0) {
         *format = COMPRESS_FORMAT_SNAPPY;
     } else if (strcasecmp(fmt, "gzip") == 0) {
         *format = COMPRESS_FORMAT_GZIP;
@@ -40,6 +43,8 @@ const char *compress_get_encoding(compress_format_t format)
     case COMPRESS_FORMAT_NONE:
         return NULL;
     case COMPRESS_FORMAT_SNAPPY:
+        return "snappy";
+    case COMPRESS_FORMAT_LZ4:
         return "snappy";
     case COMPRESS_FORMAT_GZIP:
         return "gzip";
@@ -77,6 +82,24 @@ char *compress(compress_format_t format, char *in_data, size_t in_data_len, size
         csnappy_compress(in_data, in_data_len, out_data, &len,
                                   working, CSNAPPY_WORKMEM_BYTES_POWER_OF_TWO);
         free(working);
+        *out_data_len = len;
+        return out_data;
+    }   break;
+    case COMPRESS_FORMAT_LZ4: {
+        int compressed_length = LZ4_compressBound(in_data_len);
+        char *out_data = malloc(sizeof(*out_data)*compressed_length);
+        if (out_data == NULL) {
+            PLUGIN_ERROR("malloc failed");
+            return NULL;
+        }
+
+        int len = LZ4_compress_default(in_data, out_data, in_data_len, compressed_length);
+        if (len == 0) {
+            PLUGIN_ERROR("LZ4 compresion failed");
+            free(out_data);
+            return NULL;
+        }
+
         *out_data_len = len;
         return out_data;
     }   break;
@@ -126,6 +149,9 @@ int compress_free(compress_format_t format, char *data)
     case COMPRESS_FORMAT_NONE:
         break;
     case COMPRESS_FORMAT_SNAPPY:
+        free(data);
+        break;
+    case COMPRESS_FORMAT_LZ4:
         free(data);
         break;
     case COMPRESS_FORMAT_GZIP:

@@ -10,6 +10,34 @@
 #include "libconfig/config.h"
 #include "libutils/time.h"
 
+typedef struct {
+    char *path;
+    char *group;
+    int perms;
+    bool delete;
+} cf_control_socket_t;
+
+typedef enum {
+    CF_QUEUE_MEMORY,
+    CF_QUEUE_JOURNAL
+} cf_queue_type_t;
+
+typedef struct {
+    cf_queue_type_t type;
+    struct {
+        long limit_high;
+        long limit_low;
+    } memory;
+    struct {
+        char *path;
+        bool checksum;
+        int compress;
+        off_t retention_size;
+        cdtime_t retention_time;
+        off_t segment_size;
+    } journal;
+} cf_queue_t;
+
 void cf_unregister_all(void);
 /*
  * DESCRIPTION
@@ -63,7 +91,11 @@ int cf_register(const char *type, int (*callback)(config_item_t *));
  *  Returns zero upon success and non-zero otherwise. A error-message will have
  *  been printed in this case.
  */
-int cf_read(const char *filename, bool dump);
+config_item_t * cf_read(const char *filename);
+
+int cf_config_globals(config_item_t *conf);
+
+int cf_config_plugins(config_item_t *conf);
 
 int global_option_set(const char *option, const char *value, bool from_cli);
 const char *global_option_get(const char *option);
@@ -74,5 +106,13 @@ cdtime_t global_option_get_time(char const *option, cdtime_t default_value);
 cdtime_t cf_get_default_interval(void);
 
 int global_option_get_cpumap(const char *name);
+
+cf_control_socket_t *global_option_get_control_socket(void);
+
+cf_queue_t *global_option_get_metric_queue(void);
+
+cf_queue_t *global_option_get_notification_queue(void);
+
+void global_options_init (void);
 
 void global_options_free (void);
