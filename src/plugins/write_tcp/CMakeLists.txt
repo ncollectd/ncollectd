@@ -11,7 +11,7 @@ set(BUILD_PLUGIN_WRITE_TCP ${BUILD_PLUGIN_WRITE_TCP} PARENT_SCOPE)
 if(BUILD_PLUGIN_WRITE_TCP)
     set(PLUGIN_WRITE_TCP_SRC write_tcp.c)
     add_library(write_tcp MODULE ${PLUGIN_WRITE_TCP_SRC})
-    target_link_libraries(write_tcp PRIVATE libmetric libutils libxson libformat)
+    target_link_libraries(write_tcp PRIVATE libformat libxson libmetric libutils)
     set_target_properties(write_tcp PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_write_tcp EXCLUDE_FROM_ALL write_tcp_test.c ${PLUGIN_WRITE_TCP_SRC})

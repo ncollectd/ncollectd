@@ -13,7 +13,7 @@ set(BUILD_PLUGIN_WRITE_UDP ${BUILD_PLUGIN_WRITE_UDP} PARENT_SCOPE)
 if(BUILD_PLUGIN_WRITE_UDP)
     set(PLUGIN_WRITE_UDP_SRC write_udp.c)
     add_library(write_udp MODULE ${PLUGIN_WRITE_UDP_SRC})
-    target_link_libraries(write_udp PRIVATE libmetric libutils libxson libformat)
+    target_link_libraries(write_udp PRIVATE libformat libxson libmetric libutils)
     set_target_properties(write_udp PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_write_udp EXCLUDE_FROM_ALL write_udp_test.c ${PLUGIN_WRITE_UDP_SRC})

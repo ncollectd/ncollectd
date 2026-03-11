@@ -13,7 +13,7 @@ set(BUILD_PLUGIN_FILECOUNT ${BUILD_PLUGIN_FILECOUNT} PARENT_SCOPE)
 if(BUILD_PLUGIN_FILECOUNT)
     set(PLUGIN_FILECOUNT_SRC filecount.c)
     add_library(filecount MODULE ${PLUGIN_FILECOUNT_SRC})
-    target_link_libraries(filecount PRIVATE libmetric libutils libexpr)
+    target_link_libraries(filecount PRIVATE libmetric libexpr libutils m)
     set_target_properties(filecount PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_filecount EXCLUDE_FROM_ALL filecount_test.c ${PLUGIN_FILECOUNT_SRC})
