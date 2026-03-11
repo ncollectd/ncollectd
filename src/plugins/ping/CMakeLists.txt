@@ -11,7 +11,7 @@ set(BUILD_PLUGIN_PING ${BUILD_PLUGIN_PING} PARENT_SCOPE)
 if(BUILD_PLUGIN_PING)
     set(PLUGIN_PING_SRC ping.c oping.c oping.h)
     add_library(ping MODULE ${PLUGIN_PING_SRC})
-    target_link_libraries(ping PRIVATE libmetric libutils)
+    target_link_libraries(ping PRIVATE libmetric libutils m)
     set_target_properties(ping PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_ping EXCLUDE_FROM_ALL ping_test.c ${PLUGIN_PING_SRC})
