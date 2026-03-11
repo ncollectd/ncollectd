@@ -2,7 +2,7 @@ UNTITLED - LOCAL
 
 # NAME
 
-**ncollectd-zswap** - Documentation of ncollectd's multipathd plugin
+**ncollectd-multipathd** - Documentation of ncollectd's multipathd plugin
 
 # SYNOPSIS
 
