@@ -11,7 +11,7 @@ set(BUILD_PLUGIN_CHRONY ${BUILD_PLUGIN_CHRONY} PARENT_SCOPE)
 if(BUILD_PLUGIN_CHRONY)
     set(PLUGIN_CHRONY_SRC chrony.c)
     add_library(chrony MODULE ${PLUGIN_CHRONY_SRC})
-    target_link_libraries(chrony PRIVATE libmetric libutils)
+    target_link_libraries(chrony PRIVATE libmetric libutils -lm)
     set_target_properties(chrony PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_chrony EXCLUDE_FROM_ALL chrony_test.c ${PLUGIN_CHRONY_SRC})
