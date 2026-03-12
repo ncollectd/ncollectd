@@ -23,6 +23,9 @@ NCOLLECTD-MODBUS(5) - File Formats Manual
 	        port port
 	        device devicenode
 	        baudrate baudrate
+	        parity none|even|odd
+	        data-bit 5|6|7|8
+	        stop-bit 1|2
 	        uart-type RS485|RS422|RS232
 	        interval interval
 	        metric-prefix prefix
@@ -147,6 +150,24 @@ values (unsigned 32 bit and 64 bit values) and floating point values
 
 > > For Modbus/RTU, specifies the baud rate of the serial device.
 > > Note, connections currently support only 8/N/1.
+
+> **parity** *none|even|odd*
+
+> > For Modbus/RTU, specifies the parity of the serial device, can have one
+> > of the following values: *none*, *even* or *odd*.
+> > The default value is *none*.
+
+> **data-bit** *5|6|7|8*
+
+> > For Modbus/RTU, specifies the number of bits of data of the serial device,
+> > the allowed values are 5, 6, 7 or 8.
+> > The default value is 8.
+
+> **stop-bit** *1|2*
+
+> > For Modbus/RTU, specifies the number of bits of stop of the serial device,
+> > the allowed values are 1 or 2.
+> > The default value is 1.
 
 > **uart-type** *RS485|RS422|RS232*
 

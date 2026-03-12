@@ -24,6 +24,9 @@
         \fBport\fP \fIport\fP
         \fBdevice\fP \fIdevicenode\fP
         \fBbaudrate\fP \fIbaudrate\fP
+        \fBparity\fP \fInone|even|odd\fP
+        \fBdata-bit\fP \fI5|6|7|8\fP
+        \fBstop-bit\fP \fI1|2\fP
         \fBuart-type\fP \fIRS485|RS422|RS232\fP
         \fBinterval\fP \fIinterval\fP
         \fBmetric-prefix\fP \fIprefix\fP
@@ -121,6 +124,18 @@ For Modbus/RTU, specifies the path to the serial device being used.
 .It \fBbaudrate\fP \fIbaudrate\fP
 For Modbus/RTU, specifies the baud rate of the serial device.
 Note, connections currently support only 8/N/1.
+.It \fBparity\fP \fInone|even|odd\fP
+For Modbus/RTU, specifies the parity of the serial device, can have one
+of the following values: \fInone\fP, \fIeven\fP or \fIodd\fP.
+The default value is \fInone\fP.
+.It \fBdata-bit\fP \fI5|6|7|8\fP
+For Modbus/RTU, specifies the number of bits of data of the serial device,
+the allowed values are 5, 6, 7 or 8.
+The default value is 8.
+.It \fBstop-bit\fP \fI1|2\fP
+For Modbus/RTU, specifies the number of bits of stop of the serial device,
+the allowed values are 1 or 2.
+The default value is 1.
 .It \fBuart-type\fP \fIRS485|RS422|RS232\fP
 For Modbus/RTU, specifies the type of the serial device.
 RS232, RS422 and RS485 are supported.
