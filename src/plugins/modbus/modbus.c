@@ -26,34 +26,6 @@
 #endif
 #endif
 
-/*
- * <Data "data_name">
- *   RegisterBase 1234
- *   RegisterCmd ReadHolding
- *   RegisterType float
- *   Type gauge
- *   Instance "..."
- * </Data>
- *
- * <Host "name">
- *   Address "addr"
- *   Port "1234"
- *   # Or:
- *   # Device "/dev/ttyUSB0"
- *   # Baudrate 38400
- *   # (Assumes 8N1)
- *   Interval 60
- *
- *   <Slave 1>
- *       Instance "foobar" # optional
- *       Collect "data_name"
- *   </Slave>
- * </Host>
- */
-
-/*
- * Data structures
- */
 typedef enum {
     REG_TYPE_INT16,
     REG_TYPE_INT32,
@@ -88,18 +60,15 @@ struct mb_data_s;
 typedef struct mb_data_s mb_data_t;
 struct mb_data_s {
     char *name;
-
     char *metric;
     char *help;
     metric_type_t type;
     label_set_t labels;
-
     int register_base;
     mb_register_type_t register_type;
     mb_mreg_type_t modbus_register_type;
     double scale;
     double shift;
-
     mb_data_t *next;
 };
 
@@ -118,15 +87,15 @@ struct mb_host_s {
     /* char service[NI_MAXSERV]; */
     int port;               /* for Modbus/TCP */
     int baudrate;           /* for Modbus/RTU */
+    char parity;
+    int data_bit;
+    int stop_bit;
     mb_uarttype_t uarttype; /* UART type for Modbus/RTU */
     mb_conntype_t conntype;
-
     mb_slave_t *slaves;
     size_t slaves_num;
-
     char *metric_prefix;
     label_set_t labels;
-
 #ifdef LEGACY_LIBMODBUS
     modbus_param_t connection;
 #else
@@ -305,9 +274,8 @@ static int mb_init_connection(mb_host_t *host)
                         /* port = */ host->port);
     } else {
         PLUGIN_DEBUG("Trying to connect to \"%s\".", host->node);
-        modbus_init_rtu(&host->connection,
-                        /* device = */ host->node,
-                        /* baudrate = */ host->baudrate, 'N', 8, 1, 0);
+        modbus_init_rtu(&host->connection, host->node, host->baudrate, host->parity,
+                        host->data_bit, host->stop_bit, 0);
     }
 
     status = modbus_connect(&host->connection);
@@ -348,7 +316,8 @@ static int mb_init_connection(mb_host_t *host)
     } else {
         PLUGIN_DEBUG("Trying to connect to \"%s\", baudrate %i.", host->node, host->baudrate);
 
-        host->connection = modbus_new_rtu(host->node, host->baudrate, 'N', 8, 1);
+        host->connection = modbus_new_rtu(host->node, host->baudrate, host->parity,
+                                          host->data_bit, host->stop_bit);
         if (host->connection == NULL) {
             PLUGIN_ERROR("Creating new Modbus/RTU object failed.");
             return -1;
@@ -911,6 +880,72 @@ static int mb_config_add_slave(mb_host_t *host, config_item_t *ci)
     return status;
 }
 
+static int mb_config_parity(config_item_t *ci, char *parity)
+{
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    if (strcasecmp(ci->values[0].value.string, "none") == 0) {
+        *parity = 'N';
+    } else if (strcasecmp(ci->values[0].value.string, "even") == 0) {
+        *parity = 'E';
+    } else if (strcasecmp(ci->values[0].value.string, "odd") == 0) {
+        *parity = 'O';
+    } else {
+        PLUGIN_ERROR("The allowed values of '%s' option in %s:%d are: none, even or odd.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int mb_config_data_bit(config_item_t *ci, int *data_bit)
+{
+    if ((ci == NULL) || (data_bit == NULL))
+        return EINVAL;
+
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_NUMBER)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one numeric argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    *data_bit = (int)ci->values[0].value.number;
+
+    if (!((*data_bit == 5) || (*data_bit == 6) || (*data_bit == 7) || (*data_bit == 8))) {
+        PLUGIN_ERROR("The allowed values of '%s' option in %s:%d are: 5, 6, 7 or 8.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int mb_config_stop_bit(config_item_t *ci, int *stop_bit)
+{
+    if ((ci == NULL) || (stop_bit == NULL))
+        return EINVAL;
+
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_NUMBER)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one numeric argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    *stop_bit = (int)ci->values[0].value.number;
+
+    if (!((*stop_bit == 1) || (*stop_bit == 2))) {
+        PLUGIN_ERROR("The allowed values of '%s' option in %s:%d are: 1 or 2.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+    return 0;
+}
+
 static int mb_config_add_host(config_item_t *ci)
 {
     cdtime_t interval = 0;
@@ -921,6 +956,9 @@ static int mb_config_add_host(config_item_t *ci)
     if (host == NULL)
         return ENOMEM;
     host->slaves = NULL;
+    host->parity = 'N';
+    host->data_bit = 8;
+    host->stop_bit = 1;
 
     status = cf_util_get_string_buffer(ci, host->host, sizeof(host->host));
     if (status != 0) {
@@ -957,6 +995,12 @@ static int mb_config_add_host(config_item_t *ci)
             }
         } else if (strcasecmp("baud-rate", child->key) == 0) {
             status = cf_util_get_int(child, &host->baudrate);
+        } else if (strcasecmp("parity", child->key) == 0) {
+            status = mb_config_parity(child, &host->parity);
+        } else if (strcasecmp("data-bit", child->key) == 0) {
+            status = mb_config_data_bit(child, &host->data_bit);
+        } else if (strcasecmp("stop-bit", child->key) == 0) {
+            status = mb_config_stop_bit(child, &host->stop_bit);
         } else if (strcasecmp("uart-type", child->key) == 0) {
 #if defined(linux) && !defined(LEGACY_LIBMODBUS) && LIBMODBUS_VERSION_CHECK(2, 9, 4)
             char buffer[NI_MAXHOST];
