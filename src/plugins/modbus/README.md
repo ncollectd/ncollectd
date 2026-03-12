@@ -15,6 +15,7 @@ NCOLLECTD-MODBUS(5) - File Formats Manual
 	        metric metric
 	        help help
 	        label key value
+	        type gauge|counter|unknown
 	        scale scale
 	        shift shift
 	    }
