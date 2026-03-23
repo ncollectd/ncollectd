@@ -54,6 +54,10 @@
         \fBbulk-size\fP \fIinteger\fP
         \fBmetric-prefix\fP \fImetric-prefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBmetric-up\fP \fImetric-up\fP {
+            \fBhelp\fP \fIhelp\fP
+            \fBlabel\fP \fIkey\fP \fIvalue\fP
+        }
         \fBfilter\fP {
             ...
         }
@@ -293,6 +297,16 @@ Prepends \fIprefix\fP to the metric name in the \fBdata\fP block.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times.
+.It \fBmetric-up\fP \fImetric-up\fP
+Metric to report if the host reponse to any of the request OIDs.
+The metric will be 0 if the collection of all values fails.
+.Bl -tag -width Ds
+.It \fBhelp\fP \fIhelp\fP
+Set the help text for the up metric.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the up metric.
+Can appear multiple times.
+.El
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
 See \fBFILTER CONFIGURATION\fP in
