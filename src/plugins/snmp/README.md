@@ -53,6 +53,10 @@ NCOLLECTD-SNMP(5) - File Formats Manual
 	        bulk-size integer
 	        metric-prefix metric-prefix
 	        label key value
+	        metric-up metric-up {
+	            help help
+	            label key value
+	        }
 	        filter {
 	            ...
 	        }
@@ -372,6 +376,20 @@ block: **table**, **data**, and **host**:
 
 > > Append the label *key*=*value* to the submitting metrics.
 > > Can appear multiple times.
+
+> **metric-up** *metric-up*
+
+> > Metric to report if the host reponse to any of the request OIDs.
+> > The metric will be 0 if the collection of all values fails.
+
+> > **help** *help*
+
+> > > Set the help text for the up metric.
+
+> > **label** *key* *value*
+
+> > > Append the label *key*=*value* to the up metric.
+> > > Can appear multiple times.
 
 > **filter**
 

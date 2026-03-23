@@ -95,6 +95,10 @@ typedef struct {
     data_definition_t **data_list;
     int data_list_len;
     int bulk_size;
+
+    char *metric_up;
+    char *metric_up_help;
+    label_set_t metric_up_labels;
 } host_definition_t;
 
 /* These two types are used to cache values in 'csnmp_read_table' to handle gaps in tables. */
@@ -194,6 +198,9 @@ static void csnmp_host_definition_destroy(void *arg)
     free(hd->data_list);
     free(hd->metric_prefix);
     label_set_reset(&hd->labels);
+    free(hd->metric_up);
+    free(hd->metric_up_help);
+    label_set_reset(&hd->metric_up_labels);
     plugin_filter_free(hd->filter);
 
     free(hd);
@@ -1126,7 +1133,7 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
         value_cells_head = next;
     }
 
-    return 0;
+    return status;
 }
 
 static int csnmp_read_value(host_definition_t *host, data_definition_t *data)
@@ -1233,6 +1240,34 @@ static int csnmp_read_value(host_definition_t *host, data_definition_t *data)
     return 0;
 }
 
+static void csnmp_metric_up(host_definition_t *host, int val)
+{
+    if (host->metric_up == NULL)
+        return;
+
+    metric_family_t fam = {0};
+    fam.name = host->metric_up;
+    fam.type = METRIC_TYPE_GAUGE;
+    fam.help = host->metric_up_help;
+
+    metric_t m = {0};
+
+    for (size_t i = 0; i < host->labels.num; i++) {
+        label_pair_t *pair = &host->labels.ptr[i];
+        metric_label_set(&m, pair->name, pair->value);
+    }
+    for (size_t i = 0; i < host->metric_up_labels.num; i++) {
+        label_pair_t *pair = &host->metric_up_labels.ptr[i];
+        metric_label_set(&m, pair->name, pair->value);
+    }
+
+    m.value = VALUE_GAUGE(val);
+
+    metric_family_metric_append(&fam, m);
+    metric_reset(&m, fam.type);
+    plugin_dispatch_metric_family_filtered(&fam, host->filter, 0);
+}
+
 static int csnmp_read_host(user_data_t *ud)
 {
     host_definition_t *host = ud->data;
@@ -1240,8 +1275,10 @@ static int csnmp_read_host(user_data_t *ud)
     if (host->sess_handle == NULL)
         csnmp_host_open_session(host);
 
-    if (host->sess_handle == NULL)
-        return -1;
+    if (host->sess_handle == NULL) {
+        csnmp_metric_up(host, 0);
+        return 0;
+    }
 
     int success = 0;
     for (int i = 0; i < host->data_list_len; i++) {
@@ -1258,8 +1295,7 @@ static int csnmp_read_host(user_data_t *ud)
             success++;
     }
 
-    if (success == 0)
-        return -1;
+    csnmp_metric_up(host, success == 0 ? 0 : 1);
 
     return 0;
 }
@@ -1430,6 +1466,32 @@ static int csnmp_config_add_data(config_item_t *ci, bool table)
     }
 
     return 0;
+}
+
+static int csnmp_config_metric_up(host_definition_t *hd, config_item_t *ci)
+{
+    int status = cf_util_get_string(ci, &hd->metric_up);
+    if (status != 0)
+        return -1;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *option = ci->children + i;
+
+        if (strcasecmp("help", option->key) == 0) {
+            status = cf_util_get_string(option, &hd->metric_up_help);
+        } else if (strcasecmp("label", option->key) == 0) {
+            status = cf_util_get_label(option, &hd->metric_up_labels);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          option->key, cf_get_file(option), cf_get_lineno(option));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    return status;
 }
 
 static int csnmp_config_add_host_version(host_definition_t *hd, config_item_t *ci)
@@ -1710,6 +1772,8 @@ static int csnmp_config_add_host(config_item_t *ci)
             status = cf_util_get_string(option, &hd->metric_prefix);
         } else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &hd->labels);
+        } else if (strcasecmp("metric-up", option->key) == 0) {
+            status = csnmp_config_metric_up(hd, option);
         } else if (strcasecmp("filter", option->key) == 0) {
             status = plugin_filter_configure(option, &hd->filter);
         } else {
