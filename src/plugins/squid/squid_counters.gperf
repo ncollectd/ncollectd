@@ -13,59 +13,60 @@
 %}
 struct squid_counter {
     char *key;
+    double scale;
     int fam;
 };
 %%
-client_http.requests,       FAM_SQUID_CLIENT_HTTP_REQUESTS
-client_http.hits,           FAM_SQUID_CLIENT_HTTP_HITS
-client_http.errors,         FAM_SQUID_CLIENT_HTTP_ERRORS
-client_http.kbytes_in,      FAM_SQUID_CLIENT_HTTP_IN_BYTES
-client_http.kbytes_out,     FAM_SQUID_CLIENT_HTTP_OUT_BYTES
-client_http.hit_kbytes_out, FAM_SQUID_CLIENT_HTTP_HIT_OUT_BYTES
-server.all.requests,        FAM_SQUID_SERVER_ALL_REQUESTS
-server.all.errors,          FAM_SQUID_SERVER_ALL_ERRORS
-server.all.kbytes_in,       FAM_SQUID_SERVER_ALL_IN_BYTES
-server.all.kbytes_out,      FAM_SQUID_SERVER_ALL_OUT_BYTES
-server.http.requests,       FAM_SQUID_SERVER_HTTP_REQUESTS
-server.http.errors,         FAM_SQUID_SERVER_HTTP_ERRORS
-server.http.kbytes_in,      FAM_SQUID_SERVER_HTTP_IN_BYTES
-server.http.kbytes_out,     FAM_SQUID_SERVER_HTTP_OUT_BYTES
-server.ftp.requests,        FAM_SQUID_SERVER_FTP_REQUESTS
-server.ftp.errors,          FAM_SQUID_SERVER_FTP_ERRORS
-server.ftp.kbytes_in,       FAM_SQUID_SERVER_FTP_IN_BYTES
-server.ftp.kbytes_out,      FAM_SQUID_SERVER_FTP_OUT_BYTES
-server.other.requests,      FAM_SQUID_SERVER_OTHER_REQUESTS
-server.other.errors,        FAM_SQUID_SERVER_OTHER_ERRORS
-server.other.kbytes_in,     FAM_SQUID_SERVER_OTHER_IN_BYTES
-server.other.kbytes_out,    FAM_SQUID_SERVER_OTHER_OUT_BYTES
-icp.pkts_sent,              FAM_SQUID_ICP_SENT_PKTS
-icp.pkts_recv,              FAM_SQUID_ICP_RECV_PKTS
-icp.queries_sent,           FAM_SQUID_ICP_SENT_QUERIES
-icp.replies_sent,           FAM_SQUID_ICP_SENT_REPLIES
-icp.queries_recv,           FAM_SQUID_ICP_RECV_QUERIES
-icp.replies_recv,           FAM_SQUID_ICP_RECV_REPLIES
-icp.query_timeouts,         FAM_SQUID_ICP_QUERY_TIMEOUTS
-icp.replies_queued,         FAM_SQUID_ICP_REPLIES_QUEUED
-icp.kbytes_sent,            FAM_SQUID_ICP_SENT_BYTES
-icp.kbytes_recv,            FAM_SQUID_ICP_RECV_BYTES
-icp.q_kbytes_sent,          FAM_SQUID_ICP_Q_SENT_BYTES
-icp.r_kbytes_sent,          FAM_SQUID_ICP_R_SENT_BYTES
-icp.q_kbytes_recv,          FAM_SQUID_ICP_Q_RECV_BYTES
-icp.r_kbytes_recv,          FAM_SQUID_ICP_R_RECV_BYTES
-icp.times_used,             FAM_SQUID_ICP_TIMES_USED
-cd.times_used,              FAM_SQUID_CD_TIMES_USED
-cd.msgs_sent,               FAM_SQUID_CD_SENT_MSGS
-cd.msgs_recv,               FAM_SQUID_CD_RECV_MSGS
-cd.memory,                  FAM_SQUID_CD_MEMORY
-cd.local_memory,            FAM_SQUID_CD_LOCAL_MEMORY
-cd.kbytes_sent,             FAM_SQUID_CD_SENT_BYTES
-cd.kbytes_recv,             FAM_SQUID_CD_RECV_BYTES
-unlink.requests,            FAM_SQUID_UNLINK_REQUESTS
-page_faults,                FAM_SQUID_PAGE_FAULTS
-select_loops,               FAM_SQUID_SELECT_LOOPS
-cpu_time,                   FAM_SQUID_CPU_SECONDS
-wall_time,                  FAM_SQUID_WALL_SECONDS
-swap.outs,                  FAM_SQUID_SWAP_OUTS
-swap.ins,                   FAM_SQUID_SWAP_INS
-swap.files_cleaned,         FAM_SQUID_SWAP_FILES_CLEANED
-aborted_requests,           FAM_SQUID_ABORTED_REQUESTS
+client_http.requests,          0, FAM_SQUID_CLIENT_HTTP_REQUESTS
+client_http.hits,              0, FAM_SQUID_CLIENT_HTTP_HITS
+client_http.errors,            0, FAM_SQUID_CLIENT_HTTP_ERRORS
+client_http.kbytes_in,      1024, FAM_SQUID_CLIENT_HTTP_IN_BYTES
+client_http.kbytes_out,     1024, FAM_SQUID_CLIENT_HTTP_OUT_BYTES
+client_http.hit_kbytes_out, 1024, FAM_SQUID_CLIENT_HTTP_HIT_OUT_BYTES
+server.all.requests,           0, FAM_SQUID_SERVER_ALL_REQUESTS
+server.all.errors,             0, FAM_SQUID_SERVER_ALL_ERRORS
+server.all.kbytes_in,       1024, FAM_SQUID_SERVER_ALL_IN_BYTES
+server.all.kbytes_out,      1024, FAM_SQUID_SERVER_ALL_OUT_BYTES
+server.http.requests,          0, FAM_SQUID_SERVER_HTTP_REQUESTS
+server.http.errors,            0, FAM_SQUID_SERVER_HTTP_ERRORS
+server.http.kbytes_in,      1024, FAM_SQUID_SERVER_HTTP_IN_BYTES
+server.http.kbytes_out,     1024, FAM_SQUID_SERVER_HTTP_OUT_BYTES
+server.ftp.requests,           0, FAM_SQUID_SERVER_FTP_REQUESTS
+server.ftp.errors,             0, FAM_SQUID_SERVER_FTP_ERRORS
+server.ftp.kbytes_in,       1024, FAM_SQUID_SERVER_FTP_IN_BYTES
+server.ftp.kbytes_out,      1024, FAM_SQUID_SERVER_FTP_OUT_BYTES
+server.other.requests,         0, FAM_SQUID_SERVER_OTHER_REQUESTS
+server.other.errors,           0, FAM_SQUID_SERVER_OTHER_ERRORS
+server.other.kbytes_in,     1024, FAM_SQUID_SERVER_OTHER_IN_BYTES
+server.other.kbytes_out,    1024, FAM_SQUID_SERVER_OTHER_OUT_BYTES
+icp.pkts_sent,                 0, FAM_SQUID_ICP_SENT_PKTS
+icp.pkts_recv,                 0, FAM_SQUID_ICP_RECV_PKTS
+icp.queries_sent,              0, FAM_SQUID_ICP_SENT_QUERIES
+icp.replies_sent,              0, FAM_SQUID_ICP_SENT_REPLIES
+icp.queries_recv,              0, FAM_SQUID_ICP_RECV_QUERIES
+icp.replies_recv,              0, FAM_SQUID_ICP_RECV_REPLIES
+icp.query_timeouts,            0, FAM_SQUID_ICP_QUERY_TIMEOUTS
+icp.replies_queued,            0, FAM_SQUID_ICP_REPLIES_QUEUED
+icp.kbytes_sent,            1024, FAM_SQUID_ICP_SENT_BYTES
+icp.kbytes_recv,            1024, FAM_SQUID_ICP_RECV_BYTES
+icp.q_kbytes_sent,          1024, FAM_SQUID_ICP_Q_SENT_BYTES
+icp.r_kbytes_sent,          1024, FAM_SQUID_ICP_R_SENT_BYTES
+icp.q_kbytes_recv,          1024, FAM_SQUID_ICP_Q_RECV_BYTES
+icp.r_kbytes_recv,          1024, FAM_SQUID_ICP_R_RECV_BYTES
+icp.times_used,                0, FAM_SQUID_ICP_TIMES_USED
+cd.times_used,                 0, FAM_SQUID_CD_TIMES_USED
+cd.msgs_sent,                  0, FAM_SQUID_CD_SENT_MSGS
+cd.msgs_recv,                  0, FAM_SQUID_CD_RECV_MSGS
+cd.memory,                     0, FAM_SQUID_CD_MEMORY
+cd.local_memory,               0, FAM_SQUID_CD_LOCAL_MEMORY
+cd.kbytes_sent,             1024, FAM_SQUID_CD_SENT_BYTES
+cd.kbytes_recv,             1024, FAM_SQUID_CD_RECV_BYTES
+unlink.requests,               0, FAM_SQUID_UNLINK_REQUESTS
+page_faults,                   0, FAM_SQUID_PAGE_FAULTS
+select_loops,                  0, FAM_SQUID_SELECT_LOOPS
+cpu_time,                      0, FAM_SQUID_CPU_SECONDS
+wall_time,                     0, FAM_SQUID_WALL_SECONDS
+swap.outs,                     0, FAM_SQUID_SWAP_OUTS
+swap.ins,                      0, FAM_SQUID_SWAP_INS
+swap.files_cleaned,            0, FAM_SQUID_SWAP_FILES_CLEANED
+aborted_requests,              0, FAM_SQUID_ABORTED_REQUESTS

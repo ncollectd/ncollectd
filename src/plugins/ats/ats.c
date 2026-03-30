@@ -12,6 +12,7 @@
 #include <curl/curl.h>
 
 enum {
+    FAM_ATS_UP,
     FAM_ATS_CLIENT_REQUESTS_INVALID,
     FAM_ATS_CLIENT_REQUESTS_MISSING_HOST_HDR,
     FAM_ATS_CONNECT_FAILURES,
@@ -59,6 +60,11 @@ enum {
 };
 
 static metric_family_t fams_ats[FAM_ATS_MAX] = {
+    [FAM_ATS_UP] = {
+        .name = "ats_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the Traffic Server server be reached.",
+    },
     [FAM_ATS_CLIENT_REQUESTS_INVALID] = {
         .name = "ats_client_requests_invalid",
         .type = METRIC_TYPE_COUNTER,
@@ -306,6 +312,7 @@ typedef struct {
     plugin_filter_t *filter;
     CURL *curl;
     char ats_curl_error[CURL_ERROR_SIZE];
+    json_parser_t handle;
     metric_family_t fams[FAM_ATS_MAX];
 } ats_instance_t;
 
@@ -483,29 +490,15 @@ static size_t ats_curl_callback(void *buf, size_t size, size_t nmemb, void *user
     return len;
 }
 
-static int ats_read(user_data_t *user_data)
+static int ats_curl_init(ats_instance_t *ats)
 {
-    ats_instance_t *ats = user_data->data;
+    if (ats->curl != NULL)
+        return 0;
 
-    if (ats == NULL) {
-        PLUGIN_ERROR("ats instance is NULL.");
-        return -1;
-    }
-
-    ats_json_ctx_t ctx = {0};
-    ctx.fams = ats->fams;
-    ctx.labels = &ats->labels;
-    ctx.nfam = -1;
-
-    json_parser_t handle;
-    json_parser_init(&handle, 0, &ats_json_callbacks, &ctx);
-
+    ats->curl = curl_easy_init();
     if (ats->curl == NULL) {
-        ats->curl = curl_easy_init();
-        if (ats->curl == NULL) {
-            PLUGIN_ERROR("curl_easy_init failed.");
-            return -1;
-        }
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
     }
 
     CURLcode rcode = 0;
@@ -524,7 +517,7 @@ static int ats_read(user_data_t *user_data)
         return -1;
     }
     /* coverity[BAD_SIZEOF] */
-    rcode = curl_easy_setopt(ats->curl, CURLOPT_WRITEDATA, (void *)&handle);
+    rcode = curl_easy_setopt(ats->curl, CURLOPT_WRITEDATA, (void *)&(ats->handle));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
                      curl_easy_strerror(rcode));
@@ -578,21 +571,59 @@ static int ats_read(user_data_t *user_data)
         return -1;
     }
 
+    return 0;
+}
+
+static void ats_curl_cleanup(ats_instance_t *ats)
+{
+    if (ats->curl != NULL) {
+        curl_easy_cleanup(ats->curl);
+        ats->curl = NULL;
+        ats->ats_curl_error[0] = '\0';
+    }
+}
+
+static int ats_read(user_data_t *user_data)
+{
+    ats_instance_t *ats = user_data->data;
+
+    if (ats == NULL) {
+        PLUGIN_ERROR("ats instance is NULL.");
+        return -1;
+    }
+
+    if (ats_curl_init(ats) != 0) {
+        ats_curl_cleanup(ats);
+        metric_family_append(&ats->fams[FAM_ATS_UP], VALUE_GAUGE(0), &ats->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&ats->fams[FAM_ATS_UP], ats->filter, 0);
+        return 0;
+    }
+
+    ats_json_ctx_t ctx = {0};
+    ctx.fams = ats->fams;
+    ctx.labels = &ats->labels;
+    ctx.nfam = -1;
+
+    json_parser_init(&(ats->handle), 0, &ats_json_callbacks, &ctx);
 
     if (curl_easy_perform(ats->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", ats->ats_curl_error);
-        return -1;
+        ats_curl_cleanup(ats);
+        json_parser_free(&(ats->handle));
+        metric_family_append(&ats->fams[FAM_ATS_UP], VALUE_GAUGE(0), &ats->labels, NULL);
+        plugin_dispatch_metric_family_array_filtered(ats->fams, FAM_ATS_MAX, ats->filter, 0);
+        return 0;
     }
 
-    json_status_t status = json_parser_complete(&handle);
+    metric_family_append(&ats->fams[FAM_ATS_UP], VALUE_GAUGE(1), &ats->labels, NULL);
+
+    json_status_t status = json_parser_complete(&(ats->handle));
     if (status != JSON_STATUS_OK) {
-        unsigned char *errmsg = json_parser_get_error(&handle, 0, NULL, 0);
+        unsigned char *errmsg = json_parser_get_error(&(ats->handle), 0, NULL, 0);
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
-        json_parser_free (&handle);
-        return -1;
     }
-    json_parser_free(&handle);
+    json_parser_free(&(ats->handle));
 
     plugin_dispatch_metric_family_array_filtered(ats->fams, FAM_ATS_MAX, ats->filter, 0);
 

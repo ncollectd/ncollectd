@@ -23,7 +23,6 @@
 
 struct wh_callback_s {
     char *name;
-
     char *location;
     char *user;
     char *pass;
@@ -41,23 +40,18 @@ struct wh_callback_s {
     int low_speed_limit;
     time_t low_speed_time;
     int timeout;
-
     cdtime_t flush_timeout;
-
     format_stream_metric_t format_metric;
     format_notification_t format_notification;
     compress_format_t compress;
     const char *content_type;
-
     CURL *curl;
     uint64_t curl_stats_flags;
     struct curl_slist *headers;
     char curl_errbuf[CURL_ERROR_SIZE];
-
     unsigned int send_buffer_max;
     strbuf_t send_buffer;
     cdtime_t send_buffer_init_time;
-
     char response_buffer[WRITE_HTTP_RESPONSE_BUFFER_SIZE];
     unsigned int response_buffer_pos;
 };
@@ -380,10 +374,19 @@ static int wh_callback_init(wh_callback_t *cb)
     return 0;
 }
 
+static void wh_callback_cleanup(wh_callback_t *cb)
+{
+    if (cb->curl != NULL) {
+        curl_easy_cleanup(cb->curl);
+        cb->curl = NULL;
+        cb->curl_errbuf[0] = '\0';
+    }
+}
+
 static int wh_flush_internal(wh_callback_t *cb, cdtime_t timeout)
 {
     if (wh_callback_init(cb) != 0) {
-        PLUGIN_ERROR("wh_callback_init failed.");
+        wh_callback_cleanup(cb);
         return -1;
     }
 
@@ -500,6 +503,7 @@ static int wh_notify(notification_t const *n, user_data_t *ud)
     if (wh_callback_init(cb) != 0) {
         PLUGIN_ERROR("wh_callback_init failed.");
         strbuf_destroy(&buf);
+        wh_callback_cleanup(cb);
         return -1;
     }
 

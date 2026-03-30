@@ -79,8 +79,7 @@ typedef struct {
     cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
-    char nginx_buffer[16384];
-    size_t nginx_buffer_len;
+    strbuf_t nginx_buffer;
     char nginx_curl_error[CURL_ERROR_SIZE];
     CURL *curl;
     metric_family_t fams[FAM_NGINX_MAX];
@@ -99,6 +98,7 @@ static void nginx_free(void *arg) {
     free(st->pass);
     free(st->cacert);
     free(st->ssl_ciphers);
+    strbuf_destroy(&st->nginx_buffer);
     label_set_reset(&st->labels);
     plugin_filter_free(st->filter);
 
@@ -121,23 +121,19 @@ static size_t nginx_curl_callback(void *buf, size_t size, size_t nmemb, void *us
     if (unlikely(len == 0))
         return len;
 
-    /* Check if the data fits into the memory. If not, truncate it. */
-    if ((st->nginx_buffer_len + len) >= sizeof(st->nginx_buffer)) {
-        assert(sizeof(st->nginx_buffer) > st->nginx_buffer_len);
-        len = (sizeof(st->nginx_buffer) - 1) - st->nginx_buffer_len;
+    int status = strbuf_putstrn(&st->nginx_buffer, buf, len);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to copy to buffer.");
+        return 0;
     }
-
-    memcpy(&st->nginx_buffer[st->nginx_buffer_len], buf, len);
-    st->nginx_buffer_len += len;
-    st->nginx_buffer[st->nginx_buffer_len] = 0;
 
     return len;
 }
 
-static int nginx_init_host(nginx_t *st)
+static int nginx_curl_init(nginx_t *st)
 {
-    if (unlikely(st->curl != NULL))
-        curl_easy_cleanup(st->curl);
+    if (st->curl != NULL)
+        return 0;
 
     st->curl = curl_easy_init();
     if (unlikely(st->curl == NULL)) {
@@ -294,31 +290,47 @@ static int nginx_init_host(nginx_t *st)
         }
     }
 #endif
+
+    rcode = curl_easy_setopt(st->curl, CURLOPT_URL, st->url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s", curl_easy_strerror(rcode));
+        return -1;
+    }
+
     return 0;
+}
+
+static void nginx_curl_cleanup(nginx_t *st)
+{
+    if (st->curl != NULL) {
+        curl_easy_cleanup(st->curl);
+        st->curl = NULL;
+        st->nginx_curl_error[0] = '\0';
+    }
 }
 
 static int nginx_read(user_data_t *user_data)
 {
     nginx_t *st = user_data->data;
 
-    if (unlikely(st->curl == NULL)) {
-        if (unlikely(nginx_init_host(st) != 0)) {
-            metric_family_append(&st->fams[FAM_NGINX_UP], VALUE_GAUGE(0), &st->labels, NULL);
-            plugin_dispatch_metric_family_filtered(&st->fams[FAM_NGINX_UP], st->filter, 0);
-            return 0;
-        }
+    if (unlikely(nginx_curl_init(st) != 0)) {
+        nginx_curl_cleanup(st);
+        metric_family_append(&st->fams[FAM_NGINX_UP], VALUE_GAUGE(0), &st->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&st->fams[FAM_NGINX_UP], st->filter, 0);
+        return 0;
     }
 
-    st->nginx_buffer_len = 0;
-    CURLcode rcode = curl_easy_setopt(st->curl, CURLOPT_URL, st->url);
-    if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                     curl_easy_strerror(rcode));
-        return -1;
-    }
+    strbuf_reset(&st->nginx_buffer);
 
     if (curl_easy_perform(st->curl) != CURLE_OK) {
         PLUGIN_WARNING("curl_easy_perform failed: %s", st->nginx_curl_error);
+        nginx_curl_cleanup(st);
+        metric_family_append(&st->fams[FAM_NGINX_UP], VALUE_GAUGE(0), &st->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&st->fams[FAM_NGINX_UP], st->filter, 0);
+        return 0;
+    }
+
+    if (strbuf_len(&st->nginx_buffer) == 0) {
         metric_family_append(&st->fams[FAM_NGINX_UP], VALUE_GAUGE(0), &st->labels, NULL);
         plugin_dispatch_metric_family_filtered(&st->fams[FAM_NGINX_UP], st->filter, 0);
         return 0;
@@ -328,7 +340,7 @@ static int nginx_read(user_data_t *user_data)
 
     char *lines[16];
     int lines_num = 0;
-    char *ptr = st->nginx_buffer;
+    char *ptr = st->nginx_buffer.ptr;
     char *saveptr = NULL;
     while ((lines[lines_num] = strtok_r(ptr, "\n\r", &saveptr)) != NULL) {
         ptr = NULL;
@@ -375,8 +387,8 @@ static int nginx_read(user_data_t *user_data)
         }
     }
 
-    st->nginx_buffer_len = 0;
     plugin_dispatch_metric_family_array_filtered(st->fams, FAM_NGINX_MAX, st->filter, 0);
+
     return 0;
 }
 

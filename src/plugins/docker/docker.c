@@ -203,19 +203,15 @@ struct docker_instance_s {
     int timeout;
     label_set_t labels;
     plugin_filter_t *filter;
-
     pthread_t thread_id;
     bool thread_running;
-
     CURL *curl;
     char curl_error[CURL_ERROR_SIZE];
     CURLM *curl_multi;
-
     pthread_mutex_t lock;
     llist_t *ladd;
     llist_t *ldel;
     c_avl_tree_t *ids;
-
     metric_family_t fams[FAM_DOCKER_MAX];
     json_parser_t handle;
 };
@@ -1020,99 +1016,119 @@ static size_t docker_curl_callback(void *buf, size_t size, size_t nmemb, void *u
     return len;
 }
 
+static int docker_curl_init(docker_instance_t *docker)
+{
+    if (docker->curl != NULL)
+        return 0;
+
+    docker->curl = curl_easy_init();
+    if (docker->curl == NULL) {
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
+    }
+
+    CURLcode rcode = 0;
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_NOSIGNAL, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_WRITEFUNCTION, docker_curl_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_WRITEDATA, docker);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_ERRORBUFFER, docker->curl_error);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_MAXREDIRS, 50L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#ifdef HAVE_CURLOPT_TIMEOUT_MS
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_TIMEOUT_MS,
+                                   (docker->timeout >= 0) ? (long)docker->timeout
+                                   : (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#endif
+#ifdef HAVE_CURLOPT_UNIX_SOCKET_PATH
+    if (docker->socket_path != NULL) {
+        rcode = curl_easy_setopt(docker->curl, CURLOPT_UNIX_SOCKET_PATH, docker->socket_path);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_UNIX_SOCKET_PATH failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+#endif
+    rcode = curl_easy_setopt(docker->curl, CURLOPT_URL, docker->url_info);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    return 0;
+}
+
+static void docker_curl_cleanup(docker_instance_t *docker)
+{
+    if (docker->curl != NULL) {
+        curl_easy_cleanup(docker->curl);
+        docker->curl = NULL;
+        docker->curl_error[0] = '\0';
+    }
+}
+
 static int docker_read(user_data_t *user_data)
 {
     docker_instance_t *docker = user_data->data;
-
     if (docker == NULL) {
         PLUGIN_ERROR("docker instance is NULL.");
         return -1;
     }
 
-    if (docker->curl == NULL) {
-        docker->curl = curl_easy_init();
-        if (docker->curl == NULL) {
-            PLUGIN_ERROR("curl_easy_init failed.");
-            return -1;
-        }
-
-        CURLcode rcode = 0;
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_NOSIGNAL, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_WRITEFUNCTION, docker_curl_callback);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_WRITEDATA, docker);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_ERRORBUFFER, docker->curl_error);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_FOLLOWLOCATION, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_MAXREDIRS, 50L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-#ifdef HAVE_CURLOPT_TIMEOUT_MS
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_TIMEOUT_MS,
-                                       (docker->timeout >= 0) ? (long)docker->timeout
-                                       : (long)CDTIME_T_TO_MS(plugin_get_interval()));
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-#endif
-#ifdef HAVE_CURLOPT_UNIX_SOCKET_PATH
-        if (docker->socket_path != NULL) {
-            rcode = curl_easy_setopt(docker->curl, CURLOPT_UNIX_SOCKET_PATH, docker->socket_path);
-            if (rcode != CURLE_OK) {
-                PLUGIN_ERROR("curl_easy_setopt CURLOPT_UNIX_SOCKET_PATH failed: %s",
-                             curl_easy_strerror(rcode));
-                return -1;
-            }
-        }
-#endif
-        rcode = curl_easy_setopt(docker->curl, CURLOPT_URL, docker->url_info);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
+    if (docker_curl_init(docker) != 0) {
+        docker_curl_cleanup(docker);
+        return 0;
     }
+
 
     docker_container_info_json_ctx_t ictx = {0};
     ictx.fams = docker->fams;
@@ -1125,6 +1141,7 @@ static int docker_read(user_data_t *user_data)
     if (code != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: (%d) %s", (int)code, docker->curl_error);
         json_parser_free(&docker->handle);
+        docker_curl_cleanup(docker);
         return -1;
     }
 

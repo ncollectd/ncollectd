@@ -19,7 +19,6 @@ typedef struct {
     char *metric_prefix;
     label_set_t labels;
     plugin_filter_t *filter;
-
     char *url;
     int address_family;
     char *user;
@@ -35,21 +34,15 @@ typedef struct {
     uint64_t curl_stats_flags;
     char *proxy;
     bool proxy_tunnel;
-
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
-    char *buffer;
-    size_t buffer_size;
-    size_t buffer_fill;
-
+    strbuf_t buffer;
     plugin_match_t *matches;
 } chttp_ctx_t;
 
 static size_t chttp_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
 {
-    size_t len;
-
-    len = size * nmemb;
+    size_t len = size * nmemb;
     if (len == 0)
         return len;
 
@@ -57,23 +50,11 @@ static size_t chttp_curl_callback(void *buf, size_t size, size_t nmemb, void *us
     if (ctx == NULL)
         return 0;
 
-    if ((ctx->buffer_fill + len) >= ctx->buffer_size) {
-        char *temp;
-        size_t temp_size;
-
-        temp_size = ctx->buffer_fill + len + 1;
-        temp = realloc(ctx->buffer, temp_size);
-        if (temp == NULL) {
-            PLUGIN_ERROR("realloc failed.");
-            return 0;
-        }
-        ctx->buffer = temp;
-        ctx->buffer_size = temp_size;
+    int status = strbuf_putstrn(&ctx->buffer, buf, len);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to copy to buffer.");
+        return 0;
     }
-
-    memcpy(ctx->buffer + ctx->buffer_fill, (char *)buf, len);
-    ctx->buffer_fill += len;
-    ctx->buffer[ctx->buffer_fill] = 0;
 
     return len;
 }
@@ -101,7 +82,7 @@ static void chttp_free(void *arg)
     free(ctx->post_body);
     curl_slist_free_all(ctx->headers);
 
-    free(ctx->buffer);
+    strbuf_destroy(&ctx->buffer);
     free(ctx->proxy);
 
     if (ctx->matches != NULL)
@@ -127,8 +108,11 @@ static int chttp_config_append_string(const char *name, struct curl_slist **dest
     return 0;
 }
 
-static int chttp_init_curl(chttp_ctx_t *ctx)
+static int chttp_curl_init(chttp_ctx_t *ctx)
 {
+    if (ctx->curl != NULL)
+        return 0;
+
     ctx->curl = curl_easy_init();
     if (ctx->curl == NULL) {
         PLUGIN_ERROR("curl_easy_init failed.");
@@ -215,14 +199,17 @@ static int chttp_init_curl(chttp_ctx_t *ctx)
         if (ctx->pass != NULL)
             credentials_size += strlen(ctx->pass);
 
-        ctx->credentials = malloc(credentials_size);
         if (ctx->credentials == NULL) {
-            PLUGIN_ERROR("malloc failed.");
-            return -1;
+            ctx->credentials = malloc(credentials_size);
+            if (ctx->credentials == NULL) {
+                PLUGIN_ERROR("malloc failed.");
+                return -1;
+            }
+
+            snprintf(ctx->credentials, credentials_size, "%s:%s", ctx->user,
+                     (ctx->pass == NULL) ? "" : ctx->pass);
         }
 
-        snprintf(ctx->credentials, credentials_size, "%s:%s", ctx->user,
-                         (ctx->pass == NULL) ? "" : ctx->pass);
         rcode = curl_easy_setopt(ctx->curl, CURLOPT_USERPWD, ctx->credentials);
         if (rcode != CURLE_OK) {
             PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
@@ -303,22 +290,7 @@ static int chttp_init_curl(chttp_ctx_t *ctx)
     }
 #endif
 
-    return 0;
-}
-
-static int chttp_read(user_data_t *ud)
-{
-
-    if ((ud == NULL) || (ud->data == NULL)) {
-        PLUGIN_ERROR("cc_read_page: Invalid user data.");
-        return -1;
-    }
-
-    chttp_ctx_t *ctx = ud->data;
-
-    ctx->buffer_fill = 0;
-
-    CURLcode rcode = curl_easy_setopt(ctx->curl, CURLOPT_URL, ctx->url);
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_URL, ctx->url);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
                      curl_easy_strerror(rcode));
@@ -341,16 +313,49 @@ static int chttp_read(user_data_t *ud)
         }
     }
 
+    return 0;
+}
+
+static void chttpd_curl_cleanup(chttp_ctx_t *ctx)
+{
+    if (ctx->curl != NULL) {
+        curl_easy_cleanup(ctx->curl);
+        ctx->curl = NULL;
+        ctx->curl_errbuf[0] = '\0';
+    }
+}
+
+static int chttp_read(user_data_t *ud)
+{
+
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("cc_read_page: Invalid user data.");
+        return -1;
+    }
+
+    chttp_ctx_t *ctx = ud->data;
+
+    if (chttp_curl_init(ctx) != 0) {
+        chttpd_curl_cleanup(ctx);
+        return 0;
+    }
+
+    strbuf_reset(&ctx->buffer);
+
     int status = curl_easy_perform(ctx->curl);
     if (status != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed with status %i: %s", status, ctx->curl_errbuf);
-        return -1;
+        chttpd_curl_cleanup(ctx);
+        return 0;
     }
 
     curl_stats_dispatch(ctx->curl, ctx->curl_stats_flags, ctx->filter,
                                    ctx->metric_prefix, &ctx->labels);
 
-    status = plugin_match(ctx->matches, ctx->buffer);
+    if (strbuf_len(&ctx->buffer) == 0)
+        return 0;
+
+    status = plugin_match(ctx->matches, ctx->buffer.ptr);
     if (status != 0)
         PLUGIN_WARNING("plugin_match failed.");
 
@@ -490,9 +495,6 @@ static int chttp_config_instance(config_item_t *ci)
                 break;
             }
         }
-
-        if (status == 0)
-            status = chttp_init_curl(ctx);
 
         break;
     }

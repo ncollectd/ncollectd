@@ -620,6 +620,9 @@ static size_t bind_curl_callback(void *buf, size_t size, size_t nmemb, void *use
 
 static int bind_curl_init(bind_instance_t *bi)
 {
+    if (bi->curl != NULL)
+        return 0;
+
     bi->curl = curl_easy_init();
     if (bi->curl == NULL) {
         PLUGIN_ERROR("curl_easy_init failed.");
@@ -701,7 +704,25 @@ static int bind_curl_init(bind_instance_t *bi)
         return -1;
     }
 #endif
+
+    rcode = curl_easy_setopt(bi->curl, CURLOPT_URL,
+                             (bi->url != NULL) ? bi->url : BIND_DEFAULT_URL);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
     return 0;
+}
+
+static void bind_curl_cleanup(bind_instance_t *bi)
+{
+    if (bi->curl != NULL) {
+        curl_easy_cleanup(bi->curl);
+        bi->curl = NULL;
+        bi->bind_curl_error[0] = '\0';
+    }
 }
 
 static int bind_read(user_data_t *user_data)
@@ -713,26 +734,20 @@ static int bind_read(user_data_t *user_data)
         return -1;
     }
 
-    if (bi->curl == NULL) {
-        int status = bind_curl_init(bi);
-        if (status != 0)
-            return -1;
+    if (bind_curl_init(bi) != 0) {
+        metric_family_append(&bi->fams[FAM_BIND_UP], VALUE_GAUGE(0), &bi->labels, NULL);
+        plugin_dispatch_metric_family(&bi->fams[FAM_BIND_UP], 0);
+        bind_curl_cleanup(bi);
+        return 0;
     }
 
     bi->fmt = BIND_FORMAT_NONE;
-
-    CURLcode rcode = curl_easy_setopt(bi->curl, CURLOPT_URL,
-                                                (bi->url != NULL) ? bi->url : BIND_DEFAULT_URL);
-    if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                     curl_easy_strerror(rcode));
-        return -1;
-    }
 
     if (curl_easy_perform(bi->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", bi->bind_curl_error);
         metric_family_append(&bi->fams[FAM_BIND_UP], VALUE_GAUGE(0), &bi->labels, NULL);
         plugin_dispatch_metric_family(&bi->fams[FAM_BIND_UP], 0);
+        bind_curl_cleanup(bi);
         return 0;
     }
 
