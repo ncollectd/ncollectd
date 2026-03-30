@@ -38,9 +38,7 @@ typedef struct {
     char *instance;
     label_set_t labels;
     plugin_filter_t *filter;
-
     char *socketpath;
-
     char *url;
     int address_family;
     char *user;
@@ -51,13 +49,9 @@ typedef struct {
     bool verify_host;
     char *cacert;
     struct curl_slist *headers;
-
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
-    char *buffer;
-    size_t buffer_size;
-    size_t buffer_fill;
-
+    strbuf_t buffer;
     metric_family_t fams_process[FAM_HAPROXY_PROCESS_MAX];
     metric_family_t fams_stat[FAM_HAPROXY_STAT_MAX];
     metric_family_t fams_sticktable[FAM_HAPROXY_STICKTABLE_MAX];
@@ -395,7 +389,7 @@ static void haproxy_free(void *arg)
     free(ha->cacert);
     curl_slist_free_all(ha->headers);
 
-    free(ha->buffer);
+    strbuf_destroy(&ha->buffer);
 
     free(ha);
 }
@@ -742,12 +736,12 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
 
 static int haproxy_read_curl_stat(haproxy_t *ha, cdtime_t when)
 {
-    if (ha->buffer_fill == 0)
+    if (strbuf_len(&ha->buffer) == 0)
         return 0;
 
     int stat_header[HA_STAT_MAX] = {0};
     bool stat_header_found = false;
-    char *ptr = ha->buffer;
+    char *ptr = ha->buffer.ptr;
     char *saveptr = NULL;
     char *line;
     while ((line = strtok_r(ptr, "\n", &saveptr)) != NULL) {
@@ -928,78 +922,6 @@ static int haproxy_read_cmd_table(haproxy_t *ha)
     return 0;
 }
 
-static int haproxy_read (user_data_t *ud)
-{
-    if ((ud == NULL) || (ud->data == NULL)) {
-        PLUGIN_ERROR("Invalid user data.");
-        return -1;
-    }
-
-    haproxy_t *ha = ud->data;
-
-    metric_family_t fam_up = {
-        .name = "haproxy_up",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "Could the haproxy server be reached"
-    };
-
-    int status = 0;
-
-    if (ha->socketpath != NULL) {
-        while (status == 0) {
-            status = haproxy_read_cmd_info(ha);
-            if (status < 0)
-                break;
-            status = haproxy_read_cmd_stat(ha);
-            if (status < 0)
-                break;
-            status = haproxy_read_cmd_table(ha);
-
-            break;
-        }
-    } else {
-        ha->buffer_fill = 0;
-
-        while (status == 0) {
-            CURLcode rccode = curl_easy_setopt(ha->curl, CURLOPT_URL, ha->url);
-            if (rccode != CURLE_OK) {
-                PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                             curl_easy_strerror(rccode));
-                status = -1;
-                break;
-            }
-
-            status = curl_easy_perform(ha->curl);
-            if (status != CURLE_OK) {
-                PLUGIN_ERROR("curl_easy_perform failed with status %i: %s",
-                            status, ha->curl_errbuf);
-                status = -1;
-                break;
-            }
-
-            long rcode = 0;
-            cdtime_t when = cdtime();
-            status = curl_easy_getinfo(ha->curl, CURLINFO_RESPONSE_CODE, &rcode);
-            if (status != CURLE_OK) {
-                PLUGIN_ERROR("Fetching response code failed with status %i: %s",
-                            status, ha->curl_errbuf);
-                status = -1;
-                break;
-            }
-
-            if (rcode == 200)
-                haproxy_read_curl_stat(ha, when);
-
-            break;
-        }
-    }
-
-    metric_family_append(&fam_up, VALUE_GAUGE(status == 0 ? 1 : 0), &ha->labels, NULL);
-    plugin_dispatch_metric_family_filtered(&fam_up, ha->filter, 0);
-
-    return 0;
-}
-
 static size_t haproxy_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
 {
     size_t len = size * nmemb;
@@ -1010,26 +932,16 @@ static size_t haproxy_curl_callback(void *buf, size_t size, size_t nmemb, void *
     if (ha == NULL)
         return 0;
 
-    if ((ha->buffer_fill + len) >= ha->buffer_size) {
-        size_t temp_size = ha->buffer_fill + len + 1;
-        char * temp = realloc(ha->buffer, temp_size);
-        if (temp == NULL) {
-            PLUGIN_ERROR("realloc failed.");
-            return 0;
-        }
-        ha->buffer = temp;
-        ha->buffer_size = temp_size;
-    }
-
-    memcpy(ha->buffer + ha->buffer_fill, (char *)buf, len);
-    ha->buffer_fill += len;
-    ha->buffer[ha->buffer_fill] = 0;
+    strbuf_putstrn(&ha->buffer, buf, len);
 
     return len;
 }
 
-static int haproxy_init_curl(haproxy_t *ha)
+static int haproxy_curl_init(haproxy_t *ha)
 {
+    if (ha->curl != NULL)
+        return 0;
+
     ha->curl = curl_easy_init();
     if (ha->curl == NULL) {
         PLUGIN_ERROR("curl_easy_init failed.");
@@ -1175,6 +1087,94 @@ static int haproxy_init_curl(haproxy_t *ha)
         return -1;
     }
 
+    rcode = curl_easy_setopt(ha->curl, CURLOPT_URL, ha->url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    return 0;
+}
+
+static void haproxy_curl_cleanup(haproxy_t *ha)
+{
+    if (ha->curl != NULL) {
+        curl_easy_cleanup(ha->curl);
+        ha->curl = NULL;
+        ha->curl_errbuf[0] = '\0';
+    }
+}
+
+static int haproxy_read (user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+
+    haproxy_t *ha = ud->data;
+
+    metric_family_t fam_up = {
+        .name = "haproxy_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the haproxy server be reached"
+    };
+
+    int status = 0;
+
+    if (ha->socketpath != NULL) {
+        while (status == 0) {
+            status = haproxy_read_cmd_info(ha);
+            if (status < 0)
+                break;
+            status = haproxy_read_cmd_stat(ha);
+            if (status < 0)
+                break;
+            status = haproxy_read_cmd_table(ha);
+
+            break;
+        }
+    } else {
+
+        strbuf_reset(&ha->buffer);
+
+        while (status == 0) {
+            if (haproxy_curl_init(ha) != 0) {
+                haproxy_curl_cleanup(ha->curl);
+                status = -1;
+                break;
+            }
+
+            status = curl_easy_perform(ha->curl);
+            if (status != CURLE_OK) {
+                PLUGIN_ERROR("curl_easy_perform failed with status %i: %s",
+                             status, ha->curl_errbuf);
+                haproxy_curl_cleanup(ha->curl);
+                status = -1;
+                break;
+            }
+
+            long rcode = 0;
+            cdtime_t when = cdtime();
+            status = curl_easy_getinfo(ha->curl, CURLINFO_RESPONSE_CODE, &rcode);
+            if (status != CURLE_OK) {
+                PLUGIN_ERROR("Fetching response code failed with status %i: %s",
+                            status, ha->curl_errbuf);
+                status = -1;
+                break;
+            }
+
+            if (rcode == 200)
+                haproxy_read_curl_stat(ha, when);
+
+            break;
+        }
+    }
+
+    metric_family_append(&fam_up, VALUE_GAUGE(status == 0 ? 1 : 0), &ha->labels, NULL);
+    plugin_dispatch_metric_family_filtered(&fam_up, ha->filter, 0);
+
     return 0;
 }
 
@@ -1270,12 +1270,9 @@ static int haproxy_config_instance(config_item_t *ci)
     }
 
     if ((ha->url == NULL) && (ha->socketpath == NULL)) {
-        PLUGIN_WARNING("'URL' or 'SocketPath' missing in 'Instance' block.");
+        PLUGIN_WARNING("'url' or 'socket-path' missing in 'instance' block.");
         status = -1;
     }
-
-    if ((status == 0) && (ha->url != NULL))
-        status = haproxy_init_curl(ha);
 
     if (status != 0) {
         haproxy_free(ha);

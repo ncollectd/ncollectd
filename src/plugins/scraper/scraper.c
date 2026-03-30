@@ -18,10 +18,8 @@
 
 typedef struct {
     char *instance;
-
     char *file_path;
     char *socket_path;
-
     char *url;
     char *user;
     char *pass;
@@ -32,22 +30,17 @@ typedef struct {
     char *cacert;
     char *proxy;
     bool proxy_tunnel;
-
     cdtime_t timeout;
-
     cdtime_t interval;
     char *metric_prefix;
     label_set_t label;
     plugin_filter_t *filter;
-
     struct curl_slist *headers;
     char *post_body;
     uint64_t curl_stats_flags;
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
-
     metric_parser_t *mp;
-
 } scraper_instance_t;
 
 static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
@@ -69,8 +62,11 @@ static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *
     return len;
 }
 
-static int scraper_init_curl(scraper_instance_t *target)
+static int scraper_curl_init(scraper_instance_t *target)
 {
+    if (target->curl != NULL)
+        return 0;
+
     target->curl = curl_easy_init();
     if (target->curl == NULL) {
         PLUGIN_ERROR("curl_easy_init failed.");
@@ -127,7 +123,6 @@ static int scraper_init_curl(scraper_instance_t *target)
                      curl_easy_strerror(rcode));
         return -1;
     }
-
 
     if (target->user != NULL) {
 #ifdef HAVE_CURLOPT_USERNAME
@@ -246,18 +241,7 @@ static int scraper_init_curl(scraper_instance_t *target)
     }
 #endif
 
-    return 0;
-}
-
-
-static int scaper_read_url(scraper_instance_t *target)
-{
-    if (target->curl == NULL) {
-        if (scraper_init_curl(target) < 0)
-            return -1;
-    }
-
-    CURLcode rcode = curl_easy_setopt(target->curl, CURLOPT_URL, target->url);
+    rcode = curl_easy_setopt(target->curl, CURLOPT_URL, target->url);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
                      curl_easy_strerror(rcode));
@@ -281,12 +265,32 @@ static int scaper_read_url(scraper_instance_t *target)
         }
     }
 
+    return 0;
+}
+
+static void scaper_curl_cleanup(scraper_instance_t *target)
+{
+    if (target->curl != NULL) {
+        curl_easy_cleanup(target->curl);
+        target->curl = NULL;
+        target->curl_errbuf[0] = '\0';
+    }
+}
+
+static int scaper_read_url(scraper_instance_t *target)
+{
+    if (scraper_curl_init(target) != 0) {
+        scaper_curl_cleanup(target);
+        return 0;
+    }
+
     int status = curl_easy_perform(target->curl);
     if (status != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed with status %i: %s (%s)",
-                    status, target->curl_errbuf, target->url);
+                     status, target->curl_errbuf, target->url);
         metric_parser_reset(target->mp);
-        return -1;
+        scaper_curl_cleanup(target);
+        return 0;
     }
 
     label_set_t lstats = {0};
@@ -309,7 +313,8 @@ static int scaper_read_url(scraper_instance_t *target)
     if ((rc != 0) && (rc != 200)) {
         PLUGIN_ERROR("curl_easy_perform failed with response code %ld (%s)", rc, url);
         metric_parser_reset(target->mp);
-        return -1;
+        scaper_curl_cleanup(target);
+        return 0;
     }
 
     metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);

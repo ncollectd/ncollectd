@@ -635,78 +635,97 @@ static size_t podman_curl_callback(void *buf, size_t size, size_t nmemb, void *u
     return len;
 }
 
+static int podman_curl_init(podman_instance_t *podman)
+{
+    podman->curl = curl_easy_init();
+    if (podman->curl == NULL) {
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
+    }
+
+    CURLcode rcode = 0;
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_NOSIGNAL, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_WRITEFUNCTION, podman_curl_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_WRITEDATA, podman);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_ERRORBUFFER, podman->curl_error);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_MAXREDIRS, 50L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+#ifdef HAVE_CURLOPT_TIMEOUT_MS
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_TIMEOUT_MS,
+                               (podman->timeout >= 0) ? (long)podman->timeout
+                               : (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#endif
+
+    return 0;
+}
+
+static void podman_curl_cleanup(podman_instance_t *podman)
+{
+    if (podman->curl != NULL) {
+        curl_easy_cleanup(podman->curl);
+        podman->curl = NULL;
+        podman->curl_error[0] = '\0';
+    }
+}
+
 static int podman_curl_read(podman_instance_t *podman, const char *url,
                             xson_callbacks_t callbacks, void *ctx)
 {
     if (podman->curl == NULL) {
-        podman->curl = curl_easy_init();
-        if (podman->curl == NULL) {
-            PLUGIN_ERROR("curl_easy_init failed.");
+        int status = podman_curl_init(podman);
+        if (status != 0) {
+            podman_curl_cleanup(podman);
             return -1;
         }
-
-        CURLcode rcode = 0;
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_NOSIGNAL, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_WRITEFUNCTION, podman_curl_callback);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_WRITEDATA, podman);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_ERRORBUFFER, podman->curl_error);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_FOLLOWLOCATION, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_MAXREDIRS, 50L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-#ifdef HAVE_CURLOPT_TIMEOUT_MS
-        rcode = curl_easy_setopt(podman->curl, CURLOPT_TIMEOUT_MS,
-                                   (podman->timeout >= 0) ? (long)podman->timeout
-                                   : (long)CDTIME_T_TO_MS(plugin_get_interval()));
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-#endif
     }
 
     json_parser_init(&podman->handle, 0, &callbacks, &ctx);
@@ -715,6 +734,7 @@ static int podman_curl_read(podman_instance_t *podman, const char *url,
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
                      curl_easy_strerror(rcode));
+        podman_curl_cleanup(podman);
         return -1;
     }
 
@@ -722,6 +742,7 @@ static int podman_curl_read(podman_instance_t *podman, const char *url,
     if (curl_easy_perform(podman->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", podman->curl_error);
         json_parser_free(&podman->handle);
+        podman_curl_cleanup(podman);
         return -1;
     }
 
@@ -787,7 +808,8 @@ static void podman_instance_free(void *arg)
 
     free(podman->instance);
     free(podman->url);
-    // FIXME
+    free(podman->url_stats);
+    free(podman->url_info);
     label_set_reset(&podman->labels);
     plugin_filter_free(podman->filter);
 
@@ -842,27 +864,33 @@ static int podman_config_instance(config_item_t *ci)
         return -1;
     }
 
-    if (podman->url != NULL) {
-        char url[512] = {0};
+    if (podman->url == NULL) {
+        PLUGIN_ERROR("Instance '%s': No 'url' has been configured.", podman->instance);
+        podman_instance_free(podman);
+        return -1;
+    }
 
-        size_t url_len = strlen(podman->url);
-        bool slash = podman->url[url_len-1] == '/' ? true : false;
+    char url[512] = {0};
 
-        ssnprintf(url, sizeof(url), "%s%s%s", podman->url, slash ? "" : "/",
-                                    "v1.0.0/libpod/containers/json");
-        podman->url_info = strdup(url);
-        if (podman->url_info == NULL) {
-            podman_instance_free(podman);
-            return -1;
-        }
+    size_t url_len = strlen(podman->url);
+    bool slash = podman->url[url_len-1] == '/' ? true : false;
 
-        ssnprintf(url, sizeof(url), "%s%s%s", podman->url, slash ? "" : "/",
-                                    "v1.0.0/libpod/containers/stats?stream=false");
-        podman->url_stats = strdup(url);
-        if (podman->url_stats == NULL) {
-            podman_instance_free(podman);
-            return -1;
-        }
+    ssnprintf(url, sizeof(url), "%s%s%s", podman->url, slash ? "" : "/",
+                                "v1.0.0/libpod/containers/json");
+    podman->url_info = strdup(url);
+    if (podman->url_info == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        podman_instance_free(podman);
+        return -1;
+    }
+
+    ssnprintf(url, sizeof(url), "%s%s%s", podman->url, slash ? "" : "/",
+                                "v1.0.0/libpod/containers/stats?stream=false");
+    podman->url_stats = strdup(url);
+    if (podman->url_stats == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        podman_instance_free(podman);
+        return -1;
     }
 
     return plugin_register_complex_read("podman", podman->instance, podman_read, interval,

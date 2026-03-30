@@ -86,14 +86,10 @@ typedef struct {
     char *server; /* user specific server type */
     label_set_t labels;
     plugin_filter_t *filter;
-
-    char *apache_buffer;
+    strbuf_t apache_buffer;
     char apache_curl_error[CURL_ERROR_SIZE];
-    size_t apache_buffer_size;
-    size_t apache_buffer_fill;
     cdtime_t timeout;
     CURL *curl;
-
     metric_family_t fams[FAM_APACHE_MAX];
 } apache_ctx_t;
 
@@ -111,7 +107,7 @@ static void apache_free(void *arg)
     free(ctx->cacert);
     free(ctx->ssl_ciphers);
     free(ctx->server);
-    free(ctx->apache_buffer);
+    strbuf_destroy(&ctx->apache_buffer);
     label_set_reset(&ctx->labels);
     if (ctx->curl) {
         curl_easy_cleanup(ctx->curl);
@@ -133,19 +129,11 @@ static size_t apache_curl_callback(void *buf, size_t size, size_t nmemb, void *u
     if (len == 0)
         return len;
 
-    if ((ctx->apache_buffer_fill + len) >= ctx->apache_buffer_size) {
-        char *temp = realloc(ctx->apache_buffer, ctx->apache_buffer_fill + len + 1);
-        if (temp == NULL) {
-            PLUGIN_ERROR("realloc failed.");
-            return 0;
-        }
-        ctx->apache_buffer = temp;
-        ctx->apache_buffer_size = ctx->apache_buffer_fill + len + 1;
+    int status = strbuf_putstrn(&ctx->apache_buffer, buf, len);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to copy to buffer.");
+        return 0;
     }
-
-    memcpy(ctx->apache_buffer + ctx->apache_buffer_fill, (char *)buf, len);
-    ctx->apache_buffer_fill += len;
-    ctx->apache_buffer[ctx->apache_buffer_fill] = 0;
 
     return len;
 }
@@ -181,18 +169,13 @@ static size_t apache_header_callback(void *buf, size_t size, size_t nmemb, void 
     return len;
 }
 
-/* initialize curl for each host */
-static int apache_init_instance(apache_ctx_t *ctx)
+static int apache_curl_init(apache_ctx_t *ctx)
 {
-    assert(ctx->url != NULL);
-    /* (Assured by `config_add') */
+    if (ctx->curl != NULL)
+        return 0;
 
-    if (ctx->curl != NULL) {
-        curl_easy_cleanup(ctx->curl);
-        ctx->curl = NULL;
-    }
-
-    if ((ctx->curl = curl_easy_init()) == NULL) {
+    ctx->curl = curl_easy_init();
+    if (ctx->curl == NULL) {
         PLUGIN_ERROR("'curl_easy_init' failed.");
         return -1;
     }
@@ -219,7 +202,6 @@ static int apache_init_instance(apache_ctx_t *ctx)
                      curl_easy_strerror(rcode));
         return -1;
     }
-
 
     /* not set as yet if the user specified string doesn't match apache or
      * lighttpd, then ignore it. Headers will be parsed to find out the
@@ -375,7 +357,22 @@ static int apache_init_instance(apache_ctx_t *ctx)
     }
 #endif
 
+    rcode = curl_easy_setopt(ctx->curl, CURLOPT_URL, ctx->url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s", curl_easy_strerror(rcode));
+        return -1;
+    }
+
     return 0;
+}
+
+static void apache_curl_cleanup(apache_ctx_t *ctx)
+{
+    if (ctx->curl != NULL) {
+        curl_easy_cleanup(ctx->curl);
+        ctx->curl = NULL;
+        ctx->apache_curl_error[0] = '\0';
+    }
 }
 
 static void submit_scoreboard(char *buf, apache_ctx_t *ctx, metric_family_t *fam_scoreboard)
@@ -525,29 +522,21 @@ static int apache_read(user_data_t *user_data)
 {
     apache_ctx_t *ctx = user_data->data;
 
-    assert(ctx->url != NULL);
-    /* (Assured by `config_add') */
-
-    if (ctx->curl == NULL) {
-        if (apache_init_instance(ctx) != 0)
-            return -1;
+    if (apache_curl_init(ctx) != 0) {
+        apache_curl_cleanup(ctx);
+        metric_family_append(&ctx->fams[FAM_APACHE_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_APACHE_UP], ctx->filter, 0);
+        return 0;
     }
-    assert(ctx->curl != NULL);
 
-    ctx->apache_buffer_fill = 0;
-
-    CURLcode rcode = curl_easy_setopt(ctx->curl, CURLOPT_URL, ctx->url);
-    if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                     curl_easy_strerror(rcode));
-        return -1;
-    }
+    strbuf_reset(&ctx->apache_buffer);
 
     cdtime_t submit = cdtime();
     if (curl_easy_perform(ctx->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", ctx->apache_curl_error);
+        apache_curl_cleanup(ctx);
         metric_family_append(&ctx->fams[FAM_APACHE_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
-        plugin_dispatch_metric_family(&ctx->fams[FAM_APACHE_UP], 0);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_APACHE_UP], ctx->filter, 0);
         return 0;
     }
 
@@ -568,7 +557,13 @@ static int apache_read(user_data_t *user_data)
                         text_plain, content_type);
     }
 
-    char *ptr = ctx->apache_buffer;
+    if (strbuf_len(&ctx->apache_buffer) == 0) {
+        metric_family_append(&ctx->fams[FAM_APACHE_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_APACHE_UP], ctx->filter, 0);
+        return 0;
+    }
+
+    char *ptr = ctx->apache_buffer.ptr;
     char *saveptr = NULL;
     char *line;
     /* Apache http mod_status added a second set of BusyWorkers, IdleWorkers in
@@ -639,8 +634,6 @@ static int apache_read(user_data_t *user_data)
 
         }
     }
-
-    ctx->apache_buffer_fill = 0;
 
     plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_APACHE_MAX, ctx->filter, submit);
 

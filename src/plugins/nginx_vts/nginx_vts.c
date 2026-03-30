@@ -11,6 +11,7 @@
 #define NGINX_VTS_DEFAULT_URL "http://localhost/status/format/json"
 
 enum {
+    FAM_NGINX_VTS_UP,
     FAM_NGINX_VTS_START_TIME_SECONDS,
     FAM_NGINX_VTS_CONNECTIONS,
     FAM_NGINX_VTS_SHM_USED_BYTES,
@@ -47,6 +48,11 @@ enum {
 };
 
 static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
+    [FAM_NGINX_VTS_UP] = {
+        .name = "nginx_vts_up",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Could the nginx server be reached.",
+    },
     [FAM_NGINX_VTS_START_TIME_SECONDS] = {
         .name = "nginx_vts_start_time_seconds",
         .type = METRIC_TYPE_GAUGE,
@@ -107,7 +113,6 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of  requests cache counter",
     },
-
     [FAM_NGINX_VTS_FILTER_REQUESTS] = {
         .name = "nginx_vts_filter_requests",
         .type = METRIC_TYPE_COUNTER,
@@ -768,83 +773,112 @@ static size_t nginx_vts_curl_callback(void *buf, size_t size, size_t nmemb, void
     return len;
 }
 
+static int nginx_vts_curl_init(nginx_vts_instance_t *ngx)
+{
+    if (ngx->curl != NULL)
+        return 0;
+
+    ngx->curl = curl_easy_init();
+    if (ngx->curl == NULL) {
+        PLUGIN_ERROR("curl_easy_init failed.");
+        return -1;
+    }
+
+    CURLcode rcode = 0;
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_NOSIGNAL, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_WRITEFUNCTION, nginx_vts_curl_callback);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_WRITEDATA, ngx);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_ERRORBUFFER, ngx->curl_error);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_MAXREDIRS, 50L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+#ifdef HAVE_CURLOPT_TIMEOUT_MS
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_TIMEOUT_MS,
+                               (ngx->timeout >= 0) ? (long)ngx->timeout
+                               : (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#endif
+
+    char *url = (ngx->url != NULL) ? ngx->url : NGINX_VTS_DEFAULT_URL;
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_URL, url);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    return 0;
+}
+
+static void nginx_vts_curl_cleanup(nginx_vts_instance_t *ngx)
+{
+    if (ngx->curl != NULL) {
+        curl_easy_cleanup(ngx->curl);
+        ngx->curl = NULL;
+        ngx->curl_error[0] = '\0';
+    }
+}
+
 static int nginx_vts_read(user_data_t *user_data)
 {
     nginx_vts_instance_t *ngx = user_data->data;
-
     if (ngx == NULL) {
         PLUGIN_ERROR("nginx_vtx instance is NULL.");
         return -1;
     }
 
-    if (ngx->curl == NULL) {
-        ngx->curl = curl_easy_init();
-        if (ngx->curl == NULL) {
-            PLUGIN_ERROR("curl_easy_init failed.");
-            return -1;
-        }
-
-        CURLcode rcode = 0;
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_NOSIGNAL, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_WRITEFUNCTION, nginx_vts_curl_callback);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_WRITEDATA, ngx);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_USERAGENT, NCOLLECTD_USERAGENT);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_ERRORBUFFER, ngx->curl_error);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_FOLLOWLOCATION, 1L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_MAXREDIRS, 50L);
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-
-#ifdef HAVE_CURLOPT_TIMEOUT_MS
-        rcode = curl_easy_setopt(ngx->curl, CURLOPT_TIMEOUT_MS,
-                                   (ngx->timeout >= 0) ? (long)ngx->timeout
-                                   : (long)CDTIME_T_TO_MS(plugin_get_interval()));
-        if (rcode != CURLE_OK) {
-            PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
-                         curl_easy_strerror(rcode));
-            return -1;
-        }
-#endif
+    if (nginx_vts_curl_init(ngx) != 0) {
+        nginx_vts_curl_cleanup(ngx);
+        metric_family_append(&ngx->fams[FAM_NGINX_VTS_UP], VALUE_GAUGE(0), &ngx->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&ngx->fams[FAM_NGINX_VTS_UP], ngx->filter, 0);
+        return 0;
     }
 
     nginx_vts_json_ctx_t ctx = {0};
@@ -853,27 +887,22 @@ static int nginx_vts_read(user_data_t *user_data)
 
     json_parser_init(&ngx->handle, 0, &nginx_vts_json_callbacks, &ctx);
 
-    CURLcode rcode = curl_easy_setopt(ngx->curl, CURLOPT_URL,
-                                      (ngx->url != NULL) ? ngx->url : NGINX_VTS_DEFAULT_URL);
-    if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
-                     curl_easy_strerror(rcode));
-        return -1;
-    }
-
     if (curl_easy_perform(ngx->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", ngx->curl_error);
         json_parser_free(&ngx->handle);
-        return -1;
+        nginx_vts_curl_cleanup(ngx);
+        metric_family_append(&ngx->fams[FAM_NGINX_VTS_UP], VALUE_GAUGE(0), &ngx->labels, NULL);
+        plugin_dispatch_metric_family_array_filtered(ngx->fams, FAM_NGINX_VTS_MAX, ngx->filter, 0);
+        return 0;
     }
+
+    metric_family_append(&ngx->fams[FAM_NGINX_VTS_UP], VALUE_GAUGE(1), &ngx->labels, NULL);
 
     json_status_t status = json_parser_complete(&ngx->handle);
     if (status != JSON_STATUS_OK) {
         unsigned char *errmsg = json_parser_get_error(&ngx->handle, 0, NULL, 0);
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
-        json_parser_free (&ngx->handle);
-        return -1;
     }
     json_parser_free(&ngx->handle);
 

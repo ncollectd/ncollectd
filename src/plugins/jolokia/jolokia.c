@@ -73,14 +73,11 @@ typedef struct {
     char *cacert;
     struct curl_slist *headers;
     cdtime_t timeout;
-
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
-
     char *metric_prefix;
     label_set_t labels;
     plugin_filter_t *filter;
-
     size_t mbeans_size;
     char **post_body;
     size_t *mbeans;
@@ -242,7 +239,7 @@ static void jlk_submit(jlk_t *jlk, jlk_mbean_t *mbean, jlk_mbean_attribute_t *at
     value_t value = {0};
 
     if (attribute->type == METRIC_TYPE_COUNTER) {
-        uint64_t inumber = number;  
+        uint64_t inumber = number;
         if (number != (double)inumber)
             value = VALUE_COUNTER_FLOAT64(number);
         else
@@ -486,7 +483,7 @@ static size_t jlk_curl_callback(void *buf, size_t size, size_t nmemb, void *user
     return len;
 }
 
-static int jlk_init_curl(jlk_t *jlk)
+static int jlk_curl_init(jlk_t *jlk)
 {
     if (jlk->curl != NULL)
         return 0;
@@ -588,7 +585,6 @@ static int jlk_init_curl(jlk_t *jlk)
         }
     }
 
-
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
     if (jlk->timeout > 0) {
         rcode = curl_easy_setopt(jlk->curl, CURLOPT_TIMEOUT_MS,
@@ -610,6 +606,15 @@ static int jlk_init_curl(jlk_t *jlk)
 #endif
 
     return 0;
+}
+
+static void jlk_curl_cleanup(jlk_t *jlk)
+{
+    if (jlk->curl != NULL)  {
+        curl_easy_cleanup(jlk->curl);
+        jlk->curl = NULL;
+        jlk->curl_errbuf[0] = '\0';
+    }
 }
 
 static int jlk_curl_perform(jlk_t *jlk, char *post_body, void *data)
@@ -661,10 +666,10 @@ static int jlk_read(user_data_t *ud)
     }
     jlk_t *jlk = ud->data;
 
-    if (jlk->curl == NULL) {
-        int status = jlk_init_curl(jlk);
-        if (status != 0)
-            return -1;
+    int status = jlk_curl_init(jlk);
+    if (status != 0) {
+        jlk_curl_cleanup(jlk);
+        return 0;
     }
 
     for (size_t i = 0; i < jlk->mbeans_size; i++) {
@@ -676,10 +681,11 @@ static int jlk_read(user_data_t *ud)
         if (parser == NULL)
             return -1;
 
-        int status = jlk_curl_perform(jlk, jlk->post_body[i], parser);
+        status = jlk_curl_perform(jlk, jlk->post_body[i], parser);
         if (status < 0) {
             if (error_buffer[0] != '\0')
                 PLUGIN_ERROR("json_parse failed: %s", error_buffer);
+            jlk_curl_cleanup(jlk);
             xson_tree_parser_free(parser);
             return -1;
         }
