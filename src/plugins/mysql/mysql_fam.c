@@ -2700,10 +2700,42 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .type = METRIC_TYPE_HISTOGRAM,
         .help = "The number of write queries by duration they took to execute.",
     },
-
     [FAM_MYSQL_HEARTBEAT_DELAY_SECONDS] = {
         .name = "mysql_heartbeat_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Timestamp stored in the heartbeat table.",
+    },
+    [FAM_MYSQL_MASTER_BINARY_LOG_POSITION] = {
+        .name = "mysql_master_binary_log_position",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The position as master writes its own binary log."
+    },
+    [FAM_MYSQL_SLAVE_SQL_RUNNING] = {
+        .name = "mysql_slave_sql_running",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Whether or not the SQL thread is running.",
+    },
+    [FAM_MYSQL_SLAVE_IO_RUNNING] = {
+        .name = "mysql_slave_io_running",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Whether the replica I/O thread is running and connected.",
+    },
+    [FAM_MYSQL_SLAVE_READ_MASTER_LOG_POSITION] = {
+        .name = "mysql_slave_read_master_log_position",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Position up to which the I/O thread has read in the current "
+                "primary binary log file.",
+    },
+    [FAM_MYSQL_SLAVE_EXEC_MASTER_LOG_POSITION] = {
+        .name = "mysql_slave_exec_master_log_position",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Position up to which the SQL thread has processed in the current "
+                "master binary log file.",
+    },
+    [FAM_MYSQL_SLAVE_BEHIND_MASTER_SECONDS] = {
+        .name = "mysql_slave_behind_master_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Difference between the timestamp logged on the master for the event that "
+                "the replica is currently processing, and the current timestamp on the replica.",
     },
 };
