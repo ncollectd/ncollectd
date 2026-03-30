@@ -88,47 +88,30 @@ typedef struct {
     char *user;
     char *pass;
     char *database;
-
-    /* mysql_ssl_set params */
     char *key;
     char *cert;
     char *ca;
     char *capath;
     char *cipher;
-
     char *socket;
     int port;
     int timeout;
-
     c_complain_t conn_complaint;
-
     char *metric_prefix;
     label_set_t labels;
     plugin_filter_t *filter;
     uint64_t flags;
-
     bool heartbeat_utc;
     char *heartbeat_schema;
     char *heartbeat_table;
-
     db_query_preparation_area_t **q_prep_areas;
     db_query_t **queries;
     size_t queries_num;
-
-    bool primary_stats;
-    bool replica_stats;
-
-    bool replica_notif;
-    bool replica_io_running;
-    bool replica_sql_running;
-
     MYSQL *con;
     bool is_connected;
     unsigned long mysql_version;
     cmysql_server_t mysql_server;
-
     metric_family_t fams[FAM_MYSQL_STATUS_MAX];
-
 } cmysql_database_t;
 
 static db_query_t **queries;
@@ -264,9 +247,14 @@ static MYSQL_RES *exec_query(MYSQL *con, const char *query)
     return res;
 }
 
-static int cmysql_read_primary_stats(__attribute__((unused)) cmysql_database_t *db, MYSQL *con)
+static int cmysql_read_primary_stats(cmysql_database_t *db, MYSQL *con)
 {
-    const char *query = "SHOW MASTER STATUS";
+    char *query = "SHOW MASTER STATUS";
+
+    if (((db->mysql_server == SERVER_MYSQL) || (db->mysql_server == SERVER_PERCONA)) &&
+        (db->mysql_version >= 84000)) {
+        query = "SHOW BINARY LOG STATUS";
+    }
 
     MYSQL_RES *res = exec_query(con, query);
     if (res == NULL)
@@ -282,17 +270,18 @@ static int cmysql_read_primary_stats(__attribute__((unused)) cmysql_database_t *
     int field_num = mysql_num_fields(res);
     if (field_num < 2) {
         PLUGIN_ERROR("Failed to get primary statistics: '%s' returned less than two columns.",
-                    query);
+                     query);
         mysql_free_result(res);
         return -1;
     }
 
-//    unsigned long long position = atoll(row[1]);
-//    derive_submit("mysql_log_position", "master-bin", position, db);
+    if (row[1] != NULL)
+        metric_family_append(&db->fams[FAM_MYSQL_HEARTBEAT_DELAY_SECONDS],
+                             VALUE_GAUGE(atoll(row[1])), &db->labels, NULL);
 
     row = mysql_fetch_row(res);
     if (row != NULL)
-        PLUGIN_WARNING("`%s' returned more than one row ignoring further results.", query);
+        PLUGIN_WARNING("'%s' returned more than one row - ignoring further results.", query);
 
     mysql_free_result(res);
 
@@ -301,7 +290,6 @@ static int cmysql_read_primary_stats(__attribute__((unused)) cmysql_database_t *
 
 static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
 {
-#if 0
     /* WTF? libmysqlclient does not seem to provide any means to
      * translate a column name to a column index ... :-/ */
     const int READ_MASTER_LOG_POS_IDX = 6;
@@ -309,8 +297,13 @@ static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
     const int SLAVE_SQL_RUNNING_IDX = 11;
     const int EXEC_MASTER_LOG_POS_IDX = 21;
     const int SECONDS_BEHIND_MASTER_IDX = 32;
-#endif
-    const char *query = "SHOW SLAVE STATUS";
+
+    char *query = "SHOW SLAVE STATUS";
+
+    if (((db->mysql_server == SERVER_MYSQL) || (db->mysql_server == SERVER_PERCONA)) &&
+        (db->mysql_version >= 80022)) {
+        query = "SHOW REPLICA STATUS";
+    }
 
     MYSQL_RES *res = exec_query(con, query);
     if (res == NULL)
@@ -330,72 +323,33 @@ static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
         return -1;
     }
 
-    if (db->replica_stats) {
-#if 0
-        unsigned long long counter;
-        double gauge;
+    double slave_sql_running = 0;
+    if ((row[SLAVE_SQL_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_SQL_RUNNING_IDX], "yes") == 0))
+        slave_sql_running = 1;
+    metric_family_append(&db->fams[FAM_MYSQL_SLAVE_SQL_RUNNING],
+                         VALUE_GAUGE(slave_sql_running), &db->labels, NULL);
 
-        gauge_submit("bool", "slave-sql-running", (row[SLAVE_SQL_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_SQL_RUNNING_IDX], "yes") == 0), db);
+    double slave_io_running = 0;
+    if ((row[SLAVE_IO_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_IO_RUNNING_IDX], "yes") == 0))
+        slave_io_running = 1;
+    metric_family_append(&db->fams[FAM_MYSQL_SLAVE_IO_RUNNING],
+                         VALUE_GAUGE(slave_io_running), &db->labels, NULL);
 
-        gauge_submit("bool", "slave-io-running", (row[SLAVE_IO_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_IO_RUNNING_IDX], "yes") == 0), db);
+    if (row[READ_MASTER_LOG_POS_IDX] != NULL)
+        metric_family_append(&db->fams[FAM_MYSQL_SLAVE_READ_MASTER_LOG_POSITION],
+                             VALUE_GAUGE(atoll(row[READ_MASTER_LOG_POS_IDX])), &db->labels, NULL);
 
-        counter = atoll(row[READ_MASTER_LOG_POS_IDX]);
-        derive_submit("mysql_log_position", "slave-read", counter, db);
+    if (row[EXEC_MASTER_LOG_POS_IDX] != NULL)
+        metric_family_append(&db->fams[FAM_MYSQL_SLAVE_EXEC_MASTER_LOG_POSITION],
+                             VALUE_GAUGE(atoll(row[EXEC_MASTER_LOG_POS_IDX])), &db->labels, NULL);
 
-        counter = atoll(row[EXEC_MASTER_LOG_POS_IDX]);
-        derive_submit("mysql_log_position", "slave-exec", counter, db);
-
-        if (row[SECONDS_BEHIND_MASTER_IDX] != NULL) {
-            gauge = atof(row[SECONDS_BEHIND_MASTER_IDX]);
-            gauge_submit("time_offset", NULL, gauge, db);
-        }
-#endif
-    }
-
-    if (db->replica_notif) {
-#if 0
-        notification_t n = {0,  cdtime(), "", "", "mysql", "", "time_offset", "", NULL};
-
-        char *io, *sql;
-
-        io = row[SLAVE_IO_RUNNING_IDX];
-        sql = row[SLAVE_SQL_RUNNING_IDX];
-
-        set_host(db, n.host, sizeof(n.host));
-
-        /* Assured by "mysql_config_database" */
-        assert(db->instance != NULL);
-        sstrncpy(n.plugin_instance, db->instance, sizeof(n.plugin_instance));
-
-        if (((io == NULL) || (strcasecmp(io, "yes") != 0)) && (db->replica_io_running)) {
-            n.severity = NOTIF_WARNING;
-            ssnprintf(n.message, sizeof(n.message), "replica I/O thread not started or not connected to primary");
-            plugin_dispatch_notification(&n);
-            db->replica_io_running = false;
-        } else if (((io != NULL) && (strcasecmp(io, "yes") == 0)) && (!db->replica_io_running)) {
-            n.severity = NOTIF_OKAY;
-            ssnprintf(n.message, sizeof(n.message), "replica I/O thread started and connected to primary");
-            plugin_dispatch_notification(&n);
-            db->replica_io_running = true;
-        }
-
-        if (((sql == NULL) || (strcasecmp(sql, "yes") != 0)) && (db->replica_sql_running)) {
-            n.severity = NOTIF_WARNING;
-            ssnprintf(n.message, sizeof(n.message), "replica SQL thread not started");
-            plugin_dispatch_notification(&n);
-            db->replica_sql_running = false;
-        } else if (((sql != NULL) && (strcasecmp(sql, "yes") == 0)) && (!db->replica_sql_running)) {
-            n.severity = NOTIF_OKAY;
-            ssnprintf(n.message, sizeof(n.message), "replica SQL thread started");
-            plugin_dispatch_notification(&n);
-            db->replica_sql_running = true;
-        }
-#endif
-    }
+    if (row[SECONDS_BEHIND_MASTER_IDX] != NULL)
+        metric_family_append(&db->fams[FAM_MYSQL_SLAVE_BEHIND_MASTER_SECONDS],
+                             VALUE_GAUGE(atof(row[SECONDS_BEHIND_MASTER_IDX])), &db->labels, NULL);
 
     row = mysql_fetch_row(res);
     if (row != NULL)
-        PLUGIN_WARNING("`%s' returned more than one row - ignoring further results.", query);
+        PLUGIN_WARNING("'%s' returned more than one row - ignoring further results.", query);
 
     mysql_free_result(res);
 
@@ -849,7 +803,8 @@ static int cmysql_read_innodb_tablespace(cmysql_database_t *db, MYSQL *con)
 {
     const char *query;
 
-    if ((db->mysql_server == SERVER_MYSQL) && (db->mysql_version >= 80030)) {
+    if (((db->mysql_server == SERVER_MYSQL) || (db->mysql_server == SERVER_PERCONA)) &&
+        (db->mysql_version >= 80030)) {
         query = "SELECT name, file_size, allocated_size"
                 "  FROM information_schema.innodb_tablespaces";
     } else {
@@ -1302,10 +1257,10 @@ static int cmysql_read(user_data_t *ud)
     if (db->flags & COLLECT_HEARTBEAT)
         cmysql_read_heartbeat(db, con);
 
-    if (db->primary_stats)
+    if (db->flags & COLLECT_MASTER_STATS)
         cmysql_read_primary_stats(db, con);
 
-    if ((db->replica_stats) || (db->replica_notif))
+    if (db->flags & COLLECT_SLAVE_STATS)
         cmysql_read_replica_stats(db, con);
 
     plugin_dispatch_metric_family_array_filtered(db->fams, FAM_MYSQL_STATUS_MAX, db->filter, 0);
@@ -1350,10 +1305,6 @@ static int cmysql_config_database(config_item_t *ci)
     db->flags = COLLECT_GLOBALS;
 
     C_COMPLAIN_INIT(&db->conn_complaint);
-
-    /* trigger a notification, if it's not running */
-    db->replica_io_running = true;
-    db->replica_sql_running = true;
 
     memcpy(db->fams, fam_mysql_status, sizeof(db->fams[0])*FAM_MYSQL_STATUS_MAX);
 
@@ -1413,12 +1364,6 @@ static int cmysql_config_database(config_item_t *ci)
         } else if (strcasecmp("query", child->key) == 0) {
             status = db_query_pick_from_list(child, queries, queries_num,
                                                     &db->queries, &db->queries_num);
-        } else if (strcasecmp("master-stats", child->key) == 0) {
-            status = cf_util_get_boolean(child, &db->primary_stats);
-        } else if (strcasecmp("slave-stats", child->key) == 0) {
-            status = cf_util_get_boolean(child, &db->replica_stats);
-        } else if (strcasecmp("slave-notifications", child->key) == 0) {
-            status = cf_util_get_boolean(child, &db->replica_notif);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &db->filter);
         } else {
