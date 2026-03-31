@@ -299,7 +299,7 @@ static void *plugin_write_journal_thread(void *args)
 {
     write_journal_thread_t *writer = args;
 
-    DEBUG("start", writer->name);
+    DEBUG("start: '%s'", writer->super.name);
     cdtime_t next_flush = 0;
 
     plugin_ctx_t ctx = {
@@ -353,7 +353,7 @@ static void *plugin_write_queue_thread(void *args)
 {
     write_queue_thread_t *writer = args;
 
-    DEBUG("start", writer->name);
+    DEBUG("start '%s'", writer->super.name);
     cdtime_t next_flush = 0;
 
     while (writer->super.loop) {
@@ -365,7 +365,7 @@ static void *plugin_write_queue_thread(void *args)
                                                                        next_flush);
         if (elem != NULL) {
             DEBUG("%s: de-queue %p (remaining queue length: %ld)",
-                  writer->super.name, elem, writer->super.queue_length);
+                  writer->super.name, (void *)elem, writer->super.queue_length);
 
             /* Should elem be written to all plugins or this plugin in particular? */
             if ((elem->super.plugin == NULL) ||
