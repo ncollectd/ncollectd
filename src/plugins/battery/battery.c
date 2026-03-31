@@ -104,11 +104,11 @@ static void submit_capacity(const char *device, double capacity_charged, double 
         return;
 
     metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(capacity_charged), NULL,
-                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("battery", device), NULL);
     metric_family_append(&fams[FAM_BATTERY_CAPACITY_FULL], VALUE_GAUGE(capacity_full), NULL,
-                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("battery", device), NULL);
     metric_family_append(&fams[FAM_BATTERY_CAPACITY_DESIGN], VALUE_GAUGE(capacity_design), NULL,
-                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("battery", device), NULL);
 
 }
 
@@ -301,10 +301,10 @@ static int battery_read_metrics(void)
 
     if (!isnan(current))
         metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(current), NULL,
-                             &(label_pair_const_t){.name="battery", .value="0"}, NULL);
+                             &LABEL_PAIR_CONST("battery", "0"), NULL);
     if (!isnan(voltage))
         metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage), NULL,
-                             &(label_pair_const_t){.name="battery", .value="0"}, NULL);
+                             &LABEL_PAIR_CONST("battery", "0"), NULL);
 
     return 0;
 }
@@ -440,18 +440,18 @@ static int read_sysfs_callback(__attribute__((unused)) int dir_fd, char const *d
         if (discharging)
             v *= -1.0;
         metric_family_append(&fams[FAM_BATTERY_POWER], VALUE_GAUGE(v * SYSFS_FACTOR), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
     }
     if (sysfs_file_to_gauge(dir, power_supply, "current_now", &v) == 0) {
         if (discharging)
             v *= -1.0;
         metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(v * SYSFS_FACTOR), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
     }
 
     if (sysfs_file_to_gauge(dir, power_supply, "voltage_now", &v) == 0)
         metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(v * SYSFS_FACTOR), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
 
     return 0;
 }
@@ -601,15 +601,15 @@ static int read_acpi_callback(__attribute__((unused)) int dirfd, char const *dir
 
     if (is_current) {
         metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(power * PROC_ACPI_FACTOR), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
 
     } else {
         metric_family_append(&fams[FAM_BATTERY_POWER], VALUE_GAUGE(power * PROC_ACPI_FACTOR), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
     }
 
     metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage * PROC_ACPI_FACTOR), NULL,
-                         &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("battery", device), NULL);
 
     return 0;
 }
@@ -679,11 +679,11 @@ static int read_pmu(void)
         fh = NULL;
 
         metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(charge / 1000.0), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
         metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(current / 1000.0), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
         metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage / 1000.0), NULL,
-                             &(label_pair_const_t){.name="battery", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("battery", device), NULL);
     }
 
     if (i == 0)

@@ -75,9 +75,9 @@ static int edac_read_channel(__attribute__((unused)) int dir_fd,
         edac_labels_t *el = ud;
 
         metric_family_append(&fams[FAM_EDAC_CHANNEL_CORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=el->controller},
-                             &(label_pair_const_t){.name="csrow", .value=el->csrow},
-                             &(label_pair_const_t){.name="channel", .value=channel}, NULL);
+                             &LABEL_PAIR_CONST("controller", el->controller),
+                             &LABEL_PAIR_CONST("csrow", el->csrow),
+                             &LABEL_PAIR_CONST("channel", channel), NULL);
     }
 
     return 0;
@@ -101,16 +101,16 @@ static int edac_read_csrow(int dir_fd, __attribute__((unused)) const char *path,
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_EDAC_CSROW_CORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=el->controller},
-                             &(label_pair_const_t){.name="csrow", .value=csrow},
+                             &LABEL_PAIR_CONST("controller", el->controller),
+                             &LABEL_PAIR_CONST("csrow", csrow),
                              NULL);
 
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "ue_count");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_EDAC_CSROW_UNCORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=el->controller},
-                             &(label_pair_const_t){.name="csrow", .value=csrow},
+                             &LABEL_PAIR_CONST("controller", el->controller),
+                             &LABEL_PAIR_CONST("csrow", csrow),
                              NULL);
 
     walk_directory_at(dir_fd, entry, edac_read_channel, el, 0);
@@ -132,30 +132,30 @@ static int edac_read_mc(int dir_fd, __attribute__((unused)) const char *path,
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_EDAC_MC_CORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=controller},
+                             &LABEL_PAIR_CONST("controller", controller),
                              NULL);
 
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "ue_count");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_EDAC_MC_UNCORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=controller},
+                             &LABEL_PAIR_CONST("controller", controller),
                              NULL);
 
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "ce_noinfo_count");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_EDAC_CSROW_CORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=controller},
-                             &(label_pair_const_t){.name="csrow", .value="unknown"},
+                             &LABEL_PAIR_CONST("controller", controller),
+                             &LABEL_PAIR_CONST("csrow", "unknown"),
                              NULL);
 
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "ue_noinfo_count");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_EDAC_CSROW_UNCORRECTABLE_ERRORS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="controller", .value=controller},
-                             &(label_pair_const_t){.name="csrow", .value="unknown"},
+                             &LABEL_PAIR_CONST("controller", controller),
+                             &LABEL_PAIR_CONST("csrow", "unknown"),
                              NULL);
 
     edac_labels_t el = {.controller = controller };

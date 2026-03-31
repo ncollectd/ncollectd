@@ -85,15 +85,15 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
         if (!PQgetisnull(res, i, 2))
             metric_family_append(&fams[FAM_PG_ACTIVITY_CONNECTIONS],
                                  VALUE_GAUGE(atol(PQgetvalue(res, i, 2))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="state", .value=col_state},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("state", col_state),
                                  NULL);
 
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_ACTIVITY_MAX_TX_SECONDS],
                                  VALUE_GAUGE(atol(PQgetvalue(res, i, 3))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="state", .value=col_state},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("state", col_state),
                                  NULL);
     }
 

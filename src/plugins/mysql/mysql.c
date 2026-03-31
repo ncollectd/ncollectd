@@ -382,7 +382,7 @@ static int cmysql_read_heartbeat(cmysql_database_t *db, MYSQL *con)
 
         metric_family_append(&db->fams[FAM_MYSQL_HEARTBEAT_DELAY_SECONDS],
                             VALUE_GAUGE(atof(row[0])), &db->labels,
-                            &(label_pair_const_t){.name = "server_id", .value = row[1]},
+                            &LABEL_PAIR_CONST("server_id", row[1]),
                             NULL);
     }
 
@@ -511,8 +511,8 @@ static int cmysql_read_table(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "table_schema", .value = row[0]},
-                                 &(label_pair_const_t){.name = "table_name", .value = row[1]},
+                                 &LABEL_PAIR_CONST("table_schema", row[0]),
+                                 &LABEL_PAIR_CONST("table_name", row[1]),
                                  NULL);
         }
     }
@@ -603,7 +603,7 @@ static int cmysql_read_client_statistics(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "client", .value = row[0]}, NULL);
+                                 &LABEL_PAIR_CONST("client", row[0]), NULL);
         }
     }
 
@@ -693,7 +693,7 @@ static int cmysql_read_user_statistics(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "user", .value = row[0]}, NULL);
+                                 &LABEL_PAIR_CONST("user", row[0]), NULL);
         }
     }
 
@@ -729,9 +729,9 @@ static int cmysql_read_index_statistics(cmysql_database_t *db, MYSQL *con)
         if (row[3] != NULL)
             metric_family_append(&db->fams[FAM_MYSQL_INDEX_ROWS_READ],
                                 VALUE_COUNTER(atoll(row[3])),  &db->labels,
-                                &(label_pair_const_t){.name = "table_schema", .value = row[0]},
-                                &(label_pair_const_t){.name = "table_name", .value = row[1]},
-                                &(label_pair_const_t){.name = "index_name", .value = row[2]},
+                                &LABEL_PAIR_CONST("table_schema", row[0]),
+                                &LABEL_PAIR_CONST("table_name", row[1]),
+                                &LABEL_PAIR_CONST("index_name", row[2]),
                                 NULL);
     }
 
@@ -789,8 +789,8 @@ static int cmysql_read_table_statistics(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "table_schema", .value = row[0]},
-                                 &(label_pair_const_t){.name = "table_name", .value = row[1]},
+                                 &LABEL_PAIR_CONST("table_schema", row[0]),
+                                 &LABEL_PAIR_CONST("table_name", row[1]),
                                  NULL);
         }
     }
@@ -850,7 +850,7 @@ static int cmysql_read_innodb_tablespace(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "tablespace", .value = row[0]},
+                                 &LABEL_PAIR_CONST("tablespace", row[0]),
                                  NULL);
         }
     }
@@ -906,7 +906,7 @@ static int cmysql_read_innodb_cmp(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "page_size", .value = row[0]},
+                                 &LABEL_PAIR_CONST("page_size", row[0]),
                                  NULL);
         }
     }
@@ -961,8 +961,8 @@ static int cmysql_read_innodb_cmpmem(cmysql_database_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "page_size", .value = row[0]},
-                                 &(label_pair_const_t){.name = "buffer_pool", .value = row[1]},
+                                 &LABEL_PAIR_CONST("page_size", row[0]),
+                                 &LABEL_PAIR_CONST("buffer_pool", row[1]),
                                  NULL);
         }
     }
@@ -1012,8 +1012,7 @@ static int cmysql_read_innodb_metrics(cmysql_database_t *db, MYSQL *con)
 
         if (minnodb->lname != NULL) {
             metric_family_append(fam, value, &db->labels,
-                                 &(label_pair_const_t){.name = minnodb->lname,
-                                                       .value = minnodb->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(minnodb->lname, minnodb->lvalue), NULL);
         } else {
             metric_family_append(fam, value, &db->labels, NULL);
         }
@@ -1068,8 +1067,7 @@ static int cmysql_read_status(cmysql_database_t *db, MYSQL *con)
 
         if (mstatus->lname != NULL) {
             metric_family_append(fam, value, &db->labels,
-                                 &(label_pair_const_t){.name = mstatus->lname,
-                                                       .value = mstatus->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(mstatus->lname, mstatus->lvalue), NULL);
         } else {
             metric_family_append(fam, value, &db->labels, NULL);
         }

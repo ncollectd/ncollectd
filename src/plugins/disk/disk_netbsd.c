@@ -64,21 +64,21 @@ int disk_read(void)
             continue;
 
         metric_family_append(&fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(drives[i].rbytes), NULL,
-                             &(label_pair_const_t){.name="device", .value=drives[i].name}, NULL);
+                             &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
         metric_family_append(&fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(drives[i].wbytes), NULL,
-                             &(label_pair_const_t){.name="device", .value=drives[i].name}, NULL);
+                             &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
         metric_family_append(&fams[FAM_DISK_READ_OPS], VALUE_COUNTER(drives[i].rxfer), NULL,
-                             &(label_pair_const_t){.name="device", .value=drives[i].name}, NULL);
+                             &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
         metric_family_append(&fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(drives[i].wxfer), NULL,
-                             &(label_pair_const_t){.name="device", .value=drives[i].name}, NULL);
+                             &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
         metric_family_append(&fams[FAM_DISK_IO_TIME],
                              VALUE_COUNTER_FLOAT64((double)drives[i].time_sec +
                                                    (double)drives[i].time_usec * 1e-6), NULL,
-                             &(label_pair_const_t){.name="device", .value=drives[i].name}, NULL);
+                             &LABEL_PAIR_CONST("device", drives[i].name), NULL);
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);

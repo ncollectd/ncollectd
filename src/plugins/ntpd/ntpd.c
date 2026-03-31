@@ -1357,19 +1357,19 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
 
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_STRATUM],
                              VALUE_GAUGE(stratum), &ctx->labels,
-                             &(label_pair_const_t){.name="peer", .value=srcadr}, NULL);
+                             &LABEL_PAIR_CONST("peer", srcadr), NULL);
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_DISPERSION_SECONDS],
                              VALUE_GAUGE(jitter), &ctx->labels,
-                             &(label_pair_const_t){.name="peer", .value=srcadr}, NULL);
+                             &LABEL_PAIR_CONST("peer", srcadr), NULL);
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_OFFSET_SECONDS],
                              VALUE_GAUGE(offset), &ctx->labels,
-                             &(label_pair_const_t){.name="peer", .value=srcadr}, NULL);
+                             &LABEL_PAIR_CONST("peer", srcadr), NULL);
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_DELAY_SECONDS],
                              VALUE_GAUGE(delay), &ctx->labels,
-                             &(label_pair_const_t){.name="peer", .value=srcadr}, NULL);
+                             &LABEL_PAIR_CONST("peer", srcadr), NULL);
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_STATUS],
                              VALUE_GAUGE(CTL_PEER_STATVAL(ntp_stat[n].status) & 0x7), &ctx->labels,
-                             &(label_pair_const_t){.name="peer", .value=srcadr}, NULL);
+                             &LABEL_PAIR_CONST("peer", srcadr), NULL);
     }
 
     free(ntp_stat);

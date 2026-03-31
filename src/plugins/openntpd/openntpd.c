@@ -311,31 +311,31 @@ static int read_peer_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_STRATUM],
                          VALUE_GAUGE(cpeer->stratum), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_SYNCEDTO],
                          VALUE_GAUGE(cpeer->syncedto), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_WEIGHT],
                          VALUE_GAUGE(cpeer->weight), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_TRUSTLEVEL],
                          VALUE_GAUGE(cpeer->trustlevel), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_NEXT],
                          VALUE_GAUGE(cpeer->next), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_POLL],
                          VALUE_GAUGE(cpeer->poll), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_OFFSET],
                          VALUE_GAUGE(cpeer->offset * 0.001), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_DELAY],
                          VALUE_GAUGE(cpeer->delay * 0.001), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_PEER_JITTER],
                          VALUE_GAUGE(cpeer->jitter * 0.001), &ctx->labels, 
-                         &(label_pair_const_t){.name="peer", .value=cpeer->peer_desc}, NULL);
+                         &LABEL_PAIR_CONST("peer", cpeer->peer_desc), NULL);
  
     return 0;
 }
@@ -364,28 +364,28 @@ static int read_sensor_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_SYNCEDTO],
                          VALUE_GAUGE(csensor->syncedto), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_WEIGHT],
                          VALUE_GAUGE(csensor->weight), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_GOOD],
                          VALUE_GAUGE(csensor->good), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_STRATUM],
                          VALUE_GAUGE(csensor->stratum), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_NEXT],
                          VALUE_GAUGE(csensor->next), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_POLL],
                          VALUE_GAUGE(csensor->poll), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_OFFSET],
                          VALUE_GAUGE(csensor->offset * 0.001), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
     metric_family_append(&ctx->fams[FAM_OPENNTPD_SENSOR_CORRECTION],
                          VALUE_GAUGE(csensor->correction * 0.001), &ctx->labels,
-                         &(label_pair_const_t){.name="sensor", .value=csensor->sensor_desc}, NULL);
+                         &LABEL_PAIR_CONST("sensor", csensor->sensor_desc), NULL);
 
     return 0;
 }

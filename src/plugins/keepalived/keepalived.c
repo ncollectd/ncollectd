@@ -272,14 +272,14 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
                     }
                     metric_family_append(&kpd->fams[FAM_KEEPALIVED_VRRP_STATE],
                                          VALUE_STATE_SET(set), &kpd->labels,
-                                         &(label_pair_const_t){.name="iname", .value=iname },
+                                         &LABEL_PAIR_CONST("iname", iname ),
                                          NULL);
                 } else if (strcmp("Gratuitous ARP delay", key) == 0) {
                     uint64_t value = 0;
                     if (strtouint(val, &value) == 0)
                         metric_family_append(&kpd->fams[FAM_KEEPALIVED_GRATUITOUS_ARP_DELAY],
                                              VALUE_COUNTER(value), &kpd->labels,
-                                             &(label_pair_const_t){.name="iname", .value=iname },
+                                             &LABEL_PAIR_CONST("iname", iname ),
                                              NULL);
 
                 }
@@ -299,7 +299,7 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
                     }
                     metric_family_append(&kpd->fams[FAM_KEEPALIVED_SCRIPT_STATUS],
                                          VALUE_STATE_SET(set), &kpd->labels,
-                                         &(label_pair_const_t){.name="script", .value=sname },
+                                         &LABEL_PAIR_CONST("script", sname ),
                                          NULL);
                 } else if (strcmp("State", key) == 0) {
                     state_t states[] = {
@@ -317,7 +317,7 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
                     }
                     metric_family_append(&kpd->fams[FAM_KEEPALIVED_SCRIPT_STATE],
                                          VALUE_STATE_SET(set), &kpd->labels,
-                                         &(label_pair_const_t){.name="script", .value=sname },
+                                         &LABEL_PAIR_CONST("script", sname ),
                                          NULL);
 
                 }
@@ -430,7 +430,7 @@ static int read_keepalived_stats(keepalived_t *kpd, int pid)
                 uint64_t value = 0;
                 if (strtouint(val, &value) == 0)
                     metric_family_append(&kpd->fams[fam], VALUE_COUNTER(value), &kpd->labels,
-                                         &(label_pair_const_t){.name="iname", .value=iname },
+                                         &LABEL_PAIR_CONST("iname", iname ),
                                          NULL);
             }
         }

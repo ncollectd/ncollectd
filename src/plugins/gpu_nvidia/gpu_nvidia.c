@@ -114,13 +114,13 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS) {
             metric_family_append(&fams[FAM_GPU_NVIDIA_MEMORY_FREE_BYTES],
                                  VALUE_GAUGE(meminfo.free), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
             metric_family_append(&fams[FAM_GPU_NVIDIA_MEMORY_USED_BYTES],
                                  VALUE_GAUGE(meminfo.used), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
         }
 
@@ -129,8 +129,8 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_GPU_UTILIZATION_RATIO],
                                  VALUE_GAUGE((double)utilization.gpu / 100.0), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
 
         unsigned int fan_speed;
@@ -138,8 +138,8 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_FAN_SPEED_RATIO],
                                  VALUE_GAUGE((double)fan_speed / 100.0), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
 
         unsigned int core_temp;
@@ -154,8 +154,8 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_TEMPERATURE_CELSIUS],
                                  VALUE_GAUGE(core_temp), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
 
         unsigned int sm_clk_mhz;
@@ -163,8 +163,8 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_MULTIPROCESSOR_FREQUENCY_HZ],
                                  VALUE_GAUGE(1e6 * sm_clk_mhz), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
 
         unsigned int mem_clk_mhz;
@@ -172,8 +172,8 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_MEMORY_FREQUENCY_HZ],
                                  VALUE_GAUGE(1e6 * mem_clk_mhz), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
 
         unsigned int power_mW;
@@ -181,8 +181,8 @@ static int nvml_read(void)
         if (nv_status == NVML_SUCCESS)
             metric_family_append(&fams[FAM_GPU_NVIDIA_POWER_WATTS],
                                  VALUE_GAUGE(1e-3 * power_mW), NULL,
-                                 &(label_pair_const_t){.name="device_name", .value=dev_name},
-                                 &(label_pair_const_t){.name="device_index", .value=device_index},
+                                 &LABEL_PAIR_CONST("device_name", dev_name),
+                                 &LABEL_PAIR_CONST("device_index", device_index),
                                  NULL);
 
     }

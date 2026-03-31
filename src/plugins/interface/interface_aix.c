@@ -47,22 +47,22 @@ int interface_read(void)
 
         metric_family_append(&fams[FAM_INTERFACE_RX_BYTES],
                              VALUE_COUNTER(ifstat[i].ibytes), NULL,
-                             &(label_pair_const_t){.name="interface", .value=ifstat[i].name}, NULL);
+                             &LABEL_PAIR_CONST("interface", ifstat[i].name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_PACKETS],
                              VALUE_COUNTER(ifstat[i].ipackets), NULL,
-                             &(label_pair_const_t){.name="interface", .value=ifstat[i].name}, NULL);
+                             &LABEL_PAIR_CONST("interface", ifstat[i].name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_ERRORS],
                              VALUE_COUNTER(ifstat[i].ierrors), NULL,
-                             &(label_pair_const_t){.name="interface", .value=ifstat[i].name}, NULL);
+                             &LABEL_PAIR_CONST("interface", ifstat[i].name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_BYTES],
                              VALUE_COUNTER(ifstat[i].obytes), NULL,
-                             &(label_pair_const_t){.name="interface", .value=ifstat[i].name}, NULL);
+                             &LABEL_PAIR_CONST("interface", ifstat[i].name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_PACKETS],
                              VALUE_COUNTER(ifstat[i].opackets), NULL,
-                             &(label_pair_const_t){.name="interface", .value=ifstat[i].name}, NULL);
+                             &LABEL_PAIR_CONST("interface", ifstat[i].name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_ERRORS],
                              VALUE_COUNTER(ifstat[i].oerrors), NULL,
-                             &(label_pair_const_t){.name="interface", .value=ifstat[i].name}, NULL);
+                             &LABEL_PAIR_CONST("interface", ifstat[i].name), NULL);
     }
 
     free(ifstat);

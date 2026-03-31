@@ -243,37 +243,37 @@ int hba_get_stats (char *adapter, char *device)
 
     metric_family_append(&fams[FAM_HBA_RX_FRAMES],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.RxFrames), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_TX_FRAMES],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.TxFrames), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_LIP],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.LIPCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_NOS],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.NOSCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_ERROR_FRAMES],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.ErrorFrames), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_DUMPED_FRAMES],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.DumpedFrames), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_LINK_FAILURE],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.LinkFailureCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_LOST_OF_SYNC],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.LossOfSyncCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_LOST_OF_SIGNAL],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.LossOfSignalCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_INVALID_TX_WORD],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.InvalidTxWordCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_INVALID_CRC],
                          VALUE_COUNTER(scsi_chba.un.adap_stat.InvalidCRCCount), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
 
     memset(&scsi_chba, 0, sizeof(struct scsi_chba));
     scsi_chba.flags = 0;
@@ -289,19 +289,19 @@ int hba_get_stats (char *adapter, char *device)
 
     metric_family_append(&fams[FAM_HBA_INPUT_REQUEST],
                          VALUE_COUNTER(scsi_chba.un.traffic_info.traffic_stat.inp_reqs), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_OUTPUT_REQUEST],
                          VALUE_COUNTER(scsi_chba.un.traffic_info.traffic_stat.out_reqs), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_CONTROL_REQUEST],
                          VALUE_COUNTER(scsi_chba.un.traffic_info.traffic_stat.ctrl_reqs), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_INPUT_BYTES],
                          VALUE_COUNTER(scsi_chba.un.traffic_info.traffic_stat.inp_bytes), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
     metric_family_append(&fams[FAM_HBA_OUTPUT_BYTES],
                          VALUE_COUNTER(scsi_chba.un.traffic_info.traffic_stat.out_bytes), NULL,
-                         &(label_pair_const_t){.name="adapter", .value=adapter}, NULL);
+                         &LABEL_PAIR_CONST("adapter", adapter), NULL);
 
     close(fd);
 

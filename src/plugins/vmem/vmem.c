@@ -838,7 +838,7 @@ static int vmem_read(void)
 
         if ((vm->lkey != NULL) && (vm->lvalue != NULL))
             metric_family_append(&fams[vm->fam], mvalue, NULL,
-                                 &(label_pair_const_t){.name=vm->lkey, .value=vm->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(vm->lkey, vm->lvalue), NULL);
         else
             metric_family_append(&fams[vm->fam], mvalue, NULL, NULL);
 

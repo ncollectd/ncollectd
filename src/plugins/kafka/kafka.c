@@ -297,9 +297,9 @@ static void kafka_group_lag_reset(c_avl_tree_t *tree, metric_family_t *fam, labe
 
         if (key != NULL) {
             metric_family_append(fam, VALUE_GAUGE(key->lag), labels,
-                                 &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
-                                 &(label_pair_const_t){.name="group_id", .value=key->group},
-                                 &(label_pair_const_t){.name="topic", .value=key->topic},
+                                 &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                                 &LABEL_PAIR_CONST("group_id", key->group),
+                                 &LABEL_PAIR_CONST("topic", key->topic),
                                  NULL);
 
             free(key->topic);
@@ -417,13 +417,13 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
 
         metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_STATE],
                              VALUE_STATE_SET(set), &ctx->labels,
-                             &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
-                             &(label_pair_const_t){.name="group_id", .value=group_id }, NULL);
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                             &LABEL_PAIR_CONST("group_id", group_id ), NULL);
 
         metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_MEMBERS],
                              VALUE_GAUGE(member_cnt), &ctx->labels,
-                             &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
-                             &(label_pair_const_t){.name="group_id", .value=group_id }, NULL);
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                             &LABEL_PAIR_CONST("group_id", group_id ), NULL);
 
         size_t members_empty = 0;
 
@@ -459,10 +459,10 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
                     metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_PARTITION_OFFSET],
                                          VALUE_GAUGE(partitions->elems[k].offset),
                                          &ctx->labels,
-                                         &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
-                                         &(label_pair_const_t){.name="group_id", .value=group_id},
-                                         &(label_pair_const_t){.name="topic", .value=topic},
-                                         &(label_pair_const_t){.name="partition_id", .value=partition_id},
+                                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                                         &LABEL_PAIR_CONST("group_id", group_id),
+                                         &LABEL_PAIR_CONST("topic", topic),
+                                         &LABEL_PAIR_CONST("partition_id", partition_id),
                                          NULL);
                     // rd_kafka_err2str(partitions->elems[k].err));
 
@@ -477,10 +477,10 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
 
                     metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_PARTITION_LAG],
                                          VALUE_GAUGE(lag), &ctx->labels,
-                                         &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
-                                         &(label_pair_const_t){.name="group_id", .value=group_id},
-                                         &(label_pair_const_t){.name="topic", .value=topic},
-                                         &(label_pair_const_t){.name="partition_id", .value=partition_id},
+                                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                                         &LABEL_PAIR_CONST("group_id", group_id),
+                                         &LABEL_PAIR_CONST("topic", topic),
+                                         &LABEL_PAIR_CONST("partition_id", partition_id),
                                          NULL);
                 }
             }
@@ -491,8 +491,8 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
 
         metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_EMPTY_MEMBERS],
                              VALUE_GAUGE(members_empty), &ctx->labels,
-                             &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
-                             &(label_pair_const_t){.name="group_id", .value=group_id }, NULL);
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                             &LABEL_PAIR_CONST("group_id", group_id ), NULL);
     }
 
     status = 0;
@@ -525,14 +525,14 @@ static int kafka_read(user_data_t *user_data)
     char *cluster_id = rd_kafka_clusterid (ctx->rk, 10 * 1000);
     if (cluster_id == NULL) {
         metric_family_append(&ctx->fams[FAM_KAFKA_UP], VALUE_GAUGE(0), &ctx->labels,
-                             &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id),
                              NULL);
         plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_KAFKA_UP], ctx->filter, 0);
         return 0;
     }
 
     metric_family_append(&ctx->fams[FAM_KAFKA_UP], VALUE_GAUGE(1), &ctx->labels,
-                         &(label_pair_const_t){.name="cluster_id", .value=cluster_id},
+                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
                          NULL);
 
 #if 0
@@ -570,7 +570,7 @@ FAM_KAFKA_CLUSTER
        };
 
         metric_family_append(&ctx->fams[FAM_KAFKA_BROKER], VALUE_INFO(info), &ctx->labels,
-                             &(label_pair_const_t){.name="cluster_id", .value=cluster_id}, NULL);
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id), NULL);
     }
 
     for (int i = 0; i < metadata->topic_cnt; i++) {
@@ -587,7 +587,7 @@ FAM_KAFKA_CLUSTER
             }
         };
         metric_family_append(&ctx->fams[FAM_KAFKA_TOPIC], VALUE_INFO(info), &ctx->labels,
-                             &(label_pair_const_t){.name="cluster_id", .value=cluster_id}, NULL);
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id), NULL);
 
         //  topic->err == RD_KAFKA_RESP_ERR_LEADER_NOT_AVAILABLE)
 
@@ -608,15 +608,15 @@ FAM_KAFKA_CLUSTER
 
             metric_family_append(&ctx->fams[FAM_KAFKA_TOPIC_PARTITION_LOW_WATER_MARK],
                                  VALUE_GAUGE(low), &ctx->labels,
-                                 &(label_pair_const_t){.name="cluster_id",   .value=cluster_id  },
-                                 &(label_pair_const_t){.name="topic",        .value=topic->topic},
-                                 &(label_pair_const_t){.name="partition_id", .value=partition_id},
+                                 &LABEL_PAIR_CONST("cluster_id", cluster_id  ),
+                                 &LABEL_PAIR_CONST("topic", topic->topic),
+                                 &LABEL_PAIR_CONST("partition_id", partition_id),
                                  NULL);
             metric_family_append(&ctx->fams[FAM_KAFKA_TOPIC_PARTITION_HIGH_WATER_MARK],
                                  VALUE_GAUGE(high), &ctx->labels,
-                                 &(label_pair_const_t){.name="cluster_id",   .value=cluster_id  },
-                                 &(label_pair_const_t){.name="topic",        .value=topic->topic},
-                                 &(label_pair_const_t){.name="partition_id", .value=partition_id},
+                                 &LABEL_PAIR_CONST("cluster_id", cluster_id  ),
+                                 &LABEL_PAIR_CONST("topic", topic->topic),
+                                 &LABEL_PAIR_CONST("partition_id", partition_id),
                                  NULL);
 
 #if RD_KAFKA_VERSION > 0x020000ff

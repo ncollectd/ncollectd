@@ -346,29 +346,29 @@ static bool podman_container_stats_json_end_map(void *ctx)
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_CPU_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)sctx->stats.cpu / 1000000000.0),
                                  sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_CPU_SYSTEM_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)sctx->stats.cpu_system / 1000000000.0),
                                  sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_MEM_USAGE_BYTES],
                                  VALUE_GAUGE(sctx->stats.mem_usage), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_MEM_LIMIT_BYTES],
                                  VALUE_GAUGE(sctx->stats.mem_limit), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_BLOCK_INPUT],
                                  VALUE_COUNTER(sctx->stats.block_input), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_BLOCK_OUTPUT],
                                  VALUE_COUNTER(sctx->stats.block_output), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_NET_INPUT],
                                  VALUE_COUNTER(sctx->stats.net_input), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_NET_OUTPUT],
                                  VALUE_COUNTER(sctx->stats.net_output), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->stats.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->stats.id), NULL);
 
         }
     }
@@ -547,7 +547,7 @@ static bool podman_container_info_json_end_map(void *ctx)
                 }
             };
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER], VALUE_INFO(info), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         }
 
         if (sctx->info.state[0] != '\0') {
@@ -571,24 +571,24 @@ static bool podman_container_info_json_end_map(void *ctx)
             }
             metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_STATE],
                                  VALUE_STATE_SET(set), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         }
 
         metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_CREATED_SECONDS],
                              VALUE_GAUGE(sctx->info.created), sctx->labels,
-                             &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_STARTED_SECONDS],
                              VALUE_GAUGE(sctx->info.started), sctx->labels,
-                             &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_EXIT_CODE],
                              VALUE_GAUGE(sctx->info.exit_code), sctx->labels,
-                             &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_EXITED_SECONDS],
                              VALUE_GAUGE(sctx->info.exit_at), sctx->labels,
-                             &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_PID],
                              VALUE_GAUGE(sctx->info.pid), sctx->labels,
-                             &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
 
     }
 

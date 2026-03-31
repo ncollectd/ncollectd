@@ -227,39 +227,39 @@ static int zram_read_device_stat(int dirfd, const char *device)
         return -1;
 
     metric_family_append(&fams[FAM_ZRAM_READ_IOS], VALUE_COUNTER(atoll(fields[0])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_READ_MERGES], VALUE_COUNTER(atoll(fields[1])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_READ_SECTORS], VALUE_COUNTER(atoll(fields[2])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_READ_SECONDS],
                          VALUE_COUNTER_FLOAT64((double)atoll(fields[3])/1000000L), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_WRITE_IOS], VALUE_COUNTER(atoll(fields[4])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_WRITE_MERGES], VALUE_COUNTER(atoll(fields[5])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_WRITE_SECTORS], VALUE_COUNTER(atoll(fields[6])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_WRITE_SECONDS],
                          VALUE_COUNTER_FLOAT64((double)atoll(fields[7])/1000000L), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_IN_FLIGHT], VALUE_COUNTER(atoll(fields[8])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_IO_SECONDS], VALUE_COUNTER(atoll(fields[9])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_TIME_IN_QUEUE_SECONDS],
                          VALUE_COUNTER_FLOAT64((double)atoll(fields[10])/1000000L), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_DISCARD_IOS], VALUE_COUNTER(atoll(fields[11])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_DISCARD_MERGES], VALUE_COUNTER(atoll(fields[12])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_DISCARD_SECTORS], VALUE_COUNTER(atoll(fields[13])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_DISCARD_SECONDS],
                          VALUE_COUNTER_FLOAT64((double)atoll(fields[14])/1000000L), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -284,13 +284,13 @@ static int zram_read_device_io_stat(int dirfd, const char *device)
         return -1;
 
     metric_family_append(&fams[FAM_ZRAM_FAILED_READS], VALUE_COUNTER(atoll(fields[0])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_FAILED_WRITES], VALUE_COUNTER(atoll(fields[1])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_INVALID_IO], VALUE_COUNTER(atoll(fields[2])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_NOTIFY_FREE], VALUE_COUNTER(atoll(fields[3])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -316,21 +316,21 @@ static int zram_read_device_mm_stat(int dirfd, const char *device)
         return -1;
 
     metric_family_append(&fams[FAM_ZRAM_UNCOMPRESSED_BYTES], VALUE_GAUGE(atof(fields[0])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_COMPRESSED_BYTES], VALUE_GAUGE(atof(fields[1])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_MEMORY_USED_BYTES], VALUE_GAUGE(atof(fields[2])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_MEMORY_LIMIT_BYTES], VALUE_GAUGE(atof(fields[3])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_MEMORY_USED_MAX_BYTES], VALUE_GAUGE(atof(fields[4])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_SAME_PAGES], VALUE_GAUGE(atof(fields[5])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_COMPACTED_PAGES], VALUE_GAUGE(atof(fields[6])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_HUGE_PAGES], VALUE_GAUGE(atof(fields[7])), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -357,13 +357,13 @@ static int zram_read_device_bd_stat(int dirfd, const char *device)
 
     metric_family_append(&fams[FAM_ZRAM_BACKING_BYTES],
                          VALUE_COUNTER(atoll(fields[3])*4096), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_BACKING_READS_BYTES],
                          VALUE_COUNTER(atoll(fields[3])*4096), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_BACKING_WRITE_BYTES],
                          VALUE_COUNTER(atoll(fields[3])*4096), NULL,
-                         &(label_pair_const_t){.name="device", .value=device}, NULL);
+                         &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }

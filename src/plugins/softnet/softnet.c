@@ -88,25 +88,25 @@ sd->processed, sd->dropped, sd->time_squeeze, 0, 0, 0, 0, 0, /* was fastroute */
         if (fields_num >= 3) {
             value = VALUE_COUNTER(strtol(fields[0], NULL, 16));
             metric_family_append(&fams[FAM_SOFTNET_PROCESSED], value, NULL,
-                                 &(label_pair_const_t){.name="cpu", .value=cpu}, NULL);
+                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
 
             value = VALUE_COUNTER(strtol(fields[1], NULL, 16));
             metric_family_append(&fams[FAM_SOFTNET_DROPPED], value, NULL,
-                                 &(label_pair_const_t){.name="cpu", .value=cpu}, NULL);
+                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
 
             value = VALUE_COUNTER(strtol(fields[2], NULL, 16));
             metric_family_append(&fams[FAM_SOFTNET_TIMES_SQUEEZED], value, NULL,
-                                 &(label_pair_const_t){.name="cpu", .value=cpu}, NULL);
+                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
 
             if (fields_num >= 10) {
                 value = VALUE_COUNTER(strtol(fields[9], NULL, 16));
                 metric_family_append(&fams[FAM_SOFTNET_RECEIVED_RPS], value, NULL,
-                                     &(label_pair_const_t){.name="cpu", .value=cpu}, NULL);
+                                     &LABEL_PAIR_CONST("cpu", cpu), NULL);
 
                 if (fields_num >= 12) {
                     value = VALUE_GAUGE(strtol(fields[11], NULL, 16));
                     metric_family_append(&fams[FAM_SOFTNET_BACKLOG_LENGTH], value, NULL,
-                                         &(label_pair_const_t){.name="cpu", .value=cpu}, NULL);
+                                         &LABEL_PAIR_CONST("cpu", cpu), NULL);
                 }
             }
         }

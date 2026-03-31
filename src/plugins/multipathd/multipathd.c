@@ -261,10 +261,10 @@ static void multipathd_parse_path(xson_value_t *path, char *map_name, char *map_
             set.ptr[set.num - 1].enabled = true;
 
         metric_family_append(&fams[FAM_MULTIPATHD_PATH_DEVICE_STATE], VALUE_STATE_SET(set), NULL,
-                             &(label_pair_const_t){.name="map_name", .value=map_name},
-                             &(label_pair_const_t){.name="map_uuid", .value=map_uuid},
-                             &(label_pair_const_t){.name="group_id", .value=group_id},
-                             &(label_pair_const_t){.name="device",   .value=dev},
+                             &LABEL_PAIR_CONST("map_name", map_name),
+                             &LABEL_PAIR_CONST("map_uuid", map_uuid),
+                             &LABEL_PAIR_CONST("group_id", group_id),
+                             &LABEL_PAIR_CONST("device", dev),
                              NULL);
     }
 
@@ -292,10 +292,10 @@ static void multipathd_parse_path(xson_value_t *path, char *map_name, char *map_
             set.ptr[set.num - 1].enabled = true;
 
         metric_family_append(&fams[FAM_MULTIPATHD_PATH_CHECK_STATE], VALUE_STATE_SET(set), NULL,
-                             &(label_pair_const_t){.name="map_name", .value=map_name},
-                             &(label_pair_const_t){.name="map_uuid", .value=map_uuid},
-                             &(label_pair_const_t){.name="group_id", .value=group_id},
-                             &(label_pair_const_t){.name="device",   .value=dev},
+                             &LABEL_PAIR_CONST("map_name", map_name),
+                             &LABEL_PAIR_CONST("map_uuid", map_uuid),
+                             &LABEL_PAIR_CONST("group_id", group_id),
+                             &LABEL_PAIR_CONST("device", dev),
                              NULL);
     }
 
@@ -318,10 +318,10 @@ static void multipathd_parse_path(xson_value_t *path, char *map_name, char *map_
             set.ptr[set.num - 1].enabled = true;
 
         metric_family_append(&fams[FAM_MULTIPATHD_PATH_STATE], VALUE_STATE_SET(set), NULL,
-                             &(label_pair_const_t){.name="map_name", .value=map_name},
-                             &(label_pair_const_t){.name="map_uuid", .value=map_uuid},
-                             &(label_pair_const_t){.name="group_id", .value=group_id},
-                             &(label_pair_const_t){.name="device",   .value=dev},
+                             &LABEL_PAIR_CONST("map_name", map_name),
+                             &LABEL_PAIR_CONST("map_uuid", map_uuid),
+                             &LABEL_PAIR_CONST("group_id", group_id),
+                             &LABEL_PAIR_CONST("device", dev),
                              NULL);
     }
 
@@ -388,9 +388,9 @@ static void multipathd_parse_path_group(xson_value_t *path_group, char *map_name
             set.ptr[set.num - 1].enabled = true;
 
         metric_family_append(&fams[FAM_MULTIPATHD_PATH_GROUP_STATE], VALUE_STATE_SET(set), NULL,
-                             &(label_pair_const_t){.name="map_name", .value=map_name},
-                             &(label_pair_const_t){.name="map_uuid", .value=map_uuid},
-                             &(label_pair_const_t){.name="group_id", .value=group_id},
+                             &LABEL_PAIR_CONST("map_name", map_name),
+                             &LABEL_PAIR_CONST("map_uuid", map_uuid),
+                             &LABEL_PAIR_CONST("group_id", group_id),
                              NULL);
     }
 
@@ -475,22 +475,22 @@ static void multipathd_parse_map(xson_value_t *map)
             set.ptr[set.num - 1].enabled = true;
 
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_STATE], VALUE_STATE_SET(set), NULL,
-                             &(label_pair_const_t){.name="name", .value=name},
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
+                             &LABEL_PAIR_CONST("name", name),
+                             &LABEL_PAIR_CONST("uuid", uuid),
                              NULL);
     }
 
     if (path_faults != NAN) {
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATH_FAULTS], VALUE_GAUGE(path_faults), NULL,
-                             &(label_pair_const_t){.name="name", .value=name},
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
+                             &LABEL_PAIR_CONST("name", name),
+                             &LABEL_PAIR_CONST("uuid", uuid),
                              NULL);
     }
 
     if (paths != NAN) {
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATHS], VALUE_GAUGE(paths), NULL,
-                             &(label_pair_const_t){.name="name", .value=name},
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
+                             &LABEL_PAIR_CONST("name", name),
+                             &LABEL_PAIR_CONST("uuid", uuid),
                              NULL);
     }
 

@@ -332,7 +332,7 @@ static int memcached_read_stats_slabs(memcached_t *st)
                 continue;
             }
             metric_family_append(fam, value, &st->labels,
-                                 &(label_pair_const_t){.name="class", .value=class}, NULL);
+                                 &LABEL_PAIR_CONST("class", class), NULL);
         }
     }
 
@@ -382,7 +382,7 @@ static int memcached_read_stats_items(memcached_t *st)
                 continue;
             }
             metric_family_append(fam, value, &st->labels,
-                                 &(label_pair_const_t){.name="class", .value=class}, NULL);
+                                 &LABEL_PAIR_CONST("class", class), NULL);
         }
     }
 

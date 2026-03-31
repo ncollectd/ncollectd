@@ -937,74 +937,74 @@ static void nfs_read_mountstats_xprt(char *line, nfs_mountstats_t *nfs, label_se
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_BIND],
                              VALUE_COUNTER(atoull(fields[3])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_CONNECT],
                              VALUE_COUNTER(atoull(fields[4])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_CONNECT_JIFFIES],
                              VALUE_COUNTER(atoull(fields[5])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_IDLE_SECONDS],
                              VALUE_COUNTER(atoull(fields[6])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_SENDS],
                              VALUE_COUNTER(atoull(fields[7])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_RECVS],
                              VALUE_COUNTER(atoull(fields[8])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_BAD_XIDS],
                              VALUE_COUNTER(atoull(fields[9])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_REQUEST],
                              VALUE_COUNTER(atoull(fields[10])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_BACKLOG],
                              VALUE_COUNTER(atoull(fields[11])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         if (fields_num < 15)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_MAX_SLOTS],
                              VALUE_GAUGE((double)(atoull(fields[12]))), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_SENDING_QUEUE],
                              VALUE_COUNTER(atoull(fields[13])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_PENDING_QUEUE],
                              VALUE_COUNTER(atoull(fields[14])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
     } else if (strcmp(fields[1], "udp") == 0) {
         if (fields_num < 9)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_BIND],
                              VALUE_COUNTER(atoull(fields[3])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_SENDS],
                              VALUE_COUNTER(atoull(fields[4])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_RECVS],
                              VALUE_COUNTER(atoull(fields[5])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_BAD_XIDS],
                              VALUE_COUNTER(atoull(fields[6])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_REQUEST],
                              VALUE_COUNTER(atoull(fields[7])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_BACKLOG],
                              VALUE_COUNTER(atoull(fields[8])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         if (fields_num < 12)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_MAX_SLOTS],
                              VALUE_GAUGE((double)atoull(fields[9])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_SENDING_QUEUE],
                              VALUE_COUNTER(atoull(fields[10])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_PENDING_QUEUE],
                              VALUE_COUNTER(atoull(fields[11])), labels,
-                             &(label_pair_const_t){.name="port", .value=fields[2]}, NULL);
+                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
     } else if (strcmp(fields[1], "rdma") == 0) {
         if (fields_num < 12)
             return;
@@ -1081,34 +1081,34 @@ static void nfs_read_mountstats_ops(char *line, nfs_mountstats_t *nfs, label_set
 
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_REQUESTS],
                          VALUE_COUNTER(atoull(fields[1])), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_TRANSMISSIONS],
                          VALUE_COUNTER(atoull(fields[2])), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_TIMEOUTS],
                          VALUE_COUNTER(atoull(fields[3])), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_SEND_BYTES],
                          VALUE_COUNTER(atoull(fields[4])), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_RECV_BYTES],
                          VALUE_COUNTER(atoull(fields[5])), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_QUEUE_SECONDS],
                          VALUE_COUNTER_FLOAT64(((double)atoull(fields[6]))/1000.0), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_RESPONSE_SECONDS],
                          VALUE_COUNTER_FLOAT64(((double)atoull(fields[7]))/1000.0), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_REQUEST_SECONDS],
                          VALUE_COUNTER_FLOAT64(((double)atoull(fields[8]))/1000.0), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
     if (fields_num < 10)
         return;
 
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_OPERATION_ERROR],
                          VALUE_COUNTER(atoull(fields[9])), labels,
-                         &(label_pair_const_t){.name="operation", .value=fields[0]}, NULL);
+                         &LABEL_PAIR_CONST("operation", fields[0]), NULL);
 
 }
 
@@ -1339,8 +1339,8 @@ static int nfs_read_net_rpc_nfs(void)
                 if (strtouint(fields[2+i], &value) == 0) {
                      metric_family_append(&fams[FAM_NFS_REQUESTS],
                                 VALUE_COUNTER(value), NULL,
-                                &(label_pair_const_t){.name="method", .value=procedures_names[i]},
-                                &(label_pair_const_t){.name="proto", .value=proto}, NULL);
+                                &LABEL_PAIR_CONST("method", procedures_names[i]),
+                                &LABEL_PAIR_CONST("proto", proto), NULL);
                 }
             }
         }

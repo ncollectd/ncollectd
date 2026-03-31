@@ -662,19 +662,19 @@ void plugin_notify_stats(metric_family_t *fams)
 
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_TIME_SECONDS],
                              VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)notify_time)), NULL,
-                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CALLS],
                              VALUE_COUNTER(notify_calls), NULL,
-                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_FAILURES],
                              VALUE_COUNTER(notify_calls_failures), NULL,
-                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_USER],
                              VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(notify_cpu_user)), NULL,
-                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
         metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_SYSTEM],
                              VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(notify_cpu_sys)), NULL,
-                             &(label_pair_const_t){.name="plugin", .value=stats->plugin}, NULL);
+                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
 
         stats = stats->next;
     }

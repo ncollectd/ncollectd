@@ -81,7 +81,7 @@ static int arp_read(void)
         if (status != 0)
             break;
         metric_family_append(&fam_arp, VALUE_GAUGE(arp_device->num), NULL,
-                             &(label_pair_const_t){.name="device", .value=key}, NULL);
+                             &LABEL_PAIR_CONST("device", key), NULL);
         free(arp_device);
     }
 

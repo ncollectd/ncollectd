@@ -223,7 +223,7 @@ static int redis_read_info_errorstat(redis_node_t *rn, char *key, char *value)
     char *counts = value + strlen("count=");
 
     metric_family_append(&rn->fams[FAM_REDIS_ERRORS], VALUE_COUNTER(atoll(counts)), &rn->labels,
-                         &(label_pair_const_t){.name="error", .value=error}, NULL);
+                         &LABEL_PAIR_CONST("error", error), NULL);
 
     return 0;
 }
@@ -282,20 +282,20 @@ static int redis_read_info_master(redis_node_t *rn, char *value)
 
     metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_STATUS],
                          VALUE_STATE_SET(set), &rn->labels,
-                         &(label_pair_const_t){.name="master_address", .value=master_address},
-                         &(label_pair_const_t){.name="master_name", .value=master_name},
+                         &LABEL_PAIR_CONST("master_address", master_address),
+                         &LABEL_PAIR_CONST("master_name", master_name),
                          NULL);
 
     metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_SLAVES],
                          VALUE_GAUGE(atoll(master_slaves)), &rn->labels,
-                         &(label_pair_const_t){.name="master_address", .value=master_address},
-                         &(label_pair_const_t){.name="master_name", .value=master_name},
+                         &LABEL_PAIR_CONST("master_address", master_address),
+                         &LABEL_PAIR_CONST("master_name", master_name),
                          NULL);
 
     metric_family_append(&rn->fams[FAM_REDIS_SENTINEL_MASTER_SENTINELS],
                          VALUE_GAUGE(atoll(master_sentinels)), &rn->labels,
-                         &(label_pair_const_t){.name="master_address", .value=master_address},
-                         &(label_pair_const_t){.name="master_name", .value=master_name},
+                         &LABEL_PAIR_CONST("master_address", master_address),
+                         &LABEL_PAIR_CONST("master_name", master_name),
                          NULL);
 
     return 0;
@@ -356,15 +356,15 @@ static int redis_read_info_slave(redis_node_t *rn, char *value)
     state_set_enable(set, slave_state);
 
     metric_family_append(&rn->fams[FAM_REDIS_SLAVE_STATE], VALUE_STATE_SET(set), &rn->labels,
-                         &(label_pair_const_t){.name="slave_address", .value=address}, NULL);
+                         &LABEL_PAIR_CONST("slave_address", address), NULL);
 
     metric_family_append(&rn->fams[FAM_REDIS_SLAVE_LAG],
                          VALUE_GAUGE(atoll(slave_lag)), &rn->labels,
-                         &(label_pair_const_t){.name="slave_address", .value=address}, NULL);
+                         &LABEL_PAIR_CONST("slave_address", address), NULL);
 
     metric_family_append(&rn->fams[FAM_REDIS_SLAVE_OFFSET],
                          VALUE_GAUGE(atoll(slave_offset)), &rn->labels,
-                         &(label_pair_const_t){.name="slave_address", .value=address}, NULL);
+                         &LABEL_PAIR_CONST("slave_address", address), NULL);
     return 0;
 }
 
@@ -393,12 +393,12 @@ static int redis_read_info_cmdstat(redis_node_t *rn, char *key, char *value)
 
     metric_family_append(&rn->fams[FAM_REDIS_COMMANDS],
                          VALUE_COUNTER(atoll(command_calls)), &rn->labels,
-                         &(label_pair_const_t){.name="cmd", .value=command}, NULL);
+                         &LABEL_PAIR_CONST("cmd", command), NULL);
 
     metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_DURATION_SECONDS],
                          VALUE_COUNTER_FLOAT64(((double)atoll(command_usec)) / 1000000.0),
                          &rn->labels,
-                         &(label_pair_const_t){.name="cmd", .value=command}, NULL);
+                         &LABEL_PAIR_CONST("cmd", command), NULL);
     return 0;
 }
 
@@ -427,11 +427,11 @@ static int redis_read_info_db(redis_node_t *rn, char *key, char *value)
 
     metric_family_append(&rn->fams[FAM_REDIS_DB_KEYS],
                          VALUE_GAUGE((double)atoll(db_keys)), &rn->labels,
-                         &(label_pair_const_t){.name="db", .value=db}, NULL);
+                         &LABEL_PAIR_CONST("db", db), NULL);
 
     metric_family_append(&rn->fams[FAM_REDIS_DB_KEYS_EXPIRING],
                          VALUE_GAUGE((double)atoll(db_expires)), &rn->labels,
-                         &(label_pair_const_t){.name="db", .value=db}, NULL);
+                         &LABEL_PAIR_CONST("db", db), NULL);
 
     return 0;
 }

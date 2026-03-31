@@ -73,7 +73,7 @@ void conn_submit_all(const char *tcp_state[], int tcp_state_min, int tcp_state_m
 {
     for (int i = 1; i <= tcp_state_max; i++) {
         metric_family_append(&fams[FAM_TCP_ALL_CONNECTIONS], VALUE_GAUGE(count_total[i]), NULL,
-                             &(label_pair_const_t){.name="state", .value=tcp_state[i]},
+                             &LABEL_PAIR_CONST("state", tcp_state[i]),
                              NULL);
     }
 
@@ -83,19 +83,15 @@ void conn_submit_all(const char *tcp_state[], int tcp_state_min, int tcp_state_m
             size_t label_num = 0;
 
             if (counter->local.str_port != NULL)
-                label_pairs[label_num++] = (label_pair_const_t){.name="local_port",
-                                                                .value=counter->local.str_port};
+                label_pairs[label_num++] = LABEL_PAIR_CONST("local_port", counter->local.str_port);
             if (counter->local.str_addr != NULL)
-                label_pairs[label_num++] = (label_pair_const_t){.name="local_addr",
-                                                                .value=counter->local.str_addr};
+                label_pairs[label_num++] = LABEL_PAIR_CONST("local_addr", counter->local.str_addr);
             if (counter->remote.str_port != NULL)
-                label_pairs[label_num++] = (label_pair_const_t){.name="remote_port",
-                                                                .value=counter->remote.str_port};
+                label_pairs[label_num++] = LABEL_PAIR_CONST("remote_port", counter->remote.str_port);
             if (counter->remote.str_addr != NULL)
-                label_pairs[label_num++] = (label_pair_const_t){.name="remote_addr",
-                                                                .value=counter->remote.str_addr};
+                label_pairs[label_num++] = LABEL_PAIR_CONST("remote_addr", counter->remote.str_addr);
 
-            label_pairs[label_num++] = (label_pair_const_t){.name="state", .value=tcp_state[i]};
+            label_pairs[label_num++] = LABEL_PAIR_CONST("state", tcp_state[i]);
 
             label_set_t labels = {
                 .num = label_num,

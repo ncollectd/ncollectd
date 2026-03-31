@@ -716,21 +716,21 @@ static int pgpool_show_pool_health_check_stats(PGconn *conn, unsigned int versio
 
         pgpool_status_append(res, i, "status", &fams[FAM_PGPOOL_BACKEND_HEALTH_CHECK_STATUS],
                              labels,
-                             &(label_pair_const_t){.name="hostname", .value=hostname},
-                             &(label_pair_const_t){.name="port", .value=port},
-                             &(label_pair_const_t){.name="role", .value=role}, NULL);
+                             &LABEL_PAIR_CONST("hostname", hostname),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("role", role), NULL);
 
         for (size_t j = 0; j < columns_size ; j++) {
             if (columns[j].ts)
                 pgpool_timestamp_append(res, i, columns[j].name, &fams[columns[j].fam], labels,
-                                        &(label_pair_const_t){.name="hostname", .value=hostname},
-                                        &(label_pair_const_t){.name="port", .value=port},
-                                        &(label_pair_const_t){.name="role", .value=role}, NULL);
+                                        &LABEL_PAIR_CONST("hostname", hostname),
+                                        &LABEL_PAIR_CONST("port", port),
+                                        &LABEL_PAIR_CONST("role", role), NULL);
             else
                 pgpool_metric_append(res, i, columns[j].name, &fams[columns[j].fam], 1.0, labels,
-                                     &(label_pair_const_t){.name="hostname", .value=hostname},
-                                     &(label_pair_const_t){.name="port", .value=port},
-                                     &(label_pair_const_t){.name="role", .value=role}, NULL);
+                                     &LABEL_PAIR_CONST("hostname", hostname),
+                                     &LABEL_PAIR_CONST("port", port),
+                                     &LABEL_PAIR_CONST("role", role), NULL);
         }
     }
 
@@ -786,15 +786,15 @@ static int pgpool_show_pool_backend_stats(PGconn *conn, unsigned int version,
             continue;
 
         pgpool_status_append(res, i, "status", &fams[FAM_PGPOOL_BACKEND_STATUS], labels,
-                             &(label_pair_const_t){.name="hostname", .value=hostname},
-                             &(label_pair_const_t){.name="port", .value=port},
-                             &(label_pair_const_t){.name="role", .value=role}, NULL);
+                             &LABEL_PAIR_CONST("hostname", hostname),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("role", role), NULL);
 
         for (size_t j = 0; j < columns_size ; j++) {
             pgpool_metric_append(res, i, columns[j].name, &fams[columns[j].fam], 1.0, labels,
-                                 &(label_pair_const_t){.name="hostname", .value=hostname},
-                                 &(label_pair_const_t){.name="port", .value=port},
-                                 &(label_pair_const_t){.name="role", .value=role}, NULL);
+                                 &LABEL_PAIR_CONST("hostname", hostname),
+                                 &LABEL_PAIR_CONST("port", port),
+                                 &LABEL_PAIR_CONST("role", role), NULL);
         }
     }
 
@@ -839,15 +839,15 @@ static int pgpool_show_pool_nodes(PGconn *conn, metric_family_t *fams, label_set
             continue;
 
         pgpool_status_append(res, i, "status", &fams[FAM_PGPOOL_NODE_STATUS], labels,
-                             &(label_pair_const_t){.name="hostname", .value=hostname},
-                             &(label_pair_const_t){.name="port", .value=port},
-                             &(label_pair_const_t){.name="role", .value=role}, NULL);
+                             &LABEL_PAIR_CONST("hostname", hostname),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("role", role), NULL);
 
         for (size_t j = 0; j < columns_size ; j++) {
             pgpool_metric_append(res, i, columns[j].name, &fams[columns[j].fam], 1.0, labels,
-                                 &(label_pair_const_t){.name="hostname", .value=hostname},
-                                 &(label_pair_const_t){.name="port", .value=port},
-                                 &(label_pair_const_t){.name="role", .value=role}, NULL);
+                                 &LABEL_PAIR_CONST("hostname", hostname),
+                                 &LABEL_PAIR_CONST("port", port),
+                                 &LABEL_PAIR_CONST("role", role), NULL);
         }
     }
 

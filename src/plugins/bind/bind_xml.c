@@ -39,19 +39,19 @@ static void bind_xml_characters(void *ctx, const xmlChar *ch, int len)
         case BIND_XML_STATISTICS_SERVER_OPCODE:
             metric_family_append(&sctx->fams[FAM_BIND_INCOMING_REQUESTS],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="opcode", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("opcode", sctx->value1),
                                  NULL);
             break;
         case BIND_XML_STATISTICS_SERVER_RCODE:
             metric_family_append(&sctx->fams[FAM_BIND_RESPONSE_RCODES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="rcode", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("rcode", sctx->value1),
                                  NULL);
             break;
         case BIND_XML_STATISTICS_SERVER_QTYPE:
             metric_family_append(&sctx->fams[FAM_BIND_INCOMING_QUERIES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="qtype", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("qtype", sctx->value1),
                                  NULL);
             break;
         case BIND_XML_STATISTICS_SERVER_NSSTAT:
@@ -83,8 +83,8 @@ static void bind_xml_characters(void *ctx, const xmlChar *ch, int len)
         case BIND_XML_STATISTICS_VIEW_RESQTYPE:
             metric_family_append(&sctx->fams[FAM_BIND_RESOLVER_QUERIES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="view", .value=sctx->value1},
-                                 &(label_pair_const_t){.name="type", .value=sctx->value2},
+                                 &LABEL_PAIR_CONST("view", sctx->value1),
+                                 &LABEL_PAIR_CONST("type", sctx->value2),
                                  NULL);
             break;
         case BIND_XML_STATISTICS_VIEW_CACHESTATS:
@@ -105,8 +105,8 @@ static void bind_xml_characters(void *ctx, const xmlChar *ch, int len)
         case BIND_XML_STATISTICS_VIEW_CACHE_RRSET_COUNTER:
             metric_family_append(&sctx->fams[FAM_BIND_RESOLVER_CACHE_RRSETS],
                                  VALUE_GAUGE(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="view", .value=sctx->value1},
-                                 &(label_pair_const_t){.name="type", .value=sctx->value2},
+                                 &LABEL_PAIR_CONST("view", sctx->value1),
+                                 &LABEL_PAIR_CONST("type", sctx->value2),
                                  NULL);
             break;
         case BIND_XML_STATISTICS_TRAFFIC_IPV4_UDP_REQUEST_SIZE_COUNTER:

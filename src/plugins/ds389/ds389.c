@@ -292,8 +292,7 @@ static int ds389_read_metrics(ds389_ctx_t *ctx, char *filter,
             if (metrics[i].fam == FAM_DS389_VERSION_INFO) {
                 value = VALUE_GAUGE(1);
                 metric_family_append(fam, value, &ctx->labels,
-                                     &(label_pair_const_t){.name="version",
-                                                           .value=value_data.bv_val},
+                                     &LABEL_PAIR_CONST("version", value_data.bv_val),
                                      NULL);
             } else if (metrics[i].fam == FAM_DS389_START_TIME_SECONDS) {
                 struct tm tm = {0};
@@ -381,8 +380,7 @@ static int ds389_read_backend_metrics(ds389_ctx_t *ctx, char *filter)
                     uint64_t value = (uint64_t)atoll(value_data.bv_val);
                     metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_CACHE_HIT],
                                          VALUE_COUNTER(value), &ctx->labels,
-                                         &(label_pair_const_t){.name="filename",
-                                                               .value=current_filename},
+                                         &LABEL_PAIR_CONST("filename", current_filename),
                                          NULL);
                 }
             } else if (strncmp(attr, "dbfilecachemiss-", strlen("dbfilecachemiss-")) == 0) {
@@ -391,8 +389,7 @@ static int ds389_read_backend_metrics(ds389_ctx_t *ctx, char *filter)
                     uint64_t value = (uint64_t)atoll(value_data.bv_val);
                     metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_CACHE_MISS],
                                          VALUE_COUNTER(value), &ctx->labels,
-                                         &(label_pair_const_t){.name="filename",
-                                                               .value=current_filename},
+                                         &LABEL_PAIR_CONST("filename", current_filename),
                                          NULL);
                 }
             } else if (strncmp(attr, "dbfilepagein-", strlen("dbfilepagein-")) == 0) {
@@ -401,8 +398,7 @@ static int ds389_read_backend_metrics(ds389_ctx_t *ctx, char *filter)
                     uint64_t value = (uint64_t)atoll(value_data.bv_val);
                     metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_PAGEIN],
                                          VALUE_COUNTER(value), &ctx->labels,
-                                         &(label_pair_const_t){.name="filename",
-                                                               .value=current_filename},
+                                         &LABEL_PAIR_CONST("filename", current_filename),
                                          NULL);
                 }
             } else if (strncmp(attr, "dbfilepageout-", strlen("dbfilepageout-")) == 0) {
@@ -411,8 +407,7 @@ static int ds389_read_backend_metrics(ds389_ctx_t *ctx, char *filter)
                     uint64_t value = (uint64_t)atoll(value_data.bv_val);
                     metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_PAGEOUT],
                                          VALUE_COUNTER(value), &ctx->labels,
-                                         &(label_pair_const_t){.name="filename",
-                                                               .value=current_filename},
+                                         &LABEL_PAIR_CONST("filename", current_filename),
                                          NULL);
                 }
             }

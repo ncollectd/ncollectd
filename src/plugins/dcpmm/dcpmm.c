@@ -399,35 +399,35 @@ static int dcpmm_read(void)
             states[stats.health_status].enabled = true;
 
         metric_family_append(&fams[FAM_DCPMM_HEALTH_STATUS], VALUE_STATE_SET(set), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
 
         metric_family_append(&fams[FAM_DCPMM_LIFESPAN_REMAINING_RATIO],
                              VALUE_GAUGE((double)stats.percentage_remaining / 100.0), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_LIFESPAN_USED_RATIO],
                              VALUE_GAUGE((double)stats.percentage_used / 100.0), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_POWER_ON_TIME_SECONDS],
                              VALUE_GAUGE(stats.power_on_time), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_UPTIME_SECONDS],
                              VALUE_GAUGE(stats.uptime), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_LAST_SHUTDOWN_TIME_SECONDS],
                              VALUE_GAUGE(stats.last_shutdown_time), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_MEDIA_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(stats.media_temp), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_CONTROLLER_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(stats.controller_temp), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_MEDIA_MAX_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(stats.max_media_temp), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_CONTROLLER_MAX_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(stats.max_controller_temp), NULL,
-                             &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                             &LABEL_PAIR_CONST("dimm", num), NULL);
 
 
 
@@ -470,34 +470,34 @@ static int dcpmm_read(void)
 
             metric_family_append(&fams[FAM_DCPMM_READ_BYTES],
                                  VALUE_COUNTER(devices_io_stats[i].total_bytes_read), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_WRITTEN_BYTES],
                                  VALUE_COUNTER(devices_io_stats[i].total_bytes_read), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_READ_64B_OPS],
                                  VALUE_COUNTER(stats.bytes_read), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_WRITE_64B_OPS],
                                  VALUE_COUNTER(stats.bytes_written), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_MEDIA_READ_OPS],
                                  VALUE_COUNTER(devices_io_stats[i].media_read), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_MEDIA_WRITE_OPS],
                                  VALUE_COUNTER(devices_io_stats[i].media_write), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_HOST_READS],
                                  VALUE_COUNTER(stats.host_reads), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_HOST_WRITES],
                                  VALUE_COUNTER(stats.host_writes), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_READ_HIT_RATIO],
                                  VALUE_GAUGE(read_hit_ratio), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_WRITE_HIT_RATIO],
                                  VALUE_GAUGE(write_hit_ratio), NULL,
-                                 &(label_pair_const_t){.name="dimm", .value=num}, NULL);
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
 
 
         }

@@ -527,16 +527,16 @@ int bind_append_metric(metric_family_t *fams, label_set_t *labels,
     if ((bm->lkey != NULL) && (bm->lvalue != NULL)) {
         if ((lkey != NULL) && (lvalue != NULL)) {
             metric_family_append(&fams[bm->fam], mvalue, labels,
-                                 &(label_pair_const_t){.name=lkey, .value=lvalue},
-                                 &(label_pair_const_t){.name=bm->lkey, .value=bm->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(lkey, lvalue),
+                                 &LABEL_PAIR_CONST(bm->lkey, bm->lvalue), NULL);
         } else {
             metric_family_append(&fams[bm->fam], mvalue, labels,
-                                 &(label_pair_const_t){.name=bm->lkey, .value=bm->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(bm->lkey, bm->lvalue), NULL);
         }
     } else {
         if ((lkey != NULL) && (lvalue != NULL)) {
             metric_family_append(&fams[bm->fam], mvalue, labels,
-                                 &(label_pair_const_t){.name=lkey, .value=lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(lkey, lvalue), NULL);
         } else {
             metric_family_append(&fams[bm->fam], mvalue, labels, NULL);
         }

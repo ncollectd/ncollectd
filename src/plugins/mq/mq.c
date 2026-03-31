@@ -304,7 +304,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_DEPTH],
                              VALUE_GAUGE(depth), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_CURRENT_Q_DEPTH", mqcc, mqrc);
     }
@@ -314,7 +314,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_MAX_DEPTH],
                              VALUE_GAUGE(maxdepth), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_MAX_Q_DEPTH", mqcc, mqrc);
     }
@@ -324,7 +324,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_OPEN_INPUT],
                              VALUE_COUNTER(openinput), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_OPEN_INPUT_COUNT", mqcc, mqrc);
     }
@@ -334,7 +334,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_OPEN_OUTPUT],
                              VALUE_COUNTER(openoutput), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_OPEN_OUTPUT_COUNT", mqcc, mqrc);
     }
@@ -344,7 +344,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_DEQUEUE],
                              VALUE_COUNTER(dequeue), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_MSG_DEQ_COUNT", mqcc, mqrc);
     }
@@ -354,7 +354,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_ENQUEUE],
                              VALUE_COUNTER(enqueue), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_MSG_ENQ_COUNT", mqcc, mqrc);
     }
@@ -362,19 +362,19 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     time_t lastget = cmq_queue_time(bag, MQCACF_LAST_GET_DATE, MQCACF_LAST_GET_TIME);
     metric_family_append(&mq->fams[FAM_MQ_QUEUE_LATEST_GET_SECONDS],
                          VALUE_GAUGE(lastget), &mq->labels,
-                         &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                         &LABEL_PAIR_CONST("queue", qname), NULL);
 
     time_t lastput = cmq_queue_time(bag, MQCACF_LAST_PUT_TIME, MQCACF_LAST_PUT_TIME);
     metric_family_append(&mq->fams[FAM_MQ_QUEUE_LATEST_PUT_SECONDS],
                          VALUE_GAUGE(lastput), &mq->labels,
-                         &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                         &LABEL_PAIR_CONST("queue", qname), NULL);
 
     MQLONG oldest_msg_age = 0;
     mqInquireInteger(bag, MQIACF_OLDEST_MSG_AGE, MQIND_NONE, &enqueue, &mqcc, &mqrc);
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_OLDEST_MSG_AGE_SECONDS],
                              VALUE_GAUGE(oldest_msg_age), &mq->labels,
-                             &(label_pair_const_t){.name="queue", .value=qname}, NULL);
+                             &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIACF_OLDEST_MSG_AGE", mqcc, mqrc);
     }

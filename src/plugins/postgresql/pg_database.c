@@ -157,7 +157,7 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="database", .value=col_database},
+                                     &LABEL_PAIR_CONST("database", col_database),
                                      NULL);
             }
         }
@@ -226,7 +226,7 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
         if (!PQgetisnull(res, i, 1))
             metric_family_append(&fams[FAM_PG_DATABASE_SIZE_BYTES],
                                  VALUE_GAUGE(atof(PQgetvalue(res, i, 1))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
+                                 &LABEL_PAIR_CONST("database", col_database),
                                  NULL);
     }
 
@@ -317,8 +317,8 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
         if (!PQgetisnull(res, i, 2))
             metric_family_append(&fams[FAM_PG_DATABASE_LOCKS],
                                  VALUE_GAUGE(atof(PQgetvalue(res, i, 2))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="mode", .value=col_mode},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("mode", col_mode),
                                  NULL);
     }
 
@@ -412,7 +412,7 @@ int pg_stat_database_conflicts(PGconn *conn, int version, metric_family_t *fams,
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="database", .value=col_database},
+                                     &LABEL_PAIR_CONST("database", col_database),
                                      NULL);
             }
         }

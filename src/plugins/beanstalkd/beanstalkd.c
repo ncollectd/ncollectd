@@ -316,7 +316,7 @@ static int beanstalkd_read(user_data_t *user_data)
             metric_family_append(fam, value, &ctx->labels, NULL);   
         } else {
             metric_family_append(fam, value, &ctx->labels,
-                                 &(label_pair_const_t){.name=bm->lname, .value=bm->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(bm->lname, bm->lvalue), NULL);
 
         }
     }

@@ -369,8 +369,8 @@ static int ping_read(user_data_t *user_data)
         if (latency != NULL) {
             metric_family_append(&inst->fams[FAM_PING_LATENCY_SECONDS],
                                  VALUE_HISTOGRAM(latency), &hl->labels,
-                                 &(label_pair_const_t){.name="destination", .value=hl->host},
-                                 &(label_pair_const_t){.name="source", .value=hostname},
+                                 &LABEL_PAIR_CONST("destination", hl->host),
+                                 &LABEL_PAIR_CONST("source", hostname),
                                  NULL);
             free(latency);
         }
@@ -384,8 +384,8 @@ static int ping_read(user_data_t *user_data)
 
         metric_family_append(&inst->fams[FAM_PING_LATENCY_AVG_SECONDS],
                              VALUE_GAUGE(latency_average), &hl->labels,
-                             &(label_pair_const_t){.name="destination", .value=hl->host},
-                             &(label_pair_const_t){.name="source", .value=hostname}, NULL);
+                             &LABEL_PAIR_CONST("destination", hl->host),
+                             &LABEL_PAIR_CONST("source", hostname), NULL);
 
         /* Calculate standard deviation. Beware even more of division by zero. */
         double latency_stddev;
@@ -400,16 +400,16 @@ static int ping_read(user_data_t *user_data)
 
         metric_family_append(&inst->fams[FAM_PING_LATENCY_STDDEV_SECONDS],
                              VALUE_GAUGE(latency_stddev), &hl->labels,
-                             &(label_pair_const_t){.name="destination", .value=hl->host},
-                             &(label_pair_const_t){.name="source", .value=hostname}, NULL);
+                             &LABEL_PAIR_CONST("destination", hl->host),
+                             &LABEL_PAIR_CONST("source", hostname), NULL);
 
         /* Calculate drop ratio. */
         double droprate = ((double)(pkg_sent - pkg_recv)) / ((double)pkg_sent);
 
         metric_family_append(&inst->fams[FAM_PING_DROP_RATIO],
                              VALUE_GAUGE(droprate), &hl->labels,
-                             &(label_pair_const_t){.name="destination", .value=hl->host},
-                             &(label_pair_const_t){.name="source", .value=hostname}, NULL);
+                             &LABEL_PAIR_CONST("destination", hl->host),
+                             &LABEL_PAIR_CONST("source", hostname), NULL);
     }
 
     plugin_dispatch_metric_family_array_filtered(inst->fams, FAM_PING_MAX, inst->filter, 0);

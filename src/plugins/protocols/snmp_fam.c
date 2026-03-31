@@ -590,13 +590,13 @@ int snmp_read(uint64_t flags, plugin_filter_t *filter)
                         char *type = key_fields[i] + strlen("InType");
                         uint64_t value = atol(value_fields[i]);
                         metric_family_append(&fams[FAM_ICMP_IN_TYPE], VALUE_COUNTER(value), NULL,
-                                             &(label_pair_const_t){.name="type", .value=type},
+                                             &LABEL_PAIR_CONST("type", type),
                                              NULL);
                     } else if (strncmp("OutType", key_fields[i], strlen("OutType")) == 0) {
                         char *type = key_fields[i] + strlen("OutType");
                         uint64_t value = atol(value_fields[i]);
                         metric_family_append(&fams[FAM_ICMP_OUT_TYPE], VALUE_COUNTER(value), NULL,
-                                             &(label_pair_const_t){.name="type", .value=type},
+                                             &LABEL_PAIR_CONST("type", type),
                                              NULL);
                     }
                 }

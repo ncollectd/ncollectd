@@ -174,16 +174,16 @@ static int wpar_read (void)
 
         metric_family_append(&fams[FAM_WPAR_MEMORY_USER_BYTES],
                              VALUE_GAUGE(wmemory.real_inuse * pagesize), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         metric_family_append(&fams[FAM_WPAR_MEMORY_FREE_BYTES],
                              VALUE_GAUGE(wmemory.real_free * pagesize), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         metric_family_append(&fams[FAM_WPAR_MEMORY_CACHED_BYTES],
                              VALUE_GAUGE(wmemory.numperm * pagesize), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         metric_family_append(&fams[FAM_WPAR_MEMORY_TOTAL_BYTES],
                              VALUE_GAUGE(wmemory.real_total * pagesize), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
 
         /* CPU and load */
         perfstat_cpu_total_wpar_t wcpu;
@@ -196,13 +196,13 @@ static int wpar_read (void)
         double factor = 1.0 / ((double) (1 << SBITS));
         float snum = ((double) wcpu.loadavg[0]) * factor;
         metric_family_append(&fams[FAM_WPAR_LOAD_1M], VALUE_GAUGE(snum), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         double mnum = ((double) wcpu.loadavg[1]) * factor;
         metric_family_append(&fams[FAM_WPAR_LOAD_5M], VALUE_GAUGE(mnum), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         double lnum = ((double) wcpu.loadavg[2]) * factor;
         metric_family_append(&fams[FAM_WPAR_LOAD_15M], VALUE_GAUGE(lnum), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
 
         if (hardware_ticks > 0) {
             /* Number of physical processors */
@@ -218,9 +218,9 @@ static int wpar_read (void)
         }
 
         metric_family_append(&fams[FAM_WPAR_CPU_USER], VALUE_COUNTER(cnt_wcpu[i].user), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         metric_family_append(&fams[FAM_WPAR_CPU_SYSTEM], VALUE_COUNTER(cnt_wcpu[i].sys), NULL,
-                             &(label_pair_const_t){.name="wpar_name", .value=wname}, NULL);
+                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
 
         prev_wcpu[i].sys = wcpu.psys;
         prev_wcpu[i].user = wcpu.puser;

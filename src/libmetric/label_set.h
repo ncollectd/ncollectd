@@ -29,6 +29,10 @@ typedef struct {
   size_t num;
 } label_set_t;
 
+#define LABEL_PAIR_CONST(n, v) (label_pair_const_t){.name=(n), .value=(v)}
+
+#define LABEL_PAIR(n, v) (label_pair_t){.name=(n), .value=(v)}
+
 label_pair_t *label_set_read(label_set_t labels, char const *name);
 
 int _label_set_add(label_set_t *labels, bool overwrite, bool unescape,

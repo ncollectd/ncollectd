@@ -174,12 +174,12 @@ static int cert_read(user_data_t *user_data)
     if (not_after != NULL) {
         metric_family_append(&cert_cb->fams[FAM_CERT_EXPIRE_NOT_AFTER_SECONDS],
                              VALUE_GAUGE(ASN1_timestamp(not_after)), &cert_cb->labels,
-                             &(label_pair_const_t){.name="host", .value= cert_cb->host },
-                             &(label_pair_const_t){.name="port", .value= port },
-                             &(label_pair_const_t){.name="servername", .value= server_name },
-                             &(label_pair_const_t){.name="subject", .value= subj },
-                             &(label_pair_const_t){.name="issuer", .value= issuer },
-                             &(label_pair_const_t){.name="serial", .value= serial },
+                             &LABEL_PAIR_CONST("host",  cert_cb->host ),
+                             &LABEL_PAIR_CONST("port",  port ),
+                             &LABEL_PAIR_CONST("servername",  server_name ),
+                             &LABEL_PAIR_CONST("subject",  subj ),
+                             &LABEL_PAIR_CONST("issuer",  issuer ),
+                             &LABEL_PAIR_CONST("serial",  serial ),
                              NULL);
     }
 
@@ -187,12 +187,12 @@ static int cert_read(user_data_t *user_data)
     if (not_before != NULL) {
         metric_family_append(&cert_cb->fams[FAM_CERT_EXPIRE_NOT_BEFORE_SECONDS],
                              VALUE_GAUGE(ASN1_timestamp(not_before)), &cert_cb->labels,
-                             &(label_pair_const_t){.name="host", .value= cert_cb->host },
-                             &(label_pair_const_t){.name="port", .value= port },
-                             &(label_pair_const_t){.name="servername", .value= server_name },
-                             &(label_pair_const_t){.name="subject", .value= subj },
-                             &(label_pair_const_t){.name="issuer", .value= issuer },
-                             &(label_pair_const_t){.name="serial", .value= serial },
+                             &LABEL_PAIR_CONST("host",  cert_cb->host ),
+                             &LABEL_PAIR_CONST("port",  port ),
+                             &LABEL_PAIR_CONST("servername",  server_name ),
+                             &LABEL_PAIR_CONST("subject",  subj ),
+                             &LABEL_PAIR_CONST("issuer",  issuer ),
+                             &LABEL_PAIR_CONST("serial",  serial ),
                              NULL);
     }
 

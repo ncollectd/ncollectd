@@ -198,29 +198,29 @@ static void quota_report_disk(const char *disk_name, char *dir,
             if ((info.dqb_valid & QIF_INODES) == QIF_INODES) {
                 metric_family_append(&fams[FAM_QUOTA_INODES],
                                      VALUE_GAUGE(info.dqb_curinodes), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
             }
 
             if ((info.dqb_valid & QIF_ITIME) == QIF_ITIME) {
                 metric_family_append(&fams[FAM_QUOTA_INODES_TIME],
                                      VALUE_GAUGE(info.dqb_itime), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
             }
 
             if ((info.dqb_valid & QIF_ILIMITS) == QIF_ILIMITS) {
                 metric_family_append(&fams[FAM_QUOTA_INODES_HARD_LIMIT],
                                      VALUE_GAUGE(info.dqb_ihardlimit), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
                 metric_family_append(&fams[FAM_QUOTA_INODES_SOFT_LIMIT],
                                      VALUE_GAUGE(info.dqb_isoftlimit), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
             }
         }
@@ -229,29 +229,29 @@ static void quota_report_disk(const char *disk_name, char *dir,
             if ((info.dqb_valid & QIF_SPACE) == QIF_SPACE) {
                 metric_family_append(&fams[FAM_QUOTA_SPACE_BYTES],
                                      VALUE_GAUGE(info.dqb_curspace), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
             }
 
             if ((info.dqb_valid & QIF_BLIMITS) == QIF_BLIMITS) {
                 metric_family_append(&fams[FAM_QUOTA_SPACE_HARD_LIMIT],
                                      VALUE_GAUGE(info.dqb_bhardlimit), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
                 metric_family_append(&fams[FAM_QUOTA_SPACE_SOFT_LIMIT],
                                      VALUE_GAUGE(info.dqb_bsoftlimit), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
             }
 
             if ((info.dqb_valid & QIF_BTIME) == QIF_BTIME) {
                 metric_family_append(&fams[FAM_QUOTA_SPACE_TIME],
                                      VALUE_GAUGE(info.dqb_btime), NULL,
-                                     &(label_pair_const_t){.name="disk", .value=disk_name},
-                                     &(label_pair_const_t){.name="user", .value=user->p.pw_name,},
+                                     &LABEL_PAIR_CONST("disk", disk_name),
+                                     &LABEL_PAIR_CONST("user", user->p.pw_name),
                                      NULL);
             }
         }

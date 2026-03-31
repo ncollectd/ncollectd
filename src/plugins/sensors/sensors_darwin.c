@@ -117,7 +117,7 @@ int ncsensors_read(void)
 
         if (fam >= 0) {
             metric_family_append(&fams[fam], VALUE_GAUGE(value_double), NULL,
-                                 &(label_pair_const_t){.name="location", .value=location}, NULL);
+                                 &LABEL_PAIR_CONST("location", location), NULL);
         }
 
         CFRelease(prop_dict);

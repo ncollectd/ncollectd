@@ -1045,7 +1045,7 @@ static int recursor_read(user_data_t *user_data)
 
                 metric_family_append(&recursor->fams[FAM_RECURSOR_AUTH_ANSWERS],
                                      VALUE_COUNTER(num), &recursor->labels,
-                                     &(label_pair_const_t){.name="rcode", .value=key}, NULL);
+                                     &LABEL_PAIR_CONST("rcode", key), NULL);
                 continue;
             }   break;
             case 'c': {
@@ -1062,7 +1062,7 @@ static int recursor_read(user_data_t *user_data)
                 metric_family_append(&recursor->fams[FAM_RECURSOR_THREAD_CPU_SECONDS],
                                      VALUE_COUNTER_FLOAT64((double)num * 0.001),
                                      &recursor->labels,
-                                     &(label_pair_const_t){.name="thread", .value=key}, NULL);
+                                     &LABEL_PAIR_CONST("thread", key), NULL);
 
                 continue;
             }   break;
@@ -1103,7 +1103,7 @@ static int recursor_read(user_data_t *user_data)
 
         if ((m->lkey != NULL) && (m->lvalue != NULL))
             metric_family_append(fam, mvalue, &recursor->labels,
-                                 &(label_pair_const_t){.name=m->lkey, .value=m->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(m->lkey, m->lvalue), NULL);
         else
             metric_family_append(fam, mvalue, &recursor->labels, NULL);
     }

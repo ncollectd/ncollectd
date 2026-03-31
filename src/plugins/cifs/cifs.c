@@ -392,8 +392,8 @@ static int cifs_read(void)
             sstrncpy(share, ptr, sizeof(share));
             metric_family_append(&fams[FAM_CIFS_CONNECTED],
                                  VALUE_GAUGE(connected), NULL,
-                                 &(label_pair_const_t){.name="share", .value=share},
-                                 &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                 &LABEL_PAIR_CONST("share", share),
+                                 &LABEL_PAIR_CONST("connection", conn), NULL);
             continue;
         }
 
@@ -413,33 +413,33 @@ static int cifs_read(void)
                     /* Reads:  %d Bytes: %llu */
                     metric_family_append(&fams[FAM_CIFS_SMB1_READ],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB1_READ_BYTES],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 } else if (fields_num == 5) {
                     /* Reads: %d total %d failed */
                     metric_family_append(&fams[FAM_CIFS_SMB2_READ],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB2_READ_FAIL],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 }
             }  else if ((strcmp(fields[0], "Renames:") == 0) && (fields_num == 5)) {
                 /* Renames: %d T2 Renames %d */
                 metric_family_append(&fams[FAM_CIFS_SMB1_RENAMES],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_T2RENAMES],
                                      VALUE_COUNTER(atoull(fields[4])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'W':
@@ -448,22 +448,22 @@ static int cifs_read(void)
                     /* Writes: %d Bytes: %llu */
                     metric_family_append(&fams[FAM_CIFS_SMB1_WRITE],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB1_WRITE_BYTES],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 } else if (fields_num == 5) {
                     /* Writes: %d total %d failed */
                     metric_family_append(&fams[FAM_CIFS_SMB2_WRITE],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB2_WRITE_FAIL],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 }
             }
             break;
@@ -473,33 +473,33 @@ static int cifs_read(void)
                     /* Flushes: %d */
                     metric_family_append(&fams[FAM_CIFS_SMB1_FLUSHES],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 } else if (fields_num == 5) {
                     /* Flushes: %d total %d failed */
                     metric_family_append(&fams[FAM_CIFS_SMB2_FLUSH],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB2_FLUSH_FAIL],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 }
             } else if ((strcmp(fields[0], "FindFirst:") == 0) && (fields_num == 5)) {
                 /* FindFirst: %d FNext %d FClose %d */
                 metric_family_append(&fams[FAM_CIFS_SMB1_FIND_FIRST],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_FIND_NEXT],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_FIND_CLOSE],
                                      VALUE_COUNTER(atoull(fields[5])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'L':
@@ -508,26 +508,26 @@ static int cifs_read(void)
                     /* Locks: %d HardLinks: %d Symlinks: %d */
                     metric_family_append(&fams[FAM_CIFS_SMB1_LOCKS],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB1_HARD_LINKS],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB1_SYM_LINKS],
                                          VALUE_COUNTER(atoull(fields[5])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 } else if (fields_num == 5) {
                     /* Locks: %d total %d failed */
                     metric_family_append(&fams[FAM_CIFS_SMB2_LOCK],
                                          VALUE_COUNTER(atoull(fields[1])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                     metric_family_append(&fams[FAM_CIFS_SMB2_LOCK_FAIL],
                                          VALUE_COUNTER(atoull(fields[3])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
                 }
             }
             break;
@@ -536,36 +536,36 @@ static int cifs_read(void)
                 /* Opens: %d Closes: %d Deletes: %d */
                 metric_family_append(&fams[FAM_CIFS_SMB1_OPENS],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_CLOSES],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_DELETES],
                                      VALUE_COUNTER(atoull(fields[5])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "Open") == 0) && (fields_num == 9)) {
                 /* Open files: %d total (local), %d open on server */
                 metric_family_append(&fams[FAM_CIFS_SMB2_LOCAL_OPENS],
                                      VALUE_COUNTER(atoull(fields[2])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_REMOTE_OPENS],
                                      VALUE_COUNTER(atoull(fields[5])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "OplockBreaks:") == 0) && (fields_num == 5)) {
                 /* OplockBreaks: %d sent %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_OPLOCK_BREAK],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_OPLOCK_BREAK_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'P':
@@ -573,12 +573,12 @@ static int cifs_read(void)
                 /* Posix Opens: %d Posix Mkdirs: %d */
                 metric_family_append(&fams[FAM_CIFS_SMB1_POSIX_OPENS],
                                      VALUE_COUNTER(atoull(fields[2])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_POSIX_MKDIRS],
                                      VALUE_COUNTER(atoull(fields[5])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'M':
@@ -586,12 +586,12 @@ static int cifs_read(void)
                 /* Mkdirs: %d Rmdirs: %d */
                 metric_family_append(&fams[FAM_CIFS_SMB1_MKDIRS],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB1_RMDIRS],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'B':
@@ -599,12 +599,12 @@ static int cifs_read(void)
                 /* Bytes read: %llu  Bytes written: %llu */
                 metric_family_append(&fams[FAM_CIFS_SMB2_READ_BYTES],
                                      VALUE_COUNTER(atoull(fields[2])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_WRITTEN_BYTES],
                                      VALUE_COUNTER(atoull(fields[5])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'T':
@@ -612,22 +612,22 @@ static int cifs_read(void)
                 /* TreeConnects: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_TREE_CONNECT],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_TREE_CONNECT_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "TreeDisconnects:") == 0) && (fields_num == 5)) {
                 /* TreeDisconnects: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_TREE_DISCONNECT],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_TREE_DISCONNECT_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'C':
@@ -635,32 +635,32 @@ static int cifs_read(void)
                 /* Creates: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_CREATE],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_CREATE_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "Closes:") == 0) && (fields_num == 5)) {
                 /* Closes: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_CLOSE],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_CLOSE_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "ChangeNotifies:") == 0) && (fields_num == 5)) {
                 /* ChangeNotifies: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_CHANGE_NOTIFY],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_CHANGE_NOTIFY_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'I':
@@ -668,12 +668,12 @@ static int cifs_read(void)
                 /* IOCTLs: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_IOCTL],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_IOCTL_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'Q':
@@ -681,22 +681,22 @@ static int cifs_read(void)
                 /* QueryDirectories: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_QUERY_DIRECTORY],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_QUERY_DIRECTORY_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "QueryInfos:") == 0) && (fields_num == 5)) {
                 /* QueryInfos: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_QUERY_INFO],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_QUERY_INFO_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         case 'S':
@@ -704,24 +704,24 @@ static int cifs_read(void)
                 /* SetInfos: %d total %d failed */
                 metric_family_append(&fams[FAM_CIFS_SMB2_SET_INFO],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_SET_INFO_FAIL],
                                      VALUE_COUNTER(atoull(fields[3])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "SMBs:") == 0)  && (fields_num >= 2)) {
                 /* SMBs: %d */
                 metric_family_append(&fams[FAM_CIFS_SMB_SENT],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,
-                                     &(label_pair_const_t){.name="share", .value=share},
-                                     &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                     &LABEL_PAIR_CONST("share", share),
+                                     &LABEL_PAIR_CONST("connection", conn), NULL);
                 /* SMBs: %d Oplocks breaks: %d */
                 if (fields_num == 5)
                     metric_family_append(&fams[FAM_CIFS_SMB1_OPLOCK_BREAK],
                                          VALUE_COUNTER(atoull(fields[4])), NULL,
-                                         &(label_pair_const_t){.name="share", .value=share},
-                                         &(label_pair_const_t){.name="connection", .value=conn}, NULL);
+                                         &LABEL_PAIR_CONST("share", share),
+                                         &LABEL_PAIR_CONST("connection", conn), NULL);
             }
             break;
         }

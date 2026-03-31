@@ -55,16 +55,16 @@ static int schedstat_read(void)
 
         value = VALUE_COUNTER(strtol(fields[7], NULL, 10));
         metric_family_append(&fams[FAM_SCHEDSTAT_RUNNING], value, NULL,
-                             &(label_pair_const_t){.name="cpu", .value=ncpu}, NULL);
+                             &LABEL_PAIR_CONST("cpu", ncpu), NULL);
 
         value = VALUE_COUNTER(strtol(fields[8], NULL, 10));
         metric_family_append(&fams[FAM_SCHEDSTAT_WAITING], value, NULL,
-                             &(label_pair_const_t){.name="cpu", .value=ncpu}, NULL);
+                             &LABEL_PAIR_CONST("cpu", ncpu), NULL);
 
 
         value = VALUE_COUNTER(strtol(fields[9], NULL, 10));
         metric_family_append(&fams[FAM_SCHEDSTAT_TIMESLICES], value, NULL,
-                             &(label_pair_const_t){.name="cpu", .value=ncpu}, NULL);
+                             &LABEL_PAIR_CONST("cpu", ncpu), NULL);
     }
     fclose(fh);
 

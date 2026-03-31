@@ -142,21 +142,21 @@ static int df_read(void)
 
         uint64_t blk_free = (uint64_t)statbuf.f_bavail * blocksize;
         metric_family_append(&fams[FAM_DF_FREE_BYTES], VALUE_GAUGE(blk_free), NULL,
-                             &(label_pair_const_t){.name="device", .value=dev},
-                             &(label_pair_const_t){.name="fstype", .value=mnt_ptr->type},
-                             &(label_pair_const_t){.name="mountpoint", .value=mnt_ptr->dir}, NULL);
+                             &LABEL_PAIR_CONST("device", dev),
+                             &LABEL_PAIR_CONST("fstype", mnt_ptr->type),
+                             &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir), NULL);
 
         uint64_t blk_reserved = (uint64_t)(statbuf.f_bfree - statbuf.f_bavail) * blocksize;
         metric_family_append(&fams[FAM_DF_RESERVED_BYTES], VALUE_GAUGE(blk_reserved), NULL,
-                             &(label_pair_const_t){.name="device", .value=dev},
-                             &(label_pair_const_t){.name="fstype", .value=mnt_ptr->type},
-                             &(label_pair_const_t){.name="mountpoint", .value=mnt_ptr->dir}, NULL);
+                             &LABEL_PAIR_CONST("device", dev),
+                             &LABEL_PAIR_CONST("fstype", mnt_ptr->type),
+                             &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir), NULL);
 
         uint64_t blk_used = (uint64_t)(statbuf.f_blocks - statbuf.f_bfree) * blocksize;
         metric_family_append(&fams[FAM_DF_USED_BYTES], VALUE_GAUGE(blk_used), NULL,
-                             &(label_pair_const_t){.name="device", .value=dev},
-                             &(label_pair_const_t){.name="fstype", .value=mnt_ptr->type},
-                             &(label_pair_const_t){.name="mountpoint", .value=mnt_ptr->dir}, NULL);
+                             &LABEL_PAIR_CONST("device", dev),
+                             &LABEL_PAIR_CONST("fstype", mnt_ptr->type),
+                             &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir), NULL);
 
         /* inode handling */
         if (statbuf.f_files != 0 && statbuf.f_ffree != 0) {
@@ -168,23 +168,23 @@ static int df_read(void)
 
             uint64_t inode_free = (uint64_t)statbuf.f_favail;
             metric_family_append(&fams[FAM_DF_FREE_INODES], VALUE_GAUGE(inode_free), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev},
-                                 &(label_pair_const_t){.name="fstype", .value=mnt_ptr->type},
-                                 &(label_pair_const_t){.name="mountpoint", .value=mnt_ptr->dir},
+                                 &LABEL_PAIR_CONST("device", dev),
+                                 &LABEL_PAIR_CONST("fstype", mnt_ptr->type),
+                                 &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir),
                                  NULL);
 
             uint64_t inode_reserved = (uint64_t)(statbuf.f_ffree - statbuf.f_favail);
             metric_family_append(&fams[FAM_DF_RESERVED_INODES], VALUE_GAUGE(inode_reserved), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev},
-                                 &(label_pair_const_t){.name="fstype", .value=mnt_ptr->type},
-                                 &(label_pair_const_t){.name="mountpoint", .value=mnt_ptr->dir},
+                                 &LABEL_PAIR_CONST("device", dev),
+                                 &LABEL_PAIR_CONST("fstype", mnt_ptr->type),
+                                 &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir),
                                  NULL);
 
             uint64_t inode_used = (uint64_t)(statbuf.f_files - statbuf.f_ffree);
             metric_family_append(&fams[FAM_DF_USED_INODES], VALUE_GAUGE(inode_used), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev},
-                                 &(label_pair_const_t){.name="fstype", .value=mnt_ptr->type},
-                                 &(label_pair_const_t){.name="mountpoint", .value=mnt_ptr->dir},
+                                 &LABEL_PAIR_CONST("device", dev),
+                                 &LABEL_PAIR_CONST("fstype", mnt_ptr->type),
+                                 &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir),
                                  NULL);
         }
     }

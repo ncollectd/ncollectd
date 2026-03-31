@@ -232,7 +232,7 @@ static int cache_read(const char *file, metric_family_t *fams,  size_t fams_size
         for (size_t i = 0; i < field_fam_size; i++) {
             uint64_t n = strtoull(fields[field_fam[i].field], NULL, 16);
             metric_family_append(&fams[field_fam[i].fam], VALUE_COUNTER(n), NULL,
-                                 &(label_pair_const_t){.name="cpu", .value=cpu}, NULL);
+                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
         }
     }
     fclose(fh);

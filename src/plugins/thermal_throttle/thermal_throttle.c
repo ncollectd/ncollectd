@@ -261,11 +261,11 @@ static int thermal_throttle_read(void)
 
             metric_family_append(&fams[FAM_THERMAL_THROTTLE_CORE_COUNT],
                                  VALUE_COUNTER(thermal_throttle_cores[i].count), NULL,
-                                 &(label_pair_const_t){.name="core", .value=core_id_str},
+                                 &LABEL_PAIR_CONST("core", core_id_str),
                                  NULL);
             metric_family_append(&fams[FAM_THERMAL_THROTTLE_CORE_TIME_SECONDS],
                                  VALUE_COUNTER_FLOAT64(thermal_throttle_cores[i].time/1000.0), NULL,
-                                 &(label_pair_const_t){.name="core", .value=core_id_str},
+                                 &LABEL_PAIR_CONST("core", core_id_str),
                                  NULL);
         }
     }
@@ -277,11 +277,11 @@ static int thermal_throttle_read(void)
 
             metric_family_append(&fams[FAM_THERMAL_THROTTLE_PACKAGE_COUNT],
                                  VALUE_COUNTER(thermal_throttle_packages[i].count), NULL,
-                                 &(label_pair_const_t){.name="package", .value=package_id_str},
+                                 &LABEL_PAIR_CONST("package", package_id_str),
                                  NULL);
             metric_family_append(&fams[FAM_THERMAL_THROTTLE_PACKAGE_TIME_SECONDS],
                                  VALUE_COUNTER_FLOAT64(thermal_throttle_packages[i].time/1000.0), NULL,
-                                 &(label_pair_const_t){.name="package", .value=package_id_str},
+                                 &LABEL_PAIR_CONST("package", package_id_str),
                                  NULL);
         }
     }

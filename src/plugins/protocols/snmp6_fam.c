@@ -539,14 +539,14 @@ int snmp6_read(uint64_t flags, plugin_filter_t *filter)
                 char *type = fields[0] + strlen("Icmp6InType");
                 uint64_t value = atol(fields[1]);
                 metric_family_append(&fams[FAM_ICMP6_IN_TYPE], VALUE_COUNTER(value),
-                                     NULL, &(label_pair_const_t){.name="type", .value=type}, NULL);
+                                     NULL, &LABEL_PAIR_CONST("type", type), NULL);
             } else if (strncmp("Icmp6OutType", fields[0], strlen("Icmp6OutType")) == 0) {
                 if (!(flags & COLLECT_ICMP6))
                     continue;
                 char *type = fields[0] + strlen("Icmp6OutType");
                 uint64_t value = atol(fields[1]);
                 metric_family_append(&fams[FAM_ICMP6_OUT_TYPE], VALUE_COUNTER(value),
-                                     NULL, &(label_pair_const_t){.name="type", .value=type}, NULL);
+                                     NULL, &LABEL_PAIR_CONST("type", type), NULL);
             }
 
             continue;

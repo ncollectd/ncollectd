@@ -46,7 +46,7 @@ static int xencpu_read(void)
         char ncpu[ITOA_MAX];
         uitoa(cpu, ncpu);
         metric_family_append(&fam_xen_cpu_idle_time, VALUE_COUNTER(cpu_info[cpu].idletime), NULL,
-                             &(label_pair_const_t){.name="cpu", .value=ncpu}, NULL);
+                             &LABEL_PAIR_CONST("cpu", ncpu), NULL);
     }
 
     plugin_dispatch_metric_family(&fam_xen_cpu_idle_time, now);

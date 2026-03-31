@@ -145,17 +145,17 @@ int tape_read(void)
         }
 
         metric_family_append(&fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(read_bytes), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
         metric_family_append(&fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(read_ops), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
         metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(ts->avg_read_time), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
         metric_family_append(&fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(write_bytes), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
         metric_family_append(&fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
         metric_family_append(&fams[FAM_TAPE_WRITE_TIME], VALUE_COUNTER(ts->avg_write_time), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_TAPE_MAX, 0);

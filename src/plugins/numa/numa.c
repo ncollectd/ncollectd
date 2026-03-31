@@ -95,27 +95,27 @@ static int numa_read_node(int node)
 
         if (!strcmp(fields[0], "numa_hit")) {
             metric_family_append(&fams[FAM_NUMA_HIT], value, NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_buffer}, NULL);
+                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
             success++;
         } else if (!strcmp(fields[0], "numa_miss")) {
             metric_family_append(&fams[FAM_NUMA_MISS], value, NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_buffer}, NULL);
+                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
             success++;
         } else if (!strcmp(fields[0], "numa_foreign")) {
             metric_family_append(&fams[FAM_NUMA_FOREIGN], value, NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_buffer}, NULL);
+                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
             success++;
         } else if (!strcmp(fields[0], "local_node")) {
             metric_family_append(&fams[FAM_NUMA_LOCAL_NODE], value, NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_buffer}, NULL);
+                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
             success++;
         } else if (!strcmp(fields[0], "other_node")) {
             metric_family_append(&fams[FAM_NUMA_OTHER_NODE], value, NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_buffer}, NULL);
+                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
             success++;
         } else if (!strcmp(fields[0], "interleave_hit")) {
             metric_family_append(&fams[FAM_NUMA_INTERLEAVE_HIT], value, NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_buffer}, NULL);
+                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
             success++;
         }
     }

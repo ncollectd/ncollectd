@@ -181,8 +181,8 @@ static int olsrd_cb_links(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
          metric_family_append(&oi->fams[FAM_OLSRD_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="local_ip", .value=fields[0]},
-                             &(label_pair_const_t){.name="remote_ip", .value=fields[1]},
+                             &LABEL_PAIR_CONST("local_ip", fields[0]),
+                             &LABEL_PAIR_CONST("remote_ip", fields[1]),
                              NULL);
     }
 
@@ -191,8 +191,8 @@ static int olsrd_cb_links(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_NEIGHBOR_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="local_ip", .value=fields[0]},
-                             &(label_pair_const_t){.name="remote_ip", .value=fields[1]},
+                             &LABEL_PAIR_CONST("local_ip", fields[0]),
+                             &LABEL_PAIR_CONST("remote_ip", fields[1]),
                              NULL);
     }
 
@@ -217,8 +217,8 @@ static int olsrd_cb_routes(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_ROUTE_METRIC_HOPS],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="destination", .value=fields[0]},
-                             &(label_pair_const_t){.name="interface", .value=fields[4]},
+                             &LABEL_PAIR_CONST("destination", fields[0]),
+                             &LABEL_PAIR_CONST("interface", fields[4]),
                              NULL);
     }
 
@@ -227,8 +227,8 @@ static int olsrd_cb_routes(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_ROUTE_METRIC_COST],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="destination", .value=fields[0]},
-                             &(label_pair_const_t){.name="interface", .value=fields[4]},
+                             &LABEL_PAIR_CONST("destination", fields[0]),
+                             &LABEL_PAIR_CONST("interface", fields[4]),
                              NULL);
     }
 
@@ -253,8 +253,8 @@ static int olsrd_cb_topology(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_TOPOLOGY_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="destination", .value=fields[0]},
-                             &(label_pair_const_t){.name="last_hop", .value=fields[1]},
+                             &LABEL_PAIR_CONST("destination", fields[0]),
+                             &LABEL_PAIR_CONST("last_hop", fields[1]),
                              NULL);
     }
 
@@ -263,8 +263,8 @@ static int olsrd_cb_topology(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_TOPOLOGY_NEIGHBOR_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="destination", .value=fields[0]},
-                             &(label_pair_const_t){.name="last_hop", .value=fields[1]},
+                             &LABEL_PAIR_CONST("destination", fields[0]),
+                             &LABEL_PAIR_CONST("last_hop", fields[1]),
                              NULL);
     }
 
@@ -273,8 +273,8 @@ static int olsrd_cb_topology(olsrd_t *oi, size_t fields_num, char **fields)
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_TOPOLOGY_COST],
                              VALUE_GAUGE(value), &oi->labels,
-                             &(label_pair_const_t){.name="destination", .value=fields[0]},
-                             &(label_pair_const_t){.name="last_hop", .value=fields[1]},
+                             &LABEL_PAIR_CONST("destination", fields[0]),
+                             &LABEL_PAIR_CONST("last_hop", fields[1]),
                              NULL);
     }
 

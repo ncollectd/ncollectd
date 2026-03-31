@@ -671,7 +671,7 @@ static int unbound_parse_metric(unbound_t *unbound, char *line)
 
     if ((lkey != NULL) && (lvalue != NULL)) {
         metric_family_append(&unbound->fams[um->fam], mvalue, &unbound->labels,
-                             &(label_pair_const_t){.name=lkey, .value=lvalue}, NULL);
+                             &LABEL_PAIR_CONST(lkey, lvalue), NULL);
     } else {
         metric_family_append(&unbound->fams[um->fam], mvalue, &unbound->labels, NULL);
     }

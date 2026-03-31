@@ -297,7 +297,7 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
         case NGINX_VTS_JSON_CONNECTIONS:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CONNECTIONS],
                                  VALUE_GAUGE(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="status", .value=sctx->value1}, NULL);
+                                 &LABEL_PAIR_CONST("status", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_SHARED_ZONES:
             switch (sctx->stack[1]) {
@@ -326,59 +326,59 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
         case NGINX_VTS_JSON_SERVER_ZONE_IN_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_IN_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="host", .value=sctx->value1}, NULL);
+                                 &LABEL_PAIR_CONST("host", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_SERVER_ZONE_OUT_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_OUT_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="host", .value=sctx->value1}, NULL);
+                                 &LABEL_PAIR_CONST("host", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_SERVER_ZONE_REQUESTS:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_REQUESTS],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="host", .value=sctx->value1}, NULL);
+                                 &LABEL_PAIR_CONST("host", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_IN_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_IN_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="host", .value=sctx->value1}, NULL);
+                                 &LABEL_PAIR_CONST("host", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_OUT_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_OUT_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="upstream", .value=sctx->value1},
-                                 &(label_pair_const_t){.name="backend", .value=sctx->value2},
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
                                  NULL);
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_REQUESTS:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_REQUESTS],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="upstream", .value=sctx->value1},
-                                 &(label_pair_const_t){.name="backend", .value=sctx->value2},
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_USED_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_USED_BYTES],
                                  VALUE_GAUGE(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="cache_zone", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_SIZE_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_SIZE_BYTES],
                                  VALUE_GAUGE(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="cache_zone", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_IN_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_IN_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="cache_zone", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_OUT_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_IN_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="cache_zone", .value=sctx->value1},
+                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         default:
@@ -392,30 +392,30 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
                 (sctx->value2[1] == 'x') && (sctx->value2[2] == 'x')) {
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_RESPONSES],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="host", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="code", .value=sctx->value2},
+                                     &LABEL_PAIR_CONST("host", sctx->value1),
+                                     &LABEL_PAIR_CONST("code", sctx->value2),
                                      NULL);
             } else {
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_CACHE],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="host", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="status", .value=sctx->value2},
+                                     &LABEL_PAIR_CONST("host", sctx->value1),
+                                     &LABEL_PAIR_CONST("status", sctx->value2),
                                      NULL);
             }
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_RESPONSES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="upstream", .value=sctx->value1},
-                                 &(label_pair_const_t){.name="backend", .value=sctx->value2},
-                                 &(label_pair_const_t){.name="code", .value=sctx->value3},
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
+                                 &LABEL_PAIR_CONST("code", sctx->value3),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_RESPONSES:
             metric_family_append(&sctx->fams[NGINX_VTS_JSON_CACHE_ZONE_RESPONSES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &(label_pair_const_t){.name="cache_zone", .value=sctx->value1},
-                                 &(label_pair_const_t){.name="status", .value=sctx->value2},
+                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
+                                 &LABEL_PAIR_CONST("status", sctx->value2),
                                  NULL);
             break;
         case NGINX_VTS_JSON_FILTER_ZONES:
@@ -423,22 +423,22 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
             case NGINX_VTS_JSON_FILTER_ZONE_IN_BYTES:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_IN_BYTES],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="filter", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="filter_name", .value=sctx->value2},
+                                     &LABEL_PAIR_CONST("filter", sctx->value1),
+                                     &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      NULL);
                 break;
             case NGINX_VTS_JSON_FILTER_ZONE_OUT_BYTES:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_OUT_BYTES],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="filter", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="filter_name", .value=sctx->value2},
+                                     &LABEL_PAIR_CONST("filter", sctx->value1),
+                                     &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      NULL);
                 break;
             case NGINX_VTS_JSON_FILTER_ZONE_REQUESTS:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_REQUESTS],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="filter", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="filter_name", .value=sctx->value2},
+                                     &LABEL_PAIR_CONST("filter", sctx->value1),
+                                     &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      NULL);
                 break;
             default:
@@ -455,16 +455,16 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
                 (sctx->value2[1] == 'x') && (sctx->value2[2] == 'x')) {
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_RESPONSES],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="filter", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="filter_name", .value=sctx->value2},
-                                     &(label_pair_const_t){.name="code", .value=sctx->value3},
+                                     &LABEL_PAIR_CONST("filter", sctx->value1),
+                                     &LABEL_PAIR_CONST("filter_name", sctx->value2),
+                                     &LABEL_PAIR_CONST("code", sctx->value3),
                                      NULL);
             } else {
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_CACHE],
                                      VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &(label_pair_const_t){.name="filter", .value=sctx->value1},
-                                     &(label_pair_const_t){.name="filter_name", .value=sctx->value2},
-                                     &(label_pair_const_t){.name="status", .value=sctx->value3},
+                                     &LABEL_PAIR_CONST("filter", sctx->value1),
+                                     &LABEL_PAIR_CONST("filter_name", sctx->value2),
+                                     &LABEL_PAIR_CONST("status", sctx->value3),
                                      NULL);
             }
             break;

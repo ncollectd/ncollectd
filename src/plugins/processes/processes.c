@@ -739,7 +739,7 @@ void ps_submit_state(double *proc_state)
         if (!isnan(proc_state[i])) {
             metric_family_append(&fams_processes[FAM_PROCESSES_STATE],
                                  VALUE_GAUGE(proc_state[i]), NULL,
-                                 &(label_pair_const_t){.name="state", .value=proc_state_name[i]},
+                                 &LABEL_PAIR_CONST("state", proc_state_name[i]),
                                  NULL);
         }
     }

@@ -1325,8 +1325,8 @@ static int get_perf_events(virt_ctx_t *ctx, virDomainPtr domain,
             if ((fam > 0) && (ctx->fams[fam].type == METRIC_TYPE_COUNTER)) {
                 metric_family_append(&ctx->fams[fam], VALUE_COUNTER(perf->params[j].value.ul),
                                      &ctx->labels,
-                                     &(label_pair_const_t){.name="domain", .value=ndomain },
-                                     &(label_pair_const_t){.name="uuid", .value=uuid},
+                                     &LABEL_PAIR_CONST("domain", ndomain ),
+                                     &LABEL_PAIR_CONST("uuid", uuid),
                                      NULL);
 
             }
@@ -1387,9 +1387,9 @@ static int get_vcpu_stats(virt_ctx_t *ctx, virDomainPtr domain, unsigned short n
             metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_VCPU_TIME_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)vinfo[i].cpuTime/(double)1e9),
                                  &ctx->labels,
-                                 &(label_pair_const_t){.name="domain", .value=ndomain },
-                                 &(label_pair_const_t){.name="uuid", .value=uuid},
-                                 &(label_pair_const_t){.name="cpu", .value=cpu},
+                                 &LABEL_PAIR_CONST("domain", ndomain ),
+                                 &LABEL_PAIR_CONST("uuid", uuid),
+                                 &LABEL_PAIR_CONST("cpu", cpu),
                                  NULL);
         }
         if ((ctx->flags & COLLECT_VIRT_VCPUPIN) && (cpumaps != NULL)) {
@@ -1402,10 +1402,10 @@ static int get_vcpu_stats(virt_ctx_t *ctx, virDomainPtr domain, unsigned short n
 
                 metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_CPU_AFFINITY],
                                      VALUE_GAUGE(is_set), &ctx->labels,
-                                     &(label_pair_const_t){.name="domain", .value=ndomain },
-                                     &(label_pair_const_t){.name="uuid", .value=uuid},
-                                     &(label_pair_const_t){.name="cpu", .value=ncpu},
-                                     &(label_pair_const_t){.name="vcpu", .value=nvcpu},
+                                     &LABEL_PAIR_CONST("domain", ndomain ),
+                                     &LABEL_PAIR_CONST("uuid", uuid),
+                                     &LABEL_PAIR_CONST("cpu", ncpu),
+                                     &LABEL_PAIR_CONST("vcpu", nvcpu),
                                      NULL);
             }
         }
@@ -1460,14 +1460,14 @@ static int get_pcpu_stats(virt_ctx_t *ctx, virDomainPtr dom, const char *ndomain
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_VCPU_ALL_SYSTEM_TIME_SECONDS],
                             VALUE_COUNTER_FLOAT64((double)total_syst_cpu_time / (double)1e9),
                             &ctx->labels,
-                            &(label_pair_const_t){.name="domain", .value=ndomain },
-                            &(label_pair_const_t){.name="uuid", .value=uuid},
+                            &LABEL_PAIR_CONST("domain", ndomain ),
+                            &LABEL_PAIR_CONST("uuid", uuid),
                             NULL);
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_VCPU_ALL_USER_TIME_SECONDS],
                             VALUE_COUNTER_FLOAT64((double)total_user_cpu_time / (double)1e9),
                             &ctx->labels,
-                            &(label_pair_const_t){.name="domain", .value=ndomain },
-                            &(label_pair_const_t){.name="uuid", .value=uuid},
+                            &LABEL_PAIR_CONST("domain", ndomain ),
+                            &LABEL_PAIR_CONST("uuid", uuid),
                             NULL);
 
     }
@@ -1536,20 +1536,20 @@ static int submit_domain_state(virt_ctx_t *ctx, virDomainPtr domain,
 
    metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_STATE],
                          VALUE_STATE_SET(set_states), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
 
    metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_STATE_NUMBER],
                          VALUE_GAUGE(domain_state), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
 
    metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_REASON_NUMBER],
                          VALUE_GAUGE(domain_reason), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
     return 0;
 }
@@ -1658,13 +1658,13 @@ static int get_memory_stats(virt_ctx_t *ctx, virDomainPtr domain,
         if (fam > 0) {
            if (ctx->fams[fam].type == METRIC_TYPE_COUNTER) {
               metric_family_append(&ctx->fams[fam], VALUE_COUNTER(val), &ctx->labels,
-                                    &(label_pair_const_t){.name="domain", .value=ndomain},
-                                    &(label_pair_const_t){.name="uuid", .value=uuid},
+                                    &LABEL_PAIR_CONST("domain", ndomain),
+                                    &LABEL_PAIR_CONST("uuid", uuid),
                                     NULL);
            } else if (ctx->fams[fam].type == METRIC_TYPE_GAUGE) {
               metric_family_append(&ctx->fams[fam], VALUE_GAUGE(val), &ctx->labels,
-                                    &(label_pair_const_t){.name="domain", .value=ndomain },
-                                    &(label_pair_const_t){.name="uuid", .value=uuid},
+                                    &LABEL_PAIR_CONST("domain", ndomain ),
+                                    &LABEL_PAIR_CONST("uuid", uuid),
                                     NULL);
            }
         }
@@ -1727,9 +1727,9 @@ static int get_disk_err(virt_ctx_t *ctx, virDomainPtr domain,
 
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_DISK_ERROR],
                              VALUE_STATE_SET(set), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="disk", .value=disk_err[i].disk},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("disk", disk_err[i].disk),
                              NULL);
 
         free(disk_err[i].disk);
@@ -1793,36 +1793,36 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
     if (bstats.bi.rd_req != -1) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_READ_REQUESTS],
                             VALUE_COUNTER(bstats.bi.rd_req), &ctx->labels,
-                            &(label_pair_const_t){.name="domain", .value=ndomain },
-                            &(label_pair_const_t){.name="uuid", .value=uuid},
-                            &(label_pair_const_t){.name="device", .value=block_dev->path},
+                            &LABEL_PAIR_CONST("domain", ndomain ),
+                            &LABEL_PAIR_CONST("uuid", uuid),
+                            &LABEL_PAIR_CONST("device", block_dev->path),
                             NULL);
     }
 
     if (bstats.bi.wr_req != -1) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_WRITE_REQUESTS],
                             VALUE_COUNTER(bstats.bi.wr_req), &ctx->labels,
-                            &(label_pair_const_t){.name="domain", .value=ndomain },
-                            &(label_pair_const_t){.name="uuid", .value=uuid},
-                            &(label_pair_const_t){.name="device", .value=block_dev->path},
+                            &LABEL_PAIR_CONST("domain", ndomain ),
+                            &LABEL_PAIR_CONST("uuid", uuid),
+                            &LABEL_PAIR_CONST("device", block_dev->path),
                             NULL);
     }
 
     if (bstats.bi.rd_bytes != -1) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_READ_BYTES],
                             VALUE_COUNTER(bstats.bi.rd_bytes), &ctx->labels,
-                            &(label_pair_const_t){.name="domain", .value=ndomain },
-                            &(label_pair_const_t){.name="uuid", .value=uuid},
-                            &(label_pair_const_t){.name="device", .value=block_dev->path},
+                            &LABEL_PAIR_CONST("domain", ndomain ),
+                            &LABEL_PAIR_CONST("uuid", uuid),
+                            &LABEL_PAIR_CONST("device", block_dev->path),
                             NULL);
     }
 
     if (bstats.bi.wr_bytes != -1) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_WRITE_BYTES],
                             VALUE_COUNTER(bstats.bi.rd_bytes), &ctx->labels,
-                            &(label_pair_const_t){.name="domain", .value=ndomain },
-                            &(label_pair_const_t){.name="uuid", .value=uuid},
-                            &(label_pair_const_t){.name="device", .value=block_dev->path},
+                            &LABEL_PAIR_CONST("domain", ndomain ),
+                            &LABEL_PAIR_CONST("uuid", uuid),
+                            &LABEL_PAIR_CONST("device", block_dev->path),
                             NULL);
     }
 
@@ -1831,9 +1831,9 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
            metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_READ_TIME_SECONDS],
                                 VALUE_COUNTER((double)bstats.rd_total_times * 1e-9),
                                 &ctx->labels,
-                                &(label_pair_const_t){.name="domain", .value=ndomain },
-                                &(label_pair_const_t){.name="uuid", .value=uuid},
-                                &(label_pair_const_t){.name="device", .value=block_dev->path},
+                                &LABEL_PAIR_CONST("domain", ndomain ),
+                                &LABEL_PAIR_CONST("uuid", uuid),
+                                &LABEL_PAIR_CONST("device", block_dev->path),
                                 NULL);
         }
 
@@ -1841,18 +1841,18 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
            metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_WRITE_TIME_SECONDS],
                                 VALUE_COUNTER_FLOAT64((double)bstats.wr_total_times * 1e-9),
                                 &ctx->labels,
-                                &(label_pair_const_t){.name="domain", .value=ndomain },
-                                &(label_pair_const_t){.name="uuid", .value=uuid},
-                                &(label_pair_const_t){.name="device", .value=block_dev->path},
+                                &LABEL_PAIR_CONST("domain", ndomain ),
+                                &LABEL_PAIR_CONST("uuid", uuid),
+                                &LABEL_PAIR_CONST("device", block_dev->path),
                                 NULL);
         }
 
         if (bstats.fl_req != -1) {
            metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_FLUSH_REQUESTS],
                                 VALUE_COUNTER(bstats.fl_req), &ctx->labels,
-                                &(label_pair_const_t){.name="domain", .value=ndomain },
-                                &(label_pair_const_t){.name="uuid", .value=uuid},
-                                &(label_pair_const_t){.name="device", .value=block_dev->path},
+                                &LABEL_PAIR_CONST("domain", ndomain ),
+                                &LABEL_PAIR_CONST("uuid", uuid),
+                                &LABEL_PAIR_CONST("device", block_dev->path),
                                 NULL);
         }
 
@@ -1860,9 +1860,9 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
            metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_FLUSH_TIME_SECONDS],
                                 VALUE_COUNTER_FLOAT64((double)bstats.fl_total_times * 1e-9),
                                 &ctx->labels,
-                                &(label_pair_const_t){.name="domain", .value=ndomain },
-                                &(label_pair_const_t){.name="uuid", .value=uuid},
-                                &(label_pair_const_t){.name="device", .value=block_dev->path},
+                                &LABEL_PAIR_CONST("domain", ndomain ),
+                                &LABEL_PAIR_CONST("uuid", uuid),
+                                &LABEL_PAIR_CONST("device", block_dev->path),
                                 NULL);
         }
 
@@ -1871,25 +1871,25 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
     if ((ctx->flags & COLLECT_VIRT_DISK_ALLOCATION)) { //  && binfo.allocation != -1
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_ALLOCATION],
                              VALUE_GAUGE(binfo.allocation), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=block_dev->path},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", block_dev->path),
                              NULL);
     }
     if ((ctx->flags & COLLECT_VIRT_DISK_CAPACITY)) { // && binfo.capacity != -1
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_CAPACITY],
                              VALUE_GAUGE(binfo.capacity), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=block_dev->path},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", block_dev->path),
                              NULL);
     }
     if ((ctx->flags & COLLECT_VIRT_DISK_PHYSICAL)) { // && binfo.physical != -1
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_PHYSICALSIZE],
                              VALUE_GAUGE(binfo.physical), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=block_dev->path},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", block_dev->path),
                              NULL);
     }
 
@@ -1930,8 +1930,8 @@ static int get_fs_info(virt_ctx_t *ctx, virDomainPtr domain, const char *ndomain
         }
 
         metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_FS], VALUE_INFO(info), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid}, NULL);
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid), NULL);
 
         label_set_reset(&info);
 
@@ -1982,26 +1982,26 @@ static int get_domain_metrics(virt_ctx_t *ctx, domain_t *domain,
 
     metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_VCPUS],
                          VALUE_GAUGE(info.nrVirtCpu), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
 
     metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_VCPU_ALL_TIME_SECONDS],
                          VALUE_COUNTER_FLOAT64((double)info.cpuTime * (double)1e-9), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
 
     metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_MEMORY_MAX_BYTES],
                          VALUE_GAUGE(info.maxMem * 1024), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
 
     metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_MEMORY_BYTES],
                          VALUE_GAUGE(info.memory * 1024), &ctx->labels,
-                         &(label_pair_const_t){.name="domain", .value=ndomain },
-                         &(label_pair_const_t){.name="uuid", .value=uuid},
+                         &LABEL_PAIR_CONST("domain", ndomain ),
+                         &LABEL_PAIR_CONST("uuid", uuid),
                          NULL);
 
     if (ctx->flags & (COLLECT_VIRT_VCPU | COLLECT_VIRT_VCPUPIN)) {
@@ -2066,76 +2066,76 @@ static int get_if_dev_stats(virt_ctx_t *ctx, struct interface_device *if_dev)
     if ((stats.rx_bytes != -1) && (stats.tx_bytes != -1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_RECEIVE_BYTES],
                              VALUE_COUNTER(stats.rx_bytes), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_TRANSMIT_BYTES],
                              VALUE_COUNTER(stats.tx_bytes), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
     }
 
     if ((stats.rx_packets != -1) && (stats.tx_packets != -1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_RECEIVE_PACKETS],
                              VALUE_COUNTER(stats.rx_packets), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_TRANSMIT_PACKETS],
                              VALUE_COUNTER(stats.tx_packets), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
     }
 
     if ((stats.rx_errs != -1) && (stats.tx_errs != -1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_RECEIVE_ERRORS],
                              VALUE_COUNTER(stats.rx_errs), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_TRANSMIT_ERRORS],
                              VALUE_COUNTER(stats.tx_errs), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
     }
 
     if ((stats.rx_drop != -1) && (stats.tx_drop != -1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_RECEIVE_DROPS],
                              VALUE_COUNTER(stats.rx_drop), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_INTERFACE_TRANSMIT_DROPS],
                              VALUE_COUNTER(stats.tx_drop), &ctx->labels,
-                             &(label_pair_const_t){.name="domain", .value=ndomain },
-                             &(label_pair_const_t){.name="uuid", .value=uuid},
-                             &(label_pair_const_t){.name="device", .value=if_dev->path},
-                             &(label_pair_const_t){.name="device_number", .value=if_dev->number},
-                             &(label_pair_const_t){.name="address", .value=if_dev->address},
+                             &LABEL_PAIR_CONST("domain", ndomain ),
+                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("device", if_dev->path),
+                             &LABEL_PAIR_CONST("device_number", if_dev->number),
+                             &LABEL_PAIR_CONST("address", if_dev->address),
                              NULL);
     }
 

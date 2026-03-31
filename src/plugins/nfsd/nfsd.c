@@ -229,10 +229,10 @@ static int nfsd_read(void)
                 continue;
             if (strtouint(fields[2], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_PACKETS], VALUE_COUNTER(value), NULL,
-                                     &(label_pair_const_t){.name="protocol", .value="udp"}, NULL);
+                                     &LABEL_PAIR_CONST("protocol", "udp"), NULL);
             if (strtouint(fields[3], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_PACKETS], VALUE_COUNTER(value) , NULL,
-                                     &(label_pair_const_t){.name="protocol", .value="tcp"}, NULL);
+                                     &LABEL_PAIR_CONST("protocol", "tcp"), NULL);
             if (strtouint(fields[4], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_CONNECTIONS], VALUE_COUNTER(value), NULL, NULL);
         } else if (strcmp(fields[0], "rpc") == 0) {
@@ -244,13 +244,13 @@ static int nfsd_read(void)
                                             VALUE_COUNTER(value), NULL, NULL);
             if (strtouint(fields[3], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_RPC_ERRORS], VALUE_COUNTER(value), NULL,
-                                     &(label_pair_const_t){.name="error", .value="fmt"}, NULL);
+                                     &LABEL_PAIR_CONST("error", "fmt"), NULL);
             if (strtouint(fields[4], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_RPC_ERRORS], VALUE_COUNTER(value), NULL,
-                                     &(label_pair_const_t){.name="error", .value="auth"}, NULL);
+                                     &LABEL_PAIR_CONST("error", "auth"), NULL);
             if (strtouint(fields[5], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_RPC_ERRORS], VALUE_COUNTER(value), NULL,
-                                     &(label_pair_const_t){.name="error", .value="cInt"}, NULL);
+                                     &LABEL_PAIR_CONST("error", "cInt"), NULL);
         } else if (strncmp(fields[0], "proc", strlen("proc")) == 0) {
             const char **procedures_names;
             int procedures_names_num = 0;
@@ -292,8 +292,8 @@ static int nfsd_read(void)
                 uint64_t value;
                 if (strtouint(fields[2+i], &value) == 0) {
                      metric_family_append(&fams[FAM_NFSD_REQUESTS], VALUE_COUNTER(value), NULL,
-                                &(label_pair_const_t){.name="method", .value=procedures_names[i]},
-                                &(label_pair_const_t){.name="proto", .value=proto},
+                                &LABEL_PAIR_CONST("method", procedures_names[i]),
+                                &LABEL_PAIR_CONST("proto", proto),
                                 NULL);
                 }
             }

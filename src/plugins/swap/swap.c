@@ -165,9 +165,9 @@ static int swap_read_separate(void)
             continue;
 
         metric_family_append(&fams[FAM_SWAP_USED_BYTES], VALUE_GAUGE(used * 1024.0), NULL,
-                             &(label_pair_const_t){.name="device", .value=path}, NULL);
+                             &LABEL_PAIR_CONST("device", path), NULL);
         metric_family_append(&fams[FAM_SWAP_FREE_BYTES], VALUE_GAUGE((total - used) * 1024.0), NULL,
-                             &(label_pair_const_t){.name="device", .value=path}, NULL);
+                             &LABEL_PAIR_CONST("device", path), NULL);
     }
 
     fclose(fh);
@@ -412,10 +412,10 @@ static int swap_read(void)
 
         metric_family_append(&fams[FAM_SWAP_USED_BYTES],
                              VALUE_GAUGE(this_total - this_avail), NULL,
-                             &(label_pair_const_t){.name="device", .value=path}, NULL);
+                             &LABEL_PAIR_CONST("device", path), NULL);
         metric_family_append(&fams[FAM_SWAP_FREE_BYTES],
                              VALUE_GAUGE(this_avail), NULL,
-                             &(label_pair_const_t){.name="device", .value=path}, NULL);
+                             &LABEL_PAIR_CONST("device", path), NULL);
     }
 
     if (total < avail) {
@@ -519,10 +519,10 @@ static int swap_read(void)
 
         metric_family_append(&fams[FAM_SWAP_USED_BYTES],
                              VALUE_GAUGE(this_used), NULL,
-                             &(label_pair_const_t){.name="device", .value=path}, NULL);
+                             &LABEL_PAIR_CONST("device", path), NULL);
         metric_family_append(&fams[FAM_SWAP_FREE_BYTES],
                              VALUE_GAUGE(this_total - this_used), NULL,
-                             &(label_pair_const_t){.name="device", .value=path}, NULL);
+                             &LABEL_PAIR_CONST("device", path), NULL);
     }
 
     if (total < used) {

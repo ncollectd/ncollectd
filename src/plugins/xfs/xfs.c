@@ -111,7 +111,7 @@ static int xfs_read_stats(__attribute__((unused)) int dir_fd, char const *dir,
             else
                 value = VALUE_GAUGE(v);
             metric_family_append(fam, value, NULL,
-                                 &(label_pair_const_t){.name="device", .value=file}, NULL);
+                                 &LABEL_PAIR_CONST("device", file), NULL);
         }
     }
 

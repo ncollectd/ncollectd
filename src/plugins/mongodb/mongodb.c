@@ -164,9 +164,9 @@ static int mongodb_metric_append(mongodb_inst_t *ctx, bson_iter_t *iter, strbuf_
     }
 
     metric_family_append(fam, value, &ctx->labels,
-                         &(label_pair_const_t){.name=mdbs->label1, .value=mdbs->key1},
-                         &(label_pair_const_t){.name=mdbs->label2, .value=mdbs->key2},
-                         &(label_pair_const_t){.name=label, .value=key},
+                         &LABEL_PAIR_CONST(mdbs->label1, mdbs->key1),
+                         &LABEL_PAIR_CONST(mdbs->label2, mdbs->key2),
+                         &LABEL_PAIR_CONST(label, key),
                          NULL);
 
     return 0;

@@ -262,14 +262,14 @@ static int zoneinfo_read(void)
         if (zoneinfo_fams[zoneinfo->fam].type == METRIC_TYPE_COUNTER) {
             uint64_t value = (uint64_t)strtoull(fields[1], NULL, 10);
             metric_family_append(&zoneinfo_fams[zoneinfo->fam], VALUE_COUNTER(value), NULL,
-                                &(label_pair_const_t){.name="node", .value=node},
-                                &(label_pair_const_t){.name="zone", .value=zone}, NULL);
+                                &LABEL_PAIR_CONST("node", node),
+                                &LABEL_PAIR_CONST("zone", zone), NULL);
         } else if (zoneinfo_fams[zoneinfo->fam].type == METRIC_TYPE_GAUGE) {
             double value = 0.0;
             strtodouble(fields[1], &value);
             metric_family_append(&zoneinfo_fams[zoneinfo->fam], VALUE_GAUGE(value), NULL,
-                                &(label_pair_const_t){.name="node", .value=node},
-                                &(label_pair_const_t){.name="zone", .value=zone}, NULL);
+                                &LABEL_PAIR_CONST("node", node),
+                                &LABEL_PAIR_CONST("zone", zone), NULL);
         }
 
     }

@@ -815,39 +815,39 @@ static int read_io_stat(int dir_fd, const char *unit_name)
 
             if (!strcmp(key, "rbytes"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_READ_BYTES], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="unit", .value=unit_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "wbytes"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_WRITE_BYTES], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="unit", .value=unit_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "rios"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_READ_IOS], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="unit", .value=unit_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "wios"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_WRITE_IOS], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="unit", .value=unit_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "dbytes"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_DISCARTED_BYTES], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="unit", .value=unit_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "dios"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_DISCARTED_IOS], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="unit", .value=unit_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
 
         }
@@ -883,27 +883,27 @@ static int read_cpu_stat_v2(int dir_fd, const char *unit_name)
         if (!strcmp(key, "usage_usec"))
             metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_USAGE_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         else if (!strcmp(key, "user_usec"))
             metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_USER_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         else if (!strcmp(key, "system_usec"))
             metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_SYSTEM_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         else if (!strcmp(key, "nr_periods"))
             metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_PERIODS],
                                  VALUE_COUNTER_FLOAT64((double)counter), NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         else if (!strcmp(key, "nr_throttled"))
             metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_THROTTLED],
                                  VALUE_COUNTER_FLOAT64((double)counter), NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         else if (!strcmp(key, "throttled_usec"))
             metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_THROTTLED_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
     }
 
     fclose(fh);
@@ -966,8 +966,8 @@ static int read_memory_numa_stat(int dir_fd, const char *unit_name)
             }
 
             metric_family_append(&fam[ms->numa_fam], value, NULL,
-                                 &(label_pair_const_t){.name="zone", .value=zone},
-                                 &(label_pair_const_t){.name="unit", .value=unit_name},
+                                 &LABEL_PAIR_CONST("zone", zone),
+                                 &LABEL_PAIR_CONST("unit", unit_name),
                                  NULL);
         }
     }
@@ -1017,7 +1017,7 @@ static int read_memory_stat(int dir_fd, const char *unit_name)
         }
 
         metric_family_append(&fam[ms->fam], value, NULL,
-                             &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                             &LABEL_PAIR_CONST("unit", unit_name), NULL);
     }
 
     fclose(fh);
@@ -1049,10 +1049,10 @@ static int read_pressure_file(int dir_fd, const char *filename, const char *unit
 
         if ((strcmp(fields[0], "some") == 0) && (fam_waiting != NULL)) {
             metric_family_append(fam_waiting, value, NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         } else if ((strcmp(fields[0], "full") == 0) && (fam_stalled != NULL)) {
             metric_family_append(fam_stalled, value, NULL,
-                                 &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
         }
     }
 
@@ -1083,7 +1083,7 @@ static int read_cgroup_file(int dir_fd, const char *filename,
     }
 
     metric_family_append(fam_file, value, NULL,
-                         &(label_pair_const_t){.name="unit", .value=unit_name}, NULL);
+                         &LABEL_PAIR_CONST("unit", unit_name), NULL);
 
     return 0;
 }
@@ -1224,21 +1224,21 @@ static int unit_service(sd_bus *bus, char *name, char *unit_path)
                                           "org.freedesktop.systemd1.Service", "NRestarts", &r);
     if (status == 0)
         metric_family_append(&fam[FAM_SYSTEMD_SERVICE_RESTART], VALUE_COUNTER(r), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
 
     uint64_t tasks = 0;
     status = get_property_uint64(bus, "org.freedesktop.systemd1", unit_path,
                                       "org.freedesktop.systemd1.Service", "TasksCurrent", &tasks);
     if (status == 0)
         metric_family_append(&fam[FAM_SYSTEMD_UNIT_TASKS_CURRENT], VALUE_GAUGE(tasks), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
 
     uint64_t tasks_max = 0;
     status = get_property_uint64(bus, "org.freedesktop.systemd1", unit_path,
                                       "org.freedesktop.systemd1.Service", "TasksMax", &tasks_max);
     if (status == 0)
         metric_family_append(&fam[FAM_SYSTEMD_UNIT_TASKS_MAX], VALUE_GAUGE(tasks_max), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
 
     return 0;
 }
@@ -1252,7 +1252,7 @@ static int unit_socket(sd_bus *bus, char *name, char *unit_path)
     if (status == 0)
         metric_family_append(&fam[FAM_SYSTEMD_SOCKET_ACCEPTED_CONNECTIONS],
                              VALUE_COUNTER(accepted), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
 
     uint32_t connections = 0;
     status = get_property_uint32(bus, "org.freedesktop.systemd1", unit_path,
@@ -1261,7 +1261,7 @@ static int unit_socket(sd_bus *bus, char *name, char *unit_path)
     if (status == 0)
         metric_family_append(&fam[FAM_SYSTEMD_SOCKET_CURRENT_CONNECTIONS],
                              VALUE_GAUGE(connections), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
 
     uint32_t refused = 0;
     status = get_property_uint32(bus, "org.freedesktop.systemd1", unit_path,
@@ -1269,7 +1269,7 @@ static int unit_socket(sd_bus *bus, char *name, char *unit_path)
     if (status == 0)
         metric_family_append(&fam[FAM_SYSTEMD_SOCKET_REFUSED_CONNECTIONS],
                              VALUE_COUNTER(refused), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
 
     return 0;
 }
@@ -1284,7 +1284,7 @@ static int unit_timer(sd_bus *bus, char *name, char *unit_path)
         double last_trigger = last/1e6;
         metric_family_append(&fam[FAM_SYSTEMD_TIMER_LAST_TRIGGER_SECONDS],
                              VALUE_GAUGE(last_trigger), NULL,
-                             &(label_pair_const_t){.name="unit", .value = name}, NULL);
+                             &LABEL_PAIR_CONST("unit", name), NULL);
     }
 
     return 0;
@@ -1310,7 +1310,7 @@ static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
         }
     }
     metric_family_append(&fam[FAM_SYSTEMD_UNIT_LOAD_STATE], VALUE_STATE_SET(load_set), NULL,
-                         &(label_pair_const_t){.name="unit", .value=unit}, NULL);
+                         &LABEL_PAIR_CONST("unit", unit), NULL);
 
     state_t active_states[] = {
         { .name = "active",       .enabled = false },
@@ -1329,7 +1329,7 @@ static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
         }
     }
     metric_family_append(&fam[FAM_SYSTEMD_UNIT_ACTIVE_STATE], VALUE_STATE_SET(active_set), NULL,
-                         &(label_pair_const_t){.name="unit", .value=unit}, NULL);
+                         &LABEL_PAIR_CONST("unit", unit), NULL);
 
     state_t sub_states[] = {
         { .name = "dead",                       .enabled = false },
@@ -1366,7 +1366,7 @@ static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
         }
     }
     metric_family_append(&fam[FAM_SYSTEMD_UNIT_SUB_STATE], VALUE_STATE_SET(sub_set), NULL,
-                         &(label_pair_const_t){.name="unit", .value=unit}, NULL);
+                         &LABEL_PAIR_CONST("unit", unit), NULL);
 
 
     double start_time = 0.0;
@@ -1380,7 +1380,7 @@ static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
     }
 
     metric_family_append(&fam[FAM_SYSTEMD_UNIT_START_TIME_SECONDS], VALUE_GAUGE(start_time), NULL,
-                         &(label_pair_const_t){.name="unit", .value=unit}, NULL);
+                         &LABEL_PAIR_CONST("unit", unit), NULL);
 
 
     if (strendswith(unit, ".service")) {

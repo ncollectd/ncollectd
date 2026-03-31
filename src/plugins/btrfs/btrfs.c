@@ -142,19 +142,19 @@ static int btrfs_submit_read_stats(char *mount_path)
 
     metric_family_append(&fams[FAM_BTRFS_WRITE_ERRORS],
                          VALUE_COUNTER(dev_stats_args.values[BTRFS_DEV_STAT_WRITE_ERRS]), NULL,
-                         &(label_pair_const_t){.name="path", .value=mount_path}, NULL);
+                         &LABEL_PAIR_CONST("path", mount_path), NULL);
     metric_family_append(&fams[FAM_BTRFS_READ_ERRORS],
                          VALUE_COUNTER(dev_stats_args.values[BTRFS_DEV_STAT_READ_ERRS]), NULL,
-                         &(label_pair_const_t){.name="path", .value=mount_path}, NULL);
+                         &LABEL_PAIR_CONST("path", mount_path), NULL);
     metric_family_append(&fams[FAM_BTRFS_FLUSH_ERRORS],
                          VALUE_COUNTER(dev_stats_args.values[BTRFS_DEV_STAT_FLUSH_ERRS]), NULL,
-                         &(label_pair_const_t){.name="path", .value=mount_path}, NULL);
+                         &LABEL_PAIR_CONST("path", mount_path), NULL);
     metric_family_append(&fams[FAM_BTRFS_CORRUPTION_ERRORS],
                          VALUE_COUNTER(dev_stats_args.values[BTRFS_DEV_STAT_CORRUPTION_ERRS]), NULL,
-                         &(label_pair_const_t){.name="path", .value=mount_path}, NULL);
+                         &LABEL_PAIR_CONST("path", mount_path), NULL);
     metric_family_append(&fams[FAM_BTRFS_GENERATION_ERRORS],
                          VALUE_COUNTER(dev_stats_args.values[BTRFS_DEV_STAT_GENERATION_ERRS]), NULL,
-                         &(label_pair_const_t){.name="path", .value=mount_path}, NULL);
+                         &LABEL_PAIR_CONST("path", mount_path), NULL);
 
     plugin_dispatch_metric_family_array(fams, FAM_BTRFS_MAX, 0);
 

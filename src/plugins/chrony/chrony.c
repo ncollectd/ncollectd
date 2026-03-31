@@ -888,28 +888,28 @@ static int chrony_request_source_data(chrony_ctx_t *ctx, int src_idx, char *src_
 
     value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_stratum) : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_STRATUM], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_state) : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_STATE], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_mode) : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_MODE], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     value = VALUE_GAUGE(*is_reachable ? ntohs(chrony_resp.body.source_data.f_reachability) : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_REACHABILITY], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     value = VALUE_GAUGE(*is_reachable ? ntohl(chrony_resp.body.source_data.f_since_sample) : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_LAST_MEAS], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     value = VALUE_GAUGE(*is_reachable ? ntohf(chrony_resp.body.source_data.f_origin_latest_meas)
                                       : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_TIME_OFFSET], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     return 0;
 }
@@ -959,11 +959,11 @@ static int chrony_request_source_stats(chrony_ctx_t *ctx, int src_idx,
 
     value = VALUE_GAUGE(is_reachable ? skew_ppm : NAN);
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_CLOCK_SKEW], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     value = VALUE_GAUGE(is_reachable ? frequency_error : NAN); /* unit: ppm */
     metric_family_append(&ctx->fams[FAM_CHRONY_SOURCE_FREQUENCY_ERROR], value, &ctx->labels,
-                         &(label_pair_const_t){.name="source", .value=src_addr}, NULL);
+                         &LABEL_PAIR_CONST("source", src_addr), NULL);
 
     return 0;
 }

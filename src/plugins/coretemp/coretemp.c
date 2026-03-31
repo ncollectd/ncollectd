@@ -116,41 +116,41 @@ static int coretemp_read_temp(int dir_fd, __attribute__((unused)) const char *di
         char *package_id = label + strlen("Package id ");
         metric_family_append(&fams[FAM_CORETEMP_PACKAGE_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(input/1000.0), NULL,
-                             &(label_pair_const_t){.name="socket", .value=coretemp->socket},
-                             &(label_pair_const_t){.name="hwmon", .value=coretemp->hwmon},
-                             &(label_pair_const_t){.name="package", .value=package_id},
+                             &LABEL_PAIR_CONST("socket", coretemp->socket),
+                             &LABEL_PAIR_CONST("hwmon", coretemp->hwmon),
+                             &LABEL_PAIR_CONST("package", package_id),
                              NULL);
         metric_family_append(&fams[FAM_CORETEMP_PACKAGE_MAX_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(max/1000.0), NULL,
-                             &(label_pair_const_t){.name="socket", .value=coretemp->socket},
-                             &(label_pair_const_t){.name="hwmon", .value=coretemp->hwmon},
-                             &(label_pair_const_t){.name="package", .value=package_id},
+                             &LABEL_PAIR_CONST("socket", coretemp->socket),
+                             &LABEL_PAIR_CONST("hwmon", coretemp->hwmon),
+                             &LABEL_PAIR_CONST("package", package_id),
                              NULL);
         metric_family_append(&fams[FAM_CORETEMP_PACKAGE_CRITICAL_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(crit/1000.0), NULL,
-                             &(label_pair_const_t){.name="socket", .value=coretemp->socket},
-                             &(label_pair_const_t){.name="hwmon", .value=coretemp->hwmon},
-                             &(label_pair_const_t){.name="package", .value=package_id},
+                             &LABEL_PAIR_CONST("socket", coretemp->socket),
+                             &LABEL_PAIR_CONST("hwmon", coretemp->hwmon),
+                             &LABEL_PAIR_CONST("package", package_id),
                              NULL);
     } else if (strncmp(label, "Core ", strlen("Core ")) == 0)  {
         char *core_id = label + strlen("Core ");
         metric_family_append(&fams[FAM_CORETEMP_CORE_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(input/1000.0), NULL,
-                             &(label_pair_const_t){.name="socket", .value=coretemp->socket},
-                             &(label_pair_const_t){.name="hwmon", .value=coretemp->hwmon},
-                             &(label_pair_const_t){.name="core", .value=core_id},
+                             &LABEL_PAIR_CONST("socket", coretemp->socket),
+                             &LABEL_PAIR_CONST("hwmon", coretemp->hwmon),
+                             &LABEL_PAIR_CONST("core", core_id),
                              NULL);
         metric_family_append(&fams[FAM_CORETEMP_CORE_MAX_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(max/1000.0), NULL,
-                             &(label_pair_const_t){.name="socket", .value=coretemp->socket},
-                             &(label_pair_const_t){.name="hwmon", .value=coretemp->hwmon},
-                             &(label_pair_const_t){.name="core", .value=core_id},
+                             &LABEL_PAIR_CONST("socket", coretemp->socket),
+                             &LABEL_PAIR_CONST("hwmon", coretemp->hwmon),
+                             &LABEL_PAIR_CONST("core", core_id),
                              NULL);
         metric_family_append(&fams[FAM_CORETEMP_CORE_CRITICAL_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(crit/1000.0), NULL,
-                             &(label_pair_const_t){.name="socket", .value=coretemp->socket},
-                             &(label_pair_const_t){.name="hwmon", .value=coretemp->hwmon},
-                             &(label_pair_const_t){.name="core", .value=core_id},
+                             &LABEL_PAIR_CONST("socket", coretemp->socket),
+                             &LABEL_PAIR_CONST("hwmon", coretemp->hwmon),
+                             &LABEL_PAIR_CONST("core", core_id),
                              NULL);
     }
 

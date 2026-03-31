@@ -142,22 +142,22 @@ static int lvm_metrics_vg(lvm_json_ctx_t *sctx)
     if (sctx->vg.vg_free != UINT64_MAX)
         metric_family_append(&fams[FAM_LVM_VG_FREE_BYTES],
                              VALUE_GAUGE(sctx->vg.vg_free), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->vg.vg_name},
+                             &LABEL_PAIR_CONST("vg_name", sctx->vg.vg_name),
                              NULL);
     if (sctx->vg.vg_size != UINT64_MAX)
         metric_family_append(&fams[FAM_LVM_VG_SIZE_BYTES],
                              VALUE_GAUGE(sctx->vg.vg_size), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->vg.vg_name},
+                             &LABEL_PAIR_CONST("vg_name", sctx->vg.vg_name),
                              NULL);
     if (sctx->vg.lv_count != UINT64_MAX)
         metric_family_append(&fams[FAM_LVM_VG_LV_COUNT],
                              VALUE_GAUGE(sctx->vg.lv_count), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->vg.vg_name},
+                             &LABEL_PAIR_CONST("vg_name", sctx->vg.vg_name),
                              NULL);
     if (sctx->vg.snap_count != UINT64_MAX)
         metric_family_append(&fams[FAM_LVM_VG_SNAP_COUNT],
                              VALUE_GAUGE(sctx->vg.snap_count), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->vg.vg_name},
+                             &LABEL_PAIR_CONST("vg_name", sctx->vg.vg_name),
                              NULL);
     return 0;
 }
@@ -181,13 +181,13 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
 
         metric_family_append(&fams[FAM_LVM_LV_DATA_USED_BYTES],
                              VALUE_GAUGE(used_bytes), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                             &(label_pair_const_t){.name="lv_name", .value=sctx->lv.lv_name},
+                             &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                             &LABEL_PAIR_CONST("lv_name", sctx->lv.lv_name),
                              NULL);
         metric_family_append(&fams[FAM_LVM_LV_DATA_FREE_BYTES],
                              VALUE_GAUGE(sctx->lv.lv_size - used_bytes), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                             &(label_pair_const_t){.name="lv_name", .value=sctx->lv.lv_name},
+                             &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                             &LABEL_PAIR_CONST("lv_name", sctx->lv.lv_name),
                              NULL);
     }   break;
     case 't': {
@@ -207,13 +207,13 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
 
         metric_family_append(&fams[FAM_LVM_LV_DATA_USED_BYTES],
                              VALUE_GAUGE(used_bytes), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                             &(label_pair_const_t){.name="lv_name", .value=sctx->lv.data_lv},
+                             &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                             &LABEL_PAIR_CONST("lv_name", sctx->lv.data_lv),
                              NULL);
         metric_family_append(&fams[FAM_LVM_LV_DATA_FREE_BYTES],
                              VALUE_GAUGE(sctx->lv.lv_size - used_bytes), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                             &(label_pair_const_t){.name="lv_name", .value=sctx->lv.data_lv},
+                             &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                             &LABEL_PAIR_CONST("lv_name", sctx->lv.data_lv),
                              NULL);
 
 
@@ -222,13 +222,13 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
 
         metric_family_append(&fams[FAM_LVM_LV_METADATA_USED_BYTES],
                              VALUE_GAUGE(used_bytes), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                             &(label_pair_const_t){.name="lv_name", .value=sctx->lv.metadata_lv},
+                             &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                             &LABEL_PAIR_CONST("lv_name", sctx->lv.metadata_lv),
                              NULL);
         metric_family_append(&fams[FAM_LVM_LV_METADATA_FREE_BYTES],
                              VALUE_GAUGE(sctx->lv.lv_metadata_size - used_bytes), NULL,
-                             &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                             &(label_pair_const_t){.name="lv_name", .value=sctx->lv.metadata_lv},
+                             &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                             &LABEL_PAIR_CONST("lv_name", sctx->lv.metadata_lv),
                              NULL);
         return 0;
     }   break;
@@ -244,8 +244,8 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
 
     metric_family_append(&fams[FAM_LVM_LV_SIZE_BYTES],
                          VALUE_GAUGE(sctx->lv.lv_size), NULL,
-                         &(label_pair_const_t){.name="vg_name", .value=sctx->lv.vg_name},
-                         &(label_pair_const_t){.name="lv_name", .value=sctx->lv.lv_name},
+                         &LABEL_PAIR_CONST("vg_name", sctx->lv.vg_name),
+                         &LABEL_PAIR_CONST("lv_name", sctx->lv.lv_name),
                          NULL);
     return 0;
 }

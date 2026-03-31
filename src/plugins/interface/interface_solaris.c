@@ -85,7 +85,7 @@ int interface_read(void)
                 continue;
 
             metric_family_append(&fams[metrics[j].fam], VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="interface", .value=iname}, NULL);
+                                 &LABEL_PAIR_CONST("interface", iname), NULL);
         }
     }
 

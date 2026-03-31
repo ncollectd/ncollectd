@@ -103,7 +103,7 @@ static void cpufreq_read_stats(int cpu, char *cpunum)
     }
 
     metric_family_append(&fams[FAM_CPU_FREQUENCY_TRANSITIONS], VALUE_COUNTER(v), NULL,
-                         &(label_pair_const_t){.name="cpu", .value=cpunum}, NULL);
+                         &LABEL_PAIR_CONST("cpu", cpunum), NULL);
 
     /* Determine percentage time in each state for cpu during previous
      * interval. */
@@ -154,8 +154,8 @@ static void cpufreq_read_stats(int cpu, char *cpunum)
                 g = 100.1;
 
             metric_family_append(&fams[FAM_CPU_FREQUENCY_STATE_RATIO], VALUE_GAUGE(g), NULL,
-                                 &(label_pair_const_t){.name="cpu", .value=cpunum},
-                                 &(label_pair_const_t){.name="state", .value=state}, NULL);
+                                 &LABEL_PAIR_CONST("cpu", cpunum),
+                                 &LABEL_PAIR_CONST("state", state), NULL);
         }
         state_index++;
     }
@@ -184,7 +184,7 @@ static int cpufreq_read(void)
         char cpunum[64];
         snprintf(cpunum, sizeof(cpunum), "%d", cpu);
         metric_family_append(&fams[FAM_CPU_FREQUENCY_HZ], VALUE_GAUGE(v), NULL,
-                             &(label_pair_const_t){.name="cpu", .value=cpunum}, NULL);
+                             &LABEL_PAIR_CONST("cpu", cpunum), NULL);
 
         if (report_p_stats)
             cpufreq_read_stats(cpu, cpunum);
@@ -202,7 +202,7 @@ static int cpufreq_read(void)
 
     /* convert Mhz to Hz */
     metric_family_append(&fams[FAM_CPU_FREQUENCY_HZ], VALUE_GAUGE(cpufreq * 1000000.0), NULL,
-                         &(label_pair_const_t){.name="cpu", .value="0"}, NULL);
+                         &LABEL_PAIR_CONST("cpu", "0"), NULL);
 #endif
 
 

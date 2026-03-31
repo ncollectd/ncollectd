@@ -155,7 +155,7 @@ static int lpar_read(void)
     /* entitled_proc_capacity is in 1/100th of a CPU */
     double entitled_proc_capacity = 0.01 * ((double)lparstats.entitled_proc_capacity);
     metric_family_append(&fams[FAM_LPAR_ENTITLED], VALUE_GAUGE(entitled_proc_capacity), NULL,
-                         &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                         &LABEL_PAIR_CONST("serial", name.machine), NULL);
 
     /* The number of ticks actually spent in the various states */
     u_longlong_t user_ticks = lparstats.puser - lparstats_old.puser;
@@ -166,16 +166,16 @@ static int lpar_read(void)
 
     metric_family_append(&fams[FAM_LPAR_USER],
                          VALUE_GAUGE((double)user_ticks / (double)ticks), NULL,
-                         &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                         &LABEL_PAIR_CONST("serial", name.machine), NULL);
     metric_family_append(&fams[FAM_LPAR_SYSTEM],
                          VALUE_GAUGE((double)syst_ticks / (double)ticks), NULL,
-                         &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                         &LABEL_PAIR_CONST("serial", name.machine), NULL);
     metric_family_append(&fams[FAM_LPAR_WAIT],
                          VALUE_GAUGE((double)wait_ticks / (double)ticks), NULL,
-                         &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                         &LABEL_PAIR_CONST("serial", name.machine), NULL);
     metric_family_append(&fams[FAM_LPAR_IDLE],
                          VALUE_GAUGE((double)idle_ticks / (double)ticks), NULL,
-                         &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                         &LABEL_PAIR_CONST("serial", name.machine), NULL);
 
 #ifdef PERFSTAT_SUPPORTS_DONATION
     if (donate_flag) {
@@ -193,16 +193,16 @@ static int lpar_read(void)
 
         metric_family_append(&fams[FAM_LPAR_IDLE_DONATED],
                              VALUE_GAUGE((double)idle_donated_ticks / (double)ticks), NULL,
-                             &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                             &LABEL_PAIR_CONST("serial", name.machine), NULL);
         metric_family_append(&fams[FAM_LPAR_BUSY_DONATED],
                              VALUE_GAUGE((double)busy_donated_ticks / (double)ticks), NULL,
-                             &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                             &LABEL_PAIR_CONST("serial", name.machine), NULL);
         metric_family_append(&fams[FAM_LPAR_IDLE_STOLEN],
                              VALUE_GAUGE((double)idle_stolen_ticks / (double)ticks), NULL,
-                             &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                             &LABEL_PAIR_CONST("serial", name.machine), NULL);
         metric_family_append(&fams[FAM_LPAR_BUSY_STOLEN],
                              VALUE_GAUGE((double)busy_stolen_ticks / (double)ticks), NULL,
-                             &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                             &LABEL_PAIR_CONST("serial", name.machine), NULL);
 
         /* Donated ticks will be accounted for as stolen ticks in other LPARs */
         consumed_ticks += idle_stolen_ticks + busy_stolen_ticks;
@@ -211,7 +211,7 @@ static int lpar_read(void)
 
     metric_family_append(&fams[FAM_LPAR_CONSUMED],
                          VALUE_GAUGE((double)consumed_ticks / (double)ticks), NULL,
-                         &(label_pair_const_t){.name="serial", .value=name.machine}, NULL);
+                         &LABEL_PAIR_CONST("serial", name.machine), NULL);
 
     if (pool_stats) {
         /* We're calculating "busy" from "idle" and the total number of
@@ -228,12 +228,12 @@ static int lpar_read(void)
 
         metric_family_append(&fams[FAM_LPAR_POOL_BUSY],
                              VALUE_GAUGE(pool_busy_cpus), NULL,
-                             &(label_pair_const_t){.name="serial", .value=name.machine},
-                             &(label_pair_const_t){.name="pool_id", .value=pool_id}, NULL);
+                             &LABEL_PAIR_CONST("serial", name.machine),
+                             &LABEL_PAIR_CONST("pool_id", pool_id), NULL);
         metric_family_append(&fams[FAM_LPAR_POOL_IDLE],
                              VALUE_GAUGE(pool_idle_cpus), NULL,
-                             &(label_pair_const_t){.name="serial", .value=name.machine},
-                             &(label_pair_const_t){.name="pool_id", .value=pool_id}, NULL);
+                             &LABEL_PAIR_CONST("serial", name.machine),
+                             &LABEL_PAIR_CONST("pool_id", pool_id), NULL);
     }
 
     memcpy(&lparstats_old, &lparstats, sizeof(lparstats_old));

@@ -63,27 +63,27 @@ static int iscsi_read_lun(int dir_fd, __attribute__((unused)) const char *path,
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_ISCSI_LUN_IOPS], VALUE_COUNTER(value), NULL,
-                             &(label_pair_const_t){.name="iqn", .value=ll->iqn},
-                             &(label_pair_const_t){.name="tpgt", .value=ll->tpgt},
-                             &(label_pair_const_t){.name="lun", .value=lun},
+                             &LABEL_PAIR_CONST("iqn", ll->iqn),
+                             &LABEL_PAIR_CONST("tpgt", ll->tpgt),
+                             &LABEL_PAIR_CONST("lun", lun),
                              NULL);
 
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "statistics/scsi_tgt_port/read_mbytes");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_ISCSI_LUN_READ_BYTES], VALUE_COUNTER(value * 1024 * 1024), NULL,
-                             &(label_pair_const_t){.name="iqn", .value=ll->iqn},
-                             &(label_pair_const_t){.name="tpgt", .value=ll->tpgt},
-                             &(label_pair_const_t){.name="lun", .value=lun},
+                             &LABEL_PAIR_CONST("iqn", ll->iqn),
+                             &LABEL_PAIR_CONST("tpgt", ll->tpgt),
+                             &LABEL_PAIR_CONST("lun", lun),
                              NULL);
     
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "statistics/scsi_tgt_port/write_mbytes");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
         metric_family_append(&fams[FAM_ISCSI_LUN_WRITE_BYTES], VALUE_COUNTER(value * 1024 * 1024), NULL,
-                             &(label_pair_const_t){.name="iqn", .value=ll->iqn},
-                             &(label_pair_const_t){.name="tpgt", .value=ll->tpgt},
-                             &(label_pair_const_t){.name="lun", .value=lun},
+                             &LABEL_PAIR_CONST("iqn", ll->iqn),
+                             &LABEL_PAIR_CONST("tpgt", ll->tpgt),
+                             &LABEL_PAIR_CONST("lun", lun),
                              NULL);
     
     return 0;

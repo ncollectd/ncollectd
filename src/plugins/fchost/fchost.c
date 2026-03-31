@@ -199,8 +199,8 @@ static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
         }
 
         metric_family_append(&fams[FAM_FCHOST_PORT_ONLINE], VALUE_GAUGE(fchost_port_state), NULL,
-                             &(label_pair_const_t){.name="host", .value=filename},
-                             &(label_pair_const_t){.name="port_name", .value=port_name},
+                             &LABEL_PAIR_CONST("host", filename),
+                             &LABEL_PAIR_CONST("port_name", port_name),
                              NULL);
 
         for (size_t i = 0; i < fchost_stats_size; i++) {
@@ -212,8 +212,8 @@ static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
                     value <<= fcs->shift;
 
                 metric_family_append(&fams[fcs->fam], VALUE_COUNTER(value), NULL,
-                                     &(label_pair_const_t){.name="host", .value=filename},
-                                     &(label_pair_const_t){.name="port_name", .value=port_name},
+                                     &LABEL_PAIR_CONST("host", filename),
+                                     &LABEL_PAIR_CONST("port_name", port_name),
                                      NULL);
             }
         }

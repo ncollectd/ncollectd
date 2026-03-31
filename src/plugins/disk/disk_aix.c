@@ -139,50 +139,50 @@ int disk_read(void)
         }
 
         metric_family_append(&fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(read_bytes), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
         metric_family_append(&fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(write_bytes), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_READ_OPS], VALUE_COUNTER(read_ops), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
         metric_family_append(&fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_READ_TIME],
                              VALUE_COUNTER_FLOAT64(HTIC2SEC(read_time)), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
         metric_family_append(&fams[FAM_DISK_WRITE_TIME],
                              VALUE_COUNTER_FLOAT64(HTIC2SEC(write_time)), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_READ_WEIGHTED_TIME],
                              VALUE_COUNTER_FLOAT64(ds->avg_read_time), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
         metric_family_append(&fams[FAM_DISK_WRITE_WEIGHTED_TIME],
                              VALUE_COUNTER_FLOAT64(ds->avg_write_time), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_IO_TIME],
                              VALUE_COUNTER_FLOAT64(HTIC2SEC(stat_disk[i].time)), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_PENDING_OPERATIONS],
                              VALUE_GAUGE(stat_disk[i].qdepth), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_READ_TIMEOUT],
                              VALUE_COUNTER(stat_disk[i].rtimeout), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
         metric_family_append(&fams[FAM_DISK_WRITE_TIMEOUT],
                              VALUE_COUNTER(stat_disk[i].wtimeout), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
 
         metric_family_append(&fams[FAM_DISK_READ_FAILED],
                              VALUE_COUNTER(stat_disk[i].rfailed), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
         metric_family_append(&fams[FAM_DISK_WRITE_FAILED],
                              VALUE_COUNTER(stat_disk[i].wfailed), NULL,
-                             &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);
