@@ -88,7 +88,7 @@ static int journal_compress(const char *source, const size_t source_bytes, char 
 
     int rv = LZ4_compress_default(source, *dest, source_bytes, required);
     if (rv > 0) {
-        DEBUG("Compressed %d bytes into %d bytes\n", source_bytes, rv);
+        DEBUG("Compressed %zu bytes into %d bytes.", source_bytes, rv);
         *dest_bytes = rv;
         return 0;
     }
@@ -104,7 +104,7 @@ static int journal_decompress(const char *source, const size_t source_bytes, cha
 
     int rv = LZ4_decompress_safe(source, dest, source_bytes, dest_bytes);
     if (rv >= 0) {
-        DEBUG("Compressed %d bytes into %d bytes\n", source_bytes, rv);
+        DEBUG("Compressed %zu bytes into %d bytes.", source_bytes, rv);
         return 0;
     }
 
@@ -526,7 +526,7 @@ static char *compute_checkpoint_filename(journal_t *j, const char *subscriber, c
     }
     name[len] = '\0';
 
-    DEBUG("checkpoint %s filename is %s\n", subscriber, name);
+    DEBUG("checkpoint '%s' filename is '%s'.", subscriber, name);
 
     return name;
 }
@@ -590,7 +590,7 @@ static journal_file_t *journal_open_reader(journal_ctx_t *ctx, uint32_t log)
 
     journal_set_data_file(ctx, file, log);
 
-    DEBUG("opening log file[ro]: '%s'\n", file);
+    DEBUG("opening log file[ro]: '%s'.", file);
 
     ctx->data = journal_file_open(ctx->journal, file, 0, ctx->file_mode);
     ctx->current_log = log;
@@ -662,14 +662,14 @@ static int journal_unlink_datafile(journal_ctx_t *ctx, uint32_t log)
     }
 
     journal_set_data_file(ctx, file, log);
-    DEBUG("unlinking %s\n", file);
+    DEBUG("unlinking '%s'.", file);
     unlink(file);
 
     len = strlen(file);
     if ((len + sizeof(INDEX_EXT)) > sizeof(file))
         return -1;
     memcpy(file + len, INDEX_EXT, sizeof(INDEX_EXT));
-    DEBUG("unlinking %s\n", file);
+    DEBUG("unlinking '%s'.", file);
     unlink(file);
     return 0;
 }
@@ -701,13 +701,13 @@ int journal_pending_readers(journal_t *j, uint32_t log, uint32_t *earliest_out)
             if ((len + dlen + 1) > (int)sizeof(file))
                 continue;
             memcpy(file + len, ent->d_name, dlen + 1); /* include \0 */
-            DEBUG("Checking if %s needs %s...\n", ent->d_name, j->path);
+            DEBUG("Checking if '%s' needs '%s'...", ent->d_name, j->path);
             journal_file_t *cp = journal_file_open(j, file, 0, j->file_mode);
             if (cp != NULL) {
                 if (journal_file_lock(cp)) {
                     journal_id_t id;
                     (void) journal_file_pread(cp, &id, sizeof(id), 0);
-                    DEBUG("\t%u <= %u (pending reader)\n", id.log, log);
+                    DEBUG("\t%u <= %u (pending reader).", id.log, log);
                     if (!seen) {
                         earliest = id.log;
                         seen = 1;
@@ -866,7 +866,7 @@ static int journal_open_metastore(journal_ctx_t *ctx, bool create)
 
 static int journal_save_metastore(journal_ctx_t *ctx, bool ilocked)
 {
-    DEBUG("journal_save_metastore\n");
+    DEBUG("journal_save_metastore.");
 
     if (ctx->context_mode == JOURNAL_READ) {
         ERROR("journal_save_metastore: illegal call in JOURNAL_READ mode");
@@ -1006,7 +1006,7 @@ restart:
         SYS_FAIL(JOURNAL_ERR_IDX_SEEK);
 
     if (index_off % sizeof(uint64_t)) {
-        DEBUG("corrupt index [%llu]\n", index_off);
+        DEBUG("corrupt index [%ld].", index_off);
         RESTART;
     }
 
@@ -1016,7 +1016,7 @@ restart:
 
         if (index == 0) {
             /* This log file has been "closed" */
-            DEBUG("index closed\n");
+            DEBUG("index closed.");
             if (last) {
                 last->log = log;
                 last->marker = (index_off / sizeof(uint64_t)) - 1;
@@ -1025,7 +1025,7 @@ restart:
             goto finish;
         } else {
             if (index > (uint64_t)data_len) {
-                DEBUG("index told me to seek somehwere I can't\n");
+                DEBUG("index told me to seek somehwere I can't.");
                 RESTART;
             }
             data_off = index;
@@ -1037,7 +1037,7 @@ restart:
         if (!journal_file_pread(ctx->data, &logmhdr, hdr_size, data_off))
             SYS_FAIL(JOURNAL_ERR_FILE_READ);
         if ((data_off += hdr_size + *message_disk_len) > data_len) {
-            DEBUG("index overshoots %zd + %zd + %zd > %zd\n",
+            DEBUG("index overshoots %lu + %zu + %"PRIu32" > %zd.",
                   data_off - hdr_size - *message_disk_len, hdr_size, *message_disk_len, data_len);
             RESTART;
         }
@@ -1049,7 +1049,7 @@ restart:
         if (!journal_file_pread(ctx->data, &logmhdr, hdr_size, data_off))
             SYS_FAIL(JOURNAL_ERR_FILE_READ);
         if (logmhdr.reserved != ctx->meta->hdr_magic) {
-            DEBUG("logmhdr.reserved == %d\n", logmhdr.reserved);
+            DEBUG("logmhdr.reserved == %"PRIu32".", logmhdr.reserved);
             SYS_FAIL(JOURNAL_ERR_FILE_CORRUPT);
         }
         if ((next_off += hdr_size + *message_disk_len) > data_len)
@@ -1058,7 +1058,7 @@ restart:
         /* Write our new index offset */
         indices[i++] = data_off;
         if (i >= BUFFERED_INDICES) {
-            DEBUG("writing %i offsets\n", i);
+            DEBUG("writing %i offsets.", i);
             if (!journal_file_pwrite(ctx->index, indices, i * sizeof(uint64_t), index_off))
                 RESTART;
             index_off += i * sizeof(uint64_t);
@@ -1068,7 +1068,7 @@ restart:
     }
 
     if (i > 0) {
-        DEBUG("writing %i offsets\n", i);
+        DEBUG("writing %i offsets.", i);
         if (!journal_file_pwrite(ctx->index, indices, i * sizeof(uint64_t), index_off))
             RESTART;
         index_off += i * sizeof(uint64_t);
@@ -1098,12 +1098,12 @@ restart:
             SYS_FAIL(JOURNAL_ERR_FILE_SEEK);
 
         if (recheck_data_len != data_len) {
-            DEBUG("data len changed, %llu -> %llu\n", data_off, recheck_data_len);
+            DEBUG("data len changed, %ld -> %ld.", data_off, recheck_data_len);
             RESTART;
         }
 
         if (data_off != data_len) {
-            DEBUG("closing index, but %llu != %llu\n", data_off, data_len);
+            DEBUG("closing index, but %ld != %ld.", data_off, data_len);
             SYS_FAIL(JOURNAL_ERR_FILE_CORRUPT);
         }
 
@@ -1114,7 +1114,7 @@ restart:
         if (index_off) {
             index = 0;
             if (!journal_file_pwrite(ctx->index, &index, sizeof(uint64_t), index_off)) {
-                DEBUG("null index\n");
+                DEBUG("null index.");
                 RESTART;
             }
             index_off += sizeof(uint64_t);
@@ -1127,7 +1127,7 @@ restart:
 
 finish:
     journal_file_unlock(ctx->index);
-    DEBUG("index is %s\n", closed?(*closed?"closed":"open"):"unknown");
+    DEBUG("index is %s.", closed?(*closed?"closed":"open"):"unknown");
     if (ctx->last_error == JOURNAL_ERR_SUCCESS)
         return 0;
     return -1;
@@ -1637,7 +1637,7 @@ static int journal_inspect_datafile(journal_ctx_t *ctx, uint32_t log)
         memcpy(&hdr, this, hdr_size);
         i++;
         if (hdr.reserved != ctx->meta->hdr_magic) {
-            ERROR("Message %d at [%ld] has invalid reserved value %u\n",
+            ERROR("Message %d at [%ld] has invalid reserved value %u.",
                   i, (long int)(this - (char *)ctx->mmap_base), hdr.reserved);
             return 1;
         }
@@ -1678,7 +1678,7 @@ static int analyze_datafile(journal_ctx_t *ctx, uint32_t logid)
     int rv = 0;
 
     if (journal_inspect_datafile(ctx, logid) > 0) {
-        WARNING("Repairing %s/%08x\n", ctx->path, logid);
+        WARNING("Repairing %s/%08x.", ctx->path, logid);
         rv = journal_repair_datafile(ctx, logid);
         journal_set_data_file(ctx, idxfile, logid);
         strcat(idxfile, INDEX_EXT);
@@ -1848,7 +1848,7 @@ static int journal_metastore_atomic_increment(journal_ctx_t *ctx)
 {
     char file[MAXPATHLEN] = {0};
 
-    DEBUG("atomic increment on %u\n", ctx->current_log);
+    DEBUG("atomic increment on %u.", ctx->current_log);
 
     if (ctx->data)
         SYS_FAIL(JOURNAL_ERR_NOT_SUPPORTED);
@@ -1912,7 +1912,7 @@ static journal_file_t *journal_open_writer(journal_ctx_t *ctx)
 
     ctx->current_log = ctx->meta->storage_log;
     journal_set_data_file(ctx, file, ctx->current_log);
-    DEBUG("opening log file[rw]: '%s'\n", file);
+    DEBUG("opening log file[rw]: '%s'.", file);
     ctx->data = journal_file_open(ctx->journal, file, O_CREAT, ctx->file_mode);
     if (ctx->data == NULL) {
         ERROR("journal_open_writer call to journal_file_open failed");
@@ -2328,7 +2328,7 @@ static journal_file_t *journal_open_indexer(journal_ctx_t *ctx, uint32_t log)
 
     memcpy(file + len, INDEX_EXT, sizeof(INDEX_EXT));
 
-    DEBUG("opening index file: '%s'\n", file);
+    DEBUG("opening index file: '%s'.", file);
 
     ctx->index = journal_file_open(ctx->journal, file, O_CREAT, ctx->file_mode);
     ctx->current_log = log;
@@ -2426,10 +2426,10 @@ int journal_ctx_read_interval(journal_ctx_t *ctx, journal_id_t *start, journal_i
      * of the file. When this happens, we need to set it to the end of
      * the file */
     if (count < 0) {
-        WARNING("need to repair checkpoint for %s - start (%08x:%08x) > finish (%08x:%08x)\n",
+        WARNING("need to repair checkpoint for %s - start (%08x:%08x) > finish (%08x:%08x).",
                 ctx->path, start->log, start->marker, finish->log, finish->marker);
         if (journal_set_checkpoint(ctx, ctx->subscriber_name, finish) != 0) {
-            WARNING("failed repairing checkpoint for %s\n", ctx->path);
+            WARNING("failed repairing checkpoint for %s.", ctx->path);
             SYS_FAIL(JOURNAL_ERR_CHECKPOINT);
         }
 
@@ -2438,7 +2438,7 @@ int journal_ctx_read_interval(journal_ctx_t *ctx, journal_id_t *start, journal_i
             SYS_FAIL(JOURNAL_ERR_INVALID_SUBSCRIBER);
         }
 
-        WARNING("repaired checkpoint for %s: %08x:%08x\n", ctx->path, chkpt.log, chkpt.marker);
+        WARNING("repaired checkpoint for %s: %08x:%08x.", ctx->path, chkpt.log, chkpt.marker);
         ctx->last_error = JOURNAL_ERR_SUCCESS;
         count = 0;
     }
@@ -2523,7 +2523,7 @@ int journal_ctx_read_message(journal_ctx_t *ctx, const journal_id_t *id, journal
     switch(read_method) {
     case JOURNAL_READ_METHOD_MMAP:
         if (data_off > ctx->mmap_len - hdr_size) {
-            DEBUG("read idx off end: %llu\n", data_off);
+            DEBUG("read idx off end: %"PRIu64".", data_off);
             SYS_FAIL(JOURNAL_ERR_IDX_CORRUPT);
         }
 
@@ -2531,7 +2531,7 @@ int journal_ctx_read_message(journal_ctx_t *ctx, const journal_id_t *id, journal
                      hdr_size);
 
         if (data_off + hdr_size + *message_disk_len > ctx->mmap_len) {
-            DEBUG("read idx off end: %llu %llu\n", data_off, ctx->mmap_len);
+            DEBUG("read idx off end: %"PRIu64" %zu.", data_off, ctx->mmap_len);
             SYS_FAIL(JOURNAL_ERR_IDX_CORRUPT);
         }
         m->header = &m->aligned_header;
@@ -2551,14 +2551,14 @@ int journal_ctx_read_message(journal_ctx_t *ctx, const journal_id_t *id, journal
         break;
     case JOURNAL_READ_METHOD_PREAD:
         if (data_off > ctx->data_file_size - hdr_size) {
-            DEBUG("read idx off end: %llu\n", data_off);
+            DEBUG("read idx off end: %"PRIu64".", data_off);
             SYS_FAIL(JOURNAL_ERR_IDX_CORRUPT);
         }
         if (!journal_file_pread(ctx->data, &m->aligned_header, hdr_size, data_off))
             SYS_FAIL(JOURNAL_ERR_IDX_READ);
 
         if (data_off + hdr_size + *message_disk_len > ctx->data_file_size) {
-            DEBUG("read idx off end: %llu %llu\n", data_off, ctx->data_file_size);
+            DEBUG("read idx off end: %"PRIu64" %lu.", data_off, ctx->data_file_size);
             SYS_FAIL(JOURNAL_ERR_IDX_CORRUPT);
         }
 
@@ -2607,7 +2607,7 @@ finish:
         }
         ___journal_resync_index(ctx, id->log, NULL, NULL);
         with_lock = 1;
-        DEBUG("read retrying with lock\n");
+        DEBUG("read retrying with lock.");
         goto once_more_with_lock;
     }
 

@@ -247,14 +247,14 @@ static void *plugin_notify_queue_thread(void *args)
 {
     notify_queue_thread_t *notifier = args;
 
-    DEBUG("start", notifier->name);
+    DEBUG("start '%s'", notifier->super.name);
 
     while (notifier->super.loop) {
         notify_queue_elem_t *elem = (notify_queue_elem_t *)
                                    queue_dequeue(notify_queue, (queue_thread_t *)notifier, 0);
         if (elem != NULL) {
             DEBUG("%s: de-queue %p (remaining queue length: %ld)",
-                  notifier->super.name, elem, notifier->super.queue_length);
+                  notifier->super.name, (void *)elem, notifier->super.queue_length);
 
             /* Should elem be written to all plugins or this plugin in particular? */
             if ((elem->super.plugin == NULL) ||
@@ -326,7 +326,7 @@ static void *plugin_notify_journal_thread(void *args)
 {
     notify_journal_thread_t *notifier = args;
 
-    DEBUG("start", notifier->name);
+    DEBUG("start '%s'", notifier->super.name);
 
     plugin_ctx_t ctx = {
         .name = (char *)notifier->super.name,
