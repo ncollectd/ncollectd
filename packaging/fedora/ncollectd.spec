@@ -278,6 +278,7 @@
 %if 0%{?rhel} == 8
 %define build_with_docker 0%{?_with_docker:1}
 %define build_with_wireguard 0%{?_with_wireguard:1}
+%define build_with_redfish0%{?_with_redfish:1}
 %endif
 %if 0%{?rhel} == 9
 %define build_with_iptables 0%{?_with_iptables:1}
