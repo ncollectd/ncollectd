@@ -50,7 +50,7 @@ static int ubi_read_device(int dirfd, __attribute__((unused)) const char *path,
         PLUGIN_ERROR("Did not find an integer in bad_peb_count");
     } else {
         metric_family_append(&fams[FAM_UBI_BAD_PHYSICAL_ERASEBLOCKS], VALUE_GAUGE(value), NULL,
-                             &(label_pair_const_t){.name="device", .value="entry"}, NULL);
+                             &LABEL_PAIR_CONST("device", "entry"), NULL);
     }
 
     status = filetouint_at(devfd, "max_ec", &value);
@@ -58,7 +58,7 @@ static int ubi_read_device(int dirfd, __attribute__((unused)) const char *path,
         PLUGIN_ERROR("Did not find an integer in max_ec");
     } else {
         metric_family_append(&fams[FAM_UBI_MAXIMUM_PHYSICAL_ERASEBLOCKS], VALUE_GAUGE(value), NULL,
-                             &(label_pair_const_t){.name="device", .value="entry"}, NULL);
+                             &LABEL_PAIR_CONST("device", "entry"), NULL);
     }
 
     close(devfd);

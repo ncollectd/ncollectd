@@ -104,16 +104,16 @@ static int pf_read(void)
 
     for (int i = 0; i < PFRES_MAX; i++)
         metric_family_append(&fams[FAM_PF_COUNTERS], VALUE_COUNTER(state.counters[i]), NULL,
-                             &(label_pair_const_t){.name="counter", .value=pf_reasons[i]}, NULL);
+                             &LABEL_PAIR_CONST("counter", pf_reasons[i]), NULL);
     for (int i = 0; i < LCNT_MAX; i++)
         metric_family_append(&fams[FAM_PF_LIMITS], VALUE_COUNTER(state.lcounters[i]), NULL,
-                             &(label_pair_const_t){.name="limit", .value=pf_lcounters[i]}, NULL);
+                             &LABEL_PAIR_CONST("limit", pf_lcounters[i]), NULL);
     for (int i = 0; i < FCNT_MAX; i++)
         metric_family_append(&fams[FAM_PF_STATE], VALUE_COUNTER(state.fcounters[i]), NULL,
-                             &(label_pair_const_t){.name="state", .value=pf_fcounters[i]}, NULL);
+                             &LABEL_PAIR_CONST("state", pf_fcounters[i]), NULL);
     for (int i = 0; i < SCNT_MAX; i++)
         metric_family_append(&fams[FAM_PF_SOURCE], VALUE_COUNTER(state.scounters[i]), NULL,
-                             &(label_pair_const_t){.name="source", .value=pf_scounters[i]}, NULL);
+                             &LABEL_PAIR_CONST("source", pf_scounters[i]), NULL);
 
     metric_family_append(&fams[FAM_PF_STATES], VALUE_GAUGE(state.states), NULL, NULL);
 

@@ -336,22 +336,22 @@ static int sendmail_read_mailstats_v2(sendmail_ctx_t *ctx, mailstats_v2_t *stats
 
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_FROM_MESSAGES],
                              VALUE_COUNTER(stats->nf[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_FROM_BYTES],
                              VALUE_COUNTER(stats->bf[i]*1024), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_TO_MESSAGES],
                              VALUE_COUNTER(stats->nt[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_TO_BYTES],
                              VALUE_COUNTER(stats->bt[i]*1024), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_REJECT_MESSAGES],
                              VALUE_COUNTER(stats->nr[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES],
                              VALUE_COUNTER(stats->nd[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
     }
 
     return 0;
@@ -375,22 +375,22 @@ static int sendmail_read_mailstats_v3(sendmail_ctx_t *ctx, mailstats_v3_t *stats
 
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_FROM_MESSAGES],
                              VALUE_COUNTER(stats->nf[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_FROM_BYTES],
                              VALUE_COUNTER(stats->bf[i]*1024), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_TO_MESSAGES],
                              VALUE_COUNTER(stats->nt[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_TO_BYTES],
                              VALUE_COUNTER(stats->bt[i]*1024), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_REJECT_MESSAGES],
                              VALUE_COUNTER(stats->nr[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES],
                              VALUE_COUNTER(stats->nd[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
 
     }
 
@@ -415,25 +415,25 @@ static int sendmail_read_mailstats_v4(sendmail_ctx_t *ctx, mailstats_v4_t *stats
 
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_FROM_MESSAGES],
                              VALUE_COUNTER(stats->nf[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_FROM_BYTES],
                              VALUE_COUNTER(stats->bf[i]*1024), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_TO_MESSAGES],
                              VALUE_COUNTER(stats->nt[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_TO_BYTES],
                              VALUE_COUNTER(stats->bt[i]*1024), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_REJECT_MESSAGES],
                              VALUE_COUNTER(stats->nr[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES],
                              VALUE_COUNTER(stats->nd[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_QUARANTINED_MESSAGES],
                              VALUE_COUNTER(stats->nq[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="mailer", .value=ctx->mailers[i]}, NULL);
+                             &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
     }
 
     return 0;

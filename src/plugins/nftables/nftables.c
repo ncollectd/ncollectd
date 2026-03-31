@@ -105,14 +105,14 @@ static int counter_cb(const struct nlmsghdr *nlh, void *data)
 
     metric_family_append(&fams[FAM_NFTABLES_BYTES],
                          VALUE_COUNTER(nftnl_obj_get_u64(nlo, NFTNL_OBJ_CTR_BYTES)), NULL,
-                         &(label_pair_const_t){.name="family", family_name},
-                         &(label_pair_const_t){.name="table", table},
-                         &(label_pair_const_t){.name="counter", name}, NULL);
+                         &LABEL_PAIR_CONST("family", family_name),
+                         &LABEL_PAIR_CONST("table", table),
+                         &LABEL_PAIR_CONST("counter", name), NULL);
     metric_family_append(&fams[FAM_NFTABLES_PACKETS],
                          VALUE_COUNTER(nftnl_obj_get_u64(nlo, NFTNL_OBJ_CTR_PKTS)), NULL,
-                         &(label_pair_const_t){.name="family", family_name},
-                         &(label_pair_const_t){.name="table", table},
-                         &(label_pair_const_t){.name="counter", name}, NULL);
+                         &LABEL_PAIR_CONST("family", family_name),
+                         &LABEL_PAIR_CONST("table", table),
+                         &LABEL_PAIR_CONST("counter", name), NULL);
 
     nftnl_obj_free(nlo);
 

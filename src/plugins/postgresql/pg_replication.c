@@ -88,10 +88,8 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
                 }
             }
             metric_family_append(&fams[FAM_PG_REPLICATION_STATE], VALUE_STATE_SET(set), labels,
-                                 &(label_pair_const_t){.name="application",
-                                                       .value=col_application_name},
-                                 &(label_pair_const_t){.name="client_addr",
-                                                       .value=col_client_addr},
+                                 &LABEL_PAIR_CONST("application", col_application_name),
+                                 &LABEL_PAIR_CONST("client_addr", col_client_addr),
                                  NULL);
         }
 
@@ -111,10 +109,8 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
                 }
             }
             metric_family_append(&fams[FAM_PG_REPLICATION_SYNC_STATE], VALUE_STATE_SET(set), labels,
-                                 &(label_pair_const_t){.name="application",
-                                                       .value=col_application_name},
-                                 &(label_pair_const_t){.name="client_addr",
-                                                       .value=col_client_addr},
+                                 &LABEL_PAIR_CONST("application", col_application_name),
+                                 &LABEL_PAIR_CONST("client_addr", col_client_addr),
                                  NULL);
         }
 
@@ -132,10 +128,8 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="application",
-                                                           .value=col_application_name},
-                                     &(label_pair_const_t){.name="client_addr",
-                                                           .value=col_client_addr},
+                                     &LABEL_PAIR_CONST("application", col_application_name),
+                                     &LABEL_PAIR_CONST("client_addr", col_client_addr),
                                      NULL);
             }
         }
@@ -213,15 +207,15 @@ int pg_replication_slots(PGconn *conn, int version, metric_family_t *fams, label
         if (!PQgetisnull(res, i, 2))
             metric_family_append(&fams[FAM_PG_REPLICATION_SLOT_ACTIVE],
                                  VALUE_GAUGE(atof(PQgetvalue(res, i, 2))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="slot", .value=col_slot_name},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("slot", col_slot_name),
                                  NULL);
 
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_REPLICATION_SLOT_WAL_LSN_DIFF_BYTES],
                                  VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="slot", .value=col_slot_name},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("slot", col_slot_name),
                                  NULL);
     }
 

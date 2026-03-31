@@ -149,11 +149,11 @@ static int zone_read(void)
         } else {
             metric_family_append(&fams[FAM_ZONE_CPU_PERCENT],
                                  VALUE_GAUGE(FRC2PCT(stats->pctcpu)), NULL,
-                                 &(label_pair_const_t){.name="zone", .value=zonename}, NULL);
+                                 &LABEL_PAIR_CONST("zone", zonename), NULL);
 
             metric_family_append(&fams[FAM_ZONE_MEMORY_PERCENT],
                                  VALUE_GAUGE(FRC2PCT(stats->pctmem)), NULL,
-                                 &(label_pair_const_t){.name="zone", .value=zonename}, NULL);
+                                 &LABEL_PAIR_CONST("zone", zonename), NULL);
 
         }
         free(stats);

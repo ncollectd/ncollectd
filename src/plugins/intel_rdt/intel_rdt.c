@@ -132,12 +132,12 @@ static void rdt_submit(const struct pqos_mon_data *group)
     if (events & PQOS_MON_EVENT_L3_OCCUP)
         metric_family_append(&fams[FAM_INTEL_RDT_L3_CACHE_OCCUPANCY_BYTES],
                              VALUE_GAUGE(values->llc), NULL,
-                             &(label_pair_const_t){.name="context", .value=desc}, NULL);
+                             &LABEL_PAIR_CONST("context", desc), NULL);
 
     if (events & PQOS_PERF_EVENT_IPC)
         metric_family_append(&fams[FAM_INTEL_RDT_INSTRUCTIONS_PER_CYCLE],
                              VALUE_GAUGE(values->ipc), NULL,
-                             &(label_pair_const_t){.name="context", .value=desc}, NULL);
+                             &LABEL_PAIR_CONST("context", desc), NULL);
 
 #if PQOS_VERSION >= 40400
     if (events & PQOS_PERF_EVENT_LLC_REF) {
@@ -146,7 +146,7 @@ static void rdt_submit(const struct pqos_mon_data *group)
         if (ret == PQOS_RETVAL_OK)
             metric_family_append(&fams[FAM_INTEL_RDT_LLC_REFERENCES],
                                  VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="context", .value=desc}, NULL);
+                                 &LABEL_PAIR_CONST("context", desc), NULL);
         }
 #endif
 
@@ -162,7 +162,7 @@ static void rdt_submit(const struct pqos_mon_data *group)
 
             metric_family_append(&fams[FAM_INTEL_RDT_LOCAL_MEMORY_BANDWIDTH],
                                  VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="context", .value=desc}, NULL);
+                                 &LABEL_PAIR_CONST("context", desc), NULL);
         }
     }
 
@@ -178,7 +178,7 @@ static void rdt_submit(const struct pqos_mon_data *group)
 
             metric_family_append(&fams[FAM_INTEL_RDT_TOTAL_MEMORY_BANDWIDTH],
                                  VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="context", .value=desc}, NULL);
+                                 &LABEL_PAIR_CONST("context", desc), NULL);
         }
     }
 
@@ -199,7 +199,7 @@ static void rdt_submit(const struct pqos_mon_data *group)
 
             metric_family_append(&fams[FAM_INTEL_RDT_REMOTE_MEMORY_BANDWIDTH],
                                  VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="context", .value=desc}, NULL);
+                                 &LABEL_PAIR_CONST("context", desc), NULL);
         }
     }
 

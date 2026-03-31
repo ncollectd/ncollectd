@@ -352,7 +352,7 @@ static void postfix_counter_tree_metric_append(c_avl_tree_t *tree, metric_family
     if (iter != NULL) {
         while (c_avl_iterator_next(iter, (void *)&name, (void *)&value) == 0) {
             metric_family_append(fam, VALUE_COUNTER((*value)), labels,
-                                 &(label_pair_const_t){.name=key, .value=name}, NULL);
+                                 &LABEL_PAIR_CONST(key, name), NULL);
         }
         c_avl_iterator_destroy(iter);
     }
@@ -421,8 +421,8 @@ static void postfix_histogram_tree_metric_append(c_avl_tree_t *tree, metric_fami
     if (iter != NULL) {
         while (c_avl_iterator_next(iter, (void *)&name, (void *)&histogram) == 0) {
             metric_family_append(fam, VALUE_HISTOGRAM(histogram), labels,
-                                 &(label_pair_const_t){.name=key1, .value=name},
-                                 &(label_pair_const_t){.name=key2, .value=name2}, NULL);
+                                 &LABEL_PAIR_CONST(key1, name),
+                                 &LABEL_PAIR_CONST(key2, name2), NULL);
         }
         c_avl_iterator_destroy(iter);
     }
@@ -595,15 +595,15 @@ static int postfix_showq_parse(postfix_ctx_t *ctx)
     for (size_t i = 0; i < QUEUE_MAX; i++) {
         metric_family_append(&ctx->fams[FAM_POSTFIX_QUEUE_SIZE],
                              VALUE_GAUGE(queue_size[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="queue", .value=queue_name[i]},
+                             &LABEL_PAIR_CONST("queue", queue_name[i]),
                              NULL);
         metric_family_append(&ctx->fams[FAM_POSTFIX_QUEUE_MESSAGE_SIZE_BYTES],
                              VALUE_HISTOGRAM(queue_msg_size[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="queue", .value=queue_name[i]},
+                             &LABEL_PAIR_CONST("queue", queue_name[i]),
                              NULL);
         metric_family_append(&ctx->fams[FAM_POSTFIX_QUEUE_MESSAGE_AGE_SECONDS],
                              VALUE_HISTOGRAM(queue_msg_age[i]), &ctx->labels,
-                             &(label_pair_const_t){.name="queue", .value=queue_name[i]},
+                             &LABEL_PAIR_CONST("queue", queue_name[i]),
                              NULL);
     }
 
@@ -1034,16 +1034,16 @@ static int postfix_read(user_data_t *user_data)
 
     metric_family_append(&ctx->fams[FAM_POSTFIX_LMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.lmtp_before_queue_manager_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="before_queue_manager"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "before_queue_manager"), NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_LMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.lmtp_queue_manager_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="queue_manager"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "queue_manager"), NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_LMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.lmtp_connection_setup_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="connection_setup"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "connection_setup"), NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_LMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.lmtp_transmission_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="transmission"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "transmission"), NULL);
 
     postfix_histogram_tree_metric_append(ctx->stats.pipe_before_queue_manager_delays,
                                          &ctx->fams[FAM_POSTFIX_PIPE_DELIVERY_DELAY_SECONDS],
@@ -1060,16 +1060,16 @@ static int postfix_read(user_data_t *user_data)
 
     metric_family_append(&ctx->fams[FAM_POSTFIX_SMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.smtp_before_queue_manager_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="before_queue_manager"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "before_queue_manager"), NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_SMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.smtp_queue_manager_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="queue_manager"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "queue_manager"), NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_SMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.smtp_connection_setup_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="connection_setup"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "connection_setup"), NULL);
     metric_family_append(&ctx->fams[FAM_POSTFIX_SMTP_DELIVERY_DELAY_SECONDS],
                          VALUE_HISTOGRAM(ctx->stats.smtp_transmission_delays), &ctx->labels,
-                         &(label_pair_const_t){.name="stage", .value="transmission"}, NULL);
+                         &LABEL_PAIR_CONST("stage", "transmission"), NULL);
 
     postfix_counter_tree_metric_append(ctx->stats.smtp_processed,
                                        &ctx->fams[FAM_POSTFIX_SMTP_MESSAGES_PROCESSED],

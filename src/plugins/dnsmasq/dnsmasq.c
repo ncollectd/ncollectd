@@ -302,10 +302,10 @@ static int dnsmasq_read(user_data_t *user_data)
             continue;
         metric_family_append(&fams[FAM_DNSMASQ_SERVERS_QUERIES],
                              VALUE_COUNTER(atoll(sfields[1])), &dns->labels,
-                             &(label_pair_const_t){.name="server", .value=sfields[0]}, NULL);
+                             &LABEL_PAIR_CONST("server", sfields[0]), NULL);
         metric_family_append(&fams[FAM_DNSMASQ_SERVERS_QUERIES_FAILED],
                              VALUE_COUNTER(atoll(sfields[2])), &dns->labels,
-                             &(label_pair_const_t){.name="server", .value=sfields[0]}, NULL);
+                             &LABEL_PAIR_CONST("server", sfields[0]), NULL);
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_DNSMASQ_MAX, 0);

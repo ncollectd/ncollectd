@@ -65,9 +65,9 @@ static int buddyinfo_read(void)
             char pagesize_kb[8];
             ssnprintf(pagesize_kb, sizeof(pagesize_kb), "%d", NUM_OF_KB(pagesize, i - 1));
             metric_family_append(&fam, VALUE_GAUGE(atoi(fields[i + 3])), NULL,
-                                 &(label_pair_const_t){.name="node", .value=node_name},
-                                 &(label_pair_const_t){.name="zone", .value=zone},
-                                 &(label_pair_const_t){.name="pagesize_kb", .value=pagesize_kb},
+                                 &LABEL_PAIR_CONST("node", node_name),
+                                 &LABEL_PAIR_CONST("zone", zone),
+                                 &LABEL_PAIR_CONST("pagesize_kb", pagesize_kb),
                                  NULL);
         }
     }

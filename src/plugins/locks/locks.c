@@ -113,8 +113,8 @@ static int locks_read(void)
         for (size_t i = 0; i < FAM_LOCK_MAX; i++) {
             for (size_t k = 0; k < LOCK_TYPE_MAX; k++) {
                 metric_family_append(&fams[i], VALUE_GAUGE(counter[i][j][k]), NULL,
-                                     &(label_pair_const_t){.name="class", .value=lock_class_name[j]},
-                                     &(label_pair_const_t){.name="type", .value=lock_type_name[k]},
+                                     &LABEL_PAIR_CONST("class", lock_class_name[j]),
+                                     &LABEL_PAIR_CONST("type", lock_type_name[k]),
                                      NULL);
             }
         }

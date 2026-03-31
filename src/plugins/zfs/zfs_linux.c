@@ -185,7 +185,7 @@ static int zfs_append_metric(char *buffer, size_t prefix_len, size_t buffer_len,
     }
 
     metric_family_append(fam, value, NULL,
-                         &(label_pair_const_t){.name=zfss->lkey, .value=zfss->lvalue}, NULL);
+                         &LABEL_PAIR_CONST(zfss->lkey, zfss->lvalue), NULL);
 
     return 0;
 }
@@ -252,8 +252,8 @@ static int zfs_read_proc_pool_objset(int dir_fd, const char *pool, const char *f
     for (size_t i = 0; metrics[i].name != NULL; i++) {
         if (metrics[i].found) {
             metric_family_append(&fams_zfs[metrics[i].fam], VALUE_GAUGE(metrics[i].value), NULL,
-                                 &(label_pair_const_t){.name="dataset", .value=dataset_name},
-                                 &(label_pair_const_t){.name="pool", .value=pool}, NULL);
+                                 &LABEL_PAIR_CONST("dataset", dataset_name),
+                                 &LABEL_PAIR_CONST("pool", pool), NULL);
         }
     }
 
@@ -371,7 +371,7 @@ static int zfs_read_proc_pool_state(int dir_fd, const char *pool)
     }
 
     metric_family_append(&fams_zfs[FAM_ZFS_ZPOOL_STATE], VALUE_STATE_SET(set), NULL,
-                         &(label_pair_const_t){.name="pool", .value=pool}, NULL);
+                         &LABEL_PAIR_CONST("pool", pool), NULL);
 
     return 0;
 }

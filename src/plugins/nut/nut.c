@@ -357,12 +357,12 @@ static int nut_read(user_data_t *user_data)
             double value = atof(answer[3]);
             if (tokens_num > 2) {
                 metric_family_append(fam, VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name="context", .value=tokens[1]},
-                                     &(label_pair_const_t){.name="instance", .value=ups->upsname},
+                                     &LABEL_PAIR_CONST("context", tokens[1]),
+                                     &LABEL_PAIR_CONST("instance", ups->upsname),
                                      NULL);
             } else {
                 metric_family_append(fam, VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name="instance", .value=ups->upsname},
+                                     &LABEL_PAIR_CONST("instance", ups->upsname),
                                      NULL);
             }
         }

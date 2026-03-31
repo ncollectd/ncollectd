@@ -133,7 +133,7 @@ extern metric_family_t fams[FAM_INTERFACE_MAX];
 
 static void check_ignorelist_and_submit(const char *dev, struct ir_link_stats_storage_s *stats)
 {
-    label_pair_const_t interface_label = {.name="interface", .value=dev};
+    label_pair_const_t interface_label = LABEL_PAIR_CONST("interface", dev);
 
     metric_family_append(&fams[FAM_INTERFACE_RX_PACKETS],
                          VALUE_COUNTER(stats->rx_packets), NULL, &interface_label, NULL);
@@ -260,7 +260,7 @@ static void vf_info_submit(const char *dev, vf_stats_t *vf_stats)
     ssnprintf(buffer, sizeof(buffer), "%u", vf_stats->vf_mac->vf);
     labels.ptr[1] = (label_pair_t){.name="vf_num", .value=buffer};
 
-    label_pair_const_t dev_label = {.name="interface", .value=dev};
+    label_pair_const_t dev_label = LABEL_PAIR_CONST("interface", dev);
 
     metric_family_append(&fams[FAM_INTERFACE_VF_LINK_VLAN],
                          VALUE_GAUGE(vf_stats->vlan), &labels, &dev_label, NULL);
@@ -517,7 +517,7 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
 
     // ifi->ifi_flags & IFF_RUNNING XXX
 
-    label_pair_const_t interface_label = {.name="interface", .value=dev};
+    label_pair_const_t interface_label = LABEL_PAIR_CONST("interface", dev);
 
     metric_family_append(&fams[FAM_INTERFACE_STATE_UP],
                          VALUE_GAUGE(oper_state == 6 ? 1.0 : 0.0), NULL,
@@ -717,7 +717,7 @@ static int interface_read_proc(void)
         if (!report_inactive && (rx == 0) && (tx == 0))
             continue;
 
-        label_pair_const_t interface_label = {.name="interface", .value=interface};
+        label_pair_const_t interface_label = LABEL_PAIR_CONST("interface", interface);
 
         metric_family_append(&fams[FAM_INTERFACE_RX_BYTES],
                              VALUE_COUNTER(atoll(fields[0])), NULL, &interface_label, NULL);

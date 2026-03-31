@@ -111,24 +111,24 @@ static void md_process(const int minor, const char *path)
     ssnprintf(minor_buffer, sizeof(minor_buffer), "%i", minor);
 
     metric_family_append(&fams[FAM_MD_ACTIVE], VALUE_GAUGE(array.active_disks), NULL,
-                         &(label_pair_const_t){.name="device", .value=path},
-                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+                         &LABEL_PAIR_CONST("device", path),
+                         &LABEL_PAIR_CONST("minor", minor_buffer), NULL);
 
     metric_family_append(&fams[FAM_MD_FAILED], VALUE_GAUGE(array.failed_disks), NULL,
-                         &(label_pair_const_t){.name="device", .value=path},
-                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+                         &LABEL_PAIR_CONST("device", path),
+                         &LABEL_PAIR_CONST("minor", minor_buffer), NULL);
 
     metric_family_append(&fams[FAM_MD_SPARE], VALUE_GAUGE(array.spare_disks), NULL,
-                         &(label_pair_const_t){.name="device", .value=path},
-                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+                         &LABEL_PAIR_CONST("device", path),
+                         &LABEL_PAIR_CONST("minor", minor_buffer), NULL);
 
     double disks_missing = 0.0;
     if (array.raid_disks > array.nr_disks)
         disks_missing = (double)(array.raid_disks - array.nr_disks);
 
     metric_family_append(&fams[FAM_MD_MISSING], VALUE_GAUGE(disks_missing), NULL,
-                         &(label_pair_const_t){.name="device", .value=path},
-                         &(label_pair_const_t){.name="minor", .value=minor_buffer}, NULL);
+                         &LABEL_PAIR_CONST("device", path),
+                         &LABEL_PAIR_CONST("minor", minor_buffer), NULL);
 }
 
 static int md_read(void)

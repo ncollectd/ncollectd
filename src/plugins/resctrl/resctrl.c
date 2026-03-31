@@ -53,24 +53,24 @@ static int resctrl_read_domain(int dir_fd, __attribute__((unused)) const char *p
         if (likely(status == 0))
             metric_family_append(&fams[FAM_RESCTRL_LLC_OCCUPANCY_BYTES],
                                  VALUE_GAUGE(value), NULL,
-                                 &(label_pair_const_t){.name="domain", .value=rl->domain},
-                                 &(label_pair_const_t){.name="group", .value=rl->group}, NULL);
+                                 &LABEL_PAIR_CONST("domain", rl->domain),
+                                 &LABEL_PAIR_CONST("group", rl->group), NULL);
     } else if (strcmp(entry, "mbm_local_bytes") == 0) {
         uint64_t value;
         int status = filetouint_at(dir_fd, "mbm_local_bytes", &value);
         if (likely(status == 0))
             metric_family_append(&fams[FAM_RESCTRL_MEM_BANDWIDTH_LOCAL_BYTES],
                                  VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="domain", .value=rl->domain},
-                                 &(label_pair_const_t){.name="group", .value=rl->group}, NULL);
+                                 &LABEL_PAIR_CONST("domain", rl->domain),
+                                 &LABEL_PAIR_CONST("group", rl->group), NULL);
     } else if (strcmp(entry, "mbm_total_bytes") == 0) {
         uint64_t value;
         int status = filetouint_at(dir_fd, "mbm_total_bytes", &value);
         if (likely(status == 0))
             metric_family_append(&fams[FAM_RESCTRL_MEM_BANDWIDTH_TOTAL_BYTES],
                                  VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="domain", .value=rl->domain},
-                                 &(label_pair_const_t){.name="group", .value=rl->group}, NULL);
+                                 &LABEL_PAIR_CONST("domain", rl->domain),
+                                 &LABEL_PAIR_CONST("group", rl->group), NULL);
     }
 
     return 0;

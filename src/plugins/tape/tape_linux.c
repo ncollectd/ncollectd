@@ -91,42 +91,42 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
     ssize_t in_flight_size = filetouint_at(tape_fd, "stats/in_flight", &in_flight);
     if (in_flight_size > 0)
         metric_family_append(&fams[FAM_TAPE_IN_FLIGHT_OPS], VALUE_COUNTER(in_flight), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t other_cnt = 0;
     ssize_t other_cnt_size = filetouint_at(tape_fd, "stats/other_cnt", &other_cnt);
     if (other_cnt_size > 0)
         metric_family_append(&fams[FAM_TAPE_OTHER_OPS], VALUE_COUNTER(other_cnt), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t read_byte_cnt = 0;
     ssize_t read_byte_cnt_size = filetouint_at(tape_fd, "stats/read_byte_cnt", &read_byte_cnt);
     if(read_byte_cnt_size > 0)
         metric_family_append(&fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(read_byte_cnt), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t read_cnt = 0;
     ssize_t read_cnt_size = filetouint_at(tape_fd, "stats/read_cnt", &read_cnt);
     if(read_cnt_size > 0)
         metric_family_append(&fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(read_cnt), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t write_byte_cnt = 0;
     ssize_t write_byte_cnt_size = filetouint_at(tape_fd, "stats/write_byte_cnt", &write_byte_cnt);
     if(write_byte_cnt_size > 0)
         metric_family_append(&fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(write_byte_cnt), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
     uint64_t write_cnt = 0;
     ssize_t write_cnt_size = filetouint_at(tape_fd, "stats/write_cnt", &write_cnt);
     if(write_cnt_size > 0)
         metric_family_append(&fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(write_cnt), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t resid_cnt = 0;
     ssize_t resid_cnt_size = filetouint_at(tape_fd, "stats/resid_cnt", &resid_cnt);
     if (resid_cnt_size > 0)
         metric_family_append(&fams[FAM_TAPE_RESIDUAL], VALUE_COUNTER(resid_cnt), NULL,
-                             &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
     if ((read_cnt_size <= 0) || (write_cnt_size <= 0))
         return 0;
@@ -181,11 +181,11 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
         return 0;
 
     metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(ts->avg_read_time), NULL,
-                         &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                         &LABEL_PAIR_CONST("device", tape), NULL);
     metric_family_append(&fams[FAM_TAPE_WRITE_TIME], VALUE_COUNTER(ts->avg_write_time), NULL,
-                         &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                         &LABEL_PAIR_CONST("device", tape), NULL);
     metric_family_append(&fams[FAM_TAPE_OTHER_TIME], VALUE_COUNTER(ts->avg_other_time), NULL,
-                         &(label_pair_const_t){.name="device", .value=tape}, NULL);
+                         &LABEL_PAIR_CONST("device", tape), NULL);
 
     close(tape_fd);
 

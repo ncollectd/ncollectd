@@ -275,16 +275,16 @@ static int nsd_parse_metric(nsd_t *nsd, char *line)
     if ((nm->lkey != NULL) && (nm->lvalue != NULL)) {
         if ((lkey != NULL) && (lvalue != NULL)) {
             metric_family_append(&nsd->fams[nm->fam], mvalue, &nsd->labels,
-                                 &(label_pair_const_t){.name=lkey, .value=lvalue},
-                                 &(label_pair_const_t){.name=nm->lkey, .value=nm->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(lkey, lvalue),
+                                 &LABEL_PAIR_CONST(nm->lkey, nm->lvalue), NULL);
         } else {
             metric_family_append(&nsd->fams[nm->fam], mvalue, &nsd->labels,
-                                 &(label_pair_const_t){.name=nm->lkey, .value=nm->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(nm->lkey, nm->lvalue), NULL);
         }
     } else {
         if ((lkey != NULL) && (lvalue != NULL)) {
             metric_family_append(&nsd->fams[nm->fam], mvalue, &nsd->labels,
-                                 &(label_pair_const_t){.name=lkey, .value=lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(lkey, lvalue), NULL);
         } else {
             metric_family_append(&nsd->fams[nm->fam], mvalue, &nsd->labels, NULL);
         }

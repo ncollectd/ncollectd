@@ -631,9 +631,9 @@ static int read_blkio_io(int dir_fd, const char *filename, const char *cgroup_na
             continue;
 
         metric_family_append(fam, VALUE_COUNTER(val), NULL,
-                             &(label_pair_const_t){.name="minor", .value=minor},
-                             &(label_pair_const_t){.name="mayor", .value=mayor},
-                             &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                             &LABEL_PAIR_CONST("minor", minor),
+                             &LABEL_PAIR_CONST("mayor", mayor),
+                             &LABEL_PAIR_CONST("cgroup", cgroup_name),
                              NULL);
     }
 
@@ -677,39 +677,39 @@ static int read_io_stat(int dir_fd, const char *cgroup_name)
 
             if (!strcmp(key, "rbytes"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_READ_BYTES], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "wbytes"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_WRITE_BYTES], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "rios"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_READ_IOS], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "wios"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_WRITE_IOS], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "dbytes"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_DISCARTED_BYTES], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "dios"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_DISCARTED_IOS], VALUE_COUNTER(val), NULL,
-                                     &(label_pair_const_t){.name="minor", .value=minor},
-                                     &(label_pair_const_t){.name="mayor", .value=mayor},
-                                     &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                     &LABEL_PAIR_CONST("minor", minor),
+                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
 
         }
@@ -760,11 +760,11 @@ static int read_cpu_stat_v1(int dir_fd, const char *cgroup_name)
         if (!strcmp(key, "user"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_USER_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000000.0), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "system"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_SYSTEM_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000000.0), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
     }
 
     fclose(fh);
@@ -798,27 +798,27 @@ static int read_cpu_stat_v2(int dir_fd, const char *cgroup_name)
         if (!strcmp(key, "usage_usec"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_USAGE_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "user_usec"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_USER_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "system_usec"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_SYSTEM_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "nr_periods"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_PERIODS],
                                  VALUE_COUNTER_FLOAT64((double)counter), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "nr_throttled"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_THROTTLED],
                                  VALUE_COUNTER_FLOAT64((double)counter), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "throttled_usec"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_THROTTLED_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
     }
 
     fclose(fh);
@@ -881,8 +881,8 @@ static int read_memory_numa_stat(int dir_fd, const char *cgroup_name)
             }
 
             metric_family_append(&fams[ms->numa_fam], value, NULL,
-                                 &(label_pair_const_t){.name="zone", .value=zone},
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name},
+                                 &LABEL_PAIR_CONST("zone", zone),
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                  NULL);
         }
     }
@@ -932,7 +932,7 @@ static int read_memory_stat(int dir_fd, const char *cgroup_name)
         }
 
         metric_family_append(&fams[ms->fam], value, NULL,
-                             &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                             &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
     }
 
     fclose(fh);
@@ -964,10 +964,10 @@ static int read_pressure_file(int dir_fd, const char *filename, const char *cgro
 
         if ((strcmp(fields[0], "some") == 0) && (fam_waiting != NULL)) {
             metric_family_append(fam_waiting, value, NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         } else if ((strcmp(fields[0], "full") == 0) && (fam_stalled != NULL)) {
             metric_family_append(fam_stalled, value, NULL,
-                                 &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         }
     }
 
@@ -998,7 +998,7 @@ static int  read_cgroup_file(int dir_fd, const char *filename,
     }
 
     metric_family_append(fam, value, NULL,
-                         &(label_pair_const_t){.name="cgroup", .value=cgroup_name}, NULL);
+                         &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
 
     return 0;
 }

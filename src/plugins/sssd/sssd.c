@@ -103,8 +103,8 @@ static int sssd_active_server(sd_bus *bus, char *domain, char *decode_domain, ch
         }
     };
     metric_family_append(&fams[FAM_SSSD_DOMAIN_ACTIVE_SERVER], VALUE_INFO(info), NULL,
-                         &(label_pair_const_t){.name="domain", .value=decode_domain},
-                         &(label_pair_const_t){.name="service", .value=service}, NULL);
+                         &LABEL_PAIR_CONST("domain", decode_domain),
+                         &LABEL_PAIR_CONST("service", service), NULL);
 
     sd_bus_message_unref(reply);
     return 0;
@@ -235,7 +235,7 @@ static int sssd_list_domains(sd_bus *bus)
             online = VALUE_GAUGE(1);
 
         metric_family_append(&fams[FAM_SSSD_DOMAIN_ONLINE], online, NULL,
-                             &(label_pair_const_t){.name="domain", .value=decode_domain}, NULL);
+                             &LABEL_PAIR_CONST("domain", decode_domain), NULL);
 
         sssd_list_services(bus, domain, decode_domain);
 

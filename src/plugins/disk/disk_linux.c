@@ -294,7 +294,7 @@ int disk_read(void)
             continue;
         }
 
-        label_pair_const_t device_label = {.name="device", .value=output_name};
+        label_pair_const_t device_label = LABEL_PAIR_CONST("device", output_name);
 
         if ((ds->read_bytes != 0) || (ds->write_bytes != 0)) {
             metric_family_append(&fams[FAM_DISK_READ_BYTES],

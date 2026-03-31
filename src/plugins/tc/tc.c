@@ -446,16 +446,16 @@ static int qos_filter_cb(const struct nlmsghdr *nlh, void *args)
         if (q_stats.bs != NULL || q_stats.qs != NULL) {
             if (q_stats.bs != NULL) {
                 metric_family_append(fam_tc_bytes, VALUE_COUNTER(q_stats.bs->bytes), NULL,
-                                     &(label_pair_const_t){.name="device", .value=dev},
-                                     &(label_pair_const_t){.name="kind", .value=tc_inst}, NULL);
+                                     &LABEL_PAIR_CONST("device", dev),
+                                     &LABEL_PAIR_CONST("kind", tc_inst), NULL);
                 metric_family_append(fam_tc_packets, VALUE_COUNTER(q_stats.bs->packets), NULL,
-                                     &(label_pair_const_t){.name="device", .value=dev},
-                                     &(label_pair_const_t){.name="kind", .value=tc_inst}, NULL);
+                                     &LABEL_PAIR_CONST("device", dev),
+                                     &LABEL_PAIR_CONST("kind", tc_inst), NULL);
             }
             if (q_stats.qs != NULL) {
                 metric_family_append(fam_tc_dropped, VALUE_COUNTER(q_stats.qs->drops), NULL,
-                                     &(label_pair_const_t){.name="device", .value=dev},
-                                     &(label_pair_const_t){.name="kind", .value=tc_inst}, NULL);
+                                     &LABEL_PAIR_CONST("device", dev),
+                                     &LABEL_PAIR_CONST("kind", tc_inst), NULL);
             }
         }
 
@@ -478,14 +478,14 @@ static int qos_filter_cb(const struct nlmsghdr *nlh, void *args)
 
         if (!stats_submitted && ts != NULL) {
             metric_family_append(fam_tc_bytes, VALUE_COUNTER(ts->bytes), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev},
-                                 &(label_pair_const_t){.name="kind", .value=tc_inst}, NULL);
+                                 &LABEL_PAIR_CONST("device", dev),
+                                 &LABEL_PAIR_CONST("kind", tc_inst), NULL);
             metric_family_append(fam_tc_packets, VALUE_COUNTER(ts->packets), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev},
-                                 &(label_pair_const_t){.name="kind", .value=tc_inst}, NULL);
+                                 &LABEL_PAIR_CONST("device", dev),
+                                 &LABEL_PAIR_CONST("kind", tc_inst), NULL);
             metric_family_append(fam_tc_dropped, VALUE_COUNTER(ts->drops), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev},
-                                 &(label_pair_const_t){.name="kind", .value=tc_inst}, NULL);
+                                 &LABEL_PAIR_CONST("device", dev),
+                                 &LABEL_PAIR_CONST("kind", tc_inst), NULL);
         }
 
         break;

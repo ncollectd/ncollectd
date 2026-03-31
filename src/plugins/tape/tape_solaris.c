@@ -63,17 +63,17 @@ int tape_read(void)
                 continue;
 
             metric_family_append(&fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(kio.KIO_ROCTETS), NULL,
-                                 &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", tape_name), NULL);
             metric_family_append(&fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(kio.KIO_ROPS), NULL,
-                                 &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", tape_name), NULL);
             metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(kio.KIO_RTIME), NULL,
-                                 &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", tape_name), NULL);
             metric_family_append(&fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(kio.KIO_WOCTETS), NULL,
-                                 &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", tape_name), NULL);
             metric_family_append(&fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(kio.KIO_WOPS), NULL,
-                                 &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", tape_name), NULL);
             metric_family_append(&fams[FAM_TAPE_WRITE_TIME], VALUE_COUNTER(kio.KIO_WTIME), NULL,
-                                 &(label_pair_const_t){.name="device", .value=tape_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", tape_name), NULL);
       }
     }
 

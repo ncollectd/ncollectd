@@ -83,9 +83,9 @@ static int bonding_read(void)
                 bonding_active++;
         }
         metric_family_append(&fams[FAM_BONDING_SLAVES], VALUE_GAUGE(bonding_slaves), NULL,
-                             &(label_pair_const_t){.name="master", .value=master}, NULL);
+                             &LABEL_PAIR_CONST("master", master), NULL);
         metric_family_append(&fams[FAM_BONDING_ACTIVE], VALUE_GAUGE(bonding_active), NULL,
-                             &(label_pair_const_t){.name="master", .value=master}, NULL);
+                             &LABEL_PAIR_CONST("master", master), NULL);
         master_ptr = NULL;
     }
 

@@ -93,10 +93,10 @@ static int nfacct_read_cb(const struct nlmsghdr *nlh, __attribute__((unused)) vo
     uint64_t bytes = be64toh(mnl_attr_get_u64(tb[NFACCT_BYTES]));
 
     metric_family_append(&fams[FAM_NFACCT_BYTES], VALUE_COUNTER(bytes), NULL,
-                         &(label_pair_const_t){.name="name", .value=name}, NULL);
+                         &LABEL_PAIR_CONST("name", name), NULL);
 
     metric_family_append(&fams[FAM_NFACCT_PACKETS], VALUE_COUNTER(pkts), NULL,
-                         &(label_pair_const_t){.name="name", .value=name}, NULL);
+                         &LABEL_PAIR_CONST("name", name), NULL);
 
     if (tb[NFACCT_FLAGS] && tb[NFACCT_QUOTA]) {
         uint32_t flags = be32toh(mnl_attr_get_u32(tb[NFACCT_FLAGS]));
@@ -105,16 +105,16 @@ static int nfacct_read_cb(const struct nlmsghdr *nlh, __attribute__((unused)) vo
         if (flags) {
             if (flags & NFACCT_F_QUOTA_BYTES) {
                 metric_family_append(&fams[FAM_NFACCT_QUOTA_BYTES], VALUE_GAUGE(quota), NULL,
-                                     &(label_pair_const_t){.name="name", .value=name}, NULL);
+                                     &LABEL_PAIR_CONST("name", name), NULL);
             } else if (flags & NFACCT_F_QUOTA_PKTS) {
                 metric_family_append(&fams[FAM_NFACCT_QUOTA_PACKETS], VALUE_GAUGE(quota), NULL,
-                                     &(label_pair_const_t){.name="name", .value=name}, NULL);
+                                     &LABEL_PAIR_CONST("name", name), NULL);
             }
 
 
             metric_family_append(&fams[FAM_NFACCT_OVER_QUOTA],
                                  VALUE_GAUGE(flags & NFACCT_F_OVERQUOTA ? 1 : 0),
-                                 NULL, &(label_pair_const_t){.name="name", .value=name}, NULL);
+                                 NULL, &LABEL_PAIR_CONST("name", name), NULL);
 
         }
     }

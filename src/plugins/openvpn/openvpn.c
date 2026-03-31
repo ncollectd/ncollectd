@@ -330,16 +330,16 @@ static int multi1_read(openvpn_instance_t *oi, FILE *fh)
 
         metric_family_append(&oi->fams[FAM_OPENVPN_USER_RECEIVED_BYTES],
                              VALUE_COUNTER(atoll(fields[2])), &oi->labels,
-                              &(label_pair_const_t){.name="common_name", .value=fields[0]}, NULL);
+                              &LABEL_PAIR_CONST("common_name", fields[0]), NULL);
         metric_family_append(&oi->fams[FAM_OPENVPN_USER_SENT_BYTES],
                              VALUE_COUNTER(atoll(fields[3])), &oi->labels,
-                             &(label_pair_const_t){.name="common_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("common_name", fields[0]), NULL);
 
         struct tm tm;
         strptime(fields[4], "%Y-%m-%d %H:%M:%S", &tm);
         metric_family_append(&oi->fams[FAM_OPENVPN_USER_CONNECTED_SINCE],
                              VALUE_GAUGE((double) mktime(&tm)), &oi->labels,
-                             &(label_pair_const_t){.name="common_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("common_name", fields[0]), NULL);
 
         sum_users += 1;
     }
@@ -451,15 +451,15 @@ static int multi2_read(openvpn_instance_t *oi, FILE *fh, const char *delim)
 
         metric_family_append(&oi->fams[FAM_OPENVPN_USER_RECEIVED_BYTES],
                     VALUE_COUNTER(atoll(fields[idx_bytes_recv])), &oi->labels,
-                    &(label_pair_const_t){.name="common_name", .value=fields[idx_cname]}, NULL);
+                    &LABEL_PAIR_CONST("common_name", fields[idx_cname]), NULL);
         metric_family_append(&oi->fams[FAM_OPENVPN_USER_SENT_BYTES],
                     VALUE_COUNTER(atoll(fields[idx_bytes_sent])), &oi->labels,
-                    &(label_pair_const_t){.name="common_name", .value=fields[idx_cname]}, NULL);
+                    &LABEL_PAIR_CONST("common_name", fields[idx_cname]), NULL);
 
         if (idx_since != 0)
             metric_family_append(&oi->fams[FAM_OPENVPN_USER_CONNECTED_SINCE],
                         VALUE_GAUGE((double)atoll(fields[idx_since])), &oi->labels,
-                        &(label_pair_const_t){.name="common_name", .value=fields[idx_cname]}, NULL);
+                        &LABEL_PAIR_CONST("common_name", fields[idx_cname]), NULL);
 
         sum_users += 1;
     }

@@ -81,24 +81,24 @@ static void handle_attribute(__attribute__((unused)) SkDisk *d,
 
     metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_CURRENT],
                          VALUE_GAUGE(a->current_value), ud->labels,
-                         &(label_pair_const_t){.name="attribute", .value=a->name,},
-                         &(label_pair_const_t){.name="attribute_id", .value=id,},
+                         &LABEL_PAIR_CONST("attribute", a->name),
+                         &LABEL_PAIR_CONST("attribute_id", id),
                          NULL);
     metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_PRETTY],
                          VALUE_GAUGE(a->pretty_value), ud->labels,
-                         &(label_pair_const_t){.name="attribute", .value=a->name,},
-                         &(label_pair_const_t){.name="attribute_id", .value=id,},
+                         &LABEL_PAIR_CONST("attribute", a->name),
+                         &LABEL_PAIR_CONST("attribute_id", id),
                          NULL);
     metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_THRESHOLD],
                          VALUE_GAUGE(a->threshold_valid ? a->threshold : 0),
                          ud->labels,
-                         &(label_pair_const_t){.name="attribute", .value=a->name,},
-                         &(label_pair_const_t){.name="attribute_id", .value=id,},
+                         &LABEL_PAIR_CONST("attribute", a->name),
+                         &LABEL_PAIR_CONST("attribute_id", id),
                          NULL);
     metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_WORST],
                          VALUE_GAUGE(a->worst_value), ud->labels,
-                         &(label_pair_const_t){.name="attribute", .value=a->name,},
-                         &(label_pair_const_t){.name="attribute_id", .value=id,},
+                         &LABEL_PAIR_CONST("attribute", a->name),
+                         &LABEL_PAIR_CONST("attribute_id", id),
                          NULL);
 
     if (a->threshold_valid && a->current_value <= a->threshold) {
@@ -294,7 +294,7 @@ static int smart_read_nvme_disk(const char *dev, metric_family_t *fams, label_se
         if (smart_log->data.temp_sensor[i] > 0) {
             value = VALUE_GAUGE((double)smart_log->data.temp_sensor[i] - 273);
             metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], value, labels,
-                                 &(label_pair_const_t){.name="sensor", .value=temp_sensor[i]},
+                                 &LABEL_PAIR_CONST("sensor", temp_sensor[i]),
                                  NULL);
         }
     }

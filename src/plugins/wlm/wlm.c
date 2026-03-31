@@ -80,15 +80,15 @@ static int wlm_read (void)
 
         metric_family_append(&fams[FAM_WLM_CPU_RATIO],
                              VALUE_GAUGE((double)pwlminfo->i_regul[WLM_RES_CPU].consum/100.0), NULL,
-                             &(label_pair_const_t){.name="class", .value=pwlminfo->i_descr.name},
+                             &LABEL_PAIR_CONST("class", pwlminfo->i_descr.name),
                              NULL);
         metric_family_append(&fams[FAM_WLM_MEMORY_RATIO],
                              VALUE_GAUGE((double)pwlminfo->i_regul[WLM_RES_MEM].consum/100.0), NULL,
-                             &(label_pair_const_t){.name="class", .value=pwlminfo->i_descr.name},
+                             &LABEL_PAIR_CONST("class", pwlminfo->i_descr.name),
                              NULL);
         metric_family_append(&fams[FAM_WLM_IO_RATIO],
                              VALUE_GAUGE((double)pwlminfo->i_regul[WLM_RES_BIO].consum/100.0), NULL,
-                             &(label_pair_const_t){.name="class", .value=pwlminfo->i_descr.name},
+                             &LABEL_PAIR_CONST("class", pwlminfo->i_descr.name),
                              NULL);
     }
 

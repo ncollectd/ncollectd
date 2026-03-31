@@ -240,10 +240,10 @@ static int mmc_read_emmc_generic(struct udev_device *mmc_dev)
         if (sscanf(attr_life_time, "%hhx %hhx", &life_time_a, &life_time_b) == 2) {
             metric_family_append(&fams[FAM_MMC_LIFE_TIME_EST_TYP_A],
                                  VALUE_GAUGE((double)life_time_a), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", dev_name), NULL);
             metric_family_append(&fams[FAM_MMC_LIFE_TIME_EST_TYP_B],
                                  VALUE_GAUGE((double)life_time_b), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", dev_name), NULL);
             res = 0;
         }
     }
@@ -253,7 +253,7 @@ static int mmc_read_emmc_generic(struct udev_device *mmc_dev)
         uint8_t pre_eol;
         if (sscanf(attr_pre_eol, "%hhx", &pre_eol) == 1) {
             metric_family_append(&fams[FAM_MMC_PRE_EOL_INFO], VALUE_GAUGE((double)pre_eol), NULL,
-                                 &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", dev_name), NULL);
             res = 0;
         }
     }
@@ -399,24 +399,24 @@ static int mmc_read_micron(struct udev_device *mmc_dev, struct udev_device *bloc
     double bb_total = (double)(bb_initial) + (double)(bb_runtime);
 
     metric_family_append(&fams[FAM_MMC_BAD_BLOCKS], VALUE_GAUGE(bb_total), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_SPARE_BLOCKS], VALUE_GAUGE((double)(bb_remaining)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_ERASES_SLC_MIN], VALUE_GAUGE((double)(er_slc_min)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_SLC_MAX], VALUE_GAUGE((double)(er_slc_max)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_SLC_AVG], VALUE_GAUGE((double)(er_slc_avg)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_ERASES_MLC_MIN], VALUE_GAUGE((double)(er_mlc_min)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_MLC_MAX], VALUE_GAUGE((double)(er_mlc_max)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_MLC_AVG], VALUE_GAUGE((double)(er_mlc_avg)), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     return 0;
 }
@@ -468,45 +468,45 @@ static int mmc_read_sandisk(struct udev_device *mmc_dev, struct udev_device *blo
                       le32toh(cmd_data[SANDISK_FIELDS_BB_RUNTIME_SYS]);
 
     metric_family_append(&fams[FAM_MMC_BAD_BLOCKS], VALUE_GAUGE(bb_total), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_POWER_CYCLES],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_POWER_UPS])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_TEMPERATURE],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_TEMP_CUR])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_ERASES_MLC_AVG],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_MLC_AVG])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_MLC_MAX],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_MLC_MAX])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_MLC_MIN],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_MLC_MIN])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_ERASES_SLC_AVG],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_SLC_AVG])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_SLC_MAX],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_SLC_MAX])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_SLC_MIN],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_SLC_MIN])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     metric_family_append(&fams[FAM_MMC_ERASES_SYS_AVG],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_SYS_AVG])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_SYS_MAX],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_SYS_MAX])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
     metric_family_append(&fams[FAM_MMC_ERASES_SYS_MIN],
                          VALUE_GAUGE((double)le32toh(cmd_data[SANDISK_FIELDS_ER_SYS_MIN])), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     return 0;
 }
@@ -554,7 +554,7 @@ static int mmc_read_ssr_swissbit(struct udev_device *mmc_dev)
     value = abs(value - 100);
     PLUGIN_DEBUG("(%s): [bad_blocks] str=%s int=%d", dev_name, bad_blocks, value);
     metric_family_append(&fams[FAM_MMC_BAD_BLOCKS], VALUE_GAUGE(value), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     char block_erases[SWISSBIT_LENGTH_BLOCK_ERASES];
     sstrncpy(block_erases, &attr[SWISSBIT_SSR_START_BLOCK_ERASES], sizeof(block_erases) - 1);
@@ -562,7 +562,7 @@ static int mmc_read_ssr_swissbit(struct udev_device *mmc_dev)
     value = (int)strtol(block_erases, NULL, 16);
     PLUGIN_DEBUG("(%s): [block_erases] str=%s int=%d", dev_name, block_erases, value);
     metric_family_append(&fams[FAM_MMC_BLOCK_ERASES], VALUE_GAUGE(value), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     char power_on[SWISSBIT_LENGTH_POWER_ON];
     sstrncpy(power_on, &attr[SWISSBIT_SSR_START_POWER_ON], sizeof(power_on) - 1);
@@ -570,7 +570,7 @@ static int mmc_read_ssr_swissbit(struct udev_device *mmc_dev)
     value = (int)strtol(power_on, NULL, 16);
     PLUGIN_DEBUG("(%s): [power_on] str=%s int=%d", dev_name, power_on, value);
     metric_family_append(&fams[FAM_MMC_POWER_CYCLES], VALUE_GAUGE(value), NULL,
-                         &(label_pair_const_t){.name="device", .value=dev_name}, NULL);
+                         &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     return 0;
 }

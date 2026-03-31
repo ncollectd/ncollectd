@@ -109,8 +109,8 @@ static int irq_read(void)
             if (status != 0)
                 break;
             metric_family_append(&fam, VALUE_COUNTER(value), NULL,
-                                 &(label_pair_const_t){.name="irq", .value=irq_name},
-                                 &(label_pair_const_t){.name="cpu", .value=cpu_fields[i - 1]},
+                                 &LABEL_PAIR_CONST("irq", irq_name),
+                                 &LABEL_PAIR_CONST("cpu", cpu_fields[i - 1]),
                                  NULL);
         }
     }
@@ -153,7 +153,7 @@ static int irq_read(void)
 
         if (exclist_match(&excl_irq, irqname)) {
             metric_family_append(&fam, VALUE_COUNTER(evs->ev_count), NULL,
-                                 &(label_pair_const_t){.name="irq", .value=irqname}, NULL);
+                                 &LABEL_PAIR_CONST("irq", irqname), NULL);
         }
 
         buflen -= evs->ev_len;

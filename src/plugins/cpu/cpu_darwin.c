@@ -110,40 +110,40 @@ int cpu_read(void)
         metric_family_append(&fams[FAM_CPU_USAGE],
                              VALUE_COUNTER_FLOAT64((double)cpu_info.cpu_ticks[CPU_STATE_USER]/100.0),
                              NULL,
-                             &(label_pair_const_t){.name="state", "usage"},
-                             &(label_pair_const_t){.name="cpu", buffer_cpu}, NULL);
+                             &LABEL_PAIR_CONST("state", "usage"),
+                             &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         cpu_all_nice += cpu_info.cpu_ticks[CPU_STATE_NICE];
         metric_family_append(&fams[FAM_CPU_USAGE],
                              VALUE_COUNTER_FLOAT64((double)cpu_info.cpu_ticks[CPU_STATE_NICE]/100.0),
                              NULL,
-                             &(label_pair_const_t){.name="state", "nice"},
-                             &(label_pair_const_t){.name="cpu", buffer_cpu}, NULL);
+                             &LABEL_PAIR_CONST("state", "nice"),
+                             &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         cpu_all_system += cpu_info.cpu_ticks[CPU_STATE_SYSTEM];
         metric_family_append(&fams[FAM_CPU_USAGE],
                              VALUE_COUNTER_FLOAT64((double)cpu_info.cpu_ticks[CPU_STATE_SYSTEM]/100.0),
                              NULL,
-                             &(label_pair_const_t){.name="state", "sys"},
-                             &(label_pair_const_t){.name="cpu", buffer_cpu}, NULL);
+                             &LABEL_PAIR_CONST("state", "sys"),
+                             &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         cpu_all_idle += cpu_info.cpu_ticks[CPU_STATE_IDLE];
         metric_family_append(&fams[FAM_CPU_USAGE],
                              VALUE_COUNTER_FLOAT64((double)cpu_info.cpu_ticks[CPU_STATE_IDLE]/100.0),
                              NULL,
-                             &(label_pair_const_t){.name="state", "idle"},
-                             &(label_pair_const_t){.name="cpu", buffer_cpu}, NULL);
+                             &LABEL_PAIR_CONST("state", "idle"),
+                             &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
     }
 
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
                          VALUE_COUNTER_FLOAT64((double)cpu_all_user/100.0), NULL,
-                         &(label_pair_const_t){.name="state", "usage"}, NULL);
+                         &LABEL_PAIR_CONST("state", "usage"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
                          VALUE_COUNTER_FLOAT64((double)cpu_all_nice/100.0), NULL,
-                         &(label_pair_const_t){.name="state", "nice"}, NULL);
+                         &LABEL_PAIR_CONST("state", "nice"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
                          VALUE_COUNTER_FLOAT64((double)cpu_all_system/100.0), NULL,
-                         &(label_pair_const_t){.name="state", "sys"}, NULL);
+                         &LABEL_PAIR_CONST("state", "sys"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
                          VALUE_COUNTER_FLOAT64((double)cpu_all_idle/100.0), NULL,
-                         &(label_pair_const_t){.name="state", "idle"}, NULL);
+                         &LABEL_PAIR_CONST("state", "idle"), NULL);
 
     metric_family_append(&fams[FAM_CPU_COUNT], VALUE_GAUGE(cpu_list_len), NULL, NULL);
 

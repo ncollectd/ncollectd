@@ -68,21 +68,21 @@ static int thermal_sysfs_device_read(__attribute__((unused)) int dirfd,
     double raw = 0;
     if (parse_double_file(filename, &raw) == 0) {
         metric_family_append(&fams[FAM_THERMAL_ZONE_CELSIUS], VALUE_GAUGE(raw/1000.0), NULL,
-                             &(label_pair_const_t){.name="zone", .value=name}, NULL);
+                             &LABEL_PAIR_CONST("zone", name), NULL);
         success = true;
     }
 
     snprintf(filename, sizeof(filename), "%s/%s/cur_state", path_sys_thermal, name);
     if (parse_double_file(filename, &raw) == 0) {
         metric_family_append(&fams[FAM_COOLING_DEVICE_CUR_STATE], VALUE_GAUGE(raw), NULL,
-                             &(label_pair_const_t){.name="device", .value=name}, NULL);
+                             &LABEL_PAIR_CONST("device", name), NULL);
         success = true;
     }
 
     snprintf(filename, sizeof(filename), "%s/%s/max_state", path_sys_thermal, name);
     if (parse_double_file(filename, &raw) == 0) {
         metric_family_append(&fams[FAM_COOLING_DEVICE_MAX_STATE], VALUE_GAUGE(raw), NULL,
-                             &(label_pair_const_t){.name="device", .value=name}, NULL);
+                             &LABEL_PAIR_CONST("device", name), NULL);
         success = true;
     }
 
@@ -141,7 +141,7 @@ static int thermal_procfs_device_read(__attribute__((unused)) int dirfd,
 
         if (endptr != data + len && errno == 0) {
             metric_family_append(&fams[FAM_THERMAL_ZONE_CELSIUS], VALUE_GAUGE(temp), NULL,
-                                 &(label_pair_const_t){.name="zone", .value=name}, NULL);
+                                 &LABEL_PAIR_CONST("zone", name), NULL);
             return 0;
         }
     }

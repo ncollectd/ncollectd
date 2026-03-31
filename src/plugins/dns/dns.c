@@ -1313,7 +1313,7 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
 
     metric_family_append(&ctx->fams[FAM_DNS_QUERY_TIME_SECONDS],
                          VALUE_GAUGE(CDTIME_T_TO_DOUBLE(response->query_time)), &query->labels,
-                         &(label_pair_const_t){.name="query", .value=query->query}, NULL);
+                         &LABEL_PAIR_CONST("query", query->query), NULL);
 
     /* Parse the answer header. */
     response->id = DNS_HEADER_QID(abuf);
@@ -1327,7 +1327,7 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
 
     metric_family_append(&ctx->fams[FAM_DNS_QUERY_SUCCESS],
                          VALUE_GAUGE(response->rcode == 0 ? 1 : 0), &query->labels,
-                         &(label_pair_const_t){.name="query", .value=query->query}, NULL);
+                         &LABEL_PAIR_CONST("query", query->query), NULL);
 
     response->question_qd_len = DNS_HEADER_QDCOUNT(abuf);
     unsigned int qdcount = DNS_HEADER_QDCOUNT(abuf);
@@ -1425,7 +1425,7 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
 
         metric_family_append(&ctx->fams[FAM_DNS_QUERY_VALIDATION],
                              VALUE_GAUGE(validation), &query->labels,
-                             &(label_pair_const_t){.name="query", .value=query->query}, NULL);
+                             &LABEL_PAIR_CONST("query", query->query), NULL);
     } else {
 //fprintf(stderr, "query->ast  is null\n");
     }

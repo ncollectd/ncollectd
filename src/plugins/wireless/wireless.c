@@ -113,7 +113,7 @@ static int wireless_read(void)
             quality = -1.0; /* invalid */
 
         metric_family_append(&fams[FAM_WIRELESS_SIGNAL_QUALITY], VALUE_GAUGE(quality), NULL,
-                             &(label_pair_const_t){.name="device", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
         /* power [dBm] < 0.0 */
         double power = strtod(fields[3], &endptr);
@@ -127,7 +127,7 @@ static int wireless_read(void)
             power = 1.0; /* invalid */
 
         metric_family_append(&fams[FAM_WIRELESS_SIGNAL_POWER_DBM], VALUE_GAUGE(power), NULL,
-                             &(label_pair_const_t){.name="device", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
         /* noise [dBm] < 0.0 */
         double noise = strtod(fields[4], &endptr);
@@ -141,7 +141,7 @@ static int wireless_read(void)
             noise = 1.0; /* invalid */
 
         metric_family_append(&fams[FAM_WIRELESS_SIGNAL_NOISE_DBM], VALUE_GAUGE(noise), NULL,
-                             &(label_pair_const_t){.name="device", .value=device}, NULL);
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
         struct iwreq req = {
                 .ifr_ifrn.ifrn_name = {0},
@@ -152,7 +152,7 @@ static int wireless_read(void)
         } else {
             metric_family_append(&fams[FAM_WIRELESS_BITRATE],
                                  VALUE_GAUGE((double)req.u.bitrate.value), NULL,
-                                 &(label_pair_const_t){.name="device", .value=device}, NULL);
+                                 &LABEL_PAIR_CONST("device", device), NULL);
         }
 
         devices_found++;

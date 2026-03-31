@@ -74,7 +74,7 @@ int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="name", .value=col_name},
+                                     &LABEL_PAIR_CONST("name", col_name),
                                      NULL);
             }
         }

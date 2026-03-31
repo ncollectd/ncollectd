@@ -126,11 +126,11 @@ static int cups_read_instance(user_data_t *user_data)
             if ((option != NULL) && !strcmp(option, "true")) {
                 metric_family_append(&ins->fams[FAM_CUPS_PRINTER_ACCEPTING_JOBS],
                                      VALUE_GAUGE(1), &ins->labels,
-                                     &(label_pair_const_t){.name="printer", .value=dest_name}, NULL);
+                                     &LABEL_PAIR_CONST("printer", dest_name), NULL);
             } else {
                 metric_family_append(&ins->fams[FAM_CUPS_PRINTER_ACCEPTING_JOBS],
                                      VALUE_GAUGE(0), &ins->labels,
-                                     &(label_pair_const_t){.name="printer", .value=dest_name}, NULL);
+                                     &LABEL_PAIR_CONST("printer", dest_name), NULL);
             }
 
 
@@ -159,7 +159,7 @@ static int cups_read_instance(user_data_t *user_data)
 
             metric_family_append(&ins->fams[FAM_CUPS_PRINTER_STATUS],
                                  VALUE_STATE_SET(set), &ins->labels,
-                                 &(label_pair_const_t){.name="printer", .value=dest_name}, NULL);
+                                 &LABEL_PAIR_CONST("printer", dest_name), NULL);
 
         }
         cupsFreeDests(n_dest, dest);
@@ -203,13 +203,13 @@ static int cups_read_instance(user_data_t *user_data)
             break;
         metric_family_append(&ins->fams[FAM_CUPS_PRINTER_JOBS_PENDING],
                              VALUE_GAUGE(jstate->pending), &ins->labels,
-                             &(label_pair_const_t){.name="printer", .value=key}, NULL);
+                             &LABEL_PAIR_CONST("printer", key), NULL);
         metric_family_append(&ins->fams[FAM_CUPS_PRINTER_JOBS_HELD],
                              VALUE_GAUGE(jstate->held), &ins->labels,
-                             &(label_pair_const_t){.name="printer", .value=key}, NULL);
+                             &LABEL_PAIR_CONST("printer", key), NULL);
         metric_family_append(&ins->fams[FAM_CUPS_PRINTER_JOBS_PROCESSING],
                              VALUE_GAUGE(jstate->processing), &ins->labels,
-                             &(label_pair_const_t){.name="printer", .value=key}, NULL);
+                             &LABEL_PAIR_CONST("printer", key), NULL);
         free(jstate);
     }
 

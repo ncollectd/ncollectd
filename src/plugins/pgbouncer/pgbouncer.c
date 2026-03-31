@@ -467,10 +467,10 @@ static int pgb_show_databases(PGconn *conn, metric_family_t *fams, label_set_t *
         for (size_t j = 0; j < columns_size ; j++) {
             pgb_metric_append(res, i, columns[j].name, &fams[columns[j].fam],
                               columns[j].scale, labels,
-                              &(label_pair_const_t){.name="name", .value=name},
-                              &(label_pair_const_t){.name="host", .value=host},
-                              &(label_pair_const_t){.name="port", .value=port},
-                              &(label_pair_const_t){.name="database", .value=database}, NULL);
+                              &LABEL_PAIR_CONST("name", name),
+                              &LABEL_PAIR_CONST("host", host),
+                              &LABEL_PAIR_CONST("port", port),
+                              &LABEL_PAIR_CONST("database", database), NULL);
         }
     }
 
@@ -513,7 +513,7 @@ static int pgb_show_stats(PGconn *conn, metric_family_t *fams, label_set_t *labe
         for (size_t j = 0; j < columns_size ; j++) {
             pgb_metric_append(res, i, columns[j].name, &fams[columns[j].fam],
                               columns[j].scale, labels,
-                              &(label_pair_const_t){.name="database", .value=database}, NULL);
+                              &LABEL_PAIR_CONST("database", database), NULL);
         }
     }
 
@@ -561,8 +561,8 @@ static int pgb_show_pools(PGconn *conn, metric_family_t *fams, label_set_t *labe
         for (size_t j = 0; j < columns_size ; j++) {
             pgb_metric_append(res, i, columns[j].name, &fams[columns[j].fam],
                               columns[j].scale, labels,
-                              &(label_pair_const_t){.name="database", .value=database},
-                              &(label_pair_const_t){.name="user",     .value=user    }, NULL);
+                              &LABEL_PAIR_CONST("database", database),
+                              &LABEL_PAIR_CONST("user", user    ), NULL);
         }
 
         char *maxwait = pgb_get_string(res, i, "maxwait");
@@ -575,8 +575,8 @@ static int pgb_show_pools(PGconn *conn, metric_family_t *fams, label_set_t *labe
 
         metric_family_append(&fams[FAM_PGBOUNCER_POOL_CLIENT_MAXWAIT_SECONDS],
                              VALUE_GAUGE(dmaxwait + dmaxwait_us * 1e-6), labels,
-                            &(label_pair_const_t){.name="database", .value=database},
-                            &(label_pair_const_t){.name="user",     .value=user    }, NULL);
+                            &LABEL_PAIR_CONST("database", database),
+                            &LABEL_PAIR_CONST("user", user    ), NULL);
     }
 
     PQclear(res);

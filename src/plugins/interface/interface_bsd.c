@@ -74,22 +74,22 @@ int interface_read(void)
 
         metric_family_append(&fams[FAM_INTERFACE_RX_BYTES],
                              VALUE_COUNTER(if_data->IFA_RX_BYTES), NULL,
-                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
+                             &LABEL_PAIR_CONST("interface", if_ptr->ifa_name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_PACKETS],
                              VALUE_COUNTER(if_data->IFA_RX_PACKT), NULL,
-                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
+                             &LABEL_PAIR_CONST("interface", if_ptr->ifa_name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_RX_ERRORS],
                              VALUE_COUNTER(if_data->IFA_RX_ERROR), NULL,
-                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
+                             &LABEL_PAIR_CONST("interface", if_ptr->ifa_name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_BYTES],
                              VALUE_COUNTER(if_data->IFA_TX_BYTES), NULL,
-                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
+                             &LABEL_PAIR_CONST("interface", if_ptr->ifa_name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_PACKETS],
                              VALUE_COUNTER(if_data->IFA_TX_PACKT), NULL,
-                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
+                             &LABEL_PAIR_CONST("interface", if_ptr->ifa_name), NULL);
         metric_family_append(&fams[FAM_INTERFACE_TX_ERRORS],
                              VALUE_COUNTER(if_data->IFA_TX_ERROR), NULL,
-                             &(label_pair_const_t){.name="interface", .value=if_ptr->ifa_name}, NULL);
+                             &LABEL_PAIR_CONST("interface", if_ptr->ifa_name), NULL);
     }
 
     freeifaddrs(if_list);

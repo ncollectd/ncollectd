@@ -939,7 +939,7 @@ static bool docker_container_info_json_end_map(void *ctx)
                 }
             };
             metric_family_append(&sctx->fams[FAM_DOCKER_CONTAINER], VALUE_INFO(info), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         }
 
         if (sctx->info.state[0] != '\0') {
@@ -965,12 +965,12 @@ static bool docker_container_info_json_end_map(void *ctx)
 
             metric_family_append(&sctx->fams[FAM_DOCKER_CONTAINER_STATE],
                                  VALUE_STATE_SET(set), sctx->labels,
-                                 &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                                 &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         }
 
         metric_family_append(&sctx->fams[FAM_DOCKER_CONTAINER_CREATED_SECONDS],
                              VALUE_GAUGE(sctx->info.created), sctx->labels,
-                             &(label_pair_const_t){.name="id", .value=sctx->info.id}, NULL);
+                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
     }
 
     sctx->depth--;
@@ -1169,43 +1169,43 @@ static int docker_read(user_data_t *user_data)
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_CPU_USER_SECONDS],
                              VALUE_COUNTER(
                              &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
 #endif
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_CPU_SYSTEM_SECONDS],
                              VALUE_COUNTER(docker_stats->stats.cpu_system), // FIXME
                              &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_CPU_USAGE_SECONDS],
                              VALUE_COUNTER(docker_stats->stats.cpu_usage), // FIXME
                              &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_ONLINE_CPUS],
                              VALUE_GAUGE(docker_stats->stats.online_cpus), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_PROCESSES],
                              VALUE_GAUGE(docker_stats->stats.pids_current), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_PROCESSES_LIMITS],
                              VALUE_GAUGE(docker_stats->stats.pids_limit), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_MEMORY_USAGE_BYTES],
                              VALUE_GAUGE(docker_stats->stats.mem_usage), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_MEMORY_LIMIT_BYTES],
                              VALUE_GAUGE(docker_stats->stats.mem_limit), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_NETWORK_RECEIVE_BYTES],
                              VALUE_COUNTER(docker_stats->stats.net_rx_bytes), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_NETWORK_RECEIVE_PACKETS],
                              VALUE_COUNTER(docker_stats->stats.net_rx_packets), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_NETWORK_TRANSMIT_BYTES],
                              VALUE_COUNTER(docker_stats->stats.net_tx_bytes), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_NETWORK_TRANSMIT_PACKETS],
                              VALUE_COUNTER(docker_stats->stats.net_tx_packets), &docker->labels,
-                             &(label_pair_const_t){.name="id", .value=docker_stats->id}, NULL);
+                             &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
 
     }
     c_avl_iterator_destroy(iter);

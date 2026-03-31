@@ -326,8 +326,8 @@ static int ib_read_port(const char *device, const char *port)
         }
 
         metric_family_append(&fams[ib_files[i].fam], value, NULL,
-                             &(label_pair_const_t){.name="device", .value=device},
-                             &(label_pair_const_t){.name="port", .value=port}, NULL);
+                             &LABEL_PAIR_CONST("device", device),
+                             &LABEL_PAIR_CONST("port", port), NULL);
     }
 
     return 0;

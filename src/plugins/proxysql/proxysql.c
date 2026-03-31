@@ -905,8 +905,7 @@ static int proxysql_stats_mysql_global(proxysql_t *db, MYSQL *con)
 
         if (kv->lname != NULL) {
             metric_family_append(fam, value, &db->labels,
-                                 &(label_pair_const_t){.name = kv->lname,
-                                                       .value = kv->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(kv->lname, kv->lvalue), NULL);
         } else {
             metric_family_append(fam, value, &db->labels, NULL);
         }
@@ -953,8 +952,7 @@ static int proxysql_stats_memory_metricsl(proxysql_t *db, MYSQL *con)
 
         if (kv->lname != NULL) {
             metric_family_append(fam, value, &db->labels,
-                                 &(label_pair_const_t){.name = kv->lname,
-                                                       .value = kv->lvalue}, NULL);
+                                 &LABEL_PAIR_CONST(kv->lname, kv->lvalue), NULL);
         } else {
             metric_family_append(fam, value, &db->labels, NULL);
         }
@@ -1013,7 +1011,7 @@ static int proxysql_stats_mysql_commands_counters(proxysql_t *db, MYSQL *con)
 
         metric_family_append(&db->fams[FAM_PROXYSQL_COMMAND_TIME_SECONDS],
                              VALUE_HISTOGRAM(histogram), &db->labels,
-                             &(label_pair_const_t){.name = "command", .value = row[0]},
+                             &LABEL_PAIR_CONST("command", row[0]),
                              NULL);
 
         histogram_reset(histogram);
@@ -1042,11 +1040,11 @@ static int proxysql_stats_mysql_users(proxysql_t *db, MYSQL *con)
 
         metric_family_append(&db->fams[FAM_PROXYSQL_USER_FRONTEND_CONNECTIONS],
                              VALUE_GAUGE(atof(row[1])), &db->labels,
-                             &(label_pair_const_t){.name = "username", .value = row[0]},
+                             &LABEL_PAIR_CONST("username", row[0]),
                              NULL);
         metric_family_append(&db->fams[FAM_PROXYSQL_USER_FRONTEND_MAX_CONNECTIONS],
                              VALUE_GAUGE(atof(row[2])), &db->labels,
-                             &(label_pair_const_t){.name = "username", .value = row[0]},
+                             &LABEL_PAIR_CONST("username", row[0]),
                              NULL);
     }
 
@@ -1108,9 +1106,9 @@ static int proxysql_stats_mysql_connection_pool(proxysql_t *db, MYSQL *con)
             state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
             metric_family_append(&db->fams[FAM_PROXYSQL_CONNECTION_POOL_STATUS],
                                  VALUE_STATE_SET(set), &db->labels,
-                                 &(label_pair_const_t){.name = "hostgroup", .value = row[0]},
-                                 &(label_pair_const_t){.name = "srv_host", .value = row[1]},
-                                 &(label_pair_const_t){.name = "srv_port", .value = row[2]},
+                                 &LABEL_PAIR_CONST("hostgroup", row[0]),
+                                 &LABEL_PAIR_CONST("srv_host", row[1]),
+                                 &LABEL_PAIR_CONST("srv_port", row[2]),
                                  NULL);
          }
 
@@ -1134,9 +1132,9 @@ static int proxysql_stats_mysql_connection_pool(proxysql_t *db, MYSQL *con)
             }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
-                                 &(label_pair_const_t){.name = "hostgroup", .value = row[0]},
-                                 &(label_pair_const_t){.name = "srv_host", .value = row[1]},
-                                 &(label_pair_const_t){.name = "srv_port", .value = row[2]},
+                                 &LABEL_PAIR_CONST("hostgroup", row[0]),
+                                 &LABEL_PAIR_CONST("srv_host", row[1]),
+                                 &LABEL_PAIR_CONST("srv_port", row[2]),
                                  NULL);
         }
     }

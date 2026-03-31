@@ -184,7 +184,7 @@ static int drbd_metrics(long int resource, char **fields, size_t fields_num)
             }
 
             metric_family_append(fam, val, NULL,
-                                 &(label_pair_const_t){.name="device", .value=device}, NULL);
+                                 &LABEL_PAIR_CONST("device", device), NULL);
         }
     }
 
@@ -214,7 +214,7 @@ static int drbd_status(long int resource, char **fields, size_t fields_num)
             if (strncmp(data, "Connected", strlen("Connected")) == 0)
                 value = 1;
             metric_family_append(&fams[FAM_DRBD_CONNECTED], VALUE_GAUGE(value), NULL,
-                                 &(label_pair_const_t){.name="device", .value=device}, NULL);
+                                 &LABEL_PAIR_CONST("device", device), NULL);
         }
     }
 
@@ -226,7 +226,7 @@ static int drbd_status(long int resource, char **fields, size_t fields_num)
             if (strncmp(data, "Primary", strlen("Primary")) == 0)
                 value = 1;
             metric_family_append(&fams[FAM_DRDB_NODE_ROLE_IS_PRIMARY], VALUE_GAUGE(value), NULL,
-                                 &(label_pair_const_t){.name="device", .value=device}, NULL);
+                                 &LABEL_PAIR_CONST("device", device), NULL);
         }
     }
 
@@ -238,7 +238,7 @@ static int drbd_status(long int resource, char **fields, size_t fields_num)
             if (strncmp(data, "UpToDate", strlen("UpToDate")) == 0)
                 value = 1;
             metric_family_append(&fams[FAM_DRDB_DISK_STATE_IS_UP_TO_DATE], VALUE_GAUGE(value), NULL,
-                                 &(label_pair_const_t){.name="device", .value=device}, NULL);
+                                 &LABEL_PAIR_CONST("device", device), NULL);
         }
     }
 

@@ -111,22 +111,22 @@ int disk_read(void)
         if ((snap_iter->bytes[DEVSTAT_READ] != 0) || (snap_iter->bytes[DEVSTAT_WRITE] != 0)) {
             metric_family_append(&fams[FAM_DISK_READ_BYTES],
                                  VALUE_COUNTER(snap_iter->bytes[DEVSTAT_READ]), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
 
             metric_family_append(&fams[FAM_DISK_WRITE_BYTES],
                                  VALUE_COUNTER(snap_iter->bytes[DEVSTAT_WRITE]), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
 
         if ((snap_iter->operations[DEVSTAT_READ] != 0) ||
                 (snap_iter->operations[DEVSTAT_WRITE] != 0)) {
             metric_family_append(&fams[FAM_DISK_READ_OPS],
                                  VALUE_COUNTER(snap_iter->operations[DEVSTAT_READ]), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
 
             metric_family_append(&fams[FAM_DISK_WRITE_OPS],
                                  VALUE_COUNTER(snap_iter->operations[DEVSTAT_WRITE]), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
 
         long double read_time = devstat_compute_etime(&snap_iter->duration[DEVSTAT_READ], NULL);
@@ -134,11 +134,11 @@ int disk_read(void)
         if ((read_time != 0) || (write_time != 0)) {
             metric_family_append(&fams[FAM_DISK_READ_TIME],
                                  VALUE_COUNTER_FLOAT64(read_time), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
 
             metric_family_append(&fams[FAM_DISK_WRITE_TIME],
                                  VALUE_COUNTER_FLOAT64(write_time), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
 
         long double busy_time, total_duration;
@@ -151,15 +151,15 @@ int disk_read(void)
         } else {
             metric_family_append(&fams[FAM_DISK_IO_TIME],
                                  VALUE_COUNTER_FLOAT64(busy_time), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
 
             metric_family_append(&fams[FAM_DISK_IO_WEIGHTED_TIME],
                                  VALUE_COUNTER_FLOAT64(total_duration), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
 
             metric_family_append(&fams[FAM_DISK_PENDING_OPERATIONS],
                                  VALUE_GAUGE(queue_length), NULL,
-                                 &(label_pair_const_t){.name="device", .value=disk_name}, NULL);
+                                 &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
     }
 

@@ -94,8 +94,8 @@ static int softirq_read(void)
             if (status != 0)
                 break;
             metric_family_append(&fam, VALUE_COUNTER(v), NULL,
-                                 &(label_pair_const_t){.name="cpu", .value=cpu_fields[i-1]},
-                                 &(label_pair_const_t){.name="softirq", .value=softirq_name},
+                                 &LABEL_PAIR_CONST("cpu", cpu_fields[i-1]),
+                                 &LABEL_PAIR_CONST("softirq", softirq_name),
                                  NULL);
         }
     }

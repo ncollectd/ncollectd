@@ -43,7 +43,7 @@ static void ethstat_submit_value(interface_t *interface, const char *name, uint6
     };
 
     metric_family_append(&fam, VALUE_COUNTER(value), NULL,
-                         &(label_pair_const_t){.name="device", .value=interface->device}, NULL);
+                         &LABEL_PAIR_CONST("device", interface->device), NULL);
 
     plugin_dispatch_metric_family_filtered(&fam, interface->filter, ts);
 }

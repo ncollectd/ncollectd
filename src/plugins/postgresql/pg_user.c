@@ -167,9 +167,9 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="database", .value=col_database},
-                                     &(label_pair_const_t){.name="schema", .value=col_schema},
-                                     &(label_pair_const_t){.name="table", .value=col_table},
+                                     &LABEL_PAIR_CONST("database", col_database),
+                                     &LABEL_PAIR_CONST("schema", col_schema),
+                                     &LABEL_PAIR_CONST("table", col_table),
                                      NULL);
             }
         }
@@ -290,9 +290,9 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="database", .value=col_database},
-                                     &(label_pair_const_t){.name="schema", .value=col_schema},
-                                     &(label_pair_const_t){.name="table", .value=col_table},
+                                     &LABEL_PAIR_CONST("database", col_database),
+                                     &LABEL_PAIR_CONST("schema", col_schema),
+                                     &LABEL_PAIR_CONST("table", col_table),
                                      NULL);
             }
         }
@@ -386,17 +386,17 @@ int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t 
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_TABLE_SIZE_BYTES],
                                  VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
                                  NULL);
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_TABLE_INDEXES_SIZE_BYTES],
                                  VALUE_GAUGE(atof(PQgetvalue(res, i, 4))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
                                  NULL);
     }
 
@@ -488,27 +488,27 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_FUNCTION_CALLS],
                                  VALUE_COUNTER( atol(PQgetvalue(res, i, 3))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="function", .value=col_function},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("function", col_function),
                                  NULL);
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_FUNCTION_TOTAL_TIME_SECONDS],
                                  VALUE_COUNTER_FLOAT64(((double)atol(PQgetvalue(res, i, 4))/1000.0)),
                                  labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="function", .value=col_function},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("function", col_function),
                                  NULL);
 
         if (!PQgetisnull(res, i, 5))
             metric_family_append(&fams[FAM_PG_FUNCTION_SELF_TIME_SECONDS],
                                  VALUE_COUNTER_FLOAT64(((double)atol(PQgetvalue(res, i, 5))/1000.0)),
                                  labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="function", .value=col_function},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("function", col_function),
                                  NULL);
     }
 
@@ -611,28 +611,28 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_SCAN],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
-                                 &(label_pair_const_t){.name="index", .value=col_index},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
+                                 &LABEL_PAIR_CONST("index", col_index),
                                  NULL);
 
         if (!PQgetisnull(res, i, 5))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_READ_ROWS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 5))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
-                                 &(label_pair_const_t){.name="index", .value=col_index},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
+                                 &LABEL_PAIR_CONST("index", col_index),
                                  NULL);
 
         if (!PQgetisnull(res, i, 6))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_FETCH_ROWS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 6))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
-                                 &(label_pair_const_t){.name="index", .value=col_index},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
+                                 &LABEL_PAIR_CONST("index", col_index),
                                  NULL);
     }
 
@@ -735,19 +735,19 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_READ_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
-                                 &(label_pair_const_t){.name="index", .value=col_index},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
+                                 &LABEL_PAIR_CONST("index", col_index),
                                  NULL);
 
         if (!PQgetisnull(res, i, 5))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_HIT_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 5))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="table", .value=col_table},
-                                 &(label_pair_const_t){.name="index", .value=col_index},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("table", col_table),
+                                 &LABEL_PAIR_CONST("index", col_index),
                                  NULL);
     }
 
@@ -837,17 +837,17 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_SEQUENCES_READ_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 3))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="sequence", .value=col_sequence},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("sequence", col_sequence),
                                  NULL);
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_SEQUENCES_HIT_BLOCKS],
                                  VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
-                                 &(label_pair_const_t){.name="database", .value=col_database},
-                                 &(label_pair_const_t){.name="schema", .value=col_schema},
-                                 &(label_pair_const_t){.name="sequence", .value=col_sequence},
+                                 &LABEL_PAIR_CONST("database", col_database),
+                                 &LABEL_PAIR_CONST("schema", col_schema),
+                                 &LABEL_PAIR_CONST("sequence", col_sequence),
                                  NULL);
     }
 

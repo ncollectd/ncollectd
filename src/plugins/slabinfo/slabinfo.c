@@ -91,19 +91,19 @@ static int slabinfo_read(void)
             continue;
 
         metric_family_append(&fams[FAM_SLABINFO_OBJECTS_ACTIVE], VALUE_GAUGE(atof(fields[1])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_OBJECTS], VALUE_GAUGE(atof(fields[2])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_OBJECT_BYTES], VALUE_GAUGE(atof(fields[3])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_SLAB_OBJECTS], VALUE_GAUGE(atof(fields[4])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_SLAB_BYTES], VALUE_GAUGE(atof(fields[5])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_SLABS_ACTIVE], VALUE_GAUGE(atof(fields[13])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_SLABS], VALUE_GAUGE(atof(fields[14])), NULL,
-                             &(label_pair_const_t){.name="cache_name", .value=fields[0]}, NULL);
+                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
     }
 
     fclose(fh);

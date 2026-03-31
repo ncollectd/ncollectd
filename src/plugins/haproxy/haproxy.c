@@ -669,32 +669,32 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
         case HA_STAT_HRSP_1XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
                 metric_family_append(fam, value, &ha->labels,
-                                     &(label_pair_const_t){.name="code", .value="1xx"}, NULL);
+                                     &LABEL_PAIR_CONST("code", "1xx"), NULL);
             break;
         case HA_STAT_HRSP_2XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
                 metric_family_append(fam, value, &ha->labels,
-                                     &(label_pair_const_t){.name="code", .value="2xx"}, NULL);
+                                     &LABEL_PAIR_CONST("code", "2xx"), NULL);
             break;
         case HA_STAT_HRSP_3XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
                 metric_family_append(fam, value, &ha->labels,
-                                     &(label_pair_const_t){.name="code", .value="3xx"}, NULL);
+                                     &LABEL_PAIR_CONST("code", "3xx"), NULL);
             break;
         case HA_STAT_HRSP_4XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
                 metric_family_append(fam, value, &ha->labels,
-                                     &(label_pair_const_t){.name="code", .value="4xx"}, NULL);
+                                     &LABEL_PAIR_CONST("code", "4xx"), NULL);
             break;
         case HA_STAT_HRSP_5XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
                 metric_family_append(fam, value, &ha->labels,
-                                     &(label_pair_const_t){.name="code", .value="5xx"}, NULL);
+                                     &LABEL_PAIR_CONST("code", "5xx"), NULL);
             break;
         case HA_STAT_HRSP_OTHER:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
                 metric_family_append(fam, value, &ha->labels,
-                                     &(label_pair_const_t){.name="code", .value="other"}, NULL);
+                                     &LABEL_PAIR_CONST("code", "other"), NULL);
             break;
         case HA_STAT_REQ_RATE_MAX:
         case HA_STAT_REQ_TOT:
@@ -903,7 +903,7 @@ static int haproxy_read_cmd_table(haproxy_t *ha)
             if (strtodouble(fields[5] + strlen("size:"), &value) == 0)
                 metric_family_append(&ha->fams_sticktable[FAM_HAPROXY_STICKTABLE_SIZE],
                                      VALUE_GAUGE(value), &ha->labels,
-                                     &(label_pair_const_t){.name="table", .value=table}, NULL);
+                                     &LABEL_PAIR_CONST("table", table), NULL);
         }
 
         if (strncmp(fields[6], "used:", strlen("used:")) == 0) {
@@ -911,7 +911,7 @@ static int haproxy_read_cmd_table(haproxy_t *ha)
             if (strtodouble(fields[6] + strlen("used:"), &value) == 0)
                 metric_family_append(&ha->fams_sticktable[FAM_HAPROXY_STICKTABLE_USED],
                                      VALUE_GAUGE(value), &ha->labels,
-                                     &(label_pair_const_t){.name="table", .value=table}, NULL);
+                                     &LABEL_PAIR_CONST("table", table), NULL);
         }
     }
 

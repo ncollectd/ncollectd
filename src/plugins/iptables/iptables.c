@@ -124,15 +124,15 @@ static int submit6_match(const struct ip6t_entry_match *match,
     }
 
     metric_family_append(fam_ip6t_bytes, VALUE_COUNTER(entry->counters.bcnt), NULL,
-                         &(label_pair_const_t){.name="table", .value=chain->table},
-                         &(label_pair_const_t){.name="chain", .value=chain->chain},
-                         &(label_pair_const_t){.name="rule", .value=rule},
+                         &LABEL_PAIR_CONST("table", chain->table),
+                         &LABEL_PAIR_CONST("chain", chain->chain),
+                         &LABEL_PAIR_CONST("rule", rule),
                          NULL);
 
     metric_family_append(fam_ip6t_packets, VALUE_COUNTER(entry->counters.pcnt), NULL,
-                         &(label_pair_const_t){.name="table", .value=chain->table},
-                         &(label_pair_const_t){.name="chain", .value=chain->chain},
-                         &(label_pair_const_t){.name="rule", .value=rule},
+                         &LABEL_PAIR_CONST("table", chain->table),
+                         &LABEL_PAIR_CONST("chain", chain->chain),
+                         &LABEL_PAIR_CONST("rule", rule),
                          NULL);
     return 0;
 }
@@ -167,15 +167,15 @@ static int submit_match(const struct ipt_entry_match *match,
     }
 
     metric_family_append(fam_ipt_bytes, VALUE_COUNTER((uint64_t)entry->counters.bcnt), NULL,
-                         &(label_pair_const_t){.name="table", .value=chain->table},
-                         &(label_pair_const_t){.name="chain", .value=chain->chain},
-                         &(label_pair_const_t){.name="rule", .value=rule},
+                         &LABEL_PAIR_CONST("table", chain->table),
+                         &LABEL_PAIR_CONST("chain", chain->chain),
+                         &LABEL_PAIR_CONST("rule", rule),
                          NULL);
 
     metric_family_append(fam_ipt_packets, VALUE_COUNTER((uint64_t)entry->counters.pcnt), NULL,
-                         &(label_pair_const_t){.name="table", .value=chain->table},
-                         &(label_pair_const_t){.name="chain", .value=chain->chain},
-                         &(label_pair_const_t){.name="rule", .value=rule},
+                         &LABEL_PAIR_CONST("table", chain->table),
+                         &LABEL_PAIR_CONST("chain", chain->chain),
+                         &LABEL_PAIR_CONST("rule", rule),
                          NULL);
 
     return 0;

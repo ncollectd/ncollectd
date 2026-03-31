@@ -100,9 +100,9 @@ int pg_stat_io(PGconn *conn, int version, metric_family_t *fams, label_set_t *la
                 }
 
                 metric_family_append(fam, value, labels,
-                                     &(label_pair_const_t){.name="backend", .value=col_backend},
-                                     &(label_pair_const_t){.name="object", .value=col_object},
-                                     &(label_pair_const_t){.name="context", .value=col_context},
+                                     &LABEL_PAIR_CONST("backend", col_backend),
+                                     &LABEL_PAIR_CONST("object", col_object),
+                                     &LABEL_PAIR_CONST("context", col_context),
                                      NULL);
             }
         }

@@ -54,8 +54,8 @@ static int rapl_read_dir(int dir_fd, __attribute__((unused)) const char *path,
 
     metric_family_append(&fams[FAM_RAPL_ENERGY],
                          VALUE_COUNTER_FLOAT64(((double)energy)/1000000.0), NULL,
-                         &(label_pair_const_t){.name="domain", .value=domain},
-                         &(label_pair_const_t){.name="zone", .value=entry + strlen("intel-rapl:")},
+                         &LABEL_PAIR_CONST("domain", domain),
+                         &LABEL_PAIR_CONST("zone", entry + strlen("intel-rapl:")),
                          NULL);
 
     return 0;

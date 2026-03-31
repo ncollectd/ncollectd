@@ -471,50 +471,50 @@ static void submit_scoreboard(char *buf, apache_ctx_t *ctx, metric_family_t *fam
 
     if (ctx->server_type == APACHE) {
         metric_family_append(fam_scoreboard, VALUE_GAUGE(open), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="open"}, NULL);
+                             &LABEL_PAIR_CONST("state", "open"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(waiting), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="waiting"}, NULL);
+                             &LABEL_PAIR_CONST("state", "waiting"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(starting), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="starting"}, NULL);
+                             &LABEL_PAIR_CONST("state", "starting"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(reading), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="reading"}, NULL);
+                             &LABEL_PAIR_CONST("state", "reading"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(sending), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="sending"}, NULL);
+                             &LABEL_PAIR_CONST("state", "sending"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(keepalive), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="keepalive"}, NULL);
+                             &LABEL_PAIR_CONST("state", "keepalive"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(dnslookup), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="dnslookup"}, NULL);
+                             &LABEL_PAIR_CONST("state", "dnslookup"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(closing), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="closing"}, NULL);
+                             &LABEL_PAIR_CONST("state", "closing"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(logging), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="logging"}, NULL);
+                             &LABEL_PAIR_CONST("state", "logging"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(finishing), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="finishing"}, NULL);
+                             &LABEL_PAIR_CONST("state", "finishing"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(idle_cleanup), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="idle_cleanup"}, NULL);
+                             &LABEL_PAIR_CONST("state", "idle_cleanup"), NULL);
     } else {
         metric_family_append(fam_scoreboard, VALUE_GAUGE(open), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="connect"}, NULL);
+                             &LABEL_PAIR_CONST("state", "connect"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(closing), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="close"}, NULL);
+                             &LABEL_PAIR_CONST("state", "close"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(hard_error), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="hard_error"}, NULL);
+                             &LABEL_PAIR_CONST("state", "hard_error"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(lighttpd_read), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="read"}, NULL);
+                             &LABEL_PAIR_CONST("state", "read"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(reading), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="read_post"}, NULL);
+                             &LABEL_PAIR_CONST("state", "read_post"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(sending), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="write"}, NULL);
+                             &LABEL_PAIR_CONST("state", "write"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(handle_request), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="handle_request"}, NULL);
+                             &LABEL_PAIR_CONST("state", "handle_request"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(request_start), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="request_start"}, NULL);
+                             &LABEL_PAIR_CONST("state", "request_start"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(request_end), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="request_end"}, NULL);
+                             &LABEL_PAIR_CONST("state", "request_end"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(response_start), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="response_start"}, NULL);
+                             &LABEL_PAIR_CONST("state", "response_start"), NULL);
         metric_family_append(fam_scoreboard, VALUE_GAUGE(response_end), &ctx->labels,
-                             &(label_pair_const_t){.name="state", .value="response_end"}, NULL);
+                             &LABEL_PAIR_CONST("state", "response_end"), NULL);
     }
 }
 
@@ -599,31 +599,31 @@ static int apache_read(user_data_t *user_data)
                        || (strcmp(fields[0], "BusyWorkers:") == 0)) /* Apache 2.* */) {
                 metric_family_append(&ctx->fams[FAM_APACHE_WORKERS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="busy"}, NULL);
+                                     &LABEL_PAIR_CONST("state", "busy"), NULL);
                 apache_connections_submitted++;
             } else if (!apache_idle_workers_submitted &&
                        ((strcmp(fields[0], "IdleServers:") == 0) /* Apache 1.x */
                        ||(strcmp(fields[0], "IdleWorkers:") == 0)) /* Apache 2.x */) {
                 metric_family_append(&ctx->fams[FAM_APACHE_WORKERS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="idle"}, NULL);
+                                     &LABEL_PAIR_CONST("state", "idle"), NULL);
                 apache_idle_workers_submitted++;
             } else if (strcmp(fields[0], "ConnsTotal:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="total"}, NULL);
+                                     &LABEL_PAIR_CONST("state", "total"), NULL);
             } else if (strcmp(fields[0], "ConnsAsyncWriting:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="writing"}, NULL);
+                                     &LABEL_PAIR_CONST("state", "writing"), NULL);
             } else if (strcmp(fields[0], "ConnsAsyncKeepAlive:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="keepalive"}, NULL);
+                                     &LABEL_PAIR_CONST("state", "keepalive"), NULL);
             } else if (strcmp(fields[0], "ConnsAsyncClosing:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &(label_pair_const_t){.name="state", .value="closing"}, NULL);
+                                     &LABEL_PAIR_CONST("state", "closing"), NULL);
             } else if (strcmp(fields[0], "Processes:") == 0) {
                 metric_family_append(&ctx->fams[FAM_APACHE_PROCESSES],
                                      VALUE_GAUGE(atol(fields[1])), &ctx->labels, NULL);

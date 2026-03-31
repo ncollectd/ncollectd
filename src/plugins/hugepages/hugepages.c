@@ -135,25 +135,25 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
         if (node == NULL) {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_NR], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
 
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_NR_BYTES], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             }
         } else {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_NR], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
-                                     &(label_pair_const_t){.name = "node", .value = node}, NULL);
+                                     &LABEL_PAIR_CONST("page_size", hpage),
+                                     &LABEL_PAIR_CONST("node", node), NULL);
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_NR_BYTES], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
-                                     &(label_pair_const_t){.name = "node", .value = node}, NULL);
+                                     &LABEL_PAIR_CONST("page_size", hpage),
+                                     &LABEL_PAIR_CONST("node", node), NULL);
             }
         }
     }
@@ -163,24 +163,24 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
         if (node == NULL) {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_FREE], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_FREE_BYTES], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             }
         } else {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_FREE], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
-                                     &(label_pair_const_t){.name = "node", .value = node}, NULL);
+                                     &LABEL_PAIR_CONST("page_size", hpage),
+                                     &LABEL_PAIR_CONST("node", node), NULL);
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_FREE_BYTES], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
-                                     &(label_pair_const_t){.name = "node", .value = node}, NULL);
+                                     &LABEL_PAIR_CONST("page_size", hpage),
+                                     &LABEL_PAIR_CONST("node", node), NULL);
             }
         }
     }
@@ -190,25 +190,25 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
         if (node == NULL) {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_SURPLUS], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_SURPLUS_BYTES], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             }
         } else {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_SURPLUS], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
-                                     &(label_pair_const_t){.name = "node", .value = node}, NULL);
+                                     &LABEL_PAIR_CONST("page_size", hpage),
+                                     &LABEL_PAIR_CONST("node", node), NULL);
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_SURPLUS_BYTES], VALUE_GAUGE(value),
                                      NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
-                                     &(label_pair_const_t){.name = "node", .value = node}, NULL);
+                                     &LABEL_PAIR_CONST("page_size", hpage),
+                                     &LABEL_PAIR_CONST("node", node), NULL);
             }
         }
     }
@@ -218,12 +218,12 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
         if (parse_double_file(hpath, &value) == 0) {
             if (values_pages)
                 metric_family_append(&fams[FAM_HUGEPAGES_RESERVED], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             if (values_bytes) {
                 value *= hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_RESERVED_BYTES], VALUE_GAUGE(value), NULL,
-                                     &(label_pair_const_t){.name = "page_size", .value = hpage},
+                                     &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             }
         }

@@ -584,7 +584,7 @@ int nc_dns_read(nc_dns_ctx_t *ctx, label_set_t *labels)
         char *qtype = qtype_str(keys[i], buf, sizeof(buf));
         metric_family_append(&ctx->fams[FAM_PCAP_DNS_QUERY_TYPES], VALUE_COUNTER(values[i]),
                              labels,
-                             &(label_pair_const_t){.name="qtype", .value=qtype}, NULL);
+                             &LABEL_PAIR_CONST("qtype", qtype), NULL);
         PLUGIN_DEBUG("qtype = %u; counter = %u;", keys[i], values[i]);
     }
 
@@ -600,7 +600,7 @@ int nc_dns_read(nc_dns_ctx_t *ctx, label_set_t *labels)
         char *opcode = opcode_str(keys[i], buf, sizeof(buf));
         metric_family_append(&ctx->fams[FAM_PCAP_DNS_OPERATION_CODES], VALUE_COUNTER(values[i]),
                              labels,
-                             &(label_pair_const_t){.name="opcode", .value=opcode}, NULL);
+                             &LABEL_PAIR_CONST("opcode", opcode), NULL);
         PLUGIN_DEBUG("opcode = %u; counter = %u;", keys[i], values[i]);
     }
 
@@ -616,7 +616,7 @@ int nc_dns_read(nc_dns_ctx_t *ctx, label_set_t *labels)
         char *rcode = rcode_str(keys[i], buf, sizeof(buf));
         metric_family_append(&ctx->fams[FAM_PCAP_DNS_RESPONSE_CODES], VALUE_COUNTER(values[i]),
                              labels,
-                             &(label_pair_const_t){.name="rcode", .value=rcode}, NULL);
+                             &LABEL_PAIR_CONST("rcode", rcode), NULL);
         PLUGIN_DEBUG("rcode = %u; counter = %u;", keys[i], values[i]);
     }
 

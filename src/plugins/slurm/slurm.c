@@ -311,15 +311,15 @@ static void slurm_submit_partition(partition_state_t *partition)
     for (int i = 0; i < JOB_END; i++) {
         metric_family_append(&fams[FAM_SLURM_JOB_STATE],
                              VALUE_GAUGE(partition->jobs_states_count[i]), NULL,
-                             &(label_pair_const_t){.name="partition", .value=partition->name},
-                             &(label_pair_const_t){.name="state", .value=job_state_names[i]},
+                             &LABEL_PAIR_CONST("partition", partition->name),
+                             &LABEL_PAIR_CONST("state", job_state_names[i]),
                              NULL);
     }
     for (size_t i = 0; i < NUM_NODE_STATES; i++) {
         metric_family_append(&fams[FAM_SLURM_NODE_STATE],
                              VALUE_GAUGE(partition->nodes_states_count[i]), NULL,
-                             &(label_pair_const_t){.name="partition", .value=partition->name},
-                             &(label_pair_const_t){.name="state", .value=node_state_names[i]},
+                             &LABEL_PAIR_CONST("partition", partition->name),
+                             &LABEL_PAIR_CONST("state", node_state_names[i]),
                              NULL);
     }
 }
