@@ -10,13 +10,14 @@
 \fBload-plugin\fP cgroups
 \fBplugin\fP cgroups {
     \fBcgroup\fP [\fIincl|include|excl|exclude\fP] \fIcgroup\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
-The \fBcgroups\fP plugin collects the CPU user/system time for each
-\fIcgroup\fP by reading the \fIcpuacct.stat\fP files in the first
-cpuacct-mountpoint (typically \fI/sys/fs/cgroup/cpu.cpuacct\fP on
-machines using systemd).
+The \fBcgroups\fP plugin collects CPU, IO and memory metrics from
+the groups configured in Control Groups V1 or Control Groups V2.
 .Pp
 The plugin has the following options:
 .Bl -tag -width Ds
@@ -24,6 +25,10 @@ The plugin has the following options:
 Select \fIcgroup\fP based on the name.
 By default only selected cgroups are collected if a selection is made.
 If no selection is configured at all, \fBall\fP cgroups are selected.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
