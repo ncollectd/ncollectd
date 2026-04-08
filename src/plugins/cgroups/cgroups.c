@@ -149,7 +149,7 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
     },
     [FAM_CGROUPS_CPU_MAX_SECONDS] = {
         .name = "system_cgroups_cpu_max_seconds",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "The maximum bandwidth limit for the CPU in seconds."
     },
     [FAM_CGROUPS_PROCESSES] = {
@@ -875,7 +875,7 @@ static int read_cpu_max(int dir_fd, const char *cgroup_name)
     }
 
     metric_family_append(&fams[FAM_CGROUPS_CPU_MAX_SECONDS],
-                         VALUE_COUNTER_FLOAT64(max_cpu), NULL,
+                         VALUE_GAUGE(max_cpu), NULL,
                          &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
 
     return 0;
@@ -950,7 +950,7 @@ static int read_memory_max(int dir_fd, const char *cgroup_name)
         strtouint(tbuf, &max);
 
     metric_family_append(&fams[FAM_CGROUPS_MEMORY_MAX_BYTES],
-                         VALUE_COUNTER(max), NULL,
+                         VALUE_GAUGE(max), NULL,
                          &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
 
     return 0;
