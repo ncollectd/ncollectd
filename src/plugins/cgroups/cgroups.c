@@ -22,6 +22,7 @@ enum {
     FAM_CGROUPS_CPU_PERIODS,
     FAM_CGROUPS_CPU_THROTTLED,
     FAM_CGROUPS_CPU_THROTTLED_SECONDS,
+    FAM_CGROUPS_CPU_MAX_SECONDS,
     FAM_CGROUPS_PROCESSES,
     FAM_CGROUPS_MEMORY_BYTES,
     FAM_CGROUPS_SWAP_BYTES,
@@ -66,6 +67,14 @@ enum {
     FAM_CGROUPS_MEMORY_PAGE_DEACTIVATES,
     FAM_CGROUPS_MEMORY_PAGE_LAZY_FREE,
     FAM_CGROUPS_MEMORY_PAGE_LAZY_FREED,
+    FAM_CGROUPS_MEMORY_MAX_BYTES,
+    FAM_CGROUPS_MEMORY_EVENT_LOW,
+    FAM_CGROUPS_MEMORY_EVENT_HIGH,
+    FAM_CGROUPS_MEMORY_EVENT_MAX,
+    FAM_CGROUPS_MEMORY_EVENT_OOM,
+    FAM_CGROUPS_MEMORY_EVENT_OOM_KILL,
+    FAM_CGROUPS_MEMORY_EVENT_OOM_GROUP_KILL,
+    FAM_CGROUPS_MEMORY_EVENT_SOCK_THROTTLED,
     FAM_CGROUPS_NUMA_ANONYMOUS_BYTES,
     FAM_CGROUPS_NUMA_PAGE_CACHE_BYTES,
     FAM_CGROUPS_NUMA_KERNEL_STACK_BYTES,
@@ -137,6 +146,11 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "The total time duration (in seconds) for which tasks "
                 "in the cgroup have been throttled."
+    },
+    [FAM_CGROUPS_CPU_MAX_SECONDS] = {
+        .name = "system_cgroups_cpu_max_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The maximum bandwidth limit for the CPU in seconds."
     },
     [FAM_CGROUPS_PROCESSES] = {
         .name = "system_cgroups_processes",
@@ -369,6 +383,51 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
         .help = "Number of transparent hugepages which were allocated to allow collapsing "
                 "an existing range of pages."
     },
+    [FAM_CGROUPS_MEMORY_MAX_BYTES] = {
+        .name = "system_cgroups_memory_max_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory usage hard limit in bytes.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_LOW] = {
+        .name = "system_cgroups_memory_event_low",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times the cgroup is reclaimed due to high memory pressure "
+                "even though its usage is under the low boundary.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_HIGH] = {
+        .name = "system_cgroups_memory_event_high",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times processes of the cgroup are throttled and routed to "
+                "perform direct memory reclaim because the high memory boundary was exceeded.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_MAX] = {
+        .name = "system_cgroups_memory_event_max",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times the cgroup’s memory usage was about to go over "
+                "the max boundary.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_OOM] = {
+        .name = "system_cgroups_memory_event_oom",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of time the cgroup’s memory usage was reached the limit and "
+                "allocation was about to fail.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_OOM_KILL] = {
+        .name = "system_cgroups_memory_event_oom_kill",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of processes belonging to this cgroup killed by any kind "
+                "of OOM killer.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_OOM_GROUP_KILL] = {
+        .name = "system_cgroups_memory_event_oom_group_kill",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times a group OOM has occurred.",
+    },
+    [FAM_CGROUPS_MEMORY_EVENT_SOCK_THROTTLED] = {
+        .name = "system_cgroups_memory_event_sock_throttled",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times network sockets associated with this cgroup are throttled.",
+    },
     [FAM_CGROUPS_NUMA_ANONYMOUS_BYTES] = {
         .name = "system_cgroups_numa_anonymous_bytes",
         .type = METRIC_TYPE_GAUGE,
@@ -583,6 +642,8 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
 
 static exclist_t excl_cgroup;
 
+static plugin_filter_t *filter;
+
 typedef enum {
     KIND_CGROUP_V2,
     KIND_CGROUP_V1_CPUACCT,
@@ -772,6 +833,54 @@ static int read_cpu_stat_v1(int dir_fd, const char *cgroup_name)
     return 0;
 }
 
+static int read_cpu_max(int dir_fd, const char *cgroup_name)
+{
+    FILE *fh = fopenat(dir_fd, "cpu.max", "r");
+    if (fh == NULL) {
+        PLUGIN_DEBUG("fdopen ('%s') failed: %s", cgroup_name, STRERRNO);
+        return -1;
+    }
+
+    char buf[1024];
+    if (fgets(buf, sizeof(buf), fh) == NULL) {
+        fclose(fh);
+        return -1;
+    }
+
+    fclose(fh);
+
+    char *fields[8];
+
+    int numfields = strsplit(buf, fields, STATIC_ARRAY_SIZE(fields));
+    if (numfields != 2)
+        return -1;
+
+    double max_cpu = 0;
+
+    if (strcmp(fields[0], "max") != 0)  {
+        double max = 0;
+        int status = strtodouble(fields[0], &max);
+        if (status != 0)
+            return -1;
+
+        double period = 0;
+        status = strtodouble(fields[1], &period);
+        if (status != 0)
+            return -1;
+
+        if ((max == 0) || (period == 0))
+            return -1;
+
+        max_cpu = max / period;
+    }
+
+    metric_family_append(&fams[FAM_CGROUPS_CPU_MAX_SECONDS],
+                         VALUE_COUNTER_FLOAT64(max_cpu), NULL,
+                         &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+
+    return 0;
+}
+
 static int read_cpu_stat_v2(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "cpu.stat", "r");
@@ -818,6 +927,85 @@ static int read_cpu_stat_v2(int dir_fd, const char *cgroup_name)
         else if (!strcmp(key, "throttled_usec"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_THROTTLED_SECONDS],
                                  VALUE_COUNTER_FLOAT64((double)counter / 1000000.0), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+    }
+
+    fclose(fh);
+
+    return 0;
+}
+
+static int read_memory_max(int dir_fd, const char *cgroup_name)
+{
+    char buf[256];
+    ssize_t len = read_file_at(dir_fd, "memory.max", buf, sizeof(buf));
+    if (len < 0)
+        return -1;
+
+    char *tbuf = strntrim(buf, (size_t)len);
+
+    uint64_t max = 0;
+
+    if (strcmp(tbuf, "max") != 0)
+        strtouint(tbuf, &max);
+
+    metric_family_append(&fams[FAM_CGROUPS_MEMORY_MAX_BYTES],
+                         VALUE_COUNTER(max), NULL,
+                         &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+
+    return 0;
+}
+
+static int read_memory_events(int dir_fd, const char *cgroup_name)
+{
+    FILE *fh = fopenat(dir_fd, "memory.events", "r");
+    if (fh == NULL) {
+        PLUGIN_DEBUG("fdopen ('memory.events') at '%s' failed: %s", cgroup_name, STRERRNO);
+        return -1;
+    }
+
+    char buf[1024];
+    while (fgets(buf, sizeof(buf), fh) != NULL) {
+        char *fields[8];
+
+        int numfields = strsplit(buf, fields, STATIC_ARRAY_SIZE(fields));
+        if (numfields < 2)
+            continue;
+
+        char *key = fields[0];
+
+        uint64_t counter;
+        int status = strtouint(fields[1], &counter);
+        if (status != 0)
+            continue;
+
+        if (!strcmp(key, "low"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_LOW],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+        else if (!strcmp(key, "high"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_HIGH],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+        else if (!strcmp(key, "max"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_MAX],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+        else if (!strcmp(key, "oom"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_OOM],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+        else if (!strcmp(key, "oom_kill"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_OOM_KILL],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+        else if (!strcmp(key, "oom_group_kill"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_OOM_GROUP_KILL],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+        else if (!strcmp(key, "sock_throttled"))
+            metric_family_append(&fams[FAM_CGROUPS_MEMORY_EVENT_SOCK_THROTTLED],
+                                 VALUE_COUNTER(counter), NULL,
                                  &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
     }
 
@@ -1009,6 +1197,8 @@ static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup
         case KIND_CGROUP_V2:
             read_cpu_stat_v2(cgroup_fd, cgroup_name);
 
+            read_cpu_max(cgroup_fd, cgroup_name);
+
             read_cgroup_file(cgroup_fd, "pids.current", cgroup_name,
                                         &fams[FAM_CGROUPS_PROCESSES]);
 
@@ -1023,6 +1213,10 @@ static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup
             read_memory_stat(cgroup_fd, cgroup_name);
 
             read_memory_numa_stat(cgroup_fd, cgroup_name);
+
+            read_memory_events(cgroup_fd, cgroup_name);
+
+            read_memory_max(cgroup_fd, cgroup_name);
 
             read_pressure_file(cgroup_fd, "cpu.pressure", cgroup_name,
                                           &fams[FAM_CGROUPS_PRESSURE_CPU_WAITING],
@@ -1152,7 +1346,7 @@ static int cgroups_read(void)
         return -1;
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_CGROUPS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_CGROUPS_MAX, filter, 0);
 
     return 0;
 }
@@ -1165,6 +1359,8 @@ static int cgroups_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "cgroup") == 0) {
             status = cf_util_exclist(child, &excl_cgroup);
+        } else if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -1181,6 +1377,7 @@ static int cgroups_config(config_item_t *ci)
 static int cgroups_shutdown(void)
 {
     exclist_reset(&excl_cgroup);
+    plugin_filter_free(filter);
     return 0;
 }
 

@@ -9,14 +9,15 @@ NCOLLECTD-CGROUPS(5) - File Formats Manual
 	load-plugin cgroups
 	plugin cgroups {
 	    cgroup [incl|include|excl|exclude] cgroup
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
 
-The **cgroups** plugin collects the CPU user/system time for each
-*cgroup* by reading the *cpuacct.stat* files in the first
-cpuacct-mountpoint (typically */sys/fs/cgroup/cpu.cpuacct* on
-machines using systemd).
+The **cgroups** plugin collects CPU, IO and memory metrics from
+the groups configured in Control Groups V1 or Control Groups V2.
 
 The plugin has the following options:
 
@@ -25,6 +26,12 @@ The plugin has the following options:
 > Select *cgroup* based on the name.
 > By default only selected cgroups are collected if a selection is made.
 > If no selection is configured at all, **all** cgroups are selected.
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 
