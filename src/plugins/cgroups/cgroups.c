@@ -25,7 +25,9 @@ enum {
     FAM_CGROUPS_CPU_MAX_SECONDS,
     FAM_CGROUPS_PROCESSES,
     FAM_CGROUPS_MEMORY_BYTES,
+    FAM_CGROUPS_MEMORY_MAX_BYTES,
     FAM_CGROUPS_SWAP_BYTES,
+    FAM_CGROUPS_SWAP_MAX_BYTES,
     FAM_CGROUPS_MEMORY_SWAP_BYTES,
     FAM_CGROUPS_MEMORY_ANONYMOUS_BYTES,
     FAM_CGROUPS_MEMORY_PAGE_CACHE_BYTES,
@@ -67,7 +69,6 @@ enum {
     FAM_CGROUPS_MEMORY_PAGE_DEACTIVATES,
     FAM_CGROUPS_MEMORY_PAGE_LAZY_FREE,
     FAM_CGROUPS_MEMORY_PAGE_LAZY_FREED,
-    FAM_CGROUPS_MEMORY_MAX_BYTES,
     FAM_CGROUPS_MEMORY_EVENT_LOW,
     FAM_CGROUPS_MEMORY_EVENT_HIGH,
     FAM_CGROUPS_MEMORY_EVENT_MAX,
@@ -163,15 +164,20 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
         .help = "The total amount of memory currently being used "
                 "by the cgroup and its descendants.",
     },
+    [FAM_CGROUPS_MEMORY_MAX_BYTES] = {
+        .name = "system_cgroups_memory_max_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory usage hard limit in bytes.",
+    },
     [FAM_CGROUPS_SWAP_BYTES] = {
         .name = "system_cgroups_swap_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "The total amount of swap currently being used by the cgroup and its descendants.",
     },
-    [FAM_CGROUPS_MEMORY_SWAP_BYTES] = {
-        .name = "system_cgroups_memory_swap_bytes",
+    [FAM_CGROUPS_SWAP_MAX_BYTES] = {
+        .name = "system_cgroups_swap_max_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The total amount of swap currently being used by the cgroup and its descendants.",
+        .help = "The swap usage hard limt in bytes.",
     },
     [FAM_CGROUPS_MEMORY_ANONYMOUS_BYTES] = {
         .name = "system_cgroups_memory_anonymous_bytes",
@@ -382,11 +388,6 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of transparent hugepages which were allocated to allow collapsing "
                 "an existing range of pages."
-    },
-    [FAM_CGROUPS_MEMORY_MAX_BYTES] = {
-        .name = "system_cgroups_memory_max_bytes",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "Memory usage hard limit in bytes.",
     },
     [FAM_CGROUPS_MEMORY_EVENT_LOW] = {
         .name = "system_cgroups_memory_event_low",
@@ -680,7 +681,7 @@ static int read_blkio_io(int dir_fd, const char *filename, const char *cgroup_na
         if (fam == NULL)
             continue;
 
-        char *mayor = fields[0];
+        char *major = fields[0];
         char *minor = strchr(fields[0], ':');
         if (minor == NULL)
             continue;
@@ -693,7 +694,7 @@ static int read_blkio_io(int dir_fd, const char *filename, const char *cgroup_na
 
         metric_family_append(fam, VALUE_COUNTER(val), NULL,
                              &LABEL_PAIR_CONST("minor", minor),
-                             &LABEL_PAIR_CONST("mayor", mayor),
+                             &LABEL_PAIR_CONST("major", major),
                              &LABEL_PAIR_CONST("cgroup", cgroup_name),
                              NULL);
     }
@@ -718,7 +719,7 @@ static int read_io_stat(int dir_fd, const char *cgroup_name)
         if (numfields < 7)
             continue;
 
-        char *mayor = fields[0];
+        char *major = fields[0];
         char *minor = strchr(fields[0], ':');
         if (minor == NULL)
             continue;
@@ -739,37 +740,37 @@ static int read_io_stat(int dir_fd, const char *cgroup_name)
             if (!strcmp(key, "rbytes"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_READ_BYTES], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "wbytes"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_WRITE_BYTES], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "rios"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_READ_IOS], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "wios"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_WRITE_IOS], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "dbytes"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_DISCARTED_BYTES], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
             else if (!strcmp(key, "dios"))
                 metric_family_append(&fams[FAM_CGROUPS_IO_DISCARTED_IOS], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("cgroup", cgroup_name),
                                      NULL);
 
@@ -935,10 +936,10 @@ static int read_cpu_stat_v2(int dir_fd, const char *cgroup_name)
     return 0;
 }
 
-static int read_memory_max(int dir_fd, const char *cgroup_name)
+static int read_memory_max(int dir_fd, char *path, const char *cgroup_name, metric_family_t *fam)
 {
     char buf[256];
-    ssize_t len = read_file_at(dir_fd, "memory.max", buf, sizeof(buf));
+    ssize_t len = read_file_at(dir_fd, path, buf, sizeof(buf));
     if (len < 0)
         return -1;
 
@@ -949,8 +950,7 @@ static int read_memory_max(int dir_fd, const char *cgroup_name)
     if (strcmp(tbuf, "max") != 0)
         strtouint(tbuf, &max);
 
-    metric_family_append(&fams[FAM_CGROUPS_MEMORY_MAX_BYTES],
-                         VALUE_GAUGE(max), NULL,
+    metric_family_append(fam, VALUE_GAUGE(max), NULL,
                          &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
 
     return 0;
@@ -1207,16 +1207,20 @@ static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup
             read_cgroup_file(cgroup_fd, "memory.current", cgroup_name,
                                         &fams[FAM_CGROUPS_MEMORY_BYTES]);
 
+            read_memory_max(cgroup_fd, "memory.max", cgroup_name,
+                                       &fams[FAM_CGROUPS_MEMORY_MAX_BYTES]);
+
             read_cgroup_file(cgroup_fd, "memory.swap.current", cgroup_name,
                                         &fams[FAM_CGROUPS_SWAP_BYTES]);
+
+            read_memory_max(cgroup_fd, "memory.swap.max", cgroup_name,
+                                       &fams[FAM_CGROUPS_SWAP_MAX_BYTES]);
 
             read_memory_stat(cgroup_fd, cgroup_name);
 
             read_memory_numa_stat(cgroup_fd, cgroup_name);
 
             read_memory_events(cgroup_fd, cgroup_name);
-
-            read_memory_max(cgroup_fd, cgroup_name);
 
             read_pressure_file(cgroup_fd, "cpu.pressure", cgroup_name,
                                           &fams[FAM_CGROUPS_PRESSURE_CPU_WAITING],
