@@ -62,6 +62,32 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Estimation of how much memory is available for starting new applications.",
     },
+    [FAM_MEMORY_PAGE_TABLES_BYTES] = {
+        .name = "system_memory_page_tables_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Amount of memory dedicated to the lowest level of page tables.",
+    },
+    [FAM_MEMORY_KERNEL_STACK_BYTES] = {
+        .name = "system_memory_kernel_stack_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory consumed by the kernel stacks of all tasks. This is not reclaimable."
+    },
+    [FAM_MEMORY_ANONYMOUS_BYTES] = {
+        .name = "system_memory_anonymous_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Non-file backed pages mapped into userspace page tables.",
+    },
+    [FAM_MEMORY_SWAP_CACHED_BYTES] = {
+        .name = "system_memory_swap_cached_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory that once was swapped out, is swapped back in "
+                "but still also is in the swapfile.",
+    },
+    [FAM_MEMORY_HUGEPAGES_BYTES] = {
+        .name = "system_memory_hugepages_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Total amount of memory consumed by huge pages of all sizes.",
+    },
     [FAM_MEMORY_WIRED_BYTES] = {
         .name = "system_memory_wired_bytes",
         .type = METRIC_TYPE_GAUGE,
@@ -75,12 +101,12 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
     [FAM_MEMORY_ACTIVE_BYTES] = {
         .name = "system_memory_active_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Memory that has been used more recently and usually not swapped out or reclaimed.",
     },
     [FAM_MEMORY_INACTIVE_BYTES] = {
         .name = "system_memory_inactive_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Memory that has not been used recently and can be swapped out or reclaimed.",
     },
     [FAM_MEMORY_KERNEL_BYTES] = {
         .name = "system_memory_kernel_bytes",

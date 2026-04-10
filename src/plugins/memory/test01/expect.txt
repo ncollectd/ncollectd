@@ -16,3 +16,13 @@ system_memory_slab_reclaimable_bytes{hostname="localhost.localdomain"} 704954368
 system_memory_slab_unreclaimable_bytes{hostname="localhost.localdomain"} 183504896
 # TYPE system_memory_available_bytes gauge
 system_memory_available_bytes{hostname="localhost.localdomain"} 27894935552
+# TYPE system_memory_page_tables_bytes gauge
+system_memory_page_tables_bytes{hostname="localhost.localdomain"} 44265472
+# TYPE system_memory_kernel_stack_bytes gauge
+system_memory_kernel_stack_bytes{hostname="localhost.localdomain"} 18726912
+# TYPE system_memory_anonymous_bytes gauge
+system_memory_anonymous_bytes{hostname="localhost.localdomain"} 2973937664
+# TYPE system_memory_swap_cached_bytes gauge
+system_memory_swap_cached_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_memory_hugepages_bytes gauge
+system_memory_hugepages_bytes{hostname="localhost.localdomain"} 0

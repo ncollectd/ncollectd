@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix MEMINFO_
+%define hash-function-name meminfo_hash
+%define lookup-function-name meminfo_get_key
+%define slot-name key
+%{
+%}
+struct meminfo_metric {
+    char *key;
+    int mkey;
+};
+%%
+MemTotal:,          MEMINFO_MEMORY_TOTAL
+MemFree:,           MEMINFO_MEMORY_FREE
+MemAvailable:,      MEMINFO_MEMORY_AVAILABLE
+Buffers:,           MEMINFO_BUFFERS
+Cached:,            MEMINFO_CACHED
+SwapCached:,        MEMINFO_SWAP_CACHED
+AnonPages:,         MEMINFO_ANONYMOUS_PAGES
+Shmem:,             MEMINFO_SHMEM
+Slab:,              MEMINFO_SLAB
+SReclaimable:,      MEMINFO_SLAB_RECLAIMABLE
+SUnreclaim:,        MEMINFO_SLAB_UNRECLAIMABLE
+KernelStack:,       MEMINFO_KERNEL_STACK
+PageTables:,        MEMINFO_PAGE_TABLES
+Hugetlb:,           MEMINFO_HUGEPAGES

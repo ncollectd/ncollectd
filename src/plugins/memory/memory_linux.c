@@ -15,6 +15,26 @@ static char *path_proc_meminfo;
 
 extern metric_family_t fams[];
 
+typedef enum {
+    MEMINFO_MEMORY_TOTAL,
+    MEMINFO_MEMORY_FREE,
+    MEMINFO_MEMORY_AVAILABLE,
+    MEMINFO_BUFFERS,
+    MEMINFO_CACHED,
+    MEMINFO_SWAP_CACHED,
+    MEMINFO_ANONYMOUS_PAGES,
+    MEMINFO_SHMEM,
+    MEMINFO_SLAB,
+    MEMINFO_SLAB_RECLAIMABLE,
+    MEMINFO_SLAB_UNRECLAIMABLE,
+    MEMINFO_KERNEL_STACK,
+    MEMINFO_PAGE_TABLES,
+    MEMINFO_HUGEPAGES,
+    MEMINFO_MAX
+} meminfo_t;
+
+#include "plugins/memory/meminfo.h"
+
 int memory_read(void)
 {
     FILE *fh = fopen(path_proc_meminfo, "r");
@@ -24,111 +44,120 @@ int memory_read(void)
         return status;
     }
 
-    double mem_free = NAN;
-    double mem_buffers = NAN;
-    double mem_cached = NAN;
-    double mem_slab = NAN;
-    double mem_slab_recl = NAN;
-    double mem_slab_unrecl = NAN;
-    double mem_total = 0;
-    double mem_not_used = 0;
-    double mem_available = NAN;
-    double mem_shmem = NAN;
+    double meminfo[MEMINFO_MAX];
+
+    meminfo[MEMINFO_MEMORY_TOTAL] = 0;
+    for (size_t i = 1; i < MEMINFO_MAX; i++) {
+        meminfo[i] = NAN;
+    }
 
     char buffer[256];
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-        char *fields[4] = {NULL};
+        char *fields[5] = {NULL};
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
-        if ((fields_num != 3) || (strcmp("kB", fields[2]) != 0))
+        if ((fields_num < 2) || (fields_num > 3))
             continue;
 
-        switch (fields[0][0]) {
-        case 'B':
-            if (strcmp(fields[0], "Buffers:") == 0) {
-                mem_buffers = 1024.0 * atoll(fields[1]);
-                mem_not_used += mem_buffers;
+        const struct meminfo_metric *mm = meminfo_get_key(fields[0], strlen(fields[0]));
+        if (mm == NULL)
+            continue;
+
+        double value = atof(fields[1]);
+
+        if (fields_num == 3) {
+            if ((fields[2][0] == 'k') && (fields[2][1] == 'B')) {
+                value *= 1024.0;
+            } else {
+                continue;
             }
-            break;
-        case 'C':
-            if (strcmp(fields[0], "Cached:") == 0) {
-                mem_cached = 1024.0 * atoll(fields[1]);
-                mem_not_used += mem_cached;
-            }
-            break;
-        case 'M':
-            if (strcmp(fields[0], "MemTotal:") == 0) {
-                mem_total = 1024.0 * atoll(fields[1]);
-            } else if (strcmp(fields[0], "MemFree:") == 0) {
-                mem_free = 1024.0 * atoll(fields[1]);
-                mem_not_used += mem_free;
-            } else if (strcmp(fields[0], "MemAvailable:") == 0) {
-                mem_available = 1024.0 * atoll(fields[1]);
-            }
-            break;
-        case 'S':
-            if (strcmp(fields[0], "Slab:") == 0) {
-                mem_slab = 1024.0 * atoll(fields[1]);
-            } else if (strcmp(fields[0], "SReclaimable:") == 0) {
-                mem_slab_recl = 1024.0 * atoll(fields[1]);
-            } else if (strcmp(fields[0], "SUnreclaim:") == 0) {
-                mem_slab_unrecl = 1024.0 * atoll(fields[1]);
-            } else if (strcmp(fields[0], "Shmem:") == 0) {
-                mem_shmem = 1024.0 * atoll(fields[1]);
-            }
-            break;
         }
+
+        if (!isfinite(value))
+            continue;
+
+        meminfo[mm->mkey] = value;
     }
 
     fclose(fh);
 
-    if (isnan(mem_total) || (mem_total == 0))
+    if (isnan(meminfo[MEMINFO_MEMORY_TOTAL]) || (meminfo[MEMINFO_MEMORY_TOTAL] == 0))
         return EINVAL;
 
     double mem_used = 0;
 
-    if (isnan(mem_available) || (mem_available == 0)) {
-        if (!isnan(mem_slab_recl))
-            mem_not_used += mem_slab_recl;
-        else if (!isnan(mem_slab))
-            mem_not_used += mem_slab;
+    if (isnan(meminfo[MEMINFO_MEMORY_AVAILABLE]) || (meminfo[MEMINFO_MEMORY_AVAILABLE]== 0)) {
+        double mem_not_used = 0;
 
-        if (mem_total < mem_not_used)
+        if (!isnan(meminfo[MEMINFO_BUFFERS]))
+            mem_not_used += meminfo[MEMINFO_BUFFERS];
+        if (!isnan(meminfo[MEMINFO_CACHED]))
+            mem_not_used += meminfo[MEMINFO_CACHED];
+        if (!isnan(meminfo[MEMINFO_MEMORY_FREE]))
+            mem_not_used += meminfo[MEMINFO_MEMORY_FREE];
+
+        if (!isnan(meminfo[MEMINFO_SLAB_RECLAIMABLE]))
+            mem_not_used += meminfo[MEMINFO_SLAB_RECLAIMABLE];
+        else if (!isnan(meminfo[MEMINFO_SLAB]))
+            mem_not_used += meminfo[MEMINFO_SLAB];
+
+        if (meminfo[MEMINFO_MEMORY_TOTAL] < mem_not_used)
             return EINVAL;
 
         /* "used" is not explicitly reported. It is calculated as everything that is
          * not "not used", e.g. cached, buffers, ... */
-        mem_used = mem_total - mem_not_used;
+        mem_used = meminfo[MEMINFO_MEMORY_TOTAL] - mem_not_used;
     } else {
-        if (mem_available > mem_total)
-            mem_used = mem_total - mem_free;
+        if (meminfo[MEMINFO_MEMORY_AVAILABLE] > meminfo[MEMINFO_MEMORY_TOTAL])
+            mem_used = meminfo[MEMINFO_MEMORY_TOTAL] - meminfo[MEMINFO_MEMORY_FREE];
         else
-            mem_used = mem_total - mem_available;
+            mem_used = meminfo[MEMINFO_MEMORY_TOTAL] - meminfo[MEMINFO_MEMORY_AVAILABLE];
     }
 
-    metric_family_append(&fams[FAM_MEMORY_TOTAL_BYTES], VALUE_GAUGE(mem_total), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_USED_BYTES], VALUE_GAUGE(mem_used), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES], VALUE_GAUGE(mem_free), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_SHARED_BYTES], VALUE_GAUGE(mem_shmem), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_BUFFERS_BYTES], VALUE_GAUGE(mem_buffers), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_CACHED_BYTES], VALUE_GAUGE(mem_cached), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_TOTAL_BYTES],
+                         VALUE_GAUGE(meminfo[MEMINFO_MEMORY_TOTAL]), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_USED_BYTES],
+                         VALUE_GAUGE(mem_used), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
+                         VALUE_GAUGE(meminfo[MEMINFO_MEMORY_FREE]), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_SHARED_BYTES],
+                         VALUE_GAUGE(meminfo[MEMINFO_SHMEM]), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_BUFFERS_BYTES],
+                         VALUE_GAUGE(meminfo[MEMINFO_BUFFERS]), NULL, NULL);
+    metric_family_append(&fams[FAM_MEMORY_CACHED_BYTES],
+                         VALUE_GAUGE(meminfo[MEMINFO_CACHED]), NULL, NULL);
 
     /* SReclaimable and SUnreclaim were introduced in kernel 2.6.19
      * They sum up to the value of Slab, which is available on older & newer
      * kernels. So SReclaimable/SUnreclaim are submitted if available, and Slab
      * if not. */
-    if (!isnan(mem_slab_recl) || !isnan(mem_slab_unrecl)) {
+    if (!isnan(meminfo[MEMINFO_SLAB_RECLAIMABLE]) || !isnan(meminfo[MEMINFO_SLAB_UNRECLAIMABLE])) {
         metric_family_append(&fams[FAM_MEMORY_SLAB_RECLAIMABLE_BYTES],
-                             VALUE_GAUGE(mem_slab_recl), NULL, NULL);
+                             VALUE_GAUGE(meminfo[MEMINFO_SLAB_RECLAIMABLE]), NULL, NULL);
         metric_family_append(&fams[FAM_MEMORY_SLAB_UNRECLAIMABLE_BYTES],
-                             VALUE_GAUGE(mem_slab_unrecl), NULL, NULL);
+                             VALUE_GAUGE(meminfo[MEMINFO_SLAB_UNRECLAIMABLE]), NULL, NULL);
     } else {
         metric_family_append(&fams[FAM_MEMORY_SLAB_BYTES],
-                             VALUE_GAUGE(mem_slab), NULL, NULL);
+                             VALUE_GAUGE(meminfo[MEMINFO_SLAB]), NULL, NULL);
     }
 
-    if (!isnan(mem_available) && (mem_available != 0))
+    if (!isnan(meminfo[MEMINFO_MEMORY_AVAILABLE]) && (meminfo[MEMINFO_MEMORY_AVAILABLE] != 0))
         metric_family_append(&fams[FAM_MEMORY_AVAILABLE_BYTES],
-                             VALUE_GAUGE(mem_available), NULL, NULL);
+                             VALUE_GAUGE(meminfo[MEMINFO_MEMORY_AVAILABLE]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_SWAP_CACHED]))
+        metric_family_append(&fams[FAM_MEMORY_SWAP_CACHED_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_SWAP_CACHED]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_ANONYMOUS_PAGES]))
+        metric_family_append(&fams[FAM_MEMORY_ANONYMOUS_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_ANONYMOUS_PAGES]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_KERNEL_STACK]))
+        metric_family_append(&fams[FAM_MEMORY_KERNEL_STACK_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_KERNEL_STACK]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_PAGE_TABLES]))
+        metric_family_append(&fams[FAM_MEMORY_PAGE_TABLES_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_PAGE_TABLES]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_HUGEPAGES]))
+        metric_family_append(&fams[FAM_MEMORY_HUGEPAGES_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_HUGEPAGES]), NULL, NULL);
 
     plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
 
