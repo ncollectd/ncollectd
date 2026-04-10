@@ -14,6 +14,9 @@
     \fBservice\fP \fIservice-name\fP ...
     \fBsocket\fP \fIsocket-name\fP ...
     \fBtimer\fP \fItimer-name\fP ...
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -38,6 +41,10 @@ It is not necessary to add the ".socket" suffix.
 .It \fBtimer\fP \fItimer-name\fP ...
 Collect information of the specified timers names.
 It is not necessary to add the ".timer" suffix.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,

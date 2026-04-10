@@ -33,6 +33,8 @@ static cgroup_systemd_t cgroup_type = CGROUP_UNKNOWN;
 static char **units;
 static size_t units_size;
 
+static plugin_filter_t *filter;
+
 enum {
     FAM_SYSTEMD_UNIT_LOAD_STATE,
     FAM_SYSTEMD_UNIT_ACTIVE_STATE,
@@ -51,8 +53,12 @@ enum {
     FAM_SYSTEMD_UNIT_CPU_PERIODS,
     FAM_SYSTEMD_UNIT_CPU_THROTTLED,
     FAM_SYSTEMD_UNIT_CPU_THROTTLED_SECONDS,
+    FAM_SYSTEMD_UNIT_CPU_MAX_SECONDS,
     FAM_SYSTEMD_UNIT_PROCESSES,
     FAM_SYSTEMD_UNIT_MEMORY_BYTES,
+    FAM_SYSTEMD_UNIT_MEMORY_MAX_BYTES,
+    FAM_SYSTEMD_UNIT_SWAP_BYTES,
+    FAM_SYSTEMD_UNIT_SWAP_MAX_BYTES,
     FAM_SYSTEMD_UNIT_MEMORY_SWAP_BYTES,
     FAM_SYSTEMD_UNIT_MEMORY_ANONYMOUS_BYTES,
     FAM_SYSTEMD_UNIT_MEMORY_PAGE_CACHE_BYTES,
@@ -94,6 +100,13 @@ enum {
     FAM_SYSTEMD_UNIT_MEMORY_PAGE_DEACTIVATES,
     FAM_SYSTEMD_UNIT_MEMORY_PAGE_LAZY_FREE,
     FAM_SYSTEMD_UNIT_MEMORY_PAGE_LAZY_FREED,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_LOW,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_HIGH,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_MAX,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM_KILL,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM_GROUP_KILL,
+    FAM_SYSTEMD_UNIT_MEMORY_EVENT_SOCK_THROTTLED,
     FAM_SYSTEMD_UNIT_NUMA_ANONYMOUS_BYTES,
     FAM_SYSTEMD_UNIT_NUMA_PAGE_CACHE_BYTES,
     FAM_SYSTEMD_UNIT_NUMA_KERNEL_STACK_BYTES,
@@ -221,6 +234,11 @@ static metric_family_t fam[FAM_SYSTEMD_MAX] = {
         .help = "The total time duration (in seconds) for which tasks "
                 "in the cgroup have been throttled."
     },
+    [FAM_SYSTEMD_UNIT_CPU_MAX_SECONDS] = {
+        .name = "systemd_unit_cpu_max_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The maximum bandwidth limit for the CPU in seconds."
+    },
     [FAM_SYSTEMD_UNIT_PROCESSES] = {
         .name = "systemd_unit_processes",
         .type = METRIC_TYPE_GAUGE,
@@ -231,6 +249,21 @@ static metric_family_t fam[FAM_SYSTEMD_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "The total amount of memory currently being used "
                 "by the cgroup and its descendants.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_MAX_BYTES] = {
+        .name = "systemd_unit_memory_max_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory usage hard limit in bytes.",
+    },
+    [FAM_SYSTEMD_UNIT_SWAP_BYTES] = {
+        .name = "systemd_unit_swap_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The total amount of swap currently being used by the cgroup and its descendants.",
+    },
+    [FAM_SYSTEMD_UNIT_SWAP_MAX_BYTES] = {
+        .name = "systemd_unit_swap_max_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The swap usage hard limt in bytes.",
     },
     [FAM_SYSTEMD_UNIT_MEMORY_SWAP_BYTES] = {
         .name = "systemd_unit_memory_swap_bytes",
@@ -446,6 +479,46 @@ static metric_family_t fam[FAM_SYSTEMD_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of transparent hugepages which were allocated to allow collapsing "
                 "an existing range of pages."
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_LOW] = {
+        .name = "systemd_unit_memory_event_low",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times the cgroup is reclaimed due to high memory pressure "
+                "even though its usage is under the low boundary.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_HIGH] = {
+        .name = "systemd_unit_memory_event_high",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times processes of the cgroup are throttled and routed to "
+                "perform direct memory reclaim because the high memory boundary was exceeded.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_MAX] = {
+        .name = "systemd_unit_memory_event_max",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times the cgroup’s memory usage was about to go over "
+                "the max boundary.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM] = {
+        .name = "systemd_unit_memory_event_oom",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of time the cgroup’s memory usage was reached the limit and "
+                "allocation was about to fail.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM_KILL] = {
+        .name = "systemd_unit_memory_event_oom_kill",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of processes belonging to this cgroup killed by any kind "
+                "of OOM killer.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM_GROUP_KILL] = {
+        .name = "systemd_unit_memory_event_oom_group_kill",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times a group OOM has occurred.",
+    },
+    [FAM_SYSTEMD_UNIT_MEMORY_EVENT_SOCK_THROTTLED] = {
+        .name = "systemd_unit_memory_event_sock_throttled",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of times network sockets associated with this cgroup are throttled.",
     },
     [FAM_SYSTEMD_UNIT_NUMA_ANONYMOUS_BYTES] = {
         .name = "systemd_unit_numa_anonymous_bytes",
@@ -795,7 +868,7 @@ static int read_io_stat(int dir_fd, const char *unit_name)
         if (numfields < 7)
             continue;
 
-        char *mayor = fields[0];
+        char *major = fields[0];
         char *minor = strchr(fields[0], ':');
         if (minor == NULL)
             continue;
@@ -816,37 +889,37 @@ static int read_io_stat(int dir_fd, const char *unit_name)
             if (!strcmp(key, "rbytes"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_READ_BYTES], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "wbytes"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_WRITE_BYTES], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "rios"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_READ_IOS], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "wios"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_WRITE_IOS], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "dbytes"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_DISCARTED_BYTES], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
             else if (!strcmp(key, "dios"))
                 metric_family_append(&fam[FAM_SYSTEMD_UNIT_IO_DISCARTED_IOS], VALUE_COUNTER(val), NULL,
                                      &LABEL_PAIR_CONST("minor", minor),
-                                     &LABEL_PAIR_CONST("mayor", mayor),
+                                     &LABEL_PAIR_CONST("major", major),
                                      &LABEL_PAIR_CONST("unit", unit_name),
                                      NULL);
 
@@ -907,6 +980,54 @@ static int read_cpu_stat_v2(int dir_fd, const char *unit_name)
     }
 
     fclose(fh);
+
+    return 0;
+}
+
+static int read_cpu_max(int dir_fd, const char *unit_name)
+{
+    FILE *fh = fopenat(dir_fd, "cpu.max", "r");
+    if (fh == NULL) {
+        PLUGIN_DEBUG("fdopen ('cpu.max') at '%s' failed: %s", unit_name, STRERRNO);
+        return -1;
+    }
+
+    char buf[1024];
+    if (fgets(buf, sizeof(buf), fh) == NULL) {
+        fclose(fh);
+        return -1;
+    }
+
+    fclose(fh);
+
+    char *fields[8];
+
+    int numfields = strsplit(buf, fields, STATIC_ARRAY_SIZE(fields));
+    if (numfields != 2)
+        return -1;
+
+    double max_cpu = 0;
+
+    if (strcmp(fields[0], "max") != 0)  {
+        double max = 0;
+        int status = strtodouble(fields[0], &max);
+        if (status != 0)
+            return -1;
+
+        double period = 0;
+        status = strtodouble(fields[1], &period);
+        if (status != 0)
+            return -1;
+
+        if ((max == 0) || (period == 0))
+            return -1;
+
+        max_cpu = max / period;
+    }
+
+    metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_MAX_SECONDS],
+                         VALUE_GAUGE(max_cpu), NULL,
+                         &LABEL_PAIR_CONST("unit", unit_name), NULL);
 
     return 0;
 }
@@ -1025,6 +1146,84 @@ static int read_memory_stat(int dir_fd, const char *unit_name)
     return 0;
 }
 
+static int read_memory_max(int dir_fd, char *path, const char *unit_name, metric_family_t *fam_max)
+{
+    char buf[256];
+    ssize_t len = read_file_at(dir_fd, path, buf, sizeof(buf));
+    if (len < 0)
+        return -1;
+
+    char *tbuf = strntrim(buf, (size_t)len);
+
+    uint64_t max = 0;
+
+    if (strcmp(tbuf, "max") != 0)
+        strtouint(tbuf, &max);
+
+    metric_family_append(fam_max, VALUE_GAUGE(max), NULL,
+                         &LABEL_PAIR_CONST("unit", unit_name), NULL);
+
+    return 0;
+}
+
+static int read_memory_events(int dir_fd, const char *unit_name)
+{
+    FILE *fh = fopenat(dir_fd, "memory.events", "r");
+    if (fh == NULL) {
+        PLUGIN_DEBUG("fdopen ('memory.events') at '%s' failed: %s", unit_name, STRERRNO);
+        return -1;
+    }
+
+    char buf[1024];
+    while (fgets(buf, sizeof(buf), fh) != NULL) {
+        char *fields[8];
+
+        int numfields = strsplit(buf, fields, STATIC_ARRAY_SIZE(fields));
+        if (numfields < 2)
+            continue;
+
+        char *key = fields[0];
+
+        uint64_t counter;
+        int status = strtouint(fields[1], &counter);
+        if (status != 0)
+            continue;
+
+        if (!strcmp(key, "low"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_LOW],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+        else if (!strcmp(key, "high"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_HIGH],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+        else if (!strcmp(key, "max"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_MAX],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+        else if (!strcmp(key, "oom"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+        else if (!strcmp(key, "oom_kill"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM_KILL],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+        else if (!strcmp(key, "oom_group_kill"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_OOM_GROUP_KILL],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+        else if (!strcmp(key, "sock_throttled"))
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_MEMORY_EVENT_SOCK_THROTTLED],
+                                 VALUE_COUNTER(counter), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit_name), NULL);
+    }
+
+    fclose(fh);
+
+    return 0;
+}
+
 static int read_pressure_file(int dir_fd, const char *filename, const char *unit_name,
                                metric_family_t *fam_waiting, metric_family_t *fam_stalled)
 {
@@ -1133,6 +1332,8 @@ static int read_cgroup(int cgroup_fd, sd_bus *bus, char *unit_path, const char *
 
     read_cpu_stat_v2(dir_fd, unit_name);
 
+    read_cpu_max(dir_fd, unit_name);
+
     read_cgroup_file(dir_fd, "pids.current", unit_name,
                              &fam[FAM_SYSTEMD_UNIT_PROCESSES]);
 
@@ -1141,10 +1342,18 @@ static int read_cgroup(int cgroup_fd, sd_bus *bus, char *unit_path, const char *
     read_cgroup_file(dir_fd, "memory.current", unit_name,
                              &fam[FAM_SYSTEMD_UNIT_MEMORY_BYTES]);
 
+    read_memory_max(dir_fd, "memory.max", unit_name,
+                            &fam[FAM_SYSTEMD_UNIT_MEMORY_MAX_BYTES]);
+
     read_cgroup_file(dir_fd, "memory.swap.current", unit_name,
-                             &fam[FAM_SYSTEMD_UNIT_MEMORY_SWAP_BYTES]);
+                             &fam[FAM_SYSTEMD_UNIT_SWAP_BYTES]);
+
+    read_memory_max(dir_fd, "memory.swap.max", unit_name,
+                            &fam[FAM_SYSTEMD_UNIT_SWAP_MAX_BYTES]);
 
     read_memory_stat(dir_fd, unit_name);
+
+    read_memory_events(dir_fd, unit_name);
 
     read_memory_numa_stat(dir_fd, unit_name);
 
@@ -1502,7 +1711,7 @@ static int systemd_read(void)
     sd_bus_message_unref(reply);
     sd_bus_unref(bus);
 
-    plugin_dispatch_metric_family_array(fam, FAM_SYSTEMD_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fam, FAM_SYSTEMD_MAX, filter, 0);
 
     return 0;
 }
@@ -1595,6 +1804,8 @@ static int systemd_config(config_item_t *ci)
             status = systemd_config_append_unit(child, ".timer");
         } else if (strcasecmp(child->key, "slice") == 0) {
             status = systemd_config_append_unit(child, ".slice");
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -1624,6 +1835,8 @@ static int systemd_shutdown(void)
 
     units_size = 0;
     units = NULL;
+
+    plugin_filter_free(filter);
 
     return 0;
 }
