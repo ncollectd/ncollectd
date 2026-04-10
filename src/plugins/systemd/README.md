@@ -13,6 +13,9 @@ NCOLLECTD-SYSTEMD(5) - File Formats Manual
 	    service service-name ...
 	    socket socket-name ...
 	    timer timer-name ...
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -47,6 +50,12 @@ The following configuration options are available:
 
 > Collect information of the specified timers names.
 > It is not necessary to add the ".timer" suffix.
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 
