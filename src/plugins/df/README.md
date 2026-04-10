@@ -12,6 +12,9 @@ NCOLLECTD-DF(5) - File Formats Manual
 	    mount-point [incl|include|excl|exclude] mount-point
 	    fs-type [incl|include|excl|exclude] fs-type
 	    log-once true|false
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -47,6 +50,12 @@ The **df** plugin supports the following options:
 > Only log
 > **stat**()
 > errors once.
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 
