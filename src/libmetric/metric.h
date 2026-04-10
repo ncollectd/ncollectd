@@ -151,6 +151,10 @@ void metric_family_free(metric_family_t *fam);
  * metric_family_free(). */
 metric_family_t *metric_family_clone(metric_family_t const *fam);
 
+int metric_family_dedup(metric_family_t *fam);
+
+int metric_family_array_dedup(metric_family_t *fam, size_t size);
+
 /*The static function metric_list_clone creates a clone of the argument
  *metric_list_t src. For each metric_t element in the src list it checks if its
  *value is a distribution metric and if yes, calls the distribution_clone

@@ -34,6 +34,8 @@ static exclist_t excl_mountpoint;
 static exclist_t excl_fstype;
 static exclist_t excl_errors;
 
+static plugin_filter_t *filter;
+
 static bool log_once;
 
 enum {
@@ -191,7 +193,12 @@ static int df_read(void)
 
     cu_mount_freelist(mnt_list);
 
-    plugin_dispatch_metric_family_array(fams, FAM_DF_MAX, 0);
+    int deduped = metric_family_array_dedup(fams, FAM_DF_MAX);
+    if (deduped != 0)
+        PLUGIN_WARNING("It appears there are duplicate mounting points.");
+
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_DF_MAX, filter, 0);
+
     return 0;
 }
 
@@ -210,6 +217,8 @@ static int df_config(config_item_t *ci)
             status = cf_util_exclist(child, &excl_fstype );
         } else if (strcasecmp(child->key, "log-once") == 0) {
             status = cf_util_get_boolean(child, &log_once);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -232,6 +241,7 @@ static int df_shutdown(void)
     exclist_reset(&excl_mountpoint);
     exclist_reset(&excl_fstype);
     exclist_reset(&excl_errors);
+    plugin_filter_free(filter);
     return 0;
 }
 

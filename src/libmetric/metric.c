@@ -644,6 +644,69 @@ static int metric_list_unpack(rbuf_t *rbuf, uint8_t id, metric_type_t type, metr
     return status;
 }
 
+static int metric_cmp(void const *a, void const *b)
+{
+    metric_t const *ma = (metric_t const *)a;
+    metric_t const *mb = (metric_t const *)b;
+
+    if (ma->label.num > mb->label.num)
+        return 1;
+    if (ma->label.num < mb->label.num)
+        return -1;
+
+    for (size_t i = 0; i < ma->label.num; i++) {
+        label_pair_t *paira = &ma->label.ptr[i];
+        label_pair_t *pairb = &mb->label.ptr[i];
+        int cmp = strcmp(paira->name, pairb->name);
+        if (cmp != 0)
+            return cmp;
+        cmp = strcmp(paira->value, pairb->value);
+        if (cmp != 0)
+            return cmp;
+    }
+
+    return 0;
+}
+
+int metric_family_dedup(metric_family_t *fam)
+{
+    int dedup = 0;
+
+    if (fam->metric.num <= 1)
+        return 0;
+
+    qsort(fam->metric.ptr, fam->metric.num, sizeof(*fam->metric.ptr), metric_cmp);
+
+    size_t idx = 0;
+    while (idx < fam->metric.num) {
+        if ((idx + 1) >= fam->metric.num)
+            break;
+        if (metric_cmp(fam->metric.ptr + idx, fam->metric.ptr + (idx + 1)) == 0) {
+            metric_reset(fam->metric.ptr + (idx + 1), fam->type);
+            if ((idx + 1) != (fam->metric.num - 1))
+                memmove(fam->metric.ptr + (idx + 1), fam->metric.ptr + (idx + 2),
+                        sizeof(*fam->metric.ptr) * (fam->metric.num - (idx + 2)));
+            fam->metric.num--;
+            dedup++;
+            continue;
+        }
+        idx++;
+    }
+
+    return dedup;
+}
+
+int metric_family_array_dedup(metric_family_t *fam, size_t size)
+{
+    int dedup = 0;
+
+    for (size_t i = 0; i < size; i++) {
+        dedup += metric_family_dedup(fam + i);
+    }
+
+    return dedup;
+}
+
 enum {
     METRIC_FAMILY_NAME_ID        = 0x10,
     METRIC_FAMILY_HELP_ID        = 0x20,

@@ -13,6 +13,9 @@
     \fBmount-point\fP [\fIincl|include|excl|exclude\fP] \fImount-point\fP
     \fBfs-type\fP [\fIincl|include|excl|exclude\fP] \fIfs-type\fP
     \fBlog-once\fP \fItrue|false\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -40,6 +43,10 @@ See \fBINCLUDE AND EXCLUDE LISTS\fP in
 Only log
 .Fn stat
 errors once.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
