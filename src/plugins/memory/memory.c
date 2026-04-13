@@ -88,6 +88,32 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Total amount of memory consumed by huge pages of all sizes.",
     },
+    [FAM_MEMORY_VMALLOC_USED_BYTES] = {
+        .name = "system_memory_vmalloc_used_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Amount of vmalloc area which is used.",
+    },
+    [FAM_MEMORY_ACTIVE_ANONYMOUS_BYTES] = {
+        .name = "system_memory_active_anonymous_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Anonymous memory that has been used more recently and usually not swapped out.",
+    },
+    [FAM_MEMORY_INACTIVE_ANONYMOUS_BYTES] = {
+        .name = "system_memory_inactive_anonymous_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Anonymous memory that has not been used recently and can be swapped out.",
+    },
+    [FAM_MEMORY_ACTIVE_PAGE_CACHE_BYTES] = {
+        .name = "system_memory_active_page_cache_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Pagecache memory that has been used more recently "
+                "and usually not reclaimed until needed.",
+    },
+    [FAM_MEMORY_INACTIVE_PAGE_CACHE_BYTES] = {
+        .name = "system_memory_inactive_page_cache_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Pagecache memory that can be reclaimed without huge performance impact.",
+    },
     [FAM_MEMORY_WIRED_BYTES] = {
         .name = "system_memory_wired_bytes",
         .type = METRIC_TYPE_GAUGE,

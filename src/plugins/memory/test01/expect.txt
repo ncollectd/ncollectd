@@ -26,3 +26,13 @@ system_memory_anonymous_bytes{hostname="localhost.localdomain"} 2973937664
 system_memory_swap_cached_bytes{hostname="localhost.localdomain"} 0
 # TYPE system_memory_hugepages_bytes gauge
 system_memory_hugepages_bytes{hostname="localhost.localdomain"} 0
+# TYPE system_memory_vmalloc_used_bytes gauge
+system_memory_vmalloc_used_bytes{hostname="localhost.localdomain"} 97406976
+# TYPE system_memory_active_anonymous_bytes gauge
+system_memory_active_anonymous_bytes{hostname="localhost.localdomain"} 3199549440
+# TYPE system_memory_inactive_anonymous_bytes gauge
+system_memory_inactive_anonymous_bytes{hostname="localhost.localdomain"} 126275584
+# TYPE system_memory_active_page_cache_bytes gauge
+system_memory_active_page_cache_bytes{hostname="localhost.localdomain"} 976384000
+# TYPE system_memory_inactive_page_cache_bytes gauge
+system_memory_inactive_page_cache_bytes{hostname="localhost.localdomain"} 3675762688

@@ -30,6 +30,11 @@ typedef enum {
     MEMINFO_KERNEL_STACK,
     MEMINFO_PAGE_TABLES,
     MEMINFO_HUGEPAGES,
+    MEMINFO_ACTIVE_ANONYMOUS,
+    MEMINFO_INACTIVE_ANONYMOUS,
+    MEMINFO_ACTIVE_PAGE_CACHE,
+    MEMINFO_INACTIVE_PAGE_CACHE,
+    MEMINFO_VMALLOC_USED,
     MEMINFO_MAX
 } meminfo_t;
 
@@ -140,24 +145,27 @@ int memory_read(void)
                              VALUE_GAUGE(meminfo[MEMINFO_SLAB]), NULL, NULL);
     }
 
-    if (!isnan(meminfo[MEMINFO_MEMORY_AVAILABLE]) && (meminfo[MEMINFO_MEMORY_AVAILABLE] != 0))
-        metric_family_append(&fams[FAM_MEMORY_AVAILABLE_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_MEMORY_AVAILABLE]), NULL, NULL);
-    if (!isnan(meminfo[MEMINFO_SWAP_CACHED]))
-        metric_family_append(&fams[FAM_MEMORY_SWAP_CACHED_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_SWAP_CACHED]), NULL, NULL);
-    if (!isnan(meminfo[MEMINFO_ANONYMOUS_PAGES]))
-        metric_family_append(&fams[FAM_MEMORY_ANONYMOUS_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_ANONYMOUS_PAGES]), NULL, NULL);
-    if (!isnan(meminfo[MEMINFO_KERNEL_STACK]))
-        metric_family_append(&fams[FAM_MEMORY_KERNEL_STACK_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_KERNEL_STACK]), NULL, NULL);
-    if (!isnan(meminfo[MEMINFO_PAGE_TABLES]))
-        metric_family_append(&fams[FAM_MEMORY_PAGE_TABLES_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_PAGE_TABLES]), NULL, NULL);
-    if (!isnan(meminfo[MEMINFO_HUGEPAGES]))
-        metric_family_append(&fams[FAM_MEMORY_HUGEPAGES_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_HUGEPAGES]), NULL, NULL);
+    struct {
+        int fam;
+        int idx;
+    } fmem[] = {
+        { FAM_MEMORY_AVAILABLE_BYTES,           MEMINFO_MEMORY_AVAILABLE    },
+        { FAM_MEMORY_SWAP_CACHED_BYTES,         MEMINFO_SWAP_CACHED         },
+        { FAM_MEMORY_ANONYMOUS_BYTES,           MEMINFO_ANONYMOUS_PAGES     },
+        { FAM_MEMORY_KERNEL_STACK_BYTES,        MEMINFO_KERNEL_STACK        },
+        { FAM_MEMORY_PAGE_TABLES_BYTES,         MEMINFO_PAGE_TABLES         },
+        { FAM_MEMORY_HUGEPAGES_BYTES,           MEMINFO_HUGEPAGES           },
+        { FAM_MEMORY_VMALLOC_USED_BYTES,        MEMINFO_VMALLOC_USED        },
+        { FAM_MEMORY_ACTIVE_ANONYMOUS_BYTES,    MEMINFO_ACTIVE_ANONYMOUS    },
+        { FAM_MEMORY_INACTIVE_ANONYMOUS_BYTES,  MEMINFO_INACTIVE_ANONYMOUS  },
+        { FAM_MEMORY_ACTIVE_PAGE_CACHE_BYTES,   MEMINFO_ACTIVE_PAGE_CACHE   },
+        { FAM_MEMORY_INACTIVE_PAGE_CACHE_BYTES, MEMINFO_INACTIVE_PAGE_CACHE }
+    };
+
+    for (size_t i = 0; i < STATIC_ARRAY_SIZE(fmem); i++) {
+        if (!isnan(meminfo[fmem[i].idx]))
+            metric_family_append(&fams[fmem[i].fam], VALUE_GAUGE(meminfo[fmem[i].idx]), NULL, NULL);
+    }
 
     plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
 

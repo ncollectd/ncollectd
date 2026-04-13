@@ -29,4 +29,9 @@ SReclaimable:,      MEMINFO_SLAB_RECLAIMABLE
 SUnreclaim:,        MEMINFO_SLAB_UNRECLAIMABLE
 KernelStack:,       MEMINFO_KERNEL_STACK
 PageTables:,        MEMINFO_PAGE_TABLES
+Active(anon):,      MEMINFO_ACTIVE_ANONYMOUS
+Inactive(anon):,    MEMINFO_INACTIVE_ANONYMOUS
+Active(file):,      MEMINFO_ACTIVE_PAGE_CACHE
+Inactive(file):,    MEMINFO_INACTIVE_PAGE_CACHE
+VmallocUsed:,       MEMINFO_VMALLOC_USED
 Hugetlb:,           MEMINFO_HUGEPAGES
