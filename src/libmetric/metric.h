@@ -164,7 +164,7 @@ int metric_list_append(metric_list_t *metrics, metric_t m);
 
 void metric_list_reset(metric_list_t *metrics, metric_type_t type);
 
-int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_family_t *fam);
+int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_type_t type);
 
 int metric_value_clone(value_t *dst, value_t src, metric_type_t type);
 

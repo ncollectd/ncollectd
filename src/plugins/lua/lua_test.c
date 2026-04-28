@@ -22,7 +22,7 @@ DEF_TEST(test01)
                 }
             },
             {
-                .key = "script",
+                .key = "load-plugin",
                 .values_num = 1,
                 .values = (config_value_t[]) {
                     {.type = CONFIG_TYPE_STRING, .value.string = "test01.lua"},

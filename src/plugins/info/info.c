@@ -19,7 +19,7 @@ static int info_read(void)
             .type = METRIC_TYPE_INFO,
         };
 
-        int status = metric_list_clone(&fam.metric, info_fams[i]->metric, &fam);
+        int status = metric_list_clone(&fam.metric, info_fams[i]->metric, fam.type);
         if (status != 0) {
             PLUGIN_ERROR("metric_list_clone failed.");
             continue;
