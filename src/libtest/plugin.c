@@ -284,7 +284,7 @@ int plugin_test_read(void)
         return g_simple_read_cb();
     if (g_complex_read_cb != 0)
         return g_complex_read_cb(&g_complex_read_ud);
-    return -1;
+    return 0;
 }
 
 int plugin_test_write(metric_family_t const *fam)

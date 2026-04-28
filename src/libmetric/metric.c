@@ -181,7 +181,7 @@ void metric_list_reset(metric_list_t *metrics, metric_type_t type)
     metrics->num = 0;
 }
 
-int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_family_t *fam)
+int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_type_t type)
 {
     if (src.num == 0)
         return 0;
@@ -200,7 +200,7 @@ int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_family_t *f
 
         int status = 0;
 
-        switch (fam->type) {
+        switch (type) {
         case METRIC_TYPE_UNKNOWN:
         case METRIC_TYPE_GAUGE:
         case METRIC_TYPE_COUNTER:
@@ -226,13 +226,13 @@ int metric_list_clone(metric_list_t *dest, metric_list_t src, metric_family_t *f
         }
 
         if (status != 0) {
-            metric_list_reset(dest, fam->type);
+            metric_list_reset(dest, type);
             return status;
         }
 
         status = label_set_clone(&dest->ptr[i].label, src.ptr[i].label);
         if (status != 0) {
-            metric_list_reset(dest, fam->type);
+            metric_list_reset(dest, type);
             return status;
         }
     }
@@ -381,7 +381,7 @@ metric_family_t *metric_family_clone(metric_family_t const *fam)
     ret->type = fam->type;
 
     if (fam->metric.num > 0) {
-        int status = metric_list_clone(&ret->metric, fam->metric, ret);
+        int status = metric_list_clone(&ret->metric, fam->metric, ret->type);
         if (status != 0) {
             metric_family_free(ret);
             errno = status;
