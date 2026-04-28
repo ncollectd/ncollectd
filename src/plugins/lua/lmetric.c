@@ -1828,7 +1828,7 @@ static int lmetric_state_set_set(lua_State *L)
             if (strcmp(key, "value") == 0) {
                 if (!lua_istable(L, 3))
                     return luaL_error(L, "Value must be a table.");
-                state_set_reset(&m.value.state_set);
+                state_set_reset(&m->value.state_set);
                 luac_to_state_set(L, 3, &m->value.state_set);
                 return 0;
             }
