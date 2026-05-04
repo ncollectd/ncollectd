@@ -180,18 +180,18 @@ static inline int unpack_id_double(rbuf_t *rbuf, uint8_t id, double *value)
 
 static inline int unpack_string(rbuf_t *rbuf, uint8_t id, char **str)
 {
-    if (*str != NULL)
+    if (*str != NULL) {
         free(*str);
+        *str = NULL;
+    }
 
     size_t len = 0;
     int status = unpack_size(rbuf, id, &len);
     if (status != 0)
         return status;
 
-    if (len == 0) {
-        *str = NULL;
+    if (len == 0)
         return 0;
-    }
 
     char *rstr = NULL;
     status = rbuf_refstring(rbuf, &rstr, len);

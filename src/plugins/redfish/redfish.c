@@ -1102,6 +1102,7 @@ static int redfish_config_attribute(redfish_query_t *query, config_item_t *ci)
     if (status != 0) {
         PLUGIN_ERROR("Could not get the name of an attribute for query '%s'", query->name);
         free(attr);
+        return -1;
     }
 
     for (int i = 0; i < ci->children_num; i++) {

@@ -135,8 +135,7 @@ static int plugin_write_unpack(rbuf_t *rbuf, write_journal_elem_t *elem)
 
     if (status != 0) {
         free(elem->plugin);
-        if (elem->fam != NULL)
-            metric_family_free(elem->fam);
+        metric_family_free(elem->fam);
         return -1;
     }
 
