@@ -120,8 +120,7 @@ static int plugin_notify_unpack(rbuf_t *rbuf, notify_journal_elem_t *elem)
 
     if (status != 0) {
         free(elem->plugin);
-        if (elem->n != NULL)
-            notification_free(elem->n);
+        notification_free(elem->n);
         return -1;
     }
 
