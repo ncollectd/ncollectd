@@ -19,6 +19,7 @@
 #include "libquickjs/quickjs-libc.h"
 
 #include "jmetric.h"
+#include "jutil.h"
 
 static JSClassID qjs_metric_family_class_id;
 
@@ -47,7 +48,7 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
 
     fam->type = METRIC_TYPE_UNKNOWN;
 
-    if (!JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
+    if ((argc > 0) && !JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
         const char *name = JS_ToCString(ctx, argv[0]);
         if (name == NULL)
             goto fail;
@@ -55,7 +56,7 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
         JS_FreeCString(ctx, name);
     }
 
-    if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
+    if ((argc > 1) && !JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         int32_t type = 0;
         if (JS_ToInt32(ctx, &type, argv[1]))
             goto fail;
@@ -67,7 +68,7 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
         fam->type = type;
     }
 
-    if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
+    if ((argc > 2) && !JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
         const char *help = JS_ToCString(ctx, argv[2]);
         if (help == NULL)
             goto fail;
@@ -75,7 +76,7 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
         JS_FreeCString(ctx, help);
     }
 
-    if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
+    if ((argc > 3) && !JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
         const char *unit = JS_ToCString(ctx, argv[3]);
         if (unit == NULL)
             goto fail;
@@ -134,6 +135,50 @@ static JSValue qjs_metric_family_get(JSContext *ctx, JSValueConst this_val, int 
     return JS_UNDEFINED;
 }
 
+static JSValue qjs_metric_family_append_metric(JSContext *ctx, metric_family_t *fam,
+                                                               JSValueConst val)
+{
+    metric_type_t type = qjs_metric_get_metric_type(ctx, val);
+    if (type != fam->type)
+        return JS_EXCEPTION;
+    metric_t *m = qjs_metric_get_metric(ctx, val);
+    if (m == NULL)
+        return JS_EXCEPTION;
+    metric_list_add(&fam->metric, *m, fam->type);
+
+    return JS_UNDEFINED;
+}
+
+static JSValue qjs_metric_family_append_metrics(JSContext *ctx, metric_family_t *fam,
+                                                bool reset, JSValueConst val)
+{
+    if (reset)
+        metric_list_reset(&fam->metric, fam->type);
+
+    if (JS_IsArray(ctx, val)) {
+        uint32_t len = 0;
+        qjs_array_get_length(ctx, val, &len);
+        for (uint32_t i = 0; i < len; i++) {
+            JSValueConst metric = JS_GetPropertyUint32(ctx, val, i);
+            if (JS_IsException(metric))
+                return metric;
+            if (JS_IsUndefined(metric))
+                return JS_EXCEPTION;
+            JSValue ret = qjs_metric_family_append_metric(ctx, fam, metric);
+            JS_FreeValue(ctx, metric);
+            if (JS_IsException(ret))
+                return ret;
+        }
+    } else {
+        JSValue ret = qjs_metric_family_append_metric(ctx, fam, val);
+        if (JS_IsException(ret))
+            return ret;
+    }
+
+    return JS_UNDEFINED;
+}
+
+
 static JSValue qjs_metric_family_set(JSContext *ctx, JSValueConst this_val, JSValue val, int magic)
 {
     metric_family_t *fam = JS_GetOpaque2(ctx, this_val, qjs_metric_family_class_id);
@@ -166,7 +211,7 @@ static JSValue qjs_metric_family_set(JSContext *ctx, JSValueConst this_val, JSVa
         return JS_EXCEPTION;
         break;
     case FAM_GETSET_METRICS:
-        return JS_EXCEPTION;
+        return qjs_metric_family_append_metrics(ctx, fam, true, val);
         break;
     }
 
@@ -180,23 +225,13 @@ static JSValue qjs_metric_family_add_metric(JSContext *ctx, JSValueConst this_va
     if (fam == NULL)
         return JS_EXCEPTION;
 
-    if (JS_IsUndefined(argv[0]))
+    if (argc != 1)
         return JS_UNDEFINED;
 
-    if (JS_IsNull(argv[0]))
+    if (JS_IsUndefined(argv[0]) || JS_IsNull(argv[0]))
         return JS_UNDEFINED;
 
-    metric_type_t type = qjs_metric_get_metric_type(ctx, argv[0]);
-    if (type != fam->type)
-        return JS_EXCEPTION;
-
-    metric_t *m = qjs_metric_get_metric(ctx, argv[0]);
-    if (m == NULL)
-        return JS_EXCEPTION;
-
-    metric_list_add(&fam->metric, *m, fam->type);
-
-    return JS_UNDEFINED;
+    return qjs_metric_family_append_metrics(ctx, fam, false, argv[0]);
 }
 
 static JSValue qjs_metric_family_dispatch(JSContext *ctx, JSValueConst this_val,
@@ -233,28 +268,28 @@ static JSValue qjs_metric_family_to_string(JSContext *ctx, JSValueConst this_val
     status |= strbuf_putstr(&buf, "\", type: ");
     switch(fam->type) {
     case METRIC_TYPE_UNKNOWN:
-        status |= strbuf_putstr(&buf, "MetricFamily.UNKNOWN");
+        status |= strbuf_putstr(&buf, "METRIC_UNKNOWN");
         break;
     case METRIC_TYPE_GAUGE:
-        status |= strbuf_putstr(&buf, "MetricFamily.GAUGE");
+        status |= strbuf_putstr(&buf, "METRIC_GAUGE");
         break;
     case METRIC_TYPE_COUNTER:
-        status |= strbuf_putstr(&buf, "MetricFamily.COUNTER");
+        status |= strbuf_putstr(&buf, "METRIC_COUNTER");
         break;
     case METRIC_TYPE_STATE_SET:
-        status |= strbuf_putstr(&buf, "MetricFamily.STATE_SET");
+        status |= strbuf_putstr(&buf, "METRIC_STATE_SET");
         break;
     case METRIC_TYPE_INFO:
-        status |= strbuf_putstr(&buf, "MetricFamily.INFO");
+        status |= strbuf_putstr(&buf, "METRIC_INFO");
         break;
     case METRIC_TYPE_SUMMARY:
-        status |= strbuf_putstr(&buf, "MetricFamily.SUMMARY");
+        status |= strbuf_putstr(&buf, "METRIC_SUMMARY");
         break;
     case METRIC_TYPE_HISTOGRAM:
-        status |= strbuf_putstr(&buf, "MetricFamily.HISTOGRAM");
+        status |= strbuf_putstr(&buf, "METRIC_HISTOGRAM");
         break;
     case METRIC_TYPE_GAUGE_HISTOGRAM:
-        status |= strbuf_putstr(&buf, "MetricFamily.GAUGE_HISTOGRAM");
+        status |= strbuf_putstr(&buf, "METRIC_GAUGE_HISTOGRAM");
         break;
     }
     status |= strbuf_putstr(&buf, ", metrics: [ ");
@@ -288,8 +323,8 @@ static const JSCFunctionListEntry qjs_metric_family_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("help", qjs_metric_family_get, qjs_metric_family_set, FAM_GETSET_HELP),
     JS_CGETSET_MAGIC_DEF("unit", qjs_metric_family_get, qjs_metric_family_set, FAM_GETSET_UNIT),
     JS_CGETSET_MAGIC_DEF("type", qjs_metric_family_get, NULL, FAM_GETSET_TYPE),
-    JS_CGETSET_MAGIC_DEF("metrics", qjs_metric_family_get, NULL, FAM_GETSET_METRICS),
-    JS_CFUNC_DEF("add_metric", 1, qjs_metric_family_add_metric),
+    JS_CGETSET_MAGIC_DEF("metrics", qjs_metric_family_get, qjs_metric_family_set, FAM_GETSET_METRICS),
+    JS_CFUNC_DEF("append", 1, qjs_metric_family_add_metric),
     JS_CFUNC_DEF("dispatch", 1, qjs_metric_family_dispatch),
     JS_CFUNC_DEF("toString", 0, qjs_metric_family_to_string),
 };

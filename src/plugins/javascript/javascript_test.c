@@ -15,20 +15,10 @@ DEF_TEST(test01)
         .children_num = 1,
         .children = (config_item_t[]) {
             {
-                .key = "instance",
+                .key = "load-plugin",
                 .values_num = 1,
                 .values = (config_value_t[]) {
-                    {.type = CONFIG_TYPE_STRING, .value.string = "local"},
-                },
-                .children_num = 1,
-                .children = (config_item_t[]) {
-                    {
-                        .key = "script",
-                        .values_num = 1,
-                        .values = (config_value_t[]) {
-                            {.type = CONFIG_TYPE_STRING, .value.string = "src/plugins/javascript/test01/test01.js"},
-                        }
-                    }
+                    {.type = CONFIG_TYPE_STRING, .value.string = "src/plugins/javascript/test01/test01.js"},
                 }
             }
         }
