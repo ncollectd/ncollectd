@@ -299,9 +299,6 @@ static JSClassDef qjs_notification_class = {
 };
 
 static const JSCFunctionListEntry qjs_notification_proto_funcs[] = {
-    JS_PROP_INT32_DEF("FAILURE", NOTIF_FAILURE, JS_PROP_CONFIGURABLE),
-    JS_PROP_INT32_DEF("WARNING", NOTIF_WARNING, JS_PROP_CONFIGURABLE),
-    JS_PROP_INT32_DEF("OKAY", NOTIF_OKAY, JS_PROP_CONFIGURABLE),
     JS_CGETSET_MAGIC_DEF("severity", qjs_notification_get, qjs_notification_set,
                                      NOTIF_GETSET_SEVERITY),
     JS_CGETSET_MAGIC_DEF("time", qjs_notification_get, qjs_notification_set, NOTIF_GETSET_TIME),

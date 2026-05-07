@@ -209,7 +209,7 @@ static JSValue qjs_metric_unknown_get(JSContext *ctx, JSValueConst this_val, int
         break;
     case METRIC_GETSET_TYPE:
         return JS_NewInt32(ctx, m->value.unknown.type == UNKNOWN_FLOAT64 ?
-                                UNKNOWN_FLOAT64 : UNKNOWN_INT64); 
+                                UNKNOWN_FLOAT64 : UNKNOWN_INT64);
         break;
     default:
         break;
@@ -424,7 +424,7 @@ static JSValue qjs_metric_gauge_get(JSContext *ctx, JSValueConst this_val, int m
         break;
     case METRIC_GETSET_TYPE:
         return JS_NewInt32(ctx, m->value.gauge.type == GAUGE_FLOAT64 ?
-                                GAUGE_FLOAT64 : GAUGE_INT64); 
+                                GAUGE_FLOAT64 : GAUGE_INT64);
         break;
     default:
         break;
@@ -639,7 +639,7 @@ static JSValue qjs_metric_counter_get(JSContext *ctx, JSValueConst this_val, int
         break;
     case METRIC_GETSET_TYPE:
         return JS_NewInt32(ctx, m->value.counter.type == COUNTER_UINT64 ?
-                                COUNTER_UINT64 : COUNTER_FLOAT64); 
+                                COUNTER_UINT64 : COUNTER_FLOAT64);
         break;
     default:
         break;
@@ -971,7 +971,7 @@ static JSValue qjs_to_state_set(JSContext *ctx, JSValueConst jset, state_set_t *
         if (ret < 0)
             goto fail;
         bool value = ret == 0 ? false : true;
-        
+
         const char *key = JS_AtomToCString(ctx, tab[i].atom);
         if (key == NULL) {
             goto fail;
@@ -1193,7 +1193,7 @@ static JSValue qjs_from_quantiles(JSContext *ctx, summary_t *summary)
                                      JS_NewFloat64(ctx, quantile->quantile), JS_PROP_C_W_E);
         JS_DefinePropertyValueUint32(ctx, jquantile, 1,
                                      JS_NewFloat64(ctx, quantile->value), JS_PROP_C_W_E);
-    
+
         JS_DefinePropertyValueUint32(ctx, jquantiles, i, jquantile, JS_PROP_C_W_E);
     }
 
@@ -1201,7 +1201,7 @@ static JSValue qjs_from_quantiles(JSContext *ctx, summary_t *summary)
 }
 
 static JSValue qjs_to_quantile(JSContext *ctx, JSValueConst jpair, summary_quantile_t *quantile)
-{       
+{
     uint32_t qlen = 0;
     qjs_array_get_length(ctx, jpair, &qlen);
 
@@ -1243,8 +1243,8 @@ static JSValue qjs_to_quantile(JSContext *ctx, JSValueConst jpair, summary_quant
     }
 
     JS_FreeValue(ctx, jvalue);
-    
-    return JS_UNDEFINED; 
+
+    return JS_UNDEFINED;
 }
 
 static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary_t **rsummary)
@@ -1265,12 +1265,12 @@ static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary
 
         if (JS_IsUndefined(jpair))
             return JS_EXCEPTION;
- 
+
         if (!JS_IsArray(ctx, jpair)) {
             JS_FreeValue(ctx, jpair);
             return JS_EXCEPTION;
         }
-        
+
         summary_quantile_t quantile = {0, 0};
         JSValue jret = qjs_to_quantile(ctx, jpair, &quantile);
         if (JS_IsException(jret)) {
@@ -1311,7 +1311,7 @@ static JSValue qjs_metric_summary_ctor(JSContext *ctx, JSValueConst new_target, 
         free(m);
         return JS_EXCEPTION;
     }
-    
+
     m->value.summary = summary;
 
     // "sum", "count", "quantiles", "labels", "time", "interval"
@@ -1325,7 +1325,7 @@ static JSValue qjs_metric_summary_ctor(JSContext *ctx, JSValueConst new_target, 
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         int64_t count = 0;
-        if (JS_ToInt64(ctx, &count, argv[1])) 
+        if (JS_ToInt64(ctx, &count, argv[1]))
             goto fail;
         m->value.summary->count = count;
     }
@@ -1538,7 +1538,7 @@ static JSValue qjs_from_buckets(JSContext *ctx, histogram_t *histogram)
                                      JS_NewBigUint64(ctx, bucket->counter), JS_PROP_C_W_E);
         JS_DefinePropertyValueUint32(ctx, jbucket, 1,
                                      JS_NewFloat64(ctx, bucket->maximum), JS_PROP_C_W_E);
-    
+
         JS_DefinePropertyValueUint32(ctx, jbuckets, i, jbucket, JS_PROP_C_W_E);
     }
 
@@ -1546,7 +1546,7 @@ static JSValue qjs_from_buckets(JSContext *ctx, histogram_t *histogram)
 }
 
 static JSValue qjs_to_bucket(JSContext *ctx, JSValueConst jpair, histogram_bucket_t *bucket)
-{       
+{
     uint32_t qlen = 0;
     qjs_array_get_length(ctx, jpair, &qlen);
 
@@ -1564,7 +1564,7 @@ static JSValue qjs_to_bucket(JSContext *ctx, JSValueConst jpair, histogram_bucke
         return JS_EXCEPTION;
     }
 
-    int64_t value = 0;        
+    int64_t value = 0;
     if (JS_ToInt64Ext(ctx, &value, jcounter)) {
         JS_FreeValue(ctx, jcounter);
         return JS_EXCEPTION;
@@ -1592,8 +1592,8 @@ static JSValue qjs_to_bucket(JSContext *ctx, JSValueConst jpair, histogram_bucke
     }
 
     JS_FreeValue(ctx, jmaximun);
-    
-    return JS_UNDEFINED; 
+
+    return JS_UNDEFINED;
 }
 
 static JSValue qjs_to_buckets(JSContext *ctx, JSValueConst jbuckets, histogram_t **rhistogram)
@@ -1651,7 +1651,7 @@ static JSValue qjs_metric_generic_histogram_ctor(JSContext *ctx, JSValueConst ne
         free(m);
         return JS_EXCEPTION;
     }
-    
+
     m->value.histogram = histogram;
     // "gsum", "buckets", "labels", "time", "interval"
 
@@ -1999,7 +1999,7 @@ JSValue qjs_metric_new(JSContext *ctx, metric_t *m, metric_type_t type)
         class_id = qjs_metric_gauge_histogram_class_id;
         break;
     default:
-        return JS_EXCEPTION; 
+        return JS_EXCEPTION;
         break;
     }
 

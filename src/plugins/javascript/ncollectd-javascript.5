@@ -9,16 +9,15 @@
 .Bd -literal -compact
 \fBload-plugin\fP javascript
 \fBplugin\fP javascript {
-    \fBinstance\fP \fIinstance\fP {
+    \fBbase-path\fP \fI/path/to/your/javascript/scripts\fP
+    \fBload-plugin\fP \fIfilename\fP {
         \fBmemory-limit\fP \fIbytes\fP
         \fBstack-size\fP \fIbytes\fP
-        \fBinterval\fP \fIseconds\fP
         \fBload-std\fP \fItrue|false\fP
         \fBinclude\fP \fIfilename\fP
-        \fBscript\fP \fIfilename\fP
-        \fBconfig\fP {
-            ...
-        }
+    }
+    \fBplugin\fP \fIname\fP {
+        ...
     }
 }
 .Ed
@@ -27,24 +26,348 @@ The \fBjavascript\fP plugin embeds a javascript interpreter into ncollectd
 and provides an interface to ncollectd's plugin system.
 This makes it possible to write plugins for ncollectd in javascript.
 .Pp
-Each instance is a javascript interpreter, the following options are accepted
-within each \fBinstance\fP block:
+.Bl -tag -width Ds
+.It \fBbase-path\fP \fI/path/to/your/lua/scripts\fP
+The directory the \fBjavascript\fP plugin looks in to find scripts.
+If set, this is also prepended to \fIfilename\fP in \fBload-plugin\fP.
+.It \fBload-plugin\fP \fIfilename\fP
 .Bl -tag -width Ds
 .It \fBmemory-limit\fP \fIbytes\fP
 Limit the memory usage of the javascript interpreter.
 .It \fBstack-size\fP \fIbytes\fP
 Limit the stack size of the javscript interpreter.
-.It \fBinterval\fP \fIseconds\fP
-Sets the interval (in seconds) in which read callbacks will be called.
 .It \fBload-std\fP \fItrue|false\fP
 Make 'std' and 'os' modules available to the loaded script.
 .It \fBinclude\fP \fIfilename\fP
 Load file as ES6 module, the file extension must be 'mjs'.
-.It \fBscript\fP \fIfilename\fP
-Load file as ES6 script.
-.It \fBconfig\fP
+.El
+.It \fBplugin\fP \fIname\fP
 Configuration for the config callback in the script.
 .El
+.Sh WRITING YOUR OWN PLUGINS
+Writing your own plugins is quite simple, ncollectd manages plugins by means of
+\fBdispatch functions\fP which call the appropriate \fBcallback functions\fP
+registered by the plugins.
+Any plugin basically consists of the implementation of these callback functions
+and initializing code which registers the functions with ncollectd.
+See the section \fBEXAMPLES\fP below for a really basic example.
+The following types of \fBcallback functions\fP are implemented in the
+\fBjavascript\fP plugin (all of them are optional):
+.Bl -tag -width Ds
+.It \fBread functions\fP
+These are used to collect the actual data.
+It is called once per interval (see the \fBinterval\fP configuration option
+of ncollectd).
+Usually it will call \fMetricFamily.Bdispatch()\fP to dispatch
+the metrics to ncollectd which will pass them on to all registered
+\fBwrite functions\fP.
+If this function does not return 0, interval between its calls will grow
+until function returns 0 again.
+See the \fBmax-read-interval\fP configuration option of ncollectd.
+.It \fBwrite functions\fP
+These are used to write the dispatched values.
+They are called once for every value that was dispatched by any plugin.
+.El
+.Sh OBJECTS
+The following objects are used to pass values between the javascript plugin
+and ncollectd:
+
+.Bl -tag -width Ds
+
+.It \fBMetricUnknown\fP
+.Bd -literal
+    ncollectd.MetricUnknown(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.It \fBtype\fP
+\fBFLOAT64\fP
+\fBINT64\fP
+.El
+.It \fBMetricGauge\fP
+.Bd -literal
+    ncollectd.MetricGauge(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.It \fBtype\fP
+\fBFLOAT64\fP
+\fBINT64\fP
+.El
+.It \fBMetricCounter\fP
+.Bd -literal
+    ncollectd.MetricCounter(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.It \fBtype\fP
+\fBUINT64\fP
+\fBFLOAT64\fP
+.El
+.It \fBMetricInfo\fP
+.Bd -literal
+    ncollectd.MetricInfo(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.El
+.It \fBMetricStateSet\fP
+.Bd -literal
+    ncollectd.MetricStateSet(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBvalue\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.El
+.It \fBMetricSummary\fP
+.Bd -literal
+    ncollectd.MetricSummary(sum, count, quantiles[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBsum\fP
+.It \fBcount\fP
+.It \fBquantiles\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.El
+.It \fBMetricGaugeHistogram\fP
+.Bd -literal
+    ncollectd.MetricGaugeHistogram(gsum, buckets[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBgsum\fP
+.It \fBbucket\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.El
+.It \fBMetricHistogram\fP
+.Bd -literal
+    ncollectd.MetricHistogram(sum, bucket[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBsum\fP
+.It \fBbucket\fP
+.It \fBlabels\fP
+.It \fBtime\fP
+.It \fBinterval\fP
+.El
+.It \fBMetricFamily\fP
+.Bd -literal
+    ncollectd.MetricFamily(type, name[, help][, unit][, metrics])
+.Ed
+.Bl -tag -width Ds
+.It dispatch([time])
+.It append(metrics)
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBtype\fP
+.It \fBname\fP
+.It \fBhelp\fP
+.It \fBunit\fP
+.It \fBmetrics\fP
+.El
+.It \fBNotification\fP
+.Bd -literal
+    ncollectd.Notification(name[, severity][, time][, labels][, annotations])
+.Ed
+.Bl -tag -width Ds
+.It dispatch()
+.It toString()
+.El
+.Bl -tag -width Ds
+.It \fBname\fP
+.It \fBseverity\fP
+.It \fBtime\fP
+.It \fBlabels\fP
+.It \fBannotations\fP
+.El
+
+.It \fBLOG_ERR\fP
+.It \fBLOG_WARNING\fP
+.It \fBLOG_NOTICE\fP
+.It \fBLOG_INFO\fP
+.It \fBLOG_DEBUG\fP
+
+.It \fBMETRIC_UNKNOWN\fP
+.It \fBMETRIC_GAUGE\fP
+.It \fBMETRIC_COUNTER\fP
+.It \fBMETRIC_STATE_SET\fP
+.It \fBMETRIC_INFO\fP
+.It \fBMETRIC_SUMMARY\fP
+.It \fBMETRIC_HISTOGRAM\fP
+.It \fBMETRIC_GAUGE_HISTOGRAM\fP
+
+.It \fBNOTIF_FAILURE\fP
+.It \fBNOTIF_WARNING\fP
+.It \fBNOTIF_OKAY\fP
+.EL
+
+.Sh FUNCTIONS
+The following functions are provided to javascript modules:
+.Bl -tag -width Ds
+.It \fBregister_*\fP(\fIcallback\fP[, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+There are seven different register functions to get callback for seven
+different events.
+With one exception all of them are called as shown above.
+.Bl -tag -width Ds
+.It \fIcallback\fP
+Is the name of a function, a string with the name of the function or an
+anonymous function that will be called every time the event is triggered.
+.It \fIdata\fP
+Is an optional data that will be passed back to the callback function
+every time it is called.
+If you omit this parameter no data is passed back to your callback.
+.It \fIname\fP
+Is an optional identifier for this callback.
+Every callback needs a unique identifier.
+.It \fIidentifier\fP
+Is the full identifier assigned to this callback.
+.El
+
+.Pp
+These functions are called in the various stages of the daemon (see the section
+\fBWRITING YOUR OWN PLUGINS\fP above) and are passed the following arguments:
+.Bl -tag -width Ds
+.It \fBregister_config\fP
+The only argument passed is a table withe the configuration.
+Note that you cannot receive the whole config files this way, only \fBplugin\fP
+blocks inside the Lua configuration block.
+Additionally you will only receive blocks where your callback identifier
+matches the \fBname\fP.
+.It \fBregister_init\fP
+The callback will be called without arguments.
+.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fI][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+This function takes an additional parameter: \fIinterval\fP.
+It specifies the time between calls to the callback function.
+If this callback function does not return 0 the next call will be delayed by
+an increasing interval.
+.Pp
+The callback will be called without arguments.
+.It \fBregister_shutdown\fP
+The callback will be called without arguments.
+.It \fBregister_write\fP
+The callback function will be called with one argument passed, which will be a
+\fIMetricFamily\fP metatable.
+For the layout of \fIMetricFamily\fP see above.
+If this callback function does not return 0 the next call will be delayed by
+an increasing interval.
+.It \fBregister_log\fP
+The arguments are \fIseverity\fP and \fImessage\fP.
+The severity is an integer and small for important messages and high for less
+important messages.
+The least important level is \fBLOG_DEBUG\fP, the most important level
+is \fBLOG_ERR\fP.
+In between there are (from least to most important): \fBLOG_INFO\fP,
+\fBLOG_NOTICE\fP, and \fBLOG_WARNING\fP.
+\fImessage\fP is simply a string \fBwithout\fP a newline at the end.
+.Pp
+If this callback throws an exception it will \fBnot\fP be logged.
+It will just be printed to \fBsys.stderr\fP which usually means
+silently ignored.
+.It \fBregister_notification\fP
+The only argument passed is a \fINotification\fP metatable.
+See above for the layout of this data type.
+.El
+.It \fBunregister_*\fP(\fIidentifier\fP)
+Removes a callback or data-set from ncollectd's internal list of callback
+functions.
+Every \fIregister_*\fP function has an \fIunregister_*\fP function.
+\fIIdentifier\fP is the value that was returned by the register function.
+.It \fBerror, warning, notice, info, debug\fP(\fImessage\fP)
+Log a message with the specified severity.
+.El
+.Sh EXAMPLES
+A very simple read function might look like:
+.Bd -literal
+    function read() {
+        const file = std.open("/proc/loadavg", "r");
+        if (!file) {
+            ncollectd.error("Error: fail to open '/proc/loadavg'.");
+            return -1;
+        }
+        const load = file.getline().split(" ");
+        file.close();
+
+        var fam = new ncollectd.MetricFamily("system_load", ncollectd.METRIC_GAUGE, "System load averages");
+        fam.append(new ncollectd.MetricGauge(parseFloat(load[0]), {duration: "1m"}));
+        fam.append(new ncollectd.MetricGauge(parseFloat(load[1]), {duration: "5m"}));
+        fam.append(new ncollectd.MetricGauge(parseFloat(load[2]), {duration: "15m"}));
+        fam.dispatch();
+
+        return 0;
+    }
+.Ed
+.Pp
+A very simple write function might look like:
+.Bd -literal
+    function write(fam) {
+        if (fam.type == ncollectd.METRIC_GAUGE) {
+            std.out.puts("# TYPE "+fam.name+" gauge"+"\\n");
+            if (fam.help)
+                std.out.puts("# HELP "+fam.name+" "+fam.help+"\\n");
+            for (const metric of fam.metrics) {
+                std.out.puts(fam.name+"{");
+                let i = 0;
+                for (const [lkey, lvalue] of Object.entries(metric.labels)) {
+                    if (i > 0)
+                        std.out.puts(",");
+                    i++;
+                    std.out.puts(lkey+"=\\""+lvalue+"\\"");
+                }
+                std.out.puts("} "+metric.value+" "+Math.floor(metric.time*1000)+"\\n");
+            }
+        }
+
+        return 0;
+    }
+.Ed
+.Pp
+To register those functions with ncollectd:
+.Bd -literal
+    ncollectd.register_read(read);
+    ncollectd.register_write(write);
+.Ed
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5
