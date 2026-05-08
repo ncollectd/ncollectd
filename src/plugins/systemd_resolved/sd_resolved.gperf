@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2026 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix SD_RESOLVED_
+%define hash-function-name sd_resolved_hash
+%define lookup-function-name sd_resolved_get_key
+%define slot-name key
+%{
+%}
+struct sd_resolved_metric {
+    char *key;
+    int fam;
+    char *lkey;
+    char *lvalue;
+};
+%%
+transactions.currentTransactions,             FAM_SYSTEMD_RESOLVED_CURRENT_TRANSACTIONS,           NULL, NULL
+transactions.totalTransactions,               FAM_SYSTEMD_RESOLVED_TRANSACTIONS,                   NULL, NULL
+transactions.totalTimeouts,                   FAM_SYSTEMD_RESOLVED_TIMEOUTS,                       NULL, NULL
+transactions.totalTimeoutsServedStale,        FAM_SYSTEMD_RESOLVED_TIMEOUTS_SERVED_STALE,          NULL, NULL
+transactions.totalFailedResponses,            FAM_SYSTEMD_RESOLVED_FAILURE_RESPONSES,              NULL, NULL
+transactions.totalFailedResponsesServedStale, FAM_SYSTEMD_RESOLVED_FAILURE_RESPONSES_SERVED_STALE, NULL, NULL
+cache.size,                                   FAM_SYSTEMD_RESOLVED_CACHE_SIZE,                     NULL, NULL
+cache.hits,                                   FAM_SYSTEMD_RESOLVED_CACHE_HIT,                      NULL, NULL
+cache.misses,                                 FAM_SYSTEMD_RESOLVED_CACHE_MISS,                     NULL, NULL
+dnssec.secure,                                FAM_SYSTEMD_RESOLVED_DNSSEC_VERDICT,                 "verdict", "secure"
+dnssec.insecure,                              FAM_SYSTEMD_RESOLVED_DNSSEC_VERDICT,                 "verdict", "insecure"
+dnssec.bogus,                                 FAM_SYSTEMD_RESOLVED_DNSSEC_VERDICT,                 "verdict", "bogus"
+dnssec.indeterminate,                         FAM_SYSTEMD_RESOLVED_DNSSEC_VERDICT,                 "verdict", "indeterminate"
