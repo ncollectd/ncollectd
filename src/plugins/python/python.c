@@ -563,7 +563,7 @@ static int cpy_write_callback(const metric_family_t *fam, user_data_t *data)
 
     PyObject *fam_name = cpy_string_to_unicode_or_bytes(fam->name); /* New reference. */
     PyObject *cpy_type = PyLong_FromLong(fam->type);
-    PyObject *pymf = MetricFamily_New(cpy_type, fam_name); /* New reference. */
+    PyObject *pymf = MetricFamily_New(fam_name, cpy_type); /* New reference. */
     Py_XDECREF(fam_name);
     Py_XDECREF(cpy_type);
     if (pymf == NULL) {
@@ -1432,14 +1432,14 @@ static int cpy_init_python(void)
     PyModule_AddIntConstant(module, "NOTIF_FAILURE", NOTIF_FAILURE);
     PyModule_AddIntConstant(module, "NOTIF_WARNING", NOTIF_WARNING);
     PyModule_AddIntConstant(module, "NOTIF_OKAY", NOTIF_OKAY);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_UNKNOWN", METRIC_TYPE_UNKNOWN);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_GAUGE", METRIC_TYPE_GAUGE);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_COUNTER", METRIC_TYPE_COUNTER);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_STATE_SET", METRIC_TYPE_STATE_SET);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_INFO", METRIC_TYPE_INFO);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_SUMMARY", METRIC_TYPE_SUMMARY);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_HISTOGRAM", METRIC_TYPE_HISTOGRAM);
-    PyModule_AddIntConstant(module, "METRIC_TYPE_GAUGE_HISTOGRAM", METRIC_TYPE_GAUGE_HISTOGRAM);
+    PyModule_AddIntConstant(module, "METRIC_UNKNOWN", METRIC_TYPE_UNKNOWN);
+    PyModule_AddIntConstant(module, "METRIC_GAUGE", METRIC_TYPE_GAUGE);
+    PyModule_AddIntConstant(module, "METRIC_COUNTER", METRIC_TYPE_COUNTER);
+    PyModule_AddIntConstant(module, "METRIC_STATE_SET", METRIC_TYPE_STATE_SET);
+    PyModule_AddIntConstant(module, "METRIC_INFO", METRIC_TYPE_INFO);
+    PyModule_AddIntConstant(module, "METRIC_SUMMARY", METRIC_TYPE_SUMMARY);
+    PyModule_AddIntConstant(module, "METRIC_HISTOGRAM", METRIC_TYPE_HISTOGRAM);
+    PyModule_AddIntConstant(module, "METRIC_GAUGE_HISTOGRAM", METRIC_TYPE_GAUGE_HISTOGRAM);
     return 0;
 }
 
@@ -1567,7 +1567,7 @@ static int cpy_config(config_item_t *ci)
             }
             Py_DECREF(dir_object);
             free(dir);
-        } else if (strcasecmp(item->key, "import") == 0) {
+        } else if (strcasecmp(item->key, "load-plugin") == 0) {
             char *module_name = NULL;
             PyObject *module;
 
@@ -1583,7 +1583,7 @@ static int cpy_config(config_item_t *ci)
             }
             free(module_name);
             Py_XDECREF(module);
-        } else if (strcasecmp(item->key, "module") == 0) {
+        } else if (strcasecmp(item->key, "plugin") == 0) {
             status = cpy_config_module(item);
         } else {
             PLUGIN_ERROR("Unknown config key \"%s\".", item->key);

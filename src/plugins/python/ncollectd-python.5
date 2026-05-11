@@ -7,14 +7,14 @@
 .Nd Documentation of ncollectd's python plugin
 .Sh SYNOPSIS
 .Bd -literal -compact
-\fBload-plugin\fP plugin
-\fBplugin\fP plugin {
+\fBload-plugin\fP python
+\fBplugin\fP python {
     \fBencoding\fP \fIencoding\fP
     \fBmodule-path\fP \fI/path/to/your/python/modules\fP
     \fBlog-traces\fP \fItrue|false\fP
     \fBinteractive\fP \fItrue|false\fP
-    \fBimport\fP "spam"
-    \fBmodule\fP spam  {
+    \fBload-plugin\fP "spam"
+    \fBplugin\fP spam  {
       spam "wonderful" "lovely"
     }
 }
@@ -85,14 +85,14 @@ not work during normal operation.
 To quit ncollectd send \fBEOF\fP (press \f(CWCtrl+D\fP at the beginning
 of a new line).
 .El
-.It \fBimport\fP "name"
+.It \fBload-plugin\fP "name"
 Imports the python script \fIname\fP and loads it into the ncollectd
 python process.
 If your python script is not found, be sure its directory exists in
 python's \f(CWsys.path\fP.
 You can prepend to the \f(CWsys.path\fP using the \fBmodule-path\fP
 configuration option.
-.It \fBmodule\fP name
+.It \fBplugin\fP name
 This block may be used to pass on configuration settings to a Python module.
 The configuration is converted into an instance of the \fBConfig\fP class
 which is passed to the registered configuration callback.
@@ -411,32 +411,25 @@ See \fBclass Metric\fP.
 .El
 .It \fBMetricFamily\fP
 .Bd -literal
-    class MetricFamily(type, name[, help][, unit][, metrics])
+    class MetricFamily(name, type[, help][, unit][, metrics])
 .Ed
 .Pp
 Methods defined here:
 .Bd -literal
-    dispatch([metrics][, time]) -> None.
+    dispatch([time]) -> None.
     append(metrics) -> None.
 .Ed
 .Pp
 Dispatch this instance to the ncollectd process.
-The object has members for each of the possible arguments for this method.
-For a detailed explanation of these parameters see the member of the same same.
-.Pp
-If you do not submit a parameter the value saved in its member will be
-submitted.
-If you do provide a parameter it will be used instead,
-without altering the member.
 .Pp
 Data descriptors defined here:
 .Bl -tag -width Ds
 .It \fBtype\fP
 The type of this metric family.
-Assign or compare to \fBMETRIC_TYPE_UNKNOWN\fP, \fBMETRIC_TYPE_GAUGE\fP,
-\fBMETRIC_TYPE_COUNTER\fP, \fBMETRIC_TYPE_STATE_SET\fP,
-\fBMETRIC_TYPE_INFO\fP, \fBMETRIC_TYPE_SUMMARY\fP, \fBMETRIC_TYPE_HISTOGRAM\fP
-or \fBMETRIC_TYPE_GAUGE_HISTOGRAM\fP.
+Assign or compare to \fBMETRIC_UNKNOWN\fP, \fBMETRIC_GAUGE\fP,
+\fBMETRIC_COUNTER\fP, \fBMETRIC_STATE_SET\fP,
+\fBMETRIC_INFO\fP, \fBMETRIC_SUMMARY\fP, \fBMETRIC_HISTOGRAM\fP
+or \fBMETRIC_GAUGE_HISTOGRAM\fP.
 .It \fBname\fP
 .It \fBhelp\fP
 .It \fBunit\fP
@@ -458,17 +451,10 @@ register_notification.
 .Pp
 Methods defined here:
 .Bd -literal
-    dispatch([name][, severity][, time][, labels][, annotations]) -> None.
+    dispatch() -> None.
 .Ed
 .Pp
 Dispatch this instance to the ncollectd process.
-The object has members for each of the possible arguments for this method.
-For a detailed explanation of these parameters see the member of the same same.
-.Pp
-If you do not submit a parameter the value saved in its member will be
-submitted.
-If you do provide a parameter it will be used instead, without altering
-the member.
 .Pp
 Data descriptors defined here:
 .Bl -tag -width Ds
@@ -573,18 +559,37 @@ Any Python module will start similar to:
 .Pp
 A very simple read function might look like:
 .Bd -literal
-    import random
-
-    def read(data=None):
-        fam = ncollectd.MetricFamily(ncollectd.METRIC_TYPE_GAUGE, 'python.spam')
-        fam.dispatch([ncollectd.MetricGaugeDouble(random.random() * 100)])
+    def read():
+        with open("/proc/loadavg") as f:
+            load = f.readline().split()
+            fam = ncollectd.MetricFamily("system_load", ncollectd.METRIC_GAUGE, "System load averages")
+            fam.append(ncollectd.MetricGaugeDouble(float(load[0]), {'duration': '1m'}))
+            fam.append(ncollectd.MetricGaugeDouble(float(load[1]), {'duration': '5m'}))
+            fam.append(ncollectd.MetricGaugeDouble(float(load[2]), {'duration': '15m'}))
+            fam.dispatch()
+        return 0
 .Ed
 .Pp
 A very simple write function might look like:
 .Bd -literal
-    def write(fam, data=None):
-        for i in vl.values:
-            print "%s (%s): %f" % (vl.plugin, vl.type, i)
+    import math
+    import sys
+
+    def write(fam):
+        if fam.type == ncollectd.METRIC_GAUGE:
+            sys.stdout.write("# TYPE %s gauge\\n" % (fam.name))
+            if fam.help:
+                sys.stdout.write("# HELP %s %s\\n" %  (fam.name, fam.help))
+            for metric in fam.metrics:
+                sys.stdout.write("%s{" % (fam.name))
+                j = 0;
+                for lkey, lvalue in metric.labels.items():
+                    if j > 0:
+                        sys.stdout.write(",")
+                    j = j + 1
+                    sys.stdout.write("%s=\\"%s\\"" % (lkey, lvalue))
+                sys.stdout.write("} %.15g %.15g\\n" % (metric.value, math.floor(metric.time*1000)))
+        return 0
 .Ed
 .Pp
 To register those functions with collectd:

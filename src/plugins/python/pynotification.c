@@ -43,15 +43,9 @@ static char Notification_doc[] =
     "register_notification.";
 
 static char notif_dispatch_doc[] =
-    "dispatch([name][, severity][, timestamp][, labels][, annotations]) "
-    "-> None.  Dispatch a notification.\n"
+    "dispatch() -> None.  Dispatch a notification.\n"
     "\n"
-    "Dispatch this notification to the ncollectd process. The object has members\n"
-    "for each of the possible arguments for this method. For a detailed explanation\n"
-    "of these parameters see the member of the same same.\n"
-    "\n"
-    "If you do not submit a parameter the value saved in its member will be submitted.\n"
-    "If you do provide a parameter it will be used instead, without altering the member.";
+    "Dispatch this notification to the ncollectd process.";
 
 static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
 {
@@ -99,7 +93,7 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
     self->name = name;
     Py_XDECREF(old_name);
 
-    if (labels == NULL) {
+    if ((labels == NULL) || (labels == Py_None)) {
         labels = PyDict_New();
         PyErr_Clear();
         PyObject *old_labels = self->labels;
@@ -112,7 +106,7 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
         Py_XDECREF(old_labels);
     }
 
-    if (annotations == NULL) {
+    if ((annotations == NULL) || (annotations == Py_None)) {
         annotations = PyDict_New();
         PyErr_Clear();
         PyObject *old_annotations = self->annotations;
@@ -128,7 +122,8 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
     return 0;
 }
 
-static PyObject *Notification_dispatch(Notification *self, PyObject *args, PyObject *kwds)
+static PyObject *Notification_dispatch(Notification *self, __attribute__((unused)) PyObject *args,
+                                                           __attribute__((unused)) PyObject *kwds)
 {
     notification_t n = {0};
 
@@ -138,28 +133,11 @@ static PyObject *Notification_dispatch(Notification *self, PyObject *args, PyObj
     PyObject *labels = NULL;
     PyObject *annotations = NULL;
 
-    static char *kwlist[] = {"name", "severity", "time", "labels", "annotations", NULL};
-
-    int status = PyArg_ParseTupleAndKeywords(args, kwds, "|OidOO", kwlist,
-                                             &name, &severity, &time, &labels, &annotations);
-    if (status == 0)
-        return NULL;
-
     if (self->name == NULL) {
-        if (name == NULL) {
-            Py_XDECREF(labels);
-            Py_XDECREF(annotations);
-            PyErr_SetString(PyExc_TypeError, "missing name");
-            return NULL;
-        }
-
-        if (!IS_BYTES_OR_UNICODE(name)) {
-            Py_XDECREF(name);
-            Py_XDECREF(labels);
-            Py_XDECREF(annotations);
-            PyErr_SetString(PyExc_TypeError, "name must be str");
-            return NULL;
-        }
+        Py_XDECREF(labels);
+        Py_XDECREF(annotations);
+        PyErr_SetString(PyExc_TypeError, "missing name");
+        return NULL;
     } else {
         if (!IS_BYTES_OR_UNICODE(self->name)) {
             Py_XDECREF(name);
@@ -182,41 +160,17 @@ static PyObject *Notification_dispatch(Notification *self, PyObject *args, PyObj
         break;
     }
 
-    if ((labels!= NULL) && (labels != Py_None) && (!PyDict_Check(labels))) {
-        Py_XDECREF(name);
-        Py_XDECREF(labels);
-        Py_XDECREF(annotations);
-        PyErr_Format(PyExc_TypeError, "labels must be a dict");
-        return NULL;
-    }
-
-    if ((annotations != NULL) && (annotations != Py_None) && (!PyDict_Check(annotations))) {
-        Py_XDECREF(name);
-        Py_XDECREF(labels);
-        Py_XDECREF(annotations);
-        PyErr_Format(PyExc_TypeError, "annotations must be a dict");
-        return NULL;
-    }
-
-    if ((labels != NULL) && (labels != Py_None)) {
-        cpy_build_labels(labels, &n.label);
-    } else if ((self->labels != NULL) && (self->labels != Py_None)) {
+    if ((self->labels != NULL) && (self->labels != Py_None)) {
         if (PyDict_Check(self->labels))
             cpy_build_labels(self->labels, &n.label);
     }
 
-    if ((annotations != NULL) && (annotations != Py_None)) {
-        cpy_build_labels(annotations, &n.annotation);
-    } else if ((self->annotations != NULL) && (self->annotations != Py_None)) {
+    if ((self->annotations != NULL) && (self->annotations != Py_None)) {
         if (PyDict_Check(self->annotations))
             cpy_build_labels(self->annotations, &n.annotation);
     }
 
-    PyObject *str_name = NULL;
-    if (name != NULL)
-        str_name = PyObject_Str(name);
-    else
-        str_name = PyObject_Str(self->name);
+    PyObject *str_name = PyObject_Str(self->name);
 
     const char *string = cpy_unicode_or_bytes_to_string(&str_name);
     if (string == NULL) {
@@ -234,6 +188,8 @@ static PyObject *Notification_dispatch(Notification *self, PyObject *args, PyObj
         n.time = cdtime();
 
     n.severity = severity;
+
+    int status = 0;
 
     Py_BEGIN_ALLOW_THREADS;
     status = plugin_dispatch_notification(&n);

@@ -48,7 +48,7 @@ static int Metric_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -188,7 +188,7 @@ static int MetricUnknownDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -338,7 +338,7 @@ static int MetricUnknownLong_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -488,7 +488,7 @@ static int MetricGaugeDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -638,7 +638,7 @@ static int MetricGaugeLong_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -788,7 +788,7 @@ static int MetricCounterDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -938,7 +938,7 @@ static int MetricCounterULong_init(PyObject *s, PyObject *args, PyObject *kwds)
     if (status == 0)
         return -1;
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(labels);
         return -1;
@@ -1097,7 +1097,7 @@ static int MetricInfo_init(PyObject *s, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(info);
         Py_XDECREF(labels);
@@ -1270,7 +1270,7 @@ static int MetricStateSet_init(PyObject *s, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(set);
         Py_XDECREF(labels);
@@ -1447,7 +1447,7 @@ static int MetricSummary_init(PyObject *s, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(quantiles);
         Py_XDECREF(labels);
@@ -1644,7 +1644,7 @@ static int MetricHistogram_init(PyObject *s, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(buckets);
         Py_XDECREF(labels);
@@ -1820,7 +1820,7 @@ static int MetricGaugeHistogram_init(PyObject *s, PyObject *args, PyObject *kwds
     double interval = 0;
     PyObject *labels = NULL;
 
-    static char *kwlist[] = {"sum", "buckets" "labels", "time", "interval", NULL};
+    static char *kwlist[] = {"sum", "buckets", "labels", "time", "interval", NULL};
 
     int status = PyArg_ParseTupleAndKeywords(args, kwds, "dO|Odd", kwlist,
                                              &sum, &buckets, &labels, &time, &interval);
@@ -1834,7 +1834,7 @@ static int MetricGaugeHistogram_init(PyObject *s, PyObject *args, PyObject *kwds
         return -1;
     }
 
-    if ((labels != NULL) && !PyDict_Check(labels)) {
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
         Py_XDECREF(buckets);
         Py_XDECREF(labels);
