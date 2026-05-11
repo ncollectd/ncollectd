@@ -6,14 +6,14 @@ NCOLLECTD-PYTHON(5) - File Formats Manual
 
 # SYNOPSIS
 
-	load-plugin plugin
-	plugin plugin {
+	load-plugin python
+	plugin python {
 	    encoding encoding
 	    module-path /path/to/your/python/modules
 	    log-traces true|false
 	    interactive true|false
-	    import "spam"
-	    module spam  {
+	    load-plugin "spam"
+	    plugin spam  {
 	      spam "wonderful" "lovely"
 	    }
 	}
@@ -95,7 +95,7 @@ Available configuration options:
 > > To quit ncollectd send **EOF** (press Ctrl+D at the beginning
 > > of a new line).
 
-**import** name
+**load-plugin** name
 
 > Imports the python script *name* and loads it into the ncollectd
 > python process.
@@ -104,7 +104,7 @@ Available configuration options:
 > You can prepend to the sys.path using the **module-path**
 > configuration option.
 
-**module** name
+**plugin** name
 
 > This block may be used to pass on configuration settings to a Python module.
 > The configuration is converted into an instance of the **Config** class
@@ -510,31 +510,24 @@ and ncollectd:
 
 **MetricFamily**
 
-> >     class MetricFamily(type, name\[, help]\[, unit]\[, metrics])
+> >     class MetricFamily(name, type\[, help]\[, unit]\[, metrics])
 
 > Methods defined here:
 
-> >     dispatch(\[metrics]\[, time]) -&gt; None.
+> >     dispatch(\[time]) -&gt; None.
 > >     append(metrics) -&gt; None.
 
 > Dispatch this instance to the ncollectd process.
-> The object has members for each of the possible arguments for this method.
-> For a detailed explanation of these parameters see the member of the same same.
-
-> If you do not submit a parameter the value saved in its member will be
-> submitted.
-> If you do provide a parameter it will be used instead,
-> without altering the member.
 
 > Data descriptors defined here:
 
 > **type**
 
 > > The type of this metric family.
-> > Assign or compare to **METRIC\_TYPE\_UNKNOWN**, **METRIC\_TYPE\_GAUGE**,
-> > **METRIC\_TYPE\_COUNTER**, **METRIC\_TYPE\_STATE\_SET**,
-> > **METRIC\_TYPE\_INFO**, **METRIC\_TYPE\_SUMMARY**, **METRIC\_TYPE\_HISTOGRAM**
-> > or **METRIC\_TYPE\_GAUGE\_HISTOGRAM**.
+> > Assign or compare to **METRIC\_UNKNOWN**, **METRIC\_GAUGE**,
+> > **METRIC\_COUNTER**, **METRIC\_STATE\_SET**,
+> > **METRIC\_INFO**, **METRIC\_SUMMARY**, **METRIC\_HISTOGRAM**
+> > or **METRIC\_GAUGE\_HISTOGRAM**.
 
 > **name**
 
@@ -560,16 +553,9 @@ and ncollectd:
 
 > Methods defined here:
 
-> >     dispatch(\[name]\[, severity]\[, time]\[, labels]\[, annotations]) -&gt; None.
+> >     dispatch() -&gt; None.
 
 > Dispatch this instance to the ncollectd process.
-> The object has members for each of the possible arguments for this method.
-> For a detailed explanation of these parameters see the member of the same same.
-
-> If you do not submit a parameter the value saved in its member will be
-> submitted.
-> If you do provide a parameter it will be used instead, without altering
-> the member.
 
 > Data descriptors defined here:
 
@@ -703,17 +689,36 @@ Any Python module will start similar to:
 
 A very simple read function might look like:
 
-	    import random
-	
-	    def read(data=None):
-	        fam = ncollectd.MetricFamily(ncollectd.METRIC_TYPE_GAUGE, 'python.spam')
-	        fam.dispatch([ncollectd.MetricGaugeDouble(random.random() * 100)])
+	    def read():
+	        with open("/proc/loadavg") as f:
+	            load = f.readline().split()
+	            fam = ncollectd.MetricFamily("system_load", ncollectd.METRIC_GAUGE, "System load averages")
+	            fam.append(ncollectd.MetricGaugeDouble(float(load[0]), {'duration': '1m'}))
+	            fam.append(ncollectd.MetricGaugeDouble(float(load[1]), {'duration': '5m'}))
+	            fam.append(ncollectd.MetricGaugeDouble(float(load[2]), {'duration': '15m'}))
+	            fam.dispatch()
+	        return 0
 
 A very simple write function might look like:
 
-	    def write(fam, data=None):
-	        for i in vl.values:
-	            print "%s (%s): %f" % (vl.plugin, vl.type, i)
+	    import math
+	    import sys
+	
+	    def write(fam):
+	        if fam.type == ncollectd.METRIC_GAUGE:
+	            sys.stdout.write("# TYPE %s gauge\n" % (fam.name))
+	            if fam.help:
+	                sys.stdout.write("# HELP %s %s\n" %  (fam.name, fam.help))
+	            for metric in fam.metrics:
+	                sys.stdout.write("%s{" % (fam.name))
+	                j = 0;
+	                for lkey, lvalue in metric.labels.items():
+	                    if j > 0:
+	                        sys.stdout.write(",")
+	                    j = j + 1
+	                    sys.stdout.write("%s=\"%s\"" % (lkey, lvalue))
+	                sys.stdout.write("} %.15g %.15g\n" % (metric.value, math.floor(metric.time*1000)))
+	        return 0
 
 To register those functions with collectd:
 

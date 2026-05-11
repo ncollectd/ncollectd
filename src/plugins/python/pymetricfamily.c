@@ -20,6 +20,8 @@ static char fam_help_doc[] = "Brief description of the metric family.";
 
 static char fam_unit_doc[] = "Specifies the metric family units.";
 
+static char fam_type_doc[] = "The metric family type.";
+
 static char fam_metrics_doc[] = "List of metrics.";
 
 static char MetricFamily_doc[] =
@@ -29,7 +31,7 @@ static char MetricFamily_doc[] =
     "register_read.";
 
 static char fam_dispatch_doc[] =
-    "dispatch([metrics]) -> None.  Dispatch metrics.\n"
+    "dispatch([time]) -> None.  Dispatch metrics.\n"
     "\n"
     "Dispatch this metrics to the ncollectd process.\n"
     "\n"
@@ -45,16 +47,16 @@ static char fam_append_doc[] =
 static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
 {
     MetricFamily *self = (MetricFamily *)s;
-    int type = METRIC_TYPE_UNKNOWN;
     PyObject *name = NULL;
+    int type = METRIC_TYPE_UNKNOWN;
     PyObject *help = NULL;
     PyObject *unit = NULL;
     PyObject *metrics= NULL;
 
-    static char *kwlist[] = {"type", "name", "help", "unit", "metrics", NULL};
+    static char *kwlist[] = {"name", "type", "help", "unit", "metrics", NULL};
 
-    int status = PyArg_ParseTupleAndKeywords(args, kwds, "iO|OOO", kwlist,
-                                             &type, &name, &help, &unit, &metrics);
+    int status = PyArg_ParseTupleAndKeywords(args, kwds, "Oi|OOO", kwlist,
+                                             &name, &type, &help, &unit, &metrics);
     if (status == 0)
         return -1;
 
@@ -114,7 +116,6 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
         break;
     }
     self->type = type;
-
 
     PyObject *old_name = self->name;
     Py_INCREF(name);
@@ -258,34 +259,29 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
 {
     int ret;
     MetricFamily *self = (MetricFamily *) s;
-    PyObject *metrics = NULL;
     double time = 0;
-    static char *kwlist[] = {"metrics", "time" , NULL};
+    static char *kwlist[] = {"time" , NULL};
 
-    int status = PyArg_ParseTupleAndKeywords(args, kwds, "|Od", kwlist, &metrics, &time);
+    int status = PyArg_ParseTupleAndKeywords(args, kwds, "|d", kwlist, &time);
     if (status == 0)
         return NULL;
 
     if (self->name == NULL) {
-        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "missing name");
         return NULL;
     }
 
     if (!IS_BYTES_OR_UNICODE(self->name)) {
-        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "name must be str");
         return NULL;
     }
 
     if ((self->help != NULL) && !IS_BYTES_OR_UNICODE(self->help)) {
-        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "help must be str");
         return NULL;
     }
 
     if ((self->unit != NULL) && !IS_BYTES_OR_UNICODE(self->unit)) {
-        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "unit must be str");
         return NULL;
     }
@@ -301,7 +297,6 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
     case METRIC_TYPE_GAUGE_HISTOGRAM:
         break;
     default:
-        Py_XDECREF(metrics);
         PyErr_SetString(PyExc_TypeError, "invalid metric type value");
         return NULL;
         break;
@@ -311,19 +306,8 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
 
     fam.type = self->type;
 
-    if (metrics == NULL) {
-        if (self->metrics == NULL)
-            Py_RETURN_NONE;
-
-        if ((!PyTuple_Check(self->metrics) && !PyList_Check(self->metrics))) {
-            PyErr_Format(PyExc_TypeError, "metrics must be a list");
-            return NULL;
-        }
-    } else if ((metrics != NULL) && (!PyTuple_Check(metrics) && !PyList_Check(metrics))) {
-        Py_XDECREF(metrics);
-        PyErr_Format(PyExc_TypeError, "metrics must be a list");
-        return NULL;
-    }
+    if (self->metrics == NULL)
+        Py_RETURN_NONE;
 
     PyObject *str_unit = NULL;
     if (self->unit != NULL) {
@@ -358,13 +342,12 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
         fam.name = discard_const(string);
     }
 
-    PyObject *metrics_list = metrics == NULL ? self->metrics : metrics;
+    PyObject *metrics_list = self->metrics;
 
     size_t size = (size_t)PySequence_Length(metrics_list);
     fam.metric.ptr = calloc(size, sizeof(*fam.metric.ptr));
     if (fam.metric.ptr == NULL) {
         PyErr_SetString(PyExc_TypeError, "failed to alloc metrics");
-        Py_XDECREF(metrics);
         Py_XDECREF(str_name);
         Py_XDECREF(str_help);
         Py_XDECREF(str_unit);
@@ -376,7 +359,6 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
     for (size_t i = 0; i < size; ++i) {
         PyObject *item = PySequence_Fast_GET_ITEM(metrics_list, (int)i); /* Borrowed reference. */
         if (item == NULL) {
-            Py_XDECREF(metrics);
             Py_XDECREF(str_name);
             Py_XDECREF(str_help);
             Py_XDECREF(str_unit);
@@ -388,7 +370,6 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
 
         status = build_metric(m, self->type, item);
         if (status != 0) {
-            Py_XDECREF(metrics);
             Py_XDECREF(str_name);
             Py_XDECREF(str_help);
             Py_XDECREF(str_unit);
@@ -397,7 +378,6 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
         }
 
         if (PyErr_Occurred() != NULL) {
-            Py_XDECREF(metrics);
             Py_XDECREF(str_name);
             Py_XDECREF(str_help);
             Py_XDECREF(str_unit);
@@ -410,12 +390,8 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
     ret = plugin_dispatch_metric_family(&fam, CDTIME_T_TO_DOUBLE(time));
     Py_END_ALLOW_THREADS;
 
-    if (metrics == NULL) {
-        Py_XDECREF(self->metrics);
-        self->metrics = PyList_New(0); /* New reference. */
-    } else {
-        Py_XDECREF(metrics);
-    }
+    Py_XDECREF(self->metrics);
+    self->metrics = PyList_New(0); /* New reference. */
 
     Py_XDECREF(str_name);
     Py_XDECREF(str_help);
@@ -674,10 +650,11 @@ static PyMethodDef MetricFamily_methods[] = {
 };
 
 static PyMemberDef MetricFamily_members[] = {
-    {"name",        T_OBJECT,    offsetof(MetricFamily, name),    0, fam_name_doc   },
-    {"help",        T_OBJECT,    offsetof(MetricFamily, help),    0, fam_help_doc   },
-    {"unit",        T_OBJECT,    offsetof(MetricFamily, unit),    0, fam_unit_doc   },
-    {"metrics",     T_OBJECT_EX, offsetof(MetricFamily, metrics), 0, fam_metrics_doc},
+    {"name",        T_OBJECT,    offsetof(MetricFamily, name),    0,           fam_name_doc   },
+    {"help",        T_OBJECT,    offsetof(MetricFamily, help),    0,           fam_help_doc   },
+    {"unit",        T_OBJECT,    offsetof(MetricFamily, unit),    0,           fam_unit_doc   },
+    {"type",        Py_T_INT,    offsetof(MetricFamily, type),    Py_READONLY, fam_type_doc   },
+    {"metrics",     T_OBJECT_EX, offsetof(MetricFamily, metrics), 0,           fam_metrics_doc},
     {NULL}
 };
 

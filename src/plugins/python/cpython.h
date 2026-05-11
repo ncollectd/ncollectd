@@ -249,8 +249,8 @@ typedef struct {
     PyObject *metrics; /* Sequence */
 } MetricFamily;
 extern PyTypeObject MetricFamilyType;
-#define MetricFamily_New(t, n)                                                     \
-    PyObject_CallFunctionObjArgs((PyObject *)&MetricFamilyType, (t), (n), (void *)0)
+#define MetricFamily_New(n, t)                                                     \
+    PyObject_CallFunctionObjArgs((PyObject *)&MetricFamilyType, (n), (t), (void *)0)
 
 typedef struct {
     PyObject_HEAD          /* No semicolon! */
