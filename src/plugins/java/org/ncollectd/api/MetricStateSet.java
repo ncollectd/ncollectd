@@ -24,14 +24,14 @@ public class MetricStateSet extends Metric
         this._set = set;
     }
 
-    public MetricStateSet(HashMap<String, Boolean> set, HashMap<String, String> labels, long time)
+    public MetricStateSet(HashMap<String, Boolean> set, HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._set = set;
     }
 
-    public MetricStateSet(HashMap<String, Boolean> set, HashMap<String, String> labels, long time,
-                          long interval)
+    public MetricStateSet(HashMap<String, Boolean> set, HashMap<String, String> labels, double time,
+                          double interval)
     {
         super(labels, time, interval);
         this._set = set;

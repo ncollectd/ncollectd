@@ -10,8 +10,8 @@ import java.util.Map;
  */
 public class Metric
 {
-    protected long _time;
-    protected long _interval;
+    protected double _time;
+    protected double _interval;
     protected HashMap<String, String> _labels = new HashMap<>();
 
     public Metric()
@@ -23,34 +23,34 @@ public class Metric
         this._labels = labels;
     }
 
-    public Metric(HashMap<String, String> labels, long time)
+    public Metric(HashMap<String, String> labels, double time)
     {
         this._labels = labels;
         this._time = time;
     }
 
-    public Metric(HashMap<String, String> labels, long time, long interval)
+    public Metric(HashMap<String, String> labels, double time, double interval)
     {
         this._labels = labels;
         this._time = time;
         this._interval = interval;
     }
 
-    public long getTime() {
+    public double getTime() {
         return this._time;
     }
 
-    public void setTime(long time)
+    public void setTime(double time)
     {
         this._time = time;
     }
 
-    public long getInterval()
+    public double getInterval()
     {
         return this._interval;
     }
 
-    public void setInterval(long interval)
+    public void setInterval(double interval)
     {
         this._interval = interval;
     }

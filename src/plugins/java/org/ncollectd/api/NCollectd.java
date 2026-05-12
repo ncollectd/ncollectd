@@ -143,7 +143,7 @@ public class NCollectd
     /**
      * Prints an error message.
      */
-    public static void logError (String message)
+    public static void error (String message)
     {
         log (LOG_ERR, message);
     }
@@ -151,7 +151,7 @@ public class NCollectd
     /**
      * Prints a warning message.
      */
-    public static void logWarning (String message)
+    public static void warning (String message)
     {
         log (LOG_WARNING, message);
     }
@@ -159,7 +159,7 @@ public class NCollectd
     /**
      * Prints a notice.
      */
-    public static void logNotice (String message)
+    public static void notice (String message)
     {
         log (LOG_NOTICE, message);
     }
@@ -167,7 +167,7 @@ public class NCollectd
     /**
      * Prints an info message.
      */
-    public static void logInfo (String message)
+    public static void info (String message)
     {
         log (LOG_INFO, message);
     }
@@ -175,7 +175,7 @@ public class NCollectd
     /**
      * Prints a debug message.
      */
-    public static void logDebug (String message)
+    public static void debug (String message)
     {
         log (LOG_DEBUG, message);
     }

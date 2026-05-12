@@ -88,8 +88,8 @@ class GenericJMXConfConnection
             this._jmx_connector = JMXConnectorFactory.connect (service_url, environment);
             this._mbean_connection = _jmx_connector.getMBeanServerConnection ();
         } catch (Exception e) {
-            NCollectd.logError ("GenericJMXConfConnection: " +
-                                "Creating MBean server connection failed: " + e);
+            NCollectd.error ("GenericJMXConfConnection: " +
+                             "Creating MBean server connection failed: " + e);
             disconnect ();
             return;
         }
@@ -163,7 +163,7 @@ class GenericJMXConfConnection
                         throw (new IllegalArgumentException ("No such MBean defined: "
                                     + tmp + ". Please make sure all `MBean' blocks appear "
                                     + "before (above) all `Connection' blocks."));
-                    NCollectd.logDebug ("GenericJMXConfConnection: " + this._host + ": Add " + tmp);
+                    NCollectd.debug ("GenericJMXConfConnection: " + this._host + ": Add " + tmp);
                     this._mbeans.add (mbean);
                 }
             } else {
@@ -185,7 +185,7 @@ class GenericJMXConfConnection
         if (this._mbean_connection == null)
             return;
 
-        NCollectd.logDebug ("GenericJMXConfConnection.query: "
+        NCollectd.debug ("GenericJMXConfConnection.query: "
                 + "Reading " + this._mbeans.size () + " mbeans from "
                 + ((this._host != null) ? this._host : "(null)"));
 

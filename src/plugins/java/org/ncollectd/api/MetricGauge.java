@@ -30,14 +30,14 @@ public class MetricGauge extends Metric
         this._lvalue = value;
     }
 
-    public MetricGauge(long value, HashMap<String, String> labels, long time)
+    public MetricGauge(long value, HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._type = GAUGE_INT64;
         this._lvalue = value;
     }
 
-    public MetricGauge(long value, HashMap<String, String> labels, long time, long interval)
+    public MetricGauge(long value, HashMap<String, String> labels, double time, double interval)
     {
         super(labels, time, interval);
         this._type = GAUGE_INT64;
@@ -58,14 +58,14 @@ public class MetricGauge extends Metric
         this._dvalue = value;
     }
 
-    public MetricGauge(double value, HashMap<String, String> labels, long time)
+    public MetricGauge(double value, HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._type = GAUGE_FLOAT64;
         this._dvalue = value;
     }
 
-    public MetricGauge(double value, HashMap<String, String> labels, long time, long interval)
+    public MetricGauge(double value, HashMap<String, String> labels, double time, double interval)
     {
         super(labels, time, interval);
         this._type = GAUGE_FLOAT64;
@@ -82,7 +82,7 @@ public class MetricGauge extends Metric
         if (this._type == GAUGE_FLOAT64) {
             return this._dvalue;
         }
-        return 0;
+        return (double)this._lvalue;
     }
 
     public long getLong()
@@ -90,7 +90,7 @@ public class MetricGauge extends Metric
         if (this._type == GAUGE_INT64) {
             return this._lvalue;
         }
-        return 0;
+        return (long)this._dvalue;
     }
 
     public String toString() {

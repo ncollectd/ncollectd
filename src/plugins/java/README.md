@@ -152,12 +152,12 @@ the classes.
 # EXPORTED API FUNCTIONS
 
 All ncollectd API functions that are available to Java plugins are implemented
-as *public static* functions of the **Collectd** class.
+as *public static* functions of the **NCollectd** class.
 This makes calling these functions pretty straight forward.
 For example, to send an error message to the daemon,
 you'd do something like this:
 
-	  NCollectd.logError ("That wasn't chicken!");
+	  NCollectd.error ("That wasn't chicken!");
 
 The following are the currently exported functions.
 
@@ -253,33 +253,33 @@ Signature: *int* **dispatchNotification** (*Notification* object);
 
 Returns zero upon success or non-zero upon failure.
 
-## logError
+## error
 
-Signature: *void* **logError** (*String*)
+Signature: *void* **error** (*String*)
 
 Sends a log message with severity **ERROR** to the daemon.
 
-## logWarning
+## warning
 
-Signature: *void* **logWarning** (*String*)
+Signature: *void* **warning** (*String*)
 
 Sends a log message with severity **WARNING** to the daemon.
 
-## logNotice
+## notice
 
-Signature: *void* **logNotice** (*String*)
+Signature: *void* **notice** (*String*)
 
 Sends a log message with severity **NOTICE** to the daemon.
 
-## logInfo
+## info
 
-Signature: *void* **logInfo** (*String*)
+Signature: *void* **info** (*String*)
 
 Sends a log message with severity **INFO** to the daemon.
 
-## logDebug
+## debug
 
-Signature: *void* **logDebug** (*String*)
+Signature: *void* **debug** (*String*)
 
 Sends a log message with severity **DEBUG** to the daemon.
 
@@ -305,11 +305,11 @@ Each callback method is now explained in more detail:
 
 Interface: **org.ncollectd.api.NCollectdConfigInterface**
 
-Signature: *int* **config** (*OConfigItem* ci)
+Signature: *int* **config** (*ConfigItem* ci)
 
-This method is passed a **OConfigItem** object, if both, method and
+This method is passed a **ConfigItem** object, if both, method and
 configuration, are available.
-**OConfigItem** is the root of a tree representing the configuration
+**ConfigItem** is the root of a tree representing the configuration
 for this plugin.
 The root itself is the representation of the **Plugin** block,
 so in next to all cases the children of the root are the first
@@ -364,10 +364,7 @@ Interface: **org.ncollectd.api.NCollectdWriteInterface**
 Signature: *int* **write** (*MetricFamily* object)
 
 This method is called whenever a value is dispatched to the daemon.
-The corresponding C "write"-functions are passed a C&lt;data\_set\_t, so they can
-decide which values are absolute values (gauge) and which are counter values.
-To get the corresponding C&lt;ListE&lt;ltDataSourceE&lt;gt,
-call the **getDataSource** method of the **ValueList** object.
+The corresponding C "write"-functions are passed a MetricFamily.
 
 To signal success, this method has to return zero.
 Anything else will be considered an error condition and cause an appropriate
@@ -401,15 +398,15 @@ This callback can be used to receive log messages from the daemon.
 
 The argument *severity* is one of:
 
-*	**org.ncollectd.api.Collectd.LOG\_ERR**
+*	**org.ncollectd.api.NCollectd.LOG\_ERR**
 
-*	**org.ncollectd.api.Collectd.LOG\_WARNING**
+*	**org.ncollectd.api.NCollectd.LOG\_WARNING**
 
-*	**org.ncollectd.api.Collectd.LOG\_NOTICE**
+*	**org.ncollectd.api.NCollectd.LOG\_NOTICE**
 
-*	**org.ncollectd.api.Collectd.LOG\_INFO**
+*	**org.ncollectd.api.NCollectd.LOG\_INFO**
 
-*	**org.ncollectd.api.Collectd.LOG\_DEBUG**
+*	**org.ncollectd.api.NCollectd.LOG\_DEBUG**
 
 The function does not return any value.
 
@@ -434,29 +431,79 @@ See **"registerNotification"** above.
 This short example demonstrates how to register a read callback with the
 daemon:
 
-	  import org.ncollectd.api.NCollectd;
-	  import org.ncollectd.api.MetricFamily;
-	  import org.ncollectd.api.MetricGauge;
+	    import java.io.FileReader;
+	    import java.io.BufferedReader;
+	    import java.util.StringTokenizer;
+	    import java.util.HashMap;
+	    import org.ncollectd.api.NCollectd;
+	    import org.ncollectd.api.MetricFamily;
+	    import org.ncollectd.api.Metric;
+	    import org.ncollectd.api.MetricGauge;
+	    import org.ncollectd.api.NCollectdReadInterface;
+	    import org.ncollectd.api.NCollectdWriteInterface;
 	
-	  import org.ncollectd.api.NCollectdReadInterface;
-	
-	  public class Foobar implements NCollectdReadInterface
-	  {
-	    public Foobar ()
+	    public class Load implements NCollectdReadInterface, NCollectdWriteInterface
 	    {
-	      NCollectd.registerRead ("Foobar", this);
+	        public Load ()
+	        {
+	            NCollectd.registerRead("load", this);
+	            NCollectd.registerWrite("load", this);
+	        }
+	
+	        public int read ()
+	        {
+	            FileReader file = null;
+	            BufferedReader reader = null;
+	            try {
+	                file = new FileReader("/proc/loadavg");
+	                reader = new BufferedReader(file);
+	                StringTokenizer st = new StringTokenizer(reader.readLine());
+	
+	                MetricFamily fam = new MetricFamily("system_load", MetricFamily.METRIC_GAUGE, "System load averages");
+	                fam.append(new MetricGauge(Float.parseFloat(st.nextToken()),
+	                               new HashMap<String, String>(){{put("duration", "1m");}}));
+	                fam.append(new MetricGauge(Float.parseFloat(st.nextToken()),
+	                               new HashMap<String, String>(){{put("duration", "5m");}}));
+	                fam.append(new MetricGauge(Float.parseFloat(st.nextToken()),
+	                               new HashMap<String, String>(){{put("duration", "15m");}}));
+	                fam.dispatch();
+	            } catch(Exception e) {
+	                NCollectd.error(e.getMessage());
+	            } finally {
+	                try {
+	                    reader.close();
+	                    file.close();
+	                } catch(Exception e) {
+	                    NCollectd.error(e.getMessage());
+	                }
+	            }
+	            return 0;
+	        }
+	
+	        public int write (MetricFamily fam)
+	        {
+	            if (fam.getType() == MetricFamily.METRIC_GAUGE) {
+	                System.out.print("# TYPE "+fam.getName()+" gauge"+"\n");
+	                if (fam.getHelp() != null)
+	                    System.out.print("# HELP "+fam.getName()+" "+fam.getHelp()+"\n");
+	                for(Metric metric: fam.getMetrics()) {
+	                    MetricGauge gmetric = (MetricGauge)metric;
+	                    System.out.print(fam.getName()+"{");
+	                    int j = 0;
+	                    HashMap<String, String> labels = metric.getLabels();
+	                    for (String lkey: labels.keySet()) {
+	                        if (j > 0)
+	                            System.out.print(",");
+	                        j++;
+	                        System.out.print(lkey+"=\""+labels.get(lkey)+"\"");
+	                    }
+	                    System.out.print("} "+String.format("%.3f",gmetric.getDouble())+
+	                                     " "+String.format("%.0f",Math.floor(metric.getTime()*1000))+"\n");
+	                }
+	            }
+	            return 0;
+	        }
 	    }
-	
-	    public int read ()
-	    {
-	      MetricFamily fam = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE, "test");
-	      fam.addMetric(new MetricGauge(10));
-	
-	      /* Do something... */
-	
-	      NCollectd.dispatchMetricFamily (fam);
-	    }
-	  }
 
 # PLUGINS
 
@@ -503,6 +550,7 @@ in case you know it.
 	            collect mbean
 	            user user
 	            password password
+	            ssl true|false
 	        }
 	    }
 	}
@@ -590,6 +638,12 @@ in case you know it.
 
 > > Use *password* to authenticate to the server.
 > > If not given, unauthenticated access is used.
+
+> **ssl** *true|false*
+
+> > Use *SSL* to connect to the jmx ssl server configured with
+> > com.sun.management.jmxremote.ssl.
+> > If not given, plain connection is used.
 
 # SEE ALSO
 

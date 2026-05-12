@@ -123,12 +123,12 @@ In order to be able to use these abbreviated names, you need to \fBimport\fP
 the classes.
 .Sh EXPORTED API FUNCTIONS
 All ncollectd API functions that are available to Java plugins are implemented
-as \fIpublic static\fP functions of the \fBCollectd\fP class.
+as \fIpublic static\fP functions of the \fBNCollectd\fP class.
 This makes calling these functions pretty straight forward.
 For example, to send an error message to the daemon,
 you'd do something like this:
 .Bd -literal
-  NCollectd.logError ("That wasn't chicken!");
+  NCollectd.error ("That wasn't chicken!");
 .Ed
 .Pp
 The following are the currently exported functions.
@@ -206,24 +206,24 @@ Returns zero upon success or non-zero upon failure.
 Signature: \fIint\fP \fBdispatchNotification\fP (\fINotification\fP object);
 .Pp
 Returns zero upon success or non-zero upon failure.
-.Ss logError
-Signature: \fIvoid\fP \fBlogError\fP (\fIString\fP)
+.Ss error
+Signature: \fIvoid\fP \fBerror\fP (\fIString\fP)
 .Pp
 Sends a log message with severity \fBERROR\fP to the daemon.
-.Ss logWarning
-Signature: \fIvoid\fP \fBlogWarning\fP (\fIString\fP)
+.Ss warning
+Signature: \fIvoid\fP \fBwarning\fP (\fIString\fP)
 .Pp
 Sends a log message with severity \fBWARNING\fP to the daemon.
-.Ss logNotice
-Signature: \fIvoid\fP \fBlogNotice\fP (\fIString\fP)
+.Ss notice
+Signature: \fIvoid\fP \fBnotice\fP (\fIString\fP)
 .Pp
 Sends a log message with severity \fBNOTICE\fP to the daemon.
-.Ss logInfo
-Signature: \fIvoid\fP \fBlogInfo\fP (\fIString\fP)
+.Ss info
+Signature: \fIvoid\fP \fBinfo\fP (\fIString\fP)
 .Pp
 Sends a log message with severity \fBINFO\fP to the daemon.
-.Ss logDebug
-Signature: \fIvoid\fP \fBlogDebug\fP (\fIString\fP)
+.Ss debug
+Signature: \fIvoid\fP \fBdebug\fP (\fIString\fP)
 .Pp
 Sends a log message with severity \fBDEBUG\fP to the daemon.
 .Sh REGISTERING CALLBACKS
@@ -245,11 +245,11 @@ Each callback method is now explained in more detail:
 .Ss config callback
 Interface: \fBorg.ncollectd.api.NCollectdConfigInterface\fP
 .Pp
-Signature: \fIint\fP \fBconfig\fP (\fIOConfigItem\fP ci)
+Signature: \fIint\fP \fBconfig\fP (\fIConfigItem\fP ci)
 .Pp
-This method is passed a \fBOConfigItem\fP object, if both, method and
+This method is passed a \fBConfigItem\fP object, if both, method and
 configuration, are available.
-\fBOConfigItem\fP is the root of a tree representing the configuration
+\fBConfigItem\fP is the root of a tree representing the configuration
 for this plugin.
 The root itself is the representation of the \fBPlugin\fP block,
 so in next to all cases the children of the root are the first
@@ -298,10 +298,7 @@ Interface: \fBorg.ncollectd.api.NCollectdWriteInterface\fP
 Signature: \fIint\fP \fBwrite\fP (\fIMetricFamily\fP object)
 .Pp
 This method is called whenever a value is dispatched to the daemon.
-The corresponding C "write"-functions are passed a C<data_set_t\fP, so they can
-decide which values are absolute values (gauge) and which are counter values.
-To get the corresponding C<ListE<lt\fPDataSourceE<gt\fP\fP,
-call the \fBgetDataSource\fP method of the \fBValueList\fP object.
+The corresponding C "write"-functions are passed a \f(CWMetricFamily\fP.
 .Pp
 To signal success, this method has to return zero.
 Anything else will be considered an error condition and cause an appropriate
@@ -332,15 +329,15 @@ This callback can be used to receive log messages from the daemon.
 The argument \fIseverity\fP is one of:
 .Bl -bullet
 .It
-\fBorg.ncollectd.api.Collectd.LOG_ERR\fP
+\fBorg.ncollectd.api.NCollectd.LOG_ERR\fP
 .It
-\fBorg.ncollectd.api.Collectd.LOG_WARNING\fP
+\fBorg.ncollectd.api.NCollectd.LOG_WARNING\fP
 .It
-\fBorg.ncollectd.api.Collectd.LOG_NOTICE\fP
+\fBorg.ncollectd.api.NCollectd.LOG_NOTICE\fP
 .It
-\fBorg.ncollectd.api.Collectd.LOG_INFO\fP
+\fBorg.ncollectd.api.NCollectd.LOG_INFO\fP
 .It
-\fBorg.ncollectd.api.Collectd.LOG_DEBUG\fP
+\fBorg.ncollectd.api.NCollectd.LOG_DEBUG\fP
 .El
 .Pp
 The function does not return any value.
@@ -362,29 +359,79 @@ See \fB"registerNotification"\fP above.
 This short example demonstrates how to register a read callback with the
 daemon:
 .Bd -literal
-  import org.ncollectd.api.NCollectd;
-  import org.ncollectd.api.MetricFamily;
-  import org.ncollectd.api.MetricGauge;
+    import java.io.FileReader;
+    import java.io.BufferedReader;
+    import java.util.StringTokenizer;
+    import java.util.HashMap;
+    import org.ncollectd.api.NCollectd;
+    import org.ncollectd.api.MetricFamily;
+    import org.ncollectd.api.Metric;
+    import org.ncollectd.api.MetricGauge;
+    import org.ncollectd.api.NCollectdReadInterface;
+    import org.ncollectd.api.NCollectdWriteInterface;
 
-  import org.ncollectd.api.NCollectdReadInterface;
-
-  public class Foobar implements NCollectdReadInterface
-  {
-    public Foobar ()
+    public class Load implements NCollectdReadInterface, NCollectdWriteInterface
     {
-      NCollectd.registerRead ("Foobar", this);
+        public Load ()
+        {
+            NCollectd.registerRead("load", this);
+            NCollectd.registerWrite("load", this);
+        }
+
+        public int read ()
+        {
+            FileReader file = null;
+            BufferedReader reader = null;
+            try {
+                file = new FileReader("/proc/loadavg");
+                reader = new BufferedReader(file);
+                StringTokenizer st = new StringTokenizer(reader.readLine());
+
+                MetricFamily fam = new MetricFamily("system_load", MetricFamily.METRIC_GAUGE, "System load averages");
+                fam.append(new MetricGauge(Float.parseFloat(st.nextToken()),
+                               new HashMap<String, String>(){{put("duration", "1m");}}));
+                fam.append(new MetricGauge(Float.parseFloat(st.nextToken()),
+                               new HashMap<String, String>(){{put("duration", "5m");}}));
+                fam.append(new MetricGauge(Float.parseFloat(st.nextToken()),
+                               new HashMap<String, String>(){{put("duration", "15m");}}));
+                fam.dispatch();
+            } catch(Exception e) {
+                NCollectd.error(e.getMessage());
+            } finally {
+                try {
+                    reader.close();
+                    file.close();
+                } catch(Exception e) {
+                    NCollectd.error(e.getMessage());
+                }
+            }
+            return 0;
+        }
+
+        public int write (MetricFamily fam)
+        {
+            if (fam.getType() == MetricFamily.METRIC_GAUGE) {
+                System.out.print("# TYPE "+fam.getName()+" gauge"+"\\n");
+                if (fam.getHelp() != null)
+                    System.out.print("# HELP "+fam.getName()+" "+fam.getHelp()+"\\n");
+                for(Metric metric: fam.getMetrics()) {
+                    MetricGauge gmetric = (MetricGauge)metric;
+                    System.out.print(fam.getName()+"{");
+                    int j = 0;
+                    HashMap<String, String> labels = metric.getLabels();
+                    for (String lkey: labels.keySet()) {
+                        if (j > 0)
+                            System.out.print(",");
+                        j++;
+                        System.out.print(lkey+"=\\""+labels.get(lkey)+"\\"");
+                    }
+                    System.out.print("} "+String.format("%.3f",gmetric.getDouble())+
+                                     " "+String.format("%.0f",Math.floor(metric.getTime()*1000))+"\\n");
+                }
+            }
+            return 0;
+        }
     }
-
-    public int read ()
-    {
-      MetricFamily fam = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE, "test");
-      fam.addMetric(new MetricGauge(10));
-
-      /* Do something... */
-
-      NCollectd.dispatchMetricFamily (fam);
-    }
-  }
 .Ed
 .Sh PLUGINS
 The following plugins are implemented in \fIJava\fP.

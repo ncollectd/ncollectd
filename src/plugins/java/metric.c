@@ -276,13 +276,13 @@ static jobject ctoj_metric(JNIEnv *jvm_env, metric_type_t type, const metric_t *
     if (m->time > 0) {
         /* Java measures time in milliseconds. */
          (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_time,
-                                             (jlong)CDTIME_T_TO_MS(m->time));
+                                             (jdouble)CDTIME_T_TO_DOUBLE(m->time));
     }
 
     if (m->interval > 0) {
         /* Java measures time in milliseconds. */
          (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_interval,
-                                             (jlong)CDTIME_T_TO_MS(m->interval));
+                                             (jdouble)CDTIME_T_TO_DOUBLE(m->interval));
     }
 
     return o_metric;
@@ -299,7 +299,7 @@ jobject ctoj_metric_family(JNIEnv *jvm_env, const metric_family_t *fam)
     jint type = fam->type;;
 
     jobject o_fam = (*jvm_env)->NewObject(jvm_env, gref.metric_family.class,
-                                                   gref.metric_family.constructor, type, o_name);
+                                                   gref.metric_family.constructor, o_name, type);
     if (o_fam == NULL) {
         PLUGIN_ERROR("Creating a new MetricFamily instance failed.");
         return NULL;
@@ -571,13 +571,11 @@ static int jtoc_metric(JNIEnv *jvm_env, metric_type_t type, metric_t *m, jobject
         return -1;
     }
 
-    jlong time = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric.get_time);
-    /* Java measures time in milliseconds. */
-    m->time = MS_TO_CDTIME_T(time);
+    jdouble time = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric.get_time);
+    m->time = DOUBLE_TO_CDTIME_T(time);
 
-    jlong interval = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric.get_interval);
-    /* Java measures time in milliseconds. */
-    m->interval = MS_TO_CDTIME_T(interval);
+    jdouble interval = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric.get_interval);
+    m->interval = DOUBLE_TO_CDTIME_T(interval);
 
     return 0;
 }

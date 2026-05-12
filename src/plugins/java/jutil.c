@@ -36,9 +36,9 @@ static jcached_class_t classes[] = {
         { "add",    "(Ljava/lang/Object;)Z", &gref.array_list.add         },
         { NULL,     NULL,                    NULL                         }}},
     { "java/util/List", &gref.list.class, (jcached_method_t[]) {
-        { "size",    "()I",                   &gref.list.size        },
-        { "toArray", "()[Ljava/lang/Object;", &gref.list.to_array    },
-        { NULL,      NULL,                    NULL                   }}},
+        { "size",    "()I",                   &gref.list.size     },
+        { "toArray", "()[Ljava/lang/Object;", &gref.list.to_array },
+        { NULL,      NULL,                    NULL                }}},
     { "java/util/HashMap", &gref.hash_map.class, (jcached_method_t[]) {
         { "<init>", "(I)V", &gref.hash_map.constructor  },
         { "put",    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", &gref.hash_map.put },
@@ -61,22 +61,22 @@ static jcached_class_t classes[] = {
         { NULL,       NULL,                     NULL               }}},
     { "java/util/Iterator", &gref.iterator.class, (jcached_method_t[]) {
         { "hasNext", "()Z",                  &gref.iterator.has_next },
-        { "next",    "()Ljava/lang/Object;", &gref.iterator.next      },
-        { NULL,      NULL,                   NULL                     }}},
+        { "next",    "()Ljava/lang/Object;", &gref.iterator.next     },
+        { NULL,      NULL,                   NULL                    }}},
     { "java/util/Map$Entry", &gref.map_entry.class, (jcached_method_t[]) {
         { "getKey",   "()Ljava/lang/Object;", &gref.map_entry.get_key   },
         { "getValue", "()Ljava/lang/Object;", &gref.map_entry.get_value },
         { NULL,       NULL,                   NULL                      }}},
     { "org/ncollectd/api/Metric", &gref.metric.class,  (jcached_method_t[]) {
-        { "setLabels",   "(Ljava/util/HashMap;)V", &gref.metric.set_labels },
-        { "setTime",     "(J)V", &gref.metric.set_time     },
-        { "setInterval", "(J)V", &gref.metric.set_interval },
-        { "getLabels",   "()Ljava/util/HashMap;", &gref.metric.get_labels  },
-        { "getTime",     "()J",  &gref.metric.get_time     },
-        { "getInterval", "()J",  &gref.metric.get_interval },
-        { NULL,          NULL,   NULL                      }}},
+        { "setLabels",   "(Ljava/util/HashMap;)V", &gref.metric.set_labels   },
+        { "setTime",     "(D)V",                   &gref.metric.set_time     },
+        { "setInterval", "(D)V",                   &gref.metric.set_interval },
+        { "getLabels",   "()Ljava/util/HashMap;",  &gref.metric.get_labels   },
+        { "getTime",     "()D",                    &gref.metric.get_time     },
+        { "getInterval", "()D",                    &gref.metric.get_interval },
+        { NULL,          NULL,                     NULL                      }}},
     { "org/ncollectd/api/MetricFamily", &gref.metric_family.class, (jcached_method_t[]) {
-        { "<init>",     "(ILjava/lang/String;)V",        &gref.metric_family.constructor },
+        { "<init>",     "(Ljava/lang/String;I)V",        &gref.metric_family.constructor },
         { "setHelp",    "(Ljava/lang/String;)V",         &gref.metric_family.set_help    },
         { "setUnit",    "(Ljava/lang/String;)V",         &gref.metric_family.set_unit    },
         { "addMetric",  "(Lorg/ncollectd/api/Metric;)V", &gref.metric_family.add_metric  },
@@ -110,16 +110,16 @@ static jcached_class_t classes[] = {
     { "org/ncollectd/api/MetricInfo", &gref.metric_info.class, (jcached_method_t[]) {
         { "<init>",  "(Ljava/util/HashMap;)V", &gref.metric_info.constructor },
         { "getInfo", "()Ljava/util/HashMap;",  &gref.metric_info.get_info    },
-        { NULL,      NULL,     NULL                                    }}},
+        { NULL,      NULL,                     NULL                          }}},
     { "org/ncollectd/api/MetricStateSet", &gref.metric_state_set.class, (jcached_method_t[]) {
         { "<init>", "(Ljava/util/HashMap;)V", &gref.metric_state_set.constructor },
         { "getSet", "()Ljava/util/HashMap;",  &gref.metric_state_set.get_set     },
-        { NULL,      NULL,                     NULL                    }}},
+        { NULL,      NULL,                    NULL                               }}},
     { "org/ncollectd/api/MetricHistogram", &gref.metric_histogram.class, (jcached_method_t[]) {
         { "<init>",     "(DLjava/util/List;)V", &gref.metric_histogram.constructor },
-        { "getSum",     "()D", &gref.metric_histogram.get_sum  },
-        { "getBuckets", "()Ljava/util/List;", &gref.metric_histogram.get_buckets },
-        { NULL,         NULL,                     NULL         }}},
+        { "getSum",     "()D",                  &gref.metric_histogram.get_sum     },
+        { "getBuckets", "()Ljava/util/List;",   &gref.metric_histogram.get_buckets },
+        { NULL,         NULL,                   NULL                               }}},
     { "org/ncollectd/api/MetricHistogramBucket", &gref.metric_histogram_bucket.class, (jcached_method_t[]) {
         { "<init>",     "(JD)V", &gref.metric_histogram_bucket.constructor },
         { "getCounter", "()J",   &gref.metric_histogram_bucket.get_counter },
@@ -127,28 +127,28 @@ static jcached_class_t classes[] = {
         { NULL,         NULL,    NULL                                      }}},
     { "org/ncollectd/api/MetricSummary", &gref.metric_summary.class, (jcached_method_t[]) {
         { "<init>",       "(DJLjava/util/List;)V", &gref.metric_summary.constructor },
-        { "getSum",       "()D", &gref.metric_summary.get_sum   },
-        { "getCount",     "()D", &gref.metric_summary.get_count },
-        { "getQuantiles", "()Ljava/util/List;", &gref.metric_summary.get_quantiles },
-        { NULL,           NULL,  NULL                           }}},
+        { "getSum",       "()D",                   &gref.metric_summary.get_sum       },
+        { "getCount",     "()D",                   &gref.metric_summary.get_count     },
+        { "getQuantiles", "()Ljava/util/List;",    &gref.metric_summary.get_quantiles },
+        { NULL,           NULL,                    NULL                               }}},
     { "org/ncollectd/api/MetricSummaryQuantile", &gref.metric_summary_quantile.class, (jcached_method_t[]) {
         { "<init>",      "(DD)V", &gref.metric_summary_quantile.constructor  },
         { "getQuantile", "()D",   &gref.metric_summary_quantile.get_quantile },
         { "getValue",    "()D",   &gref.metric_summary_quantile.get_value    },
         { NULL,          NULL,    NULL                                       }}},
     { "org/ncollectd/api/Notification", &gref.notification.class, (jcached_method_t[]) {
-        { "<init>",         "()V",                      &gref.notification.constructor     },
-        { "setName",        "(Ljava/lang/String;)V",    &gref.notification.set_name        },
-        { "setTime",        "(J)V",                     &gref.notification.set_time        },
-        { "setSeverity",    "(I)V",                     &gref.notification.set_severity    },
+        { "<init>",         "()V",                    &gref.notification.constructor     },
+        { "setName",        "(Ljava/lang/String;)V",  &gref.notification.set_name        },
+        { "setTime",        "(D)V",                   &gref.notification.set_time        },
+        { "setSeverity",    "(I)V",                   &gref.notification.set_severity    },
         { "setLabels",      "(Ljava/util/HashMap;)V", &gref.notification.set_labels      },
         { "setAnnotations", "(Ljava/util/HashMap;)V", &gref.notification.set_annotations },
-        { "getName",        "()Ljava/lang/String;",     &gref.notification.get_name        },
-        { "getTime",        "()J",                      &gref.notification.get_time        },
-        { "getSeverity",    "()I",                      &gref.notification.get_severity    },
+        { "getName",        "()Ljava/lang/String;",   &gref.notification.get_name        },
+        { "getTime",        "()D",                    &gref.notification.get_time        },
+        { "getSeverity",    "()I",                    &gref.notification.get_severity    },
         { "getLabels",      "()Ljava/util/HashMap;",  &gref.notification.get_labels      },
         { "getAnnotations", "()Ljava/util/HashMap;",  &gref.notification.get_annotations },
-        { NULL,             NULL,                       NULL                               }}},
+        { NULL,             NULL,                     NULL                               }}},
     { "org/ncollectd/api/ConfigValue",  &gref.config_value.class, (jcached_method_t[]) {
         { "<init>", "(Z)V",                  &gref.config_value.constructor_bool   },
         { "<init>", "(Ljava/lang/String;)V", &gref.config_value.constructor_string },
@@ -263,15 +263,7 @@ jobject ctoj_label_set_object(JNIEnv *jvm_env, const label_set_t *label)
             return NULL;
         }
 
-        jobject put_obj = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put,
-                                                                o_name, o_value);
-        if (put_obj == NULL) {
-            PLUGIN_ERROR("CallObjectMethod to put in HashTable failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
-            return NULL;
-        }
+        (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put, o_name, o_value);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
@@ -311,15 +303,7 @@ jobject ctoj_state_set_object(JNIEnv *jvm_env, const state_set_t *set)
             return NULL;
         }
 
-        jobject put_obj = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put,
-                                                                        o_name, o_value);
-        if (put_obj == NULL) {
-            PLUGIN_ERROR("CallObjectMethod to put in HashTable failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            return NULL;
-        }
+        (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put, o_name, o_value);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_value);

@@ -38,7 +38,7 @@ jobject ctoj_notification(JNIEnv *jvm_env, const notification_t *n)
 
     /* Set the `time' member. Java stores time in milliseconds. */
     (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_time,
-                                        (jlong)CDTIME_T_TO_MS(n->time));
+                                        (jdouble)CDTIME_T_TO_DOUBLE(n->time));
 
     /* Set the `severity' member.. */
     (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_severity,
@@ -82,9 +82,9 @@ int jtoc_notification(JNIEnv *jvm_env, notification_t *n, jobject object_ptr)
     }
     n->name = name;
 
-    jlong tmp_long = (*jvm_env)->CallLongMethod(jvm_env, object_ptr, gref.notification.get_time);
+    jdouble tmp_double = (*jvm_env)->CallLongMethod(jvm_env, object_ptr, gref.notification.get_time);
     /* Java measures time in milliseconds. */
-    n->time = MS_TO_CDTIME_T(tmp_long);
+    n->time = DOUBLE_TO_CDTIME_T(tmp_double);
 
     jint tmp_int = (*jvm_env)->CallIntMethod(jvm_env, object_ptr, gref.notification.get_severity);
     n->severity = (int)tmp_int;
