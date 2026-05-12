@@ -30,14 +30,14 @@ public class MetricCounter extends Metric
         this._lvalue = value;
     }
 
-    public MetricCounter(long value, HashMap<String, String> labels, long time)
+    public MetricCounter(long value, HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._type = COUNTER_UINT64;
         this._lvalue = value;
     }
 
-    public MetricCounter(long value, HashMap<String, String> labels, long time, long interval)
+    public MetricCounter(long value, HashMap<String, String> labels, double time, double interval)
     {
         super(labels, time, interval);
         this._type = COUNTER_UINT64;
@@ -58,14 +58,14 @@ public class MetricCounter extends Metric
         this._dvalue = value;
     }
 
-    public MetricCounter(double value, HashMap<String, String> labels, long time)
+    public MetricCounter(double value, HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._type = COUNTER_FLOAT64;
         this._dvalue = value;
     }
 
-    public MetricCounter(double value, HashMap<String, String> labels, long time, long interval)
+    public MetricCounter(double value, HashMap<String, String> labels, double time, double interval)
     {
         super(labels, time, interval);
         this._type = COUNTER_FLOAT64;
@@ -82,7 +82,7 @@ public class MetricCounter extends Metric
         if (_type == COUNTER_FLOAT64) {
             return this._dvalue;
         }
-        return 0;
+        return (double)this._lvalue;
     }
 
     public long getLong()
@@ -90,7 +90,7 @@ public class MetricCounter extends Metric
         if (_type == COUNTER_UINT64) {
             return this._lvalue;
         }
-        return 0;
+        return (long)this._dvalue;
     }
 
     public String toString() {

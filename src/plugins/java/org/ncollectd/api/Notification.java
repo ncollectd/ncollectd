@@ -24,7 +24,7 @@ public class Notification
     };
 
     private String _name;
-    private long _time;
+    private double _time;
     private int _severity;
     private HashMap<String, String> _labels = new HashMap<>();
     private HashMap<String, String> _annotations = new HashMap<>();
@@ -79,12 +79,12 @@ public class Notification
         }
     }
 
-    public void setTime(long time)
+    public void setTime(double time)
     {
         this._time = time;
     }
 
-    public long getTime()
+    public double getTime()
     {
         return this._time;
     }
@@ -117,6 +117,11 @@ public class Notification
     public HashMap<String, String> getAnnotations()
     {
         return this._annotations;
+    }
+
+    public int dispatch()
+    {
+        return NCollectd.dispatchNotification(this);
     }
 
     public String toString()

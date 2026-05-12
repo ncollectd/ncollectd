@@ -47,7 +47,7 @@ class GenericJMXConfMBean
         while (iter.hasNext()) {
             ConfigItem child = iter.next();
 
-            NCollectd.logDebug ("GenericJMXConfMBean: child.getKey () = " + child.getKey());
+            NCollectd.debug ("GenericJMXConfMBean: child.getKey () = " + child.getKey());
             if (child.getKey().equalsIgnoreCase("object-name")) {
                 String tmp = GenericJMX.getConfigString(child);
                 if (tmp == null)
@@ -93,12 +93,12 @@ class GenericJMXConfMBean
         try {
             names = conn.queryNames(this._obj_name, /* query = */ null);
         } catch (Exception e) {
-            NCollectd.logError ("GenericJMXConfMBean: queryNames failed: " + e);
+            NCollectd.error ("GenericJMXConfMBean: queryNames failed: " + e);
             return (-1);
         }
 
         if (names.size() == 0) {
-            NCollectd.logWarning("GenericJMXConfMBean: No MBean matched " + "the ObjectName " +
+            NCollectd.warning("GenericJMXConfMBean: No MBean matched " + "the ObjectName " +
                                   this._obj_name);
         }
 
@@ -115,7 +115,7 @@ class GenericJMXConfMBean
         while (iter.hasNext()) {
             ObjectName objName = iter.next();
 
-            NCollectd.logDebug ("GenericJMXConfMBean: objName = " + objName.toString());
+            NCollectd.debug ("GenericJMXConfMBean: objName = " + objName.toString());
 
             HashMap<String, String> mlabels = new HashMap<String, String>(labels);
             mlabels.putAll(this._labels);
@@ -125,7 +125,7 @@ class GenericJMXConfMBean
                 String propertyName = entry.getValue();
                 String propertyValue = objName.getKeyProperty(propertyName);
                 if (propertyValue == null) {
-                    NCollectd.logError ("GenericJMXConfMBean: "
+                    NCollectd.error ("GenericJMXConfMBean: "
                             + "No such property in object name: " + propertyName);
                 } else {
                     mlabels.put(name, propertyValue);

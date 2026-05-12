@@ -56,6 +56,7 @@ if(BUILD_PLUGIN_JAVA)
         org/ncollectd/java/GenericJMXConfMetric.java
         org/ncollectd/java/JMXMemory.java)
     add_jar("generic-jmx" ${GENERIC_JMX_SRC})
+    add_dependencies("generic-jmx" "ncollectd-api")
 
 #    add_executable(test_plugin_java EXCLUDE_FROM_ALL java_test.c ${PLUGIN_JAVA_SRC})
 #    target_link_libraries(test_plugin_java libtest libmetric libutils -lm)

@@ -39,14 +39,14 @@ public class JMXMemory implements NCollectdConfigInterface,
     private String _jmx_service_url = null;
     private MemoryMXBean _mbean = null;
 
-    private MetricFamily fam_memory_init_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
-                                                                  "jmx_memory_init_bytes");
-    private MetricFamily fam_memory_used_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
-                                                                  "jmx_memory_used_bytes");
-    private MetricFamily fam_memory_committed_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
-                                                                       "jmx_memory_committed_bytes");
-    private MetricFamily fam_memory_max_bytes = new MetricFamily(MetricFamily.METRIC_TYPE_GAUGE,
-                                                                 "jmx_memory_max_bytes");
+    private MetricFamily fam_memory_init_bytes = new MetricFamily("jmx_memory_init_bytes",
+                                                                  MetricFamily.METRIC_GAUGE);
+    private MetricFamily fam_memory_used_bytes = new MetricFamily("jmx_memory_used_bytes",
+                                                                  MetricFamily.METRIC_GAUGE);
+    private MetricFamily fam_memory_committed_bytes = new MetricFamily("jmx_memory_committed_bytes",
+                                                                       MetricFamily.METRIC_GAUGE);
+    private MetricFamily fam_memory_max_bytes = new MetricFamily("jmx_memory_max_bytes",
+                                                                 MetricFamily.METRIC_GAUGE);
 
     public JMXMemory ()
     {
@@ -63,7 +63,7 @@ public class JMXMemory implements NCollectdConfigInterface,
         long mem_committed = usage.getCommitted();
         long mem_max = usage.getMax();
 
-        NCollectd.logDebug ("JMXMemory plugin: instance = " + instance + "; "
+        NCollectd.debug ("JMXMemory plugin: instance = " + instance + "; "
                 + "mem_init = " + mem_init + "; "
                 + "mem_used = " + mem_used + "; "
                 + "mem_committed = " + mem_committed + "; "
@@ -73,27 +73,23 @@ public class JMXMemory implements NCollectdConfigInterface,
         labels.put("instance", instance);
 
         if (mem_init >= 0) {
-            fam_memory_init_bytes.addMetric(new MetricGauge(mem_init, labels));
-            NCollectd.dispatchMetricFamily(fam_memory_init_bytes);
-            fam_memory_init_bytes.clearMetrics();
+            fam_memory_init_bytes.append(new MetricGauge(mem_init, labels));
+            fam_memory_init_bytes.dispatch();
         }
 
         if (mem_used >= 0) {
-            fam_memory_used_bytes.addMetric(new MetricGauge(mem_used, labels));
-            NCollectd.dispatchMetricFamily(fam_memory_used_bytes);
-            fam_memory_used_bytes.clearMetrics();
+            fam_memory_used_bytes.append(new MetricGauge(mem_used, labels));
+            fam_memory_used_bytes.dispatch();
         }
 
         if (mem_committed >= 0) {
-            fam_memory_committed_bytes.addMetric(new MetricGauge(mem_committed, labels));
-            NCollectd.dispatchMetricFamily(fam_memory_committed_bytes);
-            fam_memory_committed_bytes.clearMetrics();
+            fam_memory_committed_bytes.append(new MetricGauge(mem_committed, labels));
+            fam_memory_committed_bytes.dispatch();
         }
 
         if (mem_max >= 0) {
-            fam_memory_committed_bytes.addMetric(new MetricGauge(mem_max, labels));
-            NCollectd.dispatchMetricFamily(fam_memory_committed_bytes);
-            fam_memory_committed_bytes.clearMetrics();
+            fam_memory_committed_bytes.append(new MetricGauge(mem_max, labels));
+            fam_memory_committed_bytes.dispatch();
         }
     }
 
@@ -101,14 +97,14 @@ public class JMXMemory implements NCollectdConfigInterface,
     {
         List<ConfigValue> values = ci.getValues ();
         if (values.size () != 1) {
-            NCollectd.logError ("JMXMemory plugin: The JMXServiceURL option needs "
+            NCollectd.error ("JMXMemory plugin: The JMXServiceURL option needs "
                     + "exactly one string argument.");
             return (-1);
         }
 
         ConfigValue cv = values.get (0);
         if (cv.getType () != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("JMXMemory plugin: The JMXServiceURL option needs "
+            NCollectd.error ("JMXMemory plugin: The JMXServiceURL option needs "
                     + "exactly one string argument.");
             return (-1);
         }
@@ -119,7 +115,7 @@ public class JMXMemory implements NCollectdConfigInterface,
 
     public int config (ConfigItem ci)
     {
-        NCollectd.logDebug ("JMXMemory plugin: config: ci = " + ci + ";");
+        NCollectd.debug ("JMXMemory plugin: config: ci = " + ci + ";");
 
         List<ConfigItem> children = ci.getChildren ();
         for (int i = 0; i < children.size (); i++) {
@@ -131,7 +127,7 @@ public class JMXMemory implements NCollectdConfigInterface,
             if (key.equalsIgnoreCase ("JMXServiceURL")) {
                 configServiceURL (child);
             } else {
-                NCollectd.logError ("JMXMemory plugin: Unknown config option: " + key);
+                NCollectd.error ("JMXMemory plugin: Unknown config option: " + key);
             }
         }
 
@@ -141,7 +137,7 @@ public class JMXMemory implements NCollectdConfigInterface,
     public int init ()
     {
         if (_jmx_service_url == null) {
-            NCollectd.logError ("JMXMemory: _jmx_service_url == null");
+            NCollectd.error ("JMXMemory: _jmx_service_url == null");
             return (-1);
         }
 
@@ -153,7 +149,7 @@ public class JMXMemory implements NCollectdConfigInterface,
                     ManagementFactory.MEMORY_MXBEAN_NAME,
                     MemoryMXBean.class);
         } catch (Exception e) {
-            NCollectd.logError ("JMXMemory: Creating MBean failed: " + e);
+            NCollectd.error ("JMXMemory: Creating MBean failed: " + e);
             return (-1);
         }
 
@@ -163,7 +159,7 @@ public class JMXMemory implements NCollectdConfigInterface,
     public int read ()
     {
         if (_mbean == null) {
-            NCollectd.logError ("JMXMemory: _mbean == null");
+            NCollectd.error ("JMXMemory: _mbean == null");
             return (-1);
         }
 

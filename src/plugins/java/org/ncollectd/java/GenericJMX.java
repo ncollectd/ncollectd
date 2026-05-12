@@ -40,14 +40,14 @@ public class GenericJMX implements NCollectdConfigInterface,
     {
         List<ConfigValue> values = ci.getValues();
         if (values.size() != 1) {
-            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+            NCollectd.error ("GenericJMXConfMBean: The " + ci.getKey ()
                     + " configuration option needs exactly one string argument.");
             return (null);
         }
 
         ConfigValue v = values.get(0);
         if (v.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+            NCollectd.error ("GenericJMXConfMBean: The " + ci.getKey ()
                     + " configuration option needs exactly one string argument.");
             return (null);
         }
@@ -59,14 +59,14 @@ public class GenericJMX implements NCollectdConfigInterface,
     {
         List<ConfigValue> values = ci.getValues();
         if (values.size() != 1) {
-            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+            NCollectd.error ("GenericJMXConfMBean: The " + ci.getKey ()
                     + " configuration option needs exactly one boolean argument.");
             return (null);
         }
 
         ConfigValue v = values.get(0);
         if (v.getType() != ConfigValue.CONFIG_TYPE_BOOLEAN) {
-            NCollectd.logError ("GenericJMXConfMBean: The " + ci.getKey ()
+            NCollectd.error ("GenericJMXConfMBean: The " + ci.getKey ()
                     + " configuration option needs exactly one boolean argument.");
             return (null);
         }
@@ -78,21 +78,21 @@ public class GenericJMX implements NCollectdConfigInterface,
     {
         List<ConfigValue> values = ci.getValues();
         if (values.size() != 2) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
+            NCollectd.error ("GenericJMXConfConnection: The " + ci.getKey()
                     + " configuration option needs exactly two string arguments.");
             return;
         }
 
         ConfigValue name = values.get(0);
         if (name.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
+            NCollectd.error ("GenericJMXConfConnection: The " + ci.getKey()
                     + " configuration option needs exactly two string arguments.");
             return;
         }
 
         ConfigValue value = values.get(1);
         if (value.getType() != ConfigValue.CONFIG_TYPE_STRING) {
-            NCollectd.logError ("GenericJMXConfConnection: The " + ci.getKey()
+            NCollectd.error ("GenericJMXConfConnection: The " + ci.getKey()
                     + " configuration option needs exactly two string arguments.");
             return;
         }
@@ -105,7 +105,7 @@ public class GenericJMX implements NCollectdConfigInterface,
         List<ConfigItem> children;
         int i;
 
-        NCollectd.logDebug ("GenericJMX plugin: config: ci = " + ci + ";");
+        NCollectd.debug ("GenericJMX plugin: config: ci = " + ci + ";");
 
         children = ci.getChildren ();
         for (i = 0; i < children.size (); i++) {
@@ -119,18 +119,18 @@ public class GenericJMX implements NCollectdConfigInterface,
                     GenericJMXConfMBean mbean = new GenericJMXConfMBean (child);
                     putMBean (mbean);
                 } catch (IllegalArgumentException e) {
-                    NCollectd.logError("GenericJMX plugin: Evaluating 'MBean' block failed: " + e);
+                    NCollectd.error("GenericJMX plugin: Evaluating 'MBean' block failed: " + e);
                 }
             } else if (key.equalsIgnoreCase ("connection")) {
                 try {
                     GenericJMXConfConnection conn = new GenericJMXConfConnection (child);
                     this._connections.add (conn);
                 } catch (IllegalArgumentException e) {
-                    NCollectd.logError ("GenericJMX plugin: " +
-                                        "Evaluating `Connection' block failed: " + e);
+                    NCollectd.error ("GenericJMX plugin: " +
+                                     "Evaluating `Connection' block failed: " + e);
                 }
             } else {
-                NCollectd.logError ("GenericJMX plugin: Unknown config option: " + key);
+                NCollectd.error ("GenericJMX plugin: Unknown config option: " + key);
             }
         }
 
@@ -143,7 +143,7 @@ public class GenericJMX implements NCollectdConfigInterface,
             try {
                 this._connections.get (i).query ();
             } catch (Exception e) {
-                NCollectd.logError ("GenericJMX: Caught unexpected exception: " + e);
+                NCollectd.error ("GenericJMX: Caught unexpected exception: " + e);
                 e.printStackTrace ();
             }
         }
@@ -168,7 +168,7 @@ public class GenericJMX implements NCollectdConfigInterface,
 
     static private void putMBean (GenericJMXConfMBean mbean)
     {
-        NCollectd.logDebug ("GenericJMX.putMBean: Adding " + mbean.getName ());
+        NCollectd.debug ("GenericJMX.putMBean: Adding " + mbean.getName ());
         _mbeans.put (mbean.getName (), mbean);
     }
 }

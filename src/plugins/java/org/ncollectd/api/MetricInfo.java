@@ -24,14 +24,14 @@ public class MetricInfo extends Metric
         this._info = info;
     }
 
-    public MetricInfo(HashMap<String, String> info, HashMap<String, String> labels, long time)
+    public MetricInfo(HashMap<String, String> info, HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._info = info;
     }
 
-    public MetricInfo(HashMap<String, String> info, HashMap<String, String> labels, long time,
-                      long interval)
+    public MetricInfo(HashMap<String, String> info, HashMap<String, String> labels, double time,
+                      double interval)
     {
         super(labels, time, interval);
         this._info = info;

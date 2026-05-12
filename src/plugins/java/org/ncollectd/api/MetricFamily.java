@@ -10,14 +10,14 @@ import java.util.List;
  */
 public class MetricFamily
 {
-    public static final int METRIC_TYPE_UNKNOWN         = 0;
-    public static final int METRIC_TYPE_GAUGE           = 1;
-    public static final int METRIC_TYPE_COUNTER         = 2;
-    public static final int METRIC_TYPE_STATE_SET       = 3;
-    public static final int METRIC_TYPE_INFO            = 4;
-    public static final int METRIC_TYPE_SUMMARY         = 5;
-    public static final int METRIC_TYPE_HISTOGRAM       = 6;
-    public static final int METRIC_TYPE_GAUGE_HISTOGRAM = 7;
+    public static final int METRIC_UNKNOWN         = 0;
+    public static final int METRIC_GAUGE           = 1;
+    public static final int METRIC_COUNTER         = 2;
+    public static final int METRIC_STATE_SET       = 3;
+    public static final int METRIC_INFO            = 4;
+    public static final int METRIC_SUMMARY         = 5;
+    public static final int METRIC_HISTOGRAM       = 6;
+    public static final int METRIC_GAUGE_HISTOGRAM = 7;
 
     protected String _name;
     protected String _help;
@@ -25,87 +25,87 @@ public class MetricFamily
     protected int _type;
     protected List<Metric> _metrics = new ArrayList<Metric>();
 
-    public MetricFamily(int type, String name)
+    public MetricFamily(String name, int type)
     {
+        this._name = name;
         switch (type) {
-        case METRIC_TYPE_UNKNOWN:
-        case METRIC_TYPE_GAUGE:
-        case METRIC_TYPE_COUNTER:
-        case METRIC_TYPE_STATE_SET:
-        case METRIC_TYPE_INFO:
-        case METRIC_TYPE_SUMMARY:
-        case METRIC_TYPE_HISTOGRAM:
-        case METRIC_TYPE_GAUGE_HISTOGRAM:
+        case METRIC_UNKNOWN:
+        case METRIC_GAUGE:
+        case METRIC_COUNTER:
+        case METRIC_STATE_SET:
+        case METRIC_INFO:
+        case METRIC_SUMMARY:
+        case METRIC_HISTOGRAM:
+        case METRIC_GAUGE_HISTOGRAM:
             this._type = type;
             break;
         default:
-            this._type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_UNKNOWN;
             break;
         }
-        this._name = name;
     }
 
-    public MetricFamily(int type, String name, String help)
+    public MetricFamily(String name, int type, String help)
     {
+        this._name = name;
         switch (type) {
-        case METRIC_TYPE_UNKNOWN:
-        case METRIC_TYPE_GAUGE:
-        case METRIC_TYPE_COUNTER:
-        case METRIC_TYPE_STATE_SET:
-        case METRIC_TYPE_INFO:
-        case METRIC_TYPE_SUMMARY:
-        case METRIC_TYPE_HISTOGRAM:
-        case METRIC_TYPE_GAUGE_HISTOGRAM:
+        case METRIC_UNKNOWN:
+        case METRIC_GAUGE:
+        case METRIC_COUNTER:
+        case METRIC_STATE_SET:
+        case METRIC_INFO:
+        case METRIC_SUMMARY:
+        case METRIC_HISTOGRAM:
+        case METRIC_GAUGE_HISTOGRAM:
             this._type = type;
             break;
         default:
-            this._type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_UNKNOWN;
             break;
         }
-        this._name = name;
         this._help = help;
     }
 
-    public MetricFamily(int type, String name, String help, String unit)
+    public MetricFamily(String name, int type, String help, String unit)
     {
+        this._name = name;
         switch (type) {
-        case METRIC_TYPE_UNKNOWN:
-        case METRIC_TYPE_GAUGE:
-        case METRIC_TYPE_COUNTER:
-        case METRIC_TYPE_STATE_SET:
-        case METRIC_TYPE_INFO:
-        case METRIC_TYPE_SUMMARY:
-        case METRIC_TYPE_HISTOGRAM:
-        case METRIC_TYPE_GAUGE_HISTOGRAM:
+        case METRIC_UNKNOWN:
+        case METRIC_GAUGE:
+        case METRIC_COUNTER:
+        case METRIC_STATE_SET:
+        case METRIC_INFO:
+        case METRIC_SUMMARY:
+        case METRIC_HISTOGRAM:
+        case METRIC_GAUGE_HISTOGRAM:
             this._type = type;
             break;
         default:
-            this._type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_UNKNOWN;
             break;
         }
-        this._name = name;
         this._help = help;
         this._unit = unit;
     }
 
-    public MetricFamily(int type, String name, String help, String unit, List<Metric> metrics)
+    public MetricFamily(String name, int type, String help, String unit, List<Metric> metrics)
     {
+        this._name = name;
         switch (type) {
-        case METRIC_TYPE_UNKNOWN:
-        case METRIC_TYPE_GAUGE:
-        case METRIC_TYPE_COUNTER:
-        case METRIC_TYPE_STATE_SET:
-        case METRIC_TYPE_INFO:
-        case METRIC_TYPE_SUMMARY:
-        case METRIC_TYPE_HISTOGRAM:
-        case METRIC_TYPE_GAUGE_HISTOGRAM:
+        case METRIC_UNKNOWN:
+        case METRIC_GAUGE:
+        case METRIC_COUNTER:
+        case METRIC_STATE_SET:
+        case METRIC_INFO:
+        case METRIC_SUMMARY:
+        case METRIC_HISTOGRAM:
+        case METRIC_GAUGE_HISTOGRAM:
             this._type = type;
             break;
         default:
-            this._type = METRIC_TYPE_UNKNOWN;
+            this._type = METRIC_UNKNOWN;
             break;
         }
-        this._name = name;
         this._help = help;
         this._unit = unit;
         this._metrics = metrics;
@@ -159,35 +159,35 @@ public class MetricFamily
     public void addMetric(Metric metric)
     {
         switch (this._type) {
-        case METRIC_TYPE_UNKNOWN:
+        case METRIC_UNKNOWN:
             if (!(metric instanceof MetricUnknown))
                 return;
             break;
-        case METRIC_TYPE_GAUGE:
+        case METRIC_GAUGE:
             if (!(metric instanceof MetricGauge))
                 return;
             break;
-        case METRIC_TYPE_COUNTER:
+        case METRIC_COUNTER:
             if (!(metric instanceof MetricCounter))
                 return;
             break;
-        case METRIC_TYPE_STATE_SET:
+        case METRIC_STATE_SET:
             if (!(metric instanceof MetricStateSet))
                 return;
             break;
-        case METRIC_TYPE_INFO:
+        case METRIC_INFO:
             if (!(metric instanceof MetricInfo))
                 return;
             break;
-        case METRIC_TYPE_SUMMARY:
+        case METRIC_SUMMARY:
             if (!(metric instanceof MetricSummary))
                 return;
             break;
-        case METRIC_TYPE_HISTOGRAM:
+        case METRIC_HISTOGRAM:
             if (!(metric instanceof MetricHistogram))
                 return;
             break;
-        case METRIC_TYPE_GAUGE_HISTOGRAM:
+        case METRIC_GAUGE_HISTOGRAM:
             if (!(metric instanceof MetricHistogram))
                 return;
             break;
@@ -198,9 +198,38 @@ public class MetricFamily
         this._metrics.add(metric);
     }
 
+    public void append(Metric metric)
+    {  
+        this.addMetric(metric);
+    }
+
+    public void append(List<Metric> metrics)
+    {
+        for(Metric metric: metrics) {
+            this.addMetric(metric);
+        }
+    }
+
     public void clearMetrics()
     {
         this._metrics.clear();
+    }
+
+    public int dispatch()
+    {
+        int status = NCollectd.dispatchMetricFamily(this);
+        this._metrics.clear();
+        return status;
+    }
+
+    public int dispatch(double time)
+    {
+        for(Metric metric: this._metrics) {
+            metric.setTime(time);
+        }
+        int status = NCollectd.dispatchMetricFamily(this);
+        this._metrics.clear();
+        return status;
     }
 
     public String toString()
@@ -214,28 +243,28 @@ public class MetricFamily
 
         sb.append(",type: ");
         switch (this._type) {
-        case METRIC_TYPE_UNKNOWN:
+        case METRIC_UNKNOWN:
             sb.append("unknown");
             break;
-        case METRIC_TYPE_GAUGE:
+        case METRIC_GAUGE:
             sb.append("gauge");
             break;
-        case METRIC_TYPE_COUNTER:
+        case METRIC_COUNTER:
             sb.append("counter");
             break;
-        case METRIC_TYPE_STATE_SET:
+        case METRIC_STATE_SET:
             sb.append("state_set");
             break;
-        case METRIC_TYPE_INFO:
+        case METRIC_INFO:
             sb.append("info");
             break;
-        case METRIC_TYPE_SUMMARY:
+        case METRIC_SUMMARY:
             sb.append("summary");
             break;
-        case METRIC_TYPE_HISTOGRAM:
+        case METRIC_HISTOGRAM:
             sb.append("histogram");
             break;
-        case METRIC_TYPE_GAUGE_HISTOGRAM:
+        case METRIC_GAUGE_HISTOGRAM:
             sb.append("gauge_histogram");
             break;
         }

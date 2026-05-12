@@ -33,7 +33,7 @@ public class MetricSummary extends Metric
     }
 
     public MetricSummary(double sum, long count, List<MetricSummaryQuantile> quantiles,
-                         HashMap<String, String> labels, long time)
+                         HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._sum = sum;
@@ -42,7 +42,7 @@ public class MetricSummary extends Metric
     }
 
     public MetricSummary(double sum, long count, List<MetricSummaryQuantile> quantiles,
-                         HashMap<String, String> labels, long time, long interval)
+                         HashMap<String, String> labels, double time, double interval)
     {
         super(labels, time, interval);
         this._sum = sum;

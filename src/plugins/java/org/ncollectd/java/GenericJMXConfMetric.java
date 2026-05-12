@@ -62,13 +62,13 @@ class GenericJMXConfMetric
             String str = (String)obj;
 
             try {
-                if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+                if (type == MetricFamily.METRIC_UNKNOWN) {
                     double value = Double.valueOf(str).doubleValue();
                     return new MetricUnknown(value, labels);
-                } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+                } else if (type == MetricFamily.METRIC_GAUGE) {
                     double value = Double.valueOf(str).doubleValue();
                     return new MetricGauge(value, labels);
-                } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+                } else if (type == MetricFamily.METRIC_COUNTER) {
                     double value = Long.valueOf(str).longValue();
                     return new MetricCounter(value, labels);
                 }
@@ -76,96 +76,96 @@ class GenericJMXConfMetric
                 return null;
             }
         } else if (obj instanceof Byte) {
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(((Byte)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(((Byte)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(((Byte)obj).longValue(), labels);
             }
         } else if (obj instanceof Short) {
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(((Short)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(((Short)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(((Short)obj).longValue(), labels);
             }
         } else if (obj instanceof Integer) {
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(((Integer)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(((Integer)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(((Integer)obj).longValue(), labels);
             }
         } else if (obj instanceof Long) {
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(((Long)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(((Long)obj).longValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(((Long)obj).longValue(), labels);
             }
         } else if (obj instanceof Float) {
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(((Float)obj).doubleValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(((Float)obj).doubleValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(((Float)obj).doubleValue(), labels);
             }
         } else if (obj instanceof Double) {
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(((Double)obj).doubleValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(((Double)obj).doubleValue(), labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(((Double)obj).doubleValue(), labels);
             }
         } else if (obj instanceof BigDecimal) {
             double value = BigDecimal.ZERO.add((BigDecimal)obj).doubleValue();
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(value, labels);
             }
         } else if (obj instanceof BigInteger) {
             long value = BigInteger.ZERO.add((BigInteger)obj).longValue();
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(value, labels);
             }
         } else if (obj instanceof AtomicInteger) {
             long value = Integer.valueOf(((AtomicInteger)obj).get()).longValue();
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(value, labels);
             }
         } else if (obj instanceof AtomicLong) {
             long value = Long.valueOf(((AtomicLong)obj).get()).longValue();
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(value, labels);
             }
         } else if (obj instanceof Boolean) {
             long value = ((Boolean)obj).booleanValue() ? 1 : 0;
-            if (type == MetricFamily.METRIC_TYPE_UNKNOWN) {
+            if (type == MetricFamily.METRIC_UNKNOWN) {
                 return new MetricUnknown(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_GAUGE) {
+            } else if (type == MetricFamily.METRIC_GAUGE) {
                 return new MetricGauge(value, labels);
-            } else if (type == MetricFamily.METRIC_TYPE_COUNTER) {
+            } else if (type == MetricFamily.METRIC_COUNTER) {
                 return new MetricCounter(value, labels);
             }
         }
@@ -243,7 +243,7 @@ class GenericJMXConfMetric
                 value = conn.invoke(objName, key, /* args = */ null, /* types = */ null);
             }
         } catch (Exception e) {
-            NCollectd.logError("GenericJMXConfMetric.query: getAttribute failed: " + e);
+            NCollectd.error("GenericJMXConfMetric.query: getAttribute failed: " + e);
             return null;
         }
 
@@ -256,11 +256,11 @@ class GenericJMXConfMetric
                 return (queryAttributeRecursive((TabularData)value, attrNameList));
             else if (value instanceof OpenType) {
                 OpenType ot = (OpenType)value;
-                NCollectd.logNotice("GenericJMXConfMetric: Handling of OpenType \"" +
+                NCollectd.notice("GenericJMXConfMetric: Handling of OpenType \"" +
                                     ot.getTypeName() + "\" is not yet implemented.");
                 return null;
             } else {
-                NCollectd.logError("GenericJMXConfMetric: Received object of " +
+                NCollectd.error("GenericJMXConfMetric: Received object of " +
                                    "unknown class. " + attrName + " " +
                                    ((value == null) ? "null" : value.getClass().getName()));
                 return null;
@@ -274,7 +274,7 @@ class GenericJMXConfMetric
     public GenericJMXConfMetric(ConfigItem ci) throws IllegalArgumentException
     {
         this._metric_name = null;
-        this._type = MetricFamily.METRIC_TYPE_UNKNOWN;
+        this._type = MetricFamily.METRIC_UNKNOWN;
         this._attribute = null;
         this._labels = new HashMap<String, String>();
         this._labels_from = new HashMap<String, String>();
@@ -304,13 +304,13 @@ class GenericJMXConfMetric
                 String tmp = GenericJMX.getConfigString(child);
                 if (tmp != null) {
                     if (tmp.equalsIgnoreCase("unknown")) {
-                        this._type = MetricFamily.METRIC_TYPE_UNKNOWN;
+                        this._type = MetricFamily.METRIC_UNKNOWN;
                     } else if (tmp.equalsIgnoreCase("gauge")) {
-                        this._type = MetricFamily.METRIC_TYPE_GAUGE;
+                        this._type = MetricFamily.METRIC_GAUGE;
                     } else if (tmp.equalsIgnoreCase("counter")) {
-                        this._type = MetricFamily.METRIC_TYPE_COUNTER;
+                        this._type = MetricFamily.METRIC_COUNTER;
                     } else {
-                        this._type = MetricFamily.METRIC_TYPE_UNKNOWN;
+                        this._type = MetricFamily.METRIC_UNKNOWN;
                     }
                 }
             } else if (child.getKey().equalsIgnoreCase("help")) {
@@ -361,7 +361,7 @@ class GenericJMXConfMetric
             String propertyName = entry.getValue();
             String propertyValue = objName.getKeyProperty(propertyName);
             if (propertyValue == null) {
-                NCollectd.logError ("GenericJMXConfMBean: "
+                NCollectd.error ("GenericJMXConfMBean: "
                         + "No such property in object name: " + propertyName);
             } else {
                 mlabels.put(name, propertyValue);
@@ -370,23 +370,23 @@ class GenericJMXConfMetric
 
         Object object = queryAttribute(conn, objName, this._attribute);
         if (object == null) {
-            NCollectd.logError("GenericJMXConfMetric.query: " + "Querying attribute " +
-                               this._attribute + " failed.");
+            NCollectd.error("GenericJMXConfMetric.query: " + "Querying attribute " +
+                            this._attribute + " failed.");
             return;
         }
 
         if (object instanceof CompositeData) {
             CompositeData cd = (CompositeData)object;
             Set<String> set =  cd.getCompositeType().keySet();
-            NCollectd.logError("GenericJMXConfMetric.query: attribute \"" +
-                               this._attribute + "\" is CompositeData object ("+
-                               String.join(",", set) + ")");
+            NCollectd.error("GenericJMXConfMetric.query: attribute \"" +
+                            this._attribute + "\" is CompositeData object ("+
+                            String.join(",", set) + ")");
             return;
         }
 
         Metric metric = genericObjectToMetric(object, this._type, mlabels);
         if (metric == null) {
-            NCollectd.logError("GenericJMXConfMetric: Cannot convert object to metric.");
+            NCollectd.error("GenericJMXConfMetric: Cannot convert object to metric.");
             return;
         }
 
@@ -397,9 +397,9 @@ class GenericJMXConfMetric
             metric_name = this._metric_name;
         }
 
-        MetricFamily fam = new MetricFamily(this._type, metric_name,
+        MetricFamily fam = new MetricFamily(metric_name, this._type,
                                             this._metric_help, this._metric_unit);
-        fam.addMetric(metric);
-        NCollectd.dispatchMetricFamily(fam);
+        fam.append(metric);
+        fam.dispatch();
     }
 }
