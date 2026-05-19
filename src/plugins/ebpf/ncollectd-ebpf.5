@@ -1,0 +1,469 @@
+.\" SPDX-License-Identifier: GPL-2.0
+.Dd @NCOLLECTD_DATE@
+.Dt NCOLLECTD-EBPF 5
+.Os ncollectd @NCOLLECTD_VERSION@
+.Sh NAME
+.Nm ncollectd-ebpf
+.Nd Documentation of ncollectd's ebpf plugin
+.Sh SYNOPSIS
+.Bd -literal -compact
+\fBload-plugin\fP ebpf
+\fBplugin\fP ebpf {
+    \fBinstance\fP \fIinstance-name\fP {
+        \fBscript\fP \fIscript\fP
+        \fBfile\fP \fIfile-path\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
+        \fBinterval\fP \fIseconds\fP
+        \fBmetric\fP \fImap-name|agreggate-name\fP {
+            \fBname\fP \fImetric-name\fP
+            \fBhelp\fP \fIhelp\fP
+            \fBtype\fP \fIgauge|counter|histogram|gaugehistogram\fP
+            \fBlabel\fP \fIkey\fP \fIvalue\fP
+            \fBlabel-from\fP \fIkey\fP \fIindex\fP
+        }
+        \fBfilter\fP {
+            ...
+        }
+    }
+}
+.Ed
+.Sh DESCRIPTION
+The \fBebpf\fP plugin dynamically instruments the running kernel to
+aggregate and extract user-defined data.
+It compiles an input program in \fBply\fP (See
+.Lk https://github.com/wkz/ply
+) to one or more Linux
+.Xr bpf 2
+binaries and attaches them to arbitrary points in the kernel using kprobes
+and tracepoints.
+.Pp
+The configuration of the \fBebpf\fP plugin consists of one or more
+\fBinstance\fP blocks.
+Each block requires one string argument as the instance name.
+The instance name will be used as \fIinstance\fP label in the metrics.
+.Pp
+The following options are accepted within each \fBinstance\fP block:
+.Bl -tag -width Ds
+.It \fBscript\fP \fIscript\fP
+String with a \fBply\fP script.
+.It \fBfile\fP \fIfile-path\fP
+Path to the file that contains the \fBply\fP script.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected from
+this script.
+.It \fBmetric\fP \fImap-name|agreggate-name\fP
+Create a metric from the map or agreggate indicated.
+.Bl -tag -width Ds
+.It \fBname\fP \fImetric-name\fP
+Set the name of the metric.
+.It \fBhelp\fP \fIhelp\fP
+Set the help text of the metric.\fP
+.It \fBtype\fP \fIgauge|counter|histogram|gaugehistogram\fP
+Set the metric type. Can be one of \fIgauge\fP, \fIcounter\fP,
+\fIhistogram\fP or \fIgaugehistogram\fP.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.It \fBlabel-from\fP \fIkey\fP \fIindex\fP
+Specifies the index of the map or aggregation expresion 
+whose values will be used to create the labels. 
+.El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
+.Sh "PLY SYNTAX"
+The syntax is C-like in general, taking its inspiration
+.Xr dtrace 1
+and, by extension, from
+.Xr awk 1 .
+.Ss Probes
+A program consists of one or more \fIprobes\fP, which are analogous to
+awk's pattern-action statements.
+The syntax for a probe is as follows:
+.Bd -literal -offset indent
+provider:probe-definition ['/' predicate '/']
+{
+     statement ';'
+    [statement ';' ... ]
+}
+.Ed
+.Pp
+The \fIprovider\fP selects which probe interface to use.
+See the PROVIDERS section for more information about each provider.
+It is then up to the provider to parse the \fIprobe-definition\fP to
+determine the point(s) of instrumentation.
+.Pp
+When tracing, it is often desirable to filter events to match some
+criteria.
+Because of this, ply allows you to provide a \fIpredicate\fP,
+i.e. an expression that must evaluate to a non-zero value in order for
+the probe to be executed.
+.Pp
+Then follows a block of \fIstatements\fP that perform the actual information
+gathering.
+.Pp
+A provider may define a default probe clause to be used if the user
+does not supply one.
+.Ss Control of Flow
+Probes support basic conditional control of flow via an
+\fIif-statement\fP, which conforms to the same rules as C's equivalent:
+.Bd -literal -offset indent
+\'if' '(' expr ')'
+    statement ';' | block
+[else
+    statement ';' | block]
+.Ed
+.Pp
+In order to ensure that a probe will have a finite run-time the kernel
+does not allow backwards branching.
+As a result, ply does not have any loop construct like \fIfor\fP or
+\fIwhile\fP.
+.Ss Type System
+The type system is modeled after C.
+As such ply understands the difference between signed and unsigned integers,
+the difference between a short and a long long, what separates an integer
+from a pointer, how a struct is laid out in memory and so on.
+It is not complete though, notably floating point numbers and
+unions are missing.
+.Pp
+Programs are statically typed, but all types are inferred
+automatically.
+Thus, the type system is mostly hidden from the user.
+.Pp
+Numbers and string literals are specified in the same way as in C.
+.Ss Maps
+The primary way to extract information is to store it in a \fImap\fP,
+i.e. in a hash table.
+Like
+.Xr awk 1 ,
+ply dynamically creates any referenced maps and their key and value
+types are inferred from the context in which they are used.
+All maps are in the global scope and can thus be used both for
+extracting data to the end-user, and for carrying data between probes.
+Map names follow the rules of identifiers from C.
+.Bd -literal -offset indent
+mapname[exprs]
+.Ed
+.Pp
+Data can be stored in a map by assigning a value to a given key:
+.Bd -literal -offset indent
+mapname[exprs] = expr
+.Ed
+.Pp
+The \fIdelete\fP keyword can be used to remove an association from a map:
+.Bd -literal -offset indent
+delete mapname[exprs]
+.Ed
+.Pp
+You can also remove all elements in the map using \fIclear\fP function.
+.Ss Aggregations
+More often than not, looking at each individual datum from a trace is
+not nearly as helpful as an \fIaggregation\fP of the data.
+Therefore ply supports aggregating data at the source, thereby
+reducing tracing overhead.
+Aggregations are syntactically similar to maps, indeed they
+are a kind of map, but they are distinguished by a leading '@'.
+Also, they can only be assigned the result of one of the following
+aggregation functions:
+.Bl -tag -width Ds -offset indent
+.It \f(CW@agg[exprs] = count()\fP
+Bump a counter.
+.It \f(CW@agg[exprs] = sum(scalr-expr)\fP
+Evaluates the argument and aggregates the result.
+.It \f(CW@agg[exprs] = quantize(scalar-expr)\fP
+Evaluates the argument and aggregates on the most significant bit
+of the result.
+In other words, it stores the distribution of the expression.
+.El
+.Sh PROVIDERS
+A \fIprovider\fP makes data available to the user by exporting functions
+and variables to the probe.
+Function calls use the same syntax as most languages that inherit from C.
+In addition to the provider-specific functions, all providers inherits a
+set of common functions and variables:
+.Bl -tag -width Ds -offset indent
+.It \f(CWchar[16] comm\fP, \f(CWchar[16] execname\fP
+\fIname\fP of the running process's executable.
+.It \f(CWu32 cpu\fP
+\fICPU ID\fP of the processor on which the probe fired.
+.It \f(CWu32 gid\FP
+\fIGroup ID\fP of the running process.
+.It \f(CWu32 kpid\fP
+\fIKernel PID\fP of the running process.
+Also known as \fIpid\fP by the kernel.
+For a single-threaded process \fIkpid\fP is equal to \fIpid\fP.
+For multi-threaded processes, \fIkpid\fP will be unique while \fIpid\fP
+will be the same across all threads.
+.It \f(CWchar[N] mem(void *address [, int size])\fP
+Copy \fIsize\fP bytes from \fIaddress\fP.
+If \fIsize\fP is omitted, 64 bytes will be copied.
+.It \f(CWchar[N] str(void *address [, int size])\fP
+Copy a NUL terminated string or \fIsize\fP bytes from an
+unsafe kernel or user address.
+If the \fIsize\fP is set should include the terminating NUL byte.
+In case the string length is smaller than size, the target is not
+padded with further NUL bytes.
+If the string length is larger than size, just size-1 bytes are
+copied and the last byte is set to NUL.
+.It \f(CWs64 time\fP, \f(CWs64 walltime\fP
+Nanoseconds elaped since system boot.
+\fItime\fP is intended for time deltas and \fIwalltime\fP should be used
+for timestamps.
+They refer to the same data, but with different default output formats.
+.It \f(CWu32 pid\fP
+\fIProcess ID\fP of the running process.
+Also known as \fIthread group ID\fP (tgid) by the kernel.
+.It \f(CWvoid print(...)\fP
+\fIPrint\fP each expression with its default output format, separated
+by commas and terminated with a newline, to standard out.
+.It \f(CWvoid printf(format, ...)\fP
+Prints \fIformatted output\fP to standard out.
+In addition to the formats recognized by the printf sitting in your <stdio.h>,
+also recognizes '%v' which will dump the value according to
+the inferred type's default (i.e. how \fIprint\fP would print it).
+.It \f(CWint strcmp(char *a, char *b)\fP
+Returns -1, 0 or 1 if the first argument is less than, equal to or
+greater than the second argument respectively.
+Strings are compared by their lexicographical order.
+.It \f(CWu32 uid\fP
+\fIUser ID\fP of the running process.
+.El
+.Ss kprobe and kretprobe
+These providers use the corresponding kernel features to instrument
+arbitrary instructions in the kernel.
+The \fIprobe-definition\fP may be either an address or a symbol name.
+When using a symbol name, glob expansion is performed allowing a single
+probe to be inserted at multiple locations.
+An offset relative to a symbol may also be specfied for kprobes.
+.Pp
+Examples:
+.Bl -tag -width Ds -offset indent
+.It \f(CWkretprobe:schedule\fP
+Trace every time \f(CWschedule\fP returns.
+.It \f(CWkprobe:SyS*\fP
+Trace every time a syscall is made.
+.It \f(CWkprobe:dev_hard_start_xmit+8\fP
+Trace function with offset.
+.El
+.Pp
+Shared variables:
+.Bl -tag -width Ds -offset indent
+.It \f(CWstruct pt_regs *regs\fP
+Hardware register contents from when the probe was triggered.
+This matches the definition in <sys/ptrace.h> on your system.
+.It \f(CWu32 stack\fP
+\fIStack trace ID\fP of the current probe.
+This is just returns an index into a separate map containing the actual
+instruction pointers.
+As a user though, you can think of this function as returning a string
+containing the stack trace at the current location.
+Indeed \f(CWprint(stack)\fP will produce exactly that.
+.Pp
+\fBCAUTION\fP: On some architectures (looking at you, ARM), capturing
+stack traces at the entry of a function, before the prologue has
+run, does not work.
+Setting your probe after the prologue will work around the issue
+(typically two instructions, or +8, on ARM).
+.El
+.Pp
+\fIkprobe\fP specific functions:
+.Bl -tag -width Ds -offset indent
+.It \f(CWarg0\fP, \f(CWarg1\fP ...  \f(CWargN\fP
+Returns the value of the specified \fIargument\fP of the function to
+which the probe was attached, zero-indexed.
+I.e. arg0 is the 1st argument, arg1 is the 2nd, and so on.
+.Pp
+\fBCAUTION\fP: ply simply maps registers to arguments according to the
+syscall ABI.
+If your compiler decides to optimize out arguments or do other sneaky things,
+ply will be utterly oblivious to that.
+.It \f(CWvoid *caller\fP
+The program counter, as recorded in \f(CWregs\fP, at the time the probe
+was triggered.  was attached.
+The default output format will resolve it to a symbolic name
+if one is available.
+.El
+.Pp
+\fIkretprobe\fP specific function:
+.Bl -tag -width Ds -offset indent
+.It \f(CWretval\fP
+Return value of the probed function.
+.El
+.Ss tracepoint
+The tracepoint provider can instrument all stable tracepoints in the kernel.
+They are identified by their relative path from the
+\f(CW/sys/kernel/debug/tracing/events\fP directory, where each leaf
+directory corresponds to a tracepoint.
+.Pp
+Examples:
+.Bl -tag -width Ds -offset indent
+.It \f(CWtracepoint:sched/sched_wakeup\fP
+Trace every time a process is awoken.
+.It \f(CWtracepoint:irq/irq_handler_entry\fP
+Trace every time an interrupt is handled.
+.El
+Variables:
+.Bl -tag -width Ds -offset indent
+.It \f(CWstruct <X> *data\fP
+A struct is dynamically generated for each tracepoint by parsing
+its \f(CWformat\fP file.
+I.e. if the contents of the format file looks like the following:
+.Bd -literal -offset indent
+name: tcp_send_reset
+ID: 1304
+format:
+    field:unsigned short common_type;    offset:0;    size:2;    signed:0;
+    field:unsigned char common_flags;    offset:2;    size:1;    signed:0;
+    field:unsigned char common_preempt_count;    offset:3;    size:1;    signed:0;
+    field:int common_pid;    offset:4;    size:4;    signed:1;
+
+    field:const void * skbaddr;    offset:8;    size:8;    signed:0;
+    field:const void * skaddr;    offset:16;    size:8;    signed:0;
+    field:__u16 sport;    offset:24;    size:2;    signed:0;
+    field:__u16 dport;    offset:26;    size:2;    signed:0;
+    field:__u8 saddr[4];    offset:28;    size:4;    signed:0;
+    field:__u8 daddr[4];    offset:32;    size:4;    signed:0;
+    field:__u8 saddr_v6[16];    offset:36;    size:16;    signed:0;
+    field:__u8 daddr_v6[16];    offset:52;    size:16;    signed:0;
+.Ed
+.Pp
+Then \f(CWdata\fP would point to a struct of the following type:
+.Bd -literal -offset indent
+struct data {
+    unsigned short common_type;
+    unsigned char common_flags;
+    unsigned char common_preempt_count;
+    int common_pid;
+
+    const void * skbaddr;
+    const void * skaddr;
+    __u16 sport;
+    __u16 dport;
+    __u8 saddr[4];
+    __u8 daddr[4];
+    __u8 saddr_v6[16];
+    __u8 daddr_v6[16];
+};
+.Ed
+.El
+Functions:
+.Bl -tag -width Ds -offset indent
+.It \f(CWchar[N] dyn(void *address [, int size])\fP
+Copy \fIsize\fP bytes from a dynamic data pointer in \f(CWdata\fP, i.e. a
+member marked with \f(CW__data_loc\fP.
+If \fIsize\fP is omitted, the default string size determines the number
+of bytes to be copied.
+.El
+.Ss BEGIN and END
+These special providers are called at the beginning and the end of the
+tracing session like awk and bpftrace.
+The names are case sensitive.
+Users can print some messages or fill maps to known info.
+.Ss interval
+The interval provider will be trigger at each given interval.
+Users can specify time and unit (optional).
+If unit is omitted, then second is used.
+The supported units are:
+.Bl -bullet -offset indent
+.It
+\fBm\fP: minutes
+.It
+\fBs\fP: seconds (default)
+.It
+\fBms\fP: milli-seconds
+.It
+\fBus\fP: micro-seconds
+.It
+\fBns\fP: nano-seconds
+.El
+.Pp
+Examples:
+.Bl -tag -width Ds -offset indent
+.It \f(CWinterval:1\fP
+Called for every second
+.It \f(CWinterval:500ms\fP
+Called for every 500 milli-second
+.El
+.Ss profile
+The profile provider supports profiling by allowing the user to specify
+how many times it will fire per-second.
+Values of 1-1000 are supported, and the profile provider supports
+two probe formats:
+.Bl -tag -width Ds -offset indent
+.It \f(CWprofile:[N]hz\fP
+Profile on all CPUs N times per second
+.It \f(CWprofile:[C]:[N]hz\fP
+Profile on CPU C N times per second
+.El
+.Sh EXAMPLES
+.Ss Count number of coredumps
+Count the number of coredump that the systemd does.
+.Bd -literal -offset indent
+plugin ebpf {
+    instance core {
+        script '''
+BEGIN {
+    @core["core"] = sum(0);
+}
+kprobe:do_coredump {
+    @core["core"] = count();
+}'''
+        metric "@core" {
+            name "system_coredump"
+            type counter
+        }
+    }
+}
+.Ed
+.Ss Quantize
+Record the distribution of the return value of read(2):
+.Bd -literal -offset indent
+kretprobe:SyS_read
+{
+    @["dist"] = quantize(retval);
+}
+.Ed
+.Ss Wildcards
+Count all syscalls made on the system, grouped by function:
+.Bd -literal -offset indent
+kprobe:SyS_*
+{
+    @[caller] = count();
+}
+.Ed
+.Pp
+Count all syscalls made by every dd(1) process, grouped by function:
+.Bd -literal -offset indent
+kprobe:SyS_* / !strcmp(execname, "dd") /
+{
+    @[caller] = count();
+}
+.Ed
+.Ss Object Tracking
+Record the distribution of the time it takes an \fIskb\fP to go from
+\fPnetif_receive\fP to \fIip_rcv\fP:
+.Bd -literal -offset indent
+kprobe:__netif_receive_skb_core
+{
+    rx[arg0] = time;
+}
+
+kprobe:ip_rcv / rx[arg0] /
+{
+    @["diff"] = quantize(time - rx[arg0]);
+}
+.Ed
+.Sh AUTHORS
+This man page is based in
+.Xr ply 1
+man page written by
+.An -nosplit
+.An Tobias Waldekranz Aq Mt tobias@waldekranz.com
+.Sh COPYRIGHT
+Copyright 2018 Tobias Waldekranz
+.Sh "SEE ALSO"
+.Xr ncollectd 1 ,
+.Xr ncollectd.conf 5
