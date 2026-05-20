@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only OR MIT
 // SPDX-FileCopyrightText: Copyright (C) 2010 Florian Forster
 // SPDX-FileCopyrightText: Copyright (C) 2022-2024 Manuel Sanmartín
+// SPDX-FileCopyrightText: Copyright (C) 1994-2020 Lua.org, PUC-Rio
+// SPDX-FileCopyrightText: Copyright (C) 2013-2023 The Lua-Compat-5.3 authors
 // SPDX-FileContributor: Florian Forster <octo at collectd.org>
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
@@ -231,3 +233,43 @@ void luac_stack_dump(lua_State *L, FILE *fp)
         fprintf(fp, "\n");
     }
 }
+
+#if defined(LUA_VERSION_NUM) && LUA_VERSION_NUM == 501 && !defined(LUA_JITLIBNAME)
+
+void luaL_setmetatable (lua_State *L, const char *tname)
+{
+	luaL_checkstack(L, 1, "not enough stack slots");
+	luaL_getmetatable(L, tname);
+	lua_setmetatable(L, -2);
+}
+
+void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup)
+{
+    luaL_checkstack(L, nup+1, "too many upvalues");
+    for (; l->name != NULL; l++) {
+        lua_pushstring(L, l->name);
+        for (int i = 0; i < nup; i++)
+            lua_pushvalue(L, -(nup + 1));
+        lua_pushcclosure(L, l->func, nup);
+        lua_settable(L, -(nup + 3));
+    }
+    lua_pop(L, nup);
+}
+
+void *luaL_testudata (lua_State *L, int i, const char *tname)
+{
+    void *p = lua_touserdata(L, i);
+    luaL_checkstack(L, 2, "not enough stack slots");
+    if (p == NULL || !lua_getmetatable(L, i)) {
+        return NULL;
+    }  else {
+        luaL_getmetatable(L, tname);
+        int res = lua_rawequal(L, -1, -2);
+        lua_pop(L, 2);
+        if (!res)
+            p = NULL;
+    }
+    return p;
+}
+
+#endif
