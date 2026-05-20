@@ -650,11 +650,11 @@ static PyMethodDef MetricFamily_methods[] = {
 };
 
 static PyMemberDef MetricFamily_members[] = {
-    {"name",        T_OBJECT,    offsetof(MetricFamily, name),    0,           fam_name_doc   },
-    {"help",        T_OBJECT,    offsetof(MetricFamily, help),    0,           fam_help_doc   },
-    {"unit",        T_OBJECT,    offsetof(MetricFamily, unit),    0,           fam_unit_doc   },
-    {"type",        Py_T_INT,    offsetof(MetricFamily, type),    Py_READONLY, fam_type_doc   },
-    {"metrics",     T_OBJECT_EX, offsetof(MetricFamily, metrics), 0,           fam_metrics_doc},
+    {"name",        T_OBJECT,    offsetof(MetricFamily, name),    0,        fam_name_doc   },
+    {"help",        T_OBJECT,    offsetof(MetricFamily, help),    0,        fam_help_doc   },
+    {"unit",        T_OBJECT,    offsetof(MetricFamily, unit),    0,        fam_unit_doc   },
+    {"type",        T_INT,       offsetof(MetricFamily, type),    READONLY, fam_type_doc   },
+    {"metrics",     T_OBJECT_EX, offsetof(MetricFamily, metrics), 0,        fam_metrics_doc},
     {NULL}
 };
 
