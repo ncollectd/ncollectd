@@ -255,18 +255,10 @@ else
 	CMAKE_FLAGS += -DPLUGIN_JAVA:BOOL=ON
 endif
 
-ifeq ($(DEB_HOST_ARCH_OS),armhf)
-	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=ON
-else ifeq ($(DEB_HOST_ARCH_OS),arm64)
-	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=ON
-else ifeq ($(DEB_HOST_ARCH_OS),ppc64el)
-	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=ON
-else ifeq ($(DEB_HOST_ARCH_OS),amd64)
-	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=ON
-else ifeq ($(DEB_HOST_ARCH_OS),riscv64)
-	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=ON
-else
+ifeq (,$(filter armhf arm64 ppc64el amd64 riscv64, $(DEB_HOST_ARCH))) 
 	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=OFF
+else
+	CMAKE_FLAGS += -DPLUGIN_EBPF:BOOL=ON
 endif
 
 %:
