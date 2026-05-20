@@ -46,7 +46,7 @@ __extension__ union value {
     double d;
     long double ld;
     uintptr_t ptr;
-    char str[];
+    char str[0];
 };
 
 #pragma GCC diagnostic push

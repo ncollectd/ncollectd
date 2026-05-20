@@ -4,8 +4,10 @@
 
 // From https://github.com/wkz/ply
 
-#include <stdio.h>
+#pragma GCC diagnostic ignored "-Wunused-result"
 
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
