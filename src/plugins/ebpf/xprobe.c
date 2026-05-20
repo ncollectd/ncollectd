@@ -4,6 +4,9 @@
 
 // From https://github.com/wkz/ply
 
+#pragma GCC diagnostic ignored "-Wunused-result"
+
+#define _GNU_SOURCE 
 #include <assert.h>
 #include <errno.h>
 #include <fnmatch.h>
@@ -221,7 +224,7 @@ static int __xprobe_attach(struct ply_probe *pb)
         return err;
 
     if (gl.gl_pathc != xp->n_evs) {
-        PLUGIN_DEBUG("n:%d c:%d.", xp->n_evs, gl.gl_pathc);
+        PLUGIN_DEBUG("n:%zu c:%zu.", xp->n_evs, gl.gl_pathc);
         pause();
     }
     

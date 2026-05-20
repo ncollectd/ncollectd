@@ -18,6 +18,8 @@
 
 %code requires {
 
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 #include "plugins/ebpf/node.h"
 
 #define YYLTYPE struct nloc
