@@ -43,6 +43,7 @@
 %define build_with_docker 0%{!?_without_docker:1}
 %define build_with_ds389 0%{!?_without_ds389:1}
 %define build_with_drbd 0%{!?_without_drbd:1}
+%define build_with_ebpf 0%{!?_without_ebpf:1}
 %define build_with_edac 0%{!?_without_edac:1}
 %define build_with_entropy 0%{!?_without_entropy:1}
 %define build_with_ethstat 0%{!?_without_ethstat:1}
@@ -162,6 +163,7 @@
 %define build_with_swap 0%{!?_without_swap:1}
 %define build_with_synproxy 0%{!?_without_synproxy:1}
 %define build_with_systemd 0%{!?_without_systemd:1}
+%define build_with_systemd_resolved 0%{!?_without_systemd_resolved:1}
 %define build_with_sssd 0%{!?_without_sssd:1}
 %define build_with_table 0%{!?_without_table:1}
 %define build_with_tail 0%{!?_without_tail:1}
@@ -235,6 +237,10 @@
 %define build_with_perl 0%{?_with_perl:1}
 %define build_with_python 0%{?_with_perl:1}
 %define build_with_nftables 0%{?_with_nftables:1}
+
+%ifnarch aarch64 ppc64le riscv64 x86_64
+%define build_with_ebpf 0%{?_with_ebpf:1}
+%endif
 
 Summary: Statistics collection and monitoring daemon
 Name: ncollectd
@@ -1209,6 +1215,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_drbd -DPLUGIN_DRBD:BOOL=OFF
 %endif
 
+%if %{build_with_ebpf}
+%define _build_with_ebpf -DPLUGIN_EBPF:BOOL=ON
+%else
+%define _build_with_ebpf -DPLUGIN_EBPF:BOOL=OFF
+%endif
+
 %if %{build_with_edac}
 %define _build_with_edac -DPLUGIN_EDAC:BOOL=ON
 %else
@@ -1975,6 +1987,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_systemd -DPLUGIN_SYSTEMD:BOOL=OFF
 %endif
 
+%if %{build_with_systemd_resolved}
+%define _build_with_systemd_resolved -DPLUGIN_SYSTEMD_RESOLVED:BOOL=ON
+%else
+%define _build_with_systemd_resolved -DPLUGIN_SYSTEMD_RESOLVED:BOOL=OFF
+%endif
+
 %if %{build_with_sssd}
 %define _build_with_sssd -DPLUGIN_SSSD:BOOL=ON
 %else
@@ -2270,6 +2288,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_docker} \
     %{?_build_with_ds389} \
     %{?_build_with_drbd} \
+    %{?_build_with_ebpf} \
     %{?_build_with_edac} \
     %{?_build_with_entropy} \
     %{?_build_with_ethstat} \
@@ -2397,6 +2416,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_swap} \
     %{?_build_with_synproxy} \
     %{?_build_with_systemd} \
+    %{?_build_with_systemd_resolved} \
     %{?_build_with_sssd} \
     %{?_build_with_table} \
     %{?_build_with_tail} \
@@ -2584,6 +2604,10 @@ rm -rf %{buildroot}
 %if %{build_with_drbd}
 %{_libdir}/%{name}/drbd.so
 %{_mandir}/man5/ncollectd-drbd.5*
+%endif
+%if %{build_with_ebpf}
+%{_libdir}/%{name}/ebpf.so
+%{_mandir}/man5/ncollectd-ebpf.5*
 %endif
 %if %{build_with_edac}
 %{_libdir}/%{name}/edac.so
@@ -2904,6 +2928,10 @@ rm -rf %{buildroot}
 %if %{build_with_systemd}
 %{_libdir}/%{name}/systemd.so
 %{_mandir}/man5/ncollectd-systemd.5*
+%endif
+%if %{build_with_systemd_resolved}
+%{_libdir}/%{name}/systemd_resolved.so
+%{_mandir}/man5/ncollectd-systemd_resolved.5*
 %endif
 %if %{build_with_sssd}
 %{_libdir}/%{name}/sssd.so

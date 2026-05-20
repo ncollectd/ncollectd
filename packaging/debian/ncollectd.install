@@ -58,6 +58,8 @@ usr/lib/ncollectd/dmi.so
 usr/share/man/man5/ncollectd-dmi.5
 usr/lib/ncollectd/drbd.so
 usr/share/man/man5/ncollectd-drbd.5
+usr/lib/ncollectd/ebpf.so
+usr/share/man/man5/ncollectd-ebpf.5
 usr/lib/ncollectd/edac.so
 usr/share/man/man5/ncollectd-edac.5
 usr/lib/ncollectd/entropy.so
@@ -194,6 +196,8 @@ usr/lib/ncollectd/statsd.so
 usr/share/man/man5/ncollectd-statsd.5
 usr/lib/ncollectd/systemd.so
 usr/share/man/man5/ncollectd-systemd.5
+usr/lib/ncollectd/systemd_resolved.so
+usr/share/man/man5/ncollectd-systemd_resolved.5
 usr/lib/ncollectd/sssd.so
 usr/share/man/man5/ncollectd-sssd.5
 usr/lib/ncollectd/swap.so
