@@ -15,7 +15,7 @@ NCOLLECTD-MODBUS(5) - File Formats Manual
 	        metric metric
 	        help help
 	        label key value
-	        type gauge|counter|unknown
+	        type gauge|counter
 	        scale scale
 	        shift shift
 	    }
@@ -100,11 +100,11 @@ values (unsigned 32 bit and 64 bit values) and floating point values
 > > Append the label *key*=*value* to the submitting metrics.
 > > Can appear multiple times in the **data** block.
 
-> **type** *gauge|counter|unknown*
+> **type** *gauge*|*counter*
 
 > > The **type** for the metric.
-> > Must be *gauge*, *counter* or *unknown*.
-> > If not set is *unknown*.
+> > Must be *gauge* or *counter*.
+> > If not set is *gauge*.
 > > There must be exactly one **type** option inside each **data** block.
 
 > **scale** *value*

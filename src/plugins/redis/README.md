@@ -19,7 +19,7 @@ NCOLLECTD-REDIS(5) - File Formats Manual
 	        label key value
 	        query query-string {
 	            metric name
-	            type gauge|counter|unknown
+	            type gauge|counter
 	            label key value
 	            database index
 	        }
@@ -92,11 +92,11 @@ instance running in an specified host and port.
 
 > > Set the metric name.
 
-> **type** *gauge|counter|unknown*
+> **type** *gauge*|*counter*
 
 > > The **type** that's used for the metric.
-> > Must be *gauge*, *counter*, or *unknown*.
-> > If not set is unknown.
+> > Must be *gauge* or *counter*.
+> > If not set is gauge.
 > > There must be exactly one **type** option inside each **Result** block.
 
 > **label** *key* *value*

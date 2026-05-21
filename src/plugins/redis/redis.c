@@ -634,7 +634,7 @@ static redis_query_t *redis_config_query(config_item_t *ci)
     }
 
     rq->database = 0;
-    rq->type = METRIC_TYPE_UNKNOWN;
+    rq->type = METRIC_TYPE_GAUGE;
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *option = ci->children + i;
@@ -642,7 +642,8 @@ static redis_query_t *redis_config_query(config_item_t *ci)
         if (strcasecmp("metric", option->key) == 0) {
             status = cf_util_get_string(option, &rq->metric);
         } else if (strcasecmp("Type", option->key) == 0) {
-            status = cf_util_get_metric_type(option, &rq->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(option, allow, &rq->type);
         } else if (strcasecmp("label", option->key) == 0) {
             status = cf_util_get_label(option, &rq->labels);
         } else if (strcasecmp("database", option->key) == 0) {

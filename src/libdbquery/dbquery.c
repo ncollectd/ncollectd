@@ -395,7 +395,7 @@ static int db_result_create(const char *query_name, db_result_t **r_head, config
         return -1;
     }
 
-    r->type = METRIC_TYPE_UNKNOWN;
+    r->type = METRIC_TYPE_GAUGE;
     bool type_setted = false;
     /* Fill the 'db_result_t' structure.. */
     int status = 0;
@@ -404,7 +404,8 @@ static int db_result_create(const char *query_name, db_result_t **r_head, config
 
         if (strcasecmp("type", child->key) == 0) {
             type_setted = true;
-            status = cf_util_get_metric_type(child, &r->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &r->type);
         } else if (strcasecmp("type-from", child->key) == 0) {
             status = cf_util_get_string(child, &r->type_from);
         } else if (strcasecmp("help", child->key) == 0) {

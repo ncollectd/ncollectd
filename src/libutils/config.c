@@ -364,7 +364,7 @@ int cf_util_get_label(const config_item_t *ci, label_set_t *labels)
     return label_set_add(labels, true, ci->values[0].value.string, ci->values[1].value.string);
 }
 
-int cf_util_get_metric_type(const config_item_t *ci, metric_type_t *ret_metric)
+int cf_util_get_metric_type(const config_item_t *ci, int allow, metric_type_t *ret_metric)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
         PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
@@ -372,21 +372,58 @@ int cf_util_get_metric_type(const config_item_t *ci, metric_type_t *ret_metric)
         return -1;
     }
 
-    if (!strcasecmp(ci->values[0].value.string, "gauge")) {
-        *ret_metric = METRIC_TYPE_GAUGE;
-    } else if (!strcasecmp(ci->values[0].value.string, "unknown")) {
-        *ret_metric = METRIC_TYPE_UNKNOWN;
-    } else if (!strcasecmp(ci->values[0].value.string, "counter")) {
-        *ret_metric = METRIC_TYPE_COUNTER;
-    } else if (!strcasecmp(ci->values[0].value.string, "info")) {
-        *ret_metric = METRIC_TYPE_INFO;
-    } else {
-        PLUGIN_ERROR("The '%s' option in %s:%d must be: 'gauge', 'unknow', 'info' or 'counter'.",
-                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
-        return -1;
+    char *metric_name[] = {
+        [METRIC_TYPE_UNKNOWN] = "unknow",
+        [METRIC_TYPE_GAUGE] = "gauge",
+        [METRIC_TYPE_COUNTER] = "counter",
+        [METRIC_TYPE_STATE_SET] = "stateset",
+        [METRIC_TYPE_INFO] = "info",
+        [METRIC_TYPE_SUMMARY] = "summary",
+        [METRIC_TYPE_HISTOGRAM] = "histogram",
+        [METRIC_TYPE_GAUGE_HISTOGRAM] = "gaugehistogram"
+    };
+
+    for (size_t i = 0; i < (METRIC_TYPE_GAUGE_HISTOGRAM + 1); i++) {
+        if (allow & (1 << i)) {
+            if (strcasecmp(metric_name[i], ci->values[0].value.string) == 0) {
+                *ret_metric = i;
+                return 0;
+            }
+        }
     }
 
-    return 0;
+    int nallows = 0;
+    for (size_t i = 0; i < (METRIC_TYPE_GAUGE_HISTOGRAM + 1); i++) {
+        if (allow & (1 << i))
+            nallows++;
+    }
+
+    char buffer[256];
+    strbuf_t buf = STRBUF_CREATE_FIXED(buffer, sizeof(buffer));
+
+    strbuf_printf(&buf, "The '%s' option in %s:%d must be: ",
+                        ci->key, cf_get_file(ci), cf_get_lineno(ci));
+
+    int cnt_allows = 0;
+    for (size_t i = 0; i < (METRIC_TYPE_GAUGE_HISTOGRAM + 1); i++) {
+        if (allow & (1 << i)) {
+            cnt_allows++;
+            if (cnt_allows != 1) {
+                if (cnt_allows == nallows)
+                     strbuf_putstr(&buf, " or ");
+                else
+                     strbuf_putstr(&buf, ", ");
+            }
+            strbuf_putchar(&buf, '\'');
+            strbuf_putstr(&buf, metric_name[i]);
+            strbuf_putchar(&buf, '\'');
+        }
+    }
+    strbuf_putchar(&buf, '.');
+
+    PLUGIN_ERROR("%s", buf.ptr);
+
+    return -1;
 }
 
 int cf_util_get_log_level(const config_item_t *ci, int *ret_log_level)

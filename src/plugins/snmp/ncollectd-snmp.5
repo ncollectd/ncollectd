@@ -10,7 +10,7 @@
 \fBload-plugin\fP snmp
 \fBplugin\fP snmp {
     \fBtable\fP \fItable\fP {
-        \fBtype\fP \fIcounter|gauge\fP
+        \fBtype\fP \fIcounter\fP|\fIgauge\fP
         \fBhelp\fP \fIhelp\fP
         \fBmetric\fP \fImetric\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -24,7 +24,7 @@
         \fBfilter-value\fP  [\fIincl|include|excl|exclude\fP] \fIvalue\fP
     }
     \fBdata\fP \fIdata\fP {
-        \fBtype\fP \fIcounter|gauge\fP
+        \fBtype\fP \fIcounter\fP|\fIgauge\fP
         \fBhelp\fP \fIhelp\fP
         \fBmetric\fP \fImetric\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -123,10 +123,10 @@ Counter example: If you want to query the interface table provided by the
 \f(CWIF-MIB\fP, e.g. the bytes transmitted.
 There are potentially many interfaces, so you will want to user is a \fBtable\fP
 block.
-.It \fBtype\fP \fIcounter|gauge|unknown\fP
+.It \fBtype\fP \fIcounter\fP|\fIgauge\fP
 The \fBtype\fP that's used for each value read.
-Must be \fIgauge\fP, \fIcounter\fP or \fPunknown\fP.
-If not set is \fPunknown\fP.
+Must be \fIgauge\fP or \fIcounter\fP.
+If not set is \fPgauge\fP.
 .It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
 .It \fBmetric\fP \fImetric\fP
@@ -193,10 +193,10 @@ SNMP command (see
 ) and transmitted to mcollectd.
 The following options can be set:
 .Bl -tag -width Ds
-.It \fBtype\fP \fIcounter|gauge|unknown\fP
+.It \fBtype\fP \fIcounter\fP|\fIgauge\fP
 The \fBtype\fP that's used for each value read.
-Must be \fIgauge\fP, \fIcounter\fP or \fPunknown\fP.
-If not set is \fPunknown\fP.
+Must be \fIgauge\fP or \fIcounter\fP.
+If not set is \fPgauge\fP.
 .It \fBhelp\fP \fIhelp\fP
 Set the \fBhelp\fP text for the metric.
 .It \fBmetric\fP \fImetric\fP

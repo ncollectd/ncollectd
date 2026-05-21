@@ -272,13 +272,15 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
 
     res->scale = 1.0;
     res->shift = 0;
+    res->type = METRIC_TYPE_GAUGE;
 
     int status = 0;
     for (int i = 0; i < ci->children_num; ++i) {
         config_item_t *c = ci->children + i;
 
         if (strcasecmp(c->key, "type") == 0) {
-            status = cf_util_get_metric_type(c, &res->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(c, allow, &res->type);
         } else if (strcasecmp(c->key, "help") == 0) {
             status = cf_util_get_string(c, &res->help);
         } else if (strcasecmp(c->key, "metric") == 0) {

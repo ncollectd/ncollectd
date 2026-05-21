@@ -16,7 +16,7 @@ NCOLLECTD-POSTGRESQL(5) - File Formats Manual
 	        label key value
 	        label-from key column-name
 	        result {
-	            type gauge|counter|info|unknown
+	            type gauge|counter
 	            type-from column-name
 	            help help
 	            help-from column-name
@@ -355,18 +355,17 @@ installation.
 
 > **result**
 
-> > **type** *gauge|counter|info|unknown*
+> > **type** *gauge*|*counter*
 
 > > > The **type** that's used for each line returned.
-> > > Must be *gauge*, *counter*, *info* or *unknown*.
+> > > Must be *gauge* or *counter*.
 > > > If not set is unknown.
 > > > There must be exactly one **type** option inside each **Result** block.
 
 > > **type-from** *column-name*
 
 > > > Read the type from *column*.
-> > > The column value must be *gauge*, *counter*,
-> > > *info* or *unknown*.
+> > > The column value must be *gauge* or *counter*.
 
 > > **help** *help*
 

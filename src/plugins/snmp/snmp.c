@@ -1388,7 +1388,8 @@ static int csnmp_config_add_data(config_item_t *ci, bool table)
         config_item_t *option = ci->children + i;
 
         if (strcasecmp("type", option->key) == 0) {
-            status = cf_util_get_metric_type(option, &dd->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(option, allow, &dd->type);
         } else if (strcasecmp("help", option->key) == 0) {
             status = cf_util_get_string(option, &dd->help);
         } else if (strcasecmp("metric", option->key) == 0) {
