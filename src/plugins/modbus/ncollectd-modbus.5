@@ -16,7 +16,7 @@
         \fBmetric\fP \fImetric\fP
         \fBhelp\fP \fIhelp\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
-        \fBtype\fP \fIgauge|counter|unknown\fP
+        \fBtype\fP \fIgauge\fP|\fIcounter\fP
         \fBscale\fP \fIscale\fP
         \fBshift\fP \fIshift\fP
     }
@@ -87,10 +87,10 @@ Set the \fBhelp\fP text for the metric.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times in the \fBdata\fP block.
-.It \fBtype\fP \fIgauge|counter|unknown\fP
+.It \fBtype\fP \fIgauge\fP|\fIcounter\fP
 The \fBtype\fP for the metric.
-Must be \fIgauge\fP, \fIcounter\fP or \fIunknown\fP.
-If not set is \fIunknown\fP.
+Must be \fIgauge\fP or \fIcounter\fP.
+If not set is \fIgauge\fP.
 There must be exactly one \fBtype\fP option inside each \fBdata\fP block.
 .It \fBscale\fP \fIvalue\fP
 The values taken from device are multiplied by \fIvalue\fP.

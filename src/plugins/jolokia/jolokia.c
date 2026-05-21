@@ -885,13 +885,16 @@ static int jlk_config_add_attribute(config_item_t *ci, jlk_mbean_attribute_set_t
         return status;
     }
 
+    attribute->type = METRIC_TYPE_GAUGE;
+
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("metric", child->key) == 0) {
             status = cf_util_get_string(child, &attribute->metric_name);
         } else if (strcasecmp("type", child->key) == 0) {
-            status = cf_util_get_metric_type(child, &attribute->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &attribute->type);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &attribute->labels);
         } else if (strcasecmp("label-from", child->key) == 0) {

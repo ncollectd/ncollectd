@@ -565,7 +565,8 @@ static int epics_config_metric(config_item_t *ci)
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &em->labels);
         } else if (strcasecmp("type", child->key) == 0) {
-            status = cf_util_get_metric_type(child, &em->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &em->type);
         } else if (strcasecmp("label-from", child->key) == 0) {
             status = cf_util_get_label(child, &em->labels_from);
         } else if (strcasecmp("value-from", child->key) == 0) {

@@ -66,7 +66,18 @@ int cf_util_get_cdtime(const config_item_t *ci, cdtime_t *ret_value);
 
 int cf_util_get_label(const config_item_t *ci, label_set_t *labels);
 
-int cf_util_get_metric_type(const config_item_t *ci, metric_type_t *ret_metric);
+typedef enum {
+    CONFIG_METRIC_UNKNOWN         = (1 << METRIC_TYPE_UNKNOWN),
+    CONFIG_METRIC_GAUGE           = (1 << METRIC_TYPE_GAUGE),
+    CONFIG_METRIC_COUNTER         = (1 << METRIC_TYPE_COUNTER),
+    CONFIG_METRIC_STATE_SET       = (1 << METRIC_TYPE_STATE_SET),
+    CONFIG_METRIC_INFO            = (1 << METRIC_TYPE_INFO),
+    CONFIG_METRIC_SUMMARY         = (1 << METRIC_TYPE_SUMMARY),
+    CONFIG_METRIC_HISTOGRAM       = (1 << METRIC_TYPE_HISTOGRAM),
+    CONFIG_METRIC_GAUGE_HISTOGRAM = (1 << METRIC_TYPE_GAUGE_HISTOGRAM)
+} config_metric_t;
+
+int cf_util_get_metric_type(const config_item_t *ci, int allow, metric_type_t *ret_metric);
 
 int cf_util_get_severity(const config_item_t *ci, severity_t *ret_severity);
 

@@ -217,7 +217,7 @@ static int mb_submit(mb_host_t *host, mb_slave_t *slave, mb_data_t *data, value_
     metric_label_set(&m, "host", host->host);
     m.value = value;
     metric_family_metric_append(&fam, m);
-    metric_reset(&m, METRIC_TYPE_GAUGE);
+    metric_reset(&m, data->type);
 
     plugin_dispatch_metric_family(&fam, 0);
     strbuf_destroy(&buf);
@@ -688,7 +688,7 @@ static int mb_config_add_data(config_item_t *ci)
     data->register_type = REG_TYPE_UINT16;
     data->scale = 1;
     data->shift = 0;
-    data->type = METRIC_TYPE_UNKNOWN;
+    data->type = METRIC_TYPE_GAUGE;
 
     status = cf_util_get_string(ci, &data->name);
     if (status != 0) {
@@ -704,7 +704,8 @@ static int mb_config_add_data(config_item_t *ci)
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &data->labels);
         } else if (strcasecmp("type", child->key) == 0) {
-            status = cf_util_get_metric_type(child, &data->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &data->type);
         } else if (strcasecmp("help", child->key) == 0) {
             status = cf_util_get_string(child, &data->help);
         } else if (strcasecmp("scale", child->key) == 0) {

@@ -390,6 +390,8 @@ static int ldap_config_metric(config_item_t *ci, ldap_query_t *query)
     }
 
     int status = 0;
+    
+    metric->type = METRIC_TYPE_GAUGE;
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
@@ -409,7 +411,8 @@ static int ldap_config_metric(config_item_t *ci, ldap_query_t *query)
         } else if (strcasecmp("help-from", child->key) == 0) {
             status = cf_util_get_string(child, &metric->help_from);
         } else if (strcasecmp("type", child->key) == 0) {
-            status = cf_util_get_metric_type(child, &metric->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &metric->type);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &metric->labels);
         } else if (strcasecmp("label-from", child->key) == 0) {

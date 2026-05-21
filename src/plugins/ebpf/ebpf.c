@@ -601,32 +601,6 @@ static int ebpf_config_append_label_from(config_item_t *ci, ebpf_label_from_t *l
     return 0;
 }
 
-static int ebpf_metric_type(const config_item_t *ci, metric_type_t *ret_metric)
-{
-    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
-        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
-                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
-        return -1;
-    }
-
-    if (!strcasecmp(ci->values[0].value.string, "gauge")) {
-        *ret_metric = METRIC_TYPE_GAUGE;
-    } else if (!strcasecmp(ci->values[0].value.string, "counter")) {
-        *ret_metric = METRIC_TYPE_COUNTER;
-    } else if (!strcasecmp(ci->values[0].value.string, "histogram")) {
-        *ret_metric = METRIC_TYPE_HISTOGRAM;
-    } else if (!strcasecmp(ci->values[0].value.string, "gaugehistogram")) {
-        *ret_metric = METRIC_TYPE_GAUGE_HISTOGRAM;
-    } else {
-        PLUGIN_ERROR("The '%s' option in %s:%d must be: 'gauge', 'counter', "
-                     "'histogram' or 'gaugehistogram'.",
-                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
-        return -1;
-    }
-
-    return 0;
-}
-
 static int ebpf_config_metric(config_item_t *ci, ebpf_ctx_t *ctx)
 {
     ebpf_metric_t *ebpf_metric = calloc(1, sizeof(*ebpf_metric));
@@ -640,7 +614,7 @@ static int ebpf_config_metric(config_item_t *ci, ebpf_ctx_t *ctx)
         return -1;
     }
 
-    ebpf_metric->type = METRIC_TYPE_COUNTER;
+    ebpf_metric->type = METRIC_TYPE_GAUGE;
 
     for (int i = 0; i < ci->children_num; ++i) {
         config_item_t *child = ci->children + i;
@@ -650,7 +624,9 @@ static int ebpf_config_metric(config_item_t *ci, ebpf_ctx_t *ctx)
         } else if (strcasecmp("help", child->key) == 0) {
             status = cf_util_get_string(child, &ebpf_metric->help);
         } else if (strcasecmp("type", child->key) == 0) {
-            status = ebpf_metric_type(child, &ebpf_metric->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER |
+                        CONFIG_METRIC_HISTOGRAM | CONFIG_METRIC_GAUGE_HISTOGRAM;
+            status = cf_util_get_metric_type(child, allow, &ebpf_metric->type);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ebpf_metric->labels);
         } else if (strcasecmp("label-from", child->key) == 0) {

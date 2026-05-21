@@ -970,7 +970,8 @@ static int redfish_config_property(redfish_resource_t *resource, config_item_t *
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("type", child->key) == 0) {
-            status = cf_util_get_metric_type(child, &property->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &property->type);
         } else if (strcasecmp("help", child->key) == 0) {
             status = cf_util_get_string(child, &property->help);
         } else if (strcasecmp("metric", child->key) == 0) {
@@ -1109,7 +1110,8 @@ static int redfish_config_attribute(redfish_query_t *query, config_item_t *ci)
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("type", child->key) == 0) {
-            status = cf_util_get_metric_type(child, &attr->type);
+            int allow = CONFIG_METRIC_GAUGE | CONFIG_METRIC_COUNTER;
+            status = cf_util_get_metric_type(child, allow, &attr->type);
         } else if (strcasecmp("help", child->key) == 0) {
             status = cf_util_get_string(child, &attr->help);
         } else if (strcasecmp("metric", child->key) == 0) {

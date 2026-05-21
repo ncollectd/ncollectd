@@ -126,11 +126,11 @@ block: **table**, **data**, and **host**:
 > > There are potentially many interfaces, so you will want to user is a **table**
 > > block.
 
-> **type** *counter|gauge|unknown*
+> **type** *counter*|*gauge*
 
 > > The **type** that's used for each value read.
-> > Must be *gauge*, *counter* or *unknown*.
-> > If not set is unknown.
+> > Must be *gauge* or *counter*.
+> > If not set is gauge.
 
 > **help** *help*
 
@@ -217,11 +217,11 @@ block: **table**, **data**, and **host**:
 > ) and transmitted to mcollectd.
 > The following options can be set:
 
-> **type** *counter|gauge|unknown*
+> **type** *counter*|*gauge*
 
 > > The **type** that's used for each value read.
-> > Must be *gauge*, *counter* or *unknown*.
-> > If not set is unknown.
+> > Must be *gauge* or *counter*.
+> > If not set is gauge.
 
 > **help** *help*
 

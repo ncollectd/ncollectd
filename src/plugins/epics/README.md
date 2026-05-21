@@ -13,7 +13,7 @@ NCOLLECTD-EPICS(5) - File Formats Manual
 	    metric {
 	        metric metric
 	        help help
-	        type [gauge | counter]
+	        type gauge|counter
 	        label key index
 	        label-from key pv-name
 	        value-from pv-name [index]
@@ -55,7 +55,7 @@ plugin interval.
 
 > > Set the **help** text for the metric.
 
-> **type** \[*gauge* | *counter*]
+> **type** *gauge*|*counter*
 
 > > The **type** that's used for each metric returned.
 > > Must be *gauge* or *counter*,
