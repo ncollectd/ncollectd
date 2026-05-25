@@ -45,6 +45,8 @@ struct wh_callback_s {
     format_notification_t format_notification;
     compress_format_t compress;
     const char *content_type;
+    char *proxy;
+    bool proxy_tunnel;
     CURL *curl;
     uint64_t curl_stats_flags;
     struct curl_slist *headers;
@@ -371,6 +373,22 @@ static int wh_callback_init(wh_callback_t *cb)
         }
     }
 
+    if (cb->proxy != NULL) {
+        rcode = curl_easy_setopt(cb->curl, CURLOPT_PROXY, cb->proxy);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_PROXY failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(cb->curl, CURLOPT_HTTPPROXYTUNNEL, cb->proxy_tunnel ? 1L : 0L);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_HTTPPROXYTUNNEL failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
     return 0;
 }
 
@@ -447,6 +465,7 @@ static void wh_callback_free(void *data)
     free(cb->clientkey);
     free(cb->clientcert);
     free(cb->clientkeypass);
+    free(cb->proxy);
 
     free(cb);
 }
@@ -649,6 +668,10 @@ static int wh_config_instance(config_item_t *ci)
             status = cf_util_get_boolean(child, &cb->log_http_error);
         } else if (strcasecmp("header", child->key) == 0) {
             status = wh_config_append_string("Header", &cb->headers, child);
+        } else if (strcasecmp("proxy", child->key) == 0) {
+            status = cf_util_get_string(child, &cb->proxy);
+        } else if (strcasecmp("proxy-tunnel", child->key) == 0) {
+            status = cf_util_get_boolean(child, &cb->proxy_tunnel);
         } else if (strcasecmp("flush-interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &flush_interval);
         } else if (strcasecmp("flush-timeout", child->key) == 0) {

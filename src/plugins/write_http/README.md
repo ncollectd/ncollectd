@@ -22,7 +22,9 @@ NCOLLECTD-WRITE\_HTTP(5) - File Formats Manual
 	        client-cert /path/to/client-cert
 	        client-key-pass key-pass
 	        ssl-version default|sslv2|sslv3|tlsv1|tlsv1_0|tlsv1_1|tlsv1_2|tlsv1_3
-	        compress none|snappy|gzip|zlib|deflate
+	        proxy proxy-url
+	        proxy-tunnel true|false
+	        compress none|snappy|lz4|gzip|zlib|deflate
 	        collect flags
 	        store-rates true|false
 	        buffer-size size
@@ -114,6 +116,14 @@ Within each **instance** block, the following options are available:
 **ssl-version** *default|sslv2|sslv3|tlsv1|tlsv1\_0|tlsv1\_1|tlsv1\_2|tlsv1\_3*
 
 > Define which SSL protocol version must be used.
+
+**proxy** *proxy-url*
+
+> Set the proxy URL to send requests through the HTTP proxy.
+
+**proxy-tunnel** *true|false*
+
+> If set to *true* tunnel all operations through the HTTP proxy.
 
 **compress** *none|snappy|gzip|zlib|deflate*
 

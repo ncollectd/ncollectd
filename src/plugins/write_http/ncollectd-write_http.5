@@ -23,6 +23,8 @@
         \fBclient-cert\fP \fI/path/to/client-cert\fP
         \fBclient-key-pass\fP \fIkey-pass\fP
         \fBssl-version\fP \fIdefault|sslv2|sslv3|tlsv1|tlsv1_0|tlsv1_1|tlsv1_2|tlsv1_3\fP
+        \fBproxy\fP \fIproxy-url\fP
+        \fBproxy-tunnel\fP \fItrue|false\fP
         \fBcompress\fP \fInone|snappy|lz4|gzip|zlib|deflate\fP
         \fBcollect\fP \fIflags\fP
         \fBstore-rates\fP \fItrue|false\fP
@@ -89,6 +91,10 @@ authentication.
 Password required to load the private key in \fBclient-key\fP.
 .It \fBssl-version\fP \fIdefault|sslv2|sslv3|tlsv1|tlsv1_0|tlsv1_1|tlsv1_2|tlsv1_3\fP
 Define which SSL protocol version must be used.
+.It \fBproxy\fP \fIproxy-url\fP
+Set the proxy URL to send requests through the HTTP proxy.
+.It \fBproxy-tunnel\fP \fItrue|false\fP
+If set to \fItrue\fP tunnel all operations through the HTTP proxy.
 .It \fBcompress\fP \fInone|snappy|gzip|zlib|deflate\fP
 .It \fBcollect\fP \fIflags\fP
 .Bl -tag -width Ds
