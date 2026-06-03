@@ -589,13 +589,17 @@ static int smart_read(void)
     struct udev_enumerate *enumerate = udev_enumerate_new(handle_udev);
     if (enumerate == NULL) {
         udev_unref(handle_udev);
-        PLUGIN_ERROR("fail udev_enumerate_new");
+        PLUGIN_ERROR("udev_enumerate_new failed.");
         return -1;
     }
 
     udev_enumerate_add_match_subsystem(enumerate, "block");
     udev_enumerate_add_match_property(enumerate, "DEVTYPE", "disk");
-    udev_enumerate_scan_devices(enumerate);
+    int status = udev_enumerate_scan_devices(enumerate);
+    if (status < 0) {
+        PLUGIN_ERROR("udev_enumerate_scan_devices failed.");
+        return -1;
+    }
 
     struct udev_list_entry *devices = udev_enumerate_get_list_entry(enumerate);
     if (devices == NULL) {
