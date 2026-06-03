@@ -331,7 +331,7 @@ static int olsrd_read(user_data_t *user_data)
     if (fh == NULL)
         return -1;
 
-    fputs("\r\n", fh);
+    fputs("/all \r\n", fh);
     fflush(fh);
 
     int status = 0;
@@ -354,9 +354,9 @@ static int olsrd_read(user_data_t *user_data)
         } else if (strcmp("Table: Routes", buffer) == 0) {
             status = olsrd_read_table(fh, oi, olsrd_cb_routes);
         } else {
-           if ((strcmp("HTTP/1.0 200 OK", buffer) != 0) &&
-               (strcmp("Content-type: text/plain", buffer) != 0)) {
-               PLUGIN_DEBUG("Unable to handle line: %s", buffer);
+            if ((strcmp("HTTP/1.0 200 OK", buffer) != 0) &&
+                (strcmp("Content-type: text/plain", buffer) != 0)) {
+                PLUGIN_DEBUG("Unable to handle line: %s", buffer);
             }
         }
 
