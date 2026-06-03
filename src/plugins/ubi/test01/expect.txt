@@ -1,0 +1,6 @@
+# TYPE system_ubi_bad_physical_eraseblocks gauge
+system_ubi_bad_physical_eraseblocks{device="ubi1",hostname="localhost.localdomain"} 100
+# TYPE system_ubi_reserved_for_bad_physical_eraseblocks gauge
+system_ubi_reserved_for_bad_physical_eraseblocks{device="ubi1",hostname="localhost.localdomain"} 200
+# TYPE system_ubi_maximum_physical_eraseblocks gauge
+system_ubi_maximum_physical_eraseblocks{device="ubi1",hostname="localhost.localdomain"} 500
