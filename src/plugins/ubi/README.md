@@ -9,6 +9,9 @@ NCOLLECTD-UBI(5) - File Formats Manual
 	load-plugin ubi
 	plugin ubi {
 	    device [incl|include|excl|exclude] name
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -20,9 +23,12 @@ the underlying MTD (Memory Technology Device) and the maximum erase
 counter value concerning one volume.
 
 See following links for details:
-[http://www.linux-mtd.infradead.org/doc/ubi.html](http://www.linux-mtd.infradead.org/doc/ubi.html)
-[http://www.linux-mtd.infradead.org/doc/ubifs.html](http://www.linux-mtd.infradead.org/doc/ubifs.html)
-[https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-ubi](https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-ubi)
+
+*	[http://www.linux-mtd.infradead.org/doc/ubi.html](http://www.linux-mtd.infradead.org/doc/ubi.html)
+
+*	[http://www.linux-mtd.infradead.org/doc/ubifs.html](http://www.linux-mtd.infradead.org/doc/ubifs.html)
+
+*	[https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-ubi](https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-ubi)
 
 The plugin has the following options:
 
@@ -30,6 +36,12 @@ The plugin has the following options:
 
 > Select the device *name* of the UBI volume.
 > See **INCLUDE AND EXCLUDE LISTS** in
+> ncollectd.conf(5).
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
 > ncollectd.conf(5).
 
 # SEE ALSO

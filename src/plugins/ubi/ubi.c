@@ -11,9 +11,11 @@
 #endif
 
 static char *path_sys_class_ubi;
+static plugin_filter_t *filter;
 
 enum {
     FAM_UBI_BAD_PHYSICAL_ERASEBLOCKS,
+    FAM_UBI_RESERVED_FOR_BAD_PHYSICAL_ERASEBLOCKS,
     FAM_UBI_MAXIMUM_PHYSICAL_ERASEBLOCKS,
     FAM_UBI_MAX,
 };
@@ -23,6 +25,11 @@ static metric_family_t fams[FAM_UBI_MAX] = {
         .name = "system_ubi_bad_physical_eraseblocks",
         .type = METRIC_TYPE_GAUGE,
         .help = "Count of bad physical eraseblocks on the underlying MTD device.",
+    },
+    [FAM_UBI_RESERVED_FOR_BAD_PHYSICAL_ERASEBLOCKS] = {
+        .name = "system_ubi_reserved_for_bad_physical_eraseblocks",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of physical eraseblocks reserved for bad block handling."
     },
     [FAM_UBI_MAXIMUM_PHYSICAL_ERASEBLOCKS] = {
         .name = "system_ubi_maximum_physical_eraseblocks",
@@ -49,16 +56,27 @@ static int ubi_read_device(int dirfd, __attribute__((unused)) const char *path,
     if (unlikely(status != 0)) {
         PLUGIN_ERROR("Did not find an integer in bad_peb_count");
     } else {
-        metric_family_append(&fams[FAM_UBI_BAD_PHYSICAL_ERASEBLOCKS], VALUE_GAUGE(value), NULL,
-                             &LABEL_PAIR_CONST("device", "entry"), NULL);
+        metric_family_append(&fams[FAM_UBI_BAD_PHYSICAL_ERASEBLOCKS],
+                             VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", entry), NULL);
+    }
+
+    status = filetouint_at(devfd, "reserved_for_bad", &value);
+    if (unlikely(status != 0)) {
+        PLUGIN_ERROR("Did not find an integer in reserved_for_bad");
+    } else {
+        metric_family_append(&fams[FAM_UBI_RESERVED_FOR_BAD_PHYSICAL_ERASEBLOCKS],
+                             VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", entry), NULL);
     }
 
     status = filetouint_at(devfd, "max_ec", &value);
     if (unlikely(status != 0)) {
         PLUGIN_ERROR("Did not find an integer in max_ec");
     } else {
-        metric_family_append(&fams[FAM_UBI_MAXIMUM_PHYSICAL_ERASEBLOCKS], VALUE_GAUGE(value), NULL,
-                             &LABEL_PAIR_CONST("device", "entry"), NULL);
+        metric_family_append(&fams[FAM_UBI_MAXIMUM_PHYSICAL_ERASEBLOCKS],
+                             VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", entry), NULL);
     }
 
     close(devfd);
@@ -70,7 +88,8 @@ static int ubi_read(void)
 {
     walk_directory(path_sys_class_ubi, ubi_read_device, NULL, 0);
 
-    plugin_dispatch_metric_family_array(fams, FAM_UBI_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_UBI_MAX, filter, 0);
+
     return 0;
 }
 
@@ -82,6 +101,8 @@ static int ubi_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "device") == 0) {
             status = cf_util_exclist(child, &excl_device);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -97,7 +118,7 @@ static int ubi_config(config_item_t *ci)
 
 static int ubi_init(void)
 {
-    path_sys_class_ubi = plugin_procpath("class/ubi");
+    path_sys_class_ubi = plugin_syspath("class/ubi");
     if (path_sys_class_ubi == NULL) {
         PLUGIN_ERROR("Cannot get sys path.");
         return -1;
@@ -110,6 +131,8 @@ static int ubi_shutdown(void)
 {
     free(path_sys_class_ubi);
     exclist_reset(&excl_device);
+    plugin_filter_free(filter);
+
     return 0;
 }
 
