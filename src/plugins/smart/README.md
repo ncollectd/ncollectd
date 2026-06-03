@@ -11,6 +11,9 @@ NCOLLECTD-SMART(5) - File Formats Manual
 	    disk [incl|include|excl|exclude] disk-name
 	    serial [incl|include|excl|exclude] serial-number
 	    ignore-sleep-mode true|false
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -51,6 +54,12 @@ collection only of specific disks.
 > This is useful in cases where libatasmart mistakenly reports disks as asleep
 > because it has not been updated to incorporate support
 > for newer idle states in the ATA spec.
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 

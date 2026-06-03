@@ -50,10 +50,9 @@ typedef struct {
 
 static exclist_t excl_disk;
 static exclist_t excl_serial;
-
 static bool ignore_sleep_mode;
-
 static int pagesize;
+static plugin_filter_t *filter;
 
 static void *smart_alloc(size_t len)
 {
@@ -645,6 +644,8 @@ static int smart_config(config_item_t *ci)
             status = cf_util_exclist(child, &excl_serial);
         } else if (strcasecmp(child->key, "ignore-sleep-mode") == 0) {
             status = cf_util_get_boolean(child, &ignore_sleep_mode);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -681,6 +682,7 @@ static int smart_shutdown(void)
 {
     exclist_reset(&excl_disk);
     exclist_reset(&excl_serial);
+    plugin_filter_free(filter);
     return 0;
 }
 
