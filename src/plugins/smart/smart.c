@@ -578,6 +578,8 @@ static void smart_handle_disk(const char *dev, const char *serial, metric_family
 // __attribute__((stack_protect))
 static int smart_read(void)
 {
+    cdtime_t submit = cdtime();
+
     /* Use udev to get a list of disks */
     struct udev *handle_udev = udev_new();
     if (handle_udev == NULL) {
@@ -628,7 +630,8 @@ static int smart_read(void)
     udev_enumerate_unref(enumerate);
     udev_unref(handle_udev);
 
-    plugin_dispatch_metric_family_array(fams_smart, FAM_SMART_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams_smart, FAM_SMART_MAX, filter, submit);
+
     return 0;
 }
 
