@@ -12,6 +12,9 @@
     \fBdisk\fP [\fIincl|include|excl|exclude\fP] \fBdisk-name\fP
     \fBserial\fP [\fIincl|include|excl|exclude\fP] \fBserial-number\fP
     \fBignore-sleep-mode\fP \fItrue|false\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -46,6 +49,10 @@ data from these disks anyway.
 This is useful in cases where libatasmart mistakenly reports disks as asleep
 because it has not been updated to incorporate support
 for newer idle states in the ATA spec.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
