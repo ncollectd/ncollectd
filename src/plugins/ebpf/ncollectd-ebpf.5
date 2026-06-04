@@ -59,7 +59,7 @@ Create a metric from the map or agreggate indicated.
 .It \fBname\fP \fImetric-name\fP
 Set the name of the metric.
 .It \fBhelp\fP \fIhelp\fP
-Set the help text of the metric.\fP
+Set the help text of the metric.
 .It \fBtype\fP \fIgauge|counter|histogram|gaugehistogram\fP
 Set the metric type. Can be one of \fIgauge\fP, \fIcounter\fP,
 \fIhistogram\fP or \fIgaugehistogram\fP.
@@ -404,13 +404,7 @@ Count the number of coredump that the systemd does.
 .Bd -literal -offset indent
 plugin ebpf {
     instance core {
-        script '''
-BEGIN {
-    @core["core"] = sum(0);
-}
-kprobe:do_coredump {
-    @core["core"] = count();
-}'''
+        script 'BEGIN { @core["core"] = sum(0); } kprobe:do_coredump { @core["core"] = count(); }'
         metric "@core" {
             name "system_coredump"
             type counter
