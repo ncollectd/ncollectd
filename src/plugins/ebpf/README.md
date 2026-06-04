@@ -482,13 +482,7 @@ Count the number of coredump that the systemd does.
 
 	plugin ebpf {
 	    instance core {
-	        script '''
-	BEGIN {
-	    @core["core"] = sum(0);
-	}
-	kprobe:do_coredump {
-	    @core["core"] = count();
-	}'''
+	        script 'BEGIN { @core["core"] = sum(0); } kprobe:do_coredump { @core["core"] = count(); }'
 	        metric "@core" {
 	            name "system_coredump"
 	            type counter
