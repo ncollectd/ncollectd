@@ -8,11 +8,27 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP wireless
-\fBplugin\fP wireless
+\fBplugin\fP wireless {
+    \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBwireless\fP plugin collectd statistics of the signal
 in wireless interfaces.
+The plugin has the following options:
+.Bl -tag -width Ds
+.It \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+Select the wireless device \fIname\fP.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.Xr ncollectd.conf 5 .
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5 .
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

@@ -268,6 +268,24 @@ int strbuf_putuint(strbuf_t *buf, uint64_t value)
     return 0;
 }
 
+int strbuf_puthex(strbuf_t *buf, uint8_t c)
+{
+    static const char *hex = "0123456789abcdef";
+
+    if (strbuf_avail(buf) < 2) {
+        if (strbuf_resize(buf, 2) != 0)
+            return ENOMEM;
+    }
+
+    if (unlikely(buf->ptr == NULL))
+        return ENOMEM;
+
+    buf->ptr[buf->pos++] = hex[c >> 4];
+    buf->ptr[buf->pos++] = hex[c & 0xf];
+    buf->ptr[buf->pos] = '\0';
+    return 0;
+}
+
 int strbuf_putdouble(strbuf_t *buf, double value)
 {
     if (strbuf_avail(buf) < DTOA_MAX) {
