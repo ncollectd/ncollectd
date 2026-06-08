@@ -176,6 +176,8 @@ int strbuf_putuint(strbuf_t *buf, uint64_t n);
 
 int strbuf_putdouble(strbuf_t *buf, double n);
 
+int strbuf_puthex(strbuf_t *buf, uint8_t c);
+
 static inline void strbuf_reset(strbuf_t *buf)
 {
     if (buf == NULL)
