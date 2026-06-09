@@ -4,13 +4,52 @@
 
 #pragma once
 
-struct pinghost;
+#define PING_ERRMSG_LEN 256
+#define PING_TABLE_LEN 5381
+
+struct pinghost {
+    /* username: name passed in by the user */
+    char *username;
+    /* hostname: name returned by the reverse lookup */
+    char *hostname;
+    struct sockaddr_storage *addr;
+    socklen_t addrlen;
+    int addrfamily;
+    int ident;
+    int sequence;
+    struct timeval *timer;
+    double latency;
+    uint32_t dropped;
+    int recv_ttl;
+    uint8_t recv_qos;
+    char *data;
+    void *context;
+    struct pinghost *next;
+    struct pinghost *table_next;
+};
 typedef struct pinghost pinghost_t;
 
-typedef pinghost_t pingobj_iter_t;
-
-struct pingobj;
+struct pingobj {
+    double timeout;
+    int ttl;
+    int addrfamily;
+    uint8_t qos;
+    char *data;
+    int fd4;
+    int fd6;
+    struct sockaddr *srcaddr;
+//    struct sockaddr_storage *srcaddr;
+    socklen_t srcaddrlen;
+    char *device;
+    char set_mark;
+    int mark;
+    char errmsg[PING_ERRMSG_LEN];
+    pinghost_t *head;
+    pinghost_t *table[PING_TABLE_LEN];
+};
 typedef struct pingobj pingobj_t;
+
+typedef pinghost_t pingobj_iter_t;
 
 #define PING_OPT_TIMEOUT 0x01
 #define PING_OPT_TTL     0x02
@@ -38,27 +77,6 @@ int ping_host_add (pingobj_t *obj, const char *host);
 
 int ping_host_remove (pingobj_t *obj, const char *host);
 
-pingobj_iter_t *ping_iterator_get (pingobj_t *obj);
-
-pingobj_iter_t *ping_iterator_next (pingobj_iter_t *iter);
-
-int ping_iterator_count (pingobj_t *obj);
-
-#define PING_INFO_HOSTNAME  1
-#define PING_INFO_ADDRESS   2
-#define PING_INFO_FAMILY    3
-#define PING_INFO_LATENCY   4
-#define PING_INFO_SEQUENCE  5
-#define PING_INFO_IDENT     6
-#define PING_INFO_DATA      7
-#define PING_INFO_USERNAME  8
-#define PING_INFO_DROPPED   9
-#define PING_INFO_RECV_TTL 10
-#define PING_INFO_RECV_QOS 11
-int ping_iterator_get_info (pingobj_iter_t *iter, int info, void *buffer, size_t *buffer_len);
+int ping_host_resolve (pingobj_t *obj, pinghost_t *ph, const char *host);
 
 const char *ping_get_error (pingobj_t *obj);
-
-void *ping_iterator_get_context (pingobj_iter_t *iter);
-
-void  ping_iterator_set_context (pingobj_iter_t *iter, void *context);
