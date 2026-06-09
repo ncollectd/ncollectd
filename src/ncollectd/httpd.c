@@ -433,9 +433,11 @@ static void *httpd_server(__attribute__((unused)) void *arg)
         httpd_loop(httpd, httpd_request);
     }
 
-    status = unlink(httpd_sock_file);
-    if (status != 0)
-        NOTICE("unlink (%s) failed: %s", httpd_sock_file, STRERRNO);
+    if (httpd_sock_file != NULL) {
+        status = unlink(httpd_sock_file);
+        if (status != 0)
+            NOTICE("unlink (%s) failed: %s", httpd_sock_file, STRERRNO);
+    }
 
     return (void *)0;
 }
