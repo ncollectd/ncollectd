@@ -35,49 +35,6 @@
 
 #pragma GCC diagnostic ignored "-Wcast-align"
 
-#define PING_ERRMSG_LEN 256
-#define PING_TABLE_LEN 5381
-
-struct pinghost {
-    /* username: name passed in by the user */
-    char *username;
-    /* hostname: name returned by the reverse lookup */
-    char *hostname;
-    struct sockaddr_storage *addr;
-    socklen_t addrlen;
-    int addrfamily;
-    int ident;
-    int sequence;
-    struct timeval *timer;
-    double latency;
-    uint32_t dropped;
-    int recv_ttl;
-    uint8_t recv_qos;
-    char *data;
-    void *context;
-    struct pinghost *next;
-    struct pinghost *table_next;
-};
-
-struct pingobj {
-    double timeout;
-    int ttl;
-    int addrfamily;
-    uint8_t qos;
-    char *data;
-    int fd4;
-    int fd6;
-    struct sockaddr *srcaddr;
-//    struct sockaddr_storage *srcaddr;
-    socklen_t srcaddrlen;
-    char *device;
-    char set_mark;
-    int mark;
-    char errmsg[PING_ERRMSG_LEN];
-    pinghost_t *head;
-    pinghost_t *table[PING_TABLE_LEN];
-};
-
 static void ping_set_error (pingobj_t *obj, const char *function, const char *message)
 {
     ssnprintf (obj->errmsg, sizeof (obj->errmsg), "%s: %s", function, message);
@@ -1239,20 +1196,29 @@ static pinghost_t *ping_host_search (pinghost_t *ph, const char *host)
     return ph;
 }
 
-int ping_host_add (pingobj_t *obj, const char *host)
+int ping_host_resolve (pingobj_t *obj, pinghost_t *ph, const char *host)
 {
-    pinghost_t *ph;
     struct addrinfo  ai_hints;
     struct addrinfo *ai_list, *ai_ptr;
     int ai_return;
 
-    if ((obj == NULL) || (host == NULL))
+    memset (ph->addr, '\0', sizeof(struct sockaddr_storage));
+    ph->addrlen = sizeof(struct sockaddr_storage);
+    ph->latency = -1.0;
+    ph->dropped = 0;
+    ph->sequence = 0;
+
+    char *hostname = strdup(host);
+    if (hostname == NULL) {
+        PLUGIN_DEBUG("Out of memory!\n");
+        ping_set_errno(obj, errno);
         return -1;
+    }
 
-    PLUGIN_DEBUG("host = %s\n", host);
+    if (ph->hostname != NULL)
+        free(ph->hostname);
 
-    if (ping_host_search(obj->head, host) != NULL)
-        return 0;
+    ph->hostname = hostname;
 
     memset (&ai_hints, '\0', sizeof(ai_hints));
     ai_hints.ai_flags    = 0;
@@ -1265,33 +1231,6 @@ int ping_host_add (pingobj_t *obj, const char *host)
     ai_hints.ai_family   = obj->addrfamily;
     ai_hints.ai_socktype = SOCK_RAW;
 
-    if ((ph = ping_alloc()) == NULL) {
-        PLUGIN_DEBUG("Out of memory!\n");
-        return -1;
-    }
-
-    if ((ph->username = strdup(host)) == NULL) {
-        PLUGIN_DEBUG("Out of memory!\n");
-        ping_set_errno(obj, errno);
-        ping_free(ph);
-        return -1;
-    }
-
-    if ((ph->hostname = strdup(host)) == NULL) {
-        PLUGIN_DEBUG("Out of memory!\n");
-        ping_set_errno(obj, errno);
-        ping_free(ph);
-        return -1;
-    }
-
-    /* obj->data is not guaranteed to be != NULL */
-    if ((ph->data = strdup(obj->data == NULL ? PING_DEF_DATA : obj->data)) == NULL) {
-        PLUGIN_DEBUG("Out of memory!\n");
-        ping_set_errno(obj, errno);
-        ping_free (ph);
-        return -1;
-    }
-
     if ((ai_return = getaddrinfo(host, NULL, &ai_hints, &ai_list)) != 0) {
 #if defined(EAI_SYSTEM)
         char errbuf[PING_ERRMSG_LEN];
@@ -1303,12 +1242,13 @@ int ping_host_add (pingobj_t *obj, const char *host)
                         ? sstrerror(errno, errbuf, sizeof (errbuf)) :
 #endif
                         gai_strerror(ai_return));
-        ping_free (ph);
         return -1;
     }
 
-    if (ai_list == NULL)
+    if (ai_list == NULL) {
         ping_set_error (obj, "getaddrinfo", "No hosts returned");
+        return -1;
+    }
 
     for (ai_ptr = ai_list; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next) {
         if (ai_ptr->ai_family == AF_INET) {
@@ -1354,11 +1294,46 @@ int ping_host_add (pingobj_t *obj, const char *host)
 
     freeaddrinfo(ai_list);
 
-    /*
-     * Adding in the front is much easier, but then the iterator will
-     * return the host that was added last as first host. That's just not
-     * nice. -octo
-     */
+    return 0;
+}
+
+int ping_host_add (pingobj_t *obj, const char *host)
+{
+    pinghost_t *ph;
+
+    if ((obj == NULL) || (host == NULL))
+        return -1;
+
+    PLUGIN_DEBUG("host = %s\n", host);
+
+    if (ping_host_search(obj->head, host) != NULL)
+        return 0;
+
+    if ((ph = ping_alloc()) == NULL) {
+        PLUGIN_DEBUG("Out of memory!\n");
+        return -1;
+    }
+
+    if ((ph->username = strdup(host)) == NULL) {
+        PLUGIN_DEBUG("Out of memory!\n");
+        ping_set_errno(obj, errno);
+        ping_free(ph);
+        return -1;
+    }
+
+    /* obj->data is not guaranteed to be != NULL */
+    if ((ph->data = strdup(obj->data == NULL ? PING_DEF_DATA : obj->data)) == NULL) {
+        PLUGIN_DEBUG("Out of memory!\n");
+        ping_set_errno(obj, errno);
+        ping_free (ph);
+        return -1;
+    }
+
+    if (ping_host_resolve(obj, ph, host) != 0) {
+        ping_free (ph);
+        return -1;
+    }
+
     if (obj->head == NULL) {
         obj->head = ph;
     } else {
@@ -1433,169 +1408,4 @@ int ping_host_remove (pingobj_t *obj, const char *host)
     ping_free (cur);
 
     return 0;
-}
-
-pingobj_iter_t *ping_iterator_get (pingobj_t *obj)
-{
-    if (obj == NULL)
-        return NULL;
-    return (pingobj_iter_t *)obj->head;
-}
-
-pingobj_iter_t *ping_iterator_next (pingobj_iter_t *iter)
-{
-    if (iter == NULL)
-        return NULL;
-    return (pingobj_iter_t *)iter->next;
-}
-
-int ping_iterator_count (pingobj_t *obj)
-{
-    if (obj == NULL)
-        return 0;
-
-    int count = 0;
-    pingobj_iter_t *iter = obj->head;
-    while (iter) {
-        count++;
-        iter = iter->next;
-    }
-    return count;
-}
-
-int ping_iterator_get_info (pingobj_iter_t *iter, int info, void *buffer, size_t *buffer_len)
-{
-    int ret = EINVAL;
-
-    if ((iter == NULL) || (buffer_len == NULL))
-        return -1;
-    if ((buffer == NULL) && (*buffer_len != 0 ))
-        return -1;
-
-    size_t orig_buffer_len = *buffer_len;
-
-    switch (info) {
-    case PING_INFO_USERNAME:
-        ret = ENOMEM;
-        *buffer_len = strlen(iter->username) + 1;
-        if (orig_buffer_len > *buffer_len) {
-            /* Since (orig_buffer_len > *buffer_len) `strncpy'
-             * will copy `*buffer_len' and pad the rest of
-             * `buffer' with null-bytes */
-            strncpy(buffer, iter->username, orig_buffer_len);
-            ret = 0;
-        }
-        break;
-    case PING_INFO_HOSTNAME:
-        ret = ENOMEM;
-        *buffer_len = strlen(iter->hostname) + 1;
-        if (orig_buffer_len >= *buffer_len) {
-            /* Since (orig_buffer_len > *buffer_len) `strncpy'
-             * will copy `*buffer_len' and pad the rest of
-             * `buffer' with null-bytes */
-            strncpy(buffer, iter->hostname, orig_buffer_len);
-            ret = 0;
-        }
-        break;
-    case PING_INFO_ADDRESS:
-        ret = getnameinfo((struct sockaddr *) iter->addr, iter->addrlen,
-                          (char *) buffer, *buffer_len, NULL, 0, NI_NUMERICHOST);
-        if (ret != 0) {
-            if ((ret == EAI_MEMORY)
-#ifdef EAI_OVERFLOW
-                || (ret == EAI_OVERFLOW)
-#endif
-                )
-               ret = ENOMEM;
-#if defined(EAI_SYSTEM)
-           else if (ret == EAI_SYSTEM)
-              ret = errno;
-#endif
-           else
-              ret = EINVAL;
-        }
-        break;
-    case PING_INFO_FAMILY:
-        ret = ENOMEM;
-        *buffer_len = sizeof (int);
-        if (orig_buffer_len >= sizeof (int)) {
-            *((int *) buffer) = iter->addrfamily;
-            ret = 0;
-        }
-        break;
-    case PING_INFO_LATENCY:
-        ret = ENOMEM;
-        *buffer_len = sizeof (double);
-        if (orig_buffer_len >= sizeof (double)) {
-            *((double *) buffer) = iter->latency;
-            ret = 0;
-        }
-        break;
-    case PING_INFO_DROPPED:
-        ret = ENOMEM;
-        *buffer_len = sizeof (uint32_t);
-        if (orig_buffer_len >= sizeof (uint32_t)) {
-            *((uint32_t *) buffer) = iter->dropped;
-            ret = 0;
-        }
-        break;
-    case PING_INFO_SEQUENCE:
-        ret = ENOMEM;
-        *buffer_len = sizeof (unsigned int);
-        if (orig_buffer_len >= sizeof (unsigned int)) {
-            *((unsigned int *) buffer) = (unsigned int) iter->sequence;
-            ret = 0;
-        }
-        break;
-    case PING_INFO_IDENT:
-        ret = ENOMEM;
-        *buffer_len = sizeof (uint16_t);
-        if (orig_buffer_len >= sizeof (uint16_t)) {
-            *((uint16_t *) buffer) = (uint16_t) iter->ident;
-            ret = 0;
-        }
-        break;
-    case PING_INFO_DATA:
-        ret = ENOMEM;
-        *buffer_len = strlen(iter->data);
-        if ((buffer != NULL) && (orig_buffer_len >= *buffer_len)) {
-            strncpy((char *) buffer, iter->data, orig_buffer_len);
-            ret = 0;
-        }
-        break;
-    case PING_INFO_RECV_TTL:
-        ret = ENOMEM;
-        *buffer_len = sizeof (int);
-        if (orig_buffer_len >= sizeof (int)) {
-            *((int *) buffer) = iter->recv_ttl;
-            ret = 0;
-        }
-        break;
-    case PING_INFO_RECV_QOS:
-        ret = ENOMEM;
-        if (*buffer_len>sizeof(unsigned))
-            *buffer_len=sizeof(unsigned);
-        if (!*buffer_len) *buffer_len=1;
-        if (orig_buffer_len >= *buffer_len) {
-            memcpy(buffer,&iter->recv_qos,*buffer_len);
-            ret = 0;
-        }
-        break;
-    }
-
-    return ret;
-}
-
-void *ping_iterator_get_context (pingobj_iter_t *iter)
-{
-    if (iter == NULL)
-        return NULL;
-    return iter->context;
-}
-
-void ping_iterator_set_context (pingobj_iter_t *iter, void *context)
-{
-    if (iter == NULL)
-        return;
-    iter->context = context;
 }

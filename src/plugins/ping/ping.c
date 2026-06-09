@@ -91,34 +91,20 @@ typedef struct  {
 
 static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
 {
-    for (pingobj_iter_t *iter = ping_iterator_get(pingobj);
-           iter != NULL; iter = ping_iterator_next(iter)) {
-        char userhost[NI_MAXHOST];
-        size_t param_size = sizeof(userhost);
-        int status = ping_iterator_get_info(iter, PING_INFO_USERNAME, userhost, &param_size);
-        if (status != 0) {
-            PLUGIN_WARNING("ping_iterator_get_info failed: %s", ping_get_error(pingobj));
-            continue;
-        }
-
+    for (pinghost_t *ph = pingobj->head; ph != NULL; ph = ph->next) {
         hostlist_t *hl;
         for (hl = inst->hostlist_head; hl != NULL; hl = hl->next) {
-            if (strcmp(userhost, hl->host) == 0)
+            if (strcmp(ph->username, hl->host) == 0)
                 break;
         }
 
         if (hl == NULL) {
-            PLUGIN_WARNING("Cannot find host %s.", userhost);
+            PLUGIN_WARNING("Cannot find host %s.", ph->username);
             continue;
         }
 
-        double latency;
-        param_size = sizeof(latency);
-        status = ping_iterator_get_info(iter, PING_INFO_LATENCY, (void *)&latency, &param_size);
-        if (status != 0) {
-            PLUGIN_WARNING("ping_iterator_get_info failed: %s", ping_get_error(pingobj));
-            continue;
-        }
+        double latency = ph->latency;
+
         hl->pkg_sent++;
         if (latency >= 0.0) {
             hl->pkg_recv++;
@@ -126,7 +112,7 @@ static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
             hl->latency_total += latency;
             hl->latency_squared += (latency * latency);
 
-            status = histogram_update(hl->latency, latency);
+            int status = histogram_update(hl->latency, latency);
             if (status != 0)
                 PLUGIN_WARNING("histogram_update failed: %s",STRERROR(status));
 
@@ -146,6 +132,10 @@ static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
             PLUGIN_WARNING("host %s has not answered %d PING requests, triggering resolve",
                             hl->host, inst->ping_max_missed);
 
+            int status = ping_host_resolve(pingobj, ph, hl->host);
+            if (status != 0)
+                PLUGIN_WARNING("ping_host_resolve (%s) failed.", hl->host);
+#if 0
             /* we trigger the resolv simply be removing and adding the host to our
              * ping object */
             status = ping_host_remove(pingobj, hl->host);
@@ -156,6 +146,7 @@ static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
                 if (status != 0)
                     PLUGIN_ERROR("ping_host_add (%s) failed.", hl->host);
             }
+#endif
         }
     }
 
