@@ -486,12 +486,10 @@ static int dispatch_block_control_socket(const config_item_t *ci)
         } else if (strcasecmp("delete", child->key) == 0) {
             status = cf_util_get_boolean(child, &cf_control_socket.delete);
         } else if (strcasecmp("perms", child->key) == 0) {
-            char *tmp = NULL;
-            status = cf_util_get_string(child, &tmp);
-            if (status != 0) {
+            char tmp[64];
+            status = cf_util_get_string_buffer(child, tmp, sizeof(tmp));
+            if (status == 0)
                 cf_control_socket.perms = (int)strtol(tmp, NULL, 8);
-                free(tmp);
-            }
         } else {
             ERROR("Unknown control-socket option '%s' in %s:%d",
                   child->key, cf_get_file(child), cf_get_lineno(child));
