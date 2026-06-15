@@ -87,9 +87,39 @@ config_item_t *config_parse_file(const char *file)
     return ret;
 }
 
+config_item_t *config_parse_buffer(char *buffer, size_t size)
+{
+    const char *file = "buffer";
+    size_t file_len = strlen(file);
+    c_file = malloc(sizeof(config_file_t) + file_len + 1);
+    if (c_file == NULL) {
+        fprintf(stderr, "'%s' malloc failed: %s\n", file, strerror(errno));
+        return NULL;
+    }
+    c_file->refcnt = 0;
+    memcpy(c_file->name, file, file_len + 1);
+
+    FILE *fh = fmemopen(buffer, size, "r");
+    if (fh == NULL) {
+        fprintf(stderr, "fopen (%s) failed: %s\n", file, strerror(errno));
+        free(c_file);
+        c_file = NULL;
+        return NULL;
+    }
+
+    config_item_t *ret = config_parse_fh(fh);
+    fclose(fh);
+
+    if (c_file->refcnt == 0)
+        free(c_file);
+
+    c_file = NULL;
+
+    return ret;
+}
+
 config_item_t *config_clone(const config_item_t *ci_orig) /* FIXME */
 {
-
     config_item_t *ci_copy = calloc(1, sizeof(*ci_copy));
     if (ci_copy == NULL) {
         fprintf(stderr, "calloc failed.\n");

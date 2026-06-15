@@ -1,6 +1,6 @@
 set(LIBTEST_SRC plugin.c
                 metric.c
-                testing.h)
+                testing.c testing.h)
 
 add_library(libtest STATIC ${LIBTEST_SRC})
 set_target_properties(libtest PROPERTIES PREFIX "")

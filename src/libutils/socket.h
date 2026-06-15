@@ -13,8 +13,10 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout);
 
 int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t timeout);
 
-int socket_listen_tcp(const char *host, short port, int addrfamily, int backlog, bool reuseaddr);
+int socket_listen_tcp(const char *host, int port, int addrfamily, int backlog, bool reuseaddr);
 
-int socket_connect_udp(const char *host, short port, int ttl);
+int socket_connect_udp(const char *host, int port, int ttl);
 
-int socket_connect_tcp(const char *host, short port, int keep_idle, int keep_int);
+int socket_connect_tcp(const char *host, int port, int keep_idle, int keep_int);
+
+int socket_get_port(int sfd);

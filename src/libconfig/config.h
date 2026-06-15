@@ -44,6 +44,8 @@ struct config_item_s {
 
 config_item_t *config_parse_file(const char *file);
 
+config_item_t *config_parse_buffer(char *buffer, size_t size);
+
 config_item_t *config_clone(const config_item_t *ci);
 
 void config_dump(FILE *fh, config_item_t *ci);

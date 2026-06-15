@@ -21,7 +21,7 @@ if(BUILD_PLUGIN_PYTHON)
     set_target_properties(python PROPERTIES PREFIX "")
 
     add_executable(test_plugin_python EXCLUDE_FROM_ALL python_test.c ${PLUGIN_PYTHON_SRC})
-    target_link_libraries(test_plugin_python libtest libmetric libutils LibPython::LibPython m -lpthread)
+    target_link_libraries(test_plugin_python libtest libconfig libmetric libutils LibPython::LibPython m -lpthread)
     add_dependencies(build_tests test_plugin_python)
     add_test(NAME test_plugin_python COMMAND test_plugin_python WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -17,7 +17,7 @@ if(BUILD_PLUGIN_BEANSTALKD)
     set_target_properties(beanstalkd PROPERTIES PREFIX "")
 
     add_executable(test_plugin_beanstalkd EXCLUDE_FROM_ALL beanstalkd_test.c ${PLUGIN_BEANSTALKD_SRC})
-    target_link_libraries(test_plugin_beanstalkd libtest libmetric libutils -lm -lpthread)
+    target_link_libraries(test_plugin_beanstalkd libtest libconfig libmetric libutils -lm -lpthread)
     add_dependencies(build_tests test_plugin_beanstalkd)
     add_test(NAME test_plugin_beanstalkd COMMAND test_plugin_beanstalkd WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

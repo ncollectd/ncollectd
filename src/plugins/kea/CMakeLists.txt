@@ -16,7 +16,7 @@ if(BUILD_PLUGIN_KEA)
     set_target_properties(kea PROPERTIES PREFIX "")
 
     add_executable(test_plugin_kea EXCLUDE_FROM_ALL kea_test.c ${PLUGIN_KEA_SRC})
-    target_link_libraries(test_plugin_kea libtest libmetric libutils libxson -lm -lpthread)
+    target_link_libraries(test_plugin_kea libtest libconfig libmetric libutils libxson -lm -lpthread)
     add_dependencies(build_tests test_plugin_kea)
     add_test(NAME test_plugin_kea COMMAND test_plugin_kea WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -22,7 +22,7 @@ if(BUILD_PLUGIN_IRQ)
 
     if(BUILD_LINUX)
         add_executable(test_plugin_irq EXCLUDE_FROM_ALL irq_linux_test.c ${PLUGIN_IRQ_SRC})
-        target_link_libraries(test_plugin_irq libtest libmetric libutils -lm)
+        target_link_libraries(test_plugin_irq libtest libconfig libmetric libutils -lm)
         add_dependencies(build_tests test_plugin_irq)
         add_test(NAME test_plugin_irq COMMAND test_plugin_irq WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif()

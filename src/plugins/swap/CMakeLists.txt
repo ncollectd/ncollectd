@@ -136,7 +136,7 @@ if(BUILD_PLUGIN_SWAP)
 
     if(BUILD_LINUX)
         add_executable(test_plugin_swap EXCLUDE_FROM_ALL swap_linux_test.c ${PLUGIN_SWAP_SRC})
-        target_link_libraries(test_plugin_swap libtest libmetric libutils m)
+        target_link_libraries(test_plugin_swap libtest libconfig libmetric libutils m)
         add_dependencies(build_tests test_plugin_swap)
         add_test(NAME test_plugin_swap COMMAND test_plugin_swap WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif()

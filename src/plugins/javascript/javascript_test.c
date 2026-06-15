@@ -3,28 +3,19 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "libtest/testing.h"
+#include "libconfig/config.h"
 
 extern void module_register(void);
 
 DEF_TEST(test01)
 {
-    config_item_t ci = (config_item_t) {
-        .key = "plugin",
-        .values_num = 1,
-        .values = (config_value_t[]) {{.type = CONFIG_TYPE_STRING, .value.string ="javascript"}},
-        .children_num = 1,
-        .children = (config_item_t[]) {
-            {
-                .key = "load-plugin",
-                .values_num = 1,
-                .values = (config_value_t[]) {
-                    {.type = CONFIG_TYPE_STRING, .value.string = "src/plugins/javascript/test01/test01.js"},
-                }
-            }
-        }
-    };
+    char *config = "load-plugin \"src/plugins/javascript/test01/test01.js\"\n";
+    config_item_t *ci = config_parse_buffer(config, strlen(config));
+    CHECK_NOT_NULL(ci);
 
-    EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, &ci, "src/plugins/javascript/test01/expect.txt"));
+    EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, ci, "src/plugins/javascript/test01/expect.txt"));
+
+    config_free(ci);
 
     return 0;
 }

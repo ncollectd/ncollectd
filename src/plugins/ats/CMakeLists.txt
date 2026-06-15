@@ -21,7 +21,7 @@ if(BUILD_PLUGIN_ATS)
     set_target_properties(ats PROPERTIES PREFIX "")
 
     add_executable(test_plugin_ats EXCLUDE_FROM_ALL ats_test.c ${PLUGIN_ATS_SRC})
-    target_link_libraries(test_plugin_ats libtest libmetric libutils libxson LibCurl::LibCurl -lm -lpthread)
+    target_link_libraries(test_plugin_ats libtest libconfig libmetric libutils libxson LibCurl::LibCurl -lm -lpthread)
     add_dependencies(build_tests test_plugin_ats)
     add_test(NAME test_plugin_ats COMMAND test_plugin_ats WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
