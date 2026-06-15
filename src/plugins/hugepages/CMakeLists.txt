@@ -19,7 +19,7 @@ if(BUILD_PLUGIN_HUGEPAGES)
     set_target_properties(hugepages PROPERTIES PREFIX "")
 
     add_executable(test_plugin_hugepages EXCLUDE_FROM_ALL hugepages_test.c ${PLUGIN_HUGEPAGES_SRC})
-    target_link_libraries(test_plugin_hugepages libtest libmetric libutils -lm)
+    target_link_libraries(test_plugin_hugepages libtest libconfig libmetric libutils -lm)
     add_dependencies(build_tests test_plugin_hugepages)
     add_test(NAME test_plugin_hugepages COMMAND test_plugin_hugepages WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

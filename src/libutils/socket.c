@@ -65,7 +65,6 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
         }
     }
 
-
     int status = bind(fd, (struct sockaddr *)&sa, sa_len);
     if (status != 0) {
         ERROR("bind failed: %s", STRERRNO);
@@ -230,7 +229,7 @@ int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t 
     return fd;
 }
 
-int socket_connect_udp(const char *host, short port, int ttl)
+int socket_connect_udp(const char *host, int port, int ttl)
 {
     char service[ITOA_MAX];
 
@@ -291,14 +290,15 @@ int socket_connect_udp(const char *host, short port, int ttl)
     return fd;
 }
 
-int socket_listen_tcp(const char *host, short port, int addrfamily, int backlog, bool reuseaddr)
+int socket_listen_tcp(const char *host, int port, int addrfamily, int backlog, bool reuseaddr)
 {
     char service[ITOA_MAX];
 
-    uitoa(port, service);
+    if (port > 0)
+        uitoa(port, service);
 
     struct addrinfo *res;
-    int status = getaddrinfo(host, service,
+    int status = getaddrinfo(host, port > 0 ? service : NULL,
                              &(struct addrinfo){ .ai_flags = AI_PASSIVE | AI_ADDRCONFIG,
                                                  .ai_family = addrfamily,
                                                  .ai_socktype = SOCK_STREAM, }, &res);
@@ -352,7 +352,7 @@ int socket_listen_tcp(const char *host, short port, int addrfamily, int backlog,
     return fd;
 }
 
-int socket_connect_tcp(const char *host, short port, int keep_idle, int keep_int)
+int socket_connect_tcp(const char *host, int port, int keep_idle, int keep_int)
 {
     char service[ITOA_MAX];
 
@@ -417,4 +417,25 @@ int socket_connect_tcp(const char *host, short port, int keep_idle, int keep_int
     freeaddrinfo(ai_list);
 
     return fd;
+}
+
+int socket_get_port(int sfd)
+{
+    struct sockaddr_storage ss = {0};
+    socklen_t sslen = sizeof(ss);
+
+    int status = getsockname(sfd, (struct sockaddr*)(&ss), &sslen);
+    if (status < 0) {
+        ERROR("getsockname failed: %s", STRERRNO);
+        return -1;
+    }
+
+    switch (ss.ss_family) {
+    case AF_INET:
+        return ntohs(((struct sockaddr_in *)(&ss))->sin_port);
+    case AF_INET6:
+        return ntohs(((struct sockaddr_in6 *)(&ss))->sin6_port);
+    }
+
+    return -1;
 }

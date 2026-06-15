@@ -3,6 +3,7 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "libtest/testing.h"
+#include "libconfig/config.h"
 
 extern void module_register(void);
 
@@ -15,28 +16,14 @@ DEF_TEST(test01)
 
 DEF_TEST(test02)
 {
+    char *config = "irq include \"144\"\n";
+    config_item_t *ci = config_parse_buffer(config, strlen(config));
+    CHECK_NOT_NULL(ci);
 
-    config_item_t ci = (config_item_t) {
-        .key = "plugin",
-        .values_num = 1,
-        .values = (config_value_t[]) {
-            {.type = CONFIG_TYPE_STRING, .value.string ="irq"},
-        },
-        .children_num = 1,
-        .children = (config_item_t[]) {
-            {
-                .key = "irq",
-                .values_num = 2,
-                .values = (config_value_t[]) {
-                    {.type = CONFIG_TYPE_STRING, .value.string ="include"},
-                    {.type = CONFIG_TYPE_STRING, .value.string ="144"},
-                }
-            },
-        }
-    };
-
-    EXPECT_EQ_INT(0, plugin_test_do_read("src/plugins/irq/test02/proc", NULL, &ci,
+    EXPECT_EQ_INT(0, plugin_test_do_read("src/plugins/irq/test02/proc", NULL, ci,
                                          "src/plugins/irq/test02/expect.txt"));
+
+    config_free(ci);
 
     return 0;
 }

@@ -20,7 +20,7 @@ if(BUILD_PLUGIN_APACHE)
     set_target_properties(apache PROPERTIES PREFIX "")
 
     add_executable(test_plugin_apache EXCLUDE_FROM_ALL apache_test.c ${PLUGIN_APACHE_SRC})
-    target_link_libraries(test_plugin_apache libtest libmetric libutils LibCurl::LibCurl -lm -lpthread)
+    target_link_libraries(test_plugin_apache libtest libconfig libmetric libutils LibCurl::LibCurl -lm -lpthread)
     add_dependencies(build_tests test_plugin_apache)
     add_test(NAME test_plugin_apache COMMAND test_plugin_apache WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

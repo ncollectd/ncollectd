@@ -10,31 +10,7 @@
 
 extern void module_register(void);
 
-static pthread_mutex_t lock;
-static pthread_cond_t cond;
-static bool running;
-
-static int dump_file(char *base_path, char *file, int fdw)
-{
-    char file_path[PATH_MAX];
-    ssnprintf(file_path, sizeof(file_path), "%s/%s", base_path, file);
-
-    int fdr = open(file_path, O_RDONLY);
-    if (fdr < 0)
-        return -1;
-
-    char buffer[8192];
-    ssize_t size = 0;
-    while ((size = read(fdr, buffer, sizeof(buffer))) > 0) {
-        int status = write(fdw, buffer, size);
-        if (status < 0)
-            fprintf(stderr, "Failed to write.\n");
-    }
-
-    close(fdr);
-
-    return 0;
-}
+static int sfd;
 
 static int read_command(int fd, char *base_path)
 {
@@ -47,11 +23,11 @@ static int read_command(int fd, char *base_path)
     command[size] = '\0';
 
     if (strcmp(command, "{\"command\": \"statistic-get-all\"}") == 0) {
-        dump_file(base_path, "statistic-get-all.json", fd);
+        test_dump_file(base_path, "statistic-get-all.json", fd);
     } else if (strcmp(command, "{\"command\": \"config-get\"}") == 0) {
-        dump_file(base_path, "config-get.json", fd);
+        test_dump_file(base_path, "config-get.json", fd);
     } else if (strcmp(command, "{\"command\": \"config-hash-get\"}") == 0) {
-        dump_file(base_path, "config-hash-get.json",fd);
+        test_dump_file(base_path, "config-hash-get.json",fd);
     }
 
     close(fd);
@@ -63,21 +39,6 @@ static void *kea_thread(void *data)
 {
     char *base_path= data;
 
-    char sfile[PATH_MAX];
-    ssnprintf(sfile, sizeof(sfile), "%s/kea.socket", base_path);
-
-    unlink(sfile);
-
-    int sfd = socket_listen_unix_stream(sfile, 0, NULL, 0660, true, 0);
-
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&cond);
-    running = true;
-    pthread_mutex_unlock(&lock);
-
-    if (sfd < 0)
-        goto quit;
-
     while (true) {
         int fd = accept(sfd, NULL, NULL);
         if (fd < 0)
@@ -85,12 +46,10 @@ static void *kea_thread(void *data)
 
         if (read_command(fd, base_path) < 0)
             break;
+
+        close(fd);
     }
 
-    close(sfd);
-    unlink(sfile);
-
-quit:
     pthread_exit(NULL);
 }
 
@@ -98,50 +57,27 @@ DEF_TEST(test01)
 {
     pthread_t thread_id;
 
-    pthread_cond_init(&cond, NULL);
-    pthread_mutex_init(&lock, NULL);
+    char *sfile = "src/plugins/kea/test01/kea.socket";
+
+    sfd = socket_listen_unix_stream(sfile, 0, NULL, 0660, true, 0);
+    EXPECT_EQ_INT(1, sfd >= 0);
+
+    char *config = "instance local {\n"
+                   "    socket-path \"src/plugins/kea/test01/kea.socket\"\n"
+                   "}";
+    config_item_t *ci = config_parse_buffer(config, strlen(config));
+    CHECK_NOT_NULL(ci);
 
     pthread_create(&thread_id, NULL, kea_thread, "src/plugins/kea/test01");
 
-    config_item_t ci = (config_item_t) {
-        .key = "plugin",
-        .values_num = 1,
-        .values = (config_value_t[]) {{.type = CONFIG_TYPE_STRING, .value.string ="kea"}},
-        .children_num = 1,
-        .children = (config_item_t[]) {
-            {
-                .key = "instance",
-                .values_num = 1,
-                .values = (config_value_t[]) {{.type = CONFIG_TYPE_STRING, .value.string ="local"}},
-                .children_num = 1,
-                .children = (config_item_t[]) {
-                    {
-                        .key = "socket-path",
-                        .values_num = 1,
-                        .values = (config_value_t[]) {
-                            {
-                                .type = CONFIG_TYPE_STRING,
-                                .value.string = "src/plugins/kea/test01/kea.socket"
-                            },
-                        }
-                    }
-                }
-            },
-        }
-    };
-
-    pthread_mutex_lock(&lock);
-    if (!running)
-        pthread_cond_wait(&cond, &lock);
-    pthread_mutex_unlock(&lock);
-
-    EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, &ci, "src/plugins/kea/test01/expect.txt"));
+    EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, ci, "src/plugins/kea/test01/expect.txt"));
 
     pthread_cancel(thread_id);
-
     pthread_join(thread_id, NULL);
 
+    close(sfd);
     unlink("src/plugins/kea/test01/kea.socket");
+    config_free(ci);
 
     return 0;
 }

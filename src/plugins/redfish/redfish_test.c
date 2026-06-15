@@ -11,47 +11,11 @@
 
 extern void module_register(void);
 
-static pthread_mutex_t lock;
-static pthread_cond_t cond;
-static bool running;
-
-#define LISTEN_PORT 32222
-
-static int dump_file(char *base_path, char *file, int fdw)
-{
-    char file_path[PATH_MAX];
-    ssnprintf(file_path, sizeof(file_path), "%s/%s", base_path, file);
-
-    int fdr = open(file_path, O_RDONLY);
-    if (fdr < 0)
-        return -1;
-
-    char buffer[8192];
-    ssize_t size = 0;
-    while ((size = read(fdr, buffer, sizeof(buffer))) > 0) {
-        int status = write(fdw, buffer, size);
-        if (status < 0)
-            fprintf(stderr, "Failed to write\n");
-    }
-
-    close(fdr);
-
-    return 0;
-}
+static int sfd;
 
 static void *httpd_thread(void *data)
 {
     char *base_path = data;
-
-    int sfd = socket_listen_tcp("127.0.0.1", LISTEN_PORT, AF_INET, 15, true);
-
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&cond);
-    running = true;
-    pthread_mutex_unlock(&lock);
-
-    if (sfd < 0)
-        goto quit;
 
     while (true) {
         int fd = accept(sfd, NULL, NULL);
@@ -63,14 +27,11 @@ static void *httpd_thread(void *data)
         if (status < 0)
             fprintf(stderr, "Failed to read\n");
 
-        dump_file(base_path, "response", fd);
+        test_dump_file(base_path, "response", fd);
 
         close(fd);
     }
 
-    close(sfd);
-
-quit:
     pthread_exit(NULL);
 }
 
@@ -78,27 +39,77 @@ DEF_TEST(test01)
 {
     pthread_t thread_id;
 
-    pthread_cond_init(&cond, NULL);
-    pthread_mutex_init(&lock, NULL);
+    sfd = socket_listen_tcp("127.0.0.1", 0, AF_INET, 15, true);
+    EXPECT_EQ_INT(1, sfd >= 0);
+
+    int port = socket_get_port(sfd);
+    EXPECT_EQ_INT(1, port >= 0);
+
+    char config[2048];
+    ssnprintf(config, sizeof(config), "query \"Power\" {\n"
+                                      "    end-point \"/Chassis/1/Power\"\n"
+                                      "    resource \"PowerSupplies\" {\n"
+                                      "        property \"LastPowerOutputWatts\" {\n"
+                                      "            metric \"bmc_powersupply_output_watts\"\n"
+                                      "            type gauge\n"
+                                      "            label-from \"id\" \"MemberId\"\n"
+                                      "            label-from \"sn\" \"SerialNumber\"\n"
+                                      "        }\n"
+                                      "        property \"PowerCapacityWatts\" {\n"
+                                      "            metric \"bmc_powersupply_capacity_watts\"\n"
+                                      "            type gauge\n"
+                                      "            label-from \"id\" \"MemberId\"\n"
+                                      "            label-from \"sn\" \"SerialNumber\"\n"
+                                      "        }\n"
+                                      "        property \"LineInputVoltage\" {\n"
+                                      "            metric \"bmc_powersupply_input_volts\"\n"
+                                      "            type gauge\n"
+                                      "            label-from \"id\" \"MemberId\"\n"
+                                      "            label-from \"sn\" \"SerialNumber\"\n"
+                                      "        }\n"
+                                      "        property \"Status\" {\n"
+                                      "            metric \"bmc_powersupply_status\"\n"
+                                      "            type gauge\n"
+                                      "            label-from \"id\" \"MemberId\"\n"
+                                      "            label-from \"sn\" \"SerialNumber\"\n"
+                                      "        }\n"
+                                      "    }\n"
+                                      "    resource \"Redundancy\" {\n"
+                                      "        property \"Status\" {\n"
+                                      "            metric \"bmc_power_redundancy_status\"\n"
+                                      "            type gauge\n"
+                                      "        }\n"
+                                      "    }\n"
+                                      "    resource \"PowerControl\" {\n"
+                                      "        property \"PowerConsumedWatts\" {\n"
+                                      "            metric \"bmc_powercontrol_consumed_watts\"\n"
+                                      "            type gauge\n"
+                                      "            label-from \"id\" \"MemberId\"\n"
+                                      "        }\n"
+                                      "        property \"PowerCapacityWatts\" {\n"
+                                      "            metric \"bmc_powercontrol_capacity_watts\"\n"
+                                      "            type gauge\n"
+                                      "            label-from \"id\" \"MemberId\"\n"
+                                      "        }\n"
+                                      "    }\n"
+                                      "}\n"
+                                      "instance \"local\" {\n"
+                                      "    url \"http://127.0.0.1:%d\"\n"
+                                      "    query \"Power\"\n"
+                                      "}\n", port);
+    config_item_t *ci = config_parse_buffer(config, strlen(config));
+    CHECK_NOT_NULL(ci);
 
     pthread_create(&thread_id, NULL, httpd_thread, "src/plugins/redfish/test01");
 
-    config_item_t *ci;
-    CHECK_NOT_NULL(ci = config_parse_file("src/plugins/redfish/test01/config.txt"));
-
-    pthread_mutex_lock(&lock);
-    if (!running)
-        pthread_cond_wait(&cond, &lock);
-    pthread_mutex_unlock(&lock);
-
-    EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, ci->children,
+    EXPECT_EQ_INT(0, plugin_test_do_read(NULL, NULL, ci,
                                          "src/plugins/redfish/test01/expect.txt"));
 
-    config_free(ci);
-
     pthread_cancel(thread_id);
-
     pthread_join(thread_id, NULL);
+
+    config_free(ci);
+    close(sfd);
 
     return 0;
 }

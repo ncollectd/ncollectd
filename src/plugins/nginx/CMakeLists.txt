@@ -20,7 +20,7 @@ if(BUILD_PLUGIN_NGINX)
     set_target_properties(nginx PROPERTIES PREFIX "")
 
     add_executable(test_plugin_nginx EXCLUDE_FROM_ALL nginx_test.c ${PLUGIN_NGINX_SRC})
-    target_link_libraries(test_plugin_nginx libtest libmetric libutils LibCurl::LibCurl -lm -lpthread)
+    target_link_libraries(test_plugin_nginx libtest libconfig libmetric libutils LibCurl::LibCurl -lm -lpthread)
     add_dependencies(build_tests test_plugin_nginx)
     add_test(NAME test_plugin_nginx COMMAND test_plugin_nginx WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
