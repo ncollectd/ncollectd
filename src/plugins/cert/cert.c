@@ -5,6 +5,7 @@
 #include "plugin.h"
 #include "libutils/common.h"
 #include "libutils/itoa.h"
+#include "libutils/socket.h"
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
@@ -59,36 +60,6 @@ static time_t ASN1_timestamp(const ASN1_TIME *s)
     return mktime(&tm);
 }
 
-static int create_socket(char *hostname, int port)
-{
-    struct hostent * host = gethostbyname(hostname);
-    if (host == NULL) {
-        PLUGIN_ERROR("Cannot resolve hostname %s.",  hostname);
-        return -1;
-    }
-
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        PLUGIN_ERROR("Error open socket: %s.",  STRERRNO);
-        return -1;
-    }
-
-    struct sockaddr_in dest_addr = {0};
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(port);
-    memcpy(&dest_addr.sin_addr.s_addr, host->h_addr, sizeof(dest_addr.sin_addr.s_addr));
-
-    char *tmp_ptr = inet_ntoa(dest_addr.sin_addr);
-
-    if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) == -1 ) {
-        PLUGIN_ERROR("Cannot connect to host %s [%s] on port %d.", hostname, tmp_ptr, port);
-        close(sockfd);
-        return -1;
-    }
-
-    return sockfd;
-}
-
 static void cert_free(void *data)
 {
     cert_cb_t *cert_cb = data;
@@ -134,10 +105,9 @@ static int cert_read(user_data_t *user_data)
     const char *server_name = cert_cb->server_name != NULL ? cert_cb->server_name
                                                            : cert_cb->host;
     SSL_set_tlsext_host_name(ssl, server_name);
-    fd = create_socket(cert_cb->host, cert_cb->port);
-    if (fd < 0) {
+    fd = socket_connect_tcp(cert_cb->host, cert_cb->port, 0, 0);
+    if (fd < 0)
         goto error;
-    }
 
     SSL_set_fd(ssl, fd);
     if (SSL_connect(ssl) != 1) {
