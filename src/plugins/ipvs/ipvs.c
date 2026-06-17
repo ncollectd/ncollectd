@@ -39,6 +39,8 @@ enum {
     FAM_IPVS_SERVICE_OUT_BYTES,
     FAM_IPVS_SERVICE_IN_PACKETS,
     FAM_IPVS_SERVICE_OUT_PACKETS,
+    FAM_IPVS_SERVICE_ACTIVE_DESTINATIONS,
+    FAM_IPVS_SERVICE_INACTIVE_DESTINATIONS,
     FAM_IPVS_DESTINATION_ACTIVE_CONNECTIONS,
     FAM_IPVS_DESTINATION_INACTIVE_CONNECTIONS,
     FAM_IPVS_DESTINATION_PERSISTENT_CONNECTIONS,
@@ -75,6 +77,16 @@ static metric_family_t fams[FAM_IPVS_MAX] = {
         .name = "system_ipvs_service_out_packets",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of egress packets in the ipvs service",
+    },
+    [FAM_IPVS_SERVICE_ACTIVE_DESTINATIONS] = {
+        .name = "system_ipvs_service_active_destinations",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of currently active destinations.",
+    },
+    [FAM_IPVS_SERVICE_INACTIVE_DESTINATIONS] = {
+        .name = "system_ipvs_service_inactive_destinations",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of currently inactive destinations.",
     },
     [FAM_IPVS_DESTINATION_ACTIVE_CONNECTIONS] = {
         .name = "system_ipvs_destination_active_connections",
@@ -199,7 +211,8 @@ static int cipvs_read(void)
             label_set_add(&labels, true, "fwmark", buffer);
         } else {
             struct in_addr saddr = {.s_addr = se->addr};
-            label_set_add(&labels, true, "vip", inet_ntoa(saddr));
+            char addr[INET_ADDRSTRLEN];
+            label_set_add(&labels, true, "vip", inet_ntop(AF_INET, &saddr, addr, sizeof(addr)));
 
             char buffer[24];
             ssnprintf(buffer, sizeof(buffer), "%u", ntohs(se->port));
@@ -222,9 +235,15 @@ static int cipvs_read(void)
 
         struct ip_vs_get_dests *dests = ipvs_get_dests(se);
         if (dests == NULL) {
+            metric_family_append(&fams[FAM_IPVS_SERVICE_ACTIVE_DESTINATIONS],
+                                 VALUE_GAUGE(0), &labels, NULL);
+            metric_family_append(&fams[FAM_IPVS_SERVICE_INACTIVE_DESTINATIONS],
+                                 VALUE_GAUGE(0), &labels, NULL);
             label_set_reset(&labels);
             continue;
         }
+
+        size_t live_dests = 0;
 
         for (size_t n = 0; n < dests->num_dests; ++n) {
             struct ip_vs_dest_entry *de = &dests->entrytable[n];
@@ -232,11 +251,15 @@ static int cipvs_read(void)
                 continue;
 
             struct in_addr daddr = {.s_addr = de->addr};
-            label_set_add(&labels, true, "rip", inet_ntoa(daddr));
+            char addr[INET_ADDRSTRLEN];
+            label_set_add(&labels, true, "rip", inet_ntop(AF_INET, &daddr, addr, sizeof(addr)));
 
             char buffer[24];
             ssnprintf(buffer, sizeof(buffer), "%u", ntohs(de->port));
             label_set_add(&labels, true, "rport", buffer);
+
+            if (de->weight != 0)
+                live_dests++;
 
             metric_family_append(&fams[FAM_IPVS_DESTINATION_ACTIVE_CONNECTIONS],
                                  VALUE_GAUGE(de->activeconns), &labels, NULL);
@@ -258,6 +281,14 @@ static int cipvs_read(void)
             metric_family_append(&fams[FAM_IPVS_DESTINATION_OUT_PACKETS],
                                  VALUE_COUNTER(dstats.outpkts), &labels, NULL);
         }
+
+        label_set_add(&labels, true, "rip", NULL);
+        label_set_add(&labels, true, "rport", NULL);
+
+        metric_family_append(&fams[FAM_IPVS_SERVICE_ACTIVE_DESTINATIONS],
+                             VALUE_GAUGE(live_dests), &labels, NULL);
+        metric_family_append(&fams[FAM_IPVS_SERVICE_INACTIVE_DESTINATIONS],
+                             VALUE_GAUGE(dests->num_dests - live_dests), &labels, NULL);
 
         free(dests);
 
