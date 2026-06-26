@@ -321,7 +321,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_cpu_system_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_cpu_system_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "system",
           "range": true,
@@ -333,7 +333,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_cpu_user_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_cpu_user_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "user",
@@ -437,7 +437,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_contextswitch_involuntary_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_contextswitch_involuntary_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "involuntary",
           "range": true,
@@ -449,7 +449,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_contextswitch_voluntary_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_contextswitch_voluntary_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "voluntary",
@@ -553,7 +553,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_sched_running_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_sched_running_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "running",
           "range": true,
@@ -565,7 +565,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_sched_waiting_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_sched_waiting_seconds_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "waiting",
@@ -669,7 +669,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_sched_timeslices_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_sched_timeslices_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "slices",
           "range": true,
@@ -728,7 +728,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -839,7 +840,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -950,7 +952,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -989,7 +992,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_vmem_majflt_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_vmem_majflt_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "major",
           "range": true,
@@ -1001,7 +1004,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_vmem_minflt_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_vmem_minflt_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "minor",
@@ -1061,7 +1064,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1101,7 +1105,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_io_rchar_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_io_rchar_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "read",
           "range": true,
@@ -1113,7 +1117,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_io_wchar_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_io_wchar_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "write",
@@ -1171,7 +1175,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1210,7 +1215,7 @@
             "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_io_syscr_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_io_syscr_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "read",
           "range": true,
@@ -1222,7 +1227,7 @@
             "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_io_syscw_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_io_syscw_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "write",
@@ -1280,7 +1285,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1319,7 +1325,7 @@
             "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_io_diskr_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_io_diskr_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "read",
           "range": true,
@@ -1331,7 +1337,7 @@
             "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
           },
           "editorMode": "code",
-          "expr": "irate(system_process_io_diskw_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
+          "expr": "rate(system_process_io_diskw_bytes_total{hostname=\"${hostname}\",name=\"${name}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "write",
@@ -1433,6 +1439,6 @@
   "timezone": "browser",
   "title": "Processes",
   "uid": "be924584-92fd-4ae6-8c22-d5722407f320",
-  "version": 30,
+  "version": 32,
   "weekStart": ""
 }

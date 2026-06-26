@@ -611,7 +611,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "100 - sum(irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "100 - sum(rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "hide": false,
           "instant": true,
           "legendFormat": "Busy",
@@ -625,7 +625,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"user\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "sum(rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"user\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -640,7 +640,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"system\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"system\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -655,7 +655,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"wait\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"wait\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1075,7 +1075,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "clamp(100 - (sum(irate(system_cpu_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 ), 1e-7, 100)",
+          "expr": "clamp(100 - (sum(rate(system_cpu_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 ), 1e-7, 100)",
           "instant": false,
           "legendFormat": "{{cpu}}",
           "range": true,
@@ -1407,7 +1407,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_processes_forks_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_processes_forks_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "forks",
           "range": true,
@@ -1509,7 +1509,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_processes_contextswitch_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_processes_contextswitch_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "context switches",
           "range": true,
@@ -1784,7 +1784,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_swap_in_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_swap_in_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "Swap in bytes/s",
           "range": true,
@@ -1796,7 +1796,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_swap_out_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_swap_out_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "Swap out bytes/s",
@@ -2217,8 +2217,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2321,8 +2320,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2422,8 +2420,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2466,7 +2463,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_interface_rx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_interface_rx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{interface}}",
           "range": true,
@@ -2523,8 +2520,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2567,7 +2563,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_interface_tx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_interface_tx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{interface}}",
@@ -2625,8 +2621,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2669,7 +2664,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_interface_rx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_interface_rx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{interface}}",
           "range": true,
@@ -2726,8 +2721,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2770,7 +2764,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_interface_tx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_interface_tx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{interface}}",
           "range": true,
@@ -2828,8 +2822,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2930,8 +2923,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3032,8 +3024,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3076,7 +3067,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_disk_read_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_disk_read_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{device}}",
           "range": true,
@@ -3134,8 +3125,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3178,7 +3168,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_disk_write_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_disk_write_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{device}}",
           "range": true,
@@ -3236,8 +3226,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3280,7 +3269,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_disk_read_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_disk_read_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{device}}",
           "range": true,
@@ -3338,8 +3327,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3382,7 +3370,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_disk_write_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_disk_write_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{device}}",
           "range": true,
@@ -3440,8 +3428,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3484,7 +3471,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_disk_read_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_disk_read_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{device}}",
           "range": true,
@@ -3542,8 +3529,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3586,7 +3572,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_disk_write_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_disk_write_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{device}}",
           "range": true,
@@ -3661,6 +3647,6 @@
   "timezone": "browser",
   "title": "System AIX",
   "uid": "daf4a304-d2c0-47ea-ad5c-cc41438e252e",
-  "version": 10,
+  "version": 12,
   "weekStart": ""
 }

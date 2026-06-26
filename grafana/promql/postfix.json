@@ -214,7 +214,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(postfix_virtual_delivered_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(postfix_virtual_delivered_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "virutal delivered/s",
           "range": true,
@@ -315,7 +315,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(postfix_cleanup_messages_not_accepted_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(postfix_cleanup_messages_not_accepted_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "not accepted/s",
           "range": true,
@@ -327,7 +327,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(postfix_cleanup_messages_rejected_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(postfix_cleanup_messages_rejected_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "rejected/s",
@@ -340,7 +340,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(postfix_cleanup_messages_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(postfix_cleanup_messages_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "processed/s",
@@ -442,6 +442,6 @@
   "timezone": "browser",
   "title": "Postfix",
   "uid": "a1703bca-fe94-471f-9780-314e128a3c29",
-  "version": 5,
+  "version": 8,
   "weekStart": ""
 }

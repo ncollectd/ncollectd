@@ -714,7 +714,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_heap_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_heap_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -816,7 +816,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_heap_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_heap_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -874,7 +874,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -917,7 +918,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_idx_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_idx_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -975,7 +976,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1018,7 +1020,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_idx_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_idx_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -1076,7 +1078,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1119,7 +1122,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_toast_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_toast_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -1177,7 +1180,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1220,7 +1224,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_toast_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_toast_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -1278,7 +1282,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1321,7 +1326,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_tidx_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_tidx_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -1379,7 +1384,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1422,7 +1428,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_tidx_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_tidx_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "blocks",
           "range": true,
@@ -1523,7 +1529,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_inserted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_inserted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "inserted",
           "range": true,
@@ -1535,7 +1541,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "updated",
@@ -1548,7 +1554,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_deleted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_deleted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "deleted",
@@ -1764,7 +1770,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_hot_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_hot_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "hot updates",
           "range": true,
@@ -1776,7 +1782,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_newpage_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_newpage_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "newpage updates",
@@ -1878,7 +1884,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_vacuum_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_vacuum_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "vacuum",
           "range": true,
@@ -1890,7 +1896,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_autovacuum_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_autovacuum_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "autovacuum",
@@ -1903,7 +1909,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_analyze_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_analyze_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "analyze",
@@ -1916,7 +1922,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_autoanalyze_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_autoanalyze_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "autoanalyze",
@@ -2220,7 +2226,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_seq_scan_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_seq_scan_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "sequential scans",
           "range": true,
@@ -2321,7 +2327,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_seq_read_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_seq_read_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "rows",
           "range": true,
@@ -2422,7 +2428,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_idx_scan_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_idx_scan_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "indexes scans",
           "range": true,
@@ -2523,7 +2529,7 @@
             "uid": "edhq55gf59dz4b"
           },
           "editorMode": "code",
-          "expr": "irate(pg_table_idx_fetch_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
+          "expr": "rate(pg_table_idx_fetch_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "rows",
           "range": true,
@@ -2708,6 +2714,6 @@
   "timezone": "browser",
   "title": "Postgresql table",
   "uid": "fdn5o3wavrshsb",
-  "version": 5,
+  "version": 7,
   "weekStart": ""
 }

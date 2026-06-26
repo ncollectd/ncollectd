@@ -142,7 +142,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_cpu_system_seconds_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_cpu_system_seconds_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "system",
           "range": true,
@@ -154,7 +154,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_cpu_user_seconds_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_cpu_user_seconds_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "user",
@@ -374,7 +374,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_cpu_throttled_seconds_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_cpu_throttled_seconds_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "throttled time",
@@ -478,7 +478,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_cpu_throttled_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_cpu_throttled_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "throttled times",
@@ -800,7 +800,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1055,7 +1056,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1098,7 +1100,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_faults_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_faults_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "faults",
           "range": true,
@@ -1110,7 +1112,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_major_faults_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_major_faults_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "major faults",
@@ -1123,7 +1125,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_refills_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_refills_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "refills",
@@ -1136,7 +1138,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_scans_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_scans_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "scans",
@@ -1149,7 +1151,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_steals_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_steals_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "steals",
@@ -1162,7 +1164,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_activates_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_activates_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "activates",
@@ -1175,7 +1177,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_deactivates_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_deactivates_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "deactivates",
@@ -1188,7 +1190,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_lazy_free_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_lazy_free_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "lazy free",
@@ -1201,7 +1203,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_page_lazy_freed_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_page_lazy_freed_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "lazy freed",
@@ -1261,7 +1263,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1304,7 +1307,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_event_low_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_event_low_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "low",
           "range": true,
@@ -1316,7 +1319,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_event_high_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_event_high_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "high",
@@ -1329,7 +1332,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_event_max_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_event_max_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "max",
@@ -1342,7 +1345,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_event_oom_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_event_oom_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "oom",
@@ -1355,7 +1358,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_event_oom_kill_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_event_oom_kill_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "oom_kill",
@@ -1368,7 +1371,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_event_oom_group_kill_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_event_oom_group_kill_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "oom_group_kill",
@@ -1428,7 +1431,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1471,7 +1475,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_refault_anonymous_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_refault_anonymous_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "refault anonymous",
           "range": true,
@@ -1483,7 +1487,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_refault_file_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_refault_file_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "refault file",
@@ -1496,7 +1500,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_activate_anonymous_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_activate_anonymous_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "activate anonymous",
@@ -1509,7 +1513,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_activate_file_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_activate_file_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "activate file",
@@ -1522,7 +1526,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_restore_anonymous_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_restore_anonymous_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "restore anonymous",
@@ -1535,7 +1539,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_restore_file_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_restore_file_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "restore file",
@@ -1548,7 +1552,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_memory_workingset_nodereclaim_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_memory_workingset_nodereclaim_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "noderelcaim",
@@ -1608,7 +1612,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1647,7 +1652,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_io_read_bytes_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_io_read_bytes_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "read {{major}}:{{minor}}",
           "range": true,
@@ -1659,7 +1664,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_io_write_bytes_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_io_write_bytes_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "write {{major}}:{{minor}}",
@@ -1672,7 +1677,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_io_discarted_bytes_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_io_discarted_bytes_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "discarted {{major}}:{{minor}}",
@@ -1732,7 +1737,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1771,7 +1777,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_io_read_ios_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_io_read_ios_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "read {{major}}:{{minor}}",
           "range": true,
@@ -1783,7 +1789,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_io_write_ios_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_io_write_ios_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "write {{major}}:{{minor}}",
@@ -1796,7 +1802,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_cgroups_io_discarted_ios_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
+          "expr": "rate(system_cgroups_io_discarted_ios_total{hostname=\"${hostname}\",cgroup=\"${cgroup}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "discarted {{major}}:{{minor}}",
@@ -1898,6 +1904,6 @@
   "timezone": "browser",
   "title": "CGroups",
   "uid": "d6f02ce3-7f53-4216-9d56-e2a099b7dd3d",
-  "version": 35,
+  "version": 37,
   "weekStart": ""
 }

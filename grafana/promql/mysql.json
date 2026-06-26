@@ -216,7 +216,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_connections_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_connections_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "connections/s",
           "range": true,
@@ -318,7 +318,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_questions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_questions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "questions/s",
           "range": true,
@@ -535,7 +535,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_created_tmp_tables_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_created_tmp_tables_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "create tmp tables/s",
           "range": true,
@@ -547,7 +547,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_created_tmp_disk_tables_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_created_tmp_disk_tables_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "create tmp disk tables/s",
@@ -560,7 +560,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_created_tmp_files_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_created_tmp_files_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "create tmp files/s",
@@ -663,7 +663,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_select_range_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_select_range_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "select range/s",
           "range": true,
@@ -675,7 +675,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_select_range_check_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_select_range_check_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "select range check/s",
@@ -688,7 +688,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_select_scan_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_select_scan_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "select scan/s",
@@ -701,7 +701,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_select_full_join_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_select_full_join_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "select full join/s",
@@ -714,7 +714,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_select_full_range_join_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_select_full_range_join_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "select full range join/s",
@@ -773,7 +773,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -816,7 +817,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_sort_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_sort_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "sort rows/s",
           "range": true,
@@ -828,7 +829,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_sort_range_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_sort_range_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "sort range/s",
@@ -841,7 +842,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_sort_merge_passes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_sort_merge_passes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "sort merge passes/s",
@@ -854,7 +855,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_sort_scan_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_sort_scan_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "sort scan/s",
@@ -913,7 +914,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -956,7 +958,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_slow_queries_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_slow_queries_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "slow queries/s",
           "range": true,
@@ -1014,7 +1016,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1057,7 +1060,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_aborted_connects_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_aborted_connects_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "aborted connects (attempts)/s",
           "range": true,
@@ -1069,7 +1072,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_aborted_clients_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_aborted_clients_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "aborted clients (timeout)/s",
@@ -1128,7 +1131,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1171,7 +1175,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_table_locks_immediate_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_table_locks_immediate_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "table locks immediate",
           "range": true,
@@ -1183,7 +1187,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_table_locks_waited_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_table_locks_waited_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "table locks waited",
@@ -1242,7 +1246,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1285,7 +1290,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_received_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_received_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "received",
           "range": true,
@@ -1297,7 +1302,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_sent_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_sent_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "sent",
@@ -1356,7 +1361,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1500,7 +1506,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_commands_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_commands_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{command}}/s",
           "range": true,
@@ -1603,7 +1609,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_handlers_total{hostname=\"${hostname}\",instance=\"${instance}\",handler!~\"commit|rollback|savepoint.*|prepare\"}[$__rate_interval])",
+          "expr": "rate(mysql_handlers_total{hostname=\"${hostname}\",instance=\"${instance}\",handler!~\"commit|rollback|savepoint.*|prepare\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{handler}}/s",
           "range": true,
@@ -1706,7 +1712,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_handlers_total{hostname=\"${hostname}\",instance=\"${instance}\",handler=~\"commit|rollback|savepoint.*|prepare\"}[$__rate_interval])",
+          "expr": "rate(mysql_handlers_total{hostname=\"${hostname}\",instance=\"${instance}\",handler=~\"commit|rollback|savepoint.*|prepare\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{handler}}/s",
           "range": true,
@@ -1908,7 +1914,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_qcache_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_qcache_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "hits/s",
           "range": true,
@@ -1920,7 +1926,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_qcache_inserts_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_qcache_inserts_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "inserts/s",
@@ -1933,7 +1939,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_qcache_not_cached_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_qcache_not_cached_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "not cached/s",
@@ -1946,7 +1952,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_qcache_lowmem_prunes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_qcache_lowmem_prunes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "prunes/s",
@@ -2048,7 +2054,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_opened_files_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_opened_files_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "openings",
           "range": true,
@@ -2452,7 +2458,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(mysql_opened_table_definitions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(mysql_opened_table_definitions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "opened table definitions/s",
           "range": true,
@@ -2555,6 +2561,6 @@
   "timezone": "browser",
   "title": "MySQL",
   "uid": "fdit5hi8momwwa",
-  "version": 2,
+  "version": 4,
   "weekStart": ""
 }
