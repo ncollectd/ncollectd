@@ -321,7 +321,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{protocol}} packets/s",
           "range": true,
@@ -424,7 +424,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_connections_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_connections_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "tcp connections/s",
           "range": true,
@@ -483,7 +483,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -526,7 +527,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_server_rpc_calls_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_server_rpc_calls_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "rpc calls/s",
           "range": true,
@@ -585,7 +586,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -628,7 +630,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_rpc_errors_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_rpc_errors_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{error}} errors/s",
           "range": true,
@@ -687,7 +689,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -730,7 +733,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_requests_total{hostname=\"${hostname}\",proto=\"3\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_requests_total{hostname=\"${hostname}\",proto=\"3\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{method}} request/s",
           "range": true,
@@ -789,7 +792,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -832,7 +836,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_requests_total{hostname=\"${hostname}\",proto=\"4\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_requests_total{hostname=\"${hostname}\",proto=\"4\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{method}} request/s",
           "range": true,
@@ -891,7 +895,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -934,7 +939,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_reply_cache_hits_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_reply_cache_hits_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "hits/s",
           "range": true,
@@ -946,7 +951,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_reply_cache_misses_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_reply_cache_misses_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "misses/s",
@@ -959,7 +964,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_reply_cache_nocache_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_reply_cache_nocache_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "nocache/s",
@@ -1019,7 +1024,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1062,7 +1068,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_disk_bytes_read_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_disk_bytes_read_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "read bytes/s",
           "range": true,
@@ -1074,7 +1080,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_disk_bytes_written_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_disk_bytes_written_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "written bytes/s",
@@ -1279,7 +1285,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_nfsd_read_ahead_cache_not_found{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_nfsd_read_ahead_cache_not_found{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "not founds/s",
           "range": true,
@@ -1352,6 +1358,6 @@
   "timezone": "browser",
   "title": "Nfsd",
   "uid": "c2b9208e-35e2-4a98-8392-e0d07c4091ae",
-  "version": 14,
+  "version": 15,
   "weekStart": ""
 }

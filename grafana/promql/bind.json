@@ -398,7 +398,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_incoming_queries_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_incoming_queries_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{qtype}}",
           "range": true,
@@ -499,7 +499,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_incoming_queries_udp_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_incoming_queries_udp_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "UDP",
           "range": true,
@@ -511,7 +511,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_incoming_queries_tcp_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_incoming_queries_tcp_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "TCP",
@@ -613,7 +613,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_query_errors_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_query_errors_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{error}}",
           "range": true,
@@ -714,7 +714,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_query_recursions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_query_recursions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "recursions",
           "range": true,
@@ -773,7 +773,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -816,7 +817,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_responses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_responses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{result}}",
           "range": true,
@@ -874,7 +875,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -916,7 +918,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_response_rcodes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_response_rcodes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{rcode}}",
           "range": true,
@@ -974,7 +976,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1016,7 +1019,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_queries_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_queries_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{view}} - {{type}}",
           "range": true,
@@ -1074,7 +1077,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1174,7 +1178,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1216,7 +1221,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_cache_query_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_cache_query_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{view}} - hits",
           "range": true,
@@ -1228,7 +1233,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_cache_query_misses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_cache_query_misses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{view}} - misses",
@@ -1287,7 +1292,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1329,7 +1335,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_cache_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_cache_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{view}} - hits",
           "range": true,
@@ -1341,7 +1347,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_cache_misses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_cache_misses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{view}} - misses",
@@ -1442,7 +1448,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_response_truncated_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_response_truncated_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{view}} - hits",
           "range": true,
@@ -1542,7 +1548,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_resolver_resolver_errors_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_resolver_resolver_errors_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{view}} - {{error}}",
           "range": true,
@@ -1643,7 +1649,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_memory_use_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_memory_use_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "used",
           "range": true,
@@ -1884,7 +1890,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_socket_accept_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_socket_accept_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{type}}",
@@ -1986,7 +1992,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_socket_accept_fail_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_socket_accept_fail_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{type}}",
@@ -2088,7 +2094,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_socket_connect_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_socket_connect_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{type}}",
@@ -2190,7 +2196,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(bind_socket_connect_fail_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(bind_socket_connect_fail_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{type}}",
@@ -2292,6 +2298,6 @@
   "timezone": "browser",
   "title": "Bind",
   "uid": "adj3gdy5xx2iob",
-  "version": 3,
+  "version": 6,
   "weekStart": ""
 }

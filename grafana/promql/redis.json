@@ -1287,7 +1287,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_connections_received_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_connections_received_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "received",
           "range": true,
@@ -1299,7 +1299,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_rejected_connections_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_rejected_connections_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "rejected",
@@ -1398,7 +1398,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_cpu_sys_main_thread_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_cpu_sys_main_thread_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "Sys Main",
           "range": true,
@@ -1410,7 +1410,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_cpu_user_main_thread_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_cpu_user_main_thread_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "User Main",
@@ -1423,7 +1423,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_cpu_sys_children_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_cpu_sys_children_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "Sys Children",
@@ -1436,7 +1436,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_cpu_user_children_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_cpu_user_children_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "User Children",
@@ -1539,7 +1539,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_input_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_input_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "input",
           "range": true,
@@ -1551,7 +1551,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_output_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_output_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "output",
@@ -1610,7 +1610,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1710,7 +1711,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1752,7 +1754,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_commands_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_commands_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{cmd}}",
           "range": true,
@@ -1810,7 +1812,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1852,7 +1855,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_commands_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_commands_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "processed",
           "range": true,
@@ -1910,7 +1913,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1953,7 +1957,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_commands_duration_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_commands_duration_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{cmd}}",
           "range": true,
@@ -2011,7 +2015,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2124,7 +2129,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2280,7 +2286,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_reads_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__interval])",
+          "expr": "rate(redis_reads_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__interval])",
           "instant": false,
           "legendFormat": "reads",
           "range": true,
@@ -2292,7 +2298,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_writes_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__interval])",
+          "expr": "rate(redis_writes_processed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "writes",
@@ -2491,7 +2497,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_keyspace_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_keyspace_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "Hits",
           "range": true,
@@ -2503,7 +2509,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_keyspace_misses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_keyspace_misses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "Misses",
@@ -2601,7 +2607,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_expired_keys_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_expired_keys_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "Expired",
           "range": true,
@@ -2613,7 +2619,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(redis_evicted_keys_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(redis_evicted_keys_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "Evited",
@@ -2715,6 +2721,6 @@
   "timezone": "browser",
   "title": "Redis",
   "uid": "bc06dc40-502b-4b76-9c4e-1525f5820760",
-  "version": 25,
+  "version": 27,
   "weekStart": ""
 }

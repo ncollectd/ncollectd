@@ -611,7 +611,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "100 - sum(irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "100 - sum(rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "hide": false,
           "instant": true,
           "legendFormat": "Busy",
@@ -625,7 +625,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"user|nice\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "sum(rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=~\"user|nice\"}[$__rate_interval])) without (state) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -640,7 +640,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"system\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"system\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -655,7 +655,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"wait\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+          "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"wait\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1060,7 +1060,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"interrupt\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"interrupt\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
               "hide": false,
               "instant": false,
               "legendFormat": "Interrupt",
@@ -1073,7 +1073,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"steal\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})\n",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"steal\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})\n",
               "hide": false,
               "instant": false,
               "legendFormat": "Steal",
@@ -1086,7 +1086,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"softirq\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})\n",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"softirq\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})\n",
               "hide": false,
               "instant": false,
               "legendFormat": "Softirq",
@@ -1099,7 +1099,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"system\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"system\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
               "instant": false,
               "interval": "",
               "legendFormat": "System",
@@ -1112,7 +1112,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"user\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"user\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
               "hide": false,
               "instant": false,
               "legendFormat": "User",
@@ -1125,7 +1125,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"nice\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"nice\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
               "hide": false,
               "instant": false,
               "legendFormat": "Nice",
@@ -1138,7 +1138,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"wait\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
+              "expr": "rate(system_cpu_all_usage_seconds_total{hostname=\"${hostname}\",state=\"wait\"}[$__rate_interval]) * 100 / scalar(system_cpu_count{hostname=\"${hostname}\"})",
               "hide": false,
               "instant": false,
               "legendFormat": "Wait",
@@ -1222,7 +1222,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "clamp(100 - (sum(irate(system_cpu_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 ), 1e-7, 100)",
+              "expr": "clamp(100 - (sum(rate(system_cpu_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 ), 1e-7, 100)",
               "instant": false,
               "legendFormat": "{{cpu}}",
               "range": true,
@@ -1464,7 +1464,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_pressure_cpu_waiting_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_pressure_cpu_waiting_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "CPU",
               "range": true,
@@ -1476,7 +1476,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_pressure_memory_waiting_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_pressure_memory_waiting_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "Memory",
@@ -1489,7 +1489,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_pressure_io_waiting_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_pressure_io_waiting_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "IO",
@@ -1590,7 +1590,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_pressure_memory_stalled_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_pressure_memory_stalled_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "Memory",
@@ -1603,7 +1603,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_pressure_io_stalled_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_pressure_io_stalled_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "IO",
@@ -1719,7 +1719,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_processes_forks_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_processes_forks_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "forks",
               "range": true,
@@ -1920,7 +1920,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_processes_contextswitch_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_processes_contextswitch_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "context switches",
               "range": true,
@@ -3065,7 +3065,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_swap_in_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_swap_in_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "Swap in bytes/s",
               "range": true,
@@ -3077,7 +3077,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_swap_out_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_swap_out_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "Swap out bytes/s",
@@ -3730,7 +3730,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_interface_rx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_interface_rx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{interface}}",
               "range": true,
@@ -3830,7 +3830,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_interface_tx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_interface_tx_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{interface}}",
@@ -3931,7 +3931,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_interface_rx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_interface_rx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{interface}}",
               "range": true,
@@ -4031,7 +4031,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_interface_tx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_interface_tx_packets_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{interface}}",
               "range": true,
@@ -4348,7 +4348,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_disk_read_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_disk_read_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{device}}",
               "range": true,
@@ -4449,7 +4449,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_disk_write_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_disk_write_bytes_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{device}}",
               "range": true,
@@ -4550,7 +4550,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_disk_read_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_disk_read_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{device}}",
               "range": true,
@@ -4651,7 +4651,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_disk_write_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_disk_write_ops_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{device}}",
               "range": true,
@@ -4752,7 +4752,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_disk_read_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_disk_read_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{device}}",
               "range": true,
@@ -4853,7 +4853,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(system_disk_write_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
+              "expr": "rate(system_disk_write_weighted_time_seconds_total{hostname=\"${hostname}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{device}}",
               "range": true,
@@ -4932,6 +4932,6 @@
   "timezone": "browser",
   "title": "System Linux",
   "uid": "edhq66iytbapsf",
-  "version": 27,
+  "version": 29,
   "weekStart": ""
 }

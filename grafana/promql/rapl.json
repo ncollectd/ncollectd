@@ -115,7 +115,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(system_rapl_energy_joules_total{hostname=\"${hostname}\"}[$__rate_interval])",
+          "expr": "rate(system_rapl_energy_joules_total{hostname=\"${hostname}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{zone}} {{domain}} ",
           "range": true,
@@ -188,6 +188,6 @@
   "timezone": "browser",
   "title": "Rapl",
   "uid": "edif96owxksu8d",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

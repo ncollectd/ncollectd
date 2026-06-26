@@ -256,7 +256,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(nginx_http_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(nginx_http_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "request/s",
           "range": true,
@@ -498,7 +498,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(nginx_connections_accepted_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(nginx_connections_accepted_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "connections/s",
           "range": true,
@@ -702,6 +702,6 @@
   "timezone": "browser",
   "title": "Nginx",
   "uid": "ddi5lllncpog0b",
-  "version": 2,
+  "version": 4,
   "weekStart": ""
 }

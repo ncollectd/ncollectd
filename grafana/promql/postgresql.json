@@ -95,7 +95,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "clamp(100 - (sum(irate(system_cpu_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 ), 1e-7, 100)",
+          "expr": "clamp(100 - (sum(rate(system_cpu_usage_seconds_total{hostname=\"${hostname}\",state=~\"idle|wait\"}[$__rate_interval])) without (state) * 100 ), 1e-7, 100)",
           "instant": false,
           "legendFormat": "{{cpu}}",
           "range": true,
@@ -845,7 +845,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_xact_commit_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_xact_commit_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{database}} - commits",
               "range": true,
@@ -857,7 +857,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_xact_rollback_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_xact_rollback_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - rollbacks",
@@ -959,7 +959,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_blks_read_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_blks_read_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{database}} - reads",
               "range": true,
@@ -971,7 +971,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_blks_hit_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_blks_hit_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - hits",
@@ -1073,7 +1073,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_returned_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_returned_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{database}} - returned",
               "range": true,
@@ -1085,7 +1085,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_fetched_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_fetched_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - feched",
@@ -1098,7 +1098,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_inserted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_inserted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - inserted",
@@ -1111,7 +1111,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - updated",
@@ -1124,7 +1124,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_deleted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_deleted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - deleted",
@@ -1226,7 +1226,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_temp_files_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_temp_files_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{database}}",
               "range": true,
@@ -1327,7 +1327,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_temp_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_temp_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{database}}",
               "range": true,
@@ -1529,7 +1529,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_deadlocks_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_deadlocks_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "{{database}}",
               "range": true,
@@ -1630,7 +1630,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_conflicts_tablespace_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_conflicts_tablespace_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - tablespace",
@@ -1643,7 +1643,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_conflicts_lock_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_conflicts_lock_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - lock",
@@ -1656,7 +1656,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_conflicts_snapshot_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_conflicts_snapshot_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - snapshot",
@@ -1669,7 +1669,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_conflicts_bufferpin_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_conflicts_bufferpin_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - bufferpin",
@@ -1682,7 +1682,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_conflicts_deadlock_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_conflicts_deadlock_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - deadlock",
@@ -1784,7 +1784,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_blk_read_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_blk_read_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}}",
@@ -1886,7 +1886,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_blk_write_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_blk_write_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}}",
@@ -1988,7 +1988,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_sessions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_sessions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - sessions",
@@ -2001,7 +2001,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_sessions_abandoned_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_sessions_abandoned_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - abandoned",
@@ -2014,7 +2014,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_sessions_fatal_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_sessions_fatal_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - fatal",
@@ -2027,7 +2027,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_sessions_killed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_sessions_killed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}} - killed",
@@ -2129,7 +2129,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_active_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_active_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}}",
@@ -2231,7 +2231,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_session_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_session_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}}",
@@ -2333,7 +2333,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_database_idle_in_transaction_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_database_idle_in_transaction_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{database}}",
@@ -2449,7 +2449,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_blocks_read_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_blocks_read_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -2551,7 +2551,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_blocks_written_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_blocks_written_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -2653,7 +2653,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_blocks_zeroed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_blocks_zeroed_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -2755,7 +2755,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_blocks_hit_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_blocks_hit_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -2857,7 +2857,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_blocks_exists_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_blocks_exists_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -2959,7 +2959,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_flushes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_flushes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -3061,7 +3061,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_slru_truncates_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_slru_truncates_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "{{name}}",
@@ -3177,7 +3177,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_clean_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_clean_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "cleans",
@@ -3279,7 +3279,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_alloc_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_alloc_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "allocs",
@@ -3381,7 +3381,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_backend_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_backend_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "backend",
@@ -3497,7 +3497,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_read_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_read_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -3599,7 +3599,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_read_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_read_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -3701,7 +3701,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_write_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_write_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -3803,7 +3803,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_write_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_write_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -3905,7 +3905,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_writebacks_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_writebacks_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4007,7 +4007,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_writebacks_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_writebacks_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4109,7 +4109,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_extends_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_extends_bytes_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4211,7 +4211,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_extends_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_extends_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4313,7 +4313,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_fsyncs_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_fsyncs_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4415,7 +4415,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_fsyncs_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_fsyncs_time_seconds_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4517,7 +4517,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_hits_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4619,7 +4619,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_evictions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_evictions_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4721,7 +4721,7 @@
                 "uid": "edhq55gf59dz4b"
               },
               "editorMode": "code",
-              "expr": "sum (irate(pg_io_reuses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
+              "expr": "sum (rate(pg_io_reuses_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])) by (backend)",
               "hide": false,
               "instant": false,
               "legendFormat": "__auto",
@@ -4949,7 +4949,7 @@
                 "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_alloc_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_alloc_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "allocs/s",
               "range": true,
@@ -5046,7 +5046,7 @@
                 "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_backend_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_backend_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "buffers/s",
               "range": true,
@@ -5058,7 +5058,7 @@
                 "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_backend_fsync_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_backend_fsync_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "hide": false,
               "instant": false,
               "legendFormat": "buffers fsync/s",
@@ -5156,7 +5156,7 @@
                 "uid": "b8085ef2-42c3-490b-9dc5-020c5af7ca40"
               },
               "editorMode": "code",
-              "expr": "irate(pg_bgwriter_buffers_clean_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+              "expr": "rate(pg_bgwriter_buffers_clean_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
               "instant": false,
               "legendFormat": "buffers/s",
               "range": true,
@@ -6559,6 +6559,6 @@
   "timezone": "browser",
   "title": "Postgresql",
   "uid": "edmkllgeailmoa",
-  "version": 41,
+  "version": 43,
   "weekStart": ""
 }

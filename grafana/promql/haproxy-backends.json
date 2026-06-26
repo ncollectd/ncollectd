@@ -417,7 +417,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_bytes_in_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_bytes_in_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "In",
           "range": true,
@@ -429,7 +429,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_bytes_out_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_bytes_out_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "Out",
@@ -531,7 +531,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_http_responses_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_http_responses_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "{{code}}",
           "range": true,
@@ -589,7 +589,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -631,7 +632,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_ssl_sessions_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_ssl_sessions_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "ssl sessions/s",
           "range": true,
@@ -643,7 +644,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_ssl_reused_sessions_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_ssl_reused_sessions_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "ssl reuse sessions/s",
@@ -702,7 +703,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -744,7 +746,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_ssl_failed_handshake_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_ssl_failed_handshake_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "Failed handshake/s",
           "range": true,
@@ -802,7 +804,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -844,7 +847,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_connections_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_connections_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "connections/s",
           "range": true,
@@ -856,7 +859,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_backend_denied_connections_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_backend_denied_connections_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "hide": false,
           "instant": false,
           "legendFormat": "denied connections/s",
@@ -915,7 +918,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -957,7 +961,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_frontend_ssl_failed_handshake_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_frontend_ssl_failed_handshake_total{hostname=\"${hostname}\",instance=\"${instance}\",proxy=\"${proxy}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "Failed handshake/s",
           "range": true,
@@ -1086,6 +1090,6 @@
   "timezone": "browser",
   "title": "HAProxy Backends",
   "uid": "b5e22143-12c2-44c6-8d2b-93646f1bd06f",
-  "version": 9,
+  "version": 11,
   "weekStart": ""
 }

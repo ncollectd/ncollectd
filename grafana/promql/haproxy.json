@@ -287,7 +287,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_process_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_process_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "request/s",
           "range": true,
@@ -389,7 +389,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_process_bytes_out_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_process_bytes_out_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "bytes/s",
           "range": true,
@@ -604,7 +604,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_process_connections_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_process_connections_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "connections/s",
           "range": true,
@@ -662,7 +662,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -704,7 +705,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "irate(haproxy_process_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
+          "expr": "rate(haproxy_process_requests_total{hostname=\"${hostname}\",instance=\"${instance}\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "request/s",
           "range": true,
@@ -762,7 +763,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -905,6 +907,6 @@
   "timezone": "browser",
   "title": "HAProxy",
   "uid": "c34d7f18-1b60-4fab-a8d0-e490ceb35c85",
-  "version": 12,
+  "version": 14,
   "weekStart": ""
 }
