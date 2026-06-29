@@ -142,8 +142,8 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "value_and_name",
+        "wideLayout": false
       },
       "pluginVersion": "10.2.2",
       "targets": [
@@ -240,8 +240,8 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "value_and_name",
+        "wideLayout": false
       },
       "pluginVersion": "10.2.2",
       "targets": [
@@ -599,8 +599,8 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "value_and_name",
+        "wideLayout": false
       },
       "pluginVersion": "10.2.2",
       "targets": [
@@ -716,8 +716,8 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "value_and_name",
+        "wideLayout": false
       },
       "pluginVersion": "10.2.2",
       "targets": [
@@ -3647,6 +3647,6 @@
   "timezone": "browser",
   "title": "System AIX",
   "uid": "daf4a304-d2c0-47ea-ad5c-cc41438e252e",
-  "version": 12,
+  "version": 13,
   "weekStart": ""
 }
