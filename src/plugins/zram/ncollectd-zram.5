@@ -8,11 +8,28 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP zram
-\fBplugin\fP zram
+\fBplugin\fP zram {
+    \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBzram\fP plugin report metrics from the compressed block device
 in RAM (zram).
+.Pp
+Using the following options you can ignore some zram devices or configure the
+collection only of specific zram devices.
+.Bl -tag -width Ds
+.It \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+Select the zram device \fIname\fP.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.Xr ncollectd.conf 5 .
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

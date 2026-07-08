@@ -11,6 +11,7 @@
 #endif
 
 static char *path_sys_block;
+static plugin_filter_t *filter;
 
 enum {
     FAM_ZRAM_READ_IOS,
@@ -387,7 +388,7 @@ static int zram_read_device(int dirfd, __attribute__((unused)) const char *path,
 static int zram_read(void)
 {
     walk_directory(path_sys_block, zram_read_device, NULL, 0);
-    plugin_dispatch_metric_family_array(fams, FAM_ZRAM_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_ZRAM_MAX, filter, 0);
     return 0;
 }
 
@@ -399,6 +400,8 @@ static int zram_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "device") == 0) {
             status = cf_util_exclist(child, &excl_device);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -427,6 +430,7 @@ static int zram_shutdown(void)
 {
     free(path_sys_block);
     exclist_reset(&excl_device);
+    plugin_filter_free(filter);
     return 0;
 }
 
