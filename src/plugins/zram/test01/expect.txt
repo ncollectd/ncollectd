@@ -1,0 +1,54 @@
+# TYPE system_zram_read_ios counter
+system_zram_read_ios_total{device="zram0",hostname="localhost.localdomain"} 13672977
+# TYPE system_zram_read_merges counter
+system_zram_read_merges_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_read_sectors counter
+system_zram_read_sectors_total{device="zram0",hostname="localhost.localdomain"} 109387904
+# TYPE system_zram_read_seconds counter
+system_zram_read_seconds_total{device="zram0",hostname="localhost.localdomain"} 0.020611
+# TYPE system_zram_write_ios counter
+system_zram_write_ios_total{device="zram0",hostname="localhost.localdomain"} 13630217
+# TYPE system_zram_write_merges counter
+system_zram_write_merges_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_write_sectors counter
+system_zram_write_sectors_total{device="zram0",hostname="localhost.localdomain"} 148249744
+# TYPE system_zram_write_seconds counter
+system_zram_write_seconds_total{device="zram0",hostname="localhost.localdomain"} 0.051028
+# TYPE system_zram_in_flight gauge
+system_zram_in_flight{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_io_seconds counter
+system_zram_io_seconds_total{device="zram0",hostname="localhost.localdomain"} 62692
+# TYPE system_zram_time_in_queue_seconds counter
+system_zram_time_in_queue_seconds_total{device="zram0",hostname="localhost.localdomain"} 0.071639
+# TYPE system_zram_discard_ios counter
+system_zram_discard_ios_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_discard_merges counter
+system_zram_discard_merges_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_discard_sectors counter
+system_zram_discard_sectors_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_discard_seconds counter
+system_zram_discard_seconds_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_failed_reads counter
+system_zram_failed_reads_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_failed_writes counter
+system_zram_failed_writes_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_invalid_io counter
+system_zram_invalid_io_total{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_notify_free counter
+system_zram_notify_free_total{device="zram0",hostname="localhost.localdomain"} 31038142
+# TYPE system_zram_uncompressed_bytes gauge
+system_zram_uncompressed_bytes{device="zram0",hostname="localhost.localdomain"} 8462692352
+# TYPE system_zram_compressed_bytes gauge
+system_zram_compressed_bytes{device="zram0",hostname="localhost.localdomain"} 1386995869
+# TYPE system_zram_memory_used_bytes gauge
+system_zram_memory_used_bytes{device="zram0",hostname="localhost.localdomain"} 1509965824
+# TYPE system_zram_memory_limit_bytes gauge
+system_zram_memory_limit_bytes{device="zram0",hostname="localhost.localdomain"} 0
+# TYPE system_zram_memory_used_max_bytes gauge
+system_zram_memory_used_max_bytes{device="zram0",hostname="localhost.localdomain"} 1694662656
+# TYPE system_zram_same_pages gauge
+system_zram_same_pages{device="zram0",hostname="localhost.localdomain"} 12897
+# TYPE system_zram_compacted_pages gauge
+system_zram_compacted_pages{device="zram0",hostname="localhost.localdomain"} 67625
+# TYPE system_zram_huge_pages gauge
+system_zram_huge_pages{device="zram0",hostname="localhost.localdomain"} 42553
