@@ -549,7 +549,7 @@ int plugin_register_complex_read(const char *group, const char *name, plugin_rea
     rf->rf_ctx.interval = rf->rf_interval;
 
     rf->stats = stats;
-    rf->stats->plugin = name;
+    rf->stats->plugin = full_name;
 
     int status = plugin_insert_read(rf);
     if (status != 0) {
