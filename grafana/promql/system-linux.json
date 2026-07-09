@@ -142,8 +142,11 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "text": {
+          "titleSize": 16
+        },
+        "textMode": "value_and_name",
+        "wideLayout": false
       },
       "pluginVersion": "10.2.2",
       "targets": [
@@ -240,6 +243,9 @@
           "values": false
         },
         "showPercentChange": false,
+        "text": {
+          "titleSize": 16
+        },
         "textMode": "value_and_name",
         "wideLayout": false
       },
@@ -599,6 +605,9 @@
           "values": false
         },
         "showPercentChange": false,
+        "text": {
+          "titleSize": 16
+        },
         "textMode": "value_and_name",
         "wideLayout": false
       },
@@ -785,7 +794,9 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "titleSize": 16
+        },
         "textMode": "value_and_name",
         "wideLayout": false
       },
@@ -911,8 +922,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1051,7 +1061,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -1283,8 +1293,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1316,7 +1325,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -1424,8 +1433,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1457,7 +1465,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -1551,8 +1559,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1584,7 +1591,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -1681,8 +1688,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1783,8 +1789,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1815,7 +1820,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -1884,8 +1889,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2000,8 +2004,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2064,7 +2067,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -2147,8 +2150,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2271,7 +2273,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -2497,8 +2499,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2621,7 +2622,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -2938,7 +2939,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3065,7 +3066,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3176,7 +3177,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 32
+            "y": 12
           },
           "id": 24,
           "options": {
@@ -3192,7 +3193,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3293,7 +3294,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 43
+            "y": 13
           },
           "id": 11,
           "options": {
@@ -3309,7 +3310,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3395,7 +3396,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 43
+            "y": 13
           },
           "id": 51,
           "options": {
@@ -3411,7 +3412,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3498,7 +3499,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 23
           },
           "id": 12,
           "options": {
@@ -3514,7 +3515,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3600,7 +3601,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 53
+            "y": 23
           },
           "id": 52,
           "options": {
@@ -3616,7 +3617,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3714,7 +3715,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 64
+            "y": 14
           },
           "id": 4,
           "options": {
@@ -3730,7 +3731,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3814,7 +3815,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 64
+            "y": 14
           },
           "id": 14,
           "options": {
@@ -3830,7 +3831,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -3915,7 +3916,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 75
+            "y": 25
           },
           "id": 18,
           "options": {
@@ -3931,7 +3932,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4015,7 +4016,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 75
+            "y": 25
           },
           "id": 19,
           "options": {
@@ -4031,7 +4032,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4116,7 +4117,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 86
+            "y": 36
           },
           "id": 36,
           "options": {
@@ -4132,7 +4133,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4217,7 +4218,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 86
+            "y": 36
           },
           "id": 37,
           "options": {
@@ -4233,7 +4234,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4348,7 +4349,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4449,7 +4450,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4550,7 +4551,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4651,7 +4652,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4752,7 +4753,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4853,7 +4854,7 @@
               "showLegend": true
             },
             "tooltip": {
-              "mode": "single",
+              "mode": "multi",
               "sort": "none"
             }
           },
@@ -4943,6 +4944,6 @@
   "timezone": "browser",
   "title": "System Linux",
   "uid": "edhq66iytbapsf",
-  "version": 32,
+  "version": 37,
   "weekStart": ""
 }

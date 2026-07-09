@@ -104,7 +104,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -188,6 +188,6 @@
   "timezone": "browser",
   "title": "Cpufreq",
   "uid": "ddj3f3fqs8bggb",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

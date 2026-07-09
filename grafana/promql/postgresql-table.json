@@ -74,7 +74,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -140,7 +140,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -206,7 +206,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -272,7 +272,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -338,7 +338,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -404,7 +404,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -499,7 +499,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -507,7 +507,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "pg_table_size_bytes{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}",
@@ -601,7 +601,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -609,7 +609,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "pg_table_indexes_size_bytes{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}",
@@ -703,7 +703,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -711,7 +711,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_heap_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -805,7 +805,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -813,7 +813,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_heap_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -907,7 +907,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -915,7 +915,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_idx_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1009,7 +1009,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1017,7 +1017,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_idx_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1111,7 +1111,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1119,7 +1119,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_toast_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1213,7 +1213,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1221,7 +1221,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_toast_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1315,7 +1315,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1323,7 +1323,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_tidx_read_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1417,7 +1417,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1425,7 +1425,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_tidx_hit_blocks_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1518,7 +1518,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1526,7 +1526,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_inserted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1538,7 +1538,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1551,7 +1551,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_deleted_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1645,7 +1645,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1653,7 +1653,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "pg_table_dead_rows{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}",
@@ -1665,7 +1665,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "pg_table_live_rows{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}",
@@ -1759,7 +1759,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1767,7 +1767,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_hot_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1779,7 +1779,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_newpage_updated_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1873,7 +1873,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1881,7 +1881,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_vacuum_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1893,7 +1893,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_autovacuum_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1906,7 +1906,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_analyze_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -1919,7 +1919,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_autoanalyze_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -2013,7 +2013,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2114,7 +2114,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2215,7 +2215,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2223,7 +2223,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_seq_scan_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -2316,7 +2316,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2324,7 +2324,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_seq_read_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -2417,7 +2417,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2425,7 +2425,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_idx_scan_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -2518,7 +2518,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -2526,7 +2526,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "edhq55gf59dz4b"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(pg_table_idx_fetch_rows_total{hostname=\"${hostname}\",instance=\"${instance}\",database=\"${database}\",schema=\"${schema}\",table=\"${table}\"}[$__rate_interval])",
@@ -2714,6 +2714,6 @@
   "timezone": "browser",
   "title": "Postgresql table",
   "uid": "fdn5o3wavrshsb",
-  "version": 7,
+  "version": 9,
   "weekStart": ""
 }

@@ -212,7 +212,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1625,7 +1625,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1919,7 +1920,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2213,7 +2215,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2522,6 +2525,6 @@
   "timezone": "browser",
   "title": "CPU Linux",
   "uid": "baa4def0-41d8-47e2-a53a-8c61fa278867",
-  "version": 16,
+  "version": 17,
   "weekStart": ""
 }
