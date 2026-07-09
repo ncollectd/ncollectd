@@ -104,7 +104,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -188,6 +188,6 @@
   "timezone": "browser",
   "title": "Rapl",
   "uid": "edif96owxksu8d",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }

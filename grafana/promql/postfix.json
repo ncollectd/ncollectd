@@ -102,7 +102,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -203,7 +203,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -304,7 +304,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -442,6 +442,6 @@
   "timezone": "browser",
   "title": "Postfix",
   "uid": "a1703bca-fe94-471f-9780-314e128a3c29",
-  "version": 8,
+  "version": 9,
   "weekStart": ""
 }

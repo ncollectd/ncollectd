@@ -103,7 +103,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -205,7 +205,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -307,7 +307,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -420,6 +420,6 @@
   "timezone": "browser",
   "title": "Ping",
   "uid": "edi5u7dixshdse",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
