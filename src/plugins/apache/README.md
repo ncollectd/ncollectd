@@ -60,7 +60,7 @@ For example:
 	    instance "www2" {
 	        url "http://www2.example.com/mod_status?auto"
 	    }
-	EXPORTED API}
+	}
 
 The instance name will be used as *instance* label in the metrics.
 In order for the plugin to work correctly, each instance name must be unique.
