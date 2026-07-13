@@ -177,7 +177,11 @@ static int histogram_bucket_cmp(void const *a, void const *b)
 {
     const histogram_bucket_t *bucket_a = a;
     const histogram_bucket_t *bucket_b = b;
-    return bucket_a->maximum < bucket_b->maximum;
+    if (bucket_b->maximum > bucket_a->maximum)
+        return 1;
+    if (bucket_b->maximum < bucket_a->maximum)
+        return -1;
+    return 0;
 }
 
 histogram_t *histogram_bucket_append(histogram_t *h, double maximum, uint64_t counter)
