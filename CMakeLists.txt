@@ -143,6 +143,8 @@ if(BUILD_AIX)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -Wl,-bbigtoc")
     endif()
+elseif(BUILD_FREEBSD)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L/usr/local/lib")
 endif()
 
 check_c_compiler_flag(-fmacro-prefix-map=\"${CMAKE_SOURCE_DIR}=.\" CC_HAVE_FMACRO_PREFIX_MAP)
