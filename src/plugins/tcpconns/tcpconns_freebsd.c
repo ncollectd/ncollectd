@@ -34,6 +34,8 @@
 #include <netinet/tcp_var.h>
 #include <netinet/tcpip.h>
 
+#include "plugins/tcpconns/tcpconns.h"
+
 static const char *tcp_state[] = {
     "CLOSED",    "LISTEN",      "SYN_SENT",
     "SYN_RECV",  "ESTABLISHED", "CLOSE_WAIT",

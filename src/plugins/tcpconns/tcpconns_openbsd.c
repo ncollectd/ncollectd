@@ -55,6 +55,8 @@
 
 #include <kvm.h>
 
+#include "plugins/tcpconns/tcpconns.h"
+
 #pragma GCC diagnostic ignored "-Wcast-align"
 
 static const char *tcp_state[] = {
