@@ -10,6 +10,24 @@
 #include "libutils/common.h"
 #include "libutils/itoa.h"
 
+#ifdef HAVE_SYSCTLBYNAME
+#    ifdef HAVE_NET_IF_H
+#        include <net/if.h>
+#    endif
+#    include <netinet/in.h>
+#    include <netinet/ip.h>
+#    include <netinet/ip6.h>
+#elif defined(HAVE_KVM_GETFILES)
+#    include <netinet/in.h>
+#elif defined(HAVE_LIBKVM_NLIST)
+#    include <arpa/inet.h>
+#    include <net/route.h>
+#    include <netinet/in.h>
+#    include <netinet/ip.h>
+#elif defined(KERNEL_AIX)
+#    include <arpa/inet.h>
+#endif
+
 #define TCPCONNS_CFG_PORT 0x01
 #define TCPCONNS_CFG_ADDR 0x02
 

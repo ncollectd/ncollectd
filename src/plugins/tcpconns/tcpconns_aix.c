@@ -9,9 +9,10 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
-
 #include <arpa/inet.h>
 #include <sys/socketvar.h>
+
+#include "plugins/tcpconns/tcpconns.h"
 
 #pragma GCC diagnostic ignored "-Wcast-align"
 
