@@ -66,6 +66,6 @@ add_dependencies(build_tests test_libutils_itoa)
 add_test(NAME test_libutils_itoa COMMAND test_libutils_itoa)
 
 add_executable(test_libutils_dtoa EXCLUDE_FROM_ALL dtoa_test.c)
-target_link_libraries(test_libutils_dtoa libutils libtest)
+target_link_libraries(test_libutils_dtoa libutils libtest m)
 add_dependencies(build_tests test_libutils_dtoa)
 add_test(NAME test_libutils_dtoa COMMAND test_libutils_dtoa)

@@ -20,11 +20,11 @@ if(BUILD_PLUGIN_LUA)
                        lmetricfamily.c lmetricfamily.h
                        lmetric.c lmetric.h)
     add_library(lua MODULE ${PLUGIN_LUA_SRC})
-    target_link_libraries(lua PRIVATE libmetric libutils libconfig LibLua::LibLua)
+    target_link_libraries(lua PRIVATE libmetric libutils libconfig LibLua::LibLua m)
     set_target_properties(lua PROPERTIES PREFIX "")
 
     add_executable(test_plugin_lua EXCLUDE_FROM_ALL lua_test.c ${PLUGIN_LUA_SRC})
-    target_link_libraries(test_plugin_lua libtest libconfig libmetric libutils libconfig LibLua::LibLua)
+    target_link_libraries(test_plugin_lua libtest libconfig libmetric libutils libconfig LibLua::LibLua m)
     add_dependencies(build_tests test_plugin_lua)
     add_test(NAME test_plugin_lua COMMAND test_plugin_lua WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
