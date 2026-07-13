@@ -22,7 +22,7 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
 {
     struct sockaddr_un sa = {0};
 
-    if (strlen(file) >= sizeof(sa.sun_path)) {
+    if ((strlen(file) + 1) >= sizeof(sa.sun_path)) {
         ERROR("Unix socket name '%s': too long.", file);
         return -1;
     }
@@ -35,7 +35,7 @@ int socket_listen_unix_stream(const char *file, int backlog, char const *group, 
 
     sa.sun_family = AF_UNIX;
     sstrncpy(sa.sun_path, file, sizeof(sa.sun_path));
-    socklen_t sa_len = strlen(file) + sizeof(sa_family_t);
+    socklen_t sa_len = strlen(file) + 1 + sizeof(sa_family_t);
 
     bool abstract = false;
     if (sa.sun_path[0] == '@') {
@@ -119,7 +119,7 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
 {
     struct sockaddr_un sa = {0};
 
-    if (strlen(path) >= sizeof(sa.sun_path)) {
+    if ((strlen(path) + 1)>= sizeof(sa.sun_path)) {
         ERROR("Unix socket name '%s': too long.", path);
         return -1;
     }
@@ -144,7 +144,7 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
     sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
     if (sa.sun_path[0] == '@')
         sa.sun_path[0] = '\0';
-    socklen_t sa_len = strlen(path) + sizeof(sa_family_t);
+    socklen_t sa_len = strlen(path) + 1 + sizeof(sa_family_t);
 
     int status = connect(fd, (const struct sockaddr *) &sa, sa_len);
     if (status < 0) {
@@ -160,11 +160,11 @@ int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t 
 {
     struct sockaddr_un lsa = {0};
 
-    if (strlen(localpath) >= sizeof(lsa.sun_path)) {
+    if ((strlen(localpath) + 1) >= sizeof(lsa.sun_path)) {
         ERROR("Unix socket name '%s': too long.", localpath);
         return -1;
     }
-    if (strlen(path) >= sizeof(lsa.sun_path)) {
+    if ((strlen(path) + 1) >= sizeof(lsa.sun_path)) {
         ERROR("Unix socket name '%s': too long.", path);
         return -1;
     }
@@ -177,7 +177,7 @@ int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t 
 
     lsa.sun_family = AF_UNIX;
     sstrncpy(lsa.sun_path, localpath, sizeof(lsa.sun_path));
-    socklen_t lsa_len = strlen(localpath) + sizeof(sa_family_t);
+    socklen_t lsa_len = strlen(localpath) + 1 + sizeof(sa_family_t);
 
     bool labstract = false;
     if (lsa.sun_path[0] == '@') {
@@ -217,7 +217,7 @@ int socket_connect_unix_dgram(const char *localpath, const char *path, cdtime_t 
     sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
     if (sa.sun_path[0] == '@')
         sa.sun_path[0] = '\0';
-    socklen_t sa_len = strlen(path) + sizeof(sa_family_t);
+    socklen_t sa_len = strlen(path) + 1 + sizeof(sa_family_t);
 
     status = connect(fd, (struct sockaddr *)&sa, sa_len);
     if (status != 0) {
