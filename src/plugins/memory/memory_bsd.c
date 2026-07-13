@@ -98,7 +98,7 @@ int memory_read(void)
         int fam;
     } metrics[] = {
         {"vm.stats.vm.v_page_size",       -1                         },
-        {"vm.stats.vm.v_page_count",      FAM_MEMORY_BYTES           },
+        {"vm.stats.vm.v_page_count",      FAM_MEMORY_TOTAL_BYTES     },
         {"vm.stats.vm.v_free_count",      FAM_MEMORY_FREE_BYTES      },
         {"vm.stats.vm.v_wire_count",      FAM_MEMORY_WIRED_BYTES     },
         {"vm.stats.vm.v_active_count",    FAM_MEMORY_ACTIVE_BYTES    },
