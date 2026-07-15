@@ -1,0 +1,4 @@
+ncollectd is a small daemon written in C for performance. It reads various
+system & network statistics and send metrics to various destinations.
+The daemon is very fast and allows for frequent polling of values, with
+support for polling as frequent as you want.
