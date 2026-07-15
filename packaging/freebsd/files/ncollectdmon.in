@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# PROVIDE: ncollectdmon
+# REQUIRE: LOGIN
+#
+# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# ncollectdmon_enable (bool):   Set to NO by default.
+#               Set it to YES to enable ncollectdmon.
+# ncollectdmon_flags (string):  Set to "-c %%PREFIX%%/sbin/ncollectd" by default.
+#               Additional flags to ncollectdmon, see manual page.
+#
+
+. /etc/rc.subr
+
+name="ncollectdmon"
+rcvar=ncollectdmon_enable
+
+command=%%PREFIX%%/sbin/${name}
+
+load_rc_config $name
+
+: ${ncollectdmon_enable="NO"}
+: ${ncollectdmon_flags="-c %%PREFIX%%/sbin/ncollectd"}
+
+run_rc_command "$1"
