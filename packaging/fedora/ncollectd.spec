@@ -24,6 +24,7 @@
 %define build_with_buddyinfo 0%{!?_without_buddyinfo:1}
 %define build_with_ceph 0%{!?_without_ceph:1}
 %define build_with_cert 0%{!?_without_cert:1}
+%define build_with_certmonger 0%{!?_without_certmonger:1}
 %define build_with_cgroups 0%{!?_without_cgroups:1}
 %define build_with_chrony 0%{!?_without_chrony:1}
 %define build_with_cifs 0%{!?_without_cifs:1}
@@ -271,6 +272,7 @@
 %define build_with_nsd 0%{?_with_nsd:1}
 %define build_with_cups 0%{?_with_cups:1}
 %define build_with_cert 0%{?_with_cert:1}
+%define build_with_certmonger 0%{?_with_certmonger:1}
 %define build_with_virt 0%{?_with_virt:1}
 %define build_with_docker 0%{?_with_docker:1}
 %define build_with_systemd 0%{?_with_systemd:1}
@@ -1185,6 +1187,12 @@ The xencpu plugin collects CPU statistics from Xen.
 %define _build_with_cert -DPLUGIN_CERT:BOOL=ON
 %else
 %define _build_with_cert -DPLUGIN_CERT:BOOL=OFF
+%endif
+
+%if %{build_with_certmonger}
+%define _build_with_certmonger -DPLUGIN_CERTMONGER:BOOL=ON
+%else
+%define _build_with_certmonger -DPLUGIN_CERTMONGER:BOOL=OFF
 %endif
 
 %if %{build_with_cgroups}
@@ -2364,6 +2372,7 @@ The xencpu plugin collects CPU statistics from Xen.
     %{?_build_with_buddyinfo} \
     %{?_build_with_ceph} \
     %{?_build_with_cert} \
+    %{?_build_with_certmonger} \
     %{?_build_with_cgroups} \
     %{?_build_with_chrony} \
     %{?_build_with_cifs} \
@@ -2671,6 +2680,10 @@ fi
 %if %{build_with_ceph}
 %{_libdir}/%{name}/ceph.so
 %{_mandir}/man5/ncollectd-ceph.5*
+%endif
+%if %{build_with_certmonger}
+%{_libdir}/%{name}/certmonger.so
+%{_mandir}/man5/ncollectd-certmonger.5*
 %endif
 %if %{build_with_cgroups}
 %{_libdir}/%{name}/cgroups.so

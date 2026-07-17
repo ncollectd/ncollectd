@@ -30,6 +30,8 @@ usr/lib/ncollectd/buddyinfo.so
 usr/share/man/man5/ncollectd-buddyinfo.5
 usr/lib/ncollectd/ceph.so
 usr/share/man/man5/ncollectd-ceph.5
+usr/lib/ncollectd/certmonger.so
+usr/share/man/man5/ncollectd-certmonger.5
 usr/lib/ncollectd/cgroups.so
 usr/share/man/man5/ncollectd-cgroups.5
 usr/lib/ncollectd/chrony.so

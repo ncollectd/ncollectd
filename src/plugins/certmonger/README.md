@@ -24,7 +24,7 @@ The following configuration options are available:
 
 **request** \[*incl|include|excl|exclude*] *name*
 
-> Select the request*name*.
+> Select the request *name*.
 > See **INCLUDE AND EXCLUDE LISTS** in
 > ncollectd.conf(5).
 
