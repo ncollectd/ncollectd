@@ -404,8 +404,8 @@ static int logind_list_sessions(sd_bus *bus, c_avl_tree_t *sessions)
 
     status = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(susso)");
     if (status < 0) {
+        PLUGIN_ERROR("sd_bus_message_enter_container failed.");
         sd_bus_message_unref(reply);
-        sd_bus_unref(bus);
         return -1;
     }
 
