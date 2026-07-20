@@ -28,7 +28,9 @@ typedef struct featurelist {
     const sensors_subfeature *subfeature;
     struct featurelist *next;
 } featurelist_t;
+
 static featurelist_t *first_feature;
+static featurelist_t *last_feature;
 
 extern char *conffile;
 extern bool use_labels;
@@ -79,7 +81,7 @@ static int ncsensors_load_conf(void)
     }
 
     first_feature = NULL;
-    featurelist_t *last_feature = NULL;
+    last_feature = NULL;
     const sensors_chip_name *chip;
     int chip_num = 0;
     while ((chip = sensors_get_detected_chips(NULL, &chip_num)) != NULL) {
@@ -141,7 +143,8 @@ static int ncsensors_load_conf(void)
 
                 if (first_feature == NULL)
                     first_feature = fl;
-                else if (last_feature != NULL)
+
+                if (last_feature != NULL)
                     last_feature->next = fl;
                 last_feature = fl;
             }
