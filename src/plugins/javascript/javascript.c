@@ -254,6 +254,7 @@ static qjs_callback_t *qjs_callback_alloc(qjs_script_t *qjs, JSValueConst func,
 
     qjs_callback_t *qjc = calloc(1, sizeof(*qjc));
     if (qjc == NULL) {
+        free(dup_name);
         JS_FreeValue(qjs->ctx, dup_func);
         JS_FreeValue(qjs->ctx, dup_data);
         return NULL;
