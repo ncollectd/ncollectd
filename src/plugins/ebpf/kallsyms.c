@@ -142,8 +142,8 @@ static int kfunc_list_build(struct kfunc_list *kfuncs)
             list = realloc(list, size * sizeof(*list));
             assert(list);
         }
-
-        p = strtok(line, " \t\n");
+        char *saveptr = NULL;
+        p = strtok_r(line, " \t\n", &saveptr);
         list[count] = strndup(p, sizeof(ksym->sym) - 1);
         assert(list[count]);
 
@@ -190,7 +190,8 @@ static int ksym_parse(FILE *fp, struct ksym *ksym)
             continue;
 
         p += 2;
-        p = strtok(p, " \t\n");
+        char *saveptr = NULL;
+        p = strtok_r(p, " \t\n", &saveptr);
         if (!p)
             continue;
 

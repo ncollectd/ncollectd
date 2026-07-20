@@ -490,18 +490,19 @@ static int struct_ir_pre(__attribute__((unused)) const struct func *func, struct
         offset = type_offsetof(t, f->name);
         size = type_sizeof(f->type);
 
-        if (!arg->sym->irs.loc) {
-            arg->sym->irs.hint.stack = 1;
-            arg->sym->irs.stack = stack + offset;
-        }
+        if (arg != NULL) {
+            if ((arg->sym != NULL) && !arg->sym->irs.loc) {
+                arg->sym->irs.hint.stack = 1;
+                arg->sym->irs.stack = stack + offset;
+            }
 
-        if (arg->next) {
-            pad = type_offsetof(t, f[1].name) - (offset + size);
-            if (pad)
-                ir_emit_bzero(pb->ir,
-                          stack + offset + size, pad);
+            if (arg->next) {
+                pad = type_offsetof(t, f[1].name) - (offset + size);
+                if (pad)
+                    ir_emit_bzero(pb->ir, stack + offset + size, pad);
+            }
+            arg = arg->next;
         }
-        arg = arg->next;
     }
 
     pad = type_sizeof(t) - (offset + size);
