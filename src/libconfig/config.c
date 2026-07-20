@@ -235,20 +235,18 @@ static void config_dump_config_item(strbuf_t *buf, int level, config_item_t *ci)
         }
     }
 
-    if (ci->children != NULL)
-        strbuf_putstr(buf, " {");
+    if (ci->children != NULL) {
+        strbuf_putstr(buf, " {\n");
+
+        for (int i = 0; i < ci->children_num; i++) {
+            config_dump_config_item(buf, level + 1, ci->children + i);
+        }
+
+        strbuf_putxstrn(buf, "    ", strlen("    "), level);
+        strbuf_putchar(buf, '}');
+    }
 
     strbuf_putchar(buf, '\n');
-
-
-    for (int i = 0; i < ci->children_num; i++) {
-        config_dump_config_item(buf, level + 1, ci->children + i);
-    }
-
-    if (ci->children != NULL) {
-        strbuf_putxstrn(buf, "    ", strlen("    "), level);
-        strbuf_putstr(buf, "}\n");
-    }
 
 }
 
