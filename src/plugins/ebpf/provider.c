@@ -26,17 +26,16 @@ extern struct provider profile;
 
 struct provider *provider_get(const char *name)
 {
-    struct provider *p;
-    char *search;
+    char *search = strchr(name, ':');
+    if (search ==  NULL)
+        return NULL;
 
-    search = strtok(strdup(name), ":");
-
+    struct provider *p = NULL;
     SLIST_FOREACH(p, &heads, entry) {
          if (strstr(p->name, search) == p->name)
             break;
     }
 
-    free(search);
     return p;
 }
 

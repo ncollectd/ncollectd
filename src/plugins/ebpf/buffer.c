@@ -227,16 +227,25 @@ struct buffer *buffer_new(struct ply *ply, int mapfd)
     int ncpus = t_buffer.map.len;
 
     struct buffer *buf = xcalloc(1, sizeof(*buf) + ncpus * sizeof(buf->q[0]));
+    if (buf == NULL)
+        return NULL;
 
     buf->mapfd = mapfd;
     buf->ncpus = ncpus;
 
     buf->poll = xcalloc(ncpus, sizeof(*buf->poll));
+    if (buf->poll == NULL) {
+        free(buf);
+        return NULL;
+    }
 
     for (int cpu = 0; cpu < ncpus; cpu++) {
         int err = buffer_q_init(ply, buf, cpu);
-        if (err)
+        if (err) {
+            free(buf->poll);
+            free(buf);
             return NULL;
+        }
     }
 
     return buf;
