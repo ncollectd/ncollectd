@@ -218,27 +218,54 @@ static void *event_thread(void *arg)
     return NULL;
 }
 
-static int encqueue(amqp1_instance_t *inst, char *buf, size_t size)
+static int message_encode(pn_message_t *msg, pn_rwbytes_t *buffer)
 {
-    pn_rwbytes_t mbuf = {.size = BUFSIZE };
-    mbuf.start = malloc(mbuf.size);
-    if (mbuf.start == NULL) {
-        PLUGIN_ERROR("malloc failed");
+    if (buffer->start == NULL) {
+        buffer->start = (char*)malloc(BUFSIZE);
+        if (buffer->start == NULL) {
+            PLUGIN_ERROR("malloc failed");
+            return -1;
+        }
+        buffer->size = BUFSIZE;
+    }
+
+    size_t size = buffer->size;
+    int err = 0;
+    while ((err = pn_message_encode(msg, buffer->start, &size)) == PN_OVERFLOW) {
+        PLUGIN_DEBUG("increasing message buffer size %zu", buffer->size);
+        char *start = realloc(buffer->start, buffer->size);
+        if (start == NULL) {
+            PLUGIN_ERROR("remalloc failed");
+            free(buffer->start);
+            return -1;
+        }
+        buffer->start = start;
+        buffer->size *= 2;
+        size = buffer->size;
+    }
+
+    if (err != 0) {
+        free(buffer->start);
         return -1;
     }
 
+    buffer->size = size;
+
+    return 0;
+}
+
+static int encqueue(amqp1_instance_t *inst, char *buf, size_t size)
+{
     /* encode message */
     pn_message_t *message = pn_message();
     if (message == NULL) {
         PLUGIN_ERROR("pn_message failed");
-        free(mbuf.start);
         return -1;
     }
     pn_message_set_address(message, inst->address);
     pn_data_t *body = pn_message_body(message);
     if (body == NULL) {
         PLUGIN_ERROR("pn_message_body failed");
-        free(mbuf.start);
         return -1;
     }
     pn_data_clear(body);
@@ -246,23 +273,11 @@ static int encqueue(amqp1_instance_t *inst, char *buf, size_t size)
     pn_data_exit(body);
 
     /* put_binary copies and stores so ok to use mbuf */
-
-    int status = 0;
-    while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
-        PLUGIN_DEBUG("increasing message buffer size %zu", mbuf.size);
-        mbuf.size *= 2;
-        char *start = realloc(mbuf.start, mbuf.size);
-        if (start == NULL) {
-            status = -1;
-            break;
-        }
-        mbuf.start = start;
-    }
-
-    if (status != 0) {
+    pn_rwbytes_t mbuf = {0};
+    int status  = message_encode(message, &mbuf);
+    if (status < 0) {
         PLUGIN_ERROR("error encoding message: %s", pn_error_text(pn_message_error(message)));
         pn_message_free(message);
-        free(mbuf.start);
         return -1;
     }
 
