@@ -1377,7 +1377,7 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
                     arg2_len = arg3 - arg2;
                     arg3++;
                     char *end = strchr(arg3, ')');
-                    if (end != NULL) {
+                    if (end == NULL) {
                         PLUGIN_ERROR("Missing end ')' in the %d argument of '%s' option in %s:%d.",
                                       i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
                         return -1;
@@ -1385,7 +1385,7 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
                     arg3_len = end - arg3;
                 } else {
                     char *end = strchr(arg2, ')');
-                    if (end != NULL) {
+                    if (end == NULL) {
                         PLUGIN_ERROR("Missing end ')' in the %d argument of '%s' option in %s:%d.",
                                       i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
                         return -1;
