@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2007  Sebastian Harl
 // SPDX-FileContributor: Sebastian Harl <sh at tokkee.org>
 
+#define _GNU_SOURCE
+
 #include "config.h"
 
 #include <assert.h>
@@ -31,14 +33,19 @@
 
 #ifndef NCOLLECTDMON_PIDFILE
 #define NCOLLECTDMON_PIDFILE LOCALSTATEDIR "/run/ncollectdmon.pid"
-#endif /* ! NCOLLECTDMON_PIDFILE */
+#endif
 
 #ifndef WCOREDUMP
 #define WCOREDUMP(s) 0
-#endif /* ! WCOREDUMP */
+#endif
 
 static int loop;
 static int restart;
+
+static int dev_null;
+static int fd_in;
+static int fd_out;
+static int fd_err;
 
 static const char *pidfile;
 static pid_t ncollectd_pid;
@@ -86,16 +93,33 @@ static int pidfile_delete(void)
     return 0;
 }
 
+
+static void close_all(void)
+{
+#if defined(HAVE_CLOSE_RANGE) || defined(HAVE_CLOSEFROM) || defined(HAVE_FCNTL_CLOSEM)
+#ifdef HAVE_CLOSE_RANGE
+#ifdef CLOSE_RANGE_UNSHARE
+    close_range(0, ~0U, CLOSE_RANGE_UNSHARE);
+#else
+    close_range(0, ~0U, 0);
+#endif
+#elif defined(HAVE_CLOSEFROM)
+    closefrom(0);
+#elif defined(HAVE_FCNTL_CLOSEM)
+    fcntl(0, F_CLOSEM, 0);
+#endif
+#else
+    int fd_num = getdtablesize();
+    for (int fd = 0; fd < fd_num; fd++) {
+        close(fd);
+    }
+#endif
+}
+
 static int daemonize(void)
 {
     if (chdir("/") != 0) {
         fprintf(stderr, "Error: chdir() failed: %s\n", strerror(errno));
-        return -1;
-    }
-
-    struct rlimit rl;
-    if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
-        fprintf(stderr, "Error: getrlimit() failed: %s\n", strerror(errno));
         return -1;
     }
 
@@ -112,41 +136,40 @@ static int daemonize(void)
 
     setsid();
 
-    if (rl.rlim_max == RLIM_INFINITY)
-        rl.rlim_max = 1024;
+    close_all();
 
-    for (int i = 0; i < (int)rl.rlim_max; ++i)
-        close(i);
-
-    int dev_null = open("/dev/null", O_RDWR);
+    dev_null = open("/dev/null", O_RDWR);
     if (dev_null == -1) {
         syslog(LOG_ERR, "Error: couldn't open /dev/null: %s", strerror(errno));
         return -1;
     }
 
-    if (dup2(dev_null, STDIN_FILENO) == -1) {
+    fd_in = dup2(dev_null, STDIN_FILENO);
+    if (fd_in == -1) {
         close(dev_null);
-        syslog(LOG_ERR, "Error: couldn't connect STDIN to /dev/null: %s",
-                     strerror(errno));
+        syslog(LOG_ERR, "Error: couldn't connect STDIN to /dev/null: %s", strerror(errno));
         return -1;
     }
 
-    if (dup2(dev_null, STDOUT_FILENO) == -1) {
+    fd_out = dup2(dev_null, STDOUT_FILENO);
+    if (fd_out == -1) {
         close(dev_null);
-        syslog(LOG_ERR, "Error: couldn't connect STDOUT to /dev/null: %s",
-                     strerror(errno));
+        close(fd_in);
+        syslog(LOG_ERR, "Error: couldn't connect STDOUT to /dev/null: %s", strerror(errno));
         return -1;
     }
 
-    if (dup2(dev_null, STDERR_FILENO) == -1) {
+    fd_err = dup2(dev_null, STDERR_FILENO);
+    if (fd_err == -1) {
         close(dev_null);
-        syslog(LOG_ERR, "Error: couldn't connect STDERR to /dev/null: %s",
-                     strerror(errno));
+        close(fd_in);
+        close(fd_out);
+        syslog(LOG_ERR, "Error: couldn't connect STDERR to /dev/null: %s", strerror(errno));
         return -1;
     }
 
     if ((dev_null != STDIN_FILENO) && (dev_null != STDOUT_FILENO) &&
-            (dev_null != STDERR_FILENO))
+        (dev_null != STDERR_FILENO))
         close(dev_null);
 
     return 0;
