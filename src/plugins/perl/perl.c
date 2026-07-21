@@ -853,7 +853,8 @@ static int hv2notification(pTHX_ HV *hash, notification_t *n)
     n->severity = NOTIF_FAILURE;
     if ((tmp = hv_fetch(hash, "severity", 8, 0)) != NULL) {
         unsigned int severity = SvIV(*tmp);
-        if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) && (severity != NOTIF_OKAY)) {
+        if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) &&
+            (severity != NOTIF_OKAY)) {
             PLUGIN_ERROR("Invalid notification severity.");
             return -1;
         }
@@ -1385,8 +1386,10 @@ static int pplugin_dispatch_notification(pTHX_ HV *notif)
         return -1;
 
     notification_t n = {0};
-    if (hv2notification(aTHX_ notif, &n) != 0)
+    if (hv2notification(aTHX_ notif, &n) != 0) {
+        notification_reset(&n);
         return -1;
+    }
 
     int ret = plugin_dispatch_notification(&n);
 //    plugin_notification_meta_free(n.meta);
