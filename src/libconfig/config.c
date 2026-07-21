@@ -150,15 +150,20 @@ config_item_t *config_clone(const config_item_t *ci_orig) /* FIXME */
 
         for (int i = 0; i < ci_copy->values_num; i++) {
             ci_copy->values[i].type = ci_orig->values[i].type;
-            if (ci_copy->values[i].type == CONFIG_TYPE_STRING) {
+            switch (ci_copy->values[i].type) {
+            case CONFIG_TYPE_STRING:
+            case CONFIG_TYPE_REGEX:
                 ci_copy->values[i].value.string = strdup(ci_orig->values[i].value.string);
                 if (ci_copy->values[i].value.string == NULL) {
                     fprintf(stderr, "strdup failed.\n");
                     config_free(ci_copy);
                     return NULL;
                 }
-            } else {
+                break;
+            case CONFIG_TYPE_NUMBER:
+            case CONFIG_TYPE_BOOLEAN:
                 ci_copy->values[i].value = ci_orig->values[i].value;
+                break;
             }
         }
     }
@@ -277,10 +282,14 @@ static void config_free_all(config_item_t *ci)
 
     if (ci->values != NULL) {
         for (int i = 0; i < ci->values_num; i++) {
-            if (((ci->values[i].type == CONFIG_TYPE_STRING) ||
-                 (ci->values[i].type == CONFIG_TYPE_REGEX)) &&
-                (ci->values[i].value.string != NULL)) {
+            switch (ci->values[i].type) {
+            case CONFIG_TYPE_STRING:
+            case CONFIG_TYPE_REGEX:
                 free(ci->values[i].value.string);
+                break;
+            case CONFIG_TYPE_NUMBER:
+            case CONFIG_TYPE_BOOLEAN:
+                break;
             }
         }
         free(ci->values);
