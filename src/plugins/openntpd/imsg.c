@@ -136,7 +136,8 @@ ssize_t imsg_get(struct imsgbuf *ibuf, struct imsg *imsg)
     else
         imsg->fd = -1;
 
-    memcpy(imsg->data, ibuf->r.rptr, datalen);
+    if (imsg->data != NULL)
+        memcpy(imsg->data, ibuf->r.rptr, datalen);
 
     if (imsg->hdr.len < av) {
         left = av - imsg->hdr.len;
@@ -248,17 +249,16 @@ void imsg_free(struct imsg *imsg)
 
 static int imsg_get_fd(struct imsgbuf *ibuf)
 {
-    int      fd;
     struct imsg_fd  *ifd;
 
     if ((ifd = TAILQ_FIRST(&ibuf->fds)) == NULL)
-        return (-1);
+        return -1;
 
-    fd = ifd->fd;
+    int fd = ifd->fd;
     TAILQ_REMOVE(&ibuf->fds, ifd, entry);
     free(ifd);
 
-    return (fd);
+    return fd;
 }
 
 int imsg_flush(struct imsgbuf *ibuf)
