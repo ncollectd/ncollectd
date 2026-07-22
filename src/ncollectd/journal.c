@@ -1117,7 +1117,6 @@ restart:
                 DEBUG("null index.");
                 RESTART;
             }
-            index_off += sizeof(uint64_t);
         }
 
         if (closed)
@@ -1135,7 +1134,7 @@ finish:
 
 static int journal_repair_datafile(journal_ctx_t *ctx, uint32_t log)
 {
-    journal_message_header_compressed_t hdr;
+    journal_message_header_compressed_t hdr = {0};
     size_t hdr_size = sizeof(journal_message_header_t);
     uint32_t *message_disk_len = &hdr.mlen;
 
@@ -1455,7 +1454,6 @@ static int metastore_ok_p(char *ag, unsigned int lat, journal_meta_info_t *out)
     (void)lseek(fd, 0, SEEK_SET);
     int rd = read(fd, &current, sizeof(current));
     (void)close(fd);
-    fd = -1;
     if (rd != sizeof(current))
         return 0;
 
@@ -1522,7 +1520,6 @@ static int repair_checkpointfile(journal_ctx_t *ctx, const char *pth, unsigned i
         return 0;
     }
     struct dirent *ent = NULL;
-    int fd = -1;
 
     const size_t twoI = 2*sizeof(unsigned int);
     int rv = 0;
@@ -1543,8 +1540,8 @@ static int repair_checkpointfile(journal_ctx_t *ctx, const char *pth, unsigned i
             continue;
         (void)ssnprintf(ag, leen-1, "%s%c%s", pth, IFS_CH, ent->d_name);
         int closed;
-        journal_id_t last;
-        fd = open(ag, O_RDWR);
+        journal_id_t last = {0};
+        int fd = open(ag, O_RDWR);
         sta = 0;
         if (fd >= 0) {
             off_t oof = lseek(fd, 0, SEEK_END);
@@ -1593,14 +1590,10 @@ static int repair_checkpointfile(journal_ctx_t *ctx, const char *pth, unsigned i
             if (sta == 0)
                 ERROR("cannot create new checkpoint file");
         }
-        if (fd >= 0) {
+        if (fd >= 0)
             (void)close(fd);
-            fd = -1;
-        }
-        if (ag != NULL) {
+        if (ag != NULL)
             (void)free((void *)ag);
-            ag = NULL;
-        }
     }
     closedir(dir);
     return rv;
@@ -1732,15 +1725,13 @@ static int repair_data_files(journal_ctx_t *log)
 
 int journal_ctx_repair(journal_ctx_t *ctx, int aggressive)
 {
+    if (ctx == NULL)
+        return 0;
+
     // step 1: extract the directory path
-    const char *pth;
+    const char *pth = ctx->path;
 
-    if (ctx != NULL)
-        pth = ctx->path;
-    else
-        pth = NULL; // fassertxgetpath();
-
-    if (pth == NULL || pth[0] == '\0') {
+    if ((pth == NULL) || (pth[0] == '\0')) {
         ERROR("repair command cannot find journal path");
         ctx->last_error = JOURNAL_ERR_NOTDIR;
         return 0;                               /* hopeless without a dir name */
@@ -2847,11 +2838,16 @@ int journal_ctx_list_subscribers(journal_ctx_t *ctx, char ***subs)
 
     memset(file, 0, sizeof(file));
     js.subs = calloc(16, sizeof(char *));
+    if (js.subs == NULL)
+        return -1;
     js.allocd = 16;
 
     DIR *dir = opendir(ctx->path);
-    if (!dir)
+    if (!dir) {
+        free(js.subs);
         return -1;
+    }
+
     while ((ent = readdir(dir))) {
         if (ent->d_name[0] == 'c' && ent->d_name[1] == 'p' && ent->d_name[2] == '.') {
 
@@ -2880,7 +2876,14 @@ int journal_ctx_list_subscribers(journal_ctx_t *ctx, char ***subs)
             js.subs[js.used++] = strdup((char *)file);
             if (js.used == js.allocd) {
                 js.allocd *= 2;
-                js.subs = realloc(js.subs, js.allocd*sizeof(char *));
+                char **tmp = realloc(js.subs, js.allocd*sizeof(char *));
+                if (*tmp == NULL) {
+                    for (int i = 0; i < js.used; i++)
+                        free(js.subs[i]);
+                    free(js.subs);
+                    return -1;
+                }
+                js.subs = tmp;
             }
             js.subs[js.used] = NULL;
         }
