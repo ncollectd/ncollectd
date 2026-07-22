@@ -14,8 +14,8 @@ set(BUILD_PLUGIN_VMEM ${BUILD_PLUGIN_VMEM} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_VMEM)
     gperf_generate(vmem.gperf "${CMAKE_CURRENT_BINARY_DIR}/vmem.h" VMEM_H)
-    set(PLUGIN_VMEM_SRC vmem.c)
-    add_library(vmem MODULE ${PLUGIN_VMEM_SRC} ${VMEM_H})
+    set(PLUGIN_VMEM_SRC vmem.c ${VMEM_H})
+    add_library(vmem MODULE ${PLUGIN_VMEM_SRC})
     target_link_libraries(vmem PRIVATE libmetric libutils)
     set_target_properties(vmem PROPERTIES PREFIX "")
 
