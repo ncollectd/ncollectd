@@ -14,13 +14,15 @@ static int dispatch_metric_family(metric_family_t *fam,
                                   __attribute__((unused)) plugin_filter_t *filter,
                                   __attribute__((unused)) cdtime_t time)
 {
-    metric_family_t *tmp = realloc(g_fams, sizeof(*tmp)*(g_fams_num +1));
-    if (tmp == NULL)
-        return -1;
-
     char *dup_name = strdup(fam->name);
     if (dup_name == NULL)
         return -1;
+
+    metric_family_t *tmp = realloc(g_fams, sizeof(*tmp)*(g_fams_num +1));
+    if (tmp == NULL) {
+        free(dup_name);
+        return -1;
+    }
 
     g_fams = tmp;
     g_fams[g_fams_num].name = dup_name;
