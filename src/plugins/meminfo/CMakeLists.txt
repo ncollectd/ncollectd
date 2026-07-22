@@ -14,8 +14,8 @@ set(BUILD_PLUGIN_MEMINFO ${BUILD_PLUGIN_MEMINFO} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_MEMINFO)
     gperf_generate(meminfo.gperf "${CMAKE_CURRENT_BINARY_DIR}/meminfo.h" MEMINFO_H)
-    set(PLUGIN_MEMINFO_SRC meminfo.c)
-    add_library(meminfo MODULE ${PLUGIN_MEMINFO_SRC} ${MEMINFO_H})
+    set(PLUGIN_MEMINFO_SRC meminfo.c ${MEMINFO_H})
+    add_library(meminfo MODULE ${PLUGIN_MEMINFO_SRC})
     target_link_libraries(meminfo PRIVATE libmetric libutils)
     set_target_properties(meminfo PROPERTIES PREFIX "")
 
