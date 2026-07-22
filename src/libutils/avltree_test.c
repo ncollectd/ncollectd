@@ -63,7 +63,10 @@ DEF_TEST(success)
         char *value;
 
         CHECK_NOT_NULL(key = strdup(cases[i].key));
-        CHECK_NOT_NULL(value = strdup(cases[i].value));
+        value = strdup(cases[i].value);
+        if (value == NULL)
+            free(key);
+        CHECK_NOT_NULL(value);
 
         CHECK_ZERO(c_avl_insert(t, key, value));
         EXPECT_EQ_INT((int)(i + 1), c_avl_size(t));
