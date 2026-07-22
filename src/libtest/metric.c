@@ -571,6 +571,7 @@ int plugin_test_metrics_cmp(const char *filename)
 
     metric_parser_t *mp = metric_parser_alloc(NULL, NULL);
     if (mp == NULL) {
+        fclose(fp);
         fprintf(stderr, "Cannot alloc metric parser.\n");
         return -1;
     }
