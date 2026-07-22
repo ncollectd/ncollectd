@@ -14,8 +14,8 @@ set(BUILD_PLUGIN_XFRM ${BUILD_PLUGIN_XFRM} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_XFRM)
     gperf_generate(xfrm_stat.gperf "${CMAKE_CURRENT_BINARY_DIR}/xfrm_stat.h" XFRM_STAT_H)
-    set(PLUGIN_XFRM_SRC xfrm.c)
-    add_library(xfrm MODULE ${PLUGIN_XFRM_SRC} ${XFRM_STAT_H})
+    set(PLUGIN_XFRM_SRC xfrm.c ${XFRM_STAT_H})
+    add_library(xfrm MODULE ${PLUGIN_XFRM_SRC})
     target_link_libraries(xfrm PRIVATE libmetric libutils)
     set_target_properties(xfrm PROPERTIES PREFIX "")
 
