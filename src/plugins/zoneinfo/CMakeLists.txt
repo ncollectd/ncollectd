@@ -14,8 +14,8 @@ set(BUILD_PLUGIN_ZONEINFO ${BUILD_PLUGIN_ZONEINFO} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_ZONEINFO)
     gperf_generate(zoneinfo.gperf "${CMAKE_CURRENT_BINARY_DIR}/zoneinfo.h" ZONEINFO_H)
-    set(PLUGIN_ZONEINFO_SRC zoneinfo.c)
-    add_library(zoneinfo MODULE ${PLUGIN_ZONEINFO_SRC} ${ZONEINFO_H})
+    set(PLUGIN_ZONEINFO_SRC zoneinfo.c ${ZONEINFO_H})
+    add_library(zoneinfo MODULE ${PLUGIN_ZONEINFO_SRC})
     target_link_libraries(zoneinfo PRIVATE libmetric libutils)
     set_target_properties(zoneinfo PROPERTIES PREFIX "")
 
