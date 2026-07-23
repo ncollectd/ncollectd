@@ -42,7 +42,7 @@ typedef struct {
     double scale;
     double shift;
     uint64_t *select_ids;
-    uint64_t select_ids_num;
+    size_t select_ids_num;
     strlist_t select_attr;
     label_set_t select_attr_values;
 } redfish_property_t;
