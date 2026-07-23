@@ -21,10 +21,14 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
+#include "processes.h"
+
 #include <kvm.h>
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/sysctl.h>
+
+static int pagesize;
 
 int ps_read(void)
 {
@@ -77,7 +81,7 @@ int ps_read(void)
 
             proc_ptr = &(procs[i]);
             /* Don't probe zombie processes  */
-            if (!P_ZOMBIE(proc_ptr)) {
+            if (!(proc_ptr->p_stat == SDEAD)) {
                 char **argv;
                 int argc;
                 int status;
