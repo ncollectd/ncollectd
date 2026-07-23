@@ -81,7 +81,7 @@ static inline int pack_block_end(buf_t *buf, size_t pos)
     return buf_putuint32at(buf, pos, (uint32_t)0xff000000U | (uint32_t)diff);
 }
 
-static inline int unpack_size(rbuf_t *rbuf, uint8_t id, uint64_t *size)
+static inline int unpack_size(rbuf_t *rbuf, uint8_t id, size_t *size)
 {
     int status = 0;
 
