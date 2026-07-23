@@ -6,7 +6,7 @@ include(CheckFunctionExists)
 set(BUILD_PLUGIN_USERS 0)
 
 if(PLUGIN_USERS)
-    check_include_file(utmp.h HAVE_UTMP_H)
+    check_include_files("time.h;utmp.h" HAVE_UTMP_H)
     check_include_file(utmpx.h HAVE_UTMPX_H)
     if(HAVE_UTMPX_H OR HAVE_UTMP_H)
         check_function_exists(getutent  HAVE_GETUTENT)
