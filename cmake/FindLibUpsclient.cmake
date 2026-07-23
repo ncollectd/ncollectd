@@ -18,9 +18,19 @@ check_library_exists(upsclient "upscli_init" "${LIBUPSCLIENT_LIBRARIES}" HAVE_UP
 
 check_library_exists(upsclient "upscli_tryconnect" "${LIBUPSCLIENT_LIBRARIES}" HAVE_UPSCLI_TRYCONNECT)
 
-check_type_exists("UPSCONN_t" "time.h;stdint.h;upsclient.h" HAVE_UPSCONN_T)
+cmake_push_check_state(RESET)
+set(CMAKE_REQUIRED_INCLUDES ${LIBUPSCLIENT_INCLUDE_DIR})
+set(CMAKE_REQUIRED_LIBRARIES ${LIBUPSCLIENT_LIBRARIES})
 
+if(HAVE_SYS_TIME_H)
+check_type_exists("UPSCONN_t" "time.h;sys/time.h;stdint.h;upsclient.h" HAVE_UPSCONN_T)
+check_type_exists("UPSCONN" "time.h;sys/time.h;stdint.h;upsclient.h" HAVE_UPSCONN)
+else()
+check_type_exists("UPSCONN_t" "time.h;stdint.h;upsclient.h" HAVE_UPSCONN_T)
 check_type_exists("UPSCONN" "time.h;stdint.h;upsclient.h" HAVE_UPSCONN)
+endif()
+
+cmake_pop_check_state()
 
 foreach(PORT_ARG "uint16_t" "int")
     string(TOUPPER "HAVE_PORT_TYPE_${PORT_ARG}" HAVE_PORT_TYPE)
@@ -28,9 +38,15 @@ foreach(PORT_ARG "uint16_t" "int")
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror")
     set(CMAKE_REQUIRED_INCLUDES ${LIBUPSCLIENT_INCLUDE_DIR})
     set(CMAKE_REQUIRED_LIBRARIES ${LIBUPSCLIENT_LIBRARIES})
+    if(HAVE_SYS_TIME_H)
+        set(CMAKE_REQUIRED_DEFINITIONS "-DHAVE_SYS_TIME_H")
+    endif()
     check_c_source_compiles(
 "
 #include <time.h>
+#ifdef HAVE_SYS_TIME_H
+#   include <sys/time.h>
+#endif
 #include <stdint.h>
 #include <upsclient.h>
 int main(void)
@@ -55,11 +71,14 @@ foreach(SIZE_ARG "size_t" "unsigned int" "int")
     string(REPLACE " " "_" HAVE_UPSCONN_TYPE "${HAVE_UPSCONN_TYPE}")
 
     cmake_push_check_state(RESET)
-
+    set(CMAKE_REQUIRED_DEFINITIONS "")
     if(HAVE_UPSCONN_T)
-        set(CMAKE_REQUIRED_DEFINITIONS "-DHAVE_UPSCONN_T")
+        list(APPEND CMAKE_REQUIRED_DEFINITIONS "-DHAVE_UPSCONN_T")
     elseif(HAVE_UPSCONN)
-        set(CMAKE_REQUIRED_DEFINITIONS "-DHAVE_UPSCONN")
+        list(APPEND CMAKE_REQUIRED_DEFINITIONS "-DHAVE_UPSCONN")
+    endif()
+    if(HAVE_SYS_TIME_H)
+        list(APPEND CMAKE_REQUIRED_DEFINITIONS "-DHAVE_SYS_TIME_H")
     endif()
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror")
     set(CMAKE_REQUIRED_INCLUDES ${LIBUPSCLIENT_INCLUDE_DIR})
@@ -68,6 +87,9 @@ foreach(SIZE_ARG "size_t" "unsigned int" "int")
     check_c_source_compiles(
 "
 #include <time.h>
+#ifdef HAVE_SYS_TIME_H
+#   include <sys/time.h>
+#endif
 #include <stdint.h>
 #include <upsclient.h>
 
