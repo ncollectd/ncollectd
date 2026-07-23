@@ -88,6 +88,7 @@ static metric_family_t fams[FAM_PF_MAX] = {
     },
 };
 
+#if defined(DIOCGETSTATUSNV)
 static int pf_ioctl(int dev, uint cmd, size_t size, nvlist_t **nvl)
 {
     struct pfioc_nv nv;
@@ -152,6 +153,7 @@ static void pf_status_counters(const nvlist_t *nvl, metric_family_t *fam, char *
                              &LABEL_PAIR_CONST(label, names[i]), NULL);
     }
 }
+#endif
 
 static int pf_read(void)
 {
