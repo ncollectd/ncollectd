@@ -87,33 +87,33 @@ int conn_read(void)
         if (kf[i].inp_fport == 0)
             continue;
 
-        if (ki[i].so_family == AF_INET) {
+        if (kf[i].so_family == AF_INET) {
             struct sockaddr_in saddr = {
                 .sin_family      = AF_INET,
-                .sin_port        = ntohs(ki[i].inp_lport),
-                .sin_addr.s_addr = ki[i].inp_laddru[0]
+                .sin_port        = ntohs(kf[i].inp_lport),
+                .sin_addr.s_addr = kf[i].inp_laddru[0]
             };
 
             struct sockaddr_in daddr = {
                 .sin_family      = AF_INET,
-                .sin_port        = ntohs(ki[i].inp_fport),
-                .sin_addr.s_addr = ki[i].inp_faddru[0]
+                .sin_port        = ntohs(kf[i].inp_fport),
+                .sin_addr.s_addr = kf[i].inp_faddru[0]
             };
 
             conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr,
-                              r->idiag_state, TCP_STATE_MIN, TCP_STATE_MAX);
-        } else if (ki[i].so_family == AF_INET6) {
+                              kf[i].t_state, TCP_STATE_MIN, TCP_STATE_MAX);
+        } else if (kf[i].so_family == AF_INET6) {
             struct sockaddr_in6 saddr = {
                 .sin6_family       = AF_INET6,
-                .sin6_port         = ntohs(ki[i].inp_lport),
+                .sin6_port         = ntohs(kf[i].inp_lport),
             };
-            memcpy(saddr.sin6_addr.s6_addr, ki[i].inp_laddru, sizeof(saddr.sin6_addr.s6_addr));
+            memcpy(saddr.sin6_addr.s6_addr, kf[i].inp_laddru, sizeof(saddr.sin6_addr.s6_addr));
 
             struct sockaddr_in6 daddr = {
                 .sin6_family       = AF_INET6,
-                .sin6_port         = ntohs(ki[i].inp_fport),
+                .sin6_port         = ntohs(kf[i].inp_fport),
             };
-            memcpy(daddr.sin6_addr.s6_addr, ki[i].inp_faddru, sizeof(daddr.sin6_addr.s6_addr));
+            memcpy(daddr.sin6_addr.s6_addr, kf[i].inp_faddru, sizeof(daddr.sin6_addr.s6_addr));
 
             conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr,
                               kf[i].t_state, TCP_STATE_MIN, TCP_STATE_MAX);
