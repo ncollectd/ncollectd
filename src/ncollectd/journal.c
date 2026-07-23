@@ -1579,7 +1579,7 @@ static int repair_checkpointfile(journal_ctx_t *ctx, const char *pth, unsigned i
                     ERROR("cannot read checkpoint file %s", ent->d_name);
                 }
             } else {
-                ERROR("checkpoint %s file size incorrect: %ld != %zu", ent->d_name, oof, twoI);
+                ERROR("checkpoint %s file size incorrect: %ld != %zu", ent->d_name, (long)oof, twoI);
             }
         } else {
             ERROR("cannot open checkpoint file %s", ent->d_name);
