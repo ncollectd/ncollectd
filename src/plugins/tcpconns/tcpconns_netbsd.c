@@ -42,9 +42,8 @@
  * SUCH DAMAGE.
  */
 
-#ifdef KERNEL_NETBSD
-#undef HAVE_SYSCTLBYNAME /* force HAVE_LIBKVM_NLIST path */
-#endif
+#include "plugin.h"
+#include "libutils/common.h"
 
 #include <arpa/inet.h>
 #include <net/route.h>
@@ -78,27 +77,16 @@ static const char *tcp_state[] = {
 
 static kvm_t *kvmd;
 static u_long inpcbtable_off;
-struct inpcbtable *inpcbtable_ptr = NULL;
 
 #define TCP_STATE_LISTEN 1
 #define TCP_STATE_MIN 1
 #define TCP_STATE_MAX 10
 
-static int kread(u_long addr, void *buf, int size)
-{
-    int status = kvm_read(kvmd, addr, buf, size);
-    if (status != size) {
-        PLUGIN_ERROR("kvm_read failed (got %i, expected %i): %s\n", status, size, kvm_geterr(kvmd));
-        return -1;
-    }
-
-    return 0;
-}
+#define N_TCBTABLE 0
 
 int conn_init(void)
 {
     char buf[_POSIX2_LINE_MAX];
-#define N_TCBTABLE 0
     struct nlist nl[] = {{"_tcbtable"}, {""}};
 
     kvmd = kvm_openfiles(NULL, NULL, NULL, O_RDONLY, buf);
@@ -119,94 +107,80 @@ int conn_init(void)
     }
 
     inpcbtable_off = (u_long)nl[N_TCBTABLE].n_value;
-    inpcbtable_ptr = (struct inpcbtable *)nl[N_TCBTABLE].n_value;
 
     return 0;
 }
 
 int conn_read(void)
 {
-    struct inpcbtable table;
-#if (defined(__NetBSD_Version__) && __NetBSD_Version__ <= 699002700)
-    struct inpcb *head;
-#endif
-    struct inpcb *next;
-    struct inpcb inpcb;
-    struct tcpcb tcpcb;
-
     /* Read the pcbtable from the kernel */
-    int status = kread(inpcbtable_off, &table, sizeof(table));
-    if (status != 0)
+    struct inpcbtable table;
+    int status = kvm_read(kvmd, inpcbtable_off, &table, sizeof(table));
+    if (status != sizeof(table)) {
+        PLUGIN_ERROR("kvm_read failed (got %i, expected %zu): %s\n",
+                     status, sizeof(table), kvm_geterr(kvmd));
         return -1;
+    }
 
-#if (defined(__NetBSD_Version__) && __NetBSD_Version__ > 699002700)
     /* inpt_queue is a TAILQ on OpenBSD */
     /* Get the first pcb */
-    next = (struct inpcb *)TAILQ_FIRST(&table.inpt_queue);
-    while (next)
-#else
-    /* Get the `head' pcb */
-    head = (struct inpcb *)&(inpcbtable_ptr->inpt_queue);
-    /* Get the first pcb */
-    next = (struct inpcb *)CIRCLEQ_FIRST(&table.inpt_queue);
-    while (next != head)
-#endif
-    {
+    struct inpcb inpcb;
+    struct inpcb *next = (struct inpcb *)TAILQ_FIRST(&table.inpt_queue);
+    while (next) {
         /* Read the pcb pointed to by `next' into `inpcb' */
-        status = kread((u_long)next, &inpcb, sizeof(inpcb));
-        if (status != 0)
+        status = kvm_read(kvmd, (u_long)next, &inpcb, sizeof(inpcb));
+        if (status != sizeof(inpcb)) {
+            PLUGIN_ERROR("kvm_read failed (got %i, expected %zu): %s\n",
+                         status, sizeof(inpcb), kvm_geterr(kvmd));
             return -1;
+         }
 
-/* Advance `next' */
-#if (defined(__NetBSD_Version__) && __NetBSD_Version__ > 699002700)
-        /* inpt_queue is a TAILQ on OpenBSD */
+        /* Advance `next' */
         next = (struct inpcb *)TAILQ_NEXT(&inpcb, inp_queue);
-#else
-        next = (struct inpcb *)CIRCLEQ_NEXT(&inpcb, inp_queue);
-#endif
 
-/* Ignore sockets, that are not connected. */
-        if (inpcb.inp_af == AF_INET6)
-            continue; /* XXX see netbsd/src/usr.bin/netstat/inet6.c */
-
-        status = kread((u_long)inpcb.inp_ppcb, &tcpcb, sizeof(tcpcb));
-        if (status != 0)
+        struct tcpcb tcpcb;
+        status = kvm_read(kvmd, (u_long)inpcb.inp_ppcb, &tcpcb, sizeof(tcpcb));
+        if (status != sizeof(tcpcb)) {
+            PLUGIN_ERROR("kvm_read failed (got %i, expected %zu): %s\n",
+                         status, sizeof(tcpcb), kvm_geterr(kvmd));
             return -1;
+        }
 
-        if (inpcb.inp_flags & INP_IPV4) {
-            if (inet_lnaof(inpcb.inp_laddr) == INADDR_ANY)
+        if (inpcb.inp_af == AF_INET) {
+            if (inet_lnaof(in4p_laddr(&inpcb)) == INADDR_ANY)
                 continue;
 
             struct sockaddr_in saddr = {
                 .sin_family      = AF_INET,
                 .sin_port        = ntohs(inpcb.inp_lport),
-                .sin_addr.s_addr = inpcb.inp_laddr.s_addr
+                .sin_addr.s_addr = in4p_laddr(&inpcb).s_addr
             };
 
             struct sockaddr_in daddr = {
                 .sin_family      = AF_INET,
                 .sin_port        = ntohs(inpcb.inp_fport),
-                .sin_addr.s_addr = inpcb.inp_faddr.s_addr
+                .sin_addr.s_addr = in4p_faddr(&inpcb).s_addr
             };
 
             conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr,
-                              tp->t_state, TCP_STATE_MIN, TCP_STATE_MAX);
-        } else if (inpcb.inp_flags & INP_IPV6) {
-            if (IN6_IS_ADDR_UNSPECIFIED(&inpcb.inp_laddr6))
+                              tcpcb.t_state, TCP_STATE_MIN, TCP_STATE_MAX);
+        } else if (inpcb.inp_af == AF_INET6) {
+            if (IN6_IS_ADDR_UNSPECIFIED(&in6p_laddr(&inpcb)))
                 continue;
 
             struct sockaddr_in6 saddr = {
                 .sin6_family       = AF_INET6,
                 .sin6_port         = ntohs(inpcb.inp_lport)
             };
-            memcpy(saddr.sin6_addr.s6_addr, inpcb.in6p_laddr.s6_addr,
+
+            memcpy(saddr.sin6_addr.s6_addr, in6p_laddr(&inpcb).s6_addr,
                    sizeof(saddr.sin6_addr.s6_addr));
 
             struct sockaddr_in6 daddr = {
                 .sin6_family       = AF_INET6,
                 .sin6_port         = ntohs(inpcb.inp_fport)
             };
-            memcpy(daddr.sin6_addr.s6_addr, inpcb.in6p_faddr.s6_addr,
+            memcpy(daddr.sin6_addr.s6_addr, in6p_faddr(&inpcb).s6_addr,
                    sizeof(daddr.sin6_addr.s6_addr));
 
             conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr,
