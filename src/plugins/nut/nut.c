@@ -474,7 +474,7 @@ static int nut_config(config_item_t *ci)
     if (ca_path != NULL) {
         PLUGIN_WARNING("nut_connect: Dependency libupsclient version insufficient (<2.7) "
                        "for 'verify-peer support. Ignoring 'verify-peer' and 'ca-path'.");
-        verify_peer = false;
+        can_verify_peer = false;
     }
 #endif
 
