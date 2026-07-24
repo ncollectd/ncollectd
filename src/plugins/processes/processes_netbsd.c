@@ -59,7 +59,6 @@ int ps_read(void)
     int l, nlwps;
     struct kinfo_lwp *kl;
 
-    procstat_t *ps_ptr;
     process_entry_t pse;
 
     ps_list_reset();
