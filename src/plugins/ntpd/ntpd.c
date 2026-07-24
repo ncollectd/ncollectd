@@ -1123,7 +1123,7 @@ static size_t ntpd_readvars(ntpd_ctx_t *ctx, associd_t associd, char *vars,
     uint16_t rstatus = 0;
     char qdata[CTL_MAX_DATA_LEN];
 
-    strncpy(qdata, vars, sizeof(qdata));
+    sstrncpy(qdata, vars, sizeof(qdata));
     size_t qdatalen = strlen(qdata);
 
     int status = ntpd_query(ctx, CTL_OP_READVAR, associd, qdata, qdatalen, &rstatus, &data, &rsize);
