@@ -366,7 +366,7 @@ static int tcpconn_config_addr(config_item_t *ci, inet_addr_t *addr)
         prefix_str++;
         char *c = prefix_str;
         while (*c != '\0') {
-            if (!isdigit(*c)) {
+            if (!isdigit((unsigned char)*c)) {
                 PLUGIN_ERROR("Invalid address prefix: '%s' in %s:%d.", prefix_str,
                              cf_get_file(ci), cf_get_lineno(ci));
                 return -1;
