@@ -302,6 +302,9 @@ static void jlk_submit(jlk_t *jlk, jlk_mbean_t *mbean, jlk_mbean_attribute_t *at
 static int jlk_parse_response_value(jlk_t *jlk, jlk_mbean_t *mbean, xson_value_t *value,
                                     double timestamp)
 {
+    if (value == NULL)
+        return -1;
+
     if (xson_value_is_object(value)) {
         for (size_t i = 0; i < xson_value_object_size(value); i++) {
             xson_keyval_t *kv = xson_value_object_at(value, i);
@@ -358,6 +361,9 @@ static int jlk_parse_response_value(jlk_t *jlk, jlk_mbean_t *mbean, xson_value_t
 
 static int jlk_parse_response_request_to_key(xson_value_t *tree, strbuf_t *buf)
 {
+    if (tree == NULL)
+        return -1;
+
     if (!xson_value_is_object(tree))
         return -1;
 
@@ -393,12 +399,15 @@ static int jlk_parse_response_request_to_key(xson_value_t *tree, strbuf_t *buf)
     if (attributes != NULL) {
         if (xson_value_is_array(attributes)) {
             for (size_t i = 0; i < xson_value_array_size(attributes); i++) {
-                char *attribute = xson_value_get_string(xson_value_array_at(attributes, i));
-                if (attribute == NULL)
-                    return -1;
-                if (i != 0)
-                    status |= strbuf_putchar(buf, CHAR_RS);
-                status |= strbuf_putstr(buf, attribute);
+                xson_value_t *attribute_at = xson_value_array_at(attributes, i);
+                if (attribute_at != NULL) {
+                    char *attribute = xson_value_get_string(attribute_at);
+                    if (attribute == NULL)
+                        return -1;
+                    if (i != 0)
+                        status |= strbuf_putchar(buf, CHAR_RS);
+                    status |= strbuf_putstr(buf, attribute);
+                }
             }
         } else if (xson_value_is_string(attributes)) {
             char *attribute = xson_value_get_string(attributes);
@@ -413,9 +422,11 @@ static int jlk_parse_response_request_to_key(xson_value_t *tree, strbuf_t *buf)
 
 static int jlk_parse_response(jlk_t *jlk, c_avl_tree_t *mbeans, xson_value_t *tree)
 {
-    if (!xson_value_is_object(tree)) {
+    if (tree == NULL)
         return -1;
-    }
+
+    if (!xson_value_is_object(tree))
+        return -1;
 
     xson_value_t *request = NULL;
     xson_value_t *value = NULL;
