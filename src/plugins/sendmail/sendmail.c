@@ -303,13 +303,13 @@ static int sendmail_read_mailers(sendmail_ctx_t *ctx)
         } else if (*c == 'O') {
             c++;
             if (strncasecmp(c, " StatusFile", 11) == 0) {
-                if (isalnum(c[11]))
+                if (isalnum((unsigned char)c[11]))
                     continue;
                 c = strchr(c, '=');
                 if (c == NULL)
                     continue;
                 c++;
-                while (isspace(*c)) c++;
+                while (isspace((unsigned char)*c)) c++;
 
                 sstrncpy(ctx->status_path, c, sizeof(ctx->status_path));
             }

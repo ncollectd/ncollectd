@@ -115,7 +115,7 @@ static bool isinteger(const char *str)
         str++;
 
     while(*str != '\0') {
-        if(!isdigit(*str))
+        if(!isdigit((unsigned char)*str))
             return false;
         str++;
     }
