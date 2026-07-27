@@ -1286,7 +1286,11 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
     return aptr + dlen;
 }
 
+#if ARES_VERSION == 74247 /* 1.34.7 */
+static void dns_callback(void *arg, int status, int timeouts, const unsigned char *abuf, int alen)
+#else
 static void dns_callback(void *arg, int status, int timeouts, unsigned char *abuf, int alen)
+#endif
 {
     dns_query_t *query = arg;
 
