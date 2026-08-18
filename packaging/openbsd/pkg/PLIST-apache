@@ -1,0 +1,2 @@
+@so lib/ncollectd/apache.so
+@man man/man5/ncollectd-apache.5

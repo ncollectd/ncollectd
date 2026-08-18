@@ -1,0 +1,2 @@
+@so lib/ncollectd/write_http.so
+@man man/man5/ncollectd-write_http.5

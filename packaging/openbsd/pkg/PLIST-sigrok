@@ -1,0 +1,2 @@
+@so lib/ncollectd/sigrok.so
+@man man/man5/ncollectd-sigrok.5

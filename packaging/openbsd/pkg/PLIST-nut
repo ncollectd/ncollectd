@@ -1,0 +1,2 @@
+@so lib/ncollectd/nut.so
+@man man/man5/ncollectd-nut.5

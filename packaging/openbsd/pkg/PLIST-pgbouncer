@@ -1,0 +1,2 @@
+@so lib/ncollectd/pgbouncer.so
+@man man/man5/ncollectd-pgbouncer.5

@@ -1,0 +1,2 @@
+MySQL querying plugin. This plugin provides data of issued commands, called
+handlers and database traffic.

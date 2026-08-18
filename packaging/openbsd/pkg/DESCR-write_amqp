@@ -1,0 +1,2 @@
+The AMQP 0.9 plugin transmits values collected by ncollectd via the
+Advanced Message Queuing Protocol v0.9 (AMQP).

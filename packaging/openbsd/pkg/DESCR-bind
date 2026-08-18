@@ -1,0 +1,2 @@
+The bind plugin retrieves this information that's encoded in XML
+and provided via HTTP and submits the values to ncollectd.

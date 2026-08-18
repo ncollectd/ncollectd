@@ -1,0 +1,2 @@
+@so lib/ncollectd/write_redis.so
+@man man/man5/ncollectd-write_redis.5

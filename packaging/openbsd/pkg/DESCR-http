@@ -1,0 +1,1 @@
+The http plugin queries a http server and parser the data using the match plugins.

@@ -1,0 +1,2 @@
+The pcap plugin uses libpcap to get a copy of all traffic and generates statistics
+of some protocols such as DNS.

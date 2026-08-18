@@ -1,0 +1,2 @@
+@so lib/ncollectd/write_exporter.so
+@man man/man5/ncollectd-write_exporter.5

@@ -1,0 +1,2 @@
+@so lib/ncollectd/squid.so
+@man man/man5/ncollectd-squid.5

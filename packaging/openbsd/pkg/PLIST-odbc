@@ -1,0 +1,2 @@
+@so lib/ncollectd/odbc.so
+@man man/man5/ncollectd-odbc.5

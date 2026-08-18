@@ -1,0 +1,2 @@
+@so lib/ncollectd/cert.so
+@man man/man5/ncollectd-cert.5

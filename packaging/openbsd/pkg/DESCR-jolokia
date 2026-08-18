@@ -1,0 +1,2 @@
+The jolokia plugin collects values from MBeanServevr - servlet
+engines equipped with the jolokia MBean.

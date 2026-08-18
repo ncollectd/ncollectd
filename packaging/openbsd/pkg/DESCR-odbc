@@ -1,0 +1,2 @@
+The odbc plugin uses ODBC, a database abstraction library, to execute SQL
+statements on a database and read back the result.
