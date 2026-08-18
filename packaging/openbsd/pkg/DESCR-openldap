@@ -1,0 +1,1 @@
+This plugin reads monitoring information from OpenLDAP's cn=Monitor subtree.

@@ -1,0 +1,2 @@
+@so lib/ncollectd/bind.so
+@man man/man5/ncollectd-bind.5

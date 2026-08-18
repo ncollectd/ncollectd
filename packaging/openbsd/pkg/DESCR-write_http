@@ -1,0 +1,2 @@
+The write_http plugin sends the values collected by ncollectd to a web-server
+using HTTP POST requests.

@@ -1,0 +1,2 @@
+The Lua plugin embeds a Lua interpreter into ncollectd and exposes the
+application programming interface (API) to Lua scripts.

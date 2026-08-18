@@ -1,0 +1,2 @@
+@so lib/ncollectd/mysql.so
+@man man/man5/ncollectd-mysql.5

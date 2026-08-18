@@ -1,0 +1,2 @@
+The Redis plugin connects to one or more instances of Redis, a key-value store,
+and collects usage information using the hiredis library.

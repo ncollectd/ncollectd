@@ -1,0 +1,2 @@
+@so lib/ncollectd/jolokia.so
+@man man/man5/ncollectd-jolokia.5

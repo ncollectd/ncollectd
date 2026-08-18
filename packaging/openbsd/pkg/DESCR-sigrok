@@ -1,0 +1,3 @@
+Uses libsigrok as a backend, allowing any sigrok-supported device to have its
+measurements fed to ncollectd. This includes multimeters, sound level meters,
+thermometers, and much more.

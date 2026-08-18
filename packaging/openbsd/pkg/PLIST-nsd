@@ -1,0 +1,2 @@
+@so lib/ncollectd/nsd.so
+@man man/man5/ncollectd-nsd.5

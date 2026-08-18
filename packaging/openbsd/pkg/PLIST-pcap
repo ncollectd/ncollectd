@@ -1,0 +1,2 @@
+@so lib/ncollectd/pcap.so
+@man man/man5/ncollectd-pcap.5

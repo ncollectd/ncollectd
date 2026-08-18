@@ -1,0 +1,2 @@
+@so lib/ncollectd/snmp.so
+@man man/man5/ncollectd-snmp.5

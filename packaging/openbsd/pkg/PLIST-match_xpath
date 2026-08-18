@@ -1,0 +1,2 @@
+@so lib/ncollectd/match_xpath.so
+@man man/man5/ncollectd-match_xpath.5

@@ -1,0 +1,2 @@
+@so lib/ncollectd/ds389.so
+@man man/man5/ncollectd-ds389.5

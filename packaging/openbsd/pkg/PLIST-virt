@@ -1,0 +1,2 @@
+@so lib/ncollectd/virt.so
+@man man/man5/ncollectd-virt.5

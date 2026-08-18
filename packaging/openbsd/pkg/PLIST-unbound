@@ -1,0 +1,2 @@
+@so lib/ncollectd/unbound.so
+@man man/man5/ncollectd-unbound.5

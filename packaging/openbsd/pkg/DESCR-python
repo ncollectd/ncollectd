@@ -1,0 +1,2 @@
+The Python plugin embeds a Python interpreter into collectd and exposes the
+application programming interface (API) to Python-scripts.

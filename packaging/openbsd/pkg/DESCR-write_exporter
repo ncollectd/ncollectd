@@ -1,0 +1,2 @@
+The write_exporter plugin exposes ncollected values using an embedded HTTP
+server, turning the ncollectd daemon into a openmetrics exporter.

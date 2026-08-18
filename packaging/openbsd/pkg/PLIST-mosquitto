@@ -1,0 +1,2 @@
+@so lib/ncollectd/mosquitto.so
+@man man/man5/ncollectd-mosquitto.5

@@ -1,0 +1,2 @@
+@so lib/ncollectd/varnish.so
+@man man/man5/ncollectd-varnish.5
