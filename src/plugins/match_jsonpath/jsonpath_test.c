@@ -7745,7 +7745,7 @@ static void dump_result(strbuf_t *buf, char **expect_result,
 static bool isalldigits(char *str)
 {
     while (*str != '\0') {
-        if (!isdigit(*str))
+        if (!isdigit((unsigned char)*str))
             return false;
         str++;
     }
