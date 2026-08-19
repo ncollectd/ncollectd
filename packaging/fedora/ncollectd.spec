@@ -1696,9 +1696,9 @@ The xencpu plugin collects CPU statistics from Xen.
 %endif
 
 %if %{build_with_multipathd}
-%define _build_with_multipathd -DPLUGIN_MULIPATHD:BOOL=ON
+%define _build_with_multipathd -DPLUGIN_MULTIPATHD:BOOL=ON
 %else
-%define _build_with_multipathd -DPLUGIN_MULIPATHD:BOOL=OFF
+%define _build_with_multipathd -DPLUGIN_MULTIPATHD:BOOL=OFF
 %endif
 
 %if %{build_with_mysql}
