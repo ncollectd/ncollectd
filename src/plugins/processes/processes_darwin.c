@@ -232,8 +232,9 @@ int ps_read(void)
                 pse.vmem_minflt_counter = task_events_info.cow_faults;
                 pse.vmem_majflt_counter = task_events_info.faults;
 
-                pse.cpu_user_counter = task_absolutetime_info.total_user;
-                pse.cpu_system_counter = task_absolutetime_info.total_system;
+                /* Convert system time and user time from nanoseconds to microseconds */
+                pse.cpu_user_counter = task_absolutetime_info.total_user / 1000;
+                pse.cpu_system_counter = task_absolutetime_info.total_system / 1000;
 
                 /* context switch counters not implemented */
                 pse.cswitch_vol = -1;
