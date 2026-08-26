@@ -278,8 +278,12 @@ int ts_delay_by_tgid(ts_t *ts, uint32_t tgid, ts_delay_t *out)
     out->cpu_ns = raw.cpu_delay_total;
     out->blkio_ns = raw.blkio_delay_total;
     out->swapin_ns = raw.swapin_delay_total;
-    out->thrashing_ns = raw.thrashing_delay_total;
+#if TASKSTATS_VERSION >= 8
     out->freepages_ns = raw.freepages_delay_total;
+#endif
+#if TASKSTATS_VERSION >= 9
+    out->thrashing_ns = raw.thrashing_delay_total;
+#endif
 #if TASKSTATS_VERSION >= 11
     out->compact_ns = raw.compact_delay_total;
 #endif
