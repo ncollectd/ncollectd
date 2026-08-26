@@ -15,7 +15,6 @@
 
 #include <sys/ioctl.h>
 #include <net/if.h>
-#include <linux/if.h>
 #include <linux/wireless.h>
 #include <linux/if_ether.h>
 #include <linux/netlink.h>
