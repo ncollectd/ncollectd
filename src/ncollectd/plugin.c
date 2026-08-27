@@ -151,7 +151,7 @@ static const char *plugin_get_dir(void)
         return plugindir;
 }
 
-static int plugin_update_internal_statistics(void)
+static int plugin_update_internal_statistics(__attribute__((unused)) user_data_t *user_data)
 {
     static time_t ncollectd_uptime = 0;
 
@@ -646,7 +646,8 @@ int plugin_init_all(void)
         return -1;
 
     if (IS_TRUE(global_option_get("collect-internal-stats")))
-        plugin_register_read("ncollectd", plugin_update_internal_statistics);
+        plugin_register_complex_read("ncollectd", NULL, plugin_update_internal_statistics,
+                                     cf_get_default_interval(), NULL);
 
     /* Calling all init callbacks before checking if read callbacks
      * are available allows the init callbacks to register the read
