@@ -2004,7 +2004,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2150,7 +2151,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2499,7 +2501,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2711,6 +2714,19 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
+              "expr": "system_memory_unevictable_bytes{hostname=\"${hostname}\"}",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "Unevictable",
+              "range": true,
+              "refId": "N"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
               "expr": "system_memory_page_tables_bytes{hostname=\"${hostname}\"}",
               "hide": false,
               "instant": false,
@@ -2789,7 +2805,7 @@
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "system_memory_total_bytes{hostname=\"${hostname}\"}-system_memory_free_bytes{hostname=\"${hostname}\"}-system_memory_slab_reclaimable_bytes{hostname=\"${hostname}\"}-system_memory_slab_unreclaimable_bytes{hostname=\"${hostname}\"}-system_memory_active_anonymous_bytes{hostname=\"${hostname}\"}-system_memory_inactive_anonymous_bytes{hostname=\"${hostname}\"}-system_memory_active_page_cache_bytes{hostname=\"${hostname}\"}-system_memory_inactive_page_cache_bytes{hostname=\"${hostname}\"}-system_memory_page_tables_bytes{hostname=\"${hostname}\"}-system_memory_kernel_stack_bytes{hostname=\"${hostname}\"}-system_memory_swap_cached_bytes{hostname=\"${hostname}\"}-system_memory_hugepages_bytes{hostname=\"${hostname}\"}-system_memory_vmalloc_used_bytes{hostname=\"${hostname}\"}",
+              "expr": "system_memory_total_bytes{hostname=\"${hostname}\"}-system_memory_free_bytes{hostname=\"${hostname}\"}-system_memory_slab_reclaimable_bytes{hostname=\"${hostname}\"}-system_memory_slab_unreclaimable_bytes{hostname=\"${hostname}\"}-system_memory_active_anonymous_bytes{hostname=\"${hostname}\"}-system_memory_inactive_anonymous_bytes{hostname=\"${hostname}\"}-system_memory_active_page_cache_bytes{hostname=\"${hostname}\"}-system_memory_inactive_page_cache_bytes{hostname=\"${hostname}\"}-system_memory_unevictable_bytes{hostname=\"${hostname}\"}-system_memory_page_tables_bytes{hostname=\"${hostname}\"}-system_memory_kernel_stack_bytes{hostname=\"${hostname}\"}-system_memory_swap_cached_bytes{hostname=\"${hostname}\"}-system_memory_hugepages_bytes{hostname=\"${hostname}\"}-system_memory_vmalloc_used_bytes{hostname=\"${hostname}\"}",
               "hide": false,
               "instant": false,
               "legendFormat": "Untracked",
@@ -4944,6 +4960,6 @@
   "timezone": "browser",
   "title": "System Linux",
   "uid": "edhq66iytbapsf",
-  "version": 37,
+  "version": 38,
   "weekStart": ""
 }
