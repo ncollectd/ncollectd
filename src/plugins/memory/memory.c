@@ -114,6 +114,11 @@ metric_family_t fams[FAM_MEMORY_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Pagecache memory that can be reclaimed without huge performance impact.",
     },
+    [FAM_MEMORY_UNEVICTABLE_BYTES] = {
+        .name = "system_memory_unevictable_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Unevictable pages that can't be swapped out for a variety of reasons."
+    },
     [FAM_MEMORY_WIRED_BYTES] = {
         .name = "system_memory_wired_bytes",
         .type = METRIC_TYPE_GAUGE,

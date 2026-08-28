@@ -33,5 +33,6 @@ Active(anon):,      MEMINFO_ACTIVE_ANONYMOUS
 Inactive(anon):,    MEMINFO_INACTIVE_ANONYMOUS
 Active(file):,      MEMINFO_ACTIVE_PAGE_CACHE
 Inactive(file):,    MEMINFO_INACTIVE_PAGE_CACHE
+Unevictable:,       MEMINFO_UNEVICTABLE
 VmallocUsed:,       MEMINFO_VMALLOC_USED
 Hugetlb:,           MEMINFO_HUGEPAGES
