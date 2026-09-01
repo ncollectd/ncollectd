@@ -186,43 +186,47 @@ static int parse_label_value(strbuf_t *buf, const char **inout)
 {
     const char *ptr = *inout;
 
-    if (ptr[0] != '"')
-        return EINVAL;
+    if (*ptr != '"')
+        return -1;
     ptr++;
 
-    while (ptr[0] != '"') {
-        size_t valid_len = strcspn(ptr, "\\\"\n");
-        if (valid_len != 0) {
-            strbuf_printn(buf, ptr, valid_len);
-            ptr += valid_len;
-            continue;
+    while (*ptr != '"') {
+        switch(*ptr) {
+        case '\0':
+        case '\n':
+            return -1;
+            break;
+        case '\\':
+            ptr++;
+            switch(*ptr) {
+            case 'n':
+                strbuf_putchar(buf, '\n');
+                break;
+            case 'r':
+                strbuf_putchar(buf, '\r');
+                break;
+            case 't':
+                strbuf_putchar(buf, '\t');
+                break;
+            case '\\':
+            case '"':
+                strbuf_putchar(buf, *ptr);
+                break;
+            default:
+                return -1;
+                break;
+            }
+            break;
+        default:
+            strbuf_putchar(buf, *ptr);
+            break;
         }
-
-        if ((ptr[0] == 0) || (ptr[0] == '\n')) {
-            return EINVAL;
-        }
-
-        assert(ptr[0] == '\\');
-        if (ptr[1] == 0)
-            return EINVAL;
-
-        char tmp[2] = {ptr[1], 0};
-        if (tmp[0] == 'n') {
-            tmp[0] = '\n';
-        } else if (tmp[0] == 'r') {
-            tmp[0] = '\r';
-        } else if (tmp[0] == 't') {
-            tmp[0] = '\t';
-        }
-
-        strbuf_print(buf, tmp);
-
-        ptr += 2;
+        ptr++;
     }
 
-    assert(ptr[0] == '"');
     ptr++;
     *inout = ptr;
+
     return 0;
 }
 
@@ -249,15 +253,17 @@ int metric_match_unmarshal(metric_match_t *match, char const *str)
             return status;
 
         /* metric name without labels */
-        if ((ptr[0] == '\0') || (ptr[0] == ' '))
+        if ((*ptr == '\0') || (*ptr == ' '))
             return 0;
     }
 
-    if (ptr[0] != '{')
+    if (*ptr != '{')
         return EINVAL;
 
     strbuf_t value = STRBUF_CREATE;
-    while ((ptr[0] == '{') || (ptr[0] == ',')) {
+    strbuf_resize(&value, 256);
+
+    while ((*ptr == '{') || (*ptr == ',')) {
         ptr++;
 
         size_t key_len = label_valid_name_len(ptr);
@@ -272,19 +278,19 @@ int metric_match_unmarshal(metric_match_t *match, char const *str)
         ptr += key_len;
 
         metric_match_op_t op;
-        if (ptr[0] == '=') {
+        if (*ptr == '=') {
             op = METRIC_MATCH_OP_EQL;
             ptr++;
-            if (ptr[0] == '~') {
+            if (*ptr == '~') {
                 op = METRIC_MATCH_OP_EQL_REGEX;
                 ptr++;
             }
-        } else if (ptr[0] == '!') {
+        } else if (*ptr == '!') {
             ptr++;
-            if (ptr[0] == '~') {
+            if (*ptr == '~') {
                 op = METRIC_MATCH_OP_NEQ_REGEX;
                 ptr++;
-            } else if (ptr[0] == '=') {
+            } else if (*ptr == '=') {
                 op = METRIC_MATCH_OP_NEQ;
                 ptr++;
             } else {
@@ -303,12 +309,7 @@ int metric_match_unmarshal(metric_match_t *match, char const *str)
             break;
         }
 
-        if (value.ptr == NULL) {
-            ret = -1;
-            break;
-        }
-
-        if (value.ptr[0] == '\0') {
+        if ((value.ptr == NULL) || (*(value.ptr) == '\0')) {
             if (op == METRIC_MATCH_OP_EQL) {
                 op = METRIC_MATCH_OP_NEXISTS;
             } else if (op == METRIC_MATCH_OP_NEQ) {
@@ -344,12 +345,12 @@ int metric_match_unmarshal(metric_match_t *match, char const *str)
             }
         }
     }
-    strbuf_destroy(&value);
 
+    strbuf_destroy(&value);
     if (ret != 0)
         return ret;
 
-    if (ptr[0] != '}')
+    if (*ptr != '}')
         return EINVAL;
 
     return 0;
