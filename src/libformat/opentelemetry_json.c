@@ -151,7 +151,7 @@ static int opentelemetry_summary(xson_render_t *r, metric_t const *m)
     status |= xson_render_integer(r, m->value.summary->sum);
     status |= xson_render_key_string(r, "timeUnixNano");
     status |= xson_render_integer(r, CDTIME_T_TO_NS(m->time));
-    status |= opentelemetry_attributes(r, &m->label, &m->value.info);
+    status |= opentelemetry_attributes(r, &m->label, NULL);
 
     return status | xson_render_map_close(r);
 }
@@ -180,7 +180,7 @@ static int opentelemetry_histogram(xson_render_t *r, metric_t const *m)
     status |= xson_render_double(r, histogram_sum(m->value.histogram));
     status |= xson_render_key_string(r, "timeUnixNano");
     status |= xson_render_integer(r, CDTIME_T_TO_NS(m->time));
-    status |= opentelemetry_attributes(r, &m->label, &m->value.info);
+    status |= opentelemetry_attributes(r, &m->label, NULL);
 
     return status | xson_render_map_close(r);
 }
