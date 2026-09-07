@@ -24,7 +24,7 @@
 #define NCOLLECTD_LOCALE "C"
 #endif
 
-static int loop;
+static volatile sig_atomic_t loop;
 
 static int init_hostname(void)
 {
@@ -329,7 +329,10 @@ static int configure_ncollectd(struct cmdline_config *config)
     return 0;
 }
 
-void stop_ncollectd(void) { loop++; }
+void stop_ncollectd(void)
+{
+    loop++;
+}
 
 struct cmdline_config init_config(int argc, char **argv)
 {
