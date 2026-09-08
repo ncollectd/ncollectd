@@ -535,19 +535,20 @@ int xson_value_cmp(const xson_value_t *val1, const xson_value_t *val2)
             int cmp = strcmp(kv1->key, kv2->key);
             if (cmp != 0)
                 return cmp;
-            cmp = xson_value_cmp(&kv1->value, &kv1->value);
+            cmp = xson_value_cmp(&kv1->value, &kv2->value);
             if (cmp != 0)
                 return cmp;
         }
-        return false;
+        return 0;
     case XSON_TYPE_ARRAY:
         if (val1->array.len != val2->array.len)
             return (int)val1->array.len - (int)val2->array.len;
         for (size_t i = 0; i < val1->array.len; i++) {
-            if (!xson_value_cmp(&val1->array.values[i], &val2->array.values[i]))
-                return 0;
+            int cmp = xson_value_cmp(&val1->array.values[i], &val2->array.values[i]);
+            if (cmp != 0)
+                return cmp;
         }
-        return false;
+        return 0;
     case XSON_TYPE_TRUE:
         return 0;
     case XSON_TYPE_FALSE:
