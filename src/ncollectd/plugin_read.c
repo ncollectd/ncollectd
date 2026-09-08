@@ -483,12 +483,12 @@ int plugin_register_read(const char *name, int (*callback)(void))
     rf->rf_ctx.interval = rf->rf_interval;
 
     rf->stats = stats;
-    rf->stats->plugin = name;
+    rf->stats->plugin = rf->rf_name;
 
     int status = plugin_insert_read(rf);
     if (status != 0) {
         free(rf->rf_name);
-        free(stats);
+        free(rf->stats);
         free(rf);
         return -1;
     }
@@ -557,6 +557,7 @@ int plugin_register_complex_read(const char *group, const char *name, plugin_rea
         free(rf->rf_name);
         free(rf->stats);
         free(rf);
+        return status;
     }
 
     pthread_mutex_lock(&read_stats_lock);
