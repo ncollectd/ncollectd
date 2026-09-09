@@ -412,6 +412,7 @@ int plugin_notify(const char *plugin, const notification_t *notify)
             if (status != 0) {
                 ERROR("cannot serialize notification '%s'", notify->name);
                 buf_destroy(&buf);
+                notification_free(n);
                 return status;
             }
 
