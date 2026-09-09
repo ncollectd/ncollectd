@@ -303,7 +303,7 @@ static int db_result_prepare_result(db_result_t const *r,
             }
         }
         if (i >= column_num) {
-            PLUGIN_ERROR("Column '%s' could not be found.", r->type_from);
+            PLUGIN_ERROR("Column '%s' could not be found.", r->metric_from);
             status = -ENOENT;
             goto error;
         }
@@ -319,7 +319,7 @@ static int db_result_prepare_result(db_result_t const *r,
             }
         }
         if (i >= column_num) {
-            PLUGIN_ERROR("Column '%s' could not be found.", r->type_from);
+            PLUGIN_ERROR("Column '%s' could not be found.", r->help_from);
             status = -ENOENT;
             goto error;
         }
