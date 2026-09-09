@@ -129,7 +129,7 @@ int openmetrics_text_metric_family(strbuf_t *buf, metric_family_t const *fam)
         status |= strbuf_putstrn(buf, "# HELP ", strlen("# HELP "));
         status |= strbuf_putstr(buf, fam->name);
         status |= strbuf_putchar(buf, ' ');
-        status |= strbuf_putstr(buf, fam->help);
+        status |= strbuf_putescape_label(buf, fam->help);
         status |= strbuf_putchar(buf, '\n');
     }
 
