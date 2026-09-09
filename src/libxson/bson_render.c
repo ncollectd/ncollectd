@@ -1,48 +1,48 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include "ncollectd.h"
-#include "libxson/bjson.h"
+#include "libxson/bson.h"
 #include "libxson/render.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
 
-static int render_jsonb_open(xson_render_t *r, xson_render_block_t type, ssize_t size)
+static int render_bson_open(xson_render_t *r, xson_render_block_t type, ssize_t size)
 {
     int status = 0;
 
     switch(type){
     case XSON_RENDER_BLOCK_MAP:
-        if (size < 0) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_MAP);
+        if (size <= 0) {
+            status |= buf_putuint8(r->buf, BSON_STYPE_MAP);
         } else if (size <= UINT8_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_MAP8);
+            status |= buf_putuint8(r->buf, BSON_STYPE_MAP8);
             status |= buf_putuint8(r->buf, (uint8_t)size);
         } else if (size <= UINT16_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_MAP16);
+            status |= buf_putuint8(r->buf, BSON_STYPE_MAP16);
             status |= buf_putuint16hton(r->buf, (uint16_t)size);
         } else if (size <= UINT32_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_MAP32);
+            status |= buf_putuint8(r->buf, BSON_STYPE_MAP32);
             status |= buf_putuint32hton(r->buf, (uint32_t)size);
         } else {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_MAP64);
+            status |= buf_putuint8(r->buf, BSON_STYPE_MAP64);
             status |= buf_putuint64hton(r->buf, (uint64_t)size);
         }
         break;
     case XSON_RENDER_BLOCK_ARRAY:
-        if (size < 0) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_ARRAY);
+        if (size <= 0) {
+            status |= buf_putuint8(r->buf, BSON_STYPE_ARRAY);
         } else if (size <= UINT8_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_ARRAY8);
+            status |= buf_putuint8(r->buf, BSON_STYPE_ARRAY8);
             status |= buf_putuint8(r->buf, (uint8_t)size);
         } else if (size <= UINT16_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_ARRAY16);
+            status |= buf_putuint8(r->buf, BSON_STYPE_ARRAY16);
             status |= buf_putuint16hton(r->buf, (uint16_t)size);
         } else if (size <= UINT32_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_ARRAY32);
+            status |= buf_putuint8(r->buf, BSON_STYPE_ARRAY32);
             status |= buf_putuint32hton(r->buf, (uint32_t)size);
         } else {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_ARRAY64);
+            status |= buf_putuint8(r->buf, BSON_STYPE_ARRAY64);
             status |= buf_putuint64hton(r->buf, (uint64_t)size);
         }
         break;
@@ -51,23 +51,23 @@ static int render_jsonb_open(xson_render_t *r, xson_render_block_t type, ssize_t
     return status;
 }
 
-static int render_bjson_close(xson_render_t *r, xson_render_block_t type)
+static int render_bson_close(xson_render_t *r, xson_render_block_t type)
 {
     int status = 0;
 
     switch(type){
     case XSON_RENDER_BLOCK_MAP:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_MAP_END);
+        status |= buf_putuint8(r->buf, BSON_STYPE_MAP_END);
         break;
     case XSON_RENDER_BLOCK_ARRAY:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_ARRAY_END);
+        status |= buf_putuint8(r->buf, BSON_STYPE_ARRAY_END);
         break;
     }
 
     return status;
 }
 
-static int render_bjson_key(xson_render_t *r, xson_render_key_type_t type, xson_render_key_t k)
+static int render_bson_key(xson_render_t *r, xson_render_key_type_t type, xson_render_key_t k)
 {
     int status = 0;
 
@@ -85,16 +85,16 @@ static int render_bjson_key(xson_render_t *r, xson_render_key_type_t type, xson_
     }
 
     if (size <= UINT8_MAX) {
-        status |= buf_putuint8(r->buf, BJSON_STYPE_KEY8);
+        status |= buf_putuint8(r->buf, BSON_STYPE_KEY8);
         status |= buf_putuint8(r->buf, (uint8_t)size);
     } else if (size <= UINT16_MAX) {
-        status |= buf_putuint8(r->buf, BJSON_STYPE_KEY16);
+        status |= buf_putuint8(r->buf, BSON_STYPE_KEY16);
         status |= buf_putuint16hton(r->buf, (uint16_t)size);
     } else if (size <= UINT32_MAX) {
-        status |= buf_putuint8(r->buf, BJSON_STYPE_KEY32);
+        status |= buf_putuint8(r->buf, BSON_STYPE_KEY32);
         status |= buf_putuint32hton(r->buf, (uint32_t)size);
     } else {
-        status |= buf_putuint8(r->buf, BJSON_STYPE_KEY64);
+        status |= buf_putuint8(r->buf, BSON_STYPE_KEY64);
         status |= buf_putuint64hton(r->buf, (uint64_t)size);
     }
 
@@ -112,13 +112,13 @@ static int render_bjson_key(xson_render_t *r, xson_render_key_type_t type, xson_
     return status;
 }
 
-static int render_bjson_value(xson_render_t *r, xson_render_value_type_t type, xson_render_value_t v)
+static int render_bson_value(xson_render_t *r, xson_render_value_type_t type, xson_render_value_t v)
 {
     int status = 0;
 
     switch(type) {
     case XSON_RENDER_VALUE_TYPE_NULL:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_NULL);
+        status |= buf_putuint8(r->buf, BSON_STYPE_NULL);
         break;
     case XSON_RENDER_VALUE_TYPE_STRING:
     case XSON_RENDER_VALUE_TYPE_IOV:
@@ -133,16 +133,16 @@ static int render_bjson_value(xson_render_t *r, xson_render_value_type_t type, x
         }
 
         if (size <= UINT8_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_STRING8);
+            status |= buf_putuint8(r->buf, BSON_STYPE_STRING8);
             status |= buf_putuint8(r->buf, (uint8_t)size);
         } else if (size <= UINT16_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_STRING16);
+            status |= buf_putuint8(r->buf, BSON_STYPE_STRING16);
             status |= buf_putuint16hton(r->buf, (uint16_t)size);
         } else if (size <= UINT32_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_STRING32);
+            status |= buf_putuint8(r->buf, BSON_STYPE_STRING32);
             status |= buf_putuint32hton(r->buf, (uint32_t)size);
         } else {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_STRING64);
+            status |= buf_putuint8(r->buf, BSON_STYPE_STRING64);
             status |= buf_putuint64hton(r->buf, (uint64_t)size);
         }
 
@@ -155,73 +155,73 @@ static int render_bjson_value(xson_render_t *r, xson_render_value_type_t type, x
         }
         break;
     case XSON_RENDER_VALUE_TYPE_FLOAT:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_FLOAT);
+        status |= buf_putuint8(r->buf, BSON_STYPE_FLOAT);
         status |= buf_putfloathton(r->buf, v.fnumber);
         break;
     case XSON_RENDER_VALUE_TYPE_DOUBLE:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_DOUBLE);
+        status |= buf_putuint8(r->buf, BSON_STYPE_DOUBLE);
         status |= buf_putdoublehton(r->buf, v.dnumber);
         break;
     case XSON_RENDER_VALUE_TYPE_INTEGER:
         if (v.inumber < 0) {
             if (v.inumber <= INT8_MIN) {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_INT8);
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT8);
                 status |= buf_putint8(r->buf, v.inumber);
-            } else if (v.inumber <= UINT16_MIN) {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT16);
+            } else if (v.inumber <= INT16_MIN) {
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT16);
                 status |= buf_putint16hton(r->buf, (int16_t)v.inumber);
-            } else if (v.inumber <= UINT32_MIN) {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT32);
+            } else if (v.inumber <= INT32_MIN) {
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT32);
                 status |= buf_putint32hton(r->buf, (int32_t)v.inumber);
             } else {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT64);
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT64);
                 status |= buf_putint64hton(r->buf, (int64_t)v.inumber);
             }
         } else {
             if (v.inumber <= INT8_MAX) {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT8);
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT8);
                 status |= buf_putint8(r->buf, v.unumber);
-            } else if (v.inumber <= UINT16_MAX) {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT16);
+            } else if (v.inumber <= INT16_MAX) {
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT16);
                 status |= buf_putint16hton(r->buf, (int16_t)v.inumber);
-            } else if (v.inumber <= UINT32_MAX) {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT32);
+            } else if (v.inumber <= INT32_MAX) {
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT32);
                 status |= buf_putint32hton(r->buf, (int32_t)v.inumber);
             } else {
-                status |= buf_putuint8(r->buf, BJSON_STYPE_UINT64);
+                status |= buf_putuint8(r->buf, BSON_STYPE_INT64);
                 status |= buf_putint64hton(r->buf, (int64_t)v.inumber);
             }
         }
         break;
     case XSON_RENDER_VALUE_TYPE_UINTEGER:
         if (v.unumber < UINT8_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_UINT8);
+            status |= buf_putuint8(r->buf, BSON_STYPE_UINT8);
             status |= buf_putuint8(r->buf, v.unumber);
         } else if (v.unumber < UINT16_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_UINT16);
+            status |= buf_putuint8(r->buf, BSON_STYPE_UINT16);
             status |= buf_putuint16hton(r->buf, (uint16_t)v.unumber);
         } else if (v.unumber < UINT32_MAX) {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_UINT32);
+            status |= buf_putuint8(r->buf, BSON_STYPE_UINT32);
             status |= buf_putuint32hton(r->buf, (uint32_t)v.unumber);
         } else {
-            status |= buf_putuint8(r->buf, BJSON_STYPE_UINT64);
+            status |= buf_putuint8(r->buf, BSON_STYPE_UINT64);
             status |= buf_putuint64hton(r->buf, (uint64_t)v.unumber);
         }
         break;
     case XSON_RENDER_VALUE_TYPE_TRUE:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_FALSE);
+        status |= buf_putuint8(r->buf, BSON_STYPE_TRUE);
         break;
     case XSON_RENDER_VALUE_TYPE_FALSE:
-        status |= buf_putuint8(r->buf, BJSON_STYPE_TRUE);
+        status |= buf_putuint8(r->buf, BSON_STYPE_FALSE);
         break;
     }
 
     return status;
 }
 
-xson_render_callbacks_t xson_render_jsonb = {
-    .xson_render_open  = render_jsonb_open,
-    .xson_render_close = render_jsonb_close,
-    .xson_render_key   = render_jsonb_key,
-    .xson_render_value = render_jsonb_value,
+xson_render_callbacks_t xson_render_bson = {
+    .xson_render_open  = render_bson_open,
+    .xson_render_close = render_bson_close,
+    .xson_render_key   = render_bson_key,
+    .xson_render_value = render_bson_value,
 };
