@@ -6,8 +6,12 @@
 #include "cmd.h"
 #include "plugin_internal.h"
 #include "libutils/common.h"
+#include "libutils/itoa.h"
 
+#include <sys/file.h>
 #include <sys/un.h>
+
+static int pidfile_fd;
 
 static void sig_int_handler(int __attribute__((unused)) signal)
 {
@@ -22,26 +26,64 @@ static void sig_term_handler(int __attribute__((unused)) signal)
 static int pidfile_create(void)
 {
     const char *file = global_option_get("pid-file");
+    if (file != NULL)
+        return 0;
 
-    FILE *fh = fopen(file, "w");
-    if (fh == NULL) {
-        ERROR("fopen (%s): %s", file, STRERRNO);
+    pidfile_fd = open(file, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
+    if (pidfile_fd < 0) {
+        ERROR("open('%s') failed: %s", file, STRERRNO);
         return 1;
     }
 
-    fprintf(fh, "%i\n", (int)getpid());
-    fclose(fh);
+    struct stat st;
+    if (fstat(pidfile_fd, &st) < 0) {
+        ERROR("fstat('%s') failed: %s", file, STRERRNO);
+        close(pidfile_fd);
+        return 1;
+    }
+
+    if (!S_ISREG(st.st_mode)) {
+        ERROR("'%s' is not a regular file.", file);
+        close(pidfile_fd);
+        return 1;
+    }
+
+#ifdef HAVE_LOCKF
+	int status = lockf(pidfile_fd, F_TLOCK, 0);
+#else
+    int status = flock(pidfile_fd, LOCK_EX|LOCK_NB);
+#endif
+    if (status < 0) {
+        ERROR("Couldn't get lock for file '%s': %s", file, STRERRNO);
+        close(pidfile_fd);
+        return 1;
+	}
+
+    if (ftruncate(pidfile_fd, 0) < 0) {
+        ERROR("ftruncate('%s') failed: %s", file, STRERRNO);
+        close(pidfile_fd);
+        return 1;
+    }
+
+    char pid[ITOA_MAX+1];
+    size_t len = uitoa(getpid(), pid);
+    pid[len] = '\n';
+    pid[len+1] = '\0';
+
+    write(pidfile_fd, pid, len+1);
 
     return 0;
 }
 
-static int pidfile_remove(void)
+static void pidfile_remove(void)
 {
     const char *file = global_option_get("pid-file");
-    if (file == NULL)
-        return 0;
+    if (file != NULL)
+        return;
 
-    return unlink(file);
+    close(pidfile_fd);
+
+    unlink(file);
 }
 
 #ifdef KERNEL_LINUX

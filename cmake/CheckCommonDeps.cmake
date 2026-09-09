@@ -149,6 +149,7 @@ int main(void) {
     check_function_exists(closefrom        HAVE_CLOSEFROM)
     check_function_exists(pwritev          HAVE_PWRITEV)
     check_function_exists(fdatasync        HAVE_FDATASYNC)
+    check_function_exists(lockf            HAVE_LOCKF)
 
     check_symbol_exists(F_CLOSEM "fcntl.h" HAVE_FCNTL_CLOSEM)
 
