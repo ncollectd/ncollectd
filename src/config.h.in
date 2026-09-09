@@ -257,6 +257,9 @@
 #ifndef HAVE_FDATASYNC
 #cmakedefine HAVE_FDATASYNC
 #endif
+#ifndef HAVE_LOCKF
+#cmakedefine HAVE_LOCKF
+#endif
 #ifndef HAVE_RUSAGE_THREAD
 #cmakedefine HAVE_RUSAGE_THREAD
 #endif
