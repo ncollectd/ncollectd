@@ -1,0 +1,57 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+#pragma once
+
+typedef enum {
+    BSON_TYPE_NULL      = 0x10,
+    BSON_TYPE_FALSE     = 0x20,
+    BSON_TYPE_TRUE      = 0x30,
+    BSON_TYPE_INT       = 0x40,
+    BSON_TYPE_UINT      = 0x50,
+    BSON_TYPE_FLOAT     = 0x60,
+    BSON_TYPE_STRING    = 0x70,
+    BSON_TYPE_KEY       = 0x80,
+    BSON_TYPE_ARRAY     = 0x90,
+    BSON_TYPE_ARRAY_END = 0xA0,
+    BSON_TYPE_MAP       = 0xB0,
+    BSON_TYPE_MAP_END   = 0xC0,
+} bson_type_t;
+
+typedef enum {
+    BSON_STYPE_NULL      = 0x10,
+    BSON_STYPE_FALSE     = 0x20,
+    BSON_STYPE_TRUE      = 0x30,
+    BSON_STYPE_INT8      = 0x41,
+    BSON_STYPE_INT16     = 0x42,
+    BSON_STYPE_INT32     = 0x44,
+    BSON_STYPE_INT64     = 0x48,
+    BSON_STYPE_UINT8     = 0x51,
+    BSON_STYPE_UINT16    = 0x52,
+    BSON_STYPE_UINT32    = 0x54,
+    BSON_STYPE_UINT64    = 0x58,
+    BSON_STYPE_FLOAT     = 0x64,
+    BSON_STYPE_DOUBLE    = 0x68,
+    BSON_STYPE_STRING    = 0x70,
+    BSON_STYPE_STRING8   = 0x71,
+    BSON_STYPE_STRING16  = 0x72,
+    BSON_STYPE_STRING32  = 0x74,
+    BSON_STYPE_STRING64  = 0x78,
+    BSON_STYPE_KEY       = 0x80,
+    BSON_STYPE_KEY8      = 0x81,
+    BSON_STYPE_KEY16     = 0x82,
+    BSON_STYPE_KEY32     = 0x84,
+    BSON_STYPE_KEY64     = 0x88,
+    BSON_STYPE_ARRAY     = 0x90,
+    BSON_STYPE_ARRAY8    = 0x91,
+    BSON_STYPE_ARRAY16   = 0x92,
+    BSON_STYPE_ARRAY32   = 0x94,
+    BSON_STYPE_ARRAY64   = 0x98,
+    BSON_STYPE_ARRAY_END = 0xA0,
+    BSON_STYPE_MAP       = 0xB0,
+    BSON_STYPE_MAP8      = 0xB1,
+    BSON_STYPE_MAP16     = 0xB2,
+    BSON_STYPE_MAP32     = 0xB4,
+    BSON_STYPE_MAP64     = 0xB8,
+    BSON_STYPE_MAP_END   = 0xC0,
+} bson_stype_t;
+
+
