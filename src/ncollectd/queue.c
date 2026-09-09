@@ -193,7 +193,6 @@ int queue_enqueue(queue_t *queue, const char *plugin, queue_elem_t *ins_head)
 queue_elem_t *queue_dequeue(queue_t *queue, queue_thread_t *writer, cdtime_t abstime)
 {
     queue_elem_t *elem = NULL;
-
     pthread_mutex_lock(&queue->lock);
 
     elem = writer->head;
@@ -207,6 +206,7 @@ queue_elem_t *queue_dequeue(queue_t *queue, queue_thread_t *writer, cdtime_t abs
         }
 
         pthread_mutex_unlock(&queue->lock);
+
         return NULL;
     }
 
@@ -353,12 +353,14 @@ int queue_thread_stop(queue_t *queue, const char *name)
     while (to_stop != NULL) {
         /* coverity[MISSING_LOCK] */
         queue_thread_t *next = to_stop->next;
-
-        int ret = pthread_join(to_stop->thread, NULL);
-        if (ret != 0) {
-            ERROR("pthread_join failed for %s.", to_stop->name);
-            status = ret;
+        if (pthread_kill(to_stop->thread, 0) == 0) {
+            int ret = pthread_join(to_stop->thread, NULL);
+            if (ret != 0) {
+                ERROR("pthread_join failed for %s.", to_stop->name);
+                status = ret;
+            }
         }
+
         free(to_stop->name);
 
         /* Drop references to all remaining queue elements */
