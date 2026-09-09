@@ -749,6 +749,8 @@ int plugin_write(const char *plugin, metric_family_t *fam, bool clone)
             if (status != 0) {
                 ERROR("cannot serialize metric family '%s'", fam->name);
                 buf_destroy(&buf);
+                if (!clone)
+                    metric_family_free(fam);
                 return status;
             }
 
