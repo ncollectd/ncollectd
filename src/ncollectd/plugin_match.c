@@ -534,10 +534,16 @@ int plugin_match_dispatch(plugin_match_t *plugin_match_list, plugin_filter_t *fi
 
                 switch (fam.type) {
                 case METRIC_TYPE_GAUGE:
-                    m.value = VALUE_GAUGE(mm->value.gauge.float64);
+                    if (mm->value.gauge.type == GAUGE_FLOAT64)
+                        m.value = VALUE_GAUGE_FLOAT64(mm->value.gauge.float64);
+                    else
+                        m.value = VALUE_GAUGE_INT64(mm->value.gauge.int64);
                     break;
                 case METRIC_TYPE_COUNTER:
-                    m.value = VALUE_COUNTER(mm->value.counter.uint64);
+                    if (mm->value.counter.type == COUNTER_UINT64)
+                        m.value = VALUE_COUNTER_UINT64(mm->value.counter.uint64);
+                    else
+                        m.value = VALUE_COUNTER_FLOAT64(mm->value.counter.float64);
                     break;
                 default:
                     PLUGIN_WARNING("unsupported metric type in match");
