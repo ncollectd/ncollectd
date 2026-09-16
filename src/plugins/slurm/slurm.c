@@ -439,6 +439,7 @@ static int slurm_read(void)
         slurm_free_node_info_msg(node_buffer_ptr);
         slurm_free_partition_info_msg(part_buffer_ptr);
         PLUGIN_ERROR("slurm_get_statistics error");
+        return -1;
     }
 
     /* SLURM APIs provide *non-relational* data about nodes, partitions and jobs.
