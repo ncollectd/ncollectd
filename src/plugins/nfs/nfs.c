@@ -792,7 +792,7 @@ static void nfs_read_mountstats_events(char *line, nfs_mountstats_t *nfs, label_
 {
     char *fields[28];
     int fields_num = strsplit(line, fields, STATIC_ARRAY_SIZE(fields));
-    if (fields_num < 29)
+    if (fields_num < 28)
         return;
 
     metric_family_append(&nfs->fams[FAM_NFS_MOUNT_INODE_REVALIDATE],
@@ -1185,7 +1185,7 @@ static int nfs_read_mountstats(void)
             if (mount == NULL)
                 continue;
             mount += strlen(" mounted on ");
-            while ((*mount == ' ') || (*mount == '\t')) str++;
+            while ((*mount == ' ') || (*mount == '\t')) mount++;
             if (*mount == '\0')
                 continue;
             str = mount;
@@ -1193,7 +1193,7 @@ static int nfs_read_mountstats(void)
             size_t mount_size = str - mount;
 
             char *export = line + strlen("device ");
-            while ((*export == ' ') || (*export == '\t')) str++;
+            while ((*export == ' ') || (*export == '\t')) export++;
             if (*export == '\0')
                 continue;
             str = export;
@@ -1287,7 +1287,7 @@ static int nfs_read_net_rpc_nfs(void)
 
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
 
-        if (fields_num < 3)
+        if (fields_num < 4)
             continue;
 
         uint64_t value;

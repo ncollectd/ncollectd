@@ -1,10 +1,9 @@
-
+# TYPE system_nfs_rpc_calls counter
+system_nfs_rpc_calls_total{hostname="localhost.localdomain"} 655056050
 # TYPE system_nfs_rpc_retransmissions counter
 system_nfs_rpc_retransmissions_total{hostname="localhost.localdomain"} 18764
 # TYPE system_nfs_rpc_authentication_refreshes counter
 system_nfs_rpc_authentication_refreshes_total{hostname="localhost.localdomain"} 655037135
-# TYPE system_nfs_rpc_calls counter
-system_nfs_rpc_calls_total{hostname="localhost.localdomain"} 655056050
 # TYPE system_nfs_requests counter
 system_nfs_requests_total{hostname="localhost.localdomain",method="null",proto="3"} 8
 system_nfs_requests_total{hostname="localhost.localdomain",method="getattr",proto="3"} 16118436
@@ -96,161 +95,6 @@ system_nfs_requests_total{hostname="localhost.localdomain",method="getxattr",pro
 system_nfs_requests_total{hostname="localhost.localdomain",method="setxattr",proto="4"} 0
 system_nfs_requests_total{hostname="localhost.localdomain",method="listxattrs",proto="4"} 0
 # TYPE system_nfs_mount_normal_read_bytes counter
-system_nfs_mount_normal_read_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 125104779619
-# TYPE system_nfs_mount_direct_written_bytes counter
-system_nfs_mount_direct_written_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
-# TYPE system_nfs_mount_server_read_bytes counter
-system_nfs_mount_server_read_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 18594800515
-# TYPE system_nfs_mount_normal_written_bytes counter
-system_nfs_mount_normal_written_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 34781209796
-# TYPE system_nfs_mount_direct_read_bytes counter
-system_nfs_mount_direct_read_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
-# TYPE system_nfs_mount_server_written_bytes counter
-system_nfs_mount_server_written_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 34930026111
-# TYPE system_nfs_mount_xptr_tcp_connect_jiffies counter
-system_nfs_mount_xptr_tcp_connect_jiffies_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
-# TYPE system_nfs_mount_written_pages counter
-system_nfs_mount_written_pages_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 8729101
-# TYPE system_nfs_mount_xptr_tcp_sends counter
-system_nfs_mount_xptr_tcp_sends_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 119608652
-# TYPE system_nfs_mount_xptr_tcp_connect counter
-system_nfs_mount_xptr_tcp_connect_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 2
-# TYPE system_nfs_mount_read_pages counter
-system_nfs_mount_read_pages_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 4558481
-# TYPE system_nfs_mount_xptr_tcp_request counter
-system_nfs_mount_xptr_tcp_request_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 786311733
-# TYPE system_nfs_mount_xptr_tcp_backlog counter
-system_nfs_mount_xptr_tcp_backlog_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
-# TYPE system_nfs_mount_xptr_tcp_max_slots gauge
-system_nfs_mount_xptr_tcp_max_slots{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 15678
-# TYPE system_nfs_mount_xptr_tcp_sending_queue counter
-system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 6148152422
-# TYPE system_nfs_mount_xptr_tcp_idle_seconds counter
-system_nfs_mount_xptr_tcp_idle_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
-# TYPE system_nfs_mount_xptr_tcp_pending_queue counter
-system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 661727840
-# TYPE system_nfs_mount_operation_transmissions counter
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 1
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 3439372
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 762782
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 472187
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 478183
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 337774
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 933295
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 452699
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 261
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 66103
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 648
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 189
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 87
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 511
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 11773945
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 2
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 1
-system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
-# TYPE system_nfs_mount_operation_timeouts counter
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
-# TYPE system_nfs_mount_operation_send_bytes counter
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 44
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 495261476
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 132809156
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 85056140
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 70771060
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 52692744
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 35083794252
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 87970872
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 50400
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 10977528
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 106984
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 45776
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 14268
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 85740
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 1695442036
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 280
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 140
-system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
-# TYPE system_nfs_mount_xptr_tcp_bad_xids counter
-system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
-# TYPE system_nfs_mount_operation_requests counter
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 1
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 3439372
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 762782
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 472187
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 478183
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 337774
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 933295
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 452699
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 261
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 66103
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 648
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 189
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 87
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 511
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 11773945
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 2
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 1
-system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
-# TYPE system_nfs_mount_xptr_tcp_bind counter
-system_nfs_mount_xptr_tcp_bind_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 1
-# TYPE system_nfs_mount_operation_queue_seconds counter
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 19.199
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 0.96
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 2.334
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 0.674
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 2.236
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 1504.183
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 0.861
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 0.133
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0.001
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 84.639
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
-system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
-# TYPE system_nfs_mount_xptr_tcp_recvs counter
-system_nfs_mount_xptr_tcp_recvs_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 119608652
-# TYPE system_nfs_mount_normal_read_bytes counter
 system_nfs_mount_normal_read_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 51006662506
 # TYPE system_nfs_mount_normal_written_bytes counter
 system_nfs_mount_normal_written_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 51907893706
@@ -260,174 +104,88 @@ system_nfs_mount_direct_read_bytes_total{export="nfs2.localdomain:/export2",host
 system_nfs_mount_direct_written_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
 # TYPE system_nfs_mount_server_read_bytes counter
 system_nfs_mount_server_read_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 24144911427
-# TYPE system_nfs_mount_operation_recv_bytes counter
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 24
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 385207312
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 109840608
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 64208692
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 57381872
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 18638097336
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 149327200
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 128565532
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 74124
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 9518640
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 81000
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 48876
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 1667020
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 1270980
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 1978022760
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 328
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 140
-system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
 # TYPE system_nfs_mount_server_written_bytes counter
 system_nfs_mount_server_written_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 51907897215
 # TYPE system_nfs_mount_read_pages counter
 system_nfs_mount_read_pages_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 5958813
-# TYPE system_nfs_mount_operation_response_seconds counter
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 1319.891
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 489.53
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 188.898
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 168.827
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 241.442
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 3350.768
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 369.894
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0.326
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 49.595
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0.459
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0.157
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0.061
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0.297
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 4744.037
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0.01
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
-system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
 # TYPE system_nfs_mount_written_pages counter
 system_nfs_mount_written_pages_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 12832497
-# TYPE system_nfs_mount_xptr_tcp_connect counter
-system_nfs_mount_xptr_tcp_connect_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 2
-# TYPE system_nfs_mount_operation_request_seconds counter
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0.001
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 1371.353
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 495.761
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 196.362
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 172.736
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 247.045
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 4859.305
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 374.491
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0.328
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 50.295
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0.464
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0.159
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0.063
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0.303
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 4973.639
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0.01
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
-system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_inode_revalidate counter
+system_nfs_mount_inode_revalidate_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 6455738
+# TYPE system_nfs_mount_dnode_revalidate counter
+system_nfs_mount_dnode_revalidate_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 37362785
+# TYPE system_nfs_mount_data_invalidate counter
+system_nfs_mount_data_invalidate_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 117733
+# TYPE system_nfs_mount_attribute_invalidate counter
+system_nfs_mount_attribute_invalidate_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 238753
+# TYPE system_nfs_mount_vfs_open counter
+system_nfs_mount_vfs_open_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 5600899
+# TYPE system_nfs_mount_vfs_lookup counter
+system_nfs_mount_vfs_lookup_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 481129
+# TYPE system_nfs_mount_vfs_access counter
+system_nfs_mount_vfs_access_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 39180715
+# TYPE system_nfs_mount_vfs_update_page counter
+system_nfs_mount_vfs_update_page_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 14701821
+# TYPE system_nfs_mount_vfs_read_page counter
+system_nfs_mount_vfs_read_page_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 28
+# TYPE system_nfs_mount_vfs_read_pages counter
+system_nfs_mount_vfs_read_pages_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 531571
+# TYPE system_nfs_mount_vfs_write_page counter
+system_nfs_mount_vfs_write_page_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_vfs_write_pages counter
+system_nfs_mount_vfs_write_pages_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 317198
+# TYPE system_nfs_mount_vfs_getdents counter
+system_nfs_mount_vfs_getdents_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 8676794
+# TYPE system_nfs_mount_vfs_setattr counter
+system_nfs_mount_vfs_setattr_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 317164
+# TYPE system_nfs_mount_vfs_flush counter
+system_nfs_mount_vfs_flush_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 1342282
+# TYPE system_nfs_mount_vfs_fsync counter
+system_nfs_mount_vfs_fsync_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_vfs_lock counter
+system_nfs_mount_vfs_lock_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_vfs_release counter
+system_nfs_mount_vfs_release_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 1342282
+# TYPE system_nfs_mount_truncate counter
+system_nfs_mount_truncate_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 158581
+# TYPE system_nfs_mount_extend_write counter
+system_nfs_mount_extend_write_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 14701821
+# TYPE system_nfs_mount_silly_rename counter
+system_nfs_mount_silly_rename_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 116
+# TYPE system_nfs_mount_short_read counter
+system_nfs_mount_short_read_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_short_write counter
+system_nfs_mount_short_write_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_delay counter
+system_nfs_mount_delay_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_pnfs_read counter
+system_nfs_mount_pnfs_read_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_pnfs_write counter
+system_nfs_mount_pnfs_write_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
 # TYPE system_nfs_mount_xptr_tcp_bind counter
 system_nfs_mount_xptr_tcp_bind_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 1
+# TYPE system_nfs_mount_xptr_tcp_connect counter
+system_nfs_mount_xptr_tcp_connect_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 2
 # TYPE system_nfs_mount_xptr_tcp_connect_jiffies counter
 system_nfs_mount_xptr_tcp_connect_jiffies_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
+# TYPE system_nfs_mount_xptr_tcp_idle_seconds counter
+system_nfs_mount_xptr_tcp_idle_seconds_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
+# TYPE system_nfs_mount_xptr_tcp_sends counter
+system_nfs_mount_xptr_tcp_sends_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_recvs counter
 system_nfs_mount_xptr_tcp_recvs_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_bad_xids counter
 system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
-# TYPE system_nfs_mount_xptr_tcp_idle_seconds counter
-system_nfs_mount_xptr_tcp_idle_seconds_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
-# TYPE system_nfs_mount_operation_error counter
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 28
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 402812
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 1
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 6
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 8
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 513
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 2
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
-system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
 # TYPE system_nfs_mount_xptr_tcp_request counter
 system_nfs_mount_xptr_tcp_request_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 786311733
 # TYPE system_nfs_mount_xptr_tcp_backlog counter
 system_nfs_mount_xptr_tcp_backlog_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
-# TYPE system_nfs_mount_xptr_tcp_sends counter
-system_nfs_mount_xptr_tcp_sends_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_max_slots gauge
 system_nfs_mount_xptr_tcp_max_slots{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 15678
 # TYPE system_nfs_mount_xptr_tcp_sending_queue counter
 system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 6148152422
 # TYPE system_nfs_mount_xptr_tcp_pending_queue counter
 system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 661727840
-# TYPE system_nfs_mount_operation_timeouts counter
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="setattr"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="lookup"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="access"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readlink"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="read"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="write"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="create"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mkdir"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="symlink"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mknod"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="remove"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rmdir"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rename"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="link"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdir"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdirplus"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsstat"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsinfo"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="pathconf"} 0
-system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="commit"} 0
-# TYPE system_nfs_mount_operation_transmissions counter
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 1
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 6455738
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="setattr"} 475747
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="lookup"} 547782
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="access"} 639188
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readlink"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="read"} 591577
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="write"} 939215
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="create"} 158585
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mkdir"} 158524
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="symlink"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mknod"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="remove"} 158585
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rmdir"} 158583
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rename"} 116
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="link"} 0
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdir"} 1
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdirplus"} 169796
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsstat"} 35321832
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsinfo"} 4
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="pathconf"} 1
-system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="commit"} 0
 # TYPE system_nfs_mount_operation_requests counter
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 1
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 6455738
@@ -451,6 +209,52 @@ system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hos
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsinfo"} 4
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="pathconf"} 1
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="commit"} 0
+# TYPE system_nfs_mount_operation_transmissions counter
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 1
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 6455738
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="setattr"} 475747
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="lookup"} 547782
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="access"} 639188
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readlink"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="read"} 591577
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="write"} 939215
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="create"} 158585
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mkdir"} 158524
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="symlink"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mknod"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="remove"} 158585
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rmdir"} 158583
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rename"} 116
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="link"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdir"} 1
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdirplus"} 169796
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsstat"} 35321832
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsinfo"} 4
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="pathconf"} 1
+system_nfs_mount_operation_transmissions_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="commit"} 0
+# TYPE system_nfs_mount_operation_timeouts counter
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="setattr"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="lookup"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="access"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readlink"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="read"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="write"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="create"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mkdir"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="symlink"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="mknod"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="remove"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rmdir"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="rename"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="link"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdir"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="readdirplus"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsstat"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsinfo"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="pathconf"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="commit"} 0
 # TYPE system_nfs_mount_operation_send_bytes counter
 system_nfs_mount_operation_send_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 44
 system_nfs_mount_operation_send_bytes_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 929626236
@@ -589,3 +393,302 @@ system_nfs_mount_operation_error_total{export="nfs2.localdomain:/export2",hostna
 system_nfs_mount_operation_error_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="fsinfo"} 0
 system_nfs_mount_operation_error_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="pathconf"} 0
 system_nfs_mount_operation_error_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="commit"} 0
+# TYPE system_nfs_mount_normal_read_bytes counter
+system_nfs_mount_normal_read_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 125104779619
+# TYPE system_nfs_mount_normal_written_bytes counter
+system_nfs_mount_normal_written_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 34781209796
+# TYPE system_nfs_mount_direct_read_bytes counter
+system_nfs_mount_direct_read_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_direct_written_bytes counter
+system_nfs_mount_direct_written_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_server_read_bytes counter
+system_nfs_mount_server_read_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 18594800515
+# TYPE system_nfs_mount_server_written_bytes counter
+system_nfs_mount_server_written_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 34930026111
+# TYPE system_nfs_mount_read_pages counter
+system_nfs_mount_read_pages_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 4558481
+# TYPE system_nfs_mount_written_pages counter
+system_nfs_mount_written_pages_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 8729101
+# TYPE system_nfs_mount_inode_revalidate counter
+system_nfs_mount_inode_revalidate_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 3439372
+# TYPE system_nfs_mount_dnode_revalidate counter
+system_nfs_mount_dnode_revalidate_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 993562387
+# TYPE system_nfs_mount_data_invalidate counter
+system_nfs_mount_data_invalidate_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 13244
+# TYPE system_nfs_mount_attribute_invalidate counter
+system_nfs_mount_attribute_invalidate_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 87570
+# TYPE system_nfs_mount_vfs_open counter
+system_nfs_mount_vfs_open_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 2891216
+# TYPE system_nfs_mount_vfs_lookup counter
+system_nfs_mount_vfs_lookup_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 426724
+# TYPE system_nfs_mount_vfs_access counter
+system_nfs_mount_vfs_access_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 996019448
+# TYPE system_nfs_mount_vfs_update_page counter
+system_nfs_mount_vfs_update_page_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 20482602
+# TYPE system_nfs_mount_vfs_read_page counter
+system_nfs_mount_vfs_read_page_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 248
+# TYPE system_nfs_mount_vfs_read_pages counter
+system_nfs_mount_vfs_read_pages_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 207448
+# TYPE system_nfs_mount_vfs_write_page counter
+system_nfs_mount_vfs_write_page_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_vfs_write_pages counter
+system_nfs_mount_vfs_write_pages_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 857344
+# TYPE system_nfs_mount_vfs_getdents counter
+system_nfs_mount_vfs_getdents_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 2126507
+# TYPE system_nfs_mount_vfs_setattr counter
+system_nfs_mount_vfs_setattr_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 360617
+# TYPE system_nfs_mount_vfs_flush counter
+system_nfs_mount_vfs_flush_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 1826862
+# TYPE system_nfs_mount_vfs_fsync counter
+system_nfs_mount_vfs_fsync_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_vfs_lock counter
+system_nfs_mount_vfs_lock_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 17940
+# TYPE system_nfs_mount_vfs_release counter
+system_nfs_mount_vfs_release_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 1826862
+# TYPE system_nfs_mount_truncate counter
+system_nfs_mount_truncate_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 249
+# TYPE system_nfs_mount_extend_write counter
+system_nfs_mount_extend_write_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 20481796
+# TYPE system_nfs_mount_silly_rename counter
+system_nfs_mount_silly_rename_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 187
+# TYPE system_nfs_mount_short_read counter
+system_nfs_mount_short_read_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_short_write counter
+system_nfs_mount_short_write_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_delay counter
+system_nfs_mount_delay_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_pnfs_read counter
+system_nfs_mount_pnfs_read_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_pnfs_write counter
+system_nfs_mount_pnfs_write_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_xptr_tcp_bind counter
+system_nfs_mount_xptr_tcp_bind_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 1
+# TYPE system_nfs_mount_xptr_tcp_connect counter
+system_nfs_mount_xptr_tcp_connect_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 2
+# TYPE system_nfs_mount_xptr_tcp_connect_jiffies counter
+system_nfs_mount_xptr_tcp_connect_jiffies_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+# TYPE system_nfs_mount_xptr_tcp_idle_seconds counter
+system_nfs_mount_xptr_tcp_idle_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+# TYPE system_nfs_mount_xptr_tcp_sends counter
+system_nfs_mount_xptr_tcp_sends_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 119608652
+# TYPE system_nfs_mount_xptr_tcp_recvs counter
+system_nfs_mount_xptr_tcp_recvs_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 119608652
+# TYPE system_nfs_mount_xptr_tcp_bad_xids counter
+system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+# TYPE system_nfs_mount_xptr_tcp_request counter
+system_nfs_mount_xptr_tcp_request_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 786311733
+# TYPE system_nfs_mount_xptr_tcp_backlog counter
+system_nfs_mount_xptr_tcp_backlog_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+# TYPE system_nfs_mount_xptr_tcp_max_slots gauge
+system_nfs_mount_xptr_tcp_max_slots{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 15678
+# TYPE system_nfs_mount_xptr_tcp_sending_queue counter
+system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 6148152422
+# TYPE system_nfs_mount_xptr_tcp_pending_queue counter
+system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 661727840
+# TYPE system_nfs_mount_operation_requests counter
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 1
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 3439372
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 762782
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 472187
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 478183
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 337774
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 933295
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 452699
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 261
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 66103
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 648
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 189
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 87
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 511
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 11773945
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 2
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 1
+system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_transmissions counter
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 1
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 3439372
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 762782
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 472187
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 478183
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 337774
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 933295
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 452699
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 261
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 66103
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 648
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 189
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 87
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 511
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 11773945
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 2
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 1
+system_nfs_mount_operation_transmissions_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_timeouts counter
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
+system_nfs_mount_operation_timeouts_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_send_bytes counter
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 44
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 495261476
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 132809156
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 85056140
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 70771060
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 52692744
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 35083794252
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 87970872
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 50400
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 10977528
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 106984
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 45776
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 14268
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 85740
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 1695442036
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 280
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 140
+system_nfs_mount_operation_send_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_recv_bytes counter
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 24
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 385207312
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 109840608
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 64208692
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 57381872
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 18638097336
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 149327200
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 128565532
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 74124
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 9518640
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 81000
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 48876
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 1667020
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 1270980
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 1978022760
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 328
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 140
+system_nfs_mount_operation_recv_bytes_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_queue_seconds counter
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 19.199
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 0.96
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 2.334
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 0.674
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 2.236
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 1504.183
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 0.861
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 0.133
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0.001
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 84.639
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
+system_nfs_mount_operation_queue_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_response_seconds counter
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 1319.891
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 489.53
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 188.898
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 168.827
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 241.442
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 3350.768
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 369.894
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0.326
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 49.595
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0.459
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0.157
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0.061
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0.297
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 4744.037
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0.01
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
+system_nfs_mount_operation_response_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_request_seconds counter
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0.001
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 1371.353
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 495.761
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 196.362
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 172.736
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 247.045
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 4859.305
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 374.491
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0.328
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 50.295
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 0.464
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 0.159
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0.063
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0.303
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 4973.639
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0.01
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
+system_nfs_mount_operation_request_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
+# TYPE system_nfs_mount_operation_error counter
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 28
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="setattr"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="lookup"} 402812
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="access"} 1
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readlink"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="read"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="write"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="create"} 6
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mkdir"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="symlink"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="mknod"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="remove"} 8
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rmdir"} 513
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="rename"} 2
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="link"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdir"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="readdirplus"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsstat"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="fsinfo"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="pathconf"} 0
+system_nfs_mount_operation_error_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="commit"} 0
