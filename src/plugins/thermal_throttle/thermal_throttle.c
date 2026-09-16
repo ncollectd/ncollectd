@@ -81,11 +81,10 @@ static int thermal_throttle_cpu(int dir_fd, __attribute__((unused)) const char *
         return 0;
 
     size_t cpu = atoi(cpu_num);
-    if (cpu > cpus_num)
-        return 0;
-
     if (cpu > cpu_max_found)
         cpu_max_found = cpu;
+    if (cpu >= cpus_num)
+        return 0;
 
     int core_id = cpus[cpu].core_id;
     if ((core_id >= 0) && ((size_t)core_id < thermal_throttle_cores_num)) {
@@ -232,6 +231,7 @@ static int thermal_throttle_read(void)
         thermal_throttle_cores = calloc(thermal_throttle_cores_num,
                                         sizeof(*thermal_throttle_cores));
         if (thermal_throttle_cores == NULL) {
+            PLUGIN_ERROR("calloc failed.");
             thermal_throttle_free();
             return 0;
         }
@@ -240,6 +240,7 @@ static int thermal_throttle_read(void)
         thermal_throttle_packages = calloc(thermal_throttle_packages_num,
                                            sizeof(*thermal_throttle_packages));
         if (thermal_throttle_packages == NULL) {
+            PLUGIN_ERROR("calloc failed.");
             thermal_throttle_free();
             return 0;
         }
