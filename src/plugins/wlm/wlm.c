@@ -133,6 +133,8 @@ static int wlm_shutdown(void)
 {
     exclist_reset(&excl_class);
 
+    free(wlminfo);
+
     return 0;
 }
 
