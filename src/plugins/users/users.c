@@ -39,7 +39,7 @@ static int users_read(void)
     }
     endutxent();
 
-#elif defines(HAVE_GETUTENT)
+#elif defined(HAVE_GETUTENT)
     struct utmp *entry = NULL;
 
     /* according to the *utent(3) man page none of the functions sets errno
