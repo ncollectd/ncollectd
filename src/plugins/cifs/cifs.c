@@ -486,7 +486,7 @@ static int cifs_read(void)
                                          &LABEL_PAIR_CONST("share", share),
                                          &LABEL_PAIR_CONST("connection", conn), NULL);
                 }
-            } else if ((strcmp(fields[0], "FindFirst:") == 0) && (fields_num == 5)) {
+            } else if ((strcmp(fields[0], "FindFirst:") == 0) && (fields_num == 6)) {
                 /* FindFirst: %d FNext %d FClose %d */
                 metric_family_append(&fams[FAM_CIFS_SMB1_FIND_FIRST],
                                      VALUE_COUNTER(atoull(fields[1])), NULL,

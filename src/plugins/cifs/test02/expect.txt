@@ -58,3 +58,12 @@ system_cifs_smb1_sym_links_total{connection="2",hostname="localhost.localdomain"
 # TYPE system_cifs_smb1_flushes counter
 system_cifs_smb1_flushes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
 system_cifs_smb1_flushes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_find_first counter
+system_cifs_smb1_find_first_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_find_first_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_find_next counter
+system_cifs_smb1_find_next_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_find_next_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb1_find_close counter
+system_cifs_smb1_find_close_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb1_find_close_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
