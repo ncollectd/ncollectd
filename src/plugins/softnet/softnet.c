@@ -15,6 +15,8 @@ enum {
     FAM_SOFTNET_RECEIVED_RPS,
     FAM_SOFTNET_FLOW_LIMIT,
     FAM_SOFTNET_BACKLOG_LENGTH,
+    FAM_SOFTNET_INPUT_QUEUE_LENGTH,
+    FAM_SOFTNET_PROCESS_QUEUE_LENGTH,
     FAM_SOFTNET_MAX,
 };
 
@@ -49,8 +51,34 @@ static metric_family_t fams[FAM_SOFTNET_MAX]= {
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of packets in backlog queue, sum of input queue and process queue.",
     },
+    [FAM_SOFTNET_INPUT_QUEUE_LENGTH] = {
+        .name = "system_softnet_input_queue_length",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of packets in the input queue.",
+    },
+    [FAM_SOFTNET_PROCESS_QUEUE_LENGTH] = {
+        .name = "system_softnet_process_queue_length",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of packets in the process queue.",
+    },
 };
 
+typedef struct {
+    int field;
+    int fam;
+} field_fam_t;
+
+static field_fam_t field_fam[] = {
+    {  0, FAM_SOFTNET_PROCESSED            },
+    {  1, FAM_SOFTNET_DROPPED              },
+    {  2, FAM_SOFTNET_TIMES_SQUEEZED       },
+    {  9, FAM_SOFTNET_RECEIVED_RPS         },
+    { 10, FAM_SOFTNET_FLOW_LIMIT           },
+    { 11, FAM_SOFTNET_BACKLOG_LENGTH       },
+    { 13, FAM_SOFTNET_INPUT_QUEUE_LENGTH   },
+    { 14, FAM_SOFTNET_PROCESS_QUEUE_LENGTH }
+};
+static size_t field_fam_size = STATIC_ARRAY_SIZE(field_fam);
 
 static int softnet_read(void)
 {
@@ -68,52 +96,39 @@ static int softnet_read(void)
         if (fields_num < 6)
             continue;
 
-        value_t value = {0};
         char cpu[ITOA_MAX];
 
-#if 0
-    0             1             2             3  4  5  6  7                           8                         9                 10                 11                       12
-sd->processed, sd->dropped, sd->time_squeeze, 0, 0, 0, 0, 0, /* was fastroute */ sd->cpu_collision        , sd->received_rps
-sd->processed, sd->dropped, sd->time_squeeze, 0, 0, 0, 0, 0, /* was fastroute */ 0, /* was cpu_collision */ sd->received_rps, flow_limit_count
-sd->processed, sd->dropped, sd->time_squeeze, 0, 0, 0, 0, 0, /* was fastroute */ 0, /* was cpu_collision */ sd->received_rps, flow_limit_count, softnet_backlog_len(sd), (int)seq->index
-#endif
-
-        if (fields_num >= 14) {
+        if (fields_num >= 13) {
             int fcpu =  (int)strtol(fields[12], NULL, 16);
             uitoa(fcpu, cpu);
         } else {
             uitoa(ncpu, cpu);
         }
 
-        if (fields_num >= 3) {
-            value = VALUE_COUNTER(strtol(fields[0], NULL, 16));
-            metric_family_append(&fams[FAM_SOFTNET_PROCESSED], value, NULL,
-                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
+        for (size_t i = 0; i < field_fam_size; i++) {
+            int field = field_fam[i].field;
+            if (fields_num <= field)
+                continue;
 
-            value = VALUE_COUNTER(strtol(fields[1], NULL, 16));
-            metric_family_append(&fams[FAM_SOFTNET_DROPPED], value, NULL,
-                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
+            unsigned long long val = strtoull(fields[field], NULL, 16);
 
-            value = VALUE_COUNTER(strtol(fields[2], NULL, 16));
-            metric_family_append(&fams[FAM_SOFTNET_TIMES_SQUEEZED], value, NULL,
-                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
+            metric_family_t *fam = &fams[field_fam[i].fam];
 
-            if (fields_num >= 10) {
-                value = VALUE_COUNTER(strtol(fields[9], NULL, 16));
-                metric_family_append(&fams[FAM_SOFTNET_RECEIVED_RPS], value, NULL,
+            if (fam->type == METRIC_TYPE_GAUGE) {
+                metric_family_append(fam, VALUE_GAUGE(val), NULL,
                                      &LABEL_PAIR_CONST("cpu", cpu), NULL);
-
-                if (fields_num >= 12) {
-                    value = VALUE_GAUGE(strtol(fields[11], NULL, 16));
-                    metric_family_append(&fams[FAM_SOFTNET_BACKLOG_LENGTH], value, NULL,
-                                         &LABEL_PAIR_CONST("cpu", cpu), NULL);
-                }
+            } else if (fam->type == METRIC_TYPE_COUNTER) {
+                metric_family_append(fam, VALUE_COUNTER(val), NULL,
+                                     &LABEL_PAIR_CONST("cpu", cpu), NULL);
             }
         }
+
     }
+
     fclose(fh);
 
     plugin_dispatch_metric_family_array(fams, FAM_SOFTNET_MAX, 0);
+
     return 0;
 }
 
