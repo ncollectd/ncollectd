@@ -139,6 +139,8 @@ static int uptime_read(void)
 {
     /* calculate the amount of time elapsed since boot, AKA uptime */
     time_t elapsed = uptime_get_sys();
+    if (elapsed < 0)
+        return -1;
 
     metric_family_append(&fam, VALUE_GAUGE(elapsed), NULL, NULL);
 
