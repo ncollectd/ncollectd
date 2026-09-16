@@ -215,7 +215,7 @@ static int fcgi_build_request(fcgi_ctx_t *ctx)
         };
 
         status |= buf_put(&ctx->request, &hdr_stdin, sizeof(hdr_stdin));
-        status |= buf_put(&ctx->request, ctx->data, sizeof(data_len));
+        status |= buf_put(&ctx->request, ctx->data, data_len);
     }
 
     fcgi_header_t hdr_stdin_end = {
