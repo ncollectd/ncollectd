@@ -1,0 +1,10 @@
+# TYPE system_synproxy_connections_syn_received counter
+system_synproxy_connections_syn_received_total{hostname="localhost.localdomain"} 4132
+# TYPE system_synproxy_cookies_invalid counter
+system_synproxy_cookies_invalid_total{hostname="localhost.localdomain"} 6180
+# TYPE system_synproxy_cookies_valid counter
+system_synproxy_cookies_valid_total{hostname="localhost.localdomain"} 8228
+# TYPE system_synproxy_cookies_retransmission counter
+system_synproxy_cookies_retransmission_total{hostname="localhost.localdomain"} 10276
+# TYPE system_synproxy_connections_reopened counter
+system_synproxy_connections_reopened_total{hostname="localhost.localdomain"} 12324
