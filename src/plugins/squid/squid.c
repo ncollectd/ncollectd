@@ -537,7 +537,7 @@ static int squid_curl_init(squid_t *sq)
 
 static void squid_curl_cleanup(squid_t *sq)
 {
-    if (sq->curl == NULL) {
+    if (sq->curl != NULL) {
         curl_easy_cleanup(sq->curl);
         sq->curl = NULL;
         sq->curl_errbuf[0] = '\0';
