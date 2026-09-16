@@ -26,7 +26,7 @@ static xc_cpuinfo_t *cpu_info;
 
 static metric_family_t fam_xen_cpu_idle_time = {
     .name = "xen_cpu_idle_time",
-    .type = METRIC_TYPE_GAUGE,
+    .type = METRIC_TYPE_COUNTER,
     .help = NULL,
 };
 
