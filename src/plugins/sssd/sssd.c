@@ -306,9 +306,13 @@ static int sssd_read(void)
     if (sd_booted() <= 0)
         return -1;
 
-    sd_bus_default_system(&bus);
+    int status = sd_bus_default_system(&bus);
+    if (status < 0) {
+        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERRNO);
+        return -1;
+    }
 
-    int status = sssd_ping(bus);
+    status = sssd_ping(bus);
     if (status != 0) {
         sd_bus_unref(bus);
         metric_family_append(&fams[FAM_SSSD_UP], VALUE_GAUGE(0), NULL, NULL);
