@@ -357,13 +357,13 @@ static int zram_read_device_bd_stat(int dirfd, const char *device)
         return -1;
 
     metric_family_append(&fams[FAM_ZRAM_BACKING_BYTES],
-                         VALUE_COUNTER(atoll(fields[3])*4096), NULL,
+                         VALUE_COUNTER(atoll(fields[0])*4096), NULL,
                          &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_BACKING_READS_BYTES],
-                         VALUE_COUNTER(atoll(fields[3])*4096), NULL,
+                         VALUE_COUNTER(atoll(fields[1])*4096), NULL,
                          &LABEL_PAIR_CONST("device", device), NULL);
     metric_family_append(&fams[FAM_ZRAM_BACKING_WRITE_BYTES],
-                         VALUE_COUNTER(atoll(fields[3])*4096), NULL,
+                         VALUE_COUNTER(atoll(fields[2])*4096), NULL,
                          &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
