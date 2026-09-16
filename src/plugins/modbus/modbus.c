@@ -416,6 +416,7 @@ static int mb_read_data(mb_host_t *host, mb_slave_t *slave, mb_data_t *data)
         modbus_close(host->connection);
         modbus_free(host->connection);
 #endif
+        host->connection = NULL;
     }
 
 #ifdef LEGACY_LIBMODBUS
