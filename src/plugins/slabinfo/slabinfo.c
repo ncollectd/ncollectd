@@ -43,7 +43,7 @@ static metric_family_t fams[FAM_SLABINFO_MAX] = {
     [FAM_SLABINFO_SLAB_BYTES] = {
         .name = "system_slabinfo_slab_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The number of pages allocated for each slab.",
+        .help = "The number of bytes allocated for each slab.",
     },
     [FAM_SLABINFO_SLABS_ACTIVE] = {
         .name = "system_slabinfo_slabs_active",
@@ -98,7 +98,8 @@ static int slabinfo_read(void)
                              &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_SLAB_OBJECTS], VALUE_GAUGE(atof(fields[4])), NULL,
                              &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_SLAB_BYTES], VALUE_GAUGE(atof(fields[5])), NULL,
+        metric_family_append(&fams[FAM_SLABINFO_SLAB_BYTES],
+                             VALUE_GAUGE(atof(fields[5]) * pagesize), NULL,
                              &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
         metric_family_append(&fams[FAM_SLABINFO_SLABS_ACTIVE], VALUE_GAUGE(atof(fields[13])), NULL,
                              &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
