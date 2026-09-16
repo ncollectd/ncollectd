@@ -100,7 +100,7 @@ static metric_family_t fams[FAM_TIMEX_MAX] = {
         .help = "Pulse per second count of jitter limit exceeded events.",
     },
     [FAM_TIMEX_PPS_CALIBRATION_CICLES] = {
-        .name = "system_timex_pps_calibration_clicles",
+        .name = "system_timex_pps_calibration_cicles",
         .type = METRIC_TYPE_COUNTER,
         .help = "Pulse per second count of calibration intervals.",
     },
