@@ -219,7 +219,11 @@ static int write_udp_send_message(write_udp_callback_t *cb, char const *message,
     }
 
     /* Assert that we have enough space for this message. */
-    assert(message_len < cb->send_buf_free);
+    if (message_len >= cb->send_buf_free) {
+        PLUGIN_ERROR("No space free in buffer, only %zu bytes free, for message of %zu bytes.",
+                     cb->send_buf_free, message_len);
+        return -1;
+    }
 
     /* `message_len + 1' because `message_len' does not include the
      * trailing null byte. Neither does `send_buffer_fill'. */
