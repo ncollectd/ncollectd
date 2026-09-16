@@ -91,10 +91,10 @@ static struct zswap_files zswap_files[] = {
     { false, "reject_kmemcache_fail", FAM_ZSWAP_REJECT_KMEMCACHE_FAIL },
     { false, "reject_reclaim_fail",   FAM_ZSWAP_REJECT_RECLAIM_FAIL   },
     { false, "written_back_pages",    FAM_ZSWAP_WRITTEN_BACK_PAGES    },
-    { false, "pool_total_size",       FAM_ZSWAP_POOL_TOTAL_BYTES      },
+    { false, "pool_total_size",       FAM_ZSWAP_POOL_TOTAL_BYTES      }, /* Kernel >= 3.16 */
     { true , "same_filled_pages",     FAM_ZSWAP_SAME_FILLED_BYTES     },
     { true , "stored_pages",          FAM_ZSWAP_STORED_BYTES          },
-    { true , "pool_pages",            FAM_ZSWAP_POOL_TOTAL_BYTES      },
+    { true , "pool_pages",            FAM_ZSWAP_POOL_TOTAL_BYTES      }, /* Kernel <= 3.15 */
 };
 
 static char *path_sys_zswap;
