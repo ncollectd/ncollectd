@@ -1234,7 +1234,7 @@ static int get_perf_events(virt_ctx_t *ctx, virDomainPtr domain,
         PLUGIN_ERROR("virDomainListGetStats failed with status %i.", status);
 
         virErrorPtr err = virGetLastError();
-        if (err->code == VIR_ERR_NO_SUPPORT) {
+        if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
             PLUGIN_ERROR("Disabled unsupported selector: perf");
             ctx->flags &= ~(COLLECT_VIRT_PERF);
         }
@@ -1367,7 +1367,7 @@ static int get_vcpu_stats(virt_ctx_t *ctx, virDomainPtr domain, unsigned short n
         PLUGIN_ERROR("virDomainGetVcpus failed with status %i.", status);
 
         virErrorPtr err = virGetLastError();
-        if (err->code == VIR_ERR_NO_SUPPORT) {
+        if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
             if (ctx->flags & COLLECT_VIRT_VCPU)
                 PLUGIN_ERROR("Disabled unsupported selector: vcpu");
             if (ctx->flags & COLLECT_VIRT_VCPUPIN)
@@ -1424,7 +1424,7 @@ static int get_pcpu_stats(virt_ctx_t *ctx, virDomainPtr dom, const char *ndomain
         VIRT_ERROR(ctx->conn, "getting the CPU params count");
 
         virErrorPtr err = virGetLastError();
-        if (err->code == VIR_ERR_NO_SUPPORT) {
+        if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
             PLUGIN_ERROR("Disabled unsupported selector: pcpu");
             ctx->flags &= ~(COLLECT_VIRT_PCPU);
         }
@@ -1588,7 +1588,7 @@ static int get_memory_stats(virt_ctx_t *ctx, virDomainPtr domain,
         free(minfo);
 
         virErrorPtr err = virGetLastError();
-        if (err->code == VIR_ERR_NO_SUPPORT) {
+        if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
             PLUGIN_ERROR("Disabled unsupported selector: memory");
             ctx->flags &= ~(COLLECT_VIRT_MEMORY);
         }
@@ -1684,8 +1684,7 @@ static int get_disk_err(virt_ctx_t *ctx, virDomainPtr domain,
         PLUGIN_ERROR("failed to get preferred size of disk errors array");
 
         virErrorPtr err = virGetLastError();
-
-        if (err->code == VIR_ERR_NO_SUPPORT) {
+        if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
             PLUGIN_ERROR("Disabled unsupported selector: disk_err");
             ctx->flags &= ~(COLLECT_VIRT_DISK_ERR);
         }
@@ -1759,8 +1758,7 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
                 PLUGIN_ERROR("virDomainGetBlockInfo failed for path: %s", block_dev->path);
 
                 virErrorPtr err = virGetLastError();
-                if (err->code == VIR_ERR_NO_SUPPORT) {
-
+                if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
                     if (ctx->flags & COLLECT_VIRT_DISK_ALLOCATION)
                         PLUGIN_ERROR("Disabled unsupported selector: disk_allocation");
                     if (ctx->flags & COLLECT_VIRT_DISK_CAPACITY)
@@ -1819,7 +1817,7 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
 
     if (bstats.bi.wr_bytes != -1) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_WRITE_BYTES],
-                            VALUE_COUNTER(bstats.bi.rd_bytes), &ctx->labels,
+                            VALUE_COUNTER(bstats.bi.wr_bytes), &ctx->labels,
                             &LABEL_PAIR_CONST("domain", ndomain ),
                             &LABEL_PAIR_CONST("uuid", uuid),
                             &LABEL_PAIR_CONST("device", block_dev->path),
@@ -1908,7 +1906,7 @@ static int get_fs_info(virt_ctx_t *ctx, virDomainPtr domain, const char *ndomain
         PLUGIN_ERROR("virDomainGetFSInfo failed: %d", mount_points_cnt);
 
         virErrorPtr err = virGetLastError();
-        if (err->code == VIR_ERR_NO_SUPPORT) {
+        if ((err != NULL) && (err->code == VIR_ERR_NO_SUPPORT)) {
             PLUGIN_ERROR("Disabled unsupported selector: fs_info");
             ctx->flags &= ~(COLLECT_VIRT_FS_INFO);
         }
