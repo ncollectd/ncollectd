@@ -73,10 +73,13 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
 
     if (ts == NULL) {
         ts = (tape_stats_t *)calloc(1, sizeof (tape_stats_t));
-        if (ts == NULL)
+        if (ts == NULL) {
+            close(tape_fd);
             return 0;
+        }
 
         if ((ts->name = strdup (tape)) == NULL) {
+            close(tape_fd);
             free(ts);
             return 0;
         }
@@ -128,12 +131,13 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
         metric_family_append(&fams[FAM_TAPE_RESIDUAL], VALUE_COUNTER(resid_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
 
-    if ((read_cnt_size <= 0) || (write_cnt_size <= 0))
+    if ((read_cnt_size <= 0) || (write_cnt_size <= 0)) {
+        close(tape_fd);
         return 0;
+    }
 
     uint64_t diff_read_ops = read_cnt - ts->read_ops;
     uint64_t diff_write_ops = write_cnt - ts->write_ops;
-
 
     uint64_t read_ns = 0;
     ssize_t read_ns_size = filetouint_at(tape_fd, "stats/read_ns", &read_ns);
@@ -141,8 +145,10 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
     uint64_t write_ns = 0;
     ssize_t write_ns_size = filetouint_at(tape_fd, "stats/write_ns", &write_ns);
 
-    if ((read_ns_size <= 0) || (write_ns_size <= 0))
+    if ((read_ns_size <= 0) || (write_ns_size <= 0)) {
+        close(tape_fd);
         return 0;
+    }
 
     uint64_t diff_read_time = read_ns - ts->read_time;
     uint64_t diff_write_time = write_ns - ts->write_time;
@@ -177,8 +183,10 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
     ts->write_time = write_ns;
     ts->other_time = io_ns;
 
-    if (ts->poll_count <= 2)
+    if (ts->poll_count <= 2) {
+        close(tape_fd);
         return 0;
+    }
 
     metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(ts->avg_read_time), NULL,
                          &LABEL_PAIR_CONST("device", tape), NULL);
