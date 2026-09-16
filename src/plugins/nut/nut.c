@@ -181,6 +181,15 @@ typedef struct nut_ups_s {
 static char *ca_path;
 static bool can_verify_peer;
 
+static void nut_disconnect(nut_ups_t *ups)
+{
+    if (ups->conn == NULL)
+        return;
+    upscli_disconnect(ups->conn);
+    free(ups->conn);
+    ups->conn = NULL;
+}
+
 static void free_nut_ups(void *arg)
 {
     nut_ups_t *ups = arg;
@@ -188,10 +197,7 @@ static void free_nut_ups(void *arg)
     if (ups == NULL)
         return;
 
-    if (ups->conn != NULL) {
-        upscli_disconnect(ups->conn);
-        free(ups->conn);
-    }
+    nut_disconnect(ups);
 
     free(ups->instance);
     free(ups->name);
@@ -224,7 +230,7 @@ static int nut_connect(nut_ups_t *ups)
     if (status != 0) {
         PLUGIN_ERROR("upscli_connect (%s, %i) failed: %s",
                      ups->hostname, ups->port, upscli_strerror(ups->conn));
-        free(ups->conn);
+        nut_disconnect(ups);
         return -1;
     }
 
@@ -240,7 +246,7 @@ static int nut_connect(nut_ups_t *ups)
         PLUGIN_WARNING("Connection is unsecured (no SSL).");
     } else {
         PLUGIN_ERROR("upscli_ssl failed: %s", upscli_strerror(ups->conn));
-        free(ups->conn);
+        nut_disconnect(ups);
         return -1;
     }
     return 0;
@@ -252,7 +258,7 @@ static int nut_read(user_data_t *user_data)
 
     /* (Re-)Connect if we have no connection */
     if (ups->conn == NULL) {
-        ups->conn = malloc(sizeof(*ups->conn));
+        ups->conn = calloc(1, sizeof(*ups->conn));
         if (ups->conn == NULL) {
             PLUGIN_ERROR("malloc failed.");
             return -1;
@@ -270,8 +276,7 @@ static int nut_read(user_data_t *user_data)
     int status = upscli_list_start(ups->conn, query_num, query);
     if (status != 0) {
         PLUGIN_ERROR("upscli_list_start (%s) failed: %s", ups->upsname, upscli_strerror(ups->conn));
-        upscli_disconnect(ups->conn);
-        free(ups->conn);
+        nut_disconnect(ups);
         return -1;
     }
 
