@@ -236,7 +236,7 @@ static int kafka_config_property(config_item_t *ci, rd_kafka_conf_t *conf)
     char errbuf[1024];
     rd_kafka_conf_res_t ret = rd_kafka_conf_set(conf, key, val, errbuf, sizeof(errbuf));
     if (ret != RD_KAFKA_CONF_OK) {
-        PLUGIN_WARNING("cannot set kafka property %s to %s: %s.", key, val, errbuf);
+        PLUGIN_WARNING("cannot set kafka property %s: %s.", key, errbuf);
         return 1;
     }
 
@@ -296,7 +296,7 @@ static int kafka_config_instance(config_item_t *ci)
         if  (strcasecmp("topic", child->key) == 0) {
             status = cf_util_get_string(child, &tctx->topic_name);
         } else if (strcasecmp("property", child->key) == 0) {
-            status = kafka_config_property(ci, tctx->kafka_conf);
+            status = kafka_config_property(child, tctx->kafka_conf);
         } else if (strcasecmp("key", child->key) == 0) {
             if (cf_util_get_string(child, &tctx->key) != 0)
                 continue;
