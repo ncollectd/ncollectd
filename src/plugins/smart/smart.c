@@ -363,7 +363,7 @@ static int smart_read_nvme_intel_disk(const char *dev, metric_family_t *fams, la
     value = VALUE_GAUGE((double)intel_smart_log->erase_fail_cnt.norm);
     metric_family_append(&fams[FAM_SMART_NVME_ERASE_FAIL_COUNT_NORM], value, labels, NULL);
 
-    value = VALUE_GAUGE(int48_to_double(intel_smart_log->program_fail_cnt.raw));
+    value = VALUE_GAUGE(int48_to_double(intel_smart_log->erase_fail_cnt.raw));
     metric_family_append(&fams[FAM_SMART_NVME_ERASE_FAIL_COUNT_RAW], value, labels, NULL);
 
     value = VALUE_GAUGE((double)intel_smart_log->wear_leveling_cnt.norm);
@@ -596,6 +596,8 @@ static int smart_read(void)
     udev_enumerate_add_match_property(enumerate, "DEVTYPE", "disk");
     int status = udev_enumerate_scan_devices(enumerate);
     if (status < 0) {
+        udev_enumerate_unref(enumerate);
+        udev_unref(handle_udev);
         PLUGIN_ERROR("udev_enumerate_scan_devices failed.");
         return -1;
     }
@@ -604,7 +606,7 @@ static int smart_read(void)
     if (devices == NULL) {
         udev_enumerate_unref(enumerate);
         udev_unref(handle_udev);
-        PLUGIN_ERROR("udev returned an empty list deviecs");
+        PLUGIN_ERROR("udev returned an empty list of devices.");
         return -1;
     }
 
