@@ -296,7 +296,7 @@ static int write_psql_notif(notification_t const *n, user_data_t *ud)
     char *labels_str = NULL;
     if (n->label.num > 0) {
         status = strbuf_putchar(&buf, '{');
-        for (size_t i = 0; i < n->label.num; i++, n++) {
+        for (size_t i = 0; i < n->label.num; i++) {
             if (i != 0)
                 status |= strbuf_putchar(&buf, ',');
             status |= strbuf_putstrn(&buf, "{'", 2);
@@ -317,7 +317,7 @@ static int write_psql_notif(notification_t const *n, user_data_t *ud)
     char *annotations_str = NULL;
     if (n->annotation.num > 0) {
         status = strbuf_putchar(&buf, '{');
-        for (size_t i = 0; i < n->annotation.num; i++, n++) {
+        for (size_t i = 0; i < n->annotation.num; i++) {
             if (i != 0)
                 status |= strbuf_putchar(&buf, ',');
             status |= strbuf_putstrn(&buf, "{'", 2);
