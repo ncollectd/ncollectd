@@ -118,14 +118,14 @@ static struct ksm_files ksm_files[] = {
     { 1,     "run",                                FAM_KSM_RUN                              },
     { 1,     "max_page_sharing",                   FAM_KSM_MAX_PAGE_SHARING                 },
     { 0.001, "stable_node_chains_prune_millisecs", FAM_KSM_STABLE_NODE_CHAINS_PRUNE_SECONDS },
-    { 1,     "full_scans",                         FAM_KSM_USE_ZERO_PAGES                   },
+    { 1,     "full_scans",                         FAM_KSM_FULL_SCANS                       },
     { 1,     "pages_shared",                       FAM_KSM_PAGES_SHARED                     },
     { 1,     "pages_sharing",                      FAM_KSM_PAGES_SHARING                    },
     { 1,     "pages_unshared",                     FAM_KSM_PAGES_UNSHARED                   },
     { 1,     "pages_volatile",                     FAM_KSM_PAGES_VOLATILE                   },
-    { 1,     "stable_node_chains",                 FAM_KSM_FULL_SCANS                       },
-    { 1,     "stable_node_dups",                   FAM_KSM_STABLE_NODE_CHAINS               },
-    { 1,     "use_zero_pages",                     FAM_KSM_STABLE_NODE_DUPS                 },
+    { 1,     "stable_node_chains",                 FAM_KSM_STABLE_NODE_CHAINS               },
+    { 1,     "stable_node_dups",                   FAM_KSM_STABLE_NODE_DUPS                 },
+    { 1,     "use_zero_pages",                     FAM_KSM_USE_ZERO_PAGES                   }
 };
 
 static int ksm_read(void)
