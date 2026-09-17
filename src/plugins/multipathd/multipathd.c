@@ -362,7 +362,7 @@ static void multipathd_parse_path_group(xson_value_t *path_group, char *map_name
         }
     }
 
-    if (group == NAN)
+    if (isnan(group))
         return;
 
     char group_id[DTOA_MAX];
@@ -480,14 +480,14 @@ static void multipathd_parse_map(xson_value_t *map)
                              NULL);
     }
 
-    if (path_faults != NAN) {
+    if (!isnan(path_faults)) {
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATH_FAULTS], VALUE_GAUGE(path_faults), NULL,
                              &LABEL_PAIR_CONST("name", name),
                              &LABEL_PAIR_CONST("uuid", uuid),
                              NULL);
     }
 
-    if (paths != NAN) {
+    if (!isnan(paths)) {
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATHS], VALUE_GAUGE(paths), NULL,
                              &LABEL_PAIR_CONST("name", name),
                              &LABEL_PAIR_CONST("uuid", uuid),
@@ -539,7 +539,6 @@ static int multipathd_read(void)
     xson_value_t *root = xson_tree_parser(reply, error, sizeof(error));
     if (root == NULL) {
         PLUGIN_ERROR("Error parsing json: %s", error);
-        close(fd);
         free(reply);
         metric_family_append(&fams[FAM_MULTIPATHD_UP], VALUE_GAUGE(0), NULL, NULL);
         plugin_dispatch_metric_family(&fams[FAM_MULTIPATHD_UP], 0);
