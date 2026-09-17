@@ -352,12 +352,15 @@ static int chttp_read(user_data_t *ud)
     curl_stats_dispatch(ctx->curl, ctx->curl_stats_flags, ctx->filter,
                                    ctx->metric_prefix, &ctx->labels);
 
-    if (strbuf_len(&ctx->buffer) == 0)
-        return 0;
-
-    status = plugin_match(ctx->matches, ctx->buffer.ptr);
-    if (status != 0)
-        PLUGIN_WARNING("plugin_match failed.");
+    long rc = 0;
+    curl_easy_getinfo(ctx->curl, CURLINFO_RESPONSE_CODE, &rc);
+    if ((rc >= 200) && (rc < 300)) {
+        if (strbuf_len(&ctx->buffer) > 0) {
+            status = plugin_match(ctx->matches, ctx->buffer.ptr);
+            if (status != 0)
+                PLUGIN_WARNING("plugin_match failed.");
+        }
+    }
 
     plugin_match_dispatch(ctx->matches, ctx->filter, &ctx->labels, true);
 
