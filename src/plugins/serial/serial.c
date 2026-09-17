@@ -102,7 +102,7 @@ static int serial_read(void)
                 if (strncmp(fields[i], "tx:", 3) == 0) {
                     if (strtouint(fields[i] + 3, &value) == 0) {
                         m.value = VALUE_COUNTER(value);
-                        metric_family_metric_append(&fams[FAM_SERIAL_READ], m);
+                        metric_family_metric_append(&fams[FAM_SERIAL_WRITE], m);
                     }
                 }
                 break;
@@ -110,7 +110,7 @@ static int serial_read(void)
                 if (strncmp(fields[i], "rx:", 3) == 0) {
                     if (strtouint(fields[i] + 3, &value) == 0) {
                          m.value = VALUE_COUNTER(value);
-                         metric_family_metric_append(&fams[FAM_SERIAL_WRITE], m);
+                         metric_family_metric_append(&fams[FAM_SERIAL_READ], m);
                     }
                 }
                 break;
