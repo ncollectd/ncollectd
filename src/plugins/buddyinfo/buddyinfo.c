@@ -126,5 +126,5 @@ void module_register(void)
     plugin_register_init("buddyinfo", buddyinfo_init);
     plugin_register_config("buddyinfo", buddyinfo_config);
     plugin_register_read("buddyinfo", buddyinfo_read);
-    plugin_register_shutdown("buddy", buddyinfo_shutdown);
+    plugin_register_shutdown("buddyinfo", buddyinfo_shutdown);
 }
