@@ -173,6 +173,7 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
     if (dfd < 0) {
         PLUGIN_ERROR("Cannot get directory stream file descriptor '%s': %s",
                       ctx->queue_path, STRERRNO);
+        closedir(dh);
         return -1;
     }
 
