@@ -457,7 +457,7 @@ static void sensor_read_handler(ipmi_sensor_t *sensor, int err,
     if (st->host != NULL)
         metric_label_set(&m, "host", st->host);
 
-    metric_family_metric_append(fams, m);
+    metric_family_metric_append(fam, m);
     metric_reset(&m, METRIC_TYPE_GAUGE);
 //  sstrncpy(vl.plugin, "ipmi", sizeof(vl.plugin));
 //  sstrncpy(vl.type, list_item->sensor_type, sizeof(vl.type));
@@ -713,7 +713,7 @@ static int sensor_list_read_all(c_ipmi_instance_t *st)
 
         list_item->use++;
         ipmi_sensor_id_get_reading(list_item->sensor_id, sensor_read_handler,
-                                                             /* user data = */ (void *)list_item);
+                                   /* user data = */ (void *)list_item);
     }
 
     pthread_mutex_unlock(&st->sensor_list_lock);
@@ -1191,6 +1191,8 @@ static int c_ipmi_config_instance(config_item_t *ci)
 
     pthread_mutex_init(&st->sensor_list_lock, NULL);
     st->authtype = IPMI_AUTHTYPE_DEFAULT;
+
+    memcpy(st->fams, fams, sizeof(st->fams[0])*FAM_IPMI_MAX);
 
     int status = cf_util_get_string(ci, &st->name);
     if (status != 0) {
