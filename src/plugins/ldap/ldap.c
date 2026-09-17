@@ -357,7 +357,7 @@ static int ldap_read_host(user_data_t *ud)
             struct berval **cn_list = ldap_get_values_len(ldap->ld, e, "cn");
 
             for (size_t j = 0; j < query->metrics_size; j++) {
-                ldap_metric_t *metric = query->metrics[i];
+                ldap_metric_t *metric = query->metrics[j];
 
                 if ((dn != NULL) && (metric->dn != NULL) && (strcmp(dn, metric->dn) != 0))
                     continue;
