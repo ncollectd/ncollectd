@@ -103,7 +103,7 @@ static epics_pv_t *epics_pv_tree_get(c_avl_tree_t *tree, char *name)
         return NULL;
 
     epics_pv_t *pv = NULL;
-    int status = c_avl_get(tree, pv, (void *)&name);
+    int status = c_avl_get(tree, (const void *)&name, (void *)&pv);
     if (status != 0)
         return NULL;
 
@@ -304,6 +304,7 @@ static void connection_handler(struct connection_handler_args args)
                 PLUGIN_ERROR("Unsupported channel type '%s' for channel '%s'.",
                              dbf_type_to_text(pv->ch_type), pv->name);
                 pthread_mutex_unlock(&pv_lock);
+                return;
                 break;
             }
 
