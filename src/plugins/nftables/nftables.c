@@ -294,6 +294,10 @@ static int nftables_config(config_item_t *ci)
 static int nftables_init(void)
 {
     nl = mnl_socket_open(NETLINK_NETFILTER);
+    if (nl == NULL) {
+        PLUGIN_ERROR("mnl_socket_open failed.");
+        return -1;
+    }
 
     if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
         PLUGIN_ERROR("error calling mnl_socket_bind");
