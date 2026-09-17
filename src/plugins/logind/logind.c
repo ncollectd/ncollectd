@@ -221,6 +221,7 @@ static int get_property_bool(sd_bus *bus, const char *destination, const char *p
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
     }
@@ -256,6 +257,7 @@ static int get_property_string(sd_bus *bus, const char *destination, const char 
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
     }
@@ -346,14 +348,17 @@ static int logind_submit(metric_family_t *fam,  c_avl_tree_t *sessions,
 static int logind_list_seats(sd_bus *bus, char **seats, size_t seats_size)
 {
     sd_bus_message *reply = NULL;
-
     sd_bus_error error = SD_BUS_ERROR_NULL;
+
     int status = sd_bus_call_method(bus, "org.freedesktop.login1",
                                          "/org/freedesktop/login1",
                                          "org.freedesktop.login1.Manager",
                                          "ListSeats", &error, &reply, NULL);
-    if (status < 0)
+    if (status < 0) {
+        sd_bus_error_free(&error);
+        sd_bus_message_unref(reply);
         return -1;
+    }
 
     sd_bus_error_free(&error);
 
@@ -391,14 +396,17 @@ static int logind_list_seats(sd_bus *bus, char **seats, size_t seats_size)
 static int logind_list_sessions(sd_bus *bus, c_avl_tree_t *sessions)
 {
     sd_bus_message *reply = NULL;
-
     sd_bus_error error = SD_BUS_ERROR_NULL;
+
     int status = sd_bus_call_method(bus, "org.freedesktop.login1",
                                          "/org/freedesktop/login1",
                                          "org.freedesktop.login1.Manager",
                                          "ListSessions", &error, &reply, NULL);
-    if (status < 0)
+    if (status < 0) {
+        sd_bus_error_free(&error);
+        sd_bus_message_unref(reply);
         return -1;
+    }
 
     sd_bus_error_free(&error);
 
@@ -467,11 +475,17 @@ static int logind_read(void)
     if (sd_booted() <= 0)
         return -1;
 
-    c_avl_tree_t *sessions = c_avl_create((int (*)(const void *, const void *))logind_session_cmp);
-    if (sessions == NULL)
+    int status = sd_bus_default_system(&bus);
+    if (status < 0) {
+        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERRNO);
         return -1;
+    }
 
-    sd_bus_default_system(&bus);
+    c_avl_tree_t *sessions = c_avl_create((int (*)(const void *, const void *))logind_session_cmp);
+    if (sessions == NULL) {
+        sd_bus_unref(bus);
+        return -1;
+    }
 
     char *seats[1024];
     size_t seats_size = 1;
