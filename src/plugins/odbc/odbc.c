@@ -418,9 +418,9 @@ static int codbc_connect(codbc_database_t *db)
         status = codbc_ping(db);
         if (status != 0) /* connection is alive */
             return 0;
-
-        codbc_disconnect(db);
     }
+
+    codbc_disconnect(db);
 
     rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &(db->henv));
     if (rc != SQL_SUCCESS) {
@@ -448,6 +448,7 @@ static int codbc_connect(codbc_database_t *db)
             buffer[len] = '\0';
             PLUGIN_WARNING("codbc_connect(%s): SQLDriverConnect "
                            "reported the following diagnostics: %s", db->name, buffer);
+            return 0;
         }
         if (rc != SQL_SUCCESS) {
             char errbuf[1024];
