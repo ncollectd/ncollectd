@@ -388,7 +388,7 @@ static int notify_snmp_config_add_target(config_item_t *ci)
     if (notify_snmp_targets != NULL) {
         notify_snmp_target_t *targets = notify_snmp_targets;
         while (targets->next != NULL) {
-            targets = target->next;
+            targets = targets->next;
         }
         targets->next = target;
     } else {
