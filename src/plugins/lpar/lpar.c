@@ -102,12 +102,12 @@ static metric_family_t fams[FAM_LPAR_MAX] = {
                 "by the hypervisor from a dedicated partition."
     },
     [FAM_LPAR_POOL_IDLE] = {
-        .name = "system_lpar_pool_busy",
+        .name = "system_lpar_pool_idle",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
     [FAM_LPAR_POOL_BUSY] = {
-        .name = "system_lpar_pool_idle",
+        .name = "system_lpar_pool_busy",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
