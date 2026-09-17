@@ -1141,7 +1141,7 @@ static int haproxy_read (user_data_t *ud)
 
         while (status == 0) {
             if (haproxy_curl_init(ha) != 0) {
-                haproxy_curl_cleanup(ha->curl);
+                haproxy_curl_cleanup(ha);
                 status = -1;
                 break;
             }
@@ -1150,7 +1150,7 @@ static int haproxy_read (user_data_t *ud)
             if (status != CURLE_OK) {
                 PLUGIN_ERROR("curl_easy_perform failed with status %i: %s",
                              status, ha->curl_errbuf);
-                haproxy_curl_cleanup(ha->curl);
+                haproxy_curl_cleanup(ha);
                 status = -1;
                 break;
             }
