@@ -102,6 +102,11 @@ static int cert_read(user_data_t *user_data)
     SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
 
     ssl = SSL_new(ctx);
+    if (ssl == NULL) {
+        PLUGIN_ERROR("Error: Could not create a SSL structure.");
+        goto error;
+    }
+
     const char *server_name = cert_cb->server_name != NULL ? cert_cb->server_name
                                                            : cert_cb->host;
     SSL_set_tlsext_host_name(ssl, server_name);
