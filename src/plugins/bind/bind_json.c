@@ -71,7 +71,7 @@ static bool bind_json_number(void *ctx, const char *number_val, size_t number_le
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_UDP_RESPONSES_SIZES_SENT_IPV4:
-            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_INCOMING_REQUESTS_UDP6_SIZE],
+            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_RESPONSES_UDP4_SIZE],
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_TCP_REQUESTS_SIZES_RECEIVED_IPV4:
@@ -79,11 +79,11 @@ static bool bind_json_number(void *ctx, const char *number_val, size_t number_le
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_TCP_RESPONSES_SIZES_SENT_IPV4:
-            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_INCOMING_REQUESTS_TCP6_SIZE],
+            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_RESPONSES_TCP4_SIZE],
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_UDP_REQUESTS_SIZES_RECEIVED_IPV6:
-            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_RESPONSES_UDP4_SIZE],
+            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_INCOMING_REQUESTS_UDP6_SIZE],
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_UDP_RESPONSES_SIZES_SENT_IPV6:
@@ -91,7 +91,7 @@ static bool bind_json_number(void *ctx, const char *number_val, size_t number_le
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_TCP_REQUESTS_SIZES_RECEIVED_IPV6:
-            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_RESPONSES_TCP4_SIZE],
+            bind_traffic_histogram_append(&sctx->traffic[BIND_TRAFFIC_INCOMING_REQUESTS_TCP6_SIZE],
                                           sctx->value1, number);
             break;
         case BIND_JSON_TRAFFIC_DNS_TCP_RESPONSES_SIZES_SENT_IPV6:

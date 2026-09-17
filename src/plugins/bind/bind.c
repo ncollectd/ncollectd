@@ -242,11 +242,6 @@ static metric_family_t fams_bind[FAM_BIND_MAX] = {
         .type = METRIC_TYPE_HISTOGRAM,
         .help = "Size of DNS requests (TCP/IPv6).",
     },
-    [FAM_BIND_TRAFFIC_INCOMING_REQUESTS_TOTAL_SIZE] = {
-        .name = "bind_traffic_incoming_requests_total_size",
-        .type = METRIC_TYPE_HISTOGRAM,
-        .help = "Size of DNS requests (any transport).",
-    },
     [FAM_BIND_TRAFFIC_RESPONSES_UDP4_SIZE] = {
         .name = "bind_traffic_responses_udp4_size",
         .type = METRIC_TYPE_HISTOGRAM,
@@ -266,11 +261,6 @@ static metric_family_t fams_bind[FAM_BIND_MAX] = {
         .name = "bind_traffic_responses_tcp6_size",
         .type = METRIC_TYPE_HISTOGRAM,
         .help = "Size of DNS responses (TCP/IPv6).",
-    },
-    [FAM_BIND_TRAFFIC_RESPONSES_TOTAL_SIZE] = {
-        .name = "bind_traffic_responses_total_size",
-        .type = METRIC_TYPE_HISTOGRAM,
-        .help = "Size of DNS responses (any transport).",
     },
     [FAM_BIND_MEMORY_USE_BYTES] = {
         .name = "bind_memory_use_bytes",
