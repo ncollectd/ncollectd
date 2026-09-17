@@ -239,7 +239,7 @@ static int log_gelf_fmt_notification(strbuf_t *buf, const notification_t *n)
         status |= xson_render_string(&r, n->name);
     }
 
-    for (size_t i = 0; i < n->label.num ; n++) {
+    for (size_t i = 0; i < n->label.num ; i++) {
         label_pair_t *pair = &n->label.ptr[i];
         struct iovec iov[2] = {
             {.iov_base = "_label_",  .iov_len = strlen("_label_")  },
@@ -249,7 +249,7 @@ static int log_gelf_fmt_notification(strbuf_t *buf, const notification_t *n)
         status |= xson_render_string(&r, pair->value);
     }
 
-    for (size_t i = 0; i < n->annotation.num ; n++) {
+    for (size_t i = 0; i < n->annotation.num ; i++) {
         label_pair_t *pair = &n->annotation.ptr[i];
         struct iovec iov[2] = {
             {.iov_base = "_annotation_",  .iov_len = strlen("_annotation_") },
