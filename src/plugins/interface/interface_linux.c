@@ -125,6 +125,7 @@ static size_t nl_socket_buffer_size = NETLINK_VF_DEFAULT_BUF_SIZE_KB * 1024;
 static struct mnl_socket *nl;
 static char *path_proc_dev;
 static char *path_proc_net_if_inet6;
+static char *path_sys_class_net;
 
 extern bool collect_vf_stats;
 extern exclist_t excl_interface;
@@ -639,9 +640,14 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
 
 static int interface_read_netlink(void)
 {
+    char *buf = malloc(nl_socket_buffer_size);
+    if (buf == NULL) {
+        PLUGIN_ERROR("malloc failed.");
+        return -1;
+    }
+
     unsigned int portid = mnl_socket_get_portid(nl);
 
-    char buf[nl_socket_buffer_size];
     struct nlmsghdr *nlh = mnl_nlmsg_put_header(buf);
     nlh->nlmsg_type = RTM_GETLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
@@ -655,12 +661,14 @@ static int interface_read_netlink(void)
     if (collect_vf_stats &&
         mnl_attr_put_u32_check(nlh, sizeof(buf), IFLA_EXT_MASK, RTEXT_FILTER_VF) == 0) {
         PLUGIN_ERROR("FAILED to set RTEXT_FILTER_VF");
+        free(buf);
         return -1;
     }
 #endif
 
     if (mnl_socket_sendto(nl, nlh, nlh->nlmsg_len) < 0) {
         PLUGIN_ERROR("rtnl_wilddump_request failed.");
+        free(buf);
         return -1;
     }
 
@@ -674,10 +682,11 @@ static int interface_read_netlink(void)
 
     if (ret < 0) {
         PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERRNO);
-        return (-1);
+        free(buf);
+        return -1;
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_INTERFACE_MAX, 0);
+    free(buf);
 
     return 0;
 }
@@ -772,13 +781,15 @@ int interface_read(void)
 
 static size_t interface_get_buffer_size(void)
 {
-    if (collect_vf_stats == false) {
+    if (collect_vf_stats == false)
         return MNL_SOCKET_BUFFER_SIZE;
-    }
+
+    char path[PATH_MAX];
+    ssnprintf(path, sizeof(path), "%s/*/device/sriov_totalvfs", path_sys_class_net);
 
     glob_t g;
     unsigned int max_num = 0;
-    if (glob("/sys/class/net/*/device/sriov_totalvfs", GLOB_NOSORT, NULL, &g)) {
+    if (glob(path, GLOB_NOSORT, NULL, &g)) {
         PLUGIN_ERROR("glob failed");
         /* using default value */
         return NETLINK_VF_DEFAULT_BUF_SIZE_KB * 1024;
@@ -837,6 +848,12 @@ int interface_init(void)
         return -1;
     }
 
+    path_sys_class_net = plugin_syspath("class/net");
+    if (path_proc_net_if_inet6 == NULL) {
+        PLUGIN_ERROR("Cannot get sys path.");
+        return -1;
+    }
+
     nl = mnl_socket_open(NETLINK_ROUTE);
     if (nl == NULL) {
         PLUGIN_ERROR("mnl_socket_open failed.");
@@ -860,6 +877,7 @@ int interface_shutdown(void)
 {
     free(path_proc_dev);
     free(path_proc_net_if_inet6);
+    free(path_sys_class_net);
 
     exclist_reset(&excl_interface);
 
