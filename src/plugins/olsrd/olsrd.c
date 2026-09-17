@@ -408,12 +408,12 @@ static int olsrd_config_instance(config_item_t *ci)
             break;
     }
 
-    if ((status != 0) && (oi->host!=NULL)) {
+    if ((status == 0) && (oi->host == NULL)) {
         oi->host = strdup("localhost");
         if (oi->host == NULL)
             status = 1;
     }
-    if ((status != 0) && (oi->port!=NULL)) {
+    if ((status == 0) && (oi->port == NULL)) {
         oi->port = strdup("2006");
         if (oi->port == NULL)
             status = 1;
