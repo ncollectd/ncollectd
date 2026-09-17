@@ -106,26 +106,18 @@ static int btrfs_mountlist_read(void)
 
 static int btrfs_submit_read_stats(char *mount_path)
 {
-    int ret = 0;
-
-    DIR *dirstream = opendir(mount_path);
-    if (dirstream == NULL) {
-        PLUGIN_ERROR("open on %s failed %s", mount_path, strerror(errno));
+    int fd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    if (fd < 0) {
+        PLUGIN_ERROR("open on '%s' failed: %s", mount_path, STRERRNO);
         return -1;
     }
 
-    int fd = dirfd(dirstream);
-    if (fd < 0) {
-        PLUGIN_ERROR("open on %s failed: %s", mount_path, strerror(errno));
-        ret = -1;
-        goto onerr;
-    }
-
     struct btrfs_ioctl_fs_info_args fs_args = {0};
-    ret = ioctl(fd, BTRFS_IOC_FS_INFO, &fs_args);
+    int ret = ioctl(fd, BTRFS_IOC_FS_INFO, &fs_args);
     if (ret < 0) {
-        PLUGIN_ERROR("ioctl(BTRFS_IOC_FS_INFO) on %s failed: %s", mount_path, strerror(errno));
-        goto onerr;
+        PLUGIN_ERROR("ioctl(BTRFS_IOC_FS_INFO) on '%s' failed: %s", mount_path, STRERRNO);
+        close(fd);
+        return -1;
     }
 
     struct btrfs_ioctl_get_dev_stats dev_stats_args = {0};
@@ -135,9 +127,9 @@ static int btrfs_submit_read_stats(char *mount_path)
 
     ret = ioctl(fd, BTRFS_IOC_GET_DEV_STATS, &dev_stats_args);
     if (ret < 0) {
-        PLUGIN_ERROR("ioctl(BTRFS_IOC_GET_DEV_STATS) on %s failed: %s",
-                     mount_path, strerror(errno));
-        goto onerr;
+        PLUGIN_ERROR("ioctl(BTRFS_IOC_GET_DEV_STATS) on '%s' failed: %s", mount_path, STRERRNO);
+        close(fd);
+        return -1;
     }
 
     metric_family_append(&fams[FAM_BTRFS_WRITE_ERRORS],
@@ -158,10 +150,7 @@ static int btrfs_submit_read_stats(char *mount_path)
 
     plugin_dispatch_metric_family_array(fams, FAM_BTRFS_MAX, 0);
 
-onerr:
-    closedir(dirstream);
-    close(fd);
-    return ret;
+    return 0;
 }
 
 static int btrfs_read(void)
