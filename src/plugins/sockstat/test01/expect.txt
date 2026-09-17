@@ -4,6 +4,8 @@ system_sockets_used{hostname="localhost.localdomain"} 3269
 system_sockets_tcp_orphan{hostname="localhost.localdomain"} 13
 # TYPE system_sockets_udp_inuse gauge
 system_sockets_udp_inuse{hostname="localhost.localdomain"} 14
+# TYPE system_sockets_udp_mem gauge
+system_sockets_udp_mem{hostname="localhost.localdomain"} 3
 # TYPE system_sockets_udplite_inuse gauge
 system_sockets_udplite_inuse{hostname="localhost.localdomain"} 0
 # TYPE system_sockets_tcp_inuse gauge
