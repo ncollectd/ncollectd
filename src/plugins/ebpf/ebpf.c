@@ -743,7 +743,7 @@ static int ebpf_config_instance(config_item_t *ci)
 
     label_set_add(&ctx->labels, true, "instance", ctx->instance);
 
-    return plugin_register_complex_read("ebf", ctx->instance, ebpf_read, interval,
+    return plugin_register_complex_read("ebpf", ctx->instance, ebpf_read, interval,
                                         &(user_data_t){.data = ctx, .free_func = ebpf_free});
 }
 
