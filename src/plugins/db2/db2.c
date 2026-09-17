@@ -413,9 +413,9 @@ static int db2_connect(db2_database_t *db)
         status = db2_ping(db);
         if (status != 0) /* connection is alive */
             return 0;
-
-        db2_disconnect(db);
     }
+
+    db2_disconnect(db);
 
     rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &(db->henv));
     if (rc != SQL_SUCCESS) {
