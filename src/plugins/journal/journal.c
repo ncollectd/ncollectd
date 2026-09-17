@@ -49,6 +49,8 @@ static void *journal_thread_read(void *data)
 {
     journal_t *ctx = data;
 
+    ctx->thread_running = true;
+
     if (ctx->journal == NULL) {
         int status = 0;
 
@@ -138,7 +140,11 @@ static void journal_free(void *arg)
 
     if (journal->thread_running) {
         journal->thread_running = false;
-        pthread_join(journal->thread_id, NULL);
+        if (pthread_kill(journal->thread_id, 0) == 0) {
+            int status = pthread_join(journal->thread_id, NULL);
+            if (status != 0)
+                PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
+        }
     }
 
     pthread_mutex_destroy(&journal->lock);
@@ -222,8 +228,6 @@ static int journal_config_instance(config_item_t *ci)
     }
 
     label_set_add(&journal->labels, true, "instance", journal->name);
-
-    journal->thread_running = true;
 
     status = plugin_thread_create(&journal->thread_id, journal_thread_read, journal, "journal");
     if (status != 0) {
