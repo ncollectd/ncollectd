@@ -184,7 +184,6 @@ static int numa_shutdown(void)
 void module_register(void)
 {
     plugin_register_init("numa", numa_init);
-    plugin_register_init("numa", numa_init);
     plugin_register_read("numa", numa_read);
     plugin_register_shutdown("numa", numa_shutdown);
 }
