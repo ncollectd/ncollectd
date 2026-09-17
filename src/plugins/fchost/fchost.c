@@ -185,6 +185,7 @@ static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
         status = read_file_at(dir_host_fd, "port_name", port_name, sizeof(port_name));
         if (status != 0) {
             PLUGIN_ERROR("open 'port_name' in %s failed: %s.", path, STRERRNO);
+            close(dir_host_fd);
             return -1;
         }
 
