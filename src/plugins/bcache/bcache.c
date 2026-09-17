@@ -182,16 +182,16 @@ typedef struct {
 } bcache_file_t;
 
 static bcache_file_t bcache_files[] = {
-    { "average_key_size",                        1.0,   FAM_BCACHE_AVERAGE_KEY_SIZE_SECTORS            },
-    { "btree_cache_size",                        1.0,   FAM_BCACHE_BTREE_CACHE_SIZE_BYTES              },
-    { "cache_available_percent",                 1.0,   FAM_BCACHE_CACHE_AVAILABLE_PERCENT             },
-    { "congested",                               1.0,   FAM_BCACHE_CONGESTED                           },
-    { "root_usage_percent",                      1.0,   FAM_BCACHE_ROOT_USAGE_PERCENT                  },
-    { "tree_depth",                              1.0,   FAM_BCACHE_TREE_DEPTH                          },
-    { "internal/active_journal_entries",         1.0,   FAM_BCACHE_ACTIVE_JOURNAL_ENTRIES              },
-    { "internal/btree_nodes",                    1.0,   FAM_BCACHE_BTREE_NODES                         },
+    { "average_key_size",                        1.0,  FAM_BCACHE_AVERAGE_KEY_SIZE_SECTORS            },
+    { "btree_cache_size",                        1.0,  FAM_BCACHE_BTREE_CACHE_SIZE_BYTES              },
+    { "cache_available_percent",                 1.0,  FAM_BCACHE_CACHE_AVAILABLE_PERCENT             },
+    { "congested",                               1.0,  FAM_BCACHE_CONGESTED                           },
+    { "root_usage_percent",                      1.0,  FAM_BCACHE_ROOT_USAGE_PERCENT                  },
+    { "tree_depth",                              1.0,  FAM_BCACHE_TREE_DEPTH                          },
+    { "internal/active_journal_entries",         1.0,  FAM_BCACHE_ACTIVE_JOURNAL_ENTRIES              },
+    { "internal/btree_nodes",                    1.0,  FAM_BCACHE_BTREE_NODES                         },
     { "internal/btree_read_average_duration_us", 1e-6, FAM_BCACHE_BTREE_READ_AVERAGE_DURATION_SECONDS },
-    { "internal/cache_read_races",               1.0,   FAM_BCACHE_CACHE_READ_RACES                    },
+    { "internal/cache_read_races",               1.0,  FAM_BCACHE_CACHE_READ_RACES                    },
 };
 static size_t bcache_files_size = STATIC_ARRAY_SIZE(bcache_files);
 
@@ -210,8 +210,8 @@ static size_t bcache_backing_files_size = STATIC_ARRAY_SIZE(bcache_backing_files
 
 static bcache_file_t bcache_cache_files[] = {
     { "io_errors",        1.0, FAM_BCACHE_IO_ERRORS              },
-    { "written",          1.0, FAM_BCACHE_METADATA_WRITTEN_BYTES },
-    { "metadata_written", 1.0, FAM_BCACHE_WRITTEN_BYTES          },
+    { "written",          1.0, FAM_BCACHE_WRITTEN_BYTES          },
+    { "metadata_written", 1.0, FAM_BCACHE_METADATA_WRITTEN_BYTES },
 };
 static size_t bcache_cache_files_size = STATIC_ARRAY_SIZE(bcache_cache_files);
 
@@ -251,7 +251,7 @@ static double bache_strtovalue(char *string, metric_type_t type, double vscale, 
             string[len-1] = '\0';
             break;
         case 'Y':
-            scale = 1e22;
+            scale = 1e24;
             string[len-1] = '\0';
             break;
         }
@@ -259,7 +259,7 @@ static double bache_strtovalue(char *string, metric_type_t type, double vscale, 
 
     double num;
     if (strtodouble(string, &num) != 0) {
-        PLUGIN_ERROR("Cannot parse \"%s\".", string);
+        PLUGIN_ERROR("Cannot parse '%s'.", string);
         return -1;
     }
     num *= scale;
