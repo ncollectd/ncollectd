@@ -116,17 +116,16 @@ static void submit_capacity(const char *device, double capacity_charged, double 
 static double dict_get_double(CFDictionaryRef dict, const char *key_string)
 {
     double val_double;
-    long long val_int;
-    CFNumberRef val_obj;
-    CFStringRef key_obj;
 
-    key_obj = CFStringCreateWithCString(kCFAllocatorDefault, key_string, kCFStringEncodingASCII);
+    CFStringRef key_obj = CFStringCreateWithCString(kCFAllocatorDefault, key_string,
+                                                    kCFStringEncodingASCII);
     if (key_obj == NULL) {
         PLUGIN_DEBUG("CFStringCreateWithCString (%s) failed.\n", key_string);
         return NAN;
     }
 
-    if ((val_obj = CFDictionaryGetValue(dict, key_obj)) == NULL) {
+    CFNumberRef val_obj = CFDictionaryGetValue(dict, key_obj);
+    if ((val_obj == NULL) {
         PLUGIN_DEBUG("CFDictionaryGetValue (%s) failed.", key_string);
         CFRelease(key_obj);
         return NAN;
@@ -137,6 +136,7 @@ static double dict_get_double(CFDictionaryRef dict, const char *key_string)
         if (CFNumberIsFloatType(val_obj)) {
             CFNumberGetValue(val_obj, kCFNumberDoubleType, &val_double);
         } else {
+            long long val_int;
             CFNumberGetValue(val_obj, kCFNumberLongLongType, &val_int);
             val_double = val_int;
         }
@@ -151,24 +151,21 @@ static double dict_get_double(CFDictionaryRef dict, const char *key_string)
 #ifdef HAVE_IOKIT_PS_IOPOWERSOURCES_H
 static void get_via_io_power_sources(double *ret_charge, double *ret_current, double *ret_voltage)
 {
-    CFTypeRef ps_raw;
-    CFArrayRef ps_array;
-    int ps_array_len;
-    CFDictionaryRef ps_dict;
-    CFTypeRef ps_obj;
-
-    double temp_double;
-
-    ps_raw = IOPSCopyPowerSourcesInfo();
-    ps_array = IOPSCopyPowerSourcesList(ps_raw);
-    ps_array_len = CFArrayGetCount(ps_array);
+    CFTypeRef ps_raw = IOPSCopyPowerSourcesInfo();
+    if (ps_raw == NULL)
+        return;
+    CFArrayRef ps_array = IOPSCopyPowerSourcesList(ps_raw);
+    if (ps_array == NULL) {
+        CFRelease(ps_raw);
+        return;
+    }
+    int ps_array_len = CFArrayGetCount(ps_array);
 
     PLUGIN_DEBUG("ps_array_len == %i", ps_array_len);
 
     for (int i = 0; i < ps_array_len; i++) {
-        ps_obj = CFArrayGetValueAtIndex(ps_array, i);
-        ps_dict = IOPSGetPowerSourceDescription(ps_raw, ps_obj);
-
+        CFTypeRef ps_obj = CFArrayGetValueAtIndex(ps_array, i);
+        CFDictionaryRef ps_dict = IOPSGetPowerSourceDescription(ps_raw, ps_obj);
         if (ps_dict == NULL) {
             PLUGIN_DEBUG("IOPSGetPowerSourceDescription failed.");
             continue;
@@ -183,19 +180,19 @@ static void get_via_io_power_sources(double *ret_charge, double *ret_current, do
 
         if (isnan(*ret_charge)) {
             /* This is the charge in percent. */
-            temp_double = dict_get_double(ps_dict, kIOPSCurrentCapacityKey);
+            double temp_double = dict_get_double(ps_dict, kIOPSCurrentCapacityKey);
             if (!isnan((temp_double)) && (temp_double >= 0.0) && (temp_double <= 100.0))
                 *ret_charge = temp_double;
         }
 
         if (isnan(*ret_current)) {
-            temp_double = dict_get_double(ps_dict, kIOPSCurrentKey);
+            double temp_double = dict_get_double(ps_dict, kIOPSCurrentKey);
             if (!isnan(temp_double))
                 *ret_current = temp_double / 1000.0;
         }
 
         if (isnan(*ret_voltage)) {
-            temp_double = dict_get_double(ps_dict, kIOPSVoltageKey);
+            double temp_double = dict_get_double(ps_dict, kIOPSVoltageKey);
             if (!isnan(temp_double))
                 *ret_voltage = temp_double / 1000.0;
         }
@@ -210,25 +207,18 @@ static void get_via_io_power_sources(double *ret_charge, double *ret_current, do
 static void get_via_generic_iokit(double *ret_capacity_full, double *ret_capacity_design,
                                   double *ret_current, double *ret_voltage)
 {
-    kern_return_t status;
     io_iterator_t iterator;
-    io_object_t io_obj;
-
-    CFDictionaryRef bat_root_dict;
-    CFArrayRef bat_info_arry;
-    CFIndex bat_info_arry_len;
-    CFDictionaryRef bat_info_dict;
-
-    double temp_double;
-
-    status = IOServiceGetMatchingServices((mach_port_t) 0, IOServiceNameMatching("battery"),
-                                                           &iterator);
+    kern_return_t status = IOServiceGetMatchingServices((mach_port_t) 0,
+                                                        IOServiceNameMatching("battery"),
+                                                        &iterator);
     if (status != kIOReturnSuccess) {
         DEBUG("IOServiceGetMatchingServices failed.");
         return;
     }
 
+    io_object_t io_obj;
     while ((io_obj = IOIteratorNext(iterator))) {
+        CFDictionaryRef bat_root_dict;
         status = IORegistryEntryCreateCFProperties(io_obj, (CFMutableDictionaryRef *)&bat_root_dict,
                                                            kCFAllocatorDefault, kNilOptions);
         if (status != kIOReturnSuccess) {
@@ -236,35 +226,39 @@ static void get_via_generic_iokit(double *ret_capacity_full, double *ret_capacit
             continue;
         }
 
-        bat_info_arry = (CFArrayRef)CFDictionaryGetValue(bat_root_dict, CFSTR("IOBatteryInfo"));
+        CFArrayRef bat_info_arry = (CFArrayRef)CFDictionaryGetValue(bat_root_dict,
+                                                                    CFSTR("IOBatteryInfo"));
         if (bat_info_arry == NULL) {
             CFRelease(bat_root_dict);
             continue;
         }
-        bat_info_arry_len = CFArrayGetCount(bat_info_arry);
+
+        CFIndex bat_info_arry_len = CFArrayGetCount(bat_info_arry);
 
         for (CFIndex bat_info_arry_pos = 0; bat_info_arry_pos < bat_info_arry_len;
                  bat_info_arry_pos++) {
-            bat_info_dict = (CFDictionaryRef)CFArrayGetValueAtIndex(bat_info_arry,
-                                                                    bat_info_arry_pos);
+            CFDictionaryRef bat_info_dict = (CFDictionaryRef)CFArrayGetValueAtIndex(bat_info_arry,
+                                            bat_info_arry_pos);
+            if (bat_info_dict == NULL)
+                continue;
 
             if (isnan(*ret_capacity_full)) {
-                temp_double = dict_get_double(bat_info_dict, "Capacity");
+                double temp_double = dict_get_double(bat_info_dict, "Capacity");
                 *ret_capacity_full = temp_double / 1000.0;
             }
 
             if (isnan(*ret_capacity_design)) {
-                temp_double = dict_get_double(bat_info_dict, "AbsoluteMaxCapacity");
+                double temp_double = dict_get_double(bat_info_dict, "AbsoluteMaxCapacity");
                 *ret_capacity_design = temp_double / 1000.0;
             }
 
             if (isnan(*ret_current)) {
-                temp_double = dict_get_double(bat_info_dict, "Current");
+                double temp_double = dict_get_double(bat_info_dict, "Current");
                 *ret_current = temp_double / 1000.0;
             }
 
             if (isnan(*ret_voltage)) {
-                temp_double = dict_get_double(bat_info_dict, "Voltage");
+                double temp_double = dict_get_double(bat_info_dict, "Voltage");
                 *ret_voltage = temp_double / 1000.0;
             }
         }
