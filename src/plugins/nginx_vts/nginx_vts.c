@@ -376,7 +376,7 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_OUT_BYTES:
-            metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_IN_BYTES],
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_OUT_BYTES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
                                  &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
@@ -412,7 +412,7 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_RESPONSES:
-            metric_family_append(&sctx->fams[NGINX_VTS_JSON_CACHE_ZONE_RESPONSES],
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_RESPONSES],
                                  VALUE_COUNTER(atol(number)), sctx->labels,
                                  &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  &LABEL_PAIR_CONST("status", sctx->value2),
