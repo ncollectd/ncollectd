@@ -149,9 +149,8 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
     return 0;
 }
 
-static int tbl_parse_line(tbl_t *tbl, char *line)
+static int tbl_parse_line(tbl_t *tbl, char *line, char **fields)
 {
-    char *fields[tbl->max_colnum + 1];
     int i = 0;
 
     char *ptr = line;
@@ -186,9 +185,16 @@ static int tbl_read_table(user_data_t *user_data)
 
     tbl_t *tbl = user_data->data;
 
+    char **fields = malloc((tbl->max_colnum + 1) * sizeof(char *));
+    if (fields == NULL) {
+        PLUGIN_ERROR("malloc failed.");
+        return -1;
+    }
+
     FILE *fh = fopen(tbl->file, "r");
     if (fh == NULL) {
         PLUGIN_ERROR("Failed to open file \"%s\": %s.", tbl->file, STRERRNO);
+        free(fields);
         return -1;
     }
 
@@ -204,7 +210,7 @@ static int tbl_read_table(user_data_t *user_data)
         if (line <= tbl->skip_lines)
             continue;
 
-        if (tbl_parse_line(tbl, buf) != 0) {
+        if (tbl_parse_line(tbl, buf, fields) != 0) {
             PLUGIN_WARNING("Table %s: Failed to parse line: %s", tbl->file, buf);
             continue;
         }
@@ -212,10 +218,12 @@ static int tbl_read_table(user_data_t *user_data)
 
     if (ferror(fh) != 0) {
         PLUGIN_ERROR("Failed to read from file \"%s\": %s.", tbl->file, STRERRNO);
+        free(fields);
         fclose(fh);
         return -1;
     }
 
+    free(fields);
     fclose(fh);
     return 0;
 }
@@ -258,8 +266,7 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
         return -1;
     }
 
-    tbl_result_t *res =
-            realloc(tbl->results, (tbl->results_num + 1) * sizeof(*tbl->results));
+    tbl_result_t *res = realloc(tbl->results, (tbl->results_num + 1) * sizeof(*tbl->results));
     if (res == NULL) {
         PLUGIN_ERROR("realloc failed: %s.", STRERRNO);
         return -1;
