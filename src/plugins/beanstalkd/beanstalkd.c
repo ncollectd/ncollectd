@@ -5,6 +5,7 @@
 #include "plugin.h"
 #include "libutils/common.h"
 #include "libutils/socket.h"
+#include "libutils/strbuf.h"
 
 #include <poll.h>
 
@@ -184,7 +185,7 @@ typedef struct {
 
 #define BEANSTALKD_PORT 11300
 
-static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, char *buffer, size_t buffer_size)
+static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, strbuf_t *buf)
 {
     int sd = socket_connect_tcp(ctx->host, ctx->port, 0, 0);
     if (sd < 0) {
@@ -206,9 +207,6 @@ static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, char *buffer, size_t bu
         return -1;
     }
 
-    memset(buffer, 0, buffer_size);
-    size_t buffer_fill = 0;
-
     struct pollfd pollfd = {
         .fd = sd,
         .events = POLLIN,
@@ -220,10 +218,12 @@ static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, char *buffer, size_t bu
 
     if (status <= 0) {
         PLUGIN_ERROR("Timeout reading from socket");
+        close(sd);
         return -1;
     }
 
-    while ((status = (int)recv(sd, buffer + buffer_fill, buffer_size - buffer_fill, 0)) != 0) {
+    char buffer[4096];
+    while ((status = (int)recv(sd, buffer, sizeof(buffer), 0)) != 0) {
         if (status < 0) {
             if (errno == EAGAIN)
                 break;
@@ -234,11 +234,11 @@ static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, char *buffer, size_t bu
             return -1;
         }
 
-        buffer_fill += (size_t)status;
+        strbuf_putstrn(buf, buffer, status);
     }
 
     status = 0;
-    if (buffer_fill == 0) {
+    if (strbuf_len(buf) == 0) {
         PLUGIN_WARNING("No data returned by MNTR command.");
         status = -1;
     }
@@ -255,9 +255,10 @@ static int beanstalkd_read(user_data_t *user_data)
         return -1;
     
     char buffer[8192];
+    strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
     cdtime_t submit = cdtime();
    
-    int status = beanstalkd_query_stats(ctx, buffer, sizeof(buffer));
+    int status = beanstalkd_query_stats(ctx, &buf);
     if (status != 0)
         goto error;
 
