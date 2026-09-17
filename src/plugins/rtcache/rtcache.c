@@ -82,7 +82,7 @@ static field_fam_t field_fam[] = {
     {  9, FAM_RT_CACHE_OUT_SLOW_TOT   },
     { 10, FAM_RT_CACHE_OUT_SLOW_MC    }
 };
-static size_t field_fam_size = STATIC_ARRAY_SIZE(fams_rt_cache);
+static size_t field_fam_size = STATIC_ARRAY_SIZE(field_fam);
 
 static char *path_proc_rt_cache;
 
@@ -117,6 +117,7 @@ static int rt_cache_read(void)
                                  &LABEL_PAIR_CONST("cpu", cpu), NULL);
         }
     }
+
     fclose(fh);
 
     plugin_dispatch_metric_family_array(fams_rt_cache, FAM_RT_CACHE_MAX, 0);
