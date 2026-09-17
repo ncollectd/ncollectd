@@ -258,8 +258,8 @@ static int ipc_read_sem(metric_family_t *fam)
     }
     free(ipcinfo_sem);
 
-    metric_family_append(&fam[FAM_IPC_SEM_SETS], VALUE_GAUGE(sem_nsems), NULL, NULL);
-    metric_family_append(&fam[FAM_IPC_SEM_SEMAPHORES], VALUE_GAUGE(sems), NULL, NULL);
+    metric_family_append(&fam[FAM_IPC_SEM_SETS], VALUE_GAUGE(sems), NULL, NULL);
+    metric_family_append(&fam[FAM_IPC_SEM_SEMAPHORES], VALUE_GAUGE(sem_nsems), NULL, NULL);
 
     return 0;
 }
