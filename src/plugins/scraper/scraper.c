@@ -591,13 +591,13 @@ static int scraper_config_target(config_item_t *ci)
             count++;
 
         if (count == 0)  {
-            PLUGIN_ERROR("Only one of 'url', 'file' or 'socket' can be set.");
+            PLUGIN_ERROR("At least one of 'url', 'file' or 'socket' must be set.");
             scraper_instance_free(target);
             return -1;
         }
 
         if (count > 1)  {
-            PLUGIN_ERROR("At least one of 'url', 'file' or 'socket' must be set.");
+            PLUGIN_ERROR("Only one of 'url', 'file' or 'socket' can be set.");
             scraper_instance_free(target);
             return -1;
         }
