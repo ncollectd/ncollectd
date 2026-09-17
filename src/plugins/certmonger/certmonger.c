@@ -82,6 +82,7 @@ static int get_property_bool(sd_bus *bus, const char *destination, const char *p
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
     }
@@ -117,6 +118,7 @@ static int get_property_integer(sd_bus *bus, const char *destination, const char
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
     }
@@ -152,6 +154,7 @@ static int get_property_string(sd_bus *bus, const char *destination, const char 
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
     }
@@ -224,8 +227,11 @@ static int certmonger_get_requests(sd_bus *bus)
                                          "/org/fedorahosted/certmonger",
                                          "org.fedorahosted.certmonger",
                                          "get_requests", &error, &reply, NULL);
-    if (status < 0)
+    if (status < 0) {
+        sd_bus_error_free(&error);
+        sd_bus_message_unref(reply);
         return -1;
+    }
 
     sd_bus_error_free(&error);
 
@@ -355,7 +361,11 @@ static int certmonger_read(void)
     if (sd_booted() <= 0)
         return -1;
 
-    sd_bus_default_system(&bus);
+    int status = sd_bus_default_system(&bus);
+    if (status < 0) {
+        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERRNO);
+        return -1;
+    }
 
     int requests = certmonger_get_requests(bus);
     metric_family_append(&fams[FAM_CERTMONGER_UP],
