@@ -331,7 +331,7 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
     rd_kafka_DescribeConsumerGroups(ctx->rk, NULL, 0, options, queue);
 
     event = rd_kafka_queue_poll(queue, -1);
-    if (event != NULL) {
+    if (event == NULL) {
         status = -1;
         goto exit;
     }
