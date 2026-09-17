@@ -85,7 +85,7 @@ static int nfacct_read_cb(const struct nlmsghdr *nlh, __attribute__((unused)) vo
 //  struct nfgenmsg *nfg = mnl_nlmsg_get_payload(nlh);
 
     mnl_attr_parse(nlh, sizeof(struct nfgenmsg), nfacct_nlmsg_parse_attr_cb, tb);
-    if (!tb[NFACCT_NAME] && !tb[NFACCT_PKTS] && !tb[NFACCT_BYTES])
+    if (!tb[NFACCT_NAME] || !tb[NFACCT_PKTS] || !tb[NFACCT_BYTES])
         return MNL_CB_OK;
 
     const char *name = mnl_attr_get_str(tb[NFACCT_NAME]);
