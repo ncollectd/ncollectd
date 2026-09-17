@@ -349,7 +349,7 @@ static int cgps_read(user_data_t *user_data)
         gps_mode_state[GPS_MODE_STATE_2D_FIX].enabled = true;
         break;
     case MODE_3D:
-        gps_mode_state[GPS_MODE_STATE_2D_FIX].enabled = true;
+        gps_mode_state[GPS_MODE_STATE_3D_FIX].enabled = true;
         break;
     case MODE_NOT_SEEN:
     case MODE_NO_FIX:
