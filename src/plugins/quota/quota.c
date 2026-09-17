@@ -393,5 +393,5 @@ void module_register(void)
 {
     plugin_register_config("quota", quota_config);
     plugin_register_read("quota", quota_read);
-    plugin_register_init("quota", quota_shutdown);
+    plugin_register_shutdown("quota", quota_shutdown);
 }
