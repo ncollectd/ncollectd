@@ -472,7 +472,7 @@ static int dcpmm_read(void)
                                  VALUE_COUNTER(devices_io_stats[i].total_bytes_read), NULL,
                                  &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_WRITTEN_BYTES],
-                                 VALUE_COUNTER(devices_io_stats[i].total_bytes_read), NULL,
+                                 VALUE_COUNTER(devices_io_stats[i].total_bytes_written), NULL,
                                  &LABEL_PAIR_CONST("dimm", num), NULL);
             metric_family_append(&fams[FAM_DCPMM_READ_64B_OPS],
                                  VALUE_COUNTER(stats.bytes_read), NULL,
