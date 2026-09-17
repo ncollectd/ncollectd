@@ -625,6 +625,10 @@ static int freeradius_read(user_data_t *user_data)
             break;
 
         radius_avp_raw_t *avp = (radius_avp_raw_t *)(resp + offset);
+
+        if (avp->length == 0)
+            break;
+
         offset += avp->length;
 
         if (offset > hdr->length)
@@ -646,7 +650,7 @@ static int freeradius_read(user_data_t *user_data)
 
         uint32_t value = ntohl(avp_vsa->vsa.val);
 
-        if (avp_vsa->vsa.type > freeradius_stats_size)
+        if (avp_vsa->vsa.type >= freeradius_stats_size)
             continue;
 
         int fam = freeradius_stats[avp_vsa->vsa.type].fam;
