@@ -728,7 +728,7 @@ static int podman_curl_read(podman_instance_t *podman, const char *url,
         }
     }
 
-    json_parser_init(&podman->handle, 0, &callbacks, &ctx);
+    json_parser_init(&podman->handle, 0, &callbacks, ctx);
 
     CURLcode rcode = curl_easy_setopt(podman->curl, CURLOPT_URL, url);
     if (rcode != CURLE_OK) {
