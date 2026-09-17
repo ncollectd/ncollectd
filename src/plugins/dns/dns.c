@@ -1453,6 +1453,7 @@ static int dns_read(user_data_t *user_data)
     if(strbuf_len(&ctx->servers) > 0) {
         status = ares_set_servers_csv(channel, ctx->servers.ptr);
         if (status != ARES_SUCCESS) {
+            ares_destroy(channel);
             PLUGIN_ERROR("ares_init_options: %s", ares_strerror(status));
             return -1;
         }
@@ -1481,6 +1482,7 @@ static int dns_read(user_data_t *user_data)
         struct timeval *tvp = ares_timeout(channel, NULL, &tv);
         int count = select(nfds, &read_fds, &write_fds, NULL, tvp);
         if (count < 0) {
+            ares_destroy(channel);
             PLUGIN_ERROR("select fail: %s", STRERRNO );
             return 1;
         }
