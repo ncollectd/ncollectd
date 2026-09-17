@@ -215,6 +215,7 @@ typedef struct {
 
     /* For subscribing */
     pthread_t thread;
+    pthread_mutex_t lock;
     volatile bool loop;
     bool clean_session;
 
@@ -269,17 +270,21 @@ static void ncmosquitto_free(void *arg)
     if (conf == NULL)
         return;
 
-    conf->loop = 0;
-    int status = pthread_join(conf->thread, /* retval = */ NULL);
-    if (status != 0) {
-        PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
+    if (conf->loop == 1) {
+        conf->loop = 0;
+        if (pthread_kill(conf->thread, 0) == 0) {
+            int status = pthread_join(conf->thread, /* retval = */ NULL);
+            if (status != 0)
+                PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
+        }
     }
+
+    pthread_mutex_destroy(&conf->lock);
 
     if (conf->connected)
         (void)mosquitto_disconnect(conf->mosq);
     conf->connected = false;
     (void)mosquitto_destroy(conf->mosq);
-
 
     free(conf->name);
     free(conf->host);
@@ -312,6 +317,8 @@ static void ncmosquitto_on_message(
         return;
     }
 
+    pthread_mutex_lock(&conf->lock);
+
     for (size_t i = 0; i < ncmosquitto_subs_size ; i++) {
         if (strcmp(msg->topic, conf->subs[i].topic) == 0) {
             char playload[256];
@@ -339,6 +346,8 @@ static void ncmosquitto_on_message(
             break;
         }
     }
+
+    pthread_mutex_unlock(&conf->lock);
 }
 
 static int ncmosquitto_subscribe(ncmosquitto_instance_t *conf)
@@ -528,6 +537,8 @@ static int ncmosquitto_read(user_data_t *user_data)
 
     metric_family_append(&conf->fams[FAM_MOSQUITTO_UP], VALUE_GAUGE(1), &conf->labels, NULL);
 
+    pthread_mutex_lock(&conf->lock);
+
     for (size_t i = 0; i < ncmosquitto_subs_size ; i++) {
         if (conf->subs[i].updated) {
             int type = conf->fams[conf->subs[i].fam].type;
@@ -540,6 +551,8 @@ static int ncmosquitto_read(user_data_t *user_data)
             }
         }
     }
+
+    pthread_mutex_unlock(&conf->lock);
 
     plugin_dispatch_metric_family_array_filtered(conf->fams, FAM_MOSQUITTO_MAX, conf->filter, 0);
 
@@ -581,6 +594,8 @@ static int ncmosquitto_config_instance(config_item_t *ci)
     conf->client_id = NULL;
     conf->clean_session = true;
     conf->qos = 2;
+
+    pthread_mutex_init(&conf->lock, /* attr = */ NULL);
 
     conf->subs = malloc(sizeof(*conf->subs)*ncmosquitto_subs_size);
     if (conf->subs == NULL) {
