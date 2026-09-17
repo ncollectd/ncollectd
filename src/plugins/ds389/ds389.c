@@ -822,14 +822,15 @@ static int ds389_config_add(config_item_t *ci)
 
     /* Check if URL is valid */
     if ((status == 0) && (ctx->url != NULL)) {
-        LDAPURLDesc *ludpp;
+        LDAPURLDesc *ludpp = NULL;
 
         if (ldap_url_parse(ctx->url, &ludpp) != 0) {
             PLUGIN_ERROR("Instance '%s': Invalid url: '%s'", ctx->name, ctx->url);
             status = -1;
         }
 
-        ldap_free_urldesc(ludpp);
+        if (ludpp != NULL)
+            ldap_free_urldesc(ludpp);
     }
 
     if (status != 0) {
