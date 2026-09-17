@@ -788,19 +788,16 @@ static int docker_stats_purge(docker_instance_t *docker, cdtime_t last)
     }
     c_avl_iterator_destroy(iter);
 
-
     for (size_t i = 0; i < to_be_deleted_num; i++) {
+        c_avl_remove(docker->ids, to_be_deleted[i], (void *)&id, (void *)&docker_stats);
+
         llentry_t *entry = llentry_create(NULL, docker_stats);
         if (entry == NULL) {
-            pthread_mutex_unlock(&docker->lock);
-            docker_stats_free(docker_stats);
             PLUGIN_ERROR("llentry_create failed.");
-            return 0;
+            continue;
         }
 
         llist_append(docker->ldel, entry);
-
-        c_avl_remove(docker->ids, to_be_deleted[i], (void *)&id, (void *)&docker_stats);
     }
 
     pthread_mutex_unlock(&docker->lock);
