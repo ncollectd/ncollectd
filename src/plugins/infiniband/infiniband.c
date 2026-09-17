@@ -286,8 +286,8 @@ static int ib_read_port(const char *device, const char *port)
 
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(ib_files); i++) {
 
-        if (snprintf(path, sizeof(path), "%s/%s/ports/%s/%s",
-                     path_sys_infiniband, device, port, ib_files[i].filename) < 0)
+        if (ssnprintf(path, sizeof(path), "%s/%s/ports/%s/%s",
+                      path_sys_infiniband, device, port, ib_files[i].filename) < 0)
             continue;
 
         char buffer[256];
@@ -343,7 +343,7 @@ static int infiniband_read(void)
         for (size_t i = 0; i < g.gl_pathc; ++i) {
             char *device = NULL, *port = NULL;
             if (ib_parse_glob_port(g.gl_pathv[i], &device, &port) == 0) {
-                snprintf(port_name, sizeof(port_name), "%s:%s", device, port);
+                ssnprintf(port_name, sizeof(port_name), "%s:%s", device, port);
                 if (exclist_match(&excl_port, port_name))
                     rc &= ib_read_port(device, port);
             }
