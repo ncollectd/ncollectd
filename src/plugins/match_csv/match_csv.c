@@ -180,10 +180,9 @@ static int match_csv_match(match_metric_family_set_t *set, char *buffer, void *u
 
     match_csv_metric_t *csv_metric = csv->metrics;
     while (csv_metric != NULL) {
-        if (!match_csv_check_index(csv_metric->value_from, metrics_num) ||
-            !match_csv_check_index(csv->time_from, metrics_num))
-            continue;
-        match_csv_read_metric(csv, csv_metric, set, metrics, metrics_num);
+        if (match_csv_check_index(csv_metric->value_from, metrics_num) &&
+            match_csv_check_index(csv->time_from, metrics_num))
+            match_csv_read_metric(csv, csv_metric, set, metrics, metrics_num);
         csv_metric = csv_metric->next;
     }
 
