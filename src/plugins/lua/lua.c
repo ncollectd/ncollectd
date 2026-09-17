@@ -505,6 +505,12 @@ static int clua_cb_register_generic(lua_State *L, clua_cb_type_t type)
     char *plugin_name = full_plugin_name + strlen("lua/");
     lua_pop(L, 1);
 
+    cb->plugin_name = strdup(full_plugin_name);
+    if (cb->plugin_name == NULL) {
+        free(cb);
+        return luaL_error(L, "%s", "strdup failed");
+    }
+
     cb->lua_state = thread;
     cb->callback_id = callback_id;
     cb->script = script;
@@ -524,16 +530,20 @@ static int clua_cb_register_generic(lua_State *L, clua_cb_type_t type)
     case LUA_CB_READ: {
         int status = plugin_register_complex_read("lua", plugin_name, clua_read, interval,
                                    &(user_data_t){ .data = cb, .free_func = clua_cb_free });
-        if (status != 0)
+        if (status != 0) {
+            clua_cb_data_free(cb);
             return luaL_error(L, "%s", "plugin_register_complex_read failed");
+        }
         lua_pushstring(L, full_plugin_name);
         return 1;
     }   break;
     case LUA_CB_WRITE: {
         int status = plugin_register_write("lua", plugin_name, clua_write, NULL, 0, 0,
                                            &(user_data_t){ .data = cb, .free_func = clua_cb_free });
-        if (status != 0)
+        if (status != 0) {
+            clua_cb_data_free(cb);
             return luaL_error(L, "%s", "plugin_register_write failed");
+        }
         lua_pushstring(L, full_plugin_name);
         return 1;
     }   break;
@@ -552,8 +562,10 @@ static int clua_cb_register_generic(lua_State *L, clua_cb_type_t type)
     case LUA_CB_NOTIFICATION: {
         int status = plugin_register_notification("lua", plugin_name, clua_notification,
                                             &(user_data_t){ .data = cb, .free_func = clua_cb_free });
-        if (status != 0)
+        if (status != 0) {
+            clua_cb_data_free(cb);
             return luaL_error(L, "plugin_register_notification failed");
+        }
 
         lua_pushstring(L, full_plugin_name);
         return 1;
@@ -600,6 +612,8 @@ static int clua_cb_unregister_generic(lua_State *L, clua_cb_data_t **head)
         return luaL_error(L, "A callback name is required.");
 
     const char *name = luaL_checkstring(L, 1);
+    if (name == NULL)
+         return luaL_error(L, "Missing callback identifier.");
 
     clua_cb_data_t *cb = *head;
     clua_cb_data_t *prev = NULL;
@@ -619,7 +633,7 @@ static int clua_cb_unregister_generic(lua_State *L, clua_cb_data_t **head)
     else
         prev->next = cb->next;
 
-    clua_cb_data_free(0);
+    clua_cb_data_free(cb);
 
     return 0;
 }
@@ -627,6 +641,8 @@ static int clua_cb_unregister_generic(lua_State *L, clua_cb_data_t **head)
 static int clua_cb_unregister_read(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
+    if (name == NULL)
+         return luaL_error(L, "Missing callback identifier.");
     plugin_unregister_read(name);
     return 0;
 }
@@ -642,6 +658,8 @@ static int clua_cb_unregister_init(lua_State *L)
 static int clua_cb_unregister_write(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
+    if (name == NULL)
+         return luaL_error(L, "Missing callback identifier.");
     plugin_unregister_write(name);
     return 0;
 }
@@ -651,7 +669,6 @@ static int clua_cb_unregister_config(lua_State *L)
     clua_script_t *script = clua_get_context(L);
     if (script == NULL)
         return luaL_error(L, "Missing script context.");
-
     return clua_cb_unregister_generic(L, &script->shutdown_callbacks);
 }
 
@@ -660,13 +677,14 @@ static int clua_cb_unregister_shutdown(lua_State *L)
     clua_script_t *script = clua_get_context(L);
     if (script == NULL)
         return luaL_error(L, "Missing script context.");
-
     return clua_cb_unregister_generic(L, &script->config_callbacks);
 }
 
 static int clua_cb_unregister_notification(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
+    if (name == NULL)
+         return luaL_error(L, "Missing callback identifier.");
     plugin_unregister_notification(name);
     return 0;
 }
