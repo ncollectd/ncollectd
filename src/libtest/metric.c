@@ -345,14 +345,16 @@ static int test_metric_expect_add(metric_family_t *fam,
     return 0;
 }
 
-static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
+static int test_metric_cmp(metric_t *a, metric_t *b, const char *name, metric_type_t type)
 {
     if ((a == NULL) || (b == NULL))
         return -1;
 
     if (type != METRIC_TYPE_INFO) {
-        if (label_set_cmp(&a->label, &b->label) != 0)
+        if (label_set_cmp(&a->label, &b->label) != 0) {
+//            fprintf(stderr, "Labels of metric '%s' are not equal.\n", name);
             return -1;
+        }
     }
 
     switch (type) {
@@ -361,22 +363,28 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
             if (a->value.unknown.type == UNKNOWN_FLOAT64) {
                 double val = b->value.unknown.int64;
                 if(a->value.unknown.float64 != val) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             } else if (a->value.unknown.type == UNKNOWN_INT64) {
                 int64_t val = b->value.unknown.int64;
                 if(a->value.unknown.int64 != val) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             }
             return -1;
         } else {
             if (a->value.unknown.type == UNKNOWN_FLOAT64) {
-                if (a->value.unknown.float64 != b->value.unknown.float64)
+                if (a->value.unknown.float64 != b->value.unknown.float64) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
+                }
             } else {
-                if (a->value.unknown.int64 != b->value.unknown.int64)
+                if (a->value.unknown.int64 != b->value.unknown.int64) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
+                }
             }
         }
         break;
@@ -385,11 +393,13 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
             if (a->value.gauge.type == GAUGE_FLOAT64) {
                 double val = b->value.gauge.int64;
                 if(a->value.gauge.float64 != val) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             } else if (a->value.gauge.type == GAUGE_INT64) {
                 int64_t val = b->value.gauge.int64;
                 if(a->value.gauge.int64 != val) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             }
@@ -397,10 +407,12 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
         } else {
             if (a->value.gauge.type == GAUGE_FLOAT64) {
                 if (a->value.gauge.float64 != b->value.gauge.float64) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             } else {
                 if (a->value.gauge.int64 != b->value.gauge.int64) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             }
@@ -411,21 +423,25 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
             if (a->value.counter.type == COUNTER_FLOAT64) {
                 double val = b->value.counter.uint64;
                 if(a->value.counter.float64 != val) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             } else if (a->value.counter.type == COUNTER_UINT64) {
                 uint64_t val = b->value.counter.uint64;
                 if(a->value.counter.uint64 != val) {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             }
         } else {
             if (a->value.counter.type == COUNTER_UINT64) {
                 if (a->value.counter.uint64 != b->value.counter.uint64)  {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             } else {
                 if (a->value.counter.float64 != b->value.counter.float64)  {
+                    fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
                     return -1;
                 }
             }
@@ -437,8 +453,10 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
     case METRIC_TYPE_INFO:
         label_set_add_set(&a->label, true, a->value.info);
         label_set_add_set(&b->label, true, b->value.info);
-        if (label_set_cmp(&a->label, &b->label) != 0)
+        if (label_set_cmp(&a->label, &b->label) != 0) {
+            fprintf(stderr, "Values of metric '%s' are not equal.\n", name);
             return -1;
+        }
         break;
     case METRIC_TYPE_SUMMARY:
         // TODO
@@ -454,24 +472,30 @@ static int test_metric_cmp(metric_t *a, metric_t *b, metric_type_t type)
     return 0;
 }
 
-static int test_metric_list_cmp(metric_list_t *a, metric_list_t *b, metric_type_t type)
+static int test_metric_list_cmp(metric_list_t *a, metric_list_t *b,
+                                const char *name, metric_type_t type)
 {
     if ((a == NULL) || (b == NULL))
         return -1;
 
-    if (a->num != b->num)
+    if (a->num != b->num) {
+        fprintf(stderr, "Diferent number of metrics for '%s'. Expect %zu got %zu.\n",
+                        name, b->num, a->num);
         return -1;
+    }
 
     for (size_t i = 0; i < a->num; i++) {
         bool found = false;
         for (size_t j = 0; j < b->num; j++) {
-            if (test_metric_cmp(&a->ptr[i], &b->ptr[j], type) == 0) {
+            if (test_metric_cmp(&a->ptr[i], &b->ptr[j], name, type) == 0) {
                 found = true;
                 break;
             }
         }
-        if (!found)
+        if (!found) {
+            fprintf(stderr, "Metric for family '%s': not found.\n", name);
             return -1;
+        }
     }
 
     return 0;
@@ -485,8 +509,11 @@ int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
     if (strcmp(a->name, b->name) != 0)
         return -1;
 
-    if (a->type != b->type)
+    if (a->type != b->type) {
+        fprintf(stderr, "Family metric '%s' with diferent type. Expect %d got %d.\n",
+                        a->name, b->type, a->type);
         return -1;
+    }
 
 #if 0
     if (a->help != NULL) {
@@ -497,7 +524,6 @@ int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
     } else if (b->help != NULL) {
         return -1;
     }
-#endif
     if (a->unit != NULL) {
        if (b->unit == NULL)
             return -1;
@@ -506,7 +532,9 @@ int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
     } else if (b->unit!= NULL) {
         return -1;
     }
-    return test_metric_list_cmp(&a->metric, &b->metric, a->type);
+#endif
+
+    return test_metric_list_cmp(&a->metric, &b->metric, a->name, a->type);
 }
 
 int test_metric_family_list_cmp(metric_family_t *a, size_t size_a,
@@ -525,7 +553,8 @@ int test_metric_family_list_cmp(metric_family_t *a, size_t size_a,
     }
 
     if (fa_size != fb_size) {
-        fprintf(stderr, "Different number of metrics. Expect %zu got %zu.", fa_size, fb_size);
+        fprintf(stderr, "Different number of family metrics. Expect %zu got %zu.\n",
+                        fb_size, fa_size);
         return -1;
     }
 
@@ -542,7 +571,7 @@ int test_metric_family_list_cmp(metric_family_t *a, size_t size_a,
         }
 
         if (!found) {
-            fprintf(stderr, "Metric %s not found.", a[i].name);
+            fprintf(stderr, "Metric family %s not found.\n", a[i].name);
             return -1;
         }
     }
