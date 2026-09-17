@@ -491,9 +491,9 @@ static JSValue qjs_register_generic(JSContext *ctx, JSValueConst this_val, int a
             interval = DOUBLE_TO_CDTIME_T(jinterval);
         }
         if ((argc > 2) && !JS_IsNull(argv[2]))
-            data = argv[1];
+            data = argv[2];
         if ((argc > 3) && !JS_IsNull(argv[3]))
-            name = argv[2];
+            name = argv[3];
     } else {
         if ((argc > 1) && !JS_IsNull(argv[1]))
             data = argv[1];
@@ -591,7 +591,7 @@ static const JSCFunctionListEntry qjs_ncollectd_funcs[] = {
     JS_PROP_INT32_DEF("METRIC_GAUGE_HISTOGRAM", METRIC_TYPE_GAUGE_HISTOGRAM, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("NOTIF_FAILURE", NOTIF_FAILURE, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("NOTIF_WARNING", NOTIF_WARNING, JS_PROP_CONFIGURABLE),
-    JS_PROP_INT32_DEF("NOTIF_OKAY", NOTIF_WARNING, JS_PROP_CONFIGURABLE),
+    JS_PROP_INT32_DEF("NOTIF_OKAY", NOTIF_OKAY, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("LOG_ERR", LOG_ERR, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("LOG_WARNING", LOG_WARNING, JS_PROP_CONFIGURABLE),
     JS_PROP_INT32_DEF("LOG_NOTICE", LOG_NOTICE, JS_PROP_CONFIGURABLE),
