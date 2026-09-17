@@ -89,6 +89,9 @@ int memory_read(void)
     if (isnan(meminfo[MEMINFO_MEMORY_TOTAL]) || (meminfo[MEMINFO_MEMORY_TOTAL] == 0))
         return EINVAL;
 
+    if (isnan(meminfo[MEMINFO_MEMORY_FREE]))
+        return EINVAL;
+
     double mem_used = 0;
 
     if (isnan(meminfo[MEMINFO_MEMORY_AVAILABLE]) || (meminfo[MEMINFO_MEMORY_AVAILABLE]== 0)) {
