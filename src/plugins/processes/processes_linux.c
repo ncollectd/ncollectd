@@ -371,7 +371,7 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
 
     char *fields[64];
     int fields_len = strsplit(buffer_ptr, fields, STATIC_ARRAY_SIZE(fields));
-    if (fields_len < 26) {
+    if (fields_len < 27) {
         PLUGIN_DEBUG("processes plugin: ps_read_process (pid = %li): '%s' has only %i fields..",
                      pid, filename, fields_len);
         return -1;
