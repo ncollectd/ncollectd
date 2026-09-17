@@ -95,13 +95,13 @@ static void *c_redisCommand(redis_node_t *rn, const char *format, ...)
 
 static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
 {
-    redisReply *rr;
-    rr = c_redisCommand(rn, "SELECT %d", rq->database);
+    redisReply *rr = c_redisCommand(rn, "SELECT %d", rq->database);
     if (unlikely(rr == NULL)) {
         PLUGIN_WARNING("unable to switch to database '%d' on node '%s'.",
                         rq->database, rn->name);
         return -1;
     }
+    freeReplyObject(rr);
 
     rr = c_redisCommand(rn, rq->query);
     if (unlikely(rr == NULL)) {
@@ -193,7 +193,7 @@ static void redis_check_connection(redis_node_t *rn)
     rn->redisContext = rh;
 
     if (rn->passwd) {
-        PLUGIN_DEBUG("authenticating node '%s' passwd(%s).", rn->name, rn->passwd);
+        PLUGIN_DEBUG("authenticating node '%s'.", rn->name);
 
         redisReply *rr = c_redisCommand(rn, "AUTH %s", rn->passwd);
         if (unlikely(rr == NULL)) {
