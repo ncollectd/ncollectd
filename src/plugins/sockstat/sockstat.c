@@ -196,7 +196,7 @@ static int sockstat4_read(void)
                 }
                 if (strcmp(fields[3], "mem") == 0) {
                     uint64_t value = 0;
-                    if (strtouint(fields[3], &value) == 0)
+                    if (strtouint(fields[4], &value) == 0)
                          metric_family_append(&fams_sockstat[FAM_SOCKETS_UDP_MEM],
                                               VALUE_GAUGE(value), NULL, NULL);
                 }
