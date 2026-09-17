@@ -57,7 +57,6 @@ static int edac_read_channel(__attribute__((unused)) int dir_fd,
                              __attribute__((unused)) const char *path,
                              const char *entry, void *ud)
 {
-
     if (strncmp(entry, "ch", strlen("ch")) != 0)
         return 0;
     char *end = strchr(entry, '_');
@@ -65,12 +64,13 @@ static int edac_read_channel(__attribute__((unused)) int dir_fd,
         return 0;
     if (strcmp(end, "_ce_count") != 0)
         return 0;
+    size_t channel_len = strlen(entry) - strlen("ch") - strlen("_ce_count");
 
     uint64_t value;
     int status = filetouint_at(dir_fd, entry, &value);
     if (likely(status == 0)) {
-        const char *channel = entry + strlen("ch");
-        *end = '\0';
+        char channel[24];
+        sstrnncpy(channel, sizeof(channel), entry + strlen("ch"), channel_len);
 
         edac_labels_t *el = ud;
 
