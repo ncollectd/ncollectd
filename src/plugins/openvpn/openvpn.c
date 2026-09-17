@@ -283,7 +283,7 @@ static int single_read(openvpn_instance_t *oi, FILE *fh)
             metric_family_append(&oi->fams[FAM_OPENVPN_PRE_ENCRYPT_TRUNCATIONS],
                                  VALUE_COUNTER(atoll(fields[1])), &oi->labels, NULL);
         } else if (strcmp(fields[0], "Post-decrypt truncations") == 0) {
-            metric_family_append(&oi->fams[FAM_OPENVPN_PRE_ENCRYPT_TRUNCATIONS],
+            metric_family_append(&oi->fams[FAM_OPENVPN_POST_DECRYPT_TRUNCATIONS],
                                  VALUE_COUNTER(atoll(fields[1])), &oi->labels, NULL);
         }
     }
@@ -325,7 +325,7 @@ static int multi1_read(openvpn_instance_t *oi, FILE *fh)
             continue;
 
         int fields_num = openvpn_strsplit(buffer, fields, max_fields);
-        if (fields_num < 4)
+        if (fields_num < 5)
             continue;
 
         metric_family_append(&oi->fams[FAM_OPENVPN_USER_RECEIVED_BYTES],
