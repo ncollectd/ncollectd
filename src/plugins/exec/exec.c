@@ -125,7 +125,7 @@ static void *exec_read_one(void *arg)
             char *pnl;
             while ((pnl = strchr(pbuffer, '\n'))) {
                 *pnl = '\0';
-                if (*(pnl - 1) == '\r')
+                if ((pnl > pbuffer) && (*(pnl - 1) == '\r'))
                     *(pnl - 1) = '\0';
 
                 status = metric_parse_line(pm->mp, pbuffer);
