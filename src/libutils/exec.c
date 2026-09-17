@@ -359,7 +359,7 @@ int cf_util_exec_cmd(config_item_t *ci, cexec_t *pm)
             pm->argv[i] = strdup(ci->values[i].value.string);
         } else {
             if (ci->values[i].type == CONFIG_TYPE_NUMBER) {
-                snprintf(buffer, sizeof(buffer), "%lf", ci->values[i + 1].value.number);
+                snprintf(buffer, sizeof(buffer), "%lf", ci->values[i].value.number);
             } else if (ci->values[i].type == CONFIG_TYPE_BOOLEAN) {
                 if (ci->values[i].value.boolean)
                     sstrncpy(buffer, "true", sizeof(buffer));
