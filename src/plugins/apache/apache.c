@@ -161,6 +161,7 @@ static size_t apache_header_callback(void *buf, size_t size, size_t nmemb, void 
     } else if (strstr(buf, "IBM_HTTP_Server") != NULL) {
         ctx->server_type = APACHE;
     } else {
+        ctx->server_type = APACHE;
         const char *hdr = buf;
         hdr += strlen("Server: ");
         PLUGIN_NOTICE("Unknown server software: %s", hdr);
