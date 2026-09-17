@@ -729,13 +729,13 @@ static int postfix_log_parse_qmgr(postfix_ctx_t *ctx, char *message, size_t mess
 
     if (regexec(&ctx->preg[POSTFIX_REGEX_QMGR_INSERT], message, match_size, match, 0) == 0) {
         char *size = postfix_regmatch(&match[1], message, message_len);
-        if (size == NULL) {
+        if (size != NULL) {
             double value = 0;
             if (strtodouble(size, &value) == 0)
                 histogram_update(ctx->stats.qmgr_inserts_size, value);
         }
         char *nrcpt = postfix_regmatch(&match[2], message, message_len);
-        if (nrcpt == NULL) {
+        if (nrcpt != NULL) {
             double value = 0;
             if (strtodouble(nrcpt, &value) == 0)
                 histogram_update(ctx->stats.qmgr_inserts_nrcpt, value);
@@ -847,9 +847,8 @@ static int postfix_log_parse_smtpd(postfix_ctx_t *ctx, char *message, size_t mes
 static int postfix_log_parse_bounce(postfix_ctx_t *ctx, char *message,
                                     __attribute__((unused)) size_t message_len)
 {
-    if (strstr(message, ": sender non-delivery notification: ") == 0) {
+    if (strstr(message, ": sender non-delivery notification: ") != NULL)
         ctx->stats.bounce_non_delivery++;
-    }
 
     return 0;
 }
@@ -857,9 +856,8 @@ static int postfix_log_parse_bounce(postfix_ctx_t *ctx, char *message,
 static int postfix_log_parse_virtual(postfix_ctx_t *ctx, char *message,
                                      __attribute__((unused)) size_t message_len)
 {
-    if (strstr(message, ", status=sent (delivered to maildir)") != NULL) {
+    if (strstr(message, ", status=sent (delivered to maildir)") != NULL)
         ctx->stats.virtual_delivered++;
-    }
 
     return 0;
 }
