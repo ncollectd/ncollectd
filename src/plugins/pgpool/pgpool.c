@@ -321,32 +321,29 @@ static int pgpool_connect(pgpool_instance_t *db)
     if ((!db) || (!db->database))
         return -1;
 
-    char conninfo[4096];
-    strbuf_t buf = STRBUF_CREATE_STATIC(conninfo);
-    struct {
-        char *param;
-        char *value;
-    } pgpool_params[] = {
-        { "dbname",           db->database       },
-        { "host",             db->host           },
-        { "port",             db->port           },
-        { "user",             db->user           },
-        { "password",         db->password       },
-        { "sslmode",          db->sslmode        },
-        { "application_name", "ncollectd_pgpool" }
+    const char *keywords[] = {
+        "dbname",
+        "host",
+        "port",
+        "user",
+        "password",
+        "sslmode",
+        "application_name",
+        NULL
     };
-    size_t pgpool_params_size = STATIC_ARRAY_SIZE(pgpool_params);
+    const char *values[] = {
+        db->database,
+        db->host,
+        db->port,
+        db->user,
+        db->password,
+        db->sslmode,
+        PACKAGE_NAME "/pgpool",
+        NULL
+    };
 
-    for (size_t i = 0; i  < pgpool_params_size; i++) {
-        if ((pgpool_params[i].value != NULL) && (pgpool_params[i].value[0] != '\0')) {
-            strbuf_putstr(&buf, pgpool_params[i].param);
-            strbuf_putstr(&buf, " = '");
-            strbuf_putstr(&buf, pgpool_params[i].value);
-            strbuf_putstr(&buf, "' ");
-        }
-    }
+    db->conn = PQconnectdbParams(keywords, values, 1);
 
-    db->conn = PQconnectdb(conninfo);
     return 0;
 }
 
