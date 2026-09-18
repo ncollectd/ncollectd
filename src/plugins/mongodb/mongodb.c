@@ -80,28 +80,45 @@ static int mongodb_connect(mongodb_inst_t *ctx)
             return 0;
 
         mongoc_client_destroy(ctx->client);
+        ctx->client = NULL;
     }
 
-    char uri[1024];
+    mongoc_uri_t *uri = mongoc_uri_new_for_host_port(ctx->host, ctx->port);
+    if (uri == NULL) {
+        PLUGIN_ERROR("Cannot create URI object.");
+        return -1;
+    }
 
-    int result = 0;
     if (ctx->user != NULL) {
-        result = snprintf(uri, sizeof(uri), "mongodb://%s:%s@%s:%d/admin",
-                          ctx->user, ctx->password, ctx->host, ctx->port);
-    } else {
-        result = snprintf(uri, sizeof(uri), "mongodb://%s:%d/admin", ctx->host, ctx->port);
+        if (!mongoc_uri_set_username(uri, ctx->user)) {
+            PLUGIN_ERROR("Failed to set user in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
     }
 
-    if (result < 0 ||  result >= (int)(sizeof(uri))) {
-        PLUGIN_ERROR("no space in buffer for build connection uri");
+    if (ctx->password != NULL) {
+        if (!mongoc_uri_set_password(uri, ctx->password)) {
+            PLUGIN_ERROR("Failed to set password in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+    }
+
+    if (!mongoc_uri_set_database(uri, "admin")) {
+        PLUGIN_ERROR("Failed to set database 'admin' in URI.");
+        mongoc_uri_destroy(uri);
         return -1;
     }
 
-    ctx->client = mongoc_client_new(uri);
+    ctx->client = mongoc_client_new_from_uri(uri);
     if (ctx->client == NULL) {
-        PLUGIN_ERROR("mongoc_client_new failed.");
+        PLUGIN_ERROR("Connecting to [%s]:%d failed.", ctx->host, ctx->port);
+        mongoc_uri_destroy(uri);
         return -1;
     }
+
+    mongoc_uri_destroy(uri);
 
     if (mongodb_cmd_ping(ctx) == 0)
        return 0;
