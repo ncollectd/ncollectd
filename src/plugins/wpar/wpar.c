@@ -206,15 +206,17 @@ static int wpar_read (void)
 
         if (hardware_ticks > 0) {
             /* Number of physical processors */
-           int pncpus = wcpu.ncpus;
-            if (part.smt_thrds > 0 )
-                pncpus = wcpu.ncpus / part.smt_thrds;
-
-            u_longlong_t diff_sys = (wcpu.psys - prev_wcpu[i].sys) * 100 * time_diff;
-            cnt_wcpu[i].sys += (diff_sys / hardware_ticks) / pncpus;
-
-            u_longlong_t diff_user = (wcpu.puser - prev_wcpu[i].user) * 100 * time_diff;
-            cnt_wcpu[i].user += (diff_user / hardware_ticks) / pncpus;
+            int pncpus = wcpu.ncpus;
+            if (pncpus > 0) {
+                if (part.smt_thrds > 0 )
+                    pncpus = wcpu.ncpus / part.smt_thrds;
+            
+                u_longlong_t diff_sys = (wcpu.psys - prev_wcpu[i].sys) * 100 * time_diff;
+                cnt_wcpu[i].sys += (diff_sys / hardware_ticks) / pncpus;
+            
+                u_longlong_t diff_user = (wcpu.puser - prev_wcpu[i].user) * 100 * time_diff;
+                cnt_wcpu[i].user += (diff_user / hardware_ticks) / pncpus;
+            }
         }
 
         metric_family_append(&fams[FAM_WPAR_CPU_USER], VALUE_COUNTER(cnt_wcpu[i].user), NULL,
