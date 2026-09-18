@@ -43,7 +43,7 @@ static int summary_quantile_cmp(void const *a, void const *b)
 {
     const summary_quantile_t *quantile_a = a;
     const summary_quantile_t *quantile_b = b;
-    return quantile_a->quantile > quantile_b->quantile;
+    return quantile_a->quantile - quantile_b->quantile;
 }
 
 summary_t *summary_quantile_append(summary_t *s, double quantile, double value)
