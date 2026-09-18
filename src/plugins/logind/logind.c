@@ -617,7 +617,7 @@ static int logind_read(void)
     while (true) {
         logind_session_t *lk = NULL;
         logind_session_t *lv = NULL;
-        int status = c_avl_pick(sessions, (void *)&lk, (void *)&lv);
+        status = c_avl_pick(sessions, (void *)&lk, (void *)&lv);
         if (status != 0)
             break;
         logind_session_free(lk);
