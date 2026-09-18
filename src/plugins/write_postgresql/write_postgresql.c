@@ -68,35 +68,34 @@ static int write_psql_connect(psql_database_t *db)
     if ((db == NULL) || (db->database == NULL))
         return -1;
 
-    char conninfo[4096];
-    strbuf_t buf = STRBUF_CREATE_STATIC(conninfo);
-    struct {
-        char *param;
-        char *value;
-    } psql_params[] = {
-        { "dbname",           db->database           },
-        { "host",             db->host               },
-        { "port",             db->port               },
-        { "user",             db->user               },
-        { "password",         db->password           },
-        { "sslmode",          db->sslmode            },
-        { "krbsrvname",       db->krbsrvname         },
-        { "service",          db->service            },
-        { "application_name", PACKAGE_NAME           }
+    const char *keywords[] = {
+        "dbname",
+        "host",
+        "port",
+        "user",
+        "password",
+        "sslmode",
+        "krbsrvname",
+        "service",
+        "application_name",
+        NULL
     };
-    size_t psql_params_size = STATIC_ARRAY_SIZE(psql_params);
+    const char *values[] = {
+        db->database,
+        db->host,
+        db->port,
+        db->user,
+        db->password,
+        db->sslmode,
+        db->krbsrvname,
+        db->service,
+        PACKAGE_NAME "/write_postgresql",
+        NULL
+    };
 
-    for (size_t i = 0; i  < psql_params_size; i++) {
-        if ((psql_params[i].value != NULL) && (psql_params[i].value[0] != '\0')) {
-            strbuf_putstr(&buf, psql_params[i].param);
-            strbuf_putstr(&buf, " = '");
-            strbuf_putstr(&buf, psql_params[i].value);
-            strbuf_putstr(&buf, "' ");
-        }
-    }
-
-    db->conn = PQconnectdb(conninfo);
+    db->conn = PQconnectdbParams(keywords, values, 1);
     db->proto_version = PQprotocolVersion(db->conn);
+
     return 0;
 }
 
