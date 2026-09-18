@@ -78,10 +78,8 @@ static void tbl_free(void *arg)
     free(tbl);
 }
 
-static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
-                               __attribute__((unused)) int fields_num)
+static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields, int fields_num)
 {
-    assert(res->value_from < fields_num);
     metric_t m = {0};
 
     if (res->type == METRIC_TYPE_GAUGE) {
@@ -149,7 +147,7 @@ static int tbl_result_dispatch(tbl_t *tbl, tbl_result_t *res, char **fields,
     return 0;
 }
 
-static int tbl_parse_line(tbl_t *tbl, char *line, char **fields)
+static int tbl_parse_line(tbl_t *tbl, char *line, char **fields, int fields_num)
 {
     int i = 0;
 
@@ -170,7 +168,7 @@ static int tbl_parse_line(tbl_t *tbl, char *line, char **fields)
     }
 
     for (i = 0; i < tbl->results_num; ++i) {
-        if (tbl_result_dispatch(tbl, tbl->results + i, fields, STATIC_ARRAY_SIZE(fields)) != 0) {
+        if (tbl_result_dispatch(tbl, tbl->results + i, fields, fields_num) != 0) {
             PLUGIN_ERROR("Failed to dispatch result.");
             continue;
         }
@@ -184,8 +182,8 @@ static int tbl_read_table(user_data_t *user_data)
         return -1;
 
     tbl_t *tbl = user_data->data;
-
-    char **fields = malloc((tbl->max_colnum + 1) * sizeof(char *));
+    int fields_num = tbl->max_colnum + 1;
+    char **fields = malloc(fields_num * sizeof(char *));
     if (fields == NULL) {
         PLUGIN_ERROR("malloc failed.");
         return -1;
@@ -210,7 +208,7 @@ static int tbl_read_table(user_data_t *user_data)
         if (line <= tbl->skip_lines)
             continue;
 
-        if (tbl_parse_line(tbl, buf, fields) != 0) {
+        if (tbl_parse_line(tbl, buf, fields, fields_num) != 0) {
             PLUGIN_WARNING("Table %s: Failed to parse line: %s", tbl->file, buf);
             continue;
         }
