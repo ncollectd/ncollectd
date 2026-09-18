@@ -511,7 +511,7 @@ int test_metric_family_cmp(metric_family_t *a, metric_family_t *b)
 
     if (a->type != b->type) {
         fprintf(stderr, "Family metric '%s' with diferent type. Expect %d got %d.\n",
-                        a->name, b->type, a->type);
+                        a->name, (int)b->type, (int)a->type);
         return -1;
     }
 
