@@ -62,47 +62,51 @@ static int write_mongodb_initialize(write_mongodb_t *db, char *collection)
     if (db->connected)
         return 0;
 
+    if (db->client != NULL) {
+        mongoc_client_destroy(db->client);
+        db->client = NULL;
+    }
+
     PLUGIN_INFO("Connecting to [%s]:%d", db->host, db->port);
 
-    if ((db->database_name != NULL) && (db->user != NULL) && (db->passwd != NULL)) {
-        char *uri = ssnprintf_alloc("mongodb://%s:%s@%s:%d/?authSource=%s", db->user,
-                                    db->passwd, db->host, db->port, db->database_name);
-        if (uri == NULL) {
-            PLUGIN_ERROR("Not enough memory to assemble authentication string.");
-            mongoc_client_destroy(db->client);
-            db->client = NULL;
-            db->connected = false;
-            return -1;
-        }
-
-        db->client = mongoc_client_new(uri);
-        if (!db->client) {
-            PLUGIN_ERROR("Authenticating to [%s]:%d for database '%s' as user '%s' failed.",
-                         db->host, db->port, db->database_name, db->user);
-            db->connected = false;
-            free(uri);
-            return -1;
-        }
-        free(uri);
-    } else {
-        char *uri = ssnprintf_alloc("mongodb://%s:%d", db->host, db->port);
-        if (uri == NULL) {
-            PLUGIN_ERROR("Not enough memory to assemble authentication string.");
-            mongoc_client_destroy(db->client);
-            db->client = NULL;
-            db->connected = false;
-            return -1;
-        }
-
-        db->client = mongoc_client_new(uri);
-        if (!db->client) {
-            PLUGIN_ERROR("Connecting to [%s]:%d failed.", db->host, db->port);
-            db->connected = false;
-            free(uri);
-            return -1;
-        }
-        free(uri);
+    mongoc_uri_t *uri = mongoc_uri_new_for_host_port(db->host, db->port);
+    if (uri == NULL) {
+        PLUGIN_ERROR("Cannot create URI object.");
+        return -1;
     }
+
+    if (db->user != NULL) {
+        if (!mongoc_uri_set_username(uri, db->user)) {
+            PLUGIN_ERROR("Failed to set user in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+    }
+
+    if (db->passwd != NULL) {
+        if (!mongoc_uri_set_password(uri, db->passwd)) {
+            PLUGIN_ERROR("Failed to set password in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+    }
+
+    if (db->database_name != NULL) {
+        if (!mongoc_uri_set_database(uri, db->database_name)) {
+            PLUGIN_ERROR("Failed to set database in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+    }
+
+    db->client = mongoc_client_new_from_uri(uri);
+    if (db->client == NULL) {
+        PLUGIN_ERROR("Connecting to [%s]:%d failed.", db->host, db->port);
+        mongoc_uri_destroy(uri);
+        return -1;
+    }
+
+    mongoc_uri_destroy(uri);
 
     db->database = mongoc_client_get_database(db->client, db->database_name);
     if (db->database == NULL) {
