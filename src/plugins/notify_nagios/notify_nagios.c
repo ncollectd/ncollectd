@@ -29,49 +29,44 @@ static char *nagios_command_file;
 static int nagios_print(char const *buffer)
 {
     char const *file = NAGIOS_COMMAND_FILE;
-    int fd;
-    int status;
-    struct flock lock = {0};
-
     if (nagios_command_file != NULL)
         file = nagios_command_file;
 
-    fd = open(file, O_WRONLY | O_APPEND);
+    int fd = open(file, O_WRONLY | O_APPEND);
     if (fd < 0) {
-        status = errno;
         PLUGIN_ERROR("Opening \"%s\" failed: %s", file, STRERRNO);
-        return status;
+        return -1;
     }
 
-    lock.l_type = F_WRLCK;
-    lock.l_whence = SEEK_END;
+    struct flock lock = {
+        .l_type = F_WRLCK,
+        .l_whence = SEEK_END
+    };
 
-    status = fcntl(fd, F_GETLK, &lock);
+    int status = fcntl(fd, F_GETLK, &lock);
     if (status != 0) {
-        status = errno;
         PLUGIN_ERROR("Failed to acquire write lock on \"%s\": %s", file, STRERRNO);
         close(fd);
-        return status;
+        return -1;
     }
 
     status = (int)lseek(fd, 0, SEEK_END);
     if (status == -1) {
-        status = errno;
         PLUGIN_ERROR("Seeking to end of \"%s\" failed: %s", file, STRERRNO);
         close(fd);
-        return status;
+        return -1;
     }
 
     status = (int)swrite(fd, buffer, strlen(buffer));
     if (status != 0) {
-        status = errno;
         PLUGIN_ERROR("Writing to \"%s\" failed: %s", file, STRERRNO);
         close(fd);
-        return status;
+        return -1;
     }
 
     close(fd);
-    return status;
+
+    return 0;
 }
 
 // [<timestamp>] PROCESS_SERVICE_CHECK_RESULT;<host_name>;<svc_description>;<return_code>;<plugin_output>
@@ -149,7 +144,8 @@ static int nagios_config(config_item_t *ci)
         if (strcasecmp("command-file", child->key) == 0) {
             status = cf_util_get_string(child, &nagios_command_file);
         } else {
-            PLUGIN_ERROR("Unknown config option \"%s\".", child->key);
+            PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
             status = -1;
         }
 
