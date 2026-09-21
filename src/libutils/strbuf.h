@@ -255,3 +255,10 @@ static inline int strbuf_putreplace_set(strbuf_t *buf, char const *str, char rse
 {
     return  strbuf_putnreplace_set(buf, str, strlen(str), rset, rchar);
 }
+
+int strbuf_putnescape_set(strbuf_t *buf, char const *str, size_t len, char eset[256], char echar);
+
+static inline int strbuf_putescape_set(strbuf_t *buf, char const *str, char eset[256], char echar)
+{
+    return  strbuf_putnescape_set(buf, str, strlen(str), eset, echar);
+}
