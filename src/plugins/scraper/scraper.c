@@ -463,6 +463,8 @@ static int scraper_config_url(scraper_instance_t *target, config_item_t *ci)
         return -1;
     }
 
+    target->verify_peer = true;
+    target->verify_host = true;
     target->timeout = CDTIME_DOOMSDAY;
 
     for (int i = 0; i < ci->children_num; i++) {
