@@ -408,6 +408,9 @@ static int nginx_config_instance(config_item_t *ci)
 
     memcpy(st->fams, fams, sizeof(st->fams[0])*FAM_NGINX_MAX);
 
+    st->verify_peer = true;
+    st->verify_host = true;
+
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
