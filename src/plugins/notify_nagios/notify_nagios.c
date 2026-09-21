@@ -14,12 +14,14 @@
 #define NAGIOS_COMMAND_FILE "/usr/local/nagios/var/rw/nagios.cmd"
 #endif
 
-static char escape[256] = {
-    ['\\'] = 1,
+static char replace_svc[256] = {
     [';'] = 1,
     ['\n'] = 1,
-    ['\r'] = 1,
-    ['\t'] = 1
+};
+
+static char escape_message[256] = {
+    ['\\'] = '\\',
+    ['\n'] = 'n',
 };
 
 static char *nagios_command_file;
@@ -82,20 +84,25 @@ static int nagios_notify(const notification_t *n, __attribute__((unused)) user_d
     status |= strbuf_putchar(&buf, '[');
     status |= strbuf_putuint(&buf, CDTIME_T_TO_TIME_T(n->time));
     status |= strbuf_putstr(&buf, "] PROCESS_SERVICE_CHECK_RESULT;");
-    label_pair_t *pair = label_set_read(n->label, "hostname");
-    if (pair != NULL)
-        status |= strbuf_putstr(&buf, pair->value);
+    label_pair_t *hostname_pair = label_set_read(n->label, "hostname");
+    if (hostname_pair != NULL)
+        status |= strbuf_putstr(&buf, hostname_pair->value);
     status |= strbuf_putchar(&buf, ';');
-    for (size_t i = 0; i < n->label.num; i++) {
-        if (strcmp(n->label.ptr[i].name, "hostname") != 0) {
-            if (i != 0)
-                status |= strbuf_putchar(&buf, ',');
-            status |= strbuf_putstr(&buf, n->label.ptr[i].name);
-            status |= strbuf_putstr(&buf, "=\"");
-            size_t len = strlen(n->label.ptr[i].value);
-            status |= strbuf_putnreplace_set(&buf, n->label.ptr[i].value, len, escape, '\\');
-            status |= strbuf_putchar(&buf, '"');
+    status |= strbuf_putstr(&buf, n->name);
+    if (((hostname_pair == NULL) && (n->label.num > 0)) ||
+        ((hostname_pair != NULL) && (n->label.num > 1)) ) {
+        status |= strbuf_putchar(&buf, '{');
+        for (size_t i = 0; i < n->label.num; i++) {
+            if (strcmp(n->label.ptr[i].name, "hostname") != 0) {
+                if (i != 0)
+                    status |= strbuf_putchar(&buf, ',');
+                status |= strbuf_putstr(&buf, n->label.ptr[i].name);
+                status |= strbuf_putstr(&buf, "=\"");
+                status |= strbuf_putreplace_set(&buf, n->label.ptr[i].value, replace_svc, ' ');
+                status |= strbuf_putchar(&buf, '"');
+            }
         }
+        status |= strbuf_putchar(&buf, '}');
     }
     status |= strbuf_putchar(&buf, ';');
     int code;
@@ -115,11 +122,9 @@ static int nagios_notify(const notification_t *n, __attribute__((unused)) user_d
     }
     status |= strbuf_putint(&buf, code);
     status |= strbuf_putchar(&buf, ';');
-    pair = label_set_read(n->annotation, "message");
-    if (pair != NULL) {
-        size_t len = strlen(pair->value);
-        status |= strbuf_putnreplace_set(&buf, pair->value, len, escape, '\\');
-    }
+    label_pair_t *pair = label_set_read(n->annotation, "message");
+    if (pair != NULL)
+        status |= strbuf_putescape_set(&buf, pair->value, escape_message, '\\');
     status |= strbuf_putchar(&buf, '\n');
 
     if (status != 0) {
