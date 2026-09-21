@@ -126,7 +126,7 @@ static void nagios_check_dispatch_notification(program_t *pm, char *output)
     };
 
     label_set_add_set(&n.label, true, pm->labels);
-    label_set_add_set(&n.annotation, true, pm->labels);
+    label_set_add_set(&n.annotation, true, pm->annotations);
 
     if ((output != NULL) && (*output != '\0')) {
         strstripnewline(output);
