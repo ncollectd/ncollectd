@@ -164,7 +164,7 @@ static bool gpu_subarray_free(void **mem)
 static void **gpu_subarray_realloc(void **mem, int count, int size)
 {
     gpu_subarray_free(mem);
-    mem = malloc(config.samples * sizeof(void *));
+    mem = calloc(config.samples, sizeof(void *));
     if (mem == NULL) {
         PLUGIN_ERROR("malloc failed.");
         return NULL;
@@ -180,6 +180,7 @@ static void **gpu_subarray_realloc(void **mem, int count, int size)
             return NULL;
         }
     }
+
     return mem;
 }
 
@@ -2431,10 +2432,10 @@ static int gpu_read(void)
             gpu->flags &= ~COLLECT_THROTTLETIME;
         }
 
-        if (gpu->flags & (COLLECT_ENGINE | COLLECT_ENGINE_SINGLE | COLLECT_FABRIC |
+        if (!(gpu->flags & (COLLECT_ENGINE | COLLECT_ENGINE_SINGLE | COLLECT_FABRIC |
                 COLLECT_FREQUENCY | COLLECT_MEMORY | COLLECT_MEMORY_BANDWIDTH |
                 COLLECT_POWER | COLLECT_ERRORS | COLLECT_SEPARATE_ERRORS |
-                COLLECT_TEMPERATURE | COLLECT_THROTTLETIME)) {
+                COLLECT_TEMPERATURE | COLLECT_THROTTLETIME))) {
             /* all metrics missing -> disable use of that GPU */
             PLUGIN_ERROR("No metrics from GPU-%u, disabling its querying", i);
             gpu->flags = 0ULL;
