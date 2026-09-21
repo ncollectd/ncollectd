@@ -194,7 +194,6 @@ static int nginx_curl_init(nginx_t *st)
                          curl_easy_strerror(rcode));
             return -1;
         }
-
 #else
         static char credentials[1024];
         int status = ssnprintf(credentials, sizeof(credentials), "%s:%s", st->user,
@@ -205,13 +204,13 @@ static int nginx_curl_init(nginx_t *st)
             st->curl = NULL;
             return -1;
         }
-        rcode = curl_easy_setopt(st->curl, CURLOPT_USERPWD, credentials);
-    if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
-                     curl_easy_strerror(rcode));
-        return -1;
-    }
 
+        rcode = curl_easy_setopt(st->curl, CURLOPT_USERPWD, credentials);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
 #endif
     }
 
