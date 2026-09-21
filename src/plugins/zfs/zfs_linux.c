@@ -230,7 +230,7 @@ static int zfs_read_proc_pool_objset(int dir_fd, const char *pool, const char *f
 
         if (fields[1][0] == '7') {
             if (strcmp(fields[0], "dataset_name") == 0)
-                sstrncpy(dataset_name, fields[0], sizeof(dataset_name));
+                sstrncpy(dataset_name, fields[2], sizeof(dataset_name));
         } else if (fields[1][0] == '4') {
             for (size_t i = 0; metrics[i].name != NULL; i++) {
                 if (strcmp(fields[0], metrics[i].name) == 0) {
