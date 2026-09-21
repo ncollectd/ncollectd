@@ -569,3 +569,35 @@ int strbuf_putnreplace_set(strbuf_t *buf, char const *str, size_t len, char rset
     buf->ptr[buf->pos] = '\0';
     return 0;
 }
+
+int strbuf_putnescape_set(strbuf_t *buf, char const *str, size_t len, char eset[256], char echar)
+{
+    if (unlikely(strbuf_avail(buf) < len)) {
+        if (strbuf_resize(buf, len) != 0)
+            return ENOMEM;
+    }
+
+    if (unlikely(buf->ptr == NULL))
+        return ENOMEM;
+
+    size_t n = 0;
+    while (n < len) {
+        if (unlikely(strbuf_avail(buf) < 2)) {
+            if (strbuf_resize(buf, 2) != 0)
+                return ENOMEM;
+        }
+
+        unsigned char c = (unsigned char)str[n];
+
+        if (eset[c]) {
+            buf->ptr[buf->pos++] = echar;
+            buf->ptr[buf->pos++] = eset[c];
+        } else {
+            buf->ptr[buf->pos++] = c;
+        }
+        n++;
+    }
+
+    buf->ptr[buf->pos] = '\0';
+    return 0;
+}
