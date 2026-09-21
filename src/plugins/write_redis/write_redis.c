@@ -28,6 +28,14 @@ typedef struct {
     strbuf_t buf_metric;
 } write_redis_t;
 
+static char escape_key[256] = {
+    ['#'] = 1,
+    [':'] = 1,
+    ['\n'] = 1,
+    ['\r'] = 1,
+    ['\t'] = 1
+};
+
 static int redis_cmd_argv(write_redis_t *node, int argc, const char **argv)
 {
     redisReply *rr = redisCommandArgv(node->conn, argc, argv, NULL);
@@ -133,7 +141,8 @@ static int format_metric(write_redis_t *node, char *metric, char *metric_suffix,
     if (metric_suffix != NULL)
         status |= strbuf_putstr(buf_metric, metric_suffix);
 
-    status |= strbuf_putstrn(buf_key, buf_metric->ptr, strbuf_len(buf_metric));
+    status |= strbuf_putnreplace_set(buf_key, buf_metric->ptr, strbuf_len(buf_metric),
+                                     escape_key, '_');
 
     size_t size1 = labels1 == NULL ? 0 : labels1->num;
     size_t n1 = 0;
@@ -156,9 +165,9 @@ static int format_metric(write_redis_t *node, char *metric, char *metric_suffix,
 
         if (pair != NULL) {
             status |= strbuf_putchar(buf_key, ':');
-            status |= strbuf_putstr(buf_key, pair->name);
+            status |= strbuf_putreplace_set(buf_key, pair->name, escape_key, '_');
             status |= strbuf_putchar(buf_key, '#');
-            status |= strbuf_putstr(buf_key, pair->value);
+            status |= strbuf_putreplace_set(buf_key, pair->value, escape_key, '_');
         }
     }
 
