@@ -239,7 +239,7 @@ static int cmq_connect(cmq_instance_t *mq)
     return 0;
 }
 
-time_t cmq_queue_time(MQHBAG bag, MQLONG mq_date, MQLONG mq_time)
+static time_t cmq_queue_time(MQHBAG bag, MQLONG mq_date, MQLONG mq_time)
 {
     MQLONG mqcc, mqrc;
     MQCHAR qdate[MQ_DATE_LENGTH+1] = {0};
@@ -364,13 +364,13 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
                          VALUE_GAUGE(lastget), &mq->labels,
                          &LABEL_PAIR_CONST("queue", qname), NULL);
 
-    time_t lastput = cmq_queue_time(bag, MQCACF_LAST_PUT_TIME, MQCACF_LAST_PUT_TIME);
+    time_t lastput = cmq_queue_time(bag, MQCACF_LAST_PUT_DATE, MQCACF_LAST_PUT_TIME);
     metric_family_append(&mq->fams[FAM_MQ_QUEUE_LATEST_PUT_SECONDS],
                          VALUE_GAUGE(lastput), &mq->labels,
                          &LABEL_PAIR_CONST("queue", qname), NULL);
 
     MQLONG oldest_msg_age = 0;
-    mqInquireInteger(bag, MQIACF_OLDEST_MSG_AGE, MQIND_NONE, &enqueue, &mqcc, &mqrc);
+    mqInquireInteger(bag, MQIACF_OLDEST_MSG_AGE, MQIND_NONE, &oldest_msg_age, &mqcc, &mqrc);
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_OLDEST_MSG_AGE_SECONDS],
                              VALUE_GAUGE(oldest_msg_age), &mq->labels,
