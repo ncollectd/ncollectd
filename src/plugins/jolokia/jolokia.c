@@ -1120,6 +1120,9 @@ static int jlk_config_add_instance(config_item_t *ci)
         return status;
     }
 
+    jlk->verify_peer = true;
+    jlk->verify_host = true;
+
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
