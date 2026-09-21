@@ -659,6 +659,9 @@ static int apache_config_instance (config_item_t *ci)
     }
     assert(ctx->name != NULL);
 
+    ctx->verify_peer = true;
+    ctx->verify_host = true;
+
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
