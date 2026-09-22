@@ -325,13 +325,14 @@ static int nl80211_cmd_get_interfaces_attr_cb(const struct nlattr *attr, void *d
         wdev->frequency = (double)frequency * 1e6;
     }   break;
     case NL80211_ATTR_SSID: {
-        char essid[ESSID_MAX_SIZE + 1];
         size_t len = mnl_attr_get_payload_len(attr);
-        if (len > (sizeof(essid) - 1))
-            len = sizeof(essid) - 1;
+        if (len > (sizeof(wdev->bss.essid) - 1))
+            len = sizeof(wdev->bss.essid) - 1;
         char *playload = mnl_attr_get_payload(attr);
-        memcpy(essid, playload, len);
-        essid[len] = '\0';
+        if (playload != NULL) {
+            memcpy(wdev->bss.essid, playload, len);
+            wdev->bss.essid[len] = '\0';
+        }
     }   break;
     }
 
@@ -411,8 +412,9 @@ static int nl80211_cmd_get_interfaces(void)
 
 static uint8_t *find_ie(uint8_t *buf, size_t len, uint8_t ie)
 {
+
     while (len >= 2) {
-        if (len < (size_t)(2+buf[1]))
+        if (len < (size_t)(buf[1]+2))
             break;
         if (buf[0] == ie)
             return buf;
@@ -453,13 +455,15 @@ static int nl80211_cmd_get_scan_attr_cb(const struct nlattr *attr, void *data)
             case NL80211_BSS_INFORMATION_ELEMENTS: {
                 uint16_t payload_len = mnl_attr_get_payload_len(nested);
                 uint8_t *payload = mnl_attr_get_payload(nested);
-                uint8_t *ie = find_ie(payload,payload_len,0);
-                if (ie) {
-                    uint8_t l = ie[1];
-                    if (l >= sizeof(wbss->essid))
-                        l = sizeof(wbss->essid)-1;
-                    memcpy(wbss->essid, ie+2, l);
-                    wbss->essid[l] = 0;
+                if (payload != NULL) {
+                    uint8_t *ie = find_ie(payload, payload_len, 0);
+                    if (ie) {
+                        uint8_t l = ie[1];
+                        if (l >= sizeof(wbss->essid))
+                            l = sizeof(wbss->essid)-1;
+                        memcpy(wbss->essid, ie+2, l);
+                        wbss->essid[l] = 0;
+                    }
                 }
             }   break;
             }
@@ -671,7 +675,7 @@ static int nl80211_cmd_get_station_msg_cb(const struct nlmsghdr *nlh, void *data
     char mac[ETH_ALEN*3+1];
 
     label_set_t labels = {
-        .num = 2,
+        .num = 3,
         .ptr = (label_pair_t[]){
             {.name = "bssid",  .value = mac2str(wst.mac, mac) },
             {.name = "device", .value = wdev->name            },
