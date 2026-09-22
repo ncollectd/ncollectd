@@ -393,8 +393,9 @@ static int nsd_read_ssl(nsd_t *nsd)
         goto error;
     }
 
-    char buffer[1024];
+    strbuf_t buf = STRBUF_CREATE;
     while (true) {
+        char buffer[4096];
         int buffer_size = sizeof(buffer);
         int rsize = SSL_read(ssl, buffer, buffer_size - 1);
         if (rsize == 0)
@@ -406,9 +407,20 @@ static int nsd_read_ssl(nsd_t *nsd)
         }
         buffer[rsize] = '\0';
 
-        nsd_parse_metric(nsd, buffer);
+        strbuf_putstrn(&buf, buffer, rsize);
     }
 
+    if (strbuf_len(&buf) > 0) {
+        char *ptr = buf.ptr;
+        char *saveptr = NULL;
+        char *line;
+        while ((line = strtok_r(ptr, "\n\r", &saveptr)) != NULL) {
+            ptr = NULL;
+            nsd_parse_metric(nsd, line);
+        }
+    }
+
+    strbuf_destroy(&buf);
 
 error:
     if (ssl != NULL)
