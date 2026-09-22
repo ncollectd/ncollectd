@@ -214,8 +214,7 @@ static int memcached_query_daemon(char *cmd, char *buffer, size_t buffer_size, m
 
     status = swrite(st->fd, cmd, strlen(cmd));
     if (status != 0) {
-        PLUGIN_ERROR("Instance \"%s\": write(2) failed: %s", st->name,
-                    STRERRNO);
+        PLUGIN_ERROR("Instance \"%s\": write(2) failed: %s", st->name, STRERRNO);
         shutdown(st->fd, SHUT_RDWR);
         close(st->fd);
         st->fd = -1;
@@ -276,10 +275,11 @@ static int memcached_query_daemon(char *cmd, char *buffer, size_t buffer_size, m
             break;
         }
 
-        /* If buffer ends in end_token, we have all the data. */
-        if (memcmp(buffer + buffer_fill - sizeof(end_token), end_token,
-                             sizeof(end_token)) == 0)
-            break;
+        if (buffer_fill >= sizeof(end_token)) {
+            /* If buffer ends in end_token, we have all the data. */
+            if (memcmp(buffer + buffer_fill - sizeof(end_token), end_token, sizeof(end_token)) == 0)
+                break;
+        }
     }
 
     status = 0;
@@ -331,8 +331,7 @@ static int memcached_read_stats_slabs(memcached_t *st)
             } else {
                 continue;
             }
-            metric_family_append(fam, value, &st->labels,
-                                 &LABEL_PAIR_CONST("class", class), NULL);
+            metric_family_append(fam, value, &st->labels, &LABEL_PAIR_CONST("class", class), NULL);
         }
     }
 
@@ -381,8 +380,7 @@ static int memcached_read_stats_items(memcached_t *st)
             } else {
                 continue;
             }
-            metric_family_append(fam, value, &st->labels,
-                                 &LABEL_PAIR_CONST("class", class), NULL);
+            metric_family_append(fam, value, &st->labels, &LABEL_PAIR_CONST("class", class), NULL);
         }
     }
 
