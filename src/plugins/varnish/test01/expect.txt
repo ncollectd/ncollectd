@@ -1,0 +1,534 @@
+# TYPE varnish_up gauge
+varnish_up{hostname="localhost.localdomain",instance="local"} 1
+# TYPE varnish_mgt_uptime_seconds gauge
+varnish_mgt_uptime_seconds{hostname="localhost.localdomain",instance="local"} 7534733
+# TYPE varnish_mgt_child_start counter
+varnish_mgt_child_start_total{hostname="localhost.localdomain",instance="local"} 16550171
+# TYPE varnish_mgt_child_exit counter
+varnish_mgt_child_exit_total{hostname="localhost.localdomain",instance="local"} 11876743
+# TYPE varnish_mgt_child_stop counter
+varnish_mgt_child_stop_total{hostname="localhost.localdomain",instance="local"} 3538028
+# TYPE varnish_mgt_child_died counter
+varnish_mgt_child_died_total{hostname="localhost.localdomain",instance="local"} 7950621
+# TYPE varnish_mgt_child_dump counter
+varnish_mgt_child_dump_total{hostname="localhost.localdomain",instance="local"} 14515332
+# TYPE varnish_mgt_child_panic counter
+varnish_mgt_child_panic_total{hostname="localhost.localdomain",instance="local"} 1575707
+# TYPE varnish_summs counter
+varnish_summs_total{hostname="localhost.localdomain",instance="local"} 1670327
+# TYPE varnish_uptime_seconds counter
+varnish_uptime_seconds_total{hostname="localhost.localdomain",instance="local"} 6423927
+# TYPE varnish_session counter
+varnish_session_total{hostname="localhost.localdomain",instance="local"} 5062744
+# TYPE varnish_session_fail counter
+varnish_session_fail_total{hostname="localhost.localdomain",instance="local"} 11024642
+# TYPE varnish_session_fail_econnaborted counter
+varnish_session_fail_econnaborted_total{hostname="localhost.localdomain",instance="local"} 13574366
+# TYPE varnish_session_fail_eintr counter
+varnish_session_fail_eintr_total{hostname="localhost.localdomain",instance="local"} 2209595
+# TYPE varnish_session_fail_emfile counter
+varnish_session_fail_emfile_total{hostname="localhost.localdomain",instance="local"} 864165
+# TYPE varnish_session_fail_ebadf counter
+varnish_session_fail_ebadf_total{hostname="localhost.localdomain",instance="local"} 896277
+# TYPE varnish_session_fail_enomem counter
+varnish_session_fail_enomem_total{hostname="localhost.localdomain",instance="local"} 7679193
+# TYPE varnish_session_fail_other counter
+varnish_session_fail_other_total{hostname="localhost.localdomain",instance="local"} 13100797
+# TYPE varnish_client_request_400 counter
+varnish_client_request_400_total{hostname="localhost.localdomain",instance="local"} 11611115
+# TYPE varnish_client_request_417 counter
+varnish_client_request_417_total{hostname="localhost.localdomain",instance="local"} 7424928
+# TYPE varnish_client_request counter
+varnish_client_request_total{hostname="localhost.localdomain",instance="local"} 1998355
+# TYPE varnish_esi_requests counter
+varnish_esi_requests_total{hostname="localhost.localdomain",instance="local"} 9892462
+# TYPE varnish_cache_hit counter
+varnish_cache_hit_total{hostname="localhost.localdomain",instance="local"} 9707881
+# TYPE varnish_cache_hit_grace counter
+varnish_cache_hit_grace_total{hostname="localhost.localdomain",instance="local"} 8890233
+# TYPE varnish_cache_hitpass counter
+varnish_cache_hitpass_total{hostname="localhost.localdomain",instance="local"} 9983202
+# TYPE varnish_cache_hitmiss counter
+varnish_cache_hitmiss_total{hostname="localhost.localdomain",instance="local"} 6071957
+# TYPE varnish_cache_miss counter
+varnish_cache_miss_total{hostname="localhost.localdomain",instance="local"} 5105062
+# TYPE varnish_backend_total_response_uncacheable counter
+varnish_backend_total_response_uncacheable_total{hostname="localhost.localdomain",instance="local"} 14910303
+# TYPE varnish_backend_total_response_shortlived counter
+varnish_backend_total_response_shortlived_total{hostname="localhost.localdomain",instance="local"} 7995763
+# TYPE varnish_backend_total_connection counter
+varnish_backend_total_connection_total{hostname="localhost.localdomain",instance="local"} 2849111
+# TYPE varnish_backend_total_unhealthy counter
+varnish_backend_total_unhealthy_total{hostname="localhost.localdomain",instance="local"} 10229557
+# TYPE varnish_backend_total_busy counter
+varnish_backend_total_busy_total{hostname="localhost.localdomain",instance="local"} 8820572
+# TYPE varnish_backend_total_fail counter
+varnish_backend_total_fail_total{hostname="localhost.localdomain",instance="local"} 10383844
+# TYPE varnish_backend_total_reuse counter
+varnish_backend_total_reuse_total{hostname="localhost.localdomain",instance="local"} 10002512
+# TYPE varnish_backend_total_recycle counter
+varnish_backend_total_recycle_total{hostname="localhost.localdomain",instance="local"} 3920100
+# TYPE varnish_backend_total_retry counter
+varnish_backend_total_retry_total{hostname="localhost.localdomain",instance="local"} 13921873
+# TYPE varnish_fetch_head counter
+varnish_fetch_head_total{hostname="localhost.localdomain",instance="local"} 15497581
+# TYPE varnish_fetch_length counter
+varnish_fetch_length_total{hostname="localhost.localdomain",instance="local"} 2846246
+# TYPE varnish_fetch_chunked counter
+varnish_fetch_chunked_total{hostname="localhost.localdomain",instance="local"} 8082144
+# TYPE varnish_fetch_eof counter
+varnish_fetch_eof_total{hostname="localhost.localdomain",instance="local"} 3783109
+# TYPE varnish_fetch_bad counter
+varnish_fetch_bad_total{hostname="localhost.localdomain",instance="local"} 13870888
+# TYPE varnish_fetch_none counter
+varnish_fetch_none_total{hostname="localhost.localdomain",instance="local"} 4879295
+# TYPE varnish_fetch_1xx counter
+varnish_fetch_1xx_total{hostname="localhost.localdomain",instance="local"} 5992705
+# TYPE varnish_fetch_204 counter
+varnish_fetch_204_total{hostname="localhost.localdomain",instance="local"} 14735054
+# TYPE varnish_fetch_304 counter
+varnish_fetch_304_total{hostname="localhost.localdomain",instance="local"} 5775572
+# TYPE varnish_fetch_failed counter
+varnish_fetch_failed_total{hostname="localhost.localdomain",instance="local"} 13671898
+# TYPE varnish_thread_pools gauge
+varnish_thread_pools{hostname="localhost.localdomain",instance="local"} 609472
+# TYPE varnish_threads gauge
+varnish_threads{hostname="localhost.localdomain",instance="local"} 4319611
+# TYPE varnish_threads_limited counter
+varnish_threads_limited_total{hostname="localhost.localdomain",instance="local"} 13056991
+# TYPE varnish_threads_created counter
+varnish_threads_created_total{hostname="localhost.localdomain",instance="local"} 10501935
+# TYPE varnish_threads_destroyed counter
+varnish_threads_destroyed_total{hostname="localhost.localdomain",instance="local"} 14027493
+# TYPE varnish_threads_failed counter
+varnish_threads_failed_total{hostname="localhost.localdomain",instance="local"} 5170009
+# TYPE varnish_thread_queue_len gauge
+varnish_thread_queue_len{hostname="localhost.localdomain",instance="local"} 3707921
+# TYPE varnish_request_busy_sleep counter
+varnish_request_busy_sleep_total{hostname="localhost.localdomain",instance="local"} 3322234
+# TYPE varnish_request_busy_wakeup counter
+varnish_request_busy_wakeup_total{hostname="localhost.localdomain",instance="local"} 10275071
+# TYPE varnish_request_busy_killed counter
+varnish_request_busy_killed_total{hostname="localhost.localdomain",instance="local"} 1841009
+# TYPE varnish_session_queued counter
+varnish_session_queued_total{hostname="localhost.localdomain",instance="local"} 11317997
+# TYPE varnish_session_dropped counter
+varnish_session_dropped_total{hostname="localhost.localdomain",instance="local"} 13124183
+# TYPE varnish_request_dropped counter
+varnish_request_dropped_total{hostname="localhost.localdomain",instance="local"} 12070566
+# TYPE varnish_objects gauge
+varnish_objects{hostname="localhost.localdomain",instance="local"} 6730811
+# TYPE varnish_objects_vampire gauge
+varnish_objects_vampire{hostname="localhost.localdomain",instance="local"} 5295862
+# TYPE varnish_objects_core gauge
+varnish_objects_core{hostname="localhost.localdomain",instance="local"} 7281455
+# TYPE varnish_objects_head gauge
+varnish_objects_head{hostname="localhost.localdomain",instance="local"} 3875468
+# TYPE varnish_backends gauge
+varnish_backends{hostname="localhost.localdomain",instance="local"} 6471781
+# TYPE varnish_objects_expired counter
+varnish_objects_expired_total{hostname="localhost.localdomain",instance="local"} 8939672
+# TYPE varnish_objects_lru_nuked counter
+varnish_objects_lru_nuked_total{hostname="localhost.localdomain",instance="local"} 9318027
+# TYPE varnish_objects_lru_moved counter
+varnish_objects_lru_moved_total{hostname="localhost.localdomain",instance="local"} 244600
+# TYPE varnish_objects_lru_limited counter
+varnish_objects_lru_limited_total{hostname="localhost.localdomain",instance="local"} 6378943
+# TYPE varnish_lost_hdr counter
+varnish_lost_hdr_total{hostname="localhost.localdomain",instance="local"} 6411700
+# TYPE varnish_sessions counter
+varnish_sessions_total{hostname="localhost.localdomain",instance="local"} 5123896
+# TYPE varnish_pipes gauge
+varnish_pipes{hostname="localhost.localdomain",instance="local"} 12371648
+# TYPE varnish_pipe_limited counter
+varnish_pipe_limited_total{hostname="localhost.localdomain",instance="local"} 4369539
+# TYPE varnish_session_pipe counter
+varnish_session_pipe_total{hostname="localhost.localdomain",instance="local"} 10899468
+# TYPE varnish_pass counter
+varnish_pass_total{hostname="localhost.localdomain",instance="local"} 9266331
+# TYPE varnish_fetch counter
+varnish_fetch_total{hostname="localhost.localdomain",instance="local"} 15428175
+# TYPE varnish_fetch_background counter
+varnish_fetch_background_total{hostname="localhost.localdomain",instance="local"} 11508941
+# TYPE varnish_synth_response counter
+varnish_synth_response_total{hostname="localhost.localdomain",instance="local"} 13585942
+# TYPE varnish_request_hdr_bytes counter
+varnish_request_hdr_bytes_total{hostname="localhost.localdomain",instance="local"} 11707950
+# TYPE varnish_request_body_bytes counter
+varnish_request_body_bytes_total{hostname="localhost.localdomain",instance="local"} 5233660
+# TYPE varnish_response_hdr_bytes counter
+varnish_response_hdr_bytes_total{hostname="localhost.localdomain",instance="local"} 10836219
+# TYPE varnish_response_body_bytes counter
+varnish_response_body_bytes_total{hostname="localhost.localdomain",instance="local"} 100743
+# TYPE varnish_pipe_hdr_bytes counter
+varnish_pipe_hdr_bytes_total{hostname="localhost.localdomain",instance="local"} 8941582
+# TYPE varnish_pipe_in_bytes counter
+varnish_pipe_in_bytes_total{hostname="localhost.localdomain",instance="local"} 14158454
+# TYPE varnish_pipe_out_bytes counter
+varnish_pipe_out_bytes_total{hostname="localhost.localdomain",instance="local"} 10375815
+# TYPE varnish_session_closed counter
+varnish_session_closed_total{hostname="localhost.localdomain",instance="local"} 6722782
+# TYPE varnish_session_closed_error counter
+varnish_session_closed_error_total{hostname="localhost.localdomain",instance="local"} 6075941
+# TYPE varnish_session_readahead counter
+varnish_session_readahead_total{hostname="localhost.localdomain",instance="local"} 12060590
+# TYPE varnish_session_herd counter
+varnish_session_herd_total{hostname="localhost.localdomain",instance="local"} 13453594
+# TYPE varnish_session_close counter
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="REM_CLOSE"} 11371804
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="REQ_CLOSE"} 2564830
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="REQ_HTTP10"} 551847
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RX_BAD"} 1066369
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RX_BODY"} 11504502
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RX_JUNK"} 3147681
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RX_OVERFLOW"} 10384397
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RX_TIMEOUT"} 11749103
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RX_CLOSE_IDLE"} 9526624
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="TX_PIPE"} 18882
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="TX_ERROR"} 95783
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="TX_EOF"} 5121057
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RESP_CLOSE"} 4388421
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="OVERLOAD"} 10995252
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="PIPE_OVERFLOW"} 14387389
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RANGE_SHORT"} 3039380
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="REQ_HTTP20"} 5726977
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="VCL_FAILURE"} 11196115
+# TYPE varnish_workspace_backend_overflow counter
+varnish_workspace_backend_overflow_total{hostname="localhost.localdomain",instance="local"} 14848074
+# TYPE varnish_workspace_client_overflow counter
+varnish_workspace_client_overflow_total{hostname="localhost.localdomain",instance="local"} 3125004
+# TYPE varnish_workspace_thread_overflow counter
+varnish_workspace_thread_overflow_total{hostname="localhost.localdomain",instance="local"} 2636358
+# TYPE varnish_workspace_session_overflow counter
+varnish_workspace_session_overflow_total{hostname="localhost.localdomain",instance="local"} 8446673
+# TYPE varnish_shm_records counter
+varnish_shm_records_total{hostname="localhost.localdomain",instance="local"} 13907595
+# TYPE varnish_shm_writes counter
+varnish_shm_writes_total{hostname="localhost.localdomain",instance="local"} 11335594
+# TYPE varnish_shm_flushes counter
+varnish_shm_flushes_total{hostname="localhost.localdomain",instance="local"} 15169455
+# TYPE varnish_shm_contention counter
+varnish_shm_contention_total{hostname="localhost.localdomain",instance="local"} 3206321
+# TYPE varnish_shm_cycles counter
+varnish_shm_cycles_total{hostname="localhost.localdomain",instance="local"} 6618968
+# TYPE varnish_shm_bytes counter
+varnish_shm_bytes_total{hostname="localhost.localdomain",instance="local"} 11845834
+# TYPE varnish_backend_total_request counter
+varnish_backend_total_request_total{hostname="localhost.localdomain",instance="local"} 14578125
+# TYPE varnish_vcl gauge
+varnish_vcl{hostname="localhost.localdomain",instance="local"} 9183799
+# TYPE varnish_vcl_avail gauge
+varnish_vcl_avail{hostname="localhost.localdomain",instance="local"} 12397681
+# TYPE varnish_vcl_discard gauge
+varnish_vcl_discard{hostname="localhost.localdomain",instance="local"} 15644495
+# TYPE varnish_vcl_fail counter
+varnish_vcl_fail_total{hostname="localhost.localdomain",instance="local"} 3911085
+# TYPE varnish_client_response_500 counter
+varnish_client_response_500_total{hostname="localhost.localdomain",instance="local"} 5255119
+# TYPE varnish_bans gauge
+varnish_bans{hostname="localhost.localdomain",instance="local"} 15545362
+# TYPE varnish_bans_completed gauge
+varnish_bans_completed{hostname="localhost.localdomain",instance="local"} 9251677
+# TYPE varnish_bans_obj gauge
+varnish_bans_obj{hostname="localhost.localdomain",instance="local"} 15660189
+# TYPE varnish_bans_req gauge
+varnish_bans_req{hostname="localhost.localdomain",instance="local"} 8294771
+# TYPE varnish_bans_added counter
+varnish_bans_added_total{hostname="localhost.localdomain",instance="local"} 9270559
+# TYPE varnish_bans_deleted counter
+varnish_bans_deleted_total{hostname="localhost.localdomain",instance="local"} 15755972
+# TYPE varnish_bans_tested counter
+varnish_bans_tested_total{hostname="localhost.localdomain",instance="local"} 13415828
+# TYPE varnish_bans_obj_killed counter
+varnish_bans_obj_killed_total{hostname="localhost.localdomain",instance="local"} 13658981
+# TYPE varnish_bans_lurker_tested counter
+varnish_bans_lurker_tested_total{hostname="localhost.localdomain",instance="local"} 9974009
+# TYPE varnish_bans_tests_tested counter
+varnish_bans_tests_tested_total{hostname="localhost.localdomain",instance="local"} 11026001
+# TYPE varnish_bans_lurker_tests_tested counter
+varnish_bans_lurker_tests_tested_total{hostname="localhost.localdomain",instance="local"} 16698362
+# TYPE varnish_bans_lurker_obj_killed counter
+varnish_bans_lurker_obj_killed_total{hostname="localhost.localdomain",instance="local"} 15700986
+# TYPE varnish_bans_lurker_obj_killed_cutoff counter
+varnish_bans_lurker_obj_killed_cutoff_total{hostname="localhost.localdomain",instance="local"} 5444901
+# TYPE varnish_bans_dups counter
+varnish_bans_dups_total{hostname="localhost.localdomain",instance="local"} 14668477
+# TYPE varnish_bans_lurker_contention counter
+varnish_bans_lurker_contention_total{hostname="localhost.localdomain",instance="local"} 9884408
+# TYPE varnish_bans_persisted_bytes gauge
+varnish_bans_persisted_bytes{hostname="localhost.localdomain",instance="local"} 10700021
+# TYPE varnish_bans_persisted_fragmentation_bytes gauge
+varnish_bans_persisted_fragmentation_bytes{hostname="localhost.localdomain",instance="local"} 12739335
+# TYPE varnish_purges counter
+varnish_purges_total{hostname="localhost.localdomain",instance="local"} 13009413
+# TYPE varnish_purged_objects counter
+varnish_purged_objects_total{hostname="localhost.localdomain",instance="local"} 13336379
+# TYPE varnish_expiry_mailed counter
+varnish_expiry_mailed_total{hostname="localhost.localdomain",instance="local"} 4408793
+# TYPE varnish_expiry_received counter
+varnish_expiry_received_total{hostname="localhost.localdomain",instance="local"} 10139793
+# TYPE varnish_hcb_nolock counter
+varnish_hcb_nolock_total{hostname="localhost.localdomain",instance="local"} 7894757
+# TYPE varnish_hcb_lock counter
+varnish_hcb_lock_total{hostname="localhost.localdomain",instance="local"} 2801033
+# TYPE varnish_hcb_insert counter
+varnish_hcb_insert_total{hostname="localhost.localdomain",instance="local"} 13346114
+# TYPE varnish_esi_errors counter
+varnish_esi_errors_total{hostname="localhost.localdomain",instance="local"} 14513726
+# TYPE varnish_esi_warnings counter
+varnish_esi_warnings_total{hostname="localhost.localdomain",instance="local"} 14646867
+# TYPE varnish_vmods gauge
+varnish_vmods{hostname="localhost.localdomain",instance="local"} 11147024
+# TYPE varnish_gzip counter
+varnish_gzip_total{hostname="localhost.localdomain",instance="local"} 6920309
+# TYPE varnish_gunzip counter
+varnish_gunzip_total{hostname="localhost.localdomain",instance="local"} 10267332
+# TYPE varnish_test_gunzip counter
+varnish_test_gunzip_total{hostname="localhost.localdomain",instance="local"} 10014303
+# TYPE varnish_mempool_live gauge
+varnish_mempool_live{hostname="localhost.localdomain",id="busyobj",instance="local"} 10504636
+varnish_mempool_live{hostname="localhost.localdomain",id="req0",instance="local"} 1183749
+varnish_mempool_live{hostname="localhost.localdomain",id="sess0",instance="local"} 13655037
+varnish_mempool_live{hostname="localhost.localdomain",id="req1",instance="local"} 939896
+varnish_mempool_live{hostname="localhost.localdomain",id="sess1",instance="local"} 9768536
+# TYPE varnish_mempool_pool gauge
+varnish_mempool_pool{hostname="localhost.localdomain",id="busyobj",instance="local"} 2956796
+varnish_mempool_pool{hostname="localhost.localdomain",id="req0",instance="local"} 6605963
+varnish_mempool_pool{hostname="localhost.localdomain",id="sess0",instance="local"} 12639663
+varnish_mempool_pool{hostname="localhost.localdomain",id="req1",instance="local"} 15522609
+varnish_mempool_pool{hostname="localhost.localdomain",id="sess1",instance="local"} 12237262
+# TYPE varnish_mempool_size_wanted_bytes gauge
+varnish_mempool_size_wanted_bytes{hostname="localhost.localdomain",id="busyobj",instance="local"} 2125157
+varnish_mempool_size_wanted_bytes{hostname="localhost.localdomain",id="req0",instance="local"} 8328729
+varnish_mempool_size_wanted_bytes{hostname="localhost.localdomain",id="sess0",instance="local"} 5979114
+varnish_mempool_size_wanted_bytes{hostname="localhost.localdomain",id="req1",instance="local"} 7869353
+varnish_mempool_size_wanted_bytes{hostname="localhost.localdomain",id="sess1",instance="local"} 3778825
+# TYPE varnish_mempool_size_actual_bytes gauge
+varnish_mempool_size_actual_bytes{hostname="localhost.localdomain",id="busyobj",instance="local"} 3817687
+varnish_mempool_size_actual_bytes{hostname="localhost.localdomain",id="req0",instance="local"} 7324679
+varnish_mempool_size_actual_bytes{hostname="localhost.localdomain",id="sess0",instance="local"} 16743156
+varnish_mempool_size_actual_bytes{hostname="localhost.localdomain",id="req1",instance="local"} 4311225
+varnish_mempool_size_actual_bytes{hostname="localhost.localdomain",id="sess1",instance="local"} 4432068
+# TYPE varnish_mempool_allocations counter
+varnish_mempool_allocations_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 15886759
+varnish_mempool_allocations_total{hostname="localhost.localdomain",id="req0",instance="local"} 4918700
+varnish_mempool_allocations_total{hostname="localhost.localdomain",id="sess0",instance="local"} 598383
+varnish_mempool_allocations_total{hostname="localhost.localdomain",id="req1",instance="local"} 9848413
+varnish_mempool_allocations_total{hostname="localhost.localdomain",id="sess1",instance="local"} 10629789
+# TYPE varnish_mempool_frees counter
+varnish_mempool_frees_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 232637
+varnish_mempool_frees_total{hostname="localhost.localdomain",id="req0",instance="local"} 4094793
+varnish_mempool_frees_total{hostname="localhost.localdomain",id="sess0",instance="local"} 8783684
+varnish_mempool_frees_total{hostname="localhost.localdomain",id="req1",instance="local"} 2832617
+varnish_mempool_frees_total{hostname="localhost.localdomain",id="sess1",instance="local"} 9029082
+# TYPE varnish_mempool_recycle counter
+varnish_mempool_recycle_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 2698186
+varnish_mempool_recycle_total{hostname="localhost.localdomain",id="req0",instance="local"} 15307373
+varnish_mempool_recycle_total{hostname="localhost.localdomain",id="sess0",instance="local"} 3371329
+varnish_mempool_recycle_total{hostname="localhost.localdomain",id="req1",instance="local"} 9807711
+varnish_mempool_recycle_total{hostname="localhost.localdomain",id="sess1",instance="local"} 279350
+# TYPE varnish_mempool_timeout counter
+varnish_mempool_timeout_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 2013086
+varnish_mempool_timeout_total{hostname="localhost.localdomain",id="req0",instance="local"} 9498664
+varnish_mempool_timeout_total{hostname="localhost.localdomain",id="sess0",instance="local"} 11103020
+varnish_mempool_timeout_total{hostname="localhost.localdomain",id="req1",instance="local"} 7991905
+varnish_mempool_timeout_total{hostname="localhost.localdomain",id="sess1",instance="local"} 15628279
+# TYPE varnish_mempool_toosmall counter
+varnish_mempool_toosmall_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 7748520
+varnish_mempool_toosmall_total{hostname="localhost.localdomain",id="req0",instance="local"} 3199569
+varnish_mempool_toosmall_total{hostname="localhost.localdomain",id="sess0",instance="local"} 11740480
+varnish_mempool_toosmall_total{hostname="localhost.localdomain",id="req1",instance="local"} 13682641
+varnish_mempool_toosmall_total{hostname="localhost.localdomain",id="sess1",instance="local"} 5830853
+# TYPE varnish_mempool_surplus counter
+varnish_mempool_surplus_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 10880781
+varnish_mempool_surplus_total{hostname="localhost.localdomain",id="req0",instance="local"} 582443
+varnish_mempool_surplus_total{hostname="localhost.localdomain",id="sess0",instance="local"} 5496486
+varnish_mempool_surplus_total{hostname="localhost.localdomain",id="req1",instance="local"} 15536835
+varnish_mempool_surplus_total{hostname="localhost.localdomain",id="sess1",instance="local"} 3451311
+# TYPE varnish_mempool_randry counter
+varnish_mempool_randry_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 15354853
+varnish_mempool_randry_total{hostname="localhost.localdomain",id="req0",instance="local"} 7245131
+varnish_mempool_randry_total{hostname="localhost.localdomain",id="sess0",instance="local"} 14920707
+varnish_mempool_randry_total{hostname="localhost.localdomain",id="req1",instance="local"} 8833582
+varnish_mempool_randry_total{hostname="localhost.localdomain",id="sess1",instance="local"} 8768253
+# TYPE varnish_lock_created counter
+varnish_lock_created_total{hostname="localhost.localdomain",id="ban",instance="local"} 2488764
+varnish_lock_created_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 13968862
+varnish_lock_created_total{hostname="localhost.localdomain",id="cli",instance="local"} 813689
+varnish_lock_created_total{hostname="localhost.localdomain",id="director",instance="local"} 2415617
+varnish_lock_created_total{hostname="localhost.localdomain",id="exp",instance="local"} 12039275
+varnish_lock_created_total{hostname="localhost.localdomain",id="hcb",instance="local"} 8008795
+varnish_lock_created_total{hostname="localhost.localdomain",id="lru",instance="local"} 10020691
+varnish_lock_created_total{hostname="localhost.localdomain",id="mempool",instance="local"} 12380553
+varnish_lock_created_total{hostname="localhost.localdomain",id="objhdr",instance="local"} 15920081
+varnish_lock_created_total{hostname="localhost.localdomain",id="perpool",instance="local"} 3676492
+varnish_lock_created_total{hostname="localhost.localdomain",id="pipestat",instance="local"} 16228213
+varnish_lock_created_total{hostname="localhost.localdomain",id="probe",instance="local"} 15179714
+varnish_lock_created_total{hostname="localhost.localdomain",id="sess",instance="local"} 6750795
+varnish_lock_created_total{hostname="localhost.localdomain",id="conn_pool",instance="local"} 8018852
+varnish_lock_created_total{hostname="localhost.localdomain",id="dead_pool",instance="local"} 10176088
+varnish_lock_created_total{hostname="localhost.localdomain",id="vbe",instance="local"} 10846808
+varnish_lock_created_total{hostname="localhost.localdomain",id="vcapace",instance="local"} 9409866
+varnish_lock_created_total{hostname="localhost.localdomain",id="vcashut",instance="local"} 152226
+varnish_lock_created_total{hostname="localhost.localdomain",id="vcl",instance="local"} 15657714
+varnish_lock_created_total{hostname="localhost.localdomain",id="vxid",instance="local"} 10720795
+varnish_lock_created_total{hostname="localhost.localdomain",id="waiter",instance="local"} 6140929
+varnish_lock_created_total{hostname="localhost.localdomain",id="wq",instance="local"} 15881992
+varnish_lock_created_total{hostname="localhost.localdomain",id="wstat",instance="local"} 15511199
+varnish_lock_created_total{hostname="localhost.localdomain",id="sma",instance="local"} 13477643
+# TYPE varnish_lock_destroy counter
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="ban",instance="local"} 9714368
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 8641089
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="cli",instance="local"} 13662549
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="director",instance="local"} 6930296
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="exp",instance="local"} 9625444
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="hcb",instance="local"} 16696095
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="lru",instance="local"} 3734648
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="mempool",instance="local"} 7765372
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="objhdr",instance="local"} 15084162
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="perpool",instance="local"} 8011980
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="pipestat",instance="local"} 3083070
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="probe",instance="local"} 4321565
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="sess",instance="local"} 9408402
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="conn_pool",instance="local"} 6041561
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="dead_pool",instance="local"} 14519564
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="vbe",instance="local"} 9943719
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="vcapace",instance="local"} 9455931
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="vcashut",instance="local"} 15496984
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="vcl",instance="local"} 2903543
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="vxid",instance="local"} 16201448
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="waiter",instance="local"} 15089952
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="wq",instance="local"} 2052286
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="wstat",instance="local"} 3088118
+varnish_lock_destroy_total{hostname="localhost.localdomain",id="sma",instance="local"} 11722459
+# TYPE varnish_lock_locks counter
+varnish_lock_locks_total{hostname="localhost.localdomain",id="ban",instance="local"} 553034
+varnish_lock_locks_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 1889918
+varnish_lock_locks_total{hostname="localhost.localdomain",id="cli",instance="local"} 6453497
+varnish_lock_locks_total{hostname="localhost.localdomain",id="director",instance="local"} 4144518
+varnish_lock_locks_total{hostname="localhost.localdomain",id="exp",instance="local"} 13638987
+varnish_lock_locks_total{hostname="localhost.localdomain",id="hcb",instance="local"} 985212
+varnish_lock_locks_total{hostname="localhost.localdomain",id="lru",instance="local"} 3687427
+varnish_lock_locks_total{hostname="localhost.localdomain",id="mempool",instance="local"} 7357846
+varnish_lock_locks_total{hostname="localhost.localdomain",id="objhdr",instance="local"} 12868354
+varnish_lock_locks_total{hostname="localhost.localdomain",id="perpool",instance="local"} 15935340
+varnish_lock_locks_total{hostname="localhost.localdomain",id="pipestat",instance="local"} 7684619
+varnish_lock_locks_total{hostname="localhost.localdomain",id="probe",instance="local"} 12777736
+varnish_lock_locks_total{hostname="localhost.localdomain",id="sess",instance="local"} 9302096
+varnish_lock_locks_total{hostname="localhost.localdomain",id="conn_pool",instance="local"} 10970284
+varnish_lock_locks_total{hostname="localhost.localdomain",id="dead_pool",instance="local"} 1841763
+varnish_lock_locks_total{hostname="localhost.localdomain",id="vbe",instance="local"} 11350691
+varnish_lock_locks_total{hostname="localhost.localdomain",id="vcapace",instance="local"} 4070586
+varnish_lock_locks_total{hostname="localhost.localdomain",id="vcashut",instance="local"} 10090266
+varnish_lock_locks_total{hostname="localhost.localdomain",id="vcl",instance="local"} 7515882
+varnish_lock_locks_total{hostname="localhost.localdomain",id="vxid",instance="local"} 2606112
+varnish_lock_locks_total{hostname="localhost.localdomain",id="waiter",instance="local"} 12543280
+varnish_lock_locks_total{hostname="localhost.localdomain",id="wq",instance="local"} 14523683
+varnish_lock_locks_total{hostname="localhost.localdomain",id="wstat",instance="local"} 4735935
+varnish_lock_locks_total{hostname="localhost.localdomain",id="sma",instance="local"} 11440748
+# TYPE varnish_lock_dbg_busy counter
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="ban",instance="local"} 11759324
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 8217648
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="cli",instance="local"} 10698098
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="director",instance="local"} 6824410
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="exp",instance="local"} 9775785
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="hcb",instance="local"} 1245883
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="lru",instance="local"} 10573725
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="mempool",instance="local"} 14270472
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="objhdr",instance="local"} 5596363
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="perpool",instance="local"} 7821011
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="pipestat",instance="local"} 13089985
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="probe",instance="local"} 16164927
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="sess",instance="local"} 10438223
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="conn_pool",instance="local"} 15376698
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="dead_pool",instance="local"} 6267227
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="vbe",instance="local"} 10004933
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="vcapace",instance="local"} 317269
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="vcashut",instance="local"} 12929963
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="vcl",instance="local"} 8182595
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="vxid",instance="local"} 4913863
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="waiter",instance="local"} 7982693
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="wq",instance="local"} 10455468
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="wstat",instance="local"} 2804569
+varnish_lock_dbg_busy_total{hostname="localhost.localdomain",id="sma",instance="local"} 15169742
+# TYPE varnish_lock_dbg_try_fail counter
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="ban",instance="local"} 8693125
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 8562235
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="cli",instance="local"} 7585354
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="director",instance="local"} 292873
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="exp",instance="local"} 7495095
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="hcb",instance="local"} 10750275
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="lru",instance="local"} 15493972
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="mempool",instance="local"} 15983020
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="objhdr",instance="local"} 9005044
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="perpool",instance="local"} 14836390
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="pipestat",instance="local"} 12858856
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="probe",instance="local"} 5567448
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="sess",instance="local"} 3204912
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="conn_pool",instance="local"} 3534817
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="dead_pool",instance="local"} 3338711
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="vbe",instance="local"} 987515
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="vcapace",instance="local"} 5768701
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="vcashut",instance="local"} 14884695
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="vcl",instance="local"} 13341766
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="vxid",instance="local"} 14800931
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="waiter",instance="local"} 4579963
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="wq",instance="local"} 12057220
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="wstat",instance="local"} 3405388
+varnish_lock_dbg_try_fail_total{hostname="localhost.localdomain",id="sma",instance="local"} 5250257
+# TYPE varnish_sma_alloc_request counter
+varnish_sma_alloc_request_total{hostname="localhost.localdomain",id="s0",instance="local"} 12624497
+varnish_sma_alloc_request_total{hostname="localhost.localdomain",id="Transient",instance="local"} 2638638
+# TYPE varnish_sma_alloc_fail counter
+varnish_sma_alloc_fail_total{hostname="localhost.localdomain",id="s0",instance="local"} 4998490
+varnish_sma_alloc_fail_total{hostname="localhost.localdomain",id="Transient",instance="local"} 4096134
+# TYPE varnish_sma_allocated_bytes counter
+varnish_sma_allocated_bytes_total{hostname="localhost.localdomain",id="s0",instance="local"} 13578986
+varnish_sma_allocated_bytes_total{hostname="localhost.localdomain",id="Transient",instance="local"} 2284562
+# TYPE varnish_sma_freed_bytes counter
+varnish_sma_freed_bytes_total{hostname="localhost.localdomain",id="s0",instance="local"} 3171961
+varnish_sma_freed_bytes_total{hostname="localhost.localdomain",id="Transient",instance="local"} 9883770
+# TYPE varnish_sma_alloc_outstanding gauge
+varnish_sma_alloc_outstanding{hostname="localhost.localdomain",id="s0",instance="local"} 9917190
+varnish_sma_alloc_outstanding{hostname="localhost.localdomain",id="Transient",instance="local"} 973955
+# TYPE varnish_sma_outstanding_bytes gauge
+varnish_sma_outstanding_bytes{hostname="localhost.localdomain",id="s0",instance="local"} 896564
+varnish_sma_outstanding_bytes{hostname="localhost.localdomain",id="Transient",instance="local"} 14924225
+# TYPE varnish_sma_available_bytes gauge
+varnish_sma_available_bytes{hostname="localhost.localdomain",id="s0",instance="local"} 1702118
+varnish_sma_available_bytes{hostname="localhost.localdomain",id="Transient",instance="local"} 15862885
+# TYPE varnish_vbe_up gauge
+varnish_vbe_up{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 1
+# TYPE varnish_vbe_request_hdr_bytes counter
+varnish_vbe_request_hdr_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 4513446
+# TYPE varnish_vbe_request_body_bytes counter
+varnish_vbe_request_body_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 11797507
+# TYPE varnish_vbe_response_hdr_bytes counter
+varnish_vbe_response_hdr_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 5585001
+# TYPE varnish_vbe_response_body_bytes counter
+varnish_vbe_response_body_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 3599115
+# TYPE varnish_vbe_pipe_hdr_bytes counter
+varnish_vbe_pipe_hdr_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 12737403
+# TYPE varnish_vbe_pipe_out_bytes counter
+varnish_vbe_pipe_out_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 4330395
+# TYPE varnish_vbe_pipe_in_bytes counter
+varnish_vbe_pipe_in_bytes_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 11468468
+# TYPE varnish_vbe_connections gauge
+varnish_vbe_connections{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 271413
+# TYPE varnish_vbe_requests counter
+varnish_vbe_requests_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 14178809
+# TYPE varnish_vbe_unhealthy counter
+varnish_vbe_unhealthy_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 14301086
+# TYPE varnish_vbe_busy counter
+varnish_vbe_busy_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 10079124
+# TYPE varnish_vbe_fail counter
+varnish_vbe_fail_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 5393498
+# TYPE varnish_vbe_fail_reason counter
+varnish_vbe_fail_reason_total{backend="default",hostname="localhost.localdomain",instance="local",reason="EACCES",vcl="boot"} 11206511
+varnish_vbe_fail_reason_total{backend="default",hostname="localhost.localdomain",instance="local",reason="EADDRNOTAVAIL",vcl="boot"} 8838743
+varnish_vbe_fail_reason_total{backend="default",hostname="localhost.localdomain",instance="local",reason="ECONNREFUSED",vcl="boot"} 14227080
+varnish_vbe_fail_reason_total{backend="default",hostname="localhost.localdomain",instance="local",reason="ENETUNREACH",vcl="boot"} 4197832
+varnish_vbe_fail_reason_total{backend="default",hostname="localhost.localdomain",instance="local",reason="ETIMEDOUT",vcl="boot"} 4298790
+varnish_vbe_fail_reason_total{backend="default",hostname="localhost.localdomain",instance="local",reason="OTHER",vcl="boot"} 1228690
+# TYPE varnish_vbe_helddown counter
+varnish_vbe_helddown_total{backend="default",hostname="localhost.localdomain",instance="local",vcl="boot"} 8629900

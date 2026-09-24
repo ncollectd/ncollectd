@@ -150,7 +150,7 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
                 "from the backend before delivering it to the client.",
     },
     [FAM_VARNISH_BACKEND_TOTAL_RESPONSE_UNCACHEABLE] = {
-        .name = "varnish_total_backend_total_response_uncacheable",
+        .name = "varnish_backend_total_response_uncacheable",
         .type = METRIC_TYPE_COUNTER,
         .help = "Count of backend responses considered uncacheable.",
     },
@@ -484,7 +484,7 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .help = "Number of times the timeout_linger triggered.",
     },
     [FAM_VARNISH_SESSION_CLOSE] = {
-        .name = "varnish_main_session_close",
+        .name = "varnish_session_close",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of session closed by reason.",
     },
@@ -821,8 +821,8 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Size allocated.",
     },
-    [FAM_VARNISH_MEMPOOL_ALLOCIONS] = {
-        .name = "varnish_mempool_allocions",
+    [FAM_VARNISH_MEMPOOL_ALLOCATIONS] = {
+        .name = "varnish_mempool_allocations",
         .type = METRIC_TYPE_COUNTER,
         .help = "Allocations.",
     },
@@ -957,7 +957,7 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .help = "Number of bytes allocated from the storage.",
     },
     [FAM_VARNISH_SMF_AVAILABLE_BYTES] = {
-        .name = "varnish_smf_avilable_bytes",
+        .name = "varnish_smf_available_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of bytes left in the storage.",
     },
@@ -1152,6 +1152,11 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Counter of failed opens.",
     },
+    [FAM_VARNISH_VBE_FAIL_REASON] = {
+        .name = "varnish_vbe_fail_reason",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Counter of failed opens by reason.",
+    },
     [FAM_VARNISH_VBE_HELDDOWN] = {
         .name = "varnish_vbe_helddown",
         .type = METRIC_TYPE_COUNTER,
@@ -1339,7 +1344,7 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .help = "Total client response body bytes for pipes.",
     },
     [FAM_VARNISH_ACCG_CLIENT_REPONSE] = {
-        .name = "varnish_accg_client_reponse",
+        .name = "varnish_accg_client_response",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total client response by http response code.",
     },

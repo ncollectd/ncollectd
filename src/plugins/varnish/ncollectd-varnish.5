@@ -21,7 +21,7 @@
 }
 .Ed
 .Sh DESCRIPTION
-The \fBvanish\fP plugin collects information about Varnish, an HTTP accelerator.
+The \fBvanish\fP plugin collects information about Varnish or Vinyl Cache, an HTTP accelerator.
 .Pp
 The configuration consists of one or more \fBinstance\fP blocks.
 Inside each \fBinstance\fP blocks, the following options are recognized:
@@ -31,7 +31,9 @@ The \fIvsh-instanace-name\fP is the parameter passed to "varnishd -n".
 If left empty, it will collectd statistics from the default "varnishd" instance
 (this should work fine in most cases).
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
+Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
+Sets the interval (in seconds) in which the values will be collected.
 .It \fBcollect\fP \fIflags\fP
 .Bl -tag -width Ds
 .It \fBbackend\fP
@@ -44,10 +46,6 @@ Collected by default.
 .It \fBconnections\fP
 Number of client connections received, accepted and dropped.
 Collected by default.
-.It \fBdirdns\fP
-DNS director lookup cache statistics.
-Only available with Varnish 3.x.
-Not collected by default.
 .It \fBesi\fP
 Edge Side Includes (ESI) parse statistics.
 Not collected by default.
@@ -82,14 +80,6 @@ The umem storage component is Solaris specific.
 Note: SMA, SMF and MSE share counters, enable only the one used by
 the Varnish instance.
 Not collected by default.
-.It \fBsms\fP
-Synth (synthetic content) storage statistics.
-This storage component is used internally only.
-Not collected by default.
-.It \fBstruct\fP
-Current varnish internal state statistics.
-Number of current sessions, objects in cache store etc.
-Not collected by default.
 .It \fBtotals\fP
 Collects overview counters, such as the number of sessions created,
 the number of requests and bytes transferred.
@@ -102,11 +92,6 @@ Number of total (available + discarded) VCL (config files).
 Not collected by default.
 .It \fBworkers\fP
 Collect statistics about worker threads.
-Not collected by default.
-.It \fBvsm\fP
-Collect statistics about Varnish's shared memory usage (used by the logging and
-statistics subsystems).
-Only available with Varnish 4.x.
 Not collected by default.
 .It \fBlck\fP
 Lock counters.

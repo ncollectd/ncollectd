@@ -21,7 +21,7 @@ NCOLLECTD-VARNISH(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **vanish** plugin collects information about Varnish, an HTTP accelerator.
+The **vanish** plugin collects information about Varnish or Vinyl Cache, an HTTP accelerator.
 
 The configuration consists of one or more **instance** blocks.
 Inside each **instance** blocks, the following options are recognized:
@@ -34,7 +34,11 @@ Inside each **instance** blocks, the following options are recognized:
 
 **label** *key* *value*
 
+> Append the label *key*=*value* to the submitting metrics.
+
 **interval** *seconds*
+
+> Sets the interval (in seconds) in which the values will be collected.
 
 **collect** *flags*
 
@@ -53,12 +57,6 @@ Inside each **instance** blocks, the following options are recognized:
 
 > > Number of client connections received, accepted and dropped.
 > > Collected by default.
-
-> **dirdns**
-
-> > DNS director lookup cache statistics.
-> > Only available with Varnish 3.x.
-> > Not collected by default.
 
 > **esi**
 
@@ -110,18 +108,6 @@ Inside each **instance** blocks, the following options are recognized:
 > > the Varnish instance.
 > > Not collected by default.
 
-> **sms**
-
-> > Synth (synthetic content) storage statistics.
-> > This storage component is used internally only.
-> > Not collected by default.
-
-> **struct**
-
-> > Current varnish internal state statistics.
-> > Number of current sessions, objects in cache store etc.
-> > Not collected by default.
-
 > **totals**
 
 > > Collects overview counters, such as the number of sessions created,
@@ -141,13 +127,6 @@ Inside each **instance** blocks, the following options are recognized:
 > **workers**
 
 > > Collect statistics about worker threads.
-> > Not collected by default.
-
-> **vsm**
-
-> > Collect statistics about Varnish's shared memory usage (used by the logging and
-> > statistics subsystems).
-> > Only available with Varnish 4.x.
 > > Not collected by default.
 
 > **lck**
