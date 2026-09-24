@@ -26,20 +26,7 @@ typedef struct VSC_C_main c_varnish_stats_t;
 
 #include "plugins/varnish/varnish_flags.h"
 #include "plugins/varnish/varnish_fam.h"
-
-struct varnish_stats_metric {
-    char *key;
-    uint64_t flag;
-    int fam;
-    char *lkey;
-    char *lvalue;
-    char *tag1;
-    char *tag2;
-    char *tag3;
-};
-
-const struct varnish_stats_metric *
-    varnish_stats_get_key (register const char *str, register size_t len);
+#include "plugins/varnish/varnish_stats.h"
 
 extern metric_family_t fams[FAM_VARNISH_MAX];
 
@@ -47,7 +34,6 @@ static cf_flags_t cvarnish_flags[] = {
     { "backend",     COLLECT_BACKEND     },
     { "cache",       COLLECT_CACHE       },
     { "connections", COLLECT_CONNECTIONS },
-    { "dirdns",      COLLECT_DIRDNS      },
     { "esi",         COLLECT_ESI         },
     { "fetch",       COLLECT_FETCH       },
     { "hcb",         COLLECT_HCB         },
@@ -56,13 +42,10 @@ static cf_flags_t cvarnish_flags[] = {
     { "session",     COLLECT_SESSION     },
     { "shm",         COLLECT_SHM         },
     { "sma",         COLLECT_SMA         },
-    { "sms",         COLLECT_SMS         },
-    { "struct",      COLLECT_STRUCT      },
     { "totals",      COLLECT_TOTALS      },
     { "uptime",      COLLECT_UPTIME      },
     { "vcl",         COLLECT_VCL         },
     { "workers",     COLLECT_WORKERS     },
-    { "vsm",         COLLECT_VSM         },
     { "lck",         COLLECT_LCK         },
     { "mempool",     COLLECT_MEMPOOL     },
     { "mgt",         COLLECT_MGT         },
@@ -87,15 +70,64 @@ typedef struct {
     metric_family_t fams[FAM_VARNISH_MAX];
 } varnish_instance_t;
 
+#if defined(HAVE_VARNISH_V6) || defined(HAVE_VARNISH_V5)
+static bool varnish_check_fmt(const struct VSC_point *const pt, int nfam, metric_family_t *fam)
+{
+    if (pt->format == 'i')
+        return true;
+    if (pt->format == 'B')
+        return true;
+    if (pt->format == 'd')
+        return true;
+    if (pt->format == 'b') {
+        if (nfam == FAM_VARNISH_VBE_UP)
+            return true;
+    }
+
+    PLUGIN_ERROR("For vanish metric '%s' associate to metric family '%s' found "
+                 "unexpected format '%c'.", pt->name, fam->name, pt->format);
+    return false;
+}
+static bool varnish_check_sem(const struct VSC_point *const pt, int nfam, metric_family_t *fam)
+{
+    if (fam->type == METRIC_TYPE_COUNTER) {
+        if (pt->semantics == 'c')
+            return true;
+
+        PLUGIN_ERROR("For varnish metric '%s' associate to metric family '%s' "
+                     "expect 'c' (COUNTER) but get '%c'.", pt->name, fam->name, pt->semantics);
+        return false;
+    }
+
+    if (fam->type == METRIC_TYPE_GAUGE) {
+        if (pt->semantics == 'g')
+            return true;
+        if ((pt->semantics == 'c') && (nfam == FAM_VARNISH_MGT_UPTIME_SECONDS))
+            return true;
+        if ((pt->semantics == 'b') && (nfam == FAM_VARNISH_VBE_UP))
+            return true;
+
+        PLUGIN_ERROR("For varnish metric '%s' associate to metric family '%s' "
+                     "expect 'g' (GAUGE) but get '%c'.", pt->name, fam->name, pt->semantics);
+        return false;
+    }
+
+    PLUGIN_ERROR("Unsupported metric type from metric family '%s'.", fam->name);
+    return false;
+}
+#endif
+
 static int varnish_monitor(void *priv, const struct VSC_point *const pt)
 {
+    varnish_instance_t *conf = priv;
+
     const char *tokens[12] = {NULL};
     size_t tokens_num = 0;
 
     if (unlikely(pt == NULL))
         return 0;
 
-#if defined(HAVE_VARNISH_V6) | defined(HAVE_VARNISH_V5)
+#if defined(HAVE_VARNISH_V6) || defined(HAVE_VARNISH_V5)
     char buffer[1024];
     sstrncpy(buffer, pt->name, sizeof(buffer));
 
@@ -112,20 +144,19 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
         ptr = end;
         if (*ptr == '(') {
             sep = ')';
-            if (tokens_num < STATIC_ARRAY_SIZE(tokens)) {
+            if (tokens_num < STATIC_ARRAY_SIZE(tokens))
                 tokens[tokens_num] = ++ptr;
-                tokens_num++;
-            }
+            tokens_num++;
         } else {
             sep = '.';
-            if (tokens_num < STATIC_ARRAY_SIZE(tokens)) {
+            if (tokens_num < STATIC_ARRAY_SIZE(tokens))
                  tokens[tokens_num] = ptr;
-                    tokens_num++;
-            }
+            tokens_num++;
         }
     }
 
     if ((tokens_num < 2) || (tokens_num > STATIC_ARRAY_SIZE(tokens))) {
+        PLUGIN_DEBUG("Cannot parse '%s'", pt->name);
         return 0;
     }
 
@@ -159,9 +190,6 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
     tokens_num++;
 #endif
 
-    varnish_instance_t *conf = priv;
-    uint64_t val = *(const volatile uint64_t *)pt->ptr;
-
     char mname[256];
     int size = ssnprintf(mname, sizeof(mname), "%s.%s", tokens[0], tokens[tokens_num-1]);
     if (size >= (int)sizeof(mname)) {
@@ -170,46 +198,61 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
     }
 
     const struct varnish_stats_metric *vsh_metric = varnish_stats_get_key (mname, strlen(mname));
-    if (unlikely(vsh_metric != NULL)) {
-        metric_family_t *fam = &(conf->fams[vsh_metric->fam]);
+    if (unlikely(vsh_metric == NULL))
+        return 0;
 
-        /* special cases */
-        if ((tokens_num >= 7) &&
-            (strcmp(tokens[0], "VBE") == 0) && (strcmp(tokens[2], "goto") == 0)) {
-            tokens[2] = tokens[4];
-            tokens[3] = tokens[5];
-        } else if ((tokens_num >= 4) && (strcmp(tokens[0], "LCK") == 0)) {
-            const char *swap = tokens[1];
-            tokens[1] = tokens[2];
-            tokens[2] = swap;
-        }
+    if (!(conf->flags & vsh_metric->flag))
+        return 0;
 
-        metric_t m = {0};
+    metric_family_t *fam = &(conf->fams[vsh_metric->fam]);
 
-        if (vsh_metric->fam == FAM_VARNISH_VBE_UP) {
-            m.value = VALUE_GAUGE(val & 1);
-        } else {
-            if (fam->type == METRIC_TYPE_GAUGE)
-                m.value = VALUE_GAUGE(val);
-            else
-                m.value = VALUE_COUNTER(val);
-        }
+#if defined(HAVE_VARNISH_V6) || defined(HAVE_VARNISH_V5)
+    if (!varnish_check_fmt(pt, vsh_metric->fam, fam))
+        return 0;
+    if (!varnish_check_sem(pt, vsh_metric->fam, fam))
+        return 0;
+#endif
 
-        label_set_clone(&m.label, conf->labels);
-
-        if (vsh_metric->lkey != NULL)
-            metric_label_set(&m, vsh_metric->lkey, vsh_metric->lvalue);
-        if ((vsh_metric->tag1 != NULL) && (tokens_num > 2))
-            metric_label_set(&m, vsh_metric->tag1, tokens[1]);
-        if ((vsh_metric->tag2 != NULL) && (tokens_num > 3))
-            metric_label_set(&m, vsh_metric->tag2, tokens[2]);
-        if ((vsh_metric->tag3 != NULL) && (tokens_num > 4))
-            metric_label_set(&m, vsh_metric->tag3, tokens[3]);
-
-        metric_family_metric_append(fam, m);
-
-        metric_reset(&m, fam->type);
+    /* special cases */
+    if ((tokens_num >= 7) && (strcmp(tokens[0], "VBE") == 0) && (strcmp(tokens[2], "goto") == 0)) {
+        tokens[2] = tokens[4];
+        tokens[3] = tokens[5];
+    } else if ((tokens_num >= 4) && (strcmp(tokens[0], "LCK") == 0)) {
+        const char *swap = tokens[1];
+        tokens[1] = tokens[2];
+        tokens[2] = swap;
     }
+
+    uint64_t val = *(const volatile uint64_t *)pt->ptr;
+
+    metric_t m = {0};
+
+    if (vsh_metric->fam == FAM_VARNISH_VBE_UP) {
+        m.value = VALUE_GAUGE(val & 1);
+    } else {
+        if (fam->type == METRIC_TYPE_GAUGE) {
+            m.value = VALUE_GAUGE(val);
+        } else if (fam->type == METRIC_TYPE_COUNTER) {
+            m.value = VALUE_COUNTER(val);
+        } else {
+            return 0;
+        }
+    }
+
+    label_set_clone(&m.label, conf->labels);
+
+    if (vsh_metric->lkey != NULL)
+        metric_label_set(&m, vsh_metric->lkey, vsh_metric->lvalue);
+    if ((vsh_metric->tag1 != NULL) && (tokens_num > 2))
+        metric_label_set(&m, vsh_metric->tag1, tokens[1]);
+    if ((vsh_metric->tag2 != NULL) && (tokens_num > 3))
+        metric_label_set(&m, vsh_metric->tag2, tokens[2]);
+    if ((vsh_metric->tag3 != NULL) && (tokens_num > 4))
+        metric_label_set(&m, vsh_metric->tag3, tokens[3]);
+
+    metric_family_metric_append(fam, m);
+
+    metric_reset(&m, fam->type);
 
     return 0;
 }
@@ -227,8 +270,16 @@ static int varnish_read_instance(varnish_instance_t *conf)
 #endif
 
     vd = VSM_New();
+    if (vd == NULL) {
+        PLUGIN_ERROR("VSM_New() failed.");
+        return -1;
+    }
 #if defined(HAVE_VARNISH_V5) || defined(HAVE_VARNISH_V6)
     vsc = VSC_New();
+    if (vsc == NULL) {
+        PLUGIN_ERROR("VSC_New() failed.");
+        return -1;
+    }
 #endif
 #ifdef HAVE_VARNISH_V3
     VSC_Setup(vd);
@@ -282,7 +333,9 @@ static int varnish_read_instance(varnish_instance_t *conf)
 #endif
 
 #if defined(HAVE_VARNISH_V5) || defined(HAVE_VARNISH_V6)
-    if (unlikely(VSM_Attach(vd, STDERR_FILENO))) {
+    VSM_Arg(vd, 't', "0");
+
+    if (unlikely(VSM_Attach(vd, -1))) {
         PLUGIN_ERROR("Cannot attach to varnish. %s", VSM_Error(vd));
         VSC_Destroy(&vsc, vd);
         VSM_Destroy(&vd);
@@ -290,7 +343,7 @@ static int varnish_read_instance(varnish_instance_t *conf)
     }
 
     vsm_status = VSM_Status(vd);
-    if (unlikely(vsm_status & ~(VSM_MGT_RUNNING | VSM_WRK_RUNNING))) {
+    if (unlikely(!(vsm_status & VSM_MGT_RUNNING))) {
         PLUGIN_ERROR("Unable to get statistics.");
         VSC_Destroy(&vsc, vd);
         VSM_Destroy(&vd);
@@ -408,7 +461,7 @@ static int varnish_config_instance(const config_item_t *ci)
 
     label_set_add(&conf->labels, true, "instance", conf->instance);
 
-    return plugin_register_complex_read("varnish", conf->vsh_instance, varnish_read, interval,
+    return plugin_register_complex_read("varnish", conf->instance, varnish_read, interval,
                                         &(user_data_t){.data=conf, .free_func=varnish_config_free});
 }
 
