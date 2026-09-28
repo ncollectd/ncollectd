@@ -37,7 +37,7 @@
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
-        \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+        \fBssl-mode\fP \fIdisable|allow|prefer|require|verify-ca|verify-full\fP
         \fBkrb-srv-name\fP \fIname\fP
         \fBservice\fP \fIservice\fP
         \fBinterval\fP \fIseconds\fP
@@ -92,6 +92,9 @@ of ncollectd.
 Any other value will be passed literally to collectd when dispatching values.
 Also see the global \fBhostname\fP and \fBfqdn-lookup\fP options.
 .It \fBdatabase\fP \fIdatabase\fP
+Database name to connect to.
+If the string contains  \f(CW=\fP or starts with  \f(CWpostgresql://\fP
+will be used as connection string.
 .It \fBport\fP \fIport\fP
 Specify the TCP port or the local UNIX domain socket file extension of the
 server.
@@ -105,7 +108,7 @@ Specify the password to be used when connecting to the server.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password to be used when connecting to the server from the environment
 variable \fIenv-name\fP.
-.It \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+.It \fBssl-mode\fP \fIdisable|allow|prefer|require|verify-ca|verify-full\fP
 Specify whether to use an SSL connection when contacting the server.
 The following modes are supported:
 .Bl -tag -width Ds
@@ -119,6 +122,11 @@ First, try to connect using SSL.
 If that fails, try without using SSL.
 .It \fBrequire\fP
 Use SSL only.
+.It \fBverify-ca\fP
+Verify that the server certificate is trusted by the CA.
+.It \fBverify-full\fP
+Verify that the server certificate is trusted by the CA and
+server name matches the certificate.
 .El
 .It \fBkrb-srv-name\fP \fIname\fP
 Specify the Kerberos service name to use when authenticating with Kerberos 5
@@ -161,12 +169,8 @@ all databases.
 .It \fBdatabase_conflicts(database)\fP
 Read database conflicts from \f(CWpg_stat_database_conflicts\fP for
 the specific database.
-.It \fBdatabase_checkpointer\fP
-Read database checkpointer from \f(CWpg_stat_checkpointer\fP for
-all databases.
-.It \fBdatabase_checkpointer(database)\fP
-Read database checkpointer from \f(CWpg_stat_checkpointer\fP for
-the specific database.
+.It \fBcheckpointer\fP
+Read database checkpointer from \f(CWpg_stat_checkpointer\fP.
 .It \fBactivity\fP
 .It \fBactivity(database)\fP
 .It \fBreplication_slots\fP

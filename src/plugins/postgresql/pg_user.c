@@ -161,7 +161,7 @@ int pg_stat_user_table(PGconn *conn, int version, metric_family_t *fams, label_s
                 if (fam->type == METRIC_TYPE_GAUGE) {
                     value = VALUE_GAUGE(atof(PQgetvalue(res, i, field)));
                 } else if (fam->type == METRIC_TYPE_COUNTER) {
-                    value = VALUE_COUNTER( atol(PQgetvalue(res, i, field)));
+                    value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                 } else {
                     continue;
                 }
@@ -284,7 +284,7 @@ int pg_statio_user_tables(PGconn *conn, int version, metric_family_t *fams, labe
                 if (fam->type == METRIC_TYPE_GAUGE) {
                     value = VALUE_GAUGE(atof(PQgetvalue(res, i, field)));
                 } else if (fam->type == METRIC_TYPE_COUNTER) {
-                    value = VALUE_COUNTER( atol(PQgetvalue(res, i, field)));
+                    value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                 } else {
                     continue;
                 }
@@ -312,8 +312,8 @@ int pg_table_size(PGconn *conn, int version, metric_family_t *fams, label_set_t 
     char buffer[512];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
     int status = strbuf_putstr(&buf, "SELECT current_database() dbname, table_schema, table_name, "
-                     "       pg_total_relation_size('\"'||table_schema||'\".\"'||table_name||'\"') total_relation_size,"
-                     "       pg_indexes_size('\"'||table_schema||'\".\"'||table_name||'\"') indexes_size"
+                     "       pg_total_relation_size(quote_ident(table_schema)||'.'||quote_ident(table_name)) total_relation_size,"
+                     "       pg_indexes_size(quote_ident(table_schema)||'.'||quote_ident(table_name)) indexes_size"
                      "  FROM information_schema.tables "
                      " WHERE table_type = 'BASE TABLE' ");
 
@@ -487,7 +487,7 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
 
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_FUNCTION_CALLS],
-                                 VALUE_COUNTER( atol(PQgetvalue(res, i, 3))), labels,
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 3))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
                                  &LABEL_PAIR_CONST("function", col_function),
@@ -495,7 +495,7 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_FUNCTION_TOTAL_TIME_SECONDS],
-                                 VALUE_COUNTER_FLOAT64(((double)atol(PQgetvalue(res, i, 4))/1000.0)),
+                                 VALUE_COUNTER_FLOAT64(atof(PQgetvalue(res, i, 4))/1000.0),
                                  labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
@@ -504,7 +504,7 @@ int pg_stat_user_functions(PGconn *conn, int version, metric_family_t *fams, lab
 
         if (!PQgetisnull(res, i, 5))
             metric_family_append(&fams[FAM_PG_FUNCTION_SELF_TIME_SECONDS],
-                                 VALUE_COUNTER_FLOAT64(((double)atol(PQgetvalue(res, i, 5))/1000.0)),
+                                 VALUE_COUNTER_FLOAT64(atof(PQgetvalue(res, i, 5))/1000.0),
                                  labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
@@ -610,7 +610,7 @@ int pg_stat_user_indexes(PGconn *conn, int version, metric_family_t *fams, label
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_SCAN],
-                                 VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 4))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
                                  &LABEL_PAIR_CONST("table", col_table),
@@ -734,7 +734,7 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_READ_BLOCKS],
-                                 VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 4))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
                                  &LABEL_PAIR_CONST("table", col_table),
@@ -743,7 +743,7 @@ int pg_statio_user_indexes(PGconn *conn, int version, metric_family_t *fams, lab
 
         if (!PQgetisnull(res, i, 5))
             metric_family_append(&fams[FAM_PG_INDEX_IDX_HIT_BLOCKS],
-                                 VALUE_COUNTER(atol(PQgetvalue(res, i, 5))), labels,
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 5))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
                                  &LABEL_PAIR_CONST("table", col_table),
@@ -836,7 +836,7 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
 
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_SEQUENCES_READ_BLOCKS],
-                                 VALUE_COUNTER(atol(PQgetvalue(res, i, 3))), labels,
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 3))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
                                  &LABEL_PAIR_CONST("sequence", col_sequence),
@@ -844,7 +844,7 @@ int pg_statio_user_sequences(PGconn *conn, int version, metric_family_t *fams, l
 
         if (!PQgetisnull(res, i, 4))
             metric_family_append(&fams[FAM_PG_SEQUENCES_HIT_BLOCKS],
-                                 VALUE_COUNTER(atol(PQgetvalue(res, i, 4))), labels,
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 4))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("schema", col_schema),
                                  &LABEL_PAIR_CONST("sequence", col_sequence),

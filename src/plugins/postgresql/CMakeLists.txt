@@ -19,7 +19,6 @@ if(BUILD_PLUGIN_POSTGRESQL)
                               pg_archiver.c pg_bgwriter.c pg_slru.c pg_io.c pg_settings.c
                               pg_buffercache.c)
     add_library(postgresql MODULE ${PLUGIN_POSTGRESQL_SRC})
-    target_include_directories(postgresql PRIVATE ${LIBPOSTGRESQL_INCLUDE_DIRS})
     target_link_libraries(postgresql PRIVATE libdbquery libmetric libutils LibPq::LibPq)
     set_target_properties(postgresql PROPERTIES PREFIX "")
     install(TARGETS postgresql DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)

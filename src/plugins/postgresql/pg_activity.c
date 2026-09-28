@@ -38,7 +38,7 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
                     "            FROM pg_stat_activity GROUP BY datname,state ) AS tmp2"
                     " ON tmp.state = tmp2.state AND pg_database.datname = tmp2.datname");
     if (db != NULL) {
-        status |= strbuf_putstr(&buf, " WHERE datname = $1");
+        status |= strbuf_putstr(&buf, " WHERE pg_database.datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
@@ -91,7 +91,7 @@ int pg_stat_activity (PGconn *conn, int version, metric_family_t *fams, label_se
 
         if (!PQgetisnull(res, i, 3))
             metric_family_append(&fams[FAM_PG_ACTIVITY_MAX_TX_SECONDS],
-                                 VALUE_GAUGE(atol(PQgetvalue(res, i, 3))), labels,
+                                 VALUE_GAUGE(atof(PQgetvalue(res, i, 3))), labels,
                                  &LABEL_PAIR_CONST("database", col_database),
                                  &LABEL_PAIR_CONST("state", col_state),
                                  NULL);

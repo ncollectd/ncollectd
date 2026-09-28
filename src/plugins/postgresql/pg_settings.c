@@ -44,7 +44,7 @@ static void normalize (char *unit, double *value, char **suffix)
         break;
     case 'B':
         if (unit[1] == '\0')
-            *suffix = "_seconds";
+            *suffix = "_bytes";
         break;
     case 'k':
         if ((unit[1] == 'B') && (unit[2] == '\0')) {
@@ -121,7 +121,8 @@ static void normalize (char *unit, double *value, char **suffix)
     }
 }
 
-int pg_settings(PGconn *conn, int version, label_set_t *labels, cdtime_t submit)
+int pg_settings(PGconn *conn, int version, plugin_filter_t *filter, label_set_t *labels,
+                              cdtime_t submit)
 {
     if (version < 70300)
         return 0;
@@ -220,7 +221,7 @@ int pg_settings(PGconn *conn, int version, label_set_t *labels, cdtime_t submit)
         };
 
         metric_family_append(&fam, value, labels, NULL);
-        plugin_dispatch_metric_family(&fam, submit);
+        plugin_dispatch_metric_family_filtered(&fam, filter, submit);
     }
 
     PQclear(res);

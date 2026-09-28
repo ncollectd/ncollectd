@@ -112,7 +112,7 @@ int pg_stat_bgwriter(PGconn *conn, int version, metric_family_t *fams, label_set
                     if (scale != 0.0) {
                         value = VALUE_COUNTER_FLOAT64(atof(PQgetvalue(res, i, field)) * scale);
                     } else {
-                        value = VALUE_COUNTER(atol(PQgetvalue(res, i, field)));
+                        value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                     }
                 } else {
                     continue;
@@ -188,7 +188,7 @@ int pg_stat_checkpointer(PGconn *conn, int version, metric_family_t *fams, label
                     if (scale != 0.0) {
                         value = VALUE_COUNTER_FLOAT64(atof(PQgetvalue(res, i, field)) * scale);
                     } else {
-                        value = VALUE_COUNTER(atol(PQgetvalue(res, i, field)));
+                        value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                     }
                 } else {
                     continue;
