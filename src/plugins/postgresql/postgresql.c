@@ -142,7 +142,7 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
                 "were terminated because connection to the client was lost.",
     },
     [FAM_PG_DATABASE_SESSIONS_FATAL] = {
-        .name = "pg_database_ sessions_fatal",
+        .name = "pg_database_sessions_fatal",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of database sessions to this database that "
                 "were terminated by fatal errors.",
@@ -271,7 +271,7 @@ static metric_family_t pg_fams[FAM_PG_MAX] = {
     },
     [FAM_PG_TABLE_VACUUM] = {
         .name = "pg_table_vacuum",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of times this table has been manually vacuumed (not counting VACUUM FULL).",
     },
     [FAM_PG_TABLE_AUTOVACUUM] = {
@@ -798,7 +798,7 @@ static pg_flags_t pg_flags[] = {
     { "archiver",           COLLECT_ARCHIVER           },
     { "bgwriter",           COLLECT_BGWRITER           },
     { "slru",               COLLECT_SLRU               },
-    { "io",                 COLLECT_SLRU               },
+    { "io",                 COLLECT_IO                 },
     { "checkpointer",       COLLECT_CHECKPOINTER       },
     { "settings",           COLLECT_SETTINGS           },
     { "buffercache",        COLLECT_BUFFERCACHE        },
@@ -929,11 +929,11 @@ static int psql_check_connection(psql_database_t *db)
 
         /* trigger c_release() */
         if (db->conn_complaint.interval == 0)
-            db->conn_complaint.interval = 1;
+            db->conn_complaint.interval = plugin_get_interval();
 
         if (PQstatus(db->conn) != CONNECTION_OK) {
             c_complain(LOG_ERR, &db->conn_complaint,
-                                "Failed to connect to database %s: %s", db->database,
+                                "Failed to connect to database %s: %s", PQdb(db->conn),
                                 PQerrorMessage(db->conn));
             return -1;
         }
@@ -980,11 +980,13 @@ static int psql_exec_query(psql_database_t *db, db_query_t *q, db_query_preparat
         return -1;
     }
 
-    int status = -1;
-
     int rows_num = PQntuples(res);
-    if (rows_num < 1)
-        goto error;
+    if (rows_num < 1) {
+        PQclear(res);
+        return 0;
+    }
+
+    int status = -1;
 
     int column_num = PQnfields(res);
     column_names = calloc(column_num, sizeof(*column_names));
@@ -1009,8 +1011,7 @@ static int psql_exec_query(psql_database_t *db, db_query_t *q, db_query_preparat
     }
 
     status = db_query_prepare_result(q, prep_area, db->metric_prefix, &db->labels,
-                                        db->database, column_names, (size_t)column_num);
-
+                                        PQdb(db->conn), column_names, (size_t)column_num);
     if (status != 0) {
         PLUGIN_ERROR("db_query_prepare_result failed with status %i.", status);
         goto error;
@@ -1035,7 +1036,7 @@ static int psql_exec_query(psql_database_t *db, db_query_t *q, db_query_preparat
         status = db_query_handle_result(q, prep_area, column_values, db->filter);
         if (status != 0) {
             PLUGIN_ERROR("db_query_handle_result failed with status %i.", status);
-            goto error;
+            continue;
         }
     }
 
@@ -1257,7 +1258,7 @@ static int psql_read(user_data_t *ud)
     if (db->flags & COLLECT_CHECKPOINTER)
         pg_stat_checkpointer(db->conn, db->server_version, db->fams, &db->labels);
     if (db->flags & COLLECT_SETTINGS)
-        pg_settings(db->conn, db->server_version, &db->labels, submit);
+        pg_settings(db->conn, db->server_version, db->filter, &db->labels, submit);
     if (db->flags & COLLECT_BUFFERCACHE)
         pg_buffercache(db->conn, db->server_version, db->fams, &db->labels);
 
@@ -1409,67 +1410,79 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
             }
 
             int status = 0;
-            if (!strncasecmp("table", option, option_len)) {
+            if ((strlen("table") == option_len) && !strncasecmp("table", option, option_len)) {
                 db->flags |= COLLECT_TABLE;
                 status = psql_config_add_filter(&db->pg_stat_table, arg1, arg1_len,
                                                                     arg2, arg2_len,
                                                                     arg3, arg3_len);
-            } else if (!strncasecmp("table_io", option, option_len)) {
+            } else if ((strlen("table_io") == option_len) &&
+                       !strncasecmp("table_io", option, option_len)) {
                 db->flags |= COLLECT_TABLE_IO;
                 status = psql_config_add_filter(&db->pg_stat_table_io, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strncasecmp("table_size", option, option_len)) {
+            } else if ((strlen("table_size") == option_len) &&
+                       !strncasecmp("table_size", option, option_len)) {
                 db->flags |= COLLECT_TABLE_SIZE;
                 status = psql_config_add_filter(&db->pg_table_size, arg1, arg1_len,
                                                                     arg2, arg2_len,
                                                                     arg3, arg3_len);
-            } else if (!strncasecmp("indexes", option, option_len)) {
+            } else if ((strlen("indexes") == option_len) &&
+                       !strncasecmp("indexes", option, option_len)) {
                 db->flags |= COLLECT_INDEXES;
                 status = psql_config_add_filter(&db->pg_stat_indexes, arg1, arg1_len,
                                                                       arg2, arg2_len,
                                                                       arg3, arg3_len);
-            } else if (!strncasecmp("indexes_io", option, option_len)) {
+            } else if ((strlen("indexes_io") == option_len) &&
+                       !strncasecmp("indexes_io", option, option_len)) {
                 db->flags |= COLLECT_INDEXES_IO;
                 status = psql_config_add_filter(&db->pg_stat_indexes_io, arg1, arg1_len,
                                                                          arg2, arg2_len,
                                                                          arg3, arg3_len);
-            } else if (!strncasecmp("sequences_io", option, option_len)) {
+            } else if ((strlen("sequences_io") == option_len) &&
+                       !strncasecmp("sequences_io", option, option_len)) {
                 db->flags |= COLLECT_SEQUENCES_IO;
                 status = psql_config_add_filter(&db->pg_stat_sequence_io, arg1, arg1_len,
                                                                           arg2, arg2_len,
                                                                           arg3, arg3_len);
-            } else if (!strncasecmp("functions", option, option_len)) {
+            } else if ((strlen("functions") == option_len) &&
+                       !strncasecmp("functions", option, option_len)) {
                 db->flags |= COLLECT_FUNCTIONS;
                 status = psql_config_add_filter(&db->pg_stat_function, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strncasecmp("database", option, option_len)) {
+            } else if ((strlen("database") == option_len) &&
+                       !strncasecmp("database", option, option_len)) {
                 db->flags |= COLLECT_DATABASE;
                 status = psql_config_add_filter(&db->pg_stat_database, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strncasecmp("database_size", option, option_len)) {
+            } else if ((strlen("database_size") == option_len) &&
+                       !strncasecmp("database_size", option, option_len)) {
                 db->flags |= COLLECT_DATABASE_SIZE;
                 status = psql_config_add_filter(&db->pg_database_size, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strncasecmp("database_locks",  option, option_len)) {
+            } else if ((strlen("database_locks") == option_len) &&
+                       !strncasecmp("database_locks",  option, option_len)) {
                 db->flags |= COLLECT_DATABASE_LOCKS;
                 status = psql_config_add_filter(&db->pg_database_locks, arg1, arg1_len,
                                                                         arg2, arg2_len,
                                                                         arg3, arg3_len);
-            } else if (!strncasecmp("database_conflicts", option, option_len)) {
+            } else if ((strlen("database_conflicts") == option_len) &&
+                       !strncasecmp("database_conflicts", option, option_len)) {
                 db->flags |= COLLECT_DATABASE_CONFLICTS;
                 status = psql_config_add_filter(&db->pg_stat_database_conflicts, arg1, arg1_len,
                                                                                  arg2, arg2_len,
                                                                                  arg3, arg3_len);
-            } else if (!strncasecmp("activity", option, option_len)) {
+            } else if ((strlen("activity") == option_len) &&
+                       !strncasecmp("activity", option, option_len)) {
                 db->flags |= COLLECT_ACTIVITY;
                 status = psql_config_add_filter(&db->pg_stat_activity, arg1, arg1_len,
                                                                        arg2, arg2_len,
                                                                        arg3, arg3_len);
-            } else if (!strncasecmp("replication_slots", option, option_len)) {
+            } else if ((strlen("replication_slots") == option_len) && 
+                       !strncasecmp("replication_slots", option, option_len)) {
                 db->flags |= COLLECT_REPLICATION_SLOTS;
                 status = psql_config_add_filter(&db->pg_replication_slots, arg1, arg1_len,
                                                                            arg2, arg2_len,
@@ -1489,6 +1502,7 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
             continue;
         }
 
+        bool found = false;
         for (size_t j = 0; j < pg_flags_size; j++)  {
             if (!strcasecmp(pg_flags[j].option, option)) {
                 if (negate) {
@@ -1496,7 +1510,15 @@ static int psql_config_collect(const config_item_t *ci, psql_database_t *db)
                 } else {
                     db->flags |= pg_flags[j].flag;
                 }
+                found = true;
+                break;
             }
+        }
+
+        if (!found) {
+            PLUGIN_ERROR("Unknown argument '%s' in '%s' option in %s:%d.",
+                         option, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
         }
     }
 

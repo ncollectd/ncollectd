@@ -44,11 +44,11 @@ int pg_stat_archiver(PGconn *conn, int version, metric_family_t *fams, label_set
     for (int i = 0; i < PQntuples(res); i++) {
         if (!PQgetisnull(res, i, 0))
             metric_family_append(&fams[FAM_PG_ARCHIVER_ARCHIVED],
-                                 VALUE_COUNTER(atoi(PQgetvalue(res, i, 0))), labels, NULL);
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 0))), labels, NULL);
 
         if (!PQgetisnull(res, i, 1))
             metric_family_append(&fams[FAM_PG_ARCHIVER_FAILED],
-                                 VALUE_COUNTER(atoi(PQgetvalue(res, i, 1))), labels, NULL);
+                                 VALUE_COUNTER(atoll(PQgetvalue(res, i, 1))), labels, NULL);
 
         if (!PQgetisnull(res, i, 2))
             metric_family_append(&fams[FAM_PG_ARCHIVER_LAST_ARCHIVE_AGE_SECONDS],

@@ -36,7 +36,7 @@ NCOLLECTD-POSTGRESQL(5) - File Formats Manual
 	        user-env env-name
 	        password password
 	        password-env env-name
-	        ssl-mode disable|allow|prefer|require
+	        ssl-mode disable|allow|prefer|require|verify-ca|verify-full
 	        krb-srv-name name
 	        service service
 	        interval seconds
@@ -96,6 +96,10 @@ installation.
 
 > **database** *database*
 
+> > Database name to connect to.
+> > If the string contains  = or starts with  postgresql://
+> > will be used as connection string.
+
 > **port** *port*
 
 > > Specify the TCP port or the local UNIX domain socket file extension of the
@@ -119,7 +123,7 @@ installation.
 > > Get the password to be used when connecting to the server from the environment
 > > variable *env-name*.
 
-> **ssl-mode** *disable|allow|prefer|require*
+> **ssl-mode** *disable|allow|prefer|require|verify-ca|verify-full*
 
 > > Specify whether to use an SSL connection when contacting the server.
 > > The following modes are supported:
@@ -141,6 +145,15 @@ installation.
 > > **require**
 
 > > > Use SSL only.
+
+> > **verify-ca**
+
+> > > Verify that the server certificate is trusted by the CA.
+
+> > **verify-full**
+
+> > > Verify that the server certificate is trusted by the CA and
+> > > server name matches the certificate.
 
 > **krb-srv-name** *name*
 
@@ -211,15 +224,9 @@ installation.
 > > > Read database conflicts from pg\_stat\_database\_conflicts for
 > > > the specific database.
 
-> > **database\_checkpointer**
+> > **checkpointer**
 
-> > > Read database checkpointer from pg\_stat\_checkpointer for
-> > > all databases.
-
-> > **database\_checkpointer(database)**
-
-> > > Read database checkpointer from pg\_stat\_checkpointer for
-> > > the specific database.
+> > > Read database checkpointer from pg\_stat\_checkpointer.
 
 > > **activity**
 

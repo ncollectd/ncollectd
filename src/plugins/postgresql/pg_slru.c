@@ -68,14 +68,12 @@ int pg_stat_slru(PGconn *conn, int version, metric_family_t *fams, label_set_t *
                 if (fam->type == METRIC_TYPE_GAUGE) {
                     value = VALUE_GAUGE(atof(PQgetvalue(res, i, field)));
                 } else if (fam->type == METRIC_TYPE_COUNTER) {
-                    value = VALUE_COUNTER( atol(PQgetvalue(res, i, field)));
+                    value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                 } else {
                     continue;
                 }
 
-                metric_family_append(fam, value, labels,
-                                     &LABEL_PAIR_CONST("name", col_name),
-                                     NULL);
+                metric_family_append(fam, value, labels, &LABEL_PAIR_CONST("name", col_name), NULL);
             }
         }
     }

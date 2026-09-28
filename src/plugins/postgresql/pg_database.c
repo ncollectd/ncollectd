@@ -150,7 +150,7 @@ int pg_stat_database(PGconn *conn, int version, metric_family_t *fams, label_set
                     if (scale != 0.0) {
                         value = VALUE_COUNTER_FLOAT64(atof(PQgetvalue(res, i, field)) * scale);
                     } else {
-                        value = VALUE_COUNTER( atol(PQgetvalue(res, i, field)));
+                        value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                     }
                 } else {
                     continue;
@@ -182,10 +182,11 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
 
     int status = strbuf_putstr(&buf, "SELECT pg_database.datname, "
                                      "       pg_database_size(pg_database.datname)"
-                                     "  FROM pg_database");
+                                     "  FROM pg_database"
+                                     " WHERE has_database_privilege(pg_database.datname, 'CONNECT')");
 
     if (db != NULL) {
-        status |= strbuf_putstr(&buf, " WHERE datname = $1");
+        status |= strbuf_putstr(&buf, " AND pg_database.datname = $1");
         stmt_params = 1;
         param_values[0] = db;
         param_lengths[0] = strlen(db);
@@ -215,8 +216,10 @@ int pg_database_size(PGconn *conn, int version, metric_family_t *fams, label_set
     }
 
     int fields = PQnfields(res);
-    if (fields < 2)
+    if (fields < 2) {
+        PQclear(res);
         return 0;
+    }
 
     for (int i = 0; i < PQntuples(res); i++) {
         if (PQgetisnull(res, i, 0))
@@ -302,8 +305,10 @@ int pg_database_locks(PGconn *conn, int version, metric_family_t *fams, label_se
     }
 
     int fields = PQnfields(res);
-    if (fields < 3)
+    if (fields < 3) {
+        PQclear(res);
         return 0;
+    }
 
     for (int i = 0; i < PQntuples(res); i++) {
         if (PQgetisnull(res, i, 0))

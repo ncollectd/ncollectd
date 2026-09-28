@@ -143,7 +143,7 @@ int pg_stat_replication(PGconn *conn, int version, metric_family_t *fams, label_
 int pg_replication_slots(PGconn *conn, int version, metric_family_t *fams, label_set_t *labels,
                                        char *db)
 {
-    if (version < 90400)
+    if (version < 100000)
         return 0;
 
     char buffer[256];

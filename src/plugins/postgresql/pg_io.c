@@ -15,11 +15,20 @@ int pg_stat_io(PGconn *conn, int version, metric_family_t *fams, label_set_t *la
     if (version < 160000)
         return 0;
 
-    char *stmt = "SELECT backend_type, object, context, reads * op_bytes, read_time,"
-                 "       writes * op_bytes, write_time, writebacks * op_bytes, writeback_time,"
-                 "       extends * op_bytes, extend_time, hits, evictions, reuses,"
-                 "       fsyncs, fsync_time"
-                 "  FROM pg_stat_io";
+    char *stmt;
+
+    if (version >= 180000)
+        stmt = "SELECT backend_type, object, context, read_bytes, read_time,"
+               "       write_bytes, write_time, writebacks * 8192, writeback_time,"
+               "       extend_bytes, extend_time, hits, evictions, reuses,"
+               "       fsyncs, fsync_time"
+               "  FROM pg_stat_io";
+    else
+        stmt = "SELECT backend_type, object, context, reads * op_bytes, read_time,"
+               "       writes * op_bytes, write_time, writebacks * op_bytes, writeback_time,"
+               "       extends * op_bytes, extend_time, hits, evictions, reuses,"
+               "       fsyncs, fsync_time"
+               "  FROM pg_stat_io";
 
     struct {
         int field;
@@ -93,7 +102,7 @@ int pg_stat_io(PGconn *conn, int version, metric_family_t *fams, label_set_t *la
                     if (scale != 0.0) {
                         value = VALUE_COUNTER_FLOAT64(atof(PQgetvalue(res, i, field)) * scale);
                     } else {
-                        value = VALUE_COUNTER(atol(PQgetvalue(res, i, field)));
+                        value = VALUE_COUNTER(atoll(PQgetvalue(res, i, field)));
                     }
                 } else {
                     continue;
