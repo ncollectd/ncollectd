@@ -9,7 +9,6 @@
 #include "plugin.h"
 #include "libutils/common.h"
 #include "libutils/strbuf.h"
-#include "libutils/complain.h"
 #include "libdbquery/dbquery.h"
 
 #include <libpq-fe.h>
@@ -730,7 +729,7 @@ typedef struct {
     char *instance;
 
     PGconn *conn;
-    c_complain_t conn_complaint;
+    complain_t conn_complaint;
     int proto_version;
     int server_version;
 
@@ -919,7 +918,7 @@ static int psql_check_connection(psql_database_t *db)
 
         /* trigger c_release() */
         if (db->conn_complaint.interval == 0)
-            db->conn_complaint.interval = 1;
+            db->conn_complaint.interval = plugin_get_interval();
 
         psql_connect(db);
     }
@@ -932,9 +931,9 @@ static int psql_check_connection(psql_database_t *db)
             db->conn_complaint.interval = plugin_get_interval();
 
         if (PQstatus(db->conn) != CONNECTION_OK) {
-            c_complain(LOG_ERR, &db->conn_complaint,
-                                "Failed to connect to database %s: %s", PQdb(db->conn),
-                                PQerrorMessage(db->conn));
+            PLUGIN_COMPLAIN_ERROR(&db->conn_complaint,
+                                  "Failed to connect to database %s: %s.", PQdb(db->conn),
+                                  PQerrorMessage(db->conn));
             return -1;
         }
 
@@ -943,21 +942,18 @@ static int psql_check_connection(psql_database_t *db)
 
     db->server_version = PQserverVersion(db->conn);
 
-    if (c_would_release(&db->conn_complaint)) {
-        char *server_host;
-        int server_version;
+    if (COMPLAIN_WOULD_RELEASE(&db->conn_complaint)) {
+        char *server_host = PQhost(db->conn);
+        int server_version = PQserverVersion(db->conn);
 
-        server_host = PQhost(db->conn);
-        server_version = PQserverVersion(db->conn);
-
-        c_do_release(LOG_INFO, &db->conn_complaint,
-                                 "Successfully %sconnected to database %s (user %s) "
-                                 "at server %s%s%s (server version: %d.%d.%d, "
-                                 "protocol version: %d, pid: %d)",
-                                 init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
-                                 C_PSQL_SOCKET3(server_host, PQport(db->conn)),
-                                 C_PSQL_SERVER_VERSION3(server_version), db->proto_version,
-                                 PQbackendPID(db->conn));
+        PLUGIN_RELEASE_INFO(&db->conn_complaint,
+                            "Successfully %sconnected to database %s (user %s) "
+                            "at server %s%s%s (server version: %d.%d.%d, "
+                            "protocol version: %d, pid: %d).",
+                            init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
+                            C_PSQL_SOCKET3(server_host, PQport(db->conn)),
+                            C_PSQL_SERVER_VERSION3(server_version), db->proto_version,
+                            PQbackendPID(db->conn));
 
         if (db->proto_version < 3)
             PLUGIN_WARNING("Protocol version %d does not support parameters.", db->proto_version);
@@ -1052,27 +1048,8 @@ error:
     return status;
 }
 
-static int psql_read(user_data_t *ud)
+static int psql_read_all(psql_database_t *db, cdtime_t submit)
 {
-    if ((ud == NULL) || (ud->data == NULL)) {
-        PLUGIN_ERROR("Invalid user data.");
-        return -1;
-    }
-
-    psql_database_t *db = ud->data;
-
-    assert(NULL != db->database);
-
-    if (psql_check_connection(db) != 0) {
-        metric_family_append(&db->fams[FAM_PG_UP], VALUE_GAUGE(0), &db->labels, NULL);
-        plugin_dispatch_metric_family(&db->fams[FAM_PG_UP], 0);
-        return 0;
-    }
-
-    metric_family_append(&db->fams[FAM_PG_UP], VALUE_GAUGE(1), &db->labels, NULL);
-
-    cdtime_t submit = cdtime();
-
     if (db->flags & COLLECT_DATABASE) {
         if (db->pg_stat_database == NULL) {
             pg_stat_database(db->conn, db->server_version, db->fams, &db->labels, NULL);
@@ -1083,6 +1060,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_DATABASE_SIZE) {
@@ -1095,6 +1075,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_DATABASE_LOCKS) {
@@ -1107,6 +1090,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_DATABASE_CONFLICTS) {
@@ -1120,6 +1106,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_TABLE) {
@@ -1134,6 +1123,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_TABLE_IO) {
@@ -1148,6 +1140,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_TABLE_SIZE) {
@@ -1161,6 +1156,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_INDEXES) {
@@ -1175,6 +1173,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_INDEXES_IO) {
@@ -1189,6 +1190,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_SEQUENCES_IO) {
@@ -1203,6 +1207,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_FUNCTIONS) {
@@ -1217,6 +1224,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_ACTIVITY) {
@@ -1230,6 +1240,9 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
     if (db->flags & COLLECT_REPLICATION_SLOTS) {
@@ -1243,24 +1256,92 @@ static int psql_read(user_data_t *ud)
                 filter = filter->next;
             }
         }
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
     }
 
-    if (db->flags & COLLECT_REPLICATION)
+    if (db->flags & COLLECT_REPLICATION) {
         pg_stat_replication(db->conn, db->server_version, db->fams, &db->labels);
-    if (db->flags & COLLECT_ARCHIVER)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_ARCHIVER) {
         pg_stat_archiver(db->conn, db->server_version, db->fams, &db->labels);
-    if (db->flags & COLLECT_BGWRITER)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_BGWRITER) {
         pg_stat_bgwriter(db->conn, db->server_version, db->fams, &db->labels);
-    if (db->flags & COLLECT_SLRU)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_SLRU) {
         pg_stat_slru(db->conn, db->server_version, db->fams, &db->labels);
-    if (db->flags & COLLECT_IO)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_IO) {
         pg_stat_io(db->conn, db->server_version, db->fams, &db->labels);
-    if (db->flags & COLLECT_CHECKPOINTER)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_CHECKPOINTER) {
         pg_stat_checkpointer(db->conn, db->server_version, db->fams, &db->labels);
-    if (db->flags & COLLECT_SETTINGS)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_SETTINGS) {
         pg_settings(db->conn, db->server_version, db->filter, &db->labels, submit);
-    if (db->flags & COLLECT_BUFFERCACHE)
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    if (db->flags & COLLECT_BUFFERCACHE) {
         pg_buffercache(db->conn, db->server_version, db->fams, &db->labels);
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            return -1;
+    }
+
+    return 0;
+}
+
+static int psql_read(user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL)) {
+        PLUGIN_ERROR("Invalid user data.");
+        return -1;
+    }
+
+    psql_database_t *db = ud->data;
+
+    assert(db->database != NULL);
+
+    if (psql_check_connection(db) != 0) {
+        metric_family_append(&db->fams[FAM_PG_UP], VALUE_GAUGE(0), &db->labels, NULL);
+        plugin_dispatch_metric_family(&db->fams[FAM_PG_UP], 0);
+        return 0;
+    }
+
+    metric_family_append(&db->fams[FAM_PG_UP], VALUE_GAUGE(1), &db->labels, NULL);
+
+    cdtime_t submit = cdtime();
+
+    psql_read_all(db, submit);
 
     plugin_dispatch_metric_family_array_filtered(db->fams, FAM_PG_MAX, db->filter, submit);
 
@@ -1270,6 +1351,9 @@ static int psql_read(user_data_t *ud)
 
         if ((db->server_version != 0) && (db_query_check_version(q, db->server_version) <= 0))
             continue;
+
+        if (PQstatus(db->conn) != CONNECTION_OK)
+            break;
 
         psql_exec_query(db, q, prep_area);
     }
