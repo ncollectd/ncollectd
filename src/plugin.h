@@ -57,8 +57,14 @@ typedef struct {
     char const *msg;
 } log_msg_t;
 
+typedef struct {
+    cdtime_t last;
+    cdtime_t interval;
+    bool complained_once;
+} complain_t;
 
-
+#define COMPLAIN_INIT ((c_complain_t){.last = 0, .interval = 0, .complained_once = false})
+#define COMPLAIN_WOULD_RELEASE(c) ((c)->interval != 0)
 /*
  * Callback types
  */
@@ -143,6 +149,15 @@ void plugin_filter_free(plugin_filter_t *filter);
 void plugin_log(int level, const char *file, int line, const char *func, const char *format, ...)
     __attribute__((format(printf, 5, 6)));
 
+void plugin_complain_log (int level, complain_t *c, const char *file, int line, const char *func,
+                          const char *format, ...) __attribute__((format(printf, 6, 7)));
+
+void plugin_once_log (int level, complain_t *c, const char *file, int line, const char *func,
+                      const char *format, ...) __attribute__((format(printf, 6, 7)));
+
+void plugin_release_log (int level, complain_t *c, const char *file, int line, const char *func,
+                         const char *format, ...) __attribute__((format(printf, 6, 7)));
+
 #define PLUGIN_ERROR(...) plugin_log(LOG_ERR, __FILE__, __LINE__, __func__, __VA_ARGS__)
 #define PLUGIN_WARNING(...) plugin_log(LOG_WARNING, __FILE__, __LINE__, __func__, __VA_ARGS__)
 #define PLUGIN_NOTICE(...) plugin_log(LOG_NOTICE, __FILE__, __LINE__, __func__, __VA_ARGS__)
@@ -151,6 +166,36 @@ void plugin_log(int level, const char *file, int line, const char *func, const c
 #define PLUGIN_DEBUG(...) plugin_log(LOG_DEBUG, __FILE__, __LINE__, __func__, __VA_ARGS__)
 #else
 #define PLUGIN_DEBUG(...) /* noop */
+#endif
+
+#define PLUGIN_COMPLAIN_ERROR(c, ...) plugin_complain_log(LOG_ERR, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_COMPLAIN_WARNING(c, ...) plugin_complain_log(LOG_WARNING, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_COMPLAIN_NOTICE(c, ...) plugin_complain_log(LOG_NOTICE, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_COMPLAIN_INFO(c, ...) plugin_complain_log(LOG_INFO, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#ifdef NCOLLECTD_DEBUG
+#define PLUGIN_COMPLAIN_DEBUG(c, ...) plugin_complain_log(LOG_DEBUG, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#else
+#define PLUGIN_COMPLAIN_DEBUG(c, ...) /* noop */
+#endif
+
+#define PLUGIN_ONCE_ERROR(c, ...) plugin_once_log(LOG_ERR, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_ONCE_WARNING(c, ...) plugin_once_log(LOG_WARNING, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_ONCE_NOTICE(c, ...) plugin_once_log(LOG_NOTICE, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_ONCE_INFO(c, ...) plugin_once_log(LOG_INFO, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#ifdef NCOLLECTD_DEBUG
+#define PLUGIN_ONCE_DEBUG(c, ...) plugin_once_log(LOG_DEBUG, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#else
+#define PLUGIN_ONCE_DEBUG(c, ...) /* noop */
+#endif
+
+#define PLUGIN_RELEASE_ERROR(c, ...) plugin_release_log(LOG_ERR, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_RELEASE_WARNING(c, ...) plugin_release_log(LOG_WARNING, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_RELEASE_NOTICE(c, ...) plugin_release_log(LOG_NOTICE, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define PLUGIN_RELEASE_INFO(c, ...) plugin_release_log(LOG_INFO, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#ifdef NCOLLECTD_DEBUG
+#define PLUGIN_RELEASE_DEBUG(c, ...) plugin_release_log(LOG_DEBUG, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#else
+#define PLUGIN_RELEASE_DEBUG(c, ...) /* noop */
 #endif
 
 #define ERROR(...) plugin_log(LOG_ERR, __FILE__, __LINE__, __func__, __VA_ARGS__)
@@ -162,6 +207,37 @@ void plugin_log(int level, const char *file, int line, const char *func, const c
 #else
 #define DEBUG(...) /* noop */
 #endif
+
+#define COMPLAIN_ERROR(c, ...) plugin_complain_log(LOG_ERR, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define COMPLAIN_WARNING(c, ...) plugin_complain_log(LOG_WARNING, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define COMPLAIN_NOTICE(c, ...) plugin_complain_log(LOG_NOTICE, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define COMPLAIN_INFO(c, ...) plugin_complain_log(LOG_INFO, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#ifdef NCOLLECTD_DEBUG
+#define COMPLAIN_DEBUG(c, ...) plugin_complain_log(LOG_DEBUG, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#else
+#define COMPLAIN_DEBUG(c, ...) /* noop */
+#endif
+
+#define ONCE_ERROR(c, ...) plugin_once_log(LOG_ERR, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define ONCE_WARNING(c, ...) plugin_once_log(LOG_WARNING, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define ONCE_NOTICE(c, ...) plugin_once_log(LOG_NOTICE, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define ONCE_INFO(c, ...) plugin_once_log(LOG_INFO, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#ifdef NCOLLECTD_DEBUG
+#define ONCE_DEBUG(c, ...) plugin_once_log(LOG_DEBUG, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#else
+#define ONCE_DEBUG(c, ...) /* noop */
+#endif
+
+#define RELEASE_ERROR(c, ...) plugin_release_log(LOG_ERR, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define RELEASE_WARNING(c, ...) plugin_release_log(LOG_WARNING, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define RELEASE_NOTICE(c, ...) plugin_release_log(LOG_NOTICE, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define RELEASE_INFO(c, ...) plugin_release_log(LOG_INFO, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#ifdef NCOLLECTD_DEBUG
+#define RELEASE_DEBUG(c, ...) plugin_release_log(LOG_DEBUG, (c), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#else
+#define RELEASE_DEBUG(c, ...) /* noop */
+#endif
+
 
 plugin_ctx_t plugin_get_ctx(void);
 

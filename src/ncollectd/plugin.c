@@ -735,6 +735,7 @@ int plugin_shutdown_all(void)
 
 static int plugin_dispatch_log(const log_msg_t *msg)
 {
+
     if (msg == NULL)
         return EINVAL;
 
@@ -764,7 +765,8 @@ static int plugin_dispatch_log(const log_msg_t *msg)
     return 0;
 }
 
-void plugin_log(int level, const char *file, int line, const char *func, const char *format, ...)
+static void plugin_vlog(int level, const char *file, int line, const char *func,
+                        const char *format, va_list ap)
 {
 #ifndef NCOLLECTD_DEBUG
     if (level >= LOG_DEBUG)
@@ -775,12 +777,9 @@ void plugin_log(int level, const char *file, int line, const char *func, const c
     if (name == NULL)
         name = "UNKNOWN";
 
-    va_list ap;
-    va_start(ap, format);
     char msg[1024];
     vsnprintf(msg, sizeof(msg), format, ap);
     msg[sizeof(msg) - 1] = '\0';
-    va_end(ap);
 
     log_msg_t log = {
         .severity = level,
@@ -795,19 +794,74 @@ void plugin_log(int level, const char *file, int line, const char *func, const c
     plugin_dispatch_log(&log);
 }
 
-void daemon_log(int level, const char *file, int line, const char *func, const char *format, ...)
+void plugin_log(int level, const char *file, int line, const char *func, const char *format, ...)
+{
+    va_list ap;
+
+    va_start(ap, format);
+    plugin_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+void plugin_complain_log (int level, complain_t *c, const char *file, int line, const char *func,
+                          const char *format, ...)
+{
+    va_list ap;
+
+    cdtime_t now = cdtime();
+    if ((c->last + c->interval) > now)
+        return;
+    c->last = now;
+    c->interval *= 2;
+    if (c->interval > TIME_T_TO_CDTIME_T(86400))
+        c->interval = TIME_T_TO_CDTIME_T(86400);
+    c->complained_once = true;
+
+    va_start(ap, format);
+    plugin_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+void plugin_once_log (int level, complain_t *c, const char *file, int line, const char *func,
+                      const char *format, ...)
+{
+    va_list ap;
+
+    if (c->complained_once)
+        return;
+    c->complained_once = true;
+
+    va_start(ap, format);
+    plugin_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+void plugin_release_log (int level, complain_t *c, const char *file, int line, const char *func,
+                         const char *format, ...)
+{
+    va_list ap;
+
+    if (c->interval == 0)
+        return;
+    c->interval = 0;
+    c->complained_once = false;
+
+    va_start(ap, format);
+    plugin_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+static void daemon_vlog(int level, const char *file, int line, const char *func,
+                        const char *format, va_list ap)
 {
 #ifndef NCOLLECTD_DEBUG
     if (level >= LOG_DEBUG)
         return;
 #endif
 
-    va_list ap;
-    va_start(ap, format);
     char msg[1024];
     vsnprintf(msg, sizeof(msg), format, ap);
     msg[sizeof(msg) - 1] = '\0';
-    va_end(ap);
 
     log_msg_t log = {
         .severity = level,
@@ -820,6 +874,63 @@ void daemon_log(int level, const char *file, int line, const char *func, const c
     };
 
     plugin_dispatch_log(&log);
+}
+
+void daemon_log(int level, const char *file, int line, const char *func, const char *format, ...)
+{
+    va_list ap;
+
+    va_start(ap, format);
+    daemon_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+void daemon_complain_log (int level, complain_t *c, const char *file, int line, const char *func,
+                          const char *format, ...)
+{
+    va_list ap;
+
+    cdtime_t now = cdtime();
+    if ((c->last + c->interval) > now)
+        return;
+    c->last = now;
+    c->interval *= 2;
+    if (c->interval > TIME_T_TO_CDTIME_T(86400))
+        c->interval = TIME_T_TO_CDTIME_T(86400);
+    c->complained_once = true;
+
+    va_start(ap, format);
+    daemon_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+void daemon_once_log (int level, complain_t *c, const char *file, int line, const char *func,
+                      const char *format, ...)
+{
+    va_list ap;
+
+    if (c->complained_once)
+        return;
+    c->complained_once = true;
+
+    va_start(ap, format);
+    daemon_vlog(level, file, line, func, format, ap);
+    va_end(ap);
+}
+
+void daemon_release_log (int level, complain_t *c, const char *file, int line, const char *func,
+                         const char *format, ...)
+{
+    va_list ap;
+
+    if (c->interval == 0)
+        return;
+    c->interval = 0;
+    c->complained_once = false;
+
+    va_start(ap, format);
+    daemon_vlog(level, file, line, func, format, ap);
+    va_end(ap);
 }
 
 int parse_log_severity(const char *severity)
