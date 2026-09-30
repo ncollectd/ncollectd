@@ -38,7 +38,7 @@ static int cs_read(void)
     uint64_t context_switches = 0;
 
 #ifdef HAVE_SYSCTLBYNAME
-    int value = 0;
+    unsigned int value = 0;
     size_t value_len = sizeof(value);
     int status = sysctlbyname("vm.stats.sys.v_swtch", &value, &value_len,
                           /* new pointer = */ NULL, /* new length = */ 0);
@@ -56,15 +56,15 @@ static int cs_read(void)
         return -1;
     }
 
-    char buffer[64];
+    char buffer[4096];
     char *fields[3];
     int status = -2;
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
-        int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
-        if (numfields != 2)
+        if (strncmp("ctxt ", buffer, strlen("ctxt ")) != 0)
             continue;
 
-        if (strcmp("ctxt", fields[0]) != 0)
+        int numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+        if (numfields != 2)
             continue;
 
         errno = 0;
