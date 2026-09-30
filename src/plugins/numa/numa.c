@@ -13,8 +13,6 @@
 
 static char *path_sys_node;
 
-static int max_node = -1;
-
 enum {
     FAM_NUMA_HIT,
     FAM_NUMA_MISS,
@@ -61,86 +59,73 @@ static metric_family_t fams[FAM_NUMA_MAX] = {
     },
 };
 
-static int numa_read_node(int node)
+static int numa_read_node(int dir_fd, __attribute__((unused)) const char *path,
+                          const char *entry, __attribute__((unused))  void *ud)
 {
-    char path[PATH_MAX];
-    snprintf(path, sizeof(path), "%s/node%i/numastat", path_sys_node, node);
+    if (strncmp(entry, "node", strlen("node")) != 0)
+        return 0;
 
-    FILE *fh = fopen(path, "r");
+    const char *node = entry + strlen("node");
+
+    if (!isdigit(*node))
+        return 0;
+
+    char path_numastat[PATH_MAX];
+    ssnprintf(path_numastat, sizeof(path_numastat), "%s/numastat", entry);
+
+    FILE *fh = fopenat(dir_fd, path_numastat, "r");
     if (fh == NULL) {
-        PLUGIN_ERROR("Reading node %i failed: open(%s): %s", node, path, STRERRNO);
-        return -1;
+        PLUGIN_ERROR("Reading node %s failed: open(%s): %s", node, path_numastat, STRERRNO);
+        return 0;
     }
 
     char buffer[128];
-    int success = 0;
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
         char *fields[4];
 
         int status = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
         if (status != 2) {
-            PLUGIN_WARNING("Ignoring line with unexpected number of fields (node %i).", node);
+            PLUGIN_WARNING("Ignoring line with unexpected number of fields (node %s).", node);
             continue;
         }
 
-        uint64_t v;
-        status = parse_uinteger(fields[1], &v);
-        if (status != 0)
+        uint64_t value;
+        if (strtouint(fields[1], &value) != 0)
             continue;
 
-        value_t value = VALUE_COUNTER(v);
-
-        char node_buffer[21];
-        snprintf(node_buffer, sizeof(node_buffer), "%i", node);
-
         if (!strcmp(fields[0], "numa_hit")) {
-            metric_family_append(&fams[FAM_NUMA_HIT], value, NULL,
-                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
-            success++;
+            metric_family_append(&fams[FAM_NUMA_HIT], VALUE_COUNTER(value), NULL,
+                                 &LABEL_PAIR_CONST("node", node), NULL);
         } else if (!strcmp(fields[0], "numa_miss")) {
-            metric_family_append(&fams[FAM_NUMA_MISS], value, NULL,
-                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
-            success++;
+            metric_family_append(&fams[FAM_NUMA_MISS], VALUE_COUNTER(value), NULL,
+                                 &LABEL_PAIR_CONST("node", node), NULL);
         } else if (!strcmp(fields[0], "numa_foreign")) {
-            metric_family_append(&fams[FAM_NUMA_FOREIGN], value, NULL,
-                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
-            success++;
+            metric_family_append(&fams[FAM_NUMA_FOREIGN], VALUE_COUNTER(value), NULL,
+                                 &LABEL_PAIR_CONST("node", node), NULL);
         } else if (!strcmp(fields[0], "local_node")) {
-            metric_family_append(&fams[FAM_NUMA_LOCAL_NODE], value, NULL,
-                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
-            success++;
+            metric_family_append(&fams[FAM_NUMA_LOCAL_NODE], VALUE_COUNTER(value), NULL,
+                                 &LABEL_PAIR_CONST("node", node), NULL);
         } else if (!strcmp(fields[0], "other_node")) {
-            metric_family_append(&fams[FAM_NUMA_OTHER_NODE], value, NULL,
-                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
-            success++;
+            metric_family_append(&fams[FAM_NUMA_OTHER_NODE], VALUE_COUNTER(value), NULL,
+                                 &LABEL_PAIR_CONST("node", node), NULL);
         } else if (!strcmp(fields[0], "interleave_hit")) {
-            metric_family_append(&fams[FAM_NUMA_INTERLEAVE_HIT], value, NULL,
-                                 &LABEL_PAIR_CONST("node", node_buffer), NULL);
-            success++;
+            metric_family_append(&fams[FAM_NUMA_INTERLEAVE_HIT], VALUE_COUNTER(value), NULL,
+                                 &LABEL_PAIR_CONST("node", node), NULL);
         }
     }
 
     fclose(fh);
-    return success ? 0 : -1;
+
+    return 0;
 }
 
 static int numa_read(void)
 {
-    if (max_node < 0) {
-        PLUGIN_WARNING("No NUMA nodes were detected.");
-        return -1;
-    }
-
-    int success = 0;
-    for (int i = 0; i <= max_node; i++) {
-        int status = numa_read_node(i);
-        if (status == 0)
-            success++;
-    }
+    walk_directory(path_sys_node, numa_read_node, NULL, 0);
 
     plugin_dispatch_metric_family_array(fams, FAM_NUMA_MAX, 0);
 
-    return success ? 0 : -1;
+    return 0;
 }
 
 static int numa_init(void)
@@ -151,33 +136,13 @@ static int numa_init(void)
         return -1;
     }
 
-    /* Determine the number of nodes on this machine. */
-    while (true) {
-        char path[PATH_MAX];
-        struct stat statbuf = {0};
-        int status;
-
-        snprintf(path, sizeof(path), "%s/node%i", path_sys_node, max_node + 1);
-
-        status = stat(path, &statbuf);
-        if (status == 0) {
-            max_node++;
-            continue;
-        } else if (errno == ENOENT) {
-            break;
-        } else { /* ((status != 0) && (errno != ENOENT)) */
-            PLUGIN_ERROR("stat(%s) failed: %s", path, STRERRNO);
-            return -1;
-        }
-    }
-
-    PLUGIN_DEBUG("Found %i nodes.", max_node + 1);
     return 0;
 }
 
 static int numa_shutdown(void)
 {
     free(path_sys_node);
+
     return 0;
 }
 
