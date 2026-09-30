@@ -26,3 +26,7 @@ XfrmOutPolError         	455
 XfrmFwdHdrError         	111
 XfrmOutStateInvalid     	413
 XfrmAcquireError        	390
+XfrmOutStateDirError    	184
+XfrmInStateDirError     	810
+XfrmInIptfsError        	235
+XfrmOutNoQueueSpace     	947
