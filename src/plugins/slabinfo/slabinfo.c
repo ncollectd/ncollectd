@@ -4,6 +4,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/exclist.h"
 
 static char *path_proc_slabinfo;
 
@@ -57,10 +58,15 @@ static metric_family_t fams[FAM_SLABINFO_MAX] = {
     },
 };
 
+static exclist_t excl_cache;
+static plugin_filter_t *filter;
 static int64_t pagesize;
 
 static int slabinfo_read(void)
 {
+    if (path_proc_slabinfo == NULL)
+        return 0;
+
     FILE *fh = fopen(path_proc_slabinfo, "r");
     if (unlikely(fh == NULL)) {
         PLUGIN_ERROR("Unable to open '%s': %s", path_proc_slabinfo, STRERRNO);
@@ -90,26 +96,64 @@ static int slabinfo_read(void)
         if (unlikely(fields_num < 16))
             continue;
 
-        metric_family_append(&fams[FAM_SLABINFO_OBJECTS_ACTIVE], VALUE_GAUGE(atof(fields[1])), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_OBJECTS], VALUE_GAUGE(atof(fields[2])), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_OBJECT_BYTES], VALUE_GAUGE(atof(fields[3])), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_SLAB_OBJECTS], VALUE_GAUGE(atof(fields[4])), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_SLAB_BYTES],
-                             VALUE_GAUGE(atof(fields[5]) * pagesize), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_SLABS_ACTIVE], VALUE_GAUGE(atof(fields[13])), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
-        metric_family_append(&fams[FAM_SLABINFO_SLABS], VALUE_GAUGE(atof(fields[14])), NULL,
-                             &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (!exclist_match(&excl_cache, fields[0]))
+            continue;
+
+        uint64_t value;
+
+        if (strtouint(fields[1], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_OBJECTS_ACTIVE], VALUE_GAUGE(value), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (strtouint(fields[2], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_OBJECTS], VALUE_GAUGE(value), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (strtouint(fields[3], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_OBJECT_BYTES], VALUE_GAUGE(value), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (strtouint(fields[4], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_SLAB_OBJECTS], VALUE_GAUGE(value), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (strtouint(fields[5], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_SLAB_BYTES], VALUE_GAUGE(value * pagesize), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (strtouint(fields[13], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_SLABS_ACTIVE], VALUE_GAUGE(value), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
+        if (strtouint(fields[14], &value) == 0)
+            metric_family_append(&fams[FAM_SLABINFO_SLABS], VALUE_GAUGE(value), NULL,
+                                 &LABEL_PAIR_CONST("cache_name", fields[0]), NULL);
     }
 
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_SLABINFO_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_SLABINFO_MAX, filter, 0);
+
+    return 0;
+}
+
+static int slabinfo_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp(child->key, "cache") == 0) {
+            status = cf_util_exclist(child, &excl_cache);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
 
     return 0;
 }
@@ -122,6 +166,13 @@ static int slabinfo_init(void)
         return -1;
     }
 
+    if (access(path_proc_slabinfo, R_OK) != 0) {
+        PLUGIN_ERROR("Cannot access to '%s': %s.", path_proc_slabinfo, STRERRNO);
+        free(path_proc_slabinfo);
+        path_proc_slabinfo = NULL;
+        return -1;
+    }
+
     pagesize = (int64_t)sysconf(_SC_PAGESIZE);
     return 0;
 }
@@ -129,11 +180,14 @@ static int slabinfo_init(void)
 static int slabinfo_shutdown(void)
 {
     free(path_proc_slabinfo);
+    exclist_reset(&excl_cache);
+    plugin_filter_free(filter);
     return 0;
 }
 
 void module_register(void)
 {
+    plugin_register_config("slabinfo", slabinfo_config);
     plugin_register_init("slabinfo", slabinfo_init);
     plugin_register_read("slabinfo", slabinfo_read);
     plugin_register_shutdown("slabinfo", slabinfo_shutdown);
