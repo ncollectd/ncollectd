@@ -4,17 +4,16 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/complain.h"
 
 static char *proc_pressure_cpu;
 static char *proc_pressure_io;
 static char *proc_pressure_memory;
 static char *proc_pressure_irq;
 
-static c_complain_t complain_cpu;
-static c_complain_t complain_io;
-static c_complain_t complain_memory;
-static c_complain_t complain_irq;
+static complain_t complain_cpu;
+static complain_t complain_io;
+static complain_t complain_memory;
+static complain_t complain_irq;
 
 enum {
     FAM_PRESSURE_CPU_WAITING_SECONDS,
@@ -68,12 +67,12 @@ static metric_family_t fams[FAM_PRESSURE_MAX] = {
     },
 };
 
-static int pressure_read_file(c_complain_t *complain, const char *filename,
+static int pressure_read_file(complain_t *complain, const char *filename,
                               metric_family_t *fam_waiting, metric_family_t *fam_stalled)
 {
     FILE *fh = fopen(filename, "r");
     if (unlikely(fh == NULL)) {
-        c_complain_once(LOG_ERR, complain, "Open \"%s\"  failed: %s", filename, STRERRNO);
+        PLUGIN_ONCE_ERROR(complain, "Open \"%s\"  failed: %s", filename, STRERRNO);
         return -1;
     }
 
@@ -87,11 +86,15 @@ static int pressure_read_file(c_complain_t *complain, const char *filename,
         if (strncmp(fields[4], "total=", strlen("total=")) != 0)
             continue;
 
-        char *total_value = fields[4] + strlen("total=");
-        if (*total_value == '\0')
+        char *total_str = fields[4] + strlen("total=");
+        if (*total_str == '\0')
             continue;
 
-        value_t value = VALUE_COUNTER_FLOAT64((double)atoll(total_value) / 1000000.0);
+        double total_value = 0;
+        if (strtodouble(total_str, &total_value) != 0)
+            continue;
+
+        value_t value = VALUE_COUNTER_FLOAT64(total_value / 1000000.0);
 
         if ((strcmp(fields[0], "some") == 0) && (fam_waiting != NULL)) {
             metric_family_append(fam_waiting, value, NULL, NULL);
