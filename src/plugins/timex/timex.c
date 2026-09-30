@@ -25,7 +25,7 @@ enum {
     FAM_TIMEX_PPS_CALIBRATION_INTERVAL,
     FAM_TIMEX_PPS_STABILITY_PPM,
     FAM_TIMEX_PPS_JITTER_LIMIT,
-    FAM_TIMEX_PPS_CALIBRATION_CICLES,
+    FAM_TIMEX_PPS_CALIBRATION_CYCLES,
     FAM_TIMEX_PPS_CALIBRATION_ERROR,
     FAM_TIMEX_PPS_STABILITY_EXCEEDED,
     FAM_TIMEX_TAI_OFFSET_SECONDS,
@@ -41,7 +41,7 @@ static metric_family_t fams[FAM_TIMEX_MAX] = {
     [FAM_TIMEX_PLL_OFFSET_SECONDS] = {
         .name = "system_timex_pll_offset_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Kernel phase-locked loop offset  between local system "
+        .help = "Kernel phase-locked loop offset between local system "
                 "and reference clock in seconds.",
     },
     [FAM_TIMEX_PLL_FREQUENCY_PPM] = {
@@ -99,8 +99,8 @@ static metric_family_t fams[FAM_TIMEX_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Pulse per second count of jitter limit exceeded events.",
     },
-    [FAM_TIMEX_PPS_CALIBRATION_CICLES] = {
-        .name = "system_timex_pps_calibration_cicles",
+    [FAM_TIMEX_PPS_CALIBRATION_CYCLES] = {
+        .name = "system_timex_pps_calibration_cycles",
         .type = METRIC_TYPE_COUNTER,
         .help = "Pulse per second count of calibration intervals.",
     },
@@ -135,7 +135,7 @@ static int timex_read(void)
                          VALUE_GAUGE(status == TIME_ERROR ? 0 : 1), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PLL_OFFSET_SECONDS],
                         VALUE_GAUGE((double)timex.offset /
-                                    (timex.status & ADJ_NANO ? 1000000000L : 1000000L)),
+                                    (timex.status & STA_NANO ? 1000000000L : 1000000L)),
                         NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PLL_FREQUENCY_PPM],
                          VALUE_GAUGE(ldexp((double)timex.freq, -16)), NULL, NULL);
@@ -153,15 +153,15 @@ static int timex_read(void)
                          VALUE_GAUGE(ldexp((double)timex.ppsfreq, -16)), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_JITTER_SECONDS],
                          VALUE_GAUGE((double)timex.jitter /
-                                     (timex.status & ADJ_NANO ? 1000000000L : 1000000L)),
+                                     (timex.status & STA_NANO ? 1000000000L : 1000000L)),
                          NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_INTERVAL],
-                         VALUE_GAUGE(timex.shift), NULL, NULL);
+                         VALUE_GAUGE((double)(1L << timex.shift), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_STABILITY_PPM],
                          VALUE_GAUGE(ldexp((double)timex.stabil, -16)), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_JITTER_LIMIT],
                          VALUE_COUNTER(timex.jitcnt), NULL, NULL);
-    metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_CICLES],
+    metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_CYCLES],
                          VALUE_COUNTER(timex.calcnt), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_ERROR],
                          VALUE_COUNTER(timex.errcnt), NULL, NULL);
