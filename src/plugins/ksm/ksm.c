@@ -94,7 +94,7 @@ static metric_family_t fams[FAM_KSM_MAX] = {
     },
     [FAM_KSM_STABLE_NODE_CHAINS] = {
         .name = "system_ksm_stable_node_chains",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "The number of KSM pages that hit the max_page_sharing limit.",
     },
     [FAM_KSM_STABLE_NODE_DUPS] = {
@@ -165,7 +165,7 @@ static int ksm_init(void)
 {
     path_sys_ksm = plugin_syspath("kernel/mm/ksm");
     if (path_sys_ksm == NULL) {
-        PLUGIN_ERROR("Cannot get proc path.");
+        PLUGIN_ERROR("Cannot get sys path.");
         return -1;
     }
 
