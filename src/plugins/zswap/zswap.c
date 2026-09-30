@@ -110,6 +110,7 @@ static int zswap_read(void)
     for(size_t i = 0; i < STATIC_ARRAY_SIZE(zswap_files); i++) {
         value_t value = {0};
         metric_family_t *fam = &fams[zswap_files[i].fam];
+
         if (fam->type == METRIC_TYPE_COUNTER) {
             uint64_t ret_value = 0;
             int status = filetouint_at(zswap_dir, zswap_files[i].file, &ret_value);
@@ -117,6 +118,8 @@ static int zswap_read(void)
                 continue;
             if (zswap_files[i].page)
                 value = VALUE_COUNTER(ret_value * pagesize);
+            else
+                value = VALUE_COUNTER(ret_value);
         } else if (fam->type == METRIC_TYPE_GAUGE) {
             double ret_value = 0;
             int status = filetodouble_at(zswap_dir, zswap_files[i].file, &ret_value);
@@ -124,11 +127,15 @@ static int zswap_read(void)
                 continue;
             if (zswap_files[i].page)
                 value = VALUE_GAUGE(ret_value * pagesize);
+            else
+                value = VALUE_GAUGE(ret_value);
         } else {
             continue;
         }
+
         metric_family_append(fam, value, NULL, NULL);
     }
+
     close(zswap_dir);
 
     plugin_dispatch_metric_family_array(fams, FAM_ZSWAP_MAX, 0);
@@ -143,7 +150,7 @@ static int zswap_init(void)
         return -1;
     }
 
-    pagesize = (int64_t)sysconf(_SC_PAGESIZE);
+    pagesize = sysconf(_SC_PAGESIZE);
     return 0;
 }
 
