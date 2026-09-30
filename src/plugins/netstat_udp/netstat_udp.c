@@ -122,6 +122,8 @@ static metric_family_t fams[FAM_MAX] = {
     },
 };
 
+static c_complain_t complain_udp6;
+
 static int netstat_udp_read(void)
 {
     uint64_t udpstat[UDP_NSTATS];
@@ -143,18 +145,20 @@ static int netstat_udp_read(void)
                              VALUE_COUNTER(udpstat[UDP_STAT_NOPORTBCAST]), NULL, NULL);
         metric_family_append(&fams[FAM_UDP_FULL_SOCKET],
                              VALUE_COUNTER(udpstat[UDP_STAT_FULLSOCK]), NULL, NULL);
-        metric_family_append(&fams[FAM_UDP_DELIVERED],
-                             VALUE_COUNTER(udpstat[UDP_STAT_IPACKETS]
-                              - udpstat[UDP_STAT_HDROPS] - udpstat[UDP_STAT_BADLEN]
-                              - udpstat[UDP_STAT_BADSUM] - udpstat[UDP_STAT_NOPORT]
-                              - udpstat[UDP_STAT_NOPORTBCAST] - udpstat[UDP_STAT_FULLSOCK]),
-                             NULL, NULL);
+        uint64_t pkt_errors = udpstat[UDP_STAT_HDROPS] + udpstat[UDP_STAT_BADLEN] +
+                              udpstat[UDP_STAT_BADSUM] + udpstat[UDP_STAT_NOPORT] +
+                              udpstat[UDP_STAT_NOPORTBCAST] + udpstat[UDP_STAT_FULLSOCK];
+        if (udpstat[UDP_STAT_IPACKETS] >= pkt_errors)
+            metric_family_append(&fams[FAM_UDP_DELIVERED],
+                                 VALUE_COUNTER(udpstat[UDP_STAT_IPACKETS] - pkt_errors),
+                                 NULL, NULL);
     }
 
     uint64_t udp6stat[UDP6_NSTATS];
     size = sizeof(udp6stat);
     if (sysctlbyname("net.inet6.udp6.stats", udp6stat, &size, NULL, 0) == -1) {
-        PLUGIN_ERROR("could not get udp6 stats");
+        PLUGIN_ONCE_ERROR(&complain_udp6, "sysctlbyname(\"net.inet6.udp6.stats\") fail: %s.",
+                          STRERRNO);
     } else {
         metric_family_append(&fams[FAM_UDP6_RECEIVED],
                              VALUE_COUNTER(udp6stat[UDP6_STAT_IPACKETS]), NULL, NULL);
@@ -170,12 +174,13 @@ static int netstat_udp_read(void)
                              VALUE_COUNTER(udp6stat[UDP6_STAT_NOPORTMCAST]), NULL, NULL);
         metric_family_append(&fams[FAM_UDP6_FULL_SOCKET],
                              VALUE_COUNTER(udp6stat[UDP6_STAT_FULLSOCK]), NULL, NULL);
-        metric_family_append(&fams[FAM_UDP6_DELIVERED],
-                             VALUE_COUNTER(udp6stat[UDP6_STAT_IPACKETS]
-                              - udp6stat[UDP6_STAT_HDROPS] - udp6stat[UDP6_STAT_BADLEN]
-                              - udp6stat[UDP6_STAT_BADSUM] - udp6stat[UDP6_STAT_NOPORT]
-                              - udp6stat[UDP6_STAT_NOPORTMCAST] - udp6stat[UDP6_STAT_FULLSOCK]),
-                             NULL, NULL);
+        uint64_t pkt_errors = udp6stat[UDP6_STAT_HDROPS] + udp6stat[UDP6_STAT_BADLEN] +
+                              udp6stat[UDP6_STAT_BADSUM] + udp6stat[UDP6_STAT_NOPORT] +
+                              udp6stat[UDP6_STAT_NOPORTMCAST] + udp6stat[UDP6_STAT_FULLSOCK];
+        if (udp6stat[UDP6_STAT_IPACKETS] >= pkt_errors)
+            metric_family_append(&fams[FAM_UDP6_DELIVERED],
+                                 VALUE_COUNTER(udp6stat[UDP6_STAT_IPACKETS] - pkt_errors),
+                                 NULL, NULL);
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_MAX, 0);
