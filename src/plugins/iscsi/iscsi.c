@@ -6,38 +6,28 @@
 #include "libutils/common.h"
 
 enum {
-    FAM_ISCSI_LUN_IOPS,
+    FAM_ISCSI_LUN_COMMANDS,
     FAM_ISCSI_LUN_READ_BYTES,
     FAM_ISCSI_LUN_WRITE_BYTES,
-    FAM_ISCSI_LUN_SIZE_BYTES,
-
-
     FAM_ISCSI_MAX,
 };
 
 static metric_family_t fams[FAM_ISCSI_MAX] = {
-    [FAM_ISCSI_LUN_IOPS] = {
-        .name = "system_iscsi_lun_iops",
+    [FAM_ISCSI_LUN_COMMANDS] = {
+        .name = "system_iscsi_lun_commands",
         .type = METRIC_TYPE_COUNTER,
-        .help = "R/W IOPS",
+        .help = "Total number of SCSI commands received.",
     },
     [FAM_ISCSI_LUN_READ_BYTES] = {
         .name = "system_iscsi_lun_read_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Read MB",
+        .help = "Total number of bytes read."
     },
     [FAM_ISCSI_LUN_WRITE_BYTES] = {
         .name = "system_iscsi_lun_write_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Write MB",
+        .help = "Total number of bytes written."
     },
-    [FAM_ISCSI_LUN_SIZE_BYTES] = {
-        .name = "system_iscsi_lun_size_bytes",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "LUN Size (GB)",
-    },
-
-
 };
 
 typedef struct {
@@ -62,7 +52,7 @@ static int iscsi_read_lun(int dir_fd, __attribute__((unused)) const char *path,
     ssnprintf(fpath, sizeof(fpath), "%s/%s", entry, "statistics/scsi_tgt_port/in_cmds");
     status = filetouint_at(dir_fd, fpath, &value);
     if (likely(status == 0))
-        metric_family_append(&fams[FAM_ISCSI_LUN_IOPS], VALUE_COUNTER(value), NULL,
+        metric_family_append(&fams[FAM_ISCSI_LUN_COMMANDS], VALUE_COUNTER(value), NULL,
                              &LABEL_PAIR_CONST("iqn", ll->iqn),
                              &LABEL_PAIR_CONST("tpgt", ll->tpgt),
                              &LABEL_PAIR_CONST("lun", lun),
