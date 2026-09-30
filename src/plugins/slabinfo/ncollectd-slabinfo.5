@@ -8,11 +8,28 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP slabinfo
-\fBplugin\fP slabinfo
+\fBplugin\fP slabinfo {
+    \fBcache\fP [\fIincl|include|excl|exclude\fP] \fIcache\fP
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBslabinfo\fP plugin collect information about kernel caches reading the
 file \f(CW/proc/slabinfo\fP.
+.Pp
+The \fBslabinfo\fP plugin supports the following options:
+.Bl -tag -width Ds
+.It \fBcache\fP [\fIincl|include|excl|exclude\fP] \fIcache\fP
+Select kernel cache based on the cache name.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.Xr ncollectd.conf 5 .
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5
