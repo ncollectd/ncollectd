@@ -80,12 +80,12 @@ static int avccache_read(void)
         if (unlikely(fields_num < 6))
             continue;
 
-        total_lookups     += (uint64_t)strtol(fields[0], NULL, 10);
-        total_hits        += (uint64_t)strtol(fields[1], NULL, 10);
-        total_misses      += (uint64_t)strtol(fields[2], NULL, 10);
-        total_allocations += (uint64_t)strtol(fields[3], NULL, 10);
-        total_reclaims    += (uint64_t)strtol(fields[4], NULL, 10);
-        total_frees       += (uint64_t)strtol(fields[5], NULL, 10);
+        total_lookups     += (uint64_t)strtoull(fields[0], NULL, 10);
+        total_hits        += (uint64_t)strtoull(fields[1], NULL, 10);
+        total_misses      += (uint64_t)strtoull(fields[2], NULL, 10);
+        total_allocations += (uint64_t)strtoull(fields[3], NULL, 10);
+        total_reclaims    += (uint64_t)strtoull(fields[4], NULL, 10);
+        total_frees       += (uint64_t)strtoull(fields[5], NULL, 10);
     }
 
     fclose(fh);
