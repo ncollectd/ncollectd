@@ -43,6 +43,13 @@ static exclist_t excl_device;
 static int ubi_read_device(int dirfd, __attribute__((unused)) const char *path,
                            const char *entry, __attribute__((unused)) void *ud)
 {
+    if (strncmp("ubi", entry, strlen("ubi")) != 0)
+        return 0;
+
+    /* Exclude volumes ubiN_M */
+    if (strchr(entry, '_') != NULL)
+        return 0;
+
     if (!exclist_match(&excl_device, entry))
         return 0;
 
