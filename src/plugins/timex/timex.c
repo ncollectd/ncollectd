@@ -156,7 +156,7 @@ static int timex_read(void)
                                      (timex.status & STA_NANO ? 1000000000L : 1000000L)),
                          NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_CALIBRATION_INTERVAL],
-                         VALUE_GAUGE((double)(1L << timex.shift), NULL, NULL);
+                         VALUE_GAUGE((double)(1L << timex.shift)), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_STABILITY_PPM],
                          VALUE_GAUGE(ldexp((double)timex.stabil, -16)), NULL, NULL);
     metric_family_append(&fams[FAM_TIMEX_PPS_JITTER_LIMIT],
