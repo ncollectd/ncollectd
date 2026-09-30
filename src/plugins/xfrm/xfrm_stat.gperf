@@ -41,6 +41,10 @@ XfrmOutStateExpired,     FAM_XFRM_OUT_STATE_EXPIRED
 XfrmOutPolBlock,         FAM_XFRM_OUT_POLICY_BLOCK
 XfrmOutPolDead,          FAM_XFRM_OUT_POLICY_DEAD
 XfrmOutPolError,         FAM_XFRM_OUT_POLICY_ERROR
-XfrmFwdHdrError,         FAM_XFRM_FORWARD
+XfrmFwdHdrError,         FAM_XFRM_FORWARD_HEADER_ERROR
 XfrmOutStateInvalid,     FAM_XFRM_OUT_STATE_INVALID
 XfrmAcquireError,        FAM_XFRM_ACQUIRE_ERROR
+XfrmOutStateDirError,    FAM_XFRM_OUT_STATE_DIR_ERROR
+XfrmInStateDirError,     FAM_XFRM_IN_STATE_DIR_ERROR
+XfrmInIptfsError,        FAM_XFRM_IN_IPTFS_ERROR
+XfrmOutNoQueueSpace,     FAM_XFRM_OUT_NO_QUEUE_SPACE

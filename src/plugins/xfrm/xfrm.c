@@ -21,7 +21,7 @@ enum {
     FAM_XFRM_IN_POLICY_BLOCK,
     FAM_XFRM_IN_POLICY_ERROR,
     FAM_XFRM_ACQUIRE_ERROR,
-    FAM_XFRM_FORWARD,
+    FAM_XFRM_FORWARD_HEADER_ERROR,
     FAM_XFRM_OUT_ERROR,
     FAM_XFRM_OUT_BUNDLE_GENERATION_ERROR,
     FAM_XFRM_OUT_BUNDLE_CHECK_ERROR,
@@ -34,6 +34,10 @@ enum {
     FAM_XFRM_OUT_POLICY_DEAD,
     FAM_XFRM_OUT_POLICY_ERROR,
     FAM_XFRM_OUT_STATE_INVALID,
+    FAM_XFRM_OUT_STATE_DIR_ERROR,
+    FAM_XFRM_IN_STATE_DIR_ERROR,
+    FAM_XFRM_IN_IPTFS_ERROR,
+    FAM_XFRM_OUT_NO_QUEUE_SPACE,
     FAM_XFRM_MAX,
 };
 
@@ -118,8 +122,8 @@ static metric_family_t fams[FAM_XFRM_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "State hasn’t been fully acquired before use.",
     },
-    [FAM_XFRM_FORWARD] = {
-        .name = "system_xfrm_forward",
+    [FAM_XFRM_FORWARD_HEADER_ERROR] = {
+        .name = "system_xfrm_forward_header_error",
         .type = METRIC_TYPE_COUNTER,
         .help = "Forward routing of a packet is not allowed.",
     },
@@ -183,6 +187,26 @@ static metric_family_t fams[FAM_XFRM_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "State is invalid, perhaps expired.",
     },
+    [FAM_XFRM_OUT_STATE_DIR_ERROR] = {
+        .name = "system_xfrm_out_state_dir_error",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "State direction mismatch.",
+    },
+    [FAM_XFRM_IN_STATE_DIR_ERROR] = {
+        .name = "system_xfrm_in_state_dir_error",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "State direction mismatch.",
+    },
+    [FAM_XFRM_IN_IPTFS_ERROR] = {
+        .name = "system_xfrm_in_iptfs_error",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFRM_OUT_NO_QUEUE_SPACE] = {
+        .name = "system_xfrm_out_no_queue_space",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    }
 };
 
 static char *path_proc_xfrm;
