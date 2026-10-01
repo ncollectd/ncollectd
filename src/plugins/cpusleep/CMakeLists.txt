@@ -30,7 +30,7 @@ set(BUILD_PLUGIN_CPUSLEEP ${BUILD_PLUGIN_CPUSLEEP} PARENT_SCOPE)
 if(BUILD_PLUGIN_CPUSLEEP)
     set(PLUGIN_CPUSLEEP_SRC cpusleep.c)
     add_library(cpusleep MODULE ${PLUGIN_CPUSLEEP_SRC})
-    target_link_libraries(cpusleep PRIVATE libmetric libutils)
+    target_link_libraries(cpusleep PRIVATE libmetric libutils m)
     set_target_properties(cpusleep PROPERTIES PREFIX "")
 
 #    add_executable(test_plugin_cpusleep EXCLUDE_FROM_ALL cpusleep_test.c ${PLUGIN_CPUSLEEP_SRC})
