@@ -16,7 +16,7 @@ system_nfsd_disk_bytes_written_total{hostname="localhost.localdomain"} 308935934
 # TYPE system_nfsd_rpc_errors counter
 system_nfsd_rpc_errors_total{error="fmt",hostname="localhost.localdomain"} 423
 system_nfsd_rpc_errors_total{error="auth",hostname="localhost.localdomain"} 26
-system_nfsd_rpc_errors_total{error="cInt",hostname="localhost.localdomain"} 0
+system_nfsd_rpc_errors_total{error="clnt",hostname="localhost.localdomain"} 0
 # TYPE system_nfsd_server_rpc_calls counter
 system_nfsd_server_rpc_calls_total{hostname="localhost.localdomain"} 3918544635
 # TYPE system_nfsd_read_ahead_cache_size_blocks gauge
@@ -25,8 +25,8 @@ system_nfsd_read_ahead_cache_size_blocks{hostname="localhost.localdomain"} 32
 system_nfsd_connections_total{hostname="localhost.localdomain"} 9848
 # TYPE system_nfsd_reply_cache_misses counter
 system_nfsd_reply_cache_misses_total{hostname="localhost.localdomain"} 12018015
-# TYPE system_nfsd_read_ahead_cache_not_found gauge
-system_nfsd_read_ahead_cache_not_found{hostname="localhost.localdomain"} 2.9999794e-317
+# TYPE system_nfsd_read_ahead_cache_not_found counter
+system_nfsd_read_ahead_cache_not_found_total{hostname="localhost.localdomain"} 2.9999794e-317
 # TYPE system_nfsd_requests counter
 system_nfsd_requests_total{hostname="localhost.localdomain",method="null",proto="2"} 0
 system_nfsd_requests_total{hostname="localhost.localdomain",method="getattr",proto="2"} 0

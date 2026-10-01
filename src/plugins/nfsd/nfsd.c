@@ -115,7 +115,7 @@ static metric_family_t fams[FAM_NFSD_MAX] = {
     },
     [FAM_NFSD_READ_AHEAD_CACHE_NOT_FOUND] = {
         .name = "system_nfsd_read_ahead_cache_not_found",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Total number of NFSd read ahead cache not found",
     },
     [FAM_NFSD_PACKETS] = {
@@ -146,15 +146,15 @@ static metric_family_t fams[FAM_NFSD_MAX] = {
 };
 
 enum {
-    COLLECT_NFS_V2      = (1 <<  0),
-    COLLECT_NFS_V3      = (1 <<  1),
-    COLLECT_NFS_V4      = (1 <<  2)
+    COLLECT_NFS_V2 = (1 <<  0),
+    COLLECT_NFS_V3 = (1 <<  1),
+    COLLECT_NFS_V4 = (1 <<  2)
 };
 
 static cf_flags_t nfsd_flags[] = {
-    { "nfs-v2",      COLLECT_NFS_V2      },
-    { "nfs-v3",      COLLECT_NFS_V3      },
-    { "nfs-v4",      COLLECT_NFS_V4      }
+    { "nfs-v2", COLLECT_NFS_V2 },
+    { "nfs-v3", COLLECT_NFS_V3 },
+    { "nfs-v4", COLLECT_NFS_V4 }
 };
 static size_t nfsd_flags_size = STATIC_ARRAY_SIZE(nfsd_flags);
 
@@ -250,7 +250,7 @@ static int nfsd_read(void)
                                      &LABEL_PAIR_CONST("error", "auth"), NULL);
             if (strtouint(fields[5], &value) == 0)
                 metric_family_append(&fams[FAM_NFSD_RPC_ERRORS], VALUE_COUNTER(value), NULL,
-                                     &LABEL_PAIR_CONST("error", "cInt"), NULL);
+                                     &LABEL_PAIR_CONST("error", "clnt"), NULL);
         } else if (strncmp(fields[0], "proc", strlen("proc")) == 0) {
             const char **procedures_names;
             int procedures_names_num = 0;
