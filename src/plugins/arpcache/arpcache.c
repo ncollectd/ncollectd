@@ -23,7 +23,7 @@ enum {
 static metric_family_t fams_arp_cache[FAM_ARP_CACHE_MAX] = {
     [FAM_ARP_CACHE_ENTRIES] = {
         .name = "system_arp_cache_entries",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of entries in the neighbor table.",
     },
     [FAM_ARP_CACHE_ALLOCS] = {
@@ -98,7 +98,7 @@ enum {
 static metric_family_t fams_ndisc_cache[FAM_NDISC_CACHE_MAX] = {
     [FAM_NDISC_CACHE_ENTRIES] = {
         .name = "system_ndisc_cache_entries",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of entries in the neighbor table.",
     },
     [FAM_NDISC_CACHE_ALLOCS] = {
@@ -163,13 +163,14 @@ static metric_family_t fams_ndisc_cache[FAM_NDISC_CACHE_MAX] = {
     },
 };
 
+static plugin_filter_t *filter;
+
 typedef struct {
     int field;
     int fam;
 } field_fam_t;
 
 static field_fam_t fields_ndisc_cache[] = {
-    { 0,  FAM_NDISC_CACHE_ENTRIES             },
     { 1,  FAM_NDISC_CACHE_ALLOCS              },
     { 2,  FAM_NDISC_CACHE_DESTROYS            },
     { 3,  FAM_NDISC_CACHE_HASH_GROWS          },
@@ -186,7 +187,6 @@ static field_fam_t fields_ndisc_cache[] = {
 static size_t fields_ndisc_cache_size = STATIC_ARRAY_SIZE(fields_ndisc_cache);
 
 static field_fam_t fields_arp_cache[] = {
-    { 0,  FAM_ARP_CACHE_ENTRIES             },
     { 1,  FAM_ARP_CACHE_ALLOCS              },
     { 2,  FAM_ARP_CACHE_DESTROYS            },
     { 3,  FAM_ARP_CACHE_HASH_GROWS          },
@@ -203,12 +203,16 @@ static size_t fields_arp_cache_size = STATIC_ARRAY_SIZE(fields_arp_cache);
 static char *path_proc_ndisc_cache;
 static char *path_proc_arp_cache;
 
-static int cache_read(const char *file, metric_family_t *fams,  size_t fams_size,
-                                        field_fam_t *field_fam, size_t field_fam_size)
+static complain_t complain_ndisc_cache;
+static complain_t complain_arp_cache;
+
+static int cache_read(const char *file, complain_t *complain,
+                      metric_family_t *fams,  size_t fams_size,
+                      field_fam_t *field_fam, size_t field_fam_size)
 {
     FILE *fh = fopen(file, "r");
     if (fh == NULL) {
-        PLUGIN_ERROR("Unable to open %s", file);
+        PLUGIN_ONCE_ERROR(complain, "Unable to open %s", file);
         return -1;
     }
 
@@ -219,35 +223,69 @@ static int cache_read(const char *file, metric_family_t *fams,  size_t fams_size
         return -1;
     }
 
+    uint64_t entries = 0;
+    
     char *fields[13];
     for (int ncpu = 0; fgets(buffer, sizeof(buffer), fh) != NULL ; ncpu++) {
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
 
-        if (fields_num < 13)
-            continue;
-
         char cpu[64];
         ssnprintf(cpu, sizeof(cpu), "%d", ncpu);
 
+        if ((ncpu == 0) && (fields_num > 0))
+            entries = strtoull(fields[0], NULL, 16); 
+
         for (size_t i = 0; i < field_fam_size; i++) {
-            uint64_t n = strtoull(fields[field_fam[i].field], NULL, 16);
-            metric_family_append(&fams[field_fam[i].fam], VALUE_COUNTER(n), NULL,
-                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
+            int field = field_fam[i].field;
+            if (fields_num > field) {
+                uint64_t value = strtoull(fields[field], NULL, 16);
+                metric_family_append(&fams[field_fam[i].fam], VALUE_COUNTER(value), NULL,
+                                     &LABEL_PAIR_CONST("cpu", cpu), NULL);
+            }
         }
     }
+
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, fams_size, 0);
+    /*  FAM_ARP_CACHE_ENTRIES or FAM_NDISC_CACHE_ENTRIES */
+    metric_family_append(&fams[0], VALUE_GAUGE(entries), NULL, NULL);
+
+    plugin_dispatch_metric_family_array_filtered(fams, fams_size, filter, 0);
+
     return 0;
 }
 
 static int arp_cache_read(void)
 {
-    int status = cache_read(path_proc_arp_cache, fams_arp_cache, FAM_ARP_CACHE_MAX,
-                                            fields_arp_cache, fields_arp_cache_size);
-    status |=  cache_read(path_proc_ndisc_cache, fams_ndisc_cache, FAM_NDISC_CACHE_MAX,
-                                            fields_ndisc_cache, fields_ndisc_cache_size);
-    return status;
+    cache_read(path_proc_arp_cache, &complain_arp_cache,
+               fams_arp_cache, FAM_ARP_CACHE_MAX,
+               fields_arp_cache, fields_arp_cache_size);
+    cache_read(path_proc_ndisc_cache, &complain_ndisc_cache,
+               fams_ndisc_cache, FAM_NDISC_CACHE_MAX,
+               fields_ndisc_cache, fields_ndisc_cache_size);
+    return 0;
+}
+
+static int arp_cache_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
+
+    return 0;
 }
 
 static int arp_cache_init(void)
@@ -276,6 +314,7 @@ static int arp_cache_shutdown(void)
 
 void module_register(void)
 {
+    plugin_register_config("arpcache", arp_cache_config);
     plugin_register_init("arpcache", arp_cache_init);
     plugin_register_read("arpcache", arp_cache_read);
     plugin_register_shutdown("arpcache", arp_cache_shutdown);
