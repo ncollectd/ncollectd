@@ -54,7 +54,7 @@ static metric_family_t fams_sockstat[FAM_SOCKETS_MAX] = {
         .help = NULL,
     },
     [FAM_SOCKETS_TCP_MEM] = {
-        .name = "system_sockets_tcp_mem",
+        .name = "system_sockets_tcp_mem_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
@@ -64,7 +64,7 @@ static metric_family_t fams_sockstat[FAM_SOCKETS_MAX] = {
         .help = NULL,
     },
     [FAM_SOCKETS_UDP_MEM] = {
-        .name = "system_sockets_udp_mem",
+        .name = "system_sockets_udp_mem_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
@@ -84,7 +84,7 @@ static metric_family_t fams_sockstat[FAM_SOCKETS_MAX] = {
         .help = NULL,
     },
     [FAM_SOCKETS_FRAG_MEMORY] = {
-        .name = "system_sockets_frag_memory",
+        .name = "system_sockets_frag_memory_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
@@ -114,7 +114,7 @@ static metric_family_t fams_sockstat[FAM_SOCKETS_MAX] = {
         .help = NULL,
     },
     [FAM_SOCKETS_FRAG6_MEMORY] = {
-        .name = "system_sockets_frag6_memory",
+        .name = "system_sockets_frag6_memory_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
@@ -124,6 +124,7 @@ static char *path_proc_sockstat;
 static bool path_proc_sockstat_found = false;
 static char *path_proc_sockstat6;
 static bool path_proc_sockstat6_found = false;
+static uint64_t pagesize;
 
 static int sockstat4_read(void)
 {
@@ -143,7 +144,7 @@ static int sockstat4_read(void)
 
         switch (fields[0][0]) {
         case 's':
-            if ((strcmp(fields[0], "sockets:") == 0) && (fields_num == 3)) {
+            if ((strcmp(fields[0], "sockets:") == 0) && (fields_num >= 3)) {
                 if (strcmp(fields[1], "used") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -153,7 +154,7 @@ static int sockstat4_read(void)
             }
             break;
         case 'T':
-            if ((strcmp(fields[0], "TCP:") == 0) && (fields_num == 11)) {
+            if ((strcmp(fields[0], "TCP:") == 0) && (fields_num >= 11)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -182,12 +183,12 @@ static int sockstat4_read(void)
                     uint64_t value = 0;
                     if (strtouint(fields[10], &value) == 0)
                          metric_family_append(&fams_sockstat[FAM_SOCKETS_TCP_MEM],
-                                              VALUE_GAUGE(value), NULL, NULL);
+                                              VALUE_GAUGE(value * pagesize), NULL, NULL);
                 }
             }
             break;
         case 'U':
-            if ((strcmp(fields[0], "UDP:") == 0) && (fields_num == 5)) {
+            if ((strcmp(fields[0], "UDP:") == 0) && (fields_num >= 5)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -198,7 +199,7 @@ static int sockstat4_read(void)
                     uint64_t value = 0;
                     if (strtouint(fields[4], &value) == 0)
                          metric_family_append(&fams_sockstat[FAM_SOCKETS_UDP_MEM],
-                                              VALUE_GAUGE(value), NULL, NULL);
+                                              VALUE_GAUGE(value * pagesize), NULL, NULL);
                 }
             } else if ((strcmp(fields[0], "UDPLITE:") == 0) && (fields_num == 3)) {
                 if (strcmp(fields[1], "inuse") == 0) {
@@ -210,7 +211,7 @@ static int sockstat4_read(void)
             }
             break;
         case 'R':
-            if ((strcmp(fields[0], "RAW:") == 0) && (fields_num == 3)) {
+            if ((strcmp(fields[0], "RAW:") == 0) && (fields_num >= 3)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -220,7 +221,7 @@ static int sockstat4_read(void)
             }
             break;
         case 'F':
-            if ((strcmp(fields[0], "FRAG:") == 0) && (fields_num == 5)) {
+            if ((strcmp(fields[0], "FRAG:") == 0) && (fields_num >= 5)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -262,7 +263,7 @@ static int sockstat6_read(void)
 
         switch (fields[0][0]) {
         case 'T':
-            if ((strcmp(fields[0], "TCP6:") == 0) && (fields_num == 3)) {
+            if ((strcmp(fields[0], "TCP6:") == 0) && (fields_num >= 3)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -272,14 +273,14 @@ static int sockstat6_read(void)
             }
             break;
         case 'U':
-            if ((strcmp(fields[0], "UDP6:") == 0) && (fields_num == 3)) {
+            if ((strcmp(fields[0], "UDP6:") == 0) && (fields_num >= 3)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
                         metric_family_append(&fams_sockstat[FAM_SOCKETS_UDP6_INUSE],
                                              VALUE_GAUGE(value), NULL, NULL);
                 }
-            } else if ((strcmp(fields[0], "UDPLITE:") == 0) && (fields_num == 3)) {
+            } else if ((strcmp(fields[0], "UDPLITE6:") == 0) && (fields_num >= 3)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -289,7 +290,7 @@ static int sockstat6_read(void)
             }
             break;
         case 'R':
-            if ((strcmp(fields[0], "RAW6:") == 0) && (fields_num == 3)) {
+            if ((strcmp(fields[0], "RAW6:") == 0) && (fields_num >= 3)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -299,7 +300,7 @@ static int sockstat6_read(void)
             }
             break;
         case 'F':
-            if ((strcmp(fields[0], "FRAG6:") == 0) && (fields_num == 5)) {
+            if ((strcmp(fields[0], "FRAG6:") == 0) && (fields_num >= 5)) {
                 if (strcmp(fields[1], "inuse") == 0) {
                     uint64_t value = 0;
                     if (strtouint(fields[2], &value) == 0)
@@ -355,6 +356,8 @@ static int sockstat_init(void)
     status = access(path_proc_sockstat6, R_OK);
     if (status == 0)
         path_proc_sockstat6_found = true;
+
+    pagesize = sysconf(_SC_PAGESIZE);
 
     return 0;
 }
