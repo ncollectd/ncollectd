@@ -1,36 +1,5 @@
-# TYPE system_arp_cache_entries counter
-system_arp_cache_entries_total{cpu="0",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="1",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="2",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="3",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="4",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="5",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="6",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="7",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="8",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="9",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="10",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="11",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="12",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="13",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="14",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="15",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="16",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="17",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="18",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="19",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="20",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="21",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="22",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="23",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="24",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="25",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="26",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="27",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="28",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="29",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="30",hostname="localhost.localdomain"} 41
-system_arp_cache_entries_total{cpu="31",hostname="localhost.localdomain"} 41
+# TYPE system_arp_cache_entries gauge 
+system_arp_cache_entries{hostname="localhost.localdomain"} 41
 # TYPE system_arp_cache_allocs counter
 system_arp_cache_allocs_total{cpu="0",hostname="localhost.localdomain"} 59
 system_arp_cache_allocs_total{cpu="1",hostname="localhost.localdomain"} 46
@@ -361,39 +330,8 @@ system_arp_cache_table_fulls_total{cpu="28",hostname="localhost.localdomain"} 0
 system_arp_cache_table_fulls_total{cpu="29",hostname="localhost.localdomain"} 0
 system_arp_cache_table_fulls_total{cpu="30",hostname="localhost.localdomain"} 0
 system_arp_cache_table_fulls_total{cpu="31",hostname="localhost.localdomain"} 0
-# TYPE system_ndisc_cache_entries counter
-system_ndisc_cache_entries_total{cpu="0",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="1",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="2",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="3",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="4",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="5",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="6",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="7",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="8",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="9",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="10",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="11",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="12",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="13",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="14",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="15",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="16",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="17",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="18",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="19",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="20",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="21",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="22",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="23",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="24",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="25",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="26",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="27",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="28",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="29",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="30",hostname="localhost.localdomain"} 19
-system_ndisc_cache_entries_total{cpu="31",hostname="localhost.localdomain"} 19
+# TYPE system_ndisc_cache_entries gauge
+system_ndisc_cache_entries{hostname="localhost.localdomain"} 19
 # TYPE system_ndisc_cache_allocs counter
 system_ndisc_cache_allocs_total{cpu="0",hostname="localhost.localdomain"} 0
 system_ndisc_cache_allocs_total{cpu="1",hostname="localhost.localdomain"} 2
