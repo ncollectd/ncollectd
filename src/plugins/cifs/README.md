@@ -7,11 +7,23 @@ NCOLLECTD-CIFS(5) - File Formats Manual
 # SYNOPSIS
 
 	load-plugin cifs
-	plugin cifs
+	plugin cifs {
+	    filter {
+	        ...
+	    }
+	}
 
 # DESCRIPTION
 
 The **cifs** plugin collectd statistics of mounted cifs filesystems.
+
+The **cifs** plugin supports the following options:
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 

@@ -193,12 +193,12 @@ static metric_family_t fams[FAM_CIFS_MAX] = {
     },
     [FAM_CIFS_SMB2_LOCAL_OPENS] = {
         .name = "system_cifs_smb2_local_opens",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
     [FAM_CIFS_SMB2_REMOTE_OPENS] = {
         .name = "system_cifs_smb2_remote_opens",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
     [FAM_CIFS_SMB2_TREE_CONNECT] = {
@@ -344,14 +344,18 @@ static metric_family_t fams[FAM_CIFS_MAX] = {
 };
 
 static char *path_proc_cifs;
+static complain_t complain_cifs;
+static plugin_filter_t *filter;
 
 static int cifs_read(void)
 {
     FILE *fh = fopen(path_proc_cifs, "r");
     if (fh == NULL) {
-        PLUGIN_ERROR("Failed to open '%s'", path_proc_cifs);
+        PLUGIN_ONCE_ERROR(&complain_cifs, "Failed to open '%s': %s", path_proc_cifs, STRERRNO);
         return -1;
     }
+
+    complain_cifs = COMPLAIN_INIT(0);
 
     char share[PATH_MAX];
     share[0] = '\0';
@@ -503,7 +507,7 @@ static int cifs_read(void)
             }
             break;
         case 'L':
-            if (strcmp(line, "Locks:") == 0) {
+            if (strcmp(fields[0], "Locks:") == 0) {
                 if (fields_num == 6) {
                     /* Locks: %d HardLinks: %d Symlinks: %d */
                     metric_family_append(&fams[FAM_CIFS_SMB1_LOCKS],
@@ -549,11 +553,11 @@ static int cifs_read(void)
             } else if ((strcmp(fields[0], "Open") == 0) && (fields_num == 9)) {
                 /* Open files: %d total (local), %d open on server */
                 metric_family_append(&fams[FAM_CIFS_SMB2_LOCAL_OPENS],
-                                     VALUE_COUNTER(atoull(fields[2])), NULL,
+                                     VALUE_GAUGE(atoull(fields[2])), NULL,
                                      &LABEL_PAIR_CONST("share", share),
                                      &LABEL_PAIR_CONST("connection", conn), NULL);
                 metric_family_append(&fams[FAM_CIFS_SMB2_REMOTE_OPENS],
-                                     VALUE_COUNTER(atoull(fields[5])), NULL,
+                                     VALUE_GAUGE(atoull(fields[5])), NULL,
                                      &LABEL_PAIR_CONST("share", share),
                                      &LABEL_PAIR_CONST("connection", conn), NULL);
             } else if ((strcmp(fields[0], "OplockBreaks:") == 0) && (fields_num == 5)) {
@@ -726,9 +730,32 @@ static int cifs_read(void)
             break;
         }
     }
+
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_CIFS_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_CIFS_MAX, filter, 0);
+
+    return 0;
+}
+
+static int cifs_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("filter", child->key) == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
 
     return 0;
 }
@@ -747,11 +774,13 @@ static int cifs_init(void)
 static int cifs_shutdown(void)
 {
     free(path_proc_cifs);
+    plugin_filter_free(filter);
     return 0;
 }
 
 void module_register(void)
 {
+    plugin_register_config("cifs", cifs_config);
     plugin_register_init("cifs", cifs_init);
     plugin_register_read("cifs", cifs_read);
     plugin_register_shutdown("cifs", cifs_shutdown);

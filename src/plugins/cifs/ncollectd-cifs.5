@@ -8,10 +8,22 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP cifs
-\fBplugin\fP cifs
+\fBplugin\fP cifs {
+    filter {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBcifs\fP plugin collectd statistics of mounted cifs filesystems.
+.Pp
+The \fBcifs\fP plugin supports the following options:
+.Bl -tag -width Ds
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5
