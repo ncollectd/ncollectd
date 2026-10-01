@@ -1,9 +1,9 @@
 # TYPE system_cifs_smb2_read_bytes counter
 system_cifs_smb2_read_bytes_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
 system_cifs_smb2_read_bytes_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
-# TYPE system_cifs_smb2_local_opens counter
-system_cifs_smb2_local_opens_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
-system_cifs_smb2_local_opens_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_local_opens gauge
+system_cifs_smb2_local_opens{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_local_opens{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
 # TYPE system_cifs_smb_sent counter
 system_cifs_smb_sent_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 45572327
 system_cifs_smb_sent_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 45544707
@@ -88,9 +88,9 @@ system_cifs_smb2_oplock_break_total{connection="2",hostname="localhost.localdoma
 # TYPE system_cifs_smb2_oplock_break_fail counter
 system_cifs_smb2_oplock_break_fail_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
 system_cifs_smb2_oplock_break_fail_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
-# TYPE system_cifs_smb2_remote_opens counter
-system_cifs_smb2_remote_opens_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
-system_cifs_smb2_remote_opens_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
+# TYPE system_cifs_smb2_remote_opens gauge
+system_cifs_smb2_remote_opens{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 0
+system_cifs_smb2_remote_opens{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 0
 # TYPE system_cifs_smb2_tree_connect counter
 system_cifs_smb2_tree_connect_total{connection="1",hostname="localhost.localdomain",share="\\\\smb1\\share"} 2
 system_cifs_smb2_tree_connect_total{connection="2",hostname="localhost.localdomain",share="\\\\smb2\\share"} 23
