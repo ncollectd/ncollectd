@@ -58,5 +58,5 @@ static int wl_config(config_item_t *ci)
 void module_register(void)
 {
     plugin_register_config("write_log", wl_config);
-    plugin_register_write(NULL, "write_log", wl_write, NULL, 0, 0, NULL);
+    plugin_register_write("write_log", NULL, wl_write, NULL, 0, 0, NULL);
 }
