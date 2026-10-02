@@ -195,7 +195,7 @@ static int nginx_curl_init(nginx_t *st)
             return -1;
         }
 #else
-        static char credentials[1024];
+        char credentials[1024];
         int status = ssnprintf(credentials, sizeof(credentials), "%s:%s", st->user,
                                             st->pass == NULL ? "" : st->pass);
         if ((status < 0) || (status >= (int)sizeof(credentials))) {
@@ -221,7 +221,7 @@ static int nginx_curl_init(nginx_t *st)
         return -1;
     }
 
-    rcode = curl_easy_setopt(st->curl, CURLOPT_MAXREDIRS, 50L);
+    rcode = curl_easy_setopt(st->curl, CURLOPT_MAXREDIRS, 5L);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
                      curl_easy_strerror(rcode));
@@ -364,14 +364,17 @@ static int nginx_read(user_data_t *user_data)
             if ((strcmp(fields[0], "Active") == 0) && (strcmp(fields[1], "connections:") == 0)) {
                 metric_family_append(&st->fams[FAM_NGINX_CONNECTIONS_ACTIVE],
                                      VALUE_GAUGE((double)atoll(fields[2])), &st->labels, NULL);
-            } else if ((atoll(fields[0]) != 0) && (atoll(fields[1]) != 0) &&
-                       (atoll(fields[2]) != 0)) {
-                metric_family_append(&st->fams[FAM_NGINX_CONNECTIONS_ACCEPTED],
-                                     VALUE_COUNTER((uint64_t)atoll(fields[0])), &st->labels, NULL);
-                metric_family_append(&st->fams[FAM_NGINX_CONNECTIONS_HANDLED],
-                                     VALUE_COUNTER((uint64_t)atoll(fields[1])), &st->labels, NULL);
-                metric_family_append(&st->fams[FAM_NGINX_HTTP_REQUESTS],
-                                     VALUE_COUNTER((uint64_t)atoll(fields[2])), &st->labels, NULL);
+            } else {
+                uint64_t value;
+                if (strtouint(fields[0], &value) == 0)
+                    metric_family_append(&st->fams[FAM_NGINX_CONNECTIONS_ACCEPTED],
+                                         VALUE_COUNTER(value), &st->labels, NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&st->fams[FAM_NGINX_CONNECTIONS_HANDLED],
+                                         VALUE_COUNTER(value), &st->labels, NULL);
+                if (strtouint(fields[2], &value) == 0)
+                    metric_family_append(&st->fams[FAM_NGINX_HTTP_REQUESTS],
+                                         VALUE_COUNTER(value), &st->labels, NULL);
             }
         } else if (fields_num == 6) {
             if ((strcmp(fields[0], "Reading:") == 0) && (strcmp(fields[2], "Writing:") == 0) &&
