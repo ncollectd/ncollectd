@@ -1,7 +1,5 @@
 plugin_option(PLUGIN_FHCOUNT "File handles statistics" ON)
 
-check_function_exists(getfhcountavg HAVE_GETFHCOUNTAVG)
-
 set(BUILD_PLUGIN_FHCOUNT 0)
 
 if(PLUGIN_FHCOUNT)
