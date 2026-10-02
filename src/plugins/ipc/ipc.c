@@ -8,13 +8,15 @@
  *   (C) Rodney Radford <rradford@mindspring.com> and distributed under GPLv2.
  */
 
+#ifdef KERNEL_LINUX
+/* _GNU_SOURCE is needed for struct shm_info.used_ids on musl libc */
+#define _GNU_SOURCE
+#endif
+
 #include "plugin.h"
 #include "libutils/common.h"
 
 #ifdef KERNEL_LINUX
-/* _GNU_SOURCE is needed for struct shm_info.used_ids on musl libc */
-#define _GNU_SOURCE
-
 /* X/OPEN tells us to use <sys/{types,ipc,sem}.h> for semctl() */
 /* X/OPEN tells us to use <sys/{types,ipc,msg}.h> for msgctl() */
 /* X/OPEN tells us to use <sys/{types,ipc,shm}.h> for shmctl() */
@@ -223,8 +225,6 @@ static caddr_t ipc_get_info(cid_t cid, int cmd, int version, int stsize, int *nm
         return NULL;
     }
 
-    *nmemb = size / stsize;
-
     buff = malloc(size);
     if (buff == NULL) {
         PLUGIN_ERROR("ipc_get_info malloc failed.");
@@ -237,14 +237,26 @@ static caddr_t ipc_get_info(cid_t cid, int cmd, int version, int stsize, int *nm
         return NULL;
     }
 
+    if (size == 0) {
+        free(buff);
+        return NULL;
+
+    if (size % stsize) {
+        PLUGIN_ERROR("ipc_get_info: mismatch struct size and buffer size");
+        free(buff);
+        return NULL;
+    }
+
+    *nmemb = size / stsize;
+
     return buff;
 }
 
 static int ipc_read_sem(metric_family_t *fam)
 {
     ipcinfo_sem_t *ipcinfo_sem;
-    unsigned short sem_nsems = 0;
-    unsigned short sems = 0;
+    uint64_t sem_nsems = 0;
+    uint64_t sems = 0;
     int n;
 
     ipcinfo_sem = (ipcinfo_sem_t *)ipc_get_info(0, GET_IPCINFO_SEM_ALL, IPCINFO_SEM_VERSION,
