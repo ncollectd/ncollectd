@@ -21,98 +21,98 @@ static char *path_proc_drbd;
 
 enum {
     FAM_DRBD_CONNECTED = 0,
-    FAM_DRDB_NODE_ROLE_IS_PRIMARY,
-    FAM_DRDB_DISK_STATE_IS_UP_TO_DATE,
-    FAM_DRDB_NETWORK_SENT_BYTES,
-    FAM_DRDB_NETWORK_RECEIVED_BYTES,
-    FAM_DRDB_DISK_WRITTEN_BYTES,
-    FAM_DRDB_DISK_READ_BYTES,
-    FAM_DRDB_ACTIVITYLOG_WRITES,
-    FAM_DRDB_BITMAP_WRITES,
-    FAM_DRDB_LOCAL_PENDING,
-    FAM_DRDB_REMOTE_PENDING,
-    FAM_DRDB_REMOTE_UNACKNOWLEDGED,
-    FAM_DRDB_APPLICATION_PENDING,
-    FAM_DRDB_EPOCHS,
-    FAM_DRDB_OUT_OF_SYNC_BYTES,
-    FAM_DRDB_MAX,
+    FAM_DRBD_NODE_ROLE_IS_PRIMARY,
+    FAM_DRBD_DISK_STATE_IS_UP_TO_DATE,
+    FAM_DRBD_NETWORK_SENT_BYTES,
+    FAM_DRBD_NETWORK_RECEIVED_BYTES,
+    FAM_DRBD_DISK_WRITTEN_BYTES,
+    FAM_DRBD_DISK_READ_BYTES,
+    FAM_DRBD_ACTIVITYLOG_WRITES,
+    FAM_DRBD_BITMAP_WRITES,
+    FAM_DRBD_LOCAL_PENDING,
+    FAM_DRBD_REMOTE_PENDING,
+    FAM_DRBD_REMOTE_UNACKNOWLEDGED,
+    FAM_DRBD_APPLICATION_PENDING,
+    FAM_DRBD_EPOCHS,
+    FAM_DRBD_OUT_OF_SYNC_BYTES,
+    FAM_DRBD_MAX,
 };
 
-static metric_family_t fams[FAM_DRDB_MAX] = {
+static metric_family_t fams[FAM_DRBD_MAX] = {
     [FAM_DRBD_CONNECTED] = {
         .name = "system_drbd_connected",
         .type = METRIC_TYPE_GAUGE,
         .help = "Whether DRBD is connected to the peer.",
     },
-    [FAM_DRDB_NODE_ROLE_IS_PRIMARY] = {
-        .name = "system_drdb_node_role_is_primary",
+    [FAM_DRBD_NODE_ROLE_IS_PRIMARY] = {
+        .name = "system_drbd_node_role_is_primary",
         .type = METRIC_TYPE_GAUGE,
         .help = "Whether the role of the node is in the primary state.",
     },
-    [FAM_DRDB_DISK_STATE_IS_UP_TO_DATE] = {
-        .name = "system_drdb_disk_state_is_up_to_date",
+    [FAM_DRBD_DISK_STATE_IS_UP_TO_DATE] = {
+        .name = "system_drbd_disk_state_is_up_to_date",
         .type = METRIC_TYPE_GAUGE,
         .help = "Whether the disk of the node is up to date.",
     },
-    [FAM_DRDB_NETWORK_SENT_BYTES] = {
-        .name = "system_drdb_network_sent_bytes",
+    [FAM_DRBD_NETWORK_SENT_BYTES] = {
+        .name = "system_drbd_network_sent_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of bytes sent via the network.",
     },
-    [FAM_DRDB_NETWORK_RECEIVED_BYTES] = {
-        .name = "system_drdb_network_received_bytes",
+    [FAM_DRBD_NETWORK_RECEIVED_BYTES] = {
+        .name = "system_drbd_network_received_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of bytes received via the network.",
     },
-    [FAM_DRDB_DISK_WRITTEN_BYTES] = {
-        .name = "system_drdb_disk_written_bytes",
+    [FAM_DRBD_DISK_WRITTEN_BYTES] = {
+        .name = "system_drbd_disk_written_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Net data written on local hard disk; in bytes.",
     },
-    [FAM_DRDB_DISK_READ_BYTES] = {
-        .name = "system_drdb_disk_read_bytes",
+    [FAM_DRBD_DISK_READ_BYTES] = {
+        .name = "system_drbd_disk_read_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Net data read from local hard disk; in bytes.",
     },
-    [FAM_DRDB_ACTIVITYLOG_WRITES] = {
-        .name = "system_drdb_activitylog_writes",
+    [FAM_DRBD_ACTIVITYLOG_WRITES] = {
+        .name = "system_drbd_activitylog_writes",
         .help = "Number of updates of the activity log area of the meta data.",
         .type = METRIC_TYPE_COUNTER,
     },
-    [FAM_DRDB_BITMAP_WRITES] = {
-        .name = "system_drdb_bitmap_writes",
+    [FAM_DRBD_BITMAP_WRITES] = {
+        .name = "system_drbd_bitmap_writes",
         .help = "Number of updates of the bitmap area of the meta data.",
         .type = METRIC_TYPE_COUNTER,
     },
-    [FAM_DRDB_LOCAL_PENDING] = {
-        .name = "system_drdb_local_pending",
+    [FAM_DRBD_LOCAL_PENDING] = {
+        .name = "system_drbd_local_pending",
         .help = "Number of open requests to the local I/O sub-system.",
         .type = METRIC_TYPE_GAUGE,
     },
-    [FAM_DRDB_REMOTE_PENDING] = {
-        .name = "system_drdb_remote_pending",
+    [FAM_DRBD_REMOTE_PENDING] = {
+        .name = "system_drbd_remote_pending",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of requests sent to the peer, "
                 "but that have not yet been answered by the latter.",
     },
-    [FAM_DRDB_REMOTE_UNACKNOWLEDGED] = {
-        .name = "system_drdb_remote_unacknowledged",
+    [FAM_DRBD_REMOTE_UNACKNOWLEDGED] = {
+        .name = "system_drbd_remote_unacknowledged",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of requests received by the peer via the network connection, "
                 "but that have not yet been answered.",
     },
-    [FAM_DRDB_APPLICATION_PENDING] = {
-        .name = "system_drdb_application_pending",
+    [FAM_DRBD_APPLICATION_PENDING] = {
+        .name = "system_drbd_application_pending",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of block I/O requests forwarded to DRBD, but not yet answered by DRBD.",
     },
-    [FAM_DRDB_EPOCHS] = {
-        .name = "system_drdb_epochs",
+    [FAM_DRBD_EPOCHS] = {
+        .name = "system_drbd_epochs",
         .help = "Number of Epochs currently on the fly.",
         .type = METRIC_TYPE_GAUGE,
     },
-    [FAM_DRDB_OUT_OF_SYNC_BYTES] = {
-        .name = "system_drdb_out_of_sync_bytes",
+    [FAM_DRBD_OUT_OF_SYNC_BYTES] = {
+        .name = "system_drbd_out_of_sync_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Amount of data known to be out of sync; in bytes.",
     },
@@ -121,22 +121,23 @@ static metric_family_t fams[FAM_DRDB_MAX] = {
 typedef struct {
     char *field;
     size_t field_size;
+    uint64_t scale;
     int fam_num;
 } drbd_fam_t;
 
 static drbd_fam_t drbd_fams[] = {
-    { "ns:",  3, FAM_DRDB_NETWORK_SENT_BYTES     },
-    { "nr:",  3, FAM_DRDB_NETWORK_RECEIVED_BYTES },
-    { "dw:",  3, FAM_DRDB_DISK_WRITTEN_BYTES     },
-    { "dr:",  3, FAM_DRDB_DISK_READ_BYTES        },
-    { "al:",  3, FAM_DRDB_ACTIVITYLOG_WRITES     },
-    { "bm:",  3, FAM_DRDB_BITMAP_WRITES          },
-    { "lo:",  3, FAM_DRDB_LOCAL_PENDING          },
-    { "pe:",  3, FAM_DRDB_REMOTE_PENDING         },
-    { "ua:",  3, FAM_DRDB_REMOTE_UNACKNOWLEDGED  },
-    { "ap:",  3, FAM_DRDB_APPLICATION_PENDING    },
-    { "ep:",  3, FAM_DRDB_EPOCHS                 },
-    { "oos:", 4, FAM_DRDB_OUT_OF_SYNC_BYTES      },
+    { "ns:",  3, 1024, FAM_DRBD_NETWORK_SENT_BYTES     },
+    { "nr:",  3, 1024, FAM_DRBD_NETWORK_RECEIVED_BYTES },
+    { "dw:",  3, 1024, FAM_DRBD_DISK_WRITTEN_BYTES     },
+    { "dr:",  3, 1024, FAM_DRBD_DISK_READ_BYTES        },
+    { "al:",  3,    1, FAM_DRBD_ACTIVITYLOG_WRITES     },
+    { "bm:",  3,    1, FAM_DRBD_BITMAP_WRITES          },
+    { "lo:",  3,    1, FAM_DRBD_LOCAL_PENDING          },
+    { "pe:",  3,    1, FAM_DRBD_REMOTE_PENDING         },
+    { "ua:",  3,    1, FAM_DRBD_REMOTE_UNACKNOWLEDGED  },
+    { "ap:",  3,    1, FAM_DRBD_APPLICATION_PENDING    },
+    { "ep:",  3,    1, FAM_DRBD_EPOCHS                 },
+    { "oos:", 4, 1024, FAM_DRBD_OUT_OF_SYNC_BYTES      },
 };
 
 static size_t drbd_fams_num = STATIC_ARRAY_SIZE(drbd_fams);
@@ -170,7 +171,10 @@ static int drbd_metrics(long int resource, char **fields, size_t fields_num)
             if (*data == '\0')
                 break;
 
-            (void)parse_uinteger(data, &value);
+            if (strtouint(data, &value) != 0)
+                break;
+
+            value = value * drbd_fams[j].scale;
             fam = &fams[drbd_fams[j].fam_num];
             break;
         }
@@ -225,7 +229,7 @@ static int drbd_status(long int resource, char **fields, size_t fields_num)
             double value = 0;
             if (strncmp(data, "Primary", strlen("Primary")) == 0)
                 value = 1;
-            metric_family_append(&fams[FAM_DRDB_NODE_ROLE_IS_PRIMARY], VALUE_GAUGE(value), NULL,
+            metric_family_append(&fams[FAM_DRBD_NODE_ROLE_IS_PRIMARY], VALUE_GAUGE(value), NULL,
                                  &LABEL_PAIR_CONST("device", device), NULL);
         }
     }
@@ -237,7 +241,7 @@ static int drbd_status(long int resource, char **fields, size_t fields_num)
             double value = 0;
             if (strncmp(data, "UpToDate", strlen("UpToDate")) == 0)
                 value = 1;
-            metric_family_append(&fams[FAM_DRDB_DISK_STATE_IS_UP_TO_DATE], VALUE_GAUGE(value), NULL,
+            metric_family_append(&fams[FAM_DRBD_DISK_STATE_IS_UP_TO_DATE], VALUE_GAUGE(value), NULL,
                                  &LABEL_PAIR_CONST("device", device), NULL);
         }
     }
@@ -285,7 +289,7 @@ static int drbd_read(void)
     }
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_DRDB_MAX, 0);
+    plugin_dispatch_metric_family_array(fams, FAM_DRBD_MAX, 0);
     return 0;
 }
 
