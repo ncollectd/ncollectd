@@ -9,7 +9,7 @@
 
 enum {
     FAM_HOST_FILE_HANDLES_ALLOCATED,
-    FAM_HOST_FILE_HANDLES_MAXIMUN,
+    FAM_HOST_FILE_HANDLES_MAXIMUM,
     FAM_HOST_FILE_MAX,
 };
 
@@ -17,12 +17,12 @@ static metric_family_t fams[FAM_HOST_FILE_MAX] = {
     [FAM_HOST_FILE_HANDLES_ALLOCATED] = {
         .name = "system_file_handles_allocated",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of allocated file handle."
     },
-    [FAM_HOST_FILE_HANDLES_MAXIMUN] = {
-        .name = "system_file_handles_maximun",
+    [FAM_HOST_FILE_HANDLES_MAXIMUM] = {
+        .name = "system_file_handles_maximum",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Maximum number of file handles."
     },
 };
 
@@ -52,12 +52,12 @@ static int fhcount_read(void)
     }
 
     double used = 0;
-    strtodouble(fields[0], &used);
-    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_ALLOCATED], VALUE_GAUGE(used), NULL, NULL);
+    if (strtodouble(fields[0], &used) == 0)
+        metric_family_append(&fams[FAM_HOST_FILE_HANDLES_ALLOCATED], VALUE_GAUGE(used), NULL, NULL);
 
     double max = 0;
-    strtodouble(fields[2], &max);
-    metric_family_append(&fams[FAM_HOST_FILE_HANDLES_MAXIMUN], VALUE_GAUGE(max), NULL, NULL);
+    if (strtodouble(fields[2], &max) == 0)
+        metric_family_append(&fams[FAM_HOST_FILE_HANDLES_MAXIMUM], VALUE_GAUGE(max), NULL, NULL);
 
     plugin_dispatch_metric_family_array(fams, FAM_HOST_FILE_MAX, 0);
     return 0;
