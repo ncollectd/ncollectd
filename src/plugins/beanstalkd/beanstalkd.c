@@ -185,6 +185,81 @@ typedef struct {
 
 #define BEANSTALKD_PORT 11300
 
+static long beanstalkd_hdr_size(char *buf, long *size)
+{
+    if (strncmp("OK ", buf, strlen("OK ")) != 0)
+        return -1;
+
+    char *hdr_size = buf + strlen("OK ");
+    if (*hdr_size == '\0')
+        return -1;
+        
+    char *end = strstr(hdr_size, "\r\n");
+    if (end == NULL)
+        return -1;
+
+    char *endptr = NULL;
+    *size = strtol(hdr_size, &endptr, 10);
+    if ((endptr == hdr_size) || (errno != 0))
+        return -1;
+    if (endptr != end)
+        return -1;
+
+    return end-buf+2;
+}
+
+static int beanstalkd_read_data(int sd, strbuf_t *buf, cdtime_t *timeout, const char *until)
+{
+    struct pollfd pollfd = {
+        .fd = sd,
+        .events = POLLIN,
+    };
+
+    cdtime_t start = cdtime();
+
+    while(true) {
+        int status = poll(&pollfd, 1, CDTIME_T_TO_MS(*timeout));
+        if (status < 0 && errno == EINTR)
+            continue;
+        if (status <= 0) {
+            PLUGIN_ERROR("Timeout reading from socket");
+            return -1;
+        }
+
+        char buffer[4096];
+        status = (int)recv(sd, buffer, sizeof(buffer), 0);
+        if (status < 0) {
+            if (errno == EAGAIN)
+                continue;
+            if (errno == EINTR)
+                continue;
+            PLUGIN_ERROR("Error reading from socket: %s", STRERRNO);
+            return -1;
+        }
+
+        cdtime_t diff = cdtime() - start;
+        *timeout = (*timeout > diff) ? *timeout - diff : 0;
+        
+        if (status == 0)
+            break;
+
+        if (strbuf_putstrn(buf, buffer, status) != 0) {
+            PLUGIN_ERROR("Failed to append data to strbuf.");
+            return -1;
+        }
+
+        if (until != NULL) {
+            if (strstr(buf->ptr, until) !=NULL)
+                break;
+        }
+
+        if (*timeout == 0)
+            break;
+    }
+    
+    return 0;
+}
+
 static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, strbuf_t *buf)
 {
     int sd = socket_connect_tcp(ctx->host, ctx->port, 0, 0);
@@ -201,50 +276,67 @@ static int beanstalkd_query_stats(beanstalkd_ctx_t *ctx, strbuf_t *buf)
     }
 
     int flags = fcntl(sd, F_GETFL);
+    if (flags < 0) {
+        PLUGIN_ERROR("fcntl(F_GETFL) failed: %s.", STRERRNO);
+        close(sd);
+        return -1;
+    }
+
     status = fcntl(sd, F_SETFL, flags | O_NONBLOCK);
     if (status != 0) {
+        PLUGIN_ERROR("fcntl(O_NONBLOCK) failed: %s.", STRERRNO);
         close(sd);
         return -1;
     }
 
-    struct pollfd pollfd = {
-        .fd = sd,
-        .events = POLLIN,
-    };
+    cdtime_t timeout = ctx->timeout;
 
-    do {
-        status = poll(&pollfd, 1, CDTIME_T_TO_MS(ctx->timeout));
-    } while (status < 0 && errno == EINTR);
+    long hdr_size = 0;
+    long hdr_len = 0;
 
-    if (status <= 0) {
-        PLUGIN_ERROR("Timeout reading from socket");
-        close(sd);
-        return -1;
-    }
-
-    char buffer[4096];
-    while ((status = (int)recv(sd, buffer, sizeof(buffer), 0)) != 0) {
-        if (status < 0) {
-            if (errno == EAGAIN)
-                break;
-            if (errno == EINTR)
-                continue;
-            PLUGIN_ERROR("Error reading from socket: %s", STRERRNO);
+    while(true) {
+        status = beanstalkd_read_data(sd, buf, &timeout, "\r\n");
+        if (status != 0) {
             close(sd);
             return -1;
         }
 
-        strbuf_putstrn(buf, buffer, status);
+        hdr_len = beanstalkd_hdr_size(buf->ptr, &hdr_size);
+        if (hdr_len < 0)
+            continue;
+
+        if (hdr_size > 0)
+            break;
+
+        if (timeout == 0) {
+            PLUGIN_ERROR("Timeout reading data from beanstalkd.");
+            close(sd);
+            return -1;
+        }
     }
 
-    status = 0;
-    if (strbuf_len(buf) == 0) {
-        PLUGIN_WARNING("No data returned by MNTR command.");
-        status = -1;
+    if (strbuf_len(buf) < (size_t)(hdr_len + hdr_size + 2)) {
+        while(true) {
+            status = beanstalkd_read_data(sd, buf, &timeout, NULL);
+            if (status != 0) {
+                close(sd);
+                return -1;
+            }
+
+            if (strbuf_len(buf) >= (size_t)(hdr_len + hdr_size + 2))
+                break;
+    
+            if (timeout == 0) {
+                PLUGIN_ERROR("Timeout reading data from beanstalkd.");
+                close(sd);
+                return -1;
+            }
+        }
     }
 
     close(sd);
-    return status;
+
+    return 0;
 }
 
 static int beanstalkd_read(user_data_t *user_data)
@@ -270,7 +362,7 @@ static int beanstalkd_read(user_data_t *user_data)
         goto error;
     data += 2;
 
-    char *end = strstr(buffer, "\r\n");
+    char *end = strstr(data, "\r\n");
     if (end == NULL)
         goto error;
 
@@ -294,9 +386,12 @@ static int beanstalkd_read(user_data_t *user_data)
         value_t value = {0};
         switch (bm->fam) {
         case FAM_BEANSTALKD_CPU_USER_TIME_SECONDS:
-        case FAM_BEANSTALKD_CPU_SYSTEM_TIME_SECONDS:
-            value = VALUE_COUNTER_FLOAT64(atof(fields[1]));
-            break;
+        case FAM_BEANSTALKD_CPU_SYSTEM_TIME_SECONDS: {
+            double num;
+            if (strtodouble(fields[1], &num) != 0)
+                continue;
+            value = VALUE_COUNTER_FLOAT64(num);
+        }    break;
         case FAM_BEANSTALKD_DRAINING:
             if (strcmp(fields[1], "true") == 0) {
                 value = VALUE_GAUGE(1);
@@ -306,9 +401,15 @@ static int beanstalkd_read(user_data_t *user_data)
             break;
         default:
             if (fam->type == METRIC_TYPE_COUNTER) {
-                value = VALUE_COUNTER(atoll(fields[1]));
+                uint64_t num;
+                if (strtouint(fields[1], &num) != 0)
+                    continue;
+                value = VALUE_COUNTER(num);
             } else if (fam->type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(fields[1]));
+                double num;
+                if (strtodouble(fields[1], &num) != 0)
+                    continue;
+                value = VALUE_GAUGE(num);
             }
             break;
         }
