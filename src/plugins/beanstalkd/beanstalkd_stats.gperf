@@ -59,7 +59,7 @@ rusage-stime:,             FAM_BEANSTALKD_CPU_SYSTEM_TIME_SECONDS, NULL,      NU
 uptime:,                   FAM_BEANSTALKD_UPTIME_SECONDS,          NULL,      NULL
 binlog-oldest-index:,      FAM_BEANSTALKD_BINLOG_OLDEST_INDEX,     NULL,      NULL
 binlog-current-index:,     FAM_BEANSTALKD_BINLOG_CURRENT_INDEX,    NULL,      NULL
-binlog-records-migrated:,  FAM_BEANSTALKD_BINLOG_MAX_SIZE_BYTES,   NULL,      NULL
+binlog-records-migrated:,  FAM_BEANSTALKD_BINLOG_RECORDS_MIGRATED, NULL,      NULL
 binlog-records-written:,   FAM_BEANSTALKD_BINLOG_RECORDS_WRITTEN,  NULL,      NULL
-binlog-max-size:,          FAM_BEANSTALKD_BINLOG_RECORDS_MIGRATED, NULL,      NULL
+binlog-max-size:,          FAM_BEANSTALKD_BINLOG_MAX_SIZE_BYTES,   NULL,      NULL
 draining:,                 FAM_BEANSTALKD_DRAINING,                NULL,      NULL

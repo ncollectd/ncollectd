@@ -62,8 +62,8 @@ beanstalkd_binlog_oldest_index{hostname="localhost.localdomain",instance="local"
 # TYPE beanstalkd_binlog_current_index gauge
 beanstalkd_binlog_current_index{hostname="localhost.localdomain",instance="local"} 78
 # TYPE beanstalkd_binlog_max_size_bytes gauge
-beanstalkd_binlog_max_size_bytes{hostname="localhost.localdomain",instance="local"} 605
+beanstalkd_binlog_max_size_bytes{hostname="localhost.localdomain",instance="local"} 10485760
 # TYPE beanstalkd_binlog_records_written counter
 beanstalkd_binlog_records_written_total{hostname="localhost.localdomain",instance="local"} 756
 # TYPE beanstalkd_binlog_records_migrated counter
-beanstalkd_binlog_records_migrated_total{hostname="localhost.localdomain",instance="local"} 10485760
+beanstalkd_binlog_records_migrated_total{hostname="localhost.localdomain",instance="local"} 605
