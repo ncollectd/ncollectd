@@ -16,7 +16,13 @@ enum {
     FAM_VM_ZONE_PAGE_STATE,
     FAM_VM_NUMA_EVENT,
     FAM_VM_NODE_PAGE_STATE,
+    FAM_VM_VMSCAN_WRITE,
+    FAM_VM_VMSCAN_IMMEDIATE_RECLAIM,
     FAM_VM_WORKINGSET_NODES,
+    FAM_VM_WORKINGSET_REFAULT,
+    FAM_VM_WORKINGSET_ACTIVATE,
+    FAM_VM_WORKINGSET_RESTORE,
+    FAM_VM_WORKINGSET_NODERECLAIM,
     FAM_VM_PAGES_DIRTIED,
     FAM_VM_PAGES_WRITTEN,
     FAM_VM_PAGES_THROTTLED_WRITTEN,
@@ -159,9 +165,39 @@ static metric_family_t fams[FAM_VM_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
+    [FAM_VM_VMSCAN_WRITE] = {
+        .name = "system_vm_vmscan_write",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total pages written from the LRU by the VM scanner.",
+    },
+    [FAM_VM_VMSCAN_IMMEDIATE_RECLAIM] = {
+        .name = "system_vm_vmscan_immediate_reclaim",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total pages prioritise for reclaim when writeback ends.",
+    },
     [FAM_VM_WORKINGSET_NODES] = {
         .name = "system_vm_workingset_nodes",
         .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_VM_WORKINGSET_REFAULT] = {
+        .name = "system_vm_workingset_refault",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_VM_WORKINGSET_ACTIVATE] = {
+        .name = "system_vm_workingset_activate",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_VM_WORKINGSET_RESTORE] = {
+        .name = "system_vm_workingset_restore",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_VM_WORKINGSET_NODERECLAIM] = {
+        .name = "system_vm_workingset_nodereclaim",
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_VM_PAGES_DIRTIED] = {

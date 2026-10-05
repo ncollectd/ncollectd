@@ -53,13 +53,6 @@ system_vm_node_page_state{hostname="localhost.localdomain",state="slab_reclaimab
 system_vm_node_page_state{hostname="localhost.localdomain",state="slab_unreclaimable"} 44903
 system_vm_node_page_state{hostname="localhost.localdomain",state="isolated_anon"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="isolated_file"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_refault_anon"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_refault_file"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_activate_anon"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_activate_file"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_restore_anon"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_restore_file"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="workingset_nodereclaim"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="anon_pages"} 719786
 system_vm_node_page_state{hostname="localhost.localdomain",state="mapped"} 192800
 system_vm_node_page_state{hostname="localhost.localdomain",state="file_pages"} 1480807
@@ -72,12 +65,25 @@ system_vm_node_page_state{hostname="localhost.localdomain",state="shmem_pmdmappe
 system_vm_node_page_state{hostname="localhost.localdomain",state="file_hugepages"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="file_pmdmapped"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="anon_transparent_hugepages"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="vmscan_write"} 0
-system_vm_node_page_state{hostname="localhost.localdomain",state="vmscan_immediate_reclaim"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="kernel_misc_reclaimable"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="page_table_pages"} 11313
 system_vm_node_page_state{hostname="localhost.localdomain",state="sec_page_table_pages"} 0
 system_vm_node_page_state{hostname="localhost.localdomain",state="swapcached"} 0
+# TYPE system_vm_vmscan_write counter
+system_vm_vmscan_write_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_vmscan_immediate_reclaim counter
+system_vm_vmscan_immediate_reclaim_total{hostname="localhost.localdomain"} 0
+# TYPE system_vm_workingset_refault counter
+system_vm_workingset_refault_total{hostname="localhost.localdomain",type="anon"} 0
+system_vm_workingset_refault_total{hostname="localhost.localdomain",type="file"} 0
+# TYPE system_vm_workingset_activate counter
+system_vm_workingset_activate_total{hostname="localhost.localdomain",type="anon"} 0
+system_vm_workingset_activate_total{hostname="localhost.localdomain",type="file"} 0
+# TYPE system_vm_workingset_restore counter
+system_vm_workingset_restore_total{hostname="localhost.localdomain",type="anon"} 0
+system_vm_workingset_restore_total{hostname="localhost.localdomain",type="file"} 0
+# TYPE system_vm_workingset_nodereclaim counter
+system_vm_workingset_nodereclaim_total{hostname="localhost.localdomain"} 0
 # TYPE system_vm_page_in counter
 system_vm_page_in_total{hostname="localhost.localdomain"} 3593333
 # TYPE system_vm_page_steal_direct counter

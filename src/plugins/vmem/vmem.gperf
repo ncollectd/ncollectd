@@ -45,13 +45,13 @@ nr_slab_unreclaimable,          FAM_VM_NODE_PAGE_STATE, "state", "slab_unreclaim
 nr_isolated_anon,               FAM_VM_NODE_PAGE_STATE, "state", "isolated_anon"
 nr_isolated_file,               FAM_VM_NODE_PAGE_STATE, "state", "isolated_file"
 workingset_nodes,               FAM_VM_WORKINGSET_NODES, NULL,    NULL
-workingset_refault_anon,        FAM_VM_NODE_PAGE_STATE, "state", "workingset_refault_anon"
-workingset_refault_file,        FAM_VM_NODE_PAGE_STATE, "state", "workingset_refault_file"
-workingset_activate_anon,       FAM_VM_NODE_PAGE_STATE, "state", "workingset_activate_anon"
-workingset_activate_file,       FAM_VM_NODE_PAGE_STATE, "state", "workingset_activate_file"
-workingset_restore_anon,        FAM_VM_NODE_PAGE_STATE, "state", "workingset_restore_anon"
-workingset_restore_file,        FAM_VM_NODE_PAGE_STATE, "state", "workingset_restore_file"
-workingset_nodereclaim,         FAM_VM_NODE_PAGE_STATE, "state", "workingset_nodereclaim"
+workingset_refault_anon,        FAM_VM_WORKINGSET_REFAULT,  "type", "anon"
+workingset_refault_file,        FAM_VM_WORKINGSET_REFAULT,  "type", "file"
+workingset_activate_anon,       FAM_VM_WORKINGSET_ACTIVATE, "type", "anon"
+workingset_activate_file,       FAM_VM_WORKINGSET_ACTIVATE, "type", "file"
+workingset_restore_anon,        FAM_VM_WORKINGSET_RESTORE,  "type", "anon"
+workingset_restore_file,        FAM_VM_WORKINGSET_RESTORE , "type", "file"
+workingset_nodereclaim,         FAM_VM_WORKINGSET_NODERECLAIM, NULL,    NULL
 nr_anon_pages,                  FAM_VM_NODE_PAGE_STATE, "state", "anon_pages"
 nr_mapped,                      FAM_VM_NODE_PAGE_STATE, "state", "mapped"
 nr_file_pages,                  FAM_VM_NODE_PAGE_STATE, "state", "file_pages"
@@ -64,8 +64,8 @@ nr_shmem_pmdmapped,             FAM_VM_NODE_PAGE_STATE, "state", "shmem_pmdmappe
 nr_file_hugepages,              FAM_VM_NODE_PAGE_STATE, "state", "file_hugepages"
 nr_file_pmdmapped,              FAM_VM_NODE_PAGE_STATE, "state", "file_pmdmapped"
 nr_anon_transparent_hugepages,  FAM_VM_NODE_PAGE_STATE, "state", "anon_transparent_hugepages"
-nr_vmscan_write,                FAM_VM_NODE_PAGE_STATE, "state", "vmscan_write"
-nr_vmscan_immediate_reclaim,    FAM_VM_NODE_PAGE_STATE, "state", "vmscan_immediate_reclaim"
+nr_vmscan_write,                FAM_VM_VMSCAN_WRITE, NULL, NULL
+nr_vmscan_immediate_reclaim,    FAM_VM_VMSCAN_IMMEDIATE_RECLAIM, NULL, NULL
 nr_dirtied,                     FAM_VM_PAGES_DIRTIED, NULL, NULL
 nr_written,                     FAM_VM_PAGES_WRITTEN, NULL, NULL
 nr_throttled_written,           FAM_VM_PAGES_THROTTLED_WRITTEN, NULL, NULL
@@ -210,7 +210,7 @@ balloon_inflate,                FAM_VM_BALLOON_INFLATE, NULL, NULL
 balloon_deflate,                FAM_VM_BALLOON_DEFLATE, NULL, NULL
 balloon_migrate,                FAM_VM_BALLOON_MIGRATE, NULL, NULL
 nr_tlb_remote_flush,            FAM_VM_TLB_REMOTE_FLUSH, NULL, NULL
-nr_tlb_remote_flush_receivedr,  FAM_VM_TLB_REMOTE_FLUSH_RECEIVED, NULL, NULL
+nr_tlb_remote_flush_received,   FAM_VM_TLB_REMOTE_FLUSH_RECEIVED, NULL, NULL
 nr_tlb_local_flush_all,         FAM_VM_TLB_LOCAL_FLUSH_ALL, NULL, NULL
 nr_tlb_local_flush_one,         FAM_VM_TLB_LOCAL_FLUSH_ONE, NULL, NULL
 swap_ra,                        FAM_VM_SWAP_READAHEAD, NULL, NULL
