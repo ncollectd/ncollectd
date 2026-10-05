@@ -398,6 +398,8 @@ static int logind_list_sessions(sd_bus *bus, c_avl_tree_t *sessions)
     sd_bus_message *reply = NULL;
     sd_bus_error error = SD_BUS_ERROR_NULL;
 
+    sessions_total = 0;
+
     int status = sd_bus_call_method(bus, "org.freedesktop.login1",
                                          "/org/freedesktop/login1",
                                          "org.freedesktop.login1.Manager",
@@ -417,8 +419,6 @@ static int logind_list_sessions(sd_bus *bus, c_avl_tree_t *sessions)
         return -1;
     }
 
-    sessions_total = 0;
-
     while (true) {
         char *seat_id = NULL;
         char *session_object_path = NULL;
@@ -428,22 +428,22 @@ static int logind_list_sessions(sd_bus *bus, c_avl_tree_t *sessions)
         if (status <= 0)
           break;
 
-        sessions_total++;
-
         int remote = 0;
         if (logind_group_by & LOGIND_GROUP_BY_REMOTE) {
             status = get_property_bool(bus, "org.freedesktop.login1", session_object_path,
                                         "org.freedesktop.login1.Session", "Remote", &remote);
             if (status != 0)
-                break;
+                continue;
         }
 
         char *type = NULL;
         if (logind_group_by & LOGIND_GROUP_BY_TYPE) {
             status = get_property_string(bus, "org.freedesktop.login1", session_object_path,
                                               "org.freedesktop.login1.Session", "Type", &type);
-            if (status != 0)
-                break;
+            if (status != 0) {
+                free(type);
+                continue;
+            }
         }
 
         char *class = NULL;
@@ -452,9 +452,12 @@ static int logind_list_sessions(sd_bus *bus, c_avl_tree_t *sessions)
                                               "org.freedesktop.login1.Session", "Class", &class);
             if (status != 0) {
                 free(type);
-                break;
+                free(class);
+                continue;
             }
         }
+
+        sessions_total++;
 
         logind_session_inc(sessions, seat_id, remote, type, class);
 
@@ -477,7 +480,7 @@ static int logind_read(void)
 
     int status = sd_bus_default_system(&bus);
     if (status < 0) {
-        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERRNO);
+        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERROR(-status));
         return -1;
     }
 
