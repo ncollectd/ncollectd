@@ -16,7 +16,8 @@
 enum {
     FAM_APACHE_UP,
     FAM_APACHE_REQUESTS,
-    FAM_APACHE_BYTES,
+    FAM_APACHE_SEND,
+    FAM_APACHE_DURATION,
     FAM_APACHE_WORKERS,
     FAM_APACHE_SCOREBOARD,
     FAM_APACHE_CONNECTIONS,
@@ -36,10 +37,15 @@ static metric_family_t fams[FAM_APACHE_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Apache total requests.",
     },
-    [FAM_APACHE_BYTES] = {
-        .name = "apache_bytes",
+    [FAM_APACHE_SEND] = {
+        .name = "apache_send_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Apache total bytes sent.",
+    },
+    [FAM_APACHE_DURATION] = {
+        .name = "apache_duration_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Apache total duration of all registered requests in seconds.",
     },
     [FAM_APACHE_WORKERS] = {
         .name = "apache_workers",
@@ -150,21 +156,19 @@ static size_t apache_header_callback(void *buf, size_t size, size_t nmemb, void 
     if (len == 0)
         return len;
 
+    if (len < strlen("Server: "))
+        return len;
+
     /* look for the Server header */
     if (strncasecmp(buf, "Server: ", strlen("Server: ")) != 0)
         return len;
 
-    if (strstr(buf, "Apache") != NULL) {
+    if (memmem(buf, len, "Apache", strlen("Apache")) != NULL) {
         ctx->server_type = APACHE;
-    } else if (strstr(buf, "lighttpd") != NULL) {
+    } else if (memmem(buf, len, "lighttpd", strlen("lighttpd")) != NULL) {
         ctx->server_type = LIGHTTPD;
-    } else if (strstr(buf, "IBM_HTTP_Server") != NULL) {
+    } else if (memmem(buf, len, "IBM_HTTP_Server", strlen("IBM_HTTP_Server")) != NULL) {
         ctx->server_type = APACHE;
-    } else {
-        ctx->server_type = APACHE;
-        const char *hdr = buf;
-        hdr += strlen("Server: ");
-        PLUGIN_NOTICE("Unknown server software: %s", hdr);
     }
 
     return len;
@@ -270,7 +274,7 @@ static int apache_curl_init(apache_ctx_t *ctx)
         }
 
 #else
-        static char credentials[1024];
+        char credentials[1024];
         int status = snprintf(credentials, sizeof(credentials), "%s:%s", ctx->user,
                                            (ctx->pass == NULL) ? "" : ctx->pass);
         if ((status < 0) || ((size_t)status >= sizeof(credentials))) {
@@ -579,18 +583,25 @@ static int apache_read(user_data_t *user_data)
     while ((line = strtok_r(ptr, "\n\r", &saveptr)) != NULL) {
         ptr = NULL;
         char *fields[4];
-
+        uint64_t value = 0;
         int fields_num = strsplit(line, fields, STATIC_ARRAY_SIZE(fields));
 
         if (fields_num == 3) {
-            if ((strcmp(fields[0], "Total") == 0) && (strcmp(fields[1], "Accesses:") == 0)) {
-                metric_family_append(&ctx->fams[FAM_APACHE_REQUESTS],
-                                     VALUE_COUNTER((uint64_t)atoll(fields[2])),
-                                     &ctx->labels, NULL);
-            } else if ((strcmp(fields[0], "Total") == 0) && (strcmp(fields[1], "kBytes:") == 0)) {
-                metric_family_append(&ctx->fams[FAM_APACHE_BYTES],
-                                     VALUE_COUNTER((uint64_t)(1024LL * atoll(fields[2]))),
-                                     &ctx->labels, NULL);
+            if ((strcmp(fields[0], "Total") == 0)) {
+                if (strcmp(fields[1], "Accesses:") == 0) {
+                    if (strtouint(fields[2], &value) == 0)
+                        metric_family_append(&ctx->fams[FAM_APACHE_REQUESTS],
+                                             VALUE_COUNTER(value), &ctx->labels, NULL);
+                } else if (strcmp(fields[1], "kBytes:") == 0) {
+                    if (strtouint(fields[2], &value) == 0)
+                        metric_family_append(&ctx->fams[FAM_APACHE_SEND],
+                                             VALUE_COUNTER(value * 1024), &ctx->labels, NULL);
+                } else if (strcmp(fields[1], "Duration:") == 0) {
+                    if (strtouint(fields[2], &value) == 0)
+                        metric_family_append(&ctx->fams[FAM_APACHE_DURATION],
+                                             VALUE_COUNTER_FLOAT64((double)value / 1000.0),
+                                             &ctx->labels, NULL);
+                }
             }
         } else if (fields_num == 2) {
             if (strcmp(fields[0], "Scoreboard:") == 0) {
@@ -598,39 +609,47 @@ static int apache_read(user_data_t *user_data)
             } else if (!apache_connections_submitted &&
                        ((strcmp(fields[0], "BusyServers:") == 0) /* Apache 1.* */
                        || (strcmp(fields[0], "BusyWorkers:") == 0)) /* Apache 2.* */) {
-                metric_family_append(&ctx->fams[FAM_APACHE_WORKERS],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &LABEL_PAIR_CONST("state", "busy"), NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_WORKERS],
+                                         VALUE_GAUGE(value), &ctx->labels,
+                                         &LABEL_PAIR_CONST("state", "busy"), NULL);
                 apache_connections_submitted++;
             } else if (!apache_idle_workers_submitted &&
                        ((strcmp(fields[0], "IdleServers:") == 0) /* Apache 1.x */
                        ||(strcmp(fields[0], "IdleWorkers:") == 0)) /* Apache 2.x */) {
-                metric_family_append(&ctx->fams[FAM_APACHE_WORKERS],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &LABEL_PAIR_CONST("state", "idle"), NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_WORKERS],
+                                         VALUE_GAUGE(value), &ctx->labels,
+                                         &LABEL_PAIR_CONST("state", "idle"), NULL);
                 apache_idle_workers_submitted++;
             } else if (strcmp(fields[0], "ConnsTotal:") == 0) {
-                metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &LABEL_PAIR_CONST("state", "total"), NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
+                                         VALUE_GAUGE(value), &ctx->labels,
+                                         &LABEL_PAIR_CONST("state", "total"), NULL);
             } else if (strcmp(fields[0], "ConnsAsyncWriting:") == 0) {
-                metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &LABEL_PAIR_CONST("state", "writing"), NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
+                                         VALUE_GAUGE(value), &ctx->labels,
+                                         &LABEL_PAIR_CONST("state", "writing"), NULL);
             } else if (strcmp(fields[0], "ConnsAsyncKeepAlive:") == 0) {
-                metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &LABEL_PAIR_CONST("state", "keepalive"), NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
+                                         VALUE_GAUGE(value), &ctx->labels,
+                                         &LABEL_PAIR_CONST("state", "keepalive"), NULL);
             } else if (strcmp(fields[0], "ConnsAsyncClosing:") == 0) {
-                metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels,
-                                     &LABEL_PAIR_CONST("state", "closing"), NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_CONNECTIONS],
+                                         VALUE_GAUGE(value), &ctx->labels,
+                                         &LABEL_PAIR_CONST("state", "closing"), NULL);
             } else if (strcmp(fields[0], "Processes:") == 0) {
-                metric_family_append(&ctx->fams[FAM_APACHE_PROCESSES],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels, NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_PROCESSES],
+                                         VALUE_GAUGE(value), &ctx->labels, NULL);
             } else if (strcmp(fields[0], "ServerUptimeSeconds:") == 0) {
-                metric_family_append(&ctx->fams[FAM_APACHE_UPTIME],
-                                     VALUE_GAUGE(atol(fields[1])), &ctx->labels, NULL);
+                if (strtouint(fields[1], &value) == 0)
+                    metric_family_append(&ctx->fams[FAM_APACHE_UPTIME],
+                                         VALUE_GAUGE(value), &ctx->labels, NULL);
             }
 
         }
@@ -704,16 +723,26 @@ static int apache_config_instance (config_item_t *ci)
             break;
     }
 
-    /* Check if struct is complete.. */
-    if ((status == 0) && (ctx->url == NULL)) {
-        PLUGIN_ERROR("Instance '%s': No 'url' has been configured.", ctx->name);
-        status = -1;
-    }
-
     if (status != 0) {
         apache_free(ctx);
         return -1;
     }
+
+    if (ctx->url == NULL) {
+        PLUGIN_ERROR("Instance `%s': No 'url' has been configured.", ctx->name);
+        apache_free(ctx);
+        return -1;
+    }
+    
+    if ((ctx->server != NULL) && 
+        (strcasecmp(ctx->server, "apache") != 0) && 
+        (strcasecmp(ctx->server, "lighttpd") != 0) &&
+        (strcasecmp(ctx->server, "ibm_http_server") != 0)) {
+        PLUGIN_ERROR("Instance `%s': Unknown server type: '%s'.", ctx->name, ctx->server);
+        apache_free(ctx);
+        return -1;
+    }
+
 
     label_set_add(&ctx->labels, true, "instance", ctx->name);
 
