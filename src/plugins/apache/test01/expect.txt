@@ -2,8 +2,10 @@
 apache_up{hostname="localhost.localdomain",instance="local"} 1
 # TYPE apache_requests counter
 apache_requests_total{hostname="localhost.localdomain",instance="local"} 784953
-# TYPE apache_bytes counter
-apache_bytes_total{hostname="localhost.localdomain",instance="local"} 6929993728
+# TYPE apache_send_bytes counter
+apache_send_bytes_total{hostname="localhost.localdomain",instance="local"} 6929993728
+# TYPE apache_duration_seconds counter
+apache_duration_seconds_total{hostname="localhost.localdomain",instance="local"} 375.955
 # TYPE apache_workers gauge
 apache_workers{hostname="localhost.localdomain",instance="local",state="busy"} 13
 apache_workers{hostname="localhost.localdomain",instance="local",state="idle"} 212
