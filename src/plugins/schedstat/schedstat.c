@@ -16,14 +16,14 @@ enum {
 
 static metric_family_t fams[FAM_SCHEDSTAT_MAX]= {
     [FAM_SCHEDSTAT_RUNNING] = {
-        .name = "system_schedstat_running",
+        .name = "system_schedstat_running_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of jiffies spent running a process.",
+        .help = "Number of seconds spent running a process.",
     },
     [FAM_SCHEDSTAT_WAITING] = {
-        .name = "system_schedstat_waiting",
+        .name = "system_schedstat_waiting_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of jiffies waiting for this CPU.",
+        .help = "Number of seconds waiting for this CPU.",
     },
     [FAM_SCHEDSTAT_TIMESLICES] = {
         .name = "system_schedstat_timeslices",
@@ -51,24 +51,36 @@ static int schedstat_read(void)
             continue;
 
         char *ncpu = fields[0] + 3;
-        value_t value = {0};
 
-        value = VALUE_COUNTER(strtol(fields[7], NULL, 10));
-        metric_family_append(&fams[FAM_SCHEDSTAT_RUNNING], value, NULL,
+        uint64_t running = 0;
+        if (strtouint(fields[7], &running) != 0)
+            continue;
+
+        uint64_t waiting = 0;
+        if (strtouint(fields[8], &waiting) != 0)
+            continue;
+
+        uint64_t slices = 0;
+        if (strtouint(fields[9], &slices) != 0)
+            continue;
+
+        metric_family_append(&fams[FAM_SCHEDSTAT_RUNNING],
+                             VALUE_COUNTER_FLOAT64((double)running/(double)1e9), NULL,
                              &LABEL_PAIR_CONST("cpu", ncpu), NULL);
 
-        value = VALUE_COUNTER(strtol(fields[8], NULL, 10));
-        metric_family_append(&fams[FAM_SCHEDSTAT_WAITING], value, NULL,
+        metric_family_append(&fams[FAM_SCHEDSTAT_WAITING],
+                             VALUE_COUNTER_FLOAT64((double)waiting/(double)1e9), NULL,
                              &LABEL_PAIR_CONST("cpu", ncpu), NULL);
 
-
-        value = VALUE_COUNTER(strtol(fields[9], NULL, 10));
-        metric_family_append(&fams[FAM_SCHEDSTAT_TIMESLICES], value, NULL,
+        metric_family_append(&fams[FAM_SCHEDSTAT_TIMESLICES],
+                             VALUE_COUNTER(slices), NULL,
                              &LABEL_PAIR_CONST("cpu", ncpu), NULL);
     }
+
     fclose(fh);
 
     plugin_dispatch_metric_family_array(fams, FAM_SCHEDSTAT_MAX, 0);
+
     return 0;
 }
 
