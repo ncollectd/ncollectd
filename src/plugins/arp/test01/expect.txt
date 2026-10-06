@@ -1,3 +1,7 @@
 # TYPE system_arp_entries gauge
-system_arp_entries{device="enp36s0",hostname="localhost.localdomain"} 1
-system_arp_entries{device="enp38s0",hostname="localhost.localdomain"} 8
+system_arp_entries{device="enp36s0",hostname="localhost.localdomain",state="incomplete"} 0
+system_arp_entries{device="enp36s0",hostname="localhost.localdomain",state="complete"} 1
+system_arp_entries{device="enp36s0",hostname="localhost.localdomain",state="permanent"} 0
+system_arp_entries{device="enp38s0",hostname="localhost.localdomain",state="incomplete"} 5
+system_arp_entries{device="enp38s0",hostname="localhost.localdomain",state="complete"} 3
+system_arp_entries{device="enp38s0",hostname="localhost.localdomain",state="permanent"} 0

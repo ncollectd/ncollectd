@@ -6,11 +6,21 @@
 #include "libutils/common.h"
 #include "libutils/avltree.h"
 
+#ifdef HAVE_NET_IF_H
+#include <net/if.h>
+#endif
+
+#ifndef IF_NAMESIZE
+#define IF_NAMESIZE 16
+#endif
+
 static char *path_proc_arp;
 
 typedef struct {
-    double num;
-    char device[];
+    uint64_t incomplete;
+    uint64_t complete;
+    uint64_t permanent;
+    char device[IF_NAMESIZE];
 } arp_device_t;
 
 static metric_family_t fam_arp = {
@@ -18,6 +28,31 @@ static metric_family_t fam_arp = {
     .type = METRIC_TYPE_GAUGE,
     .help = "ARP entries by device.",
 };
+
+static void arp_device_tree_free(c_avl_tree_t *tree)
+{
+    while (true) {
+        arp_device_t *arp_device = NULL;
+        char *key = NULL;
+        int status = c_avl_pick(tree, (void *)&key, (void *)&arp_device);
+        if (status != 0)
+            break;
+        free(arp_device);
+    }
+
+    c_avl_destroy(tree);
+}
+
+static void arp_device_inc(arp_device_t *arp, int flag)
+{
+    if (flag & 0x04) {
+        arp->permanent++;
+    } else if (flag & 0x02) {
+        arp->complete++;
+    } else {
+        arp->incomplete++;
+    }
+}
 
 static int arp_read(void)
 {
@@ -48,30 +83,37 @@ static int arp_read(void)
         if (unlikely(device == NULL))
             continue;
 
-        size_t len = strlen(device);
-        if (unlikely(len == 0))
-             continue;
+        int flags = strtoul(fields[2], NULL, 16);
 
         arp_device_t *arp_device = NULL;
         int status = c_avl_get(tree, device, (void *)&arp_device);
         if (status == 0) {
             assert(arp_device != NULL);
-            arp_device->num++;
+            arp_device_inc(arp_device, flags);
             continue;
         }
 
-        arp_device = calloc(1, sizeof(*arp_device)+len+1);
-        if (unlikely(arp_device == NULL))
-            continue;
+        arp_device = calloc(1, sizeof(*arp_device));
+        if (unlikely(arp_device == NULL)) {
+            PLUGIN_ERROR("calloc failed.");
+            arp_device_tree_free(tree);
+            fclose(fh);
+            return -1;
+        }
 
-        arp_device->num = 1;
-        memcpy(arp_device->device, device, len+1);
+        arp_device_inc(arp_device, flags);
+        sstrncpy(arp_device->device, device, sizeof(arp_device->device));
+
         status = c_avl_insert(tree, arp_device->device, arp_device);
         if (unlikely(status != 0)) {
+            PLUGIN_ERROR("avl_insert failed.");
             free(arp_device);
-            continue;
+            arp_device_tree_free(tree);
+            fclose(fh);
+            return -1;
         }
     }
+
     fclose(fh);
 
     while (true) {
@@ -80,13 +122,21 @@ static int arp_read(void)
         int status = c_avl_pick(tree, (void *)&key, (void *)&arp_device);
         if (status != 0)
             break;
-        metric_family_append(&fam_arp, VALUE_GAUGE(arp_device->num), NULL,
+        metric_family_append(&fam_arp, VALUE_GAUGE(arp_device->incomplete), NULL,
+                             &LABEL_PAIR_CONST("state", "incomplete"),
+                             &LABEL_PAIR_CONST("device", key), NULL);
+        metric_family_append(&fam_arp, VALUE_GAUGE(arp_device->complete), NULL,
+                             &LABEL_PAIR_CONST("state", "complete"),
+                             &LABEL_PAIR_CONST("device", key), NULL);
+        metric_family_append(&fam_arp, VALUE_GAUGE(arp_device->permanent), NULL,
+                             &LABEL_PAIR_CONST("state", "permanent"),
                              &LABEL_PAIR_CONST("device", key), NULL);
         free(arp_device);
     }
 
     c_avl_destroy(tree);
     plugin_dispatch_metric_family(&fam_arp, submit);
+
     return 0;
 }
 
