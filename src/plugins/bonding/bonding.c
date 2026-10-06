@@ -26,7 +26,7 @@ static metric_family_t fams[FAM_BONDING_MAX] = {
     [FAM_BONDING_ACTIVE] = {
         .name = "system_bonding_active",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Number of active slaves per bonding interface.",
+        .help = "Number of active slaves with MII link up per bonding interface.",
     },
 };
 
@@ -38,7 +38,7 @@ static int bonding_read(void)
     char masters[4097];
     ssize_t size = read_file(path, masters, sizeof(masters));
     if (size <= 0) {
-        PLUGIN_ERROR("Cannot read \"%s\".", path);
+        PLUGIN_ERROR("Cannot read '%s'.", path);
         return -1;
     }
 
@@ -52,7 +52,7 @@ static int bonding_read(void)
         char slaves[4097];
         size = read_file(path, slaves, sizeof(slaves));
         if (size <= 0) {
-            PLUGIN_ERROR("Cannot read \"%s\".", path);
+            PLUGIN_ERROR("Cannot read '%s'.", path);
             continue;
         }
 
@@ -63,6 +63,8 @@ static int bonding_read(void)
         char *slave_saveptr = NULL;
         char *slave;
         while ((slave = strtok_r(slave_ptr, " \n", &slave_saveptr)) != NULL) {
+            bonding_slaves++;
+
             slave_ptr = NULL;
             ssnprintf(path, sizeof(path), "%s/%s/lower_%s/bonding_slave/mii_status",
                                           path_sys_net, master, slave);
@@ -73,12 +75,11 @@ static int bonding_read(void)
                                                path_sys_net, master, slave);
                 size = read_file(path, mii_status, sizeof(mii_status));
                 if (size <= 0) {
-                    PLUGIN_ERROR("Cannot read \"%s\".", path);
+                    PLUGIN_ERROR("Cannot read '%s'.", path);
                     continue;
                 }
             }
 
-            bonding_slaves++;
             if (strcmp(strntrim(mii_status, (size_t)size), "up") == 0)
                 bonding_active++;
         }
