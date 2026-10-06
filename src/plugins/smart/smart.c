@@ -24,7 +24,6 @@
 
 #include "smart_fams.h"
 
-#define O_RDWR 02
 #define NVME_SMART_CDW10(numdl) (((((numdl) >> 2) - 1) << 16) | 0x00000002)
 #define SHIFT_BYTE_LEFT 256
 struct nvme_admin_cmd {
@@ -86,6 +85,8 @@ static void handle_attribute(__attribute__((unused)) SkDisk *d,
     metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_PRETTY],
                          VALUE_GAUGE(a->pretty_value), ud->labels,
                          &LABEL_PAIR_CONST("attribute", a->name),
+                         &LABEL_PAIR_CONST("attribute_unit",
+                                           sk_smart_attribute_unit_to_string(a->pretty_unit)),
                          &LABEL_PAIR_CONST("attribute_id", id),
                          NULL);
     metric_family_append(&ud->fams[FAM_SMART_ATTRIBUTE_THRESHOLD],
@@ -122,6 +123,8 @@ static void handle_attribute(__attribute__((unused)) SkDisk *d,
         notification_annotation_set(&n, "threshold", message);
 
         plugin_dispatch_notification(&n);
+
+        notification_reset(&n);
     }
 }
 
@@ -166,7 +169,7 @@ static int get_vendor_id(const char *dev)
 
     int fd = open(dev, O_RDWR);
     if (unlikely(fd < 0)) {
-        PLUGIN_ERROR("open failed with %s\n", strerror(errno));
+        PLUGIN_ERROR("open(%s) failed: %s", dev, STRERRNO);
         free(vid);
         return fd;
     }
@@ -180,7 +183,7 @@ static int get_vendor_id(const char *dev)
                                               .cdw11 = 0});
 
     if (unlikely(err < 0)) {
-        PLUGIN_ERROR("ioctl for NVME_IOCTL_ADMIN_CMD failed with %s\n", strerror(errno));
+        PLUGIN_ERROR("ioctl(NVME_IOCTL_ADMIN_CMD) on '%s' failed: %s.", dev, STRERRNO);
         close(fd);
         free(vid);
         return err;
@@ -203,7 +206,7 @@ static int smart_read_nvme_disk(const char *dev, metric_family_t *fams, label_se
 
     int fd = open(dev, O_RDWR);
     if (unlikely(fd < 0)) {
-        PLUGIN_ERROR("open failed with %s\n", strerror(errno));
+        PLUGIN_ERROR("open(%s) failed: %s.", dev, STRERRNO);
         free(smart_log);
         return -1;
     }
@@ -223,7 +226,7 @@ static int smart_read_nvme_disk(const char *dev, metric_family_t *fams, label_se
                                                 .data_len = sizeof(*smart_log),
                                                 .cdw10 = NVME_SMART_CDW10(sizeof(*smart_log))});
     if (unlikely(status < 0)) {
-        PLUGIN_ERROR("ioctl for NVME_IOCTL_ADMIN_CMD failed with %s\n", strerror(errno));
+        PLUGIN_ERROR("ioctl(NVME_IOCTL_ADMIN_CMD) on '%s' failed: %s.", dev, STRERRNO);
         free(smart_log);
         close(fd);
         return status;
@@ -233,84 +236,84 @@ static int smart_read_nvme_disk(const char *dev, metric_family_t *fams, label_se
 
     value_t value = {0};
 
-    value = VALUE_GAUGE((double)smart_log->data.critical_warning);
+    value = VALUE_GAUGE(smart_log->data.critical_warning);
     metric_family_append(&fams[FAM_SMART_NVME_CRITICAL_WARNING], value, labels, NULL);
 
-    value = VALUE_GAUGE(((double)(smart_log->data.temperature[1] << 8) +
+    value = VALUE_GAUGE(((smart_log->data.temperature[1] << 8) +
                                     smart_log->data.temperature[0] - 273));
     metric_family_append(&fams[FAM_SMART_NVME_TEMPERATURE], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.avail_spare);
+    value = VALUE_GAUGE(smart_log->data.avail_spare);
     metric_family_append(&fams[FAM_SMART_NVME_AVAIL_SPARE], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.spare_thresh);
+    value = VALUE_GAUGE(smart_log->data.spare_thresh);
     metric_family_append(&fams[FAM_SMART_NVME_AVAIL_SPARE_THRESH], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.percent_used);
+    value = VALUE_GAUGE(smart_log->data.percent_used);
     metric_family_append(&fams[FAM_SMART_NVME_PERCENT_USED], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.endu_grp_crit_warn_sumry);
+    value = VALUE_GAUGE(smart_log->data.endu_grp_crit_warn_sumry);
     metric_family_append(&fams[FAM_SMART_NVME_ENDU_GRP_CRIT_WARN_SUMRY], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.data_units_read));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.data_units_read));
     metric_family_append(&fams[FAM_SMART_NVME_DATA_UNITS_READ], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.data_units_written));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.data_units_written));
     metric_family_append(&fams[FAM_SMART_NVME_DATA_UNITS_WRITTEN], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.host_commands_read));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.host_commands_read));
     metric_family_append(&fams[FAM_SMART_NVME_HOST_COMMANDS_READ], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.host_commands_written));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.host_commands_written));
     metric_family_append(&fams[FAM_SMART_NVME_HOST_COMMANDS_WRITTEN], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.ctrl_busy_time));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.ctrl_busy_time));
     metric_family_append(&fams[FAM_SMART_NVME_CTRL_BUSY_TIME], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.power_cycles));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.power_cycles));
     metric_family_append(&fams[FAM_SMART_NVME_POWER_CYCLES], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.power_on_hours));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.power_on_hours));
     metric_family_append(&fams[FAM_SMART_NVME_POWER_ON_HOURS], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.unsafe_shutdowns));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.unsafe_shutdowns));
     metric_family_append(&fams[FAM_SMART_NVME_UNSAFE_SHUTDOWNS], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.media_errors));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.media_errors));
     metric_family_append(&fams[FAM_SMART_NVME_MEDIA_ERRORS], value, labels, NULL);
 
-    value = VALUE_GAUGE(int96_to_double(smart_log->data.num_err_log_entries));
+    value = VALUE_COUNTER_FLOAT64(int96_to_double(smart_log->data.num_err_log_entries));
     metric_family_append(&fams[FAM_SMART_NVME_NUM_ERR_LOG_ENTRIES], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.warning_temp_time);
+    value = VALUE_COUNTER(le32toh(smart_log->data.warning_temp_time));
     metric_family_append(&fams[FAM_SMART_NVME_WARNING_TEMP_TIME], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.critical_comp_time);
+    value = VALUE_COUNTER(le32toh(smart_log->data.critical_comp_time));
     metric_family_append(&fams[FAM_SMART_NVME_CRITICAL_COMP_TIME], value, labels, NULL);
 
     const char *temp_sensor[] = { "1", "2", "3", "4", "5", "6", "7", "8" };
     for (size_t i = 0; i < 8; i++) {
         if (smart_log->data.temp_sensor[i] > 0) {
-            value = VALUE_GAUGE((double)smart_log->data.temp_sensor[i] - 273);
+            value = VALUE_GAUGE(le16toh(smart_log->data.temp_sensor[i]) - 273);
             metric_family_append(&fams[FAM_SMART_NVME_TEMP_SENSOR], value, labels,
                                  &LABEL_PAIR_CONST("sensor", temp_sensor[i]),
                                  NULL);
         }
     }
 
-    value = VALUE_GAUGE((double)smart_log->data.thm_temp1_trans_count);
+    value = VALUE_COUNTER(le32toh(smart_log->data.thm_temp1_trans_count));
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TRANSITION_COUNT],
                          value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.thm_temp1_total_time);
+    value = VALUE_COUNTER(le32toh(smart_log->data.thm_temp1_total_time));
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TOTAL_TIME],
                          value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.thm_temp2_trans_count);
+    value = VALUE_COUNTER(le32toh(smart_log->data.thm_temp2_trans_count));
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TRANSITION_COUNT],
                          value, labels, NULL);
 
-    value = VALUE_GAUGE((double)smart_log->data.thm_temp2_total_time);
+    value = VALUE_COUNTER(le32toh(smart_log->data.thm_temp2_total_time));
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TOTAL_TIME],
                          value, labels, NULL);
 
@@ -328,7 +331,7 @@ static int smart_read_nvme_intel_disk(const char *dev, metric_family_t *fams, la
 
     int fd = open(dev, O_RDWR);
     if (unlikely(fd < 0)) {
-        PLUGIN_ERROR("open failed with %s\n", strerror(errno));
+        PLUGIN_ERROR("open(%s) failed: %s.", dev, STRERRNO);
         free(intel_smart_log);
         return -1;
     }
@@ -344,7 +347,7 @@ static int smart_read_nvme_intel_disk(const char *dev, metric_family_t *fams, la
                                                  .data_len = sizeof(*intel_smart_log),
                                                  .cdw10 = NVME_SMART_INTEL_CDW10});
     if (unlikely(status < 0)) {
-        PLUGIN_ERROR("ioctl for NVME_IOCTL_ADMIN_CMD failed with %s\n", strerror(errno));
+        PLUGIN_ERROR("ioctl(NVME_IOCTL_ADMIN_CMD) on '%s' failed: %s.", dev, STRERRNO);
         free(intel_smart_log);
         close(fd);
         return -1;
@@ -354,88 +357,92 @@ static int smart_read_nvme_intel_disk(const char *dev, metric_family_t *fams, la
 
     value_t value = {0};
 
-    value = VALUE_GAUGE((double)intel_smart_log->program_fail_cnt.norm);
+    value = VALUE_GAUGE(intel_smart_log->program_fail_cnt.norm);
     metric_family_append(&fams[FAM_SMART_NVME_PROGRAM_FAIL_COUNT_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->program_fail_cnt.raw));
     metric_family_append(&fams[FAM_SMART_NVME_PROGRAM_FAIL_COUNT_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->erase_fail_cnt.norm);
+    value = VALUE_GAUGE(intel_smart_log->erase_fail_cnt.norm);
     metric_family_append(&fams[FAM_SMART_NVME_ERASE_FAIL_COUNT_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->erase_fail_cnt.raw));
     metric_family_append(&fams[FAM_SMART_NVME_ERASE_FAIL_COUNT_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->wear_leveling_cnt.norm);
+    value = VALUE_GAUGE(intel_smart_log->wear_leveling_cnt.norm);
     metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_NORM], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)le16_to_cpu(intel_smart_log->wear_leveling_cnt.wear_level.min));
+    value = VALUE_GAUGE(le16_to_cpu(intel_smart_log->wear_leveling_cnt.wear_level.min));
     metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_MIN], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)le16_to_cpu(intel_smart_log->wear_leveling_cnt.wear_level.max));
+    value = VALUE_GAUGE(le16_to_cpu(intel_smart_log->wear_leveling_cnt.wear_level.max));
     metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_MAX], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)le16_to_cpu(intel_smart_log->wear_leveling_cnt.wear_level.avg));
+    value = VALUE_GAUGE(le16_to_cpu(intel_smart_log->wear_leveling_cnt.wear_level.avg));
     metric_family_append(&fams[FAM_SMART_NVME_WEAR_LEVELING_AVG], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->e2e_err_cnt.norm);
-    metric_family_append(&fams[FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_NORM], value, labels, NULL);
+    value = VALUE_GAUGE(intel_smart_log->e2e_err_cnt.norm);
+    metric_family_append(&fams[FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_NORM],
+                         value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->e2e_err_cnt.raw));
-    metric_family_append(&fams[FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_RAW], value, labels, NULL);
+    metric_family_append(&fams[FAM_SMART_NVME_END_TO_END_ERROR_DETECTION_COUNT_RAW],
+                         value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->crc_err_cnt.norm);
+    value = VALUE_GAUGE(intel_smart_log->crc_err_cnt.norm);
     metric_family_append(&fams[FAM_SMART_NVME_CRC_ERROR_COUNT_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->crc_err_cnt.raw));
     metric_family_append(&fams[FAM_SMART_NVME_CRC_ERROR_COUNT_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->timed_workload_media_wear.norm);
+    value = VALUE_GAUGE(intel_smart_log->timed_workload_media_wear.norm);
     metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->timed_workload_media_wear.raw));
     metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_MEDIA_WEAR_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->timed_workload_host_reads.norm);
+    value = VALUE_GAUGE(intel_smart_log->timed_workload_host_reads.norm);
     metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->timed_workload_host_reads.raw));
     metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_HOST_READS_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->timed_workload_timer.norm);
+    value = VALUE_GAUGE(intel_smart_log->timed_workload_timer.norm);
     metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->timed_workload_timer.raw));
     metric_family_append(&fams[FAM_SMART_NVME_TIMED_WORKLOAD_TIMER_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->thermal_throttle_status.norm);
+    value = VALUE_GAUGE(intel_smart_log->thermal_throttle_status.norm);
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_NORM], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->thermal_throttle_status.thermal_throttle.pct);
+    value = VALUE_GAUGE(intel_smart_log->thermal_throttle_status.thermal_throttle.pct);
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_PCT], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->thermal_throttle_status.thermal_throttle.count);
+    value = VALUE_GAUGE(intel_smart_log->thermal_throttle_status.thermal_throttle.count);
     metric_family_append(&fams[FAM_SMART_NVME_THERMAL_THROTTLE_STATUS_COUNT], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->retry_buffer_overflow_cnt.norm);
-    metric_family_append(&fams[FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_NORM], value, labels, NULL);
+    value = VALUE_GAUGE(intel_smart_log->retry_buffer_overflow_cnt.norm);
+    metric_family_append(&fams[FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_NORM],
+                         value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->retry_buffer_overflow_cnt.raw));
-    metric_family_append(&fams[FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_RAW], value, labels, NULL);
+    metric_family_append(&fams[FAM_SMART_NVME_RETRY_BUFFER_OVERFLOW_COUNT_RAW],
+                         value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->pll_lock_loss_cnt.norm);
+    value = VALUE_GAUGE(intel_smart_log->pll_lock_loss_cnt.norm);
     metric_family_append(&fams[FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->pll_lock_loss_cnt.raw));
     metric_family_append(&fams[FAM_SMART_NVME_PLL_LOCK_LOSS_COUNT_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->host_bytes_written.norm);
+    value = VALUE_GAUGE(intel_smart_log->nand_bytes_written.norm);
     metric_family_append(&fams[FAM_SMART_NVME_NAND_BYTES_WRITTEN_NORM], value, labels, NULL);
 
-    value = VALUE_GAUGE(int48_to_double(intel_smart_log->host_bytes_written.raw));
+    value = VALUE_GAUGE(int48_to_double(intel_smart_log->nand_bytes_written.raw));
     metric_family_append(&fams[FAM_SMART_NVME_NAND_BYTES_WRITTEN_RAW], value, labels, NULL);
 
-    value = VALUE_GAUGE((double)intel_smart_log->host_bytes_written.norm);
+    value = VALUE_GAUGE(intel_smart_log->host_bytes_written.norm);
     metric_family_append(&fams[FAM_SMART_NVME_HOST_BYTES_WRITTEN_NORM], value, labels, NULL);
 
     value = VALUE_GAUGE(int48_to_double(intel_smart_log->host_bytes_written.raw));
@@ -451,27 +458,27 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
 {
     SkBool available = FALSE;
     if (sk_disk_identify_is_available(d, &available) < 0 || !available) {
-        PLUGIN_DEBUG("disk %s cannot be identified.", name);
+        PLUGIN_DEBUG("Disk '%s' cannot be identified.", name);
         return;
     }
     if (sk_disk_smart_is_available(d, &available) < 0 || !available) {
-        PLUGIN_DEBUG("disk %s has no SMART support.", name);
+        PLUGIN_DEBUG("Disk '%s' has no SMART support.", name);
         return;
     }
     if (!ignore_sleep_mode) {
         SkBool awake = FALSE;
         if (sk_disk_check_sleep_mode(d, &awake) < 0 || !awake) {
-            PLUGIN_DEBUG("disk %s is sleeping.", name);
+            PLUGIN_DEBUG("Disk '%s' is sleeping.", name);
             return;
         }
     }
     if (sk_disk_smart_read_data(d) < 0) {
-        PLUGIN_ERROR("unable to get SMART data for disk %s.", name);
+        PLUGIN_ERROR("Unable to get SMART data for disk '%s'.", name);
         return;
     }
 
     if (sk_disk_smart_parse(d, &(SkSmartParsedData const *){NULL}) < 0) {
-        PLUGIN_ERROR("unable to parse SMART data for disk %s.", name);
+        PLUGIN_ERROR("Unable to parse SMART data for disk '%s'.", name);
         return;
     }
 
@@ -479,23 +486,22 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
     uint64_t value;
     if (sk_disk_smart_get_power_on(d, &value) >= 0) {
         metric_family_append(&fams[FAM_SMART_POWER_ON],
-                             VALUE_GAUGE(((double)value) / 1000.0), labels, NULL);
+                             VALUE_COUNTER_FLOAT64(((double)value) / 1000.0), labels, NULL);
     } else {
-        PLUGIN_DEBUG("unable to get milliseconds since power on for %s.", name);
+        PLUGIN_DEBUG("Unable to get milliseconds since power on for '%s'.", name);
     }
 
     if (sk_disk_smart_get_power_cycle(d, &value) >= 0) {
-        metric_family_append(&fams[FAM_SMART_POWER_CYCLES],
-                             VALUE_GAUGE((double)value), labels, NULL);
+        metric_family_append(&fams[FAM_SMART_POWER_CYCLES], VALUE_COUNTER(value), labels, NULL);
     } else {
-        PLUGIN_DEBUG("unable to get number of power cycles for %s.", name);
+        PLUGIN_DEBUG("Unable to get number of power cycles for '%s'.", name);
     }
 
     if (sk_disk_smart_get_bad(d, &value) >= 0) {
         metric_family_append(&fams[FAM_SMART_BAD_SECTORS],
                              VALUE_GAUGE((double)value), labels, NULL);
     } else {
-        PLUGIN_DEBUG("unable to get number of bad sectors for %s.", name);
+        PLUGIN_DEBUG("Unable to get number of bad sectors for '%s'.", name);
     }
 
     if (sk_disk_smart_get_temperature(d, &value) >= 0) {
@@ -503,7 +509,7 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
                              VALUE_GAUGE(((double)value) / 1000. - 273.15),
                              labels, NULL);
     } else {
-        PLUGIN_DEBUG("unable to get temperature for %s.", name);
+        PLUGIN_DEBUG("Unable to get temperature for '%s'.", name);
     }
 
     /* Grab all attributes */
@@ -512,9 +518,8 @@ static void smart_read_sata_disk(SkDisk *d, char const *name,
         .labels = labels,
         .device = name,
     };
-    if (sk_disk_smart_parse_attributes(d, handle_attribute, (void *)&ud) < 0) {
-        PLUGIN_ERROR("unable to handle SMART attributes for %s.", name);
-    }
+    if (sk_disk_smart_parse_attributes(d, handle_attribute, (void *)&ud) < 0)
+        PLUGIN_ERROR("Unable to handle SMART attributes for '%s'.", name);
 }
 
 static void smart_handle_disk(const char *dev, const char *serial, metric_family_t *fams)
@@ -527,18 +532,18 @@ static void smart_handle_disk(const char *dev, const char *serial, metric_family
     dev_name++;
 
     if (!exclist_match(&excl_disk, dev_name)) {
-        PLUGIN_DEBUG("ignoring %s. name = %s", dev, dev_name);
+        PLUGIN_DEBUG("Ignoring '%s'. name = %s", dev, dev_name);
         return;
     }
 
     if (serial != NULL) {
         if (!exclist_match(&excl_serial, serial)) {
-            PLUGIN_DEBUG("ignoring %s. serial= %s", dev, serial);
+            PLUGIN_DEBUG("Ignoring '%s'. serial= %s", dev, serial);
             return;
         }
     }
 
-    PLUGIN_DEBUG("checking SMART status of %s.", dev);
+    PLUGIN_DEBUG("Checking SMART status of %s.", dev);
 
     label_set_t labels = {0};
     label_set_add(&labels, true, "disk", dev_name);
@@ -548,13 +553,13 @@ static void smart_handle_disk(const char *dev, const char *serial, metric_family
     if (strstr(dev, "nvme")) {
         int err = smart_read_nvme_disk(dev, fams, &labels);
         if (err < 0) {
-            PLUGIN_ERROR("smart_read_nvme_disk failed, %d", err);
+            PLUGIN_ERROR("smart_read_nvme_disk failed: %d", err);
         } else {
             switch (get_vendor_id(dev)) {
             case INTEL_VENDOR_ID:
                 err = smart_read_nvme_intel_disk(dev, fams, &labels);
                 if (err < 0)
-                    PLUGIN_ERROR("smart_read_nvme_intel_disk failed, %d", err);
+                    PLUGIN_ERROR("smart_read_nvme_intel_disk failed: %d", err);
                 break;
 
             default:
@@ -565,7 +570,7 @@ static void smart_handle_disk(const char *dev, const char *serial, metric_family
     } else {
         SkDisk *d = NULL;
         if (sk_disk_open(dev, &d) < 0) {
-            PLUGIN_ERROR("unable to open %s.", dev);
+            PLUGIN_ERROR("Unable to open '%s'.", dev);
         } else {
             smart_read_sata_disk(d, dev_name, fams, &labels);
             sk_disk_free(d);
@@ -581,7 +586,7 @@ static int smart_read(void)
     /* Use udev to get a list of disks */
     struct udev *handle_udev = udev_new();
     if (handle_udev == NULL) {
-        PLUGIN_ERROR("unable to initialize udev.");
+        PLUGIN_ERROR("Unable to initialize udev.");
         return -1;
     }
 
@@ -630,7 +635,7 @@ static int smart_read(void)
     udev_enumerate_unref(enumerate);
     udev_unref(handle_udev);
 
-    plugin_dispatch_metric_family_array(fams_smart, FAM_SMART_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams_smart, FAM_SMART_MAX, filter, 0);
     return 0;
 }
 
@@ -666,13 +671,15 @@ static int smart_init(void)
     pagesize = getpagesize();
 
 #if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_SYS_RAWIO)
-    if (plugin_check_capability(CAP_SYS_RAWIO) != 0) {
+    if ((plugin_check_capability(CAP_SYS_RAWIO) != 0) ||
+        (plugin_check_capability(CAP_SYS_ADMIN) != 0)) {
         if (getuid() == 0)
-            PLUGIN_WARNING("Running ncollectd as root, but the CAP_SYS_RAWIO capability is missing. "
+            PLUGIN_WARNING("Running ncollectd as root, but the CAP_SYS_RAWIO or CAP_SYS_ADMIN "
+                           "capability are missing. "
                            "The plugin's read function will probably fail. "
                            "Is your init system dropping capabilities?");
         else
-            PLUGIN_WARNING("ncollectd doesn't have the CAP_SYS_RAWIO capability. "
+            PLUGIN_WARNING("ncollectd doesn't have the CAP_SYS_RAWIO or CAP_SYS_ADMIN capability. "
                            "If you don't want to run ncollectd as root, try "
                            "running 'setcap cap_sys_rawio=ep' on the ncollectd binary.");
     }

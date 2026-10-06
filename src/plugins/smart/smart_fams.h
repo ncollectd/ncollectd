@@ -99,12 +99,12 @@ static metric_family_t fams_smart[FAM_SMART_MAX] = {
     },
     [FAM_SMART_POWER_CYCLES] = {
         .name = "smart_power_cycles",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_POWER_ON] = {
         .name = "smart_power_on",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_TEMPERATURE] = {
@@ -144,62 +144,62 @@ static metric_family_t fams_smart[FAM_SMART_MAX] = {
     },
     [FAM_SMART_NVME_DATA_UNITS_READ] = {
         .name= "smart_nvme_data_units_read",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_DATA_UNITS_WRITTEN] = {
         .name= "smart_nvme_data_units_written",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_HOST_COMMANDS_READ] = {
         .name= "smart_nvme_host_commands_read",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_HOST_COMMANDS_WRITTEN] = {
         .name= "smart_nvme_host_commands_written",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_CTRL_BUSY_TIME] = {
         .name= "smart_nvme_ctrl_busy_time",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_POWER_CYCLES] = {
         .name= "smart_nvme_power_cycles",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_POWER_ON_HOURS] = {
         .name= "smart_nvme_power_on_hours",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_UNSAFE_SHUTDOWNS] = {
         .name= "smart_nvme_unsafe_shutdowns",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_MEDIA_ERRORS] = {
         .name= "smart_nvme_media_errors",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_NUM_ERR_LOG_ENTRIES] = {
         .name= "smart_nvme_num_err_log_entries",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_WARNING_TEMP_TIME] = {
         .name= "smart_nvme_warning_temp_time",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_CRITICAL_COMP_TIME] = {
         .name= "smart_nvme_critical_comp_time",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_TEMP_SENSOR] = {
@@ -209,22 +209,22 @@ static metric_family_t fams_smart[FAM_SMART_MAX] = {
     },
     [FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TRANSITION_COUNT] = {
         .name= "smart_nvme_thermal_mgmt_temp1_transition_count",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_THERMAL_MGMT_TEMP1_TOTAL_TIME] = {
         .name= "smart_nvme_thermal_mgmt_temp1_total_time",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TRANSITION_COUNT] = {
         .name= "smart_nvme_thermal_mgmt_temp2_transition_count",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_THERMAL_MGMT_TEMP2_TOTAL_TIME] = {
         .name= "smart_nvme_thermal_mgmt_temp2_total_time",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_SMART_NVME_PROGRAM_FAIL_COUNT_NORM] = {
