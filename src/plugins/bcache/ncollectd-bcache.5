@@ -7,11 +7,22 @@
 .Nd Documentation of ncollectd's bcache plugin
 .Sh SYNOPSIS
 .Bd -literal -compact
-\fBload-plugin\fP bache
-\fBplugin\fP bache
+\fBload-plugin\fP bcache
+\fBplugin\fP bcache {
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBbcache\fP plugin collect statistics from the block layer cache Bcache.
+The \fBbcache\fP plugin supports the following options:
+.Bl -tag -width Ds
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

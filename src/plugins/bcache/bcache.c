@@ -103,7 +103,7 @@ static metric_family_t fams[FAM_BCACHE_MAX] = {
     [FAM_BCACHE_WRITEBACK_RATE] = {
         .name = "system_bcache_writeback_rate",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Current writeback rate for this backing device in bytes.",
+        .help = "Current writeback rate for this backing device in bytes/second.",
     },
     [FAM_BCACHE_WRITEBACK_RATE_PROPORTIONAL_TERM] = {
         .name = "system_bcache_writeback_rate_proportional_term",
@@ -174,6 +174,7 @@ static metric_family_t fams[FAM_BCACHE_MAX] = {
 };
 
 static char *path_sys_bcache;
+static plugin_filter_t *filter;
 
 typedef struct {
     char *file;
@@ -215,7 +216,7 @@ static bcache_file_t bcache_cache_files[] = {
 };
 static size_t bcache_cache_files_size = STATIC_ARRAY_SIZE(bcache_cache_files);
 
-static double bache_strtovalue(char *string, metric_type_t type, double vscale, value_t *value)
+static int bcache_strtovalue(char *string, metric_type_t type, double vscale, value_t *value)
 {
     double scale = 1.0;
 
@@ -223,35 +224,35 @@ static double bache_strtovalue(char *string, metric_type_t type, double vscale, 
     if (len > 0) {
         switch(string[len-1]) {
         case 'k':
-            scale = 1e3;
+            scale = 1024.0;
             string[len-1] = '\0';
             break;
         case 'M':
-            scale = 1e6;
+            scale = 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         case 'G':
-            scale = 1e9;
+            scale = 1024.0 * 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         case 'T':
-            scale = 1e12;
+            scale = 1024.0 * 1024.0 * 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         case 'P':
-            scale = 1e15;
+            scale = 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         case 'E':
-            scale = 1e18;
+            scale = 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         case 'Z':
-            scale = 1e21;
+            scale = 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         case 'Y':
-            scale = 1e24;
+            scale = 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
             string[len-1] = '\0';
             break;
         }
@@ -287,7 +288,7 @@ static int bcache_read_file(int dir_fd, bcache_file_t *bf, label_set_t *labels)
 
     value_t value = {0};
     metric_family_t *fam = &fams[bf->fam];
-    int status = bache_strtovalue(buf, fam->type, bf->scale, &value);
+    int status = bcache_strtovalue(buf, fam->type, bf->scale, &value);
     if (status == 0)
         metric_family_append(fam, value, labels, NULL);
 
@@ -315,7 +316,7 @@ static int bcache_read_writeback_rate_debug(int dir_fd, label_set_t *labels)
         value_t value = {0};
 
         if (strcmp("target:", fields[0]) == 0) {
-            int status = bache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
+            int status = bcache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
             if (status == 0)
                 fam = &fams[FAM_BCACHE_DIRTY_TARGET_BYTES];
         } else if (strcmp("rate:", fields[0]) == 0) {
@@ -324,15 +325,15 @@ static int bcache_read_writeback_rate_debug(int dir_fd, label_set_t *labels)
                 if (strcmp(fields[1] + len - strlen("/sec"), "/sec") == 0)
                     fields[1][len - strlen("/sec")] = '\0';
             }
-            int status = bache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
+            int status = bcache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
             if (status == 0)
                 fam = &fams[FAM_BCACHE_WRITEBACK_RATE];
         } else if (strcmp("proportional:", fields[0]) == 0) {
-            int status = bache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
+            int status = bcache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
             if (status == 0)
                 fam = &fams[FAM_BCACHE_WRITEBACK_RATE_PROPORTIONAL_TERM];
         } else if (strcmp("integral:", fields[0]) == 0) {
-            int status = bache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
+            int status = bcache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
             if (status == 0)
                 fam = &fams[FAM_BCACHE_WRITEBACK_RATE_INTEGRAL_TERM];
         } else if (strcmp("change:", fields[0]) == 0) {
@@ -341,7 +342,7 @@ static int bcache_read_writeback_rate_debug(int dir_fd, label_set_t *labels)
                 if (strcmp(fields[1] + len - strlen("/sec"), "/sec") == 0)
                     fields[1][len - strlen("/sec")] = '\0';
             }
-            int status = bache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
+            int status = bcache_strtovalue(fields[1], METRIC_TYPE_GAUGE, 1.0, &value);
             if (status == 0)
                 fam = &fams[FAM_BCACHE_WRITEBACK_CHANGE];
         }
@@ -354,7 +355,7 @@ static int bcache_read_writeback_rate_debug(int dir_fd, label_set_t *labels)
     return 0;
 }
 
-static int bache_read_device(int dirfd, const char *path, const char *filename, void *ud)
+static int bcache_read_device(int dirfd, const char *path, const char *filename, void *ud)
 {
     label_set_t *labels = ud;
 
@@ -394,7 +395,7 @@ static int bache_read_device(int dirfd, const char *path, const char *filename, 
     return 0;
 }
 
-static int bache_read_devices(int dir_fd, const char *path, const char *filename, void *ud)
+static int bcache_read_devices(int dir_fd, const char *path, const char *filename, void *ud)
 {
     label_set_t *labels = ud;
 
@@ -418,7 +419,7 @@ static int bache_read_devices(int dir_fd, const char *path, const char *filename
             bcache_read_file(dir_device_fd, &bcache_files[i], labels);
         }
 
-        walk_directory_at(dir_fd, filename, bache_read_device, labels, 0);
+        walk_directory_at(dir_fd, filename, bcache_read_device, labels, 0);
 
         close(dir_device_fd);
     }
@@ -429,10 +430,35 @@ static int bache_read_devices(int dir_fd, const char *path, const char *filename
 static int bcache_read(void)
 {
     label_set_t labels = {0};
-    int status = walk_directory(path_sys_bcache, bache_read_devices, &labels, 0);
+    int status = walk_directory(path_sys_bcache, bcache_read_devices, &labels, 0);
     label_set_reset(&labels);
 
-    plugin_dispatch_metric_family_array(fams, FAM_BCACHE_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_BCACHE_MAX, filter, 0);
+
+    if (status != 0)
+        return -1;
+
+    return 0;
+}
+
+static int bcache_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
 
     if (status != 0)
         return -1;
@@ -454,11 +480,13 @@ static int bcache_init(void)
 static int bcache_shutdown(void)
 {
     free(path_sys_bcache);
+    plugin_filter_free(filter);
     return 0;
 }
 
 void module_register(void)
 {
+    plugin_register_config("bcache", bcache_config);
     plugin_register_init("bcache", bcache_init);
     plugin_register_read("bcache", bcache_read);
     plugin_register_shutdown("bcache", bcache_shutdown);
