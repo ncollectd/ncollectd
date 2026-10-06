@@ -8,21 +8,19 @@
 
 #include "tape.h"
 
-extern metric_family_t fams[FAM_TAPE_MAX];
+extern metric_family_t tape_fams[FAM_TAPE_MAX];
 extern exclist_t excl_tape;
+extern plugin_filter_t *tape_filter;
 
 typedef struct tape_stats {
     char *name;
     unsigned int poll_count;
     uint64_t read_ops;
     uint64_t write_ops;
-    uint64_t other_ops;
     uint64_t read_time;
     uint64_t write_time;
-    uint64_t other_time;
     uint64_t avg_read_time;
     uint64_t avg_write_time;
-    uint64_t avg_other_time;
     struct tape_stats *next;
 } tape_stats_t;
 
@@ -38,7 +36,7 @@ static bool is_tape(const char *filename)
 
     const char *digits = filename + 2;
     while(*digits != '\0') {
-        if(!isdigit(*digits))
+        if(!isdigit((unsigned char)*digits))
             return false;
         digits++;
     }
@@ -59,6 +57,9 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
                             const char *tape,  __attribute__((unused)) void *user_data)
 {
     if(!is_tape(tape))
+        return 0;
+
+    if (!exclist_match(&excl_tape, tape))
         return 0;
 
     int tape_fd = openat(dir_fd, tape, O_RDONLY | O_DIRECTORY);
@@ -91,47 +92,46 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
     }
 
     uint64_t in_flight = 0;
-    ssize_t in_flight_size = filetouint_at(tape_fd, "stats/in_flight", &in_flight);
-    if (in_flight_size > 0)
-        metric_family_append(&fams[FAM_TAPE_IN_FLIGHT_OPS], VALUE_COUNTER(in_flight), NULL,
+    if (filetouint_at(tape_fd, "stats/in_flight", &in_flight) == 0)
+        metric_family_append(&tape_fams[FAM_TAPE_IN_FLIGHT_REQUESTS], VALUE_GAUGE(in_flight), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t other_cnt = 0;
-    ssize_t other_cnt_size = filetouint_at(tape_fd, "stats/other_cnt", &other_cnt);
-    if (other_cnt_size > 0)
-        metric_family_append(&fams[FAM_TAPE_OTHER_OPS], VALUE_COUNTER(other_cnt), NULL,
+    if (filetouint_at(tape_fd, "stats/other_cnt", &other_cnt) == 0)
+        metric_family_append(&tape_fams[FAM_TAPE_OTHER_OPS], VALUE_COUNTER(other_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t read_byte_cnt = 0;
-    ssize_t read_byte_cnt_size = filetouint_at(tape_fd, "stats/read_byte_cnt", &read_byte_cnt);
-    if(read_byte_cnt_size > 0)
-        metric_family_append(&fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(read_byte_cnt), NULL,
+    if (filetouint_at(tape_fd, "stats/read_byte_cnt", &read_byte_cnt) == 0)
+        metric_family_append(&tape_fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(read_byte_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
 
     uint64_t read_cnt = 0;
-    ssize_t read_cnt_size = filetouint_at(tape_fd, "stats/read_cnt", &read_cnt);
-    if(read_cnt_size > 0)
-        metric_family_append(&fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(read_cnt), NULL,
+    bool read_cnt_found = false;
+    if (filetouint_at(tape_fd, "stats/read_cnt", &read_cnt) == 0) {
+        metric_family_append(&tape_fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(read_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
+        read_cnt_found = true;
+    }
 
     uint64_t write_byte_cnt = 0;
-    ssize_t write_byte_cnt_size = filetouint_at(tape_fd, "stats/write_byte_cnt", &write_byte_cnt);
-    if(write_byte_cnt_size > 0)
-        metric_family_append(&fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(write_byte_cnt), NULL,
+    if (filetouint_at(tape_fd, "stats/write_byte_cnt", &write_byte_cnt) == 0)
+        metric_family_append(&tape_fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(write_byte_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
     uint64_t write_cnt = 0;
-    ssize_t write_cnt_size = filetouint_at(tape_fd, "stats/write_cnt", &write_cnt);
-    if(write_cnt_size > 0)
-        metric_family_append(&fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(write_cnt), NULL,
+    bool write_cnt_found = false;
+    if (filetouint_at(tape_fd, "stats/write_cnt", &write_cnt) == 0) {
+        metric_family_append(&tape_fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(write_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
+        write_cnt_found = true;
+    }
 
     uint64_t resid_cnt = 0;
-    ssize_t resid_cnt_size = filetouint_at(tape_fd, "stats/resid_cnt", &resid_cnt);
-    if (resid_cnt_size > 0)
-        metric_family_append(&fams[FAM_TAPE_RESIDUAL], VALUE_COUNTER(resid_cnt), NULL,
+    if (filetouint_at(tape_fd, "stats/resid_cnt", &resid_cnt) == 0)
+        metric_family_append(&tape_fams[FAM_TAPE_RESIDUAL], VALUE_COUNTER(resid_cnt), NULL,
                              &LABEL_PAIR_CONST("device", tape), NULL);
 
-    if ((read_cnt_size <= 0) || (write_cnt_size <= 0)) {
+    if (!read_cnt_found || !write_cnt_found) {
         close(tape_fd);
         return 0;
     }
@@ -140,59 +140,57 @@ static int tape_read_device(int dir_fd,  __attribute__((unused)) const char *dir
     uint64_t diff_write_ops = write_cnt - ts->write_ops;
 
     uint64_t read_ns = 0;
-    ssize_t read_ns_size = filetouint_at(tape_fd, "stats/read_ns", &read_ns);
+    bool read_ns_found = false;
+    if (filetouint_at(tape_fd, "stats/read_ns", &read_ns) == 0)
+        read_ns_found = true;
 
     uint64_t write_ns = 0;
-    ssize_t write_ns_size = filetouint_at(tape_fd, "stats/write_ns", &write_ns);
+    bool write_ns_found = false;
+    if (filetouint_at(tape_fd, "stats/write_ns", &write_ns) == 0)
+        write_ns_found = true;
 
-    if ((read_ns_size <= 0) || (write_ns_size <= 0)) {
+    if (!read_ns_found || !write_ns_found) {
         close(tape_fd);
         return 0;
     }
 
+    metric_family_append(&tape_fams[FAM_TAPE_READ_TIME],
+                         VALUE_COUNTER_FLOAT64((double)read_ns/(double)1e9), NULL,
+                         &LABEL_PAIR_CONST("device", tape), NULL);
+    metric_family_append(&tape_fams[FAM_TAPE_WRITE_TIME],
+                         VALUE_COUNTER_FLOAT64((double)write_ns/(double)1e9), NULL,
+                         &LABEL_PAIR_CONST("device", tape), NULL);
+
     uint64_t diff_read_time = read_ns - ts->read_time;
     uint64_t diff_write_time = write_ns - ts->write_time;
 
-    ts->poll_count++;
-
-    uint64_t io_ns = 0;
-    ssize_t io_ns_size = filetouint_at(tape_fd, "stats/io_ns", &io_ns);
-
-    uint64_t diff_other_ops = 0;
-    if (other_cnt_size > 0)  {
-        diff_other_ops = other_cnt - ts->other_ops;
-        ts->other_ops = other_cnt;
-    }
-    uint64_t diff_other_time = 0;
-    if (io_ns_size) {
-        diff_other_time = io_ns - ts->other_time; // FIXME
-        ts->other_time = io_ns;
-    }
+    ts->read_ops = read_cnt;
+    ts->write_ops = write_cnt;
+    ts->read_time = read_ns;
+    ts->write_time = write_ns;
 
     if (diff_read_ops != 0)
         ts->avg_read_time += tape_calc_time_incr(diff_read_time, diff_read_ops);
     if (diff_write_ops != 0)
         ts->avg_write_time += tape_calc_time_incr(diff_write_time, diff_write_ops);
-    if (diff_other_ops != 0)
-        ts->avg_other_time += tape_calc_time_incr(diff_other_time, diff_other_ops);
 
-    ts->read_ops = read_cnt;
-    ts->write_ops = write_cnt;
-    ts->other_ops = other_cnt;
-    ts->read_time = read_ns;
-    ts->write_time = write_ns;
-    ts->other_time = io_ns;
+    uint64_t io_ns = 0;
+    if (filetouint_at(tape_fd, "stats/io_ns", &io_ns) == 0)
+        metric_family_append(&tape_fams[FAM_TAPE_IO_TIME],
+                             VALUE_COUNTER_FLOAT64((double)io_ns/(double)1e9), NULL,
+                             &LABEL_PAIR_CONST("device", tape), NULL);
 
+    ts->poll_count++;
     if (ts->poll_count <= 2) {
         close(tape_fd);
         return 0;
     }
 
-    metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(ts->avg_read_time), NULL,
+    metric_family_append(&tape_fams[FAM_TAPE_READ_WEIGHTED_TIME],
+                         VALUE_COUNTER_FLOAT64((double)ts->avg_read_time/(double)1e9), NULL,
                          &LABEL_PAIR_CONST("device", tape), NULL);
-    metric_family_append(&fams[FAM_TAPE_WRITE_TIME], VALUE_COUNTER(ts->avg_write_time), NULL,
-                         &LABEL_PAIR_CONST("device", tape), NULL);
-    metric_family_append(&fams[FAM_TAPE_OTHER_TIME], VALUE_COUNTER(ts->avg_other_time), NULL,
+    metric_family_append(&tape_fams[FAM_TAPE_WRITE_WEIGHTED_TIME],
+                         VALUE_COUNTER_FLOAT64((double)ts->avg_write_time/(double)1e9), NULL,
                          &LABEL_PAIR_CONST("device", tape), NULL);
 
     close(tape_fd);
@@ -204,7 +202,7 @@ int tape_read(void)
 {
     walk_directory(path_sys_tape, tape_read_device, NULL, 0);
 
-    plugin_dispatch_metric_family_array(fams, FAM_TAPE_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(tape_fams, FAM_TAPE_MAX, tape_filter, 0);
 
     return 0;
 }
@@ -223,6 +221,7 @@ int tape_init(void)
 int tape_shutdown(void)
 {
     exclist_reset(&excl_tape);
+    plugin_filter_free(tape_filter);
     free(path_sys_tape);
 
     while(tape_list != NULL) {

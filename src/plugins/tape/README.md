@@ -9,6 +9,9 @@ NCOLLECTD-TAPE(5) - File Formats Manual
 	load-plugin tape
 	plugin tape {
 	    tape [incl|include|excl|exclude] name
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -19,6 +22,12 @@ The **tape** plugin collects information about the usage of tapes.
 
 > Select tape based on the devicename.
 > See **INCLUDE AND EXCLUDE LISTS** in
+> ncollectd.conf(5).
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
 > ncollectd.conf(5).
 
 # SEE ALSO

@@ -29,7 +29,8 @@
 #include "tape.h"
 
 extern exclist_t excl_tape;
-extern metric_family_t *fams;
+extern metric_family_t tape_fams[FAM_TAPE_MAX];
+extern plugin_filter_t *tape_filter;
 
 #define MAX_NUMTAPE 256
 
@@ -62,22 +63,29 @@ int tape_read(void)
             if (!exclist_match(&excl_tape, tape_name))
                 continue;
 
-            metric_family_append(&fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(kio.KIO_ROCTETS), NULL,
+            metric_family_append(&tape_fams[FAM_TAPE_READ_BYTES],
+                                 VALUE_COUNTER(kio.KIO_ROCTETS), NULL,
                                  &LABEL_PAIR_CONST("device", tape_name), NULL);
-            metric_family_append(&fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(kio.KIO_ROPS), NULL,
+            metric_family_append(&tape_fams[FAM_TAPE_READ_OPS],
+                                 VALUE_COUNTER(kio.KIO_ROPS), NULL,
                                  &LABEL_PAIR_CONST("device", tape_name), NULL);
-            metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(kio.KIO_RTIME), NULL,
+            metric_family_append(&tape_fams[FAM_TAPE_WRITE_BYTES],
+                                 VALUE_COUNTER(kio.KIO_WOCTETS), NULL,
                                  &LABEL_PAIR_CONST("device", tape_name), NULL);
-            metric_family_append(&fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(kio.KIO_WOCTETS), NULL,
+            metric_family_append(&tape_fams[FAM_TAPE_WRITE_OPS],
+                                 VALUE_COUNTER(kio.KIO_WOPS), NULL,
                                  &LABEL_PAIR_CONST("device", tape_name), NULL);
-            metric_family_append(&fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(kio.KIO_WOPS), NULL,
+
+            metric_family_append(&tape_fams[FAM_TAPE_IO_TIME],
+                                 VALUE_COUNTER_FLOAT64((double)kio.KIO_RTIME/(double)1e9), NULL,
                                  &LABEL_PAIR_CONST("device", tape_name), NULL);
-            metric_family_append(&fams[FAM_TAPE_WRITE_TIME], VALUE_COUNTER(kio.KIO_WTIME), NULL,
+            metric_family_append(&tape_fams[FAM_TAPE_WAIT_TIME],
+                                 VALUE_COUNTER_FLOAT64((double)kio.KIO_WTIME/(double)1e9), NULL,
                                  &LABEL_PAIR_CONST("device", tape_name), NULL);
       }
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_TAPE_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(tape_fams, FAM_TAPE_MAX, tape_filter, 0);
 
     return 0;
 }
@@ -111,6 +119,7 @@ int tape_init(void)
 int tape_shutdown(void)
 {
     exclist_reset(&excl_tape);
+    plugin_filter_free(tape_filter);
 
     return 0;
 }
