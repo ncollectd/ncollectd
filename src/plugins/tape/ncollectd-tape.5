@@ -10,6 +10,9 @@
 \fBload-plugin\fP tape
 \fBplugin\fP tape {
     \fBtape\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -18,6 +21,10 @@ The \fBtape\fP plugin collects information about the usage of tapes.
 .It \fBtape\fP [\fIincl|include|excl|exclude\fP] \fIname\fP
 Select tape based on the devicename.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.Xr ncollectd.conf 5 .
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
 .Xr ncollectd.conf 5 .
 .El
 .Sh "SEE ALSO"

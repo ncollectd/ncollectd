@@ -21,7 +21,8 @@
 #include "tape.h"
 
 extern exclist_t excl_tape;
-extern metric_family_t *fams;
+extern metric_family_t tape_fams[FAM_TAPE_MAX];
+extern plugin_filter_t *tape_filter;
 
 static perfstat_tape_t *stat_tape;
 static int pnumtape;
@@ -76,7 +77,7 @@ int tape_read(void)
     first.name[0]='\0';
     int rnumtape = perfstat_tape(&first, stat_tape, sizeof(perfstat_tape_t), numtape);
     if (rnumtape < 0) {
-        PLUGIN_WARNING ("tape plugin: perfstat_tape: %s", STRERRNO);
+        PLUGIN_WARNING ("perfstat_tape: %s", STRERRNO);
         return -1;
     }
 
@@ -115,8 +116,8 @@ int tape_read(void)
         uint64_t read_ops = stat_tape[i].rxfers;
         uint64_t write_ops = stat_tape[i].xfers - stat_tape[i].rxfers;
 
-        uint64_t read_time = HTIC2NANOSEC(stat_tape[i].rserv) / 1000000.0;
-        uint64_t write_time = HTIC2NANOSEC(stat_tape[i].wserv) / 1000000.0;
+        uint64_t read_time = HTIC2NANOSEC(stat_tape[i].rserv);
+        uint64_t write_time = HTIC2NANOSEC(stat_tape[i].wserv);
 
         uint64_t diff_read_ops = read_ops - ts->read_ops;
         uint64_t diff_write_ops = write_ops - ts->write_ops;
@@ -135,30 +136,28 @@ int tape_read(void)
         ts->write_ops = write_ops;
         ts->write_time = write_time;
 
+        metric_family_append(&tape_fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(read_bytes), NULL,
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
+        metric_family_append(&tape_fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(read_ops), NULL,
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
+        metric_family_append(&tape_fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(write_bytes), NULL,
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
+        metric_family_append(&tape_fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
+                             &LABEL_PAIR_CONST("device", tape_name), NULL);
+
         ts->poll_count++;
         if (ts->poll_count <= 2)
             continue;
 
-        if ((read_ops == 0) && (write_ops == 0)) {
-            PLUGIN_DEBUG ("((read_ops == 0) && " "(write_ops == 0)); => Not writing.");
-            continue;
-        }
-
-        metric_family_append(&fams[FAM_TAPE_READ_BYTES], VALUE_COUNTER(read_bytes), NULL,
+        metric_family_append(&tape_fams[FAM_TAPE_READ_TIME],
+                             VALUE_COUNTERi_FLOAT64((double)ts->avg_read_time/(double)1e9), NULL,
                              &LABEL_PAIR_CONST("device", tape_name), NULL);
-        metric_family_append(&fams[FAM_TAPE_READ_OPS], VALUE_COUNTER(read_ops), NULL,
-                             &LABEL_PAIR_CONST("device", tape_name), NULL);
-        metric_family_append(&fams[FAM_TAPE_READ_TIME], VALUE_COUNTER(ts->avg_read_time), NULL,
-                             &LABEL_PAIR_CONST("device", tape_name), NULL);
-        metric_family_append(&fams[FAM_TAPE_WRITE_BYTES], VALUE_COUNTER(write_bytes), NULL,
-                             &LABEL_PAIR_CONST("device", tape_name), NULL);
-        metric_family_append(&fams[FAM_TAPE_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
-                             &LABEL_PAIR_CONST("device", tape_name), NULL);
-        metric_family_append(&fams[FAM_TAPE_WRITE_TIME], VALUE_COUNTER(ts->avg_write_time), NULL,
+        metric_family_append(&tape_fams[FAM_TAPE_WRITE_TIME],
+                             VALUE_COUNTER_FLOAT64((double)ts->avg_write_time/(double)1e9), NULL,
                              &LABEL_PAIR_CONST("device", tape_name), NULL);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_TAPE_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(tape_fams, FAM_TAPE_MAX, tape_filter, 0);
 
     return 0;
 }
@@ -166,7 +165,7 @@ int tape_read(void)
 int tape_shutdown(void)
 {
     exclist_reset(&excl_tape);
-
+    plugin_filter_free(tape_filter);
     free(stat_tape);
 
     while(tape_list != NULL) {

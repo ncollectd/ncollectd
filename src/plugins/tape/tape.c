@@ -8,22 +8,16 @@
 
 #include "tape.h"
 
-metric_family_t fams[FAM_TAPE_MAX] = {
-    [FAM_TAPE_IN_FLIGHT_OPS] = {
-        .name = "system_tape_in_flight_ops",
-        .type = METRIC_TYPE_COUNTER,
+metric_family_t tape_fams[FAM_TAPE_MAX] = {
+    [FAM_TAPE_IN_FLIGHT_REQUESTS] = {
+        .name = "system_tape_in_flight_requests",
+        .type = METRIC_TYPE_GAUGE,
         .help = "The number of I/Os currently outstanding to this device.",
     },
     [FAM_TAPE_OTHER_OPS] = {
         .name = "system_tape_other_ops",
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of I/Os issued to the tape drive other than read or write commands.",
-    },
-    [FAM_TAPE_OTHER_TIME] = {
-        .name = "system_tape_other_time",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "The amount of time (in nanoseconds) spent waiting for I/Ps "
-                "other than read or write commands.", // FIXME
     },
     [FAM_TAPE_READ_BYTES] = {
         .name = "system_tape_read_bytes",
@@ -36,10 +30,16 @@ metric_family_t fams[FAM_TAPE_MAX] = {
         .help = "The number of read requests issued to the tape drive.",
     },
     [FAM_TAPE_READ_TIME] = {
-        .name = "system_tape_read_time",
+        .name = "system_tape_read_time_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The amount of time (in nanoseconds) spent waiting "
-                "for read requests to complete.", // FIXME
+        .help = "The amount of time in seconds spent waiting "
+                "for read requests to complete.",
+    },
+    [FAM_TAPE_READ_WEIGHTED_TIME] = {
+        .name = "system_tape_read_weighted_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The average time in seconds "
+                "for read requests to complete.",
     },
     [FAM_TAPE_WRITE_BYTES] = {
         .name = "system_tape_write_bytes",
@@ -52,10 +52,16 @@ metric_family_t fams[FAM_TAPE_MAX] = {
         .help = "The number of write requests issued to the tape drive.",
     },
     [FAM_TAPE_WRITE_TIME] = {
-        .name = "system_tape_write_time",
+        .name = "system_tape_write_time_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The amount of time (in nanoseconds) spent waiting "
-                "for write requests to complete.", // FIXME
+        .help = "The amount of time in seconds spent waiting "
+                "for write requests to complete.", 
+    },
+    [FAM_TAPE_WRITE_WEIGHTED_TIME] = {
+        .name = "system_tape_write_weighted_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The average time in seconds "
+                "for write requests to complete.", 
     },
     [FAM_TAPE_RESIDUAL] = {
         .name = "system_tape_residual",
@@ -63,9 +69,20 @@ metric_family_t fams[FAM_TAPE_MAX] = {
         .help = "The number of times during a read or write we found "
                 "the residual amount to be non-zero.",
     },
+    [FAM_TAPE_IO_TIME] = {
+        .name = "system_tape_io_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Cumulative run (service) time in seconds.",
+    },
+    [FAM_TAPE_WAIT_TIME] = {
+        .name = "system_tape_wait_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Cumulative wait (pre-service) time in seconds.",
+    }
 };
 
 exclist_t excl_tape = {0};
+plugin_filter_t *tape_filter;
 
 static int tape_config(config_item_t *ci)
 {
@@ -76,6 +93,8 @@ static int tape_config(config_item_t *ci)
 
         if (strcasecmp(child->key, "tape") == 0) {
             status = cf_util_exclist(child, &excl_tape);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &tape_filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
