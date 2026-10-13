@@ -1,0 +1,303 @@
+# TYPE system_fscache_cookie_index counter
+# HELP system_fscache_cookie_index Total number of index cookies allocated.
+system_fscache_cookie_index_total{hostname="localhost.localdomain"} 101
+# TYPE system_fscache_cookie_data counter
+# HELP system_fscache_cookie_data Total number of data storage cookies allocated.
+system_fscache_cookie_data_total{hostname="localhost.localdomain"} 102
+# TYPE system_fscache_cookie_special counter
+# HELP system_fscache_cookie_special Total number of special cookies allocated.
+system_fscache_cookie_special_total{hostname="localhost.localdomain"} 103
+# TYPE system_fscache_object_alloc counter
+# HELP system_fscache_object_alloc Total number of objects allocated.
+system_fscache_object_alloc_total{hostname="localhost.localdomain"} 201
+# TYPE system_fscache_object_no_alloc counter
+# HELP system_fscache_object_no_alloc Total number of object allocation failures.
+system_fscache_object_no_alloc_total{hostname="localhost.localdomain"} 202
+# TYPE system_fscache_object_avail counter
+# HELP system_fscache_object_avail Total number of objects that reached the available state.
+system_fscache_object_avail_total{hostname="localhost.localdomain"} 203
+# TYPE system_fscache_object_dead counter
+# HELP system_fscache_object_dead Total number of objects that reached the dead state.
+system_fscache_object_dead_total{hostname="localhost.localdomain"} 204
+# TYPE system_fscache_checkaux_none counter
+# HELP system_fscache_checkaux_none Total number of objects that didn't have a coherency check.
+system_fscache_checkaux_none_total{hostname="localhost.localdomain"} 301
+# TYPE system_fscache_checkaux_okay counter
+# HELP system_fscache_checkaux_okay Total number of objects that passed a coherency check.
+system_fscache_checkaux_okay_total{hostname="localhost.localdomain"} 302
+# TYPE system_fscache_checkaux_update counter
+# HELP system_fscache_checkaux_update Total number of objects that needed a coherency data update.
+system_fscache_checkaux_update_total{hostname="localhost.localdomain"} 303
+# TYPE system_fscache_checkaux_obsolete counter
+# HELP system_fscache_checkaux_obsolete Total number of objects that were declared obsolete.
+system_fscache_checkaux_obsolete_total{hostname="localhost.localdomain"} 304
+# TYPE system_fscache_marks counter
+# HELP system_fscache_marks Total number of pages marked as being cached.
+system_fscache_marks_total{hostname="localhost.localdomain"} 401
+# TYPE system_fscache_uncaches counter
+# HELP system_fscache_uncaches Total number of uncache page requests seen.
+system_fscache_uncaches_total{hostname="localhost.localdomain"} 402
+# TYPE system_fscache_acquires counter
+# HELP system_fscache_acquires Total number of acquire cookie requests seen.
+system_fscache_acquires_total{hostname="localhost.localdomain"} 501
+# TYPE system_fscache_acquires_null counter
+# HELP system_fscache_acquires_null Total number of acquire requests given a NULL parent.
+system_fscache_acquires_null_total{hostname="localhost.localdomain"} 502
+# TYPE system_fscache_acquires_no_cache counter
+# HELP system_fscache_acquires_no_cache Total number of acquire requests rejected due to no cache available.
+system_fscache_acquires_no_cache_total{hostname="localhost.localdomain"} 503
+# TYPE system_fscache_acquires_ok counter
+# HELP system_fscache_acquires_ok Total number of acquire requests succeeded.
+system_fscache_acquires_ok_total{hostname="localhost.localdomain"} 504
+# TYPE system_fscache_acquires_nobufs counter
+# HELP system_fscache_acquires_nobufs Total number of acquire requests rejected due to error.
+system_fscache_acquires_nobufs_total{hostname="localhost.localdomain"} 505
+# TYPE system_fscache_acquires_oom counter
+# HELP system_fscache_acquires_oom Total number of acquire requests failed on ENOMEM.
+system_fscache_acquires_oom_total{hostname="localhost.localdomain"} 506
+# TYPE system_fscache_object_lookups counter
+# HELP system_fscache_object_lookups Total number of lookup calls made on cache backends.
+system_fscache_object_lookups_total{hostname="localhost.localdomain"} 601
+# TYPE system_fscache_object_lookups_negative counter
+# HELP system_fscache_object_lookups_negative Total number of negative lookups made.
+system_fscache_object_lookups_negative_total{hostname="localhost.localdomain"} 602
+# TYPE system_fscache_object_lookups_positive counter
+# HELP system_fscache_object_lookups_positive Total number of positive lookups made.
+system_fscache_object_lookups_positive_total{hostname="localhost.localdomain"} 603
+# TYPE system_fscache_object_created counter
+# HELP system_fscache_object_created Total number of objects created by lookup.
+system_fscache_object_created_total{hostname="localhost.localdomain"} 604
+# TYPE system_fscache_object_lookups_timed_out counter
+# HELP system_fscache_object_lookups_timed_out Total number of lookups timed out and requeued.
+system_fscache_object_lookups_timed_out_total{hostname="localhost.localdomain"} 605
+# TYPE system_fscache_invalidates counter
+# HELP system_fscache_invalidates Total number of invalidations.
+system_fscache_invalidates_total{hostname="localhost.localdomain"} 701
+# TYPE system_fscache_invalidates_run counter
+# HELP system_fscache_invalidates_run Total number of invalidations granted CPU time.
+system_fscache_invalidates_run_total{hostname="localhost.localdomain"} 702
+# TYPE system_fscache_updates counter
+# HELP system_fscache_updates Total number of update cookie requests seen.
+system_fscache_updates_total{hostname="localhost.localdomain"} 801
+# TYPE system_fscache_updates_null counter
+# HELP system_fscache_updates_null Total number of update requests given a NULL parent.
+system_fscache_updates_null_total{hostname="localhost.localdomain"} 802
+# TYPE system_fscache_updates_run counter
+# HELP system_fscache_updates_run Total number of update requests granted CPU time.
+system_fscache_updates_run_total{hostname="localhost.localdomain"} 803
+# TYPE system_fscache_relinquishes counter
+# HELP system_fscache_relinquishes Total number of relinquish cookie requests seen.
+system_fscache_relinquishes_total{hostname="localhost.localdomain"} 901
+# TYPE system_fscache_relinquishes_null counter
+# HELP system_fscache_relinquishes_null Total number of relinquish cookie given a NULL parent.
+system_fscache_relinquishes_null_total{hostname="localhost.localdomain"} 902
+# TYPE system_fscache_relinquishes_waitcrt counter
+# HELP system_fscache_relinquishes_waitcrt Total number of relinquish cookie waited on completion of creation.
+system_fscache_relinquishes_waitcrt_total{hostname="localhost.localdomain"} 903
+# TYPE system_fscache_relinquishes_retire counter
+# HELP system_fscache_relinquishes_retire Total number of relinquish retries.
+system_fscache_relinquishes_retire_total{hostname="localhost.localdomain"} 904
+# TYPE system_fscache_attr_changed counter
+# HELP system_fscache_attr_changed Total number of attribute changed requests seen.
+system_fscache_attr_changed_total{hostname="localhost.localdomain"} 1001
+# TYPE system_fscache_attr_changed_ok counter
+# HELP system_fscache_attr_changed_ok Total number of attribute changed requests queued.
+system_fscache_attr_changed_ok_total{hostname="localhost.localdomain"} 1002
+# TYPE system_fscache_attr_changed_nobufs counter
+# HELP system_fscache_attr_changed_nobufs Total number of attribute changed rejected -ENOBUFS.
+system_fscache_attr_changed_nobufs_total{hostname="localhost.localdomain"} 1003
+# TYPE system_fscache_attr_changed_nomem counter
+# HELP system_fscache_attr_changed_nomem Total number of attribute changed failed -ENOMEM.
+system_fscache_attr_changed_nomem_total{hostname="localhost.localdomain"} 1004
+# TYPE system_fscache_attr_changed_calls counter
+# HELP system_fscache_attr_changed_calls Total number of attribute changed ops given CPU time.
+system_fscache_attr_changed_calls_total{hostname="localhost.localdomain"} 1005
+# TYPE system_fscache_allocs counter
+# HELP system_fscache_allocs Total number of allocation requests seen.
+system_fscache_allocs_total{hostname="localhost.localdomain"} 2001
+# TYPE system_fscache_allocs_ok counter
+# HELP system_fscache_allocs_ok Total number of successful allocation requests.
+system_fscache_allocs_ok_total{hostname="localhost.localdomain"} 2002
+# TYPE system_fscache_allocs_wait counter
+# HELP system_fscache_allocs_wait Total number of allocation requests that waited on lookup completion.
+system_fscache_allocs_wait_total{hostname="localhost.localdomain"} 2003
+# TYPE system_fscache_allocs_nobufs counter
+# HELP system_fscache_allocs_nobufs Total number of allocation requests rejected -ENOBUFS.
+system_fscache_allocs_nobufs_total{hostname="localhost.localdomain"} 2004
+# TYPE system_fscache_allocs_intr counter
+# HELP system_fscache_allocs_intr Total number of allocation requests aborted -ERESTARTSYS.
+system_fscache_allocs_intr_total{hostname="localhost.localdomain"} 2005
+# TYPE system_fscache_alloc_ops counter
+# HELP system_fscache_alloc_ops Total number of allocation requests submitted.
+system_fscache_alloc_ops_total{hostname="localhost.localdomain"} 3001
+# TYPE system_fscache_alloc_op_waits counter
+# HELP system_fscache_alloc_op_waits Total number of allocation requests waited for CPU time.
+system_fscache_alloc_op_waits_total{hostname="localhost.localdomain"} 3004
+# TYPE system_fscache_allocs_object_dead counter
+# HELP system_fscache_allocs_object_dead Total number of allocation requests aborted due to object death.
+system_fscache_allocs_object_dead_total{hostname="localhost.localdomain"} 3005
+# TYPE system_fscache_retrievals counter
+# HELP system_fscache_retrievals Total number of retrieval (read) requests seen.
+system_fscache_retrievals_total{hostname="localhost.localdomain"} 4001
+# TYPE system_fscache_retrievals_ok counter
+# HELP system_fscache_retrievals_ok Total number of successful retrieval requests.
+system_fscache_retrievals_ok_total{hostname="localhost.localdomain"} 4002
+# TYPE system_fscache_retrievals_wait counter
+# HELP system_fscache_retrievals_wait Total number of retrieval requests that waited on lookup completion.
+system_fscache_retrievals_wait_total{hostname="localhost.localdomain"} 4003
+# TYPE system_fscache_retrievals_nodata counter
+# HELP system_fscache_retrievals_nodata Total number of retrieval requests returned -ENODATA.
+system_fscache_retrievals_nodata_total{hostname="localhost.localdomain"} 4004
+# TYPE system_fscache_retrievals_nobufs counter
+# HELP system_fscache_retrievals_nobufs Total number of retrieval requests rejected -ENOBUFS.
+system_fscache_retrievals_nobufs_total{hostname="localhost.localdomain"} 4005
+# TYPE system_fscache_retrievals_intr counter
+# HELP system_fscache_retrievals_intr Total number of retrieval requests aborted -ERESTARTSYS.
+system_fscache_retrievals_intr_total{hostname="localhost.localdomain"} 4006
+# TYPE system_fscache_retrievals_nomem counter
+# HELP system_fscache_retrievals_nomem Total number of retrieval requests failed -ENOMEM.
+system_fscache_retrievals_nomem_total{hostname="localhost.localdomain"} 4007
+# TYPE system_fscache_retrieval_ops counter
+# HELP system_fscache_retrieval_ops Total number of retrieval requests submitted.
+system_fscache_retrieval_ops_total{hostname="localhost.localdomain"} 5001
+# TYPE system_fscache_retrieval_op_waits counter
+# HELP system_fscache_retrieval_op_waits Total number of retrieval requests waited for CPU time.
+system_fscache_retrieval_op_waits_total{hostname="localhost.localdomain"} 5002
+# TYPE system_fscache_retrievals_object_dead counter
+# HELP system_fscache_retrievals_object_dead Total number of retrieval requests aborted due to object death.
+system_fscache_retrievals_object_dead_total{hostname="localhost.localdomain"} 5003
+# TYPE system_fscache_store counter
+# HELP system_fscache_store Total number of storage (write) requests seen.
+system_fscache_store_total{hostname="localhost.localdomain"} 6001
+# TYPE system_fscache_store_ok counter
+# HELP system_fscache_store_ok Total number of successful store requests.
+system_fscache_store_ok_total{hostname="localhost.localdomain"} 6002
+# TYPE system_fscache_store_again counter
+# HELP system_fscache_store_again Total number of store requests on a page already pending storage.
+system_fscache_store_again_total{hostname="localhost.localdomain"} 6003
+# TYPE system_fscache_store_nobufs counter
+# HELP system_fscache_store_nobufs Total number of store requests rejected -ENOBUFS.
+system_fscache_store_nobufs_total{hostname="localhost.localdomain"} 6004
+# TYPE system_fscache_store_oom counter
+# HELP system_fscache_store_oom Total number of store requests failed -ENOMEM.
+system_fscache_store_oom_total{hostname="localhost.localdomain"} 6005
+# TYPE system_fscache_store_ops counter
+# HELP system_fscache_store_ops Total number of store requests submitted.
+system_fscache_store_ops_total{hostname="localhost.localdomain"} 7001
+# TYPE system_fscache_store_calls counter
+# HELP system_fscache_store_calls Total number of store requests granted CPU time.
+system_fscache_store_calls_total{hostname="localhost.localdomain"} 7002
+# TYPE system_fscache_store_pages counter
+# HELP system_fscache_store_pages Total number of pages given store requests processing time.
+system_fscache_store_pages_total{hostname="localhost.localdomain"} 7003
+# TYPE system_fscache_store_radix_deletes counter
+# HELP system_fscache_store_radix_deletes Total number of store requests deleted from tracking tree.
+system_fscache_store_radix_deletes_total{hostname="localhost.localdomain"} 7004
+# TYPE system_fscache_store_pages_over_limit counter
+# HELP system_fscache_store_pages_over_limit Total number of store requests over store limit.
+system_fscache_store_pages_over_limit_total{hostname="localhost.localdomain"} 7005
+# TYPE system_fscache_store_vmscan_not_storing counter
+# HELP system_fscache_store_vmscan_not_storing Total number of release requests against pages with no pending store.
+system_fscache_store_vmscan_not_storing_total{hostname="localhost.localdomain"} 8001
+# TYPE system_fscache_store_vmscan_gone counter
+# HELP system_fscache_store_vmscan_gone Total number of release requests against pages stored by time lock granted.
+system_fscache_store_vmscan_gone_total{hostname="localhost.localdomain"} 8002
+# TYPE system_fscache_store_vmscan_busy counter
+# HELP system_fscache_store_vmscan_busy Total number of release requests ignored due to in-progress store.
+system_fscache_store_vmscan_busy_total{hostname="localhost.localdomain"} 8003
+# TYPE system_fscache_store_vmscan_cancelled counter
+# HELP system_fscache_store_vmscan_cancelled Total number of page stores cancelled due to release request.
+system_fscache_store_vmscan_cancelled_total{hostname="localhost.localdomain"} 8004
+# TYPE system_fscache_store_vmscan_wait counter
+# HELP system_fscache_store_vmscan_wait Total number of page stores waited for CPU time.
+system_fscache_store_vmscan_wait_total{hostname="localhost.localdomain"} 8005
+# TYPE system_fscache_op_pending counter
+# HELP system_fscache_op_pending Total number of times async ops added to pending queues.
+system_fscache_op_pending_total{hostname="localhost.localdomain"} 9001
+# TYPE system_fscache_op_run counter
+# HELP system_fscache_op_run Total number of times async ops given CPU time.
+system_fscache_op_run_total{hostname="localhost.localdomain"} 9002
+# TYPE system_fscache_op_enqueue counter
+# HELP system_fscache_op_enqueue Total number of times async ops queued for processing.
+system_fscache_op_enqueue_total{hostname="localhost.localdomain"} 9003
+# TYPE system_fscache_op_cancelled counter
+# HELP system_fscache_op_cancelled Total number of async ops cancelled.
+system_fscache_op_cancelled_total{hostname="localhost.localdomain"} 9004
+# TYPE system_fscache_op_rejected counter
+# HELP system_fscache_op_rejected Total number of async ops rejected due to object lookup/create failure.
+system_fscache_op_rejected_total{hostname="localhost.localdomain"} 9005
+# TYPE system_fscache_op_initialised counter
+# HELP system_fscache_op_initialised Total number of async ops initialised.
+system_fscache_op_initialised_total{hostname="localhost.localdomain"} 10001
+# TYPE system_fscache_op_deferred_release counter
+# HELP system_fscache_op_deferred_release Total number of async ops queued for deferred release.
+system_fscache_op_deferred_release_total{hostname="localhost.localdomain"} 10002
+# TYPE system_fscache_op_release counter
+# HELP system_fscache_op_release Total number of async ops released (should equal ini=N when idle).
+system_fscache_op_release_total{hostname="localhost.localdomain"} 10003
+# TYPE system_fscache_op_gc counter
+# HELP system_fscache_op_gc Total number of deferred-release async ops garbage collected.
+system_fscache_op_gc_total{hostname="localhost.localdomain"} 10004
+# TYPE system_fscache_cacheop_alloc_object gauge
+# HELP system_fscache_cacheop_alloc_object Number of in-progress alloc_object() cache ops.
+system_fscache_cacheop_alloc_object{hostname="localhost.localdomain"} 20001
+# TYPE system_fscache_cacheop_lookup_object gauge
+# HELP system_fscache_cacheop_lookup_object Number of in-progress lookup_object() cache ops.
+system_fscache_cacheop_lookup_object{hostname="localhost.localdomain"} 20002
+# TYPE system_fscache_cacheop_lookup_complete gauge
+# HELP system_fscache_cacheop_lookup_complete Number of in-progress lookup_complete() cache ops.
+system_fscache_cacheop_lookup_complete{hostname="localhost.localdomain"} 20003
+# TYPE system_fscache_cacheop_grab_object gauge
+# HELP system_fscache_cacheop_grab_object Number of in-progress grab_object() cache ops.
+system_fscache_cacheop_grab_object{hostname="localhost.localdomain"} 20004
+# TYPE system_fscache_cacheop_invalidate_object gauge
+# HELP system_fscache_cacheop_invalidate_object Number of in-progress invalidate_object() cache ops.
+system_fscache_cacheop_invalidate_object{hostname="localhost.localdomain"} 30001
+# TYPE system_fscache_cacheop_update_object gauge
+# HELP system_fscache_cacheop_update_object Number of in-progress update_object() cache ops.
+system_fscache_cacheop_update_object{hostname="localhost.localdomain"} 30002
+# TYPE system_fscache_cacheop_drop_object gauge
+# HELP system_fscache_cacheop_drop_object Number of in-progress drop_object() cache ops.
+system_fscache_cacheop_drop_object{hostname="localhost.localdomain"} 30003
+# TYPE system_fscache_cacheop_put_object gauge
+# HELP system_fscache_cacheop_put_object Number of in-progress put_object() cache ops.
+system_fscache_cacheop_put_object{hostname="localhost.localdomain"} 30004
+# TYPE system_fscache_cacheop_sync_cache gauge
+# HELP system_fscache_cacheop_sync_cache Number of in-progress sync_cache() cache ops.
+system_fscache_cacheop_sync_cache{hostname="localhost.localdomain"} 30006
+# TYPE system_fscache_cacheop_attr_changed gauge
+# HELP system_fscache_cacheop_attr_changed Number of in-progress attr_changed() cache ops.
+system_fscache_cacheop_attr_changed{hostname="localhost.localdomain"} 30005
+# TYPE system_fscache_cacheop_read_or_alloc_page gauge
+# HELP system_fscache_cacheop_read_or_alloc_page Number of in-progress read_or_alloc_page() cache ops.
+system_fscache_cacheop_read_or_alloc_page{hostname="localhost.localdomain"} 40001
+# TYPE system_fscache_cacheop_read_or_alloc_pages gauge
+# HELP system_fscache_cacheop_read_or_alloc_pages Number of in-progress read_or_alloc_pages() cache ops.
+system_fscache_cacheop_read_or_alloc_pages{hostname="localhost.localdomain"} 40002
+# TYPE system_fscache_cacheop_allocate_page gauge
+# HELP system_fscache_cacheop_allocate_page Number of in-progress allocate_page() cache ops.
+system_fscache_cacheop_allocate_page{hostname="localhost.localdomain"} 40003
+# TYPE system_fscache_cacheop_allocate_pages gauge
+# HELP system_fscache_cacheop_allocate_pages Number of in-progress allocate_pages() cache ops.
+system_fscache_cacheop_allocate_pages{hostname="localhost.localdomain"} 40004
+# TYPE system_fscache_cacheop_write_page gauge
+# HELP system_fscache_cacheop_write_page Number of in-progress write_page() cache ops.
+system_fscache_cacheop_write_page{hostname="localhost.localdomain"} 40005
+# TYPE system_fscache_cacheop_uncache_page gauge
+# HELP system_fscache_cacheop_uncache_page Number of in-progress uncache_page() cache ops.
+system_fscache_cacheop_uncache_page{hostname="localhost.localdomain"} 40006
+# TYPE system_fscache_cacheop_dissociate_pages gauge
+# HELP system_fscache_cacheop_dissociate_pages Number of in-progress dissociate_pages() cache ops.
+system_fscache_cacheop_dissociate_pages{hostname="localhost.localdomain"} 40007
+# TYPE system_fscache_cache_no_space_reject counter
+# HELP system_fscache_cache_no_space_reject Total number of object lookups/creations rejected due to lack of space.
+system_fscache_cache_no_space_reject_total{hostname="localhost.localdomain"} 50001
+# TYPE system_fscache_cache_stale_objects counter
+# HELP system_fscache_cache_stale_objects Total number of stale objects deleted.
+system_fscache_cache_stale_objects_total{hostname="localhost.localdomain"} 50002
+# TYPE system_fscache_cache_retired_objects counter
+# HELP system_fscache_cache_retired_objects Total number of objects retired when relinquished.
+system_fscache_cache_retired_objects_total{hostname="localhost.localdomain"} 50003
+# TYPE system_fscache_cache_culled_objects counter
+# HELP system_fscache_cache_culled_objects Total number of objects culled.
+system_fscache_cache_culled_objects_total{hostname="localhost.localdomain"} 50004

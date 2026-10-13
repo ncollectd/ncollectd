@@ -1,0 +1,74 @@
+# TYPE system_fscache_cookie_data counter
+# HELP system_fscache_cookie_data Total number of data storage cookies allocated.
+system_fscache_cookie_data_total{hostname="localhost.localdomain"} 101
+# TYPE system_fscache_acquires counter
+# HELP system_fscache_acquires Total number of acquire cookie requests seen.
+system_fscache_acquires_total{hostname="localhost.localdomain"} 201
+# TYPE system_fscache_acquires_ok counter
+# HELP system_fscache_acquires_ok Total number of acquire requests succeeded.
+system_fscache_acquires_ok_total{hostname="localhost.localdomain"} 202
+# TYPE system_fscache_acquires_oom counter
+# HELP system_fscache_acquires_oom Total number of acquire requests failed on ENOMEM.
+system_fscache_acquires_oom_total{hostname="localhost.localdomain"} 203
+# TYPE system_fscache_invalidates counter
+# HELP system_fscache_invalidates Total number of invalidations.
+system_fscache_invalidates_total{hostname="localhost.localdomain"} 401
+# TYPE system_fscache_updates counter
+# HELP system_fscache_updates Total number of update cookie requests seen.
+system_fscache_updates_total{hostname="localhost.localdomain"} 501
+# TYPE system_fscache_relinquishes counter
+# HELP system_fscache_relinquishes Total number of relinquish cookie requests seen.
+system_fscache_relinquishes_total{hostname="localhost.localdomain"} 601
+# TYPE system_fscache_relinquishes_retire counter
+# HELP system_fscache_relinquishes_retire Total number of relinquish retries.
+system_fscache_relinquishes_retire_total{hostname="localhost.localdomain"} 602
+# TYPE system_fscache_cookie_volume counter
+# HELP system_fscache_cookie_volume Number of volume index cookies allocated.
+system_fscache_cookie_volume_total{hostname="localhost.localdomain"} 102
+# TYPE system_fscache_cookie_volume_collisions counter
+# HELP system_fscache_cookie_volume_collisions Number of volume index key collisions.
+system_fscache_cookie_volume_collisions_total{hostname="localhost.localdomain"} 103
+# TYPE system_fscache_cookie_volume_oom counter
+# HELP system_fscache_cookie_volume_oom Number of OOM events when allocating volume cookies.
+system_fscache_cookie_volume_oom_total{hostname="localhost.localdomain"} 104
+# TYPE system_fscache_cookies_lru gauge
+# HELP system_fscache_cookies_lru Number of cookies currently on the LRU
+system_fscache_cookies_lru{hostname="localhost.localdomain"} 301
+# TYPE system_fscache_cookies_lru_expired counter
+# HELP system_fscache_cookies_lru_expired Number of cookies expired off of the LRU
+system_fscache_cookies_lru_expired_total{hostname="localhost.localdomain"} 302
+# TYPE system_fscache_cookies_lru_removed counter
+# HELP system_fscache_cookies_lru_removed Number of cookies removed from the LRU
+system_fscache_cookies_lru_removed_total{hostname="localhost.localdomain"} 303
+# TYPE system_fscache_cookies_lru_dropped counter
+# HELP system_fscache_cookies_lru_dropped Number of LRU’d cookies relinquished/withdrawn
+system_fscache_cookies_lru_dropped_total{hostname="localhost.localdomain"} 304
+# TYPE system_fscache_cookies_lru_at gauge
+# HELP system_fscache_cookies_lru_at Time till next LRU cull (jiffies)
+system_fscache_cookies_lru_at{hostname="localhost.localdomain"} 305
+# TYPE system_fscache_resize_requests counter
+# HELP system_fscache_resize_requests Number of resize requests.
+system_fscache_resize_requests_total{hostname="localhost.localdomain"} 502
+# TYPE system_fscache_resize_requests_skipped counter
+# HELP system_fscache_resize_requests_skipped Number of skipped resize requests.
+system_fscache_resize_requests_skipped_total{hostname="localhost.localdomain"} 503
+# TYPE system_fscache_relinquishes_dropped counter
+# HELP system_fscache_relinquishes_dropped Number of cookies no longer blocking re-acquisition.
+system_fscache_relinquishes_dropped_total{hostname="localhost.localdomain"} 603
+# TYPE system_fscache_no_space_write counter
+# HELP system_fscache_no_space_write Number of write requests refused due to lack of space.
+system_fscache_no_space_write_total{hostname="localhost.localdomain"} 701
+# TYPE system_fscache_no_space_create counter
+# HELP system_fscache_no_space_create Number of create requests refused due to lack of space.
+system_fscache_no_space_create_total{hostname="localhost.localdomain"} 702
+# TYPE system_fscache_no_space_culled counter
+# HELP system_fscache_no_space_culled Number of objects culled to make space.
+system_fscache_no_space_culled_total{hostname="localhost.localdomain"} 703
+# TYPE system_fscache_io_read counter
+# HELP system_fscache_io_read Number of read operations in the cache.
+system_fscache_io_read_total{hostname="localhost.localdomain"} 801
+# TYPE system_fscache_io_write counter
+# HELP system_fscache_io_write Number of write operations in the cache.
+system_fscache_io_write_total{hostname="localhost.localdomain"} 802
+# TYPE system_fscache_dio_misfit counter
+system_fscache_dio_misfit_total{hostname="localhost.localdomain"} 803

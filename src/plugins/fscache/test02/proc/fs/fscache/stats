@@ -1,0 +1,9 @@
+-- FS-Cache statistics --
+Cookies: n=101 v=102 vcol=103 voom=104
+Acquire: n=201 ok=202 oom=203
+LRU    : n=301 exp=302 rmv=303 drp=304 at=305
+Invals : n=401
+Updates: n=501 rsz=502 rsn=503
+Relinqs: n=601 rtr=602 drop=603
+NoSpace: nwr=701 ncr=702 cull=703
+IO     : rd=801 wr=802 mis=803

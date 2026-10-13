@@ -8,12 +8,24 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP fscache
-\fBplugin\fP fscache
+\fBplugin\fP fscache {
+    \fBfilter\fP {
+        ...
+    }
+}
 .Ed
 .Sh DESCRIPTION
 The \fBfscache\fP plugin collects information about the file-system based
 caching infrastructure for network file-systems and other slow media.
 The cache was introduced into the Linux kernel in version 2.6.30.
+.Pp
+The \fBfscache\fP plugin supports the following options:
+.Bl -tag -width Ds
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

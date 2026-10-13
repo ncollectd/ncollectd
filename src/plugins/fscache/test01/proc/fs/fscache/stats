@@ -1,0 +1,24 @@
+FS-Cache statistics
+Cookies: idx=101 dat=102 spc=103
+Objects: alc=201 nal=202 avl=203 ded=204
+ChkAux : non=301 ok=302 upd=303 obs=304
+Pages  : mrk=401 unc=402
+Acquire: n=501 nul=502 noc=503 ok=504 nbf=505 oom=506
+Lookups: n=601 neg=602 pos=603 crt=604 tmo=605
+Invals : n=701 run=702
+Updates: n=801 nul=802 run=803
+Relinqs: n=901 nul=902 wcr=903 rtr=904
+AttrChg: n=1001 ok=1002 nbf=1003 oom=1004 run=1005
+Allocs : n=2001 ok=2002 wt=2003 nbf=2004 int=2005
+Allocs : ops=3001 owt=3004 abt=3005
+Retrvls: n=4001 ok=4002 wt=4003 nod=4004 nbf=4005 int=4006 oom=4007
+Retrvls: ops=5001 owt=5002 abt=5003
+Stores : n=6001 ok=6002 agn=6003 nbf=6004 oom=6005
+Stores : ops=7001 run=7002 pgs=7003 rxd=7004 olm=7005
+VmScan : nos=8001 gon=8002 bsy=8003 can=8004 wt=8005
+Ops    : pend=9001 run=9002 enq=9003 can=9004 rej=9005
+Ops    : ini=10001 dfr=10002 rel=10003 gc=10004
+CacheOp: alo=20001 luo=20002 luc=20003 gro=20004
+CacheOp: inv=30001 upo=30002 dro=30003 pto=30004 atc=30005 syn=30006
+CacheOp: rap=40001 ras=40002 alp=40003 als=40004 wrp=40005 ucp=40006 dsp=40007
+CacheEv: nsp=50001 stl=50002 rtr=50003 cul=50004

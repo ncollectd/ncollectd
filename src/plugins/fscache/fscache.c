@@ -125,6 +125,23 @@ enum {
     FAM_FSCACHE_CACHE_STALE_OBJECTS,
     FAM_FSCACHE_CACHE_RETIRED_OBJECTS,
     FAM_FSCACHE_CACHE_CULLED_OBJECTS,
+    FAM_FSCACHE_COOKIE_VOLUME,
+    FAM_FSCACHE_COOKIE_VOLUME_COLLISIONS,
+    FAM_FSCACHE_COOKIE_VOLUME_OOM,
+    FAM_FSCACHE_COOKIES_LRU,
+    FAM_FSCACHE_COOKIES_LRU_EXPIRED,
+    FAM_FSCACHE_COOKIES_LRU_REMOVED,
+    FAM_FSCACHE_COOKIES_LRU_DROPPED,
+    FAM_FSCACHE_COOKIES_LRU_AT,
+    FAM_FSCACHE_RESIZE_REQUESTS,
+    FAM_FSCACHE_RESIZE_REQUESTS_SKIPPED,
+    FAM_FSCACHE_RELINQUISHES_DROPPED,
+    FAM_FSCACHE_NO_SPACE_WRITE,
+    FAM_FSCACHE_NO_SPACE_CREATE,
+    FAM_FSCACHE_NO_SPACE_CULLED,
+    FAM_FSCACHE_IO_READ,
+    FAM_FSCACHE_IO_WRITE,
+    FAM_FSCACHE_DIO_MISFIT,
     FAM_FSCACHE_MAX,
 };
 
@@ -634,11 +651,97 @@ static metric_family_t fams[FAM_FSCACHE_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of objects culled.",
     },
+    [FAM_FSCACHE_COOKIE_VOLUME] = {
+        .name = "system_fscache_cookie_volume",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of volume index cookies allocated.",
+    },
+    [FAM_FSCACHE_COOKIE_VOLUME_COLLISIONS] = {
+        .name = "system_fscache_cookie_volume_collisions",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of volume index key collisions.",
+    },
+    [FAM_FSCACHE_COOKIE_VOLUME_OOM] = {
+        .name = "system_fscache_cookie_volume_oom",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of OOM events when allocating volume cookies.",
+    },
+    [FAM_FSCACHE_COOKIES_LRU] = {
+        .name = "system_fscache_cookies_lru",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of cookies currently on the LRU",
+    },
+    [FAM_FSCACHE_COOKIES_LRU_EXPIRED] = {
+        .name = "system_fscache_cookies_lru_expired",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of cookies expired off of the LRU",
+    },
+    [FAM_FSCACHE_COOKIES_LRU_REMOVED] = {
+        .name = "system_fscache_cookies_lru_removed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of cookies removed from the LRU",
+    },
+    [FAM_FSCACHE_COOKIES_LRU_DROPPED] = {
+        .name = "system_fscache_cookies_lru_dropped",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of LRU’d cookies relinquished/withdrawn",
+    },
+    [FAM_FSCACHE_COOKIES_LRU_AT] = {
+        .name = "system_fscache_cookies_lru_at",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Time till next LRU cull (jiffies)",
+    },
+    [FAM_FSCACHE_RESIZE_REQUESTS] = {
+        .name = "system_fscache_resize_requests",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of resize requests.",
+    },
+    [FAM_FSCACHE_RESIZE_REQUESTS_SKIPPED] = {
+        .name = "system_fscache_resize_requests_skipped",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of skipped resize requests.",
+    },
+    [FAM_FSCACHE_RELINQUISHES_DROPPED] = {
+        .name = "system_fscache_relinquishes_dropped",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of cookies no longer blocking re-acquisition.",
+    },
+    [FAM_FSCACHE_NO_SPACE_WRITE] = {
+        .name = "system_fscache_no_space_write",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of write requests refused due to lack of space.",
+    },
+    [FAM_FSCACHE_NO_SPACE_CREATE] = {
+        .name = "system_fscache_no_space_create",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of create requests refused due to lack of space.",
+    },
+    [FAM_FSCACHE_NO_SPACE_CULLED] = {
+        .name = "system_fscache_no_space_culled",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of objects culled to make space.",
+    },
+    [FAM_FSCACHE_IO_READ] = {
+        .name = "system_fscache_io_read",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of read operations in the cache.",
+    },
+    [FAM_FSCACHE_IO_WRITE] = {
+        .name = "system_fscache_io_write",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of write operations in the cache.",
+    },
+    [FAM_FSCACHE_DIO_MISFIT] = {
+        .name = "system_fscache_dio_misfit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
 };
 
 #include "plugins/fscache/fscache.h"
 
 static char *path_proc_fscache;
+static plugin_filter_t *filter;
 
 static int fscache_read(void)
 {
@@ -678,6 +781,19 @@ static int fscache_read(void)
      *          CacheEv: nsp=0 stl=0 rtr=0 cul=0
      */
 
+    /*
+     * Linux >= 6x
+     *  cat /proc/fs/fscache/stats
+     *          Cookies: n=0 v=0 vcol=0 voom=0
+     *          Acquire: n=0 ok=0 oom=0
+     *          LRU    : n=0 exp=0 rmv=0 drp=0 at=0
+     *          Invals : n=0
+     *          Updates: n=0 rsz=0 rsn=0
+     *          Relinqs: n=0 rtr=0 drop=0
+     *          NoSpace: nwr=0 ncr=0 cull=0
+     *          IO     : rd=0 wr=0 mis=0
+     */
+
     while (fgets(linebuffer, sizeof(linebuffer), fh) != NULL) {
         char section[DATA_MAX_NAME_LEN];
         char *lineptr;
@@ -696,10 +812,13 @@ static int fscache_read(void)
         size_t section_len = strlen(section);
         while ((section_len > 0) && isspace((int)section[section_len - 1])) {
             section_len--;
-            section[section_len] = 0;
+            section[section_len] = '\0';
         }
         if (section_len == 0)
             continue;
+        section[section_len] = ':';
+        section_len++;
+        section[section_len] = '\0';
 
         fields_num = strsplit(lineptr, fields, STATIC_ARRAY_SIZE(fields));
         if (fields_num <= 0)
@@ -749,7 +868,33 @@ static int fscache_read(void)
     }
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_FSCACHE_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_FSCACHE_MAX, filter, 0);
+
+    return 0;
+}
+
+static int fscache_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            break;
+    }
+
+    if (status != 0)
+        return -1;
+
     return 0;
 }
 
@@ -767,11 +912,13 @@ static int fscache_init(void)
 static int fscache_shutdown(void)
 {
     free(path_proc_fscache);
+    plugin_filter_free(filter);
     return 0;
 }
 
 void module_register(void)
 {
+    plugin_register_config("fscache", fscache_config);
     plugin_register_init("fscache", fscache_init);
     plugin_register_read("fscache", fscache_read);
     plugin_register_shutdown("fscache", fscache_shutdown);
