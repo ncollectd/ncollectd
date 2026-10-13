@@ -70,26 +70,8 @@ typedef struct {
     char dest[];
 } jstate_t;
 
-static int cups_read_instance(user_data_t *user_data)
+static int cups_get(cups_instance_t *ins)
 {
-    cups_instance_t *ins = user_data->data;
-
-    cdtime_t submit = cdtime();
-
-    if (ins->http == NULL) {
-        ins->http = httpConnect2(ins->host, ins->port, NULL, AF_UNSPEC, cupsEncryption(),
-                                 0, CDTIME_T_TO_MS(ins->timeout), NULL);
-        if (ins->http == NULL) {
-            metric_family_append(&ins->fams[FAM_CUPS_UP], VALUE_GAUGE(0), &ins->labels, NULL);
-            int status = plugin_dispatch_metric_family(&ins->fams[FAM_CUPS_UP], 0);
-            if (status != 0)
-                PLUGIN_ERROR("plugin_dispatch_metric_family failed: %s", STRERROR(status));
-            return 0;
-        }
-    }
-
-    metric_family_append(&ins->fams[FAM_CUPS_UP], VALUE_GAUGE(1), &ins->labels, NULL);
-
     c_avl_tree_t *tree = c_avl_create((int (*)(const void *, const void *))strcmp);
     if (unlikely(tree == NULL)) {
         PLUGIN_ERROR("failed to create avl tree");
@@ -103,8 +85,6 @@ static int cups_read_instance(user_data_t *user_data)
             cups_option_t *options = dest[n].options;
             int n_options = dest[n].num_options;
             char *dest_name = dest[n].name;
-
-            //if (dest_name ==
 
             if (cupsGetOption("printer-uri-supported", n_options, options) == NULL)
                 continue;
@@ -215,7 +195,38 @@ static int cups_read_instance(user_data_t *user_data)
 
     c_avl_destroy(tree);
 
-    plugin_dispatch_metric_family_array(ins->fams, FAM_CUPS_MAX, submit);
+    return 0;
+}
+
+static int cups_read_instance(user_data_t *user_data)
+{
+    cups_instance_t *ins = user_data->data;
+
+    cdtime_t submit = cdtime();
+
+    if (ins->http == NULL) {
+        ins->http = httpConnect2(ins->host, ins->port, NULL, AF_UNSPEC, cupsEncryption(),
+                                 0, CDTIME_T_TO_MS(ins->timeout), NULL);
+        if (ins->http == NULL) {
+            metric_family_append(&ins->fams[FAM_CUPS_UP], VALUE_GAUGE(0), &ins->labels, NULL);
+            plugin_dispatch_metric_family_filtered(&ins->fams[FAM_CUPS_UP], ins->filter, 0);
+            return 0;
+        }
+
+        httpSetTimeout(ins->http, CDTIME_T_TO_MS(ins->timeout), NULL, NULL);
+    } else {
+        if (httpReconnect2(ins->http, CDTIME_T_TO_MS(ins->timeout), NULL)) {
+            metric_family_append(&ins->fams[FAM_CUPS_UP], VALUE_GAUGE(0), &ins->labels, NULL);
+            plugin_dispatch_metric_family_filtered(&ins->fams[FAM_CUPS_UP], ins->filter, 0);
+            return 0;
+        }
+    }
+
+    metric_family_append(&ins->fams[FAM_CUPS_UP], VALUE_GAUGE(1), &ins->labels, NULL);
+
+    cups_get(ins);
+
+    plugin_dispatch_metric_family_array_filtered(ins->fams, FAM_CUPS_MAX, ins->filter, submit);
 
     return 0;
 }
@@ -253,7 +264,7 @@ static int cups_config_instance(config_item_t *ci)
         cups_instance_free(ins);
         return status;
     }
-    ins->timeout = TIME_T_TO_CDTIME_T(1);
+    ins->timeout = CDTIME_DOOMSDAY;
 
     memcpy(ins->fams, fams, sizeof(ins->fams[0])*FAM_CUPS_MAX);
 
@@ -290,6 +301,13 @@ static int cups_config_instance(config_item_t *ci)
         ins->host = strdup(cupsServer());
     if (ins->port == 0)
         ins->port = ippPort();
+
+    if (ins->timeout == CDTIME_DOOMSDAY) {
+        if (interval == 0)
+            ins->timeout = plugin_get_interval();
+        else
+            ins->timeout = interval;
+    }
 
     label_set_add(&ins->labels, true, "instance", ins->name);
 

@@ -13,6 +13,7 @@ NCOLLECTD-CUPS(5) - File Formats Manual
 	        port port
 	        label key value
 	        interval seconds
+	        timeout seconds
 	        filter {
 	            ...
 	        }
@@ -49,6 +50,12 @@ Within the **instance** blocks, the following options are allowed:
 
 > Sets the interval (in seconds) in which the values will be collected from
 > this instance.
+
+**timeout** *seconds*
+
+> The **timeout** option sets the overall timeout for CUPS requests,
+> in seconds.
+> By default, the configured **interval** is used to set the timeout.
 
 **filter**
 

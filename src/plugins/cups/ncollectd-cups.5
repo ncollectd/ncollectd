@@ -14,6 +14,7 @@
         \fBport\fP \fIport\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBfilter\fP {
             ...
         }
@@ -42,6 +43,10 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from
 this instance.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for CUPS requests,
+in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
 See \fBFILTER CONFIGURATION\fP in
