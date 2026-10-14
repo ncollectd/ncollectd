@@ -53,7 +53,7 @@ enum {
     FAM_MEMINFO_COMMITTED_BYTES,
     FAM_MEMINFO_VMALLOC_TOTAL_BYTES,
     FAM_MEMINFO_VMALLOC_USED_BYTES,
-    FAM_MEMINFO_VMALLOC_CHUNCK_BYTES,
+    FAM_MEMINFO_VMALLOC_CHUNK_BYTES,
     FAM_MEMINFO_PERCPU_BYTES,
     FAM_MEMINFO_EARLY_MEMTEST_BAD_BYTES,
     FAM_MEMINFO_HARDWARE_CORRUPTED_BYTES,
@@ -72,7 +72,11 @@ enum {
     FAM_MEMINFO_HUGEPAGES_BYTES,
     FAM_MEMINFO_DIRECTMAP_4K_BYTES,
     FAM_MEMINFO_DIRECTMAP_2M_BYTES,
-    FAM_MEMINFO_DIRECTMAP_2G_BYTES,
+    FAM_MEMINFO_DIRECTMAP_1G_BYTES,
+    FAM_MEMINFO_UNACCEPTED_BYTES,
+    FAM_MEMINFO_BALLOON_BYTES,
+    FAM_MEMINFO_SHADOW_CALL_STACK_BYTES,
+    FAM_MEMINFO_DIRECTMAP_4M_BYTES,
     FAM_MEMINFO_MAX,
 };
 
@@ -288,8 +292,8 @@ static metric_family_t fams[FAM_MEMINFO_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Amount of vmalloc area which is used.",
     },
-    [FAM_MEMINFO_VMALLOC_CHUNCK_BYTES] = {
-        .name = "system_meminfo_vmalloc_chunck_bytes",
+    [FAM_MEMINFO_VMALLOC_CHUNK_BYTES] = {
+        .name = "system_meminfo_vmalloc_chunk_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Largest contiguous block of vmalloc area which is free.",
     },
@@ -302,7 +306,7 @@ static metric_family_t fams[FAM_MEMINFO_MAX] = {
     [FAM_MEMINFO_EARLY_MEMTEST_BAD_BYTES] = {
         .name = "system_meminfo_early_memtest_bad_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The amount of RAM/memory in kB, that was identified as corrupted "
+        .help = "The amount of RAM/memory in bytes, that was identified as corrupted "
                 "by early memtest."
     },
     [FAM_MEMINFO_HARDWARE_CORRUPTED_BYTES] = {
@@ -311,7 +315,7 @@ static metric_family_t fams[FAM_MEMINFO_MAX] = {
         .help = "The amount of RAM, the kernel identified as corrupted / not working.",
     },
     [FAM_MEMINFO_ANONYMOUS_HUGEPAGES_BYTES] = {
-        .name = "system_meminfo_anonumous_hugepages_bytes",
+        .name = "system_meminfo_anonymous_hugepages_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Total size of non-file backed huge pages mapped into userspace page tables.",
     },
@@ -382,14 +386,34 @@ static metric_family_t fams[FAM_MEMINFO_MAX] = {
         .help = "The amount of memory being mapped to standard 4k pages."
     },
     [FAM_MEMINFO_DIRECTMAP_2M_BYTES] = {
-        .name = "system_meminfo_directmap_2M_bytes",
+        .name = "system_meminfo_directmap_2m_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "The amount of memory being mapped to hugepages (usually 2MB in size)."
     },
-    [FAM_MEMINFO_DIRECTMAP_2G_BYTES] = {
-        .name = "system_meminfo_directmap_2G_bytes",
+    [FAM_MEMINFO_DIRECTMAP_1G_BYTES] = {
+        .name = "system_meminfo_directmap_1g_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "The amount of memory being mapped to hugepages (usually 1GB in size)."
+    },
+    [FAM_MEMINFO_UNACCEPTED_BYTES] = {
+        .name = "system_meminfo_unaccepted_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory that has not been accepted by the guest in bytes."
+    },
+    [FAM_MEMINFO_BALLOON_BYTES] = {
+        .type = METRIC_TYPE_GAUGE,
+        .name = "system_meminfo_balloon_bytes",
+        .help = "Memory returned to Host by VM Balloon Drivers in bytes."
+    },
+    [FAM_MEMINFO_SHADOW_CALL_STACK_BYTES] = {
+        .type = METRIC_TYPE_GAUGE,
+        .name = "system_meminfo_shadow_call_stack_bytes",
+        .help = "Memory allocated for shadow stacks in bytes."
+    },
+    [FAM_MEMINFO_DIRECTMAP_4M_BYTES] = {
+        .name = "system_meminfo_directmap_4m_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The amount of memory being mapped to hugepages (usually 4MB in size)."
     },
 };
 
@@ -415,7 +439,9 @@ static int meminfo_read(void)
         if (mm == NULL)
             continue;
 
-        double value = atof(fields[1]);
+        double value = 0;
+        if (strtodouble(fields[1], &value) != 0)
+            continue;
 
         if (fields_num == 3) {
             if ((fields[2][0] == 'k') && (fields[2][1] == 'B')) {
