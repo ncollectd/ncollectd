@@ -20,3 +20,5 @@ int socket_connect_udp(const char *host, int port, int ttl);
 int socket_connect_tcp(const char *host, int port, int keep_idle, int keep_int);
 
 int socket_get_port(int sfd);
+
+int socket_setfl(int sfd, int setfl);

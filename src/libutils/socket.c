@@ -141,10 +141,17 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
     }
 
     sa.sun_family = AF_UNIX;
+    socklen_t sa_len = 0;
     sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
-    if (sa.sun_path[0] == '@')
+    if (sa.sun_path[0] == '@') {
         sa.sun_path[0] = '\0';
-    socklen_t sa_len = strlen(path) + 1 + sizeof(sa_family_t);
+        /* Not null terminated */
+        sa_len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
+    } else {
+        /* Must be null terminated */
+        sa_len = offsetof(struct sockaddr_un, sun_path) + strlen(path) + 1;
+        
+    }
 
     int status = connect(fd, (const struct sockaddr *) &sa, sa_len);
     if (status < 0) {
@@ -438,4 +445,19 @@ int socket_get_port(int sfd)
     }
 
     return -1;
+}
+
+int socket_setfl(int sfd, int setfl)
+{
+    int flags = fcntl (sfd, F_GETFL, 0);
+    if (flags == -1)
+        flags = 0;
+
+    int status = fcntl (sfd, F_SETFL, flags | setfl);
+    if (status < 0) {
+        ERROR("fcntl failed: %s", STRERRNO);
+        return -1;
+    }
+
+    return 0;
 }
