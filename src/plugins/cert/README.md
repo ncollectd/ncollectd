@@ -14,6 +14,7 @@ NCOLLECTD-CERT(5) - File Formats Manual
 	        server-name servername
 	        label key value
 	        interval seconds
+	        timeout seconds
 	        filter {
 	            ...
 	        }
@@ -48,6 +49,12 @@ in a **instance** block:
 
 > Sets the interval (in seconds) in which the values will be collected
 > from this instance.
+
+**timeout** *seconds*
+
+> The **timeout** option sets the receiving or sending timeout
+> in seconds.
+> By default, the configured **interval** is used to set the timeout.
 
 **filter**
 
