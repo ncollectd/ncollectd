@@ -13,6 +13,9 @@
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
+#ifndef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
 
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
@@ -48,16 +51,31 @@ typedef struct cert_cb {
     char *host;
     int port;
     char *server_name;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     metric_family_t fams[FAM_CERT_MAX];
 } cert_cb_t;
 
-static time_t ASN1_timestamp(const ASN1_TIME *s)
+static double ASN1_timestamp(const ASN1_TIME *s)
 {
+    time_t t = 0;
     struct tm tm = {0};
     ASN1_TIME_to_tm(s, &tm);
-    return mktime(&tm);
+#ifdef HAVE_TIMEGM
+    t = timegm(&tm);
+    if (t == ((time_t)-1))
+        return NAN;
+#else
+    t = mktime(&tm);
+    if (t == ((time_t)-1))
+        return NAN;
+    /* mktime assumes that tm is local time. Luckily, it also sets timezone to
+     * the offset used for the conversion, and we undo the conversion to convert
+     * back to UTC. */
+    t = t - timezone;
+#endif
+    return t;
 }
 
 static void cert_free(void *data)
@@ -107,22 +125,42 @@ static int cert_read(user_data_t *user_data)
         goto error;
     }
 
-    const char *server_name = cert_cb->server_name != NULL ? cert_cb->server_name
-                                                           : cert_cb->host;
-    SSL_set_tlsext_host_name(ssl, server_name);
+    if (cert_cb->server_name != NULL)
+        SSL_set_tlsext_host_name(ssl, cert_cb->server_name);
+
     fd = socket_connect_tcp(cert_cb->host, cert_cb->port, 0, 0);
     if (fd < 0)
         goto error;
 
-    SSL_set_fd(ssl, fd);
-    if (SSL_connect(ssl) != 1) {
-        PLUGIN_ERROR("Error: Could not build a SSL session.");
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(cert_cb->timeout);
+    int status = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv));
+    if (status < 0) {
+        PLUGIN_WARNING("Error setting recv timeout to %g: %s",
+                       CDTIME_T_TO_DOUBLE(cert_cb->timeout), STRERRNO);
         goto error;
     }
 
+    tv = CDTIME_T_TO_TIMEVAL(cert_cb->timeout);
+    status = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv));
+    if (status < 0) {
+        PLUGIN_WARNING("Error setting send timeout to %g: %s",
+                       CDTIME_T_TO_DOUBLE(cert_cb->timeout), STRERRNO);
+        goto error;
+    }
+
+    SSL_set_fd(ssl, fd);
+    ERR_clear_error();
+    if (SSL_connect(ssl) != 1) {
+        PLUGIN_ERROR("Error: Could not build a SSL session: %s",
+                     ERR_reason_error_string(ERR_get_error()));
+        goto error;
+    }
+
+    ERR_clear_error();
     cert = SSL_get_peer_certificate(ssl);
     if (cert == NULL) {
-        PLUGIN_ERROR("Error: Could not get a certificate.");
+        PLUGIN_ERROR("Error: Could not get a certificate: %s",
+                     ERR_reason_error_string(ERR_get_error()));
         goto error;
     }
 
@@ -151,7 +189,7 @@ static int cert_read(user_data_t *user_data)
                              VALUE_GAUGE(ASN1_timestamp(not_after)), &cert_cb->labels,
                              &LABEL_PAIR_CONST("host",  cert_cb->host ),
                              &LABEL_PAIR_CONST("port",  port ),
-                             &LABEL_PAIR_CONST("servername",  server_name ),
+                             &LABEL_PAIR_CONST("servername",  cert_cb->server_name ),
                              &LABEL_PAIR_CONST("subject",  subj ),
                              &LABEL_PAIR_CONST("issuer",  issuer ),
                              &LABEL_PAIR_CONST("serial",  serial ),
@@ -164,7 +202,7 @@ static int cert_read(user_data_t *user_data)
                              VALUE_GAUGE(ASN1_timestamp(not_before)), &cert_cb->labels,
                              &LABEL_PAIR_CONST("host",  cert_cb->host ),
                              &LABEL_PAIR_CONST("port",  port ),
-                             &LABEL_PAIR_CONST("servername",  server_name ),
+                             &LABEL_PAIR_CONST("servername",  cert_cb->server_name ),
                              &LABEL_PAIR_CONST("subject",  subj ),
                              &LABEL_PAIR_CONST("issuer",  issuer ),
                              &LABEL_PAIR_CONST("serial",  serial ),
@@ -191,7 +229,22 @@ error:
     if (serial != NULL)
         OPENSSL_free(serial);
 
+    ERR_clear_error();
+
     return 0;
+}
+
+static bool is_numeric_addr(const char *src)
+{
+    struct in_addr in_addr;
+    if (inet_pton(AF_INET, src, &in_addr) == 1)
+        return true;
+
+    struct in6_addr in6_addr;
+    if (inet_pton(AF_INET6, src, &in6_addr) == 1)
+        return true;
+
+    return false;
 }
 
 static int cert_config_instance(config_item_t *ci)
@@ -211,6 +264,8 @@ static int cert_config_instance(config_item_t *ci)
         return -1;
     }
 
+    cert_cb->timeout = CDTIME_DOOMSDAY;
+
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
@@ -222,6 +277,8 @@ static int cert_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &cert_cb->server_name);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &cert_cb->timeout);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &cert_cb->labels);
         } else if (strcasecmp(child->key, "filter") == 0) {
@@ -251,6 +308,25 @@ static int cert_config_instance(config_item_t *ci)
 
     if (cert_cb->port == 0)
         cert_cb->port = 443;
+
+    if (cert_cb->timeout == CDTIME_DOOMSDAY) {
+        if (interval == 0)
+            cert_cb->timeout = plugin_get_interval();
+        else
+            cert_cb->timeout = interval;
+    }
+
+    if (cert_cb->server_name == NULL) {
+        if (!is_numeric_addr(cert_cb->host)) {
+            cert_cb->server_name = strdup(cert_cb->host);
+            if (cert_cb->server_name == NULL) {
+                PLUGIN_ERROR("strdup failed.");
+                cert_free(cert_cb);
+                return -1;
+            }
+        }
+    }
+
 
     label_set_add(&cert_cb->labels, true, "instance", cert_cb->instance);
 
