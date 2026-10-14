@@ -47,7 +47,7 @@ static metric_family_t fams[FAM_MULTIPATHD_MAX] = {
     },
     [FAM_MULTIPATHD_MAP_PATH_FAULTS] = {
         .name = "multipathd_map_path_faults",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Total number of paths failures in Multipath map.",
     },
     [FAM_MULTIPATHD_PATH_GROUP_STATE] = {
@@ -80,7 +80,7 @@ static ssize_t mpath_read(int fd, void *buf, size_t len, cdtime_t timeout)
 
     cdtime_t start = cdtime();
 
-    while (len) {
+    while (len > 0) {
         struct pollfd pfd = {
             .fd = fd,
             .events = POLLIN
@@ -101,47 +101,79 @@ static ssize_t mpath_read(int fd, void *buf, size_t len, cdtime_t timeout)
                 continue;
             PLUGIN_ERROR("Error polling for response: %s", STRERRNO);
             return -1;
-        } else if (!(pfd.revents & POLLIN)) {
-            continue;
         }
 
-        ssize_t n = recv(fd, buf, len, 0);
-        if (n < 0) {
-            if ((errno == EINTR) || (errno == EAGAIN))
-                continue;
-            PLUGIN_ERROR("Error reading response: %s", STRERRNO);
+        if (pfd.revents & (POLLIN | POLLHUP)) {
+            ssize_t n = recv(fd, buf, len, 0);
+            if (n < 0) {
+                if ((errno == EINTR) || (errno == EAGAIN))
+                    continue;
+                PLUGIN_ERROR("Error reading response: %s", STRERRNO);
+                return -1;
+            }
+
+            if (n == 0)
+                return total;
+
+            buf = n + (char *)buf;
+            len -= n;
+            total += n;
+        } else if (pfd.revents & (POLLERR | POLLNVAL)) {
+            PLUGIN_ERROR("Failed to read response.");
             return -1;
         }
-
-        if (n == 0)
-            return total;
-
-        buf = n + (char *)buf;
-        len -= n;
-        total += n;
     }
 
     return total;
 }
 
-static size_t mpath_write(int fd, const void *buf, size_t len)
+static size_t mpath_write(int fd, const void *buf, size_t len, cdtime_t timeout)
 {
     size_t total = 0;
 
-    while (len) {
-        ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
-        if (n < 0) {
-            if ((errno == EINTR) || (errno == EAGAIN))
-                continue;
-            PLUGIN_ERROR("Error send request: %s", STRERRNO);
-            return total;
-        }
-        if (n == 0)
-            return total;
+    cdtime_t start = cdtime();
 
-        buf = n + (const char *)buf;
-        len -= n;
-        total += n;
+    while (len > 0) {
+        struct pollfd pfd = {
+            .fd = fd,
+            .events = POLLOUT
+        };
+
+        cdtime_t elapsed = cdtime() - start;
+        if (elapsed >= timeout) {
+            PLUGIN_ERROR("Timeout waiting for request.");
+            return -1;
+        }
+
+        int ret = poll(&pfd, 1, CDTIME_T_TO_MS(timeout - elapsed));
+        if (!ret) {
+            PLUGIN_ERROR("Timeout waiting for request.");
+            return -1;
+        } else if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            PLUGIN_ERROR("Error polling for request: %s", STRERRNO);
+            return -1;
+        }
+
+        if (pfd.revents & (POLLOUT | POLLHUP)) {
+            ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
+            if (n < 0) {
+                if ((errno == EINTR) || (errno == EAGAIN))
+                    continue;
+                PLUGIN_ERROR("Error send request: %s", STRERRNO);
+                return total;
+            }
+            if (n == 0)
+                return total;
+
+            buf = n + (const char *)buf;
+            len -= n;
+            total += n;
+        } else if (pfd.revents & (POLLERR | POLLNVAL)) {
+            PLUGIN_ERROR("Failed to send request.");
+            return -1;
+        }
     }
 
     return total;
@@ -188,14 +220,14 @@ static char *mpath_recv_reply(int fd, cdtime_t timeout)
     return reply;
 }
 
-int mpath_send_cmd(int fd, const char *cmd)
+static int mpath_send_cmd(int fd, const char *cmd, cdtime_t timeout)
 {
     size_t len = strlen(cmd) + 1;
 
-    if (mpath_write(fd, &len, sizeof(len)) != sizeof(len))
+    if (mpath_write(fd, &len, sizeof(len), timeout) != sizeof(len))
         return -1;
 
-    if (mpath_write(fd, cmd, len) != len)
+    if (mpath_write(fd, cmd, len, timeout) != len)
         return -1;
 
     return 0;
@@ -475,22 +507,22 @@ static void multipathd_parse_map(xson_value_t *map)
             set.ptr[set.num - 1].enabled = true;
 
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_STATE], VALUE_STATE_SET(set), NULL,
-                             &LABEL_PAIR_CONST("name", name),
-                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("map_name", name),
+                             &LABEL_PAIR_CONST("map_uuid", uuid),
                              NULL);
     }
 
     if (!isnan(path_faults)) {
-        metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATH_FAULTS], VALUE_GAUGE(path_faults), NULL,
-                             &LABEL_PAIR_CONST("name", name),
-                             &LABEL_PAIR_CONST("uuid", uuid),
+        metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATH_FAULTS], VALUE_COUNTER(path_faults), NULL,
+                             &LABEL_PAIR_CONST("map_name", name),
+                             &LABEL_PAIR_CONST("map_uuid", uuid),
                              NULL);
     }
 
     if (!isnan(paths)) {
         metric_family_append(&fams[FAM_MULTIPATHD_MAP_PATHS], VALUE_GAUGE(paths), NULL,
-                             &LABEL_PAIR_CONST("name", name),
-                             &LABEL_PAIR_CONST("uuid", uuid),
+                             &LABEL_PAIR_CONST("map_name", name),
+                             &LABEL_PAIR_CONST("map_uuid", uuid),
                              NULL);
     }
 
@@ -511,14 +543,16 @@ static int multipathd_read(void)
     if (g_timeout == 0)
         g_timeout = plugin_get_interval()/2;
 
-    int fd = socket_connect_unix_stream(DEFAULT_SOCKET, 0);
+    int fd = socket_connect_unix_stream(DEFAULT_SOCKET, g_timeout);
     if (fd < 0) {
         metric_family_append(&fams[FAM_MULTIPATHD_UP], VALUE_GAUGE(0), NULL, NULL);
         plugin_dispatch_metric_family(&fams[FAM_MULTIPATHD_UP], 0);
         return -1;
     }
 
-    if (mpath_send_cmd(fd, "show maps json") != 0) {
+    socket_setfl(fd, O_NONBLOCK);
+
+    if (mpath_send_cmd(fd, "show maps json", g_timeout) != 0) {
         close(fd);
         metric_family_append(&fams[FAM_MULTIPATHD_UP], VALUE_GAUGE(0), NULL, NULL);
         plugin_dispatch_metric_family(&fams[FAM_MULTIPATHD_UP], 0);
@@ -548,6 +582,14 @@ static int multipathd_read(void)
     free(reply);
 
     xson_value_t *maps = xson_value_object_find(root, "maps");
+    if (maps == NULL) {
+        PLUGIN_ERROR("Cannot find 'maps' key.");
+        xson_value_free(root);
+        metric_family_append(&fams[FAM_MULTIPATHD_UP], VALUE_GAUGE(0), NULL, NULL);
+        plugin_dispatch_metric_family(&fams[FAM_MULTIPATHD_UP], 0);
+        return -1;
+    }
+
     if (xson_value_is_object(maps)) {
         multipathd_parse_map(maps);
     } else if (xson_value_is_array(maps)) {
