@@ -11,6 +11,9 @@
 \fBplugin\fP xfs {
     \fBdevice\fP [\fIincl|include|excl|exclude\fP] \fIdevice\fP
     \fBcollect\fP \fIflags\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -24,32 +27,44 @@ See \fBINCLUDE AND EXCLUDE LISTS\fP in
 .Xr ncollectd.conf 5 .
 .It \fBcollect\fP \fIflags\fP
 .Bl -tag -width Ds
-.It \fIextentalloc\fP
-.It \fIabt\fP
-.It \fIblkmap\fP
-.It \fIbmbt\fP
-.It \fIdir\fP
-.It \fItrans\fP
-.It \fIig\fP
-.It \fIlog\fP
-.It \fIpushail\fP
-.It \fIsstrat\fP
-.It \fIrw\fP
-.It \fIattr\fP
-.It \fIicluster\fP
-.It \fIvnodes\fP
-.It \fIbuf\fP
-.It \fIabtb2\fP
-.It \fIabtc2\fP
-.It \fIbmbt2\fP
-.It \fIibt2\fP
-.It \fIfibt2\fP
-.It \fIrmapbt\fP
-.It \fIrefcntbt\fP
-.It \fIqm\fP
-.It \fIxpc\fP
+.It \fIExtentAlloc\fP
+.It \fIAbt\fP
+.It \fIBlkMap\fP
+.It \fIBmbt\fP
+.It \fIDir\fP
+.It \fITrans\fP
+.It \fIIG\fP
+.It \fILog\fP
+.It \fIPushAil\fP
+.It \fIXStrat\fP
+.It \fIRW\fP
+.It \fIAttr\fP
+.It \fIICluster\fP
+.It \fIVNodes\fP
+.It \fIBuf\fP
+.It \fIAbtb2\fP
+.It \fIAbtc2\fP
+.It \fIBmbt2\fP
+.It \fIIbt2\fP
+.It \fIFibt2\fP
+.It \fIrMapBt\fP
+.It \fIRefCntBt\fP
+.It \fIrMapBtMem\fP
+.It \fIRcBagBt\fP
+.It \fIRtrMapBt\fP
+.It \fIRtrMapBtMem\fP
+.It \fIRtRedCntBt\fP
+.It \fIQm\fP
+.It \fIZoned\fP
+.It \fIMetaFile\fP
+.It \fIXpc\fP
 .It \fIdefer_relog\fP
+.It \fIGcXpc\fP
 .El
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
