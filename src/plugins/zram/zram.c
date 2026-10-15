@@ -42,8 +42,8 @@ enum {
     FAM_ZRAM_COMPACTED_PAGES,
     FAM_ZRAM_HUGE_PAGES,
     FAM_ZRAM_BACKING_BYTES,
-    FAM_ZRAM_BACKING_READS_BYTES,
-    FAM_ZRAM_BACKING_WRITE_BYTES,
+    FAM_ZRAM_BACKING_READ_BYTES,
+    FAM_ZRAM_BACKING_WRITTEN_BYTES,
     FAM_ZRAM_MAX,
 };
 
@@ -181,7 +181,7 @@ static metric_family_t fams[FAM_ZRAM_MAX] = {
     },
     [FAM_ZRAM_COMPACTED_PAGES] = {
         .name = "system_zram_compacted_pages",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "The number of pages freed during compaction.",
     },
     [FAM_ZRAM_HUGE_PAGES] = {
@@ -191,22 +191,23 @@ static metric_family_t fams[FAM_ZRAM_MAX] = {
     },
     [FAM_ZRAM_BACKING_BYTES] = {
         .name = "system_zram_backing_bytes",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Size of data written in backing device.",
     },
-    [FAM_ZRAM_BACKING_READS_BYTES] = {
-        .name = "system_zram_backing_reads_bytes",
+    [FAM_ZRAM_BACKING_READ_BYTES] = {
+        .name = "system_zram_backing_read_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of reads from backing device.",
     },
-    [FAM_ZRAM_BACKING_WRITE_BYTES] = {
-        .name = "system_zram_backing_write_bytes",
+    [FAM_ZRAM_BACKING_WRITTEN_BYTES] = {
+        .name = "system_zram_backing_written_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of writes to backing device.",
     },
 };
 
 static exclist_t excl_device;
+static uint64_t pagesize;
 
 static int zram_read_device_stat(int dirfd, const char *device)
 {
@@ -227,40 +228,58 @@ static int zram_read_device_stat(int dirfd, const char *device)
     if (unlikely(fields_num < 15))
         return -1;
 
-    metric_family_append(&fams[FAM_ZRAM_READ_IOS], VALUE_COUNTER(atoll(fields[0])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_READ_MERGES], VALUE_COUNTER(atoll(fields[1])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_READ_SECTORS], VALUE_COUNTER(atoll(fields[2])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_READ_SECONDS],
-                         VALUE_COUNTER_FLOAT64((double)atoll(fields[3])/1000000L), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_WRITE_IOS], VALUE_COUNTER(atoll(fields[4])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_WRITE_MERGES], VALUE_COUNTER(atoll(fields[5])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_WRITE_SECTORS], VALUE_COUNTER(atoll(fields[6])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_WRITE_SECONDS],
-                         VALUE_COUNTER_FLOAT64((double)atoll(fields[7])/1000000L), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_IN_FLIGHT], VALUE_COUNTER(atoll(fields[8])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_IO_SECONDS], VALUE_COUNTER(atoll(fields[9])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_TIME_IN_QUEUE_SECONDS],
-                         VALUE_COUNTER_FLOAT64((double)atoll(fields[10])/1000000L), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_DISCARD_IOS], VALUE_COUNTER(atoll(fields[11])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_DISCARD_MERGES], VALUE_COUNTER(atoll(fields[12])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_DISCARD_SECTORS], VALUE_COUNTER(atoll(fields[13])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_DISCARD_SECONDS],
-                         VALUE_COUNTER_FLOAT64((double)atoll(fields[14])/1000000L), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
+    uint64_t value = 0;
+
+    if (strtouint(fields[0], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_READ_IOS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[1], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_READ_MERGES], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[2], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_READ_SECTORS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[3], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_READ_SECONDS],
+                             VALUE_COUNTER_FLOAT64(((double)value)/1000.0), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[4], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_WRITE_IOS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[5], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_WRITE_MERGES], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[6], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_WRITE_SECTORS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[7], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_WRITE_SECONDS],
+                             VALUE_COUNTER_FLOAT64(((double)value)/1000.0), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[8], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_IN_FLIGHT], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[9], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_IO_SECONDS],
+                             VALUE_COUNTER_FLOAT64(((double)value)/1000.0), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[10], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_TIME_IN_QUEUE_SECONDS],
+                             VALUE_COUNTER_FLOAT64(((double)value)/1000.0), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[11], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_DISCARD_IOS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[12], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_DISCARD_MERGES], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[13], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_DISCARD_SECTORS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[14], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_DISCARD_SECONDS],
+                             VALUE_COUNTER_FLOAT64((double)value/1000.0), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -284,14 +303,20 @@ static int zram_read_device_io_stat(int dirfd, const char *device)
     if (unlikely(fields_num < 4))
         return -1;
 
-    metric_family_append(&fams[FAM_ZRAM_FAILED_READS], VALUE_COUNTER(atoll(fields[0])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_FAILED_WRITES], VALUE_COUNTER(atoll(fields[1])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_INVALID_IO], VALUE_COUNTER(atoll(fields[2])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_NOTIFY_FREE], VALUE_COUNTER(atoll(fields[3])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
+    uint64_t value = 0;
+
+    if (strtouint(fields[0], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_FAILED_READS], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[1], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_FAILED_WRITES], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[2], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_INVALID_IO], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[3], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_NOTIFY_FREE], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -316,22 +341,32 @@ static int zram_read_device_mm_stat(int dirfd, const char *device)
     if (unlikely(fields_num < 8))
         return -1;
 
-    metric_family_append(&fams[FAM_ZRAM_UNCOMPRESSED_BYTES], VALUE_GAUGE(atof(fields[0])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_COMPRESSED_BYTES], VALUE_GAUGE(atof(fields[1])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_MEMORY_USED_BYTES], VALUE_GAUGE(atof(fields[2])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_MEMORY_LIMIT_BYTES], VALUE_GAUGE(atof(fields[3])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_MEMORY_USED_MAX_BYTES], VALUE_GAUGE(atof(fields[4])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_SAME_PAGES], VALUE_GAUGE(atof(fields[5])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_COMPACTED_PAGES], VALUE_GAUGE(atof(fields[6])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_HUGE_PAGES], VALUE_GAUGE(atof(fields[7])), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
+    uint64_t value = 0;
+
+    if (strtouint(fields[0], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_UNCOMPRESSED_BYTES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[1], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_COMPRESSED_BYTES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[2], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_MEMORY_USED_BYTES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[3], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_MEMORY_LIMIT_BYTES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[4], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_MEMORY_USED_MAX_BYTES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[5], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_SAME_PAGES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[6], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_COMPACTED_PAGES], VALUE_COUNTER(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[7], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_HUGE_PAGES], VALUE_GAUGE(value), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -353,18 +388,23 @@ static int zram_read_device_bd_stat(int dirfd, const char *device)
     char *fields[4];
     int fields_num = strsplit(line, fields, STATIC_ARRAY_SIZE(fields));
 
-    if (unlikely(fields_num < 4))
+    if (unlikely(fields_num < 3))
         return -1;
 
-    metric_family_append(&fams[FAM_ZRAM_BACKING_BYTES],
-                         VALUE_COUNTER(atoll(fields[0])*4096), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_BACKING_READS_BYTES],
-                         VALUE_COUNTER(atoll(fields[1])*4096), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
-    metric_family_append(&fams[FAM_ZRAM_BACKING_WRITE_BYTES],
-                         VALUE_COUNTER(atoll(fields[2])*4096), NULL,
-                         &LABEL_PAIR_CONST("device", device), NULL);
+    uint64_t value = 0;
+
+    if (strtouint(fields[0], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_BACKING_BYTES],
+                             VALUE_GAUGE(value * pagesize), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[1], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_BACKING_READ_BYTES],
+                             VALUE_COUNTER(value * pagesize), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
+    if (strtouint(fields[2], &value) == 0)
+        metric_family_append(&fams[FAM_ZRAM_BACKING_WRITTEN_BYTES],
+                             VALUE_COUNTER(value * pagesize), NULL,
+                             &LABEL_PAIR_CONST("device", device), NULL);
 
     return 0;
 }
@@ -422,6 +462,8 @@ static int zram_init(void)
         PLUGIN_ERROR("Cannot get sys path.");
         return -1;
     }
+
+    pagesize = sysconf(_SC_PAGESIZE);
 
     return 0;
 }
