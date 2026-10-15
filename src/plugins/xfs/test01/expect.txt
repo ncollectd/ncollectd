@@ -1,0 +1,546 @@
+# TYPE system_xfs_alloc_extent counter
+system_xfs_alloc_extent_total{device="dm-4",hostname="localhost.localdomain"} 101
+# TYPE system_xfs_alloc_block counter
+system_xfs_alloc_block_total{device="dm-4",hostname="localhost.localdomain"} 102
+# TYPE system_xfs_free_extent counter
+system_xfs_free_extent_total{device="dm-4",hostname="localhost.localdomain"} 103
+# TYPE system_xfs_free_block counter
+system_xfs_free_block_total{device="dm-4",hostname="localhost.localdomain"} 104
+# TYPE system_xfs_alloc_btree_lookup counter
+system_xfs_alloc_btree_lookup_total{device="dm-4",hostname="localhost.localdomain"} 201
+# TYPE system_xfs_alloc_btree_compare counter
+system_xfs_alloc_btree_compare_total{device="dm-4",hostname="localhost.localdomain"} 202
+# TYPE system_xfs_alloc_btree_insrec counter
+system_xfs_alloc_btree_insrec_total{device="dm-4",hostname="localhost.localdomain"} 203
+# TYPE system_xfs_alloc_btree_delrec counter
+system_xfs_alloc_btree_delrec_total{device="dm-4",hostname="localhost.localdomain"} 204
+# TYPE system_xfs_block_map_read_ops counter
+system_xfs_block_map_read_ops_total{device="dm-4",hostname="localhost.localdomain"} 301
+# TYPE system_xfs_block_map_write_ops counter
+system_xfs_block_map_write_ops_total{device="dm-4",hostname="localhost.localdomain"} 302
+# TYPE system_xfs_block_map_unmap counter
+system_xfs_block_map_unmap_total{device="dm-4",hostname="localhost.localdomain"} 303
+# TYPE system_xfs_block_map_add_exlist counter
+system_xfs_block_map_add_exlist_total{device="dm-4",hostname="localhost.localdomain"} 304
+# TYPE system_xfs_block_map_del_exlist counter
+system_xfs_block_map_del_exlist_total{device="dm-4",hostname="localhost.localdomain"} 305
+# TYPE system_xfs_block_map_lookup_exlist counter
+system_xfs_block_map_lookup_exlist_total{device="dm-4",hostname="localhost.localdomain"} 306
+# TYPE system_xfs_block_map_cmp_exlist counter
+system_xfs_block_map_cmp_exlist_total{device="dm-4",hostname="localhost.localdomain"} 307
+# TYPE system_xfs_block_map_btree_lookup counter
+system_xfs_block_map_btree_lookup_total{device="dm-4",hostname="localhost.localdomain"} 401
+# TYPE system_xfs_block_map_btree_compare counter
+system_xfs_block_map_btree_compare_total{device="dm-4",hostname="localhost.localdomain"} 402
+# TYPE system_xfs_block_map_btree_insrec counter
+system_xfs_block_map_btree_insrec_total{device="dm-4",hostname="localhost.localdomain"} 403
+# TYPE system_xfs_block_map_btree_delrec counter
+system_xfs_block_map_btree_delrec_total{device="dm-4",hostname="localhost.localdomain"} 404
+# TYPE system_xfs_dir_op_lookup counter
+system_xfs_dir_op_lookup_total{device="dm-4",hostname="localhost.localdomain"} 501
+# TYPE system_xfs_dir_op_create counter
+system_xfs_dir_op_create_total{device="dm-4",hostname="localhost.localdomain"} 502
+# TYPE system_xfs_dir_op_remove counter
+system_xfs_dir_op_remove_total{device="dm-4",hostname="localhost.localdomain"} 503
+# TYPE system_xfs_dir_op_getdents counter
+system_xfs_dir_op_getdents_total{device="dm-4",hostname="localhost.localdomain"} 504
+# TYPE system_xfs_transaction_sync counter
+system_xfs_transaction_sync_total{device="dm-4",hostname="localhost.localdomain"} 601
+# TYPE system_xfs_transaction_async counter
+system_xfs_transaction_async_total{device="dm-4",hostname="localhost.localdomain"} 602
+# TYPE system_xfs_transaction_empty counter
+system_xfs_transaction_empty_total{device="dm-4",hostname="localhost.localdomain"} 603
+# TYPE system_xfs_inode_ops_ig_attempts counter
+system_xfs_inode_ops_ig_attempts_total{device="dm-4",hostname="localhost.localdomain"} 701
+# TYPE system_xfs_inode_ops_ig_found counter
+system_xfs_inode_ops_ig_found_total{device="dm-4",hostname="localhost.localdomain"} 702
+# TYPE system_xfs_inode_ops_ig_frecycle counter
+system_xfs_inode_ops_ig_frecycle_total{device="dm-4",hostname="localhost.localdomain"} 703
+# TYPE system_xfs_inode_ops_ig_missed counter
+system_xfs_inode_ops_ig_missed_total{device="dm-4",hostname="localhost.localdomain"} 704
+# TYPE system_xfs_inode_ops_ig_dup counter
+system_xfs_inode_ops_ig_dup_total{device="dm-4",hostname="localhost.localdomain"} 705
+# TYPE system_xfs_inode_ops_ig_reclaims counter
+system_xfs_inode_ops_ig_reclaims_total{device="dm-4",hostname="localhost.localdomain"} 706
+# TYPE system_xfs_inode_ops_ig_attrchg counter
+system_xfs_inode_ops_ig_attrchg_total{device="dm-4",hostname="localhost.localdomain"} 707
+# TYPE system_xfs_log_writes counter
+system_xfs_log_writes_total{device="dm-4",hostname="localhost.localdomain"} 801
+# TYPE system_xfs_log_blocks counter
+system_xfs_log_blocks_total{device="dm-4",hostname="localhost.localdomain"} 802
+# TYPE system_xfs_log_noiclogs counter
+system_xfs_log_noiclogs_total{device="dm-4",hostname="localhost.localdomain"} 803
+# TYPE system_xfs_log_force counter
+system_xfs_log_force_total{device="dm-4",hostname="localhost.localdomain"} 804
+# TYPE system_xfs_log_force_sleep counter
+system_xfs_log_force_sleep_total{device="dm-4",hostname="localhost.localdomain"} 805
+# TYPE system_xfs_log_tail_try_logspace counter
+system_xfs_log_tail_try_logspace_total{device="dm-4",hostname="localhost.localdomain"} 901
+# TYPE system_xfs_log_tail_sleep_logspace counter
+system_xfs_log_tail_sleep_logspace_total{device="dm-4",hostname="localhost.localdomain"} 902
+# TYPE system_xfs_log_tail_push_ail counter
+system_xfs_log_tail_push_ail_total{device="dm-4",hostname="localhost.localdomain"} 903
+# TYPE system_xfs_log_tail_push_ail_success counter
+system_xfs_log_tail_push_ail_success_total{device="dm-4",hostname="localhost.localdomain"} 904
+# TYPE system_xfs_log_tail_push_ail_pushbuf counter
+system_xfs_log_tail_push_ail_pushbuf_total{device="dm-4",hostname="localhost.localdomain"} 905
+# TYPE system_xfs_log_tail_push_ail_pinned counter
+system_xfs_log_tail_push_ail_pinned_total{device="dm-4",hostname="localhost.localdomain"} 906
+# TYPE system_xfs_log_tail_push_ail_locked counter
+system_xfs_log_tail_push_ail_locked_total{device="dm-4",hostname="localhost.localdomain"} 907
+# TYPE system_xfs_log_tail_push_ail_flushing counter
+system_xfs_log_tail_push_ail_flushing_total{device="dm-4",hostname="localhost.localdomain"} 908
+# TYPE system_xfs_log_tail_push_ail_restarts counter
+system_xfs_log_tail_push_ail_restarts_total{device="dm-4",hostname="localhost.localdomain"} 909
+# TYPE system_xfs_log_tail_push_ail_flush counter
+system_xfs_log_tail_push_ail_flush_total{device="dm-4",hostname="localhost.localdomain"} 910
+# TYPE system_xfs_xstrat_quick counter
+system_xfs_xstrat_quick_total{device="dm-4",hostname="localhost.localdomain"} 1001
+# TYPE system_xfs_xstrat_split counter
+system_xfs_xstrat_split_total{device="dm-4",hostname="localhost.localdomain"} 1002
+# TYPE system_xfs_write_calls counter
+system_xfs_write_calls_total{device="dm-4",hostname="localhost.localdomain"} 1101
+# TYPE system_xfs_read_calls counter
+system_xfs_read_calls_total{device="dm-4",hostname="localhost.localdomain"} 1102
+# TYPE system_xfs_attr_get counter
+system_xfs_attr_get_total{device="dm-4",hostname="localhost.localdomain"} 1203
+# TYPE system_xfs_attr_set counter
+system_xfs_attr_set_total{device="dm-4",hostname="localhost.localdomain"} 1204
+# TYPE system_xfs_attr_remove counter
+system_xfs_attr_remove_total{device="dm-4",hostname="localhost.localdomain"} 1205
+# TYPE system_xfs_attr_list counter
+system_xfs_attr_list_total{device="dm-4",hostname="localhost.localdomain"} 1206
+# TYPE system_xfs_iflush_count counter
+system_xfs_iflush_count_total{device="dm-4",hostname="localhost.localdomain"} 1301
+# TYPE system_xfs_icluster_flushcnt counter
+system_xfs_icluster_flushcnt_total{device="dm-4",hostname="localhost.localdomain"} 1302
+# TYPE system_xfs_icluster_flushinode counter
+system_xfs_icluster_flushinode_total{device="dm-4",hostname="localhost.localdomain"} 1303
+# TYPE system_xfs_vnode_active gauge
+system_xfs_vnode_active{device="dm-4",hostname="localhost.localdomain"} 1401
+# TYPE system_xfs_vnode_alloc counter
+system_xfs_vnode_alloc_total{device="dm-4",hostname="localhost.localdomain"} 1402
+# TYPE system_xfs_vnode_get counter
+system_xfs_vnode_get_total{device="dm-4",hostname="localhost.localdomain"} 1403
+# TYPE system_xfs_vnode_hold counter
+system_xfs_vnode_hold_total{device="dm-4",hostname="localhost.localdomain"} 1404
+# TYPE system_xfs_vnode_rele counter
+system_xfs_vnode_rele_total{device="dm-4",hostname="localhost.localdomain"} 1405
+# TYPE system_xfs_vnode_reclaim counter
+system_xfs_vnode_reclaim_total{device="dm-4",hostname="localhost.localdomain"} 1406
+# TYPE system_xfs_vnode_remove counter
+system_xfs_vnode_remove_total{device="dm-4",hostname="localhost.localdomain"} 1407
+# TYPE system_xfs_vnode_free counter
+system_xfs_vnode_free_total{device="dm-4",hostname="localhost.localdomain"} 1408
+# TYPE system_xfs_buffer_get counter
+system_xfs_buffer_get_total{device="dm-4",hostname="localhost.localdomain"} 1501
+# TYPE system_xfs_buffer_create counter
+system_xfs_buffer_create_total{device="dm-4",hostname="localhost.localdomain"} 1502
+# TYPE system_xfs_buffer_get_locked counter
+system_xfs_buffer_get_locked_total{device="dm-4",hostname="localhost.localdomain"} 1503
+# TYPE system_xfs_buffer_get_locked_waited counter
+system_xfs_buffer_get_locked_waited_total{device="dm-4",hostname="localhost.localdomain"} 1504
+# TYPE system_xfs_buffer_busy_locked counter
+system_xfs_buffer_busy_locked_total{device="dm-4",hostname="localhost.localdomain"} 1505
+# TYPE system_xfs_buffer_miss_locked counter
+system_xfs_buffer_miss_locked_total{device="dm-4",hostname="localhost.localdomain"} 1506
+# TYPE system_xfs_buffer_page_retries counter
+system_xfs_buffer_page_retries_total{device="dm-4",hostname="localhost.localdomain"} 1507
+# TYPE system_xfs_buffer_page_found counter
+system_xfs_buffer_page_found_total{device="dm-4",hostname="localhost.localdomain"} 1508
+# TYPE system_xfs_buffer_get_read counter
+system_xfs_buffer_get_read_total{device="dm-4",hostname="localhost.localdomain"} 1509
+# TYPE system_xfs_abtb2_lookup counter
+system_xfs_abtb2_lookup_total{device="dm-4",hostname="localhost.localdomain"} 1601
+# TYPE system_xfs_abtb2_compare counter
+system_xfs_abtb2_compare_total{device="dm-4",hostname="localhost.localdomain"} 1602
+# TYPE system_xfs_abtb2_insrec counter
+system_xfs_abtb2_insrec_total{device="dm-4",hostname="localhost.localdomain"} 1603
+# TYPE system_xfs_abtb2_delrec counter
+system_xfs_abtb2_delrec_total{device="dm-4",hostname="localhost.localdomain"} 1604
+# TYPE system_xfs_abtb2_newroot counter
+system_xfs_abtb2_newroot_total{device="dm-4",hostname="localhost.localdomain"} 1605
+# TYPE system_xfs_abtb2_killroot counter
+system_xfs_abtb2_killroot_total{device="dm-4",hostname="localhost.localdomain"} 1606
+# TYPE system_xfs_abtb2_increment counter
+system_xfs_abtb2_increment_total{device="dm-4",hostname="localhost.localdomain"} 1607
+# TYPE system_xfs_abtb2_decrement counter
+system_xfs_abtb2_decrement_total{device="dm-4",hostname="localhost.localdomain"} 1608
+# TYPE system_xfs_abtb2_lshift counter
+system_xfs_abtb2_lshift_total{device="dm-4",hostname="localhost.localdomain"} 1609
+# TYPE system_xfs_abtb2_rshift counter
+system_xfs_abtb2_rshift_total{device="dm-4",hostname="localhost.localdomain"} 1610
+# TYPE system_xfs_abtb2_split counter
+system_xfs_abtb2_split_total{device="dm-4",hostname="localhost.localdomain"} 1611
+# TYPE system_xfs_abtb2_join counter
+system_xfs_abtb2_join_total{device="dm-4",hostname="localhost.localdomain"} 1612
+# TYPE system_xfs_abtb2_alloc counter
+system_xfs_abtb2_alloc_total{device="dm-4",hostname="localhost.localdomain"} 1613
+# TYPE system_xfs_abtb2_free counter
+system_xfs_abtb2_free_total{device="dm-4",hostname="localhost.localdomain"} 1614
+# TYPE system_xfs_abtb2_move counter
+system_xfs_abtb2_move_total{device="dm-4",hostname="localhost.localdomain"} 1615
+# TYPE system_xfs_abtc2_lookup counter
+system_xfs_abtc2_lookup_total{device="dm-4",hostname="localhost.localdomain"} 1701
+# TYPE system_xfs_abtc2_compare counter
+system_xfs_abtc2_compare_total{device="dm-4",hostname="localhost.localdomain"} 1702
+# TYPE system_xfs_abtc2_insrec counter
+system_xfs_abtc2_insrec_total{device="dm-4",hostname="localhost.localdomain"} 1703
+# TYPE system_xfs_abtc2_delrec counter
+system_xfs_abtc2_delrec_total{device="dm-4",hostname="localhost.localdomain"} 1704
+# TYPE system_xfs_abtc2_newroot counter
+system_xfs_abtc2_newroot_total{device="dm-4",hostname="localhost.localdomain"} 1705
+# TYPE system_xfs_abtc2_killroot counter
+system_xfs_abtc2_killroot_total{device="dm-4",hostname="localhost.localdomain"} 1706
+# TYPE system_xfs_abtc2_increment counter
+system_xfs_abtc2_increment_total{device="dm-4",hostname="localhost.localdomain"} 1707
+# TYPE system_xfs_abtc2_decrement counter
+system_xfs_abtc2_decrement_total{device="dm-4",hostname="localhost.localdomain"} 1708
+# TYPE system_xfs_abtc2_lshift counter
+system_xfs_abtc2_lshift_total{device="dm-4",hostname="localhost.localdomain"} 1709
+# TYPE system_xfs_abtc2_rshift counter
+system_xfs_abtc2_rshift_total{device="dm-4",hostname="localhost.localdomain"} 1710
+# TYPE system_xfs_abtc2_split counter
+system_xfs_abtc2_split_total{device="dm-4",hostname="localhost.localdomain"} 1711
+# TYPE system_xfs_abtc2_join counter
+system_xfs_abtc2_join_total{device="dm-4",hostname="localhost.localdomain"} 1712
+# TYPE system_xfs_abtc2_alloc counter
+system_xfs_abtc2_alloc_total{device="dm-4",hostname="localhost.localdomain"} 1713
+# TYPE system_xfs_abtc2_free counter
+system_xfs_abtc2_free_total{device="dm-4",hostname="localhost.localdomain"} 1714
+# TYPE system_xfs_abtc2_move counter
+system_xfs_abtc2_move_total{device="dm-4",hostname="localhost.localdomain"} 1715
+# TYPE system_xfs_bmbt2_lookup counter
+system_xfs_bmbt2_lookup_total{device="dm-4",hostname="localhost.localdomain"} 1801
+# TYPE system_xfs_bmbt2_compare counter
+system_xfs_bmbt2_compare_total{device="dm-4",hostname="localhost.localdomain"} 1802
+# TYPE system_xfs_bmbt2_insrec counter
+system_xfs_bmbt2_insrec_total{device="dm-4",hostname="localhost.localdomain"} 1803
+# TYPE system_xfs_bmbt2_delrec counter
+system_xfs_bmbt2_delrec_total{device="dm-4",hostname="localhost.localdomain"} 1804
+# TYPE system_xfs_bmbt2_newroot counter
+system_xfs_bmbt2_newroot_total{device="dm-4",hostname="localhost.localdomain"} 1805
+# TYPE system_xfs_bmbt2_killroot counter
+system_xfs_bmbt2_killroot_total{device="dm-4",hostname="localhost.localdomain"} 1806
+# TYPE system_xfs_bmbt2_increment counter
+system_xfs_bmbt2_increment_total{device="dm-4",hostname="localhost.localdomain"} 1807
+# TYPE system_xfs_bmbt2_decrement counter
+system_xfs_bmbt2_decrement_total{device="dm-4",hostname="localhost.localdomain"} 1808
+# TYPE system_xfs_bmbt2_lshift counter
+system_xfs_bmbt2_lshift_total{device="dm-4",hostname="localhost.localdomain"} 1809
+# TYPE system_xfs_bmbt2_rshift counter
+system_xfs_bmbt2_rshift_total{device="dm-4",hostname="localhost.localdomain"} 1810
+# TYPE system_xfs_bmbt2_split counter
+system_xfs_bmbt2_split_total{device="dm-4",hostname="localhost.localdomain"} 1811
+# TYPE system_xfs_bmbt2_join counter
+system_xfs_bmbt2_join_total{device="dm-4",hostname="localhost.localdomain"} 1812
+# TYPE system_xfs_bmbt2_alloc counter
+system_xfs_bmbt2_alloc_total{device="dm-4",hostname="localhost.localdomain"} 1813
+# TYPE system_xfs_bmbt2_free counter
+system_xfs_bmbt2_free_total{device="dm-4",hostname="localhost.localdomain"} 1814
+# TYPE system_xfs_bmbt2_move counter
+system_xfs_bmbt2_move_total{device="dm-4",hostname="localhost.localdomain"} 1815
+# TYPE system_xfs_ibt2_lookup counter
+system_xfs_ibt2_lookup_total{device="dm-4",hostname="localhost.localdomain"} 1901
+# TYPE system_xfs_ibt2_compare counter
+system_xfs_ibt2_compare_total{device="dm-4",hostname="localhost.localdomain"} 1902
+# TYPE system_xfs_ibt2_insrec counter
+system_xfs_ibt2_insrec_total{device="dm-4",hostname="localhost.localdomain"} 1903
+# TYPE system_xfs_ibt2_delrec counter
+system_xfs_ibt2_delrec_total{device="dm-4",hostname="localhost.localdomain"} 1904
+# TYPE system_xfs_ibt2_newroot counter
+system_xfs_ibt2_newroot_total{device="dm-4",hostname="localhost.localdomain"} 1905
+# TYPE system_xfs_ibt2_killroot counter
+system_xfs_ibt2_killroot_total{device="dm-4",hostname="localhost.localdomain"} 1906
+# TYPE system_xfs_ibt2_increment counter
+system_xfs_ibt2_increment_total{device="dm-4",hostname="localhost.localdomain"} 1907
+# TYPE system_xfs_ibt2_decrement counter
+system_xfs_ibt2_decrement_total{device="dm-4",hostname="localhost.localdomain"} 1908
+# TYPE system_xfs_ibt2_lshift counter
+system_xfs_ibt2_lshift_total{device="dm-4",hostname="localhost.localdomain"} 1909
+# TYPE system_xfs_ibt2_rshift counter
+system_xfs_ibt2_rshift_total{device="dm-4",hostname="localhost.localdomain"} 1910
+# TYPE system_xfs_ibt2_split counter
+system_xfs_ibt2_split_total{device="dm-4",hostname="localhost.localdomain"} 1911
+# TYPE system_xfs_ibt2_join counter
+system_xfs_ibt2_join_total{device="dm-4",hostname="localhost.localdomain"} 1912
+# TYPE system_xfs_ibt2_alloc counter
+system_xfs_ibt2_alloc_total{device="dm-4",hostname="localhost.localdomain"} 1913
+# TYPE system_xfs_ibt2_free counter
+system_xfs_ibt2_free_total{device="dm-4",hostname="localhost.localdomain"} 1914
+# TYPE system_xfs_ibt2_move counter
+system_xfs_ibt2_move_total{device="dm-4",hostname="localhost.localdomain"} 1915
+# TYPE system_xfs_fibt2_lookup counter
+system_xfs_fibt2_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2001
+# TYPE system_xfs_fibt2_compare counter
+system_xfs_fibt2_compare_total{device="dm-4",hostname="localhost.localdomain"} 2002
+# TYPE system_xfs_fibt2_insrec counter
+system_xfs_fibt2_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2003
+# TYPE system_xfs_fibt2_delrec counter
+system_xfs_fibt2_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2004
+# TYPE system_xfs_fibt2_newroot counter
+system_xfs_fibt2_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2005
+# TYPE system_xfs_fibt2_killroot counter
+system_xfs_fibt2_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2006
+# TYPE system_xfs_fibt2_increment counter
+system_xfs_fibt2_increment_total{device="dm-4",hostname="localhost.localdomain"} 2007
+# TYPE system_xfs_fibt2_decrement counter
+system_xfs_fibt2_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2008
+# TYPE system_xfs_fibt2_lshift counter
+system_xfs_fibt2_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2009
+# TYPE system_xfs_fibt2_rshift counter
+system_xfs_fibt2_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2010
+# TYPE system_xfs_fibt2_split counter
+system_xfs_fibt2_split_total{device="dm-4",hostname="localhost.localdomain"} 2011
+# TYPE system_xfs_fibt2_join counter
+system_xfs_fibt2_join_total{device="dm-4",hostname="localhost.localdomain"} 2012
+# TYPE system_xfs_fibt2_alloc counter
+system_xfs_fibt2_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2013
+# TYPE system_xfs_fibt2_free counter
+system_xfs_fibt2_free_total{device="dm-4",hostname="localhost.localdomain"} 2014
+# TYPE system_xfs_fibt2_move counter
+system_xfs_fibt2_move_total{device="dm-4",hostname="localhost.localdomain"} 2015
+# TYPE system_xfs_rmapbt_lookup counter
+system_xfs_rmapbt_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2101
+# TYPE system_xfs_rmapbt_compare counter
+system_xfs_rmapbt_compare_total{device="dm-4",hostname="localhost.localdomain"} 2102
+# TYPE system_xfs_rmapbt_insrec counter
+system_xfs_rmapbt_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2103
+# TYPE system_xfs_rmapbt_delrec counter
+system_xfs_rmapbt_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2104
+# TYPE system_xfs_rmapbt_newroot counter
+system_xfs_rmapbt_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2105
+# TYPE system_xfs_rmapbt_killroot counter
+system_xfs_rmapbt_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2106
+# TYPE system_xfs_rmapbt_increment counter
+system_xfs_rmapbt_increment_total{device="dm-4",hostname="localhost.localdomain"} 2107
+# TYPE system_xfs_rmapbt_decrement counter
+system_xfs_rmapbt_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2108
+# TYPE system_xfs_rmapbt_lshift counter
+system_xfs_rmapbt_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2109
+# TYPE system_xfs_rmapbt_rshift counter
+system_xfs_rmapbt_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2110
+# TYPE system_xfs_rmapbt_split counter
+system_xfs_rmapbt_split_total{device="dm-4",hostname="localhost.localdomain"} 2111
+# TYPE system_xfs_rmapbt_join counter
+system_xfs_rmapbt_join_total{device="dm-4",hostname="localhost.localdomain"} 2112
+# TYPE system_xfs_rmapbt_alloc counter
+system_xfs_rmapbt_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2113
+# TYPE system_xfs_rmapbt_free counter
+system_xfs_rmapbt_free_total{device="dm-4",hostname="localhost.localdomain"} 2114
+# TYPE system_xfs_rmapbt_move counter
+system_xfs_rmapbt_move_total{device="dm-4",hostname="localhost.localdomain"} 2115
+# TYPE system_xfs_refcbt_lookup counter
+system_xfs_refcbt_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2201
+# TYPE system_xfs_refcbt_compare counter
+system_xfs_refcbt_compare_total{device="dm-4",hostname="localhost.localdomain"} 2202
+# TYPE system_xfs_refcbt_insrec counter
+system_xfs_refcbt_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2203
+# TYPE system_xfs_refcbt_delrec counter
+system_xfs_refcbt_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2204
+# TYPE system_xfs_refcbt_newroot counter
+system_xfs_refcbt_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2205
+# TYPE system_xfs_refcbt_killroot counter
+system_xfs_refcbt_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2206
+# TYPE system_xfs_refcbt_increment counter
+system_xfs_refcbt_increment_total{device="dm-4",hostname="localhost.localdomain"} 2207
+# TYPE system_xfs_refcbt_decrement counter
+system_xfs_refcbt_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2208
+# TYPE system_xfs_refcbt_lshift counter
+system_xfs_refcbt_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2209
+# TYPE system_xfs_refcbt_rshift counter
+system_xfs_refcbt_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2210
+# TYPE system_xfs_refcbt_split counter
+system_xfs_refcbt_split_total{device="dm-4",hostname="localhost.localdomain"} 2211
+# TYPE system_xfs_refcbt_join counter
+system_xfs_refcbt_join_total{device="dm-4",hostname="localhost.localdomain"} 2212
+# TYPE system_xfs_refcbt_alloc counter
+system_xfs_refcbt_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2213
+# TYPE system_xfs_refcbt_free counter
+system_xfs_refcbt_free_total{device="dm-4",hostname="localhost.localdomain"} 2214
+# TYPE system_xfs_refcbt_move counter
+system_xfs_refcbt_move_total{device="dm-4",hostname="localhost.localdomain"} 2215
+# TYPE system_xfs_rmapbt_mem_lookup counter
+system_xfs_rmapbt_mem_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2301
+# TYPE system_xfs_rmapbt_mem_compare counter
+system_xfs_rmapbt_mem_compare_total{device="dm-4",hostname="localhost.localdomain"} 2302
+# TYPE system_xfs_rmapbt_mem_insrec counter
+system_xfs_rmapbt_mem_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2303
+# TYPE system_xfs_rmapbt_mem_delrec counter
+system_xfs_rmapbt_mem_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2304
+# TYPE system_xfs_rmapbt_mem_newroot counter
+system_xfs_rmapbt_mem_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2305
+# TYPE system_xfs_rmapbt_mem_killroot counter
+system_xfs_rmapbt_mem_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2306
+# TYPE system_xfs_rmapbt_mem_increment counter
+system_xfs_rmapbt_mem_increment_total{device="dm-4",hostname="localhost.localdomain"} 2307
+# TYPE system_xfs_rmapbt_mem_decrement counter
+system_xfs_rmapbt_mem_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2308
+# TYPE system_xfs_rmapbt_mem_lshift counter
+system_xfs_rmapbt_mem_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2309
+# TYPE system_xfs_rmapbt_mem_rshift counter
+system_xfs_rmapbt_mem_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2310
+# TYPE system_xfs_rmapbt_mem_split counter
+system_xfs_rmapbt_mem_split_total{device="dm-4",hostname="localhost.localdomain"} 2311
+# TYPE system_xfs_rmapbt_mem_join counter
+system_xfs_rmapbt_mem_join_total{device="dm-4",hostname="localhost.localdomain"} 2312
+# TYPE system_xfs_rmapbt_mem_alloc counter
+system_xfs_rmapbt_mem_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2313
+# TYPE system_xfs_rmapbt_mem_free counter
+system_xfs_rmapbt_mem_free_total{device="dm-4",hostname="localhost.localdomain"} 2314
+# TYPE system_xfs_rmapbt_mem_move counter
+system_xfs_rmapbt_mem_move_total{device="dm-4",hostname="localhost.localdomain"} 2315
+# TYPE system_xfs_rcbagbt_lookup counter
+system_xfs_rcbagbt_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2401
+# TYPE system_xfs_rcbagbt_compare counter
+system_xfs_rcbagbt_compare_total{device="dm-4",hostname="localhost.localdomain"} 2402
+# TYPE system_xfs_rcbagbt_insrec counter
+system_xfs_rcbagbt_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2403
+# TYPE system_xfs_rcbagbt_delrec counter
+system_xfs_rcbagbt_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2404
+# TYPE system_xfs_rcbagbt_newroot counter
+system_xfs_rcbagbt_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2405
+# TYPE system_xfs_rcbagbt_killroot counter
+system_xfs_rcbagbt_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2406
+# TYPE system_xfs_rcbagbt_increment counter
+system_xfs_rcbagbt_increment_total{device="dm-4",hostname="localhost.localdomain"} 2407
+# TYPE system_xfs_rcbagbt_decrement counter
+system_xfs_rcbagbt_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2408
+# TYPE system_xfs_rcbagbt_lshift counter
+system_xfs_rcbagbt_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2409
+# TYPE system_xfs_rcbagbt_rshift counter
+system_xfs_rcbagbt_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2410
+# TYPE system_xfs_rcbagbt_split counter
+system_xfs_rcbagbt_split_total{device="dm-4",hostname="localhost.localdomain"} 2411
+# TYPE system_xfs_rcbagbt_join counter
+system_xfs_rcbagbt_join_total{device="dm-4",hostname="localhost.localdomain"} 2412
+# TYPE system_xfs_rcbagbt_alloc counter
+system_xfs_rcbagbt_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2413
+# TYPE system_xfs_rcbagbt_free counter
+system_xfs_rcbagbt_free_total{device="dm-4",hostname="localhost.localdomain"} 2414
+# TYPE system_xfs_rcbagbt_move counter
+system_xfs_rcbagbt_move_total{device="dm-4",hostname="localhost.localdomain"} 2415
+# TYPE system_xfs_rtrmapbt_lookup counter
+system_xfs_rtrmapbt_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2501
+# TYPE system_xfs_rtrmapbt_compare counter
+system_xfs_rtrmapbt_compare_total{device="dm-4",hostname="localhost.localdomain"} 2502
+# TYPE system_xfs_rtrmapbt_insrec counter
+system_xfs_rtrmapbt_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2503
+# TYPE system_xfs_rtrmapbt_delrec counter
+system_xfs_rtrmapbt_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2504
+# TYPE system_xfs_rtrmapbt_newroot counter
+system_xfs_rtrmapbt_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2505
+# TYPE system_xfs_rtrmapbt_killroot counter
+system_xfs_rtrmapbt_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2506
+# TYPE system_xfs_rtrmapbt_increment counter
+system_xfs_rtrmapbt_increment_total{device="dm-4",hostname="localhost.localdomain"} 2507
+# TYPE system_xfs_rtrmapbt_decrement counter
+system_xfs_rtrmapbt_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2508
+# TYPE system_xfs_rtrmapbt_lshift counter
+system_xfs_rtrmapbt_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2509
+# TYPE system_xfs_rtrmapbt_rshift counter
+system_xfs_rtrmapbt_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2510
+# TYPE system_xfs_rtrmapbt_split counter
+system_xfs_rtrmapbt_split_total{device="dm-4",hostname="localhost.localdomain"} 2511
+# TYPE system_xfs_rtrmapbt_join counter
+system_xfs_rtrmapbt_join_total{device="dm-4",hostname="localhost.localdomain"} 2512
+# TYPE system_xfs_rtrmapbt_alloc counter
+system_xfs_rtrmapbt_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2513
+# TYPE system_xfs_rtrmapbt_free counter
+system_xfs_rtrmapbt_free_total{device="dm-4",hostname="localhost.localdomain"} 2514
+# TYPE system_xfs_rtrmapbt_move counter
+system_xfs_rtrmapbt_move_total{device="dm-4",hostname="localhost.localdomain"} 2515
+# TYPE system_xfs_rtrmapbt_mem_lookup counter
+system_xfs_rtrmapbt_mem_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2601
+# TYPE system_xfs_rtrmapbt_mem_compare counter
+system_xfs_rtrmapbt_mem_compare_total{device="dm-4",hostname="localhost.localdomain"} 2602
+# TYPE system_xfs_rtrmapbt_mem_insrec counter
+system_xfs_rtrmapbt_mem_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2603
+# TYPE system_xfs_rtrmapbt_mem_delrec counter
+system_xfs_rtrmapbt_mem_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2604
+# TYPE system_xfs_rtrmapbt_mem_newroot counter
+system_xfs_rtrmapbt_mem_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2605
+# TYPE system_xfs_rtrmapbt_mem_killroot counter
+system_xfs_rtrmapbt_mem_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2606
+# TYPE system_xfs_rtrmapbt_mem_increment counter
+system_xfs_rtrmapbt_mem_increment_total{device="dm-4",hostname="localhost.localdomain"} 2607
+# TYPE system_xfs_rtrmapbt_mem_decrement counter
+system_xfs_rtrmapbt_mem_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2608
+# TYPE system_xfs_rtrmapbt_mem_lshift counter
+system_xfs_rtrmapbt_mem_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2609
+# TYPE system_xfs_rtrmapbt_mem_rshift counter
+system_xfs_rtrmapbt_mem_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2610
+# TYPE system_xfs_rtrmapbt_mem_split counter
+system_xfs_rtrmapbt_mem_split_total{device="dm-4",hostname="localhost.localdomain"} 2611
+# TYPE system_xfs_rtrmapbt_mem_join counter
+system_xfs_rtrmapbt_mem_join_total{device="dm-4",hostname="localhost.localdomain"} 2612
+# TYPE system_xfs_rtrmapbt_mem_alloc counter
+system_xfs_rtrmapbt_mem_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2613
+# TYPE system_xfs_rtrmapbt_mem_free counter
+system_xfs_rtrmapbt_mem_free_total{device="dm-4",hostname="localhost.localdomain"} 2614
+# TYPE system_xfs_rtrmapbt_mem_move counter
+system_xfs_rtrmapbt_mem_move_total{device="dm-4",hostname="localhost.localdomain"} 2615
+# TYPE system_xfs_rtrefcntbt_lookup counter
+system_xfs_rtrefcntbt_lookup_total{device="dm-4",hostname="localhost.localdomain"} 2701
+# TYPE system_xfs_rtrefcntbt_compare counter
+system_xfs_rtrefcntbt_compare_total{device="dm-4",hostname="localhost.localdomain"} 2702
+# TYPE system_xfs_rtrefcntbt_insrec counter
+system_xfs_rtrefcntbt_insrec_total{device="dm-4",hostname="localhost.localdomain"} 2703
+# TYPE system_xfs_rtrefcntbt_delrec counter
+system_xfs_rtrefcntbt_delrec_total{device="dm-4",hostname="localhost.localdomain"} 2704
+# TYPE system_xfs_rtrefcntbt_newroot counter
+system_xfs_rtrefcntbt_newroot_total{device="dm-4",hostname="localhost.localdomain"} 2705
+# TYPE system_xfs_rtrefcntbt_killroot counter
+system_xfs_rtrefcntbt_killroot_total{device="dm-4",hostname="localhost.localdomain"} 2706
+# TYPE system_xfs_rtrefcntbt_increment counter
+system_xfs_rtrefcntbt_increment_total{device="dm-4",hostname="localhost.localdomain"} 2707
+# TYPE system_xfs_rtrefcntbt_decrement counter
+system_xfs_rtrefcntbt_decrement_total{device="dm-4",hostname="localhost.localdomain"} 2708
+# TYPE system_xfs_rtrefcntbt_lshift counter
+system_xfs_rtrefcntbt_lshift_total{device="dm-4",hostname="localhost.localdomain"} 2709
+# TYPE system_xfs_rtrefcntbt_rshift counter
+system_xfs_rtrefcntbt_rshift_total{device="dm-4",hostname="localhost.localdomain"} 2710
+# TYPE system_xfs_rtrefcntbt_split counter
+system_xfs_rtrefcntbt_split_total{device="dm-4",hostname="localhost.localdomain"} 2711
+# TYPE system_xfs_rtrefcntbt_join counter
+system_xfs_rtrefcntbt_join_total{device="dm-4",hostname="localhost.localdomain"} 2712
+# TYPE system_xfs_rtrefcntbt_alloc counter
+system_xfs_rtrefcntbt_alloc_total{device="dm-4",hostname="localhost.localdomain"} 2713
+# TYPE system_xfs_rtrefcntbt_free counter
+system_xfs_rtrefcntbt_free_total{device="dm-4",hostname="localhost.localdomain"} 2714
+# TYPE system_xfs_rtrefcntbt_move counter
+system_xfs_rtrefcntbt_move_total{device="dm-4",hostname="localhost.localdomain"} 2715
+# TYPE system_xfs_quota_reclaims counter
+system_xfs_quota_reclaims_total{device="dm-4",hostname="localhost.localdomain"} 2801
+# TYPE system_xfs_quota_reclaim_misses counter
+system_xfs_quota_reclaim_misses_total{device="dm-4",hostname="localhost.localdomain"} 2802
+# TYPE system_xfs_quota_dquot_dups counter
+system_xfs_quota_dquot_dups_total{device="dm-4",hostname="localhost.localdomain"} 2803
+# TYPE system_xfs_quota_cachemisses counter
+system_xfs_quota_cachemisses_total{device="dm-4",hostname="localhost.localdomain"} 2804
+# TYPE system_xfs_quota_cachehits counter
+system_xfs_quota_cachehits_total{device="dm-4",hostname="localhost.localdomain"} 2805
+# TYPE system_xfs_quota_wants counter
+system_xfs_quota_wants_total{device="dm-4",hostname="localhost.localdomain"} 2806
+# TYPE system_xfs_quota_dquot gauge
+system_xfs_quota_dquot{device="dm-4",hostname="localhost.localdomain"} 2807
+# TYPE system_xfs_quota_dquot_unused gauge
+system_xfs_quota_dquot_unused{device="dm-4",hostname="localhost.localdomain"} 2808
+# TYPE system_xfs_zoned_gc_read_calls counter
+system_xfs_zoned_gc_read_calls_total{device="dm-4",hostname="localhost.localdomain"} 2901
+# TYPE system_xfs_zoned_gc_write_calls counter
+system_xfs_zoned_gc_write_calls_total{device="dm-4",hostname="localhost.localdomain"} 2902
+# TYPE system_xfs_zoned_gc_zone_reset_calls counter
+system_xfs_zoned_gc_zone_reset_calls_total{device="dm-4",hostname="localhost.localdomain"} 2903
+# TYPE system_xfs_metadir_inodes gauge
+system_xfs_metadir_inodes{device="dm-4",hostname="localhost.localdomain"} 3001
+# TYPE system_xfs_xstrat_bytes counter
+system_xfs_xstrat_bytes_total{device="dm-4",hostname="localhost.localdomain"} 3101
+# TYPE system_xfs_write_bytes counter
+system_xfs_write_bytes_total{device="dm-4",hostname="localhost.localdomain"} 3102
+# TYPE system_xfs_read_bytes counter
+system_xfs_read_bytes_total{device="dm-4",hostname="localhost.localdomain"} 3103
+# TYPE system_xfs_defer_relog counter
+system_xfs_defer_relog_total{device="dm-4",hostname="localhost.localdomain"} 3201
+# TYPE system_xfs_gc_bytes counter
+system_xfs_gc_bytes_total{device="dm-4",hostname="localhost.localdomain"} 3401

@@ -186,6 +186,81 @@ typedef enum {
     FAM_XFS_REFCBT_ALLOC,
     FAM_XFS_REFCBT_FREE,
     FAM_XFS_REFCBT_MOVE,
+    FAM_XFS_RMAPBT_MEM_LOOKUP,
+    FAM_XFS_RMAPBT_MEM_COMPARE,
+    FAM_XFS_RMAPBT_MEM_INSREC,
+    FAM_XFS_RMAPBT_MEM_DELREC,
+    FAM_XFS_RMAPBT_MEM_NEWROOT,
+    FAM_XFS_RMAPBT_MEM_KILLROOT,
+    FAM_XFS_RMAPBT_MEM_INCREMENT,
+    FAM_XFS_RMAPBT_MEM_DECREMENT,
+    FAM_XFS_RMAPBT_MEM_LSHIFT,
+    FAM_XFS_RMAPBT_MEM_RSHIFT,
+    FAM_XFS_RMAPBT_MEM_SPLIT,
+    FAM_XFS_RMAPBT_MEM_JOIN,
+    FAM_XFS_RMAPBT_MEM_ALLOC,
+    FAM_XFS_RMAPBT_MEM_FREE,
+    FAM_XFS_RMAPBT_MEM_MOVE,
+    FAM_XFS_RCBAGBT_LOOKUP,
+    FAM_XFS_RCBAGBT_COMPARE,
+    FAM_XFS_RCBAGBT_INSREC,
+    FAM_XFS_RCBAGBT_DELREC,
+    FAM_XFS_RCBAGBT_NEWROOT,
+    FAM_XFS_RCBAGBT_KILLROOT,
+    FAM_XFS_RCBAGBT_INCREMENT,
+    FAM_XFS_RCBAGBT_DECREMENT,
+    FAM_XFS_RCBAGBT_LSHIFT,
+    FAM_XFS_RCBAGBT_RSHIFT,
+    FAM_XFS_RCBAGBT_SPLIT,
+    FAM_XFS_RCBAGBT_JOIN,
+    FAM_XFS_RCBAGBT_ALLOC,
+    FAM_XFS_RCBAGBT_FREE,
+    FAM_XFS_RCBAGBT_MOVE,
+    FAM_XFS_RTRMAPBT_LOOKUP,
+    FAM_XFS_RTRMAPBT_COMPARE,
+    FAM_XFS_RTRMAPBT_INSREC,
+    FAM_XFS_RTRMAPBT_DELREC,
+    FAM_XFS_RTRMAPBT_NEWROOT,
+    FAM_XFS_RTRMAPBT_KILLROOT,
+    FAM_XFS_RTRMAPBT_INCREMENT,
+    FAM_XFS_RTRMAPBT_DECREMENT,
+    FAM_XFS_RTRMAPBT_LSHIFT,
+    FAM_XFS_RTRMAPBT_RSHIFT,
+    FAM_XFS_RTRMAPBT_SPLIT,
+    FAM_XFS_RTRMAPBT_JOIN,
+    FAM_XFS_RTRMAPBT_ALLOC,
+    FAM_XFS_RTRMAPBT_FREE,
+    FAM_XFS_RTRMAPBT_MOVE,
+    FAM_XFS_RTRMAPBT_MEM_LOOKUP,
+    FAM_XFS_RTRMAPBT_MEM_COMPARE,
+    FAM_XFS_RTRMAPBT_MEM_INSREC,
+    FAM_XFS_RTRMAPBT_MEM_DELREC,
+    FAM_XFS_RTRMAPBT_MEM_NEWROOT,
+    FAM_XFS_RTRMAPBT_MEM_KILLROOT,
+    FAM_XFS_RTRMAPBT_MEM_INCREMENT,
+    FAM_XFS_RTRMAPBT_MEM_DECREMENT,
+    FAM_XFS_RTRMAPBT_MEM_LSHIFT,
+    FAM_XFS_RTRMAPBT_MEM_RSHIFT,
+    FAM_XFS_RTRMAPBT_MEM_SPLIT,
+    FAM_XFS_RTRMAPBT_MEM_JOIN,
+    FAM_XFS_RTRMAPBT_MEM_ALLOC,
+    FAM_XFS_RTRMAPBT_MEM_FREE,
+    FAM_XFS_RTRMAPBT_MEM_MOVE,
+    FAM_XFS_RTREFCNTBT_LOOKUP,
+    FAM_XFS_RTREFCNTBT_COMPARE,
+    FAM_XFS_RTREFCNTBT_INSREC,
+    FAM_XFS_RTREFCNTBT_DELREC,
+    FAM_XFS_RTREFCNTBT_NEWROOT,
+    FAM_XFS_RTREFCNTBT_KILLROOT,
+    FAM_XFS_RTREFCNTBT_INCREMENT,
+    FAM_XFS_RTREFCNTBT_DECREMENT,
+    FAM_XFS_RTREFCNTBT_LSHIFT,
+    FAM_XFS_RTREFCNTBT_RSHIFT,
+    FAM_XFS_RTREFCNTBT_SPLIT,
+    FAM_XFS_RTREFCNTBT_JOIN,
+    FAM_XFS_RTREFCNTBT_ALLOC,
+    FAM_XFS_RTREFCNTBT_FREE,
+    FAM_XFS_RTREFCNTBT_MOVE,
     FAM_XFS_QUOTA_RECLAIMS,
     FAM_XFS_QUOTA_RECLAIM_MISSES,
     FAM_XFS_QUOTA_DQUOT_DUPS,
@@ -194,10 +269,15 @@ typedef enum {
     FAM_XFS_QUOTA_WANTS,
     FAM_XFS_QUOTA_DQUOT,
     FAM_XFS_QUOTA_DQUOT_UNUSED,
+    FAM_XFS_ZONED_GC_READ_CALLS,
+    FAM_XFS_ZONED_GC_WRITE_CALLS,
+    FAM_XFS_ZONED_GC_ZONE_RESET_CALLS,
+    FAM_XFS_METADIR_INODES,
     FAM_XFS_XSTRAT_BYTES,
     FAM_XFS_WRITE_BYTES,
     FAM_XFS_READ_BYTES,
     FAM_XFS_DEFER_RELOG,
+    FAM_XFS_GC_BYTES,
     FAM_XFS_MAX,
 } fam_xfs_e;
 
@@ -355,6 +435,46 @@ static const fam_xfs_e xfs_stats_refcntbt[] = {
     FAM_XFS_REFCBT_ALLOC,     FAM_XFS_REFCBT_FREE,      FAM_XFS_REFCBT_MOVE,
 };
 
+static const fam_xfs_e xfs_stats_rmapbt_mem[] = { 
+    FAM_XFS_RMAPBT_MEM_LOOKUP,    FAM_XFS_RMAPBT_MEM_COMPARE,   FAM_XFS_RMAPBT_MEM_INSREC,
+    FAM_XFS_RMAPBT_MEM_DELREC,    FAM_XFS_RMAPBT_MEM_NEWROOT,   FAM_XFS_RMAPBT_MEM_KILLROOT,
+    FAM_XFS_RMAPBT_MEM_INCREMENT, FAM_XFS_RMAPBT_MEM_DECREMENT, FAM_XFS_RMAPBT_MEM_LSHIFT,
+    FAM_XFS_RMAPBT_MEM_RSHIFT,    FAM_XFS_RMAPBT_MEM_SPLIT,     FAM_XFS_RMAPBT_MEM_JOIN,
+    FAM_XFS_RMAPBT_MEM_ALLOC,     FAM_XFS_RMAPBT_MEM_FREE,      FAM_XFS_RMAPBT_MEM_MOVE,
+};
+
+static const fam_xfs_e xfs_stats_rcbagbt[] = { 
+    FAM_XFS_RCBAGBT_LOOKUP,    FAM_XFS_RCBAGBT_COMPARE,   FAM_XFS_RCBAGBT_INSREC,
+    FAM_XFS_RCBAGBT_DELREC,    FAM_XFS_RCBAGBT_NEWROOT,   FAM_XFS_RCBAGBT_KILLROOT,
+    FAM_XFS_RCBAGBT_INCREMENT, FAM_XFS_RCBAGBT_DECREMENT, FAM_XFS_RCBAGBT_LSHIFT,
+    FAM_XFS_RCBAGBT_RSHIFT,    FAM_XFS_RCBAGBT_SPLIT,     FAM_XFS_RCBAGBT_JOIN,
+    FAM_XFS_RCBAGBT_ALLOC,     FAM_XFS_RCBAGBT_FREE,      FAM_XFS_RCBAGBT_MOVE,
+};
+
+static const fam_xfs_e xfs_stats_rtrmapbt[] = { 
+    FAM_XFS_RTRMAPBT_LOOKUP,    FAM_XFS_RTRMAPBT_COMPARE,   FAM_XFS_RTRMAPBT_INSREC,
+    FAM_XFS_RTRMAPBT_DELREC,    FAM_XFS_RTRMAPBT_NEWROOT,   FAM_XFS_RTRMAPBT_KILLROOT,
+    FAM_XFS_RTRMAPBT_INCREMENT, FAM_XFS_RTRMAPBT_DECREMENT, FAM_XFS_RTRMAPBT_LSHIFT,
+    FAM_XFS_RTRMAPBT_RSHIFT,    FAM_XFS_RTRMAPBT_SPLIT,     FAM_XFS_RTRMAPBT_JOIN,
+    FAM_XFS_RTRMAPBT_ALLOC,     FAM_XFS_RTRMAPBT_FREE,      FAM_XFS_RTRMAPBT_MOVE,
+};
+
+static const fam_xfs_e xfs_stats_rtrmapbt_mem[] = { 
+    FAM_XFS_RTRMAPBT_MEM_LOOKUP,    FAM_XFS_RTRMAPBT_MEM_COMPARE,   FAM_XFS_RTRMAPBT_MEM_INSREC,
+    FAM_XFS_RTRMAPBT_MEM_DELREC,    FAM_XFS_RTRMAPBT_MEM_NEWROOT,   FAM_XFS_RTRMAPBT_MEM_KILLROOT,
+    FAM_XFS_RTRMAPBT_MEM_INCREMENT, FAM_XFS_RTRMAPBT_MEM_DECREMENT, FAM_XFS_RTRMAPBT_MEM_LSHIFT,
+    FAM_XFS_RTRMAPBT_MEM_RSHIFT,    FAM_XFS_RTRMAPBT_MEM_SPLIT,     FAM_XFS_RTRMAPBT_MEM_JOIN,
+    FAM_XFS_RTRMAPBT_MEM_ALLOC,     FAM_XFS_RTRMAPBT_MEM_FREE,      FAM_XFS_RTRMAPBT_MEM_MOVE,
+};
+
+static const fam_xfs_e xfs_stats_rtrefcntbt[] = { 
+    FAM_XFS_RTREFCNTBT_LOOKUP,    FAM_XFS_RTREFCNTBT_COMPARE,   FAM_XFS_RTREFCNTBT_INSREC,
+    FAM_XFS_RTREFCNTBT_DELREC,    FAM_XFS_RTREFCNTBT_NEWROOT,   FAM_XFS_RTREFCNTBT_KILLROOT,
+    FAM_XFS_RTREFCNTBT_INCREMENT, FAM_XFS_RTREFCNTBT_DECREMENT, FAM_XFS_RTREFCNTBT_LSHIFT,
+    FAM_XFS_RTREFCNTBT_RSHIFT,    FAM_XFS_RTREFCNTBT_SPLIT,     FAM_XFS_RTREFCNTBT_JOIN,
+    FAM_XFS_RTREFCNTBT_ALLOC,     FAM_XFS_RTREFCNTBT_FREE,      FAM_XFS_RTREFCNTBT_MOVE,
+};
+
 static const fam_xfs_e xfs_stats_qm[] = {
     FAM_XFS_QUOTA_RECLAIMS,   FAM_XFS_QUOTA_RECLAIM_MISSES,
     FAM_XFS_QUOTA_DQUOT_DUPS, FAM_XFS_QUOTA_CACHEMISSES,
@@ -370,6 +490,20 @@ static const fam_xfs_e xfs_stats_xpc[] = {
 
 static const fam_xfs_e xfs_stats_defer_relog[] = {
     FAM_XFS_DEFER_RELOG,
+};
+
+static const fam_xfs_e xfs_stats_zoned[] = {
+    FAM_XFS_ZONED_GC_READ_CALLS,
+    FAM_XFS_ZONED_GC_WRITE_CALLS,
+    FAM_XFS_ZONED_GC_ZONE_RESET_CALLS,
+};
+
+static const fam_xfs_e xfs_stats_metafile[] = {
+    FAM_XFS_METADIR_INODES,
+};
+
+static const fam_xfs_e xfs_stats_gc_xpc[] = {
+    FAM_XFS_GC_BYTES,
 };
 
 static  metric_family_t fams[FAM_XFS_MAX] = {
@@ -1300,6 +1434,381 @@ static  metric_family_t fams[FAM_XFS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
+    [FAM_XFS_RMAPBT_MEM_LOOKUP] = {
+        .name = "system_xfs_rmapbt_mem_lookup",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_COMPARE] = {
+        .name = "system_xfs_rmapbt_mem_compare",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_INSREC] = {
+        .name = "system_xfs_rmapbt_mem_insrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_DELREC] = {
+        .name = "system_xfs_rmapbt_mem_delrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_NEWROOT] = {
+        .name = "system_xfs_rmapbt_mem_newroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_KILLROOT] = {
+        .name = "system_xfs_rmapbt_mem_killroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_INCREMENT] = {
+        .name = "system_xfs_rmapbt_mem_increment",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_DECREMENT] = {
+        .name = "system_xfs_rmapbt_mem_decrement",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_LSHIFT] = {
+        .name = "system_xfs_rmapbt_mem_lshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_RSHIFT] = {
+        .name = "system_xfs_rmapbt_mem_rshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_SPLIT] = {
+        .name = "system_xfs_rmapbt_mem_split",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_JOIN] = {
+        .name = "system_xfs_rmapbt_mem_join",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_ALLOC] = {
+        .name = "system_xfs_rmapbt_mem_alloc",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_FREE] = {
+        .name = "system_xfs_rmapbt_mem_free",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RMAPBT_MEM_MOVE] = {
+        .name = "system_xfs_rmapbt_mem_move",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_LOOKUP] = {
+        .name = "system_xfs_rcbagbt_lookup",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_COMPARE] = {
+        .name = "system_xfs_rcbagbt_compare",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_INSREC] = {
+        .name = "system_xfs_rcbagbt_insrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_DELREC] = {
+        .name = "system_xfs_rcbagbt_delrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_NEWROOT] = {
+        .name = "system_xfs_rcbagbt_newroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_KILLROOT] = {
+        .name = "system_xfs_rcbagbt_killroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_INCREMENT] = {
+        .name = "system_xfs_rcbagbt_increment",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_DECREMENT] = {
+        .name = "system_xfs_rcbagbt_decrement",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_LSHIFT] = {
+        .name = "system_xfs_rcbagbt_lshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_RSHIFT] = {
+        .name = "system_xfs_rcbagbt_rshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_SPLIT] = {
+        .name = "system_xfs_rcbagbt_split",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_JOIN] = {
+        .name = "system_xfs_rcbagbt_join",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_ALLOC] = {
+        .name = "system_xfs_rcbagbt_alloc",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_FREE] = {
+        .name = "system_xfs_rcbagbt_free",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RCBAGBT_MOVE] = {
+        .name = "system_xfs_rcbagbt_move",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_LOOKUP] = {
+        .name = "system_xfs_rtrmapbt_lookup",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_COMPARE] = {
+        .name = "system_xfs_rtrmapbt_compare",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_INSREC] = {
+        .name = "system_xfs_rtrmapbt_insrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_DELREC] = {
+        .name = "system_xfs_rtrmapbt_delrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_NEWROOT] = {
+        .name = "system_xfs_rtrmapbt_newroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_KILLROOT] = {
+        .name = "system_xfs_rtrmapbt_killroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_INCREMENT] = {
+        .name = "system_xfs_rtrmapbt_increment",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_DECREMENT] = {
+        .name = "system_xfs_rtrmapbt_decrement",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_LSHIFT] = {
+        .name = "system_xfs_rtrmapbt_lshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_RSHIFT] = {
+        .name = "system_xfs_rtrmapbt_rshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_SPLIT] = {
+        .name = "system_xfs_rtrmapbt_split",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_JOIN] = {
+        .name = "system_xfs_rtrmapbt_join",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_ALLOC] = {
+        .name = "system_xfs_rtrmapbt_alloc",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_FREE] = {
+        .name = "system_xfs_rtrmapbt_free",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MOVE] = {
+        .name = "system_xfs_rtrmapbt_move",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_LOOKUP] = {
+        .name = "system_xfs_rtrmapbt_mem_lookup",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_COMPARE] = {
+        .name = "system_xfs_rtrmapbt_mem_compare",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_INSREC] = {
+        .name = "system_xfs_rtrmapbt_mem_insrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_DELREC] = {
+        .name = "system_xfs_rtrmapbt_mem_delrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_NEWROOT] = {
+        .name = "system_xfs_rtrmapbt_mem_newroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_KILLROOT] = {
+        .name = "system_xfs_rtrmapbt_mem_killroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_INCREMENT] = {
+        .name = "system_xfs_rtrmapbt_mem_increment",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_DECREMENT] = {
+        .name = "system_xfs_rtrmapbt_mem_decrement",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_LSHIFT] = {
+        .name = "system_xfs_rtrmapbt_mem_lshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_RSHIFT] = {
+        .name = "system_xfs_rtrmapbt_mem_rshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_SPLIT] = {
+        .name = "system_xfs_rtrmapbt_mem_split",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_JOIN] = {
+        .name = "system_xfs_rtrmapbt_mem_join",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_ALLOC] = {
+        .name = "system_xfs_rtrmapbt_mem_alloc",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_FREE] = {
+        .name = "system_xfs_rtrmapbt_mem_free",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTRMAPBT_MEM_MOVE] = {
+        .name = "system_xfs_rtrmapbt_mem_move",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_LOOKUP] = {
+        .name = "system_xfs_rtrefcntbt_lookup",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_COMPARE] = {
+        .name = "system_xfs_rtrefcntbt_compare",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_INSREC] = {
+        .name = "system_xfs_rtrefcntbt_insrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_DELREC] = {
+        .name = "system_xfs_rtrefcntbt_delrec",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_NEWROOT] = {
+        .name = "system_xfs_rtrefcntbt_newroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_KILLROOT] = {
+        .name = "system_xfs_rtrefcntbt_killroot",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_INCREMENT] = {
+        .name = "system_xfs_rtrefcntbt_increment",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_DECREMENT] = {
+        .name = "system_xfs_rtrefcntbt_decrement",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_LSHIFT] = {
+        .name = "system_xfs_rtrefcntbt_lshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_RSHIFT] = {
+        .name = "system_xfs_rtrefcntbt_rshift",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_SPLIT] = {
+        .name = "system_xfs_rtrefcntbt_split",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_JOIN] = {
+        .name = "system_xfs_rtrefcntbt_join",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_ALLOC] = {
+        .name = "system_xfs_rtrefcntbt_alloc",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_FREE] = {
+        .name = "system_xfs_rtrefcntbt_free",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_RTREFCNTBT_MOVE] = {
+        .name = "system_xfs_rtrefcntbt_move",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
     [FAM_XFS_QUOTA_RECLAIMS] = {
         .name = "system_xfs_quota_reclaims",
         .type = METRIC_TYPE_COUNTER,
@@ -1332,14 +1841,36 @@ static  metric_family_t fams[FAM_XFS_MAX] = {
     },
     [FAM_XFS_QUOTA_DQUOT] = {
         .name = "system_xfs_quota_dquot",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
     [FAM_XFS_QUOTA_DQUOT_UNUSED] = {
         .name = "system_xfs_quota_dquot_unused",
+        .type = METRIC_TYPE_GAUGE,
+        .help = NULL,
+    },
+    [FAM_XFS_ZONED_GC_READ_CALLS] = {
+        .name = "system_xfs_zoned_gc_read_calls",
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
+    [FAM_XFS_ZONED_GC_WRITE_CALLS] = {
+        .name = "system_xfs_zoned_gc_write_calls",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_ZONED_GC_ZONE_RESET_CALLS] = {
+        .name = "system_xfs_zoned_gc_zone_reset_calls",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+
+    [FAM_XFS_METADIR_INODES] = {
+        .name = "system_xfs_metadir_inodes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of metadata directory inodes."
+    },
+
     [FAM_XFS_XSTRAT_BYTES] = {
         .name = "system_xfs_xstrat_bytes",
         .type = METRIC_TYPE_COUNTER,
@@ -1359,6 +1890,11 @@ static  metric_family_t fams[FAM_XFS_MAX] = {
     },
     [FAM_XFS_DEFER_RELOG] = {
         .name = "system_xfs_defer_relog",
+        .type = METRIC_TYPE_COUNTER,
+        .help = NULL,
+    },
+    [FAM_XFS_GC_BYTES] = {
+        .name = "system_xfs_gc_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },

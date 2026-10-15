@@ -10,6 +10,9 @@ NCOLLECTD-XFS(5) - File Formats Manual
 	plugin xfs {
 	    device [incl|include|excl|exclude] device
 	    collect flags
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -26,55 +29,77 @@ The following configuration options are available:
 
 **collect** *flags*
 
-> *extentalloc*
+> *ExtentAlloc*
 
-> *abt*
+> *Abt*
 
-> *blkmap*
+> *BlkMap*
 
-> *bmbt*
+> *Bmbt*
 
-> *dir*
+> *Dir*
 
-> *trans*
+> *Trans*
 
-> *ig*
+> *IG*
 
-> *log*
+> *Log*
 
-> *pushail*
+> *PushAil*
 
-> *sstrat*
+> *XStrat*
 
-> *rw*
+> *RW*
 
-> *attr*
+> *Attr*
 
-> *icluster*
+> *ICluster*
 
-> *vnodes*
+> *VNodes*
 
-> *buf*
+> *Buf*
 
-> *abtb2*
+> *Abtb2*
 
-> *abtc2*
+> *Abtc2*
 
-> *bmbt2*
+> *Bmbt2*
 
-> *ibt2*
+> *Ibt2*
 
-> *fibt2*
+> *Fibt2*
 
-> *rmapbt*
+> *rMapBt*
 
-> *refcntbt*
+> *RefCntBt*
 
-> *qm*
+> *rMapBtMem*
 
-> *xpc*
+> *RcBagBt*
+
+> *RtrMapBt*
+
+> *RtrMapBtMem*
+
+> *RtRedCntBt*
+
+> *Qm*
+
+> *Zoned*
+
+> *MetaFile*
+
+> *Xpc*
 
 > *defer\_relog*
+
+> *GcXpc*
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 
