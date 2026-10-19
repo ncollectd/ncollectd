@@ -81,7 +81,7 @@ static char *uuid_get_from_sys_file(const char *path)
 static bool uuid_is_valid(const char *u)
 {
     size_t len = strlen(u);
-    if ((len != 36) && (len != 32))
+    if ((len != UUID_PRINTABLE_NORMAL_LENGTH) && (len != UUID_PRINTABLE_COMPACT_LENGTH))
         return false;
 
     bool nonzero = false;
@@ -90,7 +90,7 @@ static bool uuid_is_valid(const char *u)
             continue;
         if (!isxdigit((unsigned char)u[i]))
             return false;
-        if ((u[i] != '0') && (u[i] != 'f') && (u[i] != 'F')) {
+        if ((u[i] != '0') && (u[i] != 'f') && (u[i] != 'F'))
             nonzero = true;
     }
 
