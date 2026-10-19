@@ -18,6 +18,7 @@ NCOLLECTD-PGPOOL(5) - File Formats Manual
 	        password-env env-name
 	        ssl-mode disable|allow|prefer|require
 	        interval seconds
+	        timeout seconds
 	        label key value
 	        filter {
 	            ...
@@ -98,6 +99,10 @@ described below.
 
 > > Specify the interval with which the database should be queried.
 > > The default is to use the global **interval** setting.
+
+> **timeout** *seconds*
+
+> > Sets the connection timeout to connect to **pgpool**.
 
 > **label** *key* *value*
 

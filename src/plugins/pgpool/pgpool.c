@@ -32,7 +32,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/complain.h"
+#include "libutils/itoa.h"
 
 #include <libpq-fe.h>
 #include <pg_config_manual.h>
@@ -46,6 +46,7 @@ enum {
     FAM_PGPOOL_NODE_STATUS,
     FAM_PGPOOL_NODE_SELECTS,
     FAM_PGPOOL_NODE_REPLICATION_DELAY_SECONDS,
+    FAM_PGPOOL_NODE_REPLICATION_DELAY_BYTES,
     FAM_PGPOOL_BACKEND_STATUS,
     FAM_PGPOOL_BACKEND_SELECT,
     FAM_PGPOOL_BACKEND_INSERT,
@@ -82,7 +83,7 @@ static metric_family_t pgpool_fams[FAM_PGPOOL_MAX] = {
     [FAM_PGPOOL_UP] = {
         .name = "pgpool_up",
         .type = METRIC_TYPE_GAUGE,
-        .help = "",
+        .help = "Could the pgpool server be reached.",
     },
     [FAM_PGPOOL_BACKEND_SLOTS] = {
         .name = "pgpool_backend_slots",
@@ -117,7 +118,12 @@ static metric_family_t pgpool_fams[FAM_PGPOOL_MAX] = {
     [FAM_PGPOOL_NODE_REPLICATION_DELAY_SECONDS] = {
         .name = "pgpool_node_replication_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Replication delay",
+        .help = "Replication delay seconds.",
+    },
+    [FAM_PGPOOL_NODE_REPLICATION_DELAY_BYTES] = {
+        .name = "pgpool_node_replication_delay_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Replication delay bytes",
     },
     [FAM_PGPOOL_BACKEND_STATUS] = {
         .name = "pgpool_backend_status",
@@ -279,7 +285,7 @@ typedef struct {
     char *instance;
 
     PGconn *conn;
-    c_complain_t conn_complaint;
+    complain_t conn_complaint;
 
     char *host;
     char *port;
@@ -287,7 +293,7 @@ typedef struct {
     char *user;
     char *password;
     char *sslmode;
-
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     metric_family_t fams[FAM_PGPOOL_MAX];
@@ -321,6 +327,9 @@ static int pgpool_connect(pgpool_instance_t *db)
     if ((!db) || (!db->database))
         return -1;
 
+    char timeout[ITOA_MAX];
+    itoa(CDTIME_T_TO_MS(db->timeout), timeout);
+
     const char *keywords[] = {
         "dbname",
         "host",
@@ -329,6 +338,7 @@ static int pgpool_connect(pgpool_instance_t *db)
         "password",
         "sslmode",
         "application_name",
+        "connect_timeout",
         NULL
     };
     const char *values[] = {
@@ -339,6 +349,7 @@ static int pgpool_connect(pgpool_instance_t *db)
         db->password,
         db->sslmode,
         PACKAGE_NAME "/pgpool",
+        timeout,
         NULL
     };
 
@@ -356,7 +367,7 @@ static int pgpool_check_connection(pgpool_instance_t *db)
 
         /* trigger c_release() */
         if (db->conn_complaint.interval == 0)
-            db->conn_complaint.interval = 1;
+            db->conn_complaint.interval = plugin_get_interval();
 
         pgpool_connect(db);
     }
@@ -366,27 +377,45 @@ static int pgpool_check_connection(pgpool_instance_t *db)
 
         /* trigger c_release() */
         if (db->conn_complaint.interval == 0)
-            db->conn_complaint.interval = 1;
+            db->conn_complaint.interval = plugin_get_interval();
 
         if (PQstatus(db->conn) != CONNECTION_OK) {
-            c_complain(LOG_ERR, &db->conn_complaint,
-                                "Failed to connect to database %s: %s", db->database,
-                                PQerrorMessage(db->conn));
+            PLUGIN_COMPLAIN_ERROR(&db->conn_complaint,
+                                  "Failed to connect to database %s: %s", db->database,
+                                  PQerrorMessage(db->conn));
             return -1;
         }
     }
 
-    if (c_would_release(&db->conn_complaint)) {
+    if (COMPLAIN_WOULD_RELEASE(&db->conn_complaint)) {
         char *server_host = PQhost(db->conn);
 
-        c_do_release(LOG_INFO, &db->conn_complaint,
-                                 "Successfully %sconnected to pgbouncer (db %s) (user %s) "
-                                 "at server %s%s%s ",
-                                 init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
-                                 C_PSQL_SOCKET3(server_host, PQport(db->conn)));
+        PLUGIN_RELEASE_INFO(&db->conn_complaint,
+                            "Successfully %sconnected to pgpool (db %s) (user %s) "
+                            "at server %s%s%s ",
+                            init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
+                            C_PSQL_SOCKET3(server_host, PQport(db->conn)));
 
     }
+
     return 0;
+}
+
+static bool strendswith(const char *s, const char *suffix)
+{
+    size_t sl = strlen(s);
+    size_t pl = strlen(suffix);
+
+    if (pl == 0)
+        return false;
+
+    if (sl < pl)
+        return false;
+
+    if (strcmp(s + sl - pl, suffix) == 0)
+        return true;
+
+    return false;
 }
 
 static char *pgpool_get_string(const PGresult *res, int row, const char *column_name)
@@ -545,14 +574,21 @@ static int pgpool_metric_append(const PGresult *res, int row, const char *column
 
     switch(fam->type) {
     case METRIC_TYPE_COUNTER:
-        if (scale != 1.0)
-            metric_family_append_va(fam, VALUE_COUNTER_FLOAT64(atof(value) * scale), labels, ap);
-        else
-            metric_family_append_va(fam, VALUE_COUNTER(atoi(value)), labels, ap);
+        if (scale != 1.0) {
+            double number = 0;
+            if (strtodouble(value, &number) == 0)
+                metric_family_append_va(fam, VALUE_COUNTER_FLOAT64(number * scale), labels, ap);
+        } else {
+            uint64_t number = 0;
+            if (strtouint(value, &number) == 0)
+                metric_family_append_va(fam, VALUE_COUNTER(number), labels, ap);
+        }
         break;
-    case METRIC_TYPE_GAUGE:
-        metric_family_append_va(fam, VALUE_GAUGE(atof(value) * scale), labels, ap);
-        break;
+    case METRIC_TYPE_GAUGE: {
+        double number = 0;
+        if (strtodouble(value, &number) == 0)
+            metric_family_append_va(fam, VALUE_GAUGE(number * scale), labels, ap);
+    }   break;
     default:
         break;
     }
@@ -815,15 +851,6 @@ static int pgpool_show_pool_nodes(PGconn *conn, metric_family_t *fams, label_set
         return -1;
     }
 
-    struct {
-        int fam;
-        char *name;
-    } columns[] = {
-        { FAM_PGPOOL_NODE_SELECTS,                   "select_cnt"        },
-        { FAM_PGPOOL_NODE_REPLICATION_DELAY_SECONDS, "replication_delay" },
-    };
-    size_t columns_size = STATIC_ARRAY_SIZE(columns);
-
     for (int i = 0; i < PQntuples(res); i++) {
         char *hostname = pgpool_get_string(res, i, "hostname");
         if (hostname == NULL)
@@ -840,8 +867,34 @@ static int pgpool_show_pool_nodes(PGconn *conn, metric_family_t *fams, label_set
                              &LABEL_PAIR_CONST("port", port),
                              &LABEL_PAIR_CONST("role", role), NULL);
 
-        for (size_t j = 0; j < columns_size ; j++) {
-            pgpool_metric_append(res, i, columns[j].name, &fams[columns[j].fam], 1.0, labels,
+        pgpool_metric_append(res, i, "select_cnt", &fams[FAM_PGPOOL_NODE_SELECTS], 1.0, labels,
+                             &LABEL_PAIR_CONST("hostname", hostname),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("role", role), NULL);
+
+        int col = PQfnumber(res, "replication_delay");
+        if (col < 0)
+            continue;
+
+        if (PQgetisnull(res, i, col))
+            continue;
+
+        char *value = PQgetvalue(res, i, col);
+        if (value == NULL)
+            continue;
+
+        if (strcmp(value, "-1") == 0)
+            continue;
+
+        if (strendswith(value, " seconds") || strendswith(value, " second")) {
+            pgpool_metric_append(res, i, "replication_delay",
+                                 &fams[FAM_PGPOOL_NODE_REPLICATION_DELAY_SECONDS], 1.0, labels,
+                                 &LABEL_PAIR_CONST("hostname", hostname),
+                                 &LABEL_PAIR_CONST("port", port),
+                                 &LABEL_PAIR_CONST("role", role), NULL);
+        } else {
+            pgpool_metric_append(res, i, "replication_delay",
+                                 &fams[FAM_PGPOOL_NODE_REPLICATION_DELAY_BYTES], 1.0, labels,
                                  &LABEL_PAIR_CONST("hostname", hostname),
                                  &LABEL_PAIR_CONST("port", port),
                                  &LABEL_PAIR_CONST("role", role), NULL);
@@ -858,7 +911,7 @@ static int pgpool_show_pool_cache(PGconn *conn, unsigned int version,
 {
     PGresult *res = PQexec(conn, "SHOW POOL_CACHE");
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-        PLUGIN_ERROR("PQexec failed: %s", PQerrorMessage(conn));
+        PLUGIN_DEBUG("PQexec failed: %s", PQerrorMessage(conn));
         PQclear(res);
         return -1;
     }
@@ -1023,6 +1076,7 @@ static int pgpool_config_instance(config_item_t *ci)
         return -1;
     }
 
+    db->timeout = CDTIME_DOOMSDAY;
     memcpy(db->fams, pgpool_fams, sizeof(db->fams[0])*FAM_PGPOOL_MAX);
 
     cdtime_t interval = 0;
@@ -1070,6 +1124,13 @@ static int pgpool_config_instance(config_item_t *ci)
         PLUGIN_ERROR("Instance '%s': No 'database' has been configured.", db->instance);
         pgpool_instance_delete(db);
         return -1;
+    }
+
+    if (db->timeout == CDTIME_DOOMSDAY) {
+        if (interval == 0)
+            db->timeout = plugin_get_interval();
+        else
+            db->timeout = interval;
     }
 
     label_set_add(&db->labels, true, "instance", db->instance);
