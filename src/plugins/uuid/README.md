@@ -23,13 +23,20 @@ migration.
 
 The following methods are used to find the machine's UUID, in order:
 
-*	Check */etc/uuid* (or **uuid-file**).
+*	Check /etc/uuid (or **uuid-file**).
 
-*	Check for UUID from HAL (
-	[http://www.freedesktop.org/wiki/Software/hal](http://www.freedesktop.org/wiki/Software/hal)
-	) if present.
+*	In **Darwin** get from system information name kern.uuid.
 
-*	Check for UUID from Xen hypervisor.
+*	In **FreeBSD** get from system information name kern.hostuuid.
+
+*	In **NetBSD** get from system information name
+	machdep.dmi.system-uuid.
+
+*	In **OpenBSD** get from system information level CTL\_HW
+	and second level HW\_UUID.
+
+*	In **Linux** from the files /sys/class/dmi/id/product\_uuid or
+	/sys/hypervisor/uuid.
 
 *	If no UUID can be found then the hostname is not modified.
 
