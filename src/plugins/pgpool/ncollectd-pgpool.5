@@ -19,6 +19,7 @@
         \fBpassword-env\fP \fIenv-name\fP
         \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBfilter\fP {
             ...
@@ -74,6 +75,8 @@ Use SSL only.
 .It \fBinterval\fP \fIseconds\fP
 Specify the interval with which the database should be queried.
 The default is to use the global \fBinterval\fP setting.
+.It \fBtimeout\fP \fIseconds\fP
+Sets the connection timeout to connect to \fBpgpool\fP.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBdatabase\fP block.
