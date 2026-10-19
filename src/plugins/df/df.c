@@ -11,22 +11,8 @@
 #include "libutils/exclist.h"
 #include "libutils/mount.h"
 
-#ifdef HAVE_STATVFS
 #ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
-#endif
-#define STATANYFS statvfs
-#define STATANYFS_STR "statvfs"
-#define BLOCKSIZE(s) ((s).f_frsize ? (s).f_frsize : (s).f_bsize)
-#elif defined(HAVE_STATFS)
-#ifdef HAVE_SYS_STATFS_H
-#include <sys/statfs.h>
-#endif
-#define STATANYFS statfs
-#define STATANYFS_STR "statfs"
-#define BLOCKSIZE(s) (s).f_bsize
-#else
-#error "No applicable input method."
 #endif
 
 static exclist_t excl_device;
@@ -83,12 +69,8 @@ static metric_family_t fams[FAM_DF_MAX] = {
 
 static int df_read(void)
 {
-#ifdef HAVE_STATVFS
     struct statvfs statbuf;
-#elif defined(HAVE_STATFS)
-    struct statfs statbuf;
-#endif
-    /* struct STATANYFS statbuf; */
+
     cu_mount_t *mnt_list = NULL;
     if (cu_mount_getlist(&mnt_list) == NULL) {
         PLUGIN_ERROR("cu_mount_getlist failed.");
@@ -105,11 +87,14 @@ static int df_read(void)
         if (!exclist_match(&excl_fstype, mnt_ptr->type))
             continue;
 
-        if (STATANYFS(mnt_ptr->dir, &statbuf) < 0) {
-            if ((log_once == false) || !exclist_match(&excl_errors, mnt_ptr->dir)) {
-                if (log_once)
+        if (statvfs(mnt_ptr->dir, &statbuf) < 0) {
+            if (log_once) {
+                if (exclist_match(&excl_errors, mnt_ptr->dir)) {
                     exclist_add_excl_string(&excl_errors, mnt_ptr->dir);
-                PLUGIN_ERROR(STATANYFS_STR "(%s) failed: %s", mnt_ptr->dir, STRERRNO);
+                    PLUGIN_ERROR("statvfs(%s) failed: %s", mnt_ptr->dir, STRERRNO);
+                }
+            } else {
+                PLUGIN_ERROR("statvfs(%s) failed: %s", mnt_ptr->dir, STRERRNO);
             }
             continue;
         } else {
@@ -120,22 +105,20 @@ static int df_read(void)
         if (!statbuf.f_blocks)
             continue;
 
-        unsigned long long blocksize = BLOCKSIZE(statbuf);
+        unsigned long long blocksize = statbuf.f_frsize ? statbuf.f_frsize : statbuf.f_bsize;
+
         /* Sanity-check for the values in the struct */
         /* Check for negative "available" byes. For example UFS can
          * report negative free space for user. Notice. blk_reserved
          * will start to diminish after this. */
-#ifdef HAVE_STATVFS
+
         /* Cast and temporary variable are needed to avoid
          * compiler warnings.
          * ((struct statvfs).f_bavail is unsigned (POSIX)) */
         int64_t signed_bavail = (int64_t)statbuf.f_bavail;
         if (signed_bavail < 0)
             statbuf.f_bavail = 0;
-#elif defined(HAVE_STATFS)
-        if (statbuf.f_bavail < 0)
-            statbuf.f_bavail = 0;
-#endif
+
         /* Make sure that f_blocks >= f_bfree >= f_bavail */
         if (statbuf.f_bfree < statbuf.f_bavail)
             statbuf.f_bfree = statbuf.f_bavail;
@@ -161,7 +144,7 @@ static int df_read(void)
                              &LABEL_PAIR_CONST("mountpoint", mnt_ptr->dir), NULL);
 
         /* inode handling */
-        if (statbuf.f_files != 0 && statbuf.f_ffree != 0) {
+        if (statbuf.f_files != 0) {
             /* Sanity-check for the values in the struct */
             if (statbuf.f_ffree < statbuf.f_favail)
                 statbuf.f_ffree = statbuf.f_favail;
