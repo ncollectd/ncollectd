@@ -49,8 +49,8 @@ static int irq_read(void)
     }
 
     /* Get CPU count from the first line */
-    char cpu_buffer[1024];
-    char *cpu_fields[256];
+    char cpu_buffer[16384];
+    char *cpu_fields[1024];
     int cpu_count;
 
     if (fgets(cpu_buffer, sizeof(cpu_buffer), fh) != NULL) {
@@ -65,8 +65,8 @@ static int irq_read(void)
         return -1;
     }
 
-    char buffer[1024];
-    char *fields[256];
+    char buffer[16384];
+    char *fields[1024];
 
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
@@ -128,11 +128,17 @@ static int irq_read(void)
         int error;
 
         newlen = buflen;
-        if (buflen)
+        if (buflen) {
             buf = malloc(buflen);
+            if (buf == NULL) {
+                PLUGIN_ERROR("malloc failed.");
+                return -1;
+            }
+        }
         error = sysctl(mib, __arraycount(mib), buf, &newlen, NULL, 0);
         if (error) {
             PLUGIN_ERROR("failed to get event count");
+            free(buf);
             return -1;
         }
         if (newlen <= buflen) {
