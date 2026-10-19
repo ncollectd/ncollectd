@@ -25,6 +25,7 @@ static char *uuidfile;
 static char *uuid_get_from_sysctlbyname(const char *name)
 {
     char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
+    uuid[0] = '\0';
     size_t len = sizeof(uuid);
     if (sysctlbyname(name, &uuid, &len, NULL, 0) == -1)
         return NULL;
@@ -34,8 +35,9 @@ static char *uuid_get_from_sysctlbyname(const char *name)
 static char *uuid_get_from_sysctl(void)
 {
     char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1];
+    uuid[0] = '\0';
     size_t len = sizeof(uuid);
-    int mib[2] = { CTL_HW, HW_UUID};
+    int mib[2] = { CTL_HW, HW_UUID };
 
     if (sysctl(mib, 2, uuid, &len, NULL, 0) == -1)
         return NULL;
@@ -50,6 +52,7 @@ static char *uuid_get_from_file(const char *path)
         return NULL;
 
     char uuid[UUID_PRINTABLE_NORMAL_LENGTH + 1] = "";
+    uuid[0] = '\0';
     if (!fgets(uuid, sizeof(uuid), file)) {
         fclose(file);
         return NULL;
@@ -74,6 +77,25 @@ static char *uuid_get_from_sys_file(const char *path)
     return uuid;
 }
 #endif
+
+static bool uuid_is_valid(const char *u)
+{
+    size_t len = strlen(u);
+    if ((len != UUID_PRINTABLE_NORMAL_LENGTH) && (len != UUID_PRINTABLE_COMPACT_LENGTH))
+        return false;
+
+    bool nonzero = false;
+    for (size_t i = 0; i < len; i++) {
+        if (u[i] == '-')
+            continue;
+        if (!isxdigit((unsigned char)u[i]))
+            return false;
+        if ((u[i] != '0') && (u[i] != 'f') && (u[i] != 'F'))
+            nonzero = true;
+    }
+
+    return nonzero;
+}
 
 static char *uuid_get_local(void)
 {
@@ -131,7 +153,10 @@ static int uuid_init(void)
     char *uuid = uuid_get_local();
 
     if (uuid) {
-        plugin_set_hostname(uuid);
+        if (uuid_is_valid(uuid))
+            plugin_set_hostname(uuid);
+        else
+            PLUGIN_WARNING("Invalid UUID: '%s'.", uuid);
         free(uuid);
         return 0;
     }
@@ -140,8 +165,16 @@ static int uuid_init(void)
     return 0;
 }
 
+static int uuid_shutdown(void)
+{
+    free(uuidfile);
+
+    return 0;
+}
+
 void module_register(void)
 {
     plugin_register_config("uuid", uuid_config);
     plugin_register_init("uuid", uuid_init);
+    plugin_register_shutdown("uuid", uuid_shutdown);
 }

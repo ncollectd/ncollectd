@@ -24,13 +24,20 @@ migration.
 The following methods are used to find the machine's UUID, in order:
 .Bl -bullet
 .It
-Check \fI/etc/uuid\fP (or \fBuuid-file\fP).
+Check \f(CW/etc/uuid\fP (or \fBuuid-file\fP).
 .It
-Check for UUID from HAL (
-.Lk http://www.freedesktop.org/wiki/Software/hal
-) if present.
+In \fBDarwin\fP get from system information name \f(CWkern.uuid\fP.
 .It
-Check for UUID from Xen hypervisor.
+In \fBFreeBSD\fP get from system information name \f(CWkern.hostuuid\fP.
+.It
+In \fBNetBSD\fP get from system information name
+\f(CWmachdep.dmi.system-uuid\fP.
+.It
+In \fBOpenBSD\fP get from system information level \f(CWCTL_HW\fP
+and second level \f(CWHW_UUID\fP.
+.It
+In \fBLinux\fP from the files \f(CW/sys/class/dmi/id/product_uuid\fP or
+\f(CW/sys/hypervisor/uuid\fP.
 .It
 If no UUID can be found then the hostname is not modified.
 .El
