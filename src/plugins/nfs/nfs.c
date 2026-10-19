@@ -108,7 +108,7 @@ enum {
     FAM_NFS_MOUNT_XPTR_UDP_PENDING_QUEUE,
     FAM_NFS_MOUNT_XPTR_TCP_BIND,
     FAM_NFS_MOUNT_XPTR_TCP_CONNECT,
-    FAM_NFS_MOUNT_XPTR_TCP_CONNECT_JIFFIES,
+    FAM_NFS_MOUNT_XPTR_TCP_CONNECT_SECONDS,
     FAM_NFS_MOUNT_XPTR_TCP_IDLE_SECONDS,
     FAM_NFS_MOUNT_XPTR_TCP_SENDS,
     FAM_NFS_MOUNT_XPTR_TCP_RECVS,
@@ -481,14 +481,14 @@ static metric_family_t nfs_mountstats_fams[FAM_NFS_MOUNT_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
-    [FAM_NFS_MOUNT_XPTR_TCP_CONNECT_JIFFIES] = {
-        .name = "system_nfs_mount_xptr_tcp_connect_jiffies",
+    [FAM_NFS_MOUNT_XPTR_TCP_CONNECT_SECONDS] = {
+        .name = "system_nfs_mount_xptr_tcp_connect_seconds",
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_NFS_MOUNT_XPTR_TCP_IDLE_SECONDS] = {
         .name = "system_nfs_mount_xptr_tcp_idle_seconds",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = NULL,
     },
     [FAM_NFS_MOUNT_XPTR_TCP_SENDS] = {
@@ -572,7 +572,7 @@ static metric_family_t nfs_mountstats_fams[FAM_NFS_MOUNT_MAX] = {
         .help = NULL,
     },
     [FAM_NFS_MOUNT_XPTR_RDMA_BACKLOG ] = {
-        .name = "system_nfs_mount_xptr_rdma_backlog ",
+        .name = "system_nfs_mount_xptr_rdma_backlog",
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
@@ -936,75 +936,54 @@ static void nfs_read_mountstats_xprt(char *line, nfs_mountstats_t *nfs, label_se
         if (fields_num < 12)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_BIND],
-                             VALUE_COUNTER(atoull(fields[3])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[3])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_CONNECT],
-                             VALUE_COUNTER(atoull(fields[4])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
-        metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_CONNECT_JIFFIES],
-                             VALUE_COUNTER(atoull(fields[5])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[4])), labels, NULL);
+        metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_CONNECT_SECONDS],
+                             VALUE_COUNTER(atoull(fields[5])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_IDLE_SECONDS],
-                             VALUE_COUNTER(atoull(fields[6])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_GAUGE(atoull(fields[6])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_SENDS],
-                             VALUE_COUNTER(atoull(fields[7])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[7])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_RECVS],
-                             VALUE_COUNTER(atoull(fields[8])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[8])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_BAD_XIDS],
-                             VALUE_COUNTER(atoull(fields[9])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[9])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_REQUEST],
-                             VALUE_COUNTER(atoull(fields[10])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[10])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_BACKLOG],
-                             VALUE_COUNTER(atoull(fields[11])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[11])), labels, NULL);
         if (fields_num < 15)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_MAX_SLOTS],
-                             VALUE_GAUGE((double)(atoull(fields[12]))), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_GAUGE((double)(atoull(fields[12]))), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_SENDING_QUEUE],
-                             VALUE_COUNTER(atoull(fields[13])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[13])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_TCP_PENDING_QUEUE],
-                             VALUE_COUNTER(atoull(fields[14])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[14])), labels, NULL);
     } else if (strcmp(fields[1], "udp") == 0) {
         if (fields_num < 9)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_BIND],
-                             VALUE_COUNTER(atoull(fields[3])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[3])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_SENDS],
-                             VALUE_COUNTER(atoull(fields[4])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[4])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_RECVS],
-                             VALUE_COUNTER(atoull(fields[5])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[5])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_BAD_XIDS],
-                             VALUE_COUNTER(atoull(fields[6])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[6])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_REQUEST],
-                             VALUE_COUNTER(atoull(fields[7])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[7])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_BACKLOG],
-                             VALUE_COUNTER(atoull(fields[8])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[8])), labels, NULL);
         if (fields_num < 12)
             return;
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_MAX_SLOTS],
-                             VALUE_GAUGE((double)atoull(fields[9])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_GAUGE((double)atoull(fields[9])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_SENDING_QUEUE],
-                             VALUE_COUNTER(atoull(fields[10])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[10])), labels, NULL);
         metric_family_append(&nfs->fams[FAM_NFS_MOUNT_XPTR_UDP_PENDING_QUEUE],
-                             VALUE_COUNTER(atoull(fields[11])), labels,
-                             &LABEL_PAIR_CONST("port", fields[2]), NULL);
+                             VALUE_COUNTER(atoull(fields[11])), labels, NULL);
     } else if (strcmp(fields[1], "rdma") == 0) {
         if (fields_num < 12)
             return;
@@ -1114,7 +1093,7 @@ static void nfs_read_mountstats_ops(char *line, nfs_mountstats_t *nfs, label_set
 
 static int nfs_read_mountstats_device(FILE *fh, nfs_mountstats_t *nfs, label_set_t *labels)
 {
-    char line[1024];
+    char line[4096];
     while (fgets(line, sizeof(line), fh) != NULL) {
         char *str = line;
         while ((*str == ' ') || (*str == '\t')) str++;
@@ -1164,7 +1143,7 @@ static int nfs_read_mountstats(void)
         return -1;
     }
 
-    char line[1024];
+    char line[4096];
     while (fgets(line, sizeof(line), fh) != NULL) {
         if (strncmp(line, "device", strlen("device")) == 0) {
             char *str = strstr(line, " with fstype ");

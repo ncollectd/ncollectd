@@ -33,10 +33,6 @@ The **nfs** plugin the the following option:
 
 > >   **collect** *"!all"* *nfs-v4*
 
-> You can disable or enable multiple options with glob:
-
-> >   **collect** *"!nfs-\*"* *mount-stats*
-
 > By default all options are enabled.
 
 # SEE ALSO
