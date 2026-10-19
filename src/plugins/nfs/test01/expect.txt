@@ -163,29 +163,29 @@ system_nfs_mount_pnfs_read_total{export="nfs2.localdomain:/export2",hostname="lo
 # TYPE system_nfs_mount_pnfs_write counter
 system_nfs_mount_pnfs_write_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
 # TYPE system_nfs_mount_xptr_tcp_bind counter
-system_nfs_mount_xptr_tcp_bind_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 1
+system_nfs_mount_xptr_tcp_bind_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 1
 # TYPE system_nfs_mount_xptr_tcp_connect counter
-system_nfs_mount_xptr_tcp_connect_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 2
-# TYPE system_nfs_mount_xptr_tcp_connect_jiffies counter
-system_nfs_mount_xptr_tcp_connect_jiffies_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
-# TYPE system_nfs_mount_xptr_tcp_idle_seconds counter
-system_nfs_mount_xptr_tcp_idle_seconds_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
+system_nfs_mount_xptr_tcp_connect_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 2
+# TYPE system_nfs_mount_xptr_tcp_connect_seconds counter
+system_nfs_mount_xptr_tcp_connect_seconds_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
+# TYPE system_nfs_mount_xptr_tcp_idle_seconds gauge
+system_nfs_mount_xptr_tcp_idle_seconds{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
 # TYPE system_nfs_mount_xptr_tcp_sends counter
-system_nfs_mount_xptr_tcp_sends_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 119608652
+system_nfs_mount_xptr_tcp_sends_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_recvs counter
-system_nfs_mount_xptr_tcp_recvs_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 119608652
+system_nfs_mount_xptr_tcp_recvs_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_bad_xids counter
-system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
+system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
 # TYPE system_nfs_mount_xptr_tcp_request counter
-system_nfs_mount_xptr_tcp_request_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 786311733
+system_nfs_mount_xptr_tcp_request_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 786311733
 # TYPE system_nfs_mount_xptr_tcp_backlog counter
-system_nfs_mount_xptr_tcp_backlog_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 0
+system_nfs_mount_xptr_tcp_backlog_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 0
 # TYPE system_nfs_mount_xptr_tcp_max_slots gauge
-system_nfs_mount_xptr_tcp_max_slots{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 15678
+system_nfs_mount_xptr_tcp_max_slots{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 15678
 # TYPE system_nfs_mount_xptr_tcp_sending_queue counter
-system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 6148152422
+system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 6148152422
 # TYPE system_nfs_mount_xptr_tcp_pending_queue counter
-system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",port="694"} 661727840
+system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2"} 661727840
 # TYPE system_nfs_mount_operation_requests counter
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="null"} 1
 system_nfs_mount_operation_requests_total{export="nfs2.localdomain:/export2",hostname="localhost.localdomain",mount="/mnt/export2",operation="getattr"} 6455738
@@ -462,29 +462,29 @@ system_nfs_mount_pnfs_read_total{export="nfs1.localdomain:/export1",hostname="lo
 # TYPE system_nfs_mount_pnfs_write counter
 system_nfs_mount_pnfs_write_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
 # TYPE system_nfs_mount_xptr_tcp_bind counter
-system_nfs_mount_xptr_tcp_bind_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 1
+system_nfs_mount_xptr_tcp_bind_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 1
 # TYPE system_nfs_mount_xptr_tcp_connect counter
-system_nfs_mount_xptr_tcp_connect_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 2
-# TYPE system_nfs_mount_xptr_tcp_connect_jiffies counter
-system_nfs_mount_xptr_tcp_connect_jiffies_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
-# TYPE system_nfs_mount_xptr_tcp_idle_seconds counter
-system_nfs_mount_xptr_tcp_idle_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+system_nfs_mount_xptr_tcp_connect_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 2
+# TYPE system_nfs_mount_xptr_tcp_connect_seconds counter
+system_nfs_mount_xptr_tcp_connect_seconds_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
+# TYPE system_nfs_mount_xptr_tcp_idle_seconds gauge
+system_nfs_mount_xptr_tcp_idle_seconds{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
 # TYPE system_nfs_mount_xptr_tcp_sends counter
-system_nfs_mount_xptr_tcp_sends_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 119608652
+system_nfs_mount_xptr_tcp_sends_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_recvs counter
-system_nfs_mount_xptr_tcp_recvs_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 119608652
+system_nfs_mount_xptr_tcp_recvs_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 119608652
 # TYPE system_nfs_mount_xptr_tcp_bad_xids counter
-system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+system_nfs_mount_xptr_tcp_bad_xids_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
 # TYPE system_nfs_mount_xptr_tcp_request counter
-system_nfs_mount_xptr_tcp_request_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 786311733
+system_nfs_mount_xptr_tcp_request_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 786311733
 # TYPE system_nfs_mount_xptr_tcp_backlog counter
-system_nfs_mount_xptr_tcp_backlog_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 0
+system_nfs_mount_xptr_tcp_backlog_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 0
 # TYPE system_nfs_mount_xptr_tcp_max_slots gauge
-system_nfs_mount_xptr_tcp_max_slots{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 15678
+system_nfs_mount_xptr_tcp_max_slots{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 15678
 # TYPE system_nfs_mount_xptr_tcp_sending_queue counter
-system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 6148152422
+system_nfs_mount_xptr_tcp_sending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 6148152422
 # TYPE system_nfs_mount_xptr_tcp_pending_queue counter
-system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",port="694"} 661727840
+system_nfs_mount_xptr_tcp_pending_queue_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1"} 661727840
 # TYPE system_nfs_mount_operation_requests counter
 system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="null"} 1
 system_nfs_mount_operation_requests_total{export="nfs1.localdomain:/export1",hostname="localhost.localdomain",mount="/mnt/export1",operation="getattr"} 3439372
