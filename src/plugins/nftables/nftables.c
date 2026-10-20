@@ -46,20 +46,42 @@ static size_t counter_count;
 static struct mnl_socket *nl;
 static uint32_t portid;
 
+static void mnl_socket_fush(struct mnl_socket *nls)
+{
+    char buf[MNL_SOCKET_BUFFER_SIZE];
+
+    int fd = mnl_socket_get_fd(nls);
+
+    while (true) {
+        ssize_t size = recv(fd, buf, sizeof(buf), MSG_DONTWAIT);
+        if (size < 0) {
+            if (errno == EAGAIN)
+                break;
+            if (errno == EINTR)
+                continue;
+
+            PLUGIN_ERROR("Error flushing socket: %s", STRERRNO);
+            break;
+        }
+        if (size == 0)
+            break;
+    }
+}
+
 static int counter_cb(const struct nlmsghdr *nlh, void *data)
 {
     nftables_counter_t *r_info = data;
 
     struct nftnl_obj *nlo = nftnl_obj_alloc();
     if (nlo == NULL) {
-        PLUGIN_ERROR("nftnl_obj_alloc failed\n");
-        return 1;
+        PLUGIN_ERROR("nftnl_obj_alloc failed.");
+        return MNL_CB_STOP;
     }
 
     if (nftnl_obj_nlmsg_parse(nlh, nlo) < 0) {
-        PLUGIN_ERROR("nftnl_obj_nlmsg_parse failed\n");
+        PLUGIN_ERROR("nftnl_obj_nlmsg_parse failed.");
         nftnl_obj_free(nlo);
-        return 1;
+        return MNL_CB_STOP;
     }
 
     uint32_t family = nftnl_obj_get_u32(nlo, NFTNL_OBJ_FAMILY);
@@ -132,8 +154,9 @@ static int nftables_read(void)
 
         struct nftnl_obj *n = nftnl_obj_alloc();
         if (n == NULL) {
-            PLUGIN_ERROR("nftnl_obj_alloc failed\n");
-            return 1;
+            PLUGIN_ERROR("nftnl_obj_alloc failed.");
+            num_failures++;
+            continue;
         }
 
         /* coverity[Y2K38_SAFETY] */
@@ -152,7 +175,7 @@ static int nftables_read(void)
         nftnl_obj_free(n);
 
         if (mnl_socket_sendto(nl, nlh, nlh->nlmsg_len) < 0) {
-            PLUGIN_ERROR("Error sending to mnl socket");
+            PLUGIN_ERROR("Error sending to netlink socket: %s.", STRERRNO);
             num_failures++;
             continue;
         }
@@ -166,8 +189,9 @@ static int nftables_read(void)
         }
 
         if (ret == -1) {
-            PLUGIN_ERROR("Error when reading from nl socket");
+            PLUGIN_ERROR("Error when reading from netlink socket: %s.", STRERRNO);
             num_failures++;
+            mnl_socket_fush(nl);
         }
     }
 
@@ -187,16 +211,25 @@ static int nftables_append_counter(int family, char *table, char *counter)
 
     counter_list = list;
     counter_list[counter_count].family = family;
-    if (table != NULL)
-        counter_list[counter_count].table = strdup(table);
-    else
-        counter_list[counter_count].table = NULL;
-    if (counter != NULL)
-        counter_list[counter_count].counter = strdup(counter);
-    else
-        counter_list[counter_count].counter = NULL;
-
+    counter_list[counter_count].table = NULL;
+    counter_list[counter_count].counter = NULL;
     counter_count++;
+
+    if (table != NULL) {
+        counter_list[counter_count-1].table = strdup(table);
+        if (counter_list[counter_count-1].table == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            return -1;
+        }
+    }
+
+    if (counter != NULL) {
+        counter_list[counter_count-1].counter = strdup(counter);
+        if (counter_list[counter_count-1].counter == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            return -1;
+        }
+    }
 
     return 0;
 }
@@ -293,6 +326,20 @@ static int nftables_config(config_item_t *ci)
 
 static int nftables_init(void)
 {
+#if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_NET_ADMIN)
+    if (plugin_check_capability(CAP_NET_ADMIN) != 0) {
+        if (getuid() == 0)
+            PLUGIN_WARNING("Running ncollectd as root, but the "
+                           "CAP_NET_ADMIN capability is missing. The plugin's read "
+                           "function will probably fail. Is your init system dropping "
+                           "capabilities?");
+        else
+            PLUGIN_WARNING("ncollectd doesn't have the CAP_NET_ADMIN "
+                           "capability. If you don't want to run ncollectd as root, try "
+                           "running \"setcap cap_net_admin=ep\" on the ncollectd binary.");
+    }
+#endif
+
     nl = mnl_socket_open(NETLINK_NETFILTER);
     if (nl == NULL) {
         PLUGIN_ERROR("mnl_socket_open failed.");
@@ -300,6 +347,8 @@ static int nftables_init(void)
     }
 
     if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
+        mnl_socket_close(nl);
+        nl = NULL;
         PLUGIN_ERROR("error calling mnl_socket_bind");
         return -1;
     }
@@ -312,7 +361,10 @@ static int nftables_init(void)
 
 static int nftables_shutdown(void)
 {
-    mnl_socket_close(nl);
+    if (nl != NULL) {
+        mnl_socket_close(nl);
+        nl = NULL;
+    }
 
     for (size_t i = 0; i < counter_count; i++) {
         free(counter_list[i].table);
