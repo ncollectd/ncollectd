@@ -32,7 +32,7 @@ static int pagesize;
 #    include <uvm/uvm_extern.h>
 #endif
 
-extern metric_family_t fams[];
+extern metric_family_t memory_fams[];
 
 int memory_read(void)
 {
@@ -53,15 +53,17 @@ int memory_read(void)
     if (uvmexp.npages > accounted)
         mem_kernel = (double)((uvmexp.npages - accounted) * pagesize);
 
-    metric_family_append(&fams[FAM_MEMORY_WIRED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_WIRED_BYTES],
                          VALUE_GAUGE(uvmexp.wired * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_ACTIVE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_ACTIVE_BYTES],
                          VALUE_GAUGE(uvmexp.active * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_INACTIVE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_INACTIVE_BYTES],
                          VALUE_GAUGE(uvmexp.inactive * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_FREE_BYTES],
                          VALUE_GAUGE(uvmexp.free * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES], VALUE_GAUGE(mem_kernel), NULL, NULL);
+    if (!isnan(mem_kernel))
+        metric_family_append(&memory_fams[FAM_MEMORY_KERNEL_BYTES],
+                             VALUE_GAUGE(mem_kernel), NULL, NULL);
 
 #elif defined(HAVE_SYSCTL) && defined(KERNEL_OPENBSD)
     /* OpenBSD variant does not have HAVE_SYSCTLBYNAME */
@@ -76,11 +78,11 @@ int memory_read(void)
         return errno;
     }
 
-    metric_family_append(&fams[FAM_MEMORY_ACTIVE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_ACTIVE_BYTES],
                          VALUE_GAUGE(vmtotal.t_arm * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_INACTIVE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_INACTIVE_BYTES],
                          VALUE_GAUGE((vmtotal.t_rm - vmtotal.t_arm) * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_FREE_BYTES],
                          VALUE_GAUGE(vmtotal.t_free * pagesize), NULL, NULL);
 
 #elif defined(HAVE_SYSCTLBYNAME)
@@ -93,44 +95,68 @@ int memory_read(void)
      * vm.stats.vm.v_inactive_count: 113730
      * vm.stats.vm.v_cache_count: 10809
      */
-    struct {
+    
+    typedef enum {
+        SYSCTL_TYPE_UINT,
+        SYSCTL_TYPE_ULONG
+    } sysctl_type_t;
+
+    static struct {
         char const *sysctl_key;
+        sysctl_type_t type;
         int fam;
+        complain_t complain;
     } metrics[] = {
-        {"vm.stats.vm.v_page_size",       -1                         },
-        {"vm.stats.vm.v_page_count",      FAM_MEMORY_TOTAL_BYTES     },
-        {"vm.stats.vm.v_free_count",      FAM_MEMORY_FREE_BYTES      },
-        {"vm.stats.vm.v_wire_count",      FAM_MEMORY_WIRED_BYTES     },
-        {"vm.stats.vm.v_active_count",    FAM_MEMORY_ACTIVE_BYTES    },
-        {"vm.stats.vm.v_inactive_count",  FAM_MEMORY_INACTIVE_BYTES  },
-        {"vm.stats.vm.v_cache_count",     FAM_MEMORY_CACHED_BYTES    },
-        {"vm.stats.vm.v_user_wire_count", FAM_MEMORY_USER_WIRED_BYTES},
-        {"vm.stats.vm.v_laundry_count",   FAM_MEMORY_LAUNDRY_BYTES   },
+        {"vm.stats.vm.v_page_size",       SYSCTL_TYPE_UINT,  -1                         },
+        {"vm.stats.vm.v_page_count",      SYSCTL_TYPE_UINT,  FAM_MEMORY_TOTAL_BYTES     },
+        {"vm.stats.vm.v_free_count",      SYSCTL_TYPE_UINT,  FAM_MEMORY_FREE_BYTES      },
+        {"vm.stats.vm.v_wire_count",      SYSCTL_TYPE_UINT,  FAM_MEMORY_WIRED_BYTES     },
+        {"vm.stats.vm.v_active_count",    SYSCTL_TYPE_UINT,  FAM_MEMORY_ACTIVE_BYTES    },
+        {"vm.stats.vm.v_inactive_count",  SYSCTL_TYPE_UINT,  FAM_MEMORY_INACTIVE_BYTES  },
+        {"vm.stats.vm.v_cache_count",     SYSCTL_TYPE_UINT,  FAM_MEMORY_CACHED_BYTES    },
+        {"vm.stats.vm.v_user_wire_count", SYSCTL_TYPE_ULONG, FAM_MEMORY_USER_WIRED_BYTES},
+        {"vm.stats.vm.v_laundry_count",   SYSCTL_TYPE_UINT,  FAM_MEMORY_LAUNDRY_BYTES   },
     };
 
     double page_size = 0;
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(metrics); i++) {
-        long value = 0;
-        size_t value_len = sizeof(value);
+        double value = 0;
+        int status = 0;
 
-        int status = sysctlbyname(metrics[i].sysctl_key, (void *)&value, &value_len, NULL, 0);
+        switch(type) {
+        case SYSCTL_TYPE_UINT: {
+            unsigned int data;
+            size_t data_len = sizeof(data);
+            status = sysctlbyname(metrics[i].sysctl_key, (void *)&data, &data_len, NULL, 0);
+            value = data;
+        }   break;
+        case SYSCTL_TYPE_ULONG: {
+            unsigned lomg data;
+            size_t data_len = sizeof(data);
+            status = sysctlbyname(metrics[i].sysctl_key, (void *)&data, &data_len, NULL, 0);
+            value = data;
+        }   break;
+
         if (status != 0) {
-            PLUGIN_WARNING("sysctlbyname(\"%s\") failed: %s", metrics[i].sysctl_key, STRERROR(status));
+            PLUGIN_ONCE_WARNING(&metrics[i].complain, "sysctlbyname('%s') failed: %s",
+                                metrics[i].sysctl_key, STRERRNO);
+            if (i == 0)
+                break;
             continue;
         }
 
         if (i == 0) {
-            page_size = (double)value;
+            page_size = value;
             continue;
         }
 
-        metric_family_append(&fams[metrics[i].fam], VALUE_GAUGE(value * page_size), NULL, NULL);
+        metric_family_append(&memory_fams[metrics[i].fam], VALUE_GAUGE(value * page_size), NULL, NULL);
     }
 #else
 #error "No applicable input method."
 #endif
 
-    plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
+    plugin_dispatch_metric_family_array(memory_fams, FAM_MEMORY_MAX, 0);
 
     return 0;
 }

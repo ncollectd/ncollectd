@@ -14,13 +14,12 @@
 
 #include "memory.h"
 
-extern metric_family_t fams[];
-
-static int pagesize;
+extern metric_family_t memory_fams[];
 
 int memory_read(void)
 {
     perfstat_memory_total_t pmemory = {0};
+    double pagesize = 4096;
 
     int status = perfstat_memory_total(NULL, &pmemory, sizeof(pmemory), 1);
     if (status < 0) {
@@ -39,22 +38,16 @@ int memory_read(void)
      *   real_inuse = "active" + real_pinned + numperm
      */
 
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_FREE_BYTES],
                          VALUE_GAUGE(pmemory.real_free * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_CACHED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_CACHED_BYTES],
                          VALUE_GAUGE(pmemory.numperm * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_KERNEL_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_KERNEL_BYTES],
                          VALUE_GAUGE(pmemory.real_system * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_USED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_USED_BYTES],
                          VALUE_GAUGE(pmemory.real_process * pagesize), NULL, NULL);
 
-    plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
+    plugin_dispatch_metric_family_array(memory_fams, FAM_MEMORY_MAX, 0);
 
-    return 0;
-}
-
-int memory_init(void)
-{
-    pagesize = getpagesize();
     return 0;
 }
