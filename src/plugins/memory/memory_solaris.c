@@ -12,7 +12,7 @@
 
 #include "memory.h"
 
-extern metric_family_t fams[];
+extern metric_family_t memory_fams[];
 
 static int pagesize;
 
@@ -25,15 +25,17 @@ int memory_read(void)
     /* Most of the additions here were taken as-is from the k9toolkit from
      * Brendan Gregg and are subject to change I guess */
 
-    if ((ksp == NULL) || (ksz == NULL))
-        return EINVAL;
+    if (ksp == NULL)
+        return -1;
 
     long long mem_used = get_kstat_value(ksp, "pagestotal");
     long long mem_free = get_kstat_value(ksp, "pagesfree");
     long long mem_lock = get_kstat_value(ksp, "pageslocked");
     long long mem_kern = 0;
     long long mem_unus = 0;
-    long long arcsize = get_kstat_value(ksz, "size");
+    long long arcsize = 0;
+    if (ksz != NULL)
+        arcsize = get_kstat_value(ksz, "size");
 
     long long pp_kernel = get_kstat_value(ksp, "pp_kernel");
     long long physmem = get_kstat_value(ksp, "physmem");
@@ -68,19 +70,21 @@ int memory_read(void)
         mem_lock = 0;
     }
 
-    metric_family_append(&fams[FAM_MEMORY_USED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_USED_BYTES],
                          VALUE_GAUGE(mem_used * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_FREE_BYTES],
                          VALUE_GAUGE(mem_free * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_LOCKED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_LOCKED_BYTES],
                          VALUE_GAUGE(mem_lock * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_KERNEL_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_KERNEL_BYTES],
                          VALUE_GAUGE((mem_kern * pagesize) - arcsize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_UNUSED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_UNUSED_BYTES],
                          VALUE_GAUGE(mem_unus * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_ARC_BYTES], VALUE_GAUGE(arcsize), NULL, NULL);
+    if (ksz != NULL)
+        metric_family_append(&memory_fams[FAM_MEMORY_ARC_BYTES],
+                             VALUE_GAUGE(arcsize), NULL, NULL);
 
-    plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
+    plugin_dispatch_metric_family_array(memory_fams, FAM_MEMORY_MAX, 0);
 
     return 0;
 }
@@ -103,10 +107,8 @@ int memory_init(void)
         return -1;
     }
 
-    if (get_kstat(kc, &ksz, "zfs", 0, "arcstats") != 0) {
+    if (get_kstat(kc, &ksz, "zfs", 0, "arcstats") != 0)
         ksz = NULL;
-        return -1;
-    }
 
     return 0;
 }

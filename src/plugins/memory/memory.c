@@ -11,7 +11,7 @@
 
 #include "memory.h"
 
-metric_family_t fams[FAM_MEMORY_MAX] = {
+metric_family_t memory_fams[FAM_MEMORY_MAX] = {
     [FAM_MEMORY_TOTAL_BYTES] = {
         .name = "system_memory_total_bytes",
         .type = METRIC_TYPE_GAUGE,

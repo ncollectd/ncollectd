@@ -30,16 +30,16 @@ static vm_size_t pagesize;
 
 #include "memory.h"
 
-extern metric_family_t fams[];
+extern metric_family_t memory_fams[];
 
 int memory_read(void)
 {
     if (!port_host || !pagesize)
         return EINVAL;
 
-    vm_statistics_data_t vm_data = {0};
-    mach_msg_type_number_t vm_data_len = sizeof(vm_data) / sizeof(natural_t);
-    kern_return_t status = host_statistics(port_host, HOST_VM_INFO,
+    vm_statistics64_data_t vm_data = {0};
+    mach_msg_type_number_t vm_data_len = sizeof(vm_data) / sizeof(integer_t);
+    kern_return_t status = host_statistics64(port_host, HOST_VM_INFO64,
                                            (host_info_t)&vm_data, &vm_data_len);
     if (status != KERN_SUCCESS) {
         PLUGIN_ERROR("host_statistics failed and returned the value %d", (int)status);
@@ -66,16 +66,16 @@ int memory_read(void)
      *   This memory is not being used.
      */
 
-    metric_family_append(&fams[FAM_MEMORY_WIRED_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_WIRED_BYTES],
                          VALUE_GAUGE(vm_data.wire_count * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_ACTIVE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_ACTIVE_BYTES],
                          VALUE_GAUGE(vm_data.active_count * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_INACTIVE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_INACTIVE_BYTES],
                          VALUE_GAUGE(vm_data.inactive_count * pagesize), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
+    metric_family_append(&memory_fams[FAM_MEMORY_FREE_BYTES],
                          VALUE_GAUGE(vm_data.free_count * pagesize), NULL, NULL);
 
-    plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
+    plugin_dispatch_metric_family_array(memory_fams, FAM_MEMORY_MAX, 0);
 
     return 0;
 }
@@ -83,6 +83,17 @@ int memory_read(void)
 int memory_init(void)
 {
     port_host = mach_host_self();
-    host_page_size(port_host, &pagesize);
+
+    kern_return_t status = host_page_size(port_host, &pagesize);
+    if (status != KERN_SUCCESS) {
+        PLUGIN_ERROR("host_page_size_failed and returned the value %d", (int)status);
+        return -1;
+    }
+
     return 0;
+}
+
+int memory_shutdown(void)
+{
+    mach_port_deallocate(mach_task_self(), port_host);
 }

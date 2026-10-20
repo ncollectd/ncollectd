@@ -13,7 +13,7 @@
 
 static char *path_proc_meminfo;
 
-extern metric_family_t fams[];
+extern metric_family_t memory_fams[];
 
 typedef enum {
     MEMINFO_MEMORY_TOTAL,
@@ -68,7 +68,9 @@ int memory_read(void)
         if (mm == NULL)
             continue;
 
-        double value = atof(fields[1]);
+        double value = 0;
+        if (strtodouble(fields[1], &value) != 0)
+            continue;
 
         if (fields_num == 3) {
             if ((fields[2][0] == 'k') && (fields[2][1] == 'B')) {
@@ -122,31 +124,41 @@ int memory_read(void)
             mem_used = meminfo[MEMINFO_MEMORY_TOTAL] - meminfo[MEMINFO_MEMORY_AVAILABLE];
     }
 
-    metric_family_append(&fams[FAM_MEMORY_TOTAL_BYTES],
-                         VALUE_GAUGE(meminfo[MEMINFO_MEMORY_TOTAL]), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_USED_BYTES],
+    if (!isnan(meminfo[MEMINFO_MEMORY_TOTAL]))
+        metric_family_append(&memory_fams[FAM_MEMORY_TOTAL_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_MEMORY_TOTAL]), NULL, NULL);
+
+    metric_family_append(&memory_fams[FAM_MEMORY_USED_BYTES],
                          VALUE_GAUGE(mem_used), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_FREE_BYTES],
-                         VALUE_GAUGE(meminfo[MEMINFO_MEMORY_FREE]), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_SHARED_BYTES],
-                         VALUE_GAUGE(meminfo[MEMINFO_SHMEM]), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_BUFFERS_BYTES],
-                         VALUE_GAUGE(meminfo[MEMINFO_BUFFERS]), NULL, NULL);
-    metric_family_append(&fams[FAM_MEMORY_CACHED_BYTES],
-                         VALUE_GAUGE(meminfo[MEMINFO_CACHED]), NULL, NULL);
+
+    if (!isnan(meminfo[MEMINFO_MEMORY_FREE]))
+        metric_family_append(&memory_fams[FAM_MEMORY_FREE_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_MEMORY_FREE]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_SHMEM]))
+        metric_family_append(&memory_fams[FAM_MEMORY_SHARED_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_SHMEM]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_BUFFERS]))
+        metric_family_append(&memory_fams[FAM_MEMORY_BUFFERS_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_BUFFERS]), NULL, NULL);
+    if (!isnan(meminfo[MEMINFO_CACHED]))
+        metric_family_append(&memory_fams[FAM_MEMORY_CACHED_BYTES],
+                             VALUE_GAUGE(meminfo[MEMINFO_CACHED]), NULL, NULL);
 
     /* SReclaimable and SUnreclaim were introduced in kernel 2.6.19
      * They sum up to the value of Slab, which is available on older & newer
      * kernels. So SReclaimable/SUnreclaim are submitted if available, and Slab
      * if not. */
     if (!isnan(meminfo[MEMINFO_SLAB_RECLAIMABLE]) || !isnan(meminfo[MEMINFO_SLAB_UNRECLAIMABLE])) {
-        metric_family_append(&fams[FAM_MEMORY_SLAB_RECLAIMABLE_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_SLAB_RECLAIMABLE]), NULL, NULL);
-        metric_family_append(&fams[FAM_MEMORY_SLAB_UNRECLAIMABLE_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_SLAB_UNRECLAIMABLE]), NULL, NULL);
+        if (!isnan(meminfo[MEMINFO_SLAB_RECLAIMABLE]))
+            metric_family_append(&memory_fams[FAM_MEMORY_SLAB_RECLAIMABLE_BYTES],
+                                 VALUE_GAUGE(meminfo[MEMINFO_SLAB_RECLAIMABLE]), NULL, NULL);
+        if (!isnan(meminfo[MEMINFO_SLAB_UNRECLAIMABLE]))
+            metric_family_append(&memory_fams[FAM_MEMORY_SLAB_UNRECLAIMABLE_BYTES],
+                                 VALUE_GAUGE(meminfo[MEMINFO_SLAB_UNRECLAIMABLE]), NULL, NULL);
     } else {
-        metric_family_append(&fams[FAM_MEMORY_SLAB_BYTES],
-                             VALUE_GAUGE(meminfo[MEMINFO_SLAB]), NULL, NULL);
+        if (!isnan(meminfo[MEMINFO_SLAB]))
+            metric_family_append(&memory_fams[FAM_MEMORY_SLAB_BYTES],
+                                 VALUE_GAUGE(meminfo[MEMINFO_SLAB]), NULL, NULL);
     }
 
     struct {
@@ -169,10 +181,10 @@ int memory_read(void)
 
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(fmem); i++) {
         if (!isnan(meminfo[fmem[i].idx]))
-            metric_family_append(&fams[fmem[i].fam], VALUE_GAUGE(meminfo[fmem[i].idx]), NULL, NULL);
+            metric_family_append(&memory_fams[fmem[i].fam], VALUE_GAUGE(meminfo[fmem[i].idx]), NULL, NULL);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_MEMORY_MAX, 0);
+    plugin_dispatch_metric_family_array(memory_fams, FAM_MEMORY_MAX, 0);
 
     return 0;
 }
