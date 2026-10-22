@@ -61,6 +61,7 @@ struct wireless_dev_s {
     char name[IF_NAMESIZE];
     double frequency;
     int channel;
+    char ssid[ESSID_MAX_SIZE + 1];
     wireless_bss_t bss;
     wireless_dev_t *next;
 };
@@ -167,6 +168,28 @@ static metric_family_t fams[FAM_WIRELESS_MAX] = {
 #define NOISE_FLOOR_DBM -90
 #define SIGNAL_MAX_DBM -20
 
+static void mnl_socket_flush(struct mnl_socket *nls)
+{
+    char buf[MNL_SOCKET_BUFFER_SIZE];
+
+    int fd = mnl_socket_get_fd(nls);
+
+    while (true) {
+        ssize_t size = recv(fd, buf, sizeof(buf), MSG_DONTWAIT);
+        if (size < 0) {
+            if (errno == EAGAIN)
+                break;
+            if (errno == EINTR)
+                continue;
+
+            PLUGIN_ERROR("Error flushing socket: %s", STRERRNO);
+            break;
+        }
+        if (size == 0)
+            break;
+    }
+}
+
 // Based on NetworkManager/src/platform/wifi/wifi-utils-nl80211.c
 static uint32_t nl80211_xbm_to_percent(int32_t xbm, int32_t divisor)
 {
@@ -228,7 +251,7 @@ static int get_family_id_attr_cb(const struct nlattr *attr, void *data)
         return MNL_CB_OK;
 
     if (mnl_attr_validate(attr, MNL_TYPE_U16) < 0) {
-        PLUGIN_ERROR("mnl_attr_validate failed: %s", STRERRNO);
+        PLUGIN_ERROR("mnl_attr_validate(CTRL_ATTR_FAMILY_ID) failed: %s", STRERRNO);
         return MNL_CB_ERROR;
     }
 
@@ -277,6 +300,7 @@ static int get_family_id(void)
         if (status < 0) {
             status = errno;
             PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERROR(status));
+            mnl_socket_flush(nl);
             return -1;
         } else if (status == 0) {
             break;
@@ -285,6 +309,7 @@ static int get_family_id(void)
 
         if ((status = nlmsg_errno((void *)buffer, buffer_size)) != 0) {
             PLUGIN_ERROR("CTRL_CMD_GETFAMILY(\"%s\"): %s", NL80211_GENL_NAME, STRERROR(status));
+            mnl_socket_flush(nl);
             return -1;
         }
 
@@ -294,6 +319,7 @@ static int get_family_id(void)
                             get_family_id_msg_cb, &genl_id_nl80211);
         if (status < MNL_CB_STOP) {
             PLUGIN_ERROR("Parsing message failed.");
+            mnl_socket_flush(nl);
             return -1;
         } else if (status == MNL_CB_STOP) {
             break;
@@ -314,24 +340,40 @@ static int nl80211_cmd_get_interfaces_attr_cb(const struct nlattr *attr, void *d
 
     switch (mnl_attr_get_type(attr)) {
     case NL80211_ATTR_IFNAME:
+        if (mnl_attr_validate(attr, MNL_TYPE_NUL_STRING) < 0) {
+            PLUGIN_ERROR("mnl_attr_validate(NL80211_ATTR_IFNAME) failed: %s", STRERRNO);
+            return MNL_CB_ERROR;
+        }
         sstrncpy(wdev->name, mnl_attr_get_str(attr), sizeof(wdev->name));
         break;
     case NL80211_ATTR_IFINDEX:
+        if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0) {
+            PLUGIN_ERROR("mnl_attr_validate(NL80211_ATTR_IFINDEX) failed: %s", STRERRNO);
+            return MNL_CB_ERROR;
+        }
         wdev->index = mnl_attr_get_u32(attr);
         break;
     case NL80211_ATTR_WIPHY_FREQ: {
+        if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0) {
+            PLUGIN_ERROR("mnl_attr_validate(NL80211_ATTR_WIPHY_FREQ) failed: %s", STRERRNO);
+            return MNL_CB_ERROR;
+        }
         uint32_t frequency = mnl_attr_get_u32(attr);
         wdev->channel = ieee80211_frequency_to_channel(frequency);
         wdev->frequency = (double)frequency * 1e6;
     }   break;
     case NL80211_ATTR_SSID: {
+        if (mnl_attr_validate(attr, MNL_TYPE_BINARY) < 0) {
+            PLUGIN_ERROR("mnl_attr_validate(NL80211_ATTR_SSID) failed: %s", STRERRNO);
+            return MNL_CB_ERROR;
+        }
         size_t len = mnl_attr_get_payload_len(attr);
-        if (len > (sizeof(wdev->bss.essid) - 1))
-            len = sizeof(wdev->bss.essid) - 1;
+        if (len > (sizeof(wdev->ssid) - 1))
+            len = sizeof(wdev->ssid) - 1;
         char *playload = mnl_attr_get_payload(attr);
         if (playload != NULL) {
-            memcpy(wdev->bss.essid, playload, len);
-            wdev->bss.essid[len] = '\0';
+            memcpy(wdev->ssid, playload, len);
+            wdev->ssid[len] = '\0';
         }
     }   break;
     }
@@ -383,6 +425,7 @@ static int nl80211_cmd_get_interfaces(void)
         if (status < 0) {
             status = errno;
             PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERROR(status));
+            mnl_socket_flush(nl);
             return -1;
         } else if (status == 0) {
             break;
@@ -392,6 +435,7 @@ static int nl80211_cmd_get_interfaces(void)
         status = nlmsg_errno((void *)buffer, buffer_size);
         if (status != 0) {
             PLUGIN_ERROR("NL80211_CMD_GET_INTERFACE failed: %s", STRERROR(status));
+            mnl_socket_flush(nl);
             return -1;
         }
 
@@ -401,6 +445,7 @@ static int nl80211_cmd_get_interfaces(void)
                             nl80211_cmd_get_interfaces_msg_cb, NULL);
         if (status < MNL_CB_STOP) {
             PLUGIN_ERROR("Parsing message failed.");
+            mnl_socket_flush(nl);
             return -1;
         } else if (status == MNL_CB_STOP) {
             break;
@@ -412,14 +457,14 @@ static int nl80211_cmd_get_interfaces(void)
 
 static uint8_t *find_ie(uint8_t *buf, size_t len, uint8_t ie)
 {
-
     while (len >= 2) {
-        if (len < (size_t)(buf[1]+2))
+        size_t elem = (size_t)buf[1] + 1;
+        if (len < elem)
             break;
         if (buf[0] == ie)
             return buf;
-        buf += buf[1]+2;
-        len -= buf[1]+2;
+        buf += elem;
+        len -= elem;
     }
 
     return NULL;
@@ -440,6 +485,10 @@ static int nl80211_cmd_get_scan_attr_cb(const struct nlattr *attr, void *data)
         mnl_attr_for_each_nested(nested, attr) {
             switch (mnl_attr_get_type(nested)) {
             case NL80211_BSS_STATUS: {
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_BSS_STATUS) failed: %s", STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 uint32_t status = mnl_attr_get_u32(nested);
                 if (status == NL80211_BSS_STATUS_ASSOCIATED ||
                     status == NL80211_BSS_STATUS_AUTHENTICATED ||
@@ -448,11 +497,20 @@ static int nl80211_cmd_get_scan_attr_cb(const struct nlattr *attr, void *data)
                 }
             }   break;
             case NL80211_BSS_BSSID: {
+                if (mnl_attr_validate2(nested, MNL_TYPE_BINARY, sizeof(wbss->bssid)) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_BSS_BSSID) failed: %s", STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 uint8_t *bss_payload = mnl_attr_get_payload(nested);
                 if (bss_payload != NULL)
                     memcpy(wbss->bssid, bss_payload, sizeof(wbss->bssid));
             }   break;
             case NL80211_BSS_INFORMATION_ELEMENTS: {
+                if (mnl_attr_validate(nested, MNL_TYPE_BINARY) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_BSS_INFORMATION_ELEMENTS) failed: %s",
+                                  STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 uint16_t payload_len = mnl_attr_get_payload_len(nested);
                 uint8_t *payload = mnl_attr_get_payload(nested);
                 if (payload != NULL) {
@@ -574,36 +632,91 @@ static int nl80211_cmd_get_station_attr_cb(const struct nlattr *attr, void *data
                 attr_sta_info_tx_bitrate = nested;
                 break;
             case NL80211_STA_INFO_RX_BYTES64:
+                if (mnl_attr_validate(nested, MNL_TYPE_U64) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_RX_BYTES64) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->rx_bytes = mnl_attr_get_u64(nested);
                 break;
             case NL80211_STA_INFO_TX_BYTES64:
+                if (mnl_attr_validate(nested, MNL_TYPE_U64) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_TX_BYTES64) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->tx_bytes = mnl_attr_get_u64(nested);
                 break;
             case NL80211_STA_INFO_RX_PACKETS:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_RX_PACKETS) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->rx_pckts = mnl_attr_get_u32(nested);
                 break;
             case NL80211_STA_INFO_TX_PACKETS:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_TX_PACKETS) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->tx_pckts = mnl_attr_get_u32(nested);
                 break;
             case NL80211_STA_INFO_TX_RETRIES:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_TX_RETRIES) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->tx_retries = mnl_attr_get_u32(nested);
                 break;
             case NL80211_STA_INFO_TX_FAILED:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_TX_FAILED) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->tx_failed = mnl_attr_get_u32(nested);
                 break;
             case NL80211_STA_INFO_BEACON_RX:
+                if (mnl_attr_validate(nested, MNL_TYPE_U64) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_BEACON_RX) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->beacon_rx =  mnl_attr_get_u64(nested);
                 break;
             case NL80211_STA_INFO_BEACON_LOSS:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_BEACON_LOSS) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->beacon_loss = mnl_attr_get_u32(nested);
                 break;
             case NL80211_STA_INFO_CONNECTED_TIME:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_CONNECTED_TIME) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->connected_time = mnl_attr_get_u32(nested);
                 break;
             case NL80211_STA_INFO_INACTIVE_TIME:
+                if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_INACTIVE_TIME) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 wst->inactive_time = (double)mnl_attr_get_u32(nested) / 1000.0;
                 break;
             case NL80211_STA_INFO_SIGNAL: {
+                if (mnl_attr_validate(nested, MNL_TYPE_U8) < 0) {
+                    PLUGIN_ERROR("mnl_attr_validate(NL80211_STA_INFO_SIGNAL) failed: %s",
+                                 STRERRNO);
+                    return MNL_CB_ERROR;
+                }
                 int8_t signal = mnl_attr_get_u8(nested);
                 wst->signal_level = signal;
                 wst->quality = nl80211_xbm_to_percent(signal, 1);
@@ -617,12 +730,35 @@ static int nl80211_cmd_get_station_attr_cb(const struct nlattr *attr, void *data
                 return MNL_CB_ERROR;
             }
 
+            double rx_bitrate16 = NAN;
+            double rx_bitrate32 = NAN;
+            wst->rx_bitrate = NAN;
+
             mnl_attr_for_each_nested(nested, attr_sta_info_rx_bitrate) {
                 switch (mnl_attr_get_type(nested)) {
                 case NL80211_RATE_INFO_BITRATE:
-                    wst->rx_bitrate = (double)mnl_attr_get_u16(nested) * 100.0 * 1000.0;
+                    if (mnl_attr_validate(nested, MNL_TYPE_U16) < 0) {
+                        PLUGIN_ERROR("mnl_attr_validate(NL80211_RATE_INFO_BITRATE) failed: %s",
+                                     STRERRNO);
+                        return MNL_CB_ERROR;
+                    }
+                    rx_bitrate16 = (double)mnl_attr_get_u16(nested) * 100.0 * 1000.0;
+                    break;
+                case NL80211_RATE_INFO_BITRATE32:
+                    if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                        PLUGIN_ERROR("mnl_attr_validate(NL80211_RATE_INFO_BITRATE32) failed: %s",
+                                     STRERRNO);
+                        return MNL_CB_ERROR;
+                    }
+                    rx_bitrate32 = (double)mnl_attr_get_u32(nested) * 100.0 * 1000.0;
                     break;
                 }
+            }
+
+            if (!isnan(rx_bitrate32)) {
+                wst->rx_bitrate = rx_bitrate32;
+            } else if (!isnan(rx_bitrate16)) {
+                wst->rx_bitrate = rx_bitrate16;
             }
         }
 
@@ -632,12 +768,35 @@ static int nl80211_cmd_get_station_attr_cb(const struct nlattr *attr, void *data
                 return MNL_CB_ERROR;
             }
 
+            double tx_bitrate16 = NAN;
+            double tx_bitrate32 = NAN;
+            wst->tx_bitrate = NAN;
+
             mnl_attr_for_each_nested(nested, attr_sta_info_tx_bitrate) {
                 switch (mnl_attr_get_type(nested)) {
                 case NL80211_RATE_INFO_BITRATE:
-                    wst->tx_bitrate = (double)mnl_attr_get_u16(nested) * 100.0 * 1000.0;
+                    if (mnl_attr_validate(nested, MNL_TYPE_U16) < 0) {
+                        PLUGIN_ERROR("mnl_attr_validate(NL80211_RATE_INFO_BITRATE) failed: %s",
+                                     STRERRNO);
+                        return MNL_CB_ERROR;
+                    }
+                    tx_bitrate16 = (double)mnl_attr_get_u16(nested) * 100.0 * 1000.0;
+                    break;
+                case NL80211_RATE_INFO_BITRATE32:
+                    if (mnl_attr_validate(nested, MNL_TYPE_U32) < 0) {
+                        PLUGIN_ERROR("mnl_attr_validate(NL80211_RATE_INFO_BITRATE32) failed: %s",
+                                     STRERRNO);
+                        return MNL_CB_ERROR;
+                    }
+                    tx_bitrate32 = (double)mnl_attr_get_u32(nested) * 100.0 * 1000.0;
                     break;
                 }
+            }
+
+            if (!isnan(tx_bitrate32)) {
+                wst->tx_bitrate = tx_bitrate32;
+            } else if (!isnan(tx_bitrate16)) {
+                wst->tx_bitrate = tx_bitrate16;
             }
         }
 
@@ -679,7 +838,7 @@ static int nl80211_cmd_get_station_msg_cb(const struct nlmsghdr *nlh, void *data
         .ptr = (label_pair_t[]){
             {.name = "bssid",  .value = mac2str(wst.mac, mac) },
             {.name = "device", .value = wdev->name            },
-            {.name = "ssid",   .value = wdev->bss.essid       }
+            {.name = "ssid",   .value = wdev->ssid            }
         }
     };
 
@@ -687,10 +846,12 @@ static int nl80211_cmd_get_station_msg_cb(const struct nlmsghdr *nlh, void *data
                          VALUE_COUNTER(wst.connected_time), &labels, NULL);
     metric_family_append(&fams[FAM_WIRELESS_STATION_INACTIVE_SECONDS],
                          VALUE_GAUGE(wst.inactive_time), &labels, NULL);
-    metric_family_append(&fams[FAM_WIRELESS_STATION_RX_BITRATE],
-                         VALUE_GAUGE(wst.rx_bitrate), &labels, NULL);
-    metric_family_append(&fams[FAM_WIRELESS_STATION_TX_BITRATE],
-                         VALUE_GAUGE(wst.tx_bitrate), &labels, NULL);
+    if (!isnan(wst.rx_bitrate))
+        metric_family_append(&fams[FAM_WIRELESS_STATION_RX_BITRATE],
+                             VALUE_GAUGE(wst.rx_bitrate), &labels, NULL);
+    if (!isnan(wst.tx_bitrate))
+        metric_family_append(&fams[FAM_WIRELESS_STATION_TX_BITRATE],
+                             VALUE_GAUGE(wst.tx_bitrate), &labels, NULL);
     metric_family_append(&fams[FAM_WIRELESS_STATION_RX_BYTES],
                          VALUE_COUNTER(wst.rx_bytes), &labels, NULL);
     metric_family_append(&fams[FAM_WIRELESS_STATION_TX_BYTES],
