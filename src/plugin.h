@@ -63,7 +63,7 @@ typedef struct {
     bool complained_once;
 } complain_t;
 
-#define COMPLAIN_INIT ((c_complain_t){.last = 0, .interval = 0, .complained_once = false})
+#define COMPLAIN_INIT(i) ((complain_t){.last = 0, .interval = (i), .complained_once = false})
 #define COMPLAIN_WOULD_RELEASE(c) ((c)->interval != 0)
 /*
  * Callback types
