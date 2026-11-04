@@ -1,0 +1,2 @@
+# TYPE fcgi_response_code gauge
+fcgi_response_code{hostname="localhost.localdomain",instance="instance"} 200

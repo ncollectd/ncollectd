@@ -93,6 +93,7 @@ typedef struct {
     bool response_time;
     bool response_code;
     cdtime_t timeout;
+    cdtime_t remain_time;
 
     buf_t request;
     strbuf_t response;
@@ -100,12 +101,28 @@ typedef struct {
     plugin_match_t *matches;
 } fcgi_ctx_t;
 
+static void fcgi_param_list_reset(fcgi_param_list_t *params)
+{
+    for (size_t i = 0; i < params->num; i++) {
+        fcgi_param_t *param = &params->ptr[i];
+        free(param->key);
+        free(param->value);
+    }
+
+    free(params->ptr);
+
+    params->num = 0;
+    params->ptr = NULL;
+}
+
 static void fcgi_free(void *arg)
 {
     fcgi_ctx_t *ctx = arg;
     if (ctx == NULL)
         return;
 
+    free(ctx->name);
+    fcgi_param_list_reset(&ctx->params);
     free(ctx->metric_prefix);
     label_set_reset(&ctx->labels);
     plugin_filter_free(ctx->filter);
@@ -115,8 +132,8 @@ static void fcgi_free(void *arg)
     free(ctx->socket_path);
     free(ctx->data);
 
-//    buf_reset(&ctx->request);
-//    strbuf_reset(&ctx->response);
+    buf_destroy(&ctx->request);
+    strbuf_destroy(&ctx->response);
 
     if (ctx->matches != NULL)
         plugin_match_shutdown(ctx->matches);
@@ -183,10 +200,10 @@ static int fcgi_build_request(fcgi_ctx_t *ctx)
         for (size_t i = 0; i < ctx->params.num; i++) {
             fcgi_param_t *param = &ctx->params.ptr[i];
 
-            fcgi_param_size(&ctx->request, param->key_len);
-            fcgi_param_size(&ctx->request, param->value_len);
-            buf_put(&ctx->request, param->key, param->key_len);
-            buf_put(&ctx->request, param->value, param->value_len);
+            status |= fcgi_param_size(&ctx->request, param->key_len);
+            status |= fcgi_param_size(&ctx->request, param->value_len);
+            status |= buf_put(&ctx->request, param->key, param->key_len);
+            status |= buf_put(&ctx->request, param->value, param->value_len);
         }
     }
 
@@ -230,101 +247,66 @@ static int fcgi_build_request(fcgi_ctx_t *ctx)
     return status;
 }
 
-static ssize_t read_timeout(int fd, void *buf, size_t count, cdtime_t *timeout)
+static cdtime_t *fcgi_remain_time(fcgi_ctx_t *ctx)
 {
-    struct pollfd fds = {
-        .fd = fd,
-        .events = POLLIN,
-    };
-
-    cdtime_t start = cdtime();
-
-    int status = poll(&fds, 1, CDTIME_T_TO_MS(*timeout));
-    if (status < 0) {
-        PLUGIN_ERROR("poll error: %s", STRERRNO);
-        return -1;
-    }
-
-    if (status == 0) {
-        *timeout -= cdtime() - start;
-        return 0;
-    }
-
-    if (fds.revents & POLLIN) {
-        ssize_t size = read(fd, buf, count);
-        *timeout -= cdtime() - start;
-        return size;
-    }
-
-    return 0;
+    if (ctx->timeout != 0)
+        return &ctx->remain_time;
+    return NULL;
 }
 
-static ssize_t sread_timeout(int fd, void *buf, size_t count, cdtime_t *timeout)
+static bool fcgi_timeout(fcgi_ctx_t *ctx)
 {
-    char *ptr = (char *)buf;
-    size_t nleft = count;
-    size_t bread = 0;
+    if (ctx->timeout == 0)
+        return true;
 
-    while (nleft > 0) {
-        ssize_t status = read_timeout(fd, (void *)ptr, nleft, timeout);
+    if (ctx->remain_time > 0)
+        return true;
 
-        if (*timeout <= 0)
-            return -1;
-
-        if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR)))
-            continue;
-
-        if (status < 0)
-            return status;
-
-        if (status == 0)
-            return -1;
-
-        assert((0 > status) || (nleft >= (size_t)status));
-
-        nleft -= ((size_t)status);
-        ptr += ((size_t)status);
-        bread += ((size_t)status);
-    }
-
-    return bread;
+    return false;
 }
 
 static int fcgi_read_response(fcgi_ctx_t *ctx, int fd)
 {
     char cbuffer[65792];
 
-    cdtime_t timeout = ctx->timeout;
-
-    while (timeout > 0) {
+    while (fcgi_timeout(ctx)) {
         fcgi_header_t hdr;
 
-        ssize_t size = sread_timeout(fd, &hdr, sizeof(hdr), &timeout);
+        ssize_t size = socket_poll_read(fd, &hdr, sizeof(hdr), fcgi_remain_time(ctx));
+        if (size < 0)
+            return -1;
         if (size != sizeof(hdr)) {
             PLUGIN_ERROR("Invalid header size, got %zd expect %zu.", size, sizeof(hdr));
             return -1;
         }
 
         uint16_t content_length = ntohs(hdr.content_length);
-        if (content_length <= 0)
-            return -1;
 
         ssize_t csize = content_length + hdr.padding_length;
-        if ((size_t)csize > sizeof(cbuffer))
+        if ((size_t)csize > sizeof(cbuffer)) {
+            PLUGIN_ERROR("Content length: %zd is greater than buffer size: %zu.",
+                         csize, sizeof(cbuffer));
             return -1;
+        }
 
-        ssize_t rcsize = sread_timeout(fd, cbuffer, csize, &timeout);
-        if (rcsize != csize) {
-            PLUGIN_ERROR("Cannot read full body, got %zd expect %zd.", rcsize, csize);
-            return -1;
+        if (csize > 0) {
+            ssize_t rcsize = socket_poll_read(fd, cbuffer, csize, fcgi_remain_time(ctx));
+            if (rcsize < 0)
+                return -1;
+            if (rcsize != csize) {
+                PLUGIN_ERROR("Cannot read full body, got %zd expect %zd.", rcsize, csize);
+                return -1;
+            }
         }
 
         switch (hdr.type) {
         case FCGI_STDOUT:
-            strbuf_putstrn(&ctx->response, cbuffer, content_length);
+            if (content_length > 0)
+                strbuf_putstrn(&ctx->response, cbuffer, content_length);
             break;
         case FCGI_STDERR:
-            PLUGIN_ERROR("FCGI_STDERR: %.*s", (int)content_length, cbuffer);
+            if (content_length > 0)
+                PLUGIN_ERROR("FCGI_STDERR: %.*s", (int)content_length, cbuffer);
             break;
         case FCGI_END_REQUEST: {
             fcgi_end_request_body_t erb;
@@ -384,6 +366,8 @@ static int fcgi_read(user_data_t *ud)
 
     strbuf_reset(&ctx->response);
 
+    ctx->remain_time = ctx->timeout;
+
     cdtime_t start = 0;
     if (ctx->response_time)
         start = cdtime();
@@ -391,17 +375,18 @@ static int fcgi_read(user_data_t *ud)
     int fd = -1;
 
     if (ctx->socket_path != NULL)
-        fd = socket_connect_unix_stream(ctx->socket_path, 0);
+        fd = socket_poll_connect_unix_stream(ctx->socket_path, fcgi_remain_time(ctx));
     else
-        fd = socket_connect_tcp(ctx->host, ctx->port, 0, 0);
+        fd = socket_poll_connect_tcp(ctx->host, ctx->port, 0, 0, fcgi_remain_time(ctx));
 
     if (fd < 0) {
         fcgi_submit_response_code(ctx, 0);
         return -1;
     }
 
-    int status = swrite(fd, ctx->request.ptr , buf_len(&ctx->request));
-    if (status != 0) {
+    size_t len = buf_len(&ctx->request);
+    int status = socket_poll_write(fd, ctx->request.ptr , len, fcgi_remain_time(ctx));
+    if (status != (int)len) {
         PLUGIN_ERROR("Instance '%s': write(2) failed: %s", ctx->name, STRERRNO);
         fcgi_submit_response_code(ctx, 0);
         close(fd);
@@ -420,8 +405,15 @@ static int fcgi_read(user_data_t *ud)
 
     fcgi_submit_response_time(ctx, start);
 
+    if (strbuf_len(&ctx->response) == 0) {
+        fcgi_submit_response_code(ctx, 0);
+        return 0;
+    }
+
     char *body = NULL;
     char *end = strstr(ctx->response.ptr, "\r\n\r\n");
+    if (end == NULL)
+        end = strstr(ctx->response.ptr, "\n\n");
     if (end != NULL) {
         *end = '\0';
         body = end + 4;
@@ -433,8 +425,10 @@ static int fcgi_read(user_data_t *ud)
     char *line;
     while ((line = strtok_r(ptr, "\r\n", &saveptr)) != NULL) {
         ptr = NULL;
-        if (strncmp("Status: ", line, strlen("Status: ")) == 0) {
-            code = atoi(line + strlen("Status: "));
+        if (strncasecmp("status:", line, strlen("status:")) == 0) {
+            line += strlen("status:");
+            while (*line == ' ') line++;
+            code = atoi(line);
             break;
         }
     }
@@ -502,6 +496,8 @@ static int fcgi_config_instance(config_item_t *ci)
         free(ctx);
         return status;
     }
+
+    ctx->timeout = CDTIME_DOOMSDAY;
 
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
@@ -605,7 +601,7 @@ static int fcgi_config_instance(config_item_t *ci)
         return status;
     }
 
-    if (ctx->timeout == 0)
+    if (ctx->timeout == CDTIME_DOOMSDAY)
         ctx->timeout = interval != 0 ? interval/2 : plugin_get_interval()/2;
 
     label_set_add(&ctx->labels, true, "instance", ctx->name);
