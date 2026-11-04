@@ -423,6 +423,10 @@ static inline int rbuf_refstring(rbuf_t *rbuf, char **str, size_t len)
         return ENOMEM;
 
     *str = (char *)(rbuf->ptr + rbuf->pos);
+    if ((*str)[len - 1] != '\0')
+        return EINVAL;
+
     rbuf->pos += len;
+
     return 0;
 }

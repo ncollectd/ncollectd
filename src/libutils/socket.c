@@ -13,6 +13,8 @@
 #include <netinet/in.h>
 #endif
 
+#include <poll.h>
+
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <grp.h>
@@ -150,7 +152,6 @@ int socket_connect_unix_stream(const char *path, cdtime_t timeout)
     } else {
         /* Must be null terminated */
         sa_len = offsetof(struct sockaddr_un, sun_path) + strlen(path) + 1;
-        
     }
 
     int status = connect(fd, (const struct sockaddr *) &sa, sa_len);
@@ -460,4 +461,381 @@ int socket_setfl(int sfd, int setfl)
     }
 
     return 0;
+}
+
+static void socket_set_keepalive(int fd, int keep_idle, int keep_int)
+{
+    if ((keep_idle > 0) || (keep_int > 0)) {
+        int status = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &(int){1}, sizeof(int));
+        if (status != 0)
+            WARNING("failed to set socket keepalive flag");
+
+#ifdef TCP_KEEPIDLE
+        if (keep_idle > 0) {
+            status = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &keep_idle, sizeof(keep_idle));
+            if (status != 0)
+                WARNING("failed to set socket tcp keepalive time");
+        }
+#endif
+
+#ifdef TCP_KEEPINTVL
+        if (keep_intvl > 0) {
+            status = setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &keep_int, sizeof(keep_int));
+            if (status != 0)
+                WARNING("failed to set socket tcp keepalive interval");
+        }
+#endif
+    }
+}
+
+static int socket_set_nonblock(int fd)
+{
+    int flags = fcntl (fd, F_GETFL, 0);
+    if (flags == -1) {
+        WARNING("fcntl(F_GETFL) failed: %s.", STRERRNO);
+        flags = 0;
+    }
+
+    int status = fcntl (fd, F_SETFL, flags | O_NONBLOCK);
+    if (status < 0) {
+        ERROR("fcntl(F_SETFL, O_NONBLOCK) failed: %s.", STRERRNO);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int socket_poll_connect_to(int fd, const struct sockaddr *addr, socklen_t addrlen,
+                                          int timeout)
+{
+    cdtime_t start = cdtime();
+
+    int status = connect(fd, addr, addrlen);
+    if (status != 0) {
+        if (errno != EINPROGRESS) {
+            ERROR("failed to connect to remote host: %s", STRERRNO);
+            return -1;
+        }
+    }
+
+    struct pollfd pfd = {
+        .fd = fd,
+        .events = POLLOUT
+    };
+
+    int ptimeout = - 1;
+retry:
+    if (timeout > 0) {
+        int elapsed = CDTIME_T_TO_MS(cdtime() - start);
+        if (elapsed >= timeout) {
+            ERROR("Timeout waiting for connect.");
+            return -1;
+        }
+        ptimeout = timeout - elapsed;
+    }
+
+    int ret = poll(&pfd, 1, ptimeout);
+    if (!ret) {
+        ERROR("Timeout waiting for connect.");
+        return -1;
+    } else if (ret < 0) {
+        if (errno == EINTR)
+            goto retry;
+        ERROR("Error polling for connect: %s", STRERRNO);
+        return -1;
+    }
+
+    if (pfd.revents & (POLLOUT | POLLERR | POLLHUP)) {
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
+            ERROR("getsockopt(SO_ERROR) failed: %s.", STRERRNO);
+            return -1;
+        }
+
+        if (error != 0) {
+            ERROR("Failed to connect: %s.", STRERRNO);
+            return -1;
+        }
+    } else if (pfd.revents & POLLNVAL) {
+        ERROR("Failed to connect.");
+        return -1;
+    }
+
+    return 0;
+}
+
+int socket_poll_connect_unix_stream(const char *path, cdtime_t *timeout)
+{
+    cdtime_t start = cdtime();
+
+    struct sockaddr_un sa = {0};
+
+    if ((strlen(path) + 1)>= sizeof(sa.sun_path)) {
+        ERROR("Unix socket name '%s': too long.", path);
+        return -1;
+    }
+
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        ERROR("socket failed: %s", STRERRNO);
+        return -1;
+    }
+
+    if (socket_set_nonblock(fd) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    sa.sun_family = AF_UNIX;
+    socklen_t sa_len = 0;
+    sstrncpy(sa.sun_path, path, sizeof(sa.sun_path));
+    if (sa.sun_path[0] == '@') {
+        sa.sun_path[0] = '\0';
+        /* Not null terminated */
+        sa_len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
+    } else {
+        /* Must be null terminated */
+        sa_len = offsetof(struct sockaddr_un, sun_path) + strlen(path) + 1;
+    }
+
+    int status = connect(fd, (const struct sockaddr *) &sa, sa_len);
+    if (status < 0) {
+        ERROR("unix socket '%s' connect failed: %s", path, STRERRNO);
+        close(fd);
+        return -1;
+    }
+
+    int ptimeout = -1;
+
+    if (timeout != NULL) {
+        cdtime_t elapsed = cdtime() - start;
+        if (elapsed >= *timeout) {
+            *timeout = 0;
+            ERROR("Timeout waiting for read.");
+            close(fd);
+            return -1;
+        }
+        ptimeout = CDTIME_T_TO_MS(*timeout - elapsed);
+    }
+
+    status = socket_poll_connect_to(fd, (const struct sockaddr *) &sa, sa_len, ptimeout);
+    if (status < 0) {
+        close(fd);
+        return -1;
+    }
+
+    if (timeout != NULL) {
+        cdtime_t elapsed = cdtime() - start;
+        if (elapsed >= *timeout)
+            *timeout = 0;
+        else
+            *timeout -= elapsed;
+    }
+
+    return fd;
+}
+
+int socket_poll_connect_tcp(const char *host, int port, int keep_idle, int keep_int,
+                            cdtime_t *timeout)
+{
+    char service[ITOA_MAX];
+
+    cdtime_t start = cdtime();
+
+    uitoa(port, service);
+
+    struct addrinfo ai_hints = {.ai_family = AF_UNSPEC,
+                                .ai_flags = AI_ADDRCONFIG,
+                                .ai_socktype = SOCK_STREAM};
+    struct addrinfo *ai_list;
+    int status = getaddrinfo(host, service, &ai_hints, &ai_list);
+    if (status != 0) {
+        ERROR("getaddrinfo (%s, %s) failed: %s", host, service, gai_strerror(status));
+        return -1;
+    }
+
+    if (ai_list == NULL)
+        return -1;
+
+    int fd = -1;
+
+    for (struct addrinfo *ai_ptr = ai_list; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next) {
+        fd = socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+        if (fd < 0) {
+            ERROR("failed to open socket: %s", STRERRNO);
+            continue;
+        }
+
+        socket_set_keepalive(fd, keep_idle, keep_int);
+
+        if (socket_set_nonblock(fd) < 0) {
+            close(fd);
+            continue;
+        }
+
+        int ptimeout = -1;
+
+        if (timeout != NULL) {
+            cdtime_t elapsed = cdtime() - start;
+            if (elapsed >= *timeout) {
+                close(fd);
+                *timeout = 0;
+                ERROR("Timeout trying to connect.");
+                return -1;
+            }
+            ptimeout = *timeout - elapsed;
+        }
+
+        status = socket_poll_connect_to(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen, ptimeout);
+        if (status < 0) {
+            close(fd);
+            continue;
+        }
+
+        break;
+    }
+
+    freeaddrinfo(ai_list);
+
+    if (timeout != NULL) {
+        cdtime_t elapsed = cdtime() - start;
+        if (elapsed >= *timeout)
+            *timeout = 0;
+        else
+            *timeout -= elapsed;
+    }
+
+    return fd;
+}
+
+ssize_t socket_poll_read(int fd, void *buf, size_t len, cdtime_t *timeout)
+{
+    size_t total = 0;
+
+    cdtime_t start = cdtime();
+
+    while (len > 0) {
+        struct pollfd pfd = {
+            .fd = fd,
+            .events = POLLIN
+        };
+
+        int ptimeout = -1;
+        if (timeout != NULL) {
+            cdtime_t elapsed = cdtime() - start;
+            if (elapsed >= *timeout) {
+                *timeout = 0;
+                ERROR("Timeout waiting for read.");
+                return -1;
+            }
+            ptimeout = CDTIME_T_TO_MS(*timeout - elapsed);
+        }
+
+        int ret = poll(&pfd, 1, ptimeout);
+        if (!ret) {
+            ERROR("Timeout waiting for read.");
+            return -1;
+        } else if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            ERROR("Error polling for read: %s", STRERRNO);
+            return -1;
+        }
+
+        if (pfd.revents & (POLLIN | POLLHUP)) {
+            ssize_t n = recv(fd, buf, len, 0);
+            if (n < 0) {
+                if ((errno == EINTR) || (errno == EAGAIN))
+                    continue;
+                ERROR("Error reading: %s", STRERRNO);
+                return -1;
+            }
+            if (n == 0)
+                break;
+
+            buf = n + (char *)buf;
+            len -= n;
+            total += n;
+        } else if (pfd.revents & (POLLERR | POLLNVAL)) {
+            ERROR("Failed to read.");
+            return -1;
+        }
+    }
+
+    if (timeout != NULL) {
+        cdtime_t elapsed = cdtime() - start;
+        if (elapsed >= *timeout)
+            *timeout = 0;
+        else
+            *timeout -= elapsed;
+    }
+
+    return total;
+}
+
+ssize_t socket_poll_write(int fd, const void *buf, size_t len, cdtime_t *timeout)
+{
+    ssize_t total = 0;
+
+    cdtime_t start = cdtime();
+
+    while (len > 0) {
+        struct pollfd pfd = {
+            .fd = fd,
+            .events = POLLOUT
+        };
+
+        int ptimeout = -1;
+
+        if (timeout != NULL) {
+            cdtime_t elapsed = cdtime() - start;
+            if (elapsed >= *timeout) {
+                *timeout = 0;
+                ERROR("Timeout waiting for write.");
+                return -1;
+            }
+            ptimeout = CDTIME_T_TO_MS(*timeout - elapsed);
+        }
+
+        int ret = poll(&pfd, 1, ptimeout);
+        if (!ret) {
+            ERROR("Timeout waiting for write.");
+            return -1;
+        } else if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            ERROR("Error polling for write: %s", STRERRNO);
+            return -1;
+        }
+
+        if (pfd.revents & (POLLOUT | POLLHUP)) {
+            ssize_t n = send(fd, buf, len, MSG_NOSIGNAL);
+            if (n < 0) {
+                if ((errno == EINTR) || (errno == EAGAIN))
+                    continue;
+                ERROR("Error writting: %s", STRERRNO);
+                return -1;
+            }
+            if (n == 0)
+                break;
+
+            buf = n + (const char *)buf;
+            len -= n;
+            total += n;
+        } else if (pfd.revents & (POLLERR | POLLNVAL)) {
+            ERROR("Failed to write.");
+            return -1;
+        }
+    }
+
+    if (timeout != NULL) {
+        cdtime_t elapsed = cdtime() - start;
+        if (elapsed >= *timeout)
+            *timeout = 0;
+        else
+            *timeout -= elapsed;
+    }
+
+    return total;
 }
