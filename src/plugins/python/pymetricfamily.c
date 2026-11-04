@@ -62,37 +62,21 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (!IS_BYTES_OR_UNICODE(name)) {
         PyErr_SetString(PyExc_TypeError, "argument 1 must be a str");
-        Py_XDECREF(name);
-        Py_XDECREF(help);
-        Py_XDECREF(unit);
-        Py_XDECREF(metrics);
         return -1;
     }
 
-    if ((help != NULL) && !IS_BYTES_OR_UNICODE(name)) {
+    if ((help != NULL) && !IS_BYTES_OR_UNICODE(help)) {
         PyErr_SetString(PyExc_TypeError, "help must be a str");
-        Py_XDECREF(name);
-        Py_XDECREF(help);
-        Py_XDECREF(unit);
-        Py_XDECREF(metrics);
         return -1;
     }
 
     if ((unit != NULL) && !IS_BYTES_OR_UNICODE(unit)) {
         PyErr_SetString(PyExc_TypeError, "unit must be a str");
-        Py_XDECREF(name);
-        Py_XDECREF(help);
-        Py_XDECREF(unit);
-        Py_XDECREF(metrics);
         return -1;
     }
 
     if ((metrics != NULL) && (!PyTuple_Check(metrics) && !PyList_Check(metrics))) {
         PyErr_SetString(PyExc_TypeError, "metrics must be a list or a tuple");
-        Py_XDECREF(name);
-        Py_XDECREF(help);
-        Py_XDECREF(unit);
-        Py_XDECREF(metrics);
         return -1;
     }
 
@@ -108,10 +92,6 @@ static int MetricFamily_init(PyObject *s, PyObject *args, PyObject *kwds)
         break;
     default:
         PyErr_Format(PyExc_TypeError, "invalid metric type: %d", type);
-        Py_XDECREF(name);
-        Py_XDECREF(help);
-        Py_XDECREF(unit);
-        Py_XDECREF(metrics);
         return -1;
         break;
     }
@@ -285,6 +265,11 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
         PyErr_SetString(PyExc_TypeError, "unit must be str");
         return NULL;
     }
+    
+    if (time < 0) {
+        PyErr_SetString(PyExc_TypeError, "time must be greater than zero");
+        return NULL;
+    }
 
     switch (self->type) {
     case METRIC_TYPE_UNKNOWN:
@@ -309,59 +294,82 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
     if (self->metrics == NULL)
         Py_RETURN_NONE;
 
-    PyObject *str_unit = NULL;
     if (self->unit != NULL) {
-        str_unit = PyObject_Str(self->unit);
-        const char *string = cpy_unicode_or_bytes_to_string(&str_unit);
+        Py_INCREF(self->unit);
+        const char *string = cpy_unicode_or_bytes_to_string(&self->unit);
         if (string == NULL) {
-            Py_XDECREF(str_unit);
-            str_unit = NULL;
+            Py_XDECREF(self->unit);
         } else {
             fam.unit = discard_const(string);
         }
     }
 
-    PyObject *str_help = NULL;
     if (self->help != NULL) {
-        str_help = PyObject_Str(self->help);
-        const char *string = cpy_unicode_or_bytes_to_string(&str_help);
+        Py_INCREF(self->help);
+        const char *string = cpy_unicode_or_bytes_to_string(&self->help);
         if (string == NULL) {
-            Py_XDECREF(str_help);
-            str_help = NULL;
+            Py_XDECREF(self->help);
         } else {
             fam.help = discard_const(string);
         }
     }
 
-    PyObject *str_name = PyObject_Str(self->name);
-    const char *string = cpy_unicode_or_bytes_to_string(&str_name);
+    Py_INCREF(self->name);
+    const char *string = cpy_unicode_or_bytes_to_string(&self->name);
     if (string == NULL) {
-        Py_XDECREF(str_name);
-        str_name = NULL;
+        Py_XDECREF(self->name);
     } else {
         fam.name = discard_const(string);
     }
 
     PyObject *metrics_list = self->metrics;
 
-    size_t size = (size_t)PySequence_Length(metrics_list);
-    fam.metric.ptr = calloc(size, sizeof(*fam.metric.ptr));
-    if (fam.metric.ptr == NULL) {
-        PyErr_SetString(PyExc_TypeError, "failed to alloc metrics");
-        Py_XDECREF(str_name);
-        Py_XDECREF(str_help);
-        Py_XDECREF(str_unit);
+    PyObject *seq_metrics = PySequence_Fast(metrics_list, "Not a sequence of metrics.");
+    if (seq_metrics == NULL) {
+        Py_XDECREF(self->name);
+        Py_XDECREF(self->help);
+        Py_XDECREF(self->unit);
+        return NULL;
+    }
+    
+    Py_ssize_t size = PySequence_Fast_GET_SIZE(seq_metrics); 
+    if (size < 0) {
+        Py_XDECREF(self->name);
+        Py_XDECREF(self->help);
+        Py_XDECREF(self->unit);
+        Py_DECREF(seq_metrics);
         return NULL;
     }
 
+    if (size == 0) {
+        Py_XDECREF(self->name);
+        Py_XDECREF(self->help);
+        Py_XDECREF(self->unit);
+        Py_DECREF(seq_metrics);
+        Py_RETURN_NONE;
+    }
+
+    fam.metric.ptr = calloc(size, sizeof(*fam.metric.ptr));
+    if (fam.metric.ptr == NULL) {
+        PyErr_SetString(PyExc_TypeError, "failed to alloc metrics");
+        Py_XDECREF(self->name);
+        Py_XDECREF(self->help);
+        Py_XDECREF(self->unit);
+        Py_DECREF(seq_metrics);
+        return NULL;
+    }
+
+    PyObject **items = PySequence_Fast_ITEMS(seq_metrics);
+
     fam.metric.num = size;
 
-    for (size_t i = 0; i < size; ++i) {
-        PyObject *item = PySequence_Fast_GET_ITEM(metrics_list, (int)i); /* Borrowed reference. */
+    for (Py_ssize_t i = 0; i < size; ++i) {
+        PyObject *item = items[i]; /* Borrowed reference. */
         if (item == NULL) {
-            Py_XDECREF(str_name);
-            Py_XDECREF(str_help);
-            Py_XDECREF(str_unit);
+            Py_XDECREF(self->name);
+            Py_XDECREF(self->help);
+            Py_XDECREF(self->unit);
+            Py_DECREF(seq_metrics);
             metric_list_reset(&fam.metric, fam.type);
             return NULL;
         }
@@ -370,32 +378,36 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
 
         status = build_metric(m, self->type, item);
         if (status != 0) {
-            Py_XDECREF(str_name);
-            Py_XDECREF(str_help);
-            Py_XDECREF(str_unit);
+            Py_XDECREF(self->name);
+            Py_XDECREF(self->help);
+            Py_XDECREF(self->unit);
+            Py_DECREF(seq_metrics);
             metric_list_reset(&fam.metric, fam.type);
             return NULL;
         }
 
         if (PyErr_Occurred() != NULL) {
-            Py_XDECREF(str_name);
-            Py_XDECREF(str_help);
-            Py_XDECREF(str_unit);
+            Py_XDECREF(self->name);
+            Py_XDECREF(self->help);
+            Py_XDECREF(self->unit);
+            Py_DECREF(seq_metrics);
             metric_list_reset(&fam.metric, fam.type);
             return NULL;
         }
     }
 
+    Py_DECREF(seq_metrics);
+
     Py_BEGIN_ALLOW_THREADS;
-    ret = plugin_dispatch_metric_family(&fam, CDTIME_T_TO_DOUBLE(time));
+    ret = plugin_dispatch_metric_family(&fam, DOUBLE_TO_CDTIME_T(time));
     Py_END_ALLOW_THREADS;
 
     Py_XDECREF(self->metrics);
     self->metrics = PyList_New(0); /* New reference. */
 
-    Py_XDECREF(str_name);
-    Py_XDECREF(str_help);
-    Py_XDECREF(str_unit);
+    Py_XDECREF(self->name);
+    Py_XDECREF(self->help);
+    Py_XDECREF(self->unit);
 
     if (ret != 0) {
         PyErr_SetString(PyExc_RuntimeError, "error dispatching metric family, read the logs");
@@ -407,54 +419,44 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
 
 static bool check_metric_type(metric_type_t metric_type, PyObject *item)
 {
-    PyTypeObject *type = Py_TYPE(item);
-
     switch (metric_type) {
     case METRIC_TYPE_UNKNOWN:
-        if (strcmp(type->tp_name, "ncollectd.MetricUnknownDouble") == 0) {
+        if (PyObject_TypeCheck(item, &MetricUnknownDoubleType))
             return true;
-        } else if (strcmp(type->tp_name, "ncollectd.MetricUnknownLong") == 0) {
+        if (PyObject_TypeCheck(item, &MetricUnknownLongType))
             return true;
-        }
         break;
     case METRIC_TYPE_GAUGE:
-        if (strcmp(type->tp_name, "ncollectd.MetricGaugeDouble") == 0) {
+        if (PyObject_TypeCheck(item, &MetricGaugeDoubleType))
             return true;
-        } else if (strcmp(type->tp_name, "ncollectd.MetricGaugeLong") == 0) {
+        if (PyObject_TypeCheck(item, &MetricGaugeLongType))
             return true;
-        }
         break;
     case METRIC_TYPE_COUNTER:
-        if (strcmp(type->tp_name, "ncollectd.MetricCounterULong") == 0) {
+        if (PyObject_TypeCheck(item, &MetricCounterULongType))
             return true;
-        } else if (strcmp(type->tp_name, "ncollectd.MetricCounterDouble") == 0) {
+        if (PyObject_TypeCheck(item, &MetricCounterDoubleType))
             return true;
-        }
         break;
     case METRIC_TYPE_STATE_SET:
-        if (strcmp(type->tp_name, "ncollectd.MetricStateSet") == 0) {
+        if (PyObject_TypeCheck(item, &MetricStateSetType))
             return true;
-        }
         break;
     case METRIC_TYPE_INFO:
-        if (strcmp(type->tp_name, "ncollectd.MetricInfo") == 0) {
+        if (PyObject_TypeCheck(item, &MetricInfoType))
             return true;
-        }
         break;
     case METRIC_TYPE_SUMMARY:
-        if (strcmp(type->tp_name, "ncollectd.MetricSummary") == 0) {
+        if (PyObject_TypeCheck(item, &MetricSummaryType))
             return true;
-        }
         break;
     case METRIC_TYPE_HISTOGRAM:
-        if (strcmp(type->tp_name, "ncollectd.MetricHistogram") == 0) {
+        if (PyObject_TypeCheck(item, &MetricHistogramType))
             return true;
-        }
         break;
     case METRIC_TYPE_GAUGE_HISTOGRAM:
-        if (strcmp(type->tp_name, "ncollectd.MetricGaugeHistogram") == 0) {
+        if (PyObject_TypeCheck(item, &MetricGaugeHistogramType))
             return true;
-        }
         break;
     }
     return false;
@@ -481,6 +483,7 @@ static PyObject *MetricFamily_append(PyObject *s, PyObject *args, PyObject *kwds
 
     if ((!PyTuple_Check(metrics) && !PyList_Check(metrics))) {
         if (check_metric_type(self->type, metrics) == false) {
+            PyErr_SetString(PyExc_RuntimeError, "metric type mismatch");
             return NULL;
         }
 
@@ -489,20 +492,34 @@ static PyObject *MetricFamily_append(PyObject *s, PyObject *args, PyObject *kwds
         Py_RETURN_NONE;
     }
 
-    ssize_t size = PySequence_Length(metrics);
+    PyObject *seq_metrics = PySequence_Fast(metrics, "Not a sequence of metrics.");
+    if (seq_metrics == NULL)
+         return NULL;
+    
+    Py_ssize_t size = PySequence_Fast_GET_SIZE(seq_metrics); 
+    if (size < 0) {
+        Py_DECREF(seq_metrics);
+        return NULL;
+    }
 
-    for (ssize_t i = 0; i < size; ++i) {
-        PyObject *item = PySequence_Fast_GET_ITEM(metrics, (int)i); /* Borrowed reference. */
+    PyObject **items = PySequence_Fast_ITEMS(metrics);
+    for (Py_ssize_t i = 0; i < size; ++i) {
+        PyObject *item = items[i]; /* Borrowed reference. */
         if (item == NULL) {
+            Py_DECREF(seq_metrics);
             return NULL;
         }
 
         if (check_metric_type(self->type, item) == false)  {
+            PyErr_SetString(PyExc_RuntimeError, "metric type mismatch");
+            Py_DECREF(seq_metrics);
             return NULL;
         }
 
         PyList_Append(self->metrics, item);
     }
+
+    Py_DECREF(seq_metrics);
 
 
     Py_RETURN_NONE;
@@ -548,7 +565,6 @@ const char *cpy_metric_type(metric_type_t type)
 
 static PyObject *MetricFamily_repr(PyObject *s)
 {
-    PyObject *tmp;
     static PyObject *l_open, *l_type, *l_name, *l_help, *l_unit, *l_metrics, *l_closing;
     MetricFamily *self = (MetricFamily *)s;
 
@@ -582,33 +598,53 @@ static PyObject *MetricFamily_repr(PyObject *s)
         if (type != NULL)
             CPY_STRCAT_AND_DEL(&ret, type);
     } else {
-        tmp = PyInt_FromLong(self->type);
+        PyObject *tmp = PyInt_FromLong(self->type);
+        if (tmp == NULL) {
+            Py_DECREF(tmp);
+            return NULL;
+        }
         CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
     if (self->name != 0) {
         CPY_STRCAT(&ret, l_name);
-        tmp = PyObject_Repr(self->name);
+        PyObject *tmp = PyObject_Repr(self->name);
+        if (tmp == NULL) {
+            Py_DECREF(tmp);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
     if (self->help != 0) {
         CPY_STRCAT(&ret, l_help);
-        tmp = PyObject_Repr(self->help);
+        PyObject *tmp = PyObject_Repr(self->help);
+        if (tmp == NULL) {
+            Py_DECREF(tmp);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
     if (self->unit != 0) {
         CPY_STRCAT(&ret, l_unit);
-        tmp = PyObject_Repr(self->unit);
+        PyObject *tmp = PyObject_Repr(self->unit);
+        if (tmp == NULL) {
+            Py_DECREF(tmp);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
     if ((self->metrics != NULL) &&
         (!PyList_Check(self->metrics) || PySequence_Length(self->metrics) > 0)) {
         CPY_STRCAT(&ret, l_metrics);
-        tmp = PyObject_Repr(self->metrics);
+        PyObject *tmp = PyObject_Repr(self->metrics);
+        if (tmp == NULL) {
+            Py_DECREF(tmp);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -639,6 +675,7 @@ static int MetricFamily_clear(PyObject *self)
 
 static void MetricFamily_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricFamily_clear(self);
     self->ob_type->tp_free(self);
 }

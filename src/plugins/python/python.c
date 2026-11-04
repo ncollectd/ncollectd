@@ -204,6 +204,8 @@ static cpy_callback_t *cpy_shutdown_callbacks;
 static int cpy_shutdown_triggered;
 static int cpy_num_callbacks;
 
+static pid_t config_pid;
+
 static void cpy_destroy_user_data(void *data)
 {
     cpy_callback_t *c = data;
@@ -309,8 +311,9 @@ void cpy_log_exception(const char *context)
         if (cpy == NULL)
             continue;
 
-        if (cpy[strlen(cpy) - 1] == '\n')
-            cpy[strlen(cpy) - 1] = '\0';
+        size_t len = strlen(cpy);
+        if ((len > 0) && (cpy[len - 1] == '\n'))
+            cpy[len - 1] = '\0';
 
         Py_BEGIN_ALLOW_THREADS;
         PLUGIN_ERROR("%s", cpy);
@@ -448,9 +451,14 @@ static PyObject *cpy_create_metric(metric_t *m, metric_type_t type)
                 summary_quantile_t *quantile = &m->value.summary->quantiles[i];
                 PyObject *tuple = PyTuple_New(2); /* New reference. */
                 if (tuple != NULL) {
-                    PyTuple_SET_ITEM(tuple, 0, PyFloat_FromDouble(quantile->quantile));
-                    PyTuple_SET_ITEM(tuple, 1, PyFloat_FromDouble(quantile->value));
+                    PyObject *o_quantile = PyFloat_FromDouble(quantile->quantile);
+                    if (o_quantile != NULL)
+                        PyTuple_SET_ITEM(tuple, 0, o_quantile);
+                    PyObject *o_value = PyFloat_FromDouble(quantile->value);
+                    if (o_value != NULL)
+                        PyTuple_SET_ITEM(tuple, 1, o_value);
                     PyList_Append(quantiles, tuple);
+                    Py_DECREF(tuple);
                 }
             }
             PyObject *cpy_sum = PyFloat_FromDouble(m->value.summary->sum);
@@ -472,9 +480,14 @@ static PyObject *cpy_create_metric(metric_t *m, metric_type_t type)
                 histogram_bucket_t *bucket = &m->value.histogram->buckets[i];
                 PyObject *tuple = PyTuple_New(2); /* New reference. */
                 if (tuple != NULL) {
-                    PyTuple_SET_ITEM(tuple, 0, PyLong_FromUnsignedLongLong(bucket->counter));
-                    PyTuple_SET_ITEM(tuple, 1, PyFloat_FromDouble(bucket->maximum));
+                    PyObject *o_counter = PyLong_FromUnsignedLongLong(bucket->counter);
+                    if (o_counter != NULL)
+                        PyTuple_SET_ITEM(tuple, 0, o_counter);
+                    PyObject *o_maximum = PyFloat_FromDouble(bucket->maximum);
+                    if (o_maximum != NULL)
+                        PyTuple_SET_ITEM(tuple, 1, o_maximum);
                     PyList_Append(buckets, tuple);
+                    Py_DECREF(tuple);
                 }
             }
             PyObject *cpy_sum = PyFloat_FromDouble(m->value.histogram->sum);
@@ -494,9 +507,14 @@ static PyObject *cpy_create_metric(metric_t *m, metric_type_t type)
                 histogram_bucket_t *bucket = &m->value.histogram->buckets[i];
                 PyObject *tuple = PyTuple_New(2); /* New reference. */
                 if (tuple != NULL) {
-                    PyTuple_SET_ITEM(tuple, 0, PyLong_FromUnsignedLongLong(bucket->counter));
-                    PyTuple_SET_ITEM(tuple, 1, PyFloat_FromDouble(bucket->maximum));
+                    PyObject *o_counter = PyLong_FromUnsignedLongLong(bucket->counter); 
+                    if (o_counter != NULL)
+                        PyTuple_SET_ITEM(tuple, 0, o_counter);
+                    PyObject *o_maximum = PyFloat_FromDouble(bucket->maximum);
+                    if (o_maximum != NULL)
+                        PyTuple_SET_ITEM(tuple, 1, o_maximum);
                     PyList_Append(buckets, tuple);
+                    Py_DECREF(tuple);
                 }
             }
             PyObject *cpy_sum = PyFloat_FromDouble(m->value.histogram->sum);
@@ -607,6 +625,11 @@ static int cpy_notification_callback(const notification_t *notification, user_da
     PyObject *name = cpy_string_to_unicode_or_bytes(notification->name); /* New reference. */
 
     PyObject *notify = Notification_New(name); /* New reference. */
+    if (notify == NULL) {
+        cpy_log_exception("failed to create Notification object");
+        CPY_RETURN_FROM_THREADS 0;
+    }
+
     Notification *n = (Notification *)notify;
 
     Py_XDECREF(name);
@@ -680,9 +703,8 @@ static void cpy_log_callback(const log_msg_t *msg, user_data_t *data)
 static PyObject *cpy_register_generic(cpy_callback_t **list_head, PyObject *args, PyObject *kwds)
 {
     char buf[512];
-    cpy_callback_t *c;
     char *name = NULL;
-    PyObject *callback = NULL, *data = NULL, *mod = NULL;
+    PyObject *callback = NULL, *data = NULL;
     static char *kwlist[] = {"callback", "data", "name", NULL};
 
     if (PyArg_ParseTupleAndKeywords(args, kwds, "O|Oet", kwlist, &callback, &data, NULL, &name) == 0)
@@ -693,23 +715,34 @@ static PyObject *cpy_register_generic(cpy_callback_t **list_head, PyObject *args
         return NULL;
     }
     cpy_build_name(buf, sizeof(buf), callback, name);
+    PyMem_Free(name);
 
-    Py_INCREF(callback);
-    Py_XINCREF(data);
 
-    c = calloc(1, sizeof(*c));
-    if (c == NULL)
+    cpy_callback_t *c = calloc(1, sizeof(*c));
+    if (c == NULL) {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     c->name = strdup(buf);
+    if (c->name == NULL) {
+        free(c);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_INCREF(callback);
     c->callback = callback;
+    Py_XINCREF(data);
     c->data = data;
+
     c->next = *list_head;
     ++cpy_num_callbacks;
     *list_head = c;
-    Py_XDECREF(mod);
-    PyMem_Free(name);
-    return cpy_string_to_unicode_or_bytes(buf);
+
+    char fullname[512];
+    ssnprintf(fullname, sizeof(fullname), "%s/%s", "python", buf);
+    return cpy_string_to_unicode_or_bytes(fullname);
 }
 
 static PyObject *cpy_register_config(__attribute__((unused)) PyObject *self,
@@ -731,7 +764,6 @@ static PyObject *cpy_register_generic_userdata(void *reg, void *handler,
 {
     char buf[512];
     reg_function_t *register_function = (reg_function_t *)reg;
-    cpy_callback_t *c = NULL;
     char *name = NULL;
     PyObject *callback = NULL, *data = NULL;
     static char *kwlist[] = {"callback", "data", "name", NULL};
@@ -747,30 +779,39 @@ static PyObject *cpy_register_generic_userdata(void *reg, void *handler,
     cpy_build_name(buf, sizeof(buf), callback, name);
     PyMem_Free(name);
 
-    Py_INCREF(callback);
-    Py_XINCREF(data);
-
-    c = calloc(1, sizeof(*c));
-    if (c == NULL)
+    cpy_callback_t *c = calloc(1, sizeof(*c));
+    if (c == NULL) {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     c->name = strdup(buf);
+    if (c->name == NULL) {
+        free(c);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_INCREF(callback);
     c->callback = callback;
+    Py_XINCREF(data);
     c->data = data;
     c->next = NULL;
+
+    ++cpy_num_callbacks;
 
     register_function("python", buf, handler,
                       &(user_data_t){.data = c, .free_func = cpy_destroy_user_data});
 
-    ++cpy_num_callbacks;
-    return cpy_string_to_unicode_or_bytes(buf);
+    char fullname[512];
+    ssnprintf(fullname, sizeof(fullname), "%s/%s", "python", buf);
+    return cpy_string_to_unicode_or_bytes(fullname);
 }
 
 static PyObject *cpy_register_read(__attribute__((unused)) PyObject *self,
                                    PyObject *args, PyObject *kwds)
 {
     char buf[512];
-    cpy_callback_t *c = NULL;
     double interval = 0;
     char *name = NULL;
     PyObject *callback = NULL, *data = NULL;
@@ -787,22 +828,42 @@ static PyObject *cpy_register_read(__attribute__((unused)) PyObject *self,
     cpy_build_name(buf, sizeof(buf), callback, name);
     PyMem_Free(name);
 
-    Py_INCREF(callback);
-    Py_XINCREF(data);
-
-    c = calloc(1, sizeof(*c));
-    if (c == NULL)
+    cpy_callback_t *c = calloc(1, sizeof(*c));
+    if (c == NULL) {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     c->name = strdup(buf);
+    if (c->name == NULL) {
+        free(c);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_INCREF(callback);
     c->callback = callback;
+    Py_XINCREF(data);
     c->data = data;
     c->next = NULL;
 
-    plugin_register_complex_read("python", buf, cpy_read_callback, DOUBLE_TO_CDTIME_T(interval),
-                                 &(user_data_t){ .data = c, .free_func = cpy_destroy_user_data });
     ++cpy_num_callbacks;
-    return cpy_string_to_unicode_or_bytes(buf);
+
+    if (interval < 0 || isnan(interval))
+        interval = 0;
+
+    int status = plugin_register_complex_read("python", buf, cpy_read_callback,
+                                              DOUBLE_TO_CDTIME_T(interval),
+                                               &(user_data_t){ .data = c, 
+                                                               .free_func = cpy_destroy_user_data });
+    if (status != 0) {
+        PyErr_SetString(PyExc_TypeError, "plugin_register_complex_read failed.");
+        return NULL;
+    }
+    
+    char fullname[512];
+    ssnprintf(fullname, sizeof(fullname), "%s/%s", "python", buf);
+    return cpy_string_to_unicode_or_bytes(fullname);
 }
 
 static PyObject *cpy_register_log(__attribute__((unused)) PyObject *self,
@@ -834,23 +895,39 @@ static PyObject *cpy_register_write(__attribute__((unused)) PyObject *self,
     cpy_build_name(buf, sizeof(buf), callback, name);
     PyMem_Free(name);
 
-    Py_INCREF(callback);
-    Py_XINCREF(data);
 
     c = calloc(1, sizeof(*c));
-    if (c == NULL)
+    if (c == NULL) {
+        PyErr_NoMemory();
         return NULL;
+    }
 
     c->name = strdup(buf);
+    if (c->name == NULL) {
+        free(c);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_INCREF(callback);
     c->callback = callback;
+    Py_XINCREF(data);
     c->data = data;
     c->next = NULL;
 
-    plugin_register_write("python", buf, cpy_write_callback, NULL, 0, 0,
-                          &(user_data_t){.data = c, .free_func = cpy_destroy_user_data});
-
     ++cpy_num_callbacks;
-    return cpy_string_to_unicode_or_bytes(buf);
+
+    int status = plugin_register_write("python", buf, cpy_write_callback, NULL, 0, 0,
+                                       &(user_data_t){.data = c,
+                                                      .free_func = cpy_destroy_user_data});
+    if (status != 0) {
+        PyErr_SetString(PyExc_TypeError, "plugin_register_write failed.");
+        return NULL;
+    }
+
+    char fullname[512];
+    ssnprintf(fullname, sizeof(fullname), "%s/%s", "python", buf);
+    return cpy_string_to_unicode_or_bytes(fullname);
 }
 
 static PyObject *cpy_register_notification(__attribute__((unused)) PyObject *self,
@@ -1001,12 +1078,19 @@ cpy_unregister_generic_userdata(cpy_unregister_function_t *unreg, PyObject *arg,
         cpy_build_name(buf, sizeof(buf), arg, NULL);
         name = buf;
     }
-    if (unreg(name) == 0) {
+    
+    int status = 0;
+
+    Py_BEGIN_ALLOW_THREADS;
+    status = unreg(name);
+    Py_END_ALLOW_THREADS;
+
+    if (status == 0) {
         Py_DECREF(arg);
         Py_RETURN_NONE;
     }
-    PyErr_Format(PyExc_RuntimeError, "Unable to unregister %s callback '%s'.",
-                             desc, name);
+
+    PyErr_Format(PyExc_RuntimeError, "Unable to unregister %s callback '%s'.", desc, name);
     Py_DECREF(arg);
     return NULL;
 }
@@ -1098,8 +1182,9 @@ static int cpy_shutdown(void)
     cpy_unregister_list(&cpy_config_callbacks);
     cpy_unregister_list(&cpy_init_callbacks);
     cpy_unregister_list(&cpy_shutdown_callbacks);
-    cpy_shutdown_triggered = 1;
     Py_END_ALLOW_THREADS;
+
+    cpy_shutdown_triggered = 1;
 
     PyGC_Collect(); // FIXME
 
@@ -1115,6 +1200,9 @@ static int cpy_shutdown(void)
 static void *cpy_interactive(void *pipefd)
 {
     PyOS_sighandler_t cur_sig;
+
+    PyGILState_STATE gilstate = PyGILState_Ensure();
+
 
     /* Signal handler in a plugin? Bad stuff, but the best way to
      * handle it I guess. In an interactive session people will
@@ -1143,11 +1231,6 @@ static void *cpy_interactive(void *pipefd)
         cpy_log_exception("interactive session init");
     }
     cur_sig = PyOS_setsig(SIGINT, python_sigint_handler);
-#if PY_VERSION_HEX < 0x03070000
-    PyOS_AfterFork();
-#else
-    PyOS_AfterFork_Child();
-#endif
 #if PY_VERSION_HEX < 0x03090000
     PyEval_InitThreads();
 #else
@@ -1157,9 +1240,14 @@ static void *cpy_interactive(void *pipefd)
     PyRun_InteractiveLoop(stdin, "<stdin>");
     PyOS_setsig(SIGINT, cur_sig);
     PyErr_Print();
+
     state = PyEval_SaveThread();
+
+    PyGILState_Release(gilstate);
+
     PLUGIN_NOTICE("Interactive interpreter exited, stopping ncollectd ...");
     pthread_kill(main_thread, SIGINT);
+
     return NULL;
 }
 
@@ -1176,12 +1264,24 @@ static int cpy_init(void)
         Py_Finalize();
         return 0;
     }
+    
+    if (config_pid != getpid()) {
+#if PY_VERSION_HEX < 0x03070000
+        PyOS_AfterFork();
+#else
+        PyOS_AfterFork_Child();
+#endif
+    }
+
     main_thread = pthread_self();
     if (do_interactive) {
         if (pipe(pipefd)) {
             PLUGIN_ERROR(" Unable to create pipe.");
             return 1;
         }
+
+        state = PyEval_SaveThread();
+
         if (plugin_thread_create(&thread, cpy_interactive, pipefd + 1, "python interpreter")) {
             PLUGIN_ERROR(" Error creating thread for interactive interpreter.");
         }
@@ -1212,33 +1312,55 @@ static int cpy_init(void)
 
 static PyObject *cpy_config_to_pyconfig(config_item_t *ci, PyObject *parent)
 {
-    PyObject *item, *values, *children, *tmp;
-
     if (parent == NULL)
         parent = Py_None;
 
-    values = PyTuple_New(ci->values_num); /* New reference. */
+    PyObject *values = PyTuple_New(ci->values_num); /* New reference. */
+    if (values == NULL)
+        return NULL;
+    
     for (int i = 0; i < ci->values_num; ++i) {
-        if (ci->values[i].type == CONFIG_TYPE_STRING) {
+        switch(ci->values[i].type) {
+        case CONFIG_TYPE_STRING:
+        case CONFIG_TYPE_REGEX:
             PyTuple_SET_ITEM(values, i, cpy_string_to_unicode_or_bytes(ci->values[i].value.string));
-        } else if (ci->values[i].type == CONFIG_TYPE_NUMBER) {
+            break;
+        case CONFIG_TYPE_NUMBER:
             PyTuple_SET_ITEM(values, i, PyFloat_FromDouble(ci->values[i].value.number));
-        } else if (ci->values[i].type == CONFIG_TYPE_BOOLEAN) {
+            break;
+        case CONFIG_TYPE_BOOLEAN:
             PyTuple_SET_ITEM(values, i, PyBool_FromLong(ci->values[i].value.boolean));
+            break;
         }
     }
 
-    tmp = cpy_string_to_unicode_or_bytes(ci->key);
-    item = PyObject_CallFunction((void *)&ConfigType, "NONO", tmp, parent, values, Py_None);
+    PyObject *tmp = cpy_string_to_unicode_or_bytes(ci->key);
+    PyObject *item = PyObject_CallFunction((void *)&ConfigType, "NONO", tmp, parent, values, Py_None);
+    Py_XDECREF(tmp);
+    Py_XDECREF(values);
     if (item == NULL)
         return NULL;
-    children = PyTuple_New(ci->children_num); /* New reference. */
-    for (int i = 0; i < ci->children_num; ++i) {
-        PyTuple_SET_ITEM(children, i, cpy_config_to_pyconfig(ci->children + i, item));
+
+    PyObject *children = PyTuple_New(ci->children_num); /* New reference. */
+    if (children == NULL) {
+        Py_XDECREF(item);
+        return NULL;
     }
+
+    for (int i = 0; i < ci->children_num; ++i) {
+        PyObject *config = cpy_config_to_pyconfig(ci->children + i, item);
+        if (config == NULL) {
+            Py_XDECREF(children);
+            Py_XDECREF(item);
+            return NULL;
+        }
+        PyTuple_SET_ITEM(children, i, config);
+    }
+
     tmp = ((Config *)item)->children;
     ((Config *)item)->children = children;
     Py_XDECREF(tmp);
+
     return item;
 }
 
@@ -1261,6 +1383,8 @@ static int cpy_init_python(void)
 {
     PyObject *sys, *errordict;
     PyObject *module;
+
+    config_pid = getpid();
 
 #ifdef IS_PY3K
     /* Add a builtin module, before Py_Initialize */
@@ -1408,22 +1532,42 @@ static int cpy_init_python(void)
 #else
     module = Py_InitModule("ncollectd", cpy_methods); /* Borrowed reference. */
 #endif
-    PyModule_AddObject(module, "Config", (void *)&ConfigType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricUnknownDouble", (void *)&MetricUnknownDoubleType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricUnknownLong", (void *)&MetricUnknownLongType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricGaugeDouble", (void *)&MetricGaugeDoubleType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricGaugeLong", (void *)&MetricGaugeLongType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricCounterULong", (void *)&MetricCounterULongType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricCounterDouble", (void *)&MetricCounterDoubleType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricStateSet", (void *)&MetricStateSetType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricInfo", (void *)&MetricInfoType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricSummary", (void *)&MetricSummaryType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricHistogram", (void *)&MetricHistogramType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricGaugeHistogram", (void *)&MetricGaugeHistogramType); /* Steals a reference. */
-    PyModule_AddObject(module, "MetricFamily", (void *)&MetricFamilyType); /* Steals a reference. */
-    PyModule_AddObject(module, "Notification", (void *)&NotificationType); /* Steals a reference. */
+    if (module == NULL) {
+        cpy_log_exception("Import module ncollectd failed");
+        return 1;
+    }
+
+    Py_INCREF(&ConfigType);
+    PyModule_AddObject(module, "Config", (void *)&ConfigType);
+    Py_INCREF(&MetricUnknownDoubleType);
+    PyModule_AddObject(module, "MetricUnknownDouble", (void *)&MetricUnknownDoubleType);
+    Py_INCREF(&MetricUnknownLongType);
+    PyModule_AddObject(module, "MetricUnknownLong", (void *)&MetricUnknownLongType);
+    Py_INCREF(&MetricGaugeDoubleType);
+    PyModule_AddObject(module, "MetricGaugeDouble", (void *)&MetricGaugeDoubleType);
+    Py_INCREF(&MetricGaugeLongType);
+    PyModule_AddObject(module, "MetricGaugeLong", (void *)&MetricGaugeLongType);
+    Py_INCREF(&MetricCounterULongType);
+    PyModule_AddObject(module, "MetricCounterULong", (void *)&MetricCounterULongType);
+    Py_INCREF(&MetricCounterDoubleType);
+    PyModule_AddObject(module, "MetricCounterDouble", (void *)&MetricCounterDoubleType);
+    Py_INCREF(&MetricStateSetType);
+    PyModule_AddObject(module, "MetricStateSet", (void *)&MetricStateSetType);
+    Py_INCREF(&MetricInfoType);
+    PyModule_AddObject(module, "MetricInfo", (void *)&MetricInfoType);
+    Py_INCREF(&MetricSummaryType);
+    PyModule_AddObject(module, "MetricSummary", (void *)&MetricSummaryType);
+    Py_INCREF(&MetricHistogramType);
+    PyModule_AddObject(module, "MetricHistogram", (void *)&MetricHistogramType);
+    Py_INCREF(&MetricGaugeHistogramType);
+    PyModule_AddObject(module, "MetricGaugeHistogram", (void *)&MetricGaugeHistogramType);
+    Py_INCREF(&MetricFamilyType);
+    PyModule_AddObject(module, "MetricFamily", (void *)&MetricFamilyType);
+    Py_INCREF(&NotificationType);
+    PyModule_AddObject(module, "Notification", (void *)&NotificationType);
     Py_XINCREF(NCollectdError);
-    PyModule_AddObject(module, "NCollectdError", NCollectdError); /* Steals a reference. */
+    PyModule_AddObject(module, "NCollectdError", NCollectdError);
+
     PyModule_AddIntConstant(module, "LOG_DEBUG", LOG_DEBUG);
     PyModule_AddIntConstant(module, "LOG_INFO", LOG_INFO);
     PyModule_AddIntConstant(module, "LOG_NOTICE", LOG_NOTICE);
@@ -1589,7 +1733,11 @@ static int cpy_config(config_item_t *ci)
             PLUGIN_ERROR("Unknown config key \"%s\".", item->key);
             status = 1;
         }
+
+        if (status != 0)
+            break;
     }
+
     return status;
 }
 

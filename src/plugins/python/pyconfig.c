@@ -65,49 +65,51 @@ static int Config_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (!IS_BYTES_OR_UNICODE(key)) {
         PyErr_SetString(PyExc_TypeError, "argument 1 must be str");
-        Py_XDECREF(parent);
-        Py_XDECREF(values);
-        Py_XDECREF(children);
         return -1;
     }
+
     if (values == NULL) {
         values = PyTuple_New(0);
         PyErr_Clear();
     }
+
     if (children == NULL) {
         children = PyTuple_New(0);
         PyErr_Clear();
     }
+
     tmp = self->key;
     Py_INCREF(key);
     self->key = key;
     Py_XDECREF(tmp);
+
     if (parent != NULL) {
         tmp = self->parent;
         Py_INCREF(parent);
         self->parent = parent;
         Py_XDECREF(tmp);
     }
+
     if (values != NULL) {
         tmp = self->values;
         Py_INCREF(values);
         self->values = values;
         Py_XDECREF(tmp);
     }
+
     if (children != NULL) {
         tmp = self->children;
         Py_INCREF(children);
         self->children = children;
         Py_XDECREF(tmp);
     }
+
     return 0;
 }
 
 static PyObject *Config_repr(PyObject *s)
 {
     Config *self = (Config *)s;
-    PyObject *ret = NULL;
-    PyObject *tmp = NULL;
     static PyObject *l_open, *l_key, *l_values, *l_children, *l_close;
 
     /* This is ok because we have the GIL, so this is thread-save by default. */
@@ -126,13 +128,17 @@ static PyObject *Config_repr(PyObject *s)
         (l_children == NULL) || (l_close == NULL))
         return NULL;
 
-    ret = cpy_string_to_unicode_or_bytes(s->ob_type->tp_name);
+    PyObject *ret = cpy_string_to_unicode_or_bytes(s->ob_type->tp_name);
 
     CPY_STRCAT(&ret, l_open);
 
     if (self->key != NULL) {
         CPY_STRCAT(&ret, l_key);
-        tmp = PyObject_Repr(self->key);
+        PyObject *tmp = PyObject_Repr(self->key);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -140,7 +146,11 @@ static PyObject *Config_repr(PyObject *s)
         (!PyTuple_Check(self->values) || !PyList_Check(self->values)) &&
         (PySequence_Length(self->values) > 0)) {
         CPY_STRCAT(&ret, l_values);
-        tmp = PyObject_Repr(self->values);
+        PyObject *tmp = PyObject_Repr(self->values);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -148,7 +158,11 @@ static PyObject *Config_repr(PyObject *s)
         (!PyTuple_Check(self->children) || !PyList_Check(self->children)) &&
         (PySequence_Length(self->children) > 0)) {
         CPY_STRCAT(&ret, l_children);
-        tmp = PyObject_Repr(self->children);
+        PyObject *tmp = PyObject_Repr(self->children);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -179,6 +193,7 @@ static int Config_clear(PyObject *self)
 
 static void Config_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Config_clear(self);
     self->ob_type->tp_free(self);
 }
