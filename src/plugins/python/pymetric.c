@@ -50,7 +50,6 @@ static int Metric_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -59,10 +58,13 @@ static int Metric_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        PyErr_Clear();
-    }
-
-    if (labels != NULL) {
+        if (labels != NULL) {
+            PyObject *old_labels = self->labels;
+            self->labels = labels;
+            PyErr_Clear();
+            Py_XDECREF(old_labels);
+        }
+    } else {
         PyObject *old_labels = self->labels;
         Py_INCREF(labels);
         self->labels = labels;
@@ -96,6 +98,9 @@ static PyObject *Metric_repr(PyObject *s)
         return NULL;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
+
     CPY_STRCAT(&ret, l_closing);
 
     return ret;
@@ -117,6 +122,7 @@ static int Metric_clear(PyObject *self)
 
 static void Metric_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Metric_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -190,7 +196,6 @@ static int MetricUnknownDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -241,9 +246,15 @@ static PyObject *MetricUnknownDouble_repr(PyObject *s)
     MetricUnknownDouble *self = (MetricUnknownDouble *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
@@ -268,6 +279,7 @@ static int MetricUnknownDouble_clear(PyObject *self)
 
 static void MetricUnknownDouble_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricUnknownDouble_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -340,7 +352,6 @@ static int MetricUnknownLong_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -391,9 +402,15 @@ static PyObject *MetricUnknownLong_repr(PyObject *s)
     MetricUnknownLong *self = (MetricUnknownLong *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp =  PyLong_FromLongLong(self->value);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
@@ -418,12 +435,13 @@ static int MetricUnknownLong_clear(PyObject *self)
 
 static void MetricUnknownLong_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricUnknownLong_clear(self);
     self->ob_type->tp_free(self);
 }
 
 static PyMemberDef MetricUnknownLong_members[] = {
-    {"value", T_LONG, offsetof(MetricUnknownLong, value), 0, MetricUnknownLong_value_doc},
+    {"value", T_LONGLONG, offsetof(MetricUnknownLong, value), 0, MetricUnknownLong_value_doc},
     {NULL}
 };
 
@@ -490,7 +508,6 @@ static int MetricGaugeDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -541,9 +558,15 @@ static PyObject *MetricGaugeDouble_repr(PyObject *s)
     MetricGaugeDouble *self = (MetricGaugeDouble *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
@@ -568,6 +591,7 @@ static int MetricGaugeDouble_clear(PyObject *self)
 
 static void MetricGaugeDouble_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricGaugeDouble_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -640,7 +664,6 @@ static int MetricGaugeLong_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -691,9 +714,12 @@ static PyObject *MetricGaugeLong_repr(PyObject *s)
     MetricGaugeLong *self = (MetricGaugeLong *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp =  PyLong_FromLongLong(self->value);
+    
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
@@ -718,12 +744,13 @@ static int MetricGaugeLong_clear(PyObject *self)
 
 static void MetricGaugeLong_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricGaugeLong_clear(self);
     self->ob_type->tp_free(self);
 }
 
 static PyMemberDef MetricGaugeLong_members[] = {
-    {"value", T_LONG, offsetof(MetricGaugeLong, value), 0, MetricGaugeLong_value_doc},
+    {"value", T_LONGLONG, offsetof(MetricGaugeLong, value), 0, MetricGaugeLong_value_doc},
     {NULL}
 };
 
@@ -790,7 +817,6 @@ static int MetricCounterDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -844,6 +870,10 @@ static PyObject *MetricCounterDouble_repr(PyObject *s)
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
@@ -868,6 +898,7 @@ static int MetricCounterDouble_clear(PyObject *self)
 
 static void MetricCounterDouble_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricCounterDouble_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -940,7 +971,6 @@ static int MetricCounterULong_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -991,9 +1021,15 @@ static PyObject *MetricCounterULong_repr(PyObject *s)
     MetricCounterULong *self = (MetricCounterULong *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp =  PyLong_FromUnsignedLongLong(self->value);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
@@ -1018,12 +1054,13 @@ static int MetricCounterULong_clear(PyObject *self)
 
 static void MetricCounterULong_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricCounterULong_clear(self);
     self->ob_type->tp_free(self);
 }
 
 static PyMemberDef MetricCounterULong_members[] = {
-    {"value", T_ULONG, offsetof(MetricCounterULong, value), 0, MetricCounterULong_value_doc},
+    {"value", T_ULONGLONG, offsetof(MetricCounterULong, value), 0, MetricCounterULong_value_doc},
     {NULL}
 };
 
@@ -1092,15 +1129,11 @@ static int MetricInfo_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((info != NULL) && !PyDict_Check(info)) {
         PyErr_SetString(PyExc_TypeError, "info must be a dict");
-        Py_XDECREF(info);
-        Py_XDECREF(labels);
         return -1;
     }
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(info);
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -1162,10 +1195,16 @@ static PyObject *MetricInfo_repr(PyObject *s)
     MetricInfo *self = (MetricInfo *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     if (self->info && (!PyDict_Check(self->info) || PyDict_Size(self->info) > 0)) {
         CPY_STRCAT(&ret, l_info);
         PyObject *tmp = PyObject_Repr(self->info);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -1192,6 +1231,7 @@ static int MetricInfo_clear(PyObject *self)
 
 static void MetricInfo_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricInfo_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -1265,15 +1305,11 @@ static int MetricStateSet_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((set != NULL) && !PyDict_Check(set)) {
         PyErr_SetString(PyExc_TypeError, "set must be a dict");
-        Py_XDECREF(set);
-        Py_XDECREF(labels);
         return -1;
     }
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(set);
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -1335,10 +1371,16 @@ static PyObject *MetricStateSet_repr(PyObject *s)
     MetricStateSet *self = (MetricStateSet *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     if ((self->set != NULL)  && (!PyDict_Check(self->set) || PyDict_Size(self->set) > 0)) {
         CPY_STRCAT(&ret, l_set);
         PyObject *tmp = PyObject_Repr(self->set);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -1365,6 +1407,7 @@ static int MetricStateSet_clear(PyObject *self)
 
 static void MetricStateSet_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricStateSet_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -1414,6 +1457,9 @@ PyTypeObject MetricStateSetType = {
     MetricStateSet_new                        /* tp_new */
 };
 
+static char MetricSummary_count_doc[] =
+    "Total number of values registered.";
+
 static char MetricSummary_sum_doc[] =
     "The sum of all values.";
 
@@ -1442,15 +1488,11 @@ static int MetricSummary_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((quantiles != NULL) && (!PyTuple_Check(quantiles) && !PyList_Check(quantiles))) {
         PyErr_SetString(PyExc_TypeError, "quantiles must be a list");
-        Py_XDECREF(quantiles);
-        Py_XDECREF(labels);
         return -1;
     }
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(quantiles);
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -1521,20 +1563,34 @@ static PyObject *MetricSummary_repr(PyObject *s)
     MetricSummary *self = (MetricSummary *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_sum);
     PyObject *tmp = PyFloat_FromDouble(self->sum);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
     CPY_STRCAT(&ret, l_count);
-    tmp =  PyLong_FromLongLong(self->count);
+    tmp =  PyLong_FromUnsignedLongLong(self->count);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
     if (self->quantiles != NULL) {
         CPY_STRCAT(&ret, l_quantiles);
         tmp = PyObject_Repr(self->quantiles);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -1561,11 +1617,13 @@ static int MetricSummary_clear(PyObject *self)
 
 static void MetricSummary_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricSummary_clear(self);
     self->ob_type->tp_free(self);
 }
 
 static PyMemberDef MetricSummary_members[] = {
+    {"count", T_ULONGLONG, offsetof(MetricSummary, count), 0, MetricSummary_count_doc},
     {"sum", T_DOUBLE, offsetof(MetricSummary, sum), 0, MetricSummary_sum_doc},
     {"quantiles", T_OBJECT_EX, offsetof(MetricSummary, quantiles), 0, MetricSummary_quantiles_doc},
     {NULL}
@@ -1639,15 +1697,11 @@ static int MetricHistogram_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((buckets!= NULL) && (!PyTuple_Check(buckets) && !PyList_Check(buckets))) {
         PyErr_SetString(PyExc_TypeError, "set must be a list");
-        Py_XDECREF(buckets);
-        Py_XDECREF(labels);
         return -1;
     }
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(buckets);
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -1716,15 +1770,25 @@ static PyObject *MetricHistogram_repr(PyObject *s)
     MetricHistogram *self = (MetricHistogram *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_sum);
     PyObject *tmp = PyFloat_FromDouble(self->sum);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
     if (self->buckets != NULL) {
         CPY_STRCAT(&ret, l_buckets);
         tmp = PyObject_Repr(self->buckets);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -1751,6 +1815,7 @@ static int MetricHistogram_clear(PyObject *self)
 
 static void MetricHistogram_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricHistogram_clear(self);
     self->ob_type->tp_free(self);
 }
@@ -1829,15 +1894,11 @@ static int MetricGaugeHistogram_init(PyObject *s, PyObject *args, PyObject *kwds
 
     if ((buckets!= NULL) && (!PyTuple_Check(buckets) && !PyList_Check(buckets))) {
         PyErr_SetString(PyExc_TypeError, "set must be a list");
-        Py_XDECREF(buckets);
-        Py_XDECREF(labels);
         return -1;
     }
 
     if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
         PyErr_SetString(PyExc_TypeError, "labels must be a dict");
-        Py_XDECREF(buckets);
-        Py_XDECREF(labels);
         return -1;
     }
 
@@ -1906,15 +1967,25 @@ static PyObject *MetricGaugeHistogram_repr(PyObject *s)
     MetricGaugeHistogram *self = (MetricGaugeHistogram *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_sum);
     PyObject *tmp = PyFloat_FromDouble(self->sum);
+    if (tmp == NULL) {
+        Py_DECREF(ret);
+        return NULL;
+    }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
 
     if (self->buckets != NULL) {
         CPY_STRCAT(&ret, l_buckets);
         tmp = PyObject_Repr(self->buckets);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -1941,6 +2012,7 @@ static int MetricGaugeHistogram_clear(PyObject *self)
 
 static void MetricGaugeHistogram_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MetricGaugeHistogram_clear(self);
     self->ob_type->tp_free(self);
 }

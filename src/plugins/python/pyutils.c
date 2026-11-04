@@ -65,10 +65,12 @@ int cpy_build_labels(PyObject *dict, label_set_t *labels)
             } else {
                 PyErr_Clear();
                 PyObject *tmp = PyObject_Str(value);
-                string = cpy_unicode_or_bytes_to_string(&tmp);
-                if (string != NULL)
-                    label_set_add(labels, true, keystring, string);
-                Py_XDECREF(tmp);
+                if (tmp != NULL) {
+                    string = cpy_unicode_or_bytes_to_string(&tmp);
+                    if (string != NULL)
+                        label_set_add(labels, true, keystring, string);
+                    Py_XDECREF(tmp);
+                }
             }
             Py_XDECREF(value);
         }
@@ -137,31 +139,44 @@ histogram_t *cpy_build_histogram(PyObject *list)
     if ((list == NULL) || (list == Py_None))
         return NULL;
 
-    ssize_t size = PySequence_Length(list);
-    if (size <= 0)
+    PyObject *seq_list = PySequence_Fast(list, "Not a sequence of buckets.");
+    if (seq_list == NULL)
+         return NULL;
+    
+    Py_ssize_t size = PySequence_Fast_GET_SIZE(seq_list); 
+    if (size < 0) {
+        Py_DECREF(seq_list);
         return NULL;
+    }
 
     histogram_t *h = calloc(1, sizeof(histogram_t)+sizeof(histogram_bucket_t)*size);
-    if (h == NULL)
+    if (h == NULL) {
+        Py_DECREF(seq_list);
         return NULL;
+    }
 
     h->sum = 0;
     h->num = size;
 
-    for (ssize_t i = 0; i < size; i++) {
-        PyObject *item = PySequence_Fast_GET_ITEM(list, (int)i); /* Borrowed reference. */
+    PyObject **items = PySequence_Fast_ITEMS(seq_list);
+
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject *item = items[i]; /* Borrowed reference. */
         if (item == NULL) {
             free(h);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
         if (!PyTuple_Check(item) && !PyList_Check(item)) {
             free(h);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
         if (PySequence_Length(item) != 2) {
             free(h);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
@@ -170,6 +185,7 @@ histogram_t *cpy_build_histogram(PyObject *list)
 
         if ((counter == NULL) || (maximum == NULL)) {
             free(h);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
@@ -195,7 +211,7 @@ histogram_t *cpy_build_histogram(PyObject *list)
         h->buckets[i].maximum = 0;
         if (PyFloat_Check(maximum)) {
             h->buckets[i].maximum = PyFloat_AsDouble(maximum);
-        } else if (PyNumber_Check(counter)) {
+        } else if (PyNumber_Check(maximum)) {
             PyObject *tmp = PyNumber_Long(maximum);
             long long int lli = PyLong_AsLongLong(tmp);
             if (!PyErr_Occurred() && (lli == (int64_t)lli)) {
@@ -215,6 +231,8 @@ histogram_t *cpy_build_histogram(PyObject *list)
             cpy_log_exception("building state_set");
     }
 
+    Py_DECREF(seq_list);
+
     return h;
 }
 
@@ -223,32 +241,45 @@ summary_t *cpy_build_summary(PyObject *list)
     if ((list == NULL) || (list == Py_None))
         return NULL;
 
-    ssize_t size = PySequence_Length(list);
-    if (size <= 0)
+    PyObject *seq_list = PySequence_Fast(list, "Not a sequence of quantiles.");
+    if (seq_list == NULL)
+         return NULL;
+    
+    Py_ssize_t size = PySequence_Fast_GET_SIZE(seq_list); 
+    if (size < 0) {
+        Py_DECREF(seq_list);
         return NULL;
+    }
 
     summary_t *s = calloc(1, sizeof(summary_t)+sizeof(summary_quantile_t)*size);
-    if (s == NULL)
+    if (s == NULL) {
+        Py_DECREF(seq_list);
         return NULL;
+    }
 
     s->sum = 0;
     s->count  = 0;
     s->num = size;
 
-    for (ssize_t i = 0; i < size; i++) {
-        PyObject *item = PySequence_Fast_GET_ITEM(list, (int)i); /* Borrowed reference. */
+    PyObject **items = PySequence_Fast_ITEMS(seq_list);
+
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject *item = items[i]; /* Borrowed reference. */
         if (item == NULL) {
             free(s);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
         if (!PyTuple_Check(item) && !PyList_Check(item)) {
             free(s);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
         if (PySequence_Length(item) != 2) {
             free(s);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
@@ -257,6 +288,7 @@ summary_t *cpy_build_summary(PyObject *list)
 
         if ((quantile == NULL) || (value == NULL)) {
             free(s);
+            Py_DECREF(seq_list);
             return NULL;
         }
 
@@ -282,7 +314,7 @@ summary_t *cpy_build_summary(PyObject *list)
         s->quantiles[i].value = 0;
         if (PyFloat_Check(value)) {
             s->quantiles[i].value = PyFloat_AsDouble(value);
-        } else if (PyNumber_Check(quantile)) {
+        } else if (PyNumber_Check(value)) {
             PyObject *tmp = PyNumber_Long(value);
             long long int lli = PyLong_AsLongLong(tmp);
             if (!PyErr_Occurred() && (lli == (int64_t)lli)) {
@@ -301,6 +333,8 @@ summary_t *cpy_build_summary(PyObject *list)
         if (PyErr_Occurred())
             cpy_log_exception("building state_set");
     }
+
+    Py_DECREF(seq_list);
 
     return s;
 }

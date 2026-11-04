@@ -65,9 +65,6 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (!IS_BYTES_OR_UNICODE(name)) {
         PyErr_SetString(PyExc_TypeError, "argument 1 must be str");
-        Py_XDECREF(name);
-        Py_XDECREF(labels);
-        Py_XDECREF(annotations);
         return -1;
     }
 
@@ -80,9 +77,6 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
         break;
     default:
         PyErr_Format(PyExc_TypeError, "Invalid severity: %d", severity);
-        Py_XDECREF(name);
-        Py_XDECREF(labels);
-        Py_XDECREF(annotations);
         return -1;
         break;
     }
@@ -240,7 +234,6 @@ static const char *cpy_notifycation_severity(severity_t severity)
 
 static PyObject *Notification_repr(PyObject *s)
 {
-    PyObject *tmp;
     static PyObject *l_open, *l_name, *l_severity, *l_time, *l_labels, *l_annotations, *l_closing;
     Notification *self = (Notification *)s;
 
@@ -269,7 +262,11 @@ static PyObject *Notification_repr(PyObject *s)
 
     if (self->name != 0) {
         CPY_STRCAT(&ret, l_name);
-        tmp = PyObject_Repr(self->name);
+        PyObject *tmp = PyObject_Repr(self->name);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -277,30 +274,50 @@ static PyObject *Notification_repr(PyObject *s)
     const char *notifty_severity = cpy_notifycation_severity(self->severity);
     if (notifty_severity != NULL) {
         PyObject *severity = cpy_string_to_unicode_or_bytes(notifty_severity);
-        if (severity != NULL)
-            CPY_STRCAT_AND_DEL(&ret, severity);
+        if (severity == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
+        CPY_STRCAT_AND_DEL(&ret, severity);
     } else {
-        tmp = PyInt_FromLong(self->severity);
+        PyObject *tmp = PyInt_FromLong(self->severity);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
     if (self->time != 0) {
         CPY_STRCAT(&ret, l_time);
-        tmp = PyFloat_FromDouble(self->time);
+        PyObject *tmp = PyFloat_FromDouble(self->time);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
     if (self->labels && (!PyDict_Check(self->labels) || PyDict_Size(self->labels) > 0)) {
         CPY_STRCAT(&ret, l_labels);
-        tmp = PyObject_Repr(self->labels);
+        PyObject *tmp = PyObject_Repr(self->labels);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
-    if (self->annotations && (!PyDict_Check(self->annotations) || PyDict_Size(self->annotations) > 0)) {
+    if (self->annotations &&
+        (!PyDict_Check(self->annotations) || PyDict_Size(self->annotations) > 0)) {
         CPY_STRCAT(&ret, l_annotations);
-        tmp = PyObject_Repr(self->annotations);
+        PyObject *tmp = PyObject_Repr(self->annotations);
+        if (tmp == NULL) {
+            Py_DECREF(ret);
+            return NULL;
+        }
         CPY_STRCAT_AND_DEL(&ret, tmp);
     }
 
@@ -329,6 +346,7 @@ static int Notification_clear(PyObject *self)
 
 static void Notification_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Notification_clear(self);
     self->ob_type->tp_free(self);
 }
