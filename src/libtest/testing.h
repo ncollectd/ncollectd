@@ -173,3 +173,4 @@ int plugin_test_do_read(char *proc_path, char *sys_path, config_item_t *ci, char
 int test_metric_family_cmp(metric_family_t *a, metric_family_t *b);
 
 int test_dump_file(char *base_path, char *file, int fdw);
+int test_slow_dump_file(char *base_path, char *file, int fdw);

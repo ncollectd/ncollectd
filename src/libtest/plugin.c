@@ -522,6 +522,58 @@ int plugin_thread_create(pthread_t *thread, void *(*start_routine)(void *), void
     return pthread_create(thread, NULL, start_routine, arg);
 }
 
+int plugin_register_match(__attribute__((unused)) const char *name,
+                          __attribute__((unused)) plugin_match_proc_t proc)
+{
+    return 0;
+}
+
+void plugin_free_register_match(void)
+{
+}
+
+int plugin_match_config(__attribute__((unused)) const config_item_t *ci,
+                        __attribute__((unused)) plugin_match_t **plugin_match_list)
+{
+    return 0;
+}
+
+int plugin_match(__attribute__((unused)) plugin_match_t *plugin_match_list,
+                 __attribute__((unused)) char *str)
+{
+    return 0;
+}
+
+void plugin_match_shutdown(__attribute__((unused)) plugin_match_t *plugin_match_list)
+{
+}
+
+int plugin_match_dispatch(__attribute__((unused)) plugin_match_t *plugin_match_list, 
+                          __attribute__((unused)) plugin_filter_t *filter,
+                          __attribute__((unused)) label_set_t *labels, 
+                          __attribute__((unused)) bool reset)
+{
+    return 0;
+}
+
+int plugin_match_metric_family_set_add(__attribute__((unused)) match_metric_family_set_t *set, 
+                                       __attribute__((unused)) char *name,
+                                       __attribute__((unused)) char *help,
+                                       __attribute__((unused)) char *unit,
+                                       __attribute__((unused)) match_metric_type_t type,
+                                       __attribute__((unused)) label_set_t *labels,
+                                       __attribute__((unused)) char const *svalue,
+                                       __attribute__((unused)) cdtime_t t)
+{
+    return 0;
+}
+
+int cf_util_get_match_metric_type(__attribute__((unused)) const config_item_t *ci,
+                                  __attribute__((unused)) match_metric_type_t *type)
+{
+    return 0;
+}
+
 int plugin_test_do_read(char *proc_path, char *sys_path, config_item_t *ci, char *expect)
 {
     int status = 0;
