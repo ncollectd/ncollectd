@@ -22,3 +22,12 @@ int socket_connect_tcp(const char *host, int port, int keep_idle, int keep_int);
 int socket_get_port(int sfd);
 
 int socket_setfl(int sfd, int setfl);
+
+int socket_poll_connect_tcp(const char *host, int port, int keep_idle, int keep_int,
+                            cdtime_t *timeout);
+
+int socket_poll_connect_unix_stream(const char *path, cdtime_t *timeout);
+
+ssize_t socket_poll_read(int fd, void *buf, size_t len, cdtime_t *timeout);
+
+ssize_t socket_poll_write(int fd, const void *buf, size_t len, cdtime_t *timeout);

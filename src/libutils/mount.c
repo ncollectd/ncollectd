@@ -18,7 +18,7 @@
 #    define XFS_SUPER_MAGIC2_STR "BSFX"
 #endif
 
-#include "log.h"                          /* ERROR() macro */
+#include "log.h"             /* ERROR() macro */
 #include "libutils/common.h" /* sstrncpy() et alii */
 
 #ifdef HAVE_GETVFSSTAT
