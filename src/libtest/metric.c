@@ -353,7 +353,7 @@ static int test_metric_cmp(metric_t *a, metric_t *b, const char *name, metric_ty
     if (type != METRIC_TYPE_INFO) {
         if (label_set_cmp(&a->label, &b->label) != 0) {
 //            fprintf(stderr, "Labels of metric '%s' are not equal.\n", name);
-            return -1;
+            return 0;
         }
     }
 
@@ -373,7 +373,6 @@ static int test_metric_cmp(metric_t *a, metric_t *b, const char *name, metric_ty
                     return -1;
                 }
             }
-            return -1;
         } else {
             if (a->value.unknown.type == UNKNOWN_FLOAT64) {
                 if (a->value.unknown.float64 != b->value.unknown.float64) {
@@ -469,7 +468,7 @@ static int test_metric_cmp(metric_t *a, metric_t *b, const char *name, metric_ty
         break;
     }
 
-    return 0;
+    return 1;
 }
 
 static int test_metric_list_cmp(metric_list_t *a, metric_list_t *b,
@@ -487,7 +486,10 @@ static int test_metric_list_cmp(metric_list_t *a, metric_list_t *b,
     for (size_t i = 0; i < a->num; i++) {
         bool found = false;
         for (size_t j = 0; j < b->num; j++) {
-            if (test_metric_cmp(&a->ptr[i], &b->ptr[j], name, type) == 0) {
+            int status = test_metric_cmp(&a->ptr[i], &b->ptr[j], name, type);
+            if (status < 0)
+                return -1;
+            if (test_metric_cmp(&a->ptr[i], &b->ptr[j], name, type) == 1) {
                 found = true;
                 break;
             }
