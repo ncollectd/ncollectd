@@ -89,7 +89,8 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((labels == NULL) || (labels == Py_None)) {
         labels = PyDict_New();
-        PyErr_Clear();
+        if (labels == NULL)
+            return -1;
         PyObject *old_labels = self->labels;
         self->labels = labels;
         Py_XDECREF(old_labels);
@@ -102,7 +103,8 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if ((annotations == NULL) || (annotations == Py_None)) {
         annotations = PyDict_New();
-        PyErr_Clear();
+        if (annotations == NULL)
+            return -1;
         PyObject *old_annotations = self->annotations;
         self->annotations = annotations;
         Py_XDECREF(old_annotations);
@@ -155,19 +157,29 @@ static PyObject *Notification_dispatch(Notification *self, __attribute__((unused
     }
 
     if ((self->labels != NULL) && (self->labels != Py_None)) {
-        if (PyDict_Check(self->labels))
-            cpy_build_labels(self->labels, &n.label);
+        if (cpy_build_labels(self->labels, &n.label) != 0) {
+            label_set_reset(&n.label);
+            return NULL;
+        }
     }
 
     if ((self->annotations != NULL) && (self->annotations != Py_None)) {
-        if (PyDict_Check(self->annotations))
-            cpy_build_labels(self->annotations, &n.annotation);
+        if (cpy_build_labels(self->annotations, &n.annotation) != 0) {
+            label_set_reset(&n.label);
+            label_set_reset(&n.annotation);
+            return NULL;
+        }
     }
 
     PyObject *str_name = PyObject_Str(self->name);
 
-    const char *string = cpy_unicode_or_bytes_to_string(&str_name);
+    const char *string = NULL;
+    if (str_name != NULL)
+        string = cpy_unicode_or_bytes_to_string(&str_name);
+    
     if (string == NULL) {
+        label_set_reset(&n.label);
+        label_set_reset(&n.annotation);
         Py_XDECREF(str_name);
         Py_XDECREF(name);
         Py_XDECREF(labels);
@@ -214,8 +226,19 @@ static PyObject *Notification_new(PyTypeObject *type, __attribute__((unused)) Py
     self->name = NULL;
     self->severity = 0;
     self->time = 0;
+
     self->labels = PyDict_New();
+    if (self->labels == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     self->annotations = PyDict_New();
+    if (self->annotations == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     return (PyObject *)self;
 }
 
@@ -264,7 +287,7 @@ static PyObject *Notification_repr(PyObject *s)
         CPY_STRCAT(&ret, l_name);
         PyObject *tmp = PyObject_Repr(self->name);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -275,14 +298,14 @@ static PyObject *Notification_repr(PyObject *s)
     if (notifty_severity != NULL) {
         PyObject *severity = cpy_string_to_unicode_or_bytes(notifty_severity);
         if (severity == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, severity);
     } else {
         PyObject *tmp = PyInt_FromLong(self->severity);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -293,7 +316,7 @@ static PyObject *Notification_repr(PyObject *s)
         CPY_STRCAT(&ret, l_time);
         PyObject *tmp = PyFloat_FromDouble(self->time);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -304,7 +327,7 @@ static PyObject *Notification_repr(PyObject *s)
         CPY_STRCAT(&ret, l_labels);
         PyObject *tmp = PyObject_Repr(self->labels);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -315,7 +338,7 @@ static PyObject *Notification_repr(PyObject *s)
         CPY_STRCAT(&ret, l_annotations);
         PyObject *tmp = PyObject_Repr(self->annotations);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);

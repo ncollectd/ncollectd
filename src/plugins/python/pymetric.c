@@ -58,12 +58,11 @@ static int Metric_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->labels;
-            self->labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->labels;
+        self->labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->labels;
         Py_INCREF(labels);
@@ -84,6 +83,11 @@ static PyObject *Metric_new(PyTypeObject *type, __attribute__((unused)) PyObject
     self->time = 0;
     self->interval = 0;
     self->labels = PyDict_New();
+    if (self->labels == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     return (PyObject *)self;
 }
 
@@ -205,12 +209,11 @@ static int MetricUnknownDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -252,7 +255,7 @@ static PyObject *MetricUnknownDouble_repr(PyObject *s)
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -361,12 +364,11 @@ static int MetricUnknownLong_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -408,7 +410,7 @@ static PyObject *MetricUnknownLong_repr(PyObject *s)
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp =  PyLong_FromLongLong(self->value);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -517,12 +519,11 @@ static int MetricGaugeDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -564,7 +565,7 @@ static PyObject *MetricGaugeDouble_repr(PyObject *s)
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -673,12 +674,11 @@ static int MetricGaugeLong_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -826,12 +826,11 @@ static int MetricCounterDouble_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -871,7 +870,7 @@ static PyObject *MetricCounterDouble_repr(PyObject *s)
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -980,12 +979,11 @@ static int MetricCounterULong_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -1027,7 +1025,7 @@ static PyObject *MetricCounterULong_repr(PyObject *s)
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp =  PyLong_FromUnsignedLongLong(self->value);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -1142,7 +1140,8 @@ static int MetricInfo_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (info == NULL) {
         info = PyDict_New();
-        PyErr_Clear();
+        if (info == NULL)
+            return -1;
     }
 
     if (info != NULL) {
@@ -1154,12 +1153,11 @@ static int MetricInfo_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -1177,6 +1175,11 @@ static PyObject *MetricInfo_new(PyTypeObject *type, PyObject *args, PyObject *kw
         return NULL;
 
     self->info = PyDict_New();
+    if (self->info == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     return (PyObject *)self;
 }
 
@@ -1202,7 +1205,7 @@ static PyObject *MetricInfo_repr(PyObject *s)
         CPY_STRCAT(&ret, l_info);
         PyObject *tmp = PyObject_Repr(self->info);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -1318,7 +1321,8 @@ static int MetricStateSet_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (set == NULL) {
         set = PyDict_New();
-        PyErr_Clear();
+        if (set == NULL)
+            return -1;
     }
 
     if (set != NULL) {
@@ -1330,12 +1334,11 @@ static int MetricStateSet_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -1353,6 +1356,11 @@ static PyObject *MetricStateSet_new(PyTypeObject *type, PyObject *args, PyObject
         return NULL;
 
     self->set = PyDict_New();
+    if (self->set == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     return (PyObject *)self;
 }
 
@@ -1378,7 +1386,7 @@ static PyObject *MetricStateSet_repr(PyObject *s)
         CPY_STRCAT(&ret, l_set);
         PyObject *tmp = PyObject_Repr(self->set);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -1503,12 +1511,11 @@ static int MetricSummary_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (quantiles == NULL) {
         quantiles = PyList_New(0);
-        if (quantiles != NULL) {
-            PyObject *old_quantiles = self->quantiles;
-            self->quantiles = quantiles;
-            PyErr_Clear();
-            Py_XDECREF(old_quantiles);
-        }
+        if (quantiles == NULL) 
+            return -1;
+        PyObject *old_quantiles = self->quantiles;
+        self->quantiles = quantiles;
+        Py_XDECREF(old_quantiles);
     } else {
         PyObject *old_quantiles = self->quantiles;
         Py_INCREF(quantiles);
@@ -1518,12 +1525,11 @@ static int MetricSummary_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -1541,6 +1547,11 @@ static PyObject *MetricSummary_new(PyTypeObject *type, PyObject *args, PyObject 
         return NULL;
 
     self->quantiles = PyList_New(0);
+    if (self->quantiles == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
+
     return (PyObject *)self;
 }
 
@@ -1569,7 +1580,7 @@ static PyObject *MetricSummary_repr(PyObject *s)
     CPY_STRCAT(&ret, l_sum);
     PyObject *tmp = PyFloat_FromDouble(self->sum);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -1578,7 +1589,7 @@ static PyObject *MetricSummary_repr(PyObject *s)
     CPY_STRCAT(&ret, l_count);
     tmp =  PyLong_FromUnsignedLongLong(self->count);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -1588,7 +1599,7 @@ static PyObject *MetricSummary_repr(PyObject *s)
         CPY_STRCAT(&ret, l_quantiles);
         tmp = PyObject_Repr(self->quantiles);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -1711,12 +1722,11 @@ static int MetricHistogram_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (buckets == NULL) {
         buckets = PyList_New(0);
-        if (buckets != NULL) {
-            PyObject *old_buckets = self->buckets;
-            self->buckets = buckets;
-            PyErr_Clear();
-            Py_XDECREF(old_buckets);
-        }
+        if (buckets == NULL)
+            return -1;
+        PyObject *old_buckets = self->buckets;
+        self->buckets = buckets;
+        Py_XDECREF(old_buckets);
     } else {
         PyObject *old_buckets = self->buckets;
         Py_INCREF(buckets);
@@ -1726,12 +1736,11 @@ static int MetricHistogram_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -1749,6 +1758,10 @@ static PyObject *MetricHistogram_new(PyTypeObject *type, PyObject *args, PyObjec
         return NULL;
 
     self->buckets = PyList_New(0);
+    if (self->buckets == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     return (PyObject *)self;
 }
@@ -1776,7 +1789,7 @@ static PyObject *MetricHistogram_repr(PyObject *s)
     CPY_STRCAT(&ret, l_sum);
     PyObject *tmp = PyFloat_FromDouble(self->sum);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -1786,7 +1799,7 @@ static PyObject *MetricHistogram_repr(PyObject *s)
         CPY_STRCAT(&ret, l_buckets);
         tmp = PyObject_Repr(self->buckets);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -1908,12 +1921,11 @@ static int MetricGaugeHistogram_init(PyObject *s, PyObject *args, PyObject *kwds
 
     if (buckets == NULL) {
         buckets = PyList_New(0);
-        if (buckets != NULL) {
-            PyObject *old_buckets = self->buckets;
-            self->buckets = buckets;
-            PyErr_Clear();
-            Py_XDECREF(old_buckets);
-        }
+        if (buckets == NULL)
+            return -1;
+        PyObject *old_buckets = self->buckets;
+        self->buckets = buckets;
+        Py_XDECREF(old_buckets);
     } else {
         PyObject *old_buckets = self->buckets;
         Py_INCREF(buckets);
@@ -1923,12 +1935,11 @@ static int MetricGaugeHistogram_init(PyObject *s, PyObject *args, PyObject *kwds
 
     if (labels == NULL) {
         labels = PyDict_New();
-        if (labels != NULL) {
-            PyObject *old_labels = self->metric.labels;
-            self->metric.labels = labels;
-            PyErr_Clear();
-            Py_XDECREF(old_labels);
-        }
+        if (labels == NULL)
+            return -1;
+        PyObject *old_labels = self->metric.labels;
+        self->metric.labels = labels;
+        Py_XDECREF(old_labels);
     } else {
         PyObject *old_labels = self->metric.labels;
         Py_INCREF(labels);
@@ -1946,6 +1957,10 @@ static PyObject *MetricGaugeHistogram_new(PyTypeObject *type, PyObject *args, Py
         return NULL;
 
     self->buckets = PyList_New(0);
+    if (self->buckets == NULL) {
+        Py_DECREF(self);
+        return NULL;
+    }
 
     return (PyObject *)self;
 }
@@ -1973,7 +1988,7 @@ static PyObject *MetricGaugeHistogram_repr(PyObject *s)
     CPY_STRCAT(&ret, l_sum);
     PyObject *tmp = PyFloat_FromDouble(self->sum);
     if (tmp == NULL) {
-        Py_DECREF(ret);
+        Py_XDECREF(ret);
         return NULL;
     }
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
@@ -1983,7 +1998,7 @@ static PyObject *MetricGaugeHistogram_repr(PyObject *s)
         CPY_STRCAT(&ret, l_buckets);
         tmp = PyObject_Repr(self->buckets);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);

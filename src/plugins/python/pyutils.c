@@ -15,15 +15,20 @@
 int cpy_build_labels(PyObject *dict, label_set_t *labels)
 {
     if ((dict == NULL) || (dict == Py_None))
-        return -1;
+        return 0;
 
     if (PyDict_Size(dict) <= 0)
         return 0;
 
-    PyObject *key, *value;
-    Py_ssize_t pos = 0;
+    PyObject *entries = PyDict_Items(dict);
+    if (entries == NULL)
+        return -1;
 
-    while (PyDict_Next(dict, &pos, &key, &value)) {
+    Py_ssize_t size = PyList_GET_SIZE(entries);
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject *pair = PyList_GET_ITEM(entries, i);
+        PyObject *key = PyTuple_GET_ITEM(pair, 0);
+        PyObject *value = PyTuple_GET_ITEM(pair, 1);
         Py_INCREF(key);
         const char *keystring = cpy_unicode_or_bytes_to_string(&key);
         if (keystring == NULL) {
@@ -80,6 +85,8 @@ int cpy_build_labels(PyObject *dict, label_set_t *labels)
         if (PyErr_Occurred())
             cpy_log_exception("building labels");
     }
+    
+    Py_DECREF(entries);
 
     return 0;
 }
@@ -87,15 +94,21 @@ int cpy_build_labels(PyObject *dict, label_set_t *labels)
 int cpy_build_state_set(PyObject *dict, state_set_t *set)
 {
     if ((dict == NULL) || (dict == Py_None))
-        return -1;
+        return 0;
 
     if (PyDict_Size(dict) <= 0)
         return 0;
 
-    PyObject *key, *value;
-    Py_ssize_t pos = 0;
+    PyObject *entries = PyDict_Items(dict);
+    if (entries == NULL)
+        return -1;
 
-    while (PyDict_Next(dict, &pos, &key, &value)) {
+    Py_ssize_t size = PyList_GET_SIZE(entries);
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject *pair = PyList_GET_ITEM(entries, i);
+        PyObject *key = PyTuple_GET_ITEM(pair, 0);
+        PyObject *value = PyTuple_GET_ITEM(pair, 1);
+
         Py_INCREF(key);
         const char *keystring = cpy_unicode_or_bytes_to_string(&key);
         if (keystring == NULL) {
@@ -131,7 +144,46 @@ int cpy_build_state_set(PyObject *dict, state_set_t *set)
             cpy_log_exception("building state_set");
     }
 
+    Py_DECREF(entries);
+
     return 0;
+}
+
+static PyObject *cpy_pair_snapshot(PyObject *sequence)
+{
+    PyObject *outer = PySequence_Tuple(sequence);
+    if (outer == NULL)
+        return NULL;
+
+    Py_ssize_t size = PyTuple_GET_SIZE(outer);
+    PyObject *pairs = PyTuple_New(size);
+    if (pairs == NULL) {
+        Py_DECREF(outer);
+        return NULL;
+    }
+
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject *item = PyTuple_GET_ITEM(outer, i);
+        if (!PyTuple_Check(item) && !PyList_Check(item)) {
+            PyErr_SetString(PyExc_TypeError, "expected a list or tuple pair");
+            Py_DECREF(pairs);
+            Py_DECREF(outer);
+            return NULL;
+        }
+
+        PyObject *pair = PySequence_Tuple(item);
+        if (pair == NULL) {
+            Py_DECREF(pairs);
+            Py_DECREF(outer);
+            return NULL;
+        }
+
+        PyTuple_SET_ITEM(pairs, i, pair);
+    }
+
+    Py_DECREF(outer);
+
+    return pairs;
 }
 
 histogram_t *cpy_build_histogram(PyObject *list)
@@ -139,7 +191,7 @@ histogram_t *cpy_build_histogram(PyObject *list)
     if ((list == NULL) || (list == Py_None))
         return NULL;
 
-    PyObject *seq_list = PySequence_Fast(list, "Not a sequence of buckets.");
+    PyObject *seq_list = cpy_pair_snapshot(list);
     if (seq_list == NULL)
          return NULL;
     
@@ -241,7 +293,7 @@ summary_t *cpy_build_summary(PyObject *list)
     if ((list == NULL) || (list == Py_None))
         return NULL;
 
-    PyObject *seq_list = PySequence_Fast(list, "Not a sequence of quantiles.");
+    PyObject *seq_list = cpy_pair_snapshot(list);
     if (seq_list == NULL)
          return NULL;
     
