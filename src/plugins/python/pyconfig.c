@@ -70,12 +70,20 @@ static int Config_init(PyObject *s, PyObject *args, PyObject *kwds)
 
     if (values == NULL) {
         values = PyTuple_New(0);
-        PyErr_Clear();
+        if (values == NULL)
+            return -1;
+    } else {
+        Py_INCREF(values);
     }
 
     if (children == NULL) {
         children = PyTuple_New(0);
-        PyErr_Clear();
+        if (children == NULL) {
+            Py_DECREF(values);
+            return -1;
+        }
+    } else {
+         Py_INCREF(children);
     }
 
     tmp = self->key;
@@ -90,19 +98,13 @@ static int Config_init(PyObject *s, PyObject *args, PyObject *kwds)
         Py_XDECREF(tmp);
     }
 
-    if (values != NULL) {
-        tmp = self->values;
-        Py_INCREF(values);
-        self->values = values;
-        Py_XDECREF(tmp);
-    }
+    tmp = self->values;
+    self->values = values;
+    Py_XDECREF(tmp);
 
-    if (children != NULL) {
-        tmp = self->children;
-        Py_INCREF(children);
-        self->children = children;
-        Py_XDECREF(tmp);
-    }
+    tmp = self->children;
+    self->children = children;
+    Py_XDECREF(tmp);
 
     return 0;
 }
@@ -136,7 +138,7 @@ static PyObject *Config_repr(PyObject *s)
         CPY_STRCAT(&ret, l_key);
         PyObject *tmp = PyObject_Repr(self->key);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -148,7 +150,7 @@ static PyObject *Config_repr(PyObject *s)
         CPY_STRCAT(&ret, l_values);
         PyObject *tmp = PyObject_Repr(self->values);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -160,7 +162,7 @@ static PyObject *Config_repr(PyObject *s)
         CPY_STRCAT(&ret, l_children);
         PyObject *tmp = PyObject_Repr(self->children);
         if (tmp == NULL) {
-            Py_DECREF(ret);
+            Py_XDECREF(ret);
             return NULL;
         }
         CPY_STRCAT_AND_DEL(&ret, tmp);

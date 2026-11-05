@@ -303,9 +303,10 @@ void cpy_log_exception(const char *context)
         Py_INCREF(line);
 
         msg = cpy_unicode_or_bytes_to_string(&line);
-        Py_DECREF(line);
-        if (msg == NULL)
+        if (msg == NULL) {
+            Py_DECREF(line);
             continue;
+        }
 
         cpy = strdup(msg);
         if (cpy == NULL)
@@ -507,7 +508,7 @@ static PyObject *cpy_create_metric(metric_t *m, metric_type_t type)
                 histogram_bucket_t *bucket = &m->value.histogram->buckets[i];
                 PyObject *tuple = PyTuple_New(2); /* New reference. */
                 if (tuple != NULL) {
-                    PyObject *o_counter = PyLong_FromUnsignedLongLong(bucket->counter); 
+                    PyObject *o_counter = PyLong_FromUnsignedLongLong(bucket->counter);
                     if (o_counter != NULL)
                         PyTuple_SET_ITEM(tuple, 0, o_counter);
                     PyObject *o_maximum = PyFloat_FromDouble(bucket->maximum);
@@ -1010,11 +1011,10 @@ static PyObject *cpy_debug(__attribute__((unused)) PyObject *self, PyObject *arg
 static PyObject *cpy_unregister_generic(cpy_callback_t **list_head, PyObject *arg, const char *desc)
 {
     char buf[512];
-    const char *name;
     cpy_callback_t *prev = NULL, *tmp;
 
     Py_INCREF(arg);
-    name = cpy_unicode_or_bytes_to_string(&arg);
+    const char *name = cpy_unicode_or_bytes_to_string(&arg);
     if (name == NULL) {
         PyErr_Clear();
         if (!PyCallable_Check(arg)) {
@@ -1026,23 +1026,32 @@ static PyObject *cpy_unregister_generic(cpy_callback_t **list_head, PyObject *ar
         cpy_build_name(buf, sizeof(buf), arg, NULL);
         name = buf;
     }
+    
+    const char *short_name = name;
+    if (strncmp(name, "python/", strlen("python/")) == 0)
+        short_name = name + strlen("python/");
+
     for (tmp = *list_head; tmp; prev = tmp, tmp = tmp->next)
-        if (strcmp(name, tmp->name) == 0)
+        if (strcmp(short_name, tmp->name) == 0)
             break;
 
-    Py_DECREF(arg);
     if (tmp == NULL) {
-        PyErr_Format(PyExc_RuntimeError, "Unable to unregister %s callback '%s'.",
-                                 desc, name);
+        PyErr_Format(PyExc_RuntimeError, "Unable to unregister %s callback '%s'.", desc, name);
+        Py_DECREF(arg);
         return NULL;
     }
+
+    Py_DECREF(arg);
+
     /* Yes, this is actually safe. To call this function the caller has to
      * hold the GIL. Well, safe as long as there is only one GIL anyway ... */
     if (prev == NULL)
         *list_head = tmp->next;
     else
         prev->next = tmp->next;
+
     cpy_destroy_user_data(tmp);
+
     Py_RETURN_NONE;
 }
 
@@ -1058,15 +1067,13 @@ static void cpy_unregister_list(cpy_callback_t **list_head)
 
 typedef int cpy_unregister_function_t(const char *name);
 
-static PyObject *
-cpy_unregister_generic_userdata(cpy_unregister_function_t *unreg, PyObject *arg,
-                                                                const char *desc)
+static PyObject * cpy_unregister_generic_userdata(cpy_unregister_function_t *unreg, PyObject *arg,
+                                                  const char *desc)
 {
     char buf[512];
-    const char *name;
 
     Py_INCREF(arg);
-    name = cpy_unicode_or_bytes_to_string(&arg);
+    const char *name = cpy_unicode_or_bytes_to_string(&arg);
     if (name == NULL) {
         PyErr_Clear();
         if (!PyCallable_Check(arg)) {
@@ -1241,8 +1248,6 @@ static void *cpy_interactive(void *pipefd)
     PyOS_setsig(SIGINT, cur_sig);
     PyErr_Print();
 
-    state = PyEval_SaveThread();
-
     PyGILState_Release(gilstate);
 
     PLUGIN_NOTICE("Interactive interpreter exited, stopping ncollectd ...");
@@ -1283,7 +1288,14 @@ static int cpy_init(void)
         state = PyEval_SaveThread();
 
         if (plugin_thread_create(&thread, cpy_interactive, pipefd + 1, "python interpreter")) {
+            close(pipefd[0]);
+            close(pipefd[1]);
+            PyEval_RestoreThread(state);
+            state = NULL;
             PLUGIN_ERROR(" Error creating thread for interactive interpreter.");
+            /* Leave the initialized interpreter detached for shutdown. */
+            state = PyEval_SaveThread();
+            return 1;
         }
         if (read(pipefd[0], &buf, 1)) {
             //FIXME
@@ -1318,7 +1330,7 @@ static PyObject *cpy_config_to_pyconfig(config_item_t *ci, PyObject *parent)
     PyObject *values = PyTuple_New(ci->values_num); /* New reference. */
     if (values == NULL)
         return NULL;
-    
+
     for (int i = 0; i < ci->values_num; ++i) {
         switch(ci->values[i].type) {
         case CONFIG_TYPE_STRING:
@@ -1335,7 +1347,7 @@ static PyObject *cpy_config_to_pyconfig(config_item_t *ci, PyObject *parent)
     }
 
     PyObject *tmp = cpy_string_to_unicode_or_bytes(ci->key);
-    PyObject *item = PyObject_CallFunction((void *)&ConfigType, "NONO", tmp, parent, values, Py_None);
+    PyObject *item = PyObject_CallFunction((void *)&ConfigType, "OOOO", tmp, parent, values, Py_None);
     Py_XDECREF(tmp);
     Py_XDECREF(values);
     if (item == NULL)
@@ -1538,35 +1550,94 @@ static int cpy_init_python(void)
     }
 
     Py_INCREF(&ConfigType);
-    PyModule_AddObject(module, "Config", (void *)&ConfigType);
+    if (PyModule_AddObject(module, "Config", (void *)&ConfigType) != 0) {
+        Py_DECREF(&ConfigType);
+        goto error;
+    }
+
     Py_INCREF(&MetricUnknownDoubleType);
-    PyModule_AddObject(module, "MetricUnknownDouble", (void *)&MetricUnknownDoubleType);
+    if (PyModule_AddObject(module, "MetricUnknownDouble", (void *)&MetricUnknownDoubleType) != 0) {
+        Py_DECREF(&MetricUnknownDoubleType);
+        goto error;
+    }
+
     Py_INCREF(&MetricUnknownLongType);
-    PyModule_AddObject(module, "MetricUnknownLong", (void *)&MetricUnknownLongType);
+    if (PyModule_AddObject(module, "MetricUnknownLong", (void *)&MetricUnknownLongType) != 0) {
+        Py_DECREF(&MetricUnknownLongType);
+        goto error;
+    }
+
     Py_INCREF(&MetricGaugeDoubleType);
-    PyModule_AddObject(module, "MetricGaugeDouble", (void *)&MetricGaugeDoubleType);
+    if (PyModule_AddObject(module, "MetricGaugeDouble", (void *)&MetricGaugeDoubleType) != 0) {
+        Py_DECREF(&MetricGaugeDoubleType);
+        goto error;
+    }
+
     Py_INCREF(&MetricGaugeLongType);
-    PyModule_AddObject(module, "MetricGaugeLong", (void *)&MetricGaugeLongType);
+    if (PyModule_AddObject(module, "MetricGaugeLong", (void *)&MetricGaugeLongType) != 0) {
+        Py_DECREF(&MetricGaugeLongType);
+        goto error;
+    }
+
     Py_INCREF(&MetricCounterULongType);
-    PyModule_AddObject(module, "MetricCounterULong", (void *)&MetricCounterULongType);
+    if (PyModule_AddObject(module, "MetricCounterULong", (void *)&MetricCounterULongType) != 0) {
+        Py_DECREF(&MetricCounterULongType);
+        goto error;
+    }
+
     Py_INCREF(&MetricCounterDoubleType);
-    PyModule_AddObject(module, "MetricCounterDouble", (void *)&MetricCounterDoubleType);
+    if (PyModule_AddObject(module, "MetricCounterDouble", (void *)&MetricCounterDoubleType) != 0) {
+        Py_DECREF(&MetricCounterDoubleType);
+        goto error;
+    }
+
     Py_INCREF(&MetricStateSetType);
-    PyModule_AddObject(module, "MetricStateSet", (void *)&MetricStateSetType);
+    if (PyModule_AddObject(module, "MetricStateSet", (void *)&MetricStateSetType) != 0) {
+        Py_DECREF(&MetricStateSetType);
+        goto error;
+    }
+
     Py_INCREF(&MetricInfoType);
-    PyModule_AddObject(module, "MetricInfo", (void *)&MetricInfoType);
+    if (PyModule_AddObject(module, "MetricInfo", (void *)&MetricInfoType) != 0) {
+        Py_DECREF(&MetricInfoType);
+        goto error;
+    }
+
     Py_INCREF(&MetricSummaryType);
-    PyModule_AddObject(module, "MetricSummary", (void *)&MetricSummaryType);
+    if (PyModule_AddObject(module, "MetricSummary", (void *)&MetricSummaryType) != 0) {
+        Py_DECREF(&MetricSummaryType);
+        goto error;
+    }
+
     Py_INCREF(&MetricHistogramType);
-    PyModule_AddObject(module, "MetricHistogram", (void *)&MetricHistogramType);
+    if (PyModule_AddObject(module, "MetricHistogram", (void *)&MetricHistogramType) != 0) {
+        Py_DECREF(&MetricHistogramType);
+        goto error;
+    }
+
     Py_INCREF(&MetricGaugeHistogramType);
-    PyModule_AddObject(module, "MetricGaugeHistogram", (void *)&MetricGaugeHistogramType);
+    if (PyModule_AddObject(module, "MetricGaugeHistogram", (void *)&MetricGaugeHistogramType) != 0) {
+        Py_DECREF(&MetricGaugeHistogramType);
+        goto error;
+    }
+
     Py_INCREF(&MetricFamilyType);
-    PyModule_AddObject(module, "MetricFamily", (void *)&MetricFamilyType);
+    if (PyModule_AddObject(module, "MetricFamily", (void *)&MetricFamilyType) != 0) {
+        Py_DECREF(&MetricFamilyType);
+        goto error;
+    }
+
     Py_INCREF(&NotificationType);
-    PyModule_AddObject(module, "Notification", (void *)&NotificationType);
+    if (PyModule_AddObject(module, "Notification", (void *)&NotificationType) != 0) {
+        Py_DECREF(&NotificationType);
+        goto error;
+    }
+
     Py_XINCREF(NCollectdError);
-    PyModule_AddObject(module, "NCollectdError", NCollectdError);
+    if (PyModule_AddObject(module, "NCollectdError", NCollectdError) != 0) {
+        Py_XDECREF(NCollectdError);
+        goto error;
+    }
 
     PyModule_AddIntConstant(module, "LOG_DEBUG", LOG_DEBUG);
     PyModule_AddIntConstant(module, "LOG_INFO", LOG_INFO);
@@ -1584,7 +1655,15 @@ static int cpy_init_python(void)
     PyModule_AddIntConstant(module, "METRIC_SUMMARY", METRIC_TYPE_SUMMARY);
     PyModule_AddIntConstant(module, "METRIC_HISTOGRAM", METRIC_TYPE_HISTOGRAM);
     PyModule_AddIntConstant(module, "METRIC_GAUGE_HISTOGRAM", METRIC_TYPE_GAUGE_HISTOGRAM);
+
     return 0;
+
+error:
+    cpy_log_exception("exporting Python types");
+#ifdef IS_PY3K
+    Py_DECREF(module);
+#endif
+    return 1;
 }
 
 static int cpy_config_module(config_item_t *ci)
