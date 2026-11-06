@@ -57,7 +57,7 @@ int luac_to_labels(lua_State *L, int idx, label_set_t *labels)
     while (lua_next(L, idx) != 0) {
         int ktype = lua_type(L, -2);
         if (ktype != LUA_TSTRING) {
-            PLUGIN_WARNING("Label key '%s' must be LUA_TSTRING.", lua_tostring(L, -2));
+            PLUGIN_WARNING("Label key must be a LUA_TSTRING.");
             lua_pop(L, 1);
             continue;
         }
@@ -135,7 +135,7 @@ static int luac_push_config_item_children(lua_State *L, const config_item_t *ci)
         luac_push_config_values(L, child);
         lua_setfield(L, -2, "values");
 
-        luac_push_config_item(L, child->children);
+        luac_push_config_item(L, child);
         lua_setfield(L, -2, "children");
     }
 
@@ -152,7 +152,7 @@ int luac_push_config_item(lua_State *L, const config_item_t *ci)
     luac_push_config_values(L, ci);
     lua_setfield(L, -2, "values");
 
-    luac_push_config_item_children(L, ci->children);
+    luac_push_config_item_children(L, ci);
     lua_setfield(L, -2, "children");
 
     return 0;
@@ -169,7 +169,7 @@ bool luac_isarray(lua_State *L, int idx)
     /* Check that idx is in the valid range */
     if ((idx < 1) || (idx > lua_gettop(L))) {
         PLUGIN_DEBUG("idx(%d), top(%d)", idx, lua_gettop(L));
-        return -1;
+        return false;
     }
 
     lua_pushnil(L);

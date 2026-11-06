@@ -55,7 +55,7 @@ Lua plugin (all of them are optional):
 > These are used to collect the actual data.
 > It is called once per interval (see the **interval** configuration option
 > of collectd).
-> Usually it will call **ncollectd.dispatch\_metric\_family** to dispatch
+> Usually it will call **MetricFamily:dispatch** to dispatch
 > the metrics to ncollectd which will pass them on to all registered
 > **write functions**.
 > If this function does not return 0, interval between its calls will grow
@@ -214,21 +214,19 @@ and ncollectd:
 
 **MetricFamily**
 
-> >     ncollectd.MetricFamily.new(type, name\[, help]\[, unit]\[, metrics])
+> >     ncollectd.MetricFamily.new(name, type\[, help]\[, unit])
 
 > dispatch(\[time])
 
 > append(metrics)
 
-> **type**
-
 > **name**
+
+> **type**
 
 > **help**
 
 > **unit**
-
-> **metrics**
 
 **Notification**
 
@@ -236,15 +234,15 @@ and ncollectd:
 
 > dispatch()
 
-> **type**
-
 > **name**
 
-> **help**
+> **severity**
 
-> **unit**
+> **time**
 
-> **metrics**
+> **labels**
+
+> **annotations**
 
 **LOG\_ERR**
 
