@@ -106,10 +106,10 @@ static int lnotification_add_label(lua_State *L)
     if (n == NULL)
         return 0;
 
-    if (lua_isnil(L, 1) || !lua_isstring(L, 3))
+    if (lua_isnil(L, 2) || !lua_isstring(L, 2))
         return luaL_error(L, "Notification.add_label requires two string arguments.");
 
-    if (lua_isnil(L, 2) || !lua_isstring(L, 3))
+    if (lua_isnil(L, 3) || !lua_isstring(L, 3))
         return luaL_error(L, "Notification.add_label requires two string arguments.");
 
     const char *name = luaL_checkstring(L, 2);
@@ -169,7 +169,7 @@ static int lnotification_tostring(lua_State *L)
 
     strbuf_putstr(&buf, "notification{ ");
     strbuf_putstr(&buf, "name = \"");
-    strbuf_putstr(&buf, n->name);
+    strbuf_putstr(&buf, n->name == NULL ? "" : n->name);
     strbuf_putstr(&buf, "\", severity = ");
     switch (n->severity) {
     case NOTIF_FAILURE:
@@ -372,18 +372,26 @@ int register_notification(lua_State *L)
 
 int luac_push_notification(lua_State *L, const notification_t *n)
 {
-    notification_t *new_n = lua_newuserdata(L, sizeof(notification_t));
-    if (new_n == NULL)
+    if (n->name == NULL)
         return -1;
+
+    char *new_name = strdup(n->name);
+    if (new_name == NULL)
+        return -1;
+
+    notification_t *new_n = lua_newuserdata(L, sizeof(notification_t));
+    if (new_n == NULL) {
+        free(new_name);
+        return -1;
+    }
 
     memset(new_n, 0, sizeof(notification_t));
 
     new_n->time = n->time;
     new_n->severity = n->severity;
-    if (new_n->name != NULL)
-        new_n->name = strdup(n->name);
-    label_set_clone(&new_n->annotation, new_n->annotation);
-    label_set_clone(&new_n->label, new_n->label);
+    new_n->name = new_name;
+    label_set_clone(&new_n->annotation, n->annotation);
+    label_set_clone(&new_n->label, n->label);
 
     luaL_setmetatable(L, MT_NOTIFICATION);
 

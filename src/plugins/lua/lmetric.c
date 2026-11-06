@@ -1686,15 +1686,14 @@ static int lmetric_state_set_tostring_buffer(strbuf_t *buf, metric_t *m)
 {
     int status = strbuf_putstr(buf, "MetricStateSet{ ");
     status |= strbuf_putstr(buf, "value = {");
-    for (size_t i = 0; i < m->value.info.num; i++) {
-        label_pair_t *pair = &m->value.info.ptr[i];
+    for (size_t i = 0; i < m->value.state_set.num; i++) {
+        state_t *state = &m->value.state_set.ptr[i];
         if (i > 0)
             status |= strbuf_putchar(buf, ',');
         status |=  strbuf_putstr(buf, " \"");
-        status |= strbuf_putstr(buf, pair->name);
-        status |= strbuf_putstr(buf, "\" = \"");
-        status |= strbuf_putstr(buf, pair->value);
-        status |= strbuf_putstr(buf, "\"");
+        status |= strbuf_putstr(buf, state->name);
+        status |= strbuf_putstr(buf, "\" = ");
+        status |= strbuf_putstr(buf, state->enabled ? "true" : "false");
     }
     status |= strbuf_putstr(buf, "}, time = ");
     status |= strbuf_putdouble(buf, CDTIME_T_TO_DOUBLE(m->time));
@@ -1874,7 +1873,7 @@ static int luac_to_quantiles(lua_State *L, int idx, double *quantile, double *va
     
     size_t size = lua_rawlen(L, idx);
     if (size != 2) {
-        return luaL_error(L, "Quantile must be an array of two: the quantile and the value.");
+        return -1;
     }
 
     lua_rawgeti(L, idx, 1);
@@ -1888,7 +1887,7 @@ static int luac_to_quantiles(lua_State *L, int idx, double *quantile, double *va
     return 0;
 }
 
-static summary_t *luac_to_summary_quantiles(lua_State *L, int idx, summary_t *summary)
+static int luac_to_summary_quantiles(lua_State *L, int idx, value_t *svalue)
 {
     if (idx < 1)
         idx += lua_gettop(L) + 1;
@@ -1896,7 +1895,7 @@ static summary_t *luac_to_summary_quantiles(lua_State *L, int idx, summary_t *su
     /* Check that idx is in the valid range */
     if ((idx < 1) || (idx > lua_gettop(L))) {
         PLUGIN_DEBUG("idx(%d), top(%d)", idx, lua_gettop(L));
-        return summary;
+        return -1;
     }
 
     size_t size = lua_rawlen(L, idx);
@@ -1904,16 +1903,21 @@ static summary_t *luac_to_summary_quantiles(lua_State *L, int idx, summary_t *su
         lua_rawgeti(L, idx, i + 1);
         double quantile = 0;
         double value = 0;
-        if (luac_to_quantiles(L, -1, &quantile, &value) == 0)
-            summary = summary_quantile_append(summary, quantile, value);
+        if (luac_to_quantiles(L, -1, &quantile, &value) != 0)
+            return -1;
+        svalue->summary = summary_quantile_append(svalue->summary, quantile, value);
         lua_pop(L, 1);
     }
 
-    return summary;
+    return 0;
 }
 
 static int lmetric_summary_new(lua_State *L)
 {
+    int argc = lua_gettop(L);
+    if (argc < 3)
+        return luaL_error(L, "The sum, count and quantiles are required arguments.");
+
     metric_t m = {0};
 
     m.time = 0;
@@ -1921,11 +1925,6 @@ static int lmetric_summary_new(lua_State *L)
     m.value.summary = summary_new();
     if (m.value.summary == NULL)
         return luaL_error(L, "Fail to create summary.");
-
-    int argc = lua_gettop(L);
-
-    if (argc < 3)
-        return luaL_error(L, "The sum, count and quantiles are required arguments.");
 
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_isnumber(L, 1)) {
@@ -1948,12 +1947,17 @@ static int lmetric_summary_new(lua_State *L)
             metric_reset(&m, METRIC_TYPE_SUMMARY);
             return luaL_error(L, "Quantiles must be an array.");
         }
-        m.value.summary = luac_to_summary_quantiles(L, 3, m.value.summary);
+        if (luac_to_summary_quantiles(L, 3, &m.value) != 0) {
+            metric_reset(&m, METRIC_TYPE_SUMMARY);
+            return luaL_error(L, "Quantile must be an array of two: the quantile and the value.");
+        }
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_istable(L, 4))
+        if (!lua_istable(L, 4)) {
+            metric_reset(&m, METRIC_TYPE_SUMMARY);
             return luaL_error(L, "Labels must be a table.");
+        }
         luac_to_labels(L, 4, &m.label);
     }
 
@@ -1998,9 +2002,9 @@ static int lmetric_summary_tostring_buffer(strbuf_t *buf, metric_t *m)
     int status = strbuf_putstr(buf, "MetricSummary{ ");
     status |= strbuf_putstr(buf, "sum = ");
     status |= strbuf_putdouble(buf, m->value.summary->sum);
-    status |= strbuf_putstr(buf, "count = ");
+    status |= strbuf_putstr(buf, ", count = ");
     status |= strbuf_putuint(buf, m->value.summary->count);
-    status |= strbuf_putstr(buf, "quantiles = [");
+    status |= strbuf_putstr(buf, ", quantiles = [");
     for (size_t i = 0; i < m->value.summary->num; i++) {
         summary_quantile_t *q = &m->value.summary->quantiles[i];
         if (i > 0)
@@ -2170,7 +2174,19 @@ static int lmetric_summary_set(lua_State *L)
             break;
         case 'q':
             if (strcmp(key, "quantiles") == 0) {
-                m->value.summary = luac_to_summary_quantiles(L, 3, m->value.summary);
+                value_t value = {0};
+                value.summary = summary_clone(m->value.summary);
+                if (value.summary == NULL)
+                    return luaL_error(L, "Fail to create summary.");
+
+                if (luac_to_summary_quantiles(L, 3, &value) != 0) {
+                    summary_destroy(value.summary);
+                    return luaL_error(L, "Quantile must be an array of two: "
+                                         "the quantile and the value.");
+                }
+
+                summary_destroy(m->value.summary);
+                m->value.summary = value.summary;
                 return 0;
             }
             break;
@@ -2215,7 +2231,7 @@ static int luac_to_bucket(lua_State *L, int idx, uint64_t *counter, double *maxi
 
     size_t size = lua_rawlen(L, idx);
     if (size != 2) {
-        return luaL_error(L, "Bucket must be an array of two: the counter and the maximum.");
+        return -1;
     }
 
     lua_rawgeti(L, idx, 1);
@@ -2229,7 +2245,7 @@ static int luac_to_bucket(lua_State *L, int idx, uint64_t *counter, double *maxi
     return 0;
 }
 
-static histogram_t *luac_to_histogram_buckets(lua_State *L, int idx, histogram_t *histogram)
+static int luac_to_histogram_buckets(lua_State *L, int idx, value_t *hvalue)
 {
     if (idx < 1)
         idx += lua_gettop(L) + 1;
@@ -2237,7 +2253,7 @@ static histogram_t *luac_to_histogram_buckets(lua_State *L, int idx, histogram_t
     /* Check that idx is in the valid range */
     if ((idx < 1) || (idx > lua_gettop(L))) {
         PLUGIN_DEBUG("idx(%d), top(%d)", idx, lua_gettop(L));
-        return histogram;
+        return -1;
     }
 
     size_t size = lua_rawlen(L, idx);
@@ -2245,12 +2261,13 @@ static histogram_t *luac_to_histogram_buckets(lua_State *L, int idx, histogram_t
         lua_rawgeti(L, idx, i + 1);
         uint64_t counter = 0;
         double maximum = 0;
-        if (luac_to_bucket(L, -1, &counter, &maximum) == 0)
-            histogram = histogram_bucket_append(histogram, counter, maximum);
+        if (luac_to_bucket(L, -1, &counter, &maximum) != 0)
+            return -1;
+        hvalue->histogram = histogram_bucket_append(hvalue->histogram, maximum, counter);
         lua_pop(L, 1);
     }
 
-    return histogram;
+    return 0;
 }
 
 static int lmetric_histogram_new(lua_State *L)
@@ -2279,7 +2296,10 @@ static int lmetric_histogram_new(lua_State *L)
             metric_reset(&m, METRIC_TYPE_HISTOGRAM);
             return luaL_error(L, "Buckets must be an array.");
         }
-        m.value.histogram = luac_to_histogram_buckets(L, 2, m.value.histogram);
+        if (luac_to_histogram_buckets(L, 2, &m.value) != 0) {
+            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+            return luaL_error(L, "Bucket must be an array of two: the counter and the maximum.");
+        }
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
@@ -2331,7 +2351,7 @@ static int lmetric_histogram_tostring_buffer(strbuf_t *buf, metric_t *m)
     int status = strbuf_putstr(buf, "MetricHistogram{ ");
     status |= strbuf_putstr(buf, "sum = ");
     status |= strbuf_putdouble(buf, m->value.histogram->sum);
-    status |= strbuf_putstr(buf, "bucket = [");
+    status |= strbuf_putstr(buf, ", bucket = [");
     for (size_t i = 0; i < m->value.histogram->num; i++) {
         histogram_bucket_t *b = &m->value.histogram->buckets[i];
         if (i > 0)
@@ -2419,8 +2439,8 @@ static int lmetric_histogram_get(lua_State *L)
                 return 1;
             }
             break;
-        case 'q':
-            if (strcmp(key, "quantiles") == 0) {
+        case 'b':
+            if (strcmp(key, "bucket") == 0) {
                 lua_createtable(L, m->value.histogram->num, 0);
                 for (size_t i = 0; i < m->value.histogram->num; i++) {
                     histogram_bucket_t *b = &m->value.histogram->buckets[i];
@@ -2487,9 +2507,21 @@ static int lmetric_histogram_set(lua_State *L)
                 return 0;
             }
             break;
-        case 'q':
+        case 'b':
             if (strcmp(key, "bucket") == 0) {
-                m->value.histogram = luac_to_histogram_buckets(L, 3, m->value.histogram);
+                value_t value = {0};
+                value.histogram = histogram_clone(m->value.histogram);
+                if (value.histogram == NULL)
+                    return luaL_error(L, "Fail to create histogram.");
+
+                if (luac_to_histogram_buckets(L, 3, &m->value) != 0) {
+                    histogram_destroy(value.histogram);
+                    return luaL_error(L, "Bucket must be an array of two: "
+                                         "the counter and the maximum.");
+                }
+        
+                histogram_destroy(m->value.histogram);
+                m->value.histogram = value.histogram;
                 return 0;
             }
             break;
@@ -2548,7 +2580,10 @@ static int lmetric_gauge_histogram_new(lua_State *L)
             metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
             return luaL_error(L, "Buckets must be an array.");
         }
-        m.value.histogram = luac_to_histogram_buckets(L, 2, m.value.histogram);
+        if (luac_to_histogram_buckets(L, 2, &m.value) != 0) {
+            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+            return luaL_error(L, "Bucket must be an array of two: the counter and the maximum.");
+        }
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
@@ -2600,7 +2635,7 @@ static int lmetric_gauge_histogram_tostring_buffer(strbuf_t *buf, metric_t *m)
     int status = strbuf_putstr(buf, "MetricGaugeHistogram{ ");
     status |= strbuf_putstr(buf, "sum = ");
     status |= strbuf_putdouble(buf, m->value.histogram->sum);
-    status |= strbuf_putstr(buf, "bucket = [");
+    status |= strbuf_putstr(buf, ", bucket = [");
     for (size_t i = 0; i < m->value.histogram->num; i++) {
         histogram_bucket_t *b = &m->value.histogram->buckets[i];
         if (i > 0)
@@ -2688,8 +2723,8 @@ static int lmetric_gauge_histogram_get(lua_State *L)
                 return 1;
             }
             break;
-        case 'q':
-            if (strcmp(key, "quantiles") == 0) {
+        case 'b':
+            if (strcmp(key, "bucket") == 0) {
                 lua_createtable(L, m->value.histogram->num, 0);
                 for (size_t i = 0; i < m->value.histogram->num; i++) {
                     histogram_bucket_t *b = &m->value.histogram->buckets[i];
@@ -2756,9 +2791,21 @@ static int lmetric_gauge_histogram_set(lua_State *L)
                 return 0;
             }
             break;
-        case 'q':
+        case 'b':
             if (strcmp(key, "bucket") == 0) {
-                m->value.histogram = luac_to_histogram_buckets(L, 3, m->value.histogram);
+                value_t value = {0};
+                value.histogram = histogram_clone(m->value.histogram);
+                if (value.histogram == NULL)
+                    return luaL_error(L, "Fail to create histogram.");
+
+                if (luac_to_histogram_buckets(L, 3, &m->value) != 0) {
+                    histogram_destroy(value.histogram);
+                    return luaL_error(L, "Bucket must be an array of two: "
+                                         "the counter and the maximum.");
+                }
+        
+                histogram_destroy(m->value.histogram);
+                m->value.histogram = value.histogram;
                 return 0;
             }
             break;

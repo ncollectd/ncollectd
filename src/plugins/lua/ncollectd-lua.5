@@ -48,7 +48,7 @@ Lua plugin (all of them are optional):
 These are used to collect the actual data.
 It is called once per interval (see the \fBinterval\fP configuration option
 of collectd).
-Usually it will call \fBncollectd.dispatch_metric_family\fP to dispatch
+Usually it will call \fBMetricFamily:dispatch\fP to dispatch
 the metrics to ncollectd which will pass them on to all registered
 \fBwrite functions\fP.
 If this function does not return 0, interval between its calls will grow
@@ -182,18 +182,17 @@ and ncollectd:
 
 .It \fBMetricFamily\fP
 .Bd -literal
-    ncollectd.MetricFamily.new(type, name[, help][, unit][, metrics])
+    ncollectd.MetricFamily.new(name, type[, help][, unit])
 .Ed
 .Bl -tag -width Ds
 .It dispatch([time])
 .It append(metrics)
 .El
 .Bl -tag -width Ds
-.It \fBtype\fP
 .It \fBname\fP
+.It \fBtype\fP
 .It \fBhelp\fP
 .It \fBunit\fP
-.It \fBmetrics\fP
 .El
 
 .It \fBNotification\fP
@@ -204,13 +203,12 @@ and ncollectd:
 .It dispatch()
 .El
 .Bl -tag -width Ds
-.It \fBtype\fP
 .It \fBname\fP
-.It \fBhelp\fP
-.It \fBunit\fP
-.It \fBmetrics\fP
+.It \fBseverity\fP
+.It \fBtime\fP
+.It \fBlabels\fP
+.It \fBannotations\fP
 .El
-
 
 .It \fBLOG_ERR\fP
 .It \fBLOG_WARNING\fP

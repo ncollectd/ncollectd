@@ -64,6 +64,8 @@ static int lmetric_family_append_metric(metric_family_t *fam, lua_State *L, int 
         if (fam->type != METRIC_TYPE_GAUGE_HISTOGRAM)
             return luaL_error(L, "Missmatch metric type, must be METRIC_GAUGE_HISTOGRAM.");
         metric_family_metric_append(fam, *metric);
+    } else {
+        return luaL_error(L, "Unknow metric type.");
     }
 
     return 0;
@@ -85,7 +87,6 @@ static int lmetric_family_append_metric_array(metric_family_t *fam, lua_State *L
         lmetric_family_append_metric(fam, L, -1);
         lua_pop(L, 1);
     }
-    lua_pop(L, 1);
 
     return 0;
 }
@@ -210,7 +211,7 @@ static int lmetric_family_tostring(lua_State *L)
 
     strbuf_putstr(&buf, "metric_family{ ");
     strbuf_putstr(&buf, "name = \"");
-    strbuf_putstr(&buf, fam->name);
+    strbuf_putstr(&buf, fam->name == NULL ? "" : fam->name);
     strbuf_putstr(&buf, "\", type = ");
     switch (fam->type) {
     case METRIC_TYPE_UNKNOWN:
@@ -277,9 +278,9 @@ static int lmetric_family_dispatch(lua_State *L)
     cdtime_t ts = 0;
 
     int argc = lua_gettop(L);
-    if ((argc > 1) && !lua_isnil(L, 1)) {
-        if (lua_isnumber(L, 1))
-            ts = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 1));
+    if ((argc > 1) && !lua_isnil(L, 2)) {
+        if (lua_isnumber(L, 2))
+            ts = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 2));
     }
 
     plugin_dispatch_metric_family(fam, ts);

@@ -154,10 +154,10 @@ static int clua_cb_config(clua_cb_data_t *cb, const config_item_t *ci)
     if (status != 0) {
         const char *errmsg = lua_tostring(L, -1);
         if (errmsg == NULL)
-            PLUGIN_ERROR("Calling a read callback failed. "
+            PLUGIN_ERROR("Calling a config callback failed. "
                          "In addition, retrieving the error message failed.");
         else
-            PLUGIN_ERROR("Calling a read callback failed: %s", errmsg);
+            PLUGIN_ERROR("Calling a config callback failed: %s", errmsg);
         lua_pop(L, 1);
         pthread_mutex_unlock(&cb->script->lock);
         return -1;
@@ -201,10 +201,10 @@ static int clua_cb_call(clua_cb_data_t *cb)
     if (status != 0) {
         const char *errmsg = lua_tostring(L, -1);
         if (errmsg == NULL)
-            PLUGIN_ERROR("Calling a read callback failed. "
+            PLUGIN_ERROR("Calling a callback failed. "
                          "In addition, retrieving the error message failed.");
         else
-            PLUGIN_ERROR("Calling a read callback failed: %s", errmsg);
+            PLUGIN_ERROR("Calling a callback failed: %s", errmsg);
         lua_pop(L, 1);
         pthread_mutex_unlock(&cb->script->lock);
         return -1;
@@ -394,11 +394,11 @@ static int clua_cb_log(lua_State *L, int level)
 {
     const char *msg = luaL_checkstring(L, 1);
 
-    lua_Debug ar;
-    lua_getstack(L, 1, &ar);
-    lua_getinfo(L, "nSl", &ar);
-
-    plugin_log(level, ar.short_src, ar.currentline, ar.name, "%s", msg);
+    lua_Debug ar = {0};
+    if (lua_getstack(L, 1, &ar) == 0) {
+        lua_getinfo(L, "nSl", &ar);
+        plugin_log(level, "lua", ar.currentline, ar.name == NULL ? "?" : ar.name, "%s", msg);
+    }
 
     return 0;
 }
@@ -464,7 +464,7 @@ static int clua_cb_register_generic(lua_State *L, clua_cb_type_t type)
         return luaL_error(L, "%s", "Storing callback function failed");
 
     lua_Debug ar;
-    lua_pushvalue(L, 1);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, callback_id);
     lua_getinfo(L, ">S", &ar);
 
     if (type == LUA_CB_READ) {
@@ -669,7 +669,7 @@ static int clua_cb_unregister_config(lua_State *L)
     clua_script_t *script = clua_get_context(L);
     if (script == NULL)
         return luaL_error(L, "Missing script context.");
-    return clua_cb_unregister_generic(L, &script->shutdown_callbacks);
+    return clua_cb_unregister_generic(L, &script->config_callbacks);
 }
 
 static int clua_cb_unregister_shutdown(lua_State *L)
@@ -677,7 +677,7 @@ static int clua_cb_unregister_shutdown(lua_State *L)
     clua_script_t *script = clua_get_context(L);
     if (script == NULL)
         return luaL_error(L, "Missing script context.");
-    return clua_cb_unregister_generic(L, &script->config_callbacks);
+    return clua_cb_unregister_generic(L, &script->shutdown_callbacks);
 }
 
 static int clua_cb_unregister_notification(lua_State *L)
@@ -982,6 +982,12 @@ static int clua_config_load_plugin(const config_item_t *ci)
 
 static int clua_config_plugin(const config_item_t *ci)
 {
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
     if (ci->children_num == 0)
         return 0;
 
@@ -992,30 +998,24 @@ static int clua_config_plugin(const config_item_t *ci)
     }
 
     if (config_block == NULL) {
-        config_block = ci_copy;
-        return 0;
+        config_block = calloc(1, sizeof(*config_block));
+        if (config_block == NULL) {
+            config_free(ci_copy);
+            PLUGIN_ERROR("calloc failed.");
+            return -1;
+        }
     }
 
     config_item_t *tmp = realloc(config_block->children,
-                  (config_block->children_num + ci_copy->children_num) * sizeof(*tmp));
+                                 (config_block->children_num + 1) * sizeof(*tmp));
     if (tmp == NULL) {
         PLUGIN_ERROR("realloc failed.");
         config_free(ci_copy);
         return -1;
     }
     config_block->children = tmp;
-
-    /* Copy the pointers */
-    memcpy(config_block->children + config_block->children_num, ci_copy->children,
-           ci_copy->children_num * sizeof(*ci_copy->children));
-    config_block->children_num += ci_copy->children_num;
-
-    /* Delete the pointers from the copy, so `config_free' can't free them. */
-    memset(ci_copy->children, 0,
-           ci_copy->children_num * sizeof(*ci_copy->children));
-    ci_copy->children_num = 0;
-
-    config_free(ci_copy);
+    config_block->children[config_block->children_num] = *ci_copy;
+    config_block->children_num++;
 
     return 0;
 }
@@ -1053,18 +1053,22 @@ static int clua_init(void)
     while (script != NULL) {
         clua_script_t *next = script->next;
 
-        clua_cb_data_t *cb = script->config_callbacks;
-        while (cb != NULL) {
-            for (int i = 0; i < config_block->children_num; i++) {
-                config_item_t *child = config_block->children + i;
-                if (cb->name != NULL) {
-                    if (strcmp(cb->name, child->key) == 0) {
-                        clua_cb_config(cb, child);
-                        break;
+        clua_cb_data_t *cb = NULL;
+
+        if (config_block != NULL) {
+            cb = script->config_callbacks;
+            while (cb != NULL) {
+                for (int i = 0; i < config_block->children_num; i++) {
+                    config_item_t *child = config_block->children + i;
+                    if (cb->name != NULL) {
+                        if (strcmp(cb->name, child->values[0].value.string) == 0) {
+                            clua_cb_config(cb, child);
+                            break;
+                        }
                     }
                 }
+                cb = cb->next;
             }
-            cb = cb->next;
         }
 
         cb = script->init_callbacks;
@@ -1087,12 +1091,16 @@ static int clua_shutdown(void)
         clua_script_t *next = script->next;
         clua_cb_data_t *cb = script->shutdown_callbacks;
         while (cb != NULL) {
+            clua_cb_data_t *cb_next = cb->next;
             clua_cb_call(cb);
-            cb = cb->next;
+            cb = cb_next;
         }
         clua_script_free(script);
         script = next;
     }
+
+    if (config_block != NULL)
+        config_free(config_block);
 
     return 0;
 }
