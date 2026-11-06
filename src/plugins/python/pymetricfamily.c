@@ -321,8 +321,10 @@ static PyObject *MetricFamily_dispatch(PyObject *s, PyObject *args, PyObject *kw
         goto error;
 
     PyObject *metrics_list = self->metrics;
+    Py_INCREF(metrics_list);
 
     PyObject *seq_metrics = PySequence_Tuple(metrics_list);
+    Py_DECREF(metrics_list);
     if (seq_metrics == NULL)
         goto error;
 
@@ -580,8 +582,8 @@ static PyObject *MetricFamily_repr(PyObject *s)
     if (l_closing == NULL)
         l_closing = cpy_string_to_unicode_or_bytes(")");
 
-    if ((l_open == NULL) || (l_name == NULL) || (l_help == NULL) || (l_unit == NULL) ||
-        (l_metrics == NULL) || (l_closing == NULL))
+    if ((l_open == NULL) || (l_type == NULL) || (l_name == NULL) || (l_help == NULL) ||
+        (l_unit == NULL) || (l_metrics == NULL) || (l_closing == NULL))
         return NULL;
 
     PyObject *ret = cpy_string_to_unicode_or_bytes(s->ob_type->tp_name);
