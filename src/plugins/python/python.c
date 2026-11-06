@@ -273,6 +273,9 @@ void cpy_log_exception(const char *context)
         typename = "NamelessException";
     if (message == NULL)
         message = "N/A";
+
+    PyErr_Clear();
+
     Py_BEGIN_ALLOW_THREADS;
     if (ncollectd_error) {
         PLUGIN_WARNING("%s in %s: %s", typename, context, message);
@@ -280,8 +283,10 @@ void cpy_log_exception(const char *context)
         PLUGIN_ERROR("Unhandled python exception in %s: %s: %s", context, typename, message);
     }
     Py_END_ALLOW_THREADS;
+
     Py_XDECREF(tn);
     Py_XDECREF(m);
+
     if (!cpy_format_exception || !traceback || ncollectd_error) {
         PyErr_Clear();
         Py_DECREF(type);
@@ -309,6 +314,7 @@ void cpy_log_exception(const char *context)
         }
 
         cpy = strdup(msg);
+        Py_DECREF(line);
         if (cpy == NULL)
             continue;
 
@@ -409,21 +415,19 @@ static PyObject *cpy_create_metric(metric_t *m, metric_type_t type)
         }
         break;
     case METRIC_TYPE_STATE_SET: {
-        if (m->value.state_set.num > 0) {
-            PyObject *dict_set = PyDict_New();
-            if (dict_set != NULL) {
-                for (size_t i = 0; i < m->value.state_set.num ; i++) {
-                    state_t *state_item = &m->value.state_set.ptr[i];
-                    PyDict_SetItemString(dict_set, state_item->name,
-                                                   state_item->enabled ? Py_True : Py_False);
-                }
-                cpy_metric = MetricStateSet_New(dict_set);
-                if (cpy_metric != NULL) {
-                    MetricStateSet *set = (MetricStateSet *) cpy_metric;
-                    metric = &set->metric;
-                }
-                Py_DECREF(dict_set);
+        PyObject *dict_set = PyDict_New();
+        if (dict_set != NULL) {
+            for (size_t i = 0; i < m->value.state_set.num ; i++) {
+                state_t *state_item = &m->value.state_set.ptr[i];
+                PyDict_SetItemString(dict_set, state_item->name,
+                                               state_item->enabled ? Py_True : Py_False);
             }
+            cpy_metric = MetricStateSet_New(dict_set);
+            if (cpy_metric != NULL) {
+                MetricStateSet *set = (MetricStateSet *) cpy_metric;
+                metric = &set->metric;
+            }
+            Py_DECREF(dict_set);
         }
     }   break;
     case METRIC_TYPE_INFO: {
@@ -557,18 +561,23 @@ static int cpy_write_callback(const metric_family_t *fam, user_data_t *data)
     PyObject *list = PyList_New(fam->metric.num); /* New reference. */
     if (list == NULL) {
         cpy_log_exception("write callback");
-        CPY_RETURN_FROM_THREADS 0;
+        CPY_RETURN_FROM_THREADS -1;
     }
 
     for (size_t i = 0; i < fam->metric.num; ++i) {
         metric_t *m = fam->metric.ptr + i;
         PyObject *item = cpy_create_metric(m, fam->type);
         if (item == NULL) {
-            Py_BEGIN_ALLOW_THREADS;
-//            PLUGIN_ERROR("Unknown value type %d.", ds->ds[i].type);
-            Py_END_ALLOW_THREADS;
+            if (PyErr_Occurred() != NULL) {
+                cpy_log_exception("metric building for write callback");
+            } else {
+                Py_BEGIN_ALLOW_THREADS;
+                PLUGIN_ERROR("Unable to build the metric %zu of the family '%s' "
+                             "for the write callback.", i, fam->name);
+                Py_END_ALLOW_THREADS;
+            }
             Py_DECREF(list);
-            CPY_RETURN_FROM_THREADS 0;
+            CPY_RETURN_FROM_THREADS -1;
         }
 
         PyList_SetItem(list, i, item);
@@ -576,7 +585,7 @@ static int cpy_write_callback(const metric_family_t *fam, user_data_t *data)
         if (PyErr_Occurred() != NULL) {
             cpy_log_exception("metric building for write callback");
             Py_DECREF(list);
-            CPY_RETURN_FROM_THREADS 0;
+            CPY_RETURN_FROM_THREADS -1;
         }
     }
 
@@ -588,7 +597,7 @@ static int cpy_write_callback(const metric_family_t *fam, user_data_t *data)
     if (pymf == NULL) {
         cpy_log_exception("failed to create MetricFamily object");
         Py_DECREF(list);
-        CPY_RETURN_FROM_THREADS 0;
+        CPY_RETURN_FROM_THREADS -1;
     }
 
     MetricFamily *mf = (MetricFamily *)pymf;
@@ -605,6 +614,7 @@ static int cpy_write_callback(const metric_family_t *fam, user_data_t *data)
     Py_XDECREF(pymf);
     if (ret == NULL) {
         cpy_log_exception("write callback");
+        CPY_RETURN_FROM_THREADS -1;
     } else {
         Py_DECREF(ret);
     }
@@ -628,7 +638,7 @@ static int cpy_notification_callback(const notification_t *notification, user_da
     PyObject *notify = Notification_New(name); /* New reference. */
     if (notify == NULL) {
         cpy_log_exception("failed to create Notification object");
-        CPY_RETURN_FROM_THREADS 0;
+        CPY_RETURN_FROM_THREADS -1;
     }
 
     Notification *n = (Notification *)notify;
@@ -664,6 +674,7 @@ static int cpy_notification_callback(const notification_t *notification, user_da
     Py_XDECREF(notify);
     if (ret == NULL) {
         cpy_log_exception("notification callback");
+        CPY_RETURN_FROM_THREADS -1;
     } else {
         Py_DECREF(ret);
     }
@@ -677,6 +688,10 @@ static void cpy_log_callback(const log_msg_t *msg, user_data_t *data)
     cpy_callback_t *c = data->data;
 
     CPY_LOCK_THREADS
+
+    PyObject *exc_type, *exc_value, *exc_traceback;
+    PyErr_Fetch(&exc_type, &exc_value, &exc_traceback);
+
     PyObject *text = cpy_string_to_unicode_or_bytes(msg->msg); /* New reference. */
     PyObject *ret;
 
@@ -689,15 +704,17 @@ static void cpy_log_callback(const log_msg_t *msg, user_data_t *data)
     }
 
     if (ret == NULL) {
-        /* FIXME */
-        /* Do we really want to trigger a log callback because a log callback failed?
-         * Probably not. */
-        PyErr_Print();
+        /* Do not trigger a log callback because a log callback failed.
+         * PyErr_Print() can not be used here: it calls Py_Exit() on SystemExit. */
+        PyErr_WriteUnraisable(c->callback);
         /* In case someone wanted to be clever, replaced stderr and failed at that. */
         PyErr_Clear();
     } else {
         Py_DECREF(ret);
     }
+
+    PyErr_Restore(exc_type, exc_value, exc_traceback);
+
     CPY_RELEASE_THREADS
 }
 
@@ -878,7 +895,6 @@ static PyObject *cpy_register_write(__attribute__((unused)) PyObject *self,
                                     PyObject *args, PyObject *kwds)
 {
     char buf[512];
-    cpy_callback_t *c = NULL;
     char *name = NULL;
     PyObject *callback = NULL, *data = NULL;
     static char *kwlist[] = {"callback", "data", "name", NULL};
@@ -896,8 +912,7 @@ static PyObject *cpy_register_write(__attribute__((unused)) PyObject *self,
     cpy_build_name(buf, sizeof(buf), callback, name);
     PyMem_Free(name);
 
-
-    c = calloc(1, sizeof(*c));
+    cpy_callback_t *c = calloc(1, sizeof(*c));
     if (c == NULL) {
         PyErr_NoMemory();
         return NULL;
@@ -1086,6 +1101,12 @@ static PyObject * cpy_unregister_generic_userdata(cpy_unregister_function_t *unr
         name = buf;
     }
     
+    char fullname[512];
+    if (strncmp(name, "python/", strlen("python/")) != 0) {
+        ssnprintf(fullname, sizeof(fullname), "python/%s", name);
+        name = fullname;
+    }
+
     int status = 0;
 
     Py_BEGIN_ALLOW_THREADS;
@@ -1160,10 +1181,63 @@ static PyMethodDef cpy_methods[] = {
     {0, 0, 0, 0}
 };
 
+static void cpy_call_callback_list(cpy_callback_t **list_head, const char *context)
+{
+    size_t num = 0;
+    for (cpy_callback_t *c = *list_head; c != NULL; c = c->next)
+        num++;
+
+    if (num == 0)
+        return;
+
+    struct {
+        PyObject *callback;
+        PyObject *data;
+    } *snapshot = calloc(num, sizeof(*snapshot));
+    if (snapshot == NULL) {
+        PyErr_NoMemory();
+        cpy_log_exception(context);
+        return;
+    }
+
+    size_t n = 0;
+    for (cpy_callback_t *c = *list_head; (c != NULL) && (n < num); c = c->next, n++) {
+        Py_INCREF(c->callback);
+        snapshot[n].callback = c->callback;
+        Py_XINCREF(c->data);
+        snapshot[n].data = c->data;
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        /* Skip the callbacks unregistered by a previous callback. */
+        bool registered = false;
+        for (cpy_callback_t *c = *list_head; c != NULL; c = c->next) {
+            if ((c->callback == snapshot[i].callback) && (c->data == snapshot[i].data)) {
+                registered = true;
+                break;
+            }
+        }
+        if (!registered)
+            continue;
+
+        PyObject *ret = PyObject_CallFunctionObjArgs(snapshot[i].callback, snapshot[i].data,
+                                                     (void *)0); /* New reference. */
+        if (ret == NULL)
+            cpy_log_exception(context);
+        else
+            Py_DECREF(ret);
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        Py_DECREF(snapshot[i].callback);
+        Py_XDECREF(snapshot[i].data);
+    }
+
+    free(snapshot);
+}
+
 static int cpy_shutdown(void)
 {
-    PyObject *ret;
-
     if (!state) {
         printf("================================================================\n");
         printf("ncollectd shutdown while running an interactive session.\n");
@@ -1176,13 +1250,7 @@ static int cpy_shutdown(void)
 
     CPY_LOCK_THREADS
 
-    for (cpy_callback_t *c = cpy_shutdown_callbacks; c; c = c->next) {
-        ret = PyObject_CallFunctionObjArgs(c->callback, c->data, (void *)0); /* New reference. */
-        if (ret == NULL)
-            cpy_log_exception("shutdown callback");
-        else
-            Py_DECREF(ret);
-    }
+    cpy_call_callback_list(&cpy_shutdown_callbacks, "shutdown callback");
     PyErr_Print();
 
     Py_BEGIN_ALLOW_THREADS;
@@ -1258,7 +1326,6 @@ static void *cpy_interactive(void *pipefd)
 
 static int cpy_init(void)
 {
-    PyObject *ret;
     int pipefd[2];
     char buf;
     static pthread_t thread;
@@ -1310,13 +1377,7 @@ static int cpy_init(void)
         state = PyEval_SaveThread();
     }
     CPY_LOCK_THREADS
-    for (cpy_callback_t *c = cpy_init_callbacks; c; c = c->next) {
-        ret = PyObject_CallFunctionObjArgs(c->callback, c->data, (void *)0); /* New reference. */
-        if (ret == NULL)
-            cpy_log_exception("init callback");
-        else
-            Py_DECREF(ret);
-    }
+    cpy_call_callback_list(&cpy_init_callbacks, "init callback");
     CPY_RELEASE_THREADS
 
     return 0;
@@ -1403,15 +1464,21 @@ static int cpy_init_python(void)
     PyImport_AppendInittab("ncollectd", PyInit_ncollectd);
 #endif
 
+    /* Chances are the current signal handler is already SIG_DFL, but let's make sure.
+     * Python only installs its own SIGINT handler if the current one is SIG_DFL. */
+    PyOS_sighandler_t cur_sig = PyOS_setsig(SIGINT, SIG_DFL);
+
 #if PY_VERSION_ATLEAST(3, 8)
     PyConfig config = {0};
     PyConfig_InitPythonConfig(&config);
     PyConfig_SetBytesArgv(&config, 1, (char *[]){""});
     PyStatus status = Py_InitializeFromConfig(&config);
     if (PyStatus_IsError(status)) {
+        PyOS_setsig(SIGINT, cur_sig);
         PLUGIN_ERROR("python initialization: Py_InitializeFromConfig(): %s", status.err_msg);
         return 1;
     } else if (PyStatus_IsExit(status)) {
+        PyOS_setsig(SIGINT, cur_sig);
         PLUGIN_ERROR("python initialization: Py_InitializeFromConfig() returned exit code %d",
                      status.exitcode);
         return 1;
@@ -1421,8 +1488,7 @@ static int cpy_init_python(void)
     Py_Initialize();
 #endif
 
-    /* Chances are the current signal handler is already SIG_DFL, but let's make sure. */
-    PyOS_sighandler_t cur_sig = PyOS_setsig(SIGINT, SIG_DFL);
+     /* Keep the Python SIGINT handler for the interactive session and restore the old one. */
     python_sigint_handler = PyOS_setsig(SIGINT, cur_sig);
 
     if (PyType_Ready(&ConfigType) == -1) {
@@ -1527,14 +1593,13 @@ static int cpy_init_python(void)
         return 1;
     }
 
-    PyList_SetSlice(sys_path, 0, 1, NULL);
-
 #if PY_VERSION_ATLEAST(3, 8)
-    /* no op */
+    /* no op : Py_InitializeFromConfig() does not prepend it. */
 #elif defined(IS_PY3K)
     wchar_t *argv = L"";
-    PySys_SetArgv(1, &argv);
+    PySys_SetArgvEx(1, &argv, 0);
 #else
+    PyList_SetSlice(sys_path, 0, 1, NULL);
     char *argv = "";
     PySys_SetArgv(1, &argv);
 #endif
@@ -1552,6 +1617,12 @@ static int cpy_init_python(void)
     Py_INCREF(&ConfigType);
     if (PyModule_AddObject(module, "Config", (void *)&ConfigType) != 0) {
         Py_DECREF(&ConfigType);
+        goto error;
+    }
+
+    Py_INCREF(&MetricType);
+    if (PyModule_AddObject(module, "Metric", (void *)&MetricType) != 0) {
+        Py_DECREF(&MetricType);
         goto error;
     }
 
@@ -1751,19 +1822,22 @@ static int cpy_config(config_item_t *ci)
                     cpy_format_exception = NULL;
                     continue;
                 }
+
                 if (cpy_format_exception)
                     continue;
+
                 tb = PyImport_ImportModule("traceback"); /* New reference. */
                 if (tb == NULL) {
                     cpy_log_exception("python initialization");
                     status = 1;
-                    continue;
+                    break;
                 }
                 cpy_format_exception = PyObject_GetAttrString(tb, "format_exception"); /* New reference. */
                 Py_DECREF(tb);
                 if (cpy_format_exception == NULL) {
                     cpy_log_exception("python initialization");
                     status = 1;
+                    break;
                 }
             }
         } else if (strcasecmp(item->key, "module-path") == 0) {
@@ -1772,7 +1846,7 @@ static int cpy_config(config_item_t *ci)
 
             if (cf_util_get_string(item, &dir) != 0) {
                 status = 1;
-                continue;
+                break;
             }
             dir_object = cpy_string_to_unicode_or_bytes(dir); /* New reference. */
             if (dir_object == NULL) {
@@ -1780,13 +1854,14 @@ static int cpy_config(config_item_t *ci)
                 free(dir);
                 cpy_log_exception("python initialization");
                 status = 1;
-                continue;
+                break;
             }
             if (PyList_Insert(sys_path, 0, dir_object) != 0) {
                 ERROR("python plugin: Unable to prepend \"%s\" to "
                       "python module path.", dir);
                 cpy_log_exception("python initialization");
                 status = 1;
+                break;
             }
             Py_DECREF(dir_object);
             free(dir);
@@ -1796,20 +1871,22 @@ static int cpy_config(config_item_t *ci)
 
             if (cf_util_get_string(item, &module_name) != 0) {
                 status = 1;
-                continue;
+                break;
             }
             module = PyImport_ImportModule(module_name); /* New reference. */
             if (module == NULL) {
                 PLUGIN_ERROR("Error importing module \"%s\".", module_name);
                 cpy_log_exception("importing module");
                 status = 1;
+                break;
             }
             free(module_name);
             Py_XDECREF(module);
         } else if (strcasecmp(item->key, "plugin") == 0) {
             status = cpy_config_module(item);
         } else {
-            PLUGIN_ERROR("Unknown config key \"%s\".", item->key);
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                         item->key, cf_get_file(item), cf_get_lineno(item));
             status = 1;
         }
 

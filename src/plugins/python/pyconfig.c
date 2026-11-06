@@ -145,7 +145,7 @@ static PyObject *Config_repr(PyObject *s)
     }
 
     if ((self->values != NULL) &&
-        (!PyTuple_Check(self->values) || !PyList_Check(self->values)) &&
+        (PyTuple_Check(self->values) || PyList_Check(self->values)) &&
         (PySequence_Length(self->values) > 0)) {
         CPY_STRCAT(&ret, l_values);
         PyObject *tmp = PyObject_Repr(self->values);
@@ -157,7 +157,7 @@ static PyObject *Config_repr(PyObject *s)
     }
 
     if ((self->children != NULL) &&
-        (!PyTuple_Check(self->children) || !PyList_Check(self->children)) &&
+        (PyTuple_Check(self->children) || PyList_Check(self->children)) &&
         (PySequence_Length(self->children) > 0)) {
         CPY_STRCAT(&ret, l_children);
         PyObject *tmp = PyObject_Repr(self->children);

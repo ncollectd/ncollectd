@@ -719,6 +719,10 @@ static PyObject *MetricGaugeLong_repr(PyObject *s)
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp =  PyLong_FromLongLong(self->value);
+    if (tmp == NULL) {
+        Py_XDECREF(ret);
+        return NULL;
+    }
     
     CPY_SUBSTITUTE(PyObject_Repr, tmp, tmp);
     CPY_STRCAT_AND_DEL(&ret, tmp);
@@ -866,6 +870,8 @@ static PyObject *MetricCounterDouble_repr(PyObject *s)
     MetricCounterDouble *self = (MetricCounterDouble *)s;
 
     PyObject *ret = cpy_metric_repr(s);
+    if (ret == NULL)
+        return NULL;
 
     CPY_STRCAT(&ret, l_value);
     PyObject *tmp = PyFloat_FromDouble(self->value);

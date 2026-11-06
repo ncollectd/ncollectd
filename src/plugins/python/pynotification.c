@@ -68,6 +68,16 @@ static int Notification_init(PyObject *s, PyObject *args, PyObject *kwds)
         return -1;
     }
 
+    if ((labels != NULL) && (labels != Py_None) && !PyDict_Check(labels)) {
+        PyErr_SetString(PyExc_TypeError, "labels must be a dict");
+        return -1;
+    }
+
+    if ((annotations != NULL) && (annotations != Py_None) && !PyDict_Check(annotations)) {
+        PyErr_SetString(PyExc_TypeError, "annotations must be a dict");
+        return -1;
+    }
+
     self->time = time;
 
     switch (severity) {
@@ -156,9 +166,18 @@ static PyObject *Notification_dispatch(Notification *self, __attribute__((unused
         break;
     }
 
+    PyObject *str_name = self->name;
+    Py_INCREF(str_name);
+    const char *string = cpy_unicode_or_bytes_to_string(&str_name);
+    if (string == NULL) {
+        Py_DECREF(str_name);
+        return NULL;
+    }
+
     if ((self->labels != NULL) && (self->labels != Py_None)) {
         if (cpy_build_labels(self->labels, &n.label) != 0) {
             label_set_reset(&n.label);
+            Py_DECREF(str_name);
             return NULL;
         }
     }
@@ -167,24 +186,9 @@ static PyObject *Notification_dispatch(Notification *self, __attribute__((unused
         if (cpy_build_labels(self->annotations, &n.annotation) != 0) {
             label_set_reset(&n.label);
             label_set_reset(&n.annotation);
+            Py_DECREF(str_name);
             return NULL;
         }
-    }
-
-    PyObject *str_name = PyObject_Str(self->name);
-
-    const char *string = NULL;
-    if (str_name != NULL)
-        string = cpy_unicode_or_bytes_to_string(&str_name);
-    
-    if (string == NULL) {
-        label_set_reset(&n.label);
-        label_set_reset(&n.annotation);
-        Py_XDECREF(str_name);
-        Py_XDECREF(name);
-        Py_XDECREF(labels);
-        Py_XDECREF(annotations);
-        return NULL;
     }
 
     n.name = discard_const(string);
