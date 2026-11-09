@@ -14,50 +14,39 @@
 
 static int lmetric_unknown_double_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value = VALUE_UNKNOWN_FLOAT64(0);
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The value is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    m->value = VALUE_UNKNOWN_FLOAT64(0);
+    luaL_setmetatable(L, MT_METRIC_UNKNOWN_DOUBLE);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_isnumber(L, 1))
             return luaL_error(L, "Value must be a number.");
-        m.value.unknown.float64 = luaL_checknumber(L, 1);
+        m->value.unknown.float64 = luaL_checknumber(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_UNKNOWN);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_UNKNOWN);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_UNKNOWN_DOUBLE);
 
     return 1;
 }
@@ -158,16 +147,7 @@ static int lmetric_unknown_double_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_unknown_double_set(lua_State *L)
@@ -181,13 +161,13 @@ static int lmetric_unknown_double_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -209,12 +189,7 @@ static int lmetric_unknown_double_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricUnknownDouble");
 }
 
 static luaL_Reg metric_unknown_double_reg[] = {
@@ -236,50 +211,39 @@ int register_metric_unknown_double(lua_State *L)
 
 static int lmetric_unknown_integer_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value = VALUE_UNKNOWN_INT64(0);
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The value is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    m->value = VALUE_UNKNOWN_INT64(0);
+    luaL_setmetatable(L, MT_METRIC_UNKNOWN_INTEGER);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_isnumber(L, 1))
             return luaL_error(L, "Value must be a number.");
-        m.value.unknown.int64 = luaL_checknumber(L, 1);
+        m->value.unknown.int64 = luac_checkint64(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_UNKNOWN);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_UNKNOWN);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_UNKNOWN_INTEGER);
 
     return 1;
 }
@@ -373,23 +337,14 @@ static int lmetric_unknown_integer_get(lua_State *L)
             break;
         case 'v':
             if (strcmp(key, "value") == 0) {
-                lua_pushnumber(L, (lua_Number)m->value.unknown.int64);
+                luac_pushint64(L, m->value.unknown.int64);
                 return 1;
             }
             break;
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_unknown_integer_set(lua_State *L)
@@ -403,13 +358,13 @@ static int lmetric_unknown_integer_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -424,19 +379,14 @@ static int lmetric_unknown_integer_set(lua_State *L)
             break;
         case 'v':
             if (strcmp(key, "value") == 0) {
-                m->value.unknown.int64 = luaL_checknumber(L, 3);
+                m->value.unknown.int64 = luac_checkint64(L, 3);
                 return 0;
             }
             break;
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricUnknownInteger");
 }
 
 static luaL_Reg metric_unknown_integer_reg[] = {
@@ -458,51 +408,39 @@ int register_metric_unknown_interger(lua_State *L)
 
 static int lmetric_gauge_double_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value = VALUE_GAUGE_FLOAT64(0);
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The value is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    m->value = VALUE_GAUGE_FLOAT64(0);
+    luaL_setmetatable(L, MT_METRIC_GAUGE_DOUBLE);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
-        if (!lua_isnumber(L, 1)) {
+        if (!lua_isnumber(L, 1))
             return luaL_error(L, "Value must be a number.");
-        }
-        m.value.gauge.float64 = luaL_checknumber(L, 1);
+        m->value.gauge.float64 = luaL_checknumber(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_GAUGE_DOUBLE);
 
     return 1;
 }
@@ -603,16 +541,7 @@ static int lmetric_gauge_double_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_gauge_double_set(lua_State *L)
@@ -626,13 +555,13 @@ static int lmetric_gauge_double_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -654,12 +583,7 @@ static int lmetric_gauge_double_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricGaugeDouble");
 }
 
 static luaL_Reg metric_gauge_double_reg[] = {
@@ -681,50 +605,39 @@ int register_metric_gauge_double(lua_State *L)
 
 static int lmetric_gauge_integer_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value = VALUE_GAUGE_INT64(0);
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The value is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    m->value = VALUE_GAUGE_INT64(0);
+    luaL_setmetatable(L, MT_METRIC_GAUGE_INTEGER);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_isnumber(L, 1))
             return luaL_error(L, "Value must be a number.");
-        m.value.gauge.int64 = luaL_checknumber(L, 1);
+        m->value.gauge.int64 = luac_checkint64(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_GAUGE_INTEGER);
 
     return 1;
 }
@@ -818,23 +731,14 @@ static int lmetric_gauge_integer_get(lua_State *L)
             break;
         case 'v':
             if (strcmp(key, "value") == 0) {
-                lua_pushnumber(L, (lua_Number)m->value.gauge.int64);
+                luac_pushint64(L, m->value.gauge.int64);
                 return 1;
             }
             break;
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_gauge_integer_set(lua_State *L)
@@ -848,13 +752,13 @@ static int lmetric_gauge_integer_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -869,19 +773,14 @@ static int lmetric_gauge_integer_set(lua_State *L)
             break;
         case 'v':
             if (strcmp(key, "value") == 0) {
-                m->value.gauge.int64 = luaL_checknumber(L, 3);
+                m->value.gauge.int64 = luac_checkint64(L, 3);
                 return 0;
             }
             break;
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricGaugeInteger");
 }
 
 static luaL_Reg metric_gauge_integer_reg[] = {
@@ -903,50 +802,39 @@ int register_metric_gauge_interger(lua_State *L)
 
 static int lmetric_counter_double_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value = VALUE_COUNTER_FLOAT64(0);
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The value is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    m->value = VALUE_COUNTER_FLOAT64(0);
+    luaL_setmetatable(L, MT_METRIC_COUNTER_DOUBLE);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_isnumber(L, 1))
             return luaL_error(L, "Value must be a number.");
-        m.value.counter.float64 = luaL_checknumber(L, 1);
+        m->value.counter.float64 = luaL_checknumber(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_COUNTER);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_COUNTER);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_COUNTER_DOUBLE);
 
     return 1;
 }
@@ -1047,16 +935,7 @@ static int lmetric_counter_double_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_counter_double_set(lua_State *L)
@@ -1070,13 +949,13 @@ static int lmetric_counter_double_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -1098,12 +977,7 @@ static int lmetric_counter_double_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricCounterDouble");
 }
 
 static luaL_Reg metric_counter_double_reg[] = {
@@ -1125,50 +999,39 @@ int register_metric_counter_double(lua_State *L)
 
 static int lmetric_counter_integer_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value = VALUE_COUNTER_UINT64(0);
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The value is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    m->value = VALUE_COUNTER_UINT64(0);
+    luaL_setmetatable(L, MT_METRIC_COUNTER_INTEGER);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_isnumber(L, 1))
             return luaL_error(L, "Value must be a number.");
-        m.value.counter.uint64 = luaL_checknumber(L, 1);
+        m->value.counter.uint64 = luac_checkuint64(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_COUNTER);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_COUNTER);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_COUNTER_INTEGER);
 
     return 1;
 }
@@ -1262,23 +1125,14 @@ static int lmetric_counter_integer_get(lua_State *L)
             break;
         case 'v':
             if (strcmp(key, "value") == 0) {
-                lua_pushnumber(L, (lua_Number)m->value.counter.uint64);
+                luac_pushuint64(L, m->value.counter.uint64);
                 return 1;
             }
             break;
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_counter_integer_set(lua_State *L)
@@ -1292,13 +1146,13 @@ static int lmetric_counter_integer_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -1313,19 +1167,14 @@ static int lmetric_counter_integer_set(lua_State *L)
             break;
         case 'v':
             if (strcmp(key, "value") == 0) {
-                m->value.counter.uint64 = luaL_checknumber(L, 3);
+                m->value.counter.uint64 = luac_checkuint64(L, 3);
                 return 0;
             }
             break;
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricCounterInteger");
 }
 
 static luaL_Reg metric_counter_integer_reg[] = {
@@ -1347,49 +1196,38 @@ int register_metric_counter_interger(lua_State *L)
 
 static int lmetric_info_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The info is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    luaL_setmetatable(L, MT_METRIC_INFO);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_istable(L, 1))
             return luaL_error(L, "Info must be a table.");
-        luac_to_labels(L, 1, &m.value.info);
+        luac_to_labels(L, 1, &m->value.info);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_INFO);
-            return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        if (!lua_isnumber(L, 3))
+            return luaL_error(L, "Time must be a timestamp.");
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_INFO);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_INFO);
 
     return 1;
 }
@@ -1474,7 +1312,17 @@ static int lmetric_info_get(lua_State *L)
             }
             break;
         case 'i':
-            if (strcmp(key, "interval") == 0) {
+            if (strcmp(key, "info") == 0) {
+                lua_createtable(L, 0, m->value.info.num);
+
+                for (size_t i = 0; i < m->value.info.num; i++) {
+                    label_pair_t *pair = &m->value.info.ptr[i];
+                    lua_pushstring(L, pair->value);
+                    lua_setfield(L, -2, pair->name);
+                }
+
+                return 1;
+            } else if (strcmp(key, "interval") == 0) {
                 lua_pushnumber(L, (lua_Number)CDTIME_T_TO_DOUBLE(m->interval));
                 return 1;
             }
@@ -1492,32 +1340,10 @@ static int lmetric_info_get(lua_State *L)
                 return 1;
             }
             break;
-        case 'v':
-            if (strcmp(key, "value") == 0) {
-                lua_createtable(L, 0, m->value.info.num);
-
-                for (size_t i = 0; i < m->value.info.num; i++) {
-                    label_pair_t *pair = &m->value.info.ptr[i];
-                    lua_pushstring(L, pair->value);
-                    lua_setfield(L, -2, pair->name);
-                }
-
-                return 1;
-            }
-            break;
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_info_set(lua_State *L)
@@ -1531,13 +1357,19 @@ static int lmetric_info_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
-            if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+            if (strcmp(key, "info") == 0) {
+                if (!lua_istable(L, 3))
+                    return luaL_error(L, "Value must be a table.");
+                label_set_reset(&m->value.info);
+                luac_to_labels(L, 3, &m->value.info);
+                return 0;
+            } else if (strcmp(key, "interval") == 0) {
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -1550,24 +1382,10 @@ static int lmetric_info_set(lua_State *L)
                 return 0;
             }
             break;
-        case 'v':
-            if (strcmp(key, "value") == 0) {
-                if (!lua_istable(L, 3))
-                    return luaL_error(L, "Value must be a table.");
-                label_set_reset(&m->value.info);
-                luac_to_labels(L, 3, &m->value.info);
-                return 0;
-            }
-            break;
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricInfo");
 }
 
 static luaL_Reg metric_info_reg[] = {
@@ -1614,7 +1432,8 @@ int luac_to_state_set(lua_State *L, int idx, state_set_t *set)
         if (lua_type(L, -1) != LUA_TBOOLEAN)
             return luaL_error(L, "State set value ''%s' must be LUA_TBOOLEAN.", lua_tostring(L, -2));
 
-        state_set_add(set, key, lua_toboolean(L, -1));
+        if (state_set_add(set, key, lua_toboolean(L, -1)) != 0)
+            return luaL_error(L, "Cannot add the state '%s', the name may be invalid.", key);
 
         lua_pop(L, 1);
     }
@@ -1624,49 +1443,38 @@ int luac_to_state_set(lua_State *L, int idx, state_set_t *set)
 
 static int lmetric_state_set_new(lua_State *L)
 {
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The stateset is a required argument.");
 
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    luaL_setmetatable(L, MT_METRIC_STATE_SET);
+
     if ((argc > 0) && !lua_isnil(L, 1)) {
         if (!lua_istable(L, 1))
             return luaL_error(L, "State set must be a table.");
-        luac_to_state_set(L, 1, &m.value.state_set);
+        luac_to_state_set(L, 1, &m->value.state_set);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
         if (!lua_istable(L, 2))
             return luaL_error(L, "Labels must be a table.");
-        luac_to_labels(L, 2, &m.label);
+        luac_to_labels(L, 2, &m->label);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_STATE_SET);
+        if (!lua_isnumber(L, 3))
             return luaL_error(L, "Interval time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        m->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_STATE_SET);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->interval = luac_checkcdtime(L, 4);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_STATE_SET);
 
     return 1;
 }
@@ -1766,8 +1574,8 @@ static int lmetric_state_set_get(lua_State *L)
                 return 1;
             }
             break;
-        case 'v':
-            if (strcmp(key, "value") == 0) {
+        case 's':
+            if (strcmp(key, "set") == 0) {
                 lua_createtable(L, 0, m->value.state_set.num);
 
                 for (size_t i = 0; i < m->value.state_set.num; i++) {
@@ -1781,16 +1589,7 @@ static int lmetric_state_set_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_state_set_set(lua_State *L)
@@ -1804,13 +1603,13 @@ static int lmetric_state_set_set(lua_State *L)
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -1823,8 +1622,8 @@ static int lmetric_state_set_set(lua_State *L)
                 return 0;
             }
             break;
-        case 'v':
-            if (strcmp(key, "value") == 0) {
+        case 's':
+            if (strcmp(key, "set") == 0) {
                 if (!lua_istable(L, 3))
                     return luaL_error(L, "Value must be a table.");
                 state_set_reset(&m->value.state_set);
@@ -1835,12 +1634,7 @@ static int lmetric_state_set_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricStateSet");
 }
 
 static luaL_Reg metric_state_set_reg[] = {
@@ -1849,7 +1643,7 @@ static luaL_Reg metric_state_set_reg[] = {
     { "__tostring", lmetric_state_set_tostring },
     { "__newindex", lmetric_state_set_set      },
     { "__index",    lmetric_state_set_get      },
-    { NULL,         NULL                  }
+    { NULL,         NULL                       }
 };
 
 int register_metric_state_set(lua_State *L)
@@ -1870,20 +1664,30 @@ static int luac_to_quantiles(lua_State *L, int idx, double *quantile, double *va
         PLUGIN_DEBUG("idx(%d), top(%d)", idx, lua_gettop(L));
         return -1;
     }
-    
+
+    if (!lua_istable(L, idx))
+        return -1;
+
+    if (lua_rawlen(L, idx) != 2)
+        return -1;
+
     size_t size = lua_rawlen(L, idx);
     if (size != 2) {
         return -1;
     }
 
     lua_rawgeti(L, idx, 1);
-    *quantile = luaL_checknumber(L, -1);
-    lua_pop(L, 1);
-
     lua_rawgeti(L, idx, 2);
-    *value = luaL_checknumber(L, -1);
-    lua_pop(L, 1);
-    
+
+    if (!lua_isnumber(L, -2) || !lua_isnumber(L, -1)) {
+        lua_pop(L, 2);
+        return -1;
+    }
+
+    *quantile = lua_tonumber(L, -2);
+    *value = lua_tonumber(L, -1);
+    lua_pop(L, 2);
+
     return 0;
 }
 
@@ -1898,13 +1702,18 @@ static int luac_to_summary_quantiles(lua_State *L, int idx, value_t *svalue)
         return -1;
     }
 
+    if (!lua_istable(L, idx))
+        return -1;
+
     size_t size = lua_rawlen(L, idx);
     for (size_t i = 0; i < size; i++) {
         lua_rawgeti(L, idx, i + 1);
         double quantile = 0;
         double value = 0;
-        if (luac_to_quantiles(L, -1, &quantile, &value) != 0)
+        if (luac_to_quantiles(L, -1, &quantile, &value) != 0) {
+            lua_pop(L, 1);
             return -1;
+        }
         svalue->summary = summary_quantile_append(svalue->summary, quantile, value);
         lua_pop(L, 1);
     }
@@ -1918,70 +1727,50 @@ static int lmetric_summary_new(lua_State *L)
     if (argc < 3)
         return luaL_error(L, "The sum, count and quantiles are required arguments.");
 
-    metric_t m = {0};
 
-    m.time = 0;
-    m.interval = 0;
-    m.value.summary = summary_new();
-    if (m.value.summary == NULL)
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    luaL_setmetatable(L, MT_METRIC_SUMMARY);
+    m->value.summary = summary_new();
+    if (m->value.summary == NULL)
         return luaL_error(L, "Fail to create summary.");
 
     if ((argc > 0) && !lua_isnil(L, 1)) {
-        if (!lua_isnumber(L, 1)) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (!lua_isnumber(L, 1))
             return luaL_error(L, "Sum must be a number.");
-        }
-        m.value.summary->sum = luaL_checknumber(L, 1);
+        m->value.summary->sum = luaL_checknumber(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
-        if (!lua_isnumber(L, 2)) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (!lua_isnumber(L, 2))
             return luaL_error(L, "Count must be a number.");
-        }
-        m.value.summary->count = luaL_checknumber(L, 2);
+        m->value.summary->count = luac_checkuint64(L, 2);
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!luac_isarray(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (!luac_isarray(L, 3))
             return luaL_error(L, "Quantiles must be an array.");
-        }
-        if (luac_to_summary_quantiles(L, 3, &m.value) != 0) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (luac_to_summary_quantiles(L, 3, &m->value) != 0)
             return luaL_error(L, "Quantile must be an array of two: the quantile and the value.");
-        }
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_istable(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (!lua_istable(L, 4))
             return luaL_error(L, "Labels must be a table.");
-        }
-        luac_to_labels(L, 4, &m.label);
+        luac_to_labels(L, 4, &m->label);
     }
 
     if ((argc > 4) && !lua_isnil(L, 5)) {
-        if (!lua_isnumber(L, 5)) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (!lua_isnumber(L, 5))
             return luaL_error(L, "Time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 5));
+        m->time = luac_checkcdtime(L, 5);
     }
 
     if ((argc > 5) && !lua_isnil(L, 6)) {
-        if (!lua_isnumber(L, 6)) {
-            metric_reset(&m, METRIC_TYPE_SUMMARY);
+        if (!lua_isnumber(L, 6))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 6));
+        m->interval = luac_checkcdtime(L, 6);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_SUMMARY);
 
     return 1;
 }
@@ -2041,6 +1830,9 @@ static int lmetric_summary_tostring(lua_State *L)
     if (m == NULL)
         return 0;
 
+    if (m->value.summary == NULL)
+        return luaL_error(L, "MetricSummary: the object has been finalized.");
+
     strbuf_t buf = STRBUF_CREATE;
 
     lmetric_summary_tostring_buffer(&buf, m);
@@ -2057,6 +1849,9 @@ static int lmetric_summary_get(lua_State *L)
     metric_t *m = luaL_checkudata(L, 1, MT_METRIC_SUMMARY);
     if (m == NULL)
         return 0;
+
+    if (m->value.summary == NULL)
+        return luaL_error(L, "MetricSummary: the object has been finalized.");
 
     if (lua_isstring(L, 2)) {
         const char *key = lua_tostring(L, 2);
@@ -2094,7 +1889,7 @@ static int lmetric_summary_get(lua_State *L)
             break;
         case 'c':
             if (strcmp(key, "count") == 0) {
-                lua_pushnumber(L, (lua_Number)m->value.summary->count);
+                luac_pushuint64(L, m->value.summary->count);
                 return 1;
             }
             break;
@@ -2118,16 +1913,7 @@ static int lmetric_summary_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_summary_set(lua_State *L)
@@ -2136,18 +1922,21 @@ static int lmetric_summary_set(lua_State *L)
     if (m == NULL)
         return 0;
 
+    if (m->value.summary == NULL)
+        return luaL_error(L, "MetricSummary: the object has been finalized.");
+
     if (lua_isstring(L, 2)) {
         const char *key = lua_tostring(L, 2);
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -2168,16 +1957,22 @@ static int lmetric_summary_set(lua_State *L)
             break;
         case 'c':
             if (strcmp(key, "count") == 0) {
-                m->value.summary->count = luaL_checknumber(L, 3);
+                m->value.summary->count = luac_checkuint64(L, 3);
                 return 0;
             }
             break;
         case 'q':
             if (strcmp(key, "quantiles") == 0) {
+                if (!luac_isarray(L, 3))
+                    return luaL_error(L, "Quantiles must be an array.");
+
                 value_t value = {0};
-                value.summary = summary_clone(m->value.summary);
+                value.summary = summary_new();
                 if (value.summary == NULL)
                     return luaL_error(L, "Fail to create summary.");
+
+                value.summary->sum = m->value.summary->sum;
+                value.summary->count = m->value.summary->count;
 
                 if (luac_to_summary_quantiles(L, 3, &value) != 0) {
                     summary_destroy(value.summary);
@@ -2193,12 +1988,7 @@ static int lmetric_summary_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricSummary");
 }
 
 static luaL_Reg metric_summary_reg[] = {
@@ -2229,18 +2019,21 @@ static int luac_to_bucket(lua_State *L, int idx, uint64_t *counter, double *maxi
         return -1;
     }
 
-    size_t size = lua_rawlen(L, idx);
-    if (size != 2) {
+    if (!lua_istable(L, idx))
         return -1;
-    }
+
+    if (lua_rawlen(L, idx) != 2)
+        return -1;
 
     lua_rawgeti(L, idx, 1);
-    *counter = luaL_checknumber(L, -1);
-    lua_pop(L, 1);
-
     lua_rawgeti(L, idx, 2);
-    *maximum = luaL_checknumber(L, -1);
-    lua_pop(L, 1);
+
+    if (!luac_touint64(L, -2, counter) || !lua_isnumber(L, -1)) {
+        lua_pop(L, 2);
+        return -1;
+    }
+    *maximum = lua_tonumber(L, -1);
+    lua_pop(L, 2);
 
     return 0;
 }
@@ -2256,13 +2049,18 @@ static int luac_to_histogram_buckets(lua_State *L, int idx, value_t *hvalue)
         return -1;
     }
 
+    if (!lua_istable(L, idx))
+        return -1;
+
     size_t size = lua_rawlen(L, idx);
     for (size_t i = 0; i < size; i++) {
         lua_rawgeti(L, idx, i + 1);
         uint64_t counter = 0;
         double maximum = 0;
-        if (luac_to_bucket(L, -1, &counter, &maximum) != 0)
+        if (luac_to_bucket(L, -1, &counter, &maximum) != 0) {
+            lua_pop(L, 1);
             return -1;
+        }
         hvalue->histogram = histogram_bucket_append(hvalue->histogram, maximum, counter);
         lua_pop(L, 1);
     }
@@ -2273,64 +2071,46 @@ static int luac_to_histogram_buckets(lua_State *L, int idx, value_t *hvalue)
 static int lmetric_histogram_new(lua_State *L)
 {
     int argc = lua_gettop(L);
-    if (argc < 3)
+    if (argc < 2)
         return luaL_error(L, "The sum and buckets are required arguments.");
 
-    metric_t m = {0};
-    m.time = 0;
-    m.interval = 0;
-    m.value.histogram = histogram_new();
-    if (m.value.histogram == NULL)
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    luaL_setmetatable(L, MT_METRIC_HISTOGRAM);
+    m->value.histogram = histogram_new();
+    if (m->value.histogram == NULL)
         return luaL_error(L, "Fail to create Histogram.");
 
     if ((argc > 0) && !lua_isnil(L, 1)) {
-        if (!lua_isnumber(L, 1)) {
-            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+        if (!lua_isnumber(L, 1))
             return luaL_error(L, "Sum must be a number.");
-        }
-        m.value.histogram->sum = luaL_checknumber(L, 1);
+        m->value.histogram->sum = luaL_checknumber(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
-        if (!luac_isarray(L, 2)) {
-            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+        if (!luac_isarray(L, 2))
             return luaL_error(L, "Buckets must be an array.");
-        }
-        if (luac_to_histogram_buckets(L, 2, &m.value) != 0) {
-            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+        if (luac_to_histogram_buckets(L, 2, &m->value) != 0)
             return luaL_error(L, "Bucket must be an array of two: the counter and the maximum.");
-        }
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_istable(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+        if (!lua_istable(L, 3))
             return luaL_error(L, "Labels must be a table.");
-        }
-        luac_to_labels(L, 3, &m.label);
+        luac_to_labels(L, 3, &m->label);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->time = luac_checkcdtime(L, 4);
     }
 
     if ((argc > 4) && !lua_isnil(L, 5)) {
-        if (!lua_isnumber(L, 5)) {
-            metric_reset(&m, METRIC_TYPE_HISTOGRAM);
+        if (!lua_isnumber(L, 5))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 5));
+        m->interval = luac_checkcdtime(L, 5);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_HISTOGRAM);
 
     return 1;
 }
@@ -2388,6 +2168,9 @@ static int lmetric_histogram_tostring(lua_State *L)
     if (m == NULL)
         return 0;
 
+    if (m->value.histogram == NULL)
+        return luaL_error(L, "MetricHistogram: the object has been finalized.");
+
     strbuf_t buf = STRBUF_CREATE;
 
     lmetric_histogram_tostring_buffer(&buf, m);
@@ -2404,6 +2187,9 @@ static int lmetric_histogram_get(lua_State *L)
     metric_t *m = luaL_checkudata(L, 1, MT_METRIC_HISTOGRAM);
     if (m == NULL)
         return 0;
+
+    if (m->value.histogram == NULL)
+        return luaL_error(L, "MetricHistogram: the object has been finalized.");
 
     if (lua_isstring(L, 2)) {
         const char *key = lua_tostring(L, 2);
@@ -2440,13 +2226,13 @@ static int lmetric_histogram_get(lua_State *L)
             }
             break;
         case 'b':
-            if (strcmp(key, "bucket") == 0) {
+            if (strcmp(key, "buckets") == 0) {
                 lua_createtable(L, m->value.histogram->num, 0);
                 for (size_t i = 0; i < m->value.histogram->num; i++) {
                     histogram_bucket_t *b = &m->value.histogram->buckets[i];
 
                     lua_createtable(L, 2, 0);
-                    lua_pushnumber(L, (lua_Number)b->counter);
+                    luac_pushuint64(L, b->counter);
                     lua_rawseti (L, -2, 1);
                     lua_pushnumber(L, (lua_Number)b->maximum);
                     lua_rawseti (L, -2, 2);
@@ -2459,16 +2245,7 @@ static int lmetric_histogram_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_histogram_set(lua_State *L)
@@ -2477,18 +2254,21 @@ static int lmetric_histogram_set(lua_State *L)
     if (m == NULL)
         return 0;
 
+    if (m->value.histogram == NULL)
+        return luaL_error(L, "MetricHistogram: the object has been finalized.");
+
     if (lua_isstring(L, 2)) {
         const char *key = lua_tostring(L, 2);
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -2508,18 +2288,23 @@ static int lmetric_histogram_set(lua_State *L)
             }
             break;
         case 'b':
-            if (strcmp(key, "bucket") == 0) {
+            if (strcmp(key, "buckets") == 0) {
+                if (!luac_isarray(L, 3))
+                    return luaL_error(L, "Buckets must be an array.");
+
                 value_t value = {0};
-                value.histogram = histogram_clone(m->value.histogram);
+                value.histogram = histogram_new();
                 if (value.histogram == NULL)
                     return luaL_error(L, "Fail to create histogram.");
 
-                if (luac_to_histogram_buckets(L, 3, &m->value) != 0) {
+                value.histogram->sum = m->value.histogram->sum;
+
+                if (luac_to_histogram_buckets(L, 3, &value) != 0) {
                     histogram_destroy(value.histogram);
                     return luaL_error(L, "Bucket must be an array of two: "
                                          "the counter and the maximum.");
                 }
-        
+
                 histogram_destroy(m->value.histogram);
                 m->value.histogram = value.histogram;
                 return 0;
@@ -2528,12 +2313,7 @@ static int lmetric_histogram_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricHistogram");
 }
 
 static luaL_Reg metric_histogram_reg[] = {
@@ -2556,65 +2336,46 @@ int register_metric_histogram(lua_State *L)
 static int lmetric_gauge_histogram_new(lua_State *L)
 {
     int argc = lua_gettop(L);
-    if (argc < 3)
+    if (argc < 2)
         return luaL_error(L, "The sum and buckets are required arguments.");
 
-    metric_t m = {0};
-
-    m.time = 0;
-    m.interval = 0;
-    m.value.histogram = histogram_new();
-    if (m.value.histogram == NULL)
+    metric_t *m = lua_newuserdata(L, sizeof(*m));
+    memset(m, 0, sizeof(*m));
+    luaL_setmetatable(L, MT_METRIC_GAUGE_HISTOGRAM);
+    m->value.histogram = histogram_new();
+    if (m->value.histogram == NULL)
         return luaL_error(L, "Fail to create Histogram.");
 
     if ((argc > 0) && !lua_isnil(L, 1)) {
-        if (!lua_isnumber(L, 1)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+        if (!lua_isnumber(L, 1))
             return luaL_error(L, "Sum must be a number.");
-        }
-        m.value.histogram->sum = luaL_checknumber(L, 1);
+        m->value.histogram->sum = luaL_checknumber(L, 1);
     }
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
-        if (!luac_isarray(L, 2)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+        if (!luac_isarray(L, 2))
             return luaL_error(L, "Buckets must be an array.");
-        }
-        if (luac_to_histogram_buckets(L, 2, &m.value) != 0) {
-            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+        if (luac_to_histogram_buckets(L, 2, &m->value) != 0)
             return luaL_error(L, "Bucket must be an array of two: the counter and the maximum.");
-        }
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_istable(L, 3)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+        if (!lua_istable(L, 3))
             return luaL_error(L, "Labels must be a table.");
-        }
-        luac_to_labels(L, 3, &m.label);
+        luac_to_labels(L, 3, &m->label);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_isnumber(L, 4)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+        if (!lua_isnumber(L, 4))
             return luaL_error(L, "Time must be a timestamp.");
-        }
-        m.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 4));
+        m->time = luac_checkcdtime(L, 4);
     }
 
     if ((argc > 4) && !lua_isnil(L, 5)) {
-        if (!lua_isnumber(L, 5)) {
-            metric_reset(&m, METRIC_TYPE_GAUGE_HISTOGRAM);
+        if (!lua_isnumber(L, 5))
             return luaL_error(L, "Interval must be a timestamp.");
-        }
-        m.interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 5));
+        m->interval = luac_checkcdtime(L, 5);
     }
-
-    metric_t *new_m = lua_newuserdata(L, sizeof(metric_t));
-
-    memcpy(new_m, &m, sizeof(metric_t));
-
-    luaL_setmetatable(L, MT_METRIC_GAUGE_HISTOGRAM);
 
     return 1;
 }
@@ -2672,6 +2433,9 @@ static int lmetric_gauge_histogram_tostring(lua_State *L)
     if (m == NULL)
         return 0;
 
+    if (m->value.histogram == NULL)
+        return luaL_error(L, "MetricGaugeHistogram: the object has been finalized.");
+
     strbuf_t buf = STRBUF_CREATE;
 
     lmetric_gauge_histogram_tostring_buffer(&buf, m);
@@ -2688,6 +2452,9 @@ static int lmetric_gauge_histogram_get(lua_State *L)
     metric_t *m = luaL_checkudata(L, 1, MT_METRIC_GAUGE_HISTOGRAM);
     if (m == NULL)
         return 0;
+
+    if (m->value.histogram == NULL)
+        return luaL_error(L, "MetricGaugeHistogram: the object has been finalized.");
 
     if (lua_isstring(L, 2)) {
         const char *key = lua_tostring(L, 2);
@@ -2724,13 +2491,13 @@ static int lmetric_gauge_histogram_get(lua_State *L)
             }
             break;
         case 'b':
-            if (strcmp(key, "bucket") == 0) {
+            if (strcmp(key, "buckets") == 0) {
                 lua_createtable(L, m->value.histogram->num, 0);
                 for (size_t i = 0; i < m->value.histogram->num; i++) {
                     histogram_bucket_t *b = &m->value.histogram->buckets[i];
 
                     lua_createtable(L, 2, 0);
-                    lua_pushnumber(L, (lua_Number)b->counter);
+                    luac_pushuint64(L, b->counter);
                     lua_rawseti (L, -2, 1);
                     lua_pushnumber(L, (lua_Number)b->maximum);
                     lua_rawseti (L, -2, 2);
@@ -2743,16 +2510,7 @@ static int lmetric_gauge_histogram_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lmetric_gauge_histogram_set(lua_State *L)
@@ -2761,18 +2519,21 @@ static int lmetric_gauge_histogram_set(lua_State *L)
     if (m == NULL)
         return 0;
 
+    if (m->value.histogram == NULL)
+        return luaL_error(L, "MetricGaugeHistogram: the object has been finalized.");
+
     if (lua_isstring(L, 2)) {
         const char *key = lua_tostring(L, 2);
         switch(key[0]) {
         case 't':
             if (strcmp(key, "time") == 0) {
-                m->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'i':
             if (strcmp(key, "interval") == 0) {
-                m->interval = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                m->interval = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
@@ -2792,18 +2553,23 @@ static int lmetric_gauge_histogram_set(lua_State *L)
             }
             break;
         case 'b':
-            if (strcmp(key, "bucket") == 0) {
+            if (strcmp(key, "buckets") == 0) {
+                if (!luac_isarray(L, 3))
+                    return luaL_error(L, "Buckets must be an array.");
+
                 value_t value = {0};
-                value.histogram = histogram_clone(m->value.histogram);
+                value.histogram = histogram_new();
                 if (value.histogram == NULL)
                     return luaL_error(L, "Fail to create histogram.");
 
-                if (luac_to_histogram_buckets(L, 3, &m->value) != 0) {
+                value.histogram->sum = m->value.histogram->sum;
+
+                if (luac_to_histogram_buckets(L, 3, &value) != 0) {
                     histogram_destroy(value.histogram);
                     return luaL_error(L, "Bucket must be an array of two: "
                                          "the counter and the maximum.");
                 }
-        
+
                 histogram_destroy(m->value.histogram);
                 m->value.histogram = value.histogram;
                 return 0;
@@ -2812,12 +2578,7 @@ static int lmetric_gauge_histogram_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "MetricGaugeHistogram");
 }
 
 static luaL_Reg metric_gauge_histogram_reg[] = {
@@ -2886,13 +2647,6 @@ int luac_push_metric(lua_State *L, metric_type_t type, metric_t *m)
 
     memset(new_m, 0, sizeof(metric_t));
 
-    new_m->time = m->time;
-    new_m->interval = m->interval;
-
-    label_set_clone(&new_m->label, m->label);
-
-    metric_value_clone(&new_m->value, m->value, type);
-
     switch(type) {
     case METRIC_TYPE_UNKNOWN:
         if (m->value.unknown.type == UNKNOWN_FLOAT64)
@@ -2928,6 +2682,15 @@ int luac_push_metric(lua_State *L, metric_type_t type, metric_t *m)
         luaL_setmetatable(L, MT_METRIC_GAUGE_HISTOGRAM);
         break;
     }
+
+    new_m->time = m->time;
+    new_m->interval = m->interval;
+
+    if (label_set_clone(&new_m->label, m->label) != 0)
+        return -1;
+
+    if (metric_value_clone(&new_m->value, m->value, type) != 0)
+        return -1;
 
     return 0;
 }

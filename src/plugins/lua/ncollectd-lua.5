@@ -179,7 +179,6 @@ and ncollectd:
 .It \fBinterval\fP
 .El
 
-
 .It \fBMetricFamily\fP
 .Bd -literal
     ncollectd.MetricFamily.new(name, type[, help][, unit])
@@ -228,22 +227,23 @@ and ncollectd:
 .It \fBNOTIF_FAILURE\fP
 .It \fBNOTIF_WARNING\fP
 .It \fBNOTIF_OKAY\fP
-.EL
+.El
 
 .Sh FUNCTIONS
 The following functions are provided to Lua modules:
 .Bl -tag -width Ds
 .It \fBregister_*\fP(\fIcallback\fP[, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
-There are seven different register functions to get callback for seven
+There are six different register functions to get callback for seven
 different events.
 With one exception all of them are called as shown above.
 .Bl -tag -width Ds
 .It \fIcallback\fP
 Is the name of a function, a string with the name of the function or an
 anonymous function that will be called every time the event is triggered.
+The callback must return a number: 0 on success or any other value on error.
 .It \fIdata\fP
 Is an optional data that will be passed back to the callback function
-every time it is called.
+every time it is called, as its last argument.
 If you omit this parameter no data is passed back to your callback.
 .It \fIname\fP
 Is an optional identifier for this callback.
@@ -257,14 +257,15 @@ These functions are called in the various stages of the daemon (see the section
 \fBWRITING YOUR OWN PLUGINS\fP above) and are passed the following arguments:
 .Bl -tag -width Ds
 .It \fBregister_config\fP
-The only argument passed is a table withe the configuration.
+The only argument passed is a table with the configuration, with the
+fields \fIkey\fP, \fIvalues\fP and \fIchildren\fP.
 Note that you cannot receive the whole config files this way, only \fBplugin\fP
 blocks inside the Lua configuration block.
-Additionally you will only receive blocks where your callback identifier
-matches the \fBname\fP.
+Additionally you will only receive blocks where the \fIname\fP passed to
+\fBregister_config\fP matches the argument of the \fBplugin\fP block.
 .It \fBregister_init\fP
 The callback will be called without arguments.
-.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fI][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fP][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
 This function takes an additional parameter: \fIinterval\fP.
 It specifies the time between calls to the callback function.
 If this callback function does not return 0 the next call will be delayed by
@@ -277,21 +278,7 @@ The callback will be called without arguments.
 The callback function will be called with one argument passed, which will be a
 \fIMetricFamily\fP metatable.
 For the layout of \fIMetricFamily\fP see above.
-If this callback function does not return 0 the next call will be delayed by
-an increasing interval.
-.It \fBregister_log\fP
-The arguments are \fIseverity\fP and \fImessage\fP.
-The severity is an integer and small for important messages and high for less
-important messages.
-The least important level is \fBLOG_DEBUG\fP, the most important level
-is \fBLOG_ERR\fP.
-In between there are (from least to most important): \fBLOG_INFO\fP,
-\fBLOG_NOTICE\fP, and \fBLOG_WARNING\fP.
-\fImessage\fP is simply a string \fBwithout\fP a newline at the end.
-.Pp
-If this callback throws an exception it will \fBnot\fP be logged.
-It will just be printed to \fBsys.stderr\fP which usually means
-silently ignored.
+If this callback function does not return 0 the write is accounted as failed.
 .It \fBregister_notification\fP
 The only argument passed is a \fINotification\fP metatable.
 See above for the layout of this data type.

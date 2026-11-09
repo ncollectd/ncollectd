@@ -14,73 +14,54 @@
 
 static int lnotification_new(lua_State *L)
 {
-    notification_t n = {
-        .severity = NOTIF_FAILURE,
-        .time = cdtime()
-    };
-
     int argc = lua_gettop(L);
 
     if (argc < 1)
         return luaL_error(L, "The name is a required argument.");
 
-    if ((argc > 0) && !lua_isnil(L, 1)) {
-        const char *name = luaL_checkstring(L, 1);
-        if (name == NULL)
-            return luaL_error(L, "Notification name must be a string.");
+    notification_t *n = lua_newuserdata(L, sizeof(*n));
+    memset(n, 0, sizeof(*n));
+    n->severity = NOTIF_FAILURE;
+    n->time = cdtime();
+    luaL_setmetatable(L, MT_NOTIFICATION);
 
-        char *name_dup = strdup(name);
-        if (name_dup == NULL)
-            return luaL_error(L, "Notification: strdup failed.");
-        n.name = name_dup;
-    }
+    if (!lua_isstring(L, 1))
+        return luaL_error(L, "Notification name must be a string.");
+
+    n->name = strdup(lua_tostring(L, 1));
+    if (n->name == NULL)
+        return luaL_error(L, "Notification: strdup failed.");
 
     if ((argc > 1) && !lua_isnil(L, 2)) {
-        if (!lua_isnumber(L, 2)) {
-            notification_reset(&n);
+        if (!lua_isnumber(L, 2))
             return luaL_error(L, "Notification severity must be a number.");
-        }
 
         int severity = luaL_checkinteger(L, 2);
         if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) &&
-            (severity != NOTIF_OKAY)) {
-            notification_reset(&n);
+            (severity != NOTIF_OKAY))
             return luaL_error(L, "Notification severity must be FAILURE(%d), "
                                  "WARNING(%d) or OKAY(%d).",
                                  NOTIF_FAILURE, NOTIF_WARNING, NOTIF_OKAY);
-        }
-        n.severity = severity;
+        n->severity = severity;
     }
 
     if ((argc > 2) && !lua_isnil(L, 3)) {
-        if (!lua_isnumber(L, 3)) {
-            notification_reset(&n);
+        if (!lua_isnumber(L, 3))
             return luaL_error(L, "Notification time must be a timestamp.");
-        }
-        n.time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+        n->time = luac_checkcdtime(L, 3);
     }
 
     if ((argc > 3) && !lua_isnil(L, 4)) {
-        if (!lua_istable(L, 4)) {
-            notification_reset(&n);
+        if (!lua_istable(L, 4))
             return luaL_error(L, "Notification labels must be a table.");
-        }
-        luac_to_labels(L, 4, &n.label);
+        luac_to_labels(L, 4, &n->label);
     }
 
     if ((argc > 4) && !lua_isnil(L, 5)) {
-        if (!lua_istable(L, 5)) {
-            notification_reset(&n);
+        if (!lua_istable(L, 5))
             return luaL_error(L, "Notification annotations must be a table.");
-        }
-        luac_to_labels(L, 5, &n.annotation);
+        luac_to_labels(L, 5, &n->annotation);
     }
-
-    notification_t *new_n = lua_newuserdata(L, sizeof(notification_t));
-
-    memcpy(new_n, &n, sizeof(notification_t));
-
-    luaL_setmetatable(L, MT_NOTIFICATION);
 
     return 1;
 }
@@ -267,16 +248,7 @@ static int lnotification_get(lua_State *L)
         }
     }
 
-    lua_getmetatable(L, 1);
-    lua_pushvalue(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isnil(L, -1)) {
-        lua_getuservalue(L, 1);
-        lua_pushvalue(L, 2);
-        lua_gettable(L, -2);
-    }
-
-    return 1;
+    return luac_index_metatable(L);
 }
 
 static int lnotification_set(lua_State *L)
@@ -290,42 +262,41 @@ static int lnotification_set(lua_State *L)
         switch(key[0]) {
         case 's':
             if (strcmp(key, "severity") == 0) {
-                int severity = (int)luaL_checknumber(L, 3);
-                if ((severity == NOTIF_FAILURE) ||
-                    (severity == NOTIF_WARNING) ||
-                    (severity == NOTIF_OKAY)) {
-                    n->severity = severity;
-                    return 0;
-                }
+                lua_Integer severity = luaL_checkinteger(L, 3);
+                if ((severity != NOTIF_FAILURE) &&
+                    (severity != NOTIF_WARNING) &&
+                    (severity != NOTIF_OKAY))
+                    return luaL_error(L, "Notification severity must be FAILURE(%d), "
+                                         "WARNING(%d) or OKAY(%d).",
+                                         NOTIF_FAILURE, NOTIF_WARNING, NOTIF_OKAY);
+                n->severity = (severity_t)severity;
+                return 0;
             }
             break;
         case 't':
             if (strcmp(key, "time") == 0) {
-                n->time = DOUBLE_TO_CDTIME_T(luaL_checknumber(L, 3));
+                n->time = luac_checkcdtime(L, 3);
                 return 0;
             }
             break;
         case 'n':
             if (strcmp(key, "name") == 0) {
-                if (!lua_isnil(L, 3)) {
-                    const char *name = luaL_checkstring(L, 3);
-                    if (name == NULL)
-                        return luaL_error(L, "Notification: name must be a string.");
+                if (!lua_isstring(L, 3))
+                    return luaL_error(L, "Notification: name must be a string.");
 
-                    char *name_dup = strdup(name);
-                    if (name_dup == NULL)
-                        return luaL_error(L, "Notification: strdup failed.");
+                char *name_dup = strdup(lua_tostring(L, 3));
+                if (name_dup == NULL)
+                    return luaL_error(L, "Notification: strdup failed.");
 
-                    free(n->name);
-                    n->name = name_dup;
-                    return 0;
-                }
+                free(n->name);
+                n->name = name_dup;
+                return 0;
             }
             break;
         case 'l':
             if (strcmp(key, "labels") == 0) {
                 if (!lua_istable(L, 3))
-                    return luaL_error(L, "Notification: labels must be a string.");
+                    return luaL_error(L, "Notification: labels must be a table.");
                 label_set_reset(&n->label);
                 luac_to_labels(L, 3, &n->label);
                 return 0;
@@ -334,7 +305,7 @@ static int lnotification_set(lua_State *L)
         case 'a':
             if (strcmp(key, "annotations") == 0) {
                 if (!lua_istable(L, 3))
-                    return luaL_error(L, "Notification: annotations must be a string.");
+                    return luaL_error(L, "Notification: annotations must be a table.");
                 label_set_reset(&n->annotation);
                 luac_to_labels(L, 3, &n->annotation);
                 return 0;
@@ -343,12 +314,7 @@ static int lnotification_set(lua_State *L)
         }
     }
 
-    lua_getuservalue(L, 1);
-    lua_pushvalue(L, 2);
-    lua_pushvalue(L, 3);
-    lua_settable(L, -3);
-
-    return 0;
+    return luac_newindex_error(L, "Notification");
 }
 
 static luaL_Reg notification_reg[] = {
@@ -375,25 +341,26 @@ int luac_push_notification(lua_State *L, const notification_t *n)
     if (n->name == NULL)
         return -1;
 
-    char *new_name = strdup(n->name);
-    if (new_name == NULL)
-        return -1;
-
     notification_t *new_n = lua_newuserdata(L, sizeof(notification_t));
-    if (new_n == NULL) {
-        free(new_name);
+    if (new_n == NULL)
         return -1;
-    }
 
     memset(new_n, 0, sizeof(notification_t));
 
     new_n->time = n->time;
     new_n->severity = n->severity;
-    new_n->name = new_name;
-    label_set_clone(&new_n->annotation, n->annotation);
-    label_set_clone(&new_n->label, n->label);
 
     luaL_setmetatable(L, MT_NOTIFICATION);
+
+    char *new_name = strdup(n->name);
+    if (new_name == NULL)
+        return -1;
+
+    if (label_set_clone(&new_n->annotation, n->annotation) != 0)
+        return -1;
+
+    if (label_set_clone(&new_n->label, n->label) != 0)
+        return -1;
 
     return 0;
 }
