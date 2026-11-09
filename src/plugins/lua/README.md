@@ -282,7 +282,7 @@ The following functions are provided to Lua modules:
 
 **register\_\*&zwnj;**(*callback*\[, *data*]\[, *name*]) -&gt; *identifier*
 
-> There are seven different register functions to get callback for seven
+> There are six different register functions to get callback for seven
 > different events.
 > With one exception all of them are called as shown above.
 
@@ -290,11 +290,12 @@ The following functions are provided to Lua modules:
 
 > > Is the name of a function, a string with the name of the function or an
 > > anonymous function that will be called every time the event is triggered.
+> > The callback must return a number: 0 on success or any other value on error.
 
 > *data*
 
 > > Is an optional data that will be passed back to the callback function
-> > every time it is called.
+> > every time it is called, as its last argument.
 > > If you omit this parameter no data is passed back to your callback.
 
 > *name*
@@ -311,17 +312,18 @@ The following functions are provided to Lua modules:
 
 > **register\_config**
 
-> > The only argument passed is a table withe the configuration.
+> > The only argument passed is a table with the configuration, with the
+> > fields *key*, *values* and *children*.
 > > Note that you cannot receive the whole config files this way, only **plugin**
 > > blocks inside the Lua configuration block.
-> > Additionally you will only receive blocks where your callback identifier
-> > matches the **name**.
+> > Additionally you will only receive blocks where the *name* passed to
+> > **register\_config** matches the argument of the **plugin** block.
 
 > **register\_init**
 
 > > The callback will be called without arguments.
 
-> **register\_read**(*callback*\[, *interval*&zwnj;*]\[, *&zwnj;*data*&zwnj;*]\[, *&zwnj;*name*&zwnj;*]) -&gt; *&zwnj;*identifier*&zwnj;*&zwnj;*
+> **register\_read**(*callback*\[, *interval*]\[, *data*]\[, *name*]) -&gt; *identifier*
 
 > > This function takes an additional parameter: *interval*.
 > > It specifies the time between calls to the callback function.
@@ -339,23 +341,7 @@ The following functions are provided to Lua modules:
 > > The callback function will be called with one argument passed, which will be a
 > > *MetricFamily* metatable.
 > > For the layout of *MetricFamily* see above.
-> > If this callback function does not return 0 the next call will be delayed by
-> > an increasing interval.
-
-> **register\_log**
-
-> > The arguments are *severity* and *message*.
-> > The severity is an integer and small for important messages and high for less
-> > important messages.
-> > The least important level is **LOG\_DEBUG**, the most important level
-> > is **LOG\_ERR**.
-> > In between there are (from least to most important): **LOG\_INFO**,
-> > **LOG\_NOTICE**, and **LOG\_WARNING**.
-> > *message* is simply a string **without** a newline at the end.
-
-> > If this callback throws an exception it will **not** be logged.
-> > It will just be printed to **sys.stderr** which usually means
-> > silently ignored.
+> > If this callback function does not return 0 the write is accounted as failed.
 
 > **register\_notification**
 
