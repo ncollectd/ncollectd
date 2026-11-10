@@ -122,10 +122,13 @@ static jint JNICALL cjni_api_dispatch_notification(JNIEnv *jvm_env,
     status = jtoc_notification(jvm_env, &n, o_notification);
     if (status != 0) {
         PLUGIN_ERROR("jtoc_notification failed.");
+        notification_reset(&n);
         return -1;
     }
 
     status = plugin_dispatch_notification(&n);
+
+    notification_reset(&n);
 
     return status;
 }
@@ -280,6 +283,16 @@ static size_t jni_api_functions_num = sizeof(jni_api_functions) / sizeof(jni_api
 /*
  * Functions
  */
+
+static void cjni_callback_info_free(cjni_callback_info_t *cbi)
+{
+    if (cbi == NULL)
+        return;
+
+    free(cbi->name);
+    free(cbi);
+}
+
 /* Allocate a `cjni_callback_info_t' given the type and objects necessary for
  * all registration functions. */
 static cjni_callback_info_t *
@@ -344,10 +357,9 @@ static cjni_callback_info_t *
 
     cbi->name = strdup(c_name);
     if (cbi->name == NULL) {
-        pthread_mutex_unlock(&java_callbacks_lock);
         PLUGIN_ERROR("strdup failed.");
         (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_name, c_name);
-        free(cbi);
+        cjni_callback_info_free(cbi);
         return NULL;
     }
 
@@ -356,8 +368,7 @@ static cjni_callback_info_t *
     cbi->object = (*jvm_env)->NewGlobalRef(jvm_env, o_callback);
     if (cbi->object == NULL) {
         PLUGIN_ERROR("NewGlobalRef failed.");
-        free(cbi->name);
-        free(cbi);
+        cjni_callback_info_free(cbi);
         return NULL;
     }
 
@@ -365,8 +376,7 @@ static cjni_callback_info_t *
     if (cbi->class == NULL) {
         PLUGIN_ERROR("GetObjectClass failed.");
         (*jvm_env)->DeleteGlobalRef(jvm_env, cbi->object);
-        free(cbi->name);
-        free(cbi);
+        cjni_callback_info_free(cbi);
         return NULL;
     }
 
@@ -375,8 +385,7 @@ static cjni_callback_info_t *
         PLUGIN_ERROR("Cannot find the `%s' method with signature `%s'.",
                      method_name, method_signature);
         (*jvm_env)->DeleteGlobalRef(jvm_env, cbi->object);
-        free(cbi->name);
-        free(cbi);
+        cjni_callback_info_free(cbi);
         return NULL;
     }
 
@@ -422,8 +431,7 @@ static int cjni_callback_register(JNIEnv *jvm_env, jobject o_name, jobject o_cal
         PLUGIN_ERROR("cjni_callback_register: realloc failed.");
 
         (*jvm_env)->DeleteGlobalRef(jvm_env, cbi->object);
-        free(cbi);
-
+        cjni_callback_info_free(cbi);
         return -1;
     }
     java_callbacks = tmp;
@@ -432,7 +440,8 @@ static int cjni_callback_register(JNIEnv *jvm_env, jobject o_name, jobject o_cal
 
     pthread_mutex_unlock(&java_callbacks_lock);
 
-    free(cbi);
+    cjni_callback_info_free(cbi);
+
     return 0;
 }
 
@@ -476,7 +485,8 @@ static int cjni_init_native(JNIEnv *jvm_env)
         return -1;
     }
 
-    cjni_cache_classes(jvm_env);
+    if (cjni_cache_classes(jvm_env) != 0)
+        return -1;
 
     return 0;
 }
@@ -495,7 +505,7 @@ static int cjni_create_jvm(void)
     }
 
     JNIEnv *jvm_env = NULL;
-    JavaVMOption vm_options[jvm_argc];
+    JavaVMOption vm_options[jvm_argc > 0 ? jvm_argc : 1];
     JavaVMInitArgs vm_args = {0};
     vm_args.version = JNI_VERSION_1_2;
     vm_args.options = vm_options;
@@ -873,7 +883,7 @@ static void cjni_callback_info_destroy(void *arg)
 
     /* This condition can occur when shutting down. */
     if (jvm == NULL) {
-        free(cbi);
+        cjni_callback_info_free(cbi);
         return;
     }
 
@@ -891,7 +901,7 @@ static void cjni_callback_info_destroy(void *arg)
     cbi->method = NULL;
     cbi->object = NULL;
     cbi->class = NULL;
-    free(cbi);
+    cjni_callback_info_free(cbi);
 
     cjni_thread_detach();
 }
@@ -913,9 +923,16 @@ static int cjni_read(user_data_t *ud)
     if (jvm_env == NULL)
         return -1;
 
+	if ((*env)->PushLocalFrame(env, 16) < 0) {
+		PLUGIN_ERROR("Failed to allocate JVM local references");
+		return -1;
+	}
+
     cjni_callback_info_t *cbi = (cjni_callback_info_t *)ud->data;
 
     int ret_status = (*jvm_env)->CallIntMethod(jvm_env, cbi->object, cbi->method);
+
+    (*env)->PopLocalFrame(env, NULL);
 
     // cjni_thread_detach();
     return ret_status;
@@ -938,6 +955,11 @@ static int cjni_write(metric_family_t const *fam, user_data_t *ud)
     if (jvm_env == NULL)
         return -1;
 
+	if ((*env)->PushLocalFrame(env, 16) < 0) {
+		PLUGIN_ERROR("Failed to allocate JVM local references");
+		return -1;
+	}
+
     cjni_callback_info_t *cbi = (cjni_callback_info_t *)ud->data;
 
     jobject fam_java = ctoj_metric_family(jvm_env, fam);
@@ -950,6 +972,8 @@ static int cjni_write(metric_family_t const *fam, user_data_t *ud)
     int ret_status = (*jvm_env)->CallIntMethod(jvm_env, cbi->object, cbi->method, fam_java);
 
     (*jvm_env)->DeleteLocalRef(jvm_env, fam_java);
+
+    (*env)->PopLocalFrame(env, NULL);
 
     // cjni_thread_detach();
     return ret_status;
@@ -1034,7 +1058,9 @@ static int cjni_init_plugins(JNIEnv *jvm_env)
         if (status != 0) {
             PLUGIN_ERROR("Initializing `%s' failed with status %i. Removing read function.",
                          java_callbacks[i].name, status);
-            plugin_unregister_read(java_callbacks[i].name);
+            char full_name[1024];
+            ssnprintf(full_name, sizeof(full_name), "java/%s", java_callbacks[i].name);
+            plugin_unregister_read(full_name);
         }
     }
 

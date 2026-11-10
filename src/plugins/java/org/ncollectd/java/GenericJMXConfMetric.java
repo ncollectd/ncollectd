@@ -69,7 +69,7 @@ class GenericJMXConfMetric
                     double value = Double.valueOf(str).doubleValue();
                     return new MetricGauge(value, labels);
                 } else if (type == MetricFamily.METRIC_COUNTER) {
-                    double value = Long.valueOf(str).longValue();
+                    Long value = Long.valueOf(str).longValue();
                     return new MetricCounter(value, labels);
                 }
             } catch (NumberFormatException e) {

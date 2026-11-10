@@ -274,15 +274,13 @@ static jobject ctoj_metric(JNIEnv *jvm_env, metric_type_t type, const metric_t *
     }
 
     if (m->time > 0) {
-        /* Java measures time in milliseconds. */
-         (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_time,
-                                             (jdouble)CDTIME_T_TO_DOUBLE(m->time));
+        (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_time,
+                                            (jdouble)CDTIME_T_TO_DOUBLE(m->time));
     }
 
     if (m->interval > 0) {
-        /* Java measures time in milliseconds. */
-         (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_interval,
-                                             (jdouble)CDTIME_T_TO_DOUBLE(m->interval));
+        (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_interval,
+                                            (jdouble)CDTIME_T_TO_DOUBLE(m->interval));
     }
 
     return o_metric;
@@ -328,8 +326,13 @@ jobject ctoj_metric_family(JNIEnv *jvm_env, const metric_family_t *fam)
     for (size_t i = 0; i < fam->metric.num; i++) {
         metric_t *m = &fam->metric.ptr[i];
         jobject o_metric = ctoj_metric(jvm_env, fam->type, m);
-        if (o_metric != NULL)
-            (*jvm_env)->CallVoidMethod(jvm_env, o_fam, gref.metric_family.add_metric, o_metric);
+        if (o_metric == NULL) {
+            PLUGIN_ERROR("ctoj_metric failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_fam);
+            return NULL;
+        }
+        (*jvm_env)->CallVoidMethod(jvm_env, o_fam, gref.metric_family.add_metric, o_metric);
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_metric);
     }
 
     return o_fam;
@@ -571,10 +574,10 @@ static int jtoc_metric(JNIEnv *jvm_env, metric_type_t type, metric_t *m, jobject
         return -1;
     }
 
-    jdouble time = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric.get_time);
+    jdouble time = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric.get_time);
     m->time = DOUBLE_TO_CDTIME_T(time);
 
-    jdouble interval = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric.get_interval);
+    jdouble interval = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric.get_interval);
     m->interval = DOUBLE_TO_CDTIME_T(interval);
 
     return 0;
@@ -589,6 +592,9 @@ int jtoc_metric_family(JNIEnv *jvm_env, metric_family_t *fam, jobject o_fam)
         return -1;
     }
 
+    jint type = (*jvm_env)->CallIntMethod(jvm_env, o_fam, gref.metric_family.get_type);
+    fam->type = type;
+
     char *name = NULL;
     int status = jtoc_string(jvm_env, &name, o_fam, gref.metric_family.get_name);
     if (status != 0) {
@@ -601,7 +607,7 @@ int jtoc_metric_family(JNIEnv *jvm_env, metric_family_t *fam, jobject o_fam)
     status = jtoc_string(jvm_env, &help, o_fam, gref.metric_family.get_help);
     if (status != 0) {
         PLUGIN_ERROR("jtoc_value_list: jtoc_string (getHelp) failed.");
-        return -1;
+        goto error;
     }
     fam->help = help;
 
@@ -609,58 +615,67 @@ int jtoc_metric_family(JNIEnv *jvm_env, metric_family_t *fam, jobject o_fam)
     status = jtoc_string(jvm_env, &unit, o_fam, gref.metric_family.get_unit);
     if (status != 0) {
         PLUGIN_ERROR("jtoc_value_list: jtoc_string (getUnit) failed.");
-        return -1;
+        goto error;
     }
     fam->unit = unit;
-
-    jint type = (*jvm_env)->CallIntMethod(jvm_env, o_fam, gref.metric_family.get_type);
-    fam->type = type;
 
     jobject o_metrics = (*jvm_env)->CallObjectMethod(jvm_env, o_fam,
                                                               gref.metric_family.get_metrics);
     if (o_metrics == NULL) {
         PLUGIN_ERROR("CallObjectMethod (getMetrics) failed.");
-        return -1;
+        goto error;
     }
 
     jobject o_metrics_array = (*jvm_env)->CallObjectMethod(jvm_env, o_metrics, gref.list.to_array);
     if (o_metrics_array == NULL) {
         PLUGIN_ERROR("CallObjectMethod (toArray) failed.");
         (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
-        return -1;
+        goto error;
     }
 
     jsize metrics_size = (*jvm_env)->GetArrayLength(jvm_env, o_metrics_array);
 
-    metric_t *metrics = calloc((size_t)metrics_size, sizeof(*metrics));
-    if (metrics == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
-        return -1;
-    }
-
-    fam->metric.ptr = metrics;
-    fam->metric.num = metrics_size;
-
-    for (jsize i = 0; i < metrics_size; i++) {
-        metric_t *m = &fam->metric.ptr[(size_t)i];
-
-        jobject o_metric = (*jvm_env)->GetObjectArrayElement(jvm_env, o_metrics_array, i);
-        if (o_metric == NULL) {
-            PLUGIN_ERROR("GetObjectArrayElement (%zu) failed.", (size_t)i);
+    if (metrics_size > 0) {
+        metric_t *metrics = calloc((size_t)metrics_size, sizeof(*metrics));
+        if (metrics == NULL) {
+            PLUGIN_ERROR("calloc failed.");
             (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
             (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
-            return -1;
+            goto error;
         }
-
-        jtoc_metric(jvm_env, fam->type, m, o_metric);
-
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_metric); // FIXME ¿?
+       
+        fam->metric.ptr = metrics;
+        fam->metric.num = metrics_size;
+       
+        for (jsize i = 0; i < metrics_size; i++) {
+            metric_t *m = &fam->metric.ptr[(size_t)i];
+       
+            jobject o_metric = (*jvm_env)->GetObjectArrayElement(jvm_env, o_metrics_array, i);
+            if (o_metric == NULL) {
+                PLUGIN_ERROR("GetObjectArrayElement (%zu) failed.", (size_t)i);
+                (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
+                (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
+                goto error:
+            }
+       
+            jtoc_metric(jvm_env, fam->type, m, o_metric);
+       
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_metric); // FIXME ¿?
+        }
     }
 
     (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
     (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
 
     return 0;
+
+error:
+    free(fam->name);
+    fam->name = NULL;
+    free(fam->help);
+    fam->help = NULL;
+    free(fam->unit);
+    fam->unit = NULL;
+    metric_list_reset(&fam->metric, fam->type);
+    return -1;
 }

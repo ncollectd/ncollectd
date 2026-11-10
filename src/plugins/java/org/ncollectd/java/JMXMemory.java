@@ -88,8 +88,8 @@ public class JMXMemory implements NCollectdConfigInterface,
         }
 
         if (mem_max >= 0) {
-            fam_memory_committed_bytes.append(new MetricGauge(mem_max, labels));
-            fam_memory_committed_bytes.dispatch();
+            fam_memory_max_bytes.append(new MetricGauge(mem_max, labels));
+            fam_memory_max_bytes.dispatch();
         }
     }
 
