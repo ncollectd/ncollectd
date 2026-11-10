@@ -159,12 +159,16 @@ public class Notification
         switch (this._severity) {
         case FAILURE:
             sb.append(" FAILURE ");
+            break;
         case WARNING:
             sb.append(" WARNING ");
+            break;
         case OKAY:
             sb.append(" OKAY ");
+            break;
         default:
             sb.append(" UNKNOWN ");
+            break;
         }
 
         sb.append(this._time);

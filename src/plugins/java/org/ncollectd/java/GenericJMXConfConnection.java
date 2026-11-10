@@ -54,15 +54,11 @@ class GenericJMXConfConnection
 
     private void connect ()
     {
-        JMXServiceURL service_url;
-        Map<String,Object> environment;
-
-        // already connected
-        if (this._jmx_connector != null) {
+        if (this._jmx_connector != null)
             return;
-        }
 
-        environment = null;
+        Map<String,Object> environment = new HashMap<String,Object> ();
+
         if (this._password != null) {
             String[] credentials;
 
@@ -71,7 +67,6 @@ class GenericJMXConfConnection
 
             credentials = new String[] { this._username, this._password };
 
-            environment = new HashMap<String,Object> ();
             environment.put(JMXConnector.CREDENTIALS, credentials);
             environment.put(JMXConnectorFactory.PROTOCOL_PROVIDER_CLASS_LOADER,
                             this.getClass().getClassLoader());
@@ -84,7 +79,7 @@ class GenericJMXConfConnection
         }
 
         try {
-            service_url = new JMXServiceURL (this._service_url);
+            JMXServiceURL service_url = new JMXServiceURL (this._service_url);
             this._jmx_connector = JMXConnectorFactory.connect (service_url, environment);
             this._mbean_connection = _jmx_connector.getMBeanServerConnection ();
         } catch (Exception e) {

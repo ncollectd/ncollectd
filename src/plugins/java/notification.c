@@ -36,7 +36,6 @@ jobject ctoj_notification(JNIEnv *jvm_env, const notification_t *n)
         return NULL;
     }
 
-    /* Set the `time' member. Java stores time in milliseconds. */
     (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_time,
                                         (jdouble)CDTIME_T_TO_DOUBLE(n->time));
 
@@ -82,7 +81,7 @@ int jtoc_notification(JNIEnv *jvm_env, notification_t *n, jobject object_ptr)
     }
     n->name = name;
 
-    jdouble tmp_double = (*jvm_env)->CallLongMethod(jvm_env, object_ptr, gref.notification.get_time);
+    jdouble tmp_double = (*jvm_env)->CallDoubleMethod(jvm_env, object_ptr, gref.notification.get_time);
     /* Java measures time in milliseconds. */
     n->time = DOUBLE_TO_CDTIME_T(tmp_double);
 

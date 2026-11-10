@@ -30,7 +30,7 @@ public class MetricHistogram extends Metric
     }
 
     public MetricHistogram(double sum, List<MetricHistogramBucket> quantiles,
-                           HashMap<String, String> labels, long time)
+                           HashMap<String, String> labels, double time)
     {
         super(labels, time);
         this._sum = sum;
@@ -38,7 +38,7 @@ public class MetricHistogram extends Metric
     }
 
     public MetricHistogram(double sum, List<MetricHistogramBucket> quantiles,
-                           HashMap<String, String> labels, long time, long interval)
+                           HashMap<String, String> labels, double time, double interval)
     {
         super(labels, time, interval);
         this._sum = sum;

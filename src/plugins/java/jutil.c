@@ -101,8 +101,8 @@ static jcached_class_t classes[] = {
         { "getLong",   "()J",  &gref.metric_gauge.get_long           },
         { NULL,        NULL,   NULL                                  }}},
     { "org/ncollectd/api/MetricCounter", &gref.metric_counter.class, (jcached_method_t[]) {
-        { "<init>",    "(J)V", &gref.metric_counter.constructor_double },
-        { "<init>",    "(D)V", &gref.metric_counter.constructor_long   },
+        { "<init>",    "(D)V", &gref.metric_counter.constructor_double },
+        { "<init>",    "(J)V", &gref.metric_counter.constructor_long   },
         { "getType",   "()I",  &gref.metric_counter.get_type           },
         { "getDouble", "()D",  &gref.metric_counter.get_double         },
         { "getLong",   "()J",  &gref.metric_counter.get_long           },
