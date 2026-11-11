@@ -137,6 +137,7 @@ config_item_t *config_clone(const config_item_t *ci_orig) /* FIXME */
     }
 
     ci_copy->file = config_get_file_ref(ci_orig->file); /* FIXME */
+    ci_copy->lineno = ci_orig->lineno;
 
     if (ci_orig->values_num > 0) {
         ci_copy->values = calloc(ci_orig->values_num, sizeof(*ci_copy->values));
