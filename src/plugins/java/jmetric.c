@@ -44,6 +44,12 @@ static jobject ctoj_metric_histogram(JNIEnv *jvm_env, const metric_t *m)
         (*jvm_env)->CallBooleanMethod(jvm_env, o_list, gref.array_list.add, o_bucket);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_bucket);
+
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            PLUGIN_ERROR("ArrayList.add failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
+            return NULL;
+        }
     }
 
 
@@ -88,6 +94,12 @@ static jobject ctoj_metric_summary(JNIEnv *jvm_env, const metric_t *m)
         (*jvm_env)->CallBooleanMethod(jvm_env, o_list, gref.array_list.add, o_quantile);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_quantile);
+
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            PLUGIN_ERROR("ArrayList.add failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
+            return NULL;
+        }
     }
 
 
@@ -227,7 +239,7 @@ static jobject ctoj_metric_unknown(JNIEnv *jvm_env, const metric_t *m)
     return NULL;
 }
 
-static jobject ctoj_metric(JNIEnv *jvm_env, metric_type_t type, const metric_t *m)
+jobject ctoj_metric(JNIEnv *jvm_env, metric_type_t type, const metric_t *m)
 {
     jobject o_metric = NULL;
 
@@ -265,194 +277,194 @@ static jobject ctoj_metric(JNIEnv *jvm_env, metric_type_t type, const metric_t *
         jobject o_labels = ctoj_label_set_object(jvm_env, &m->label);
         if (o_labels == NULL) {
             PLUGIN_ERROR("ctoj_label_set_object failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_metric);
             return NULL;
         }
 
         (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_labels, o_labels);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_labels);
+
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
     }
 
     if (m->time > 0) {
         (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_time,
                                             (jdouble)CDTIME_T_TO_DOUBLE(m->time));
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
     }
 
     if (m->interval > 0) {
         (*jvm_env)->CallVoidMethod(jvm_env, o_metric, gref.metric.set_interval,
                                             (jdouble)CDTIME_T_TO_DOUBLE(m->interval));
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
     }
 
     return o_metric;
+error:
+    PLUGIN_ERROR("Setting the metric labels, time or interval failed.");
+    (*jvm_env)->DeleteLocalRef(jvm_env, o_metric);
+    return NULL;
 }
 
-jobject ctoj_metric_family(JNIEnv *jvm_env, const metric_family_t *fam)
+int jtoc_list_to_array(JNIEnv *jvm_env, jobject object, jmethodID method_id,
+                       jobjectArray *ret_array, jsize *ret_size)
 {
-    jstring o_name = (*jvm_env)->NewStringUTF(jvm_env, (fam->name != NULL) ? fam->name : "");
-    if (o_name == NULL) {
-        PLUGIN_ERROR("Cannot create String object.");
-        return NULL;
+    *ret_array = NULL;
+    *ret_size = 0;
+
+    jobject o_list = (*jvm_env)->CallObjectMethod(jvm_env, object, method_id);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
+    if (o_list == NULL)
+        return 0;
+
+    jobjectArray o_array = (*jvm_env)->CallObjectMethod(jvm_env, o_list, gref.list.to_array);
+    (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
+    if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_array == NULL)) {
+        PLUGIN_ERROR("List.toArray failed.");
+        return -1;
     }
 
-    jint type = fam->type;;
-
-    jobject o_fam = (*jvm_env)->NewObject(jvm_env, gref.metric_family.class,
-                                                   gref.metric_family.constructor, o_name, type);
-    if (o_fam == NULL) {
-        PLUGIN_ERROR("Creating a new MetricFamily instance failed.");
-        return NULL;
-    }
-
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
-
-    if (fam->help != NULL) {
-        int status = ctoj_string(jvm_env, fam->help, o_fam, gref.metric_family.set_help);
-        if (status != 0) {
-            PLUGIN_ERROR("ctoj_string (setName) failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_fam);
-            return NULL;
-        }
-    }
-
-    if (fam->unit != NULL) {
-        int status = ctoj_string(jvm_env, fam->unit, o_fam, gref.metric_family.set_unit);
-        if (status != 0) {
-            PLUGIN_ERROR("ctoj_string (setUnit) failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_fam);
-            return NULL;
-        }
-    }
-
-    for (size_t i = 0; i < fam->metric.num; i++) {
-        metric_t *m = &fam->metric.ptr[i];
-        jobject o_metric = ctoj_metric(jvm_env, fam->type, m);
-        if (o_metric == NULL) {
-            PLUGIN_ERROR("ctoj_metric failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_fam);
-            return NULL;
-        }
-        (*jvm_env)->CallVoidMethod(jvm_env, o_fam, gref.metric_family.add_metric, o_metric);
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_metric);
-    }
-
-    return o_fam;
+    *ret_array = o_array;
+    *ret_size = (*jvm_env)->GetArrayLength(jvm_env, o_array);
+    return 0;
 }
 
 static int jtoc_metric_histogram(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
 {
     jdouble sum = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric_histogram.get_sum);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
 
-    jobject o_list = (*jvm_env)->CallObjectMethod(jvm_env, o_metric,
-                                                           gref.metric_histogram.get_buckets);
-    if (o_list == NULL) {
-        PLUGIN_ERROR("CallObjectMethod (getQuantiles) failed.");
+    jobjectArray o_buckets = NULL;
+    jsize size = 0;
+    if (jtoc_list_to_array(jvm_env, o_metric, gref.metric_histogram.get_buckets,
+                           &o_buckets, &size) != 0) {
+       PLUGIN_ERROR("Reading the histogram buckets failed.");
         return -1;
     }
 
-    jint size = (*jvm_env)->CallIntMethod(jvm_env, o_list, gref.list.size);
-
-    jobject o_buckets_array = (*jvm_env)->CallObjectMethod(jvm_env, o_list, gref.list.to_array);
-    if (o_buckets_array == NULL) {
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-        PLUGIN_ERROR("CallObjectMethod (toArray) failed.");
-        return -1;
-    }
-
-    m->value.histogram = calloc(1, sizeof(histogram_t) + sizeof(histogram_bucket_t)*size);
+    m->value.histogram = calloc(1, sizeof(histogram_t) + sizeof(histogram_bucket_t)*(size_t)size);
     if (m->value.histogram == NULL) {
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_buckets_array);
         PLUGIN_ERROR("calloc failed.");
-        return -1;
+        goto error;
     }
 
     m->value.histogram->num = size;
     m->value.histogram->sum = sum;
 
-    for (jint i = 0; i < size; i++) {
-        jobject o_bucket = (*jvm_env)->GetObjectArrayElement(jvm_env, o_buckets_array, i);
+    for (jsize i = 0; i < size; i++) {
+        jobject o_bucket = (*jvm_env)->GetObjectArrayElement(jvm_env, o_buckets, i);
         if (o_bucket == NULL) {
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_buckets_array);
-            PLUGIN_ERROR("GetObjectArrayElement (%d) failed.", i);
-            return -1;
+            PLUGIN_ERROR("Histogram bucket %d is null.", (int)i);
+            goto error;
+        }
+
+        if (!(*jvm_env)->IsInstanceOf(jvm_env, o_bucket, gref.metric_histogram_bucket.class)) {
+            PLUGIN_ERROR("Histogram bucket %d is not a MetricHistogramBucket.", (int)i);
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_bucket);
+            goto error;
         }
 
         jlong counter = (*jvm_env)->CallLongMethod(jvm_env, o_bucket,
                                                    gref.metric_histogram_bucket.get_counter);
 
-        jdouble maximum = (*jvm_env)->CallDoubleMethod(jvm_env, o_bucket,
-                                                       gref.metric_histogram_bucket.get_maximum);
+        jdouble maximum = 0;
+        if (!(*jvm_env)->ExceptionCheck(jvm_env))
+            maximum = (*jvm_env)->CallDoubleMethod(jvm_env, o_bucket,
+                                                   gref.metric_histogram_bucket.get_maximum);
 
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_bucket); // FIXME ¿?
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_bucket);
+
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
 
         m->value.histogram->buckets[i].counter = counter;
         m->value.histogram->buckets[i].maximum = maximum;
     }
 
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_buckets_array);
+    if (o_buckets != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_buckets);
 
     return 0;
+
+error:
+    if (o_buckets != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_buckets);
+    return -1;
 }
 
 static int jtoc_metric_summary(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
 {
     jdouble sum = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric_summary.get_sum);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
 
     jdouble count = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric_summary.get_count);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
 
-    jobject o_list = (*jvm_env)->CallObjectMethod(jvm_env, o_metric,
-                                                           gref.metric_summary.get_quantiles);
-    if (o_list == NULL) {
-        PLUGIN_ERROR("CallObjectMethod (getQuantiles) failed.");
+    jobjectArray o_quantiles = NULL;
+    jsize size = 0;
+    if (jtoc_list_to_array(jvm_env, o_metric, gref.metric_summary.get_quantiles,
+                           &o_quantiles, &size) != 0) {
+        PLUGIN_ERROR("Reading the summary quantiles failed.");
         return -1;
     }
 
-    jint size = (*jvm_env)->CallIntMethod(jvm_env, o_list, gref.list.size);
-
-    jobject o_quantiles_array = (*jvm_env)->CallObjectMethod(jvm_env, o_list, gref.list.to_array);
-    if (o_quantiles_array == NULL) {
-        PLUGIN_ERROR("CallObjectMethod (toArray) failed.");
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-        return -1;
-    }
-
-    m->value.summary = calloc(1, sizeof(summary_t) + sizeof(summary_quantile_t)*size);
+    m->value.summary = calloc(1, sizeof(summary_t) + sizeof(summary_quantile_t)*(size_t)size);
     if (m->value.summary == NULL) {
         PLUGIN_ERROR("calloc failed.");
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_quantiles_array);
-        return -1;
+        goto error;
     }
 
     m->value.summary->num = size;
     m->value.summary->sum = sum;
     m->value.summary->count = count;
 
-    for (jint i = 0; i < size; i++) {
-        jobject o_quantile = (*jvm_env)->GetObjectArrayElement(jvm_env, o_quantiles_array, i);
+    for (jsize i = 0; i < size; i++) {
+        jobject o_quantile = (*jvm_env)->GetObjectArrayElement(jvm_env, o_quantiles, i);
         if (o_quantile == NULL) {
-            PLUGIN_ERROR("GetObjectArrayElement (%d) failed.", i);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_quantiles_array);
-            return -1;
+            PLUGIN_ERROR("Summary quantile %d is null.", (int)i);
+            goto error;
+        }
+
+        if (!(*jvm_env)->IsInstanceOf(jvm_env, o_quantile, gref.metric_summary_quantile.class)) {
+            PLUGIN_ERROR("Summary quantile %d is not a MetricSummaryQuantile.", (int)i);
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_quantile);
+            goto error;
         }
 
         jdouble quantile = (*jvm_env)->CallDoubleMethod(jvm_env, o_quantile,
                                                         gref.metric_summary_quantile.get_quantile);
 
-        jdouble value = (*jvm_env)->CallDoubleMethod(jvm_env, o_quantile,
-                                                     gref.metric_summary_quantile.get_value);
+        jdouble value = 0;
+        if (!(*jvm_env)->ExceptionCheck(jvm_env))
+            value = (*jvm_env)->CallDoubleMethod(jvm_env, o_quantile,
+                                                 gref.metric_summary_quantile.get_value);
+
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_quantile);
+
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
 
         m->value.summary->quantiles[i].quantile = quantile;
         m->value.summary->quantiles[i].value = value;
     }
 
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_list);
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_quantiles_array);
+    if (o_quantiles != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_quantiles);
 
     return 0;
+
+error:
+    if (o_quantiles != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_quantiles);
+    return -1;
 }
 
 static int jtoc_metric_state_set(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
@@ -481,6 +493,8 @@ static int jtoc_metric_info(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
 static int jtoc_metric_counter(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
 {
     jint type = (*jvm_env)->CallIntMethod(jvm_env, o_metric, gref.metric_counter.get_type);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
 
     if (type == COUNTER_UINT64) {
         m->value.counter.type = COUNTER_UINT64;
@@ -491,14 +505,19 @@ static int jtoc_metric_counter(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
         jdouble value = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric,
                                                               gref.metric_counter.get_double);
         m->value.counter.float64 = value;
+    } else {
+        PLUGIN_ERROR("Unknown counter type %d.", (int)type);
+        return -1;
     }
 
-    return 0;
+    return (*jvm_env)->ExceptionCheck(jvm_env) ? -1 : 0;
 }
 
 static int jtoc_metric_gauge(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
 {
     jint type = (*jvm_env)->CallIntMethod(jvm_env, o_metric, gref.metric_gauge.get_type);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
 
     if (type == GAUGE_FLOAT64) {
         m->value.gauge.type = GAUGE_FLOAT64;
@@ -510,14 +529,19 @@ static int jtoc_metric_gauge(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
         jlong value = (*jvm_env)->CallLongMethod(jvm_env, o_metric,
                                                           gref.metric_gauge.get_long);
         m->value.gauge.int64 = value;
+    } else {
+        PLUGIN_ERROR("Unknown gauge type %d.", (int)type);
+        return -1;
     }
 
-    return 0;
+    return (*jvm_env)->ExceptionCheck(jvm_env) ? -1 : 0;
 }
 
 static int jtoc_metric_unknown(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
 {
     jint type = (*jvm_env)->CallIntMethod(jvm_env, o_metric, gref.metric_unknown.get_type);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
 
     if (type == UNKNOWN_FLOAT64) {
         m->value.unknown.type = UNKNOWN_FLOAT64;
@@ -528,154 +552,87 @@ static int jtoc_metric_unknown(JNIEnv *jvm_env, metric_t *m, jobject o_metric)
         m->value.unknown.type = UNKNOWN_INT64;
         jlong value = (*jvm_env)->CallLongMethod(jvm_env, o_metric, gref.metric_unknown.get_long);
         m->value.unknown.int64 = value;
-    }
-
-    return 0;
-}
-
-static int jtoc_metric(JNIEnv *jvm_env, metric_type_t type, metric_t *m, jobject o_metric)
-{
-    jclass c_metric = (*jvm_env)->GetObjectClass(jvm_env, o_metric);
-    if (c_metric == NULL) {
-        PLUGIN_ERROR("jtoc_metric: GetObjectClass failed.");
+    } else {
+        PLUGIN_ERROR("Unknown value type %d.", (int)type);
         return -1;
     }
 
+    return (*jvm_env)->ExceptionCheck(jvm_env) ? -1 : 0;
+}
+
+int jtoc_metric(JNIEnv *jvm_env, metric_type_t type, metric_t *m, jobject o_metric)
+{
+    int status = -1;
+
     switch(type) {
     case METRIC_TYPE_UNKNOWN:
-        jtoc_metric_unknown(jvm_env, m, o_metric);
+        status = jtoc_metric_unknown(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_GAUGE:
-        jtoc_metric_gauge(jvm_env, m, o_metric);
+        status = jtoc_metric_gauge(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_COUNTER:
-        jtoc_metric_counter(jvm_env, m, o_metric);
+        status = jtoc_metric_counter(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_STATE_SET:
-        jtoc_metric_state_set(jvm_env, m, o_metric);
+        status = jtoc_metric_state_set(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_INFO:
-        jtoc_metric_info(jvm_env, m, o_metric);
+        status = jtoc_metric_info(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_SUMMARY:
-        jtoc_metric_summary(jvm_env, m, o_metric);
+        status = jtoc_metric_summary(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_HISTOGRAM:
-        jtoc_metric_histogram(jvm_env, m, o_metric);
+        status = jtoc_metric_histogram(jvm_env, m, o_metric);
         break;
     case METRIC_TYPE_GAUGE_HISTOGRAM:
-        jtoc_metric_histogram(jvm_env, m, o_metric);
+        status = jtoc_metric_histogram(jvm_env, m, o_metric);
         break;
     }
 
-    int status = jtoc_label_set(jvm_env, &m->label, o_metric, gref.metric.get_labels);
+    if (status != 0)
+        return -1;
+
+    status = jtoc_label_set(jvm_env, &m->label, o_metric, gref.metric.get_labels);
     if (status != 0) {
         PLUGIN_ERROR("jtoc_label_set (getLabels) failed.");
         return -1;
     }
 
     jdouble time = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric.get_time);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
     m->time = DOUBLE_TO_CDTIME_T(time);
 
     jdouble interval = (*jvm_env)->CallDoubleMethod(jvm_env, o_metric, gref.metric.get_interval);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
     m->interval = DOUBLE_TO_CDTIME_T(interval);
 
     return 0;
 }
 
-int jtoc_metric_family(JNIEnv *jvm_env, metric_family_t *fam, jobject o_fam)
+jclass jtoc_metric_class(metric_type_t type)
 {
-    // FIXME class equals
-    jclass c_fam = (*jvm_env)->GetObjectClass(jvm_env, o_fam);
-    if (c_fam == NULL) {
-        PLUGIN_ERROR("jtoc_metric_family: GetObjectClass failed.");
-        return -1;
+    switch(type) {
+    case METRIC_TYPE_UNKNOWN:
+        return gref.metric_unknown.class;
+    case METRIC_TYPE_GAUGE:
+        return gref.metric_gauge.class;
+    case METRIC_TYPE_COUNTER:
+        return gref.metric_counter.class;
+    case METRIC_TYPE_STATE_SET:
+        return gref.metric_state_set.class;
+    case METRIC_TYPE_INFO:
+        return gref.metric_info.class;
+    case METRIC_TYPE_SUMMARY:
+        return gref.metric_summary.class;
+    case METRIC_TYPE_HISTOGRAM:
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        return gref.metric_histogram.class;
     }
 
-    jint type = (*jvm_env)->CallIntMethod(jvm_env, o_fam, gref.metric_family.get_type);
-    fam->type = type;
-
-    char *name = NULL;
-    int status = jtoc_string(jvm_env, &name, o_fam, gref.metric_family.get_name);
-    if (status != 0) {
-        PLUGIN_ERROR("jtoc_value_list: jtoc_string (getName) failed.");
-        return -1;
-    }
-    fam->name = name;
-
-    char *help = NULL;
-    status = jtoc_string(jvm_env, &help, o_fam, gref.metric_family.get_help);
-    if (status != 0) {
-        PLUGIN_ERROR("jtoc_value_list: jtoc_string (getHelp) failed.");
-        goto error;
-    }
-    fam->help = help;
-
-    char *unit = NULL;
-    status = jtoc_string(jvm_env, &unit, o_fam, gref.metric_family.get_unit);
-    if (status != 0) {
-        PLUGIN_ERROR("jtoc_value_list: jtoc_string (getUnit) failed.");
-        goto error;
-    }
-    fam->unit = unit;
-
-    jobject o_metrics = (*jvm_env)->CallObjectMethod(jvm_env, o_fam,
-                                                              gref.metric_family.get_metrics);
-    if (o_metrics == NULL) {
-        PLUGIN_ERROR("CallObjectMethod (getMetrics) failed.");
-        goto error;
-    }
-
-    jobject o_metrics_array = (*jvm_env)->CallObjectMethod(jvm_env, o_metrics, gref.list.to_array);
-    if (o_metrics_array == NULL) {
-        PLUGIN_ERROR("CallObjectMethod (toArray) failed.");
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
-        goto error;
-    }
-
-    jsize metrics_size = (*jvm_env)->GetArrayLength(jvm_env, o_metrics_array);
-
-    if (metrics_size > 0) {
-        metric_t *metrics = calloc((size_t)metrics_size, sizeof(*metrics));
-        if (metrics == NULL) {
-            PLUGIN_ERROR("calloc failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
-            goto error;
-        }
-       
-        fam->metric.ptr = metrics;
-        fam->metric.num = metrics_size;
-       
-        for (jsize i = 0; i < metrics_size; i++) {
-            metric_t *m = &fam->metric.ptr[(size_t)i];
-       
-            jobject o_metric = (*jvm_env)->GetObjectArrayElement(jvm_env, o_metrics_array, i);
-            if (o_metric == NULL) {
-                PLUGIN_ERROR("GetObjectArrayElement (%zu) failed.", (size_t)i);
-                (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
-                (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
-                goto error:
-            }
-       
-            jtoc_metric(jvm_env, fam->type, m, o_metric);
-       
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_metric); // FIXME ¿?
-        }
-    }
-
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics);
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_metrics_array);
-
-    return 0;
-
-error:
-    free(fam->name);
-    fam->name = NULL;
-    free(fam->help);
-    fam->help = NULL;
-    free(fam->unit);
-    fam->unit = NULL;
-    metric_list_reset(&fam->metric, fam->type);
-    return -1;
+    return NULL;
 }
+

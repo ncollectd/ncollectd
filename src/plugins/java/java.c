@@ -19,15 +19,8 @@
 
 jcached_refs_t gref;
 
-struct cjni_jvm_env_s {
-    JNIEnv *jvm_env;
-    int reference_counter;
-};
-typedef struct cjni_jvm_env_s cjni_jvm_env_t;
-
 struct java_plugin_class_s {
     char *name;
-    jclass class;
     jobject object;
 };
 typedef struct java_plugin_class_s java_plugin_class_t;
@@ -44,7 +37,6 @@ typedef struct java_plugin_class_s java_plugin_class_t;
 struct cjni_callback_info_s {
     char *name;
     int type;
-    jclass class;
     jobject object;
     jmethodID method;
 };
@@ -55,6 +47,7 @@ typedef struct cjni_callback_info_s cjni_callback_info_t;
  */
 static JavaVM *jvm;
 static pthread_key_t jvm_env_key;
+static bool jvm_failed;
 
 /* Configuration options for the JVM. */
 static char **jvm_argv;
@@ -94,6 +87,11 @@ static jint JNICALL cjni_api_dispatch_metric_family(JNIEnv *jvm_env,
                                                     __attribute__((unused)) jobject this,
                                                     jobject o_fam)
 {
+    if (o_fam == NULL) {
+        PLUGIN_ERROR("The metric family is null.");
+        return -1;
+    }
+
     metric_family_t fam = {0};
 
     int status = jtoc_metric_family(jvm_env, &fam, o_fam);
@@ -116,6 +114,11 @@ static jint JNICALL cjni_api_dispatch_notification(JNIEnv *jvm_env,
                                                    __attribute__((unused)) jobject this,
                                                    jobject o_notification)
 {
+    if (o_notification == NULL) {
+        PLUGIN_ERROR("The notification is null.");
+        return -1;
+    }
+
     notification_t n = {0};
     int status;
 
@@ -157,12 +160,15 @@ static jint JNICALL cjni_api_register_read_time(JNIEnv *jvm_env,
 
     PLUGIN_DEBUG("Registering new read callback: %s", cbi->name);
 
-    plugin_register_complex_read("java", cbi->name, cjni_read, MS_TO_CDTIME_T(interval),
-            &(user_data_t){.data = cbi, .free_func = cjni_callback_info_destroy, });
+    int status = plugin_register_complex_read("java", cbi->name, cjni_read,
+                                              MS_TO_CDTIME_T(interval),
+                                              &(user_data_t){
+                                                .data = cbi,
+                                                .free_func = cjni_callback_info_destroy, });
 
     (*jvm_env)->DeleteLocalRef(jvm_env, o_read);
 
-    return 0;
+    return (status == 0) ? 0 : -1;
 }
 
 static jint JNICALL cjni_api_register_read(JNIEnv *jvm_env, jobject this,
@@ -180,12 +186,13 @@ static jint JNICALL cjni_api_register_write(JNIEnv *jvm_env, __attribute__((unus
 
     PLUGIN_DEBUG("Registering new write callback: %s", cbi->name);
 
-    plugin_register_write("java", cbi->name, cjni_write, NULL, 0, 0,
-                          &(user_data_t){ .data = cbi, .free_func = cjni_callback_info_destroy });
+    int status = plugin_register_write("java", cbi->name, cjni_write, NULL, 0, 0,
+                                       &(user_data_t){ .data = cbi,
+                                                       .free_func = cjni_callback_info_destroy });
 
     (*jvm_env)->DeleteLocalRef(jvm_env, o_write);
 
-    return 0;
+    return (status == 0) ? 0 : -1;
 }
 
 static jint JNICALL cjni_api_register_shutdown(JNIEnv *jvm_env, __attribute__((unused)) jobject this,
@@ -205,12 +212,13 @@ static jint JNICALL cjni_api_register_log(JNIEnv *jvm_env, __attribute__((unused
 
     PLUGIN_DEBUG("Registering new log callback: %s", cbi->name);
 
-    plugin_register_log("java", cbi->name, cjni_log,
-                        &(user_data_t){ .data = cbi, .free_func = cjni_callback_info_destroy, });
+    int status = plugin_register_log("java", cbi->name, cjni_log,
+                                     &(user_data_t){.data = cbi,
+                                                    .free_func = cjni_callback_info_destroy, });
 
     (*jvm_env)->DeleteLocalRef(jvm_env, o_log);
 
-    return 0;
+    return (status == 0) ? 0 : -1;
 }
 
 static jint JNICALL cjni_api_register_notification(JNIEnv *jvm_env,
@@ -225,28 +233,33 @@ static jint JNICALL cjni_api_register_notification(JNIEnv *jvm_env,
 
     PLUGIN_DEBUG("Registering new notification callback: %s", cbi->name);
 
-    plugin_register_notification("java", cbi->name, cjni_notification,
-                        &(user_data_t){ .data = cbi, .free_func = cjni_callback_info_destroy });
+    int status = plugin_register_notification("java", cbi->name, cjni_notification,
+                                              &(user_data_t){
+                                                .data = cbi,
+                                                .free_func = cjni_callback_info_destroy });
 
     (*jvm_env)->DeleteLocalRef(jvm_env, o_notification);
 
-    return 0;
+    return (status == 0) ? 0 : -1;
 }
 static void JNICALL cjni_api_log(JNIEnv *jvm_env, __attribute__((unused)) jobject this,
                                  jint severity, jobject o_message)
 {
-    const char *c_str;
-
-    c_str = (*jvm_env)->GetStringUTFChars(jvm_env, o_message, 0);
-    if (c_str == NULL) {
-        PLUGIN_ERROR("cjni_api_log: GetStringUTFChars failed.");
-        return;
-    }
-
     if (severity < LOG_ERR)
         severity = LOG_ERR;
     if (severity > LOG_DEBUG)
         severity = LOG_DEBUG;
+
+    if (o_message == NULL) {
+        plugin_log(severity, NULL, 0, NULL, "%s", "null");
+        return;
+    }
+
+    const char *c_str = (*jvm_env)->GetStringUTFChars(jvm_env, o_message, 0);
+    if (c_str == NULL) {
+        PLUGIN_ERROR("cjni_api_log: GetStringUTFChars failed.");
+        return;
+    }
 
     plugin_log(severity, NULL, 0, NULL, "%s", c_str);
 
@@ -337,7 +350,12 @@ static cjni_callback_info_t *
         method_signature = "(Lorg/ncollectd/api/Notification;)I";
         break;
     default:
-        PLUGIN_ERROR("cjni_callback_info_create: Unknown type: %#x", (unsigned int)type);
+        PLUGIN_ERROR("Unknown type: %#x", (unsigned int)type);
+        return NULL;
+    }
+
+    if ((o_name == NULL) || (o_callback == NULL)) {
+        PLUGIN_ERROR("The callback name and object must not be null.");
         return NULL;
     }
 
@@ -372,15 +390,16 @@ static cjni_callback_info_t *
         return NULL;
     }
 
-    cbi->class = (*jvm_env)->GetObjectClass(jvm_env, cbi->object);
-    if (cbi->class == NULL) {
+    jclass class = (*jvm_env)->GetObjectClass(jvm_env, cbi->object);
+    if (class == NULL) {
         PLUGIN_ERROR("GetObjectClass failed.");
         (*jvm_env)->DeleteGlobalRef(jvm_env, cbi->object);
         cjni_callback_info_free(cbi);
         return NULL;
     }
 
-    cbi->method = (*jvm_env)->GetMethodID(jvm_env, cbi->class, method_name, method_signature);
+    cbi->method = (*jvm_env)->GetMethodID(jvm_env, class, method_name, method_signature);
+    (*jvm_env)->DeleteLocalRef(jvm_env, class);
     if (cbi->method == NULL) {
         PLUGIN_ERROR("Cannot find the `%s' method with signature `%s'.",
                      method_name, method_signature);
@@ -440,7 +459,8 @@ static int cjni_callback_register(JNIEnv *jvm_env, jobject o_name, jobject o_cal
 
     pthread_mutex_unlock(&java_callbacks_lock);
 
-    cjni_callback_info_free(cbi);
+    /* The name and the global reference are now owned by java_callbacks. */
+    free(cbi);
 
     return 0;
 }
@@ -449,21 +469,10 @@ static int cjni_callback_register(JNIEnv *jvm_env, jobject o_name, jobject o_cal
  * `jvm_env_key' and prints a warning if the reference counter is not zero. */
 static void cjni_jvm_env_destroy(void *args)
 {
-    if (args == NULL)
+    if ((args == NULL) || (jvm == NULL))
         return;
 
-    cjni_jvm_env_t *cjni_env = (cjni_jvm_env_t *)args;
-
-    if (cjni_env->reference_counter > 0) {
-        PLUGIN_ERROR("cjni_env->reference_counter = %i;", cjni_env->reference_counter);
-    }
-
-    if (cjni_env->jvm_env != NULL) {
-        PLUGIN_ERROR("cjni_env->jvm_env = %p;", (void *)cjni_env->jvm_env);
-    }
-
-    /* The pointer is allocated in cjni_thread_attach */
-    free(cjni_env);
+    (*jvm)->DetachCurrentThread(jvm);
 }
 
 /* Register ``native'' functions with the JVM. Native functions are C-functions
@@ -472,6 +481,7 @@ static int cjni_init_native(JNIEnv *jvm_env)
 {
     jclass api_class_ptr = (*jvm_env)->FindClass(jvm_env, "org/ncollectd/api/NCollectd");
     if (api_class_ptr == NULL) {
+        cjni_exception_check(jvm_env, "class lookup", "org/ncollectd/api/NCollectd");
         PLUGIN_ERROR("Cannot find the API class \"org.ncollectd.api"
                      ".NCollectd\". Please set the correct class path "
                      "using 'JVMArg \"-Djava.class.path=...\"'.");
@@ -480,7 +490,9 @@ static int cjni_init_native(JNIEnv *jvm_env)
 
     int status = (*jvm_env)->RegisterNatives(jvm_env, api_class_ptr, jni_api_functions,
                                                       (jint)jni_api_functions_num);
+    (*jvm_env)->DeleteLocalRef(jvm_env, api_class_ptr);
     if (status != 0) {
+        cjni_exception_check(jvm_env, "RegisterNatives", NULL);
         PLUGIN_ERROR("RegisterNatives failed with status %i.", status);
         return -1;
     }
@@ -498,6 +510,10 @@ static int cjni_create_jvm(void)
     if (jvm != NULL)
         return 0;
 
+    if (jvm_failed)
+        return -1;
+    jvm_failed = true;
+
     int status = pthread_key_create(&jvm_env_key, cjni_jvm_env_destroy);
     if (status != 0) {
         PLUGIN_ERROR("cjni_create_jvm: pthread_key_create failed with status %i.", status);
@@ -505,39 +521,53 @@ static int cjni_create_jvm(void)
     }
 
     JNIEnv *jvm_env = NULL;
-    JavaVMOption vm_options[jvm_argc > 0 ? jvm_argc : 1];
+    JavaVMOption vm_options[jvm_argc + 1];
     JavaVMInitArgs vm_args = {0};
     vm_args.version = JNI_VERSION_1_2;
     vm_args.options = vm_options;
-    vm_args.nOptions = (jint)jvm_argc;
+    vm_args.nOptions = (jint)jvm_argc + 1;
+
+    /* Do not let the JVM install its own SIGINT, SIGTERM, SIGHUP and SIGQUIT
+     * handlers: they replace the ones of ncollectd and exit the process without
+     * the orderly shutdown of the daemon. */
+    static char reduce_signals[] = "-Xrs";
+    vm_options[0] = (JavaVMOption){ .optionString = reduce_signals };
 
     for (size_t i = 0; i < jvm_argc; i++) {
         PLUGIN_DEBUG("jvm_argv[%" PRIsz "] = %s", i, jvm_argv[i]);
-        vm_args.options[i].optionString = jvm_argv[i];
+        vm_options[i + 1] = (JavaVMOption){ .optionString = jvm_argv[i] };
     }
 
-    status = JNI_CreateJavaVM(&jvm, (void *)&jvm_env, (void *)&vm_args);
+    JavaVM *new_jvm = NULL;
+    status = JNI_CreateJavaVM(&new_jvm, (void *)&jvm_env, (void *)&vm_args);
     if (status != 0) {
         PLUGIN_ERROR("JNI_CreateJavaVM failed with status %i.", status);
+        pthread_key_delete(jvm_env_key);
         return -1;
     }
-    assert(jvm != NULL);
+    assert(new_jvm != NULL);
     assert(jvm_env != NULL);
 
-    /* Call RegisterNatives */
+    /* Call RegisterNatives. If it fails the JVM is not usable, and it cannot be
+     * destroyed and created again in the same process. */
     status = cjni_init_native(jvm_env);
     if (status != 0) {
         PLUGIN_ERROR("cjni_create_jvm: cjni_init_native failed.");
+        pthread_key_delete(jvm_env_key);
         return -1;
     }
+
+    jvm = new_jvm;
+    jvm_failed = false;
 
     PLUGIN_DEBUG("The JVM has been created.");
     return 0;
 }
 
-/* Increase the reference counter to the JVM for this thread. If it was zero,
- * attach the JVM first. */
-static JNIEnv *cjni_thread_attach(jboolean once)
+/* Return the JNI environment of the current thread, creating the JVM and
+ * attaching the thread when needed. Native threads are attached as daemon
+ * threads and stay attached until they exit (see cjni_jvm_env_destroy). */
+static JNIEnv *cjni_thread_attach(void)
 {
     /* If we're the first thread to access the JVM, we'll have to create it first.. */
     if (jvm == NULL) {
@@ -550,78 +580,39 @@ static JNIEnv *cjni_thread_attach(jboolean once)
 
     assert(jvm != NULL);
 
-    cjni_jvm_env_t *cjni_env = pthread_getspecific(jvm_env_key);
-    if (cjni_env == NULL) {
-        /* This pointer is free'd in `cjni_jvm_env_destroy'. */
-        cjni_env = calloc(1, sizeof(*cjni_env));
-        if (cjni_env == NULL) {
-            PLUGIN_ERROR("calloc failed.");
-            return NULL;
-        }
-        cjni_env->reference_counter = 0;
-        cjni_env->jvm_env = NULL;
-
-        pthread_setspecific(jvm_env_key, cjni_env);
-    }
-
     JNIEnv *jvm_env = NULL;
+    jint status = (*jvm)->GetEnv(jvm, (void **)&jvm_env, JNI_VERSION_1_2);
+    if (status == JNI_OK)
+        return jvm_env;
 
-    if (cjni_env->reference_counter > 0) {
-        if (once == JNI_FALSE)
-            cjni_env->reference_counter++;
-        jvm_env = cjni_env->jvm_env;
-    } else {
-        int status;
-        JavaVMAttachArgs args = {0};
-
-        assert(cjni_env->jvm_env == NULL);
-
-        args.version = JNI_VERSION_1_2;
-
-        status = (*jvm)->AttachCurrentThread(jvm, (void *)&jvm_env, (void *)&args);
-        if (status != 0) {
-            PLUGIN_ERROR("AttachCurrentThread failed with status %i.", status);
-            return NULL;
-        }
-
-        cjni_env->reference_counter = 1;
-        cjni_env->jvm_env = jvm_env;
+    if (status != JNI_EDETACHED) {
+        PLUGIN_ERROR("GetEnv failed with status %i.", (int)status);
+        return NULL;
     }
 
-    PLUGIN_DEBUG("cjni_env->reference_counter = %i", cjni_env->reference_counter);
+    JavaVMAttachArgs args = {0};
+    args.version = JNI_VERSION_1_2;
+    status = (*jvm)->AttachCurrentThreadAsDaemon(jvm, (void **)&jvm_env, (void *)&args);
+    if (status != JNI_OK) {
+        PLUGIN_ERROR("AttachCurrentThreadAsDaemon failed with status %i.", (int)status);
+        return NULL;
+    }
+
+    pthread_setspecific(jvm_env_key, jvm_env);
     assert(jvm_env != NULL);
     return jvm_env;
 }
 
-/* Decrease the reference counter of this thread. If it reaches zero, detach
- * from the JVM. */
-
-static int cjni_thread_detach(void)
+/* Native threads stay attached and never return to Java, so the local
+ * references they create are only released by a local frame. */
+static int cjni_push_local_frame(JNIEnv *jvm_env, jint capacity)
 {
-    cjni_jvm_env_t *cjni_env = pthread_getspecific(jvm_env_key);
-    if (cjni_env == NULL) {
-        PLUGIN_ERROR("pthread_getspecific failed.");
-        return -1;
-    }
-
-    assert(cjni_env->reference_counter > 0);
-    assert(cjni_env->jvm_env != NULL);
-
-    cjni_env->reference_counter--;
-    PLUGIN_DEBUG("cjni_env->reference_counter = %i", cjni_env->reference_counter);
-
-    if (cjni_env->reference_counter > 0)
+    if ((*jvm_env)->PushLocalFrame(jvm_env, capacity) == 0)
         return 0;
 
-    int status = (*jvm)->DetachCurrentThread(jvm);
-    if (status != 0) {
-        PLUGIN_ERROR("DetachCurrentThread failed with status %i.", status);
-    }
-
-    cjni_env->reference_counter = 0;
-    cjni_env->jvm_env = NULL;
-
-    return 0;
+    (*jvm_env)->ExceptionClear(jvm_env);
+    PLUGIN_ERROR("Failed to allocate JVM local references.");
+    return -1;
 }
 
 static int cjni_config_add_jvm_arg(config_item_t *ci)
@@ -631,7 +622,7 @@ static int cjni_config_add_jvm_arg(config_item_t *ci)
         return -1;
     }
 
-    if (jvm != NULL) {
+    if ((jvm != NULL) || jvm_failed) {
         PLUGIN_ERROR("All `JVMArg' options MUST appear before all "
                     "`LoadPlugin' options! The JVM is already started and I have to "
                     "ignore this argument: %s",
@@ -663,7 +654,7 @@ static int cjni_config_load_plugin(config_item_t *ci)
         return -1;
     }
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_FALSE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
         return -1;
 
@@ -671,7 +662,6 @@ static int cjni_config_load_plugin(config_item_t *ci)
                                          (java_classes_list_len + 1) * sizeof(*java_classes_list));
     if (class == NULL) {
         PLUGIN_ERROR("realloc failed.");
-        cjni_thread_detach();
         return -1;
     }
     java_classes_list = class;
@@ -681,10 +671,8 @@ static int cjni_config_load_plugin(config_item_t *ci)
     class->name = strdup(ci->values[0].value.string);
     if (class->name == NULL) {
         PLUGIN_ERROR("strdup failed.");
-        cjni_thread_detach();
         return -1;
     }
-    class->class = NULL;
     class->object = NULL;
 
     /* Replace all dots ('.') with slashes ('/'). Dots are usually used
@@ -696,24 +684,24 @@ static int cjni_config_load_plugin(config_item_t *ci)
 
     PLUGIN_DEBUG("Loading class %s", class->name);
 
-    class->class = (*jvm_env)->FindClass(jvm_env, class->name);
-    if (class->class == NULL) {
-        PLUGIN_ERROR("cjni_config_load_plugin: FindClass (%s) failed.",
-                    class->name);
-        cjni_thread_detach();
+    if (cjni_push_local_frame(jvm_env, 4) != 0) {
         free(class->name);
         return -1;
     }
 
-    jmethodID constructor_id = (*jvm_env)->GetMethodID(jvm_env, class->class, "<init>", "()V");
+    jclass c_plugin = (*jvm_env)->FindClass(jvm_env, class->name);
+    if (c_plugin == NULL) {
+        PLUGIN_ERROR("FindClass (%s) failed.", class->name);
+        goto error;
+    }
+
+    jmethodID constructor_id = (*jvm_env)->GetMethodID(jvm_env, c_plugin, "<init>", "()V");
     if (constructor_id == NULL) {
         PLUGIN_ERROR("Could not find the constructor for `%s'.", class->name);
-        cjni_thread_detach();
-        free(class->name);
-        return -1;
+        goto error;
     }
 
-    jobject tmp_object = (*jvm_env)->NewObject(jvm_env, class->class, constructor_id);
+    jobject tmp_object = (*jvm_env)->NewObject(jvm_env, c_plugin, constructor_id);
     if (tmp_object != NULL) {
         class->object = (*jvm_env)->NewGlobalRef(jvm_env, tmp_object);
     } else {
@@ -722,16 +710,21 @@ static int cjni_config_load_plugin(config_item_t *ci)
 
     if (class->object == NULL) {
         PLUGIN_ERROR("Could not create a new `%s' object.", class->name);
-        cjni_thread_detach();
-        free(class->name);
-        return -1;
+        goto error;
     }
 
-    cjni_thread_detach();
+    (*jvm_env)->PopLocalFrame(jvm_env, NULL);
 
     java_classes_list_len++;
 
     return 0;
+
+error:
+    cjni_exception_check(jvm_env, "load-plugin", class->name);
+    (*jvm_env)->PopLocalFrame(jvm_env, NULL);
+    free(class->name);
+
+    return -1;
 }
 
 static int cjni_config_plugin_block(config_item_t *ci)
@@ -764,25 +757,31 @@ static int cjni_config_plugin_block(config_item_t *ci)
 
     PLUGIN_DEBUG("Configuring %s", name);
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_FALSE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
+        return -1;
+
+    if (cjni_push_local_frame(jvm_env, 8) != 0)
         return -1;
 
     jobject o_ocitem = ctoj_config_item(jvm_env, ci);
     if (o_ocitem == NULL) {
-        PLUGIN_ERROR("ctoj_config_item failed.");
-        cjni_thread_detach();
+        cjni_exception_check(jvm_env, "config callback", name);
+        (*jvm_env)->PopLocalFrame(jvm_env, NULL);
+        return -1;
+    }
+    
+    int status = (*jvm_env)->CallIntMethod(jvm_env, cbi->object, cbi->method, o_ocitem);
+    if (cjni_exception_check(jvm_env, "config callback", name))
+        status = -1;
+
+    (*jvm_env)->PopLocalFrame(jvm_env, NULL);
+
+    if (status != 0) {
+        PLUGIN_ERROR("Configuring `%s' failed with status %i.", name, status);
         return -1;
     }
 
-    jclass class = (*jvm_env)->GetObjectClass(jvm_env, cbi->object);
-    jmethodID method = (*jvm_env)->GetMethodID(jvm_env, class, "config",
-                                                        "(Lorg/ncollectd/api/ConfigItem;)I");
-
-    (*jvm_env)->CallIntMethod(jvm_env, cbi->object, method, o_ocitem);
-
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_ocitem);
-    cjni_thread_detach();
     return 0;
 }
 
@@ -890,7 +889,7 @@ static void cjni_callback_info_destroy(void *arg)
     if (arg == NULL)
         return;
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_FALSE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL) {
         PLUGIN_ERROR("cjni_thread_attach failed.");
         return;
@@ -900,10 +899,7 @@ static void cjni_callback_info_destroy(void *arg)
 
     cbi->method = NULL;
     cbi->object = NULL;
-    cbi->class = NULL;
     cjni_callback_info_free(cbi);
-
-    cjni_thread_detach();
 }
 
 /* Call the CB_TYPE_READ callback pointed to by the `user_data_t' pointer. */
@@ -919,22 +915,21 @@ static int cjni_read(user_data_t *ud)
         return -1;
     }
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_TRUE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
         return -1;
 
-	if ((*env)->PushLocalFrame(env, 16) < 0) {
-		PLUGIN_ERROR("Failed to allocate JVM local references");
-		return -1;
-	}
+    if (cjni_push_local_frame(jvm_env, 16) != 0)
+        return -1;
 
     cjni_callback_info_t *cbi = (cjni_callback_info_t *)ud->data;
 
     int ret_status = (*jvm_env)->CallIntMethod(jvm_env, cbi->object, cbi->method);
+    if (cjni_exception_check(jvm_env, "read callback", cbi->name))
+        ret_status = -1;
 
-    (*env)->PopLocalFrame(env, NULL);
+    (*jvm_env)->PopLocalFrame(jvm_env, NULL);
 
-    // cjni_thread_detach();
     return ret_status;
 }
 
@@ -951,31 +946,29 @@ static int cjni_write(metric_family_t const *fam, user_data_t *ud)
         return -1;
     }
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_TRUE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
         return -1;
 
-	if ((*env)->PushLocalFrame(env, 16) < 0) {
-		PLUGIN_ERROR("Failed to allocate JVM local references");
-		return -1;
-	}
+    if (cjni_push_local_frame(jvm_env, 16) != 0)
+        return -1;
 
     cjni_callback_info_t *cbi = (cjni_callback_info_t *)ud->data;
 
     jobject fam_java = ctoj_metric_family(jvm_env, fam);
     if (fam_java == NULL) {
+        cjni_exception_check(jvm_env, "write callback", cbi->name);
+        (*jvm_env)->PopLocalFrame(jvm_env, NULL);
         PLUGIN_ERROR("ctoj_metric_family failed.");
-        // cjni_thread_detach();
         return -1;
     }
 
     int ret_status = (*jvm_env)->CallIntMethod(jvm_env, cbi->object, cbi->method, fam_java);
+    if (cjni_exception_check(jvm_env, "write callback", cbi->name))
+        ret_status = -1;
 
-    (*jvm_env)->DeleteLocalRef(jvm_env, fam_java);
+    (*jvm_env)->PopLocalFrame(jvm_env, NULL);
 
-    (*env)->PopLocalFrame(env, NULL);
-
-    // cjni_thread_detach();
     return ret_status;
 }
 
@@ -988,23 +981,33 @@ static void cjni_log(const log_msg_t *msg, user_data_t *ud)
     if ((ud == NULL) || (ud->data == NULL))
         return;
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_FALSE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
         return;
+
+    /* We may be called from native code with a pending exception, e.g. when an
+     * error is logged inside a native method: keep it for the caller. */
+    jthrowable o_pending = NULL;
+    if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+        o_pending = (*jvm_env)->ExceptionOccurred(jvm_env);
+        (*jvm_env)->ExceptionClear(jvm_env);
+    }
 
     cjni_callback_info_t *cbi = (cjni_callback_info_t *)ud->data;
 
     jobject o_message = (*jvm_env)->NewStringUTF(jvm_env, msg->msg);
-    if (o_message == NULL) {
-        cjni_thread_detach();
-        return;
+    if (o_message != NULL) {
+        (*jvm_env)->CallVoidMethod(jvm_env, cbi->object, cbi->method, (jint)msg->severity,
+                                            o_message);
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_message);
     }
 
-    (*jvm_env)->CallVoidMethod(jvm_env, cbi->object, cbi->method, (jint)msg->severity, o_message);
+    cjni_exception_check(jvm_env, "log callback", cbi->name);
 
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_message);
-
-    cjni_thread_detach();
+    if (o_pending != NULL) {
+        (*jvm_env)->Throw(jvm_env, o_pending);
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_pending);
+    }
 }
 
 /* Call the CB_TYPE_NOTIFICATION callback pointed to by the `user_data_t'
@@ -1021,24 +1024,28 @@ static int cjni_notification(const notification_t *n, user_data_t *ud)
         return -1;
     }
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_FALSE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
+        return -1;
+
+    if (cjni_push_local_frame(jvm_env, 16) != 0)
         return -1;
 
     cjni_callback_info_t *cbi = (cjni_callback_info_t *)ud->data;
 
     jobject o_notification = ctoj_notification(jvm_env, n);
     if (o_notification == NULL) {
+        cjni_exception_check(jvm_env, "notification callback", cbi->name);
         PLUGIN_ERROR("ctoj_notification failed.");
-        cjni_thread_detach();
         return -1;
     }
 
     int ret_status = (*jvm_env)->CallIntMethod(jvm_env, cbi->object, cbi->method, o_notification);
+    if (cjni_exception_check(jvm_env, "notification callback", cbi->name))
+        ret_status = -1;
 
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_notification);
+    (*jvm_env)->PopLocalFrame(jvm_env, NULL);
 
-    cjni_thread_detach();
     return ret_status;
 }
 
@@ -1055,6 +1062,8 @@ static int cjni_init_plugins(JNIEnv *jvm_env)
 
         status = (*jvm_env)->CallIntMethod(jvm_env, java_callbacks[i].object,
                                                     java_callbacks[i].method);
+        if (cjni_exception_check(jvm_env, "init callback", java_callbacks[i].name))
+            status = -1;
         if (status != 0) {
             PLUGIN_ERROR("Initializing `%s' failed with status %i. Removing read function.",
                          java_callbacks[i].name, status);
@@ -1080,6 +1089,8 @@ static int cjni_shutdown_plugins(JNIEnv *jvm_env)
 
         status = (*jvm_env)->CallIntMethod(jvm_env, java_callbacks[i].object,
                                                     java_callbacks[i].method);
+        if (cjni_exception_check(jvm_env, "shutdown callback", java_callbacks[i].name))
+            status = -1;
         if (status != 0) {
             PLUGIN_ERROR("Shutting down `%s' failed with status %i. ",
                          java_callbacks[i].name, status);
@@ -1131,13 +1142,16 @@ static int cjni_shutdown(void)
 
     cjni_cache_classes_release(jvm_env);
 
-    /* Destroy the JVM */
+    /* Destroy the JVM. Clear `jvm' and the thread-specific key first, so that
+     * callbacks and exiting threads do not use the JVM while it is destroyed. */
     PLUGIN_DEBUG("Destroying the JVM.");
-    (*jvm)->DestroyJavaVM(jvm);
+    JavaVM *vm = jvm;
     jvm = NULL;
-    jvm_env = NULL;
 
     pthread_key_delete(jvm_env_key);
+
+    (*vm)->DestroyJavaVM(vm);
+    jvm_env = NULL;
 
     /* Free the JVM argument list */
     for (size_t i = 0; i < jvm_argc; i++)
@@ -1167,14 +1181,12 @@ static int cjni_init(void)
         return -1;
     }
 
-    JNIEnv *jvm_env = cjni_thread_attach(JNI_FALSE);
+    JNIEnv *jvm_env = cjni_thread_attach();
     if (jvm_env == NULL)
         return -1;
 
     cjni_init_plugins(jvm_env);
 
-    /* Since we have loaded classes and methods with this thread. It has to remain attached */
-    // cjni_thread_detach();
     return 0;
 }
 

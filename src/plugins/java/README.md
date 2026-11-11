@@ -45,6 +45,9 @@ Available configuration options:
 > any other options! When another option is found, the JVM will be started and
 > later options will have to be ignored!.
 
+> The JVM is always started with **-Xrs**: the signals SIGINT, SIGTERM,
+> SIGHUP and SIGQUIT are handled by ncollectd and not by the JVM.
+
 **load-plugin** *java-class*
 
 > Instantiates a new *java-class* object.
