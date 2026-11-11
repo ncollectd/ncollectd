@@ -728,9 +728,12 @@ static void qjs_script_free(qjs_script_t *qjs)
     qjs_callback_list_free(qjs->cb_init);
     qjs_callback_list_free(qjs->cb_shutdown);
 
-    js_std_free_handlers(qjs->rt);
-    JS_FreeContext(qjs->ctx);
-    JS_FreeRuntime(qjs->rt);
+    if (qjs->ctx != NULL)
+        JS_FreeContext(qjs->ctx);
+    if (qjs->rt != NULL) {
+        js_std_free_handlers(qjs->rt);
+        JS_FreeRuntime(qjs->rt);
+    }
 
     pthread_mutex_unlock(&qjs->lock);
     pthread_mutex_destroy(&qjs->lock);
@@ -745,8 +748,6 @@ static int qjs_script_init(qjs_script_t *qjs)
     qjs->cb_config = NULL;
 
     qjs->rt = JS_NewRuntime();
-
-    pthread_mutex_init(&qjs->lock, NULL);
 
     if (qjs->memory_limit != 0)
         JS_SetMemoryLimit(qjs->rt, qjs->memory_limit);
@@ -835,6 +836,7 @@ static int qjs_config_script(config_item_t *ci)
     }
 
     qjs->load_std = true;
+    pthread_mutex_init(&qjs->lock, NULL);
 
     int status = cf_util_get_string(ci, &qjs->filename);
     if (status != 0) {
@@ -974,17 +976,19 @@ static int qjs_init(void)
             return -1;
 
         qjs_callback_t *qjc = qjs->cb_config;
-        while (qjc != NULL) {
-            for (int i = 0; i < config_block->children_num; i++) {
-                config_item_t *child = config_block->children + i;
-                if (qjc->name != NULL) {
-                    if (strcmp(qjc->name, child->key) == 0) {
-                        qjs_cb_config(qjc, child);
-                        break;
+        if (config_block != NULL) {
+            while (qjc != NULL) {
+                for (int i = 0; i < config_block->children_num; i++) {
+                    config_item_t *child = config_block->children + i;
+                    if (qjc->name != NULL) {
+                        if (strcmp(qjc->name, child->key) == 0) {
+                            qjs_cb_config(qjc, child);
+                            break;
+                        }
                     }
                 }
+                qjc = qjc->next;
             }
-            qjc = qjc->next;
         }
 
         qjc = qjs->cb_init;
