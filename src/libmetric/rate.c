@@ -38,7 +38,7 @@ static int rate_entry_compare(const rate_entry_t *a, const rate_entry_t *b)
         return cmp;
 
     if (a->labels.num != b->labels.num)
-        return a->labels.num - b->labels.num;
+        return (a->labels.num > b->labels.num) - (a->labels.num < b->labels.num);
 
     for (size_t i=0 ; i < a->labels.num; i++) {
         cmp = strcmp(a->labels.ptr[i].name, b->labels.ptr[i].name);
@@ -147,6 +147,8 @@ int rate_get(rate_t *rate, char *name, metric_t *m, double *rrate)
         }
 
         double time_diff = CDTIME_T_TO_DOUBLE(m->time - fre->time);
+        if (time_diff <= 0)
+            return -1;
 
         switch(m->value.counter.type) {
         case COUNTER_UINT64: {
@@ -172,7 +174,8 @@ int rate_get(rate_t *rate, char *name, metric_t *m, double *rrate)
     }
 
     re->name = strdup(name);
-    if (re->name != NULL) {
+    if (re->name == NULL) {
+        ERROR("strdup failed.");
         rate_entry_free(re);
         return -1;
     }
@@ -183,8 +186,8 @@ int rate_get(rate_t *rate, char *name, metric_t *m, double *rrate)
         return -1;
     }
 
-    fre->counter = m->value.counter;
-    fre->time = m->time;
+    re->counter = m->value.counter;
+    re->time = m->time;
 
     if (c_avl_insert(rate->tree, re, re) != 0) {
         rate_entry_free(re);

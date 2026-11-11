@@ -116,7 +116,7 @@ int _label_set_add(label_set_t *labels, bool overwrite, bool unescape,
         } else if (cmp > 0) {
             lower = idx + 1;
         } else {
-            if ((value == NULL) || (value[0] == '\0')) {
+            if ((value == NULL) || (sv == 0) || (value[0] == '\0')) {
                 free(labels->ptr[idx].name);
                 free(labels->ptr[idx].value);
                 if (idx != (labels->num - 1))
@@ -157,7 +157,7 @@ int _label_set_add(label_set_t *labels, bool overwrite, bool unescape,
 
     size_t idx = lower;
 
-    if ((value == NULL) || (value[0] == '\0'))
+    if ((value == NULL) || (sv == 0) || (value[0] == '\0'))
         return 0;
 
     if (!label_check_name(name, sn))

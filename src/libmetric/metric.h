@@ -184,23 +184,23 @@ typedef struct {
 } metric_family_list_t;
 
 #define METRIC_FAMILY_LIST_CREATE() (metric_family_list_t){.ptr = NULL}
-#define METRIC_FAMILY_LIST_CREATE_STATIC(b) \
-    (metric_family_list_t){.ptr = b, .size = sizeof(b), .fixed = true}
+#define METRIC_FAMILY_LIST_CREATE_STATIC(b, sz) \
+    (metric_family_list_t){.ptr = (b), .size = (sz), .fixed = true}
 
 int metric_family_list_alloc(metric_family_list_t *faml, size_t num);
 
 void metric_family_list_reset(metric_family_list_t *faml);
 
-static inline int metric_family_list_append(metric_family_list_t *faml, metric_family_t *fam)
+static inline bool metric_family_list_append(metric_family_list_t *faml, metric_family_t *fam)
 {
     if (faml->size == 0)
-        return -1;
+        return false;
     if (faml->pos >= faml->size)
-        return -1;
+        return false;
 
     faml->ptr[faml->pos] = fam;
     faml->pos++;
-    return 0;
+    return true;
 }
 
 
