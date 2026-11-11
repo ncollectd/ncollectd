@@ -97,6 +97,11 @@ jobject ctoj_config_item(JNIEnv *jvm_env, const config_item_t *ci)
 
         (*jvm_env)->CallVoidMethod(jvm_env, o_ocitem, gref.config_item.add_value, o_value);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            PLUGIN_ERROR("ConfigItem.addValue failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_ocitem);
+            return NULL;
+        }
     }
 
     /* Call ConfigItem.addChild for each child */
@@ -110,6 +115,11 @@ jobject ctoj_config_item(JNIEnv *jvm_env, const config_item_t *ci)
 
         (*jvm_env)->CallVoidMethod(jvm_env, o_ocitem, gref.config_item.add_child, o_child);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_child);
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            PLUGIN_ERROR("ConfigItem.addChild failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_ocitem);
+            return NULL;
+        }
     }
 
     return o_ocitem;

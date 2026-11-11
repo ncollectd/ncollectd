@@ -9,12 +9,22 @@
 typedef struct {
     struct {
         jclass class;
+        jmethodID to_string;
+    } object;
+    struct {
+        jclass class;
+        jmethodID get_stack_trace;
+    } throwable;
+    struct {
+        jclass class;
+    } string;
+    struct {
+        jclass class;
         jmethodID constructor;
         jmethodID add;
     } array_list;
     struct {
         jclass class;
-        jmethodID size;
         jmethodID to_array;
     } list;
     struct {
@@ -24,16 +34,16 @@ typedef struct {
     } hash_map;
     struct {
         jclass class;
-        jmethodID constructor;
+        jmethodID value_of;
         jmethodID boolean_value;
     } boolean;
     struct {
         jclass class;
-        jmethodID constructor;
+        jmethodID value_of;
     } _long;
     struct {
         jclass class;
-        jmethodID constructor;
+        jmethodID value_of;
     } _double;
     struct {
         jclass class;
@@ -166,11 +176,16 @@ int cjni_cache_classes(JNIEnv *jvm_env);
 
 void cjni_cache_classes_release(JNIEnv *jvm_env);
 
+bool cjni_exception_check(JNIEnv *jvm_env, const char *what, const char *name);
+
 int ctoj_string(JNIEnv *jvm_env, const char *string, jobject object_ptr, jmethodID method_id);
 
 jobject ctoj_jlong_to_number(JNIEnv *jvm_env, jlong value);
 
 jobject ctoj_jdouble_to_number(JNIEnv *jvm_env, jdouble value);
+
+int jtoc_list_to_array(JNIEnv *jvm_env, jobject object, jmethodID method_id,
+                       jobjectArray *ret_array, jsize *ret_size);
 
 jobject ctoj_label_set_object(JNIEnv *jvm_env, const label_set_t *label);
 
@@ -193,4 +208,10 @@ int jtoc_notification(JNIEnv *jvm_env, notification_t *n, jobject object_ptr);
 jobject ctoj_config_value(JNIEnv *jvm_env, config_value_t ocvalue);
 
 jobject ctoj_config_item(JNIEnv *jvm_env, const config_item_t *ci);
+
+jclass jtoc_metric_class(metric_type_t type);
+
+int jtoc_metric(JNIEnv *jvm_env, metric_type_t type, metric_t *m, jobject o_metric);
+
+jobject ctoj_metric(JNIEnv *jvm_env, metric_type_t type, const metric_t *m);
 

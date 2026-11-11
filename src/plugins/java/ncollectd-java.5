@@ -44,6 +44,9 @@ Execute \f(CWjava --help\fP for details.
 Please note that \fBall\fP these options must appear \fBbefore\fP (i. e. above)
 any other options! When another option is found, the JVM will be started and
 later options will have to be ignored!.
+.Pp
+The JVM is always started with \fB-Xrs\fP: the signals SIGINT, SIGTERM,
+SIGHUP and SIGQUIT are handled by ncollectd and not by the JVM.
 .It \fBload-plugin\fP "\fIjava-class\fP"
 Instantiates a new \fIjava-class\fP object.
 The constructor of this object very likely then registers one or more callback

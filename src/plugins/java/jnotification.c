@@ -38,10 +38,14 @@ jobject ctoj_notification(JNIEnv *jvm_env, const notification_t *n)
 
     (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_time,
                                         (jdouble)CDTIME_T_TO_DOUBLE(n->time));
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        goto error;
 
     /* Set the `severity' member.. */
     (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_severity,
                                         (jint)n->severity);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        goto error;
 
     if (n->label.num > 0 ) {
         jobject o_labels = ctoj_label_set_object(jvm_env, &n->label);
@@ -53,6 +57,8 @@ jobject ctoj_notification(JNIEnv *jvm_env, const notification_t *n)
         (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_labels,
                                             o_labels);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_labels);
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
     }
 
     if (n->annotation.num > 0 ) {
@@ -65,9 +71,16 @@ jobject ctoj_notification(JNIEnv *jvm_env, const notification_t *n)
         (*jvm_env)->CallVoidMethod(jvm_env, o_notification, gref.notification.set_annotations,
                                             o_annotations);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_annotations);
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto error;
     }
 
     return o_notification;
+
+error:
+    PLUGIN_ERROR("Setting the notification fields failed.");
+    (*jvm_env)->DeleteLocalRef(jvm_env, o_notification);
+    return NULL;
 }
 
 /* Convert a org/ncollectd/api/Notification to a notification_t. */
@@ -82,10 +95,14 @@ int jtoc_notification(JNIEnv *jvm_env, notification_t *n, jobject object_ptr)
     n->name = name;
 
     jdouble tmp_double = (*jvm_env)->CallDoubleMethod(jvm_env, object_ptr, gref.notification.get_time);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
     /* Java measures time in milliseconds. */
     n->time = DOUBLE_TO_CDTIME_T(tmp_double);
 
     jint tmp_int = (*jvm_env)->CallIntMethod(jvm_env, object_ptr, gref.notification.get_severity);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
     n->severity = (int)tmp_int;
 
     status = jtoc_label_set(jvm_env, &n->label, object_ptr, gref.notification.get_labels);

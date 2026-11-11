@@ -17,7 +17,7 @@ endif()
 set(BUILD_PLUGIN_JAVA ${BUILD_PLUGIN_JAVA} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_JAVA)
-    set(PLUGIN_JAVA_SRC java.c jutil.c jutil.h notification.c metric.c config.c)
+    set(PLUGIN_JAVA_SRC java.c jutil.c jutil.h jnotification.c jmetric.c jmetricfamily.c jconfig.c)
     add_library(java MODULE ${PLUGIN_JAVA_SRC})
     target_include_directories(java PRIVATE ${JNI_INCLUDE_DIRS})
     target_link_libraries(java PRIVATE libmetric libutils ${JAVA_JVM_LIBRARY})

@@ -22,6 +22,7 @@ typedef struct {
     const char *name;
     const char *signature;
     jmethodID *method_id;
+    bool is_static;
 } jcached_method_t;
 
 typedef struct {
@@ -31,12 +32,19 @@ typedef struct {
 } jcached_class_t;
 
 static jcached_class_t classes[] = {
+    { "java/lang/Object", &gref.object.class, (jcached_method_t[]) {
+        { "toString", "()Ljava/lang/String;", &gref.object.to_string },
+        { NULL,       NULL,                   NULL                   }}},
+    { "java/lang/Throwable", &gref.throwable.class, (jcached_method_t[]) {
+        { "getStackTrace", "()[Ljava/lang/StackTraceElement;", &gref.throwable.get_stack_trace },
+        { NULL,            NULL,                               NULL                            }}},
+    { "java/lang/String", &gref.string.class, (jcached_method_t[]) {
+        { NULL, NULL, NULL }}},
     { "java/util/ArrayList", &gref.array_list.class, (jcached_method_t[]) {
         { "<init>", "(I)V",                  &gref.array_list.constructor },
         { "add",    "(Ljava/lang/Object;)Z", &gref.array_list.add         },
         { NULL,     NULL,                    NULL                         }}},
     { "java/util/List", &gref.list.class, (jcached_method_t[]) {
-        { "size",    "()I",                   &gref.list.size     },
         { "toArray", "()[Ljava/lang/Object;", &gref.list.to_array },
         { NULL,      NULL,                    NULL                }}},
     { "java/util/HashMap", &gref.hash_map.class, (jcached_method_t[]) {
@@ -44,15 +52,15 @@ static jcached_class_t classes[] = {
         { "put",    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", &gref.hash_map.put },
         { NULL,     NULL,                     NULL        }}},
     { "java/lang/Boolean", &gref.boolean.class, (jcached_method_t[]) {
-        { "<init>",       "(Z)V", &gref.boolean.constructor   },
-        { "booleanValue", "()Z",  &gref.boolean.boolean_value },
-        { NULL,           NULL,   NULL                        }}},
+        { "valueOf",      "(Z)Ljava/lang/Boolean;", &gref.boolean.value_of, true },
+        { "booleanValue", "()Z",                    &gref.boolean.boolean_value  },
+        { NULL,           NULL,                     NULL                         }}},
     { "java/lang/Long", &gref._long.class, (jcached_method_t[]) {
-        { "<init>", "(J)V", &gref._long.constructor },
-        { NULL,     NULL,   NULL                    }}},
+        { "valueOf", "(J)Ljava/lang/Long;", &gref._long.value_of, true },
+        { NULL,      NULL,                  NULL                       }}},
     { "java/lang/Double", &gref._double.class, (jcached_method_t[]) {
-        { "<init>", "(D)V", &gref._double.constructor },
-        { NULL,     NULL,   NULL                      }}},
+        { "valueOf", "(D)Ljava/lang/Double;", &gref._double.value_of, true },
+        { NULL,      NULL,                    NULL                         }}},
     { "java/util/Map", &gref.map.class, (jcached_method_t[]) {
         { "entrySet", "()Ljava/util/Set;", &gref.map.entry_set },
         { NULL,       NULL,                NULL                }}},
@@ -167,17 +175,25 @@ int cjni_cache_classes(JNIEnv *jvm_env)
     for (size_t i = 0; classes[i].name != NULL; i++) {
         jclass class = (*jvm_env)->FindClass (jvm_env, classes[i].name);
         if (class == NULL) {
+            cjni_exception_check(jvm_env, "class lookup", classes[i].name);
             PLUGIN_ERROR("Looking up the '%s' class failed.", classes[i].name);
             return -1;
         }
 
         jcached_method_t *methods = classes[i].methods;
         for (size_t j = 0; methods[j].name != NULL; j++) {
-            jmethodID method_id = (*jvm_env)->GetMethodID (jvm_env, class,
-                                                           methods[j].name, methods[j].signature);
+            jmethodID method_id;
+            if (methods[j].is_static)
+                method_id = (*jvm_env)->GetStaticMethodID(jvm_env, class,
+                                                          methods[j].name, methods[j].signature);
+            else
+                method_id = (*jvm_env)->GetMethodID (jvm_env, class,
+                                                     methods[j].name, methods[j].signature);
             if (method_id == NULL) {
+                cjni_exception_check(jvm_env, "method lookup", methods[j].name);
                 PLUGIN_ERROR ("Looking method '%s' with signatute '%s' in class '%s' failed.",
                               methods[j].name, methods[j].signature, classes[i].name);
+                (*jvm_env)->DeleteLocalRef (jvm_env, class);
                 return -1;
             }
             *(methods[j].method_id) = method_id;
@@ -185,7 +201,9 @@ int cjni_cache_classes(JNIEnv *jvm_env)
 
         jclass global_class = (*jvm_env)->NewGlobalRef(jvm_env, class);
         if (global_class == NULL) {
+            cjni_exception_check(jvm_env, "class lookup", classes[i].name);
             PLUGIN_ERROR ("Global class reference create failed for '%s'.", classes[i].name);
+            (*jvm_env)->DeleteLocalRef (jvm_env, class);
             return -1;
         }
         (*jvm_env)->DeleteLocalRef (jvm_env, class);
@@ -204,6 +222,68 @@ void cjni_cache_classes_release(JNIEnv *jvm_env)
     }
 }
 
+/* Copy the result of `object.toString()' to `buf'. Errors are ignored. */
+static void cjni_object_to_string(JNIEnv *jvm_env, jobject object, char *buf, size_t size)
+{
+    jstring o_string = (*jvm_env)->CallObjectMethod(jvm_env, object, gref.object.to_string);
+    if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_string == NULL)) {
+        (*jvm_env)->ExceptionClear(jvm_env);
+        return;
+    }
+
+    const char *c_string = (*jvm_env)->GetStringUTFChars(jvm_env, o_string, NULL);
+    if (c_string != NULL) {
+        sstrncpy(buf, c_string, size);
+        (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_string, c_string);
+    } else {
+        (*jvm_env)->ExceptionClear(jvm_env);
+    }
+
+    (*jvm_env)->DeleteLocalRef(jvm_env, o_string);
+}
+
+/* If a Java exception is pending, log it together with the frame that threw
+ * it, clear it and return true. Native code must not call other JNI functions
+ * while an exception is pending, and a callback that throws has failed. */
+bool cjni_exception_check(JNIEnv *jvm_env, const char *what, const char *name)
+{
+    if (!(*jvm_env)->ExceptionCheck(jvm_env))
+        return false;
+
+    jthrowable o_exception = (*jvm_env)->ExceptionOccurred(jvm_env);
+    (*jvm_env)->ExceptionClear(jvm_env);
+
+    char message[512] = "";
+    char where[512] = "";
+
+    if ((o_exception != NULL) && (gref.object.to_string != NULL)) {
+        cjni_object_to_string(jvm_env, o_exception, message, sizeof(message));
+
+        jobjectArray o_trace = (*jvm_env)->CallObjectMethod(jvm_env, o_exception,
+                                                            gref.throwable.get_stack_trace);
+        if (!(*jvm_env)->ExceptionCheck(jvm_env) && (o_trace != NULL)) {
+            if ((*jvm_env)->GetArrayLength(jvm_env, o_trace) > 0) {
+                jobject o_frame = (*jvm_env)->GetObjectArrayElement(jvm_env, o_trace, 0);
+                if (o_frame != NULL) {
+                    cjni_object_to_string(jvm_env, o_frame, where, sizeof(where));
+                    (*jvm_env)->DeleteLocalRef(jvm_env, o_frame);
+                }
+            }
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_trace);
+        }
+        (*jvm_env)->ExceptionClear(jvm_env);
+    }
+
+    if (o_exception != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_exception);
+
+    PLUGIN_ERROR("Unhandled Java exception in %s%s%s%s: %s%s%s", what,
+                 (name != NULL) ? " '" : "", (name != NULL) ? name : "", (name != NULL) ? "'" : "",
+                 message, (where[0] != 0) ? " at " : "", where);
+
+    return true;
+}
+
 int ctoj_string(JNIEnv *jvm_env, const char *string, jobject object_ptr, jmethodID method_id)
 {
     /* Create a java.lang.String */
@@ -219,19 +299,30 @@ int ctoj_string(JNIEnv *jvm_env, const char *string, jobject object_ptr, jmethod
     /* Decrease reference counter on the java.lang.String object. */
     (*jvm_env)->DeleteLocalRef(jvm_env, o_string);
 
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
+
     return 0;
 }
 
 /* Convert a jlong to a java.lang.Number */
 jobject ctoj_jlong_to_number(JNIEnv *jvm_env, jlong value)
 {
-    return (*jvm_env)->NewObject(jvm_env, gref._long.class, gref._long.constructor, value);
+    jobject o_number = (*jvm_env)->CallStaticObjectMethod(jvm_env, gref._long.class,
+                                                          gref._long.value_of, value);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return NULL;
+    return o_number;
 }
 
 /* Convert a jdouble to a java.lang.Number */
 jobject ctoj_jdouble_to_number(JNIEnv *jvm_env, jdouble value)
 {
-    return (*jvm_env)->NewObject(jvm_env, gref._double.class, gref._double.constructor, value);
+    jobject o_number = (*jvm_env)->CallStaticObjectMethod(jvm_env, gref._double.class,
+                                                          gref._double.value_of, value);
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return NULL;
+    return o_number;
 }
 
 jobject ctoj_label_set_object(JNIEnv *jvm_env, const label_set_t *label)
@@ -263,10 +354,20 @@ jobject ctoj_label_set_object(JNIEnv *jvm_env, const label_set_t *label)
             return NULL;
         }
 
-        (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put, o_name, o_value);
+        jobject o_old = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put,
+                                                              o_name, o_value);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
+
+        if (o_old != NULL)
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_old);
+
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            PLUGIN_ERROR("HashMap.put failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
+            return NULL;
+        }
     }
 
     return o_hash;
@@ -293,20 +394,30 @@ jobject ctoj_state_set_object(JNIEnv *jvm_env, const state_set_t *set)
             return NULL;
         }
 
-        jobject o_value = (*jvm_env)->NewObject(jvm_env, gref.boolean.class,
-                                                         gref.boolean.constructor,
-                                                         (jboolean)state->enabled);
-        if (o_value == NULL) {
+        jobject o_value = (*jvm_env)->CallStaticObjectMethod(jvm_env, gref.boolean.class,
+                                                             gref.boolean.value_of,
+                                                             (jboolean)state->enabled);
+        if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_value == NULL)) {
             PLUGIN_ERROR("Failed to create Boolean object.");
             (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
             (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
             return NULL;
         }
 
-        (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put, o_name, o_value);
+        jobject o_old = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.hash_map.put,
+                                                              o_name, o_value);
 
         (*jvm_env)->DeleteLocalRef(jvm_env, o_name);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
+
+        if (o_old != NULL)
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_old);
+    
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            PLUGIN_ERROR("HashMap.put failed.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
+            return NULL;
+        }
     }
 
     return o_hash;
@@ -315,11 +426,13 @@ jobject ctoj_state_set_object(JNIEnv *jvm_env, const state_set_t *set)
 /* Call a `String <method> ()' method. */
 int jtoc_string(JNIEnv *jvm_env, char **str, jobject object_ptr, jmethodID method_id)
 {
+    *str = NULL;
+
     jobject string_obj = (*jvm_env)->CallObjectMethod(jvm_env, object_ptr, method_id);
-    if (string_obj == NULL) {
-        *str = NULL;
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
+        return -1;
+    if (string_obj == NULL)
         return 0;
-    }
 
     const char *c_str = (*jvm_env)->GetStringUTFChars(jvm_env, string_obj, 0);
     if (c_str == NULL) {
@@ -339,163 +452,198 @@ int jtoc_string(JNIEnv *jvm_env, char **str, jobject object_ptr, jmethodID metho
     return 0;
 }
 
+static int jtoc_label_pair(JNIEnv *jvm_env, label_set_t *label, jobject o_key, jobject o_value)
+{
+    if (!(*jvm_env)->IsInstanceOf(jvm_env, o_key, gref.string.class) ||
+        !(*jvm_env)->IsInstanceOf(jvm_env, o_value, gref.string.class)) {
+        PLUGIN_ERROR("Label names and values must be strings.");
+        return -1;
+    }
+
+    const char *s_key = (*jvm_env)->GetStringUTFChars(jvm_env, o_key, 0);
+    if (s_key == NULL) {
+        PLUGIN_ERROR("GetStringUTFChars failed.");
+        return -1;
+    }
+
+    const char *s_value = (*jvm_env)->GetStringUTFChars(jvm_env, o_value, 0);
+    if (s_value == NULL) {
+        PLUGIN_ERROR("GetStringUTFChars failed.");
+        (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
+        return -1;
+    }
+
+    label_set_add(label, true, s_key, s_value);
+
+    (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_value, s_value);
+    (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
+    return 0;
+}
+
 int jtoc_label_set(JNIEnv *jvm_env, label_set_t *label, jobject object_ptr, jmethodID method_id)
 {
+    int status = -1;
+    jobject o_set = NULL;
+    jobject o_iterator = NULL;
+
+    /* A null map is an empty set. */
     jobject o_hash = (*jvm_env)->CallObjectMethod(jvm_env, object_ptr, method_id);
-    if (o_hash == NULL) {
-        PLUGIN_ERROR("CallObjectMethod failed.");
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
         return -1;
-    }
+    if (o_hash == NULL)
+        return 0;
 
-    jobject o_set = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.map.entry_set);
-    if (o_set == NULL) {
+    o_set = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.map.entry_set);
+    if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_set == NULL)) {
         PLUGIN_ERROR("CallObjectMethod (entrySet) failed.");
-        return -1;
+        goto out;
     }
 
-    jobject o_iterator = (*jvm_env)->CallObjectMethod(jvm_env, o_set, gref.set.iterator);
-    if (o_iterator == NULL) {
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
+    o_iterator = (*jvm_env)->CallObjectMethod(jvm_env, o_set, gref.set.iterator);
+    if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_iterator == NULL)) {
         PLUGIN_ERROR("CallObjectMethod (iterator) failed.");
-        return -1;
+        goto out;
     }
 
-    while ((*jvm_env)->CallBooleanMethod(jvm_env, o_iterator, gref.iterator.has_next)) {
+    while (true) {
+        jboolean has_next = (*jvm_env)->CallBooleanMethod(jvm_env, o_iterator,
+                                                          gref.iterator.has_next);
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto out;
+        if (!has_next)
+            break;
+
         jobject o_entry = (*jvm_env)->CallObjectMethod(jvm_env, o_iterator, gref.iterator.next);
-        if (o_entry == NULL) {
+        if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_entry == NULL)) {
             PLUGIN_ERROR("CallObjectMethod (next) failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            return -1;
+            goto out;
         }
 
         jobject o_key = (*jvm_env)->CallObjectMethod(jvm_env, o_entry, gref.map_entry.get_key);
-        if (o_key == NULL) {
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            PLUGIN_ERROR("CallObjectMethod (getKey) failed.");
-            return -1;
-        }
-
-        const char *s_key = (*jvm_env)->GetStringUTFChars(jvm_env, o_key, 0);
-        if (s_key == NULL) {
-            PLUGIN_ERROR("GetStringUTFChars failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            return -1;
-        }
-
-        jobject o_value = (*jvm_env)->CallObjectMethod(jvm_env, o_entry, gref.map_entry.get_value);
-        if (o_value == NULL) {
-            PLUGIN_ERROR("CallObjectMethod (getValue) failed.");
-            (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            return -1;
-        }
-
-        const char *s_value = (*jvm_env)->GetStringUTFChars(jvm_env, o_value, 0);
-        if (s_value == NULL) {
-            PLUGIN_ERROR("GetStringUTFChars failed.");
-            (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
-            return -1;
-        }
-
-        label_set_add(label, true, s_key, s_value);
-
+        jobject o_value = NULL;
+        if (!(*jvm_env)->ExceptionCheck(jvm_env) && (o_key != NULL))
+            o_value = (*jvm_env)->CallObjectMethod(jvm_env, o_entry, gref.map_entry.get_value);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-        (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
+        if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_key == NULL)) {
+            PLUGIN_ERROR("Reading a label failed.");
+            if (o_key != NULL)
+                (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
+            goto out;
+        }
+
+        if (o_value == NULL) {
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
+            continue;
+        }
+
+        int ret = jtoc_label_pair(jvm_env, label, o_key, o_value);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-        (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_value, s_value);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
 
+        if (ret != 0)
+            goto out;
     }
 
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
-    (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
+    status = 0;
+
+out:
+    if (o_iterator != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
+    if (o_set != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
     (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
 
-    return 0;
+    return status;
 }
 
 int jtoc_state_set(JNIEnv *jvm_env, state_set_t *set, jobject object_ptr, jmethodID method_id)
 {
+    int status = -1;
+    jobject o_set = NULL;
+    jobject o_iterator = NULL;
+
+    /* A null map is an empty set. */
     jobject o_hash = (*jvm_env)->CallObjectMethod(jvm_env, object_ptr, method_id);
-    if (o_hash == NULL) {
-        PLUGIN_ERROR("CallObjectMethod failed.");
+    if ((*jvm_env)->ExceptionCheck(jvm_env))
         return -1;
-    }
+    if (o_hash == NULL)
+        return 0;
 
-    jobject o_set = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.map.entry_set);
-    if (o_set == NULL) {
+    o_set = (*jvm_env)->CallObjectMethod(jvm_env, o_hash, gref.map.entry_set);
+    if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_set == NULL)) {
         PLUGIN_ERROR("CallObjectMethod (entrySet) failed.");
-        return -1;
+        goto out;
     }
 
-    jobject o_iterator = (*jvm_env)->CallObjectMethod(jvm_env, o_set, gref.set.iterator);
-    if (o_iterator == NULL) {
+    o_iterator = (*jvm_env)->CallObjectMethod(jvm_env, o_set, gref.set.iterator);
+    if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_iterator == NULL)) {
         PLUGIN_ERROR("CallObjectMethod (iterator) failed.");
-        return -1;
+        goto out;
     }
 
-    while ((*jvm_env)->CallBooleanMethod(jvm_env, o_iterator, gref.iterator.has_next)) {
+    while (true) {
+        jboolean has_next = (*jvm_env)->CallBooleanMethod(jvm_env, o_iterator,
+                                                          gref.iterator.has_next);
+        if ((*jvm_env)->ExceptionCheck(jvm_env))
+            goto out;
+        if (!has_next)
+            break;
+
         jobject o_entry = (*jvm_env)->CallObjectMethod(jvm_env, o_iterator, gref.iterator.next);
-        if (o_entry == NULL) {
+        if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_entry == NULL)) {
             PLUGIN_ERROR("CallObjectMethod (next) failed.");
-            return -1;
+            goto out;
         }
 
         jobject o_key = (*jvm_env)->CallObjectMethod(jvm_env, o_entry, gref.map_entry.get_key);
-        if (o_key == NULL) {
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-            PLUGIN_ERROR("CallObjectMethod (getKey) failed.");
-            return -1;
+        jobject o_value = NULL;
+        if (!(*jvm_env)->ExceptionCheck(jvm_env) && (o_key != NULL))
+            o_value = (*jvm_env)->CallObjectMethod(jvm_env, o_entry, gref.map_entry.get_value);
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
+        if ((*jvm_env)->ExceptionCheck(jvm_env) || (o_key == NULL) || (o_value == NULL)) {
+            PLUGIN_ERROR("Reading a state failed.");
+            if (o_key != NULL)
+                (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
+            goto out;
+         }
+
+        if (!(*jvm_env)->IsInstanceOf(jvm_env, o_key, gref.string.class) ||
+            !(*jvm_env)->IsInstanceOf(jvm_env, o_value, gref.boolean.class)) {
+            PLUGIN_ERROR("State names must be strings and their values booleans.");
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
+            goto out;
+        }
+
+        jboolean b_value = (*jvm_env)->CallBooleanMethod(jvm_env, o_value,
+                                                         gref.boolean.boolean_value);
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
+        if ((*jvm_env)->ExceptionCheck(jvm_env)) {
+            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
+            goto out;
         }
 
         const char *s_key = (*jvm_env)->GetStringUTFChars(jvm_env, o_key, 0);
         if (s_key == NULL) {
             PLUGIN_ERROR("GetStringUTFChars failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
             (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-            return -1;
+            goto out;
         }
-
-        jobject o_value = (*jvm_env)->CallObjectMethod(jvm_env, o_entry, gref.map_entry.get_value);
-        if (o_value == NULL) {
-            PLUGIN_ERROR("CallObjectMethod (getValue) failed.");
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
-            (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
-            (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-            return -1;
-        }
-
-        jboolean b_value = (*jvm_env)->CallBooleanMethod(jvm_env, o_value,
-                                                                  gref.boolean.boolean_value);
 
         state_set_add(set, s_key, b_value);
 
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_entry);
         (*jvm_env)->ReleaseStringUTFChars(jvm_env, o_key, s_key);
         (*jvm_env)->DeleteLocalRef(jvm_env, o_key);
-        (*jvm_env)->DeleteLocalRef(jvm_env, o_value);
-
     }
 
-    return 0;
+    status = 0;
+
+out:
+    if (o_iterator != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_iterator);
+    if (o_set != NULL)
+        (*jvm_env)->DeleteLocalRef(jvm_env, o_set);
+    (*jvm_env)->DeleteLocalRef(jvm_env, o_hash);
+
+    return status;
 }
