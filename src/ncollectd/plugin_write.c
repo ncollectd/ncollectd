@@ -12,6 +12,7 @@
 #include "globals.h"
 #include "configfile.h"
 #include "plugin_internal.h"
+#include "plugin_stats.h"
 #include "filter.h"
 #include "libutils/avltree.h"
 #include "libutils/common.h"
@@ -24,21 +25,6 @@
 #include <stdatomic.h>
 #include <sys/resource.h>
 
-struct write_stats_s;
-typedef struct write_stats_s write_stats_t;
-struct write_stats_s {
-    const char *plugin;
-    atomic_ullong write_time;
-    atomic_ullong write_calls;
-    atomic_ullong write_calls_failures;
-    atomic_ullong write_cpu_user;
-    atomic_ullong write_cpu_sys;
-    write_stats_t *next;
-};
-
-static pthread_mutex_t write_stats_lock = PTHREAD_MUTEX_INITIALIZER;
-static write_stats_t *write_stats;
-
 typedef struct {
     queue_elem_t super;
     metric_family_t *fam;
@@ -46,7 +32,7 @@ typedef struct {
 
 typedef struct {
     queue_thread_t super;
-    write_stats_t *stats;
+    plugin_stats_entry_t *stats;
     plugin_write_cb write_cb;
     plugin_flush_cb flush_cb;
     cdtime_t flush_interval;
@@ -63,19 +49,24 @@ typedef struct {
 
 typedef struct {
     journal_thread_t super;
-    write_stats_t *stats;
+    plugin_stats_entry_t *stats;
     plugin_write_cb write_cb;
     plugin_flush_cb flush_cb;
     cdtime_t flush_interval;
     cdtime_t flush_timeout;
-    journal_ctx_t *journal;
     user_data_t ud;
+    journal_ctx_t *journal;
 } write_journal_thread_t;
 
 static journal_t *write_journal;
 static journal_ctx_t *write_journal_writer;
 
 static atomic_ullong metrics_dispatched;
+
+static plugin_stats_t write_stats = {
+    .entries = NULL,
+    .lock = PTHREAD_MUTEX_INITIALIZER
+};
 
 static plugin_filter_t *pre_cache_filter;
 static plugin_filter_t *post_cache_filter;
@@ -162,26 +153,7 @@ static void write_queue_thread_free(void *arg)
     if (writer == NULL)
         return;
 
-    pthread_mutex_lock(&write_stats_lock);
-    if (writer->stats != NULL) {
-        write_stats_t *prev = NULL;
-        write_stats_t *stats = write_stats;
-        while (stats != NULL) {
-            if (writer->stats == stats) {
-                write_stats_t *next = stats->next;
-                free(stats);
-                writer->stats = NULL;
-                if (prev == NULL)
-                    write_stats = next;
-                else
-                    prev->next = next;
-                break;
-            }
-            prev = stats;
-            stats = stats->next;
-        }
-    }
-    pthread_mutex_unlock(&write_stats_lock);
+    plugin_stats_remove(&write_stats, writer->stats);
 
     free(writer);
 }
@@ -192,26 +164,7 @@ static void write_journal_thread_free(void *arg)
     if (writer == NULL)
         return;
 
-    pthread_mutex_lock(&write_stats_lock);
-    if (writer->stats != NULL) {
-        write_stats_t *prev = NULL;
-        write_stats_t *stats = write_stats;
-        while (stats != NULL) {
-            if (writer->stats == stats) {
-                write_stats_t *next = stats->next;
-                free(stats);
-                writer->stats = NULL;
-                if (prev == NULL)
-                    write_stats = next;
-                else
-                    prev->next = next;
-                break;
-            }
-            prev = stats;
-            stats = stats->next;
-        }
-    }
-    pthread_mutex_unlock(&write_stats_lock);
+    plugin_stats_remove(&write_stats, writer->stats);
 
     if (writer->journal != NULL)
         journal_ctx_close(writer->journal);
@@ -219,9 +172,8 @@ static void write_journal_thread_free(void *arg)
     free(writer);
 }
 
-
-static int plugin_write_fam(write_stats_t *stats, plugin_write_cb write_cb, user_data_t *ud,
-                            metric_family_t *fam)
+static int plugin_write_fam(plugin_stats_entry_t *stats,
+                            plugin_write_cb write_cb, user_data_t *ud, metric_family_t *fam)
 {
     if (fam == NULL)
         return 0;
@@ -237,22 +189,18 @@ static int plugin_write_fam(write_stats_t *stats, plugin_write_cb write_cb, user
 
     cdtime_t diff = end - start;
 
+    cdtime_t cpu_user_time = 0;
+    cdtime_t cpu_sys_time = 0;
 #ifdef HAVE_RUSAGE_THREAD
-struct rusage usage_finish = {0};
+    struct rusage usage_finish = {0};
     getrusage(RUSAGE_THREAD, &usage_finish);
-    cdtime_t cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
-                             TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
-    cdtime_t cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
-                            TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
-
-    atomic_fetch_add(&stats->write_cpu_user, cpu_user_time);
-    atomic_fetch_add(&stats->write_cpu_sys, cpu_sys_time);
+    cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
+                    TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
+    cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
+                   TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
 #endif
-    atomic_fetch_add(&stats->write_time, diff);
-    atomic_fetch_add(&stats->write_calls, 1);
 
-    if (status != 0)
-        atomic_fetch_add(&stats->write_calls_failures, 1);
+    plugin_stats_add(stats, cpu_user_time, cpu_sys_time, diff, status);
 
     return status;
 }
@@ -278,7 +226,8 @@ static size_t plugin_write_journal_read(write_journal_thread_t *writer)
                 if (status == 0) {
                     if ((elem.plugin == NULL) ||
                         (strcasecmp(elem.plugin, writer->super.name) == 0))
-                    plugin_write_fam(writer->stats, writer->write_cb, &writer->ud, elem.fam);
+                    plugin_write_fam(writer->stats, writer->write_cb,
+                                     &writer->ud, elem.fam);
 
                     free(elem.plugin);
                     metric_family_free(elem.fam);
@@ -374,7 +323,8 @@ static void *plugin_write_queue_thread(void *args)
                 ctx.name = (char *)writer->super.name;
                 plugin_set_ctx(ctx);
 
-                plugin_write_fam(writer->stats, writer->write_cb, &writer->ud, elem->fam);
+                plugin_write_fam(writer->stats, writer->write_cb,
+                                 &writer->ud, elem->fam);
             }
 
             /* Free the element if it is not referenced by another queue or thread. */
@@ -415,13 +365,16 @@ static int plugin_dispatch_metric_internal_post(metric_family_t *fam)
         if (fam->metric.num > METRIC_FAMILY_LIST_STACK_SIZE) {
             metric_family_list_alloc(&faml, fam->metric.num);
         } else {
-            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams);
+            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams, METRIC_FAMILY_LIST_STACK_SIZE);
         }
-        metric_family_list_append(&faml, fam);
 
-        int status = filter_process(post_cache_filter, &faml);
-        if (status < 0)
-            WARNING("Running the post-cache chain failed with status %d.", status);
+        if (metric_family_list_append(&faml, fam)) {
+            int status = filter_process(post_cache_filter, &faml);
+            if (status < 0)
+                WARNING("Running the post-cache chain failed with status %d.", status);
+        } else {
+            ERROR("Failed to add metric family to list.");
+        }
 
         metric_family_list_reset(&faml);
     } else {
@@ -442,21 +395,24 @@ static int plugin_dispatch_metric_internal(metric_family_t *fam)
         if (fam->metric.num > METRIC_FAMILY_LIST_STACK_SIZE) {
             metric_family_list_alloc(&faml, fam->metric.num);
         } else {
-            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams);
-        }
-        metric_family_list_append(&faml, fam);
-
-        int status = filter_process(pre_cache_filter, &faml);
-        if (status < 0) {
-            WARNING("Running the pre-cache chain failed with status %d.", status);
-        } else if (status == FILTER_RESULT_STOP) {
-            metric_family_list_reset(&faml);
-            return 0;
+            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams, METRIC_FAMILY_LIST_STACK_SIZE);
         }
 
-        for (size_t i = 0; i < faml.pos; i++) {
-            plugin_dispatch_metric_internal_post(faml.ptr[i]);
-            faml.ptr[i] = NULL;
+        if (metric_family_list_append(&faml, fam)) {
+            int status = filter_process(pre_cache_filter, &faml);
+            if (status < 0) {
+                WARNING("Running the pre-cache chain failed with status %d.", status);
+            } else if (status == FILTER_RESULT_STOP) {
+                metric_family_list_reset(&faml);
+                return 0;
+            }
+
+            for (size_t i = 0; i < faml.pos; i++) {
+                plugin_dispatch_metric_internal_post(faml.ptr[i]);
+                faml.ptr[i] = NULL;
+            }
+        } else {
+            ERROR("Failed to add metric family to list.");
         }
 
         metric_family_list_reset(&faml);
@@ -478,21 +434,24 @@ static int plugin_dispatch_metric_internal_filtered(metric_family_t *fam, plugin
         if (fam->metric.num > METRIC_FAMILY_LIST_STACK_SIZE) {
             metric_family_list_alloc(&faml, fam->metric.num);
         } else {
-            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams);
-        }
-        metric_family_list_append(&faml, fam);
-
-        int status = filter_process(filter, &faml);
-        if (status < 0) {
-            WARNING("Running the filter chain failed with status %d.", status);
-        } else if (status == FILTER_RESULT_STOP) {
-            metric_family_list_reset(&faml);
-            return 0;
+            faml = METRIC_FAMILY_LIST_CREATE_STATIC(fams, METRIC_FAMILY_LIST_STACK_SIZE);
         }
 
-        for (size_t i = 0; i < faml.pos; i++) {
-            plugin_dispatch_metric_internal(faml.ptr[i]);
-            faml.ptr[i] = NULL;
+        if (metric_family_list_append(&faml, fam)) {
+            int status = filter_process(filter, &faml);
+            if (status < 0) {
+                WARNING("Running the filter chain failed with status %d.", status);
+            } else if (status == FILTER_RESULT_STOP) {
+                metric_family_list_reset(&faml);
+                return 0;
+            }
+
+            for (size_t i = 0; i < faml.pos; i++) {
+                plugin_dispatch_metric_internal(faml.ptr[i]);
+                faml.ptr[i] = NULL;
+            }
+        } else {
+            ERROR("Failed to add metric family to list.");
         }
 
         metric_family_list_reset(&faml);
@@ -508,6 +467,14 @@ int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t s
 {
     if ((fams == NULL) || (size == 0))
         return EINVAL;
+
+    if (mdb == NULL) {
+        for (size_t i=0; i < size; i++) {
+            metric_family_metric_reset(&fams[i]);
+        }
+        ERROR("Metrics have been discarded because MDB has not yet been initialized.");
+        return 0;
+    }
 
     if (time == 0)
         time = cdtime();
@@ -561,7 +528,7 @@ int plugin_dispatch_metric_family_array_filtered(metric_family_t *fams, size_t s
     return 0;
 }
 
-int plugin_register_write_journal(char *full_name, write_stats_t *writer_stats,
+int plugin_register_write_journal(char *full_name, plugin_stats_entry_t *stats,
                                   plugin_write_cb write_cb, plugin_flush_cb flush_cb,
                                   cdtime_t flush_interval, cdtime_t flush_timeout,
                                   user_data_t const *ud)
@@ -572,8 +539,7 @@ int plugin_register_write_journal(char *full_name, write_stats_t *writer_stats,
         return -1;
     }
 
-    writer_stats->plugin = full_name;
-    writer->stats = writer_stats;
+    writer->stats = stats;
 
     writer->write_cb = write_cb;
     writer->flush_cb = flush_cb;
@@ -609,7 +575,7 @@ int plugin_register_write_journal(char *full_name, write_stats_t *writer_stats,
     return 0;
 }
 
-int plugin_register_write_queue(char *full_name, write_stats_t *writer_stats,
+int plugin_register_write_queue(char *full_name, plugin_stats_entry_t *stats,
                                 plugin_write_cb write_cb, plugin_flush_cb flush_cb,
                                 cdtime_t flush_interval, cdtime_t flush_timeout,
                                 user_data_t const *ud)
@@ -620,8 +586,7 @@ int plugin_register_write_queue(char *full_name, write_stats_t *writer_stats,
         return -1;
     }
 
-    writer_stats->plugin = full_name;
-    writer->stats = writer_stats;
+    writer->stats = stats;
 
     writer->write_cb = write_cb;
     writer->flush_cb = flush_cb;
@@ -637,8 +602,8 @@ int plugin_register_write_queue(char *full_name, write_stats_t *writer_stats,
         writer->ud = *ud;
     }
 
-    int status = queue_thread_start(write_queue, (queue_thread_t *)writer,
-                                    full_name, plugin_write_queue_thread, (void *)writer);
+    int status = queue_thread_append(write_queue, (queue_thread_t *)writer,
+                                     full_name, plugin_write_queue_thread, (void *)writer);
     if (status != 0) {
         free(writer);
         return -1;
@@ -663,8 +628,8 @@ int plugin_register_write(const char *group, const char *name, plugin_write_cb w
         return ENOMEM;
     }
 
-    write_stats_t *writer_stats = calloc(1, sizeof(*writer_stats));
-    if (writer_stats == NULL) {
+    plugin_stats_entry_t *stats = plugin_stats_register(&write_stats, full_name);
+    if (stats == NULL) {
         ERROR("calloc failed.");
         free_userdata(ud);
         free(full_name);
@@ -674,24 +639,19 @@ int plugin_register_write(const char *group, const char *name, plugin_write_cb w
     int status = 0;
 
     if (write_queue != NULL) {
-        status = plugin_register_write_queue(full_name, writer_stats, write_cb, flush_cb,
+        status = plugin_register_write_queue(full_name, stats, write_cb, flush_cb,
                                              flush_interval, flush_timeout, ud);
     } else if (write_journal != NULL) {
-        status = plugin_register_write_journal(full_name, writer_stats, write_cb, flush_cb,
+        status = plugin_register_write_journal(full_name, stats, write_cb, flush_cb,
                                                flush_interval, flush_timeout, ud);
     }
 
     if (status != 0) {
+        plugin_stats_remove(&write_stats, stats);
         free_userdata(ud);
         free(full_name);
-        free(writer_stats);
         return -1;
     }
-
-    pthread_mutex_lock(&write_stats_lock);
-    writer_stats->next = write_stats;
-    write_stats = writer_stats;
-    pthread_mutex_unlock(&write_stats_lock);
 
     return 0;
 }
@@ -790,7 +750,7 @@ int plugin_config_write(void)
         write_queue->limit_high = metric_queue->memory.limit_high;
         write_queue->limit_low = metric_queue->memory.limit_low;
         write_queue->free_elem_cb = write_queue_elem_free;
-        write_queue->free_thread_cb = write_queue_thread_free;
+        write_queue->free_thread_cb = write_queue_thread_free; //FIXME ->
     } else {
         if (!test_mode) {
             write_journal = journal_new(metric_queue->journal.path);
@@ -808,6 +768,7 @@ int plugin_config_write(void)
             write_journal->free_thread_cb = write_journal_thread_free;
 
             journal_init(write_journal);
+// FIXME
 
             write_journal_writer = journal_get_writer(write_journal);
             if (write_journal_writer == NULL) {
@@ -830,11 +791,18 @@ int plugin_config_write(void)
         }
     }
 
+
     return 0;
 }
 
 int plugin_init_write(void)
 {
+    if (write_queue != NULL) {
+        queue_thread_start_all(write_queue);
+    } else if (write_journal != NULL) {
+// FIXME
+    }
+
     return 0;
 }
 
@@ -847,7 +815,7 @@ void plugin_shutdown_write(void)
 
     plugin_unregister_write(NULL);
 
-    if (write_journal != NULL ){
+    if (write_journal != NULL) {
         if (write_journal_writer != NULL) {
             journal_ctx_close(write_journal_writer);
             write_journal_writer = NULL;
@@ -873,36 +841,12 @@ void plugin_write_stats(metric_family_t *fams)
     metric_family_append(&fams[FAM_NCOLLECTD_METRICS_DISPACHED],
                          VALUE_COUNTER(dispatched), NULL, NULL);
 
-    pthread_mutex_lock(&write_stats_lock);
 
-    write_stats_t *stats = write_stats;
-    while(stats != NULL) {
-        unsigned long long write_time = atomic_load(&stats->write_time);
-        unsigned long long write_calls = atomic_load(&stats->write_calls);
-        unsigned long long write_calls_failures = atomic_load(&stats->write_calls_failures);
-        unsigned long long write_cpu_user = atomic_load(&stats->write_cpu_user);
-        unsigned long long write_cpu_sys = atomic_load(&stats->write_cpu_sys);
-
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_TIME_SECONDS],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)write_time)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_CALLS],
-                             VALUE_COUNTER(write_calls), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_FAILURES],
-                             VALUE_COUNTER(write_calls_failures), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_CPU_USER],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(write_cpu_user)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_WRITE_CPU_SYSTEM],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(write_cpu_sys)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-
-        stats = stats->next;
-    }
-
-    pthread_mutex_unlock(&write_stats_lock);
+    plugin_stats_read(&write_stats, &fams[FAM_NCOLLECTD_PLUGIN_WRITE_CPU_USER],
+                                    &fams[FAM_NCOLLECTD_PLUGIN_WRITE_CPU_SYSTEM],
+                                    &fams[FAM_NCOLLECTD_PLUGIN_WRITE_TIME_SECONDS],
+                                    &fams[FAM_NCOLLECTD_PLUGIN_WRITE_CALLS],
+                                    &fams[FAM_NCOLLECTD_PLUGIN_WRITE_FAILURES]);
 }
 
 void plugin_write_test_mode(bool mode)

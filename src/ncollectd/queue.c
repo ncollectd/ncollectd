@@ -278,39 +278,73 @@ strlist_t *queue_get_threads(queue_t *queue)
     return sl;
 }
 
-int queue_thread_start(queue_t *queue, queue_thread_t *thread, char *name,
-                                       void *(*start_routine)(void *), void *arg)
+static int queue_thread_start_internal(queue_thread_t *thread)
 {
-    thread->name = name;
-    thread->loop = true;
-    thread->queue_length = 0;
-    thread->head = NULL;
-
-    pthread_mutex_lock(&queue->lock);
-
     char thread_name[THREAD_NAME_MAX];
-    ssnprintf(thread_name, sizeof(thread_name), "%s", name);
+    ssnprintf(thread_name, sizeof(thread_name), "%s", thread->name);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     set_thread_setaffinity(&attr, thread_name);
 
-    int status = pthread_create(&thread->thread, &attr, start_routine, arg);
+    int status = pthread_create(&thread->thread, &attr, thread->start_routine, thread->arg);
     pthread_attr_destroy(&attr);
     if (status != 0) {
         ERROR("pthread_create failed with status %i: %s.", status, STRERROR(status));
-        pthread_mutex_unlock(&queue->lock);
         return status;
     }
 
     set_thread_name(thread->thread, thread_name);
+
+    return 0;
+}
+
+int queue_thread_start(queue_t *queue, queue_thread_t *thread)
+{
+    pthread_mutex_lock(&queue->lock);
+    
+    int status = queue_thread_start_internal(thread);
+
+    pthread_mutex_unlock(&queue->lock);
+
+    return status;
+}
+
+int queue_thread_start_all(queue_t *queue)
+{
+    int status = 0;
+
+    pthread_mutex_lock(&queue->lock);
+    
+    queue_thread_t *thread = queue->threads;
+    while (thread != NULL) {
+        status |= queue_thread_start_internal(thread);
+        thread = thread->next;
+    }
+
+    pthread_mutex_unlock(&queue->lock);
+
+    return status;
+}
+
+int queue_thread_append(queue_t *queue, queue_thread_t *thread, char *name,
+                                        void *(*start_routine)(void *), void *arg)
+{
+    thread->name = name;
+    thread->loop = true;
+    thread->queue_length = 0;
+    thread->head = NULL;
+    thread->start_routine = start_routine;
+    thread->arg = arg;
+
+    pthread_mutex_lock(&queue->lock);
 
     thread->next = queue->threads;
     queue->threads = thread;
 
     pthread_mutex_unlock(&queue->lock);
 
-    return status;
+    return 0;
 }
 
 int queue_thread_stop(queue_t *queue, const char *name)

@@ -20,6 +20,8 @@ typedef struct queue_thread_s queue_thread_t;
 struct queue_thread_s {
     char *name;
     bool loop;
+    void *(*start_routine)(void *);
+    void *arg;
     pthread_t thread;
     queue_elem_t *head;
     long queue_length;
@@ -56,7 +58,9 @@ uint64_t queue_dropped(queue_t *queue);
 
 strlist_t *queue_get_threads(queue_t *queue);
 
-int queue_thread_start(queue_t *queue, queue_thread_t *thread, char *name,
-                                       void *(*start_routine)(void *), void *arg);
+int queue_thread_append(queue_t *queue, queue_thread_t *thread, char *name,
+                                        void *(*start_routine)(void *), void *arg);
+
+int queue_thread_start_all(queue_t *queue);
 
 int queue_thread_stop(queue_t *queue, const char *name);

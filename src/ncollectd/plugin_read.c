@@ -12,6 +12,7 @@
 #include "ncollectd.h"
 #include "configfile.h"
 #include "plugin_internal.h"
+#include "plugin_stats.h"
 #include "libutils/avltree.h"
 #include "libutils/common.h"
 #include "libutils/heap.h"
@@ -23,21 +24,10 @@
 #include <stdatomic.h>
 #include <sys/resource.h>
 
-struct read_stats_s;
-typedef struct read_stats_s read_stats_t;
-struct read_stats_s {
-    const char *plugin;
-    atomic_ullong read_time;
-    atomic_ullong read_calls;
-    atomic_ullong read_calls_failures;
-    atomic_ullong read_cpu_user;
-    atomic_ullong read_cpu_sys;
-    read_stats_t *next;
-};
-
 #define RF_SIMPLE 0
 #define RF_COMPLEX 1
 #define RF_REMOVE 65535
+
 struct read_func_s {
 /* 'read_func_t' "inherits" from 'callback_func_t'.
  * The 'rf_super' member MUST be the first one in this structure! */
@@ -57,7 +47,7 @@ struct read_func_s {
     cdtime_t rf_interval;
     cdtime_t rf_effective_interval;
     cdtime_t rf_next_read;
-    read_stats_t *stats;
+    plugin_stats_entry_t *stats;
 };
 typedef struct read_func_s read_func_t;
 
@@ -73,8 +63,10 @@ static pthread_t *read_threads;
 static size_t read_threads_num;
 static cdtime_t max_read_interval = DEFAULT_MAX_READ_INTERVAL;
 
-static pthread_mutex_t read_stats_lock = PTHREAD_MUTEX_INITIALIZER;
-static read_stats_t *read_stats;
+static plugin_stats_t read_stats = {
+    .entries = NULL,
+    .lock = PTHREAD_MUTEX_INITIALIZER
+};
 
 static void destroy_callback(callback_func_t *cf)
 {
@@ -90,32 +82,6 @@ static cdtime_t plugin_normalize_interval(cdtime_t ctime, cdtime_t interval)
     if (rest == 0)
         return ctime;
     return (ctime - rest + interval);
-}
-
-static void plugin_read_stats_remove(read_stats_t *rstats)
-{
-    if (rstats == NULL)
-        return;
-
-    pthread_mutex_lock(&read_stats_lock);
-
-    read_stats_t *prev = NULL;
-    read_stats_t *stats = read_stats;
-    while (stats != NULL) {
-        if (rstats == stats) {
-            read_stats_t *next = stats->next;
-            free(rstats);
-            if (prev == NULL)
-                read_stats = next;
-            else
-                prev->next = next;
-            break;
-        }
-        prev = stats;
-        stats = stats->next;
-    }
-
-    pthread_mutex_unlock(&read_stats_lock);
 }
 
 static void *plugin_read_thread(void __attribute__((unused)) * args)
@@ -180,6 +146,8 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
          * continue. */
         if (rf_type == RF_REMOVE) {
             DEBUG("Destroying the '%s' callback.", rf->rf_name);
+            plugin_stats_remove(&read_stats, rf->stats);
+            rf->stats = NULL;
             free(rf->rf_name);
             destroy_callback((callback_func_t *)rf);
             rf = NULL;
@@ -213,16 +181,15 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
         /* update the ''next read due'' field */
         cdtime_t now = cdtime();
 
+        cdtime_t cpu_user_time = 0;
+        cdtime_t cpu_sys_time = 0;
 #ifdef HAVE_RUSAGE_THREAD
         struct rusage usage_finish = {0};
         getrusage(RUSAGE_THREAD, &usage_finish);
-        cdtime_t cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
-                                 TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
-        cdtime_t cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
-                                TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
-
-        atomic_fetch_add(&rf->stats->read_cpu_user, cpu_user_time);
-        atomic_fetch_add(&rf->stats->read_cpu_sys, cpu_sys_time);
+        cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
+                        TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
+        cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
+                       TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
 #endif
 
         /* If the function signals failure, we will increase the
@@ -242,10 +209,7 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
         /* calculate the time spent in the read function */
         cdtime_t elapsed = (now - start);
 
-        atomic_fetch_add(&rf->stats->read_time, elapsed);
-        atomic_fetch_add(&rf->stats->read_calls, 1);
-        if (status != 0)
-            atomic_fetch_add(&rf->stats->read_calls_failures, 1);
+        plugin_stats_add(rf->stats, cpu_user_time, cpu_sys_time, elapsed, status);
 
         if (elapsed > rf->rf_effective_interval)
             WARNING("read-function of the '%s' plugin took %.3f "
@@ -276,7 +240,7 @@ static void *plugin_read_thread(void __attribute__((unused)) * args)
         }
 
         DEBUG("plugin_read_thread: Next read of the '%s' plugin at %.3f.",
-                    rf->rf_name, CDTIME_T_TO_DOUBLE(rf->rf_next_read));
+              rf->rf_name, CDTIME_T_TO_DOUBLE(rf->rf_next_read));
 
         /* Re-insert this read function into the heap again. */
         c_heap_insert(read_heap, rf);
@@ -458,13 +422,6 @@ int plugin_register_read(const char *name, int (*callback)(void))
         return ENOMEM;
     }
 
-    read_stats_t *stats = calloc(1, sizeof(*stats));
-    if (stats == NULL) {
-        ERROR("calloc failed.");
-        free(rf);
-        return ENOMEM;
-    }
-
     rf->rf_init_cb = callback;
     rf->rf_udata.data = NULL;
     rf->rf_udata.free_func = NULL;
@@ -474,7 +431,6 @@ int plugin_register_read(const char *name, int (*callback)(void))
     if (rf->rf_name == NULL) {
         ERROR("strdup failed.");
         free(rf);
-        free(stats);
         return ENOMEM;
     }
 
@@ -482,21 +438,20 @@ int plugin_register_read(const char *name, int (*callback)(void))
     rf->rf_interval = plugin_get_interval();
     rf->rf_ctx.interval = rf->rf_interval;
 
-    rf->stats = stats;
-    rf->stats->plugin = rf->rf_name;
-
-    int status = plugin_insert_read(rf);
-    if (status != 0) {
+    rf->stats = plugin_stats_register(&read_stats, rf->rf_name);
+    if (rf->stats == NULL) {
         free(rf->rf_name);
-        free(rf->stats);
         free(rf);
         return -1;
     }
 
-    pthread_mutex_lock(&read_stats_lock);
-    stats->next = read_stats;
-    read_stats = stats;
-    pthread_mutex_unlock(&read_stats_lock);
+    int status = plugin_insert_read(rf);
+    if (status != 0) {
+        plugin_stats_remove(&read_stats, rf->stats);
+        free(rf->rf_name);
+        free(rf);
+        return -1;
+    }
 
     return status;
 }
@@ -523,15 +478,6 @@ int plugin_register_complex_read(const char *group, const char *name, plugin_rea
         return ENOMEM;
     }
 
-    read_stats_t *stats = calloc(1, sizeof(*stats));
-    if (stats == NULL) {
-        ERROR("calloc failed.");
-        free(full_name);
-        free_userdata(user_data);
-        free(rf);
-        return ENOMEM;
-    }
-
     rf->rf_read_cb = callback;
     rf->rf_name = full_name;
     rf->rf_type = RF_COMPLEX;
@@ -548,22 +494,24 @@ int plugin_register_complex_read(const char *group, const char *name, plugin_rea
     rf->rf_ctx = plugin_get_ctx();
     rf->rf_ctx.interval = rf->rf_interval;
 
-    rf->stats = stats;
-    rf->stats->plugin = full_name;
+    rf->stats = plugin_stats_register(&read_stats, rf->rf_name);
+    if (rf->stats == NULL) {
+        free_userdata(&rf->rf_udata);
+        free(rf->rf_name);
+        free(rf->stats);
+        free(rf);
+        return -1;
+    }
 
     int status = plugin_insert_read(rf);
     if (status != 0) {
+        plugin_stats_remove(&read_stats, rf->stats);
         free_userdata(&rf->rf_udata);
         free(rf->rf_name);
         free(rf->stats);
         free(rf);
         return status;
     }
-
-    pthread_mutex_lock(&read_stats_lock);
-    stats->next = read_stats;
-    read_stats = stats;
-    pthread_mutex_unlock(&read_stats_lock);
 
     return status;
 }
@@ -592,9 +540,6 @@ int plugin_unregister_read(const char *name)
     read_func_t *rf = le->value;
     assert(rf != NULL);
     rf->rf_type = RF_REMOVE;
-
-    plugin_read_stats_remove(rf->stats);
-    rf->stats = NULL;
 
     pthread_mutex_unlock(&read_lock);
 
@@ -658,11 +603,8 @@ int plugin_init_read(void)
 
     /* Start read-threads */
     if (read_heap != NULL) {
-        const char *rt;
-        int num;
-
-        rt = global_option_get("read-threads");
-        num = atoi(rt);
+        const char *rt = global_option_get("read-threads");
+        int num = atoi(rt);
         if (num != -1)
             start_read_threads((num > 0) ? ((size_t)num) : 5);
     }
@@ -672,34 +614,10 @@ int plugin_init_read(void)
 
 void plugin_read_stats(metric_family_t *fams)
 {
-    pthread_mutex_lock(&read_stats_lock);
-
-    read_stats_t *stats = read_stats;
-    while(stats != NULL) {
-        unsigned long long read_time = atomic_load(&stats->read_time);
-        unsigned long long read_calls = atomic_load(&stats->read_calls);
-        unsigned long long read_calls_failures = atomic_load(&stats->read_calls_failures);
-        unsigned long long read_cpu_user = atomic_load(&stats->read_cpu_user);
-        unsigned long long read_cpu_sys = atomic_load(&stats->read_cpu_sys);
-
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_TIME_SECONDS],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)read_time)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_CALLS],
-                             VALUE_COUNTER(read_calls), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_FAILURES],
-                             VALUE_COUNTER(read_calls_failures), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_CPU_USER],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(read_cpu_user)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_READ_CPU_SYSTEM],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(read_cpu_sys)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-
-        stats = stats->next;
-    }
-
-    pthread_mutex_unlock(&read_stats_lock);
+    plugin_stats_read(&read_stats,
+                      &fams[FAM_NCOLLECTD_PLUGIN_READ_CPU_USER],
+                      &fams[FAM_NCOLLECTD_PLUGIN_READ_CPU_SYSTEM],
+                      &fams[FAM_NCOLLECTD_PLUGIN_READ_TIME_SECONDS],
+                      &fams[FAM_NCOLLECTD_PLUGIN_READ_CALLS],
+                      &fams[FAM_NCOLLECTD_PLUGIN_READ_FAILURES]);
 }
