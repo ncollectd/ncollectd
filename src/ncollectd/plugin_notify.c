@@ -12,6 +12,7 @@
 #include "globals.h"
 #include "configfile.h"
 #include "plugin_internal.h"
+#include "plugin_stats.h"
 #include "filter.h"
 #include "libutils/common.h"
 #include "libutils/time.h"
@@ -22,20 +23,10 @@
 #include <stdatomic.h>
 #include <sys/resource.h>
 
-struct notify_stats_s;
-typedef struct notify_stats_s notify_stats_t;
-struct notify_stats_s {
-    const char *plugin;
-    atomic_ullong notify_time;
-    atomic_ullong notify_calls;
-    atomic_ullong notify_calls_failures;
-    atomic_ullong notify_cpu_user;
-    atomic_ullong notify_cpu_sys;
-    notify_stats_t *next;
+static plugin_stats_t notify_stats = {
+    .entries = NULL,
+    .lock = PTHREAD_MUTEX_INITIALIZER
 };
-
-static pthread_mutex_t notify_stats_lock = PTHREAD_MUTEX_INITIALIZER;
-static notify_stats_t *notify_stats;
 
 typedef struct {
     queue_elem_t super;
@@ -44,7 +35,7 @@ typedef struct {
 
 typedef struct {
     queue_thread_t super;
-    notify_stats_t *stats;
+    plugin_stats_entry_t *stats;
     plugin_notification_cb notify_cb;
     user_data_t ud;
 } notify_queue_thread_t;
@@ -58,7 +49,7 @@ typedef struct {
 
 typedef struct {
     journal_thread_t super;
-    notify_stats_t *stats;
+    plugin_stats_entry_t *stats;
     plugin_notification_cb notify_cb;
     journal_ctx_t *journal;
     user_data_t ud;
@@ -144,62 +135,21 @@ static void notify_queue_elem_free(void *arg)
 static void notify_queue_thread_free(void *arg)
 {
     notify_queue_thread_t *notifier = arg;
-
     if (notifier == NULL)
         return;
 
-    pthread_mutex_lock(&notify_stats_lock);
-    if (notifier->stats != NULL) {
-        notify_stats_t *prev = NULL;
-        notify_stats_t *stats = notify_stats;
-        while (stats != NULL) {
-            if (notifier->stats == stats) {
-                notify_stats_t *next = stats->next;
-                free(stats);
-                notifier->stats = NULL;
-                if (prev == NULL)
-                    notify_stats = next;
-                else
-                    prev->next = next;
-                break;
-            }
-            prev = stats;
-            stats = stats->next;
-        }
-    }
-    pthread_mutex_unlock(&notify_stats_lock);
+    plugin_stats_remove(&notify_stats, notifier->stats);
 
     free(notifier);
 }
 
-
 static void notify_journal_thread_free(void *arg)
 {
     notify_journal_thread_t *notifier = arg;
-
     if (notifier == NULL)
         return;
 
-    pthread_mutex_lock(&notify_stats_lock);
-    if (notifier->stats != NULL) {
-        notify_stats_t *prev = NULL;
-        notify_stats_t *stats = notify_stats;
-        while (stats != NULL) {
-            if (notifier->stats == stats) {
-                notify_stats_t *next = stats->next;
-                free(stats);
-                notifier->stats = NULL;
-                if (prev == NULL)
-                    notify_stats = next;
-                else
-                    prev->next = next;
-                break;
-            }
-            prev = stats;
-            stats = stats->next;
-        }
-    }
-    pthread_mutex_unlock(&notify_stats_lock);
+    plugin_stats_remove(&notify_stats, notifier->stats);
 
     if (notifier->journal != NULL)
         journal_ctx_close(notifier->journal);
@@ -207,7 +157,7 @@ static void notify_journal_thread_free(void *arg)
     free(notifier);
 }
 
-static int plugin_notify_notification(notify_stats_t *stats,
+static int plugin_notify_notification(plugin_stats_entry_t *stats,
                                       plugin_notification_cb notify_cb, user_data_t *ud,
                                       notification_t *n)
 {
@@ -220,24 +170,20 @@ static int plugin_notify_notification(notify_stats_t *stats,
     int status = notify_cb(n, ud);
     cdtime_t end = cdtime();
 
+    cdtime_t cpu_user_time = 0;
+    cdtime_t cpu_sys_time = 0;
 #ifdef HAVE_RUSAGE_THREAD
     struct rusage usage_finish = {0};
     getrusage(RUSAGE_THREAD, &usage_finish);
-    cdtime_t cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
-                             TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
-    cdtime_t cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
-                            TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
-
-    atomic_fetch_add(&stats->notify_cpu_user, cpu_user_time);
-    atomic_fetch_add(&stats->notify_cpu_sys, cpu_sys_time);
+    cpu_user_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_utime) -
+                    TIMEVAL_TO_CDTIME_T(&usage_start.ru_utime);
+    cpu_sys_time = TIMEVAL_TO_CDTIME_T(&usage_finish.ru_stime) -
+                   TIMEVAL_TO_CDTIME_T(&usage_start.ru_stime);
 #endif
 
     cdtime_t diff = end - start;
 
-    atomic_fetch_add(&stats->notify_time, diff);
-    atomic_fetch_add(&stats->notify_calls, 1);
-    if (status != 0)
-        atomic_fetch_add(&stats->notify_calls_failures, 1);
+    plugin_stats_add(stats, cpu_user_time, cpu_sys_time, diff, status);
 
     return 0;
 }
@@ -437,7 +383,7 @@ int plugin_dispatch_notification(const notification_t *notif)
     return plugin_notify(NULL, notif);
 }
 
-int plugin_register_notification_queue(char *full_name, notify_stats_t *notifier_stats,
+int plugin_register_notification_queue(char *full_name, plugin_stats_entry_t *stats,
                                        plugin_notification_cb callback, user_data_t const *ud)
 {
     notify_queue_thread_t *notifier = calloc(1, sizeof(*notifier));
@@ -446,8 +392,7 @@ int plugin_register_notification_queue(char *full_name, notify_stats_t *notifier
         return -1;
     }
 
-    notifier_stats->plugin = full_name;
-    notifier->stats = notifier_stats;
+    notifier->stats = stats;
 
     notifier->notify_cb = callback;
 
@@ -457,8 +402,8 @@ int plugin_register_notification_queue(char *full_name, notify_stats_t *notifier
         notifier->ud = *ud;
     }
 
-    int status = queue_thread_start(notify_queue, (queue_thread_t *)notifier,
-                                    full_name, plugin_notify_queue_thread, (void *)notifier);
+    int status = queue_thread_append(notify_queue, (queue_thread_t *)notifier,
+                                     full_name, plugin_notify_queue_thread, (void *)notifier);
     if (status != 0) {
         free(notifier);
         return -1;
@@ -467,7 +412,7 @@ int plugin_register_notification_queue(char *full_name, notify_stats_t *notifier
     return 0;
 }
 
-int plugin_register_notification_journal(char *full_name, notify_stats_t *notifier_stats,
+int plugin_register_notification_journal(char *full_name, plugin_stats_entry_t *stats,
                                          plugin_notification_cb callback, user_data_t const *ud)
 {
     notify_journal_thread_t *notifier = calloc(1, sizeof(*notifier));
@@ -476,8 +421,7 @@ int plugin_register_notification_journal(char *full_name, notify_stats_t *notifi
         return -1;
     }
 
-    notifier_stats->plugin = full_name;
-    notifier->stats = notifier_stats;
+    notifier->stats = stats;
 
     notifier->notify_cb = callback;
 
@@ -522,8 +466,8 @@ int plugin_register_notification(const char *group, const char *name,
         return -1;
     }
 
-    notify_stats_t *notifier_stats = calloc(1, sizeof(*notifier_stats));
-    if (notifier_stats == NULL) {
+    plugin_stats_entry_t *stats = plugin_stats_register(&notify_stats, full_name);
+    if (stats == NULL) {
         ERROR("calloc failed.");
         free_userdata(ud);
         free(full_name);
@@ -533,22 +477,17 @@ int plugin_register_notification(const char *group, const char *name,
     int status = 0;
 
     if (notify_queue != NULL) {
-        status = plugin_register_notification_queue(full_name, notifier_stats, callback, ud);
+        status = plugin_register_notification_queue(full_name, stats, callback, ud);
     } else if (notify_journal != NULL) {
-        status = plugin_register_notification_journal(full_name, notifier_stats, callback, ud);
+        status = plugin_register_notification_journal(full_name, stats, callback, ud);
     }
 
     if (status != 0) {
+        plugin_stats_remove(&notify_stats, stats);
         free_userdata(ud);
         free(full_name);
-        free(notifier_stats);
         return -1;
     }
-
-    pthread_mutex_lock(&notify_stats_lock);
-    notifier_stats->next = notify_stats;
-    notify_stats = notifier_stats;
-    pthread_mutex_unlock(&notify_stats_lock);
 
     return 0;
 }
@@ -603,12 +542,17 @@ int plugin_config_notify(void)
 
         buf_destroy(&buf);
     }
-
     return 0;
 }
 
 int plugin_init_notify(void)
 {
+    if (notify_queue != NULL) {
+        return queue_thread_start_all(notify_queue);
+    } else if (notify_journal != NULL) {
+
+    }
+
     return 0;
 }
 
@@ -650,34 +594,9 @@ void plugin_notify_stats(metric_family_t *fams)
     metric_family_append(&fams[FAM_NCOLLECTD_NOTIFICATIONS_DISPACHED],
                          VALUE_COUNTER(dispatched), NULL, NULL);
 
-    pthread_mutex_lock(&notify_stats_lock);
-
-    notify_stats_t *stats = notify_stats;
-    while(stats != NULL) {
-        unsigned long long notify_time = atomic_load(&stats->notify_time);
-        unsigned long long notify_calls = atomic_load(&stats->notify_calls);
-        unsigned long long notify_calls_failures = atomic_load(&stats->notify_calls_failures);
-        unsigned long long notify_cpu_user = atomic_load(&stats->notify_cpu_user);
-        unsigned long long notify_cpu_sys = atomic_load(&stats->notify_cpu_sys);
-
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_TIME_SECONDS],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE((cdtime_t)notify_time)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CALLS],
-                             VALUE_COUNTER(notify_calls), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_FAILURES],
-                             VALUE_COUNTER(notify_calls_failures), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_USER],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(notify_cpu_user)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-        metric_family_append(&fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_SYSTEM],
-                             VALUE_COUNTER_FLOAT64(CDTIME_T_TO_DOUBLE(notify_cpu_sys)), NULL,
-                             &LABEL_PAIR_CONST("plugin", stats->plugin), NULL);
-
-        stats = stats->next;
-    }
-
-    pthread_mutex_unlock(&notify_stats_lock);
+    plugin_stats_read(&notify_stats, &fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_USER],
+                                     &fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CPU_SYSTEM],
+                                     &fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_TIME_SECONDS],
+                                     &fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_CALLS],
+                                     &fams[FAM_NCOLLECTD_PLUGIN_NOTIFY_FAILURES]);
 }

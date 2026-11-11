@@ -10,6 +10,7 @@ set(NCOLLECTD_SRC ../plugin.h
                   journal.c journal.h
                   plugin.c plugin_internal.h
                   plugin_match.c plugin_match.h
+                  plugin_stats.c plugin_stats.h
                   plugin_read.c
                   plugin_write.c
                   plugin_notify.c
