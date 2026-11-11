@@ -184,8 +184,8 @@ typedef struct {
 } metric_family_list_t;
 
 #define METRIC_FAMILY_LIST_CREATE() (metric_family_list_t){.ptr = NULL}
-#define METRIC_FAMILY_LIST_CREATE_STATIC(b) \
-    (metric_family_list_t){.ptr = b, .size = sizeof(b), .fixed = true}
+#define METRIC_FAMILY_LIST_CREATE_STATIC(b, s) \
+    (metric_family_list_t){.ptr = b, .size = (s), .fixed = true}
 
 int metric_family_list_alloc(metric_family_list_t *faml, size_t num);
 
