@@ -112,9 +112,13 @@ static JSValue qjs_metric_family_get(JSContext *ctx, JSValueConst this_val, int 
         return JS_NewString(ctx, fam->name);
         break;
     case FAM_GETSET_HELP:
+        if (fam->help == NULL)
+            return JS_NULL;
         return JS_NewString(ctx, fam->help);
         break;
     case FAM_GETSET_UNIT:
+        if (fam->unit == NULL)
+            return JS_NULL;
         return JS_NewString(ctx, fam->unit);
         break;
     case FAM_GETSET_TYPE:
@@ -138,12 +142,17 @@ static JSValue qjs_metric_family_get(JSContext *ctx, JSValueConst this_val, int 
 static JSValue qjs_metric_family_append_metric(JSContext *ctx, metric_family_t *fam,
                                                                JSValueConst val)
 {
-    metric_type_t type = qjs_metric_get_metric_type(ctx, val);
+    metric_type_t type;
+    if (qjs_metric_get_metric_type(ctx, val, &type) != 0)
+        return JS_EXCEPTION;
+    
     if (type != fam->type)
         return JS_EXCEPTION;
-    metric_t *m = qjs_metric_get_metric(ctx, val);
+
+    metric_t *m = qjs_metric_get_metric(ctx, val, type);
     if (m == NULL)
         return JS_EXCEPTION;
+
     metric_list_add(&fam->metric, *m, fam->type);
 
     return JS_UNDEFINED;
@@ -256,7 +265,7 @@ static JSValue qjs_metric_family_to_string(JSContext *ctx, JSValueConst this_val
     strbuf_t buf = STRBUF_CREATE;
 
     int status = strbuf_putstr(&buf, "{ name: \"");
-    status |= strbuf_putescape_json(&buf, fam->name);
+    status |= strbuf_putescape_json(&buf, fam->name == NULL ? "" : fam->name);
     if (fam->help != NULL) {
         status |= strbuf_putstr(&buf, ", help: \"");
         status |= strbuf_putescape_json(&buf, fam->help);

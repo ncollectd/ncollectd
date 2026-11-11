@@ -1256,17 +1256,27 @@ static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary
     uint32_t len = 0;
     qjs_array_get_length(ctx, jquantiles, &len);
 
-    summary_t *summary = *rsummary;
+    summary_t *summary = summary_new();
+    if (summary == NULL)
+        return JS_EXCEPTION;
+
+    summary->sum = (*rsummary)->sum;
+    summary->count = (*rsummary)->count;
 
     for (uint32_t i = 0; i < len; i++) {
         JSValueConst jpair = JS_GetPropertyUint32(ctx, jquantiles, i);
-        if (JS_IsException(jpair))
+        if (JS_IsException(jpair)) {
+            summary_destroy(summary);
             return jpair;
+        }
 
-        if (JS_IsUndefined(jpair))
+        if (JS_IsUndefined(jpair)) {
+            summary_destroy(summary);
             return JS_EXCEPTION;
+        }
 
         if (!JS_IsArray(ctx, jpair)) {
+            summary_destroy(summary);
             JS_FreeValue(ctx, jpair);
             return JS_EXCEPTION;
         }
@@ -1274,6 +1284,7 @@ static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary
         summary_quantile_t quantile = {0, 0};
         JSValue jret = qjs_to_quantile(ctx, jpair, &quantile);
         if (JS_IsException(jret)) {
+            summary_destroy(summary);
             JS_FreeValue(ctx, jpair);
             return jret;
         }
@@ -1283,6 +1294,7 @@ static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary
         JS_FreeValue(ctx, jpair);
     }
 
+    summary_destroy(*rsummary);
     *rsummary = summary;
 
     return JS_UNDEFINED;
@@ -1604,17 +1616,26 @@ static JSValue qjs_to_buckets(JSContext *ctx, JSValueConst jbuckets, histogram_t
     uint32_t len = 0;
     qjs_array_get_length(ctx, jbuckets, &len);
 
-    histogram_t *histogram = *rhistogram;
+    histogram_t *histogram = histogram_new();
+    if (histogram == NULL)
+        return JS_EXCEPTION;
+
+    histogram->sum = (*rhistogram)->sum;
 
     for (uint32_t i = 0; i < len; i++) {
         JSValueConst jpair = JS_GetPropertyUint32(ctx, jbuckets, i);
-        if (JS_IsException(jpair))
+        if (JS_IsException(jpair)) {
+            histogram_destroy(histogram);
             return jpair;
+        }
 
-        if (JS_IsUndefined(jpair))
+        if (JS_IsUndefined(jpair)) {
+            histogram_destroy(histogram);
             return JS_EXCEPTION;
+        }
 
         if (!JS_IsArray(ctx, jpair)) {
+            histogram_destroy(histogram);
             JS_FreeValue(ctx, jpair);
             return JS_EXCEPTION;
         }
@@ -1622,6 +1643,7 @@ static JSValue qjs_to_buckets(JSContext *ctx, JSValueConst jbuckets, histogram_t
         histogram_bucket_t bucket = {0, 0};
         JSValue jret = qjs_to_bucket(ctx, jpair, &bucket);
         if (JS_IsException(jret)) {
+            histogram_destroy(histogram);
             JS_FreeValue(ctx, jpair);
             return jret;
         }
@@ -1630,7 +1652,8 @@ static JSValue qjs_to_buckets(JSContext *ctx, JSValueConst jbuckets, histogram_t
 
         JS_FreeValue(ctx, jpair);
     }
-
+    
+    histogram_destroy(*rhistogram);
     *rhistogram = histogram;
 
     return JS_UNDEFINED;
@@ -2022,34 +2045,70 @@ JSValue qjs_metric_new(JSContext *ctx, metric_t *m, metric_type_t type)
     return obj;
 }
 
-metric_type_t qjs_metric_get_metric_type(JSContext *ctx, JSValueConst v)
+int qjs_metric_get_metric_type(JSContext *ctx, JSValueConst v, metric_type_t *type)
 {
     JSClassID class_id = JS_GetClassID(v);
 
     if (class_id == qjs_metric_unknown_class_id) {
-        return METRIC_TYPE_UNKNOWN;
+        *type = METRIC_TYPE_UNKNOWN;
+        return 0;
     } else if (class_id == qjs_metric_gauge_class_id) {
-        return METRIC_TYPE_GAUGE;
+        *type = METRIC_TYPE_GAUGE;
+        return 0;
     } else if (class_id == qjs_metric_counter_class_id) {
-        return METRIC_TYPE_COUNTER;
+        *type = METRIC_TYPE_COUNTER;
+        return 0;
     } else if (class_id == qjs_metric_info_class_id) {
-        return METRIC_TYPE_INFO;
+        *type = METRIC_TYPE_INFO;
+        return 0;
     } else if (class_id == qjs_metric_state_set_class_id) {
-        return METRIC_TYPE_STATE_SET;
+        *type = METRIC_TYPE_STATE_SET;
+        return 0;
     } else if (class_id == qjs_metric_summary_class_id) {
-        return METRIC_TYPE_SUMMARY;
+        *type = METRIC_TYPE_SUMMARY;
+        return 0;
     } else if (class_id == qjs_metric_gauge_histogram_class_id) {
-        return METRIC_TYPE_GAUGE_HISTOGRAM;
+        *type = METRIC_TYPE_GAUGE_HISTOGRAM;
+        return 0;
     } else if (class_id == qjs_metric_histogram_class_id) {
-        return METRIC_TYPE_HISTOGRAM;
+        *type = METRIC_TYPE_HISTOGRAM;
+        return 0;
     }
 
-    return METRIC_TYPE_UNKNOWN;
+    return 0;
 }
 
-metric_t *qjs_metric_get_metric(JSContext *ctx, JSValueConst v)
+static JSClassID qjs_metric_get_classid(metric_type_t type) 
+{
+    switch(type) {
+    case METRIC_TYPE_UNKNOWN:
+        return qjs_metric_unknown_class_id;
+    case METRIC_TYPE_GAUGE:
+        return qjs_metric_gauge_class_id;
+    case METRIC_TYPE_COUNTER:
+        return qjs_metric_counter_class_id;
+    case METRIC_TYPE_STATE_SET:
+        return qjs_metric_state_set_class_id;
+    case METRIC_TYPE_INFO:
+        return qjs_metric_info_class_id;
+    case METRIC_TYPE_SUMMARY:
+        return qjs_metric_summary_class_id;
+    case METRIC_TYPE_HISTOGRAM:
+        return qjs_metric_histogram_class_id;
+    case METRIC_TYPE_GAUGE_HISTOGRAM:
+        return qjs_metric_gauge_histogram_class_id;
+    }
+
+    return 0;
+}
+
+metric_t *qjs_metric_get_metric(JSContext *ctx, JSValueConst v, metric_type_t type)
 {
     JSClassID class_id = JS_GetClassID(v);
+    JSClassID expected_class_id = qjs_metric_get_classid(type);
+    
+    if (class_id != expected_class_id)
+        return NULL;
 
     metric_t *m = JS_GetOpaque2(ctx, v, class_id);
     if (m != NULL)
