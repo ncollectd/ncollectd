@@ -17,6 +17,7 @@
 #include "jmetric.h"
 #include "jmetricfamily.h"
 #include "jnotification.h"
+#include "jutil.h"
 
 typedef enum {
     QJS_CB_INIT,
@@ -56,6 +57,8 @@ struct qjs_script {
     qjs_callback_t *cb_shutdown;
     qjs_callback_t *cb_config;
     pthread_mutex_t lock;
+    bool in_write_callback;
+    bool in_notification_callback;
     qjs_script_t *next;
 };
 
@@ -177,12 +180,10 @@ static JSValue qjs_call1(JSContext *ctx, JSValueConst func, JSValue data, JSValu
     return ret;
 }
 
-static void qjs_callback_free(void *data)
+static void qjs_callback_free(qjs_callback_t *qjc)
 {
-    if (data == NULL)
+    if (qjc == NULL)
         return;
-
-    qjs_callback_t *qjc = data;
 
     JS_FreeValue(qjc->qjs->ctx, qjc->cb);
     JS_FreeValue(qjc->qjs->ctx, qjc->data);
@@ -193,7 +194,20 @@ static void qjs_callback_free(void *data)
     free(qjc);
 }
 
-static void qjs_callback_list_remove(qjs_callback_t **head, const char *name)
+static void qjs_callback_user_data_free(void *data)
+{
+    qjs_callback_t *qjc = data;
+    if (qjc == NULL)
+        return;
+
+    qjs_script_t *qjs = qjc->qjs;
+
+    pthread_mutex_lock(&qjs->lock);
+    qjs_callback_free(qjc);
+    pthread_mutex_unlock(&qjs->lock);
+}
+
+static int qjs_callback_list_remove(qjs_callback_t **head, const char *name)
 {
     qjs_callback_t *qjc = *head;
     qjs_callback_t *prev = NULL;
@@ -205,7 +219,7 @@ static void qjs_callback_list_remove(qjs_callback_t **head, const char *name)
     }
 
     if (qjc == NULL)
-        return;
+        return -1;
 
     if (prev == NULL)
         *head = qjc->next;
@@ -213,6 +227,7 @@ static void qjs_callback_list_remove(qjs_callback_t **head, const char *name)
         prev->next = qjc->next;
 
     qjs_callback_free(qjc);
+    return 0;
 }
 
 static void qjs_callback_list_free(qjs_callback_t *qjc)
@@ -246,9 +261,17 @@ static qjs_callback_t *qjs_callback_alloc(qjs_script_t *qjs, JSValueConst func,
     char *dup_name = NULL;
     if (JS_IsString(name)) {
         const char *jname = JS_ToCString(qjs->ctx, name);
-        if (jname != NULL) {
-            dup_name = strdup(jname);
-            JS_FreeCString(qjs->ctx, jname);
+        if (jname == NULL) {
+            JS_FreeValue(qjs->ctx, dup_func);
+            JS_FreeValue(qjs->ctx, dup_data);
+            return NULL;
+        }
+        dup_name = strdup(jname);
+        JS_FreeCString(qjs->ctx, jname);
+        if (dup_name == NULL) {
+            JS_FreeValue(qjs->ctx, dup_func);
+            JS_FreeValue(qjs->ctx, dup_data);
+            return NULL;
         }
     }
 
@@ -265,12 +288,18 @@ static qjs_callback_t *qjs_callback_alloc(qjs_script_t *qjs, JSValueConst func,
     qjc->data = dup_data;
     qjc->name = dup_name;
 
-    char buffer[256];
-    ssnprintf(buffer, sizeof(buffer), "%p", (void *)qjc);
-    qjc->plugin_name = strdup(buffer);
+    if (qjc->name != NULL)
+        qjc->plugin_name = ssnprintf_alloc("%s/%s", qjs->filename, qjc->name);
+    else
+        qjc->plugin_name = ssnprintf_alloc("%s/%p", qjs->filename, (void *)qjc);
 
-    ssnprintf(buffer, sizeof(buffer), "javascript/%p", (void *)qjc);
-    qjc->plugin_full_name = strdup(buffer);
+    if (qjc->plugin_name != NULL)
+        qjc->plugin_full_name = ssnprintf_alloc("javascript/%s", qjc->plugin_name);
+
+    if ((qjc->plugin_name == NULL) || (qjc->plugin_full_name == NULL)) {
+        qjs_callback_free(qjc);
+        return NULL;
+    }
 
 #if 0
     if (!JS_IsNull(func)) {
@@ -289,52 +318,82 @@ static qjs_callback_t *qjs_callback_alloc(qjs_script_t *qjs, JSValueConst func,
     return qjc;
 }
 
-static int qjs_cb_call(qjs_callback_t *qjc)
+/* Runs the pending jobs and timers and returns the status of the callback: an
+ * exception, a rejected promise or a value that is not a number (or undefined)
+ * are errors. "ret" is freed. The caller must hold the script lock. */
+static int qjs_callback_status(qjs_callback_t *qjc, JSValue ret)
 {
-    pthread_mutex_lock(&qjc->qjs->lock);
+    JSContext *ctx = qjc->qjs->ctx;
 
-    JS_UpdateStackTop(qjc->qjs->rt);
-    JSValue ret = qjs_call0(qjc->qjs->ctx, qjc->cb, qjc->data);
-    js_std_loop(qjc->qjs->ctx);
+    js_std_loop(ctx);
+
     if (JS_IsException(ret)) {
-        qjs_dump_error(qjc->qjs->ctx);
-        pthread_mutex_unlock(&qjc->qjs->lock);
+        qjs_dump_error(ctx);
         return -1;
     }
 
-    JS_FreeValue(qjc->qjs->ctx, ret);
+    /* Asynchronous callbacks return a promise. */
+    int state = JS_PromiseState(ctx, ret);
+    if ((state == JS_PROMISE_PENDING) ||
+        (state == JS_PROMISE_FULFILLED) ||
+        (state == JS_PROMISE_REJECTED)) {
+        JSValue result = JS_PromiseResult(ctx, ret); 
+        JS_FreeValue(ctx, ret);
 
-    pthread_mutex_unlock(&qjc->qjs->lock);
+        if (state == JS_PROMISE_REJECTED) {
+            JS_Throw(ctx, result);
+            qjs_dump_error(ctx);
+            return -1;
+        }
 
-    return 0;
+        if (state == JS_PROMISE_PENDING) {
+            /* There are no pending jobs or timers left that can settle it. */
+            JS_FreeValue(ctx, result);
+            PLUGIN_ERROR("The promise returned by the callback '%s' was never settled.",
+                         qjc->plugin_full_name);
+            return -1;
+        }
+
+        ret = result;
+    }
+
+    int32_t status = 0;
+    if (JS_IsNumber(ret)) {
+        if (JS_ToInt32(ctx, &status, ret) != 0) {
+            qjs_dump_error(ctx);
+            status = -1;
+        }
+    } else if (!JS_IsUndefined(ret) && !JS_IsNull(ret)) {
+        PLUGIN_ERROR("The callback '%s' did not return a numeric status.", qjc->plugin_full_name);
+        status = -1;
+    }
+
+    JS_FreeValue(ctx, ret);
+
+    return status;
+}
+
+/* The caller must hold the script lock. */
+static int qjs_cb_call(qjs_callback_t *qjc)
+{
+    JS_UpdateStackTop(qjc->qjs->rt);
+    JSValue ret = qjs_call0(qjc->qjs->ctx, qjc->cb, qjc->data);
+    return qjs_callback_status(qjc, ret);
 }
 
 static int qjs_cb_config(qjs_callback_t *qjc, config_item_t *ci)
 {
-    pthread_mutex_lock(&qjc->qjs->lock);
+    JS_UpdateStackTop(qjc->qjs->rt);
 
     JSValue jconfig = qjs_from_config(qjc->qjs->ctx, ci);
     if (JS_IsException(jconfig)) {
         PLUGIN_ERROR("Failed to convert configuration");
-        pthread_mutex_unlock(&qjc->qjs->lock);
         return -1;
     }
 
-    JS_UpdateStackTop(qjc->qjs->rt);
     JSValue ret = qjs_call1(qjc->qjs->ctx, qjc->cb, qjc->data, jconfig);
-    js_std_loop(qjc->qjs->ctx);
-    if (JS_IsException(ret)) {
-        qjs_dump_error(qjc->qjs->ctx);
-        pthread_mutex_unlock(&qjc->qjs->lock);
-        return -1;
-    }
-
-    JS_FreeValue(qjc->qjs->ctx, ret);
     JS_FreeValue(qjc->qjs->ctx, jconfig);
-
-    pthread_mutex_unlock(&qjc->qjs->lock);
-
-    return 0;
+    return qjs_callback_status(qjc, ret);
 }
 
 static int qjs_read(user_data_t *user_data)
@@ -348,18 +407,11 @@ static int qjs_read(user_data_t *user_data)
 
     JS_UpdateStackTop(qjc->qjs->rt);
     JSValue ret = qjs_call0(qjc->qjs->ctx, qjc->cb, qjc->data);
-    js_std_loop(qjc->qjs->ctx);
-    if (JS_IsException(ret)) {
-        qjs_dump_error(qjc->qjs->ctx);
-        pthread_mutex_unlock(&qjc->qjs->lock);
-        return -1;
-    }
-
-    JS_FreeValue(qjc->qjs->ctx, ret);
+    int status = qjs_callback_status(qjc, ret);
 
     pthread_mutex_unlock(&qjc->qjs->lock);
 
-    return 0;
+    return status;
 }
 
 static int qjs_write(metric_family_t const *fam, user_data_t *user_data)
@@ -370,6 +422,7 @@ static int qjs_write(metric_family_t const *fam, user_data_t *user_data)
     qjs_callback_t *qjc = user_data->data;
 
     pthread_mutex_lock(&qjc->qjs->lock);
+    JS_UpdateStackTop(qjc->qjs->rt);
 
     JSValue jfam = qjs_metric_family_new(qjc->qjs->ctx, fam);
     if (JS_IsException(jfam)) {
@@ -378,23 +431,15 @@ static int qjs_write(metric_family_t const *fam, user_data_t *user_data)
         return -1;
     }
 
-    JS_UpdateStackTop(qjc->qjs->rt);
+    qjc->qjs->in_write_callback = true;
     JSValue ret = qjs_call1(qjc->qjs->ctx, qjc->cb, qjc->data, jfam);
-    js_std_loop(qjc->qjs->ctx);
-    if (JS_IsException(ret)) {
-        qjs_dump_error(qjc->qjs->ctx);
-        JS_FreeValue(qjc->qjs->ctx, jfam);
-        pthread_mutex_unlock(&qjc->qjs->lock);
-        return -1;
-    }
-
-    JS_FreeValue(qjc->qjs->ctx, ret);
-
     JS_FreeValue(qjc->qjs->ctx, jfam);
+    int status = qjs_callback_status(qjc, ret);
+    qjc->qjs->in_write_callback = false;
 
     pthread_mutex_unlock(&qjc->qjs->lock);
 
-    return 0;
+    return status;
 }
 
 static int qjs_notification(const notification_t *n, user_data_t *user_data)
@@ -405,6 +450,7 @@ static int qjs_notification(const notification_t *n, user_data_t *user_data)
     qjs_callback_t *qjc = user_data->data;
 
     pthread_mutex_lock(&qjc->qjs->lock);
+    JS_UpdateStackTop(qjc->qjs->rt);
 
     JSValue jn = qjs_notification_new(qjc->qjs->ctx, n);
     if (JS_IsException(jn)) {
@@ -413,31 +459,23 @@ static int qjs_notification(const notification_t *n, user_data_t *user_data)
         return -1;
     }
 
-    JS_UpdateStackTop(qjc->qjs->rt);
+    qjc->qjs->in_notification_callback = true;
     JSValue ret = qjs_call1(qjc->qjs->ctx, qjc->cb, qjc->data, jn);
-    js_std_loop(qjc->qjs->ctx);
-    if (JS_IsException(ret)) {
-        qjs_dump_error(qjc->qjs->ctx);
-        JS_FreeValue(qjc->qjs->ctx, jn);
-        pthread_mutex_unlock(&qjc->qjs->lock);
-        return -1;
-    }
-
-    JS_FreeValue(qjc->qjs->ctx, ret);
-
     JS_FreeValue(qjc->qjs->ctx, jn);
+    int status = qjs_callback_status(qjc, ret);
+    qjc->qjs->in_notification_callback = false;
 
     pthread_mutex_unlock(&qjc->qjs->lock);
 
-    return 0;
+    return status;
 }
 
 static JSValue qjs_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv,
                                        int level)
 {
-    JSPrintValueOptions opts = {0};
-    char buff[65536];
-    strbuf_t sbuf = STRBUF_CREATE_FIXED(buff, sizeof(buff));
+    JSPrintValueOptions opts;
+    JS_PrintValueSetDefaultOptions(&opts);
+    strbuf_t sbuf = STRBUF_CREATE;
 
     for(int i = 0; i < argc; i++) {
         if (i != 0)
@@ -446,17 +484,30 @@ static JSValue qjs_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
         if (JS_IsString(v)) {
             size_t len;
             const char *str = JS_ToCStringLen(ctx, &len, v);
-            if (!str)
+            if (!str) {
+                strbuf_destroy(&sbuf);
                 return JS_EXCEPTION;
+            }
             strbuf_putstrn(&sbuf, str, len);
             JS_FreeCString(ctx, str);
         } else {
-            JS_PrintValue(ctx, qjs_strbuf_value, &sbuf, argv[0], &opts);
+             JS_PrintValue(ctx, qjs_strbuf_value, &sbuf, v, &opts);
         }
     }
 
-    // TODO add js file  and line nuber
-    plugin_log(level, NULL, 0, NULL, "%s", sbuf.ptr);
+    /* The script or module that called the function. */
+    const char *file = NULL;
+    JSAtom script = JS_GetScriptOrModuleName(ctx, 1);
+    if (script != JS_ATOM_NULL) {
+        file = JS_AtomToCString(ctx, script);
+        JS_FreeAtom(ctx, script);
+    }
+
+    plugin_log(level, file != NULL ? file : "javascript", 0, "?", "%s",
+               sbuf.ptr != NULL ? sbuf.ptr : "");
+
+    JS_FreeCString(ctx, file);
+    strbuf_destroy(&sbuf);
 
     return JS_UNDEFINED;
 }
@@ -485,10 +536,8 @@ static JSValue qjs_register_generic(JSContext *ctx, JSValueConst this_val, int a
 
     if (type == QJS_CB_READ) {
         if ((argc > 1) && !JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
-            double jinterval = 0;
-            if (JS_ToFloat64(ctx, &jinterval, argv[1]))
-                return JS_ThrowTypeError(ctx, "interval is not a number");
-            interval = DOUBLE_TO_CDTIME_T(jinterval);
+            if (qjs_to_cdtime(ctx, &interval, argv[1]))
+                return JS_EXCEPTION;
         }
         if ((argc > 2) && !JS_IsNull(argv[2]))
             data = argv[2];
@@ -503,7 +552,17 @@ static JSValue qjs_register_generic(JSContext *ctx, JSValueConst this_val, int a
 
     qjs_callback_t *qjc = qjs_callback_alloc(qjs, func, data, name);
     if (qjc == NULL)
-        return JS_ThrowTypeError(ctx, "cannot alloc callback");
+        return JS_ThrowOutOfMemory(ctx);
+
+    /* If the registration fails the daemon frees qjc. */
+    JSValue identifier = JS_NewString(ctx, qjc->plugin_full_name);
+    if (JS_IsException(identifier)) {
+        qjs_callback_free(qjc);
+        return identifier;
+    }
+
+    int status = 0;
+    user_data_t user_data = {.data = qjc, .free_func = qjs_callback_user_data_free};
 
     switch(type) {
     case QJS_CB_INIT:
@@ -511,12 +570,12 @@ static JSValue qjs_register_generic(JSContext *ctx, JSValueConst this_val, int a
         qjs->cb_init = qjc;
         break;
     case QJS_CB_READ:
-        plugin_register_complex_read("javascript", qjc->plugin_name, qjs_read, interval,
-                                     &(user_data_t){.data = qjc, .free_func = qjs_callback_free});
+        status = plugin_register_complex_read("javascript", qjc->plugin_name,
+                                              qjs_read, interval, &user_data);
         break;
     case QJS_CB_WRITE:
-        plugin_register_write("javascript", qjc->plugin_name, qjs_write, NULL, 0, 0,
-                              &(user_data_t){.data = qjc, .free_func = qjs_callback_free});
+        status = plugin_register_write("javascript", qjc->plugin_name,
+                                       qjs_write, NULL, 0, 0, &user_data);
         break;
     case QJS_CB_SHUTDOWN:
         qjc->next = qjs->cb_shutdown;
@@ -527,12 +586,29 @@ static JSValue qjs_register_generic(JSContext *ctx, JSValueConst this_val, int a
         qjs->cb_config = qjc;
         break;
     case QJS_CB_NOTIFICATION:
-        plugin_register_notification("javascript", qjc->plugin_name, qjs_notification,
-                                     &(user_data_t){.data = qjc, .free_func = qjs_callback_free});
+        status = plugin_register_notification("javascript", qjc->plugin_name,
+                                              qjs_notification, &user_data);
         break;
     }
 
-    return JS_NewString(ctx, qjc->plugin_full_name);
+    if (status != 0) {
+        JS_FreeValue(ctx, identifier);
+        return JS_ThrowInternalError(ctx, "cannot register the callback");
+    }
+
+    return identifier;
+}
+
+static bool qjs_script_owns(const qjs_script_t *qjs, const char *identifier)
+{
+    size_t prefix_len = strlen("javascript/");
+    if (strncmp(identifier, "javascript/", prefix_len) != 0)
+        return false;
+
+    identifier += prefix_len;
+    size_t len = strlen(qjs->filename);
+
+    return (strncmp(identifier, qjs->filename, len) == 0) && (identifier[len] == '/');
 }
 
 static JSValue qjs_unregister_generic(JSContext *ctx, JSValueConst this_val, int argc,
@@ -542,37 +618,62 @@ static JSValue qjs_unregister_generic(JSContext *ctx, JSValueConst this_val, int
     if (qjs == NULL)
         return JS_UNDEFINED;
 
-    if (argc != 1)
-        return JS_ThrowTypeError(ctx, "missing identifier");
-
-    if (JS_IsNull(argv[0]))
-        return JS_ThrowTypeError(ctx, "identifier is null");
-    if (!JS_IsString(argv[0]))
-        return JS_ThrowTypeError(ctx, "identifier is not a string");
+    if ((argc < 1) || !JS_IsString(argv[0]))
+        return JS_ThrowTypeError(ctx, "The identifier must be a string");
 
     const char *name = JS_ToCString(ctx, argv[0]);
     if (name == NULL)
-        return JS_UNDEFINED;
+        return JS_EXCEPTION;
+
+    if (!qjs_script_owns(qjs, name)) {
+        JS_ThrowTypeError(ctx, "'%s' is not the identifier of a callback of this script", name);
+        JS_FreeCString(ctx, name);
+        return JS_EXCEPTION;
+    }
+
+    int status = 0;
 
     switch(type) {
     case QJS_CB_INIT:
-        qjs_callback_list_remove(&qjs->cb_init, name);
+        status = qjs_callback_list_remove(&qjs->cb_init, name);
         break;
     case QJS_CB_READ:
-        plugin_unregister_read(name);
+        status = plugin_unregister_read(name);
         break;
     case QJS_CB_WRITE:
-        plugin_unregister_write(name);
+        if (qjs->in_write_callback) {
+            JS_FreeCString(ctx, name);
+            return JS_ThrowTypeError(ctx, "cannot unregister a write callback "
+                                          "from a write callback");
+        }
+        pthread_mutex_unlock(&qjs->lock);
+        status = plugin_unregister_write(name);
+        pthread_mutex_lock(&qjs->lock);
+        JS_UpdateStackTop(qjs->rt);
         break;
     case QJS_CB_SHUTDOWN:
-        qjs_callback_list_remove(&qjs->cb_shutdown, name);
+        status = qjs_callback_list_remove(&qjs->cb_shutdown, name);
         break;
     case QJS_CB_CONFIG:
-        qjs_callback_list_remove(&qjs->cb_config, name);
+        status = qjs_callback_list_remove(&qjs->cb_config, name);
         break;
     case QJS_CB_NOTIFICATION:
-        plugin_unregister_notification(name);
+        if (qjs->in_notification_callback) {
+            JS_FreeCString(ctx, name);
+            return JS_ThrowTypeError(ctx, "cannot unregister a notification callback "
+                                          "from a notification callback");
+        }
+        pthread_mutex_unlock(&qjs->lock);
+        status = plugin_unregister_notification(name);
+        pthread_mutex_lock(&qjs->lock);
+        JS_UpdateStackTop(qjs->rt);
         break;
+    }
+
+    if (status != 0) {
+        JS_ThrowReferenceError(ctx, "unable to unregister the callback '%s'", name);
+        JS_FreeCString(ctx, name);
+        return JS_EXCEPTION;
     }
 
     JS_FreeCString(ctx, name);
@@ -658,8 +759,14 @@ static int qjs_eval_buf(JSContext *ctx, const void *buf, int buf_len, const char
         /* for the modules, we compile then run to be able to set import.meta */
         val = JS_Eval(ctx, buf, buf_len, filename, flags | JS_EVAL_FLAG_COMPILE_ONLY);
         if (!JS_IsException(val)) {
-            js_module_set_import_meta(ctx, val, TRUE, TRUE);
-            val = JS_EvalFunction(ctx, val);
+            /* The names are relative to the base-path, not to the working directory,
+             * so realpath() cannot be used. */
+            if (js_module_set_import_meta(ctx, val, FALSE, TRUE) != 0) {
+                JS_FreeValue(ctx, val);
+                val = JS_EXCEPTION;
+            } else {
+                val = JS_EvalFunction(ctx, val);
+            }
         }
         val = js_std_await(ctx, val);
     } else {
@@ -748,6 +855,10 @@ static int qjs_script_init(qjs_script_t *qjs)
     qjs->cb_config = NULL;
 
     qjs->rt = JS_NewRuntime();
+    if (qjs->rt == NULL) {
+        PLUGIN_ERROR("Cannot allocate JS runtime.");
+        return -1;
+    }
 
     if (qjs->memory_limit != 0)
         JS_SetMemoryLimit(qjs->rt, qjs->memory_limit);
@@ -764,24 +875,37 @@ static int qjs_script_init(qjs_script_t *qjs)
 
     JS_SetContextOpaque(qjs->ctx, qjs);
 
-    js_init_module_std(qjs->ctx, "std");
-    js_init_module_os(qjs->ctx, "os");
     js_std_add_helpers(qjs->ctx, -1, NULL);
 
     if (qjs->load_std) {
+        if (js_init_module_std(qjs->ctx, "std") == NULL) {
+            PLUGIN_ERROR("Failed to create the 'std' module.");
+            return -1;
+        }
+        if (js_init_module_os(qjs->ctx, "os") == NULL) {
+            PLUGIN_ERROR("Failed to create the 'os' module.");
+            return -1;
+        }
         const char *str = "import * as std from 'std';\n"
                           "import * as os from 'os';\n"
                           "globalThis.std = std;\n"
                           "globalThis.os = os;\n";
-        qjs_eval_buf(qjs->ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
+        if (qjs_eval_buf(qjs->ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE) != 0) {
+            PLUGIN_ERROR("Failed to import the 'std' and 'os' modules.");
+            return -1;
+        }
     }
 
-    {
-        qjs_init_module_ncollectd(qjs->ctx, "ncollectd");
+    if (qjs_init_module_ncollectd(qjs->ctx, "ncollectd") == NULL) {
+        PLUGIN_ERROR("Failed to create the 'ncollectd' module.");
+        return -1;
+    }
 
-        const char *str = "import * as ncollectd from 'ncollectd';\n"
-                          "globalThis.ncollectd = ncollectd;\n";
-        qjs_eval_buf(qjs->ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
+    const char *str = "import * as ncollectd from 'ncollectd';\n"
+                      "globalThis.ncollectd = ncollectd;\n";
+    if (qjs_eval_buf(qjs->ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE) != 0) {
+        PLUGIN_ERROR("Failed to import the 'ncollectd' module.");
+        return -1;
     }
 
     for(size_t i = 0; i < qjs->includes_num; i++) {
@@ -836,11 +960,18 @@ static int qjs_config_script(config_item_t *ci)
     }
 
     qjs->load_std = true;
-    pthread_mutex_init(&qjs->lock, NULL);
+    /* Recursive: the daemon can call qjs_callback_user_data_free() from inside the
+     * script, with the lock already held (e.g. when a registration fails). */
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&qjs->lock, &attr);
+    pthread_mutexattr_destroy(&attr);
 
     int status = cf_util_get_string(ci, &qjs->filename);
     if (status != 0) {
         PLUGIN_ERROR("Missing filename.");
+        pthread_mutex_destroy(&qjs->lock);
         free(qjs);
         return status;
     }
@@ -883,6 +1014,12 @@ static int qjs_config_script(config_item_t *ci)
 
 static int qjs_config_plugin(const config_item_t *ci)
 {
+    if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
+        PLUGIN_ERROR("The '%s' option in %s:%d requires exactly one string argument.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
     if (ci->children_num == 0)
         return 0;
 
@@ -893,12 +1030,16 @@ static int qjs_config_plugin(const config_item_t *ci)
     }
 
     if (config_block == NULL) {
-        config_block = ci_copy;
-        return 0;
+        config_block = calloc(1, sizeof(*config_block));
+        if (config_block == NULL) {
+            PLUGIN_ERROR("calloc failed.");
+            config_free(ci_copy);
+            return -1;
+        }
     }
 
     config_item_t *tmp = realloc(config_block->children,
-                  (config_block->children_num + ci_copy->children_num) * sizeof(*tmp));
+                                 (config_block->children_num + 1) * sizeof(*tmp));
     if (tmp == NULL) {
         PLUGIN_ERROR("realloc failed.");
         config_free(ci_copy);
@@ -906,17 +1047,10 @@ static int qjs_config_plugin(const config_item_t *ci)
     }
     config_block->children = tmp;
 
-    /* Copy the pointers */
-    memcpy(config_block->children + config_block->children_num, ci_copy->children,
-           ci_copy->children_num * sizeof(*ci_copy->children));
-    config_block->children_num += ci_copy->children_num;
+    config_block->children[config_block->children_num] = *ci_copy;
+    config_block->children_num++;
 
-    /* Delete the pointers from the copy, so `config_free' can't free them. */
-    memset(ci_copy->children, 0,
-           ci_copy->children_num * sizeof(*ci_copy->children));
-    ci_copy->children_num = 0;
-
-    config_free(ci_copy);
+    free(ci_copy);
 
     return 0;
 }
@@ -969,11 +1103,18 @@ static int qjs_config(config_item_t *ci)
 
 static int qjs_init(void)
 {
+    int ret = 0;
+
     qjs_script_t *qjs = qjs_scripts;
     while (qjs != NULL) {
+        pthread_mutex_lock(&qjs->lock);
         int status = qjs_script_init(qjs);
-        if (status != 0)
-            return -1;
+        if (status != 0) {
+            pthread_mutex_unlock(&qjs->lock);
+            ret = -1;
+            qjs = qjs->next;
+            continue;
+        }
 
         qjs_callback_t *qjc = qjs->cb_config;
         if (config_block != NULL) {
@@ -981,7 +1122,7 @@ static int qjs_init(void)
                 for (int i = 0; i < config_block->children_num; i++) {
                     config_item_t *child = config_block->children + i;
                     if (qjc->name != NULL) {
-                        if (strcmp(qjc->name, child->key) == 0) {
+                        if (strcmp(qjc->name, child->values[0].value.string) == 0) {
                             qjs_cb_config(qjc, child);
                             break;
                         }
@@ -997,10 +1138,12 @@ static int qjs_init(void)
             qjc = qjc->next;
         }
 
+        pthread_mutex_unlock(&qjs->lock);
+
         qjs = qjs->next;
     }
 
-    return 0;
+    return ret;
 }
 
 static int qjs_shutdown(void)
@@ -1008,19 +1151,25 @@ static int qjs_shutdown(void)
     qjs_script_t *qjs = qjs_scripts;
     while (qjs != NULL) {
         qjs_script_t *next = qjs->next;
+        pthread_mutex_lock(&qjs->lock);
         qjs_callback_t *qjc = qjs->cb_shutdown;
         while (qjc != NULL) {
             qjs_cb_call(qjc);
             qjc = qjc->next;
         }
+        pthread_mutex_unlock(&qjs->lock);
         qjs_script_free(qjs);
         qjs = next;
     }
 
     qjs_scripts = NULL;
 
-    if (config_block != NULL)
+    if (config_block != NULL) {
         config_free(config_block);
+        config_block = NULL;
+    }
+
+    base_path[0] = '\0';
 
     return 0;
 }

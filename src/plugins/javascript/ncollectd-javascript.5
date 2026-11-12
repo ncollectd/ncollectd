@@ -27,7 +27,7 @@ and provides an interface to ncollectd's plugin system.
 This makes it possible to write plugins for ncollectd in javascript.
 .Pp
 .Bl -tag -width Ds
-.It \fBbase-path\fP \fI/path/to/your/lua/scripts\fP
+.It \fBbase-path\fP \fI/path/to/your/javascript/scripts\fP
 The directory the \fBjavascript\fP plugin looks in to find scripts.
 If set, this is also prepended to \fIfilename\fP in \fBload-plugin\fP.
 .It \fBload-plugin\fP \fIfilename\fP
@@ -35,14 +35,17 @@ If set, this is also prepended to \fIfilename\fP in \fBload-plugin\fP.
 .It \fBmemory-limit\fP \fIbytes\fP
 Limit the memory usage of the javascript interpreter.
 .It \fBstack-size\fP \fIbytes\fP
-Limit the stack size of the javscript interpreter.
+Limit the stack size of the javascript interpreter.
 .It \fBload-std\fP \fItrue|false\fP
 Make 'std' and 'os' modules available to the loaded script.
+If false they cannot be imported either.
 .It \fBinclude\fP \fIfilename\fP
-Load file as ES6 module, the file extension must be 'mjs'.
+Load the file before the script.
+Files with the extension 'mjs' or with ES6 module syntax are loaded as modules.
 .El
 .It \fBplugin\fP \fIname\fP
-Configuration for the config callback in the script.
+Configuration passed to the config callbacks registered by the scripts
+with the same \fIname\fP.
 .El
 .Sh WRITING YOUR OWN PLUGINS
 Writing your own plugins is quite simple, ncollectd manages plugins by means of
@@ -58,16 +61,21 @@ The following types of \fBcallback functions\fP are implemented in the
 These are used to collect the actual data.
 It is called once per interval (see the \fBinterval\fP configuration option
 of ncollectd).
-Usually it will call \fMetricFamily.Bdispatch()\fP to dispatch
+Usually it will call \fBMetricFamily.dispatch()\fP to dispatch
 the metrics to ncollectd which will pass them on to all registered
 \fBwrite functions\fP.
-If this function does not return 0, interval between its calls will grow
-until function returns 0 again.
+If this function does not return 0 (or nothing), throws an exception or returns
+a rejected promise, interval between its calls will grow until function
+returns 0 again.
 See the \fBmax-read-interval\fP configuration option of ncollectd.
 .It \fBwrite functions\fP
 These are used to write the dispatched values.
 They are called once for every value that was dispatched by any plugin.
 .El
+.Pp
+The callbacks can be \fBasync\fP functions: after every callback the pending
+jobs and timers of the script are run until they finish.
+The callbacks of a script are never run concurrently.
 .Sh OBJECTS
 The following objects are used to pass values between the javascript plugin
 and ncollectd:
@@ -159,6 +167,7 @@ and ncollectd:
 .It \fBsum\fP
 .It \fBcount\fP
 .It \fBquantiles\fP
+Array of \fI[quantile, value]\fP pairs.
 .It \fBlabels\fP
 .It \fBtime\fP
 .It \fBinterval\fP
@@ -172,32 +181,36 @@ and ncollectd:
 .El
 .Bl -tag -width Ds
 .It \fBgsum\fP
-.It \fBbucket\fP
+.It \fBbuckets\fP
+Array of \fI[counter, maximum]\fP pairs.
 .It \fBlabels\fP
 .It \fBtime\fP
 .It \fBinterval\fP
 .El
 .It \fBMetricHistogram\fP
 .Bd -literal
-    ncollectd.MetricHistogram(sum, bucket[, labels][, time][, interval])
+    ncollectd.MetricHistogram(sum, buckets[, labels][, time][, interval])
 .Ed
 .Bl -tag -width Ds
 .It toString()
 .El
 .Bl -tag -width Ds
 .It \fBsum\fP
-.It \fBbucket\fP
+.It \fBbuckets\fP
+Array of \fI[counter, maximum]\fP pairs.
 .It \fBlabels\fP
 .It \fBtime\fP
 .It \fBinterval\fP
 .El
 .It \fBMetricFamily\fP
 .Bd -literal
-    ncollectd.MetricFamily(type, name[, help][, unit][, metrics])
+    ncollectd.MetricFamily(name[, type][, help][, unit])
 .Ed
 .Bl -tag -width Ds
 .It dispatch([time])
+The metrics are moved to ncollectd, \fItime\fP is used for the metrics without time.
 .It append(metrics)
+\fImetrics\fP is a metric or an array of metrics of the same type as the family.
 .It toString()
 .El
 .Bl -tag -width Ds
@@ -212,6 +225,8 @@ and ncollectd:
     ncollectd.Notification(name[, severity][, time][, labels][, annotations])
 .Ed
 .Bl -tag -width Ds
+.It add_label(name, value)
+.It add_annotation(name, value)
 .It dispatch()
 .It toString()
 .El
@@ -241,19 +256,18 @@ and ncollectd:
 .It \fBNOTIF_FAILURE\fP
 .It \fBNOTIF_WARNING\fP
 .It \fBNOTIF_OKAY\fP
-.EL
+.El
 
 .Sh FUNCTIONS
 The following functions are provided to javascript modules:
 .Bl -tag -width Ds
 .It \fBregister_*\fP(\fIcallback\fP[, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
-There are seven different register functions to get callback for seven
+There are six different register functions to get callback for six
 different events.
 With one exception all of them are called as shown above.
 .Bl -tag -width Ds
 .It \fIcallback\fP
-Is the name of a function, a string with the name of the function or an
-anonymous function that will be called every time the event is triggered.
+Is a function that will be called every time the event is triggered.
 .It \fIdata\fP
 Is an optional data that will be passed back to the callback function
 every time it is called.
@@ -262,7 +276,8 @@ If you omit this parameter no data is passed back to your callback.
 Is an optional identifier for this callback.
 Every callback needs a unique identifier.
 .It \fIidentifier\fP
-Is the full identifier assigned to this callback.
+Is the full identifier assigned to this callback:
+\fIjavascript/<script>/<name>\fP.
 .El
 
 .Pp
@@ -270,14 +285,16 @@ These functions are called in the various stages of the daemon (see the section
 \fBWRITING YOUR OWN PLUGINS\fP above) and are passed the following arguments:
 .Bl -tag -width Ds
 .It \fBregister_config\fP
-The only argument passed is a table withe the configuration.
+The only argument passed is an object with the configuration:
+\fIkey\fP, an array of \fIvalues\fP and an array of \fIchildrens\fP with the
+same layout.
 Note that you cannot receive the whole config files this way, only \fBplugin\fP
-blocks inside the Lua configuration block.
-Additionally you will only receive blocks where your callback identifier
-matches the \fBname\fP.
+blocks inside the javascript configuration block.
+Additionally you will only receive blocks where your callback \fIname\fP
+matches the \fBname\fP of the block.
 .It \fBregister_init\fP
 The callback will be called without arguments.
-.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fI][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fP][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
 This function takes an additional parameter: \fIinterval\fP.
 It specifies the time between calls to the callback function.
 If this callback function does not return 0 the next call will be delayed by
@@ -288,34 +305,25 @@ The callback will be called without arguments.
 The callback will be called without arguments.
 .It \fBregister_write\fP
 The callback function will be called with one argument passed, which will be a
-\fIMetricFamily\fP metatable.
+\fIMetricFamily\fP object.
 For the layout of \fIMetricFamily\fP see above.
 If this callback function does not return 0 the next call will be delayed by
 an increasing interval.
-.It \fBregister_log\fP
-The arguments are \fIseverity\fP and \fImessage\fP.
-The severity is an integer and small for important messages and high for less
-important messages.
-The least important level is \fBLOG_DEBUG\fP, the most important level
-is \fBLOG_ERR\fP.
-In between there are (from least to most important): \fBLOG_INFO\fP,
-\fBLOG_NOTICE\fP, and \fBLOG_WARNING\fP.
-\fImessage\fP is simply a string \fBwithout\fP a newline at the end.
-.Pp
-If this callback throws an exception it will \fBnot\fP be logged.
-It will just be printed to \fBsys.stderr\fP which usually means
-silently ignored.
 .It \fBregister_notification\fP
-The only argument passed is a \fINotification\fP metatable.
+The only argument passed is a \fINotification\fP object.
 See above for the layout of this data type.
 .El
 .It \fBunregister_*\fP(\fIidentifier\fP)
-Removes a callback or data-set from ncollectd's internal list of callback
-functions.
+Removes a callback from ncollectd's internal list of callback functions.
 Every \fIregister_*\fP function has an \fIunregister_*\fP function.
-\fIIdentifier\fP is the value that was returned by the register function.
-.It \fBerror, warning, notice, info, debug\fP(\fImessage\fP)
-Log a message with the specified severity.
+\fIIdentifier\fP is the value that was returned by the register function,
+only the callbacks of the same script can be unregistered.
+Write and notification callbacks cannot be unregistered from a write or
+notification callback, and while they are being unregistered other callbacks
+of the script can run.
+.It \fBerror, warning, notice, info, debug\fP(\fImessage\fP[, ...])
+Log a message with the specified severity, the arguments are separated
+by spaces.
 .El
 .Sh EXAMPLES
 A very simple read function might look like:

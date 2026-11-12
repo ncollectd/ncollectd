@@ -6,6 +6,10 @@
 
 JSValue qjs_array_get_length(JSContext *ctx, JSValueConst array, uint32_t *len);
 
+int qjs_to_cdtime(JSContext *ctx, cdtime_t *t, JSValueConst val);
+
+JSValue qjs_set_string(JSContext *ctx, char **str, JSValueConst val, bool nullable);
+
 JSValue qjs_from_label_set(JSContext *ctx, const label_set_t *set);
 
 JSValue qjs_to_label_set(JSContext *ctx, JSValueConst jset, label_set_t *set);
