@@ -26,7 +26,7 @@ The **javascript** plugin embeds a javascript interpreter into ncollectd
 and provides an interface to ncollectd's plugin system.
 This makes it possible to write plugins for ncollectd in javascript.
 
-**base-path** */path/to/your/lua/scripts*
+**base-path** */path/to/your/javascript/scripts*
 
 > The directory the **javascript** plugin looks in to find scripts.
 > If set, this is also prepended to *filename* in **load-plugin**.
@@ -39,19 +39,22 @@ This makes it possible to write plugins for ncollectd in javascript.
 
 > **stack-size** *bytes*
 
-> > Limit the stack size of the javscript interpreter.
+> > Limit the stack size of the javascript interpreter.
 
 > **load-std** *true|false*
 
 > > Make 'std' and 'os' modules available to the loaded script.
+> > If false they cannot be imported either.
 
 > **include** *filename*
 
-> > Load file as ES6 module, the file extension must be 'mjs'.
+> > Load the file before the script.
+> > Files with the extension 'mjs' or with ES6 module syntax are loaded as modules.
 
 **plugin** *name*
 
-> Configuration for the config callback in the script.
+> Configuration passed to the config callbacks registered by the scripts
+> with the same *name*.
 
 # WRITING YOUR OWN PLUGINS
 
@@ -69,17 +72,22 @@ The following types of **callback functions** are implemented in the
 > These are used to collect the actual data.
 > It is called once per interval (see the **interval** configuration option
 > of ncollectd).
-> Usually it will call etricFamily.Bdispatch() to dispatch
+> Usually it will call **MetricFamily.dispatch()** to dispatch
 > the metrics to ncollectd which will pass them on to all registered
 > **write functions**.
-> If this function does not return 0, interval between its calls will grow
-> until function returns 0 again.
+> If this function does not return 0 (or nothing), throws an exception or returns
+> a rejected promise, interval between its calls will grow until function
+> returns 0 again.
 > See the **max-read-interval** configuration option of ncollectd.
 
 **write functions**
 
 > These are used to write the dispatched values.
 > They are called once for every value that was dispatched by any plugin.
+
+The callbacks can be **async** functions: after every callback the pending
+jobs and timers of the script are run until they finish.
+The callbacks of a script are never run concurrently.
 
 # OBJECTS
 
@@ -183,6 +191,8 @@ and ncollectd:
 
 > **quantiles**
 
+> > Array of *\[quantile, value]* pairs.
+
 > **labels**
 
 > **time**
@@ -197,7 +207,9 @@ and ncollectd:
 
 > **gsum**
 
-> **bucket**
+> **buckets**
+
+> > Array of *\[counter, maximum]* pairs.
 
 > **labels**
 
@@ -207,13 +219,15 @@ and ncollectd:
 
 **MetricHistogram**
 
-> >     ncollectd.MetricHistogram(sum, bucket\[, labels]\[, time]\[, interval])
+> >     ncollectd.MetricHistogram(sum, buckets\[, labels]\[, time]\[, interval])
 
 > toString()
 
 > **sum**
 
-> **bucket**
+> **buckets**
+
+> > Array of *\[counter, maximum]* pairs.
 
 > **labels**
 
@@ -223,11 +237,15 @@ and ncollectd:
 
 **MetricFamily**
 
-> >     ncollectd.MetricFamily(type, name\[, help]\[, unit]\[, metrics])
+> >     ncollectd.MetricFamily(name\[, type]\[, help]\[, unit])
 
 > dispatch(\[time])
 
+> > The metrics are moved to ncollectd, *time* is used for the metrics without time.
+
 > append(metrics)
+
+> > *metrics* is a metric or an array of metrics of the same type as the family.
 
 > toString()
 
@@ -244,6 +262,10 @@ and ncollectd:
 **Notification**
 
 > >     ncollectd.Notification(name\[, severity]\[, time]\[, labels]\[, annotations])
+
+> add\_label(name, value)
+
+> add\_annotation(name, value)
 
 > dispatch()
 
@@ -297,14 +319,13 @@ The following functions are provided to javascript modules:
 
 **register\_\*&zwnj;**(*callback*\[, *data*]\[, *name*]) -&gt; *identifier*
 
-> There are seven different register functions to get callback for seven
+> There are six different register functions to get callback for six
 > different events.
 > With one exception all of them are called as shown above.
 
 > *callback*
 
-> > Is the name of a function, a string with the name of the function or an
-> > anonymous function that will be called every time the event is triggered.
+> > Is a function that will be called every time the event is triggered.
 
 > *data*
 
@@ -319,24 +340,27 @@ The following functions are provided to javascript modules:
 
 > *identifier*
 
-> > Is the full identifier assigned to this callback.
+> > Is the full identifier assigned to this callback:
+> > *javascript/&lt;script&gt;/&lt;name&gt;*.
 
 > These functions are called in the various stages of the daemon (see the section
 > **WRITING YOUR OWN PLUGINS** above) and are passed the following arguments:
 
 > **register\_config**
 
-> > The only argument passed is a table withe the configuration.
+> > The only argument passed is an object with the configuration:
+> > *key*, an array of *values* and an array of *childrens* with the
+> > same layout.
 > > Note that you cannot receive the whole config files this way, only **plugin**
-> > blocks inside the Lua configuration block.
-> > Additionally you will only receive blocks where your callback identifier
-> > matches the **name**.
+> > blocks inside the javascript configuration block.
+> > Additionally you will only receive blocks where your callback *name*
+> > matches the **name** of the block.
 
 > **register\_init**
 
 > > The callback will be called without arguments.
 
-> **register\_read**(*callback*\[, *interval*&zwnj;*]\[, *&zwnj;*data*&zwnj;*]\[, *&zwnj;*name*&zwnj;*]) -&gt; *&zwnj;*identifier*&zwnj;*&zwnj;*
+> **register\_read**(*callback*\[, *interval*]\[, *data*]\[, *name*]) -&gt; *identifier*
 
 > > This function takes an additional parameter: *interval*.
 > > It specifies the time between calls to the callback function.
@@ -352,41 +376,30 @@ The following functions are provided to javascript modules:
 > **register\_write**
 
 > > The callback function will be called with one argument passed, which will be a
-> > *MetricFamily* metatable.
+> > *MetricFamily* object.
 > > For the layout of *MetricFamily* see above.
 > > If this callback function does not return 0 the next call will be delayed by
 > > an increasing interval.
 
-> **register\_log**
-
-> > The arguments are *severity* and *message*.
-> > The severity is an integer and small for important messages and high for less
-> > important messages.
-> > The least important level is **LOG\_DEBUG**, the most important level
-> > is **LOG\_ERR**.
-> > In between there are (from least to most important): **LOG\_INFO**,
-> > **LOG\_NOTICE**, and **LOG\_WARNING**.
-> > *message* is simply a string **without** a newline at the end.
-
-> > If this callback throws an exception it will **not** be logged.
-> > It will just be printed to **sys.stderr** which usually means
-> > silently ignored.
-
 > **register\_notification**
 
-> > The only argument passed is a *Notification* metatable.
+> > The only argument passed is a *Notification* object.
 > > See above for the layout of this data type.
 
 **unregister\_\*&zwnj;**(*identifier*)
 
-> Removes a callback or data-set from ncollectd's internal list of callback
-> functions.
+> Removes a callback from ncollectd's internal list of callback functions.
 > Every *register\_\*&zwnj;* function has an *unregister\_\*&zwnj;* function.
-> *Identifier* is the value that was returned by the register function.
+> *Identifier* is the value that was returned by the register function,
+> only the callbacks of the same script can be unregistered.
+> Write and notification callbacks cannot be unregistered from a write or
+> notification callback, and while they are being unregistered other callbacks
+> of the script can run.
 
-**error, warning, notice, info, debug**(*message*)
+**error, warning, notice, info, debug**(*message*\[, ...])
 
-> Log a message with the specified severity.
+> Log a message with the specified severity, the arguments are separated
+> by spaces.
 
 # EXAMPLES
 

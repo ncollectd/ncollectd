@@ -43,33 +43,40 @@ static JSValue qjs_notification_ctor(JSContext *ctx, JSValueConst new_target,
 
     notification_t *n = calloc(1, sizeof(*n));
     if (n == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     n->severity = NOTIF_FAILURE;
     n->time = cdtime();
 
-    if (!JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
-        const char *name = JS_ToCString(ctx, argv[0]);
-        if (name == NULL)
-            goto fail;
-        n->name = strdup(name);
-        JS_FreeCString(ctx, name);
+    if (JS_IsUndefined(argv[0]) || JS_IsNull(argv[0])) {
+        JS_ThrowTypeError(ctx, "The name of the notification is required");
+        goto fail;
+    }
+
+    const char *name = JS_ToCString(ctx, argv[0]);
+    if (name == NULL)
+        goto fail;
+    n->name = strdup(name);
+    JS_FreeCString(ctx, name);
+    if (n->name == NULL) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
         int32_t severity = 0;
         if (JS_ToInt32(ctx, &severity, argv[1]))
             goto fail;
-        if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) && (severity != NOTIF_OKAY))
+        if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) && (severity != NOTIF_OKAY)) {
+            JS_ThrowRangeError(ctx, "Invalid severity");
             goto fail;
+        }
         n->severity = severity;
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
-        double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, argv[2]))
+        if (qjs_to_cdtime(ctx, &n->time, argv[2]))
             goto fail;
-        n->time = DOUBLE_TO_CDTIME_T(ntime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
@@ -115,6 +122,8 @@ static JSValue qjs_notification_get(JSContext *ctx, JSValueConst this_val, int m
         return JS_NewFloat64(ctx, CDTIME_T_TO_DOUBLE(n->time));
         break;
     case NOTIF_GETSET_NAME:
+        if (n->name == NULL)
+            return JS_NULL;
         return JS_NewString(ctx, n->name);
         break;
     case NOTIF_GETSET_LABELS:
@@ -140,22 +149,16 @@ static JSValue qjs_notification_set(JSContext *ctx, JSValueConst this_val, JSVal
         if (JS_ToInt32(ctx, &severity, val))
             return JS_EXCEPTION;
         if ((severity != NOTIF_FAILURE) && (severity != NOTIF_WARNING) && (severity != NOTIF_OKAY))
-            return JS_EXCEPTION;
+            return JS_ThrowRangeError(ctx, "Invalid severity");
         n->severity = severity;
     }   break;
-    case NOTIF_GETSET_TIME: {
-        double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case NOTIF_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &n->time, val))
             return JS_EXCEPTION;
-        n->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case NOTIF_GETSET_NAME: {
-        const char *name = JS_ToCString(ctx, val);
-        if (name == NULL)
-            return JS_EXCEPTION;
-        n->name = strdup(name);
-        JS_FreeCString(ctx, name);
-    }   break;
+        break;
+    case NOTIF_GETSET_NAME:
+        return qjs_set_string(ctx, &n->name, val, false);
+        break;
     case NOTIF_GETSET_LABELS:
         label_set_reset(&n->label);
         return qjs_to_label_set(ctx, val, &n->label);
@@ -241,7 +244,7 @@ static JSValue qjs_notification_to_string(JSContext *ctx, JSValueConst this_val,
     strbuf_t buf = STRBUF_CREATE;
 
     int status = strbuf_putstr(&buf, "{ name: \"");
-    status |= strbuf_putescape_json(&buf, n->name);
+    status |= strbuf_putescape_json(&buf, n->name == NULL ? "" : n->name);
     status |= strbuf_putstr(&buf, "\", severity: ");
     switch(n->severity) {
     case NOTIF_FAILURE:
@@ -283,7 +286,7 @@ static JSValue qjs_notification_to_string(JSContext *ctx, JSValueConst this_val,
 
     if (status != 0) {
         strbuf_destroy(&buf);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
 
     JSValue string = JS_NewStringLen(ctx, buf.ptr, strbuf_len(&buf));
@@ -341,7 +344,7 @@ JSValue qjs_notification_new(JSContext *ctx, const notification_t *n)
     notification_t *ndup = notification_clone(n);
     if (ndup == NULL) {
         JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
 
     JS_SetOpaque(obj, ndup);

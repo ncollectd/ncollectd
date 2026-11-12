@@ -55,9 +55,45 @@ static int state_set_to_string(strbuf_t *buf, state_set_t *set)
         status |= strbuf_putstr(buf, state->enabled ? "true" : "false");
     }
 
-    status |= strbuf_putchar(buf, '}');
+    return status | strbuf_putchar(buf, '}');
+}
 
-    return status;
+static int histogram_to_string(strbuf_t *buf, histogram_t *h, const char *sum)
+{
+    int status = strbuf_putstr(buf, sum);
+    status |= strbuf_putdouble(buf, histogram_sum(h));
+    status |= strbuf_putstr(buf, ", buckets: [");
+
+    for (size_t i = 0; i < h->num; i++) { 
+        if (i != 0)
+            status |= strbuf_putchar(buf, ',');
+        status |= strbuf_putstr(buf, " [");
+        status |= strbuf_putuint(buf, h->buckets[i].counter);
+        status |= strbuf_putstr(buf, ", ");
+        status |= strbuf_putdouble(buf, h->buckets[i].maximum);
+        status |= strbuf_putchar(buf, ']');
+    }
+
+    return status | strbuf_putstr(buf, " ]");
+}
+
+static int summary_to_string(strbuf_t *buf, summary_t *s)
+{
+    int status = strbuf_putstr(buf, "sum: ");
+    status |= strbuf_putdouble(buf, s->sum);
+    status |= strbuf_putstr(buf, ", count: ");
+    status |= strbuf_putuint(buf, s->count);
+    status |= strbuf_putstr(buf, ", quantiles: [");
+    for (size_t i = 0; i < s->num; i++) {
+        if (i != 0)
+            status |= strbuf_putchar(buf, ',');
+        status |= strbuf_putstr(buf, " [");
+        status |= strbuf_putdouble(buf, s->quantiles[i].quantile);
+        status |= strbuf_putstr(buf, ", ");
+        status |= strbuf_putdouble(buf, s->quantiles[i].value);
+        status |= strbuf_putchar(buf, ']');
+    }
+    return status | strbuf_putstr(buf, " ]");
 }
 
 int metric_to_string(strbuf_t *buf, metric_t *m, metric_type_t type)
@@ -68,10 +104,11 @@ int metric_to_string(strbuf_t *buf, metric_t *m, metric_type_t type)
     status |= strbuf_putdouble(buf, CDTIME_T_TO_DOUBLE(m->interval));
     status |= strbuf_putstr(buf, ", labels: ");
     status |= label_set_to_string(buf, &m->label);
-    status |= strbuf_putstr(buf, ", value: ");
+    status |= strbuf_putstr(buf, ", ");
 
     switch(type) {
     case METRIC_TYPE_UNKNOWN:
+        status |= strbuf_putstr(buf, "value: ");
         if (m->value.unknown.type == UNKNOWN_FLOAT64) {
             status |= strbuf_putdouble(buf, m->value.unknown.float64);
         } else {
@@ -79,6 +116,7 @@ int metric_to_string(strbuf_t *buf, metric_t *m, metric_type_t type)
         }
         break;
     case METRIC_TYPE_GAUGE:
+        status |= strbuf_putstr(buf, "value: ");
         if (m->value.gauge.type == GAUGE_FLOAT64) {
             status |= strbuf_putdouble(buf, m->value.gauge.float64);
         } else {
@@ -86,6 +124,7 @@ int metric_to_string(strbuf_t *buf, metric_t *m, metric_type_t type)
         }
         break;
     case METRIC_TYPE_COUNTER:
+        status |= strbuf_putstr(buf, "value: ");
         if (m->value.counter.type == COUNTER_UINT64) {
             status |= strbuf_putuint(buf, m->value.counter.uint64);
         } else {
@@ -93,18 +132,24 @@ int metric_to_string(strbuf_t *buf, metric_t *m, metric_type_t type)
         }
         break;
     case METRIC_TYPE_STATE_SET:
+        status |= strbuf_putstr(buf, "set: ");
         status |= state_set_to_string(buf, &m->value.state_set);
         break;
     case METRIC_TYPE_INFO:
+        status |= strbuf_putstr(buf, "info: ");
         status |= label_set_to_string(buf, &m->value.info);
         break;
     case METRIC_TYPE_SUMMARY:
+        status |= summary_to_string(buf, m->value.summary);
         break;
     case METRIC_TYPE_HISTOGRAM:
+        status |= histogram_to_string(buf, m->value.histogram, "sum: ");
         break;
     case METRIC_TYPE_GAUGE_HISTOGRAM:
+        status |= histogram_to_string(buf, m->value.histogram, "gsum: ");
         break;
     }
+
     return status | strbuf_putstr(buf, " }");
 }
 
@@ -124,7 +169,7 @@ static JSValue qjs_metric_unknown_ctor(JSContext *ctx, JSValueConst new_target, 
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     // "value", "labels", "time", "interval"
 
@@ -140,6 +185,7 @@ static JSValue qjs_metric_unknown_ctor(JSContext *ctx, JSValueConst new_target, 
                 goto fail;
             m->value = VALUE_UNKNOWN_INT64(value);
         } else {
+            JS_ThrowTypeError(ctx, "The value must be a number or a BigInt");
             goto fail;
         }
     }
@@ -151,17 +197,13 @@ static JSValue qjs_metric_unknown_ctor(JSContext *ctx, JSValueConst new_target, 
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
-        double mtime = 0;
-        if (JS_ToFloat64(ctx, &mtime, argv[2]))
+        if (qjs_to_cdtime(ctx, &m->time, argv[2]))
             goto fail;
-        m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
-        double minterval = 0;
-        if (JS_ToFloat64(ctx, &minterval, argv[3]))
+        if (qjs_to_cdtime(ctx, &m->interval, argv[3]))
             goto fail;
-        m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -226,18 +268,14 @@ static JSValue qjs_metric_unknown_set(JSContext *ctx, JSValueConst this_val, JSV
         return JS_EXCEPTION;
 
     switch (magic) {
-    case METRIC_GETSET_TIME: {
-       double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case METRIC_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &m->time, val))
             return JS_EXCEPTION;
-        m->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case METRIC_GETSET_INTERVAL: {
-       double ninterval = 0;
-        if (JS_ToFloat64(ctx, &ninterval, val))
+        break;
+    case METRIC_GETSET_INTERVAL:
+        if (qjs_to_cdtime(ctx, &m->interval, val))
             return JS_EXCEPTION;
-        m->interval = DOUBLE_TO_CDTIME_T(ninterval);
-    }   break;
+        break;
     case METRIC_GETSET_LABELS:
         label_set_reset(&m->label);
         return qjs_to_label_set(ctx, val, &m->label);
@@ -339,7 +377,7 @@ static JSValue qjs_metric_gauge_ctor(JSContext *ctx, JSValueConst new_target, in
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     // "value", "labels", "time", "interval"
 
@@ -355,6 +393,7 @@ static JSValue qjs_metric_gauge_ctor(JSContext *ctx, JSValueConst new_target, in
                 goto fail;
             m->value = VALUE_GAUGE_INT64(value);
         } else {
+            JS_ThrowTypeError(ctx, "The value must be a number or a BigInt");
             goto fail;
         }
     }
@@ -366,17 +405,13 @@ static JSValue qjs_metric_gauge_ctor(JSContext *ctx, JSValueConst new_target, in
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
-        double mtime = 0;
-        if (JS_ToFloat64(ctx, &mtime, argv[2]))
+        if (qjs_to_cdtime(ctx, &m->time, argv[2]))
             goto fail;
-        m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
-        double minterval = 0;
-        if (JS_ToFloat64(ctx, &minterval, argv[3]))
+        if (qjs_to_cdtime(ctx, &m->interval, argv[3]))
             goto fail;
-        m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -441,18 +476,14 @@ static JSValue qjs_metric_gauge_set(JSContext *ctx, JSValueConst this_val, JSVal
         return JS_EXCEPTION;
 
     switch (magic) {
-    case METRIC_GETSET_TIME: {
-       double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case METRIC_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &m->time, val))
             return JS_EXCEPTION;
-        m->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case METRIC_GETSET_INTERVAL: {
-       double ninterval = 0;
-        if (JS_ToFloat64(ctx, &ninterval, val))
+        break;
+    case METRIC_GETSET_INTERVAL:
+        if (qjs_to_cdtime(ctx, &m->interval, val))
             return JS_EXCEPTION;
-        m->interval = DOUBLE_TO_CDTIME_T(ninterval);
-    }   break;
+        break;
     case METRIC_GETSET_LABELS:
         label_set_reset(&m->label);
         return qjs_to_label_set(ctx, val, &m->label);
@@ -554,7 +585,7 @@ static JSValue qjs_metric_counter_ctor(JSContext *ctx, JSValueConst new_target, 
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     // "value", "labels", "time", "interval"
 
@@ -570,6 +601,7 @@ static JSValue qjs_metric_counter_ctor(JSContext *ctx, JSValueConst new_target, 
                 goto fail;
             m->value = VALUE_COUNTER_FLOAT64(value);
         } else {
+            JS_ThrowTypeError(ctx, "the value must be a number or a BigInt");
             goto fail;
         }
     }
@@ -581,17 +613,13 @@ static JSValue qjs_metric_counter_ctor(JSContext *ctx, JSValueConst new_target, 
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
-        double mtime = 0;
-        if (JS_ToFloat64(ctx, &mtime, argv[2]))
+        if (qjs_to_cdtime(ctx, &m->time, argv[2]))
             goto fail;
-        m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
-        double minterval = 0;
-        if (JS_ToFloat64(ctx, &minterval, argv[3]))
+        if (qjs_to_cdtime(ctx, &m->interval, argv[3]))
             goto fail;
-        m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -656,18 +684,14 @@ static JSValue qjs_metric_counter_set(JSContext *ctx, JSValueConst this_val, JSV
         return JS_EXCEPTION;
 
     switch (magic) {
-    case METRIC_GETSET_TIME: {
-       double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case METRIC_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &m->time, val))
             return JS_EXCEPTION;
-        m->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case METRIC_GETSET_INTERVAL: {
-       double ninterval = 0;
-        if (JS_ToFloat64(ctx, &ninterval, val))
+        break;
+    case METRIC_GETSET_INTERVAL:
+        if (qjs_to_cdtime(ctx, &m->interval, val))
             return JS_EXCEPTION;
-        m->interval = DOUBLE_TO_CDTIME_T(ninterval);
-    }   break;
+        break;
     case METRIC_GETSET_LABELS:
         label_set_reset(&m->label);
         return qjs_to_label_set(ctx, val, &m->label);
@@ -769,7 +793,7 @@ static JSValue qjs_metric_info_ctor(JSContext *ctx, JSValueConst new_target, int
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     // "value", "labels", "time", "interval"
 
@@ -786,17 +810,13 @@ static JSValue qjs_metric_info_ctor(JSContext *ctx, JSValueConst new_target, int
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
-        double mtime = 0;
-        if (JS_ToFloat64(ctx, &mtime, argv[2]))
+        if (qjs_to_cdtime(ctx, &m->time, argv[2]))
             goto fail;
-        m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
-        double minterval = 0;
-        if (JS_ToFloat64(ctx, &minterval, argv[3]))
+        if (qjs_to_cdtime(ctx, &m->interval, argv[3]))
             goto fail;
-        m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -853,18 +873,14 @@ static JSValue qjs_metric_info_set(JSContext *ctx, JSValueConst this_val, JSValu
         return JS_EXCEPTION;
 
     switch (magic) {
-    case METRIC_GETSET_TIME: {
-       double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case METRIC_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &m->time, val))
             return JS_EXCEPTION;
-        m->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case METRIC_GETSET_INTERVAL: {
-       double ninterval = 0;
-        if (JS_ToFloat64(ctx, &ninterval, val))
+        break;
+    case METRIC_GETSET_INTERVAL:
+        if (qjs_to_cdtime(ctx, &m->interval, val))
             return JS_EXCEPTION;
-        m->interval = DOUBLE_TO_CDTIME_T(ninterval);
-    }   break;
+        break;
     case METRIC_GETSET_LABELS:
         label_set_reset(&m->label);
         return qjs_to_label_set(ctx, val, &m->label);
@@ -889,7 +905,7 @@ static JSValue qjs_metric_info_to_string(JSContext *ctx, JSValueConst this_val,
 
     strbuf_t buf = STRBUF_CREATE;
 
-    metric_to_string(&buf, m, METRIC_TYPE_COUNTER);
+    metric_to_string(&buf, m, METRIC_TYPE_INFO);
 
     JSValue string = JS_NewStringLen(ctx, buf.ptr, strbuf_len(&buf));
 
@@ -968,6 +984,7 @@ static JSValue qjs_to_state_set(JSContext *ctx, JSValueConst jset, state_set_t *
             goto fail;
 
         int ret = JS_ToBool(ctx, val);
+        JS_FreeValue(ctx, val);
         if (ret < 0)
             goto fail;
         bool value = ret == 0 ? false : true;
@@ -977,9 +994,14 @@ static JSValue qjs_to_state_set(JSContext *ctx, JSValueConst jset, state_set_t *
             goto fail;
         }
 
-        state_set_add(set, key, value);
+        int status = state_set_add(set, key, value);
+        if (status != 0)
+            JS_ThrowTypeError(ctx, "invalid state '%s'", key);
 
         JS_FreeCString(ctx, key);
+
+        if (status != 0)
+            goto fail;
     }
 
     JS_FreePropertyEnum(ctx, tab, len);
@@ -1006,7 +1028,7 @@ static JSValue qjs_metric_state_set_ctor(JSContext *ctx, JSValueConst new_target
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     // "value", "labels", "time", "interval"
 
@@ -1023,17 +1045,13 @@ static JSValue qjs_metric_state_set_ctor(JSContext *ctx, JSValueConst new_target
     }
 
     if (!JS_IsUndefined(argv[2]) && !JS_IsNull(argv[2])) {
-        double mtime = 0;
-        if (JS_ToFloat64(ctx, &mtime, argv[2]))
+        if (qjs_to_cdtime(ctx, &m->time, argv[2]))
             goto fail;
-        m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
-        double minterval = 0;
-        if (JS_ToFloat64(ctx, &minterval, argv[3]))
+        if (qjs_to_cdtime(ctx, &m->interval, argv[3]))
             goto fail;
-        m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -1090,18 +1108,14 @@ static JSValue qjs_metric_state_set_set(JSContext *ctx, JSValueConst this_val, J
         return JS_EXCEPTION;
 
     switch (magic) {
-    case METRIC_GETSET_TIME: {
-       double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case METRIC_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &m->time, val))
             return JS_EXCEPTION;
-        m->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case METRIC_GETSET_INTERVAL: {
-       double ninterval = 0;
-        if (JS_ToFloat64(ctx, &ninterval, val))
+        break;
+    case METRIC_GETSET_INTERVAL:
+        if (qjs_to_cdtime(ctx, &m->interval, val))
             return JS_EXCEPTION;
-        m->interval = DOUBLE_TO_CDTIME_T(ninterval);
-    }   break;
+        break;
     case METRIC_GETSET_LABELS:
         label_set_reset(&m->label);
         return qjs_to_label_set(ctx, val, &m->label);
@@ -1126,7 +1140,7 @@ static JSValue qjs_metric_state_set_to_string(JSContext *ctx, JSValueConst this_
 
     strbuf_t buf = STRBUF_CREATE;
 
-    metric_to_string(&buf, m, METRIC_TYPE_COUNTER);
+    metric_to_string(&buf, m, METRIC_TYPE_STATE_SET);
 
     JSValue string = JS_NewStringLen(ctx, buf.ptr, strbuf_len(&buf));
 
@@ -1203,19 +1217,18 @@ static JSValue qjs_from_quantiles(JSContext *ctx, summary_t *summary)
 static JSValue qjs_to_quantile(JSContext *ctx, JSValueConst jpair, summary_quantile_t *quantile)
 {
     uint32_t qlen = 0;
-    qjs_array_get_length(ctx, jpair, &qlen);
+    if (JS_IsException(qjs_array_get_length(ctx, jpair, &qlen)))
+        return JS_EXCEPTION;
 
     if (qlen != 2)
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "A quantile must be an array [quantile, value]");
 
     JSValueConst jquantile = JS_GetPropertyUint32(ctx, jpair, 0);
     if (JS_IsException(jquantile))
         return jquantile;
-    if (JS_IsUndefined(jquantile))
-        return JS_EXCEPTION;
     if (!JS_IsNumber(jquantile)) {
         JS_FreeValue(ctx, jquantile);
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The quantile must be a number");
     }
 
     if (JS_ToFloat64(ctx, &quantile->quantile, jquantile)) {
@@ -1229,12 +1242,9 @@ static JSValue qjs_to_quantile(JSContext *ctx, JSValueConst jpair, summary_quant
     if (JS_IsException(jvalue)) {
         return jvalue;
     }
-    if (JS_IsUndefined(jvalue)) {
-        return JS_EXCEPTION;
-    }
     if (!JS_IsNumber(jvalue)) {
         JS_FreeValue(ctx, jvalue);
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The value of the quantile must be a number");
     }
 
     if (JS_ToFloat64(ctx, &quantile->value, jvalue)) {
@@ -1250,15 +1260,15 @@ static JSValue qjs_to_quantile(JSContext *ctx, JSValueConst jpair, summary_quant
 static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary_t **rsummary)
 {
     if (!JS_IsArray(ctx, jquantiles))
-//       return JS_ThrowTypeError(ctx, "label set must be an object");
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The quantiles must be an array");
 
     uint32_t len = 0;
-    qjs_array_get_length(ctx, jquantiles, &len);
+    if (JS_IsException(qjs_array_get_length(ctx, jquantiles, &len)))
+        return JS_EXCEPTION;
 
     summary_t *summary = summary_new();
     if (summary == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     summary->sum = (*rsummary)->sum;
     summary->count = (*rsummary)->count;
@@ -1270,15 +1280,10 @@ static JSValue qjs_to_quantiles(JSContext *ctx, JSValueConst jquantiles, summary
             return jpair;
         }
 
-        if (JS_IsUndefined(jpair)) {
-            summary_destroy(summary);
-            return JS_EXCEPTION;
-        }
-
         if (!JS_IsArray(ctx, jpair)) {
             summary_destroy(summary);
             JS_FreeValue(ctx, jpair);
-            return JS_EXCEPTION;
+            return JS_ThrowTypeError(ctx, "A quantile must be an array [quantile, value]");
         }
 
         summary_quantile_t quantile = {0, 0};
@@ -1316,12 +1321,12 @@ static JSValue qjs_metric_summary_ctor(JSContext *ctx, JSValueConst new_target, 
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     summary_t *summary = summary_new();
     if (summary == NULL) {
         free(m);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
 
     m->value.summary = summary;
@@ -1355,17 +1360,13 @@ static JSValue qjs_metric_summary_ctor(JSContext *ctx, JSValueConst new_target, 
     }
 
     if (!JS_IsUndefined(argv[4]) && !JS_IsNull(argv[4])) {
-        double mtime = 0;
-        if (JS_ToFloat64(ctx, &mtime, argv[4]))
+        if (qjs_to_cdtime(ctx, &m->time, argv[4]))
             goto fail;
-        m->time = DOUBLE_TO_CDTIME_T(mtime);
     }
 
     if (!JS_IsUndefined(argv[5]) && !JS_IsNull(argv[5])) {
-        double minterval = 0;
-        if (JS_ToFloat64(ctx, &minterval, argv[5]))
+        if (qjs_to_cdtime(ctx, &m->interval, argv[5]))
             goto fail;
-        m->interval = DOUBLE_TO_CDTIME_T(minterval);
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -1428,18 +1429,14 @@ static JSValue qjs_metric_summary_set(JSContext *ctx, JSValueConst this_val, JSV
         return JS_EXCEPTION;
 
     switch (magic) {
-    case METRIC_GETSET_TIME: {
-       double ntime = 0;
-        if (JS_ToFloat64(ctx, &ntime, val))
+    case METRIC_GETSET_TIME:
+        if (qjs_to_cdtime(ctx, &m->time, val))
             return JS_EXCEPTION;
-        m->time = DOUBLE_TO_CDTIME_T(ntime);
-    }   break;
-    case METRIC_GETSET_INTERVAL: {
-       double ninterval = 0;
-        if (JS_ToFloat64(ctx, &ninterval, val))
+        break;
+    case METRIC_GETSET_INTERVAL:
+        if (qjs_to_cdtime(ctx, &m->interval, val))
             return JS_EXCEPTION;
-        m->interval = DOUBLE_TO_CDTIME_T(ninterval);
-    }   break;
+        break;
     case METRIC_GETSET_LABELS:
         label_set_reset(&m->label);
         return qjs_to_label_set(ctx, val, &m->label);
@@ -1477,7 +1474,7 @@ static JSValue qjs_metric_summary_to_string(JSContext *ctx, JSValueConst this_va
 
     strbuf_t buf = STRBUF_CREATE;
 
-    metric_to_string(&buf, m, METRIC_TYPE_COUNTER);
+    metric_to_string(&buf, m, METRIC_TYPE_SUMMARY);
 
     JSValue string = JS_NewStringLen(ctx, buf.ptr, strbuf_len(&buf));
 
@@ -1542,7 +1539,7 @@ static JSValue qjs_from_buckets(JSContext *ctx, histogram_t *histogram)
 
         JSValue jbucket = JS_NewArray(ctx);
         if (JS_IsException(jbucket)) {
-            JS_FreeValue(ctx, jbucket);
+            JS_FreeValue(ctx, jbuckets);
             return jbucket;
         }
 
@@ -1560,20 +1557,19 @@ static JSValue qjs_from_buckets(JSContext *ctx, histogram_t *histogram)
 static JSValue qjs_to_bucket(JSContext *ctx, JSValueConst jpair, histogram_bucket_t *bucket)
 {
     uint32_t qlen = 0;
-    qjs_array_get_length(ctx, jpair, &qlen);
+    if (JS_IsException(qjs_array_get_length(ctx, jpair, &qlen)))
+        return JS_EXCEPTION;
 
     if (qlen != 2)
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "A bucket must be an array [counter, maximum]");
 
     JSValueConst jcounter = JS_GetPropertyUint32(ctx, jpair, 0);
     if (JS_IsException(jcounter))
         return jcounter;
-    if (JS_IsUndefined(jcounter))
-        return JS_EXCEPTION;
 
     if (!(JS_IsBigInt(ctx, jcounter) || JS_IsNumber(jcounter))) {
         JS_FreeValue(ctx, jcounter);
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The counter of the bucket must be a number or a BigInt");
     }
 
     int64_t value = 0;
@@ -1590,12 +1586,10 @@ static JSValue qjs_to_bucket(JSContext *ctx, JSValueConst jpair, histogram_bucke
     if (JS_IsException(jmaximun)) {
         return jmaximun;
     }
-    if (JS_IsUndefined(jmaximun)) {
-        return JS_EXCEPTION;
-    }
+
     if (!JS_IsNumber(jmaximun)) {
         JS_FreeValue(ctx, jmaximun);
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The maximum of the bucket must be a number");
     }
 
     if (JS_ToFloat64(ctx, &bucket->maximum, jmaximun)) {
@@ -1611,14 +1605,15 @@ static JSValue qjs_to_bucket(JSContext *ctx, JSValueConst jpair, histogram_bucke
 static JSValue qjs_to_buckets(JSContext *ctx, JSValueConst jbuckets, histogram_t **rhistogram)
 {
     if (!JS_IsArray(ctx, jbuckets))
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The buckets must be an array");
 
     uint32_t len = 0;
-    qjs_array_get_length(ctx, jbuckets, &len);
+    if (JS_IsException(qjs_array_get_length(ctx, jbuckets, &len)))
+        return JS_EXCEPTION;
 
     histogram_t *histogram = histogram_new();
     if (histogram == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     histogram->sum = (*rhistogram)->sum;
 
@@ -1629,15 +1624,10 @@ static JSValue qjs_to_buckets(JSContext *ctx, JSValueConst jbuckets, histogram_t
             return jpair;
         }
 
-        if (JS_IsUndefined(jpair)) {
-            histogram_destroy(histogram);
-            return JS_EXCEPTION;
-        }
-
         if (!JS_IsArray(ctx, jpair)) {
             histogram_destroy(histogram);
             JS_FreeValue(ctx, jpair);
-            return JS_EXCEPTION;
+            return JS_ThrowTypeError(ctx, "A bucket must be an array [counter, maximum]");
         }
 
         histogram_bucket_t bucket = {0, 0};
@@ -1667,12 +1657,12 @@ static JSValue qjs_metric_generic_histogram_ctor(JSContext *ctx, JSValueConst ne
 
     metric_t *m = calloc(1, sizeof(*m));
     if (m == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     histogram_t *histogram = histogram_new();
     if (histogram == NULL) {
         free(m);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
 
     m->value.histogram = histogram;
@@ -1682,7 +1672,7 @@ static JSValue qjs_metric_generic_histogram_ctor(JSContext *ctx, JSValueConst ne
         double sum = 0;
         if (JS_ToFloat64(ctx, &sum, argv[0]))
             goto fail;
-        m->value.summary->sum = sum;
+        m->value.histogram->sum = sum;
     }
 
     if (!JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
@@ -1792,10 +1782,6 @@ static JSValue qjs_metric_generic_histogram_set(JSContext *ctx, JSValueConst thi
         m->value.histogram->sum = sum;
     }   break;
     case METRIC_GETSET_BUCKETS: {
-        double sum = histogram_sum(m->value.histogram);
-        free(m->value.histogram);
-        m->value.histogram = histogram_new();
-        m->value.histogram->sum = sum;
         JSValue ret = qjs_to_buckets(ctx, val, &m->value.histogram);
         if (!JS_IsUndefined(ret))
             return JS_EXCEPTION;
@@ -2022,7 +2008,7 @@ JSValue qjs_metric_new(JSContext *ctx, metric_t *m, metric_type_t type)
         class_id = qjs_metric_gauge_histogram_class_id;
         break;
     default:
-        return JS_EXCEPTION;
+        return JS_ThrowRangeError(ctx, "invalid metric type");
         break;
     }
 
@@ -2033,7 +2019,7 @@ JSValue qjs_metric_new(JSContext *ctx, metric_t *m, metric_type_t type)
     metric_t *mdup = calloc(1, sizeof(*mdup));
     if (mdup == NULL) {
         JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
     mdup->time = m->time;
     mdup->interval = m->interval;
@@ -2075,7 +2061,7 @@ int qjs_metric_get_metric_type(JSContext *ctx, JSValueConst v, metric_type_t *ty
         return 0;
     }
 
-    return 0;
+    return -1;
 }
 
 static JSClassID qjs_metric_get_classid(metric_type_t type) 

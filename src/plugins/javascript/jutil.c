@@ -29,6 +29,41 @@ JSValue qjs_array_get_length(JSContext *ctx, JSValueConst array, uint32_t *len)
     return JS_UNDEFINED;
 }
 
+int qjs_to_cdtime(JSContext *ctx, cdtime_t *t, JSValueConst val)
+{
+    double d = 0;
+    if (JS_ToFloat64(ctx, &d, val))
+        return -1;
+
+    if (!isfinite(d) || (d < 0) || (d >= (double)(UINT64_C(1) << 34))) {
+        JS_ThrowRangeError(ctx, "invalid time or interval");
+        return -1;
+    }
+
+    *t = DOUBLE_TO_CDTIME_T(d);
+    return 0;
+}
+
+JSValue qjs_set_string(JSContext *ctx, char **str, JSValueConst val, bool nullable)
+{
+    char *dup = NULL;
+
+    if (!nullable || (!JS_IsUndefined(val) && !JS_IsNull(val))) {
+        const char *jstr = JS_ToCString(ctx, val);
+        if (jstr == NULL)
+            return JS_EXCEPTION;
+        dup = strdup(jstr);
+        JS_FreeCString(ctx, jstr);
+        if (dup == NULL)
+            return JS_ThrowOutOfMemory(ctx);
+    }
+
+    free(*str);
+    *str = dup;
+
+    return JS_UNDEFINED;
+}
+
 JSValue qjs_from_label_set(JSContext *ctx, const label_set_t *set)
 {
     JSValue jset = JS_NewObject(ctx);
@@ -68,10 +103,15 @@ JSValue qjs_to_label_set(JSContext *ctx, JSValueConst jset, label_set_t *set)
             goto fail;
         }
 
-        label_set_add(set, true, key, value);
+        int status = label_set_add(set, true, key, value);
+        if (status != 0)
+            JS_ThrowTypeError(ctx, "invalid label '%s'", key);
 
         JS_FreeCString(ctx, key);
         JS_FreeCString(ctx, value);
+
+        if (status != 0)
+            goto fail;
     }
 
     JS_FreePropertyEnum(ctx, tab, len);

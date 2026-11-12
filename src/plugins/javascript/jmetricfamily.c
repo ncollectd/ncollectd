@@ -44,16 +44,23 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
 
     metric_family_t *fam = calloc(1, sizeof(*fam));
     if (fam == NULL)
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
 
     fam->type = METRIC_TYPE_UNKNOWN;
 
-    if ((argc > 0) && !JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
-        const char *name = JS_ToCString(ctx, argv[0]);
-        if (name == NULL)
-            goto fail;
-        fam->name = strdup(name);
-        JS_FreeCString(ctx, name);
+    if ((argc < 1) || JS_IsUndefined(argv[0]) || JS_IsNull(argv[0])) {
+        JS_ThrowTypeError(ctx, "The name of the metric family is required");
+        goto fail;
+    }
+
+    const char *name = JS_ToCString(ctx, argv[0]);
+    if (name == NULL)
+        goto fail;
+    fam->name = strdup(name);
+    JS_FreeCString(ctx, name);
+    if (fam->name == NULL) {
+        JS_ThrowOutOfMemory(ctx);
+        goto fail;
     }
 
     if ((argc > 1) && !JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
@@ -63,8 +70,10 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
         if ((type != METRIC_TYPE_UNKNOWN) && (type != METRIC_TYPE_GAUGE) &&
             (type != METRIC_TYPE_COUNTER) && (type != METRIC_TYPE_STATE_SET) &&
             (type != METRIC_TYPE_INFO) && (type != METRIC_TYPE_SUMMARY) &&
-            (type != METRIC_TYPE_HISTOGRAM) && (type != METRIC_TYPE_GAUGE_HISTOGRAM))
+            (type != METRIC_TYPE_HISTOGRAM) && (type != METRIC_TYPE_GAUGE_HISTOGRAM)) {
+            JS_ThrowRangeError(ctx, "Invalid metric type");
             goto fail;
+        }
         fam->type = type;
     }
 
@@ -74,6 +83,10 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
             goto fail;
         fam->help = strdup(help);
         JS_FreeCString(ctx, help);
+        if (fam->help == NULL) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
     }
 
     if ((argc > 3) && !JS_IsUndefined(argv[3]) && !JS_IsNull(argv[3])) {
@@ -82,6 +95,10 @@ static JSValue qjs_metric_family_ctor(JSContext *ctx, JSValueConst new_target, i
             goto fail;
         fam->unit = strdup(unit);
         JS_FreeCString(ctx, unit);
+        if (fam->unit == NULL) {
+            JS_ThrowOutOfMemory(ctx);
+            goto fail;
+        }
     }
 
     /* using new_target to get the prototype is necessary when the class is extended. */
@@ -109,6 +126,8 @@ static JSValue qjs_metric_family_get(JSContext *ctx, JSValueConst this_val, int 
 
     switch (magic) {
     case FAM_GETSET_NAME:
+        if (fam->name == NULL)
+            return JS_NULL;
         return JS_NewString(ctx, fam->name);
         break;
     case FAM_GETSET_HELP:
@@ -130,6 +149,10 @@ static JSValue qjs_metric_family_get(JSContext *ctx, JSValueConst this_val, int 
             return jmetrics;
         for (uint32_t i = 0; i < fam->metric.num ; i++) {
             JSValue jmetric = qjs_metric_new(ctx, &fam->metric.ptr[i], fam->type);
+            if (JS_IsException(jmetric)) {
+                JS_FreeValue(ctx, jmetrics);
+                return jmetric;
+            }
             JS_DefinePropertyValueUint32(ctx, jmetrics, i, jmetric, JS_PROP_C_W_E);
         }
         return jmetrics;
@@ -144,16 +167,18 @@ static JSValue qjs_metric_family_append_metric(JSContext *ctx, metric_family_t *
 {
     metric_type_t type;
     if (qjs_metric_get_metric_type(ctx, val, &type) != 0)
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "Not a metric");
     
     if (type != fam->type)
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The type of the metric does not match the type "
+                                      "of the metric family");
 
     metric_t *m = qjs_metric_get_metric(ctx, val, type);
     if (m == NULL)
         return JS_EXCEPTION;
 
-    metric_list_add(&fam->metric, *m, fam->type);
+    if (metric_list_add(&fam->metric, *m, fam->type) != 0)
+        return JS_ThrowOutOfMemory(ctx);
 
     return JS_UNDEFINED;
 }
@@ -166,13 +191,12 @@ static JSValue qjs_metric_family_append_metrics(JSContext *ctx, metric_family_t 
 
     if (JS_IsArray(ctx, val)) {
         uint32_t len = 0;
-        qjs_array_get_length(ctx, val, &len);
+        if (JS_IsException(qjs_array_get_length(ctx, val, &len)))
+            return JS_EXCEPTION;
         for (uint32_t i = 0; i < len; i++) {
             JSValueConst metric = JS_GetPropertyUint32(ctx, val, i);
             if (JS_IsException(metric))
                 return metric;
-            if (JS_IsUndefined(metric))
-                return JS_EXCEPTION;
             JSValue ret = qjs_metric_family_append_metric(ctx, fam, metric);
             JS_FreeValue(ctx, metric);
             if (JS_IsException(ret))
@@ -187,7 +211,6 @@ static JSValue qjs_metric_family_append_metrics(JSContext *ctx, metric_family_t 
     return JS_UNDEFINED;
 }
 
-
 static JSValue qjs_metric_family_set(JSContext *ctx, JSValueConst this_val, JSValue val, int magic)
 {
     metric_family_t *fam = JS_GetOpaque2(ctx, this_val, qjs_metric_family_class_id);
@@ -195,29 +218,17 @@ static JSValue qjs_metric_family_set(JSContext *ctx, JSValueConst this_val, JSVa
         return JS_EXCEPTION;
 
     switch (magic) {
-    case FAM_GETSET_NAME: {
-        const char *name = JS_ToCString(ctx, val);
-        if (name == NULL)
-            return JS_EXCEPTION;
-        fam->name = strdup(name);
-        JS_FreeCString(ctx, name);
-    }   break;
-    case FAM_GETSET_HELP: {
-        const char *help = JS_ToCString(ctx, val);
-        if (help == NULL)
-            return JS_EXCEPTION;
-        fam->help = strdup(help);
-        JS_FreeCString(ctx, help);
-    }   break;
-    case FAM_GETSET_UNIT: {
-        const char *unit = JS_ToCString(ctx, val);
-        if (unit == NULL)
-            return JS_EXCEPTION;
-        fam->unit = strdup(unit);
-        JS_FreeCString(ctx, unit);
-    }   break;
+    case FAM_GETSET_NAME:
+        return qjs_set_string(ctx, &fam->name, val, false);
+        break;
+    case FAM_GETSET_HELP:
+        return qjs_set_string(ctx, &fam->help, val, true);
+        break;
+    case FAM_GETSET_UNIT:
+        return qjs_set_string(ctx, &fam->unit, val, true);
+        break;
     case FAM_GETSET_TYPE:
-        return JS_EXCEPTION;
+        return JS_ThrowTypeError(ctx, "The type of a metric family cannot be changed");
         break;
     case FAM_GETSET_METRICS:
         return qjs_metric_family_append_metrics(ctx, fam, true, val);
@@ -250,7 +261,13 @@ static JSValue qjs_metric_family_dispatch(JSContext *ctx, JSValueConst this_val,
     if (fam == NULL)
         return JS_EXCEPTION;
 
-    plugin_dispatch_metric_family(fam, 0);
+    cdtime_t time = 0;
+    if ((argc > 0) && !JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0])) {
+        if (qjs_to_cdtime(ctx, &time, argv[0]))
+            return JS_EXCEPTION;
+    }
+
+    plugin_dispatch_metric_family(fam, time);
 
     return JS_UNDEFINED;
 }
@@ -266,15 +283,18 @@ static JSValue qjs_metric_family_to_string(JSContext *ctx, JSValueConst this_val
 
     int status = strbuf_putstr(&buf, "{ name: \"");
     status |= strbuf_putescape_json(&buf, fam->name == NULL ? "" : fam->name);
+    status |= strbuf_putchar(&buf, '"');
     if (fam->help != NULL) {
         status |= strbuf_putstr(&buf, ", help: \"");
         status |= strbuf_putescape_json(&buf, fam->help);
+        status |= strbuf_putchar(&buf, '"');
     }
     if (fam->unit != NULL) {
         status |= strbuf_putstr(&buf, ", unit: \"");
         status |= strbuf_putescape_json(&buf, fam->unit);
+        status |= strbuf_putchar(&buf, '"');
     }
-    status |= strbuf_putstr(&buf, "\", type: ");
+    status |= strbuf_putstr(&buf, ", type: ");
     switch(fam->type) {
     case METRIC_TYPE_UNKNOWN:
         status |= strbuf_putstr(&buf, "METRIC_UNKNOWN");
@@ -312,7 +332,7 @@ static JSValue qjs_metric_family_to_string(JSContext *ctx, JSValueConst this_val
 
     if (status != 0) {
         strbuf_destroy(&buf);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
 
     JSValue string = JS_NewStringLen(ctx, buf.ptr, strbuf_len(&buf));
@@ -369,7 +389,7 @@ JSValue qjs_metric_family_new(JSContext *ctx, const metric_family_t *fam)
     metric_family_t *famdup = metric_family_clone(fam);
     if (famdup == NULL) {
         JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
+        return JS_ThrowOutOfMemory(ctx);
     }
 
     JS_SetOpaque(obj, famdup);
