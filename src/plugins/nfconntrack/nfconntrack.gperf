@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-FileCopyrightText: Copyright (C) 2026 Manuel Sanmartín
+// SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
+%struct-type
+%enum
+%compare-lengths
+%readonly-tables
+%define constants-prefix NFCONNTRACK_MAP
+%define hash-function-name nfconntrack_map
+%define lookup-function-name nfconntrack_map_get_key
+%define slot-name key
+%{
+%}
+struct nfconntrack_map {
+    char *key;
+    int fam;
+};
+%%
+entries,        FAM_NF_CONNTRACK_ENTRIES
+clashres,       FAM_NF_CONNTRACK_SEARCHED
+found,          FAM_NF_CONNTRACK_FOUND
+new,            FAM_NF_CONNTRACK_NEW
+invalid,        FAM_NF_CONNTRACK_INVALID
+ignore,         FAM_NF_CONNTRACK_IGNORE
+delete,         FAM_NF_CONNTRACK_DELETE
+chainlength,    FAM_NF_CONNTRACK_DELETE_LIST
+insert,         FAM_NF_CONNTRACK_INSERT
+insert_failed,  FAM_NF_CONNTRACK_INSERT_FAILED
+drop,           FAM_NF_CONNTRACK_DROP
+early_drop,     FAM_NF_CONNTRACK_EARLY_DROP
+icmp_error,     FAM_NF_CONNTRACK_ICMP_ERROR
+expect_new,     FAM_NF_CONNTRACK_EXPECT_NEW
+expect_create,  FAM_NF_CONNTRACK_EXPECT_CREATE
+expect_delete,  FAM_NF_CONNTRACK_EXPECT_DELETE
+search_restart, FAM_NF_CONNTRACK_SEARCH_RESTART

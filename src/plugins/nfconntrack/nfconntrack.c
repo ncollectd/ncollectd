@@ -121,31 +121,12 @@ static metric_family_t fams_nf_conntrack[FAM_NF_CONNTRACK_MAX] = {
     },
 };
 
-typedef struct {
-    int field;
-    int fam;
-} field_fam_t;
+#include "plugins/nfconntrack/nfconntrack.h"
 
-static field_fam_t field_fam[] = {
-    { 0,  FAM_NF_CONNTRACK_ENTRIES        },
-    { 1,  FAM_NF_CONNTRACK_SEARCHED       },
-    { 2,  FAM_NF_CONNTRACK_FOUND          },
-    { 3,  FAM_NF_CONNTRACK_NEW            },
-    { 4,  FAM_NF_CONNTRACK_INVALID        },
-    { 5,  FAM_NF_CONNTRACK_IGNORE         },
-    { 6,  FAM_NF_CONNTRACK_DELETE         },
-    { 7,  FAM_NF_CONNTRACK_DELETE_LIST    },
-    { 8,  FAM_NF_CONNTRACK_INSERT         },
-    { 9,  FAM_NF_CONNTRACK_INSERT_FAILED  },
-    { 10, FAM_NF_CONNTRACK_DROP           },
-    { 11, FAM_NF_CONNTRACK_EARLY_DROP     },
-    { 12, FAM_NF_CONNTRACK_ICMP_ERROR     },
-    { 13, FAM_NF_CONNTRACK_EXPECT_NEW     },
-    { 14, FAM_NF_CONNTRACK_EXPECT_CREATE  },
-    { 15, FAM_NF_CONNTRACK_EXPECT_DELETE  },
-    { 16, FAM_NF_CONNTRACK_SEARCH_RESTART }
-};
-static size_t field_fam_size = STATIC_ARRAY_SIZE(fams_nf_conntrack);
+typedef struct {
+    int fam;
+    uint64_t count;
+} field_fam_t;
 
 static char *path_proc_nf_conntrack;
 
@@ -157,30 +138,56 @@ static int nf_conntrack_read(void)
         return -1;
     }
 
+    field_fam_t field2fam[FAM_NF_CONNTRACK_MAX];
+    for (size_t i = 0 ; i < STATIC_ARRAY_SIZE(field2fam); i++) {
+        field2fam[i].fam = -1;
+        field2fam[i].count = 0;
+    }
+
+    char *fields[17];
     char buffer[256];
     if (fgets(buffer, sizeof(buffer), fh) == NULL) {
         fclose(fh);
         PLUGIN_WARNING("Unable to read  %s", path_proc_nf_conntrack);
         return -1;
     }
+    int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+    for (size_t i = 0; i < (size_t)fields_num; i++) {
+        if (i > STATIC_ARRAY_SIZE(field2fam))
+            break;
 
-    char *fields[17];
-    for (int ncpu = 0; fgets(buffer, sizeof(buffer), fh) != NULL ; ncpu++) {
-        int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+        const struct nfconntrack_map *nfmap = nfconntrack_map_get_key(fields[i], strlen(fields[i]));
+        if (nfmap == NULL)
+            continue;
 
+        field2fam[i].fam = nfmap->fam;
+    }
+
+    while(fgets(buffer, sizeof(buffer), fh) != NULL) {
+        fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
         if (fields_num < 17)
             continue;
 
-        char cpu[64];
-        ssnprintf(cpu, sizeof(cpu), "%d", ncpu);
+        for (size_t i = 0; i < (size_t)fields_num; i++) {
+            if (i > STATIC_ARRAY_SIZE(field2fam))
+                break;
 
-        for (size_t i = 0; i < field_fam_size; i++) {
-            uint64_t value = (uint64_t)strtoull(fields[field_fam[i].field], NULL, 16);
-            metric_family_append(&fams_nf_conntrack[field_fam[i].fam], VALUE_COUNTER(value), NULL,
-                                 &LABEL_PAIR_CONST("cpu", cpu), NULL);
+            if (field2fam[i].fam >= 0) {
+                if (field2fam[i].fam == FAM_NF_CONNTRACK_ENTRIES)
+                    field2fam[i].count = (uint64_t)strtoull(fields[i], NULL, 16);
+                else
+                    field2fam[i].count += (uint64_t)strtoull(fields[i], NULL, 16);
+            }
         }
     }
+
     fclose(fh);
+
+    for (size_t i = 0 ; i < STATIC_ARRAY_SIZE(field2fam); i++) {
+        if (field2fam[i].fam >= 0)
+            metric_family_append(&fams_nf_conntrack[field2fam[i].fam],
+                                 VALUE_COUNTER(field2fam[i].count), NULL, NULL);
+    }
 
     plugin_dispatch_metric_family_array(fams_nf_conntrack, FAM_NF_CONNTRACK_MAX, 0);
     return 0;
