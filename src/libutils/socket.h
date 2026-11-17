@@ -6,8 +6,6 @@
 
 #include "libutils/time.h"
 
-#include <sys/uio.h>
-
 int socket_listen_unix_stream(const char *file, int backlog, char const *group, int perms,
                               bool delete, cdtime_t timeout);
 
