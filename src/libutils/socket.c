@@ -506,14 +506,12 @@ static int socket_set_nonblock(int fd)
 }
 
 static int socket_poll_connect_to(int fd, const struct sockaddr *addr, socklen_t addrlen,
-                                          int timeout)
+                                          cdtime_t deadline)
 {
-    cdtime_t start = cdtime();
-
     int status = connect(fd, addr, addrlen);
     if (status != 0) {
         if (errno != EINPROGRESS) {
-            ERROR("failed to connect to remote host: %s", STRERRNO);
+            ERROR("Failed to connect to remote host: %s", STRERRNO);
             return -1;
         }
     }
@@ -525,17 +523,18 @@ static int socket_poll_connect_to(int fd, const struct sockaddr *addr, socklen_t
 
     int ptimeout = - 1;
 retry:
-    if (timeout > 0) {
-        int elapsed = CDTIME_T_TO_MS(cdtime() - start);
-        if (elapsed >= timeout) {
+    if (deadline > 0) {
+        cdtime_t now = cdtime();
+        if (now >= deadline) {
             ERROR("Timeout waiting for connect.");
+            close(fd);
             return -1;
         }
-        ptimeout = timeout - elapsed;
+        ptimeout = CDTIME_T_TO_MS(deadline - now);
     }
 
     int ret = poll(&pfd, 1, ptimeout);
-    if (!ret) {
+    if (ret == 0) {
         ERROR("Timeout waiting for connect.");
         return -1;
     } else if (ret < 0) {
@@ -565,10 +564,8 @@ retry:
     return 0;
 }
 
-int socket_poll_connect_unix_stream(const char *path, cdtime_t *timeout)
+int socket_poll_connect_unix_stream(const char *path, cdtime_t deadline)
 {
-    cdtime_t start = cdtime();
-
     struct sockaddr_un sa = {0};
 
     if ((strlen(path) + 1)>= sizeof(sa.sun_path)) {
@@ -599,53 +596,23 @@ int socket_poll_connect_unix_stream(const char *path, cdtime_t *timeout)
         sa_len = offsetof(struct sockaddr_un, sun_path) + strlen(path) + 1;
     }
 
-    int status = connect(fd, (const struct sockaddr *) &sa, sa_len);
-    if (status < 0) {
-        ERROR("unix socket '%s' connect failed: %s", path, STRERRNO);
-        close(fd);
-        return -1;
-    }
-
-    int ptimeout = -1;
-
-    if (timeout != NULL) {
-        cdtime_t elapsed = cdtime() - start;
-        if (elapsed >= *timeout) {
-            *timeout = 0;
-            ERROR("Timeout waiting for read.");
-            close(fd);
-            return -1;
-        }
-        ptimeout = CDTIME_T_TO_MS(*timeout - elapsed);
-    }
-
-    status = socket_poll_connect_to(fd, (const struct sockaddr *) &sa, sa_len, ptimeout);
+    int status = socket_poll_connect_to(fd, (const struct sockaddr *) &sa, sa_len, deadline);
     if (status < 0) {
         close(fd);
         return -1;
-    }
-
-    if (timeout != NULL) {
-        cdtime_t elapsed = cdtime() - start;
-        if (elapsed >= *timeout)
-            *timeout = 0;
-        else
-            *timeout -= elapsed;
     }
 
     return fd;
 }
 
-int socket_poll_connect_tcp(const char *host, int port, int keep_idle, int keep_int,
-                            cdtime_t *timeout)
+int socket_poll_connect_tcp(int ai_family, const char *host, int port,
+                            int keep_idle, int keep_int, cdtime_t deadline)
 {
     char service[ITOA_MAX];
 
-    cdtime_t start = cdtime();
-
     uitoa(port, service);
 
-    struct addrinfo ai_hints = {.ai_family = AF_UNSPEC,
+    struct addrinfo ai_hints = {.ai_family = ai_family,
                                 .ai_flags = AI_ADDRCONFIG,
                                 .ai_socktype = SOCK_STREAM};
     struct addrinfo *ai_list;
@@ -661,7 +628,12 @@ int socket_poll_connect_tcp(const char *host, int port, int keep_idle, int keep_
     int fd = -1;
 
     for (struct addrinfo *ai_ptr = ai_list; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next) {
-        fd = socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+
+        int type = ai_list->ai_socktype;
+#ifdef SOCK_CLOEXEC
+        type |= SOCK_CLOEXEC;
+#endif
+        fd = socket(ai_ptr->ai_family, type, ai_ptr->ai_protocol);
         if (fd < 0) {
             ERROR("failed to open socket: %s", STRERRNO);
             continue;
@@ -674,20 +646,7 @@ int socket_poll_connect_tcp(const char *host, int port, int keep_idle, int keep_
             continue;
         }
 
-        int ptimeout = -1;
-
-        if (timeout != NULL) {
-            cdtime_t elapsed = cdtime() - start;
-            if (elapsed >= *timeout) {
-                close(fd);
-                *timeout = 0;
-                ERROR("Timeout trying to connect.");
-                return -1;
-            }
-            ptimeout = *timeout - elapsed;
-        }
-
-        status = socket_poll_connect_to(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen, ptimeout);
+        status = socket_poll_connect_to(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen, deadline);
         if (status < 0) {
             close(fd);
             continue;
@@ -698,22 +657,12 @@ int socket_poll_connect_tcp(const char *host, int port, int keep_idle, int keep_
 
     freeaddrinfo(ai_list);
 
-    if (timeout != NULL) {
-        cdtime_t elapsed = cdtime() - start;
-        if (elapsed >= *timeout)
-            *timeout = 0;
-        else
-            *timeout -= elapsed;
-    }
-
     return fd;
 }
 
-ssize_t socket_poll_read(int fd, void *buf, size_t len, cdtime_t *timeout)
+ssize_t socket_poll_read(int fd, void *buf, size_t len, cdtime_t deadline)
 {
     size_t total = 0;
-
-    cdtime_t start = cdtime();
 
     while (len > 0) {
         struct pollfd pfd = {
@@ -722,18 +671,17 @@ ssize_t socket_poll_read(int fd, void *buf, size_t len, cdtime_t *timeout)
         };
 
         int ptimeout = -1;
-        if (timeout != NULL) {
-            cdtime_t elapsed = cdtime() - start;
-            if (elapsed >= *timeout) {
-                *timeout = 0;
+        if (deadline > 0) {
+            cdtime_t now = cdtime();
+            if (now >= deadline) {
                 ERROR("Timeout waiting for read.");
                 return -1;
             }
-            ptimeout = CDTIME_T_TO_MS(*timeout - elapsed);
+            ptimeout = CDTIME_T_TO_MS(deadline - now);
         }
 
         int ret = poll(&pfd, 1, ptimeout);
-        if (!ret) {
+        if (ret  == 0) {
             ERROR("Timeout waiting for read.");
             return -1;
         } else if (ret < 0) {
@@ -763,22 +711,12 @@ ssize_t socket_poll_read(int fd, void *buf, size_t len, cdtime_t *timeout)
         }
     }
 
-    if (timeout != NULL) {
-        cdtime_t elapsed = cdtime() - start;
-        if (elapsed >= *timeout)
-            *timeout = 0;
-        else
-            *timeout -= elapsed;
-    }
-
     return total;
 }
 
-ssize_t socket_poll_write(int fd, const void *buf, size_t len, cdtime_t *timeout)
+ssize_t socket_poll_write(int fd, const void *buf, size_t len, cdtime_t deadline)
 {
     ssize_t total = 0;
-
-    cdtime_t start = cdtime();
 
     while (len > 0) {
         struct pollfd pfd = {
@@ -787,19 +725,17 @@ ssize_t socket_poll_write(int fd, const void *buf, size_t len, cdtime_t *timeout
         };
 
         int ptimeout = -1;
-
-        if (timeout != NULL) {
-            cdtime_t elapsed = cdtime() - start;
-            if (elapsed >= *timeout) {
-                *timeout = 0;
+        if (deadline > 0) {
+            cdtime_t now = cdtime();
+            if (now >= deadline) {
                 ERROR("Timeout waiting for write.");
                 return -1;
             }
-            ptimeout = CDTIME_T_TO_MS(*timeout - elapsed);
+            ptimeout = CDTIME_T_TO_MS(deadline - now);
         }
 
         int ret = poll(&pfd, 1, ptimeout);
-        if (!ret) {
+        if (ret == 0) {
             ERROR("Timeout waiting for write.");
             return -1;
         } else if (ret < 0) {
@@ -829,13 +765,25 @@ ssize_t socket_poll_write(int fd, const void *buf, size_t len, cdtime_t *timeout
         }
     }
 
-    if (timeout != NULL) {
-        cdtime_t elapsed = cdtime() - start;
-        if (elapsed >= *timeout)
-            *timeout = 0;
-        else
-            *timeout -= elapsed;
-    }
-
     return total;
+}
+
+void socket_flush(int fd)
+{
+    char buf[4096];
+
+    while (true) {
+        ssize_t size = recv(fd, buf, sizeof(buf), MSG_DONTWAIT);
+        if (size < 0) {
+            if (errno == EAGAIN)
+                break;
+            if (errno == EINTR)
+                continue;
+
+            PLUGIN_ERROR("Error flushing socket: %s", STRERRNO);
+            break;
+        }
+        if (size == 0)
+            break;
+    }
 }
