@@ -20,6 +20,8 @@
 #  include <netdb.h>
 #endif
 
+#include <poll.h>
+
 #include <ares.h>
 #include <ares_dns.h>
 
@@ -197,7 +199,7 @@ typedef struct {
 struct dns_ctx_s {
     char *instance;
 
-    dns_query_t *queries;
+    dns_query_t **queries;
     size_t queries_num;
 
     strbuf_t servers;
@@ -209,7 +211,6 @@ struct dns_ctx_s {
     cdtime_t timeout;
     int tries;
     int ndots;
-    char *resolvconf_path;
 
     int flags;
     label_set_t labels;
@@ -456,7 +457,6 @@ static const struct nv dns_constants[] = {
     { "IN",          C_IN       },
     { "CHAOS",       C_CHAOS    },
     { "HS",          C_HS       },
-    { "ANY",         C_ANY      },
     { "QUERY",       0          },
     { "IQUERY",      1          },
     { "STATUS",      2          },
@@ -669,6 +669,14 @@ static char *dns_rcode_name(int rcode)
 }
 #endif
 
+static expr_value_t *dns_value_string(char *str)
+{
+    if (str == NULL)
+        return expr_value_alloc_number(NAN);
+
+    return expr_value_alloc_string(str);
+}
+
 static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
 {
     if (id->num == 1) {
@@ -676,7 +684,7 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
             goto error;
 
         if (strcmp(id->ptr[0].name, "name") == 0) {
-            return expr_value_alloc_string(rr->host);
+            return dns_value_string(rr->host);
         } else if (strcmp(id->ptr[0].name, "type") == 0) {
 //            return expr_value_alloc_string(dns_type_name(rr->type));
             return expr_value_alloc_number(rr->type);
@@ -696,66 +704,66 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
         case T_CNAME:
             if (strcmp(id->ptr[0].name, "cname") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_MB:
             if (strcmp(id->ptr[0].name, "mb") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_MD:
             if (strcmp(id->ptr[0].name, "md") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_MF:
             if (strcmp(id->ptr[0].name, "mf") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_MG:
             if (strcmp(id->ptr[0].name, "mg") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_MR:
             if (strcmp(id->ptr[0].name, "mr") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_NS:
             if (strcmp(id->ptr[0].name, "ns") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_PTR:
             if (strcmp(id->ptr[0].name, "ptr") == 0) {
                 if (strcmp(id->ptr[1].name, "name") == 0)
-                    return expr_value_alloc_string(rr->cname.name);
+                    return dns_value_string(rr->cname.name);
             }
             break;
         case T_HINFO:
             if (strcmp(id->ptr[0].name, "hinfo") == 0) {
                 if (strcmp(id->ptr[1].name, "hardware") == 0) {
-                    return expr_value_alloc_string(rr->hinfo.hardware);
+                    return dns_value_string(rr->hinfo.hardware);
                 } else if (strcmp(id->ptr[1].name, "os") == 0) {
-                    return expr_value_alloc_string(rr->hinfo.os);
+                    return dns_value_string(rr->hinfo.os);
                 }
             }
             break;
         case T_MINFO:
             if (strcmp(id->ptr[0].name, "minfo") == 0) {
                 if (strcmp(id->ptr[1].name, "mailbox") == 0) {
-                    return expr_value_alloc_string(rr->minfo.mailbox);
+                    return dns_value_string(rr->minfo.mailbox);
                 } else if (strcmp(id->ptr[1].name, "error_mailbox") == 0) {
-                    return expr_value_alloc_string(rr->minfo.error_mailbox);
+                    return dns_value_string(rr->minfo.error_mailbox);
                 }
             }
             break;
@@ -764,16 +772,16 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
                 if (strcmp(id->ptr[1].name, "priority") == 0) {
                     return expr_value_alloc_number(rr->mx.priority);
                 } else if (strcmp(id->ptr[1].name, "mailserver") == 0) {
-                    return expr_value_alloc_string(rr->mx.mailserver);
+                    return dns_value_string(rr->mx.mailserver);
                 }
             }
             break;
         case T_SOA:
             if (strcmp(id->ptr[0].name, "soa") == 0) {
                 if (strcmp(id->ptr[1].name, "master") == 0) {
-                    return expr_value_alloc_string(rr->soa.master);
+                    return dns_value_string(rr->soa.master);
                 } else if (strcmp(id->ptr[1].name, "responsible") == 0) {
-                    return expr_value_alloc_string(rr->soa.responsible);
+                    return dns_value_string(rr->soa.responsible);
                 } else if (strcmp(id->ptr[1].name, "serial") == 0) {
                     return expr_value_alloc_number(rr->soa.serial);
                 } else if (strcmp(id->ptr[1].name, "refresh_interval") == 0) {
@@ -788,45 +796,20 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
             }
             break;
         case T_TXT:
-            /* The RR data is one or more length-counted character
-             * strings. */
-#if 0
-        p = aptr;
-        while (p < aptr + dlen) {
-            len = *p;
-            if (p + len + 1 > aptr + dlen)
-                return NULL;
-            status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
-            if (status != ARES_SUCCESS)
-                return NULL;
-            printf("\t%s", name.as_char);
-            ares_free_string(name.as_char);
-            p += len;
-        }
-#endif
+            if (strcmp(id->ptr[0].name, "txt") == 0) {
+                if (strcmp(id->ptr[1].name, "data") == 0)
+                    return dns_value_string(rr->txt.data);
+            }
             break;
         case T_CAA:
             if (strcmp(id->ptr[0].name, "caa") == 0) {
-#if 0
-            p = aptr;
-            rr->caa.flags = *p;
-            p += 1;
-            /* Remainder of record */
-            int vlen = (int)dlen - ((char)*p) - 2;
-            /* The Property identifier, one of: - "issue", - "iodef", or - "issuewild" */
-            status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
-            if (status != ARES_SUCCESS)
-                return NULL;
-            rr->caa.flag = name.as_char;
-            p += len;
-
-            if (p + vlen > abuf + alen)
-                return NULL;
-
-            // rr->caa.value = // FIXME
-            /* A sequence of octets representing the Property Value */
-            // printf(" %.*s", vlen, p);
-#endif
+                if (strcmp(id->ptr[1].name, "flags") == 0) {
+                    return expr_value_alloc_number(rr->caa.flags);
+                } else if (strcmp(id->ptr[1].name, "tag") == 0) {
+                    return dns_value_string(rr->caa.flag);
+                } else if (strcmp(id->ptr[1].name, "value") == 0) {
+                    return dns_value_string(rr->caa.value);
+                }
             }
             break;
         case T_A:
@@ -855,7 +838,7 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
                 } else if (strcmp(id->ptr[1].name, "port") == 0) {
                     return expr_value_alloc_number(rr->srv.port);
                 } else if (strcmp(id->ptr[1].name, "target") == 0) {
-                    return expr_value_alloc_string(rr->srv.target);
+                    return dns_value_string(rr->srv.target);
                 }
             }
             break;
@@ -866,7 +849,7 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
                 } else if (strcmp(id->ptr[1].name, "weight") == 0) {
                     return expr_value_alloc_number(rr->uri.weight);
                 } else if (strcmp(id->ptr[1].name, "target") == 0) {
-                    return expr_value_alloc_string(rr->uri.target);
+                    return dns_value_string(rr->uri.target);
                 }
             }
             break;
@@ -877,13 +860,13 @@ static expr_value_t *dns_value_rr(expr_id_t *id, dns_rr_t *rr)
                 } else if (strcmp(id->ptr[1].name, "preference") == 0) {
                     return expr_value_alloc_number(rr->naptr.preference);
                 } else if (strcmp(id->ptr[1].name, "flags") == 0) {
-                    return expr_value_alloc_string(rr->naptr.flags);
+                    return dns_value_string(rr->naptr.flags);
                 } else if (strcmp(id->ptr[1].name, "service") == 0) {
-                    return expr_value_alloc_string(rr->naptr.service);
+                    return dns_value_string(rr->naptr.service);
                 } else if (strcmp(id->ptr[1].name, "regex") == 0) {
-                    return expr_value_alloc_string(rr->naptr.regex);
+                    return dns_value_string(rr->naptr.regex);
                 } else if (strcmp(id->ptr[1].name, "replacement") == 0) {
-                    return expr_value_alloc_string(rr->naptr.replacement);
+                    return dns_value_string(rr->naptr.replacement);
                 }
             }
             break;
@@ -910,7 +893,7 @@ static expr_value_t *dns_value_qd(expr_id_t *id, dns_qd_t *qd)
             goto error;
 
         if (strcmp(id->ptr[0].name, "name") == 0) {
-            return expr_value_alloc_string(qd->name);
+            return dns_value_string(qd->name);
         } else if (strcmp(id->ptr[0].name, "type") == 0) {
   //          return expr_value_alloc_string(dns_type_name(qd->type));
             return expr_value_alloc_number(qd->type);
@@ -1082,6 +1065,8 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
     if (aptr + dlen > abuf + alen)
         return NULL;
 
+    const unsigned char *end = aptr + dlen;
+
     /* Display the RR data.  Don't touch aptr. */
     switch (rr->type) {
     case T_CNAME:
@@ -1097,20 +1082,20 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
         if (status != ARES_SUCCESS)
             return NULL;
         rr->cname.name = name.as_char;
+        if (len > dlen)
+            return NULL;
         break;
     case T_HINFO:
         /* The RR data is two length-counted character strings. */
         p = aptr;
-        len = *p;
-        if (p + len + 1 > aptr + dlen)
+        if ((p >= end) || (p + *p + 1 > end))
             return NULL;
         status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
         if (status != ARES_SUCCESS)
             return NULL;
         rr->hinfo.hardware = name.as_char;
         p += len;
-        len = *p;
-        if (p + len + 1 > aptr + dlen)
+        if ((p >= end) || (p + *p + 1 > end))
             return NULL;
         status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
         if (status != ARES_SUCCESS)
@@ -1125,10 +1110,14 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
             return NULL;
         rr->minfo.mailbox = name.as_char;
         p += len;
+        if (p >= end)
+            return NULL;
         status = ares_expand_name(p, abuf, alen, &name.as_char, &len);
         if (status != ARES_SUCCESS)
             return NULL;
         rr->minfo.error_mailbox = name.as_char;
+        if (p + len > end)
+            return NULL;
         break;
     case T_MX:
         /* The RR data is two bytes giving a preference ordering, and then a domain name.  */
@@ -1139,6 +1128,8 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
         if (status != ARES_SUCCESS)
             return NULL;
         rr->mx.mailserver = name.as_char;
+        if (aptr + 2 + len > end)
+            return NULL;
         break;
 
     case T_SOA:
@@ -1167,28 +1158,31 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
         break;
     case T_TXT:
         /* The RR data is one or more length-counted character
-         * strings. */
-#if 0
+         * strings, they are concatenated. */
+        rr->txt.data = malloc(dlen + 1);
+        if (rr->txt.data == NULL)
+            return NULL;
+        len = 0;
         p = aptr;
-        while (p < aptr + dlen) {
-            len = *p;
-            if (p + len + 1 > aptr + dlen)
+        while (p < end) {
+            if (p + *p + 1 > end)
                 return NULL;
-            status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
-            if (status != ARES_SUCCESS)
-                return NULL;
-            printf("\t%s", name.as_char);
-            ares_free_string(name.as_char);
-            p += len;
+            memcpy(rr->txt.data + len, p + 1, *p);
+            len += *p;
+            p += *p + 1;
         }
-#endif
+        rr->txt.data[len] = '\0';
         break;
     case T_CAA:
+        if (dlen < 2)
+            return NULL;
         p = aptr;
         rr->caa.flags = *p;
         p += 1;
         /* Remainder of record */
-        int vlen = (int)dlen - ((char)*p) - 2;
+        int vlen = dlen - (int)*p - 2;
+        if (vlen < 0)
+            return NULL;
         /* The Property identifier, one of: - "issue", - "iodef", or - "issuewild" */
         status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
         if (status != ARES_SUCCESS)
@@ -1196,12 +1190,13 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
         rr->caa.flag = name.as_char;
         p += len;
 
-        if (p + vlen > abuf + alen)
+        if (p + vlen > end)
             return NULL;
 
-        // rr->caa.value = // FIXME
         /* A sequence of octets representing the Property Value */
-        // printf(" %.*s", vlen, p);
+        rr->caa.value = sstrndup((const char *)p, vlen);
+        if (rr->caa.value == NULL)
+            return NULL;
         break;
     case T_A:
         /* The RR data is a four-byte Internet address. */
@@ -1221,6 +1216,8 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
     case T_SRV:
         /* The RR data is three two-byte numbers representing the
          * priority, weight, and port, followed by a domain name. */
+        if (dlen < 6)
+            return NULL;
         rr->srv.priority = DNS__16BIT(aptr);
         rr->srv.weight = DNS__16BIT(aptr + 2);
         rr->srv.port = DNS__16BIT(aptr + 4);
@@ -1229,45 +1226,60 @@ static const unsigned char *parse_rr(dns_rr_t *rr, const unsigned char *aptr,
         if (status != ARES_SUCCESS)
             return NULL;
         rr->srv.target = name.as_char;
+        if (aptr + 6 + len > end)
+            return NULL;
         break;
     case T_URI:
         /* The RR data is two two-byte numbers representing the
          * priority and weight, followed by a target. */
+        if (dlen < 4)
+            return NULL;
         rr->uri.priority = DNS__16BIT(aptr);
         rr->uri.weight = DNS__16BIT(aptr+2);
-        p = aptr +4;
-//        rr->uri.target
-//        for (i=0; i <dlen-4; ++i) // FIXME
-//            printf("%c",p[i]);
+        rr->uri.target = sstrndup((const char *)aptr + 4, dlen - 4);
+        if (rr->uri.target == NULL)
+            return NULL;
         break;
 
     case T_NAPTR:
+        if (dlen < 4)
+            return NULL;
         rr->naptr.order = DNS__16BIT(aptr);
         rr->naptr.preference = DNS__16BIT(aptr + 2);
 
         p = aptr + 4;
+        if ((p >= end) || (p + *p + 1 > end))
+            return NULL;
         status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
         if (status != ARES_SUCCESS)
             return NULL;
         rr->naptr.flags = name.as_char;
         p += len;
 
+        if ((p >= end) || (p + *p + 1 > end))
+            return NULL;
         status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
         if (status != ARES_SUCCESS)
             return NULL;
         rr->naptr.service = name.as_char;
         p += len;
 
+        if ((p >= end) || (p + *p + 1 > end))
+            return NULL;
         status = ares_expand_string(p, abuf, alen, &name.as_uchar, &len);
         if (status != ARES_SUCCESS)
             return NULL;
         rr->naptr.regex = name.as_char;
         p += len;
 
+        if (p >= end)
+            return NULL;
         status = ares_expand_name(p, abuf, alen, &name.as_char, &len);
         if (status != ARES_SUCCESS)
             return NULL;
         rr->naptr.replacement = name.as_char;
+        if (p + len > end)
+            return NULL;
         break;
 
     case T_DS:
@@ -1302,15 +1314,19 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
     (void) timeouts;
 
     if (status != ARES_SUCCESS) {
-        PLUGIN_ERROR("c-ares error: %s", ares_strerror(status));
-        if (!abuf)
-            return;
+        PLUGIN_DEBUG("Query '%s' failed: %s", query->query, ares_strerror(status));
     }
 
-    /* Won't happen, but check anyway, for safety. */
-    if (alen < HFIXEDSZ)
+    if ((abuf == NULL) || (alen < HFIXEDSZ)) {
+        metric_family_append(&ctx->fams[FAM_DNS_QUERY_SUCCESS], VALUE_GAUGE(0), &query->labels,
+                             &LABEL_PAIR_CONST("query", query->query), NULL);
+        if (query->ast != NULL)
+            metric_family_append(&ctx->fams[FAM_DNS_QUERY_VALIDATION], VALUE_GAUGE(0),
+                                 &query->labels, &LABEL_PAIR_CONST("query", query->query), NULL);
         return;
+    }
 
+    bool validation = false;
     dns_response_t *response = &query->response; // FIXME ¿?
 
     response->query_time = cdtime() - query->start;
@@ -1369,7 +1385,7 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
             aptr = parse_rr(&response->answer_rr[i], aptr, abuf, alen);
             if (aptr == NULL) {
                 PLUGIN_ERROR("Parsing answers records failed.");
-                break;
+                goto exit;
             }
         }
     }
@@ -1405,7 +1421,6 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
     }
 
     if (query->ast != NULL) {
-        bool validation = false;
         expr_value_t *value = expr_eval(query->ast);
         if (value != NULL) {
             switch(value->type) {
@@ -1426,15 +1441,16 @@ static void dns_callback(void *arg, int status, int timeouts, unsigned char *abu
         } else {
 //fprintf(stderr, "null\n");
         }
-
-        metric_family_append(&ctx->fams[FAM_DNS_QUERY_VALIDATION],
-                             VALUE_GAUGE(validation), &query->labels,
-                             &LABEL_PAIR_CONST("query", query->query), NULL);
     } else {
 //fprintf(stderr, "query->ast  is null\n");
     }
 
 exit:
+    if (query->ast != NULL)
+        metric_family_append(&ctx->fams[FAM_DNS_QUERY_VALIDATION],
+                             VALUE_GAUGE(validation), &query->labels,
+                             &LABEL_PAIR_CONST("query", query->query), NULL);
+
     dns_response_reset(response);
 }
 
@@ -1460,34 +1476,72 @@ static int dns_read(user_data_t *user_data)
     }
 
     for (size_t i = 0; i < ctx->queries_num; i++) {
-        dns_query_t *query = &ctx->queries[i];
+        dns_query_t *query = ctx->queries[i];
 
         query->start = cdtime();
 
-        ares_query(channel, query->query, query->class, query->type,
-                            dns_callback, (void*)query);
+        if (ctx->options.flags & ARES_FLAG_NOSEARCH)
+            ares_query(channel, query->query, query->class, query->type,
+                                dns_callback, (void*)query);
+        else
+            ares_search(channel, query->query, query->class, query->type,
+                                 dns_callback, (void*)query);
     }
 
     for (;;) {
-        fd_set read_fds;
-        FD_ZERO(&read_fds);
-        fd_set write_fds;
-        FD_ZERO(&write_fds);
+        ares_socket_t socks[ARES_GETSOCK_MAXNUM];
+        /* Not using ARES_GETSOCK_WRITABLE(): it shifts a signed 1 into the sign bit. */
+        unsigned int bitmask = (unsigned int)ares_getsock(channel, socks, ARES_GETSOCK_MAXNUM);
 
-        int nfds = ares_fds(channel, &read_fds, &write_fds);
+        struct pollfd pfds[ARES_GETSOCK_MAXNUM];
+        nfds_t nfds = 0;
+        for (int i = 0; i < ARES_GETSOCK_MAXNUM; i++) {
+            short events = 0;
+            if (bitmask & (1U << i))
+                events |= POLLIN;
+            if (bitmask & (1U << (i + ARES_GETSOCK_MAXNUM)))
+                events |= POLLOUT;
+            if (events == 0)
+                continue;
+            pfds[nfds] = (struct pollfd){.fd = socks[i], .events = events};
+            nfds++;
+        }
+
         if (nfds == 0)
             break;
 
-        struct timeval tv; // FIXME
+        struct timeval tv;
         struct timeval *tvp = ares_timeout(channel, NULL, &tv);
-        int count = select(nfds, &read_fds, &write_fds, NULL, tvp);
+        int timeout = -1;
+        if (tvp != NULL)
+            timeout = (int)(tvp->tv_sec * 1000 + (tvp->tv_usec + 999) / 1000);
+
+        int count = poll(pfds, nfds, timeout);
         if (count < 0) {
+            if (errno == EINTR)
+                continue;
+            PLUGIN_ERROR("poll fail: %s", STRERRNO );
             ares_destroy(channel);
-            PLUGIN_ERROR("select fail: %s", STRERRNO );
+            for (size_t i = 0; i < FAM_DNS_MAX; i++)
+                metric_family_metric_reset(&ctx->fams[i]);
             return 1;
         }
 
-        ares_process(channel, &read_fds, &write_fds);
+        if (count == 0) {
+            ares_process_fd(channel, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
+            continue;
+        }
+
+        for (nfds_t i = 0; i < nfds; i++) {
+            ares_socket_t rfd = ARES_SOCKET_BAD;
+            ares_socket_t wfd = ARES_SOCKET_BAD;
+            if (pfds[i].revents & (POLLIN | POLLERR | POLLHUP))
+                rfd = pfds[i].fd;
+            if (pfds[i].revents & POLLOUT)
+                wfd = pfds[i].fd;
+            if ((rfd != ARES_SOCKET_BAD) || (wfd != ARES_SOCKET_BAD))
+                ares_process_fd(channel, rfd, wfd);
+        }
     }
 
     ares_destroy(channel);
@@ -1571,12 +1625,7 @@ static int dns_convert_query (dns_query_t *query, int use_bitstring)
         unsigned long a4 = laddr & 0xFFUL;
 
         snprintf(new_name, sizeof(new_name), "%lu.%lu.%lu.%lu.in-addr.arpa", a4, a3, a2, a1);
-
-
-        return 0;
-    }
-
-    if (ares_inet_pton(AF_INET6, query->query, &addr.addr6) == 1) {
+    } else if (ares_inet_pton(AF_INET6, query->query, &addr.addr6) == 1) {
         char *c = new_name;
         const unsigned char *ip = (const unsigned char*) &addr.addr6;
         int max_i = (int)sizeof(addr.addr6) - 1;
@@ -1607,20 +1656,18 @@ static int dns_convert_query (dns_query_t *query, int use_bitstring)
             }
             strcpy (c, "IP6.ARPA");
         }
-
-        free(query->query);
-        query->query = strdup(new_name);
-        if (query->query == NULL) {
-            PLUGIN_ERROR("strdup failed.");
-            return -1;
-        }
-
+    } else {
         return 0;
     }
 
-    PLUGIN_ERROR("Address %s was not legal for this query.", query->query);
+    free(query->query);
+    query->query = strdup(new_name);
+    if (query->query == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        return -1;
+    }
 
-    return -1;
+    return 0;
 }
 
 #if 0
@@ -1695,15 +1742,25 @@ static int dns_config_query_expr(config_item_t *ci, dns_query_t *query)
         return -1;
     }
 
+    int status = 0;
     for (size_t i = 0; i < dns_constants_size; i++) {
         expr_id_item_t item = {.type = EXPR_ID_NAME, .name = dns_constants[i].name };
         expr_id_t id = {.num = 1, .ptr = &item };
-        expr_symtab_append_number(query->symtab, &id, dns_constants[i].value);
+        status = expr_symtab_append_number(query->symtab, &id, dns_constants[i].value);
+        if (status != 0) {
+            PLUGIN_ERROR("Failed to add '%s' to the symbol table.", dns_constants[i].name);
+            return -1;
+        }
     }
 
     expr_id_item_t ritem = {.type = EXPR_ID_NAME, .name = "response" };
     expr_id_t rid = {.num = 1, .ptr = &ritem };
-    expr_symtab_append_callback(query->symtab, &rid, dns_value_response, &query->response);
+    status = expr_symtab_append_callback(query->symtab, &rid, dns_value_response,
+                                         &query->response);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add 'response' to the symbol table.");
+        return -1;
+    }
 
     query->ast = expr_parse(expr, query->symtab);
     if (query->ast == NULL) {
@@ -1715,18 +1772,20 @@ static int dns_config_query_expr(config_item_t *ci, dns_query_t *query)
 
 static int dns_config_query(config_item_t *ci, dns_ctx_t *ctx)
 {
-    dns_query_t *tmp = realloc(ctx->queries, sizeof(*ctx->queries) * (ctx->queries_num + 1));
+    dns_query_t **tmp = realloc(ctx->queries, sizeof(*ctx->queries) * (ctx->queries_num + 1));
     if (tmp == NULL) {
         PLUGIN_ERROR("realloc failed");
         return -1;
     }
-
-    dns_query_t *query = &tmp[ctx->queries_num];
-    memset(query, 0, sizeof(*query));
-
-    query->query = NULL;
-
     ctx->queries = tmp;
+
+    dns_query_t *query = calloc(1, sizeof(*query));
+    if (query == NULL) {
+        PLUGIN_ERROR("calloc failed");
+        return -1;
+    }
+
+    ctx->queries[ctx->queries_num] = query;
     ctx->queries_num++;
 
     int status = cf_util_get_string(ci, &query->query);
@@ -1750,9 +1809,9 @@ static int dns_config_query(config_item_t *ci, dns_ctx_t *ctx)
         } else if (strcasecmp("type", child->key) == 0) {
             status = dns_config_query_type(child, query);
         } else if (strcasecmp("convert-ptr", child->key) == 0) {
-            status = cf_util_get_boolean(ci, &convert_ptr);
+            status = cf_util_get_boolean(child, &convert_ptr);
         } else if (strcasecmp("convert-ptr-bit-string", child->key) == 0) {
-            status = cf_util_get_boolean(ci, &convert_ptr_bit_string);
+            status = cf_util_get_boolean(child, &convert_ptr_bit_string);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &query->labels);
         } else if (strcasecmp("validate", child->key) == 0) {
@@ -1790,17 +1849,23 @@ static void dns_free(void *arg)
     strbuf_destroy(&ctx->servers);
 
     for (size_t i = 0; i < ctx->queries_num; i++) {
-        dns_query_t *query = &ctx->queries[i];
+        dns_query_t *query = ctx->queries[i];
         label_set_reset(&query->labels);
         if (query->symtab != NULL)
             expr_symtab_free(query->symtab);
         if (query->ast != NULL)
             expr_node_free(query->ast);
         free(query->query);
+        free(query);
     }
     free(ctx->queries);
 
-    free(ctx->resolvconf_path);
+    for (int i = 0; i < ctx->options.ndomains; i++)
+        free(ctx->options.domains[i]);
+    free(ctx->options.domains);
+#ifdef ARES_OPT_RESOLVCONF
+    free(ctx->options.resolvconf_path);
+#endif
     free(ctx->instance);
     label_set_reset(&ctx->labels);
     plugin_filter_free(ctx->filter);
@@ -1818,38 +1883,43 @@ static int dns_config_server(config_item_t *ci, dns_ctx_t *ctx)
 
     char *server = ci->values[0].value.string;
 
+    int status = 0;
     if (strbuf_len(&ctx->servers) > 0)
-        strbuf_putchar(&ctx->servers, ',');
+        status = strbuf_putchar(&ctx->servers, ',');
 
-    strbuf_putstr(&ctx->servers, server);
+    status |= strbuf_putstr(&ctx->servers, server);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add server '%s'.", server);
+        return -1;
+    }
 
     ctx->optmask |= ARES_OPT_SERVERS;
 
     return 0;
 }
 
-static int dns_config_option(config_item_t *ci, int *optmask, int flag)
+static int dns_config_option(config_item_t *ci, int *flags, int flag)
 {
     bool value = false;
     int status = cf_util_get_boolean(ci, &value);
     if (status == 0) {
         if (value)
-            *optmask |= flag;
+            *flags |= flag;
         else
-            *optmask &= ~flag;
+            *flags &= ~flag;
     }
     return status;
 }
 
-static int dns_config_option_inverse(config_item_t *ci, int *optmask, int flag)
+static int dns_config_option_inverse(config_item_t *ci, int *flags, int flag)
 {
     bool value= false;
     int status = cf_util_get_boolean(ci, &value);
     if (status == 0) {
         if (value)
-            *optmask &= ~flag;
+            *flags &= ~flag;
         else
-            *optmask |= flag;
+            *flags |= flag;
     }
     return status;
 }
@@ -1877,7 +1947,7 @@ static int dns_config_domain(config_item_t *ci, dns_ctx_t *ctx)
     }
     ctx->options.ndomains++;
 
-    ctx->options.flags |= ARES_OPT_DOMAINS;
+    ctx->optmask |= ARES_OPT_DOMAINS;
 
     return 0;
 }
@@ -1893,7 +1963,8 @@ static int dns_config_instance(config_item_t *ci)
 //    memcpy(ctx->fams, fams, sizeof(st->fams[0])*FAM_DNS_MAX);
     ctx->timeout = -1;
 
-    ctx->options.flags = ARES_FLAG_NOCHECKRESP;
+    ctx->optmask = ARES_OPT_FLAGS;
+    ctx->options.flags = ARES_FLAG_NOCHECKRESP | ARES_FLAG_EDNS | ARES_FLAG_NOSEARCH;
     ctx->options.servers = NULL;
     ctx->options.nservers = 0;
     memcpy(ctx->fams, fams, sizeof(ctx->fams[0])*FAM_DNS_MAX);
@@ -1916,61 +1987,63 @@ static int dns_config_instance(config_item_t *ci)
             int port = 0;
             status = cf_util_get_port_number(child, &port);
             ctx->options.udp_port = port;
-            ctx->options.flags |= ARES_OPT_UDP_PORT;
+            ctx->optmask |= ARES_OPT_UDP_PORT;
         } else if (strcasecmp("tcp-port", child->key) == 0) {
             int port = 0;
             status = cf_util_get_port_number(child, &port);
             ctx->options.tcp_port = port;
-            ctx->options.flags |= ARES_OPT_TCP_PORT;
+            ctx->optmask |= ARES_OPT_TCP_PORT;
         } else if (strcasecmp("query", child->key) == 0) {
             status = dns_config_query(child, ctx);
         } else if (strcasecmp("use-vc", child->key) == 0) {
-            status = dns_config_option(child, &ctx->optmask, ARES_FLAG_USEVC);
+            status = dns_config_option(child, &ctx->options.flags, ARES_FLAG_USEVC);
         } else if (strcasecmp("use-tcp", child->key) == 0) {
-            status = dns_config_option(child, &ctx->optmask, ARES_FLAG_USEVC);
+            status = dns_config_option(child, &ctx->options.flags, ARES_FLAG_USEVC);
         } else if (strcasecmp("primary", child->key) == 0) {
-            status = dns_config_option(child, &ctx->optmask, ARES_FLAG_PRIMARY);
+            status = dns_config_option(child, &ctx->options.flags, ARES_FLAG_PRIMARY);
         } else if (strcasecmp("ignore-truncated", child->key) == 0) {
-            status = dns_config_option(child, &ctx->optmask, ARES_FLAG_IGNTC);
+            status = dns_config_option(child, &ctx->options.flags, ARES_FLAG_IGNTC);
         } else if (strcasecmp("recurse", child->key) == 0) {
-            status = dns_config_option_inverse(child, &ctx->optmask, ARES_FLAG_NORECURSE);
+            status = dns_config_option_inverse(child, &ctx->options.flags, ARES_FLAG_NORECURSE);
         } else if (strcasecmp("search", child->key) == 0) {
-            status = dns_config_option_inverse(child, &ctx->optmask, ARES_FLAG_NOSEARCH);
+            status = dns_config_option_inverse(child, &ctx->options.flags, ARES_FLAG_NOSEARCH);
         } else if (strcasecmp("aliases", child->key) == 0) {
-            status = dns_config_option_inverse(child, &ctx->optmask, ARES_FLAG_NOALIASES);
+            status = dns_config_option_inverse(child, &ctx->options.flags, ARES_FLAG_NOALIASES);
         } else if (strcasecmp("edns", child->key) == 0) {
-            status = dns_config_option(child, &ctx->optmask, ARES_FLAG_EDNS);
+            status = dns_config_option(child, &ctx->options.flags, ARES_FLAG_EDNS);
         } else if (strcasecmp("edns-size", child->key) == 0) {
             status = cf_util_get_int(child, &ctx->options.ednspsz);
-            ctx->options.flags |= ARES_OPT_EDNSPSZ;
-            ctx->optmask |= ARES_FLAG_EDNS;
+            ctx->optmask |= ARES_OPT_EDNSPSZ;
+            ctx->options.flags |= ARES_FLAG_EDNS;
         } else if (strcasecmp("resolvconf-path", child->key) == 0) {
 #ifdef ARES_OPT_RESOLVCONF
             status = cf_util_get_string(child, &ctx->options.resolvconf_path);
-            ctx->options.flags |= ARES_OPT_RESOLVCONF;
+            ctx->optmask |= ARES_OPT_RESOLVCONF;
 #else
             PLUGIN_WARNING("Option 'resolvconf-path' is not supported in this version of c-ares");
 #endif
         } else if (strcasecmp("timeout", child->key) == 0) {
             cdtime_t timeout = 0;
             status = cf_util_get_cdtime(child, &timeout);
-            ctx->options.flags |= ARES_OPT_TIMEOUTMS;
+            ctx->optmask |= ARES_OPT_TIMEOUTMS;
             ctx->options.timeout = CDTIME_T_TO_MS(timeout);
         } else if (strcasecmp("tries", child->key) == 0) {
             status = cf_util_get_int(child, &ctx->options.tries);
-            ctx->options.flags |= ARES_OPT_TRIES;
+            ctx->optmask |= ARES_OPT_TRIES;
         } else if (strcasecmp("ndots", child->key) == 0) {
             status = cf_util_get_int(child, &ctx->options.ndots);
-            ctx->options.flags |= ARES_OPT_NDOTS;
+            ctx->optmask |= ARES_OPT_NDOTS;
         } else if (strcasecmp("rotate", child->key) == 0) {
             bool flag = false;
             status = cf_util_get_boolean(child, &flag);
 #ifdef ARES_OPT_NOROTATE
-            ctx->options.flags |= flag ? ARES_OPT_ROTATE : ARES_OPT_NOROTATE;
+            ctx->optmask &= ~(ARES_OPT_ROTATE | ARES_OPT_NOROTATE);
+            ctx->optmask |= flag ? ARES_OPT_ROTATE : ARES_OPT_NOROTATE;
 #else
             if (flag)
-                 ctx->options.flags |= ARES_OPT_ROTATE;
-            // FIXME
+                ctx->optmask |= ARES_OPT_ROTATE;
+            else
+                ctx->optmask &= ~ARES_OPT_ROTATE;
 #endif
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ctx->labels);
@@ -1993,10 +2066,23 @@ static int dns_config_instance(config_item_t *ci)
         return -1;
     }
 
-    label_set_add(&ctx->labels, true, "instance", ctx->instance);
+    status = label_set_add(&ctx->labels, true, "instance", ctx->instance);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the 'instance' label.");
+        dns_free(ctx);
+        return -1;
+    }
 
-    for (size_t i = 0; i < ctx->queries_num; i++) {
-        label_set_add_set(&ctx->queries[i].labels, false, ctx->labels);
+    if (ctx->labels.num > 0) {
+        for (size_t i = 0; i < ctx->queries_num; i++) {
+            status = label_set_add_set(&ctx->queries[i]->labels, false, ctx->labels);
+            if (status != 0) {
+                PLUGIN_ERROR("Failed to add the instance labels to query '%s'.",
+                             ctx->queries[i]->query);
+                dns_free(ctx);
+                return -1;
+            }
+        }
     }
 
     return plugin_register_complex_read("dns", ctx->instance, dns_read, interval,
