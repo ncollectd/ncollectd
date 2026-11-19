@@ -14,6 +14,8 @@
 #include "plugins/haproxy/haproxy_info.h"
 #include "plugins/haproxy/haproxy_stat.h"
 
+#define HAPROXY_MAX_RESPONSE_SIZE (64 * 1024 * 1024)
+
 enum {
     FAM_HAPROXY_STICKTABLE_SIZE,
     FAM_HAPROXY_STICKTABLE_USED,
@@ -48,6 +50,7 @@ typedef struct {
     bool verify_peer;
     bool verify_host;
     char *cacert;
+    cdtime_t timeout;
     struct curl_slist *headers;
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
@@ -391,14 +394,36 @@ static void haproxy_free(void *arg)
 
     strbuf_destroy(&ha->buffer);
 
+    plugin_filter_free(ha->filter);
+
     free(ha);
+}
+
+static cdtime_t haproxy_timeout(haproxy_t *ha)
+{
+    if (ha->timeout > 0)
+        return ha->timeout;
+    return plugin_get_interval();
 }
 
 static FILE *haproxy_cmd(haproxy_t *ha, char *cmd)
 {
-    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    int flags = SOCK_STREAM;
+#ifdef SOCK_CLOEXEC
+    flags |= SOCK_CLOEXEC;
+#endif
+    int fd = socket(AF_UNIX, flags, 0);
     if (fd < 0) {
         PLUGIN_ERROR("socket failed: %s", STRERRNO);
+        return NULL;
+    }
+
+    cdtime_t timeout = haproxy_timeout(ha);
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(timeout);
+    if ((setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0) ||
+        (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0)) {
+        PLUGIN_ERROR("setsockopt failed: %s", STRERRNO);
+        close(fd);
         return NULL;
     }
 
@@ -439,6 +464,21 @@ static size_t haproxy_stat_split(char *line, char *fields[], size_t fields_size)
     while (*ptr != '\0') {
         fields[fields_len] = ptr;
         fields_len++;
+        if (*ptr == '"') {
+            char *dst = ptr;
+            ptr++;
+            while (*ptr != '\0') {
+                if (*ptr == '"') {
+                    if (ptr[1] != '"')
+                        break;
+                    ptr++;
+                }
+                *(dst++) = *(ptr++);
+            }
+            if (*ptr == '"')
+                ptr++;
+            *dst = '\0';
+        }
         while ((*ptr != '\0') && (*ptr != ',')) ptr++;
         if (*ptr == '\0')
             break;
@@ -451,7 +491,7 @@ static size_t haproxy_stat_split(char *line, char *fields[], size_t fields_size)
      return fields_len;
 }
 
-static size_t haproxy_read_stat_header(char *line, int stat_header[HA_STAT_MAX])
+static int haproxy_read_stat_header(char *line, int stat_header[HA_STAT_MAX])
 {
     char *fields[512];
 
@@ -459,15 +499,12 @@ static size_t haproxy_read_stat_header(char *line, int stat_header[HA_STAT_MAX])
     if (fields_len < (HA_STAT_MIN + 1))
         return 0;
 
-    size_t n = 0;
     for (size_t i = 0; i < fields_len; i++) {
         const struct hastat_extra *hse = hastat_extra_get_key(fields[i], strlen(fields[i]));
         if (hse == NULL)
             continue;
-        if (hse->stat < HA_STAT_MAX) {
+        if (hse->stat < HA_STAT_MAX)
             stat_header[hse->stat] = i;
-            n++;
-        }
     }
 
     for (int i = 0; i <= HA_STAT_MIN; i++) {
@@ -475,15 +512,24 @@ static size_t haproxy_read_stat_header(char *line, int stat_header[HA_STAT_MAX])
             return -1;
     }
 
-    return n;
+    return (int)fields_len;
 }
 
-static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], char *line)
+static bool haproxy_status_match(const char *status, const char *name)
+{
+    size_t len = strlen(name);
+    if (strncmp(status, name, len) != 0)
+        return false;
+    return (status[len] == '\0') || (status[len] == ' ');
+}
+
+static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX],
+                                  size_t stat_header_len, char *line)
 {
     char *fields[512];
 
     size_t fields_len = haproxy_stat_split(line, fields, STATIC_ARRAY_SIZE(fields));
-    if (fields_len < (HA_STAT_TYPE + 1))
+    if (fields_len < stat_header_len)
         return -1;
 
     // 32. type [LFBS]: (0=frontend, 1=backend, 2=server, 3=socket/listener)
@@ -509,9 +555,9 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
 
     ha_proxy_mode_t ha_proxy_mode = HA_PROXY_MODE_HTTP;
     int field_stat_mode = stat_header[HA_STAT_MODE];
-    if (field_stat_mode == HA_STAT_MODE) {
+    if ((field_stat_mode > 0) && ((size_t)field_stat_mode < fields_len)) {
         // 75: mode [LFBS]: proxy mode (tcp, http, health, unknown)
-        char *mode = fields[HA_STAT_MODE];
+        char *mode = fields[field_stat_mode];
         if (*mode != '\0') {
             if (strcmp(mode, "tcp") == 0) {
                 ha_proxy_mode = HA_PROXY_MODE_TCP;
@@ -525,7 +571,8 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
         }
     }
 
-    label_set_add(&ha->labels, true, "proxy", fields[HA_STAT_PXNAME]);
+    label_pair_const_t pair_proxy = LABEL_PAIR_CONST("proxy", fields[HA_STAT_PXNAME]);
+    label_pair_const_t pair_svname = LABEL_PAIR_CONST(NULL, NULL);
 
     haproxy_field_t *ha_fields = NULL;
     size_t ha_fields_size = 0;
@@ -542,22 +589,19 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
     case HA_TYPE_SERVER:
         ha_fields = haproxy_server_fields;
         ha_fields_size = haproxy_server_fields_size;
-        label_set_add(&ha->labels, true, "server", fields[HA_STAT_SVNAME]);
+        pair_svname = LABEL_PAIR_CONST("server", fields[HA_STAT_SVNAME]);
         break;
     case HA_TYPE_LISTENER:
         ha_fields = haproxy_listener_fields;
         ha_fields_size = haproxy_listener_fields_size;
-        label_set_add(&ha->labels, true, "listener", fields[HA_STAT_SVNAME]);
+        pair_svname = LABEL_PAIR_CONST("listener", fields[HA_STAT_SVNAME]);
         break;
     }
 
     for(size_t i=0 ; i < ha_fields_size ; i++) {
         size_t n = ha_fields[i].field;
-        if (n >= fields_len)
-            continue;
-
         int field = stat_header[n];
-         if (field == 0)
+        if ((field <= 0) || ((size_t)field >= fields_len))
             continue;
 
         char *str = fields[field];
@@ -568,12 +612,18 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
 
         value_t value = {0};
         switch (fam->type) {
-        case METRIC_TYPE_COUNTER:
-            value = VALUE_COUNTER(atoll(str));
-            break;
-        case METRIC_TYPE_GAUGE:
-            value = VALUE_GAUGE(atoll(str));
-            break;
+        case METRIC_TYPE_COUNTER: {
+            uint64_t counter = 0;
+            if ((*str == '-') || (strtouint(str, &counter) != 0))
+                continue;
+            value = VALUE_COUNTER(counter);
+        }   break;
+        case METRIC_TYPE_GAUGE: {
+            double gauge = 0;
+            if (strtodouble(str, &gauge) != 0)
+                continue;
+            value = VALUE_GAUGE(gauge);
+        }   break;
         case METRIC_TYPE_STATE_SET:
             break;
         default:
@@ -586,19 +636,23 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
             switch(ha_type) {
             case HA_TYPE_FRONTEND: {
                 state_t states[] = {
-                    { .name = "DOWN", .enabled = !strncmp("STOP", str, strlen("STOP"))},
-                    { .name = "UP",   .enabled = !strncmp("OPEN", str, strlen("OPEN"))},
+                    { .name = "DOWN",   .enabled = haproxy_status_match(str, "STOP")   },
+                    { .name = "UP",     .enabled = haproxy_status_match(str, "OPEN")   },
+                    { .name = "FULL",   .enabled = haproxy_status_match(str, "FULL")   },
+                    { .name = "PAUSED", .enabled = haproxy_status_match(str, "PAUSED") },
                 };
                 state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
-                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels, NULL);
+                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels,
+                                     &pair_proxy, &pair_svname, NULL);
             }   break;
             case HA_TYPE_BACKEND: {
                 state_t states[] = {
-                    { .name = "DOWN", .enabled = !strncmp("DOWN", str, strlen("DOWN")) },
-                    { .name = "UP",   .enabled = !strncmp("UP", str, strlen("UP")) },
+                    { .name = "DOWN", .enabled = haproxy_status_match(str, "DOWN") },
+                    { .name = "UP",   .enabled = haproxy_status_match(str, "UP")   },
                 };
                 state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
-                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels, NULL);
+                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels,
+                                     &pair_proxy, &pair_svname, NULL);
             }   break;
             case HA_TYPE_SERVER: {
                 state_t states[] = {
@@ -611,12 +665,13 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
                 };
                 state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
                 for (size_t j = 0; j < set.num ; j++) {
-                    if (strncmp(set.ptr[j].name, str, strlen(set.ptr[j].name)) == 0) {
+                    if (haproxy_status_match(str, set.ptr[j].name)) {
                         set.ptr[j].enabled = true;
                         break;
                     }
                 }
-                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels, NULL);
+                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels,
+                                     &pair_proxy, &pair_svname, NULL);
             }   break;
             case HA_TYPE_LISTENER: {
                 state_t states[] = {
@@ -626,12 +681,13 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
                 };
                 state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
                 for (size_t j = 0; j < set.num ; j++) {
-                    if (strncmp(set.ptr[j].name, str, strlen(set.ptr[j].name)) == 0) {
+                    if (haproxy_status_match(str, set.ptr[j].name)) {
                         set.ptr[j].enabled = true;
                         break;
                     }
                 }
-                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels, NULL);
+                metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels,
+                                     &pair_proxy, &pair_svname, NULL);
             }   break;
             }
             break;
@@ -658,42 +714,46 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
                 { .name = "PROCOK",  .enabled = false },
             };
             state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+            const char *check_status = str;
+            if (strncmp(check_status, "* ", strlen("* ")) == 0)
+                check_status += strlen("* ");
             for (size_t j = 0; j < set.num ; j++) {
-                if (strncmp(set.ptr[j].name, str, strlen(set.ptr[j].name)) == 0) { // FIXME
+                if (haproxy_status_match(check_status, set.ptr[j].name)) {
                     set.ptr[j].enabled = true;
                     break;
                 }
             }
-            metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels, NULL);
+            metric_family_append(fam, VALUE_STATE_SET(set), &ha->labels,
+                                 &pair_proxy, &pair_svname, NULL);
         }   break;
         case HA_STAT_HRSP_1XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels,
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname,
                                      &LABEL_PAIR_CONST("code", "1xx"), NULL);
             break;
         case HA_STAT_HRSP_2XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels,
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname,
                                      &LABEL_PAIR_CONST("code", "2xx"), NULL);
             break;
         case HA_STAT_HRSP_3XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels,
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname,
                                      &LABEL_PAIR_CONST("code", "3xx"), NULL);
             break;
         case HA_STAT_HRSP_4XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels,
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname,
                                      &LABEL_PAIR_CONST("code", "4xx"), NULL);
             break;
         case HA_STAT_HRSP_5XX:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels,
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname,
                                      &LABEL_PAIR_CONST("code", "5xx"), NULL);
             break;
         case HA_STAT_HRSP_OTHER:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels,
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname,
                                      &LABEL_PAIR_CONST("code", "other"), NULL);
             break;
         case HA_STAT_REQ_RATE_MAX:
@@ -706,7 +766,7 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
         case HA_STAT_COMP_BYP:
         case HA_STAT_COMP_RSP:
             if (ha_proxy_mode == HA_PROXY_MODE_HTTP)
-                metric_family_append(fam, value, &ha->labels, NULL);
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname, NULL);
             break;
         case HA_STAT_CHECK_DURATION:
         case HA_STAT_QTIME:
@@ -718,18 +778,14 @@ static int haproxy_read_stat_line(haproxy_t *ha, int stat_header[HA_STAT_MAX], c
         case HA_STAT_RT_MAX:
         case HA_STAT_TT_MAX:
             value.gauge.float64 /= 1000.0;
-            metric_family_append(fam, value, &ha->labels, NULL);
+            metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname, NULL);
             break;
         default:
             if ((fam->type == METRIC_TYPE_COUNTER) || (fam->type == METRIC_TYPE_GAUGE))
-                metric_family_append(fam, value, &ha->labels, NULL);
+                metric_family_append(fam, value, &ha->labels, &pair_proxy, &pair_svname, NULL);
             break;
         }
     }
-
-    label_set_add(&ha->labels, true, "server", NULL);
-    label_set_add(&ha->labels, true, "listener", NULL);
-    label_set_add(&ha->labels, true, "proxy", NULL);
 
     return 0;
 }
@@ -741,6 +797,7 @@ static int haproxy_read_curl_stat(haproxy_t *ha, cdtime_t when)
 
     int stat_header[HA_STAT_MAX] = {0};
     bool stat_header_found = false;
+    size_t stat_header_len = 0;
     char *ptr = ha->buffer.ptr;
     char *saveptr = NULL;
     char *line;
@@ -749,12 +806,14 @@ static int haproxy_read_curl_stat(haproxy_t *ha, cdtime_t when)
         if (line[0] == '#') {
             if (!stat_header_found) {
                 int cols = haproxy_read_stat_header(line, stat_header);
-                if (cols > 0)
+                if (cols > 0) {
                     stat_header_found = true;
+                    stat_header_len = cols;
+                }
             }
         } else {
             if (stat_header_found)
-                haproxy_read_stat_line(ha, stat_header, line);
+                haproxy_read_stat_line(ha, stat_header, stat_header_len, line);
         }
     }
 
@@ -773,8 +832,10 @@ static int haproxy_read_cmd_stat(haproxy_t *ha)
 
     int stat_header[HA_STAT_MAX] = {0};
     bool stat_header_found = false;
-    char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+    size_t stat_header_len = 0;
+    char *buffer = NULL;
+    size_t buffer_size = 0;
+    while (getline(&buffer, &buffer_size, fp) != -1) {
 
         size_t len = strlen(buffer);
         while ((len > 0) && (buffer[len-1] == '\n')) {
@@ -788,20 +849,30 @@ static int haproxy_read_cmd_stat(haproxy_t *ha)
         if (buffer[0] == '#') {
             if (!stat_header_found) {
                 int cols = haproxy_read_stat_header(buffer, stat_header);
-                if (cols > 0)
+                if (cols > 0) {
                     stat_header_found = true;
+                    stat_header_len = cols;
+                }
             }
         } else {
             if (stat_header_found)
-                haproxy_read_stat_line(ha, stat_header, buffer);
+                haproxy_read_stat_line(ha, stat_header, stat_header_len, buffer);
         }
     }
+
+    int status = 0;
+    if (ferror(fp)) {
+        PLUGIN_ERROR("Failed to read the 'show stat' response: %s", STRERRNO);
+        status = -1;
+    }
+
+    free(buffer);
 
     plugin_dispatch_metric_family_array_filtered(ha->fams_stat, FAM_HAPROXY_STAT_MAX,
                                                  ha->filter, when);
 
     fclose(fp);
-    return 0;
+    return status;
 }
 
 static int haproxy_read_cmd_info(haproxy_t *ha)
@@ -847,26 +918,45 @@ static int haproxy_read_cmd_info(haproxy_t *ha)
             };
             metric_family_append(fam, VALUE_INFO(info), &ha->labels, NULL);
         } else if (hm->fam == FAM_HAPROXY_PROCESS_TAINTED) {
-            value = VALUE_GAUGE(strtol(val, NULL, 16));
+            uint64_t tainted = 0;
+            if (strtouint(val, &tainted) != 0)
+                continue;
+            value = VALUE_GAUGE(tainted);
             metric_family_append(fam, value, &ha->labels, NULL);
         } else if (hm->fam == FAM_HAPROXY_PROCESS_BOOTTIME_SECONDS) {
-            value = VALUE_GAUGE(atoll(val) / 1000.0);
+            double boottime = 0;
+            if (strtodouble(val, &boottime) != 0)
+                continue;
+            value = VALUE_GAUGE(boottime / 1000.0);
             metric_family_append(fam, value, &ha->labels, NULL);
         } else {
-            if (fam->type == METRIC_TYPE_GAUGE)
-                value = VALUE_GAUGE(atoll(val));
-            else
-                value = VALUE_COUNTER(atoll(val));
+            if (fam->type == METRIC_TYPE_GAUGE) {
+                double gauge = 0;
+                if (strtodouble(val, &gauge) != 0)
+                    continue;
+                value = VALUE_GAUGE(gauge);
+            } else {
+                uint64_t counter = 0;
+                if ((*val == '-') || (strtouint(val, &counter) != 0))
+                    continue;
+                value = VALUE_COUNTER(counter);
+            }
 
             metric_family_append(fam, value, &ha->labels, NULL);
         }
+    }
+
+    int status = 0;
+    if (ferror(fp)) {
+        PLUGIN_ERROR("Failed to read the 'show info' response: %s", STRERRNO);
+        status = -1;
     }
 
     plugin_dispatch_metric_family_array_filtered(ha->fams_process, FAM_HAPROXY_PROCESS_MAX,
                                                  ha->filter, when);
 
     fclose(fp);
-    return 0;
+    return status;
 }
 
 static int haproxy_read_cmd_table(haproxy_t *ha)
@@ -915,11 +1005,17 @@ static int haproxy_read_cmd_table(haproxy_t *ha)
         }
     }
 
+    int status = 0;
+    if (ferror(fp)) {
+        PLUGIN_ERROR("Failed to read the 'show table' response: %s", STRERRNO);
+        status = -1;
+    }
+
     plugin_dispatch_metric_family_array_filtered(ha->fams_sticktable, FAM_HAPROXY_STICKTABLE_MAX,
                                                  ha->filter, when);
 
     fclose(fp);
-    return 0;
+    return status;
 }
 
 static size_t haproxy_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
@@ -932,7 +1028,16 @@ static size_t haproxy_curl_callback(void *buf, size_t size, size_t nmemb, void *
     if (ha == NULL)
         return 0;
 
-    strbuf_putstrn(&ha->buffer, buf, len);
+    if (len > (HAPROXY_MAX_RESPONSE_SIZE - strbuf_len(&ha->buffer))) {
+        PLUGIN_ERROR("Response of instance '%s' is larger than %d bytes.",
+                     ha->instance, HAPROXY_MAX_RESPONSE_SIZE);
+        return 0;
+    }
+
+    if (strbuf_putstrn(&ha->buffer, buf, len) != 0) {
+        PLUGIN_ERROR("Failed to copy to buffer.");
+        return 0;
+    }
 
     return len;
 }
@@ -1022,6 +1127,7 @@ static int haproxy_curl_init(haproxy_t *ha)
         if (ha->pass != NULL)
             credentials_size += strlen(ha->pass);
 
+        free(ha->credentials);
         ha->credentials = malloc(credentials_size);
         if (ha->credentials == NULL) {
             PLUGIN_ERROR("malloc failed.");
@@ -1080,7 +1186,7 @@ static int haproxy_curl_init(haproxy_t *ha)
     }
 
     rcode = curl_easy_setopt(ha->curl, CURLOPT_TIMEOUT_MS,
-                                       (long)CDTIME_T_TO_MS(plugin_get_interval()));
+                                       (long)CDTIME_T_TO_MS(haproxy_timeout(ha)));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                      curl_easy_strerror(rcode));
@@ -1165,8 +1271,14 @@ static int haproxy_read (user_data_t *ud)
                 break;
             }
 
-            if (rcode == 200)
-                haproxy_read_curl_stat(ha, when);
+            if (rcode != 200) {
+                PLUGIN_ERROR("Unexpected HTTP response code %ld in instance '%s'.",
+                             rcode, ha->instance);
+                status = -1;
+                break;
+            }
+
+            haproxy_read_curl_stat(ha, when);
 
             break;
         }
@@ -1256,6 +1368,8 @@ static int haproxy_config_instance(config_item_t *ci)
             status = haproxy_config_append_string(child, "Header", &ha->headers);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &ha->timeout);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ha->labels);
         } else if (strcasecmp("filter", child->key) == 0) {
@@ -1272,6 +1386,19 @@ static int haproxy_config_instance(config_item_t *ci)
     if ((ha->url == NULL) && (ha->socketpath == NULL)) {
         PLUGIN_WARNING("'url' or 'socket-path' missing in 'instance' block.");
         status = -1;
+    }
+
+    if ((ha->url != NULL) && (ha->socketpath != NULL))
+        PLUGIN_WARNING("Both 'url' and 'socket-path' set in instance '%s', 'url' is ignored.",
+                       ha->instance);
+
+    if (ha->socketpath != NULL) {
+        struct sockaddr_un sa = {0};
+        if (strlen(ha->socketpath) >= sizeof(sa.sun_path)) {
+            PLUGIN_ERROR("'socket-path' in instance '%s' is too long (maximum %zu characters).",
+                         ha->instance, sizeof(sa.sun_path) - 1);
+            status = -1;
+        }
     }
 
     if (status != 0) {
@@ -1306,9 +1433,21 @@ static int haproxy_config(config_item_t *ci)
     return 0;
 }
 
+static bool haproxy_curl_initialized;
+
 static int haproxy_init(void)
 {
-    curl_global_init(CURL_GLOBAL_SSL);
+    if (curl_global_init(CURL_GLOBAL_SSL) == CURLE_OK)
+        haproxy_curl_initialized = true;
+    return 0;
+}
+
+static int haproxy_shutdown(void)
+{
+    if (haproxy_curl_initialized) {
+        curl_global_cleanup();
+        haproxy_curl_initialized = false;
+    }
     return 0;
 }
 
@@ -1316,4 +1455,5 @@ void module_register(void)
 {
     plugin_register_config("haproxy", haproxy_config);
     plugin_register_init("haproxy", haproxy_init);
+    plugin_register_shutdown("haproxy", haproxy_shutdown);
 }

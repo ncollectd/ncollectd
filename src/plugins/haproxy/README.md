@@ -20,6 +20,7 @@ NCOLLECTD-HAPROXY(5) - File Formats Manual
 	        verify-host true|false
 	        ca-cert /path/to/cert
 	        header Header
+	        timeout seconds
 	        label key value
 	        interval seconds
 	        filter {
@@ -44,6 +45,7 @@ The following options are valid within **instance** blocks:
 **socket-path** *path*
 
 > Path to HAProxy stats socket.
+> If **url** is also set, the socket is used and **url** is ignored.
 
 **user** *username*
 
@@ -97,6 +99,13 @@ The following options are valid within **instance** blocks:
 > A HTTP header to add to the request.
 > Multiple headers are added if this option
 > is specified more than once.
+
+**timeout** *seconds*
+
+> The **timeout** option sets the overall timeout for HTTP requests to
+> **url** and the timeout for each operation on the **socket-path** socket,
+> in seconds.
+> By default, the configured **interval** is used to set the timeout.
 
 **label** *key* *value*
 

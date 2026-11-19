@@ -20,6 +20,14 @@ if(BUILD_PLUGIN_HAPROXY)
     add_library(haproxy MODULE ${PLUGIN_HAPROXY_SRC} ${HAPROXY_INFO_H} ${HAPROXY_STAT_H})
     target_link_libraries(haproxy PRIVATE libmetric libutils LibCurl::LibCurl)
     set_target_properties(haproxy PROPERTIES PREFIX "")
+
+    add_executable(test_plugin_haproxy EXCLUDE_FROM_ALL haproxy_test.c ${PLUGIN_HAPROXY_SRC}
+                                                        ${HAPROXY_INFO_H} ${HAPROXY_STAT_H})
+    target_link_libraries(test_plugin_haproxy libtest libconfig libmetric libutils
+                                              LibCurl::LibCurl -lm -lpthread)
+    add_dependencies(build_tests test_plugin_haproxy)
+    add_test(NAME test_plugin_haproxy COMMAND test_plugin_haproxy WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
     install(TARGETS haproxy DESTINATION ${CMAKE_INSTALL_LIBDIR}/ncollectd/)
     configure_file(ncollectd-haproxy.5 ncollectd-haproxy.5 @ONLY)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ncollectd-haproxy.5 DESTINATION ${CMAKE_INSTALL_MANDIR}/man5)

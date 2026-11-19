@@ -735,7 +735,7 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
     },
     [FAM_HAPROXY_FRONTEND_H2_OPEN_CONNECTIONS] = {
         .name = "haproxy_frontend_h2_open_connections",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Count of currently open connections in this frontend."
     },
     [FAM_HAPROXY_FRONTEND_H2_BACKEND_OPEN_STREAMS] = {
@@ -965,7 +965,7 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
     },
     [FAM_HAPROXY_FRONTEND_QUIC_HALF_OPEN_CONN] = {
         .name = "haproxy_frontend_quic_half_open_conn",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Total number of half open connections",
     },
     [FAM_HAPROXY_FRONTEND_QUIC_HDSHK_FAIL] = {
@@ -1488,7 +1488,7 @@ static metric_family_t fams_haproxy_stat[FAM_HAPROXY_STAT_MAX] = {
     },
     [FAM_HAPROXY_BACKEND_H2_OPEN_CONNECTIONS] = {
         .name = "haproxy_backend_h2_open_connections",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Count of currently open connections in this backend."
     },
     [FAM_HAPROXY_BACKEND_H2_BACKEND_OPEN_STREAMS] = {

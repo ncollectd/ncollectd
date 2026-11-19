@@ -1,0 +1,800 @@
+# TYPE haproxy_process_nbthread gauge
+haproxy_process_nbthread{hostname="localhost.localdomain",instance="local",proxy="edge1"} 100
+# TYPE haproxy_process_nbproc gauge
+haproxy_process_nbproc{hostname="localhost.localdomain",instance="local",proxy="edge1"} 101
+# TYPE haproxy_process_relative_process_id gauge
+haproxy_process_relative_process_id{hostname="localhost.localdomain",instance="local",proxy="edge1"} 102
+# TYPE haproxy_process_uptime_seconds gauge
+haproxy_process_uptime_seconds{hostname="localhost.localdomain",instance="local",proxy="edge1"} 103
+# TYPE haproxy_process_start_time_seconds gauge
+haproxy_process_start_time_seconds{hostname="localhost.localdomain",instance="local",proxy="edge1"} 104
+# TYPE haproxy_process_max_memory_bytes gauge
+haproxy_process_max_memory_bytes{hostname="localhost.localdomain",instance="local",proxy="edge1"} 105
+# TYPE haproxy_process_pool_allocated_bytes gauge
+haproxy_process_pool_allocated_bytes{hostname="localhost.localdomain",instance="local",proxy="edge1"} 106
+# TYPE haproxy_process_pool_used_bytes gauge
+haproxy_process_pool_used_bytes{hostname="localhost.localdomain",instance="local",proxy="edge1"} 107
+# TYPE haproxy_process_max_fds gauge
+haproxy_process_max_fds{hostname="localhost.localdomain",instance="local",proxy="edge1"} 109
+# TYPE haproxy_process_max_sockets gauge
+haproxy_process_max_sockets{hostname="localhost.localdomain",instance="local",proxy="edge1"} 110
+# TYPE haproxy_process_max_connections gauge
+haproxy_process_max_connections{hostname="localhost.localdomain",instance="local",proxy="edge1"} 111
+# TYPE haproxy_process_hard_max_connections gauge
+haproxy_process_hard_max_connections{hostname="localhost.localdomain",instance="local",proxy="edge1"} 112
+# TYPE haproxy_process_current_connections gauge
+haproxy_process_current_connections{hostname="localhost.localdomain",instance="local",proxy="edge1"} 113
+# TYPE haproxy_process_connections counter
+haproxy_process_connections_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 114
+# TYPE haproxy_process_requests counter
+haproxy_process_requests_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 115
+# TYPE haproxy_process_max_ssl_connections gauge
+haproxy_process_max_ssl_connections{hostname="localhost.localdomain",instance="local",proxy="edge1"} 116
+# TYPE haproxy_process_current_ssl_connections gauge
+haproxy_process_current_ssl_connections{hostname="localhost.localdomain",instance="local",proxy="edge1"} 117
+# TYPE haproxy_process_ssl_connections counter
+haproxy_process_ssl_connections_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 118
+# TYPE haproxy_process_max_pipes gauge
+haproxy_process_max_pipes{hostname="localhost.localdomain",instance="local",proxy="edge1"} 119
+# TYPE haproxy_process_pipes_used gauge
+haproxy_process_pipes_used{hostname="localhost.localdomain",instance="local",proxy="edge1"} 120
+# TYPE haproxy_process_pipes_free gauge
+haproxy_process_pipes_free{hostname="localhost.localdomain",instance="local",proxy="edge1"} 121
+# TYPE haproxy_process_current_connection_rate gauge
+haproxy_process_current_connection_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 122
+# TYPE haproxy_process_limit_connection_rate gauge
+haproxy_process_limit_connection_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 123
+# TYPE haproxy_process_max_connection_rate gauge
+haproxy_process_max_connection_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 124
+# TYPE haproxy_process_current_session_rate gauge
+haproxy_process_current_session_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 125
+# TYPE haproxy_process_limit_session_rate gauge
+haproxy_process_limit_session_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 126
+# TYPE haproxy_process_max_session_rate gauge
+haproxy_process_max_session_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 127
+# TYPE haproxy_process_current_ssl_rate gauge
+haproxy_process_current_ssl_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 128
+# TYPE haproxy_process_limit_ssl_rate gauge
+haproxy_process_limit_ssl_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 129
+# TYPE haproxy_process_max_ssl_rate gauge
+haproxy_process_max_ssl_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 130
+# TYPE haproxy_process_current_frontend_ssl_key_rate gauge
+haproxy_process_current_frontend_ssl_key_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 131
+# TYPE haproxy_process_max_frontend_ssl_key_rate gauge
+haproxy_process_max_frontend_ssl_key_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 132
+# TYPE haproxy_process_frontend_ssl_reuse gauge
+haproxy_process_frontend_ssl_reuse{hostname="localhost.localdomain",instance="local",proxy="edge1"} 133
+# TYPE haproxy_process_current_backend_ssl_key_rate gauge
+haproxy_process_current_backend_ssl_key_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 134
+# TYPE haproxy_process_max_backend_ssl_key_rate gauge
+haproxy_process_max_backend_ssl_key_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 135
+# TYPE haproxy_process_ssl_cache_lookups counter
+haproxy_process_ssl_cache_lookups_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 136
+# TYPE haproxy_process_ssl_cache_misses counter
+haproxy_process_ssl_cache_misses_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 137
+# TYPE haproxy_process_http_comp_bytes_in counter
+haproxy_process_http_comp_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 138
+# TYPE haproxy_process_http_comp_bytes_out counter
+haproxy_process_http_comp_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 139
+# TYPE haproxy_process_limit_http_comp gauge
+haproxy_process_limit_http_comp{hostname="localhost.localdomain",instance="local",proxy="edge1"} 140
+# TYPE haproxy_process_current_zlib_memory gauge
+haproxy_process_current_zlib_memory{hostname="localhost.localdomain",instance="local",proxy="edge1"} 141
+# TYPE haproxy_process_max_zlib_memory gauge
+haproxy_process_max_zlib_memory{hostname="localhost.localdomain",instance="local",proxy="edge1"} 142
+# TYPE haproxy_process_current_tasks gauge
+haproxy_process_current_tasks{hostname="localhost.localdomain",instance="local",proxy="edge1"} 143
+# TYPE haproxy_process_idle_time_percent gauge
+haproxy_process_idle_time_percent{hostname="localhost.localdomain",instance="local",proxy="edge1"} 145
+# TYPE haproxy_process_stopping gauge
+haproxy_process_stopping{hostname="localhost.localdomain",instance="local",proxy="edge1"} 146
+# TYPE haproxy_process_jobs gauge
+haproxy_process_jobs{hostname="localhost.localdomain",instance="local",proxy="edge1"} 147
+# TYPE haproxy_process_unstoppable_jobs gauge
+haproxy_process_unstoppable_jobs{hostname="localhost.localdomain",instance="local",proxy="edge1"} 148
+# TYPE haproxy_process_listeners gauge
+haproxy_process_listeners{hostname="localhost.localdomain",instance="local",proxy="edge1"} 149
+# TYPE haproxy_process_active_peers gauge
+haproxy_process_active_peers{hostname="localhost.localdomain",instance="local",proxy="edge1"} 150
+# TYPE haproxy_process_connected_peers gauge
+haproxy_process_connected_peers{hostname="localhost.localdomain",instance="local",proxy="edge1"} 151
+# TYPE haproxy_process_dropped_logs counter
+haproxy_process_dropped_logs_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 152
+# TYPE haproxy_process_busy_polling_enabled gauge
+haproxy_process_busy_polling_enabled{hostname="localhost.localdomain",instance="local",proxy="edge1"} 153
+# TYPE haproxy_process_failed_resolutions counter
+haproxy_process_failed_resolutions_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 154
+# TYPE haproxy_process_bytes_out counter
+haproxy_process_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 155
+# TYPE haproxy_process_spliced_bytes_out counter
+haproxy_process_spliced_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 156
+# TYPE haproxy_process_bytes_out_rate gauge
+haproxy_process_bytes_out_rate{hostname="localhost.localdomain",instance="local",proxy="edge1"} 157
+# TYPE haproxy_process_recv_logs counter
+haproxy_process_recv_logs_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 158
+# TYPE haproxy_process_tainted gauge
+haproxy_process_tainted{hostname="localhost.localdomain",instance="local",proxy="edge1"} 16
+# TYPE haproxy_process_warnings counter
+haproxy_process_warnings_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 161
+# TYPE haproxy_process_maxconn_reached counter
+haproxy_process_maxconn_reached_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 162
+# TYPE haproxy_process_boottime_seconds gauge
+haproxy_process_boottime_seconds{hostname="localhost.localdomain",instance="local",proxy="edge1"} 1.5
+# TYPE haproxy_process_niced_tasks gauge
+haproxy_process_niced_tasks{hostname="localhost.localdomain",instance="local",proxy="edge1"} 164
+# TYPE haproxy_process_current_streams gauge
+haproxy_process_current_streams{hostname="localhost.localdomain",instance="local",proxy="edge1"} 165
+# TYPE haproxy_process_streams counter
+haproxy_process_streams_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 166
+# TYPE haproxy_process_blocked_traffic_warnings counter
+haproxy_process_blocked_traffic_warnings_total{hostname="localhost.localdomain",instance="local",proxy="edge1"} 167
+# TYPE haproxy_frontend_current_sessions gauge
+haproxy_frontend_current_sessions{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1004
+# TYPE haproxy_frontend_max_sessions gauge
+haproxy_frontend_max_sessions{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1005
+# TYPE haproxy_frontend_limit_sessions gauge
+haproxy_frontend_limit_sessions{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1006
+# TYPE haproxy_frontend_sessions counter
+haproxy_frontend_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1007
+# TYPE haproxy_frontend_bytes_in counter
+haproxy_frontend_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1008
+# TYPE haproxy_frontend_bytes_out counter
+haproxy_frontend_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1009
+# TYPE haproxy_frontend_requests_denied counter
+haproxy_frontend_requests_denied_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1010
+# TYPE haproxy_frontend_responses_denied counter
+haproxy_frontend_responses_denied_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1011
+# TYPE haproxy_frontend_request_errors counter
+haproxy_frontend_request_errors_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1012
+# TYPE haproxy_frontend_status stateset
+haproxy_frontend_status{haproxy_frontend_status="DOWN",hostname="localhost.localdomain",instance="local",proxy="fe1"} 0
+haproxy_frontend_status{haproxy_frontend_status="UP",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1
+haproxy_frontend_status{haproxy_frontend_status="FULL",hostname="localhost.localdomain",instance="local",proxy="fe1"} 0
+haproxy_frontend_status{haproxy_frontend_status="PAUSED",hostname="localhost.localdomain",instance="local",proxy="fe1"} 0
+haproxy_frontend_status{haproxy_frontend_status="DOWN",hostname="localhost.localdomain",instance="local",proxy="fe2"} 0
+haproxy_frontend_status{haproxy_frontend_status="UP",hostname="localhost.localdomain",instance="local",proxy="fe2"} 0
+haproxy_frontend_status{haproxy_frontend_status="FULL",hostname="localhost.localdomain",instance="local",proxy="fe2"} 1
+haproxy_frontend_status{haproxy_frontend_status="PAUSED",hostname="localhost.localdomain",instance="local",proxy="fe2"} 0
+# TYPE haproxy_frontend_limit_session_rate gauge
+haproxy_frontend_limit_session_rate{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1034
+# TYPE haproxy_frontend_max_session_rate gauge
+haproxy_frontend_max_session_rate{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1035
+# TYPE haproxy_frontend_http_responses counter
+haproxy_frontend_http_responses_total{code="1xx",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1039
+haproxy_frontend_http_responses_total{code="2xx",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1040
+haproxy_frontend_http_responses_total{code="3xx",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1041
+haproxy_frontend_http_responses_total{code="4xx",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1042
+haproxy_frontend_http_responses_total{code="5xx",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1043
+haproxy_frontend_http_responses_total{code="other",hostname="localhost.localdomain",instance="local",proxy="fe1"} 1044
+# TYPE haproxy_frontend_http_requests_rate_max gauge
+haproxy_frontend_http_requests_rate_max{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1047
+# TYPE haproxy_frontend_http_requests counter
+haproxy_frontend_http_requests_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1048
+# TYPE haproxy_frontend_http_comp_bytes_in counter
+haproxy_frontend_http_comp_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1051
+# TYPE haproxy_frontend_http_comp_bytes_out counter
+haproxy_frontend_http_comp_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1052
+# TYPE haproxy_frontend_http_comp_bytes_bypassed counter
+haproxy_frontend_http_comp_bytes_bypassed_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1053
+# TYPE haproxy_frontend_http_comp_responses counter
+haproxy_frontend_http_comp_responses_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1054
+# TYPE haproxy_frontend_connections_rate_max gauge
+haproxy_frontend_connections_rate_max{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1078
+# TYPE haproxy_frontend_connections counter
+haproxy_frontend_connections_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1079
+# TYPE haproxy_frontend_intercepted_requests counter
+haproxy_frontend_intercepted_requests_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1080
+# TYPE haproxy_frontend_denied_connections counter
+haproxy_frontend_denied_connections_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1081
+# TYPE haproxy_frontend_denied_sessions counter
+haproxy_frontend_denied_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1082
+# TYPE haproxy_frontend_failed_header_rewriting counter
+haproxy_frontend_failed_header_rewriting_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1083
+# TYPE haproxy_frontend_http_cache_lookups counter
+haproxy_frontend_http_cache_lookups_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1086
+# TYPE haproxy_frontend_http_cache_hits counter
+haproxy_frontend_http_cache_hits_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1087
+# TYPE haproxy_frontend_internal_errors counter
+haproxy_frontend_internal_errors_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1094
+# TYPE haproxy_frontend_other_sessions counter
+haproxy_frontend_other_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1104
+# TYPE haproxy_frontend_h1_sessions counter
+haproxy_frontend_h1_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1105
+# TYPE haproxy_frontend_h2_sessions counter
+haproxy_frontend_h2_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1106
+# TYPE haproxy_frontend_h3_sessions counter
+haproxy_frontend_h3_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1107
+# TYPE haproxy_frontend_other_request counter
+haproxy_frontend_other_request_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1108
+# TYPE haproxy_frontend_h1_request counter
+haproxy_frontend_h1_request_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1109
+# TYPE haproxy_frontend_h2_request counter
+haproxy_frontend_h2_request_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1110
+# TYPE haproxy_frontend_h3_request counter
+haproxy_frontend_h3_request_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1111
+# TYPE haproxy_frontend_ssl_sessions counter
+haproxy_frontend_ssl_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1114
+# TYPE haproxy_frontend_ssl_reused_sessions counter
+haproxy_frontend_ssl_reused_sessions_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1115
+# TYPE haproxy_frontend_ssl_failed_handshake counter
+haproxy_frontend_ssl_failed_handshake_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1116
+# TYPE haproxy_frontend_ssl_ocsp_staple counter
+haproxy_frontend_ssl_ocsp_staple_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1117
+# TYPE haproxy_frontend_ssl_failed_ocsp_staple counter
+haproxy_frontend_ssl_failed_ocsp_staple_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1118
+# TYPE haproxy_frontend_h2_headers_rcvd counter
+haproxy_frontend_h2_headers_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1119
+# TYPE haproxy_frontend_h2_data_rcvd counter
+haproxy_frontend_h2_data_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1120
+# TYPE haproxy_frontend_h2_settings_rcvd counter
+haproxy_frontend_h2_settings_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1121
+# TYPE haproxy_frontend_h2_rst_stream_rcvd counter
+haproxy_frontend_h2_rst_stream_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1122
+# TYPE haproxy_frontend_h2_goaway_rcvd counter
+haproxy_frontend_h2_goaway_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1123
+# TYPE haproxy_frontend_h2_detected_connection_protocol_errors counter
+haproxy_frontend_h2_detected_connection_protocol_errors_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1124
+# TYPE haproxy_frontend_h2_detected_stream_protocol_errors counter
+haproxy_frontend_h2_detected_stream_protocol_errors_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1125
+# TYPE haproxy_frontend_h2_rst_stream_resp counter
+haproxy_frontend_h2_rst_stream_resp_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1126
+# TYPE haproxy_frontend_h2_goaway_resp counter
+haproxy_frontend_h2_goaway_resp_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1127
+# TYPE haproxy_frontend_h2_open_connections gauge
+haproxy_frontend_h2_open_connections{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1128
+# TYPE haproxy_frontend_h2_backend_open_streams gauge
+haproxy_frontend_h2_backend_open_streams{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1129
+# TYPE haproxy_frontend_h2_connections counter
+haproxy_frontend_h2_connections_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1130
+# TYPE haproxy_frontend_h2_backend_streams counter
+haproxy_frontend_h2_backend_streams_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1131
+# TYPE haproxy_frontend_h1_open_connections gauge
+haproxy_frontend_h1_open_connections{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1132
+# TYPE haproxy_frontend_h1_open_streams gauge
+haproxy_frontend_h1_open_streams{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1133
+# TYPE haproxy_frontend_h1_connections counter
+haproxy_frontend_h1_connections_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1134
+# TYPE haproxy_frontend_h1_streams counter
+haproxy_frontend_h1_streams_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1135
+# TYPE haproxy_frontend_h1_in_bytes counter
+haproxy_frontend_h1_in_bytes_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1136
+# TYPE haproxy_frontend_h1_out_bytes counter
+haproxy_frontend_h1_out_bytes_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1137
+# TYPE haproxy_frontend_h1_spliced_in_bytes counter
+haproxy_frontend_h1_spliced_in_bytes_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1138
+# TYPE haproxy_frontend_h1_spliced_out_bytes counter
+haproxy_frontend_h1_spliced_out_bytes_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1139
+# TYPE haproxy_frontend_h3_data counter
+haproxy_frontend_h3_data_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1140
+# TYPE haproxy_frontend_h3_headers counter
+haproxy_frontend_h3_headers_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1141
+# TYPE haproxy_frontend_h3_cancel_push counter
+haproxy_frontend_h3_cancel_push_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1142
+# TYPE haproxy_frontend_h3_push_promise counter
+haproxy_frontend_h3_push_promise_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1143
+# TYPE haproxy_frontend_h3_max_push_id counter
+haproxy_frontend_h3_max_push_id_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1144
+# TYPE haproxy_frontend_h3_goaway counter
+haproxy_frontend_h3_goaway_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1145
+# TYPE haproxy_frontend_h3_settings counter
+haproxy_frontend_h3_settings_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1146
+# TYPE haproxy_frontend_h3_no_error counter
+haproxy_frontend_h3_no_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1147
+# TYPE haproxy_frontend_h3_general_protocol_error counter
+haproxy_frontend_h3_general_protocol_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1148
+# TYPE haproxy_frontend_h3_internal_error counter
+haproxy_frontend_h3_internal_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1149
+# TYPE haproxy_frontend_h3_stream_creation_error counter
+haproxy_frontend_h3_stream_creation_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1150
+# TYPE haproxy_frontend_h3_closed_critical_stream counter
+haproxy_frontend_h3_closed_critical_stream_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1151
+# TYPE haproxy_frontend_h3_frame_unexpected counter
+haproxy_frontend_h3_frame_unexpected_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1152
+# TYPE haproxy_frontend_h3_frame_error counter
+haproxy_frontend_h3_frame_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1153
+# TYPE haproxy_frontend_h3_excessive_load counter
+haproxy_frontend_h3_excessive_load_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1154
+# TYPE haproxy_frontend_h3_id_error counter
+haproxy_frontend_h3_id_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1155
+# TYPE haproxy_frontend_h3_settings_error counter
+haproxy_frontend_h3_settings_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1156
+# TYPE haproxy_frontend_h3_missing_settings counter
+haproxy_frontend_h3_missing_settings_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1157
+# TYPE haproxy_frontend_h3_request_rejected counter
+haproxy_frontend_h3_request_rejected_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1158
+# TYPE haproxy_frontend_h3_request_cancelled counter
+haproxy_frontend_h3_request_cancelled_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1159
+# TYPE haproxy_frontend_h3_request_incomplete counter
+haproxy_frontend_h3_request_incomplete_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1160
+# TYPE haproxy_frontend_h3_message_error counter
+haproxy_frontend_h3_message_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1161
+# TYPE haproxy_frontend_h3_connect_error counter
+haproxy_frontend_h3_connect_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1162
+# TYPE haproxy_frontend_h3_version_fallback counter
+haproxy_frontend_h3_version_fallback_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1163
+# TYPE haproxy_frontend_h3_pack_decompression_failed counter
+haproxy_frontend_h3_pack_decompression_failed_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1164
+# TYPE haproxy_frontend_h3_qpack_encoder_stream_error counter
+haproxy_frontend_h3_qpack_encoder_stream_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1165
+# TYPE haproxy_frontend_h3_qpack_decoder_stream_error counter
+haproxy_frontend_h3_qpack_decoder_stream_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1166
+# TYPE haproxy_frontend_quic_dropped_pkt counter
+haproxy_frontend_quic_dropped_pkt_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1167
+# TYPE haproxy_frontend_quic_dropped_parsing_pkt counter
+haproxy_frontend_quic_dropped_parsing_pkt_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1168
+# TYPE haproxy_frontend_quic_lost_pkt counter
+haproxy_frontend_quic_lost_pkt_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1169
+# TYPE haproxy_frontend_quic_too_short_dgram counter
+haproxy_frontend_quic_too_short_dgram_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1170
+# TYPE haproxy_frontend_quic_retry_sent counter
+haproxy_frontend_quic_retry_sent_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1171
+# TYPE haproxy_frontend_quic_retry_validated counter
+haproxy_frontend_quic_retry_validated_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1172
+# TYPE haproxy_frontend_quic_retry_error counter
+haproxy_frontend_quic_retry_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1173
+# TYPE haproxy_frontend_quic_half_open_conn gauge
+haproxy_frontend_quic_half_open_conn{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1174
+# TYPE haproxy_frontend_quic_hdshk_fail counter
+haproxy_frontend_quic_hdshk_fail_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1175
+# TYPE haproxy_frontend_quic_stless_rst_sent counter
+haproxy_frontend_quic_stless_rst_sent_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1176
+# TYPE haproxy_frontend_quic_transp_err_no_error counter
+haproxy_frontend_quic_transp_err_no_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1177
+# TYPE haproxy_frontend_quic_transp_err_internal_error counter
+haproxy_frontend_quic_transp_err_internal_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1178
+# TYPE haproxy_frontend_quic_transp_err_connection_refused counter
+haproxy_frontend_quic_transp_err_connection_refused_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1179
+# TYPE haproxy_frontend_quic_transp_err_flow_control_error counter
+haproxy_frontend_quic_transp_err_flow_control_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1180
+# TYPE haproxy_frontend_quic_transp_err_stream_limit_error counter
+haproxy_frontend_quic_transp_err_stream_limit_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1181
+# TYPE haproxy_frontend_quic_transp_err_stream_state_error counter
+haproxy_frontend_quic_transp_err_stream_state_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1182
+# TYPE haproxy_frontend_quic_transp_err_final_size_error counter
+haproxy_frontend_quic_transp_err_final_size_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1183
+# TYPE haproxy_frontend_quic_transp_err_frame_encoding_error counter
+haproxy_frontend_quic_transp_err_frame_encoding_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1184
+# TYPE haproxy_frontend_quic_transp_err_transport_parameter_error counter
+haproxy_frontend_quic_transp_err_transport_parameter_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1185
+# TYPE haproxy_frontend_quic_transp_err_connection_id_limit counter
+haproxy_frontend_quic_transp_err_connection_id_limit_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1186
+# TYPE haproxy_frontend_quic_transp_err_protocol_violation_error counter
+haproxy_frontend_quic_transp_err_protocol_violation_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1187
+# TYPE haproxy_frontend_quic_transp_err_invalid_token counter
+haproxy_frontend_quic_transp_err_invalid_token_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1188
+# TYPE haproxy_frontend_quic_transp_err_application_error counter
+haproxy_frontend_quic_transp_err_application_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1189
+# TYPE haproxy_frontend_quic_transp_err_crypto_buffer_exceeded counter
+haproxy_frontend_quic_transp_err_crypto_buffer_exceeded_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1190
+# TYPE haproxy_frontend_quic_transp_err_key_update_error counter
+haproxy_frontend_quic_transp_err_key_update_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1191
+# TYPE haproxy_frontend_quic_transp_err_aead_limit_reached counter
+haproxy_frontend_quic_transp_err_aead_limit_reached_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1192
+# TYPE haproxy_frontend_quic_transp_err_no_viable_path counter
+haproxy_frontend_quic_transp_err_no_viable_path_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1193
+# TYPE haproxy_frontend_quic_transp_err_crypto_error counter
+haproxy_frontend_quic_transp_err_crypto_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1194
+# TYPE haproxy_frontend_quic_transp_err_unknown_error counter
+haproxy_frontend_quic_transp_err_unknown_error_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1195
+# TYPE haproxy_frontend_quic_data_blocked counter
+haproxy_frontend_quic_data_blocked_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1196
+# TYPE haproxy_frontend_quic_stream_data_blocked counter
+haproxy_frontend_quic_stream_data_blocked_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1197
+# TYPE haproxy_frontend_quic_streams_blocked_bidi counter
+haproxy_frontend_quic_streams_blocked_bidi_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1198
+# TYPE haproxy_frontend_quic_streams_blocked_uni counter
+haproxy_frontend_quic_streams_blocked_uni_total{hostname="localhost.localdomain",instance="local",proxy="fe1"} 1199
+# TYPE haproxy_listener_current_sessions gauge
+haproxy_listener_current_sessions{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4004
+# TYPE haproxy_listener_max_sessions gauge
+haproxy_listener_max_sessions{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4005
+# TYPE haproxy_listener_limit_sessions gauge
+haproxy_listener_limit_sessions{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4006
+# TYPE haproxy_listener_sessions counter
+haproxy_listener_sessions_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4007
+# TYPE haproxy_listener_bytes_in counter
+haproxy_listener_bytes_in_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4008
+# TYPE haproxy_listener_bytes_out counter
+haproxy_listener_bytes_out_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4009
+# TYPE haproxy_listener_requests_denied counter
+haproxy_listener_requests_denied_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4010
+# TYPE haproxy_listener_responses_denied counter
+haproxy_listener_responses_denied_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4011
+# TYPE haproxy_listener_request_errors counter
+haproxy_listener_request_errors_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4012
+# TYPE haproxy_listener_status stateset
+haproxy_listener_status{haproxy_listener_status="WAITING",hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 0
+haproxy_listener_status{haproxy_listener_status="OPEN",hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 1
+haproxy_listener_status{haproxy_listener_status="FULL",hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 0
+# TYPE haproxy_listener_denied_connections counter
+haproxy_listener_denied_connections_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4081
+# TYPE haproxy_listener_denied_sessions counter
+haproxy_listener_denied_sessions_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4082
+# TYPE haproxy_listener_failed_header_rewriting counter
+haproxy_listener_failed_header_rewriting_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4083
+# TYPE haproxy_listener_internal_errors counter
+haproxy_listener_internal_errors_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4094
+# TYPE haproxy_listener_ssl_sessions counter
+haproxy_listener_ssl_sessions_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4114
+# TYPE haproxy_listener_ssl_reused_sessions counter
+haproxy_listener_ssl_reused_sessions_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4115
+# TYPE haproxy_listener_ssl_failed_handshake counter
+haproxy_listener_ssl_failed_handshake_total{hostname="localhost.localdomain",instance="local",listener="sock-1",proxy="fe1"} 4116
+# TYPE haproxy_backend_current_queue gauge
+haproxy_backend_current_queue{hostname="localhost.localdomain",instance="local",proxy="be1"} 2002
+haproxy_backend_current_queue{hostname="localhost.localdomain",instance="local",proxy="be2"} 5002
+# TYPE haproxy_backend_max_queue gauge
+haproxy_backend_max_queue{hostname="localhost.localdomain",instance="local",proxy="be1"} 2003
+haproxy_backend_max_queue{hostname="localhost.localdomain",instance="local",proxy="be2"} 5003
+# TYPE haproxy_backend_current_sessions gauge
+haproxy_backend_current_sessions{hostname="localhost.localdomain",instance="local",proxy="be1"} 2004
+haproxy_backend_current_sessions{hostname="localhost.localdomain",instance="local",proxy="be2"} 5004
+# TYPE haproxy_backend_max_sessions gauge
+haproxy_backend_max_sessions{hostname="localhost.localdomain",instance="local",proxy="be1"} 2005
+haproxy_backend_max_sessions{hostname="localhost.localdomain",instance="local",proxy="be2"} 5005
+# TYPE haproxy_backend_limit_sessions gauge
+haproxy_backend_limit_sessions{hostname="localhost.localdomain",instance="local",proxy="be1"} 2006
+haproxy_backend_limit_sessions{hostname="localhost.localdomain",instance="local",proxy="be2"} 5006
+# TYPE haproxy_backend_sessions counter
+haproxy_backend_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2007
+haproxy_backend_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5007
+# TYPE haproxy_backend_bytes_in counter
+haproxy_backend_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2008
+haproxy_backend_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5008
+# TYPE haproxy_backend_bytes_out counter
+haproxy_backend_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2009
+haproxy_backend_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5009
+# TYPE haproxy_backend_requests_denied counter
+haproxy_backend_requests_denied_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2010
+haproxy_backend_requests_denied_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5010
+# TYPE haproxy_backend_responses_denied counter
+haproxy_backend_responses_denied_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2011
+haproxy_backend_responses_denied_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5011
+# TYPE haproxy_backend_connection_errors counter
+haproxy_backend_connection_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2013
+haproxy_backend_connection_errors_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5013
+# TYPE haproxy_backend_response_errors counter
+haproxy_backend_response_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2014
+haproxy_backend_response_errors_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5014
+# TYPE haproxy_backend_retry_warnings counter
+haproxy_backend_retry_warnings_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2015
+haproxy_backend_retry_warnings_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5015
+# TYPE haproxy_backend_redispatch_warnings counter
+haproxy_backend_redispatch_warnings_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2016
+haproxy_backend_redispatch_warnings_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5016
+# TYPE haproxy_backend_status stateset
+haproxy_backend_status{haproxy_backend_status="DOWN",hostname="localhost.localdomain",instance="local",proxy="be1"} 0
+haproxy_backend_status{haproxy_backend_status="UP",hostname="localhost.localdomain",instance="local",proxy="be1"} 1
+haproxy_backend_status{haproxy_backend_status="DOWN",hostname="localhost.localdomain",instance="local",proxy="be2"} 0
+haproxy_backend_status{haproxy_backend_status="UP",hostname="localhost.localdomain",instance="local",proxy="be2"} 1
+# TYPE haproxy_backend_weight gauge
+haproxy_backend_weight{hostname="localhost.localdomain",instance="local",proxy="be1"} 2018
+haproxy_backend_weight{hostname="localhost.localdomain",instance="local",proxy="be2"} 5018
+# TYPE haproxy_backend_active_servers gauge
+haproxy_backend_active_servers{hostname="localhost.localdomain",instance="local",proxy="be1"} 2019
+haproxy_backend_active_servers{hostname="localhost.localdomain",instance="local",proxy="be2"} 5019
+# TYPE haproxy_backend_backup_servers gauge
+haproxy_backend_backup_servers{hostname="localhost.localdomain",instance="local",proxy="be1"} 2020
+haproxy_backend_backup_servers{hostname="localhost.localdomain",instance="local",proxy="be2"} 5020
+# TYPE haproxy_backend_check_failures counter
+haproxy_backend_check_failures_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2021
+haproxy_backend_check_failures_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5021
+# TYPE haproxy_backend_check_up_down counter
+haproxy_backend_check_up_down_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2022
+haproxy_backend_check_up_down_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5022
+# TYPE haproxy_backend_check_last_change_seconds gauge
+haproxy_backend_check_last_change_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2023
+haproxy_backend_check_last_change_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5023
+# TYPE haproxy_backend_downtime_seconds counter
+haproxy_backend_downtime_seconds_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2024
+haproxy_backend_downtime_seconds_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5024
+# TYPE haproxy_backend_loadbalanced counter
+haproxy_backend_loadbalanced_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2030
+haproxy_backend_loadbalanced_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5030
+# TYPE haproxy_backend_max_session_rate gauge
+haproxy_backend_max_session_rate{hostname="localhost.localdomain",instance="local",proxy="be1"} 2035
+haproxy_backend_max_session_rate{hostname="localhost.localdomain",instance="local",proxy="be2"} 5035
+# TYPE haproxy_backend_http_responses counter
+haproxy_backend_http_responses_total{code="1xx",hostname="localhost.localdomain",instance="local",proxy="be1"} 2039
+haproxy_backend_http_responses_total{code="2xx",hostname="localhost.localdomain",instance="local",proxy="be1"} 2040
+haproxy_backend_http_responses_total{code="3xx",hostname="localhost.localdomain",instance="local",proxy="be1"} 2041
+haproxy_backend_http_responses_total{code="4xx",hostname="localhost.localdomain",instance="local",proxy="be1"} 2042
+haproxy_backend_http_responses_total{code="5xx",hostname="localhost.localdomain",instance="local",proxy="be1"} 2043
+haproxy_backend_http_responses_total{code="other",hostname="localhost.localdomain",instance="local",proxy="be1"} 2044
+# TYPE haproxy_backend_http_requests counter
+haproxy_backend_http_requests_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2048
+# TYPE haproxy_backend_client_aborts counter
+haproxy_backend_client_aborts_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2049
+# TYPE haproxy_backend_server_aborts counter
+haproxy_backend_server_aborts_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2050
+# TYPE haproxy_backend_http_comp_bytes_in counter
+haproxy_backend_http_comp_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2051
+# TYPE haproxy_backend_http_comp_bytes_out counter
+haproxy_backend_http_comp_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2052
+# TYPE haproxy_backend_http_comp_bytes_bypassed counter
+haproxy_backend_http_comp_bytes_bypassed_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2053
+# TYPE haproxy_backend_http_comp_responses counter
+haproxy_backend_http_comp_responses_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2054
+# TYPE haproxy_backend_last_session_seconds gauge
+haproxy_backend_last_session_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2055
+haproxy_backend_last_session_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} -1
+# TYPE haproxy_backend_queue_time_average_seconds gauge
+haproxy_backend_queue_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.058
+haproxy_backend_queue_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.058
+# TYPE haproxy_backend_connect_time_average_seconds gauge
+haproxy_backend_connect_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.059
+haproxy_backend_connect_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.059
+# TYPE haproxy_backend_response_time_average_seconds gauge
+haproxy_backend_response_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.06
+haproxy_backend_response_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.06
+# TYPE haproxy_backend_total_time_average_seconds gauge
+haproxy_backend_total_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.061
+haproxy_backend_total_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.061
+# TYPE haproxy_backend_failed_header_rewriting counter
+haproxy_backend_failed_header_rewriting_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2083
+haproxy_backend_failed_header_rewriting_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5083
+# TYPE haproxy_backend_connection_attempts counter
+haproxy_backend_connection_attempts_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2084
+haproxy_backend_connection_attempts_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5084
+# TYPE haproxy_backend_connection_reuses counter
+haproxy_backend_connection_reuses_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2085
+haproxy_backend_connection_reuses_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5085
+# TYPE haproxy_backend_http_cache_lookups counter
+haproxy_backend_http_cache_lookups_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2086
+# TYPE haproxy_backend_http_cache_hits counter
+haproxy_backend_http_cache_hits_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2087
+# TYPE haproxy_backend_max_queue_time_seconds gauge
+haproxy_backend_max_queue_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.09
+haproxy_backend_max_queue_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.09
+# TYPE haproxy_backend_max_connect_time_seconds gauge
+haproxy_backend_max_connect_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.091
+haproxy_backend_max_connect_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.091
+# TYPE haproxy_backend_max_response_time_seconds gauge
+haproxy_backend_max_response_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.092
+haproxy_backend_max_response_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.092
+# TYPE haproxy_backend_max_total_time_seconds gauge
+haproxy_backend_max_total_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1"} 2.093
+haproxy_backend_max_total_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be2"} 5.093
+# TYPE haproxy_backend_internal_errors counter
+haproxy_backend_internal_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2094
+haproxy_backend_internal_errors_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5094
+# TYPE haproxy_backend_uweight gauge
+haproxy_backend_uweight{hostname="localhost.localdomain",instance="local",proxy="be1"} 2099
+haproxy_backend_uweight{hostname="localhost.localdomain",instance="local",proxy="be2"} 5099
+# TYPE haproxy_backend_ssl_sessions counter
+haproxy_backend_ssl_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2114
+haproxy_backend_ssl_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5114
+# TYPE haproxy_backend_ssl_reused_sessions counter
+haproxy_backend_ssl_reused_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2115
+haproxy_backend_ssl_reused_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5115
+# TYPE haproxy_backend_ssl_failed_handshake counter
+haproxy_backend_ssl_failed_handshake_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2116
+haproxy_backend_ssl_failed_handshake_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5116
+# TYPE haproxy_backend_h2_headers_rcvd counter
+haproxy_backend_h2_headers_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2119
+haproxy_backend_h2_headers_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5119
+# TYPE haproxy_backend_h2_data_rcvd counter
+haproxy_backend_h2_data_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2120
+haproxy_backend_h2_data_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5120
+# TYPE haproxy_backend_h2_settings_rcvd counter
+haproxy_backend_h2_settings_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2121
+haproxy_backend_h2_settings_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5121
+# TYPE haproxy_backend_h2_rst_stream_rcvd counter
+haproxy_backend_h2_rst_stream_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2122
+haproxy_backend_h2_rst_stream_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5122
+# TYPE haproxy_backend_h2_goaway_rcvd counter
+haproxy_backend_h2_goaway_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2123
+haproxy_backend_h2_goaway_rcvd_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5123
+# TYPE haproxy_backend_h2_detected_connection_protocol_errors counter
+haproxy_backend_h2_detected_connection_protocol_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2124
+haproxy_backend_h2_detected_connection_protocol_errors_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5124
+# TYPE haproxy_backend_h2_detected_stream_protocol_errors counter
+haproxy_backend_h2_detected_stream_protocol_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2125
+haproxy_backend_h2_detected_stream_protocol_errors_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5125
+# TYPE haproxy_backend_h2_rst_stream_resp counter
+haproxy_backend_h2_rst_stream_resp_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2126
+haproxy_backend_h2_rst_stream_resp_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5126
+# TYPE haproxy_backend_h2_goaway_resp counter
+haproxy_backend_h2_goaway_resp_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2127
+haproxy_backend_h2_goaway_resp_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5127
+# TYPE haproxy_backend_h2_open_connections gauge
+haproxy_backend_h2_open_connections{hostname="localhost.localdomain",instance="local",proxy="be1"} 2128
+haproxy_backend_h2_open_connections{hostname="localhost.localdomain",instance="local",proxy="be2"} 5128
+# TYPE haproxy_backend_h2_backend_open_streams gauge
+haproxy_backend_h2_backend_open_streams{hostname="localhost.localdomain",instance="local",proxy="be1"} 2129
+haproxy_backend_h2_backend_open_streams{hostname="localhost.localdomain",instance="local",proxy="be2"} 5129
+# TYPE haproxy_backend_h2_connections counter
+haproxy_backend_h2_connections_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2130
+haproxy_backend_h2_connections_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5130
+# TYPE haproxy_backend_h2_backend_streams counter
+haproxy_backend_h2_backend_streams_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2131
+haproxy_backend_h2_backend_streams_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5131
+# TYPE haproxy_backend_h1_open_connections gauge
+haproxy_backend_h1_open_connections{hostname="localhost.localdomain",instance="local",proxy="be1"} 2132
+haproxy_backend_h1_open_connections{hostname="localhost.localdomain",instance="local",proxy="be2"} 5132
+# TYPE haproxy_backend_h1_open_streams gauge
+haproxy_backend_h1_open_streams{hostname="localhost.localdomain",instance="local",proxy="be1"} 2133
+haproxy_backend_h1_open_streams{hostname="localhost.localdomain",instance="local",proxy="be2"} 5133
+# TYPE haproxy_backend_h1_connections counter
+haproxy_backend_h1_connections_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2134
+haproxy_backend_h1_connections_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5134
+# TYPE haproxy_backend_h1_streams counter
+haproxy_backend_h1_streams_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2135
+haproxy_backend_h1_streams_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5135
+# TYPE haproxy_backend_h1_in_bytes counter
+haproxy_backend_h1_in_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2136
+haproxy_backend_h1_in_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5136
+# TYPE haproxy_backend_h1_out_bytes counter
+haproxy_backend_h1_out_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2137
+haproxy_backend_h1_out_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5137
+# TYPE haproxy_backend_h1_spliced_in_bytes counter
+haproxy_backend_h1_spliced_in_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2138
+haproxy_backend_h1_spliced_in_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5138
+# TYPE haproxy_backend_h1_spliced_out_bytes counter
+haproxy_backend_h1_spliced_out_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be1"} 2139
+haproxy_backend_h1_spliced_out_bytes_total{hostname="localhost.localdomain",instance="local",proxy="be2"} 5139
+# TYPE haproxy_server_current_queue gauge
+haproxy_server_current_queue{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3002
+# TYPE haproxy_server_max_queue gauge
+haproxy_server_max_queue{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3003
+# TYPE haproxy_server_current_sessions gauge
+haproxy_server_current_sessions{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3004
+# TYPE haproxy_server_max_sessions gauge
+haproxy_server_max_sessions{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3005
+# TYPE haproxy_server_limit_sessions gauge
+haproxy_server_limit_sessions{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3006
+# TYPE haproxy_server_sessions counter
+haproxy_server_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3007
+# TYPE haproxy_server_bytes_in counter
+haproxy_server_bytes_in_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3008
+# TYPE haproxy_server_bytes_out counter
+haproxy_server_bytes_out_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3009
+# TYPE haproxy_server_responses_denied counter
+haproxy_server_responses_denied_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3011
+# TYPE haproxy_server_connection_errors counter
+haproxy_server_connection_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3013
+# TYPE haproxy_server_response_errors counter
+haproxy_server_response_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3014
+# TYPE haproxy_server_retry_warnings counter
+haproxy_server_retry_warnings_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3015
+# TYPE haproxy_server_redispatch_warnings counter
+haproxy_server_redispatch_warnings_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3016
+# TYPE haproxy_server_status stateset
+haproxy_server_status{haproxy_server_status="DOWN",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_status{haproxy_server_status="UP",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 1
+haproxy_server_status{haproxy_server_status="MAINT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_status{haproxy_server_status="DRAIN",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_status{haproxy_server_status="NOLB",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_status{haproxy_server_status="no check",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_status{haproxy_server_status="DOWN",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_status{haproxy_server_status="UP",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_status{haproxy_server_status="MAINT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 1
+haproxy_server_status{haproxy_server_status="DRAIN",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_status{haproxy_server_status="NOLB",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_status{haproxy_server_status="no check",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+# TYPE haproxy_server_weight gauge
+haproxy_server_weight{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3018
+# TYPE haproxy_server_check_failures counter
+haproxy_server_check_failures_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3021
+# TYPE haproxy_server_check_up_down counter
+haproxy_server_check_up_down_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3022
+# TYPE haproxy_server_check_last_change_seconds gauge
+haproxy_server_check_last_change_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3023
+# TYPE haproxy_server_downtime_seconds counter
+haproxy_server_downtime_seconds_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3024
+# TYPE haproxy_server_queue_limit gauge
+haproxy_server_queue_limit{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3025
+# TYPE haproxy_server_current_throttle gauge
+haproxy_server_current_throttle{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3029
+# TYPE haproxy_server_loadbalanced counter
+haproxy_server_loadbalanced_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3030
+# TYPE haproxy_server_max_session_rate gauge
+haproxy_server_max_session_rate{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3035
+# TYPE haproxy_server_check_status stateset
+haproxy_server_check_status{haproxy_server_check_status="UNK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="INI",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="CHECKED",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="HANA",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="SOCKERR",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L4OK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L4TOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L4CON",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L6OK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L6TOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L6RSP",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7TOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7RSP",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7OKC",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7OK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 1
+haproxy_server_check_status{haproxy_server_check_status="L7STS",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="PROCERR",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="PROCTOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="PROCOK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 0
+haproxy_server_check_status{haproxy_server_check_status="UNK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="INI",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="CHECKED",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="HANA",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="SOCKERR",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L4OK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L4TOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L4CON",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L6OK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L6TOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L6RSP",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7TOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7RSP",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7OKC",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 1
+haproxy_server_check_status{haproxy_server_check_status="L7OK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="L7STS",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="PROCERR",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="PROCTOUT",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+haproxy_server_check_status{haproxy_server_check_status="PROCOK",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv2"} 0
+# TYPE haproxy_server_check_code gauge
+haproxy_server_check_code{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3037
+# TYPE haproxy_server_check_duration_seconds gauge
+haproxy_server_check_duration_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.038
+# TYPE haproxy_server_http_responses counter
+haproxy_server_http_responses_total{code="1xx",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3039
+haproxy_server_http_responses_total{code="2xx",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3040
+haproxy_server_http_responses_total{code="3xx",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3041
+haproxy_server_http_responses_total{code="4xx",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3042
+haproxy_server_http_responses_total{code="5xx",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3043
+haproxy_server_http_responses_total{code="other",hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3044
+# TYPE haproxy_server_client_aborts counter
+haproxy_server_client_aborts_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3049
+# TYPE haproxy_server_server_aborts counter
+haproxy_server_server_aborts_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3050
+# TYPE haproxy_server_last_session_seconds gauge
+haproxy_server_last_session_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3055
+# TYPE haproxy_server_queue_time_average_seconds gauge
+haproxy_server_queue_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.058
+# TYPE haproxy_server_connect_time_average_seconds gauge
+haproxy_server_connect_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.059
+# TYPE haproxy_server_response_time_average_seconds gauge
+haproxy_server_response_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.06
+# TYPE haproxy_server_total_time_average_seconds gauge
+haproxy_server_total_time_average_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.061
+# TYPE haproxy_server_failed_header_rewriting counter
+haproxy_server_failed_header_rewriting_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3083
+# TYPE haproxy_server_connection_attempts counter
+haproxy_server_connection_attempts_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3084
+# TYPE haproxy_server_connection_reuses counter
+haproxy_server_connection_reuses_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3085
+# TYPE haproxy_server_idle_connections_current gauge
+haproxy_server_idle_connections_current{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3088
+# TYPE haproxy_server_idle_connections_limit gauge
+haproxy_server_idle_connections_limit{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3089
+# TYPE haproxy_server_max_queue_time_seconds gauge
+haproxy_server_max_queue_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.09
+# TYPE haproxy_server_max_connect_time_seconds gauge
+haproxy_server_max_connect_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.091
+# TYPE haproxy_server_max_response_time_seconds gauge
+haproxy_server_max_response_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.092
+# TYPE haproxy_server_max_total_time_seconds gauge
+haproxy_server_max_total_time_seconds{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3.093
+# TYPE haproxy_server_internal_errors counter
+haproxy_server_internal_errors_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3094
+# TYPE haproxy_server_unsafe_idle_connections_current gauge
+haproxy_server_unsafe_idle_connections_current{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3095
+# TYPE haproxy_server_safe_idle_connections_current gauge
+haproxy_server_safe_idle_connections_current{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3096
+# TYPE haproxy_server_used_connections_current gauge
+haproxy_server_used_connections_current{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3097
+# TYPE haproxy_server_need_connections_current gauge
+haproxy_server_need_connections_current{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3098
+# TYPE haproxy_server_uweight gauge
+haproxy_server_uweight{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3099
+# TYPE haproxy_server_ssl_sessions counter
+haproxy_server_ssl_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3114
+# TYPE haproxy_server_ssl_reused_sessions counter
+haproxy_server_ssl_reused_sessions_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3115
+# TYPE haproxy_server_ssl_failed_handshake counter
+haproxy_server_ssl_failed_handshake_total{hostname="localhost.localdomain",instance="local",proxy="be1",server="srv1"} 3116
+# TYPE haproxy_sticktable_size gauge
+haproxy_sticktable_size{hostname="localhost.localdomain",instance="local",proxy="edge1",table="be1"} 204800
+haproxy_sticktable_size{hostname="localhost.localdomain",instance="local",proxy="edge1",table="fe1"} 1024
+# TYPE haproxy_sticktable_used gauge
+haproxy_sticktable_used{hostname="localhost.localdomain",instance="local",proxy="edge1",table="be1"} 5
+haproxy_sticktable_used{hostname="localhost.localdomain",instance="local",proxy="edge1",table="fe1"} 0
+# TYPE haproxy_up gauge
+haproxy_up{hostname="localhost.localdomain",instance="local",proxy="edge1"} 1
