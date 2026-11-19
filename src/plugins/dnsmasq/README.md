@@ -37,7 +37,7 @@ Within the **instance** blocks, the following options are allowed:
 **port** *port*
 
 > Service name or port number to connect to.
-> Defaults to 43
+> Defaults to 53
 
 **label** *key* *value*
 
@@ -46,13 +46,13 @@ Within the **instance** blocks, the following options are allowed:
 **timeout** *seconds*
 
 > Set the timeout for the DNS query to get metrics from dnsmasq.
-> TODO
+> Defaults to 1 second.
 
 **leases** */path/to/leases*
 
-> Leases file path.
+> Leases file path, used to report the number of DHCP leases.
+> If the file cannot be read the metric is not reported.
 > Default to */var/lib/misc/dnsmasq.leases*.
-> TODO
 
 **interval** *seconds*
 

@@ -34,16 +34,16 @@ Hostname or address to connect to.
 Default to \f(CW127.0.0.1\fP
 .It \fBport\fP \fIport\fP
 Service name or port number to connect to.
-Defaults to \f(CW43\fP
+Defaults to \f(CW53\fP
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBtimeout\fP \fIseconds\fP
 Set the timeout for the DNS query to get metrics from dnsmasq.
-TODO
+Defaults to 1 second.
 .It \fBleases\fP \fI/path/to/leases\fP
-Leases file path.
+Leases file path, used to report the number of DHCP leases.
+If the file cannot be read the metric is not reported.
 Default to \fI/var/lib/misc/dnsmasq.leases\fP.
-TODO
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected
 from this instance.
