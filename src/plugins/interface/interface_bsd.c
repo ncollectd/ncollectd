@@ -37,16 +37,6 @@
 #define IFA_TX_PACKT ifi_opackets
 #define IFA_RX_ERROR ifi_ierrors
 #define IFA_TX_ERROR ifi_oerrors
-    /* #endif HAVE_STRUCT_IF_DATA */
-
-#elif defined(HAVE_STRUCT_NET_DEVICE_STATS)
-#define IFA_DATA net_device_stats
-#define IFA_RX_BYTES rx_bytes
-#define IFA_TX_BYTES tx_bytes
-#define IFA_RX_PACKT rx_packets
-#define IFA_TX_PACKT tx_packets
-#define IFA_RX_ERROR rx_errors
-#define IFA_TX_ERROR tx_errors
 #else
 #error "No suitable type for `struct ifaddrs->ifa_data' found."
 #endif
@@ -69,6 +59,9 @@ int interface_read(void)
             continue;
 
         struct IFA_DATA *if_data = (struct IFA_DATA *)if_ptr->ifa_data;
+        if (if_data == NULL)
+            continue;
+
         if (!report_inactive && (if_data->IFA_RX_PACKT == 0) && (if_data->IFA_TX_PACKT == 0))
             continue;
 

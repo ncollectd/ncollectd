@@ -11,6 +11,7 @@ NCOLLECTD-INTERFACE(5) - File Formats Manual
 	    interface [incl|include|excl|exclude] interface
 	    report-inactive true|false
 	    unique-name true|false
+	    collect-vf-stats true|false
 	}
 
 # DESCRIPTION
@@ -55,6 +56,16 @@ The plugin support the following options:
 > separated by an underscore.
 
 > This option is only available on Solaris.
+
+**collect-vf-stats** *true|false*
+
+> If set to *true*, the configuration and the statistics of the SR-IOV
+> virtual functions (VF) of each interface are collected as well
+> (the **system\_interface\_vf\_\*&zwnj;** metrics, with the labels **mac** and
+> **vf\_num** of the virtual function).
+> The default value is *false*.
+
+> This option is only available on Linux.
 
 # SEE ALSO
 

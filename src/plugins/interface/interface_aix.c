@@ -41,7 +41,10 @@ int interface_read(void)
         return -1;
     }
 
-    for (int i = 0; i < num; i++) {
+    for (int i = 0; i < status; i++) {
+        if (!exclist_match(&excl_interface, ifstat[i].name))
+            continue;
+
         if (!report_inactive && (ifstat[i].ipackets == 0) && (ifstat[i].opackets == 0))
             continue;
 
