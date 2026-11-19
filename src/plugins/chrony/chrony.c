@@ -38,13 +38,14 @@
 #define CHRONY_DEFAULT_HOST "localhost"
 #define CHRONY_DEFAULT_PORT "323"
 #define CHRONY_DEFAULT_TIMEOUT 2
+#define CHRONY_MAX_SOURCES 4096
 
 /* Chronyd command packet variables adapted from chrony/candm.h (GPL2) */
 #define PROTO_VERSION_NUMBER 6
 #define IPADDR_UNSPEC 0
 #define IPADDR_INET4 1
 #define IPADDR_INET6 2
-#define IPV6_STR_MAX_SIZE (8 * 4 + 7 + 1)
+#define IPV6_STR_MAX_SIZE INET6_ADDRSTRLEN
 #define MODE_REFCLOCK 2
 
 typedef enum {
@@ -232,7 +233,6 @@ typedef struct __attribute__((packed)) {
 
 enum {
     FAM_CHRONY_UP,
-    FAM_CHRONY_CLOCK_LAST_MEAS,
     FAM_CHRONY_CLOCK_LAST_UPDATE,
     FAM_CHRONY_CLOCK_SKEW,
     FAM_CHRONY_CLOCK_STRATUM,
@@ -328,8 +328,7 @@ static metric_family_t fams[FAM_CHRONY_MAX] = {
     [FAM_CHRONY_SOURCE_CLOCK_LAST_MEAS] = {
         .name = "chrony_source_clock_last_measurement_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The offset between the local clock and the source at the last measurement "
-                "in seconds."
+        .help = "Seconds since the last sample was received from the source."
     },
     [FAM_CHRONY_SOURCE_CLOCK_REACHABILITY] = {
         .name = "chrony_source_clock_reachability",
@@ -403,7 +402,11 @@ static int connect_client(const char *hostname, const char *service)
     int fd = -1;
     for (struct addrinfo *ai_ptr = ai_list; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next) {
         /* create our socket descriptor */
-        fd = socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+        int socktype = ai_ptr->ai_socktype;
+#ifdef SOCK_CLOEXEC
+        socktype |= SOCK_CLOEXEC;
+#endif
+        fd = socket(ai_ptr->ai_family, socktype, ai_ptr->ai_protocol);
         if (fd < 0)
             continue;
 
@@ -482,7 +485,7 @@ static int chrony_connect(chrony_ctx_t *ctx)
     PLUGIN_DEBUG("Connecting to %s:%s", ctx->host, ctx->port);
     int socket = connect_client(ctx->host, ctx->port);
     if (socket < 0) {
-        PLUGIN_ERROR("Error connecting to daemon. Errno = %d", errno);
+        PLUGIN_ERROR("Error connecting to daemon.");
         return -1;
     }
     PLUGIN_DEBUG("Connected");
@@ -540,7 +543,7 @@ static int chrony_query(chrony_ctx_t *ctx, const int command, chrony_request_t *
         if (chrony_connect(ctx) == 0) {
             ctx->is_connected = 1;
         } else {
-            PLUGIN_ERROR("Unable to connect. Errno = %d", errno);
+            PLUGIN_ERROR("Unable to connect.");
             return -1;
         }
     }
@@ -597,6 +600,12 @@ static int chrony_query(chrony_ctx_t *ctx, const int command, chrony_request_t *
         if (chrony_recv_response(ctx, p_resp, resp_size, p_resp_size) != 0)
             break;
 
+        if (*p_resp_size < sizeof(p_resp->header)) {
+            PLUGIN_ERROR("Short reply packet (Was: %zu, expected: %zu)",
+                         *p_resp_size, resp_size);
+            return -1;
+        }
+
         PLUGIN_DEBUG("Received response: .version = %u, .type = %u, .cmd = "
                      "%u, .reply = %u, .status = %u, .seq = %u",
                      p_resp->header.f_version, p_resp->header.f_type,
@@ -621,7 +630,7 @@ static int chrony_query(chrony_ctx_t *ctx, const int command, chrony_request_t *
         }
         if (p_resp->header.f_cmd != p_req->header.f_cmd) {
             PLUGIN_ERROR("Wrong reply command (Was: %d, expected: %d)",
-                         p_resp->header.f_cmd, p_req->header.f_cmd);
+                         ntohs(p_resp->header.f_cmd), ntohs(p_req->header.f_cmd));
             return -1;
         }
 
@@ -631,13 +640,20 @@ static int chrony_query(chrony_ctx_t *ctx, const int command, chrony_request_t *
             return -1;
         }
 
-        switch (p_resp->header.f_status) {
+        uint16_t resp_status = ntohs(p_resp->header.f_status);
+        switch (resp_status) {
         case STT_SUCCESS:
             PLUGIN_DEBUG("Reply packet status STT_SUCCESS");
             break;
         default:
             PLUGIN_ERROR("Reply packet contains error status: %d (expected: %d)",
-                         p_resp->header.f_status, STT_SUCCESS);
+                         resp_status, STT_SUCCESS);
+            return -1;
+        }
+
+        if (*p_resp_size < resp_size) {
+            PLUGIN_ERROR("Short reply packet (Was: %zu, expected: %zu)",
+                         *p_resp_size, resp_size);
             return -1;
         }
 
@@ -696,8 +712,8 @@ static int chrony_init_seq(chrony_ctx_t *ctx)
     if (fh >= 0) {
         ssize_t rc = read(fh, &ctx->rand, sizeof(ctx->rand));
         if (rc != sizeof(ctx->rand)) {
-            PLUGIN_ERROR("Reading from random source '%s' failed: %s (%d)",
-                         URAND_DEVICE_PATH, strerror(errno), errno);
+            PLUGIN_ERROR("Reading from random source '%s' failed: %s",
+                         URAND_DEVICE_PATH, STRERRNO);
             close(fh);
             return -1;
         }
@@ -710,8 +726,8 @@ static int chrony_init_seq(chrony_ctx_t *ctx)
             if (fh >= 0) {
                 ssize_t rc = read(fh, &ctx->rand, sizeof(ctx->rand));
                 if (rc != sizeof(ctx->rand)) {
-                    PLUGIN_ERROR("Reading from random source '%s' failed: %s (%d)",
-                                 RAND_DEVICE_PATH, strerror(errno), errno);
+                    PLUGIN_ERROR("Reading from random source '%s' failed: %s",
+                                 RAND_DEVICE_PATH, STRERRNO);
                     close(fh);
                     return -1;
                 }
@@ -723,8 +739,8 @@ static int chrony_init_seq(chrony_ctx_t *ctx)
                 ctx->rand = time(NULL) ^ getpid();
             }
         } else {
-            PLUGIN_ERROR("Opening random source '%s' failed: %s (%d)",
-                         URAND_DEVICE_PATH, strerror(errno), errno);
+            PLUGIN_ERROR("Opening random source '%s' failed: %s",
+                         URAND_DEVICE_PATH, STRERRNO);
             return -1;
         }
     }
@@ -739,7 +755,7 @@ static int chrony_request_daemon_stats(chrony_ctx_t *ctx)
     chrony_init_req(&chrony_req);
 
     size_t chrony_resp_size;
-    chrony_response_t chrony_resp;
+    chrony_response_t chrony_resp = {0};
     int rc = chrony_query(ctx, REQ_TRACKING, &chrony_req, &chrony_resp, &chrony_resp_size);
     if (rc != 0) {
         PLUGIN_ERROR("chrony_query (REQ_TRACKING) failed with status %i", rc);
@@ -828,7 +844,7 @@ static int chrony_request_sources_count(chrony_ctx_t *ctx, unsigned int *count)
     /* Requests the number of time sources from the chrony daemon */
     size_t chrony_resp_size;
     chrony_request_t chrony_req;
-    chrony_response_t chrony_resp;
+    chrony_response_t chrony_resp = {0};
 
     PLUGIN_DEBUG("Requesting data");
     chrony_init_req(&chrony_req);
@@ -839,6 +855,10 @@ static int chrony_request_sources_count(chrony_ctx_t *ctx, unsigned int *count)
     }
 
     *count = ntohl(chrony_resp.body.n_sources.f_n_sources);
+    if (*count > CHRONY_MAX_SOURCES) {
+        PLUGIN_ERROR("Too many clock sources: %u (max: %d)", *count, CHRONY_MAX_SOURCES);
+        return -1;
+    }
     PLUGIN_DEBUG("Getting data of %u clock sources", *count);
 
     return 0;
@@ -850,7 +870,7 @@ static int chrony_request_source_data(chrony_ctx_t *ctx, int src_idx, char *src_
     /* Perform Source data request for source #p_src_idx */
     size_t chrony_resp_size;
     chrony_request_t chrony_req;
-    chrony_response_t chrony_resp;
+    chrony_response_t chrony_resp = {0};
 
     chrony_init_req(&chrony_req);
     chrony_req.body.source_data.f_index = htonl(src_idx);
@@ -920,7 +940,7 @@ static int chrony_request_source_stats(chrony_ctx_t *ctx, int src_idx,
     /* Perform Source stats request for source #src_idx */
     size_t chrony_resp_size;
     chrony_request_t chrony_req;
-    chrony_response_t chrony_resp;
+    chrony_response_t chrony_resp = {0};
     double skew_ppm, frequency_error;
 
     if (is_reachable == 0) {
@@ -990,6 +1010,12 @@ static int chrony_read(user_data_t *user_data)
     /* Get daemon stats */
     int status = chrony_request_daemon_stats(ctx);
     if (status != 0) {
+        /* Close the socket so the next read resolves the host and connects again. */
+        if (ctx->is_connected) {
+            close(ctx->socket);
+            ctx->socket = -1;
+            ctx->is_connected = false;
+        }
         metric_family_append(&ctx->fams[FAM_CHRONY_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
         plugin_dispatch_metric_family(&ctx->fams[FAM_CHRONY_UP], 0);
         return 0;
@@ -1095,6 +1121,14 @@ static int chrony_config_instance(config_item_t *ci)
         return -1;
     }
 
+    /* A zero timeout would disable SO_RCVTIMEO and block recv forever. */
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(ctx->timeout);
+    if ((tv.tv_sec == 0) && (tv.tv_usec == 0)) {
+        PLUGIN_WARNING("Invalid 'timeout' for instance '%s', using the default of %d seconds.",
+                       ctx->name, CHRONY_DEFAULT_TIMEOUT);
+        ctx->timeout = TIME_T_TO_CDTIME_T(CHRONY_DEFAULT_TIMEOUT);
+    }
+
     if (ctx->host == NULL) {
         ctx->host = strdup(CHRONY_DEFAULT_HOST);
         if (ctx->host == NULL) {
@@ -1113,7 +1147,12 @@ static int chrony_config_instance(config_item_t *ci)
         }
     }
 
-    label_set_add(&ctx->labels, true, "instance", ctx->name);
+    status = label_set_add(&ctx->labels, true, "instance", ctx->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the 'instance' label.");
+        chrony_free(ctx);
+        return -1;
+    }
 
     return plugin_register_complex_read("chrony", ctx->name, chrony_read, interval,
                                         &(user_data_t){.data = ctx, .free_func = chrony_free});
