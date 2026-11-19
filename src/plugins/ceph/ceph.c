@@ -38,6 +38,9 @@
 /** Timeout interval in seconds */
 #define CEPH_TIMEOUT_INTERVAL 1
 
+/** Maximum size of a JSON reply from the admin socket */
+#define CEPH_MAX_JSON_LEN (64 * 1024 * 1024)
+
 typedef enum {
     PERF_COUNTER_NONE       = 0x00,
     PERF_COUNTER_TIME       = 0x01, /* float (measuring seconds) */
@@ -148,13 +151,13 @@ static char *metric_pair(char *prefix, char *suffix)
         return NULL;
     }
 
-    if (valid_metric_chars[(int)prefix[0]] != 1)
+    if (valid_metric_chars[(unsigned char)prefix[0]] != 1)
         metric[0] = '_';
     else
         metric[0] = prefix[0];
 
     for (size_t i=1; i < len_prefix; i++) {
-        if (valid_metric_chars[(int)prefix[i]] == 0)
+        if (valid_metric_chars[(unsigned char)prefix[i]] == 0)
             metric[i] = '_';
         else
             metric[i] = prefix[i];
@@ -163,7 +166,7 @@ static char *metric_pair(char *prefix, char *suffix)
     metric[len_prefix] = '_';
 
     for (size_t i=0; i < len_suffix; i++) {
-        if (valid_metric_chars[(int)suffix[i]] == 0)
+        if (valid_metric_chars[(unsigned char)suffix[i]] == 0)
             metric[i + len_prefix + 1] = '_';
         else
             metric[i + len_prefix + 1] = suffix[i];
@@ -220,8 +223,10 @@ static bool ceph_schema_cb_number(void *ctx, const char *number_val, size_t numb
         }
 
         char num[64] = "";
-        if (number_len > sizeof(num)-1)
-            return 1;
+        if (number_len > sizeof(num)-1) {
+            PLUGIN_WARNING("Type of '%s' is too long, ignoring.", state->perf_value->name);
+            return true;
+        }
         memcpy(num, number_val, number_len);
         num[number_len] = '\0';
 
@@ -241,15 +246,10 @@ static bool ceph_schema_cb_number(void *ctx, const char *number_val, size_t numb
 //            } else {
 //            f->dump_string("value_type", "integer-2d-histogram");
 //            }
+        } else if (state->perf_value->type & PERF_COUNTER_COUNTER) {
+            state->perf_value->perf_metric = PERF_METRIC_COUNTER;
         } else {
-            if (state->perf_value->type & PERF_COUNTER_TIME) {
-                state->perf_value->perf_metric = PERF_METRIC_GAUGE;
-            } else {
-                state->perf_value->perf_metric = PERF_METRIC_COUNTER;
-//                if (state->perf_value->type & PERF_COUNTER_COUNTER)
-//                else
-//                    state->perf_value->perf_metric = PERF_METRIC_XXX;
-            }
+            state->perf_value->perf_metric = PERF_METRIC_GAUGE;
         }
         state->perf_value->metric = metric_pair(state->perf_key->name, state->perf_value->name);
 
@@ -517,7 +517,10 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
                     .type = METRIC_TYPE_COUNTER,
                     .help = state->perf_value->description,
                 };
-                metric_family_append(&fam, VALUE_COUNTER(atoi(num)), state->labels, NULL);
+                value_t value = (state->perf_value->type & PERF_COUNTER_TIME)
+                                ? VALUE_COUNTER_FLOAT64(atof(num))
+                                : VALUE_COUNTER(atoi(num));
+                metric_family_append(&fam, value, state->labels, NULL);
                 plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }
         }
@@ -528,10 +531,10 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
             case PERF_LONGRUN_SUM: {
                 metric_family_t fam = {
                     .name = state->perf_value->metric_longrun[PERF_LONGRUN_SUM],
-                    .type = METRIC_TYPE_GAUGE,
+                    .type = METRIC_TYPE_COUNTER,
                     .help = state->perf_value->description,
                 };
-                metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
+                metric_family_append(&fam, VALUE_COUNTER_FLOAT64(atof(num)), state->labels, NULL);
                 plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }   break;
             case PERF_LONGRUN_AVGTIME: {
@@ -546,10 +549,11 @@ static bool ceph_data_cb_number(void *ctx, const char *number_val, size_t number
             case PERF_LONGRUN_AVGCOUNT: {
                 metric_family_t fam = {
                     .name = state->perf_value->metric_longrun[PERF_LONGRUN_AVGCOUNT],
-                    .type = METRIC_TYPE_GAUGE,
+                    .type = METRIC_TYPE_COUNTER,
                     .help = state->perf_value->description,
                 };
-                metric_family_append(&fam, VALUE_GAUGE(atof(num)), state->labels, NULL);
+                metric_family_append(&fam, VALUE_COUNTER(strtoull(num, NULL, 10)),
+                                     state->labels, NULL);
                 plugin_dispatch_metric_family_filtered(&fam, state->filter, state->time);
             }   break;
             default:
@@ -691,6 +695,23 @@ static xson_callbacks_t data_callbacks = {
     .xson_end_array   = NULL,
 };
 
+static void ceph_schema_free(c_avl_tree_t *schema)
+{
+    if (schema == NULL)
+        return;
+
+    while (true) {
+        perf_key_t *perf_key = NULL;
+        char *key = NULL;
+        int status = c_avl_pick(schema, (void *)&key, (void *)&perf_key);
+        if (status != 0)
+            break;
+        ceph_perf_key_free(perf_key);
+    }
+
+    c_avl_destroy(schema);
+}
+
 static void ceph_daemon_free(void *arg)
 {
     ceph_daemon_t *cd = arg;
@@ -702,17 +723,7 @@ static void ceph_daemon_free(void *arg)
     label_set_reset(&cd->labels);
     plugin_filter_free(cd->filter);
 
-    if (cd->schema!= NULL) {
-        while (true) {
-            perf_key_t *perf_key = NULL;
-            char *key = NULL;
-            int status = c_avl_pick(cd->schema, (void *)&key, (void *)&perf_key);
-            if (status != 0)
-                break;
-            ceph_perf_key_free(perf_key);
-        }
-        c_avl_destroy(cd->schema);
-    }
+    ceph_schema_free(cd->schema);
 
     free(cd);
 }
@@ -731,22 +742,24 @@ static int ceph_conn_connect(ceph_conn_t *io)
         return err;
     }
 
-    struct sockaddr_un address = {0};
-    address.sun_family = AF_UNIX;
-    ssnprintf(address.sun_path, sizeof(address.sun_path), "%s", io->d->asok_path);
     int err;
-    RETRY_ON_EINTR(err, connect(fd, (struct sockaddr *)&address,
-                                                            sizeof(struct sockaddr_un)));
-    if (err < 0) {
-        PLUGIN_ERROR("ceph_conn_connect: connect(%d) failed: error %d", fd, err);
-        close(fd);
-        return err;
-    }
-
     int flags = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
         err = -errno;
         PLUGIN_ERROR("ceph_conn_connect: fcntl(%d, O_NONBLOCK) error %d", fd, err);
+        close(fd);
+        return err;
+    }
+
+    struct sockaddr_un address = {0};
+    address.sun_family = AF_UNIX;
+    ssnprintf(address.sun_path, sizeof(address.sun_path), "%s", io->d->asok_path);
+    /* Non-blocking connect: completion is detected by polling for POLLOUT
+     * in the CSTATE_WRITE_REQUEST state, bounded by the timeout. */
+    RETRY_ON_EINTR(err, connect(fd, (struct sockaddr *)&address,
+                                                            sizeof(struct sockaddr_un)));
+    if ((err < 0) && (err != -EINPROGRESS)) {
+        PLUGIN_ERROR("ceph_conn_connect: connect(%d) failed: error %d", fd, err);
         close(fd);
         return err;
     }
@@ -797,34 +810,35 @@ static int ceph_conn_process_json(ceph_conn_t *io)
     }
 
     json_status_t status = json_parser_parse(&handle, io->json, io->json_len);
-    switch (status) {
-    case JSON_STATUS_OK: {
-        unsigned char *errmsg = json_parser_get_error(&handle, 1, io->json,
-                                                                  (unsigned int)io->json_len);
-        PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
-        json_parser_free_error(errmsg);
-        json_parser_free(&handle);
-        return 1;
-    }   break;
-    case JSON_STATUS_CLIENT_CANCELED:
-        json_parser_free(&handle);
-        return 1;
-        break;
-    default:
-        break;
-    }
+    if (status == JSON_STATUS_OK)
+        status = json_parser_complete(&handle);
 
-    status = json_parser_complete(&handle);
     if (status != JSON_STATUS_OK) {
-        unsigned char *errmsg = json_parser_get_error(&handle, 0, NULL, 0);
-        PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
+        if (status == JSON_STATUS_CLIENT_CANCELED) {
+            json_parser_free(&handle);
+            if (io->request_type == ASOK_REQ_SCHEMA) {
+                ceph_schema_free(io->yajl.tree);
+                io->yajl.tree = NULL;
+            }
+            return 1;
+        }
+        unsigned char *errmsg = json_parser_get_error(&handle, 1, io->json,
+                                                      (unsigned int)io->json_len);
+        PLUGIN_ERROR("json_parse failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
         json_parser_free(&handle);
+        if (io->request_type == ASOK_REQ_SCHEMA) {
+            ceph_schema_free(io->yajl.tree);
+            io->yajl.tree = NULL;
+        }
         return 1;
     }
 
-    if (io->request_type == ASOK_REQ_SCHEMA)
+    if (io->request_type == ASOK_REQ_SCHEMA) {
+        ceph_schema_free(io->d->schema);
         io->d->schema = io->yajl.tree;
+        io->yajl.tree = NULL;
+    }
 
     json_parser_free(&handle);
     return 0;
@@ -890,6 +904,11 @@ static ssize_t ceph_conn_handle_event(ceph_conn_t *io)
                      io->d->name, io->state, ret);
         if (ret < 0)
             return ret;
+        if (ret == 0) {
+            PLUGIN_ERROR("ceph_conn_handle_event(name=%s,state=%u): unexpected end of file",
+                         io->d->name, io->state);
+            return -ECONNRESET;
+        }
 
         io->amt += ret;
         if (io->amt >= sizeof(io->d->version)) {
@@ -914,12 +933,22 @@ static ssize_t ceph_conn_handle_event(ceph_conn_t *io)
                      io->d->name, io->state, ret);
         if (ret < 0)
             return ret;
+        if (ret == 0) {
+            PLUGIN_ERROR("ceph_conn_handle_event(name=%s,state=%u): unexpected end of file",
+                         io->d->name, io->state);
+            return -ECONNRESET;
+        }
         io->amt += ret;
         if (io->amt >= sizeof(io->json_len)) {
             io->json_len = ntohl(io->json_len);
+            if ((io->json_len == 0) || (io->json_len > CEPH_MAX_JSON_LEN)) {
+                PLUGIN_ERROR("ceph_conn_handle_event(name=%s): invalid JSON length %" PRIu32,
+                             io->d->name, io->json_len);
+                return -EMSGSIZE;
+            }
             io->amt = 0;
             io->state = CSTATE_READ_JSON;
-            io->json = calloc(1, io->json_len + 1);
+            io->json = calloc(1, (size_t)io->json_len + 1);
             if (!io->json) {
                 PLUGIN_ERROR("error callocing io->json");
                 return -ENOMEM;
@@ -933,6 +962,11 @@ static ssize_t ceph_conn_handle_event(ceph_conn_t *io)
                      io->d->name, io->state, ret);
         if (ret < 0)
             return ret;
+        if (ret == 0) {
+            PLUGIN_ERROR("ceph_conn_handle_event(name=%s,state=%u): unexpected end of file",
+                         io->d->name, io->state);
+            return -ECONNRESET;
+        }
         io->amt += ret;
         if (io->amt >= io->json_len) {
             /* coverity[TAINTED_SCALAR] */
@@ -964,11 +998,8 @@ static int ceph_conn_prepare(ceph_conn_t *io, struct pollfd *fds)
     switch (io->state) {
     case CSTATE_UNCONNECTED:
         ret = ceph_conn_connect(io);
-        if (ret > 0) {
-            return -ret;
-        } else if (ret < 0) {
+        if (ret < 0)
             return ret;
-        }
         fds->fd = io->asok;
         fds->events = POLLOUT;
         return 1;
@@ -1008,8 +1039,7 @@ static ssize_t ceph_conn_loop(ceph_daemon_t *cd, uint32_t request_type)
         ret = ceph_conn_prepare(&io, &fd);
         if (ret < 0) {
             PLUGIN_WARNING("ceph_conn_prepare(name=%s,st=%u)=%zd", io.d->name, io.state, ret);
-            ceph_conn_close(&io);
-            io.request_type = ASOK_REQ_NONE;
+            goto done;
         }
         if (ret != 1) {
             ret = 0;
@@ -1037,15 +1067,14 @@ static ssize_t ceph_conn_loop(ceph_daemon_t *cd, uint32_t request_type)
         } else if (ceph_conn_validate_revents(&io, fd.revents)) {
             PLUGIN_WARNING("cconn(name=%s,st=%u): revents validation error: revents=0x%08x",
                             io.d->name, io.state, (unsigned int)fd.revents);
-            ceph_conn_close(&io);
-            io.request_type = ASOK_REQ_NONE;
+            ret = -EIO;
+            goto done;
         } else {
             ret = ceph_conn_handle_event(&io);
             if (ret) {
                 PLUGIN_WARNING("ceph_conn_handle_event(name=%s,st=%u): error %zd",
                                 io.d->name, io.state, ret);
-                ceph_conn_close(&io);
-                io.request_type = ASOK_REQ_NONE;
+                goto done;
             }
         }
     }
@@ -1065,10 +1094,22 @@ static int ceph_read(user_data_t *user_data)
         int status = (int)ceph_conn_loop(cd, ASOK_REQ_VERSION);
         if (status != 0)
             return -1;
+        if (cd->schema == NULL) {
+            PLUGIN_ERROR("Failed to get the perf schema from daemon '%s'.", cd->name);
+            return -1;
+        }
         cd->have_schema = true;
     }
 
-    return (int)ceph_conn_loop(cd, ASOK_REQ_DATA);
+    int status = (int)ceph_conn_loop(cd, ASOK_REQ_DATA);
+    if (status != 0) {
+        /* The daemon may have been restarted with different counters:
+         * fetch the schema again in the next read. */
+        cd->have_schema = false;
+        return -1;
+    }
+
+    return 0;
 }
 
 static int ceph_config_daemon(config_item_t *ci)
@@ -1116,12 +1157,16 @@ static int ceph_config_daemon(config_item_t *ci)
 
     if (status == 0) {
         if (cd->asok_path == NULL) {
-            PLUGIN_ERROR("%s: you must configure an administrative socket path.\n", cd->name);
+            PLUGIN_ERROR("%s: you must configure an administrative socket path.", cd->name);
             status = -1;
         } else if (!((cd->asok_path[0] == '/') ||
                      (cd->asok_path[0] == '.' && cd->asok_path[1] == '/'))) {
             PLUGIN_ERROR("%s: administrative socket paths must begin "
-                         "with '/' or './' Can't parse: '%s'\n", cd->name, cd->asok_path);
+                         "with '/' or './' Can't parse: '%s'", cd->name, cd->asok_path);
+            status = -1;
+        } else if (strlen(cd->asok_path) >= sizeof(((struct sockaddr_un *)0)->sun_path)) {
+            PLUGIN_ERROR("%s: administrative socket path '%s' is too long.",
+                         cd->name, cd->asok_path);
             status = -1;
         }
     }
