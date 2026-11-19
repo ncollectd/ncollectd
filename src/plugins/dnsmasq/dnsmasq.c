@@ -4,11 +4,11 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/random.h"
+#include "libutils/socket.h"
 
 #include <netdb.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/un.h>
 
 static const char *dnsmsq_leases_file = "/var/lib/misc/dnsmasq.leases";
 
@@ -22,6 +22,7 @@ enum {
     FAM_DNSMASQ_AUTH,
     FAM_DNSMASQ_SERVERS_QUERIES,
     FAM_DNSMASQ_SERVERS_QUERIES_FAILED,
+    FAM_DNSMASQ_DHCP_LEASES,
     FAM_DNSMASQ_MAX,
 };
 
@@ -71,6 +72,11 @@ static metric_family_t fams[FAM_DNSMASQ_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "DNS queries failed on upstream server.",
     },
+    [FAM_DNSMASQ_DHCP_LEASES] = {
+        .name = "dnsmasq_dhcp_leases",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of DHCP leases present in the leases file.",
+    },
 };
 
 typedef struct {
@@ -81,7 +87,6 @@ typedef struct {
     label_set_t labels;
     plugin_filter_t *filter;
     struct timeval timeout;
-    struct sockaddr_in dst;
     int sd;
     metric_family_t fams[FAM_DNSMASQ_MAX];
 } dnsmasq_t;
@@ -90,6 +95,10 @@ typedef struct {
 #define DNS_RCODE_NOERROR  0
 #define DNS_CLASS_CHAOS    3
 #define DNS_TYPE_TXT       16
+#define DNS_TYPE_OPT       41
+
+#define DNS_EDNS0_SIZE     4096
+#define DNS_OPT_RR_SIZE    11
 
 #define DNS_NAME_MAX_SIZE  255
 
@@ -115,17 +124,18 @@ typedef struct {
     uint16_t rdlength;
 } __attribute__((packed)) dns_answer_t;
 
+/* Split the TXT rdata in buffer into NUL terminated strings.
+ * The NUL terminator of the last string is written at buffer[size], so the
+ * caller must provide a buffer of at least size + 1 bytes. */
 static int dns_split_txt (uint8_t *buffer, size_t size, char **fields, size_t nfields)
 {
-    if (size == 0)
+    if (size <= 1)
         return -1;
 
     size_t n = 0;
     uint8_t *ptr = buffer;
     uint8_t len = *(ptr++);
-    while(true) {
-        if (((ptr - buffer) + 1 ) > (long int)size)
-            return n;
+    while (true) {
         if (len == 0)
             return n;
         if (((ptr - buffer) + len) > (long int)size)
@@ -133,6 +143,8 @@ static int dns_split_txt (uint8_t *buffer, size_t size, char **fields, size_t nf
         fields[n++] = (char *)ptr;
         ptr += len;
         len = *ptr;
+        if (((ptr - buffer) + 1 ) > (long int)size)
+            return n;
         *(ptr++) = '\0';
         if (n >= nfields)
             return n;
@@ -141,13 +153,24 @@ static int dns_split_txt (uint8_t *buffer, size_t size, char **fields, size_t nf
     return n;
 }
 
-static int dns_response(uint8_t *buffer, size_t size)
+static int dns_response(uint8_t *buffer, size_t size, uint16_t id,
+                        const uint8_t *question, size_t question_size)
 {
     if (sizeof(dns_header_t) > size)
         return -1;
 
     dns_header_t *hdr = (dns_header_t*)buffer;
-    if (((ntohs(hdr->flags) & 0xf) != 0) || (ntohs(hdr->qdcount) != 1))
+    if (ntohs(hdr->id) != id)
+        return -1;
+    /* Must be a response (QR=1) with RCODE=NOERROR */
+    if (((ntohs(hdr->flags) & 0x8000) == 0) || ((ntohs(hdr->flags) & 0xf) != 0) ||
+        (ntohs(hdr->qdcount) != 1) || (ntohs(hdr->ancount) < 1))
+        return -1;
+
+    /* The question section must match the one sent */
+    if ((sizeof(dns_header_t) + question_size) > size)
+        return -1;
+    if (memcmp(buffer + sizeof(dns_header_t), question, question_size) != 0)
         return -1;
 
     uint8_t *ptr = buffer + sizeof(dns_header_t);
@@ -172,7 +195,8 @@ static int dns_response(uint8_t *buffer, size_t size)
 
     ptr += sizeof(dns_answer_t);
     int rdlength = ntohs(answer->rdlength);
-    if ((rdlength == 0) || ((ptr - buffer) + rdlength) != (long int)size)
+    /* The answer may be followed by the OPT RR (EDNS0) in the additional section. */
+    if ((rdlength == 0) || ((ptr - buffer) + rdlength) > (long int)size)
         return -1;
 
     memmove(buffer, ptr, rdlength);
@@ -183,7 +207,8 @@ static int dns_bind_query(uint8_t *buffer, size_t size, uint64_t id, char *txt_q
 {
     size_t txt_len = strlen(txt_query);
     size_t bind_len = strlen("bind");
-    size_t hdr_size = sizeof(dns_header_t) + txt_len + bind_len + 3 + sizeof(dns_query_t);
+    size_t hdr_size = sizeof(dns_header_t) + txt_len + bind_len + 3 + sizeof(dns_query_t)
+                      + DNS_OPT_RR_SIZE;
     if (hdr_size > size)
         return -1;
 
@@ -192,6 +217,7 @@ static int dns_bind_query(uint8_t *buffer, size_t size, uint64_t id, char *txt_q
     hdr->id = htons(id);
     hdr->flags = htons (0x0100); /* QR=0, RD=1 */
     hdr->qdcount = htons(1);
+    hdr->arcount = htons(1);
 
     uint8_t *ptr = buffer + sizeof(*hdr);
 
@@ -205,30 +231,44 @@ static int dns_bind_query(uint8_t *buffer, size_t size, uint64_t id, char *txt_q
 
     dns_query_t *query = (dns_query_t *)ptr;
     query->qclass = htons(DNS_CLASS_CHAOS);
-    query->qtype    = htons(DNS_TYPE_TXT);
+    query->qtype = htons(DNS_TYPE_TXT);
+    ptr += sizeof(dns_query_t);
+
+    /* OPT RR (EDNS0) to announce a larger UDP payload size and avoid truncation */
+    uint16_t opt_type = htons(DNS_TYPE_OPT);
+    uint16_t opt_class = htons(DNS_EDNS0_SIZE);
+    *(ptr++) = 0; /* root name */
+    memcpy(ptr, &opt_type, sizeof(opt_type));
+    ptr += sizeof(opt_type);
+    memcpy(ptr, &opt_class, sizeof(opt_class));
+    ptr += sizeof(opt_class);
+    memset(ptr, 0, 4 + 2); /* ttl (extended rcode and flags) and rdlength */
 
     return hdr_size;
 }
 
-int dns_query(dnsmasq_t *dns, char *buffer, size_t buffer_size, int id,
-              char *txt_query, char **fields, size_t nfields)
+static int dns_query(dnsmasq_t *dns, char *buffer, size_t buffer_size, int16_t id,
+                     char *txt_query, char **fields, size_t nfields)
 {
     int size = dns_bind_query((uint8_t *)buffer, buffer_size, id, txt_query);
     if (size < 0)
         return 0;
 
-    socklen_t addrlen = sizeof(dns->dst);
-    int send_size = sendto(dns->sd, buffer, size, 0, (struct sockaddr *)&dns->dst, addrlen);
+    uint8_t question[DNS_NAME_MAX_SIZE + sizeof(dns_query_t)];
+    size_t question_size = size - sizeof(dns_header_t);
+    if (question_size > sizeof(question))
+        return 0;
+    memcpy(question, buffer + sizeof(dns_header_t), question_size);
+
+    int send_size = send(dns->sd, buffer, size, 0);
     if (size != send_size)
         return 0;
 
-    addrlen = 0;
-    int recv_size = recvfrom(dns->sd, buffer, buffer_size, 0,
-                             (struct sockaddr *)&dns->dst, &addrlen);
+    int recv_size = recv(dns->sd, buffer, buffer_size, 0);
     if (recv_size < 0)
-     return 0;
+        return 0;
 
-    size = dns_response((uint8_t *)buffer, recv_size);
+    size = dns_response((uint8_t *)buffer, recv_size, id, question, question_size);
     if (size < 0)
         return 0;
 
@@ -242,9 +282,13 @@ static int dnsmasq_leases(char *filename)
         return -1;
 
     int lines = 0;
-    char buffer[256];
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-        lines++;
+    char buffer[4096];
+    size_t len;
+    while ((len = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
+        for (size_t i = 0; i < len; i++) {
+            if (buffer[i] == '\n')
+                lines++;
+        }
     }
 
     fclose(fp);
@@ -270,45 +314,66 @@ static int dnsmasq_read(user_data_t *user_data)
 {
     dnsmasq_t *dns = user_data->data;
 
-    if (0)
-        dnsmasq_leases(dns->leases);
+    if (dns->leases != NULL) {
+        int leases = dnsmasq_leases(dns->leases);
+        if (leases >= 0)
+            metric_family_append(&dns->fams[FAM_DNSMASQ_DHCP_LEASES], VALUE_GAUGE(leases),
+                                 &dns->labels, NULL);
+    }
 
-    char buffer[512];
-    char *fields[32];
+    char buffer[DNS_EDNS0_SIZE + 1];
+    char *fields[256];
+    int failed = 0;
 
-    uint16_t id = 4561;
     for (size_t i = 0; i < STATIC_ARRAY_SIZE(dns_query_fam); i++) {
-        ssize_t size = dns_query(dns, buffer, sizeof(buffer),
-                                 id, dns_query_fam[i].query, fields, STATIC_ARRAY_SIZE(fields));
-        id++;
+        ssize_t size = dns_query(dns, buffer, sizeof(buffer), (uint16_t)cdrand_u(),
+                                 dns_query_fam[i].query, fields, STATIC_ARRAY_SIZE(fields));
+        if (size < 0)
+            failed++;
         if (size <= 0)
             continue;
 
-        if (fams[dns_query_fam[i].fam].type == METRIC_TYPE_COUNTER) {
-            metric_family_append(&fams[dns_query_fam[i].fam],
-                                 VALUE_COUNTER(atoll(fields[0])), &dns->labels, NULL);
-        } else if (fams[dns_query_fam[i].fam].type == METRIC_TYPE_GAUGE) {
-            metric_family_append(&fams[dns_query_fam[i].fam],
-                                 VALUE_GAUGE(atoll(fields[0])), &dns->labels, NULL);
+        uint64_t value = 0;
+        if (parse_uinteger(fields[0], &value) != 0)
+            continue;
+
+        if (dns->fams[dns_query_fam[i].fam].type == METRIC_TYPE_COUNTER) {
+            metric_family_append(&dns->fams[dns_query_fam[i].fam],
+                                 VALUE_COUNTER(value), &dns->labels, NULL);
+        } else if (dns->fams[dns_query_fam[i].fam].type == METRIC_TYPE_GAUGE) {
+            metric_family_append(&dns->fams[dns_query_fam[i].fam],
+                                 VALUE_GAUGE(value), &dns->labels, NULL);
         }
     }
 
-    ssize_t size = dns_query(dns, buffer, sizeof(buffer),
-                             id, "servers", fields, STATIC_ARRAY_SIZE(fields));
+    ssize_t size = dns_query(dns, buffer, sizeof(buffer), (uint16_t)cdrand_u(),
+                             "servers", fields, STATIC_ARRAY_SIZE(fields));
+    if (size < 0)
+        failed++;
+
     char *sfields[3];
     for (ssize_t i = 0; i < size; i++) {
         int numfields = strsplit(fields[i], sfields, STATIC_ARRAY_SIZE(sfields));
         if (numfields != 3)
             continue;
-        metric_family_append(&fams[FAM_DNSMASQ_SERVERS_QUERIES],
-                             VALUE_COUNTER(atoll(sfields[1])), &dns->labels,
+        uint64_t queries = 0;
+        uint64_t queries_failed = 0;
+        if ((parse_uinteger(sfields[1], &queries) != 0) ||
+            (parse_uinteger(sfields[2], &queries_failed) != 0))
+            continue;
+        metric_family_append(&dns->fams[FAM_DNSMASQ_SERVERS_QUERIES],
+                             VALUE_COUNTER(queries), &dns->labels,
                              &LABEL_PAIR_CONST("server", sfields[0]), NULL);
-        metric_family_append(&fams[FAM_DNSMASQ_SERVERS_QUERIES_FAILED],
-                             VALUE_COUNTER(atoll(sfields[2])), &dns->labels,
+        metric_family_append(&dns->fams[FAM_DNSMASQ_SERVERS_QUERIES_FAILED],
+                             VALUE_COUNTER(queries_failed), &dns->labels,
                              &LABEL_PAIR_CONST("server", sfields[0]), NULL);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_DNSMASQ_MAX, 0);
+    metric_family_append(&dns->fams[FAM_DNSMASQ_UP], VALUE_GAUGE(failed == 0 ? 1 : 0),
+                         &dns->labels, NULL);
+
+    plugin_dispatch_metric_family_array_filtered(dns->fams, FAM_DNSMASQ_MAX, dns->filter, 0);
+
     return 0;
 }
 
@@ -320,6 +385,7 @@ static void dnsmasq_free(void *data)
 
     free(dnsi->name);
     free(dnsi->host);
+    free(dnsi->leases);
     label_set_reset(&dnsi->labels);
     plugin_filter_free(dnsi->filter);
 
@@ -339,7 +405,7 @@ static int dnsmasq_config_instance(config_item_t *ci)
     dnsi->sd = -1;
     memcpy(dnsi->fams, fams, FAM_DNSMASQ_MAX * sizeof(*fams));
 
-    dnsi->port = 43;
+    dnsi->port = 53;
     dnsi->host = strdup("127.0.0.1");
     if (dnsi->host == NULL) {
         PLUGIN_ERROR("strdup failed adding instance.");
@@ -375,8 +441,8 @@ static int dnsmasq_config_instance(config_item_t *ci)
         } else if (strcasecmp("filter", option->key) == 0) {
             status = plugin_filter_configure(option, &dnsi->filter);
         } else {
-            PLUGIN_ERROR("Option `%s' not allowed inside a 'instance' block. "
-                         "I'll ignore this option.", option->key);
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed inside a 'instance' block.",
+                         option->key, cf_get_file(option), cf_get_lineno(option));
             status = 1;
         }
 
@@ -384,24 +450,36 @@ static int dnsmasq_config_instance(config_item_t *ci)
             break;
     }
 
-
     if (status != 0) {
         dnsmasq_free(dnsi);
         return status;
     }
 
-    if (dnsi->leases == NULL)
+    if (dnsi->leases == NULL) {
         dnsi->leases = strdup(dnsmsq_leases_file);
+        if (dnsi->leases == NULL) {
+            PLUGIN_ERROR("strdup failed adding instance.");
+            dnsmasq_free(dnsi);
+            return -1;
+        }
+    }
 
-    dnsi->sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    dnsi->sd = socket_connect_udp(dnsi->host, dnsi->port, 0);
     if (dnsi->sd < 0) {
+        PLUGIN_ERROR("Failed to connect to '%s' port %d in instance '%s'.",
+                     dnsi->host, dnsi->port, dnsi->name);
         dnsmasq_free(dnsi);
         return -1;
     }
 
-    dnsi->dst.sin_family = AF_INET;
-    dnsi->dst.sin_port = htons(dnsi->port);
-    dnsi->dst.sin_addr.s_addr = inet_addr(dnsi->host);
+    if ((dnsi->timeout.tv_sec == 0) && (dnsi->timeout.tv_usec == 0))
+        dnsi->timeout.tv_sec = 1;
+
+    if (setsockopt(dnsi->sd, SOL_SOCKET, SO_RCVTIMEO, &dnsi->timeout, sizeof(dnsi->timeout)) != 0) {
+        PLUGIN_ERROR("setsockopt(SO_RCVTIMEO) failed: %s", STRERRNO);
+        dnsmasq_free(dnsi);
+        return -1;
+    }
 
     label_set_add(&dnsi->labels, true, "instance", dnsi->name);
 
