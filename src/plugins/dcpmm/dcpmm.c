@@ -97,12 +97,12 @@ static metric_family_t fams[FAM_DCPMM_MAX] = {
         .help = "Number of bytes transacted by the write operations.",
     },
     [FAM_DCPMM_READ_64B_OPS] = {
-        .name = "system_dcpmm_read_64B_ops",
+        .name = "system_dcpmm_read_64b_ops",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of read operations performed to the physical media in 64 bytes granularity."
     },
     [FAM_DCPMM_WRITE_64B_OPS] = {
-        .name = "system_dcpmm_write_64B_ops",
+        .name = "system_dcpmm_write_64b_ops",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of write operations performed to the physical media in 64 bytes granularity."
     },
@@ -201,8 +201,8 @@ typedef struct {
     uint64_t power_on_time;
     uint64_t uptime;
     uint64_t last_shutdown_time;
-    uint64_t max_media_temp;
-    uint64_t max_controller_temp;
+    double max_media_temp;
+    double max_controller_temp;
     uint64_t health_status;
     uint64_t percentage_remaining;
     uint64_t percentage_used;
@@ -229,7 +229,8 @@ static int device_cmp_topology(const void *a, const void *b)
     const struct device_discovery *da = a;
     const struct device_discovery *db = b;
 
-    return da->device_handle.handle - db->device_handle.handle;
+    return (da->device_handle.handle > db->device_handle.handle) -
+           (da->device_handle.handle < db->device_handle.handle);
 }
 
 static uint64_t a8toint(unsigned char arr[8])
@@ -258,6 +259,15 @@ static uint64_t a2toint(unsigned char arr[2])
             (unsigned long long)(arr[0] & 0xFF);
 }
 
+
+/* Convert a temperature from the firmware format (1/16 C, bit 15 sign) to Celsius */
+static double temp_to_celsius(uint64_t temp)
+{
+    double celsius = (temp & TEMP_VALUE_MASK) * CELCIUS_CONV_VAL;
+    if ((temp >> TEMP_SIGN_BIT_INDEX) & 0x1)
+        celsius = -celsius;
+    return celsius;
+}
 
 static int dcpmm_device_stats(const NVM_UID device_uid, device_stats_t *stats)
 {
@@ -302,20 +312,27 @@ static int dcpmm_device_stats(const NVM_UID device_uid, device_stats_t *stats)
 
     uint64_t validation_flags = a4toint(hip.validation_flags);
 
+    /* The temperatures are only reported if the validation flag is set */
     uint64_t media_temp = a2toint(hip.media_temp);
-    stats->media_temp = media_temp;
+    stats->media_temp = NAN;
     uint64_t controller_temp = a2toint(hip.controller_temp);
-    stats->controller_temp = controller_temp;
+    stats->controller_temp = NAN;
 
-    stats->max_media_temp = a2toint(hip.max_media_temp);
-    stats->max_controller_temp = a2toint(hip.max_controller_temp);
+    stats->max_media_temp = temp_to_celsius(a2toint(hip.max_media_temp));
+    stats->max_controller_temp = temp_to_celsius(a2toint(hip.max_controller_temp));
 
     stats->vendor_data_size = a4toint(hip.vendor_data_size);
     stats->power_on_time = a8toint(hip.power_on_time);
     stats->uptime = a8toint(hip.uptime);
     stats->last_shutdown_time = a8toint(hip.last_shutdown_time);
 
-    stats->health_status = hip.health_status;
+    /* health_status is a bitfield: bit 0 non-critical, bit 1 critical, bit 2 fatal */
+    int health = 0;
+    for (int n = 0; n <= HEALTH_STATUS_FATAL; n++) {
+        if ((hip.health_status >> n) & 0x1)
+            health = n + 1;
+    }
+    stats->health_status = health;
     stats->percentage_remaining = hip.percentage_remaining;
     stats->percentage_used = hip.percentage_used;
 
@@ -324,14 +341,6 @@ static int dcpmm_device_stats(const NVM_UID device_uid, device_stats_t *stats)
             continue;
 
         switch (i) {
-        case 0: { // Health Status
-            int health = 0;
-            for (int n = 0; n <= HEALTH_STATUS_FATAL; n++) {
-                if ((stats->health_status >> n) & 0x1)
-                     health = n + 1;
-            }
-            stats->health_status = health;
-        }   break;
         case 1: // Percentage Remaining
             stats->percentage_used = 100 - stats->percentage_remaining;
             break;
@@ -385,8 +394,11 @@ static int dcpmm_read(void)
         if (status != 0)
             continue;
 
-        char num[ITOA_MAX];
-        uitoa(i, num);
+        /* Use the DIMM uid as a stable identifier, fallback to the index */
+        char num[sizeof(NVM_UID) + ITOA_MAX];
+        sstrnncpy(num, sizeof(num), devices[i].uid, strnlen(devices[i].uid, sizeof(NVM_UID)));
+        if (num[0] == '\0')
+            uitoa(i, num);
 
         state_t states[] = {
             { .name = "normal",       .enabled = false },
@@ -416,12 +428,14 @@ static int dcpmm_read(void)
         metric_family_append(&fams[FAM_DCPMM_LAST_SHUTDOWN_TIME_SECONDS],
                              VALUE_GAUGE(stats.last_shutdown_time), NULL,
                              &LABEL_PAIR_CONST("dimm", num), NULL);
-        metric_family_append(&fams[FAM_DCPMM_MEDIA_TEMPERATURE_CELSIUS],
-                             VALUE_GAUGE(stats.media_temp), NULL,
-                             &LABEL_PAIR_CONST("dimm", num), NULL);
-        metric_family_append(&fams[FAM_DCPMM_CONTROLLER_TEMPERATURE_CELSIUS],
-                             VALUE_GAUGE(stats.controller_temp), NULL,
-                             &LABEL_PAIR_CONST("dimm", num), NULL);
+        if (!isnan(stats.media_temp))
+            metric_family_append(&fams[FAM_DCPMM_MEDIA_TEMPERATURE_CELSIUS],
+                                 VALUE_GAUGE(stats.media_temp), NULL,
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
+        if (!isnan(stats.controller_temp))
+            metric_family_append(&fams[FAM_DCPMM_CONTROLLER_TEMPERATURE_CELSIUS],
+                                 VALUE_GAUGE(stats.controller_temp), NULL,
+                                 &LABEL_PAIR_CONST("dimm", num), NULL);
         metric_family_append(&fams[FAM_DCPMM_MEDIA_MAX_TEMPERATURE_CELSIUS],
                              VALUE_GAUGE(stats.max_media_temp), NULL,
                              &LABEL_PAIR_CONST("dimm", num), NULL);
@@ -550,19 +564,24 @@ static int dcpmm_init(void)
 
     qsort(devices, devices_count, sizeof(*devices), device_cmp_topology);
 
+    /* Register the read callback only if there are devices */
+    plugin_register_read("dcpmm", dcpmm_read);
+
     return 0;
 }
 
 static int dcpmm_shutdown(void)
 {
     free(devices_io_stats);
+    devices_io_stats = NULL;
     free(devices);
+    devices = NULL;
+    nvm_uninit();
     return 0;
 }
 
 void module_register(void)
 {
     plugin_register_init("dcpmm", dcpmm_init);
-    plugin_register_read("dcpmm", dcpmm_read);
     plugin_register_shutdown("dcpmm", dcpmm_shutdown);
 }
