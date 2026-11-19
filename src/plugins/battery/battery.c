@@ -66,50 +66,61 @@ static metric_family_t fams[FAM_BATTERY_MAX] = {
     [FAM_BATTERY_POWER] = {
         .name = "system_battery_power",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Power drawn from (negative) or supplied to the battery in watts.",
     },
     [FAM_BATTERY_CURRENT] = {
         .name = "system_battery_current",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Current drawn from (negative) or supplied to the battery in amperes.",
     },
     [FAM_BATTERY_VOLTAGE] = {
         .name = "system_battery_voltage",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Voltage of the battery in volts.",
     },
     [FAM_BATTERY_CAPACITY_CHARGED] = {
         .name = "system_battery_capacity_charged",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Charged capacity of the battery in watt-hours.",
     },
     [FAM_BATTERY_CAPACITY_FULL] = {
         .name = "system_battery_capacity_full",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Capacity of the battery when fully charged in watt-hours.",
     },
     [FAM_BATTERY_CAPACITY_DESIGN] = {
         .name = "system_battery_capacity_design",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Design capacity of the battery in watt-hours.",
     },
 };
 
 static void submit_capacity(const char *device, double capacity_charged, double capacity_full,
                                                 double capacity_design)
 {
-    if (capacity_charged > capacity_full)
-        return;
-    if (capacity_full > capacity_design)
-        return;
+    /* Submit each value independently: the full capacity can be greater than
+     * the design capacity and the charged capacity can be greater than the
+     * full capacity. Only reject unknown or negative values. */
+    if (!isnan(capacity_charged) && (capacity_charged >= 0.0)) {
+        metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(capacity_charged),
+                             NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+    } else {
+        PLUGIN_DEBUG("Ignoring charged capacity %g of battery '%s'.", capacity_charged, device);
+    }
 
-    metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(capacity_charged), NULL,
-                         &LABEL_PAIR_CONST("battery", device), NULL);
-    metric_family_append(&fams[FAM_BATTERY_CAPACITY_FULL], VALUE_GAUGE(capacity_full), NULL,
-                         &LABEL_PAIR_CONST("battery", device), NULL);
-    metric_family_append(&fams[FAM_BATTERY_CAPACITY_DESIGN], VALUE_GAUGE(capacity_design), NULL,
-                         &LABEL_PAIR_CONST("battery", device), NULL);
+    if (!isnan(capacity_full) && (capacity_full >= 0.0)) {
+        metric_family_append(&fams[FAM_BATTERY_CAPACITY_FULL], VALUE_GAUGE(capacity_full),
+                             NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+    } else {
+        PLUGIN_DEBUG("Ignoring full capacity %g of battery '%s'.", capacity_full, device);
+    }
 
+    if (!isnan(capacity_design) && (capacity_design >= 0.0)) {
+        metric_family_append(&fams[FAM_BATTERY_CAPACITY_DESIGN], VALUE_GAUGE(capacity_design),
+                             NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+    } else {
+        PLUGIN_DEBUG("Ignoring design capacity %g of battery '%s'.", capacity_design, device);
+    }
 }
 
 #if defined(HAVE_IOKIT_PS_IOPOWERSOURCES_H) || defined(HAVE_IOKIT_IOKITLIB_H)
@@ -120,12 +131,12 @@ static double dict_get_double(CFDictionaryRef dict, const char *key_string)
     CFStringRef key_obj = CFStringCreateWithCString(kCFAllocatorDefault, key_string,
                                                     kCFStringEncodingASCII);
     if (key_obj == NULL) {
-        PLUGIN_DEBUG("CFStringCreateWithCString (%s) failed.\n", key_string);
+        PLUGIN_DEBUG("CFStringCreateWithCString (%s) failed.", key_string);
         return NAN;
     }
 
     CFNumberRef val_obj = CFDictionaryGetValue(dict, key_obj);
-    if ((val_obj == NULL) {
+    if (val_obj == NULL) {
         PLUGIN_DEBUG("CFDictionaryGetValue (%s) failed.", key_string);
         CFRelease(key_obj);
         return NAN;
@@ -212,7 +223,7 @@ static void get_via_generic_iokit(double *ret_capacity_full, double *ret_capacit
                                                         IOServiceNameMatching("battery"),
                                                         &iterator);
     if (status != kIOReturnSuccess) {
-        DEBUG("IOServiceGetMatchingServices failed.");
+        PLUGIN_DEBUG("IOServiceGetMatchingServices failed.");
         return;
     }
 
@@ -222,7 +233,7 @@ static void get_via_generic_iokit(double *ret_capacity_full, double *ret_capacit
         status = IORegistryEntryCreateCFProperties(io_obj, (CFMutableDictionaryRef *)&bat_root_dict,
                                                            kCFAllocatorDefault, kNilOptions);
         if (status != kIOReturnSuccess) {
-            DEBUG("IORegistryEntryCreateCFProperties failed.");
+            PLUGIN_DEBUG("IORegistryEntryCreateCFProperties failed.");
             continue;
         }
 
@@ -318,6 +329,10 @@ static int sysfs_file_to_buffer(char const *dir, char const *power_supply, char 
         return status;
 
     strstripnewline(buffer);
+    /* Some drivers return an empty string instead of an error. */
+    if (buffer[0] == '\0')
+        return ENODATA;
+
     return 0;
 }
 
@@ -342,19 +357,11 @@ static int read_sysfs_capacity(char const *dir, char const *power_supply,
     double capacity_charged = NAN;
     double capacity_full = NAN;
     double capacity_design = NAN;
-    int status;
 
-    status = sysfs_file_to_gauge(dir, power_supply, "energy_now", &capacity_charged);
-    if (status != 0)
-        return status;
-
-    status = sysfs_file_to_gauge(dir, power_supply, "energy_full", &capacity_full);
-    if (status != 0)
-        return status;
-
-    status = sysfs_file_to_gauge(dir, power_supply, "energy_full_design", &capacity_design);
-    if (status != 0)
-        return status;
+    /* Read each value independently, the missing ones remain NAN. */
+    (void)sysfs_file_to_gauge(dir, power_supply, "energy_now", &capacity_charged);
+    (void)sysfs_file_to_gauge(dir, power_supply, "energy_full", &capacity_full);
+    (void)sysfs_file_to_gauge(dir, power_supply, "energy_full_design", &capacity_design);
 
     submit_capacity(device, capacity_charged * SYSFS_FACTOR,
                             capacity_full * SYSFS_FACTOR, capacity_design * SYSFS_FACTOR);
@@ -367,28 +374,26 @@ static int read_sysfs_capacity_from_charge(char const *dir, char const *power_su
     double capacity_charged = NAN;
     double capacity_full = NAN;
     double capacity_design = NAN;
-    double voltage_min_design = NAN;
-    int status;
+    double voltage = NAN;
 
-    status = sysfs_file_to_gauge(dir, power_supply, "voltage_min_design", &voltage_min_design);
-    if (status != 0)
-        return status;
-    voltage_min_design *= SYSFS_FACTOR;
+    /* Not all drivers export voltage_min_design, fall back to other voltages. */
+    if ((sysfs_file_to_gauge(dir, power_supply, "voltage_min_design", &voltage) != 0) &&
+        (sysfs_file_to_gauge(dir, power_supply, "voltage_max_design", &voltage) != 0) &&
+        (sysfs_file_to_gauge(dir, power_supply, "voltage_now", &voltage) != 0)) {
+        PLUGIN_DEBUG("Cannot get the voltage of battery '%s'.", power_supply);
+        return ENOENT;
+    }
+    voltage *= SYSFS_FACTOR;
 
-    status = sysfs_file_to_gauge(dir, power_supply, "charge_now", &capacity_charged);
-    if (status != 0)
-        return status;
-    capacity_charged *= voltage_min_design;
+    /* Read each value independently, the missing ones remain NAN. */
+    (void)sysfs_file_to_gauge(dir, power_supply, "charge_now", &capacity_charged);
+    capacity_charged *= voltage;
 
-    status = sysfs_file_to_gauge(dir, power_supply, "charge_full", &capacity_full);
-    if (status != 0)
-        return status;
-    capacity_full *= voltage_min_design;
+    (void)sysfs_file_to_gauge(dir, power_supply, "charge_full", &capacity_full);
+    capacity_full *= voltage;
 
-    status = sysfs_file_to_gauge(dir, power_supply, "charge_full_design", &capacity_design);
-    if (status != 0)
-        return status;
-    capacity_design *= voltage_min_design;
+    (void)sysfs_file_to_gauge(dir, power_supply, "charge_full_design", &capacity_design);
+    capacity_design *= voltage;
 
     submit_capacity(device, capacity_charged * SYSFS_FACTOR,
                             capacity_full * SYSFS_FACTOR, capacity_design * SYSFS_FACTOR);
@@ -396,11 +401,9 @@ static int read_sysfs_capacity_from_charge(char const *dir, char const *power_su
 }
 
 static int read_sysfs_callback(__attribute__((unused)) int dir_fd, char const *dir,
-                               char const *power_supply, void *user_data)
+                               char const *power_supply, __attribute__((unused)) void *user_data)
 {
-    int *battery_index = user_data;
-
-    char const *device;
+    char const *device = power_supply;
     char buffer[32];
     double v = NAN;
     bool discharging = false;
@@ -413,31 +416,29 @@ static int read_sysfs_callback(__attribute__((unused)) int dir_fd, char const *d
     if (strcasecmp("Battery", buffer) != 0)
         return 0;
 
+    /* Ignore batteries of peripheral devices (mouses, keyboards, ...). */
+    status = sysfs_file_to_buffer(dir, power_supply, "scope", buffer, sizeof(buffer));
+    if ((status == 0) && (strcasecmp("Device", buffer) == 0))
+        return 0;
+
     (void)sysfs_file_to_buffer(dir, power_supply, "status", buffer, sizeof(buffer));
     if (strcasecmp("Discharging", buffer) == 0)
         discharging = true;
 
-    /* FIXME: This is a dirty hack for backwards compatibility: The battery
-     * plugin, for a very long time, has had the plugin_instance
-     * hard-coded to "0". So, to keep backwards compatibility, we'll use
-     * "0" for the first battery we find and the power_supply name for all
-     * following. This should be reverted in a future major version. */
-    device = (*battery_index == 0) ? "0" : power_supply;
-    (*battery_index)++;
-
-    if (sysfs_file_to_gauge(dir, power_supply, "energy_now", &v) == 0)
-        read_sysfs_capacity(dir, power_supply, device);
-    else
+    /* read_sysfs_capacity fails if energy_now is not available. */
+    if (read_sysfs_capacity(dir, power_supply, device) != 0)
         read_sysfs_capacity_from_charge(dir, power_supply, device);
 
     if (sysfs_file_to_gauge(dir, power_supply, "power_now", &v) == 0) {
-        if (discharging)
+        /* Some drivers already report negative values when discharging. */
+        if (discharging && (v > 0))
             v *= -1.0;
         metric_family_append(&fams[FAM_BATTERY_POWER], VALUE_GAUGE(v * SYSFS_FACTOR), NULL,
                              &LABEL_PAIR_CONST("battery", device), NULL);
     }
     if (sysfs_file_to_gauge(dir, power_supply, "current_now", &v) == 0) {
-        if (discharging)
+        /* Some drivers already report negative values when discharging. */
+        if (discharging && (v > 0))
             v *= -1.0;
         metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(v * SYSFS_FACTOR), NULL,
                              &LABEL_PAIR_CONST("battery", device), NULL);
@@ -453,13 +454,12 @@ static int read_sysfs_callback(__attribute__((unused)) int dir_fd, char const *d
 static int read_sysfs(void)
 {
     int status;
-    int battery_counter = 0;
 
     if (access(path_sys_power_supply, R_OK) != 0)
         return ENOENT;
 
     status = walk_directory(path_sys_power_supply, read_sysfs_callback,
-                                                   /* user_data = */ &battery_counter,
+                                                   /* user_data = */ NULL,
                                                    /* include hidden */ 0);
     return status;
 }
@@ -508,10 +508,8 @@ static int read_acpi_full_capacity(char const *dir, char const *power_supply,
 }
 
 static int read_acpi_callback(__attribute__((unused)) int dirfd, char const *dir,
-                              char const *power_supply, void *user_data)
+                              char const *power_supply, __attribute__((unused)) void *user_data)
 {
-    int *battery_index = user_data;
-
     double power = NAN;
     double voltage = NAN;
     double capacity_charged = NAN;
@@ -520,7 +518,7 @@ static int read_acpi_callback(__attribute__((unused)) int dirfd, char const *dir
     bool charging = false;
     bool is_current = false;
 
-    char const *device;
+    char const *device = power_supply;
     char filename[PATH_MAX];
     char buffer[1024];
 
@@ -579,31 +577,25 @@ static int read_acpi_callback(__attribute__((unused)) int dirfd, char const *dir
     if (!charging)
         power *= -1.0;
 
-    /* FIXME: This is a dirty hack for backwards compatibility: The battery
-     * plugin, for a very long time, has had the plugin_instance
-     * hard-coded to "0". So, to keep backwards compatibility, we'll use
-     * "0" for the first battery we find and the power_supply name for all
-     * following. This should be reverted in a future major version. */
-    device = (*battery_index == 0) ? "0" : power_supply;
-    (*battery_index)++;
-
     read_acpi_full_capacity(dir, power_supply, &capacity_full, &capacity_design);
 
     submit_capacity(device, capacity_charged * PROC_ACPI_FACTOR,
                             capacity_full * PROC_ACPI_FACTOR,
                             capacity_design * PROC_ACPI_FACTOR);
 
-    if (is_current) {
-        metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(power * PROC_ACPI_FACTOR), NULL,
-                             &LABEL_PAIR_CONST("battery", device), NULL);
-
-    } else {
-        metric_family_append(&fams[FAM_BATTERY_POWER], VALUE_GAUGE(power * PROC_ACPI_FACTOR), NULL,
-                             &LABEL_PAIR_CONST("battery", device), NULL);
+    if (!isnan(power)) {
+        if (is_current) {
+            metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(power * PROC_ACPI_FACTOR),
+                                 NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+        } else {
+            metric_family_append(&fams[FAM_BATTERY_POWER], VALUE_GAUGE(power * PROC_ACPI_FACTOR),
+                                 NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+        }
     }
 
-    metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage * PROC_ACPI_FACTOR), NULL,
-                         &LABEL_PAIR_CONST("battery", device), NULL);
+    if (!isnan(voltage))
+        metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage * PROC_ACPI_FACTOR),
+                             NULL, &LABEL_PAIR_CONST("battery", device), NULL);
 
     return 0;
 }
@@ -611,13 +603,12 @@ static int read_acpi_callback(__attribute__((unused)) int dirfd, char const *dir
 static int read_acpi(void)
 {
     int status;
-    int battery_counter = 0;
 
     if (access(path_proc_acpi, R_OK) != 0)
         return ENOENT;
 
     status = walk_directory(path_proc_acpi, read_acpi_callback,
-                                            /* user_data = */ &battery_counter,
+                                            /* user_data = */ NULL,
                                             /* include hidden */ 0);
     return status;
 }
@@ -672,12 +663,15 @@ static int read_pmu(void)
         fclose(fh);
         fh = NULL;
 
-        metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(charge / 1000.0), NULL,
-                             &LABEL_PAIR_CONST("battery", device), NULL);
-        metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(current / 1000.0), NULL,
-                             &LABEL_PAIR_CONST("battery", device), NULL);
-        metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage / 1000.0), NULL,
-                             &LABEL_PAIR_CONST("battery", device), NULL);
+        if (!isnan(charge))
+            metric_family_append(&fams[FAM_BATTERY_CAPACITY_CHARGED], VALUE_GAUGE(charge / 1000.0),
+                                 NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+        if (!isnan(current))
+            metric_family_append(&fams[FAM_BATTERY_CURRENT], VALUE_GAUGE(current / 1000.0),
+                                 NULL, &LABEL_PAIR_CONST("battery", device), NULL);
+        if (!isnan(voltage))
+            metric_family_append(&fams[FAM_BATTERY_VOLTAGE], VALUE_GAUGE(voltage / 1000.0),
+                                 NULL, &LABEL_PAIR_CONST("battery", device), NULL);
     }
 
     if (i == 0)
