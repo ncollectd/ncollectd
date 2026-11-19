@@ -65,19 +65,24 @@ for the details.
 Defines whether TLS must be used when connecting to the \fIds389\fP server.
 Disabled by default.
 .It \fBtimeout\fP \fIseconds\fP
-Sets the timeout value for ldap operations, in seconds.
-By default, the configured \fBinterval\fP is used to set the timeout.
-Use \fB-1\fP to disable (infinite timeout).
+Sets the timeout, in seconds, for connecting to the \fIds389\fP server and for
+each ldap operation.
+By default, half of the configured \fBinterval\fP is used as timeout.
 .It \fBverify-host\fP \fItrue|false\fP
-Enables or disables peer host name verification.
-If enabled, the plugin checks if the \f(CWCommon Name\fP or a
-\f(CWSubject Alternate Name\fP field of the SSL certificate matches the host
-name provided by the \fBurl\fP option.
-If this identity check fails, the connection is aborted.
+Enables or disables the verification of the server certificate.
+If enabled, the certificate is checked as configured in
+.Xr ldap.conf 5
+(by default it must be signed by a trusted CA and its \f(CWCommon Name\fP or a
+\f(CWSubject Alternate Name\fP field must match the host name provided by the
+\fBurl\fP option); if this check fails, the connection is aborted.
+Disabling it skips the whole certificate verification, not only the host
+name check: it is equivalent to \fBTLS_REQCERT never\fP and makes the
+connection vulnerable to man-in-the-middle attacks.
 Enabled by default.
 .It \fBversion\fP \fIversion\fP
 An integer which sets the LDAP protocol version number to use when connecting
 to the LDAP server.
+Valid values are \fB2\fP and \fB3\fP; \fBstart-tls\fP requires version \fB3\fP.
 Defaults to \fB3\fP for using \fILDAPv3\fP.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
