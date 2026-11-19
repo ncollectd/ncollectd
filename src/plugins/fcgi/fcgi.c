@@ -93,7 +93,6 @@ typedef struct {
     bool response_time;
     bool response_code;
     cdtime_t timeout;
-    cdtime_t remain_time;
 
     buf_t request;
     strbuf_t response;
@@ -247,32 +246,14 @@ static int fcgi_build_request(fcgi_ctx_t *ctx)
     return status;
 }
 
-static cdtime_t *fcgi_remain_time(fcgi_ctx_t *ctx)
+static int fcgi_read_response(fcgi_ctx_t *ctx, int fd, cdtime_t deadline)
 {
-    if (ctx->timeout != 0)
-        return &ctx->remain_time;
-    return NULL;
-}
+    char cbuffer[65792]; // 64*1024+256
 
-static bool fcgi_timeout(fcgi_ctx_t *ctx)
-{
-    if (ctx->timeout == 0)
-        return true;
-
-    if (ctx->remain_time > 0)
-        return true;
-
-    return false;
-}
-
-static int fcgi_read_response(fcgi_ctx_t *ctx, int fd)
-{
-    char cbuffer[65792];
-
-    while (fcgi_timeout(ctx)) {
+    while (true) {
         fcgi_header_t hdr;
 
-        ssize_t size = socket_poll_read(fd, &hdr, sizeof(hdr), fcgi_remain_time(ctx));
+        ssize_t size = socket_poll_read(fd, &hdr, sizeof(hdr), deadline);
         if (size < 0)
             return -1;
         if (size != sizeof(hdr)) {
@@ -290,7 +271,7 @@ static int fcgi_read_response(fcgi_ctx_t *ctx, int fd)
         }
 
         if (csize > 0) {
-            ssize_t rcsize = socket_poll_read(fd, cbuffer, csize, fcgi_remain_time(ctx));
+            ssize_t rcsize = socket_poll_read(fd, cbuffer, csize, deadline);
             if (rcsize < 0)
                 return -1;
             if (rcsize != csize) {
@@ -366,7 +347,9 @@ static int fcgi_read(user_data_t *ud)
 
     strbuf_reset(&ctx->response);
 
-    ctx->remain_time = ctx->timeout;
+    cdtime_t deadline = 0;
+    if (ctx->timeout > 0)
+        deadline = cdtime() + ctx->timeout;
 
     cdtime_t start = 0;
     if (ctx->response_time)
@@ -375,9 +358,9 @@ static int fcgi_read(user_data_t *ud)
     int fd = -1;
 
     if (ctx->socket_path != NULL)
-        fd = socket_poll_connect_unix_stream(ctx->socket_path, fcgi_remain_time(ctx));
+        fd = socket_poll_connect_unix_stream(ctx->socket_path, deadline);
     else
-        fd = socket_poll_connect_tcp(ctx->host, ctx->port, 0, 0, fcgi_remain_time(ctx));
+        fd = socket_poll_connect_tcp(AF_UNSPEC, ctx->host, ctx->port, 0, 0, deadline);
 
     if (fd < 0) {
         fcgi_submit_response_code(ctx, 0);
@@ -385,7 +368,7 @@ static int fcgi_read(user_data_t *ud)
     }
 
     size_t len = buf_len(&ctx->request);
-    int status = socket_poll_write(fd, ctx->request.ptr , len, fcgi_remain_time(ctx));
+    int status = socket_poll_write(fd, ctx->request.ptr , len, deadline);
     if (status != (int)len) {
         PLUGIN_ERROR("Instance '%s': write(2) failed: %s", ctx->name, STRERRNO);
         fcgi_submit_response_code(ctx, 0);
@@ -393,7 +376,7 @@ static int fcgi_read(user_data_t *ud)
         return 0;
     }
 
-    status = fcgi_read_response(ctx, fd);
+    status = fcgi_read_response(ctx, fd, deadline);
     if (status != 0) {
         fcgi_submit_response_code(ctx, 0);
         fcgi_submit_response_time(ctx, start);
