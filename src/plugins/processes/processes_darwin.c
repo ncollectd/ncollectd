@@ -222,6 +222,7 @@ int ps_read(void)
                 pse.io_syscw = -1;
                 pse.io_diskr = -1;
                 pse.io_diskw = -1;
+                pse.io_cancelled_diskw = -1;
 
                 /* File descriptor count not implemented */
                 pse.num_fd = 0;

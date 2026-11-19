@@ -24,13 +24,6 @@
 
 #include "processes.h"
 
-#ifdef HAVE_LINUX_CONFIG_H
-#include <linux/config.h>
-#endif
-#ifndef CONFIG_HZ
-#define CONFIG_HZ 100
-#endif
-
 #include <regex.h>
 
 #ifdef HAVE_SYS_CAPABILITY_H
@@ -40,6 +33,7 @@
 static ts_t *taskstats_handle;
 
 static long pagesize_g;
+static long clk_tck_g;
 
 static char *path_proc;
 static char *path_proc_stat;
@@ -82,6 +76,7 @@ static int ps_read_status(process_entry_t *ps)
     unsigned long lib = 0;
     unsigned long exe = 0;
     unsigned long data = 0;
+    unsigned long stack = 0;
     unsigned long threads = 0;
     unsigned long cswitch_vol= 0;
     unsigned long cswitch_invol= 0;
@@ -95,6 +90,8 @@ static int ps_read_status(process_entry_t *ps)
             tmp = &lib;
         } else if (strncmp(buffer, "VmExe", 5) == 0) {
             tmp = &exe;
+        } else if (strncmp(buffer, "VmStk", 5) == 0) {
+            tmp = &stack;
         } else if (strncmp(buffer, "Threads", 7) == 0) {
             tmp = &threads;
         } else if (strncmp(buffer, "voluntary_ctxt_switches", 23) == 0) {
@@ -123,6 +120,7 @@ static int ps_read_status(process_entry_t *ps)
 
     ps->vmem_data = data * 1024;
     ps->vmem_code = (exe + lib) * 1024;
+    ps->stack_size = stack * 1024;
     ps->cswitch_vol = cswitch_vol;
     ps->cswitch_invol = cswitch_invol;
     if (threads != 0)
@@ -222,7 +220,7 @@ static int ps_count_fd(int pid)
     int count = 0;
     struct dirent *ent;
     while ((ent = readdir(dh)) != NULL) {
-        if (!isdigit((int)ent->d_name[0]))
+        if (!isdigit((unsigned char)ent->d_name[0]))
             continue;
         else
             count++;
@@ -240,35 +238,41 @@ static int ps_delay(process_entry_t *ps)
 
     int status = ts_delay_by_tgid(taskstats_handle, (uint32_t)ps->id, &ps->delay);
     if (status == EPERM) {
-        static c_complain_t c;
+        static complain_t complain;
 #if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_NET_ADMIN)
         if (plugin_check_capability(CAP_NET_ADMIN) != 0) {
             if (getuid() == 0) {
-                c_complain(LOG_ERR, &c,
-                           "processes plugin: Reading Delay Accounting metric failed: %s. "
-                           "ncollectd is running as root, but missing the CAP_NET_ADMIN "
-                           "capability. The most common cause for this is that the init "
-                           "system is dropping capabilities.",
-                           STRERROR(status));
+                PLUGIN_ONCE_ERROR(&complain,
+                            "processes plugin: Reading Delay Accounting metric failed: %s. "
+                            "ncollectd is running as root, but missing the CAP_NET_ADMIN "
+                            "capability. The most common cause for this is that the init "
+                            "system is dropping capabilities.",
+                            STRERROR(status));
             } else {
-                c_complain(LOG_ERR, &c,
-                           "processes plugin: Reading Delay Accounting metric failed: %s. "
-                           "ncollectd is not running as root and missing the CAP_NET_ADMIN "
-                           "capability. Either run ncollectd as root or grant it the "
-                           "CAP_NET_ADMIN capability using \"setcap cap_net_admin=ep " PREFIX
-                           "/sbin/ncollectd\".",
-                           STRERROR(status));
+                PLUGIN_ONCE_ERROR(&complain,
+                            "processes plugin: Reading Delay Accounting metric failed: %s. "
+                            "ncollectd is not running as root and missing the CAP_NET_ADMIN "
+                            "capability. Either run ncollectd as root or grant it the "
+                            "CAP_NET_ADMIN capability using \"setcap cap_net_admin=ep " PREFIX
+                            "/sbin/ncollectd\".",
+                            STRERROR(status));
             }
         } else {
-            PLUGIN_ERROR("ts_delay_by_tgid failed: %s. The CAP_NET_ADMIN capability "
-                         "is available (I checked), so this error is utterly unexpected.",
-                          STRERROR(status));
+            PLUGIN_ONCE_ERROR(&complain,
+                            "ts_delay_by_tgid failed: %s. The CAP_NET_ADMIN capability "
+                            "is available (I checked), so this error is utterly unexpected.",
+                            STRERROR(status));
         }
 #else
-        c_complain(LOG_ERR, &c, "processes plugin: Reading Delay Accounting metric failed: %s. "
-                                "Reading Delay Accounting metrics requires root privileges.",
-                                STRERROR(status));
+        PLUGIN_ONCE_ERROR(&complain,
+                          "processes plugin: Reading Delay Accounting metric failed: %s. "
+                          "Reading Delay Accounting metrics requires root privileges.",
+                          STRERROR(status));
 #endif
+        return status;
+    } else if (status == ESRCH) {
+        /* the process exited after it was listed */
+        PLUGIN_DEBUG("ts_delay_by_tgid(%lu) failed: %s", ps->id, STRERROR(status));
         return status;
     } else if (status != 0) {
         PLUGIN_ERROR("ts_delay_by_tgid failed: %s", STRERROR(status));
@@ -319,7 +323,7 @@ void ps_fill_details(procstat_t *ps, process_entry_t *entry)
 #ifdef HAVE_TASKSTATS
     if (ps->flags & COLLECT_DELAY_ACCOUNTING) {
         if (entry->has_delay == false) {
-            ps_delay(entry);
+            entry->delay_valid = (ps_delay(entry) == 0);
             entry->has_delay = true;
         }
     }
@@ -379,6 +383,8 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
 
     *state = fields[0][0];
 
+    ps->starttime = strtoull(fields[19], NULL, 10);
+
     if (*state == 'Z') {
         ps->num_lwp = 0;
         ps->num_proc = 0;
@@ -395,30 +401,54 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
         return 0;
     }
 
-    int64_t cpu_user_counter = atoll(fields[11]);
-    int64_t cpu_system_counter = atoll(fields[12]);
-    long long unsigned vmem_size = atoll(fields[20]);
-    long long unsigned vmem_rss = atoll(fields[21]);
-    ps->vmem_minflt_counter = atol(fields[7]);
-    ps->vmem_majflt_counter = atol(fields[9]);
+    uint64_t vmem_minflt = 0;
+    if (strtouint(fields[7], &vmem_minflt) != 0) {
+        PLUGIN_DEBUG("Cannot parse the 8th field of '%s'.", filename);
+        return -1;
+    }
 
-    ps->starttime = strtoull(fields[19], NULL, 10);
+    uint64_t vmem_majflt = 0;
+    if (strtouint(fields[9], &vmem_majflt) != 0) {
+        PLUGIN_DEBUG("Cannot parse the 10th field of '%s'.", filename);
+        return -1;
+    }
 
-    unsigned long long stack_start = atoll(fields[25]);
-    unsigned long long stack_ptr = atoll(fields[26]);
-    long long unsigned stack_size = (stack_start > stack_ptr) ? stack_start - stack_ptr
-                                                              : stack_ptr - stack_start;
+    uint64_t cpu_user_counter = 0;
+    if (strtouint(fields[11], &cpu_user_counter) != 0) {
+        PLUGIN_DEBUG("Cannot parse the 12th field of '%s'.", filename);
+        return -1;
+    }
+
+    uint64_t cpu_system_counter = 0;
+    if (strtouint(fields[12], &cpu_system_counter) != 0) {
+        PLUGIN_DEBUG("Cannot parse the 13th field of '%s'.", filename);
+        return -1;
+    }
+
+    uint64_t vmem_size = 0;
+    if (strtouint(fields[20], &vmem_size) != 0) {
+        PLUGIN_DEBUG("Cannot parse the 21th field of '%s'.", filename);
+        return -1;
+    }
+
+    uint64_t vmem_rss = 0;
+    if (strtouint(fields[21], &vmem_rss) != 0) {
+        PLUGIN_DEBUG("Cannot parse the 22th field of '%s'.", filename);
+        return -1;
+    }
+
+    ps->vmem_minflt_counter = vmem_minflt;
+    ps->vmem_majflt_counter = vmem_majflt;
 
     /* Convert jiffies to useconds */
-    cpu_user_counter = cpu_user_counter * 1000000 / CONFIG_HZ;
-    cpu_system_counter = cpu_system_counter * 1000000 / CONFIG_HZ;
+    cpu_user_counter = cpu_user_counter * 1000000 / clk_tck_g;
+    cpu_system_counter = cpu_system_counter * 1000000 / clk_tck_g;
     vmem_rss = vmem_rss * pagesize_g;
 
     ps->cpu_user_counter = cpu_user_counter;
     ps->cpu_system_counter = cpu_system_counter;
     ps->vmem_size = (unsigned long)vmem_size;
     ps->vmem_rss = (unsigned long)vmem_rss;
-    ps->stack_size = (unsigned long)stack_size;
 
     /* no data by default. May be filled by ps_fill_details () */
     ps->io_rchar = -1;
@@ -429,8 +459,9 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
     ps->io_diskw = -1;
     ps->io_cancelled_diskw = -1;
 
-    ps->vmem_data = -1;
-    ps->vmem_code = -1;
+    ps->vmem_data = 0;
+    ps->vmem_code = 0;
+    ps->stack_size = 0;
     ps->cswitch_vol = -1;
     ps->cswitch_invol = -1;
 
@@ -505,7 +536,7 @@ static char *ps_get_cmdline(long pid, char *name, char *buf, size_t buf_len)
 
     --n;
     /* remove trailing whitespace */
-    while ((n > 0) && (isspace(buf[n]) || ('\0' == buf[n]))) {
+    while ((n > 0) && (isspace((unsigned char)buf[n]) || ('\0' == buf[n]))) {
         buf[n] = '\0';
         --n;
     }
@@ -585,13 +616,15 @@ int ps_read(void)
 
     ps_list_reset();
 
+    bool want_cmdline = ps_list_want_cmdline();
+
     if ((proc = opendir(path_proc)) == NULL) {
         PLUGIN_ERROR("Cannot open '%s': %s", path_proc, STRERRNO);
         return -1;
     }
 
     while ((ent = readdir(proc)) != NULL) {
-        if (!isdigit(ent->d_name[0]))
+        if (!isdigit((unsigned char)ent->d_name[0]))
             continue;
 
         if ((pid = atol(ent->d_name)) < 1)
@@ -645,7 +678,9 @@ int ps_read(void)
             break;
         }
 
-        ps_list_add(pse.name, ps_get_cmdline(pid, pse.name, cmdline, sizeof(cmdline)), pid, &pse);
+        ps_list_add(pse.name,
+                    want_cmdline ? ps_get_cmdline(pid, pse.name, cmdline, sizeof(cmdline)) : NULL,
+                    pid, &pse);
     }
 
     closedir(proc);
@@ -662,9 +697,10 @@ int ps_read(void)
     uint64_t stat_ctxt = 0;
     uint64_t stat_running = 0;
 
-    proc_stat_read(&stat_forks, &stat_ctxt, &stat_running);
+    int stat_status = proc_stat_read(&stat_forks, &stat_ctxt, &stat_running);
 
-    proc_state[PROC_STATE_RUNNING] = stat_running;
+    if (stat_status == 0)
+        proc_state[PROC_STATE_RUNNING] = stat_running;
     proc_state[PROC_STATE_SLEEPING] = sleeping;
     proc_state[PROC_STATE_ZOMBIES] = zombies;
     proc_state[PROC_STATE_STOPPED] = stopped;
@@ -674,8 +710,10 @@ int ps_read(void)
     proc_state[PROC_STATE_IDLE] = idle;
     ps_submit_state(proc_state);
 
-    ps_submit_forks(stat_forks);
-    ps_submit_ctxt(stat_ctxt);
+    if (stat_status == 0) {
+        ps_submit_forks(stat_forks);
+        ps_submit_ctxt(stat_ctxt);
+    }
 
     ps_dispatch();
 
@@ -697,7 +735,10 @@ int ps_init(void)
     }
 
     pagesize_g = sysconf(_SC_PAGESIZE);
-    PLUGIN_DEBUG("pagesize_g = %li; CONFIG_HZ = %i;", pagesize_g, CONFIG_HZ);
+    clk_tck_g = sysconf(_SC_CLK_TCK);
+    if (clk_tck_g <= 0)
+        clk_tck_g = 100;
+    PLUGIN_DEBUG("pagesize_g = %li; clk_tck_g = %li;", pagesize_g, clk_tck_g);
 
 #if HAVE_TASKSTATS
     if (taskstats_handle == NULL) {

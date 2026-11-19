@@ -79,6 +79,7 @@ int ps_read(void)
                     cmdline = "swapper";
                 cargs = cmdline;
             } else {
+                memset(arglist, 0, sizeof(arglist));
                 if (getargs(&procentry[i], sizeof(struct procentry64), arglist, MAXARGLN) >= 0) {
                     int n = -1;
                     while (++n < MAXARGLN) {
@@ -95,6 +96,7 @@ int ps_read(void)
             memset(&pse, 0, sizeof(pse));
 
             pse.id = procentry[i].pi_pid;
+            pse.starttime = procentry[i].pi_start;
             pse.num_lwp = procentry[i].pi_thcount;
             pse.num_proc = 1;
 
@@ -155,6 +157,7 @@ int ps_read(void)
             pse.io_syscw = -1;
             pse.io_diskr = -1;
             pse.io_diskw = -1;
+            pse.io_cancelled_diskw = -1;
 
             pse.num_fd = 0;
             pse.num_maps = 0;

@@ -108,19 +108,31 @@ static int get_taskstats(ts_t *ts, uint32_t tgid, struct taskstats *ret_taskstat
         return status;
     }
 
-    int status = mnl_socket_recvfrom(ts->nl, buffer, sizeof(buffer));
-    if (status < 0) {
-        status = errno;
-        PLUGIN_ERROR("mnl_socket_recvfrom() = %s", STRERROR(status));
-        return status;
-    } else if (status == 0) {
-        PLUGIN_ERROR("mnl_socket_recvfrom() = 0");
-        return ECONNABORTED;
+    int status;
+    while (true) {
+        status = mnl_socket_recvfrom(ts->nl, buffer, sizeof(buffer));
+        if (status < 0) {
+            status = errno;
+            PLUGIN_ERROR("mnl_socket_recvfrom() = %s", STRERROR(status));
+            return status;
+        } else if (status == 0) {
+            PLUGIN_ERROR("mnl_socket_recvfrom() = 0");
+            return ECONNABORTED;
+        }
+
+        /* Skip late replies to earlier requests. */
+        struct nlmsghdr *reply = (void *)buffer;
+        if (!mnl_nlmsg_ok(reply, status) || (reply->nlmsg_seq == seq))
+            break;
+
+        PLUGIN_DEBUG("Discarding netlink message with sequence %" PRIu32 ", want %" PRIu32 ".",
+                     reply->nlmsg_seq, seq);
     }
+
     size_t buffer_size = (size_t)status;
 
     if ((status = nlmsg_errno((void *)buffer, buffer_size)) != 0) {
-        PLUGIN_ERROR("TASKSTATS_CMD_GET(TASKSTATS_CMD_ATTR_TGID = %" PRIu32 ") = %s",
+        PLUGIN_DEBUG("TASKSTATS_CMD_GET(TASKSTATS_CMD_ATTR_TGID = %" PRIu32 ") = %s",
                      (uint32_t)tgid, STRERROR(status));
         return status;
     }
@@ -256,6 +268,11 @@ ts_t *ts_create(void)
         ts_destroy(ts);
         return NULL;
     }
+
+    struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
+    if (setsockopt(mnl_socket_get_fd(ts->nl), SOL_SOCKET, SO_RCVTIMEO,
+                   &timeout, sizeof(timeout)) != 0)
+        PLUGIN_WARNING("setsockopt(SO_RCVTIMEO) = %s", STRERRNO);
 
     ts->pid = getpid();
     ts->port_id = mnl_socket_get_portid(ts->nl);

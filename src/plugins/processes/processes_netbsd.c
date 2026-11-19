@@ -66,18 +66,17 @@ int ps_read(void)
     /* Open the kvm interface, get a descriptor */
     kd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, errbuf);
     if (kd == NULL) {
-        ERROR("processes plugin: Cannot open kvm interface: %s", errbuf);
-        return (0);
+        PLUGIN_ERROR("Cannot open kvm interface: %s", errbuf);
+        return -1;
     }
 
     /* Get the list of processes. */
     procs =
             kvm_getproc2(kd, KERN_PROC_ALL, 0, sizeof(struct kinfo_proc2), &count);
     if (procs == NULL) {
-        ERROR("processes plugin: Cannot get kvm processes list: %s",
-                    kvm_geterr(kd));
+        PLUGIN_ERROR("Cannot get kvm processes list: %s", kvm_geterr(kd));
         kvm_close(kd);
-        return (0);
+        return -1;
     }
 
     /* Iterate through the processes in kinfo_proc */
@@ -112,11 +111,12 @@ int ps_read(void)
 
             memset(&pse, 0, sizeof(pse));
             pse.id = procs[i].p_pid;
-
+            pse.starttime = (unsigned long long)procs[i].p_ustart_sec * 1000000 +
+                            procs[i].p_ustart_usec;
             pse.num_proc = 1;
             pse.num_lwp = procs[i].p_nlwps;
 
-            pse.vmem_size = procs[i].p_uru_maxrss * pagesize;
+            pse.vmem_size = procs[i].p_vm_vsize * pagesize;
             pse.vmem_rss = procs[i].p_vm_rssize * pagesize;
             pse.vmem_data = procs[i].p_vm_dsize * pagesize;
             pse.vmem_code = procs[i].p_vm_tsize * pagesize;
@@ -150,8 +150,11 @@ int ps_read(void)
             /* no I/O data */
             pse.io_rchar = -1;
             pse.io_wchar = -1;
-            pse.io_syscr = procs[i].p_uru_inblock;
-            pse.io_syscw = procs[i].p_uru_oublock;
+            pse.io_syscr = -1;
+            pse.io_syscw = -1;
+            pse.io_diskr = -1;
+            pse.io_diskw = -1;
+            pse.io_cancelled_diskw = -1;
 
             /* file descriptor count not implemented */
             pse.num_fd = 0;

@@ -36,6 +36,12 @@ The **processes** plugin collects information about processes of local system.
 By default, with no process matches configured, only general statistics is
 collected: the number of processes in each state and fork rate.
 
+On Linux the number of processes in the *running* state is the
+*procs\_running* value of */proc/stat*, which counts runnable threads.
+On Darwin the states are counted per thread and the per-process statistics
+of **process**, **process-match** and **process-pidfile** are not
+available.
+
 Process matches can be configured by **process** and **process-match**
 options.
 These may also be a block in which further options may be specified.
@@ -105,7 +111,7 @@ The **processes** plugin has the following options:
 > > This option is only available on Linux, requires the **libmnl** library and
 > > requires the CAP\_NET\_ADMIN capability at runtime.
 
-> **file\_descriptor**
+> **file\_descriptors**
 
 > > Collect number of file descriptors of matched processes.
 > > Disabled by default.
