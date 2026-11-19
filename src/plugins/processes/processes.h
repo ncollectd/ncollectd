@@ -135,6 +135,7 @@ typedef struct process_entry_s {
 
 #ifdef HAVE_TASKSTATS
     bool has_delay;
+    bool delay_valid;
     ts_delay_t delay;
 #endif
 } process_entry_t;
@@ -167,10 +168,14 @@ typedef struct procstat_entry_s {
     int64_t sched_timeslices;
 
 #ifdef HAVE_TASKSTATS
-    counter_to_rate_state_t delay_cpu;
-    counter_to_rate_state_t delay_blkio;
-    counter_to_rate_state_t delay_swapin;
-    counter_to_rate_state_t delay_freepages;
+    int64_t delay_cpu;
+    int64_t delay_blkio;
+    int64_t delay_swapin;
+    int64_t delay_freepages;
+    int64_t delay_irq;
+    int64_t delay_thrashing;
+    int64_t delay_compact;
+    int64_t delay_wpcopy;
 #endif
 
     struct procstat_entry_s *next;
@@ -214,15 +219,15 @@ typedef struct procstat_s {
     int64_t sched_waiting;
     int64_t sched_timeslices;
 
-    /* Linux Delay Accounting. */
-    double delay_cpu;
-    double delay_blkio;
-    double delay_swapin;
-    double delay_freepages;
-    double delay_irq;
-    double delay_thrashing;
-    double delay_compact;
-    double delay_wpcopy;
+    /* Linux Delay Accounting (nanoseconds). */
+    int64_t delay_cpu;
+    int64_t delay_blkio;
+    int64_t delay_swapin;
+    int64_t delay_freepages;
+    int64_t delay_irq;
+    int64_t delay_thrashing;
+    int64_t delay_compact;
+    int64_t delay_wpcopy;
 
     uint64_t flags;
 
@@ -241,6 +246,8 @@ void ps_list_reset(void);
 void ps_list_free(void);
 
 void ps_list_add(const char *name, const char *cmdline, unsigned long pid, process_entry_t *entry);
+
+bool ps_list_want_cmdline(void);
 
 void ps_submit_state(double *proc_state);
 void ps_submit_forks(uint64_t value);

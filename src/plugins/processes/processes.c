@@ -237,7 +237,6 @@ static cf_flags_t processes_flags[] = {
 static size_t processes_flags_size = STATIC_ARRAY_SIZE(processes_flags);
 
 static procstat_t *list_head_g = NULL;
-static bool want_init = true;
 
 static uint64_t flags;
 
@@ -265,6 +264,18 @@ static char const *proc_state_name[PROC_STATE_MAX] = {
 static procstat_t *ps_list_register(const char *name, const char *regexp, const char *pid_file)
 {
 
+    procstat_t *ptr;
+    for (ptr = list_head_g; ptr != NULL; ptr = ptr->next) {
+        if (strcmp(ptr->name, name) == 0) {
+            PLUGIN_WARNING("You have configured more than one `Process' or 'ProcessMatch' "
+                           "with the same name. All but the first setting will be ignored.");
+            return NULL;
+        }
+
+        if (ptr->next == NULL)
+            break;
+    }
+
     procstat_t *new = calloc(1, sizeof(*new));
     if (new == NULL) {
         PLUGIN_ERROR("calloc failed.");
@@ -284,6 +295,14 @@ static procstat_t *ps_list_register(const char *name, const char *regexp, const 
     new->sched_running = -1;
     new->sched_waiting = -1;
     new->sched_timeslices = -1;
+    new->delay_cpu = -1;
+    new->delay_blkio = -1;
+    new->delay_swapin = -1;
+    new->delay_freepages = -1;
+    new->delay_irq = -1;
+    new->delay_thrashing = -1;
+    new->delay_compact = -1;
+    new->delay_wpcopy = -1;
 
     new->flags = flags;
     memcpy(new->fams, fams_proc, sizeof(new->fams[0])*FAM_PROC_MAX);
@@ -312,21 +331,6 @@ static procstat_t *ps_list_register(const char *name, const char *regexp, const 
             free(new);
             return NULL;
         }
-    }
-
-    procstat_t *ptr;
-    for (ptr = list_head_g; ptr != NULL; ptr = ptr->next) {
-        if (strcmp(ptr->name, name) == 0) {
-            PLUGIN_WARNING("You have configured more than one `Process' or 'ProcessMatch' "
-                           "with the same name. All but the first setting will be ignored.");
-            free(new->re);
-            free(new->pid_file);
-            free(new);
-            return NULL;
-        }
-
-        if (ptr->next == NULL)
-            break;
     }
 
     if (ptr == NULL)
@@ -362,15 +366,10 @@ static int ps_list_match(const char *name, const char *cmdline, unsigned long pi
 
 static void ps_update_counter(int64_t *group_counter, int64_t *curr_counter, int64_t new_counter)
 {
-    if (want_init) {
-        *curr_counter = new_counter;
-        *group_counter = new_counter;
-        return;
-    }
-
-    unsigned long curr_value;
+    /* A counter going backwards (undetected pid reuse, zombie) restarts from zero. */
+    int64_t curr_value;
     if (new_counter < *curr_counter)
-        curr_value = new_counter + (ULONG_MAX - *curr_counter);
+        curr_value = new_counter;
     else
         curr_value = new_counter - *curr_counter;
 
@@ -406,12 +405,15 @@ void ps_list_add(const char *name, const char *cmdline, unsigned long pid, proce
             if ((pse->id == entry->id) || (pse->next == NULL))
                 break;
 
-        if ((pse == NULL) || (pse->id != entry->id) || (pse->starttime != entry->starttime)) {
-            if ((pse != NULL) && (pse->id == entry->id)) {
-                PLUGIN_WARNING("pid %lu reused between two reads, ignoring existing "
-                               "procstat_entry for %s", pse->id, name);
-            }
-
+        if ((pse != NULL) && (pse->id == entry->id) && (pse->starttime != entry->starttime)) {
+            PLUGIN_DEBUG("pid %lu reused between two reads, resetting existing "
+                         "procstat_entry for %s", pse->id, name);
+            procstat_entry_t *next = pse->next;
+            memset(pse, 0, sizeof(*pse));
+            pse->id = entry->id;
+            pse->starttime = entry->starttime;
+            pse->next = next;
+        } else if ((pse == NULL) || (pse->id != entry->id)) {
             procstat_entry_t *new = calloc(1, sizeof(*new));
             if (new == NULL)
                 return;
@@ -477,49 +479,29 @@ void ps_list_add(const char *name, const char *cmdline, unsigned long pid, proce
         ps_update_counter(&ps->cpu_system_counter, &pse->cpu_system_counter, entry->cpu_system_counter);
 
 #ifdef HAVE_TASKSTATS
-        if (entry->has_delay) {
-            if (isnan(ps->delay_cpu))
-                ps->delay_cpu = entry->delay.cpu_ns;
-            else
-                ps->delay_cpu += entry->delay.cpu_ns;
-
-            if (isnan(ps->delay_blkio))
-                ps->delay_blkio = entry->delay.blkio_ns;
-            else
-                ps->delay_blkio += entry->delay.blkio_ns;
-
-            if (isnan(ps->delay_swapin))
-                ps->delay_swapin = entry->delay.swapin_ns;
-            else
-                ps->delay_swapin += entry->delay.swapin_ns;
-
-            if (isnan(ps->delay_freepages))
-                ps->delay_freepages = entry->delay.freepages_ns;
-            else
-                ps->delay_freepages += entry->delay.freepages_ns;
-
-            if (isnan(ps->delay_irq))
-                ps->delay_irq = entry->delay.irq_ns;
-            else
-                ps->delay_irq += entry->delay.irq_ns;
-
-            if (isnan(ps->delay_thrashing))
-                ps->delay_thrashing = entry->delay.thrashing_ns;
-            else
-                ps->delay_thrashing += entry->delay.thrashing_ns;
-
-            if (isnan(ps->delay_compact))
-                ps->delay_compact = entry->delay.compact_ns;
-            else
-                ps->delay_compact += entry->delay.compact_ns;
-
-            if (isnan(ps->delay_wpcopy))
-                ps->delay_wpcopy = entry->delay.wpcopy_ns;
-            else
-                ps->delay_wpcopy += entry->delay.wpcopy_ns;
+        if (entry->delay_valid) {
+            ps_update_counter(&ps->delay_cpu, &pse->delay_cpu, entry->delay.cpu_ns);
+            ps_update_counter(&ps->delay_blkio, &pse->delay_blkio, entry->delay.blkio_ns);
+            ps_update_counter(&ps->delay_swapin, &pse->delay_swapin, entry->delay.swapin_ns);
+            ps_update_counter(&ps->delay_freepages, &pse->delay_freepages, entry->delay.freepages_ns);
+            ps_update_counter(&ps->delay_irq, &pse->delay_irq, entry->delay.irq_ns);
+            ps_update_counter(&ps->delay_thrashing, &pse->delay_thrashing, entry->delay.thrashing_ns);
+            ps_update_counter(&ps->delay_compact, &pse->delay_compact, entry->delay.compact_ns);
+            ps_update_counter(&ps->delay_wpcopy, &pse->delay_wpcopy, entry->delay.wpcopy_ns);
         }
 #endif
     }
+}
+
+/* returns true if a configured process-match needs the command line */
+bool ps_list_want_cmdline(void)
+{
+    for (procstat_t *ps = list_head_g; ps != NULL; ps = ps->next) {
+        if (ps->re != NULL)
+            return true;
+    }
+
+    return false;
 }
 
 /* remove old entries from instances of processes in list_head_g */
@@ -537,15 +519,6 @@ void ps_list_reset(void)
         ps->vmem_data = 0;
         ps->vmem_code = 0;
         ps->stack_size = 0;
-
-        ps->delay_cpu = NAN;
-        ps->delay_blkio = NAN;
-        ps->delay_swapin = NAN;
-        ps->delay_freepages = NAN;
-        ps->delay_irq = NAN;
-        ps->delay_thrashing = NAN;
-        ps->delay_compact = NAN;
-        ps->delay_wpcopy = NAN;
 
         procstat_entry_t *pse_prev = NULL;
         procstat_entry_t *pse = ps->instances;
@@ -815,37 +788,37 @@ void ps_metric_append_proc_list(procstat_t *ps)
         /* The ps->delay_* metrics are in nanoseconds. Convert to seconds. */
         double const delay_factor = 1000000000.0;
 
-        if (!isnan(ps->delay_cpu))
+        if (ps->delay_cpu != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_CPU],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_cpu / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_cpu / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_blkio))
+        if (ps->delay_blkio != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_BLKIO],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_blkio / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_blkio / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_swapin))
+        if (ps->delay_swapin != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_SWAPIN],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_swapin / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_swapin / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_freepages))
+        if (ps->delay_freepages != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_FREEPAGES],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_freepages / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_freepages / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_irq))
+        if (ps->delay_irq != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_IRQ],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_irq / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_irq / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_thrashing))
+        if (ps->delay_thrashing != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_THRASHING],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_thrashing / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_thrashing / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_compact))
+        if (ps->delay_compact != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_COMPACT],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_compact / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_compact / delay_factor),
                                  &labels, NULL);
-        if (!isnan(ps->delay_wpcopy))
+        if (ps->delay_wpcopy != -1)
             metric_family_append(&ps->fams[FAM_PROC_DELAY_WPCOPY],
-                                 VALUE_COUNTER_FLOAT64(ps->delay_wpcopy / delay_factor),
+                                 VALUE_COUNTER_FLOAT64((double)ps->delay_wpcopy / delay_factor),
                                  &labels, NULL);
     }
 
@@ -859,9 +832,11 @@ void ps_metric_append_proc_list(procstat_t *ps)
                  "io_cancelled_diskw = %" PRIi64 "; "
                  "cswitch_vol = %" PRIi64 "; cswitch_invol = %" PRIi64 "; "
                  "sched_running = %" PRIi64 "; sched_waiting = %" PRIi64 "; "
-                 "sched_timeslices= %" PRIi64 "; delay_cpu = %g; delay_blkio = %g; "
-                 "delay_swapin = %g; delay_freepages = %g; delay_irq = %g; "
-                 "delay_thrashing = %g; delay_compact = %g; delay_wpcopy = %g;",
+                 "sched_timeslices= %" PRIi64 "; delay_cpu = %" PRIi64 "; "
+                 "delay_blkio = %" PRIi64 "; delay_swapin = %" PRIi64 "; "
+                 "delay_freepages = %" PRIi64 "; delay_irq = %" PRIi64 "; "
+                 "delay_thrashing = %" PRIi64 "; delay_compact = %" PRIi64 "; "
+                 "delay_wpcopy = %" PRIi64 ";",
                  ps->name, ps->num_proc, ps->num_lwp, ps->num_fd, ps->num_maps,
                  ps->vmem_size, ps->vmem_rss, ps->vmem_data, ps->vmem_code,
                  ps->vmem_minflt_counter, ps->vmem_majflt_counter,
@@ -885,8 +860,6 @@ void ps_dispatch(void)
         ps_metric_append_proc_list(ps);
         plugin_dispatch_metric_family_array_filtered(ps->fams, FAM_PROC_MAX, ps->filter, ts);
     }
-
-    want_init = false;
 }
 
 __attribute__(( weak ))

@@ -47,7 +47,6 @@ int ps_read(void)
     int idle = 0;
     int wait = 0;
 
-    kvm_t *kd;
     char errbuf[_POSIX2_LINE_MAX];
     struct kinfo_proc *procs; /* array of processes */
     struct kinfo_proc *proc_ptr = NULL;
@@ -58,10 +57,10 @@ int ps_read(void)
     ps_list_reset();
 
     /* Open the kvm interface, get a descriptor */
-    kd = kvm_openfiles(NULL, "/dev/null", NULL, 0, errbuf);
+    kvm_t *kd = kvm_openfiles(NULL, "/dev/null", NULL, 0, errbuf);
     if (kd == NULL) {
         PLUGIN_ERROR("Cannot open kvm interface: %s", errbuf);
-        return 0;
+        return -1;
     }
 
     /* Get the list of processes. */
@@ -69,7 +68,7 @@ int ps_read(void)
     if (procs == NULL) {
         PLUGIN_ERROR("Cannot get kvm processes list: %s", kvm_geterr(kd));
         kvm_close(kd);
-        return 0;
+        return -1;
     }
 
     /* Iterate through the processes in kinfo_proc */
@@ -104,7 +103,8 @@ int ps_read(void)
 
             memset(&pse, 0, sizeof(pse));
             pse.id = procs[i].ki_pid;
-
+            pse.starttime = (unsigned long long)procs[i].ki_start.tv_sec * 1000000 +
+                            procs[i].ki_start.tv_usec;
             pse.num_proc = 1;
             pse.num_lwp = procs[i].ki_numthreads;
 
@@ -138,6 +138,7 @@ int ps_read(void)
             pse.io_syscw = -1;
             pse.io_diskr = -1;
             pse.io_diskw = -1;
+            pse.io_cancelled_diskw = -1;
 
             /* file descriptor count not implemented */
             pse.num_fd = 0;

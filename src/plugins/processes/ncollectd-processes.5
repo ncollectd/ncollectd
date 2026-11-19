@@ -36,6 +36,12 @@ The \fBprocesses\fP plugin collects information about processes of local system.
 By default, with no process matches configured, only general statistics is
 collected: the number of processes in each state and fork rate.
 .Pp
+On Linux the number of processes in the \fIrunning\fP state is the
+\fIprocs_running\fP value of \fI/proc/stat\fP, which counts runnable threads.
+On Darwin the states are counted per thread and the per-process statistics
+of \fBprocess\fP, \fBprocess-match\fP and \fBprocess-pidfile\fP are not
+available.
+.Pp
 Process matches can be configured by \fBprocess\fP and \fBprocess-match\fP
 options.
 These may also be a block in which further options may be specified.
@@ -98,7 +104,7 @@ Disabled by default.
 .Pp
 This option is only available on Linux, requires the \fBlibmnl\fP library and
 requires the \f(CWCAP_NET_ADMIN\fP capability at runtime.
-.It \fBfile_descriptor\fP
+.It \fBfile_descriptors\fP
 Collect number of file descriptors of matched processes.
 Disabled by default.
 .It \fBmemory_maps\fP

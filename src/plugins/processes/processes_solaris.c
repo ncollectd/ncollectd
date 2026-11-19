@@ -79,33 +79,37 @@ static char *ps_get_cmdline(long pid, char *name __attribute__((unused)),
  */
 static int ps_read_process(long pid, process_entry_t *ps, char *state)
 {
-    char filename[64];
-    char f_psinfo[64], f_usage[64];
-    char *buffer;
+    char f_status[PATH_MAX];
+    char f_psinfo[PATH_MAX];
+    char f_usage[PATH_MAX];
 
-    pstatus_t *myStatus;
-    psinfo_t *myInfo;
-    prusage_t *myUsage;
-
-    snprintf(filename, sizeof(filename), "/proc/%li/status", pid);
+    snprintf(f_status, sizeof(f_status), "/proc/%li/status", pid);
     snprintf(f_psinfo, sizeof(f_psinfo), "/proc/%li/psinfo", pid);
     snprintf(f_usage, sizeof(f_usage), "/proc/%li/usage", pid);
 
-    buffer = calloc(1, sizeof(pstatus_t));
-    read_text_file_contents(filename, buffer, sizeof(pstatus_t));
-    myStatus = (pstatus_t *)buffer;
+    pstatus_t *myStatus = calloc(1, sizeof(*myStatus));
+    psinfo_t *myInfo = calloc(1, sizeof(*myInfo));
+    prusage_t *myUsage = calloc(1, sizeof(*myUsage));
+    if ((myStatus == NULL) || (myInfo == NULL) || (myUsage == NULL)) {
+        PLUGIN_ERROR("calloc failed.");
+        free(myStatus);
+        free(myInfo);
+        free(myUsage);
+        return -1;
+    }
 
-    buffer = calloc(1, sizeof(psinfo_t));
-    read_text_file_contents(f_psinfo, buffer, sizeof(psinfo_t));
-    myInfo = (psinfo_t *)buffer;
-
-    buffer = calloc(1, sizeof(prusage_t));
-    read_text_file_contents(f_usage, buffer, sizeof(prusage_t));
-    myUsage = (prusage_t *)buffer;
+    if (read_file_contents(f_psinfo, myInfo, sizeof(*myInfo)) != (ssize_t)sizeof(*myInfo)) {
+        free(myStatus);
+        free(myInfo);
+        free(myUsage);
+        return -1;
+    }
 
     sstrncpy(ps->name, myInfo->pr_fname, sizeof(myInfo->pr_fname));
-    ps->num_lwp = myStatus->pr_nlwp;
-    if (myInfo->pr_wstat != 0) {
+    ps->starttime = (unsigned long long)myInfo->pr_start.tv_sec * 1000000000 +
+                    myInfo->pr_start.tv_nsec;
+    /* The status file of a zombie cannot be read, only its psinfo. */
+    if ((myInfo->pr_wstat != 0) || (myInfo->pr_lwp.pr_sname == 'Z')) {
         ps->num_proc = 0;
         ps->num_lwp = 0;
         *state = (char)'Z';
@@ -114,17 +118,29 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
         free(myInfo);
         free(myUsage);
         return 0;
-    } else {
-        ps->num_proc = 1;
-        ps->num_lwp = myInfo->pr_nlwp;
     }
+
+    ssize_t status_len = read_file_contents(f_status, myStatus, sizeof(*myStatus));
+    ssize_t usage_len = read_file_contents(f_usage, myUsage, sizeof(*myUsage));
+    if ((status_len != (ssize_t)sizeof(*myStatus)) || (usage_len != (ssize_t)sizeof(*myUsage))) {
+        free(myStatus);
+        free(myInfo);
+        free(myUsage);
+        return -1;
+    }
+
+    ps->num_proc = 1;
+    ps->num_lwp = myInfo->pr_nlwp;
+
 
     /*
      * Convert system time and user time from nanoseconds to microseconds
      * for compatibility with the linux module
      */
-    ps->cpu_system_counter = myStatus->pr_stime.tv_nsec / 1000;
-    ps->cpu_user_counter = myStatus->pr_utime.tv_nsec / 1000;
+    ps->cpu_system_counter = (int64_t)myStatus->pr_stime.tv_sec * 1000000 +
+                             myStatus->pr_stime.tv_nsec / 1000;
+    ps->cpu_user_counter = (int64_t)myStatus->pr_utime.tv_sec * 1000000 +
+                           myStatus->pr_utime.tv_nsec / 1000;
 
     /*
      * Convert rssize from KB to bytes to be consistent w/ the linux module
@@ -138,8 +154,8 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
      * TODO: Data and code segment calculations for Solaris
      */
 
-    ps->vmem_data = -1;
-    ps->vmem_code = -1;
+    ps->vmem_data = 0;
+    ps->vmem_code = 0;
     ps->stack_size = myStatus->pr_stksize;
 
     /*
@@ -166,6 +182,7 @@ static int ps_read_process(long pid, process_entry_t *ps, char *state)
     ps->io_syscw = myUsage->pr_sysc;
     ps->io_diskr = -1;
     ps->io_diskw = -1;
+    ps->io_cancelled_diskw = -1;
 
     /*
      * TODO: context switch counters for Solaris
@@ -274,15 +291,17 @@ int ps_read(void)
     ps_list_reset();
 
     proc = opendir("/proc");
-    if (proc == NULL)
-        return -1;
+    if (proc == NULL) {
+        PLUGIN_ERROR("Cannot open '/proc': %s", STRERRNO);
+         return -1;
+    }
 
     while ((ent = readdir(proc)) != NULL) {
         long pid;
         process_entry_t pse;
         char *endptr;
 
-        if (!isdigit((int)ent->d_name[0]))
+        if (!isdigit((unsigned char)ent->d_name[0]))
             continue;
 
         pid = strtol(ent->d_name, &endptr, 10);
@@ -356,5 +375,16 @@ int ps_init(void)
         return -1;
     }
 
+    return 0;
+}
+
+int ps_shutdown(void)
+{
+    if (kc != NULL) {
+        kstat_close(kc);
+        kc = NULL;
+    }
+
+    ps_list_free();
     return 0;
 }
