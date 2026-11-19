@@ -78,23 +78,28 @@ The following options are accepted within each **instance** block:
 
 **timeout** *seconds*
 
-> Sets the timeout value for ldap operations, in seconds.
-> By default, the configured **interval** is used to set the timeout.
-> Use **-1** to disable (infinite timeout).
+> Sets the timeout, in seconds, for connecting to the *ds389* server and for
+> each ldap operation.
+> By default, half of the configured **interval** is used as timeout.
 
 **verify-host** *true|false*
 
-> Enables or disables peer host name verification.
-> If enabled, the plugin checks if the Common Name or a
-> Subject Alternate Name field of the SSL certificate matches the host
-> name provided by the **url** option.
-> If this identity check fails, the connection is aborted.
+> Enables or disables the verification of the server certificate.
+> If enabled, the certificate is checked as configured in
+> ldap.conf(5)
+> (by default it must be signed by a trusted CA and its Common Name or a
+> Subject Alternate Name field must match the host name provided by the
+> **url** option); if this check fails, the connection is aborted.
+> Disabling it skips the whole certificate verification, not only the host
+> name check: it is equivalent to **TLS\_REQCERT never** and makes the
+> connection vulnerable to man-in-the-middle attacks.
 > Enabled by default.
 
 **version** *version*
 
 > An integer which sets the LDAP protocol version number to use when connecting
 > to the LDAP server.
+> Valid values are **2** and **3**; **start-tls** requires version **3**.
 > Defaults to **3** for using *LDAPv3*.
 
 **label** *key* *value*

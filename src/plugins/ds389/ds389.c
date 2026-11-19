@@ -16,6 +16,16 @@
 #endif
 #endif
 
+#ifdef TIMEGM_NEEDS_DEFAULT
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
+#elif defined(TIMEGM_NEEDS_BSD)
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE 1
+#endif
+#endif
+
 #include "plugin.h"
 #include "libutils/common.h"
 
@@ -182,6 +192,14 @@ static ds389_metric_t ds389_metrics_backend[] = {
 };
 static size_t ds389_metrics_backend_size = STATIC_ARRAY_SIZE(ds389_metrics_backend);
 
+static ds389_metric_t ds389_metrics_dbfile[] = {
+    { "dbfilecachehit-",  FAM_DS389_BACKEND_DBFILE_CACHE_HIT  },
+    { "dbfilecachemiss-", FAM_DS389_BACKEND_DBFILE_CACHE_MISS },
+    { "dbfilepagein-",    FAM_DS389_BACKEND_DBFILE_PAGEIN     },
+    { "dbfilepageout-",   FAM_DS389_BACKEND_DBFILE_PAGEOUT    },
+};
+static size_t ds389_metrics_dbfile_size = STATIC_ARRAY_SIZE(ds389_metrics_dbfile);
+
 static void ds389_free(void *arg)
 {
     ds389_ctx_t *ctx = arg;
@@ -202,6 +220,41 @@ static void ds389_free(void *arg)
     free(ctx);
 }
 
+static int ds389_init_tls(ds389_ctx_t *ctx)
+{
+    if ((ctx->cacert == NULL) && ctx->verifyhost)
+        return 0;
+
+    if (ctx->cacert != NULL) {
+        int rc = ldap_set_option(ctx->ld, LDAP_OPT_X_TLS_CACERTFILE, ctx->cacert);
+        if (rc != LDAP_OPT_SUCCESS) {
+            PLUGIN_ERROR("Failed to set the CA certificate file '%s' for %s.",
+                         ctx->cacert, ctx->url);
+            return -1;
+        }
+    }
+
+    if (ctx->verifyhost == false) {
+        int never = LDAP_OPT_X_TLS_NEVER;
+        int rc = ldap_set_option(ctx->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
+        if (rc != LDAP_OPT_SUCCESS) {
+            PLUGIN_ERROR("Failed to disable the certificate verification for %s.", ctx->url);
+            return -1;
+        }
+    }
+
+    /* The TLS options of a connection are only used by a new TLS context,
+     * otherwise libldap uses the global default context. */
+    int newctx = 0;
+    int rc = ldap_set_option(ctx->ld, LDAP_OPT_X_TLS_NEWCTX, &newctx);
+    if (rc != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to create the TLS context for %s.", ctx->url);
+        return -1;
+    }
+
+    return 0;
+}
+
 static int ds389_init_host(ds389_ctx_t *ctx)
 {
     if (ctx->ld != NULL) {
@@ -218,17 +271,39 @@ static int ds389_init_host(ds389_ctx_t *ctx)
         return -1;
     }
 
-    ldap_set_option(ctx->ld, LDAP_OPT_PROTOCOL_VERSION, &ctx->version);
+    if (ldap_set_option(ctx->ld, LDAP_OPT_PROTOCOL_VERSION, &ctx->version) != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_PROTOCOL_VERSION for %s.", ctx->url);
+        ldap_unbind_ext_s(ctx->ld, NULL, NULL);
+        ctx->ld = NULL;
+        return -1;
+    }
+
     struct timeval tm = CDTIME_T_TO_TIMEVAL(ctx->timeout);
-    ldap_set_option(ctx->ld, LDAP_OPT_TIMEOUT, &tm);
-    ldap_set_option(ctx->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
+    if (ldap_set_option(ctx->ld, LDAP_OPT_TIMEOUT, &tm) != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_TIMEOUT for %s.", ctx->url);
+        ldap_unbind_ext_s(ctx->ld, NULL, NULL);
+        ctx->ld = NULL;
+        return -1;
+    }
 
-    if (ctx->cacert != NULL)
-        ldap_set_option(ctx->ld, LDAP_OPT_X_TLS_CACERTFILE, ctx->cacert);
+    if (ldap_set_option(ctx->ld, LDAP_OPT_NETWORK_TIMEOUT, &tm) != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_NETWORK_TIMEOUT for %s.", ctx->url);
+        ldap_unbind_ext_s(ctx->ld, NULL, NULL);
+        ctx->ld = NULL;
+        return -1;
+    }
 
-    if (ctx->verifyhost == false) {
-        int never = LDAP_OPT_X_TLS_NEVER;
-        ldap_set_option(ctx->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
+    if (ldap_set_option(ctx->ld, LDAP_OPT_RESTART, LDAP_OPT_ON) != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_RESTART for %s.", ctx->url);
+        ldap_unbind_ext_s(ctx->ld, NULL, NULL);
+        ctx->ld = NULL;
+        return -1;
+    }
+
+    if (ds389_init_tls(ctx) != 0) {
+        ldap_unbind_ext_s(ctx->ld, NULL, NULL);
+        ctx->ld = NULL;
+        return -1;
     }
 
     if (ctx->starttls) {
@@ -262,7 +337,67 @@ static int ds389_init_host(ds389_ctx_t *ctx)
     return 0;
 }
 
-static int ds389_read_metrics(ds389_ctx_t *ctx, char *filter,
+static int ds389_parse_time(const char *str, double *ret)
+{
+    struct tm tm = {0};
+    if (strptime(str, "%Y%m%d%H%M%S", &tm) == NULL)
+        return -1;
+
+#ifdef HAVE_TIMEGM
+    time_t t = timegm(&tm);
+    if (t == ((time_t)-1))
+        return -1;
+#else
+    time_t t = mktime(&tm);
+    if (t == ((time_t)-1))
+        return -1;
+    /* mktime assumes that tm is local time, undo the conversion to get UTC. */
+    t = t - timezone;
+#endif
+
+    *ret = t;
+    return 0;
+}
+
+
+static char *ds389_get_value(ds389_ctx_t *ctx, LDAPMessage *e, char *attr)
+{
+    struct berval **values = ldap_get_values_len(ctx->ld, e, attr);
+    if (values == NULL)
+        return NULL;
+
+    char *value = NULL;
+    if ((values[0] != NULL) && (values[0]->bv_val != NULL))
+        value = sstrndup(values[0]->bv_val, values[0]->bv_len);
+
+    ldap_value_free_len(values);
+    return value;
+}
+
+static int ds389_parse_value(const char *str, metric_type_t type, value_t *ret)
+{
+    char *endptr = NULL;
+    errno = 0;
+
+    if (type == METRIC_TYPE_GAUGE) {
+        double value = strtod(str, &endptr);
+        if ((errno != 0) || (endptr == str) || (*endptr != '\0'))
+            return -1;
+        *ret = VALUE_GAUGE(value);
+        return 0;
+    }
+
+    if (strchr(str, '-') != NULL)
+        return -1;
+
+    uint64_t value = strtoull(str, &endptr, 10);
+    if ((errno != 0) || (endptr == str) || (*endptr != '\0'))
+        return -1;
+    *ret = VALUE_COUNTER(value);
+    return 0;
+}
+
+static int ds389_read_metrics(ds389_ctx_t *ctx, label_set_t *labels, char *filter,
                               ds389_metric_t *metrics, size_t metrics_size)
 {
     LDAPMessage *result = NULL;
@@ -284,32 +419,27 @@ static int ds389_read_metrics(ds389_ctx_t *ctx, char *filter,
 
     for (size_t i = 0; i < metrics_size; i++) {
         value_t value = {0};
-        struct berval **value_list = ldap_get_values_len(ctx->ld, e, metrics[i].attr);
-        if (value_list != NULL) {
-            struct berval value_data = *value_list[0];
+        char *str = ds389_get_value(ctx, e, metrics[i].attr);
+        if (str != NULL) {
             metric_family_t *fam = &ctx->fams[metrics[i].fam];
 
             if (metrics[i].fam == FAM_DS389_VERSION_INFO) {
-                value = VALUE_GAUGE(1);
-                metric_family_append(fam, value, &ctx->labels,
-                                     &LABEL_PAIR_CONST("version", value_data.bv_val),
-                                     NULL);
+                label_set_t info = {
+                    .num = 1,
+                    .ptr = (label_pair_t[]){
+                        {.name = "version", .value = str}
+                    }
+                };
+                metric_family_append(fam, VALUE_INFO(info), labels, NULL);
             } else if (metrics[i].fam == FAM_DS389_START_TIME_SECONDS) {
-                struct tm tm = {0};
-                if (strptime(value_data.bv_val,"%Y%m%d%H%M%S", &tm) != NULL) {
-                    time_t start = mktime(&tm);
-                    value = VALUE_GAUGE(start);
-                    metric_family_append(fam, value, &ctx->labels, NULL);
-                }
+                double start = 0;
+                if (ds389_parse_time(str, &start) == 0)
+                    metric_family_append(fam, VALUE_GAUGE(start), labels, NULL);
             } else {
-                if (fam->type == METRIC_TYPE_GAUGE)
-                    value = VALUE_GAUGE((double)atoll(value_data.bv_val));
-                else
-                    value = VALUE_COUNTER((uint64_t)atoll(value_data.bv_val));
-
-                metric_family_append(fam, value, &ctx->labels, NULL);
+                if (ds389_parse_value(str, fam->type, &value) == 0)
+                    metric_family_append(fam, value, labels, NULL);
             }
-            ldap_value_free_len(value_list);
+            free(str);
         }
     }
 
@@ -318,7 +448,38 @@ static int ds389_read_metrics(ds389_ctx_t *ctx, char *filter,
     return 0;
 }
 
-static int ds389_read_backend_metrics(ds389_ctx_t *ctx, char *filter)
+static void ds389_read_dbfile_metric(ds389_ctx_t *ctx, label_set_t *labels, LDAPMessage *e,
+                                     char *attr, const char *num, int fam)
+{
+    const char *c = num;
+    while (*c != '\0') {
+        if (!isdigit((int)*c))
+            return;
+        c++;
+    }
+
+    size_t len = c - num;
+    if ((len == 0) || (len > 20))
+        return;
+
+    char name[64];
+    ssnprintf(name, sizeof(name), "dbfilename-%s", num);
+
+    char *filename = ds389_get_value(ctx, e, name);
+    if (filename == NULL)
+        return;
+
+    char *str = ds389_get_value(ctx, e, attr);
+    value_t value = {0};
+    if ((str != NULL) && (ds389_parse_value(str, ctx->fams[fam].type, &value) == 0))
+        metric_family_append(&ctx->fams[fam], value, labels,
+                             &LABEL_PAIR_CONST("filename", filename), NULL);
+
+    free(str);
+    free(filename);
+}
+
+static int ds389_read_backend_metrics(ds389_ctx_t *ctx, label_set_t *labels, char *filter)
 {
     LDAPMessage *result = NULL;
     int rc = ldap_search_ext_s(ctx->ld, filter, LDAP_SCOPE_BASE, "(objectClass=*)",
@@ -340,87 +501,32 @@ static int ds389_read_backend_metrics(ds389_ctx_t *ctx, char *filter)
     for (size_t i = 0; i < ds389_metrics_backend_size; i++) {
         metric_family_t *fam = &ctx->fams[ds389_metrics_backend[i].fam];
         char *attr = ds389_metrics_backend[i].attr;
-        struct berval **value_list = ldap_get_values_len(ctx->ld, e, attr);
-        if (value_list != NULL) {
+        char *str = ds389_get_value(ctx, e, attr);
+        if (str != NULL) {
             value_t value = {0};
-            struct berval value_data = *value_list[0];
-
-            if (fam->type == METRIC_TYPE_GAUGE)
-                value = VALUE_GAUGE((double)atoll(value_data.bv_val));
-            else
-                value = VALUE_COUNTER((uint64_t)atoll(value_data.bv_val));
-
-            metric_family_append(fam, value, &ctx->labels, NULL);
-
-            ldap_value_free_len(value_list);
+            if (ds389_parse_value(str, fam->type, &value) == 0)
+                metric_family_append(fam, value, labels, NULL);
+            free(str);
         }
     }
-
-    int current_num = -1;
-    char *current_filename = NULL;
 
     BerElement *ber = NULL;
-    char *attr = NULL;
-    for (attr = ldap_first_attribute(ctx->ld, e, &ber); attr != NULL;
+    for (char *attr = ldap_first_attribute(ctx->ld, e, &ber); attr != NULL;
              attr = ldap_next_attribute(ctx->ld, e, ber)) {
-        struct berval **value_list = ldap_get_values_len(ctx->ld, e, attr);
-        if (value_list != NULL) {
-            struct berval value_data = *value_list[0];
-
-            if (strncmp(attr, "dbfilename-", strlen("dbfilename-")) == 0) {
-                int num = atoll(attr + strlen("dbfilename-"));
-                current_num = num;
-                free(current_filename);
-                current_filename = strdup(value_data.bv_val);
-                if (current_filename == NULL)
-                    current_num = -1;
-            } else if (strncmp(attr, "dbfilecachehit-", strlen("dbfilecachehit-")) == 0) {
-                int num = atoll(attr + strlen("dbfilecachehit-"));
-                if (num == current_num) {
-                    uint64_t value = (uint64_t)atoll(value_data.bv_val);
-                    metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_CACHE_HIT],
-                                         VALUE_COUNTER(value), &ctx->labels,
-                                         &LABEL_PAIR_CONST("filename", current_filename),
-                                         NULL);
-                }
-            } else if (strncmp(attr, "dbfilecachemiss-", strlen("dbfilecachemiss-")) == 0) {
-                int num = atoll(attr + strlen("dbfilecachemiss-"));
-                if (num == current_num) {
-                    uint64_t value = (uint64_t)atoll(value_data.bv_val);
-                    metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_CACHE_MISS],
-                                         VALUE_COUNTER(value), &ctx->labels,
-                                         &LABEL_PAIR_CONST("filename", current_filename),
-                                         NULL);
-                }
-            } else if (strncmp(attr, "dbfilepagein-", strlen("dbfilepagein-")) == 0) {
-                int num = atoll(attr + strlen("dbfilepagein-"));
-                if (num == current_num) {
-                    uint64_t value = (uint64_t)atoll(value_data.bv_val);
-                    metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_PAGEIN],
-                                         VALUE_COUNTER(value), &ctx->labels,
-                                         &LABEL_PAIR_CONST("filename", current_filename),
-                                         NULL);
-                }
-            } else if (strncmp(attr, "dbfilepageout-", strlen("dbfilepageout-")) == 0) {
-                int num = atoll(attr + strlen("dbfilepageout-"));
-                if (num == current_num) {
-                    uint64_t value = (uint64_t)atoll(value_data.bv_val);
-                    metric_family_append(&ctx->fams[FAM_DS389_BACKEND_DBFILE_PAGEOUT],
-                                         VALUE_COUNTER(value), &ctx->labels,
-                                         &LABEL_PAIR_CONST("filename", current_filename),
-                                         NULL);
-                }
+        for (size_t i = 0; i < ds389_metrics_dbfile_size; i++) {
+            size_t len = strlen(ds389_metrics_dbfile[i].attr);
+            if (strncasecmp(attr, ds389_metrics_dbfile[i].attr, len) == 0) {
+                ds389_read_dbfile_metric(ctx, labels, e, attr, attr + len,
+                                         ds389_metrics_dbfile[i].fam);
+                break;
             }
-
-            ldap_value_free_len(value_list);
         }
-        if (attr != NULL)
-            ldap_memfree(attr);
+        ldap_memfree(attr);
     }
+
     if (ber != NULL)
         ber_free(ber, 0);
 
-    free(current_filename);
     ldap_msgfree(result);
 
     return 0;
@@ -488,7 +594,7 @@ static char *ds389_get_2rdn(char *dn, char *rdn0, char *rdn2)
 static int ds389_list_backends(ds389_ctx_t *ctx)
 {
     char *attrs[] = {"dn", NULL};
-    LDAPMessage *result;
+    LDAPMessage *result = NULL;
     int rc = ldap_search_ext_s(ctx->ld, "cn=ldbm database,cn=plugins,cn=config",
                                LDAP_SCOPE_SUBTREE, "(cn=monitor)", attrs, 0, NULL,
                                NULL, NULL, 0, &result);
@@ -507,17 +613,37 @@ static int ds389_list_backends(ds389_ctx_t *ctx)
 
         char *backend = ds389_get_2rdn(dn, "monitor", "ldbm database");
         if (backend != NULL) {
-            label_set_add(&ctx->labels, true, "backend", backend);
-            ds389_read_backend_metrics(ctx, dn);
+            label_set_t labels = {0};
+            if (label_set_clone(&labels, ctx->labels) == 0) {
+                label_set_add(&labels, true, "backend", backend);
+                ds389_read_backend_metrics(ctx, &labels, dn);
+            } else {
+                PLUGIN_ERROR("Failed to clone the labels.");
+            }
+            label_set_reset(&labels);
         }
 
         free(backend);
         ldap_memfree(dn);
     }
 
-    label_set_add(&ctx->labels, true, "backend", NULL);
-
     ldap_msgfree(result);
+    return 0;
+}
+
+static int ds389_replica_status(const char *str, double *ret)
+{
+    /* "Error (N) message" since 389-ds 1.3, "N message" in older versions. */
+    if (strncmp(str, "Error (", strlen("Error (")) == 0)
+        str += strlen("Error (");
+
+    char *endptr = NULL;
+    errno = 0;
+    long status = strtol(str, &endptr, 10);
+    if ((errno != 0) || (endptr == str))
+        return -1;
+
+    *ret = status;
     return 0;
 }
 
@@ -540,72 +666,67 @@ static int ds389_read_replica(ds389_ctx_t *ctx, char *dn)
         return -1;
     }
 
-    struct berval **value_list;
-    value_list = ldap_get_values_len(ctx->ld, e, "cn");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        label_set_add(&ctx->labels, true, "replica", value_data.bv_val);
-        ldap_value_free_len(value_list);
+    label_set_t labels = {0};
+    if (label_set_clone(&labels, ctx->labels) != 0) {
+        PLUGIN_ERROR("Failed to clone the labels.");
+        ldap_msgfree(result);
+        return -1;
     }
 
-    value_list = ldap_get_values_len(ctx->ld, e, "nsds5replicahost");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        label_set_add(&ctx->labels, true, "host", value_data.bv_val);
-        ldap_value_free_len(value_list);
+    char *str = ds389_get_value(ctx, e, "cn");
+    if (str != NULL) {
+        label_set_add(&labels, true, "replica", str);
+        free(str);
     }
 
-    value_list = ldap_get_values_len(ctx->ld, e, "nsds5replicaport");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        label_set_add(&ctx->labels, true, "port", value_data.bv_val);
-        ldap_value_free_len(value_list);
+    str = ds389_get_value(ctx, e, "nsds5replicahost");
+    if (str != NULL) {
+        label_set_add(&labels, true, "host", str);
+        free(str);
     }
 
-    value_list = ldap_get_values_len(ctx->ld, e, "nsds5replicaroot");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        label_set_add(&ctx->labels, true, "root", value_data.bv_val);
-        ldap_value_free_len(value_list);
+    str = ds389_get_value(ctx, e, "nsds5replicaport");
+    if (str != NULL) {
+        label_set_add(&labels, true, "port", str);
+        free(str);
     }
 
-    value_list = ldap_get_values_len(ctx->ld, e, "nsds5replicaLastUpdateStatus");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        double status = strtoll(value_data.bv_val, NULL, 0);
-        metric_family_append(&ctx->fams[FAM_DS389_REPLICA_LAST_UPDATE_STATUS],
-                             VALUE_GAUGE(status), &ctx->labels, NULL);
-        ldap_value_free_len(value_list);
+    str = ds389_get_value(ctx, e, "nsds5replicaroot");
+    if (str != NULL) {
+        label_set_add(&labels, true, "root", str);
+        free(str);
     }
 
-    value_list = ldap_get_values_len(ctx->ld, e, "nsds5replicaLastUpdateStart");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        struct tm tm = {0};
-        if (strptime(value_data.bv_val,"%Y%m%d%H%M%S", &tm) != NULL) {
-            time_t start = mktime(&tm);
+    str = ds389_get_value(ctx, e, "nsds5replicaLastUpdateStatus");
+    if (str != NULL) {
+        double status = 0;
+        if (ds389_replica_status(str, &status) == 0)
+            metric_family_append(&ctx->fams[FAM_DS389_REPLICA_LAST_UPDATE_STATUS],
+                                 VALUE_GAUGE(status), &labels, NULL);
+        free(str);
+    }
+
+    str = ds389_get_value(ctx, e, "nsds5replicaLastUpdateStart");
+    if (str != NULL) {
+        double start = 0;
+        if (ds389_parse_time(str, &start) == 0) {
             metric_family_append(&ctx->fams[FAM_DS389_REPLICA_LAST_UPDATE_START_SECONDS],
-                                 VALUE_GAUGE(start), &ctx->labels, NULL);
+                                 VALUE_GAUGE(start), &labels, NULL);
         }
-        ldap_value_free_len(value_list);
+        free(str);
     }
 
-    value_list = ldap_get_values_len(ctx->ld, e, "nsds5replicaLastUpdateEnd");
-    if (value_list != NULL) {
-        struct berval value_data = *value_list[0];
-        struct tm tm = {0};
-        if (strptime(value_data.bv_val,"%Y%m%d%H%M%S", &tm) != NULL) {
-            time_t end = mktime(&tm);
+    str = ds389_get_value(ctx, e, "nsds5replicaLastUpdateEnd");
+    if (str != NULL) {
+        double end = 0;
+        if (ds389_parse_time(str, &end) == 0) {
             metric_family_append(&ctx->fams[FAM_DS389_REPLICA_LAST_UPDATE_END_SECONDS],
-                                 VALUE_GAUGE(end), &ctx->labels, NULL);
+                                 VALUE_GAUGE(end), &labels, NULL);
         }
-        ldap_value_free_len(value_list);
+        free(str);
     }
 
-    label_set_add(&ctx->labels, true, "replica", NULL);
-    label_set_add(&ctx->labels, true, "host", NULL);
-    label_set_add(&ctx->labels, true, "port", NULL);
-    label_set_add(&ctx->labels, true, "root", NULL);
+    label_set_reset(&labels);
 
     ldap_msgfree(result);
 
@@ -615,7 +736,7 @@ static int ds389_read_replica(ds389_ctx_t *ctx, char *dn)
 static int ds389_list_replications(ds389_ctx_t *ctx)
 {
     char *attrs[] = {"dn", NULL};
-    LDAPMessage *result;
+    LDAPMessage *result = NULL;
     int rc = ldap_search_ext_s(ctx->ld, "cn=config", LDAP_SCOPE_SUBTREE,
                                "(objectClass=nsDS5ReplicationAgreement)", attrs,
                                0, NULL, NULL, NULL, 0, &result);
@@ -642,7 +763,7 @@ static int ds389_list_replications(ds389_ctx_t *ctx)
 static int ds389_list_links(ds389_ctx_t *ctx)
 {
     char *attrs[] = {"dn", NULL};
-    LDAPMessage *result;
+    LDAPMessage *result = NULL;
     int rc = ldap_search_ext_s(ctx->ld, "cn=chaining database,cn=plugins,cn=config",
                                LDAP_SCOPE_SUBTREE, "(cn=monitor)", attrs, 0, NULL, NULL,
                                NULL, 0, &result);
@@ -660,17 +781,22 @@ static int ds389_list_links(ds389_ctx_t *ctx)
 
         char *link= ds389_get_2rdn(dn, "monitor", "chaining database");
         if (link != NULL) {
-            label_set_add(&ctx->labels, true, "link", link);
-            int status = ds389_read_metrics(ctx, dn, ds389_metrics_link, ds389_metrics_link_size);
-            if (status < 0)
-                PLUGIN_ERROR("error reading \"%s\" metrics", dn);
+            label_set_t labels = {0};
+            if (label_set_clone(&labels, ctx->labels) == 0) {
+                label_set_add(&labels, true, "link", link);
+                int status = ds389_read_metrics(ctx, &labels, dn, ds389_metrics_link,
+                                                ds389_metrics_link_size);
+                if (status < 0)
+                    PLUGIN_ERROR("error reading \"%s\" metrics", dn);
+            } else {
+                PLUGIN_ERROR("Failed to clone the labels.");
+            }
+            label_set_reset(&labels);
         }
 
         free(link);
         ldap_memfree(dn);
     }
-
-    label_set_add(&ctx->labels, true, "link", NULL);
 
     ldap_msgfree(result);
     return 0;
@@ -679,7 +805,7 @@ static int ds389_list_links(ds389_ctx_t *ctx)
 static int ds389_ping(ds389_ctx_t *ctx)
 {
     char *attrs[] = {"dn", NULL};
-    LDAPMessage *result;
+    LDAPMessage *result = NULL;
     int rc = ldap_search_ext_s(ctx->ld, "", LDAP_SCOPE_BASE,
                                "(objectClass=top)", attrs, 0, NULL, NULL, NULL, 0, &result);
     if (rc != LDAP_SUCCESS) {
@@ -720,22 +846,24 @@ static int ds389_read(user_data_t *ud)
 
     metric_family_append(&ctx->fams[FAM_DS389_UP], VALUE_GAUGE(1), &ctx->labels, NULL);
 
-    status = ds389_read_metrics(ctx, "cn=monitor",
+    status = ds389_read_metrics(ctx, &ctx->labels, "cn=monitor",
                                 ds389_metrics_monitor, ds389_metrics_monitor_size);
     if (status < 0)
         PLUGIN_ERROR("error reading \"cn=monitor\" metrics");
 
-    status = ds389_read_metrics(ctx, "cn=snmp,cn=monitor",
+    status = ds389_read_metrics(ctx, &ctx->labels, "cn=snmp,cn=monitor",
                                 ds389_metrics_snmp, ds389_metrics_snmp_size);
     if (status < 0)
         PLUGIN_ERROR("error reading \"cn=snmp,cn=monitor\" metrics");
 
-    status = ds389_read_metrics(ctx,"cn=monitor,cn=ldbm database,cn=plugins,cn=config",
+    status = ds389_read_metrics(ctx, &ctx->labels,
+                                "cn=monitor,cn=ldbm database,cn=plugins,cn=config",
                                 ds389_metrics_cache, ds389_metrics_cache_size);
     if (status < 0)
         PLUGIN_ERROR("error reading \"cn=monitor,cn=ldbm database,cn=plugins,cn=config\" metrics");
 
-    status = ds389_read_metrics(ctx,"cn=database,cn=monitor,cn=ldbm database,cn=plugins,cn=config",
+    status = ds389_read_metrics(ctx, &ctx->labels,
+                                "cn=database,cn=monitor,cn=ldbm database,cn=plugins,cn=config",
                                 ds389_metrics_db, ds389_metrics_db_size);
     if (status < 0)
         PLUGIN_ERROR("error reading "
@@ -799,6 +927,13 @@ static int ds389_config_add(config_item_t *ci)
             status = cf_util_get_boolean(child, &ctx->verifyhost);
         } else if (strcasecmp("version", child->key) == 0) {
             status = cf_util_get_int(child, &ctx->version);
+            if (status == 0) {
+                if ((ctx->version != LDAP_VERSION2) && (ctx->version != LDAP_VERSION3)) {
+                    PLUGIN_ERROR("The 'version' option in %s:%d must be 2 or 3.",
+                                 cf_get_file(child), cf_get_lineno(child));
+                    status = -1;
+                }
+            }
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
@@ -831,6 +966,11 @@ static int ds389_config_add(config_item_t *ci)
 
         if (ludpp != NULL)
             ldap_free_urldesc(ludpp);
+    }
+
+    if ((status == 0) && ctx->starttls && (ctx->version != LDAP_VERSION3)) {
+        PLUGIN_ERROR("Instance '%s': 'start-tls' requires LDAP version 3.", ctx->name);
+        status = -1;
     }
 
     if (status != 0) {

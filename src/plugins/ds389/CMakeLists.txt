@@ -7,7 +7,7 @@ if(PLUGIN_DS389)
     if (LIBLDAP_FOUND)
         set(BUILD_PLUGIN_DS389 1)
     else()
-        set(BUILD_PLUGIN_DS389_REASON "Linux only" PARENT_SCOPE)
+        set(BUILD_PLUGIN_DS389_REASON "libldap not found" PARENT_SCOPE)
     endif()
 endif()
 

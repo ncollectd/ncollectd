@@ -149,7 +149,7 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
         .help = "The current number of active threads used for handling requests.",
     },
     [FAM_DS389_CURRENT_CONNECTIONS] = {
-        .name = "ds389_connections",
+        .name = "ds389_current_connections",
         .type = METRIC_TYPE_GAUGE,
         .help = "The number of connections currently in service by the directory.",
     },
@@ -159,7 +159,7 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
         .help = "The number of connections handled by the directory since it started.",
     },
     [FAM_DS389_CURRENT_CONNECTIONS_MAXTHREADS] = {
-        .name = "ds389_connections_maxthreads",
+        .name = "ds389_current_connections_maxthreads",
         .type = METRIC_TYPE_GAUGE,
         .help = "All connections that are currently in a max thread state.",
     },
@@ -371,9 +371,9 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
         .help = "Current size of the normalized DN cache in bytes.",
     },
     [FAM_DS389_NDN_CACHE_MAX_SIZE] = {
-        .name = "ds389_ndn_cache_max_size",
+        .name = "ds389_ndn_cache_max_size_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The maximum size of the normalized DN cache in bytes.",
     },
     [FAM_DS389_NDN_CACHE_COUNT] = {
         .name = "ds389_ndn_cache_count",
@@ -383,15 +383,15 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
     [FAM_DS389_NDN_CACHE_THREADSIZE] = {
         .name = "ds389_ndn_cache_thread_size",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The size of the normalized DN cache of each thread.",
     },
     [FAM_DS389_NDN_CACHE_THREADSLOTS] = {
         .name = "ds389_ndn_cache_thread_slots",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The number of slots of the normalized DN cache.",
     },
     [FAM_DS389_DB_ABORT_RATE] = {
-        .name = "ds389_db_abort_rate",
+        .name = "ds389_db_abort",
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of transactions that have been aborted.",
     },
@@ -402,7 +402,7 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
     },
     [FAM_DS389_DB_CACHE_REGION_WAIT] = {
         .name = "ds389_db_cache_region_wait",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "The number of times that a thread of control was forced to "
                 "wait before obtaining the region lock.",
     },
@@ -470,27 +470,27 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
     [FAM_DS389_DB_CONFIGURED_LOCKS] = {
         .name = "ds389_db_configured_locks",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The maximum number of locks configured.",
     },
     [FAM_DS389_DB_CURRENT_LOCKS] = {
         .name = "ds389_db_current_locks",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The number of current locks.",
     },
     [FAM_DS389_DB_MAX_LOCKS] = {
         .name = "ds389_db_max_locks",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The maximum number of locks at any one time.",
     },
     [FAM_DS389_DB_CURRENT_LOCK_OBJECTS] = {
         .name = "ds389_db_current_lock_objects",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The number of current lock objects.",
     },
     [FAM_DS389_DB_MAX_LOCK_OBJECTS] = {
         .name = "ds389_db_max_lock_objects",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "The maximum number of lock objects at any one time.",
     },
     [FAM_DS389_DB_LOG_BYTES_SINCE_CHECKPOINT] = {
         .name = "ds389_db_log_bytes_since_checkpoint",
@@ -504,9 +504,9 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
                 "was forced to wait before obtaining the region lock.",
     },
     [FAM_DS389_DB_LOG_WRITE_RATE] = {
-        .name = "ds389_db_log_write_rate",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "Number of bytes written to the log since the last checkpoint.",
+        .name = "ds389_db_log_write_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of bytes written to the log.",
     },
     [FAM_DS389_DB_LONGEST_CHAIN_LENGTH] = {
         .name = "ds389_db_longest_chain_length",
@@ -541,7 +541,7 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
     [FAM_DS389_DB_PAGE_WRITE] = {
         .name = "ds389_db_page_write",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The pages read into the cache.",
+        .help = "The pages written from the cache to the backing file.",
     },
     [FAM_DS389_DB_PAGES_IN_USE] = {
         .name = "ds389_db_pages_in_use",
@@ -729,12 +729,12 @@ static metric_family_t fams_ds389[FAM_DS389_MAX] = {
         .help = "Replica last update status.",
     },
     [FAM_DS389_REPLICA_LAST_UPDATE_START_SECONDS] = {
-        .name = "ds389_replica_last_update_start",
+        .name = "ds389_replica_last_update_start_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Replica last update start time in unix epoch.",
     },
     [FAM_DS389_REPLICA_LAST_UPDATE_END_SECONDS] = {
-        .name = "ds389_replica_last_update_end",
+        .name = "ds389_replica_last_update_end_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Replica last update end time in unix epoch.",
     },
