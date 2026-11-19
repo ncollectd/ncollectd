@@ -175,6 +175,14 @@ static void bind_xml_start_element_ns(void *ctx, const xmlChar *localname,
                                       const xmlChar **attributes)
 {
     bind_xml_ctx_t *sctx = (bind_xml_ctx_t *)ctx;
+
+    if (sctx->depth >= STACK_MAX_DEPTH) {
+        PLUGIN_ERROR("XML document is nested too deeply (more than %d levels).",
+                     STACK_MAX_DEPTH);
+        xmlStopParser(sctx->ctxt);
+        return;
+    }
+
     sctx->depth++;
 
     switch(sctx->depth) {
@@ -570,8 +578,11 @@ static void bind_xml_end_element_ns(void *ctx,
                                     __attribute__((unused)) const xmlChar *URI)
 {
     bind_xml_ctx_t *sctx = (bind_xml_ctx_t *)ctx;
-    sctx->stack[sctx->depth-1] = BIND_XML_NONE;
-    sctx->depth--;
+
+    if ((sctx->depth > 0) && (sctx->depth <= STACK_MAX_DEPTH)) {
+        sctx->stack[sctx->depth-1] = BIND_XML_NONE;
+        sctx->depth--;
+    }
     sctx->data = false;
 }
 

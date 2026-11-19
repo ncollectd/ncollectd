@@ -171,8 +171,15 @@ static bool bind_json_string(void *ctx, const char *string_val, size_t string_le
 static bool bind_json_start_map(void *ctx)
 {
     bind_json_ctx_t *sctx = ctx;
+
+    if (sctx->depth >= JSON_MAX_DEPTH) {
+        PLUGIN_ERROR("JSON document is nested too deeply (more than %d levels).",
+                     JSON_MAX_DEPTH);
+        return false;
+    }
+
     sctx->depth++;
-    sctx->stack[sctx->depth] = BIND_JSON_NONE;
+    sctx->stack[sctx->depth-1] = BIND_JSON_NONE;
     return true;
 }
 
@@ -372,12 +379,10 @@ static bool bind_json_end_map(void *ctx)
 {
     bind_json_ctx_t *sctx = ctx;
 
-    sctx->depth--;
-    if (sctx->depth > 0) {
+    if (sctx->depth > 0)
+        sctx->depth--;
+    if (sctx->depth > 0)
         sctx->stack[sctx->depth-1] = BIND_JSON_NONE;
-    } else {
-        sctx->depth = 0;
-    }
 
     return true;
 }
