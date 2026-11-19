@@ -120,6 +120,12 @@ static int conn_read_netlink(void)
             return 0;
         }
 
+        if (msg.msg_flags & MSG_TRUNC) {
+            PLUGIN_ERROR("conn_read_netlink: Truncated reply from netlink socket.");
+            close(fd);
+            return 1;
+        }
+
         h = (struct nlmsghdr *)buf;
         while (NLMSG_OK(h, status)) {
             if (h->nlmsg_seq != sequence_number) {
@@ -131,13 +137,20 @@ static int conn_read_netlink(void)
                 close(fd);
                 return 0;
             } else if (h->nlmsg_type == NLMSG_ERROR) {
-                struct nlmsgerr *msg_error;
-
-                msg_error = NLMSG_DATA(h);
-                PLUGIN_WARNING("conn_read_netlink: Received error %i.", msg_error->error);
+                if (h->nlmsg_len >= NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
+                    struct nlmsgerr *msg_error = NLMSG_DATA(h);
+                    PLUGIN_WARNING("conn_read_netlink: Received error %i.", msg_error->error);
+                } else {
+                    PLUGIN_WARNING("conn_read_netlink: Received truncated error message.");
+                }
 
                 close(fd);
                 return 1;
+            }
+
+            if ((h->nlmsg_type != TCPDIAG_GETSOCK) || (h->nlmsg_len < NLMSG_LENGTH(sizeof(*r)))) {
+                h = NLMSG_NEXT(h, status);
+                continue;
             }
 
             r = NLMSG_DATA(h);
@@ -186,7 +199,7 @@ static int conn_read_netlink(void)
 #endif
 }
 
-static uint8_t hex2int(char c)
+static int hex2int(char c)
 {
     if ((c >= '0') && (c <= '9'))
         return c - '0';
@@ -194,6 +207,27 @@ static uint8_t hex2int(char c)
         return c - 'a' + 10;
     if ((c >= 'A') && (c <='F'))
         return c - 'A' + 10;
+    return -1;
+}
+
+/* The kernel prints the address as 32-bit words in host byte order ("%08X"),
+ * so each word is stored back as is to get the address in network byte order. */
+static int conn_parse_addr(const char *str, void *addr, size_t addr_size)
+{
+    if (strlen(str) != (2 * addr_size))
+        return -1;
+
+    for (size_t i = 0; i < (addr_size / sizeof(uint32_t)); i++) {
+        uint32_t word = 0;
+        for (size_t j = 0; j < (2 * sizeof(uint32_t)); j++) {
+            int digit = hex2int(str[i * 2 * sizeof(uint32_t) + j]);
+            if (digit < 0)
+                return -1;
+            word = (word << 4) | (uint32_t)digit;
+        }
+        memcpy((uint8_t *)addr + i * sizeof(uint32_t), &word, sizeof(uint32_t));
+    }
+
     return 0;
 }
 
@@ -248,33 +282,19 @@ static int conn_handle_line(char *buffer, int family)
         return -1;
 
     if (family == AF_INET) {
-        if (strlen(ip_local_str) != 8)
-            return -1;
-
-        endptr = NULL;
-        uint32_t ip_local = (uint32_t)strtoul(ip_local_str, &endptr, 16);
-        if ((endptr == NULL) || (*endptr != '\0'))
-            return -1;
-
-        if (strlen(ip_remote_str) != 8)
-            return -1;
-
-        endptr = NULL;
-        uint32_t ip_remote = (uint32_t)strtoul(ip_remote_str, &endptr, 16);
-        if ((endptr == NULL) || (*endptr != '\0'))
-            return -1;
-        
         struct sockaddr_in saddr = {
             .sin_family      = AF_INET,
             .sin_port        = port_local,
-            .sin_addr.s_addr = htonl(ip_local)
         };
+        if (conn_parse_addr(ip_local_str, &saddr.sin_addr, sizeof(saddr.sin_addr)) != 0)
+            return -1;
 
         struct sockaddr_in daddr = {
             .sin_family      = AF_INET,
             .sin_port        = port_remote,
-            .sin_addr.s_addr = htonl(ip_remote)
         };
+        if (conn_parse_addr(ip_remote_str, &daddr.sin_addr, sizeof(daddr.sin_addr)) != 0)
+            return -1;
 
         return conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr, state,
                                  TCP_STATE_MIN, TCP_STATE_MAX);
@@ -283,23 +303,15 @@ static int conn_handle_line(char *buffer, int family)
             .sin6_family       = AF_INET6,
             .sin6_port         = port_local,
         };
-        if (strlen(ip_local_str) != 32)
+        if (conn_parse_addr(ip_local_str, &saddr.sin6_addr, sizeof(saddr.sin6_addr)) != 0)
             return -1;
-        for (size_t i = 0; i < 16; i++) {
-            saddr.sin6_addr.s6_addr[i] = (uint8_t) hex2int(ip_local_str[i*2]) << 4 |
-                                                   hex2int(ip_local_str[i*2+1]) ;
-        }
 
         struct sockaddr_in6 daddr = {
             .sin6_family       = AF_INET6,
             .sin6_port         = port_remote,
         };
-        if (strlen(ip_remote_str) != 32)
+        if (conn_parse_addr(ip_remote_str, &daddr.sin6_addr, sizeof(daddr.sin6_addr)) != 0)
             return -1;
-        for (size_t i = 0; i < 16; i++) {
-            daddr.sin6_addr.s6_addr[i] = (uint8_t) hex2int(ip_remote_str[i*2]) << 4 |
-                                                   hex2int(ip_remote_str[i*2+1]) ;
-        }
 
         return conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr, state,
                                   TCP_STATE_MIN, TCP_STATE_MAX);

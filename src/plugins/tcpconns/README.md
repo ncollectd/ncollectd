@@ -28,6 +28,10 @@ you are interested in:
 
 **counter** *counter-name*
 
+> Count the connections that match all the filters of the block in the
+> **system\_tcp\_connections** metric, with the *counter-name* in the
+> **counter** label. At least one filter option is required.
+
 > **local-ip** *address*|*address*/*prefix*
 
 > > Filter tcp connections for this local ip or network (with the CIDR notation).

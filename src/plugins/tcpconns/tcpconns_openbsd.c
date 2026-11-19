@@ -84,8 +84,6 @@ int conn_read(void)
     for (int i = 0; i < fcnt; i++) {
         if (kf[i].so_protocol != IPPROTO_TCP)
             continue;
-        if (kf[i].inp_fport == 0)
-            continue;
 
         if (kf[i].so_family == AF_INET) {
             struct sockaddr_in saddr = {
@@ -133,6 +131,16 @@ int conn_init(void)
     if (kvmd == NULL) {
         PLUGIN_ERROR("kvm_openfiles failed: %s", buf);
         return -1;
+    }
+
+    return 0;
+}
+
+int conn_shutdown(void)
+{
+    if (kvmd != NULL) {
+        kvm_close(kvmd);
+        kvmd = NULL;
     }
 
     return 0;
