@@ -161,7 +161,7 @@ static postfix_buckets_t default_buckets_qmgr_inserts_size = {
 
 static const char *postfix_regex[POSTFIX_REGEX_MAX] = {
     [POSTFIX_REGEX_LOG] =
-        " ?postfix(/([a-zA-Z0-9_]+))?\\[[0-9]+\\]: ((warning|error|fatal|panic): )?(.*)",
+        " ?postfix(-[a-zA-Z0-9_-]+)?(/([a-zA-Z0-9_-]+))?\\[[0-9]+\\]: (.*)",
     [POSTFIX_REGEX_LMTP_PIPE_SMTP] =
         ", relay=([^ \\t]+), .*, delays=([0-9\\.]+)/([0-9\\.]+)/([0-9\\.]+)/([0-9\\.]+)(,.*)",
     [POSTFIX_REGEX_QMGR_INSERT] =
@@ -173,7 +173,7 @@ static const char *postfix_regex[POSTFIX_REGEX_MAX] = {
     [POSTFIX_REGEX_SMTP_TLS] =
         "^([^ \\t]+) TLS connection established to [^ \\t]+: ([^ \\t]+) with cipher ([^ \\t]+) \\(([0-9]+)/([0-9]+) bits\\)",
     [POSTFIX_REGEX_SMTP_CONNECTION_TIMEDOUT] =
-        "^connect[ \\t]+to[ \\t]+(.*)\\[(.*)\\]:[0-9]+):[ \\t]+(Connection timed out)$",
+        "^connect[ \\t]+to[ \\t]+(.*)\\[(.*)\\]:[0-9]+:[ \\t]+(Connection timed out)$",
     [POSTFIX_REGEX_SMTPD_FCRDNS_ERRORS] =
         "^warning: hostname [^ \\t]+ does not resolve to address ",
     [POSTFIX_REGEX_SMTPD_PROCESSES_SASL] =
@@ -543,18 +543,17 @@ static int postfix_showq_parse(postfix_ctx_t *ctx)
     queue_t queue = QUEUE_UNKNOW;
 
     while (true) {
-        if (feof(fh))
-            break;
         ssize_t key_len = getdelim(&key, &key_size, '\0', fh);
+        if (key_len < 0)
+            break;
         if ((key_len == 0) || (key_len == 1)) {
             queue = QUEUE_UNKNOW;
             continue;
         }
 
-        if (feof(fh))
-            break;
-
         ssize_t value_len = getdelim(&value, &value_size, '\0', fh);
+        if (value_len < 0)
+            break;
         if ((value_len == 0) || (value_len == 1))
             continue;
 
@@ -577,6 +576,8 @@ static int postfix_showq_parse(postfix_ctx_t *ctx)
             } else {
                 queue = QUEUE_UNKNOW;
             }
+        } else if (queue == QUEUE_UNKNOW) {
+            continue;
         } else if (strcmp(key, "size") == 0) {
             double gauge = 0;
             if (strtodouble(value, &gauge) == 0)
@@ -590,6 +591,12 @@ static int postfix_showq_parse(postfix_ctx_t *ctx)
                 histogram_update(queue_msg_age[queue], wait);
             }
         }
+    }
+
+    if (ferror(fh)) {
+        PLUGIN_ERROR("Failed to read from the showq socket '%s': %s", ctx->showq_path, STRERRNO);
+        status = -1;
+        goto error;
     }
 
     for (size_t i = 0; i < QUEUE_MAX; i++) {
@@ -756,6 +763,19 @@ static int postfix_log_parse_smtp(postfix_ctx_t *ctx, char *message, size_t mess
     size_t match_size = STATIC_ARRAY_SIZE(match);
 
     if (regexec(&ctx->preg[POSTFIX_REGEX_LMTP_PIPE_SMTP], message, match_size, match, 0) == 0) {
+        /* postfix_regmatch() NUL-terminates in place and the transmission delay ends where
+           the remaining text starts: look for the status before extracting the delays. */
+        char *remain = postfix_regmatch(&match[6], message, message_len);
+        if (remain != NULL) {
+            regmatch_t status_match[2] = {0};
+            if (regexec(&ctx->preg[POSTFIX_REGEX_SMTP_STATUS], remain,
+                        STATIC_ARRAY_SIZE(status_match), status_match, 0) == 0) {
+                char *status = postfix_regmatch(&status_match[1], remain, strlen(remain));
+                if (status != NULL)
+                    postfix_counter_tree_inc(ctx->stats.smtp_processed, status);
+            }
+        }
+
         char *before_queue_manager = postfix_regmatch(&match[2], message, message_len);
         if (before_queue_manager != NULL) {
             double value = 0;
@@ -782,18 +802,6 @@ static int postfix_log_parse_smtp(postfix_ctx_t *ctx, char *message, size_t mess
             double value = 0;
             if (strtodouble(transmission, &value) == 0)
                 histogram_update(ctx->stats.smtp_transmission_delays, value);
-        }
-
-        char *remain = postfix_regmatch(&match[6], message, message_len);
-        if (remain == NULL)
-            return 0;
-
-        size_t remain_len = strlen(remain);
-
-        if (regexec(&ctx->preg[POSTFIX_REGEX_SMTP_STATUS], remain, 1, match, 0) == 0) {
-            char *status = postfix_regmatch(&match[1], remain, remain_len);
-            if (status != 0)
-                postfix_counter_tree_inc(ctx->stats.smtp_processed, status);
         }
     } else if (regexec(&ctx->preg[POSTFIX_REGEX_SMTP_TLS], message, match_size, match, 0) == 0) {
         ctx->stats.smtp_tls_connects++;
@@ -918,7 +926,9 @@ static int postfix_read_journal(postfix_ctx_t *ctx)
     if (ctx->journal == NULL) {
         int status = sd_journal_open(&ctx->journal, SD_JOURNAL_LOCAL_ONLY);
         if (status != 0) {
-
+            PLUGIN_ERROR("Failed to open journal: %s.", STRERROR(-status));
+            ctx->journal = NULL;
+            return -1;
         }
 
         char filter[256];
@@ -991,20 +1001,20 @@ static int postfix_read_log(postfix_ctx_t *ctx)
         if (len == 0)
             continue;
 
-        regmatch_t match[6] = {0};
+        regmatch_t match[5] = {0};
         size_t match_size = STATIC_ARRAY_SIZE(match);
 
         status = regexec(&ctx->preg[POSTFIX_REGEX_LOG], buf, match_size, match, 0);
         if (status != 0)
-            return 0;
+            continue;
 
-        char *subprocess = postfix_regmatch(&match[2], buf, len);
+        char *subprocess = postfix_regmatch(&match[3], buf, len);
         if (subprocess == NULL)
-            return -1;
+            continue;
 
-        char *message = postfix_regmatch(&match[5], buf, len);
+        char *message = postfix_regmatch(&match[4], buf, len);
         if (message == NULL)
-            return -1;
+            continue;
 
         size_t message_len = strlen(message);
 
@@ -1170,6 +1180,12 @@ static void postfix_ctx_free(void *arg)
     histogram_destroy(ctx->stats.qmgr_inserts_nrcpt);
     histogram_destroy(ctx->stats.qmgr_inserts_size);
 
+    free(ctx->buckets_time.buckets);
+    free(ctx->buckets_queue_size.buckets);
+    free(ctx->buckets_queue_age.buckets);
+    free(ctx->buckets_qmgr_inserts_nrcpt.buckets);
+    free(ctx->buckets_qmgr_inserts_size.buckets);
+
     free(ctx);
 }
 
@@ -1228,6 +1244,22 @@ static int postfix_buckets_copy(postfix_buckets_t *buckets, postfix_buckets_t *d
     return 0;
 }
 
+static int postfix_config_buckets(config_item_t *ci, postfix_buckets_t *buckets)
+{
+    double *values = NULL;
+    size_t size = 0;
+
+    int status = cf_util_get_double_array(ci, &size, &values);
+    if (status != 0)
+        return status;
+
+    free(buckets->buckets);
+    buckets->buckets = values;
+    buckets->size = size;
+
+    return 0;
+}
+
 static int postfix_config_instance (config_item_t *ci)
 {
     postfix_ctx_t *ctx = postfix_ctx_alloc();
@@ -1235,7 +1267,6 @@ static int postfix_config_instance (config_item_t *ci)
         PLUGIN_ERROR("calloc failed.");
         return -1;
     }
-
 
     int status = cf_util_get_string(ci, &ctx->name);
     if (status != 0) {
@@ -1268,22 +1299,16 @@ static int postfix_config_instance (config_item_t *ci)
             }
         } else if (strcasecmp("showq-path", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->showq_path);
-
         } else if (strcasecmp("histogram-time-buckets", child->key) == 0) {
-            status = cf_util_get_double_array(child, &ctx->buckets_time.size,
-                                                     &ctx->buckets_time.buckets);
+            status = postfix_config_buckets(child, &ctx->buckets_time);
         } else if (strcasecmp("histogram-queue-size-buckets", child->key) == 0) {
-            status = cf_util_get_double_array(child, &ctx->buckets_queue_size.size,
-                                                     &ctx->buckets_queue_size.buckets);
+            status = postfix_config_buckets(child, &ctx->buckets_queue_size);
         } else if (strcasecmp("histogram-queue-age-buckets", child->key) == 0) {
-            status = cf_util_get_double_array(child, &ctx->buckets_queue_age.size,
-                                                     &ctx->buckets_queue_age.buckets);
+            status = postfix_config_buckets(child, &ctx->buckets_queue_age);
         } else if (strcasecmp("histogram-qmgr-inserts-nrcpt-buckets", child->key) == 0) {
-            status = cf_util_get_double_array(child, &ctx->buckets_qmgr_inserts_nrcpt.size,
-                                                     &ctx->buckets_qmgr_inserts_nrcpt.buckets);
+            status = postfix_config_buckets(child, &ctx->buckets_qmgr_inserts_nrcpt);
         } else if (strcasecmp("histogram-qmgr-inserts-size-buckets", child->key) == 0) {
-            status = cf_util_get_double_array(child, &ctx->buckets_qmgr_inserts_size.size,
-                                                     &ctx->buckets_qmgr_inserts_size.buckets);
+            status = postfix_config_buckets(child, &ctx->buckets_qmgr_inserts_size);
         } else if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_cdtime(child, &ctx->timeout);
         } else if (strcasecmp("label", child->key) == 0) {
@@ -1306,6 +1331,15 @@ static int postfix_config_instance (config_item_t *ci)
         postfix_ctx_free(ctx);
         return -1;
     }
+
+#ifndef HAVE_SD_JOURNAL
+    if (ctx->log_from == POSTFIX_LOG_FROM_SD_JOURNAL) {
+        PLUGIN_ERROR("Cannot read the logs of instance '%s' from the journal: "
+                     "the plugin was built without systemd journal support.", ctx->name);
+        postfix_ctx_free(ctx);
+        return -1;
+    }
+#endif
 
     if (ctx->unit == NULL) {
         ctx->unit = strdup(DEFAULT_SERVICE);
@@ -1381,11 +1415,15 @@ static int postfix_config_instance (config_item_t *ci)
     }
 
     if (ctx->log_from == POSTFIX_LOG_FROM_NONE) {
+#ifdef HAVE_SD_JOURNAL
         if (access("/run/systemd/system/", R_OK|X_OK) == 0) {
             ctx->log_from = POSTFIX_LOG_FROM_SD_JOURNAL;
         } else {
             ctx->log_from = POSTFIX_LOG_FROM_FILE;
         }
+#else
+        ctx->log_from = POSTFIX_LOG_FROM_FILE;
+#endif
     }
 
     label_set_add(&ctx->labels, true, "instance", ctx->name);

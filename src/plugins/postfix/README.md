@@ -50,6 +50,9 @@ Within the **instance** blocks, the following options are allowed:
 
 > Define from with source to read the postfix logs.
 > By default if systemd is detected the logs will be read from the journal.
+> Reading the logs from the journal requires the plugin to be built with
+> systemd journal support, otherwise selecting it with this option or with
+> **unit** is an error.
 
 **showq-path** *path-to-showq-socket*
 

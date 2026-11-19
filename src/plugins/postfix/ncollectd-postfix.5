@@ -45,6 +45,9 @@ The default value is \f(CW/var/log/mail.log\fP.
 .It \fBlog-from\fP \fIfile|systemd\fP
 Define from with source to read the postfix logs.
 By default if systemd is detected the logs will be read from the journal.
+Reading the logs from the journal requires the plugin to be built with
+systemd journal support, otherwise selecting it with this option or with
+\fBunit\fP is an error.
 .It \fBshowq-path\fP \fIpath-to-showq-socket\fP
 Set the path to the showq postfix socket.
 The default value is \f(CW/var/spool/postfix/public/showq\fP.
