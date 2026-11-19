@@ -96,8 +96,6 @@ Requires libvirt API version \fI0.9.5\fP or later.
 .It \fBpcpu\fP
 Report the physical user/system cpu time consumed by the hypervisor, per-vm.
 Requires libvirt API version \fI0.9.11\fP or later.
-.It \fBcpu_util\fP
-Report CPU utilization per domain in percentage.
 .It \fBdomain_state\fP
 Report domain state and reason.
 .It \fBperf\fP
@@ -110,11 +108,15 @@ Note: \fIperf\fP metrics can't be collected if \fIintel_rdt\fP plugin
 is enabled.
 .It \fBvcpupin\fP
 Report pinning of domain VCPUs to host physical CPUs.
+.Pp
+Note: one series is reported for every pair of domain VCPU and host
+physical CPU (e.g. 4096 series for a domain with 32 VCPUs on a host
+with 128 CPUs), so this can be costly on large hosts.
 .It \fBdisk_err\fP
 Report disk errors if any occurred.
 Requires libvirt API version \fI0.9.10\fP or later.
 .It \fBfs_info\fP
-Report file system information as a notification.
+Report file system information as a info metric.
 Requires libvirt API version \fI1.2.11\fP or later.
 Can be collected only if \fIGuest Agent\fP is installed and configured
 inside VM.

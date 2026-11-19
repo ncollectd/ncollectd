@@ -115,10 +115,6 @@ The following options are accepted within each **instance** block:
 > > Report the physical user/system cpu time consumed by the hypervisor, per-vm.
 > > Requires libvirt API version *0.9.11* or later.
 
-> **cpu\_util**
-
-> > Report CPU utilization per domain in percentage.
-
 > **domain\_state**
 
 > > Report domain state and reason.
@@ -137,6 +133,10 @@ The following options are accepted within each **instance** block:
 
 > > Report pinning of domain VCPUs to host physical CPUs.
 
+> > Note: one series is reported for every pair of domain VCPU and host
+> > physical CPU (e.g. 4096 series for a domain with 32 VCPUs on a host
+> > with 128 CPUs), so this can be costly on large hosts.
+
 > **disk\_err**
 
 > > Report disk errors if any occurred.
@@ -144,7 +144,7 @@ The following options are accepted within each **instance** block:
 
 > **fs\_info**
 
-> > Report file system information as a notification.
+> > Report file system information as a info metric.
 > > Requires libvirt API version *1.2.11* or later.
 > > Can be collected only if *Guest Agent* is installed and configured
 > > inside VM.

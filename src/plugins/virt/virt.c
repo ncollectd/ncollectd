@@ -566,40 +566,49 @@ struct lv_read_state {
     int nr_interface_devices;
 };
 
-/* structure used for aggregating notification-thread data*/
+/* libvirt's default event loop is global to the process: the event
+ * implementation is registered once and a single thread, shared by all the
+ * instances, runs it. */
 typedef struct virt_notif_thread_s {
+    pthread_mutex_t lock; /* protects the members below except 'is_active' */
+    bool event_impl_registered;
+    size_t users;
+    int timeout_id;
     pthread_t event_loop_tid;
-    int domain_event_cb_id;
     pthread_mutex_t active_mutex; /* protects 'is_active' member access*/
     bool is_active;
 } virt_notif_thread_t;
 
+static virt_notif_thread_t notif_thread = {
+    .lock = PTHREAD_MUTEX_INITIALIZER,
+    .timeout_id = -1,
+    .active_mutex = PTHREAD_MUTEX_INITIALIZER,
+};
+
 enum {
     COLLECT_VIRT_DISK                 = 1 << 1,
     COLLECT_VIRT_PCPU                 = 1 << 2,
-    COLLECT_VIRT_CPU_UTIL             = 1 << 3,
-    COLLECT_VIRT_DOMAIN_STATE         = 1 << 4,
+    COLLECT_VIRT_DOMAIN_STATE         = 1 << 3,
 #ifdef HAVE_PERF_STATS
-    COLLECT_VIRT_PERF                 = 1 << 5,
+    COLLECT_VIRT_PERF                 = 1 << 4,
 #endif
-    COLLECT_VIRT_VCPUPIN              = 1 << 6,
+    COLLECT_VIRT_VCPUPIN              = 1 << 5,
 #ifdef HAVE_DISK_ERR
-    COLLECT_VIRT_DISK_ERR             = 1 << 7,
+    COLLECT_VIRT_DISK_ERR             = 1 << 6,
 #endif
 #ifdef HAVE_FS_INFO
-    COLLECT_VIRT_FS_INFO              = 1 << 8,
+    COLLECT_VIRT_FS_INFO              = 1 << 7,
 #endif
-    COLLECT_VIRT_DISK_ALLOCATION      = 1 << 11,
-    COLLECT_VIRT_DISK_CAPACITY        = 1 << 12,
-    COLLECT_VIRT_DISK_PHYSICAL        = 1 << 13,
-    COLLECT_VIRT_MEMORY               = 1 << 14,
-    COLLECT_VIRT_VCPU                 = 1 << 15,
+    COLLECT_VIRT_DISK_ALLOCATION      = 1 << 8,
+    COLLECT_VIRT_DISK_CAPACITY        = 1 << 9,
+    COLLECT_VIRT_DISK_PHYSICAL        = 1 << 10,
+    COLLECT_VIRT_MEMORY               = 1 << 11,
+    COLLECT_VIRT_VCPU                 = 1 << 12,
 };
 
 static cf_flags_t virt_flags_list[] = {
     { "disk",                   COLLECT_VIRT_DISK                 },
     { "pcpu",                   COLLECT_VIRT_PCPU                 },
-    { "cpu_util",               COLLECT_VIRT_CPU_UTIL             },
     { "domain_state",           COLLECT_VIRT_DOMAIN_STATE         },
 #ifdef HAVE_PERF_STATS
     { "perf",                   COLLECT_VIRT_PERF                 },
@@ -621,7 +630,6 @@ static size_t virt_flags_size = STATIC_ARRAY_SIZE(virt_flags_list);
 
 struct lv_read_instance {
     struct lv_read_state read_state;
-    size_t id;
 };
 
 enum bd_field { target, source };
@@ -632,7 +640,7 @@ typedef struct {
     /* Connection. */
     virConnectPtr conn;
     char *conn_string;
-    c_complain_t conn_complain;
+    complain_t conn_complain;
 
     /* Node information required for %CPU */
     virNodeInfo nodeinfo;
@@ -651,8 +659,10 @@ typedef struct {
     bool persistent_notification;
     //bool persistent_notification = false;
 
-    /* Thread used for handling libvirt notifications events */
-    virt_notif_thread_t notif_thread;
+    /* Domain lifecycle event callback, -1 if not registered */
+    int domain_event_cb_id;
+    /* Whether this instance holds a reference on the event loop thread */
+    bool event_loop_ref;
     /* BlockDeviceFormatBasename */
     enum bd_field blockdevice_format;
     //enum bd_field blockdevice_format = target;
@@ -670,7 +680,7 @@ typedef struct {
 
 static bool exclist_device_match(exclist_t *excl, const char *domname, const char *devpath);
 
-const char *domain_states[] = {
+static const char *domain_states[] = {
     [VIR_DOMAIN_NOSTATE]     = "no state",
     [VIR_DOMAIN_RUNNING]     = "the domain is running",
     [VIR_DOMAIN_BLOCKED]     = "the domain is blocked on resource",
@@ -879,7 +889,7 @@ static int map_domain_event_detail_to_reason(int event, int detail)
 }
 
 #define DOMAIN_STATE_REASON_MAX_SIZE 20
-const char *domain_reasons[][DOMAIN_STATE_REASON_MAX_SIZE] = {
+static const char *domain_reasons[][DOMAIN_STATE_REASON_MAX_SIZE] = {
     [VIR_DOMAIN_NOSTATE] = {
         [VIR_DOMAIN_NOSTATE_UNKNOWN]            = "the reason is unknown",
     },
@@ -984,7 +994,7 @@ static int add_interface_device(struct lv_read_state *state, virDomainPtr dom,
 
 static int refresh_lists(virt_ctx_t *ctx, struct lv_read_instance *inst);
 static int register_event_impl(void);
-static int start_event_loop(virt_ctx_t *ctx, virt_notif_thread_t *thread_data);
+static int start_event_loop(virt_ctx_t *ctx);
 
 struct lv_block_stats {
     virDomainBlockStatsStruct bi;
@@ -1078,6 +1088,9 @@ static void submit_notif(char *name, virDomainPtr domain, int severity, const ch
     notification_annotation_set(&n, "summary", msg);
 
     plugin_dispatch_notification(&n);
+
+    label_set_reset(&n.label);
+    label_set_reset(&n.annotation);
 }
 
 static void domain_state_submit_notif(virDomainPtr dom, int state, int reason)
@@ -1120,7 +1133,7 @@ static void domain_state_submit_notif(virDomainPtr dom, int state, int reason)
         break;
     case VIR_DOMAIN_BLOCKED:
     case VIR_DOMAIN_PAUSED:
-#ifdef DOM_STATE_PMSUSPENDED
+#ifdef HAVE_DOM_STATE_PMSUSPENDED
     case VIR_DOMAIN_PMSUSPENDED:
 #endif
         severity = NOTIF_WARNING;
@@ -1156,7 +1169,7 @@ static int lv_connect(virt_ctx_t *ctx)
         ctx->conn = virConnectOpenReadOnly(ctx->conn_string);
 #endif
         if (ctx->conn == NULL) {
-            c_complain(LOG_ERR, &ctx->conn_complain, "Unable to connect: virConnectOpen failed.");
+            PLUGIN_COMPLAIN_ERROR(&ctx->conn_complain, "Unable to connect: virConnectOpen failed.");
             return -1;
         }
         int status = virNodeGetInfo(ctx->conn, &ctx->nodeinfo);
@@ -1168,14 +1181,16 @@ static int lv_connect(virt_ctx_t *ctx)
         }
 
         if (!ctx->persistent_notification) {
-            if (start_event_loop(ctx, &ctx->notif_thread) != 0) {
+            if (start_event_loop(ctx) != 0) {
                 virConnectClose(ctx->conn);
                 ctx->conn = NULL;
                 return -1;
             }
         }
     }
-    c_release(LOG_NOTICE, &ctx->conn_complain, "Connection established.");
+
+    PLUGIN_RELEASE_NOTICE(&ctx->conn_complain, "Connection established.");
+
     return 0;
 }
 
@@ -1603,9 +1618,11 @@ static int get_memory_stats(virt_ctx_t *ctx, virDomainPtr domain,
         switch (minfo[i].tag) {
         case VIR_DOMAIN_MEMORY_STAT_SWAP_IN:
             fam = FAM_VIRT_DOMAIN_SWAP_IN_BYTES;
+            val *= 1024;
             break;
         case VIR_DOMAIN_MEMORY_STAT_SWAP_OUT:
             fam = FAM_VIRT_DOMAIN_SWAP_OUT_BYTES;
+            val *= 1024;
             break;
         case VIR_DOMAIN_MEMORY_STAT_MAJOR_FAULT:
             fam = FAM_VIRT_DOMAIN_MEMORY_MAJOR_PAGE_FAULT;
@@ -1694,11 +1711,19 @@ static int get_disk_err(virt_ctx_t *ctx, virDomainPtr domain,
 
     PLUGIN_DEBUG("Preferred size of disk errors array: %d for domain %s",
                  disk_err_count, virDomainGetName(domain));
-    virDomainDiskError disk_err[disk_err_count];
+    if (disk_err_count == 0)
+        return 0;
+
+    virDomainDiskErrorPtr disk_err = calloc(disk_err_count, sizeof(*disk_err));
+    if (disk_err == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return -1;
+    }
 
     disk_err_count = virDomainGetDiskErrors(domain, disk_err, disk_err_count, 0);
     if (disk_err_count == -1) {
         PLUGIN_ERROR("virDomainGetDiskErrors failed with status %d", disk_err_count);
+        free(disk_err);
         return -1;
     }
 
@@ -1733,6 +1758,8 @@ static int get_disk_err(virt_ctx_t *ctx, virDomainPtr domain,
 
         free(disk_err[i].disk);
     }
+
+    free(disk_err);
 
     return 0;
 }
@@ -1827,7 +1854,7 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
     if (ctx->flags & COLLECT_VIRT_DISK) {
         if (bstats.rd_total_times != -1) {
            metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_READ_TIME_SECONDS],
-                                VALUE_COUNTER((double)bstats.rd_total_times * 1e-9),
+                                VALUE_COUNTER_FLOAT64((double)bstats.rd_total_times * 1e-9),
                                 &ctx->labels,
                                 &LABEL_PAIR_CONST("domain", ndomain ),
                                 &LABEL_PAIR_CONST("uuid", uuid),
@@ -1866,7 +1893,8 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
 
     }
 
-    if ((ctx->flags & COLLECT_VIRT_DISK_ALLOCATION)) { //  && binfo.allocation != -1
+    if ((ctx->flags & COLLECT_VIRT_DISK_ALLOCATION) &&
+        (binfo.allocation != (unsigned long long)-1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_ALLOCATION],
                              VALUE_GAUGE(binfo.allocation), &ctx->labels,
                              &LABEL_PAIR_CONST("domain", ndomain ),
@@ -1874,7 +1902,8 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
                              &LABEL_PAIR_CONST("device", block_dev->path),
                              NULL);
     }
-    if ((ctx->flags & COLLECT_VIRT_DISK_CAPACITY)) { // && binfo.capacity != -1
+    if ((ctx->flags & COLLECT_VIRT_DISK_CAPACITY) &&
+        (binfo.capacity != (unsigned long long)-1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_CAPACITY],
                              VALUE_GAUGE(binfo.capacity), &ctx->labels,
                              &LABEL_PAIR_CONST("domain", ndomain ),
@@ -1882,7 +1911,8 @@ static int get_block_device_stats(virt_ctx_t *ctx, struct block_device *block_de
                              &LABEL_PAIR_CONST("device", block_dev->path),
                              NULL);
     }
-    if ((ctx->flags & COLLECT_VIRT_DISK_PHYSICAL)) { // && binfo.physical != -1
+    if ((ctx->flags & COLLECT_VIRT_DISK_PHYSICAL) &&
+        (binfo.physical != (unsigned long long)-1)) {
        metric_family_append(&ctx->fams[FAM_VIRT_DOMAIN_BLOCK_PHYSICALSIZE],
                              VALUE_GAUGE(binfo.physical), &ctx->labels,
                              &LABEL_PAIR_CONST("domain", ndomain ),
@@ -2163,22 +2193,22 @@ static void virt_eventloop_timeout_cb(__attribute__((unused)) int timer,
 
 static int register_event_impl(void)
 {
-    if (virEventRegisterDefaultImpl() < 0) {
-        virErrorPtr err = virGetLastError();
-        PLUGIN_ERROR("error while event implementation registering: %s",
-                     err && err->message ? err->message : "Unknown error");
-        return -1;
-    }
+    int status = 0;
 
-    if (virEventAddTimeout(CDTIME_T_TO_MS(plugin_get_interval()),
-                           virt_eventloop_timeout_cb, NULL, NULL) < 0) {
-        virErrorPtr err = virGetLastError();
-        PLUGIN_ERROR("virEventAddTimeout failed: %s",
-                     err && err->message ? err->message : "Unknown error");
-        return -1;
+    pthread_mutex_lock(&notif_thread.lock);
+    if (!notif_thread.event_impl_registered) {
+        if (virEventRegisterDefaultImpl() < 0) {
+            virErrorPtr err = virGetLastError();
+            PLUGIN_ERROR("error while event implementation registering: %s",
+                         err && err->message ? err->message : "Unknown error");
+            status = -1;
+        } else {
+            notif_thread.event_impl_registered = true;
+        }
     }
+    pthread_mutex_unlock(&notif_thread.lock);
 
-    return 0;
+    return status;
 }
 
 static void virt_notif_thread_set_active(virt_notif_thread_t *thread_data, const bool active)
@@ -2217,77 +2247,91 @@ static void *event_loop_worker(void *arg)
     return NULL;
 }
 
-static int virt_notif_thread_init(virt_notif_thread_t *thread_data)
+/* start the event loop thread for its first user */
+static int virt_notif_thread_get(virt_notif_thread_t *thread_data)
 {
-    assert(thread_data != NULL);
+    int status = 0;
 
-    int ret = pthread_mutex_init(&thread_data->active_mutex, NULL);
-    if (ret != 0) {
-        PLUGIN_ERROR("Failed to initialize mutex, err %d", ret);
-        return ret;
+    pthread_mutex_lock(&thread_data->lock);
+    if (thread_data->users == 0) {
+        /* the timeout wakes up the event loop so it can check if it must stop */
+        thread_data->timeout_id = virEventAddTimeout(CDTIME_T_TO_MS(plugin_get_interval()),
+                                                     virt_eventloop_timeout_cb, NULL, NULL);
+        if (thread_data->timeout_id < 0) {
+            virErrorPtr err = virGetLastError();
+            PLUGIN_ERROR("virEventAddTimeout failed: %s",
+                         err && err->message ? err->message : "Unknown error");
+            status = -1;
+        } else {
+            PLUGIN_DEBUG("starting event loop");
+            virt_notif_thread_set_active(thread_data, true);
+            if (plugin_thread_create(&thread_data->event_loop_tid, event_loop_worker,
+                                     thread_data, "virt events") != 0) {
+                PLUGIN_ERROR("failed event loop thread creation");
+                virt_notif_thread_set_active(thread_data, false);
+                virEventRemoveTimeout(thread_data->timeout_id);
+                thread_data->timeout_id = -1;
+                status = -1;
+            }
+        }
     }
+    if (status == 0)
+        thread_data->users++;
+    pthread_mutex_unlock(&thread_data->lock);
 
-    /**
-     * '0' and positive integers are meaningful ID's, therefore setting
-     * domain_event_cb_id to '-1'
-     */
-    thread_data->domain_event_cb_id = -1;
-    pthread_mutex_lock(&thread_data->active_mutex);
-    thread_data->is_active = false;
-    pthread_mutex_unlock(&thread_data->active_mutex);
-
-    return 0;
+    return status;
 }
 
-/* register domain event callback and start event loop thread */
-static int start_event_loop(virt_ctx_t *ctx, virt_notif_thread_t *thread_data)
+/* stop the event loop thread when its last user releases it */
+static void virt_notif_thread_put(virt_notif_thread_t *thread_data)
 {
-    assert(thread_data != NULL);
+    pthread_mutex_lock(&thread_data->lock);
+    if ((thread_data->users > 0) && (--thread_data->users == 0)) {
+        PLUGIN_DEBUG("stopping event loop");
+        virt_notif_thread_set_active(thread_data, false);
+        /* make the timeout fire at once to wake up the event loop */
+        virEventUpdateTimeout(thread_data->timeout_id, 0);
+        if (pthread_join(thread_data->event_loop_tid, NULL) != 0)
+            PLUGIN_ERROR("stopping notification thread failed");
+        virEventRemoveTimeout(thread_data->timeout_id);
+        thread_data->timeout_id = -1;
+    }
+    pthread_mutex_unlock(&thread_data->lock);
+}
+
+/* register domain event callback, starting the event loop thread if needed */
+static int start_event_loop(virt_ctx_t *ctx)
+{
+    if (!ctx->event_loop_ref) {
+        if (virt_notif_thread_get(&notif_thread) != 0)
+            return -1;
+        ctx->event_loop_ref = true;
+    }
+
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
 #endif
-    thread_data->domain_event_cb_id = virConnectDomainEventRegisterAny(
+    ctx->domain_event_cb_id = virConnectDomainEventRegisterAny(
             ctx->conn, NULL, VIR_DOMAIN_EVENT_ID_LIFECYCLE,
             VIR_DOMAIN_EVENT_CALLBACK(domain_lifecycle_event_cb), NULL, NULL);
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
-    if (thread_data->domain_event_cb_id == -1) {
+    if (ctx->domain_event_cb_id == -1) {
         PLUGIN_ERROR("error while callback registering");
-        return -1;
-    }
-
-    PLUGIN_DEBUG("starting event loop");
-
-    virt_notif_thread_set_active(thread_data, 1);
-    if (pthread_create(&thread_data->event_loop_tid, NULL, event_loop_worker, thread_data)) {
-        PLUGIN_ERROR("failed event loop thread creation");
-        virt_notif_thread_set_active(thread_data, 0);
-        virConnectDomainEventDeregisterAny(ctx->conn, thread_data->domain_event_cb_id);
-        thread_data->domain_event_cb_id = -1;
         return -1;
     }
 
     return 0;
 }
 
-/* stop event loop thread and deregister callback */
-static void stop_event_loop(virt_ctx_t *ctx, virt_notif_thread_t *thread_data)
+/* deregister domain event callback, the event loop thread keeps running */
+static void stop_event_loop(virt_ctx_t *ctx)
 {
-    PLUGIN_DEBUG("stopping event loop");
-
-    /* Stopping loop */
-    if (virt_notif_thread_is_active(thread_data)) {
-        virt_notif_thread_set_active(thread_data, 0);
-        if (pthread_join(ctx->notif_thread.event_loop_tid, NULL) != 0)
-            PLUGIN_ERROR("stopping notification thread failed");
-    }
-
-    /* ... and de-registering event handler */
-    if (ctx->conn != NULL && thread_data->domain_event_cb_id != -1) {
-        virConnectDomainEventDeregisterAny(ctx->conn, thread_data->domain_event_cb_id);
-        thread_data->domain_event_cb_id = -1;
+    if (ctx->conn != NULL && ctx->domain_event_cb_id != -1) {
+        virConnectDomainEventDeregisterAny(ctx->conn, ctx->domain_event_cb_id);
+        ctx->domain_event_cb_id = -1;
     }
 }
 
@@ -2362,6 +2406,21 @@ static int persistent_domains_state_notification(virt_ctx_t *ctx)
     return status;
 }
 
+/* Refresh the domain and device lists on the next read if the domain went
+ * away or was started or stopped since the last refresh. */
+static void lv_refresh_if_domain_changed(virt_ctx_t *ctx, virDomainPtr dom, bool active)
+{
+    int status = virDomainIsActive(dom);
+    if ((status < 0) || ((status == 1) != active))
+        ctx->last_refresh = 0;
+}
+
+static void lv_submit_down(virt_ctx_t *ctx)
+{
+    metric_family_append(&ctx->fams[FAM_VIRT_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
+    plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_VIRT_UP], ctx->filter, 0);
+}
+
 static int lv_read(user_data_t *ud)
 {
     if (ud->data == NULL) {
@@ -2373,26 +2432,22 @@ static int lv_read(user_data_t *ud)
     struct lv_read_instance *inst = &ctx->inst;
     struct lv_read_state *state = &inst->read_state;
 
-    if (lv_connect(ctx) < 0)
+    if (lv_connect(ctx) < 0) {
+        lv_submit_down(ctx);
         return -1;
-
-    /* Wait until inst#0 establish connection */
-    if (ctx->conn == NULL) {
-        PLUGIN_DEBUG("%zu: Wait until establish connection", inst->id);
-        return 0;
     }
 
+    /* 0: connection lost, -1: error */
     int ret = virConnectIsAlive(ctx->conn);
-    if (ret == 0) { /* Connection lost */
-        if (inst->id == 0) {
-            c_complain(LOG_ERR, &ctx->conn_complain, "Lost connection.");
+    if (ret <= 0) {
+        PLUGIN_COMPLAIN_ERROR(&ctx->conn_complain, "Lost connection.");
 
-            if (!ctx->persistent_notification)
-                stop_event_loop(ctx, &ctx->notif_thread);
+        if (!ctx->persistent_notification)
+            stop_event_loop(ctx);
 
-            lv_disconnect(ctx);
-            ctx->last_refresh = 0;
-        }
+        lv_disconnect(ctx);
+        ctx->last_refresh = 0;
+        lv_submit_down(ctx);
         return -1;
     }
 
@@ -2402,18 +2457,17 @@ static int lv_read(user_data_t *ud)
     if ((ctx->last_refresh == 0) ||
         ((ctx->refresh_interval > 0) && ((ctx->last_refresh + ctx->refresh_interval) <= t))) {
         if (refresh_lists(ctx, inst) != 0) {
-            if (inst->id == 0) {
-                if (!ctx->persistent_notification)
-                    stop_event_loop(ctx, &ctx->notif_thread);
-                lv_disconnect(ctx);
-            }
+            if (!ctx->persistent_notification)
+                stop_event_loop(ctx);
+            lv_disconnect(ctx);
+            ctx->last_refresh = 0;
+            lv_submit_down(ctx);
             return -1;
         }
         ctx->last_refresh = t;
     }
 
-    /* persistent domains state notifications are handled by instance 0 */
-    if (inst->id == 0 && ctx->persistent_notification) {
+    if (ctx->persistent_notification) {
         int status = persistent_domains_state_notification(ctx);
         if (status != 0) {
             PLUGIN_DEBUG("persistent_domains_state_notifications returned with status %i", status);
@@ -2453,27 +2507,35 @@ static int lv_read(user_data_t *ud)
         }
 #endif
 
-        if (status != 0)
+        if (status != 0) {
+            lv_refresh_if_domain_changed(ctx, dom->ptr, dom->active);
             PLUGIN_ERROR("failed to get metrics for domain=%s", virDomainGetName(dom->ptr));
+        }
     }
 
     /* Get block device stats for each domain. */
     for (int i = 0; i < state->nr_block_devices; ++i) {
         int status = get_block_device_stats(ctx, &state->block_devices[i]);
-        if (status != 0)
+        if (status != 0) {
+            lv_refresh_if_domain_changed(ctx, state->block_devices[i].dom, true);
             PLUGIN_ERROR("failed to get stats for block device (%s) in domain %s",
                          state->block_devices[i].path,
                          virDomainGetName(state->block_devices[i].dom));
+        }
     }
 
     /* Get interface stats for each domain. */
     for (int i = 0; i < state->nr_interface_devices; ++i) {
         int status = get_if_dev_stats(ctx, &state->interface_devices[i]);
-        if (status != 0)
+        if (status != 0) {
+            lv_refresh_if_domain_changed(ctx, state->interface_devices[i].dom, true);
             PLUGIN_ERROR("failed to get interface stats for device (%s) in domain %s",
                          state->interface_devices[i].path,
                          virDomainGetName(state->interface_devices[i].dom));
+        }
     }
+
+    metric_family_append(&ctx->fams[FAM_VIRT_UP], VALUE_GAUGE(1), &ctx->labels, NULL);
 
     plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_VIRT_MAX, ctx->filter, 0);
 
@@ -2541,7 +2603,7 @@ static void lv_add_block_devices(virt_ctx_t *ctx, struct lv_read_state *state, v
             goto cont;
         }
 
-        if (exclist_device_match(&ctx->excl_block_devices, domname, device_path) == 0) {
+        if (exclist_device_match(&ctx->excl_block_devices, domname, device_path)) {
             /* we only have to store information whether 'source' exists or not */
             bool has_source = (source_str != NULL) ? true : false;
             add_block_device(state, dom, device_path, has_source);
@@ -2669,8 +2731,13 @@ static int refresh_lists(virt_ctx_t *ctx, struct lv_read_instance *inst)
 #endif
 
 #ifdef HAVE_LIST_ALL_DOMAINS
-    virDomainPtr *domains, *domains_inactive;
+    virDomainPtr *domains_inactive = NULL;
     int m = virConnectListAllDomains(ctx->conn, &domains_inactive, VIR_CONNECT_LIST_DOMAINS_INACTIVE);
+    if (m < 0) {
+        VIRT_ERROR(ctx->conn, "reading list of inactive domains");
+        m = 0;
+    }
+    virDomainPtr *domains = NULL;
     n = virConnectListAllDomains(ctx->conn, &domains, VIR_CONNECT_LIST_DOMAINS_ACTIVE);
 #else
     /* Get list of domains. */
@@ -2953,16 +3020,22 @@ static void lv_free(void *arg)
     struct lv_read_state *state = &(inst->read_state);
     lv_clean_read_state(state);
 
-
     if (!ctx->persistent_notification)
-        stop_event_loop(ctx, &ctx->notif_thread);
+        stop_event_loop(ctx);
 
     lv_disconnect(ctx);
+
+    if (ctx->event_loop_ref)
+        virt_notif_thread_put(&notif_thread);
 
     exclist_reset(&ctx->excl_domains);
     exclist_reset(&ctx->excl_block_devices);
     exclist_reset(&ctx->excl_interface_devices);
 
+    free(ctx->name);
+    free(ctx->conn_string);
+    label_set_reset(&ctx->labels);
+    plugin_filter_free(ctx->filter);
 
     free(ctx);
 }
@@ -2975,12 +3048,14 @@ static int lv_config_instance(config_item_t *ci)
         return -1;
     }
 
+    ctx->domain_event_cb_id = -1;
+
     memcpy(ctx->fams, fams_virt, sizeof(ctx->fams[0])*FAM_VIRT_MAX);
 
     int status = cf_util_get_string(ci, &ctx->name);
     if (status != 0) {
         PLUGIN_ERROR("Missing instance name.");
-        free(ctx);
+        lv_free(ctx);
         return status;
     }
 
@@ -3053,13 +3128,6 @@ static int lv_config_instance(config_item_t *ci)
     if (status != 0) {
         lv_free(ctx);
         return -1;
-    }
-
-    if (!ctx->persistent_notification) {
-        if (virt_notif_thread_init(&ctx->notif_thread) != 0) {
-            lv_free(ctx);
-            return -1;
-        }
     }
 
     label_set_add(&ctx->labels, true, "instance", ctx->name);
