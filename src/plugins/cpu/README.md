@@ -38,7 +38,7 @@ The following configuration options are available:
 **report-topology** *false|true*
 
 > When set to **true** in Linux, reports the cpu topology as labels:
-> *node*, *code*, *socket*, *book* and *drawer*.
+> *node*, *core*, *socket*, *book* and *drawer*.
 > Defaults to **false**.
 
 # SEE ALSO

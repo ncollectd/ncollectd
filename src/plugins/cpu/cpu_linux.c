@@ -26,15 +26,17 @@ static char *path_sys_system_cpu;
 static char *path_sys_system_node;
 
 typedef struct {
-    char node[8];
-    char socket[8];
-    char core[8];
-    char drawer[8];
-    char book[8];
+    char node[16];
+    char socket[16];
+    char core[16];
+    char drawer[16];
+    char book[16];
 } cpu_topology_t;
 
 static cpu_topology_t *cpu_topology;
 static size_t cpu_topology_num;
+static size_t cpu_online_num;
+static int cpu_online_max = -1;
 static double user_hz = 100.0;
 
 static int cpu_topology_alloc(size_t cpu_num)
@@ -145,7 +147,7 @@ static int cpu_topology_node_callback (__attribute__((unused)) int dirfd,
     char path[PATH_MAX];
     ssnprintf(path, sizeof(path), "%s/%s/cpumap", path_sys_system_node, node);
 
-    char buffer[8096];
+    char buffer[8192];
     ssize_t len = read_text_file_contents(path, buffer, sizeof(buffer));
     if (len <= 0)
         return -1;
@@ -161,10 +163,11 @@ static int cpu_topology_node_callback (__attribute__((unused)) int dirfd,
             break;
         if (*c == ',')
             continue;
-//            c--;
 
         int set = hex_to_int(*c);
-        if (set <= 0) {
+        if (set < 0)
+            break;
+        if (set == 0) {
             ncpu += 4;
             continue;
         }
@@ -250,6 +253,7 @@ int cpu_read(void)
     }
 
     size_t cpu_num = 0;
+    int cpu_max = -1;
 
     char buf[1024];
     while (fgets(buf, 1024, fh) != NULL) {
@@ -272,6 +276,8 @@ int cpu_read(void)
         if (cpu == 0) {
             cpu = atoi(fields[0] + 3);
             cpu_num++;
+            if (cpu > cpu_max)
+                cpu_max = cpu;
         }
 
         /* Do not stage User and Nice immediately: we may need to alter them later: */
@@ -328,8 +334,14 @@ int cpu_read(void)
 
     plugin_dispatch_metric_family_array(fams, FAM_CPU_MAX, now);
 
-    if (cpu_report_topology && (cpu_num > 0) && (cpu_num != cpu_topology_num))
-        cpu_topology_scan();
+    /* Offline CPUs are in sysfs but not in /proc/stat: rescan the topology
+       only when the set of online CPUs changes. */
+    if (cpu_report_topology && (cpu_num > 0)) {
+        if ((cpu_online_num > 0) && ((cpu_num != cpu_online_num) || (cpu_max != cpu_online_max)))
+            cpu_topology_scan();
+        cpu_online_num = cpu_num;
+        cpu_online_max = cpu_max;
+    }
 
     return 0;
 }
