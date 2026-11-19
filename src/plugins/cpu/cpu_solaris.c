@@ -19,13 +19,46 @@
 #include <sys/sysinfo.h>
 #include <kstat.h>
 
-/* colleague tells me that Sun doesn't sell systems with more than 100 or so CPUs.. */
-#define MAX_NUMCPU 256
 static kstat_ctl_t *kc;
-static kstat_t *ksp[MAX_NUMCPU];
+static kstat_t **ksp;
+static size_t ksp_size;
 static size_t numcpu;
+static double tick_hz = 100.0;
 
 extern metric_family_t fams[];
+
+static int cpu_kstat_scan(void)
+{
+    int status = 0;
+
+    size_t n = 0;
+    for (kstat_t *ksp_chain = kc->kc_chain; ksp_chain != NULL; ksp_chain = ksp_chain->ks_next) {
+        if (strncmp(ksp_chain->ks_module, "cpu_stat", 8) == 0)
+            n++;
+    }
+
+    if (n > ksp_size) {
+        kstat_t **tmp = realloc(ksp, n * sizeof(*ksp));
+        if (tmp == NULL) {
+            PLUGIN_ERROR("realloc failed.");
+            status = -1;
+        } else {
+            ksp = tmp;
+            ksp_size = n;
+        }
+    }
+
+    /* Solaris doesn't count linear.. *sigh* */
+    numcpu = 0;
+    for (kstat_t *ksp_chain = kc->kc_chain;
+         (numcpu < ksp_size) && (ksp_chain != NULL);
+         ksp_chain = ksp_chain->ks_next) {
+        if (strncmp(ksp_chain->ks_module, "cpu_stat", 8) == 0)
+            ksp[numcpu++] = ksp_chain;
+    }
+
+    return status;
+}
 
 int cpu_read(void)
 {
@@ -36,10 +69,15 @@ int cpu_read(void)
     if (kc == NULL)
         return -1;
 
-    if (kstat_chain_update(kc) < 0) {
+    kid_t kid = kstat_chain_update(kc);
+    if (kid < 0) {
         PLUGIN_ERROR("kstat_chain_update failed.");
         return -1;
     }
+
+    /* The chain has changed: the cached kstat_t pointers may have been freed. */
+    if (kid > 0)
+        cpu_kstat_scan();
 
     uint64_t cpu_all_idle = 0;
     uint64_t cpu_all_user = 0;
@@ -63,37 +101,37 @@ int cpu_read(void)
 
         cpu_all_idle += cpu_idle;
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)cpu_idle/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)cpu_idle/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "idle"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         cpu_all_user += cpu_user;
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)cpu_user/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)cpu_user/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "user"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         cpu_all_system += cpu_system;
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)cpu_system/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)cpu_system/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "system"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         cpu_all_wait += cpu_wait;
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)cpu_wait/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)cpu_wait/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "wait"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
     }
 
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cpu_all_idle/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cpu_all_idle/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "idle"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cpu_all_user/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cpu_all_user/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "user"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cpu_all_system/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cpu_all_system/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "system"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cpu_all_wait/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cpu_all_wait/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "wait"), NULL);
 
     metric_family_append(&fams[FAM_CPU_COUNT], VALUE_GAUGE(numcpu), NULL, NULL);
@@ -105,9 +143,14 @@ int cpu_read(void)
 
 int cpu_init(void)
 {
-    kstat_t *ksp_chain;
-
     numcpu = 0;
+
+    long ticks = sysconf(_SC_CLK_TCK);
+    if (ticks <= 0) {
+        PLUGIN_ERROR("sysconf(_SC_CLK_TCK) failed: %s.", STRERRNO);
+        return -1;
+    }
+    tick_hz = ticks;
 
     if (kc == NULL)
         kc = kstat_open();
@@ -117,12 +160,22 @@ int cpu_init(void)
         return -1;
     }
 
-    /* Solaris doesn't count linear.. *sigh* */
-    for (numcpu = 0, ksp_chain = kc->kc_chain;
-         (numcpu < MAX_NUMCPU) && (ksp_chain != NULL);
-         ksp_chain = ksp_chain->ks_next) {
-        if (strncmp(ksp_chain->ks_module, "cpu_stat", 8) == 0)
-            ksp[numcpu++] = ksp_chain;
+    if (cpu_kstat_scan() != 0)
+        return -1;
+
+    return 0;
+}
+
+int cpu_shutdown(void)
+{
+    free(ksp);
+    ksp = NULL;
+    ksp_size = 0;
+    numcpu = 0;
+
+    if (kc != NULL) {
+        kstat_close(kc);
+        kc = NULL;
     }
 
     return 0;

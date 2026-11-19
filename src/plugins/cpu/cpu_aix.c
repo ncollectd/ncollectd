@@ -21,6 +21,7 @@
 
 static perfstat_cpu_t *perfcpu;
 static int pnumcpu;
+static double tick_hz = 100.0;
 
 extern metric_family_t fams[];
 
@@ -29,22 +30,22 @@ int cpu_read(void)
     cdtime_t now = cdtime();
 
     perfstat_cpu_total_t cputotal = {0};
-    if (!perfstat_cpu_total(NULL, &cputotal, sizeof(cputotal), 1)) {
+    if (perfstat_cpu_total(NULL, &cputotal, sizeof(cputotal), 1) < 1) {
         PLUGIN_WARNING("perfstat_cpu_total: %s", STRERRNO);
         return -1;
     }
 
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.idle/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.idle/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "idle"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.user/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.user/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "user"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.sys/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.sys/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "system"), NULL);
     metric_family_append(&fams[FAM_CPU_ALL_USAGE],
-                         VALUE_COUNTER_FLOAT64((double)cputotal.wait/100.0), NULL,
+                         VALUE_COUNTER_FLOAT64((double)cputotal.wait/tick_hz), NULL,
                          &LABEL_PAIR_CONST("state", "wait"), NULL);
 
 
@@ -58,6 +59,12 @@ int cpu_read(void)
     if ((pnumcpu != numcpu) || (perfcpu == NULL)) {
         free(perfcpu);
         perfcpu = malloc(numcpu * sizeof(perfstat_cpu_t));
+        if (perfcpu == NULL) {
+            PLUGIN_ERROR("malloc failed.");
+            pnumcpu = 0;
+            plugin_dispatch_metric_family_array(fams, FAM_CPU_MAX, 0);
+            return -1;
+        }
     }
     pnumcpu = numcpu;
 
@@ -74,19 +81,19 @@ int cpu_read(void)
         itoa(i, buffer_cpu);
 
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].user/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].user/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "user"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].sys/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].sys/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "system"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].idle/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].idle/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "idle"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
         metric_family_append(&fams[FAM_CPU_USAGE],
-                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].wait/100.0), NULL,
+                             VALUE_COUNTER_FLOAT64((double)perfcpu[i].wait/tick_hz), NULL,
                              &LABEL_PAIR_CONST("state", "wait"),
                              &LABEL_PAIR_CONST("cpu", buffer_cpu), NULL);
     }
@@ -94,6 +101,18 @@ int cpu_read(void)
     metric_family_append(&fams[FAM_CPU_COUNT], VALUE_GAUGE(cpus), NULL, NULL);
 
     plugin_dispatch_metric_family_array(fams, FAM_CPU_MAX, now);
+
+    return 0;
+}
+
+int cpu_init(void)
+{
+    long ticks = sysconf(_SC_CLK_TCK);
+    if (ticks <= 0) {
+        PLUGIN_ERROR("sysconf(_SC_CLK_TCK) failed: %s.", STRERRNO);
+        return -1;
+    }
+    tick_hz = ticks;
 
     return 0;
 }
