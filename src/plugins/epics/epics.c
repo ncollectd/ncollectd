@@ -58,6 +58,8 @@ static c_avl_tree_t *pv_tree;
 static pthread_mutex_t pv_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t thread_id;
 static volatile bool thread_loop;
+static bool thread_failed;
+static bool thread_started;
 
 static void epics_pv_free(epics_pv_t *pv)
 {
@@ -103,7 +105,7 @@ static epics_pv_t *epics_pv_tree_get(c_avl_tree_t *tree, char *name)
         return NULL;
 
     epics_pv_t *pv = NULL;
-    int status = c_avl_get(tree, (const void *)&name, (void *)&pv);
+    int status = c_avl_get(tree, name, (void *)&pv);
     if (status != 0)
         return NULL;
 
@@ -114,7 +116,7 @@ static int epics_pv_tree_add(c_avl_tree_t **tree, char *name, epics_pv_type_t ty
 {
     if (*tree == NULL) {
         *tree = c_avl_create((int (*)(const void *, const void *))strcmp);
-        if (tree == NULL) {
+        if (*tree == NULL) {
             PLUGIN_ERROR("Failed to create tree.");
             return -1;
         }
@@ -156,7 +158,7 @@ static int epics_pv_tree_add(c_avl_tree_t **tree, char *name, epics_pv_type_t ty
 
 static int printf_handler(const char *pformat, va_list args)
 {
-#ifdef NCOLLECT_DEBUG
+#ifdef NCOLLECTD_DEBUG
     char msg[1024] = ""; // Size inherits from plugin_log()
 
     int status = vsnprintf(msg, sizeof(msg), pformat, args);
@@ -166,7 +168,7 @@ static int printf_handler(const char *pformat, va_list args)
     }
 
     msg[strcspn(msg, "\r\n")] = '\0';
-    plugin_log(LOG_DEBUG, "%s", msg);
+    PLUGIN_DEBUG("%s", msg);
 
     return status;
 #else
@@ -259,7 +261,7 @@ static void event_handler(evargs args)
     case EPICS_PV_LABEL:
         if (args.count == 1) {
             free(pv->label);
-            pv->label = strdup((const char *)args.dbr);
+            pv->label = strndup((const char *)args.dbr, MAX_STRING_SIZE);
             if (pv->label == NULL)
                 PLUGIN_ERROR("Cannot allocate memory for '%s' value", pv->name);
         } else {
@@ -283,7 +285,7 @@ static void connection_handler(struct connection_handler_args args)
         if (pv->eid) {
             PLUGIN_INFO("Channel '%s' reconnected", pv->name);
             pv->is_active = true;
-            return;
+            break;
         }
 
         switch (pv->type) {
@@ -302,7 +304,7 @@ static void connection_handler(struct connection_handler_args args)
                 break;
             default:
                 PLUGIN_ERROR("Unsupported channel type '%s' for channel '%s'.",
-                             dbf_type_to_text(pv->ch_type), pv->name);
+                             dbf_type_to_text(ch_type), pv->name);
                 pthread_mutex_unlock(&pv_lock);
                 return;
                 break;
@@ -332,9 +334,18 @@ static void connection_handler(struct connection_handler_args args)
                 }
             }
         }   break;
-        case EPICS_PV_LABEL:
+        case EPICS_PV_LABEL: {
             pv->ch_type = DBR_STRING;
-            break;
+
+            int ret = ca_create_subscription(pv->ch_type, 1, pv->id, DBE_VALUE,
+                                             event_handler, pv, &pv->eid);
+            if (ret != ECA_NORMAL) {
+                PLUGIN_ERROR("CA error %s occurred while trying to create "
+                             "subscription for channel '%s'", ca_message(ret), pv->name);
+            } else {
+                pv->is_active = true;
+            }
+        }   break;
         }
         break;
     case CA_OP_CONN_DOWN:
@@ -350,9 +361,11 @@ static void *epics_thread(__attribute__ ((__unused__)) void *args)
 {
     long ret = ca_context_create(ca_disable_preemptive_callback);
     if (ret != ECA_NORMAL) {
-        // FIXME: report error back to start_thread()
         PLUGIN_ERROR("CA error %s occurred while trying to start channel access",
                       ca_message(ret));
+        pthread_mutex_lock(&pv_lock);
+        thread_failed = true;
+        pthread_mutex_unlock(&pv_lock);
         return (void *)1;
     }
 
@@ -369,6 +382,8 @@ static void *epics_thread(__attribute__ ((__unused__)) void *args)
             PLUGIN_ERROR("CA error %s occurred while trying to create channel \"%s\"",
                          ca_message(ret), pv->name);
             ret = 1;
+            thread_failed = true;
+            c_avl_iterator_destroy(iter);
             pthread_mutex_unlock(&pv_lock);
             goto error;
         }
@@ -392,7 +407,10 @@ error:
             ca_clear_subscription(pv->eid);
             pv->eid = 0;
         }
-        ca_clear_channel(pv->id);
+        if (pv->id != NULL) {
+            ca_clear_channel(pv->id);
+            pv->id = NULL;
+        }
     }
 
     c_avl_iterator_destroy(iter);
@@ -424,7 +442,7 @@ static int epics_dispatch_metric(epics_metric_t *em)
             return -1;
         }
 
-        if (pv_label->type != EPICS_PV_LABEL) {
+        if ((pv_label->type != EPICS_PV_LABEL) || (pv_label->label == NULL)) {
             label_set_reset(&labels);
             return -1;
         }
@@ -438,12 +456,13 @@ static int epics_dispatch_metric(epics_metric_t *em)
         return -1;
     }
 
-    if (pv_value->type != EPICS_PV_LABEL) {
+    if ((pv_value->type != EPICS_PV_VALUE) || !pv_value->is_active) {
         label_set_reset(&labels);
         return -1;
     }
 
-    if (em->value_idx > pv_value->vl.num) {
+    if ((pv_value->vl.ptr == NULL) || (em->value_idx < 0) ||
+        (em->value_idx >= pv_value->vl.num)) {
         label_set_reset(&labels);
         return -1;
     }
@@ -451,17 +470,26 @@ static int epics_dispatch_metric(epics_metric_t *em)
     value_t value = {0};
 
     if (em->type == METRIC_TYPE_COUNTER) {
-        if (pv_value->type == DBR_LONG) {
+        if (pv_value->ch_type == DBR_LONG) {
             value = VALUE_COUNTER(pv_value->vl.ptr[em->value_idx].int64);
-        } else if (pv_value->type == DBR_DOUBLE) {
+        } else if (pv_value->ch_type == DBR_DOUBLE) {
             value = VALUE_COUNTER_FLOAT64(pv_value->vl.ptr[em->value_idx].float64);
+        } else {
+            label_set_reset(&labels);
+            return -1;
         }
     } else if (em->type == METRIC_TYPE_GAUGE) {
-        if (pv_value->type == DBR_LONG) {
+        if (pv_value->ch_type == DBR_LONG) {
             value = VALUE_GAUGE_INT64(pv_value->vl.ptr[em->value_idx].int64);
-        } else if (pv_value->type == DBR_DOUBLE) {
+        } else if (pv_value->ch_type == DBR_DOUBLE) {
             value = VALUE_GAUGE(pv_value->vl.ptr[em->value_idx].float64);
+        } else {
+            label_set_reset(&labels);
+            return -1;
         }
+    } else {
+        label_set_reset(&labels);
+        return -1;
     }
 
     metric_family_t fam = {0};
@@ -470,9 +498,15 @@ static int epics_dispatch_metric(epics_metric_t *em)
         
     char buffer[1024];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
+    int status = 0;
     if (g_metric_prefix != NULL)
-        strbuf_putstr(&buf, g_metric_prefix);
-    strbuf_putstr(&buf, em->name);
+        status |= strbuf_putstr(&buf, g_metric_prefix);
+    status |= strbuf_putstr(&buf, em->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Metric name for '%s' is too long.", em->name);
+        label_set_reset(&labels);
+        return -1;
+    }
 
     fam.name = buf.ptr;
 
@@ -480,12 +514,19 @@ static int epics_dispatch_metric(epics_metric_t *em)
 
     plugin_dispatch_metric_family(&fam, 0);
 
+    label_set_reset(&labels);
+
     return 0;
 }
 
 static int epics_read(void)
 {
     pthread_mutex_lock(&pv_lock);
+
+    if (thread_failed) {
+        pthread_mutex_unlock(&pv_lock);
+        return -1;
+    }
 
     for (size_t i = 0; i < epics_metrics_num; i++) {
         epics_metric_t *em = epics_metrics[i];
@@ -525,7 +566,15 @@ static int epics_config_value_from(config_item_t *ci, char **ret_str, long int *
         goto error;
     }
 
-    *ret_num = (long int)ci->values[0].value.number;
+    double idx = 0;
+    if (ci->values_num == 2)
+        idx = ci->values[1].value.number;
+
+    if ((idx < 0) || (idx > INT_MAX)) {
+        PLUGIN_ERROR("The index of the '%s' option in %s:%d must be between 0 and %d.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci), INT_MAX);
+        return -1;
+    }
 
     char *string = strdup(ci->values[0].value.string);
     if (string == NULL) {
@@ -536,6 +585,7 @@ static int epics_config_value_from(config_item_t *ci, char **ret_str, long int *
     if (*ret_str != NULL)
         free(*ret_str);
     *ret_str = string;
+    *ret_num = (long int)idx;
 
     return 0;
 
@@ -666,6 +716,7 @@ static int epics_init(void)
             PLUGIN_ERROR("Starting thread failed: %d", status);
             return -1;
         }
+        thread_started = true;
     }
 
     return 0;
@@ -674,7 +725,10 @@ static int epics_init(void)
 static int epics_shutdown(void)
 {
     thread_loop = 0;
-    pthread_join(thread_id, NULL);
+    if (thread_started) {
+        pthread_join(thread_id, NULL);
+        thread_started = false;
+    }
 
     epics_pv_tree_free(pv_tree);
     pv_tree = NULL;
@@ -689,6 +743,8 @@ static int epics_shutdown(void)
     }
 
     label_set_reset(&g_labels);
+    free(g_metric_prefix);
+    g_metric_prefix = NULL;
     return 0;
 }
 
