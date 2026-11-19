@@ -24,6 +24,11 @@ static int pass_sym_alloc(struct node *n, void *_pb)
     if (n->sym)
         return 0;
 
+    if (built_in == NULL) {
+        PLUGIN_ERROR("No provider found for built-in symbols.");
+        return -EINVAL;
+    }
+
     switch (n->ntype) {
     case N_EXPR:
         err = pb->provider->sym_alloc(pb, n);
@@ -85,24 +90,25 @@ static int pass_rewrite(struct node *n, void *_pb)
 
 static char *pass_ir_comment(struct node *n, const char *phase)
 {
-    char *comment;
+    char *comment = NULL;
+    int ret = -1;
 
     switch (n->ntype) {
     case N_EXPR:
-        asprintf(&comment, "%s %s()", phase, n->expr.func);
+        ret = asprintf(&comment, "%s %s()", phase, n->expr.func);
         break;
     case N_STRING:
-        asprintf(&comment, "%s \"%s\"", phase, n->string.data);
+        ret = asprintf(&comment, "%s \"%s\"", phase, n->string.data);
         break;
     case N_NUM:
         if (n->num.unsignd)
-            asprintf(&comment, "%s <%#" PRIx64 ">", phase, n->num.u64);
+            ret = asprintf(&comment, "%s <%#" PRIx64 ">", phase, n->num.u64);
         else
-            asprintf(&comment, "%s <%" PRId64 ">", phase, n->num.s64);
+            ret = asprintf(&comment, "%s <%" PRId64 ">", phase, n->num.s64);
         break;
     }
 
-    return comment;
+    return (ret < 0) ? NULL : comment;
 }
 
 static int pass_ir_pre(struct node *n, void *_pb)
@@ -152,6 +158,11 @@ static int run_ir(struct ply *ply)
     struct provider *built_in = provider_get("!built-in");
     struct ply_probe *pb;
     int err;
+
+    if (built_in == NULL) {
+        PLUGIN_ERROR("No provider found for built-in symbols.");
+        return -EINVAL;
+    }
 
     ply_probe_foreach(ply, pb) {
         err = pb->provider->ir_pre ?
@@ -213,7 +224,10 @@ int ply_compile(struct ply *ply)
             break;
     }
 
-    assert(!err);
+    if (err) {
+        PLUGIN_ERROR("Too many rewrites while compiling the script.");
+        return -EINVAL;
+    }
 
     err = err ? err : run_walk(ply, NULL, pass_sym_alloc);
     err = err ? err : run_walk(ply, NULL, pass_type_infer);

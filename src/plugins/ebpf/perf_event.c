@@ -5,7 +5,10 @@
 // From https://github.com/wkz/ply
 
 #include <errno.h>
+#include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include <linux/perf_event.h>
@@ -16,6 +19,34 @@
 #include "ply.h"
 #include "internal.h"
 
+static char tracepath_buf[PATH_MAX] = "/sys/kernel/debug/tracing/";
+static pthread_once_t tracepath_once = PTHREAD_ONCE_INIT;
+
+static void tracepath_init(void)
+{
+    /* tracefs is mounted on /sys/kernel/tracing since Linux 4.1, older
+     * systems only provide it below debugfs. */
+    char *sys = plugin_syspath(NULL);
+    if (sys == NULL)
+        return;
+
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/kernel/tracing/events", sys);
+    if ((access(path, F_OK) == 0) || (errno != ENOENT))
+        snprintf(tracepath_buf, sizeof(tracepath_buf), "%s/kernel/tracing/", sys);
+    else
+        snprintf(tracepath_buf, sizeof(tracepath_buf), "%s/kernel/debug/tracing/", sys);
+
+    free(sys);
+}
+
+/* Path of the tracefs mount point, with a trailing slash. */
+const char *tracepath(void)
+{
+    pthread_once(&tracepath_once, tracepath_init);
+    return tracepath_buf;
+}
+
 static int perf_event_id(__attribute__((unused)) struct ply_probe *pb, const char *path)
 {
     FILE *fp;
@@ -23,14 +54,17 @@ static int perf_event_id(__attribute__((unused)) struct ply_probe *pb, const cha
 
     fp = fopenf("r", "%s/id", path);
     if (!fp)
-        goto err;
+        return -errno;
 
-    if (fscanf(fp, "%d", &id) != 1)
-        goto err;
+    errno = 0;
+    if (fscanf(fp, "%d", &id) != 1) {
+        int err = errno ? -errno : -EINVAL;
+        fclose(fp);
+        return err;
+    }
 
+    fclose(fp);
     return id;
-err:
-    return -errno;
 }
 
 int perf_event_attach(struct ply_probe *pb, const char *path,

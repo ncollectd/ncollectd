@@ -190,6 +190,8 @@ static int tracepoint_sym_alloc(struct ply_probe *pb, struct node *n)
         return err;
 
     n->sym = sym_alloc(&pb->locals, n, func);
+    if (!n->sym)
+        return -ENOMEM;
 
     if (func->static_ret)
         n->sym->type = func_return_type(func);
@@ -264,6 +266,8 @@ static int tracepoint_parse_field(char *line, struct tfield *f, size_t *struct_s
         return -EINVAL;
 
     char *name = rindex(type, ' ');
+    if (!name)
+        return -EINVAL;
     *name++ = '\0';
 
     char *array = index(name, '[');
@@ -272,6 +276,11 @@ static int tracepoint_parse_field(char *line, struct tfield *f, size_t *struct_s
         len = strtoul(array, NULL, 0);
         if (len == ULONG_MAX)
             return -EINVAL;
+
+        /* flexible arrays ([] or [0]) and lengths that are not numbers
+         * can not be described, skip the field. */
+        if (len == 0)
+            return 1;
 
         size /= len;
     }
@@ -294,14 +303,15 @@ static int tracepoint_parse(struct ply_probe *pb)
 {
     struct tracepoint *tp = pb->provider_data;
     struct type *t = tp->data_func.type->ptr.type;
-    char line[0x80];
+    char *line = NULL;
+    size_t len = 0;
     int n = 0;
 
     FILE *fmt = fopenf("r", "%s/format", tp->path);
     if (!fmt)
         return -ENOENT;
 
-    while (fgets(line, sizeof(line), fmt)) {
+    while (getline(&line, &len, fmt) >= 0) {
         if (!strstr(line, "field:"))
             continue;
 
@@ -310,10 +320,19 @@ static int tracepoint_parse(struct ply_probe *pb)
 
         int err = tracepoint_parse_field(line, &t->sou.fields[n - 1], &t->sou.size);
         if (err < 0) {
+            free(line);
+            fclose(fmt);
             free(t->sou.fields);
+            t->sou.fields = NULL;
             return err;
         }
+
+        if (err > 0)
+            n--;
     }
+
+    free(line);
+    fclose(fmt);
 
     t->sou.fields = realloc(t->sou.fields, sizeof(*t->sou.fields)*(n + 1));
     t->sou.fields[n] = (struct tfield) { .name = NULL, .type = NULL };
@@ -355,7 +374,7 @@ static int tracepoint_probe(struct ply_probe *pb)
 
     size_t pathsz;
     FILE *fp = open_memstream(&tp->path, &pathsz);
-    fprintf(fp, TRACEPATH "events/%s", name);
+    fprintf(fp, "%sevents/%s", tracepath(), name);
     fclose(fp);
 
     tp->data_func = tracepoint_data_func;

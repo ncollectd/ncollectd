@@ -43,7 +43,8 @@ void ply_map_print(struct ply *ply, struct sym *sym, FILE *fp)
      * bpf_map_next loop. In that case we only need space for two
      * keys and one value. This means we can get unsorted output
      * in low memory environments. */
-    char *data = calloc(ply->map_elems, row_size);
+    size_t max_elems = t->map.len ? t->map.len : ply->map_elems;
+    char *data = calloc(max_elems, row_size);
     if (!data) {
         PLUGIN_ERROR("not enough memory to dump '%s'.", sym->name);
         return;
@@ -62,6 +63,10 @@ void ply_map_print(struct ply *ply, struct sym *sym, FILE *fp)
         key += row_size;
         val += row_size;
         n_elems++;
+
+        /* the walk restarts when the previous key is deleted */
+        if (n_elems == max_elems)
+            break;
     }
 
     if (n_elems == 0)
@@ -105,7 +110,8 @@ void ply_map_clear(struct ply *ply, struct sym *sym)
 
     size_t key_size = type_sizeof(t->map.ktype);
 
-    char *data = calloc(ply->map_elems, key_size);
+    size_t max_elems = t->map.len ? t->map.len : ply->map_elems;
+    char *data = calloc(max_elems, key_size);
     if (!data) {
         PLUGIN_ERROR("Not enough memory to clear '%s'.", sym->name);
         return;
@@ -117,6 +123,10 @@ void ply_map_clear(struct ply *ply, struct sym *sym)
          err = bpf_map_next(sym->mapfd, key - key_size, key)) {
         key += key_size;
         n_elems++;
+
+        /* the walk restarts when the previous key is deleted */
+        if (n_elems == max_elems)
+            break;
     }
 
     for (key = data; n_elems > 0; key += key_size, n_elems--) {
@@ -153,7 +163,14 @@ int __ply_probe_alloc(struct ply *ply, struct node *pspec, struct node *ast)
 
     struct ply_probe *pb = xcalloc(1, sizeof(*pb));
 
+    pb->bpf_fd = -1;
     pb->ply = ply;
+
+    /* rewrites may replace the root node of the probe, so keep
+     * single statements in a block. */
+    if (!node_is(ast, "{}"))
+        ast = node_expr(&ast->loc, "{}", ast, NULL);
+
     pb->ast = ast;
     pb->probe = strdup(pspec->string.data);
 
@@ -188,6 +205,7 @@ err_free_probe:
     free(pb->probe);
     free(pb);
     node_free(pspec);
+    node_free(ast);
     return err;
 }
 
@@ -199,11 +217,10 @@ int ply_fparse(struct ply *ply, FILE *fp)
         return -EINVAL;
 
     yyset_in(fp, scanner);
-    if (yyparse(scanner, ply))
-        return -EINVAL;
- 
-    yylex_destroy(scanner); 
-    return 0;
+    int err = yyparse(scanner, ply);
+
+    yylex_destroy(scanner);
+    return err ? -EINVAL : 0;
 }
 
 int ply_parsef(struct ply *ply, const char *fmt, ...)
@@ -237,8 +254,10 @@ static int ply_unload_map(struct ply *ply)
         if (sym->type->ttype != T_MAP)
             continue;
 
-        if (sym->mapfd >= 0)
+        if (sym->mapfd >= 0) {
             close(sym->mapfd);
+            sym->mapfd = -1;
+        }
     }
     
     return 0;
@@ -249,7 +268,10 @@ static int ply_unload_bpf(struct ply *ply)
     struct ply_probe *pb;
 
     ply_probe_foreach(ply, pb) {
-        close(pb->bpf_fd);
+        if (pb->bpf_fd >= 0) {
+            close(pb->bpf_fd);
+            pb->bpf_fd = -1;
+        }
     }
 
     return 0;
@@ -409,12 +431,12 @@ struct ply_return ply_load(struct ply *ply)
      * before calling ir_bpf_extract. */
     err = ply_load_map(ply);
     if (err)
-        goto err_free_evp;
+        goto err_free_map;
 
     /* Load programs in to the kernel. */
     err = ply_load_bpf(ply);
     if (err)
-        goto err_free_map;
+        goto err_free_prog;
 
     ret = ply_load_attach(ply);
     if (ret.err || ret.exit)
@@ -425,7 +447,6 @@ err_free_prog:
     ply_unload_bpf(ply);
 err_free_map:
     ply_unload_map(ply);
-err_free_evp:
     /* TODO evpipe_free(&ply->evp); */
     if (err)
         ret.val = err;
@@ -527,7 +548,24 @@ struct ply *ply_alloc(char *group, bool ksyms_cache)
         return NULL;
 
     ply->globals.global = 1;
-    asprintf(&ply->group, "ply-%s-%d", group, getpid());
+
+    /* The group is used in kprobe_events, where names must match
+     * [A-Za-z_][A-Za-z0-9_]* and are limited in length. */
+    char name[25];
+    size_t i;
+    for (i = 0; (group[i] != '\0') && (i < (sizeof(name) - 1)); i++) {
+        char c = group[i];
+        if (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')))
+            name[i] = c;
+        else
+            name[i] = '_';
+    }
+    name[i] = '\0';
+
+    if (asprintf(&ply->group, "ply_%s_%d", name, getpid()) < 0) {
+        free(ply);
+        return NULL;
+    }
     ply->group_fd = -1;
 
     ply->map_elems = 0x400;

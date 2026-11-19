@@ -4,6 +4,7 @@
 
 // From https://github.com/wkz/ply
 
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -11,12 +12,35 @@
 #include <linux/perf_event.h>
 #include <linux/version.h>
 #include <sys/syscall.h>
+#include <sys/utsname.h>
 
 #include "syscall.h"
 
 static __u64 ptr_to_u64(const void *ptr)
 {
     return (__u64) (unsigned long) ptr;
+}
+
+/* Before Linux 5.0 kprobe programs are only loaded when kern_version is
+ * the version of the running kernel, which can differ from the headers. */
+static __u32 kernel_version(void)
+{
+    unsigned int major, minor, patch;
+
+    /* Ubuntu reports the upstream version of its kernels here. */
+    FILE *fp = fopen("/proc/version_signature", "r");
+    if (fp) {
+        int n = fscanf(fp, "%*s %*s %u.%u.%u", &major, &minor, &patch);
+        fclose(fp);
+        if (n == 3)
+            return KERNEL_VERSION(major, minor, patch > 255 ? 255 : patch);
+    }
+
+    struct utsname uts;
+    if ((uname(&uts) == 0) && (sscanf(uts.release, "%u.%u.%u", &major, &minor, &patch) == 3))
+        return KERNEL_VERSION(major, minor, patch > 255 ? 255 : patch);
+
+    return LINUX_VERSION_CODE;
 }
 
 int bpf_prog_load(enum bpf_prog_type type, const struct bpf_insn *insns, int insn_cnt,
@@ -28,7 +52,7 @@ int bpf_prog_load(enum bpf_prog_type type, const struct bpf_insn *insns, int ins
      * bytes are zeroed */
     memset(&attr, 0, sizeof(attr));
 
-    attr.kern_version = LINUX_VERSION_CODE;
+    attr.kern_version = kernel_version();
     attr.prog_type    = type;
     attr.insns        = ptr_to_u64(insns);
     attr.insn_cnt     = insn_cnt;

@@ -315,6 +315,9 @@ void ir_emit_comment(struct ir *ir, char *comment)
 {
     struct vinsn vi;
 
+    if (!comment)
+        return;
+
     vi.vitype = VI_COMMENT;
     vi.comment = comment;
     ir_emit(ir, &vi);
@@ -713,13 +716,16 @@ int ir_bpf_generate(struct ir *ir)
  * comments. */
 int ir_bpf_extract(struct ir *ir, struct bpf_insn **insnsp, int *n_insnsp)
 {
-    struct bpf_insn *insns = NULL;
     int n_insns = 0;
+
+    /* every vinsn gives at most one instruction */
+    struct bpf_insn *insns = calloc(ir->len, sizeof(*insns));
+    if (!insns)
+        return -ENOMEM;
 
     for (struct vinsn *vi = ir->vi; vi <= &ir->vi[ir->len - 1]; vi++) {
         switch (vi->vitype) {
         case VI_INSN:
-            insns = realloc(insns, (n_insns + 1) * sizeof(*insns));
             insns[n_insns] = vi->insn.bpf;
             insns[n_insns].dst_reg = vi->insn.dst;
             insns[n_insns].src_reg = vi->insn.src;
@@ -728,7 +734,6 @@ int ir_bpf_extract(struct ir *ir, struct bpf_insn **insnsp, int *n_insnsp)
         case VI_LDMAP:
             assert(vi->map.sym->mapfd >= 0);
 
-            insns = realloc(insns, (n_insns + 1) * sizeof(*insns));
             insns[n_insns] = LDDW_IMM(vi->map.sym->mapfd);
             insns[n_insns].dst_reg = vi->map.reg;
             insns[n_insns].src_reg = BPF_PSEUDO_MAP_FD;

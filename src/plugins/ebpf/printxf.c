@@ -31,8 +31,9 @@ int __printxf_wsegment(FILE *fp, const char **fmt, size_t ssize, size_t *tsize)
     return (wsize < ssize) ? EOF : 0;
 }
 
+/* ap is only used, and must only be set, when priv is NULL. */
 int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
-          void *priv, va_list ap)
+          void *priv, va_list *ap)
 {
     size_t tsize = 0, ssize;
     char spec[16];
@@ -96,7 +97,7 @@ int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
             va_list aq;
             char *tmp;
 
-            va_copy(aq, ap);
+            va_copy(aq, *ap);
             tsize += pxf->vfprintxf[type](pxf, fp, spec, aq);
             va_end(aq);
 
@@ -106,7 +107,7 @@ int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
 
             for (tmp = spec; *tmp; tmp++) {
                 if (*tmp == '*') {
-                    int dummy_int = va_arg(ap, int);
+                    int dummy_int = va_arg(*ap, int);
                     (void)dummy_int;
                 }
             }
@@ -124,10 +125,10 @@ int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
             case 'f': case 'F':
             case 'g': case 'G':
                 if (strstr(spec, "L")) {
-                    long double dummy_ld = va_arg(ap, long double);
+                    long double dummy_ld = va_arg(*ap, long double);
                     (void)dummy_ld;
                 } else {
-                    double dummy_d = va_arg(ap, double);
+                    double dummy_d = va_arg(*ap, double);
                     (void)dummy_d;
                 }
                 break;
@@ -137,13 +138,13 @@ int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
             case 'o': case 'u':
             case 'x': case 'X':
                 if (strstr(spec, "ll") || strstr(spec, "q")) {
-                    long long int dummy_ll = va_arg(ap, long long int);
+                    long long int dummy_ll = va_arg(*ap, long long int);
                     (void)dummy_ll;
                 } else if (strstr(spec, "l")) {
-                    long int dummy_l = va_arg(ap, long int);
+                    long int dummy_l = va_arg(*ap, long int);
                     (void)dummy_l;
                 } else {
-                    int dummy_int = va_arg(ap, int);
+                    int dummy_int = va_arg(*ap, int);
                     (void)dummy_int;
                 }
                 break;
@@ -152,7 +153,7 @@ int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
             default:
                 /* Extensions must consume exactly one
                  * pointer. */
-                do { void *dummy_ptr = va_arg(ap, void *); (void)dummy_ptr;} while (0);
+                do { void *dummy_ptr = va_arg(*ap, void *); (void)dummy_ptr;} while (0);
                 break;
             }
         }
@@ -163,14 +164,18 @@ int __printxf(struct printxf *pxf, FILE *fp, const char *fmt,
 
 int xfprintxf(struct printxf *pxf, FILE *fp, const char *fmt, void *priv)
 {
-    va_list ap;
-
-    return __printxf(pxf, fp, fmt, priv, ap);
+    return __printxf(pxf, fp, fmt, priv, NULL);
 }
 
 int vfprintxf(struct printxf *pxf, FILE *fp, const char *fmt, va_list ap)
 {
-    return __printxf(pxf, fp, fmt, NULL, ap);
+    va_list aq;
+    int ret;
+
+    va_copy(aq, ap);
+    ret = __printxf(pxf, fp, fmt, NULL, &aq);
+    va_end(aq);
+    return ret;
 }
 
 int fprintxf(struct printxf *pxf, FILE *fp, const char *fmt, ...)

@@ -85,6 +85,10 @@ static int stack_rewrite(__attribute__((unused)) const struct func *func, struct
 
     nmap = node_expr_ident(&n->loc, ":stackmap");
     nmap->sym = sym_alloc(&pb->ply->globals, nmap, &stackmap_func);
+    if (!nmap->sym) {
+        node_free(nmap);
+        return -ENOMEM;
+    }
 
     if (!nmap->sym->type) {
         /* This is the first reference of `stack`, we need to

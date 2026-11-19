@@ -12,6 +12,7 @@
 
 int strtonum(const char *_str, int64_t *s64, uint64_t *u64);
 int isstring(const char *data, size_t len);
+int cpus_possible(void);
 
 char *strorder(int n, char *buf, size_t buflen);
 #define ORDERBUF_SIZE 16

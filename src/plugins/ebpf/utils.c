@@ -35,6 +35,8 @@ static void strkill(char *str, char kill)
 int strtonum(const char *_str, int64_t *s64, uint64_t *u64)
 {
     char *str = strdup(_str);
+    if (!str)
+        return 0;
 
     strkill(str, '_');
 
@@ -62,6 +64,38 @@ int strtonum(const char *_str, int64_t *s64, uint64_t *u64)
     free(str);
 
     return 0;
+}
+
+/* Number of possible CPUs, i.e. the highest CPU id + 1: per-CPU data,
+ * like perf event arrays, is indexed by the CPU id and CPUs can be put
+ * online after the programs are loaded. */
+int cpus_possible(void)
+{
+    int ncpus = 0;
+    char line[256];
+
+    FILE *fp = fopen("/sys/devices/system/cpu/possible", "r");
+    if (fp) {
+        if (fgets(line, sizeof(line), fp)) {
+            size_t len = strlen(line);
+
+            /* the format is a list of ranges, e.g. "0-3,8-11" */
+            while ((len > 0) && !isdigit((unsigned char)line[len - 1]))
+                len--;
+            line[len] = '\0';
+            while ((len > 0) && isdigit((unsigned char)line[len - 1]))
+                len--;
+
+            if (line[len] != '\0')
+                ncpus = atoi(&line[len]) + 1;
+        }
+        fclose(fp);
+    }
+
+    if (ncpus <= 0)
+        ncpus = sysconf(_SC_NPROCESSORS_CONF);
+
+    return ncpus;
 }
 
 int isstring(const char *data, size_t len)

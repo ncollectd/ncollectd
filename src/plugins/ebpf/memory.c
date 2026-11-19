@@ -543,11 +543,16 @@ static int struct_type_infer(__attribute__((unused)) const struct func *func, st
     struct tfield *fields = xcalloc(nargs + 1, sizeof(*fields));
 
     for (arg = n->expr.args, f = fields, i = 0; arg; arg = arg->next, f++, i++) {
-        asprintf(&f->name, "f%d", i);
+        if (asprintf(&f->name, "f%d", i) < 0) {
+            f->name = NULL;
+            goto err_free;
+        }
         f->type = arg->sym->type;
     }
 
-    asprintf(&t->sou.name, ":anon_%p", (void *)n);
+    if (asprintf(&t->sou.name, ":anon_%p", (void *)n) < 0)
+        goto err_free;
+
     t->ttype = T_STRUCT;
     t->sou.fields = fields;
 
@@ -555,6 +560,13 @@ static int struct_type_infer(__attribute__((unused)) const struct func *func, st
     type_add(t);
     n->sym->type = t;
     return 0;
+
+err_free:
+    for (f = fields; f->name; f++)
+        free(f->name);
+    free(fields);
+    free(t);
+    return -ENOMEM;
 }
 
 static struct func struct_func = {
@@ -618,6 +630,19 @@ static int map_type_validate(__attribute__((unused)) struct node *n)
     return 0;
 }
 
+static int map_type_check_data(struct node *n, struct type *t, const char *what)
+{
+    struct type *bt = type_base(t);
+
+    if ((bt->ttype == T_VOID) || (bt->ttype == T_MAP)) {
+        PLUGIN_ERROR("%s: can't use a value of type '%s' as map %s.",
+                     STRNODELOC(n), STRTYPE(t), what);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
 static int map_type_infer(__attribute__((unused)) const struct func *func, struct node *n,
                           __attribute__((unused)) struct ply_probe *pb)
 {
@@ -644,6 +669,19 @@ static int map_type_infer(__attribute__((unused)) const struct func *func, struc
 
     if (!(n->sym->type && key->sym->type))
         return 0;
+
+    struct type *kt = type_base(key->sym->type);
+    if (kt->ttype == T_STRUCT) {
+        tfields_foreach(f, kt->sou.fields) {
+            if (map_type_check_data(n, f->type, "key"))
+                return -EINVAL;
+        }
+    } else if (map_type_check_data(n, key->sym->type, "key")) {
+        return -EINVAL;
+    }
+
+    if (map_type_check_data(n, n->sym->type, "value"))
+        return -EINVAL;
 
     map->sym->type = type_map_of(key->sym->type, n->sym->type, BPF_MAP_TYPE_HASH, 0);
     return 0;

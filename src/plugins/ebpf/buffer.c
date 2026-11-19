@@ -126,7 +126,13 @@ static struct ply_return buffer_q_drain(struct ply *ply, struct buffer_q *q)
         if (next < this) {
             size_t left = (base + size) - this;
 
-            q->buf = realloc(q->buf, ev->hdr.size);
+            void *buf = realloc(q->buf, ev->hdr.size);
+            if (!buf) {
+                PLUGIN_ERROR("Not enough memory to read an event, discarding it.");
+                continue;
+            }
+
+            q->buf = buf;
             memcpy(q->buf, this, left);
             memcpy((uint8_t *)q->buf + left, base, ev->hdr.size - left);
             ev = q->buf;
@@ -154,8 +160,11 @@ static struct ply_return buffer_q_drain(struct ply *ply, struct buffer_q *q)
             break;
         }
 
-        if (ret.err || ret.exit)
+        /* consume the event, else it is handled again on every read */
+        if (ret.err || ret.exit) {
+            __set_tail(q->mem, q->mem->data_tail + ev->hdr.size);
             break;
+        }
     }
 
     return ret;
@@ -173,6 +182,12 @@ static int buffer_q_init(struct ply *ply, struct buffer *buf, uint32_t cpu)
 
     q->fd = perf_event_open(&attr, -1, cpu, -1, 0);
     if (q->fd < 0) {
+        /* possible CPUs which are offline */
+        if (errno == ENODEV) {
+            buf->poll[cpu].fd = -1;
+            return 0;
+        }
+
         PLUGIN_ERROR("Could not create queue.");
         return q->fd;
     }

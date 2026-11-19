@@ -464,6 +464,11 @@ int type_fprint(struct type *t, FILE *fp, const void *data)
 }
 
 
+/* the difference of 32 and 64-bit values does not fit in an int */
+#define TYPE_CMP(_type, _a, _b) \
+    ((*((const _type *)(_a)) > *((const _type *)(_b))) - \
+     (*((const _type *)(_a)) < *((const _type *)(_b))))
+
 static int type_cmp_scalar(const void *a, const void *b, struct type *t)
 {
     switch ((t->scalar.size << 1) | t->scalar.unsignd) {
@@ -476,13 +481,13 @@ static int type_cmp_scalar(const void *a, const void *b, struct type *t)
     case (2 << 1) | 0:
         return *((const int16_t *)a) - *((const int16_t *)b);
     case (4 << 1) | 1:
-        return *((const uint32_t *)a) - *((const uint32_t *)b);
+        return TYPE_CMP(uint32_t, a, b);
     case (4 << 1) | 0:
-        return *((const int32_t *)a) - *((const int32_t *)b);
+        return TYPE_CMP(int32_t, a, b);
     case (8 << 1) | 1:
-        return *((const uint64_t *)a) - *((const uint64_t *)b);
+        return TYPE_CMP(uint64_t, a, b);
     case (8 << 1) | 0:
-        return *((const int64_t *)a) - *((const int64_t *)b);
+        return TYPE_CMP(int64_t, a, b);
     }
 
     assert(0);
@@ -492,9 +497,9 @@ static int type_cmp_scalar(const void *a, const void *b, struct type *t)
 static int type_cmp_pointer(const void *a, const void *b, struct type *t)
 {
     if (t->ptr.bpf)
-        return *((const uint64_t *)a) - *((const uint64_t *)b);
+        return TYPE_CMP(uint64_t, a, b);
 
-    return *((const uintptr_t *)a) - *((const uintptr_t *)b);
+    return TYPE_CMP(uintptr_t, a, b);
 }
 
 static int type_cmp_array(const void *a, const void *b, struct type *t)
@@ -802,12 +807,17 @@ void type_dump_decls(FILE *fp)
 
 int type_add(struct type *t)
 {
-    if (bsearch(t, all_types.types, all_types.len, sizeof(*all_types.types), all_types_cmp))
+    if ((all_types.len > 0) &&
+        bsearch(t, all_types.types, all_types.len, sizeof(*all_types.types), all_types_cmp))
         return 0;
 
     /* type_size_set(t); */
-    all_types.types = realloc(all_types.types, ++all_types.len * sizeof(*all_types.types));
-    all_types.types[all_types.len - 1] = t;
+    struct type **types = realloc(all_types.types, (all_types.len + 1) * sizeof(*types));
+    if (!types)
+        return -ENOMEM;
+
+    all_types.types = types;
+    all_types.types[all_types.len++] = t;
     qsort(all_types.types, all_types.len, sizeof(*all_types.types), all_types_cmp);
 
     return 0;
@@ -1013,7 +1023,7 @@ static void type_init(void)
 
     /* perf event array maps's length has to equal the number of
      * CPUs, which we won't know until we're actually running. */
-    ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+    ncpus = cpus_possible();
     assert(ncpus > 0);
     t_buffer.map.len = ncpus;
 

@@ -66,8 +66,8 @@ static int xprobe_glob(struct ply_probe *pb, glob_t *gl)
     char *evglob;
     int err;
 
-    asprintf(&evglob, TRACEPATH "events/%s/p%"PRIxPTR"_*",
-         pb->ply->group, (uintptr_t)pb);
+    asprintf(&evglob, "%sevents/%s/p%"PRIxPTR"_*",
+         tracepath(), pb->ply->group, (uintptr_t)pb);
 
     err = glob(evglob, 0, NULL, gl);
     free(evglob);
@@ -83,7 +83,7 @@ static char *xprobe_func(struct ply_probe *pb, char *path)
 {
     char *slash;
 
-    path += strlen(TRACEPATH "events/");
+    path += strlen(tracepath()) + strlen("events/");
     path += strlen(pb->ply->group);
 
     slash = strchr(path, '/');
@@ -93,26 +93,36 @@ static char *xprobe_func(struct ply_probe *pb, char *path)
 }
 #endif
 
-int xprobe_detach(struct ply_probe *pb)
+/* Close the events and remove every probe created by this ply_probe,
+ * also when only some of them were created. */
+static int xprobe_destroy(struct ply_probe *pb)
 {
     struct xprobe *xp = pb->provider_data;
     glob_t gl;
     size_t i, evstart;
     int err, pending;
 
-    if (!xp->ctrl)
-        return 0;
+    if (xp->evfds) {
+        for (i = 0; i < xp->n_evs; i++) {
+            if (xp->evfds[i] < 0)
+                continue;
 
-    for (i = 0; i < xp->n_evs; i++)
-        close(xp->evfds[i]);
+            if (xp->evfds[i] == pb->ply->group_fd)
+                pb->ply->group_fd = -1;
+
+            close(xp->evfds[i]);
+        }
+
+        free(xp->evfds);
+        xp->evfds = NULL;
+    }
+    xp->n_evs = 0;
 
     err = xprobe_glob(pb, &gl);
     if (err)
-        return err;
+        return (err == -ENOENT) ? 0 : err;
 
-    assert(gl.gl_pathc == xp->n_evs);
-
-    evstart = strlen(TRACEPATH "events/");
+    evstart = strlen(tracepath()) + strlen("events/");
     pending = 0;
 
     for (i = 0; i < gl.gl_pathc; i++) {
@@ -137,10 +147,28 @@ int xprobe_detach(struct ply_probe *pb)
     }
 
     globfree(&gl);
-    fclose(xp->ctrl);
 
-    free(xp->evfds);
+    if (!err && fflush(xp->ctrl))
+        err = -errno;
+
+    return err;
+}
+
+int xprobe_detach(struct ply_probe *pb)
+{
+    struct xprobe *xp = pb->provider_data;
+    int err = 0;
+
+    if (!xp)
+        return 0;
+
+    if (xp->ctrl) {
+        err = xprobe_destroy(pb);
+        fclose(xp->ctrl);
+    }
+
     free(xp);
+    pb->provider_data = NULL;
 
     return err;
 }
@@ -195,7 +223,11 @@ static int xprobe_create(struct ply_probe *pb)
     struct xprobe *xp = pb->provider_data;
     int err = 0;
 
-    xprobe_stem(pb, xp->type, xp->stem, sizeof(xp->stem));
+    int len = xprobe_stem(pb, xp->type, xp->stem, sizeof(xp->stem));
+    if ((len < 0) || ((size_t)len >= sizeof(xp->stem))) {
+        PLUGIN_ERROR("%s: Probe group name '%s' is too long.", pb->probe, pb->ply->group);
+        return -ENAMETOOLONG;
+    }
 
     if (strpbrk(xp->pattern, "?*[!@") && pb->ply->ksyms) {
         err = xprobe_create_pattern(pb);
@@ -224,11 +256,12 @@ static int __xprobe_attach(struct ply_probe *pb)
         return err;
 
     if (gl.gl_pathc != xp->n_evs) {
-        PLUGIN_DEBUG("n:%zu c:%zu.", xp->n_evs, gl.gl_pathc);
-        pause();
+        PLUGIN_ERROR("%s: Created %zu probe events, but %zu were found.",
+                     pb->probe, xp->n_evs, gl.gl_pathc);
+        globfree(&gl);
+        return -EINVAL;
     }
-    
-    assert(gl.gl_pathc == xp->n_evs);
+
     for (i = 0; i < (int)gl.gl_pathc; i++) {
         xp->evfds[i] = perf_event_attach(pb, gl.gl_pathv[i],
                          pb->special);
@@ -249,7 +282,7 @@ int xprobe_attach(struct ply_probe *pb)
     int err;
 
     /* TODO: mode should be a+ and we should clean this up on detach. */
-    xp->ctrl = fopenf("a+", TRACEPATH "%s", xp->ctrl_name);
+    xp->ctrl = fopenf("a+", "%s%s", tracepath(), xp->ctrl_name);
     if (!xp->ctrl)
         return -errno;
 
@@ -261,9 +294,11 @@ int xprobe_attach(struct ply_probe *pb)
 
     err = xprobe_create(pb);
     if (err)
-        goto err_close;
+        goto err_destroy;
 
-    xp->evfds = xcalloc(xp->n_evs, sizeof(xp->evfds));
+    xp->evfds = xcalloc(xp->n_evs, sizeof(*xp->evfds));
+    for (size_t i = 0; i < xp->n_evs; i++)
+        xp->evfds[i] = -1;
 
     err = __xprobe_attach(pb);
     if (err)
@@ -272,9 +307,9 @@ int xprobe_attach(struct ply_probe *pb)
     return 0;
 
 err_destroy:
-    /* xprobe_destroy(xp); */
-
+    xprobe_destroy(pb);
 err_close:
     fclose(xp->ctrl);
+    xp->ctrl = NULL;
     return err;
 }

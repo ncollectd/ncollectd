@@ -31,13 +31,14 @@ struct ply;
 #include <stdio.h>
 #include <stdint.h>
 
+#include "plugin.h"
 #include "plugins/ebpf/grammar.h"
 #include "plugins/ebpf/lexer.h"
 
 void yyerror(struct nloc *loc, __attribute__((unused)) yyscan_t scanner,
              __attribute__((unused)) struct ply *ply, const char *s)
 {
-    fprintf(stderr, "%d: error: %s\n", loc->first_line, s);
+    PLUGIN_ERROR("<input>:%d: %s.", loc->first_line, s);
 }
 
 extern int __ply_probe_alloc(struct ply *ply, struct node *pspec, struct node *ast);
@@ -49,6 +50,13 @@ extern int __ply_probe_alloc(struct ply *ply, struct node *pspec, struct node *a
 };
 
 %define api.value.type { struct node * }
+
+/* free the nodes left on the stack when the parser aborts */
+%destructor { node_free($$); } PSPEC IDENT AGG STRING NUMBER
+%destructor { node_free($$); } predicate stmts stmt block branch jump delete expr_stmt
+%destructor { node_free($$); } assign aggregate opt_exprs exprs expr logor logxor logand
+%destructor { node_free($$); } or xor and eq rel shift term fact unary basic func map
+%destructor { node_free($$); } aggregation key
 
 %token ENDPRED IF ELSE RETURN DELETE EQ NE LE GE LSH RSH AND XOR OR DEREF PSPEC IDENT AGG STRING NUMBER
 

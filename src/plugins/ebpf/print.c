@@ -198,12 +198,31 @@ struct printxf printf_printxf = {
     },
 };
 
+/* The daemon has no standard output: log every line of the output. */
+static void print_log(FILE *fp, char **buf)
+{
+    if (fclose(fp) == 0) {
+        char *saveptr = NULL;
+        for (char *line = strtok_r(*buf, "\n", &saveptr); line != NULL;
+             line = strtok_r(NULL, "\n", &saveptr))
+            PLUGIN_INFO("%s", line);
+    }
+
+    free(*buf);
+}
+
 static struct ply_return printf_ev_handler(struct buffer_ev *ev, void *_pevh)
 {
     struct printf_evh *pevh = _pevh;
+    char *buf = NULL;
+    size_t size = 0;
+
+    FILE *fp = open_memstream(&buf, &size);
+    if (fp == NULL)
+        return (struct ply_return){0};
 
     if (!pevh->n) {
-        fputs(pevh->fmt, stdout);
+        fputs(pevh->fmt, fp);
     } else {
         struct printf_data pd = {
             .t = pevh->n->sym->type,
@@ -211,9 +230,10 @@ static struct ply_return printf_ev_handler(struct buffer_ev *ev, void *_pevh)
             .data = ev->data,
         };
 
-        xfprintxf(&printf_printxf, stdout, pevh->fmt, &pd);
+        xfprintxf(&printf_printxf, fp, pevh->fmt, &pd);
     }
 
+    print_log(fp, &buf);
     return (struct ply_return){0};
 }
 
@@ -299,21 +319,27 @@ static struct ply_return print_ev_handler(struct buffer_ev *ev, void *_n)
     struct print_ev_data *data = _n;
     struct node *n = data->n;
     struct type *t = n->sym->type;
+    char *buf = NULL;
+    size_t size = 0;
+
+    FILE *fp = open_memstream(&buf, &size);
+    if (fp == NULL)
+        return (struct ply_return){0};
 
     tfields_foreach(f, t->sou.fields) {
         if (f != t->sou.fields)
-            fputs(", ", stdout);
+            fputs(", ", fp);
 
         if (f->type->ttype == T_MAP) {
-            type_fprint(f->type, stdout, data->ply);
+            type_fprint(f->type, fp, data->ply);
             continue;
         }
 
-        type_fprint(f->type, stdout,
+        type_fprint(f->type, fp,
                 ev->data + type_offsetof(t, f->name));
     }
 
-    putchar('\n');
+    print_log(fp, &buf);
     return (struct ply_return){0};
 }
 

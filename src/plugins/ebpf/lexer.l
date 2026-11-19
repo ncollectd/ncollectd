@@ -11,9 +11,11 @@
 
 /* ignore harmless bug in old versions of flex */
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 
 #include <stdio.h>
 
+#include "plugin.h"
 #include "plugins/ebpf/grammar.h"
 
 static void loc_update(struct nloc *loc, const char *token)
@@ -66,10 +68,10 @@ pspec    {ident}:[^ \n\r\t]*
 "BEGIN"            { *yylval = node_string(yylloc, strdup(yytext)); return PSPEC;  }
 "END"              { *yylval = node_string(yylloc, strdup(yytext)); return PSPEC;  }
                   
-\"[^\0\"]*\"       { *yylval = node_string(yylloc, strdup(yytext)); return STRING; }
-[_0-9]+            { *yylval = node_num   (yylloc, yytext);         return NUMBER; }
-0b[_01]+           { *yylval = node_num   (yylloc, yytext);         return NUMBER; }
-0[xX][_0-9a-fA-F]+ { *yylval = node_num   (yylloc, yytext);         return NUMBER; }
+\"[^\0\"]*\"       { *yylval = node_string(yylloc, strdup(yytext)); if (!*yylval) yyterminate(); return STRING; }
+[_0-9]+            { *yylval = node_num   (yylloc, yytext);         if (!*yylval) yyterminate(); return NUMBER; }
+0b[_01]+           { *yylval = node_num   (yylloc, yytext);         if (!*yylval) yyterminate(); return NUMBER; }
+0[xX][_0-9a-fA-F]+ { *yylval = node_num   (yylloc, yytext);         if (!*yylval) yyterminate(); return NUMBER; }
 {ident}            { *yylval = node_expr  (yylloc, yytext, NULL);   return IDENT;  }
 {agg}              { *yylval = node_expr_ident(yylloc, yytext);     return AGG;    }
 {env}              { *yylval = node_expr_ident(yylloc, yytext);     return IDENT;  }
@@ -88,6 +90,6 @@ pspec    {ident}:[^ \n\r\t]*
 
 [ \n\r\t]        ;
 
-. { fprintf(stderr, "%d: error: unknown token\n", yylloc->first_line); yyterminate(); }
+. { PLUGIN_ERROR("<input>:%d: unknown token '%s'.", yylloc->first_line, yytext); yyterminate(); }
 
 %%

@@ -187,6 +187,8 @@ static int kprobe_sym_alloc(struct ply_probe *pb, struct node *n)
         return err;
 
     n->sym = sym_alloc(&pb->locals, n, func);
+    if (!n->sym)
+        return -ENOMEM;
 
     if (func->static_ret)
         n->sym->type = func_return_type(func);
