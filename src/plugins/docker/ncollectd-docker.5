@@ -9,10 +9,13 @@
 .Bd -literal -compact
 \fBload-plugin\fP docker
 \fBplugin\fP docker {
-    \fBinterval\fP \fIinterval\fP {
+    \fBinstance\fP \fIname\fP {
         \fBurl\fP \fIurl\fP
         \fBsocket-path\fP \fIpath\fP
-        \fBlabels\fP \fIkey\fP \fIvalue\fP
+        \fBca-cert\fP \fI/path/to/ca-cert\fP
+        \fBclient-key\fP \fI/path/to/client-key\fP
+        \fBclient-cert\fP \fI/path/to/client-cert\fP
+        \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBtimeout\fP \fIseconds\fP
         \fBinterval\fP \fIseconds\fP
         \fBfilter\fP {
@@ -22,7 +25,8 @@
 }
 .Ed
 .Sh DESCRIPTION
-The \fBdocker\fP plugin collect statistics from docker running containers.
+The \fBdocker\fP plugin collects statistics from docker running containers.
+It uses version 1.40 of the Docker Engine API (Docker 19.03 or later).
 .Pp
 In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks,
 each defining a docker daemon.
@@ -30,16 +34,33 @@ each defining a docker daemon.
 The following options are valid within \fBinstance\fP blocks:
 .Bl -tag -width Ds
 .It \fBurl\fP \fIurl\fP
+Base URL of the docker daemon API, for example \fIhttp://127.0.0.1:2375\fP
+or \fIhttps://127.0.0.1:2376\fP; the API path is appended to it.
+When \fBsocket-path\fP is set the connection is made through the socket.
 .It \fBsocket-path\fP \fIpath\fP
-.It \fBlabels\fP \fIkey\fP \fIvalue\fP
+Path of the UNIX socket of the docker daemon, usually
+\fI/var/run/docker.sock\fP.
+At least one of \fBurl\fP or \fBsocket-path\fP must be set.
+.It \fBca-cert\fP \fI/path/to/ca-cert\fP
+File that holds one or more SSL certificates used to verify the docker
+daemon when \fBurl\fP uses HTTPS.
+.It \fBclient-key\fP \fI/path/to/client-key\fP
+File that holds the private key in PEM format to be used for certificate-based
+authentication, as required by a docker daemon started with \fB--tlsverify\fP.
+.It \fBclient-cert\fP \fI/path/to/client-cert\fP
+File that holds the SSL certificate to be used for certificate-based
+authentication.
+.It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBinstance\fP block.
 .It \fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for requests to the
-docker daemon in seconds.
+The \fBtimeout\fP option sets the overall timeout for the requests that list
+the containers and the connection timeout of the statistics streams, in
+seconds.
+By default the collection interval is used.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
-instanced.
+instance.
 By default the global \fBinterval\fP setting will be used.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
