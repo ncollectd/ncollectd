@@ -14,8 +14,8 @@
 #include <libgeom.h>
 
 extern exclist_t excl_disk;
-extern char *conf_udev_name_attr;
-extern metric_family_t fams[];
+extern char *disk_conf_udev_name_attr;
+extern metric_family_t disk_fams[];
 
 static struct gmesh geom_tree;
 
@@ -109,22 +109,22 @@ int disk_read(void)
             continue;
 
         if ((snap_iter->bytes[DEVSTAT_READ] != 0) || (snap_iter->bytes[DEVSTAT_WRITE] != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_BYTES],
+            metric_family_append(&disk_fams[FAM_DISK_READ_BYTES],
                                  VALUE_COUNTER(snap_iter->bytes[DEVSTAT_READ]), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_BYTES],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_BYTES],
                                  VALUE_COUNTER(snap_iter->bytes[DEVSTAT_WRITE]), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
 
         if ((snap_iter->operations[DEVSTAT_READ] != 0) ||
                 (snap_iter->operations[DEVSTAT_WRITE] != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_OPS],
+            metric_family_append(&disk_fams[FAM_DISK_READ_OPS],
                                  VALUE_COUNTER(snap_iter->operations[DEVSTAT_READ]), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_OPS],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_OPS],
                                  VALUE_COUNTER(snap_iter->operations[DEVSTAT_WRITE]), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
@@ -132,11 +132,11 @@ int disk_read(void)
         long double read_time = devstat_compute_etime(&snap_iter->duration[DEVSTAT_READ], NULL);
         long double write_time = devstat_compute_etime(&snap_iter->duration[DEVSTAT_WRITE], NULL);
         if ((read_time != 0) || (write_time != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_READ_TIME],
                                  VALUE_COUNTER_FLOAT64(read_time), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_TIME],
                                  VALUE_COUNTER_FLOAT64(write_time), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
@@ -149,15 +149,15 @@ int disk_read(void)
                                                   DSM_QUEUE_LENGTH, &queue_length, DSM_NONE) != 0) {
             PLUGIN_WARNING("%s", devstat_errbuf);
         } else {
-            metric_family_append(&fams[FAM_DISK_IO_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_IO_TIME],
                                  VALUE_COUNTER_FLOAT64(busy_time), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-            metric_family_append(&fams[FAM_DISK_IO_WEIGHTED_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_IO_WEIGHTED_TIME],
                                  VALUE_COUNTER_FLOAT64(total_duration), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-            metric_family_append(&fams[FAM_DISK_PENDING_OPERATIONS],
+            metric_family_append(&disk_fams[FAM_DISK_PENDING_OPERATIONS],
                                  VALUE_GAUGE(queue_length), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
         }
@@ -165,7 +165,7 @@ int disk_read(void)
 
     geom_stats_snapshot_free(snap);
 
-    plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);
+    plugin_dispatch_metric_family_array(disk_fams, FAM_DISK_MAX, 0);
 
     return 0;
 }
@@ -188,6 +188,9 @@ int disk_init(void)
 
 int disk_shutdown(void)
 {
+    geom_stats_close();
+    geom_deletetree(&geom_tree);
+
     exclist_reset(&excl_disk);
 
     return 0;

@@ -43,13 +43,13 @@
 #include "disk.h"
 
 extern exclist_t excl_disk;
-extern char *conf_udev_name_attr;
-extern metric_family_t fams[];
+extern char *disk_conf_udev_name_attr;
+extern metric_family_t disk_fams[];
 
 static mach_port_t io_master_port = MACH_PORT_NULL;
 /* This defaults to false for backwards compatibility. Please fix in the next
  * major version. */
-extern bool use_bsd_name;
+extern bool disk_use_bsd_name;
 
 static signed long long dict_get_value(CFDictionaryRef dict, const char *key)
 {
@@ -172,7 +172,7 @@ int disk_read(void)
         PLUGIN_DEBUG("props_disk_name_bsd=\"%s\"", props_disk_name_bsd);
 
         /* choose name */
-        if (use_bsd_name) {
+        if (disk_use_bsd_name) {
             if (child_disk_name_bsd[0] != 0)
                 sstrncpy(disk_name, child_disk_name_bsd, sizeof(disk_name));
             else if (props_disk_name_bsd[0] != 0)
@@ -202,34 +202,32 @@ int disk_read(void)
         CFRelease(props_dict);
         IOObjectRelease(disk);
 
-        /* and submit */
-        if ((read_byt != -1LL) || (write_byt != -1LL)) {
-            metric_family_append(&fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(read_byt), NULL,
+        /* and submit, dict_get_value returns -1 if the key is missing */
+        if (read_byt >= 0)
+            metric_family_append(&disk_fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(read_byt), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
-            metric_family_append(&fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(write_byt), NULL,
+        if (write_byt >= 0)
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(write_byt), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
-        }
-        if ((read_ops != -1LL) || (write_ops != -1LL)) {
-            metric_family_append(&fams[FAM_DISK_READ_OPS], VALUE_COUNTER(read_ops), NULL,
+        if (read_ops >= 0)
+            metric_family_append(&disk_fams[FAM_DISK_READ_OPS], VALUE_COUNTER(read_ops), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
-
-            metric_family_append(&fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
+        if (write_ops >= 0)
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
-        }
-        if ((read_tme != -1LL) || (write_tme != -1LL)) {
-            metric_family_append(&fams[FAM_DISK_READ_TIME],
+        if (read_tme >= 0)
+            metric_family_append(&disk_fams[FAM_DISK_READ_TIME],
                                  VALUE_COUNTER_FLOAT64((double)read_tme * 1e-9), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
-
-            metric_family_append(&fams[FAM_DISK_WRITE_TIME],
+        if (write_tme >= 0)
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_TIME],
                                  VALUE_COUNTER_FLOAT64((double)write_tme * 1e-9), NULL,
                                  &LABEL_PAIR_CONST("device", disk_name), NULL);
-        }
     }
 
     IOObjectRelease(disk_list);
 
-    plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);
+    plugin_dispatch_metric_family_array(disk_fams, FAM_DISK_MAX, 0);
     return 0;
 }
 

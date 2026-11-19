@@ -10,7 +10,7 @@
 
 #include "disk.h"
 
-metric_family_t fams[FAM_DISK_MAX] = {
+metric_family_t disk_fams[FAM_DISK_MAX] = {
     [FAM_DISK_READ_BYTES] = {
         .name = "system_disk_read_bytes",
         .type = METRIC_TYPE_COUNTER,
@@ -143,8 +143,8 @@ metric_family_t fams[FAM_DISK_MAX] = {
 };
 
 exclist_t excl_disk = {0};
-char *conf_udev_name_attr = NULL;
-bool use_bsd_name;
+char *disk_conf_udev_name_attr = NULL;
+bool disk_use_bsd_name;
 
 static int disk_config(config_item_t *ci)
 {
@@ -156,14 +156,14 @@ static int disk_config(config_item_t *ci)
             status = cf_util_exclist(child, &excl_disk);
         } else if (strcasecmp(child->key, "use-bsd-name") == 0) {
 #ifdef HAVE_IOKIT_IOKITLIB_H
-            status = cf_util_get_boolean(child, &use_bsd_name);
+            status = cf_util_get_boolean(child, &disk_use_bsd_name);
 #else
             PLUGIN_WARNING("The 'use-bsd-name' option is only supported "
                            "on Mach / Mac OS X and will be ignored.");
 #endif
         } else if (strcasecmp(child->key, "udev-name-attr") == 0) {
 #ifdef HAVE_LIBUDEV_H
-            status = cf_util_get_string(child, &conf_udev_name_attr);
+            status = cf_util_get_string(child, &disk_conf_udev_name_attr);
 #else
             PLUGIN_WARNING("The 'udev-name-attr' option is only supported "
                            "if ncollectd is built with libudev support");
