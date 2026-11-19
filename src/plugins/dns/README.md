@@ -58,15 +58,16 @@ The following options are accepted within each **instance** block:
 
 > The domains to search, instead of the domains specified in resolv.conf
 > or the domain derived from the kernel hostname variable.
+> Only used when **search** is true.
 
 **udp-port** *port*
 
-> The port to use for queries over UDP, in network byte order.
+> The port to use for queries over UDP.
 > The default value is 53, the standard name service port.
 
 **tcp-port** *port*
 
-> The port to use for queries over TCP, in network byte order.
+> The port to use for queries over TCP.
 > The default value is 53, the standard name service port.
 
 **use-vc** *true|false*
@@ -94,19 +95,23 @@ The following options are accepted within each **instance** block:
 
 **search** *true|false*
 
-> If false do not use the default search domains; only query hostnames as-is or
-> as aliases.
-> Default is true.
+> If true resolve the query names like the system resolver does, using the
+> search domains (see **domain** and **ndots**) and the HOSTALIASES environment
+> variable (see **aliases**).
+> If false the query names are sent as they are.
+> Default is false.
 
 **aliases** *true|false*
 
 > If false do not honor the HOSTALIASES environment variable, which normally
 > specifies a file of hostname translations.
+> Only used when **search** is true.
 > Default is true.
 
 **edns** *true|false*
 
 > Include an EDNS pseudo-resource record (RFC 2671) in generated requests.
+> Default is true.
 
 **edns-size** *size*
 
@@ -138,6 +143,7 @@ The following options are accepted within each **instance** block:
 > extensions appended.
 > The default value is 1 unless set otherwise by resolv.conf or the RES\_OPTIONS
 > environment variable.
+> Only used when **search** is true.
 
 **rotate** *true|false*
 
@@ -169,7 +175,16 @@ The following options are accepted within each **instance** block:
 
 > **convert-ptr** *true|false*
 
+> > For PTR queries of class IN, convert an IPv4 or IPv6 address into the
+> > reverse lookup name (in-addr.arpa or ip6.arpa).
+> > Other names are queried as is.
+> > Default is true.
+
 > **convert-ptr-bit-string** *true|false*
+
+> > Like **convert-ptr** but use the RFC 2673 bit-string notation for IPv6
+> > addresses.
+> > Default is false.
 
 > **label** *key* *value*
 
@@ -257,9 +272,13 @@ The following options are accepted within each **instance** block:
 
 > > > **soa.negative\_caching\_ttl**
 
-> > > **txt.**
+> > > **txt.data**
 
-> > > **caa.**
+> > > **caa.flags**
+
+> > > **caa.tag**
+
+> > > **caa.value**
 
 > > > **a.address**
 

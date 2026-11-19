@@ -55,11 +55,12 @@ or the local named.
 .It \fBdomain\fP \fIdomain\fP
 The domains to search, instead of the domains specified in resolv.conf
 or the domain derived from the kernel hostname variable.
+Only used when \fBsearch\fP is true.
 .It \fBudp-port\fP \fIport\fP
-The port to use for queries over UDP, in network byte order.
+The port to use for queries over UDP.
 The default value is 53, the standard name service port.
 .It \fBtcp-port\fP \fIport\fP
-The port to use for queries over TCP, in network byte order.
+The port to use for queries over TCP.
 The default value is 53, the standard name service port.
 .It \fBuse-vc\fP \fItrue|false\fP
 .It \fBuse-tcp\fP \fItrue|false\fP
@@ -76,15 +77,19 @@ so that the name server being contacted will not try to fetch the answer
 from other servers if it doesn't know the answer locally.
 Default is true.
 .It \fBsearch\fP \fItrue|false\fP
-If false do not use the default search domains; only query hostnames as-is or
-as aliases.
-Default is true.
+If true resolve the query names like the system resolver does, using the
+search domains (see \fBdomain\fP and \fBndots\fP) and the HOSTALIASES environment
+variable (see \fBaliases\fP).
+If false the query names are sent as they are.
+Default is false.
 .It \fBaliases\fP \fItrue|false\fP
 If false do not honor the HOSTALIASES environment variable, which normally
 specifies a file of hostname translations.
+Only used when \fBsearch\fP is true.
 Default is true.
 .It \fBedns\fP \fItrue|false\fP
 Include an EDNS pseudo-resource record (RFC 2671) in generated requests.
+Default is true.
 .It \fBedns-size\fP \fIsize\fP
 The message size to be advertised in EDNS.
 .It \fBresolvconf-path\fP \fIpath-to-resolv.conf\fP
@@ -106,6 +111,7 @@ queried for "as is" prior to querying for it with the default domain
 extensions appended.
 The default value is 1 unless set otherwise by resolv.conf or the RES_OPTIONS
 environment variable.
+Only used when \fBsearch\fP is true.
 .It \fBrotate\fP \fItrue|false\fP
 If true perform round-robin selection of the nameservers configured for
 each resolution, if false always use the list of nameservers in the same order.
@@ -125,7 +131,14 @@ A NS MD MF CNAME SOA MB MG MR NULL WKS PTR HINFO MINFO MX TXT RP AFSDB X25
 ISDN RT NSAP NSAP_PTR SIG KEY PX GPOS AAAA LOC SRV AXFR MAILB MAILA NAPTR
 DS SSHFP RRSIG NSEC DNSKEY CAA URI ANY
 .It \fBconvert-ptr\fP \fItrue|false\fP
+For PTR queries of class IN, convert an IPv4 or IPv6 address into the
+reverse lookup name (in-addr.arpa or ip6.arpa).
+Other names are queried as is.
+Default is true.
 .It \fBconvert-ptr-bit-string\fP \fItrue|false\fP
+Like \fBconvert-ptr\fP but use the RFC 2673 bit-string notation for IPv6
+addresses.
+Default is false.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 .It \fBvalidate\fP \fIexpression\fP
 .Bl -tag -width Ds
@@ -173,8 +186,10 @@ DS SSHFP RRSIG NSEC DNSKEY CAA URI ANY
 .It \fBsoa.retry_interval\fP
 .It \fBsoa.expire\fP
 .It \fBsoa.negative_caching_ttl\fP
-.It \fBtxt.\fP
-.It \fBcaa.\fP
+.It \fBtxt.data\fP
+.It \fBcaa.flags\fP
+.It \fBcaa.tag\fP
+.It \fBcaa.value\fP
 .It \fBa.address\fP
 .It \fBaaaa.address\fP
 .It \fBsrv.priority\fP
