@@ -124,7 +124,6 @@ static size_t nl_socket_buffer_size = NETLINK_VF_DEFAULT_BUF_SIZE_KB * 1024;
 
 static struct mnl_socket *nl;
 static char *path_proc_dev;
-static char *path_proc_net_if_inet6;
 static char *path_sys_class_net;
 
 extern bool collect_vf_stats;
@@ -156,8 +155,11 @@ static void check_ignorelist_and_submit(const char *dev, struct ir_link_stats_st
                          VALUE_COUNTER(stats->multicast), NULL, &interface_label, NULL);
     metric_family_append(&fams[FAM_INTERFACE_COLLISIONS],
                          VALUE_COUNTER(stats->collisions), NULL, &interface_label, NULL);
+#if defined(HAVE_STRUCT_RTNL_LINK_STATS64_RX_NOHANDLER) || \
+    defined(HAVE_STRUCT_RTNL_LINK_STATS_RX_NOHANDLER)
     metric_family_append(&fams[FAM_INTERFACE_RX_NOHANDLER],
                          VALUE_COUNTER(stats->rx_nohandler), NULL, &interface_label, NULL);
+#endif
     metric_family_append(&fams[FAM_INTERFACE_RX_LENGTH_ERRORS],
                          VALUE_COUNTER(stats->rx_length_errors), NULL, &interface_label, NULL);
     metric_family_append(&fams[FAM_INTERFACE_RX_OVER_ERRORS],
@@ -217,7 +219,7 @@ static void check_ignorelist_and_submit(const char *dev, struct ir_link_stats_st
 #ifdef HAVE_RTNL_LINK_STATS64
 static void check_ignorelist_and_submit64(const char *dev, struct rtnl_link_stats64 *stats)
 {
-    struct ir_link_stats_storage_s s;
+    struct ir_link_stats_storage_s s = {0};
 
     COPY_RTNL_LINK_STATS(&s, stats);
 #ifdef HAVE_STRUCT_RTNL_LINK_STATS64_RX_NOHANDLER
@@ -230,7 +232,7 @@ static void check_ignorelist_and_submit64(const char *dev, struct rtnl_link_stat
 
 static void check_ignorelist_and_submit32(const char *dev, struct rtnl_link_stats *stats)
 {
-    struct ir_link_stats_storage_s s;
+    struct ir_link_stats_storage_s s = {0};
 
     COPY_RTNL_LINK_STATS(&s, stats);
 #ifdef HAVE_STRUCT_RTNL_LINK_STATS_RX_NOHANDLER
@@ -252,14 +254,15 @@ static void vf_info_submit(const char *dev, vf_stats_t *vf_stats)
     label_pair_t pairs[2];
     label_set_t labels = {.num = STATIC_ARRAY_SIZE(pairs), .ptr = pairs };
 
-    char buffer[512];
+    char mac_buf[18];
     uint8_t *mac = vf_stats->vf_mac->mac;
-    ssnprintf(buffer, sizeof(buffer), "%02x:%02x:%02x:%02x:%02x:%02x",
+    ssnprintf(mac_buf, sizeof(mac_buf), "%02x:%02x:%02x:%02x:%02x:%02x",
                       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    labels.ptr[0] = (label_pair_t){.name="mac", .value=buffer};
+    labels.ptr[0] = (label_pair_t){.name="mac", .value=mac_buf};
 
-    ssnprintf(buffer, sizeof(buffer), "%u", vf_stats->vf_mac->vf);
-    labels.ptr[1] = (label_pair_t){.name="vf_num", .value=buffer};
+    char vf_num_buf[16];
+    ssnprintf(vf_num_buf, sizeof(vf_num_buf), "%u", vf_stats->vf_mac->vf);
+    labels.ptr[1] = (label_pair_t){.name="vf_num", .value=vf_num_buf};
 
     label_pair_const_t dev_label = LABEL_PAIR_CONST("interface", dev);
 
@@ -516,26 +519,6 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
     if ((strlen(dev) == 0) || !exclist_match(&excl_interface, dev))
         return MNL_CB_OK;
 
-    // ifi->ifi_flags & IFF_RUNNING XXX
-
-    label_pair_const_t interface_label = LABEL_PAIR_CONST("interface", dev);
-
-    metric_family_append(&fams[FAM_INTERFACE_STATE_UP],
-                         VALUE_GAUGE(oper_state == 6 ? 1.0 : 0.0), NULL,
-                         &interface_label, NULL);
-    metric_family_append(&fams[FAM_INTERFACE_ADMIN_STATE_UP],
-                         VALUE_GAUGE(ifm->ifi_flags & IFF_UP ? 1.0 : 0.0), NULL,
-                         &interface_label, NULL);
-    metric_family_append(&fams[FAM_INTERFACE_CARRIER],
-                         VALUE_GAUGE(carrier), NULL, &interface_label, NULL);
-
-    if (carrier_up_count > 0)
-        metric_family_append(&fams[FAM_INTERFACE_CARRIER_UP],
-                             VALUE_COUNTER(carrier_up_count), NULL, &interface_label, NULL);
-    if (carrier_down_count > 0)
-        metric_family_append(&fams[FAM_INTERFACE_CARRIER_DOWN],
-                             VALUE_COUNTER(carrier_down_count), NULL, &interface_label, NULL);
-
 #ifdef HAVE_IFLA_VF_STATS
     uint32_t num_vfs = 0;
     if (collect_vf_stats) {
@@ -567,6 +550,10 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
         }
         stats.stats64 = mnl_attr_get_payload(attr);
 
+        if (!report_inactive && (stats.stats64->rx_packets == 0) &&
+            (stats.stats64->tx_packets == 0))
+            return MNL_CB_OK;
+
         check_ignorelist_and_submit64(dev, stats.stats64);
 
         stats_done = true;
@@ -586,6 +573,10 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
             }
             stats.stats32 = mnl_attr_get_payload(attr);
 
+            if (!report_inactive && (stats.stats32->rx_packets == 0) &&
+                (stats.stats32->tx_packets == 0))
+                return MNL_CB_OK;
+
             check_ignorelist_and_submit32(dev, stats.stats32);
 
 #ifdef NCOLLECTD_DEBUG
@@ -599,6 +590,24 @@ static int link_filter_cb(const struct nlmsghdr *nlh, void *args __attribute__((
     if (stats_done == false)
         PLUGIN_DEBUG("No statistics for interface %s.", dev);
 #endif
+
+    label_pair_const_t interface_label = LABEL_PAIR_CONST("interface", dev);
+
+    metric_family_append(&fams[FAM_INTERFACE_STATE_UP],
+                         VALUE_GAUGE(oper_state == IF_OPER_UP ? 1.0 : 0.0), NULL,
+                         &interface_label, NULL);
+    metric_family_append(&fams[FAM_INTERFACE_ADMIN_STATE_UP],
+                         VALUE_GAUGE(ifm->ifi_flags & IFF_UP ? 1.0 : 0.0), NULL,
+                         &interface_label, NULL);
+    metric_family_append(&fams[FAM_INTERFACE_CARRIER],
+                         VALUE_GAUGE(carrier), NULL, &interface_label, NULL);
+
+    if (carrier_up_count >= 0)
+        metric_family_append(&fams[FAM_INTERFACE_CARRIER_UP],
+                             VALUE_COUNTER(carrier_up_count), NULL, &interface_label, NULL);
+    if (carrier_down_count >= 0)
+        metric_family_append(&fams[FAM_INTERFACE_CARRIER_DOWN],
+                             VALUE_COUNTER(carrier_down_count), NULL, &interface_label, NULL);
 
 #ifdef HAVE_IFLA_VF_STATS
     if (num_vfs == 0)
@@ -659,7 +668,7 @@ static int interface_read_netlink(void)
 
 #ifdef HAVE_IFLA_VF_STATS
     if (collect_vf_stats &&
-        mnl_attr_put_u32_check(nlh, sizeof(buf), IFLA_EXT_MASK, RTEXT_FILTER_VF) == 0) {
+        mnl_attr_put_u32_check(nlh, nl_socket_buffer_size, IFLA_EXT_MASK, RTEXT_FILTER_VF) == 0) {
         PLUGIN_ERROR("FAILED to set RTEXT_FILTER_VF");
         free(buf);
         return -1;
@@ -672,12 +681,12 @@ static int interface_read_netlink(void)
         return -1;
     }
 
-    int ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
+    int ret = mnl_socket_recvfrom(nl, buf, nl_socket_buffer_size);
     while (ret > 0) {
         ret = mnl_cb_run(buf, ret, seq, portid, link_filter_cb, NULL);
         if (ret <= MNL_CB_STOP)
             break;
-        ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
+        ret = mnl_socket_recvfrom(nl, buf, nl_socket_buffer_size);
     }
 
     if (ret < 0) {
@@ -696,7 +705,7 @@ static int interface_read_proc(void)
     FILE *fh = fopen(path_proc_dev, "r");
     if (fh == NULL) {
         PLUGIN_ERROR("Cannot open '%s': %s", path_proc_dev, STRERRNO);
-        return errno;
+        return -1;
     }
 
     char buffer[1024];
@@ -842,14 +851,8 @@ int interface_init(void)
         return -1;
     }
 
-    path_proc_net_if_inet6 = plugin_procpath("net/if_inet6");
-    if (path_proc_net_if_inet6 == NULL) {
-        PLUGIN_ERROR("Cannot get proc path.");
-        return -1;
-    }
-
     path_sys_class_net = plugin_syspath("class/net");
-    if (path_proc_net_if_inet6 == NULL) {
+    if (path_sys_class_net == NULL) {
         PLUGIN_ERROR("Cannot get sys path.");
         return -1;
     }
@@ -876,7 +879,6 @@ int interface_init(void)
 int interface_shutdown(void)
 {
     free(path_proc_dev);
-    free(path_proc_net_if_inet6);
     free(path_sys_class_net);
 
     exclist_reset(&excl_interface);

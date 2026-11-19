@@ -41,15 +41,51 @@ static kstat_ctl_t *kc;
 static kstat_t *ksp[MAX_NUMIF];
 static size_t numif;
 
+static void interface_scan_kstat(void)
+{
+    kstat_t *ksp_chain;
+
+    for (numif = 0, ksp_chain = kc->kc_chain; ksp_chain != NULL; ksp_chain = ksp_chain->ks_next) {
+        if (strncmp(ksp_chain->ks_class, "net", 3))
+            continue;
+        if (ksp_chain->ks_type != KSTAT_TYPE_NAMED)
+            continue;
+        if (kstat_read(kc, ksp_chain, NULL) == -1)
+            continue;
+        if (get_kstat_value(ksp_chain, "obytes") == -1LL)
+            continue;
+
+        if (numif >= MAX_NUMIF) {
+            PLUGIN_WARNING("More than %d network interfaces found, ignoring the rest.", MAX_NUMIF);
+            break;
+        }
+
+        ksp[numif++] = ksp_chain;
+    }
+}
+
+static long long interface_kstat_value(kstat_t *ks, const char *name, const char *fallback_name)
+{
+    long long value = get_kstat_value(ks, name);
+    if ((value == -1) && (fallback_name != NULL))
+        value = get_kstat_value(ks, fallback_name);
+
+    return value;
+}
+
 int interface_read(void)
 {
     if (kc == NULL)
         return -1;
 
-    if (kstat_chain_update(kc) < 0) {
+    kid_t kid = kstat_chain_update(kc);
+    if (kid < 0) {
         PLUGIN_ERROR("kstat_chain_update failed.");
         return -1;
     }
+
+    if (kid > 0)
+        interface_scan_kstat();
 
     for (size_t i = 0; i < numif; i++) {
         if (kstat_read(kc, ksp[i], NULL) == -1)
@@ -62,6 +98,14 @@ int interface_read(void)
         } else {
             sstrncpy(iname, ksp[i]->ks_name, sizeof(iname));
         }
+
+        if (!exclist_match(&excl_interface, iname))
+            continue;
+
+        if (!report_inactive &&
+            (interface_kstat_value(ksp[i], "ipackets64", "ipackets") <= 0) &&
+            (interface_kstat_value(ksp[i], "opackets64", "opackets") <= 0))
+            continue;
 
         struct {
             int fam;
@@ -77,10 +121,8 @@ int interface_read(void)
         };
 
         for (size_t j = 0; j < STATIC_ARRAY_SIZE(metrics); j++) {
-            long long value = get_kstat_value(ksp[i], metrics[j].name);
-            if ((value == -1) && (metrics[j].fallback_name != NULL))
-                value = get_kstat_value(ksp[i], metrics[j].fallback_name);
-
+            long long value = interface_kstat_value(ksp[i], metrics[j].name,
+                                                    metrics[j].fallback_name);
             if (value == -1)
                 continue;
 
@@ -96,8 +138,6 @@ int interface_read(void)
 
 int interface_init(void)
 {
-    kstat_t *ksp_chain;
-
     numif = 0;
 
     if (kc == NULL)
@@ -108,18 +148,7 @@ int interface_init(void)
         return -1;
     }
 
-    for (numif = 0, ksp_chain = kc->kc_chain; (numif < MAX_NUMIF) && (ksp_chain != NULL);
-                    ksp_chain = ksp_chain->ks_next) {
-        if (strncmp(ksp_chain->ks_class, "net", 3))
-            continue;
-        if (ksp_chain->ks_type != KSTAT_TYPE_NAMED)
-            continue;
-        if (kstat_read(kc, ksp_chain, NULL) == -1)
-            continue;
-        if (get_kstat_value(ksp_chain, "obytes") == -1LL)
-            continue;
-        ksp[numif++] = ksp_chain;
-    }
+    interface_scan_kstat();
 
     return 0;
 }

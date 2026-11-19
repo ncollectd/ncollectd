@@ -12,6 +12,7 @@
     \fBinterface\fP [\fIincl|include|excl|exclude\fP] \fIinterface\fP
     \fBreport-inactive\fP \fItrue|false\fP
     \fBunique-name\fP \fItrue|false\fP
+    \fBcollect-vf-stats\fP \fItrue|false\fP
 }
 .Ed
 .Sh DESCRIPTION
@@ -50,6 +51,14 @@ If this option is set to true, interface name contains above three fields
 separated by an underscore.
 .Pp
 This option is only available on Solaris.
+.It \fBcollect-vf-stats\fP \fItrue|false\fP
+If set to \fItrue\fP, the configuration and the statistics of the SR-IOV
+virtual functions (VF) of each interface are collected as well
+(the \fBsystem_interface_vf_*\fP metrics, with the labels \fBmac\fP and
+\fBvf_num\fP of the virtual function).
+The default value is \fIfalse\fP.
+.Pp
+This option is only available on Linux.
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
