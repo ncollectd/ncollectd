@@ -297,6 +297,7 @@ typedef struct {
     metric_family_t *fams;
     label_set_t *labels;
     int nfam;
+    double scale;
     char *lkey1;
     char *lvalue1;
     char *lkey2;
@@ -307,7 +308,7 @@ typedef struct {
 typedef struct {
     char *instance;
     char *url;
-    int timeout;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     CURL *curl;
@@ -328,9 +329,15 @@ static bool ats_json_string(void *ctx, const char *number_val, size_t number_len
 
         value_t value = {0};
         if (fam->type == METRIC_TYPE_COUNTER) {
-            value = VALUE_COUNTER(atol(number));
+            if (sctx->scale != 0)
+                value = VALUE_COUNTER_FLOAT64(atof(number) * sctx->scale);
+            else
+                value = VALUE_COUNTER(atol(number));
         } else if (fam->type == METRIC_TYPE_GAUGE) {
-            value = VALUE_GAUGE(atof(number));
+            if (sctx->scale != 0)
+                value = VALUE_GAUGE(atof(number) * sctx->scale);
+            else
+                value = VALUE_GAUGE(atof(number));
         } else {
             return true;
         }
@@ -377,8 +384,12 @@ static bool ats_json_string(void *ctx, const char *number_val, size_t number_len
 static bool ats_json_start_map(void *ctx)
 {
     ats_json_ctx_t *sctx = ctx;
+
+    if ((sctx->depth + 1) >= JSON_MAX_DEPTH)
+        return false;
+
     sctx->depth++;
-    sctx->stack[sctx->depth] = ATS_JSON_NONE;
+    sctx->stack[sctx->depth - 1] = ATS_JSON_NONE;
     return true;
 }
 
@@ -389,7 +400,7 @@ static bool ats_json_map_key(void * ctx, const char *ukey, size_t key_len)
 
     switch (sctx->depth) {
     case 1:
-        if (strncmp("global", key, key_len) == 0) {
+        if ((key_len == strlen("global")) && (strncmp("global", key, key_len) == 0)) {
             sctx->stack[0] = ATS_JSON_GLOBAL;
         } else {
             sctx->stack[0] = ATS_JSON_NONE;
@@ -406,9 +417,24 @@ static bool ats_json_map_key(void * ctx, const char *ukey, size_t key_len)
             size_t vol_len = strlen("proxy.process.cache.volume_");
             if (key_len > vol_len) {
                 if (strncmp((const char *)ukey, "proxy.process.cache.volume_", vol_len) == 0) {
-                    sctx->volume = atoi((const char *)ukey + vol_len);
-                    char *end = strchr((const char *)ukey + vol_len, '.');
+                    /* The key is not NUL terminated: parse the volume number
+                       and look for the '.' within key_len bytes. */
+                    const char *num = (const char *)ukey + vol_len;
+                    const char *end = memchr(num, '.', key_len - vol_len);
+                    int volume = 0;
+                    if ((end != NULL) && (end > num)) {
+                        for (const char *c = num; c < end; c++) {
+                            if ((*c < '0') || (*c > '9') || (volume > (INT_MAX - 9) / 10)) {
+                                end = NULL;
+                                break;
+                            }
+                            volume = volume * 10 + (*c - '0');
+                        }
+                    } else {
+                        end = NULL;
+                    }
                     if (end != NULL) {
+                        sctx->volume = volume;
                         vol_len--;
                         size_t end_len = key_len - (end - (const char *)ukey);
                         sstrncpy(bkey, "proxy.process.cache.volume", sizeof(bkey));
@@ -422,6 +448,7 @@ static bool ats_json_map_key(void * ctx, const char *ukey, size_t key_len)
             const struct ats_metric *am = ats_get_key(pkey, key_len);
             if (am != NULL) {
                 sctx->nfam = am->fam;
+                sctx->scale = am->scale;
                 sctx->lkey1 = am->lkey1;
                 sctx->lvalue1 = am->lvalue1;
                 sctx->lkey2 = am->lkey2;
@@ -485,7 +512,7 @@ static size_t ats_curl_callback(void *buf, size_t size, size_t nmemb, void *user
 
     json_status_t status = json_parser_parse(handle, buf, len);
     if (status != JSON_STATUS_OK)
-        return -1;
+        return 0;
 
     return len;
 }
@@ -554,7 +581,7 @@ static int ats_curl_init(ats_instance_t *ats)
 
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
     rcode = curl_easy_setopt(ats->curl, CURLOPT_TIMEOUT_MS,
-                                (ats->timeout >= 0) ? (long)ats->timeout
+                                (ats->timeout > 0) ? (long)CDTIME_T_TO_MS(ats->timeout)
                                 : (long)CDTIME_T_TO_MS(plugin_get_interval()));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
@@ -566,7 +593,7 @@ static int ats_curl_init(ats_instance_t *ats)
 
     rcode = curl_easy_setopt(ats->curl, CURLOPT_URL, ats->url);
     if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
                      curl_easy_strerror(rcode));
         return -1;
     }
@@ -606,24 +633,44 @@ static int ats_read(user_data_t *user_data)
 
     json_parser_init(&(ats->handle), 0, &ats_json_callbacks, &ctx);
 
+    double up = 1;
+
     if (curl_easy_perform(ats->curl) != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_perform failed: %s", ats->ats_curl_error);
         ats_curl_cleanup(ats);
-        json_parser_free(&(ats->handle));
-        metric_family_append(&ats->fams[FAM_ATS_UP], VALUE_GAUGE(0), &ats->labels, NULL);
-        plugin_dispatch_metric_family_array_filtered(ats->fams, FAM_ATS_MAX, ats->filter, 0);
-        return 0;
+        up = 0;
+    } else {
+        long rcode = 0;
+        CURLcode status = curl_easy_getinfo(ats->curl, CURLINFO_RESPONSE_CODE, &rcode);
+        if (status != CURLE_OK) {
+            PLUGIN_ERROR("Fetching response code failed with status %d: %s",
+                         (int)status, ats->ats_curl_error);
+            up = 0;
+        } else if (rcode != 200) {
+            PLUGIN_ERROR("curl_easy_perform failed with response code %ld.", rcode);
+            up = 0;
+        } else {
+            json_status_t jstatus = json_parser_complete(&(ats->handle));
+            if (jstatus != JSON_STATUS_OK) {
+                unsigned char *errmsg = json_parser_get_error(&(ats->handle), 0, NULL, 0);
+                PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
+                json_parser_free_error(errmsg);
+                up = 0;
+            }
+        }
     }
 
-    metric_family_append(&ats->fams[FAM_ATS_UP], VALUE_GAUGE(1), &ats->labels, NULL);
-
-    json_status_t status = json_parser_complete(&(ats->handle));
-    if (status != JSON_STATUS_OK) {
-        unsigned char *errmsg = json_parser_get_error(&(ats->handle), 0, NULL, 0);
-        PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
-        json_parser_free_error(errmsg);
-    }
     json_parser_free(&(ats->handle));
+
+    if (up == 0) {
+        /* Discard the partial metrics collected from an invalid response. */
+        for (size_t i = 0; i < FAM_ATS_MAX; i++) {
+            if (i != FAM_ATS_UP)
+                metric_family_metric_reset(&ats->fams[i]);
+        }
+    }
+
+    metric_family_append(&ats->fams[FAM_ATS_UP], VALUE_GAUGE(up), &ats->labels, NULL);
 
     plugin_dispatch_metric_family_array_filtered(ats->fams, FAM_ATS_MAX, ats->filter, 0);
 
@@ -658,8 +705,6 @@ static int ats_config_instance(config_item_t *ci)
         return -1;
     }
 
-    ats->timeout = -1;
-
     memcpy(ats->fams, fams_ats, FAM_ATS_MAX * sizeof(ats->fams[0]));
 
     int status = cf_util_get_string(ci, &ats->instance);
@@ -676,7 +721,7 @@ static int ats_config_instance(config_item_t *ci)
         if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &ats->url);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &ats->timeout);
+            status = cf_util_get_cdtime(child, &ats->timeout);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ats->labels);
         } else if (strcasecmp("interval", child->key) == 0) {

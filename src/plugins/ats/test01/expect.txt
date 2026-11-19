@@ -14,20 +14,20 @@ ats_connections_total{hostname="localhost.localdomain",protocol="http",source="p
 ats_connections_total{hostname="localhost.localdomain",protocol="http",source="server"} 140
 # TYPE ats_error_transaction_time_seconds counter
 # HELP ats_error_transaction_time_seconds Total cache error transaction time in seconds.
-ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="abort"} 2326
-ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="connect_failed"} 5543
-ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="other"} 8006
-ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="possible_abort"} 8141
+ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="abort"} 2.326
+ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="connect_failed"} 5.543
+ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="other"} 8.006
+ats_error_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="possible_abort"} 8.141
 # TYPE ats_hit_transaction_time_seconds counter
 # HELP ats_hit_transaction_time_seconds Total cache hit transaction time in seconds.
-ats_hit_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="fresh"} 8343
-ats_hit_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="revalidated"} 5546
+ats_hit_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="fresh"} 8.343
+ats_hit_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="revalidated"} 5.546
 # TYPE ats_miss_transaction_time_seconds counter
 # HELP ats_miss_transaction_time_seconds Total cache miss transaction time in seconds.
-ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="changed"} 7625
-ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="no_cache"} 740
-ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="cold"} 7853
-ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="not_cacheable"} 171
+ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="changed"} 7.625
+ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="no_cache"} 0.74
+ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="cold"} 7.853
+ats_miss_transaction_time_seconds_total{hostname="localhost.localdomain",protocol="http",state="not_cacheable"} 0.171
 # TYPE ats_ram_cache_total_bytes gauge
 # HELP ats_ram_cache_total_bytes Total RAM cache in bytes.
 ats_ram_cache_total_bytes{hostname="localhost.localdomain"} 6570
@@ -150,3 +150,7 @@ ats_request_document_size_bytes_total{hostname="localhost.localdomain",protocol=
 # TYPE ats_reponse_document_size_bytes counter
 ats_reponse_document_size_bytes_total{hostname="localhost.localdomain",protocol="http",source="user_agent"} 5364170
 ats_reponse_document_size_bytes_total{hostname="localhost.localdomain",protocol="http",source="origin_server"} 5364170
+# TYPE ats_cache_volume_ram_cache_used_bytes gauge
+ats_cache_volume_ram_cache_used_bytes{hostname="localhost.localdomain",volume="1"} 1024
+# TYPE ats_cache_volume_ram_cache_total_bytes gauge
+ats_cache_volume_ram_cache_total_bytes{hostname="localhost.localdomain",volume="1"} 4096

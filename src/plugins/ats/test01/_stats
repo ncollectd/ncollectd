@@ -1,5 +1,5 @@
 HTTP/1.1 200 OK
-Content-Length: 40090
+Content-Length: 40213
 Cache-Control: no-cache
 Content-Type: application/json
 Date: Thu, 26 Mar 2026 16:54:57 GMT
@@ -478,6 +478,8 @@ Server: ATS/10.1.1
 "proxy.process.cache.ram_cache.bytes_used": "6700",
 "proxy.process.cache.ram_cache.hits": "1114",
 "proxy.process.cache.ram_cache.misses": "5733",
+"proxy.process.cache.volume_1.ram_cache.total_bytes": "4096",
+"proxy.process.cache.volume_1.ram_cache.bytes_used": "1024",
 "proxy.process.cache.pread_count": "1479",
 "proxy.process.cache.percent_full": "6946",
 "proxy.process.cache.read.seek.failure": "5689",
