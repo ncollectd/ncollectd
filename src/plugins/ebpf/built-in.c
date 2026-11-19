@@ -158,6 +158,9 @@ static int env_rewrite(__attribute__((unused)) const struct func *func, struct n
         new = node_string(&n->loc, strdup(val ? val : ""));
     }
 
+    if (!new)
+        return -EINVAL;
+
     node_replace(n, new);
     return 1;
 }
@@ -266,6 +269,9 @@ static int built_in_sym_alloc(struct ply_probe *pb, struct node *n)
     } else {
         n->sym = sym_alloc(&pb->ply->globals, n, func);
     }
+
+    if (!n->sym)
+        return -ENOMEM;
 
     /* infer statically known types early */
     if (n->ntype == N_NUM)

@@ -13,6 +13,7 @@ NCOLLECTD-EBPF(5) - File Formats Manual
 	        file file-path
 	        label key value
 	        interval seconds
+	        buffer-pages pages
 	        metric map-name|agreggate-name {
 	            name metric-name
 	            help help
@@ -61,9 +62,19 @@ The following options are accepted within each **instance** block:
 > Sets the interval (in seconds) in which the values will be collected from
 > this script.
 
+**buffer-pages** *pages*
+
+> Number of memory pages per CPU of the buffer that carries the events of
+> **print**, **printf**, **clear** and **exit** from the kernel. It must be a
+> power of two, the default is 1.
+> The buffer is read once per interval, the events that do not fit in it
+> are lost.
+
 **metric** *map-name|agreggate-name*
 
 > Create a metric from the map or agreggate indicated.
+> The map must be defined in the script and its values must match
+> the metric **type**, otherwise the instance fails to load.
 
 > **name** *metric-name*
 
@@ -77,6 +88,11 @@ The following options are accepted within each **instance** block:
 
 > > Set the metric type. Can be one of *gauge*, *counter*,
 > > *histogram* or *gaugehistogram*.
+> > *histogram* and *gaugehistogram* are created from **quantize()**
+> > aggregations, their buckets are powers of two: the upper bounds are
+> > 1, 3, 7, 15, ..., 2^n-1 and +Inf (in seconds for *time* values),
+> > for signed values the negative values are counted in the bucket
+> > with upper bound 0.
 
 > **label** *key* *value*
 
@@ -86,6 +102,11 @@ The following options are accepted within each **instance** block:
 
 > > Specifies the index of the map or aggregation expresion
 > > whose values will be used to create the labels.
+> > The first expression of the key has index 0. Strings are used as is,
+> > integers in decimal, pointers in hexadecimal, *caller* as a kernel
+> > symbol and *stack* as kernel symbols separated by *;*.
+> > Every key expression that distinguishes the entries of the map
+> > needs a label, otherwise several metrics get the same labels.
 
 **filter**
 
@@ -266,11 +287,14 @@ u32 pid
 void print(...)
 
 > *Print* each expression with its default output format, separated
-> by commas and terminated with a newline, to standard out.
+> by commas and terminated with a newline.
+> The output is written to the ncollectd log with *info* level,
+> one message per line.
 
 void printf(format, ...)
 
-> Prints *formatted output* to standard out.
+> Prints *formatted output* to the ncollectd log with *info* level,
+> one message per line.
 > In addition to the formats recognized by the printf sitting in your &lt;stdio.h&gt;,
 > also recognizes '%v' which will dump the value according to
 > the inferred type's default (i.e. how *print* would print it).
@@ -360,7 +384,8 @@ retval
 
 The tracepoint provider can instrument all stable tracepoints in the kernel.
 They are identified by their relative path from the
-/sys/kernel/debug/tracing/events directory, where each leaf
+/sys/kernel/tracing/events directory (or /sys/kernel/debug/tracing/events
+when tracefs is only available through debugfs), where each leaf
 directory corresponds to a tracepoint.
 
 Examples:

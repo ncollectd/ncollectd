@@ -4,10 +4,10 @@
 
 // From https://github.com/wkz/ply
 
-/* Manages a cache of the contents in /proc/kallsyms, but in a binary
- * format with each symbol using a fixed amount of space. This let's
- * us lookup addresses using bsearch(3), making stacktrace resolution
- * much faster.
+/* Keeps an in-memory copy of the text symbols in /proc/kallsyms, with
+ * each symbol using a fixed amount of space. This let's us lookup
+ * addresses using bsearch(3), making stacktrace resolution much
+ * faster.
  *
  * The first and last symbols are the special `nullsym` and `endsym`
  * symbols defined below. These are always present but never included
@@ -19,7 +19,6 @@
 #define _XOPEN_SOURCE        /* strptime */
 #include <assert.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <linux/version.h>
@@ -32,16 +31,10 @@
 
 #include <linux/capability.h>
 
-#include <sys/mman.h>
-#include <sys/stat.h>
-
 #include "ply.h"
 #include "kallsyms.h"
 #include "perf_event.h"
 
-#define KALLSYMS    "/proc/kallsyms"
-#define KSYMS_CACHE "/var/tmp/ply-ksyms"
-#define KFUNC_LIST  TRACEPATH "available_filter_functions"
 
 struct kfunc_list {
     int size;
@@ -122,33 +115,38 @@ static int kfunc_list_find(struct kfunc_list *kfuncs, const char *name)
 
 static int kfunc_list_build(struct kfunc_list *kfuncs)
 {
-    char line[0x80];
+    char *line = NULL;
+    size_t len = 0;
     char **list = NULL;
     int size = 0;
     int count = 0;
 
-    FILE *fp = fopen(KFUNC_LIST, "r");
+    FILE *fp = fopenf("r", "%savailable_filter_functions", tracepath());
     if (!fp) {
-        PLUGIN_WARNING("cannot open %s: %s.", KFUNC_LIST, strerror(errno));
+        PLUGIN_WARNING("cannot open %savailable_filter_functions: %s.", tracepath(), strerror(errno));
         return -1;
     }
 
-    while (fgets(line, sizeof(line), fp)) {
-        char *p;
+    while (getline(&line, &len, fp) >= 0) {
         struct ksym *ksym;
+
+        char *saveptr = NULL;
+        char *p = strtok_r(line, " \t\n", &saveptr);
+        if (!p)
+            continue;
 
         if (count >= size) {
             size = size ? (size * 2) : 1024;
             list = realloc(list, size * sizeof(*list));
             assert(list);
         }
-        char *saveptr = NULL;
-        p = strtok_r(line, " \t\n", &saveptr);
+
         list[count] = strndup(p, sizeof(ksym->sym) - 1);
         assert(list[count]);
 
         count++;
     }
+    free(line);
     kfuncs->size = count;
     kfuncs->kfunc = list;
 
@@ -170,26 +168,23 @@ static void kfunc_list_free(struct kfunc_list *kfuncs)
     kfuncs->kfunc = NULL;
 }
 
-static int ksym_write(FILE *fp, struct ksym *ksym)
+static int ksym_parse(FILE *fp, struct ksym *ksym, char **line, size_t *len)
 {
-    return fwrite(ksym, sizeof(*ksym), 1, fp) ? 0 : -EIO;
-}
-
-static int ksym_parse(FILE *fp, struct ksym *ksym)
-{
-    char line[0x80];
     char *p;
 
-    while (fgets(line, sizeof(line), fp)) {
-        ksym->addr = strtoul(line, &p, 16);
-        if (ksym->addr == ULONG_MAX)
+    while (getline(line, len, fp) >= 0) {
+        ksym->addr = strtoul(*line, &p, 16);
+        if ((p == *line) || (ksym->addr == ULONG_MAX) || (*p != ' '))
             continue;
 
         p++;
         if (*p != 't' && *p != 'T')
             continue;
 
-        p += 2;
+        p++;
+        if (*p != ' ')
+            continue;
+
         char *saveptr = NULL;
         p = strtok_r(p, " \t\n", &saveptr);
         if (!p)
@@ -202,22 +197,6 @@ static int ksym_parse(FILE *fp, struct ksym *ksym)
     return EOF;
 }
 
-static int __ksyms_cache_open(struct ksyms *ks)
-{
-    struct stat st;
-
-    if (stat(KSYMS_CACHE, &st))
-        return -errno;
-
-    ks->cache_fd = open(KSYMS_CACHE, O_RDWR);
-    if (ks->cache_fd < 0)
-        return -errno;
-
-    ks->cache = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, ks->cache_fd, 0);
-
-    return (ks->cache == MAP_FAILED) ? -EIO : 0;
-}
-
 static int ksym_sort_cmp(const void *_a, const void *_b)
 {
     const struct ksym *a = _a, *b = _b;
@@ -228,26 +207,6 @@ static int ksym_sort_cmp(const void *_a, const void *_b)
         return -1;
     else
         return 0;
-}
-
-static int ksyms_cache_sort(struct ksyms *ks)
-{
-    int err;
-
-    err = __ksyms_cache_open(ks);
-    if (err)
-        return err;
-
-    /* Sort everything between NULL and END */
-    qsort(&ks->cache->sym[1], ks->cache->hdr.n_syms - 2,
-          sizeof(struct ksym), ksym_sort_cmp);
-
-    err = msync(ks->cache, sizeof(ks->cache->hdr) +
-            ks->cache->hdr.n_syms * sizeof(struct ksym), MS_SYNC);
-    if (err)
-        return -errno;
-
-    return 0;
 }
 
 /* Anyone may read /proc/kallsyms, but if the reader does not posses
@@ -282,120 +241,105 @@ static int ksyms_cache_cap(void)
     return (caps & (1ULL << CAP_SYSLOG)) ? 0 : -EPERM;
 }
 
-static int ksyms_cache_build(struct ksyms *ks)
+static int ksyms_append(struct ksyms *ks, size_t *size, const struct ksym *ksym)
 {
-    struct ksym_cache_hdr hdr = {0};
+    if (ks->cache->hdr.n_syms >= *size) {
+        size_t nsize = *size * 2;
+        struct ksym_cache *tmp = realloc(ks->cache, sizeof(*tmp) + nsize * sizeof(tmp->sym[0]));
+        if (!tmp)
+            return -ENOMEM;
+
+        ks->cache = tmp;
+        *size = nsize;
+    }
+
+    ks->cache->sym[ks->cache->hdr.n_syms++] = *ksym;
+    return 0;
+}
+
+static int ksyms_build(struct ksyms *ks)
+{
     struct kfunc_list kfuncs = {0};
     struct ksym ksym = {0};
-
-    PLUGIN_INFO("Creating kallsyms cache.");
+    size_t size = 0x1000;
+    char *line = NULL;
+    size_t len = 0;
 
     int err = ksyms_cache_cap();
     if (err)
         goto out;
 
-    FILE *kfp = fopen(KALLSYMS, "r");
+    char *path = plugin_procpath("kallsyms");
+    if (!path) {
+        err = -ENOMEM;
+        goto out;
+    }
+
+    FILE *kfp = fopen(path, "r");
     if (!kfp) {
         err = -errno;
+        free(path);
         goto out;
+    }
+    free(path);
+
+    ks->cache = calloc(1, sizeof(*ks->cache) + size * sizeof(ks->cache->sym[0]));
+    if (!ks->cache) {
+        err = -ENOMEM;
+        goto close_kfp;
     }
 
     /* Ignore failures due to missing filter functions. */
     kfunc_list_build(&kfuncs);
 
-    FILE *cfp = fopen(KSYMS_CACHE, "w");
-    if (!cfp) {
-        err = -errno;
-        goto close_kfp;
-    }
-
-    if (fseek(cfp, sizeof(hdr), SEEK_CUR)) {
-        err = -errno;
-        goto close_cfp;
-    }
-
-    err = ksym_write(cfp, &nullsym);
+    err = ksyms_append(ks, &size, &nullsym);
     if (err)
-        goto close_cfp;
-    hdr.n_syms++;
+        goto close_kfp;
 
-    while (!(err = ksym_parse(kfp, &ksym))) {
+    while (!(err = ksym_parse(kfp, &ksym, &line, &len))) {
         if (!kfunc_list_find(&kfuncs, ksym.sym))
             continue;
 
-        err = ksym_write(cfp, &ksym);
+        err = ksyms_append(ks, &size, &ksym);
         if (err)
-            goto close_cfp;
-        hdr.n_syms++;
+            goto close_kfp;
     }
 
-    if (err && (err != EOF))
-        goto close_cfp;
-
-    err = ksym_write(cfp, &endsym);
+    err = ksyms_append(ks, &size, &endsym);
     if (err)
-        goto close_cfp;
-    hdr.n_syms++;
+        goto close_kfp;
 
-    rewind(cfp);
-    if (!fwrite(&hdr, sizeof(hdr), 1, cfp))
-        err = -EIO;
-
-close_cfp:
-    fclose(cfp);
-    if (err)
-        unlink(KSYMS_CACHE);
+    /* Sort everything between NULL and END */
+    qsort(&ks->cache->sym[1], ks->cache->hdr.n_syms - 2,
+          sizeof(struct ksym), ksym_sort_cmp);
 
 close_kfp:
+    free(line);
     kfunc_list_free(&kfuncs);
     fclose(kfp);
 out:
-    if (!err)
-        err = ksyms_cache_sort(ks);
-
     if (err)
-        PLUGIN_WARNING("Unable to create kallsyms cache: %s.", STRERROR(-err));
+        PLUGIN_WARNING("Unable to load kernel symbols: %s.", STRERROR(-err));
 
     return err;
 }
 
-static int ksyms_cache_open(struct ksyms *ks)
-{
-    struct stat procst, ksymsst;
-
-    int err = __ksyms_cache_open(ks);
-    if (err)
-        return ksyms_cache_build(ks);
-
-    if (stat("/proc", &procst) || stat(KSYMS_CACHE, &ksymsst))
-        return ksyms_cache_build(ks);
-
-    /* Use ctime of `/proc` as an approximation of system boot
-     * time and require that our cache is younger than that. */
-    if (ksymsst.st_ctime < procst.st_ctime)
-        return ksyms_cache_build(ks);
-
-    return 0;
-}
-
 void ksyms_free(struct ksyms *ks)
 {
-    size_t size = sizeof(ks->cache->hdr) + sizeof(ks->cache->sym[0]) * ks->cache->hdr.n_syms;
-    munmap(ks->cache, size);
-    close(ks->cache_fd);
+    free(ks->cache);
     free(ks);
 }
 
 struct ksyms *ksyms_new(void)
 {
-    struct ksyms *ks = xcalloc(1, sizeof(*ks));
+    struct ksyms *ks = calloc(1, sizeof(*ks));
+    if (!ks)
+        return NULL;
 
-    int err = ksyms_cache_open(ks);
-    if (err)
-        goto err;
+    if (ksyms_build(ks)) {
+        ksyms_free(ks);
+        return NULL;
+    }
 
     return ks;
-err:
-    free(ks);
-    return NULL;
 }

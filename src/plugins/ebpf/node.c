@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <search.h>
 #include <stdarg.h>
@@ -54,10 +55,11 @@ char *strnode_loc(struct node *n, char *buf, size_t buflen)
     else
         snprintf(buf, buflen, "<input>:%d:", n->loc.first_line);
 
+    size_t len = strlen(buf);
     if (n->loc.first_column != n->loc.last_column)
-        snprintf(buf, buflen, "<input>:%d-%d", n->loc.first_column, n->loc.last_column);
+        snprintf(buf + len, buflen - len, "%d-%d", n->loc.first_column, n->loc.last_column);
     else
-        snprintf(buf, buflen, "<input>:%d", n->loc.first_column);
+        snprintf(buf + len, buflen - len, "%d", n->loc.first_column);
 
     return buf;
 }
@@ -129,14 +131,14 @@ int node_replace(struct node *n, struct node *new)
     if (n->next) {
         new->next = n->next;
         n->next->prev = new;
-        n->next = NULL;
     }
 
     if (new->up && (new->up->ntype == N_EXPR) && (new->up->expr.args == n))
         new->up->expr.args = new;
 
-    node_free(n);
-
+    /* n is not freed: node_walk() is still iterating over it and
+     * rewrites may keep references to its children (e.g. printf's
+     * format string). */
     return 0;
 }
 
@@ -164,7 +166,7 @@ static struct node *node_new(enum ntype ntype, const struct nloc *loc)
     return n;
 }
 
-void __string_escape(char *dst, const char *src)
+int __string_escape(char *dst, const char *src)
 {
     while (*src) {
         if (*src == '\\' && *(src + 1)) {
@@ -175,7 +177,7 @@ void __string_escape(char *dst, const char *src)
             case 'n': *dst++ = '\n'; break;
             case 'r': *dst++ = '\r'; break;
             case 't': *dst++ = '\t'; break;
-            default: assert(!"TODO"); break;
+            default: return -EINVAL;
             }
 
             src++;
@@ -183,6 +185,8 @@ void __string_escape(char *dst, const char *src)
             *dst++ = *src++;
         }
     }
+
+    return 0;
 }
 
 struct node *node_string(const struct nloc *loc, char *data)
@@ -204,7 +208,12 @@ struct node *node_string(const struct nloc *loc, char *data)
 
     len = (strlen(data) + 8) & ~7;
     n->string.data = xcalloc(1, len);
-    __string_escape(n->string.data, data);
+    if (__string_escape(n->string.data, data) != 0) {
+        PLUGIN_ERROR("%s: unknown escape sequence in string \"%s\".", STRNODELOC(n), data);
+        free(data);
+        node_free(n);
+        return NULL;
+    }
     free(data);
     return n;
 }
@@ -232,7 +241,10 @@ struct node *node_num(const struct nloc *loc, char *numstr)
     int ret;
 
     ret = strtonum(numstr, &s64, &u64);
-    assert(ret);
+    if (!ret) {
+        PLUGIN_ERROR("<input>:%d: invalid number '%s'.", loc->first_line, numstr);
+        return NULL;
+    }
 
     if (ret < 0)
         return __node_num(loc, 0, &s64, NULL);

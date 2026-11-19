@@ -6,9 +6,9 @@
 
 #pragma once
 
-#define TRACEPATH "/sys/kernel/debug/tracing/"
-
 struct ply_probe;
+
+const char *tracepath(void);
 
 int perf_event_attach(struct ply_probe *pb, const char *name,
               int task_mode);

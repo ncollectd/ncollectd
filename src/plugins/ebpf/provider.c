@@ -26,13 +26,14 @@ extern struct provider profile;
 
 struct provider *provider_get(const char *name)
 {
-    char *search = strchr(name, ':');
-    if (search ==  NULL)
+    const char *search = strchr(name, ':');
+    size_t len = (search != NULL) ? (size_t)(search - name) : strlen(name);
+    if (len == 0)
         return NULL;
 
     struct provider *p = NULL;
     SLIST_FOREACH(p, &heads, entry) {
-         if (strstr(p->name, search) == p->name)
+         if (strncmp(p->name, name, len) == 0)
             break;
     }
 

@@ -25,7 +25,6 @@ struct ksym_cache {
 };
 
 struct ksyms {
-    int cache_fd;
     struct ksym_cache *cache;
 };
 

@@ -9,11 +9,18 @@
 
 struct sym *__sym_alloc(struct symtab *st, const char *name, const struct func *func)
 {
-    st->syms = realloc(st->syms, ++st->len * sizeof(*st->syms));
-    assert(st->syms);
+    struct sym *sym = calloc(1, sizeof(*sym));
+    if (!sym)
+        return NULL;
 
-    st->syms[st->len - 1] = xcalloc(1, sizeof(struct sym));
-    struct sym *sym = st->syms[st->len - 1];
+    struct sym **syms = realloc(st->syms, (st->len + 1) * sizeof(*syms));
+    if (!syms) {
+        free(sym);
+        return NULL;
+    }
+
+    st->syms = syms;
+    st->syms[st->len++] = sym;
     sym->st    = st;
     sym->name  = name;
     sym->func  = func;

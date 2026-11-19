@@ -45,9 +45,9 @@ static int profile_probe(struct ply_probe *pb)
     if (freq < 0 || freq > 1000)
         return -EINVAL;
 
-    ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+    ncpus = cpus_possible();
 
-    if (cpu < -1 || cpu > ncpus)
+    if (cpu < -1 || cpu >= ncpus)
         return -EINVAL;
 
     if (cpu >= 0)
@@ -62,6 +62,9 @@ static int profile_probe(struct ply_probe *pb)
         free(data);
         return -ENOMEM;
     }
+
+    for (int i = 0; i < ncpus; i++)
+        data->evfds[i] = -1;
 
     data->freq = (unsigned long long)freq;
     data->cpu = cpu;
@@ -87,6 +90,12 @@ static int profile_attach(struct ply_probe *pb)
     } else {
         for (cpu = 0; cpu < data->ncpus; cpu++) {
             data->evfds[cpu] = perf_event_attach_profile(pb, cpu, data->freq);
+            /* possible CPUs which are offline */
+            if (data->evfds[cpu] == -ENODEV) {
+                data->evfds[cpu] = -1;
+                continue;
+            }
+
             if (data->evfds[cpu] < 0) {
                 PLUGIN_ERROR("%s: Unable to attach profile probe: %s.",
                         pb->probe, strerror(errno));
@@ -103,7 +112,7 @@ static int profile_detach(struct ply_probe *pb)
     struct profile_data *data = pb->provider_data;
 
     for (int i = 0; i < data->ncpus; i++) {
-        if (data->evfds[i] > 0)
+        if (data->evfds[i] >= 0)
             close(data->evfds[i]);
     }
     free(data->evfds);

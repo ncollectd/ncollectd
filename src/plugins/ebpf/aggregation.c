@@ -264,7 +264,8 @@ static int quantize_ir_post(__attribute__((unused)) const struct func *func, str
         ir_emit_insn(pb->ir, ALU_IMM(BPF_LSH, 2), BPF_REG_0, 0);
         break;
     default:
-        assert(0);
+        PLUGIN_ERROR("%s: unsupported bucket size %zu.", STRNODELOC(n), bucketsz);
+        return -EINVAL;
     }
 
     ir_emit_ldbp(pb->ir, BPF_REG_1, mapop->sym->irs.stack);
@@ -294,7 +295,9 @@ static int quantize_type_infer(__attribute__((unused)) const struct func *func, 
     struct type *array = type_array_of(&t_uint, type_sizeof(t) * 8);
 
     char *type_name;
-    asprintf(&type_name, "quantize_%s_t", n->sym->name);
+    if (asprintf(&type_name, "quantize_%s_t", n->sym->name) < 0)
+        return -ENOMEM;
+
     n->sym->type = type_typedef(array, type_name);
     free(type_name);
 
