@@ -21,6 +21,7 @@
         \fBverify-host\fP \fItrue|false\fP
         \fBca-cert\fP \fI/path/to/cert\fP
         \fBheader\fP \fIHeader\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
         \fBfilter\fP {
@@ -41,6 +42,7 @@ The following options are valid within \fBinstance\fP blocks:
 URL of the HAProxy csv stats.
 .It \fBsocket-path\fP \fIpath\fP
 Path to HAProxy stats socket.
+If \fBurl\fP is also set, the socket is used and \fBurl\fP is ignored.
 .It \fBuser\fP \fIusername\fP
 Username to use if authorization is required to read the url.
 .It \fBuser-env\fP \fIenv-name\fP
@@ -76,6 +78,11 @@ default depends on the distribution you use.
 A HTTP header to add to the request.
 Multiple headers are added if this option
 is specified more than once.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests to
+\fBurl\fP and the timeout for each operation on the \fBsocket-path\fP socket,
+in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue>\fP to the submitting metrics.
 Can appear multiple time in the \fBinstance\fP block.

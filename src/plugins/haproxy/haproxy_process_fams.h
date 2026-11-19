@@ -181,12 +181,12 @@ static metric_family_t fams_haproxy_process[FAM_HAPROXY_PROCESS_MAX] = {
     },
     [FAM_HAPROXY_PROCESS_PIPES_USED] = {
         .name = "haproxy_process_pipes_used",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Current number of pipes in use in this worker process.",
     },
     [FAM_HAPROXY_PROCESS_PIPES_FREE] = {
         .name = "haproxy_process_pipes_free",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Current number of allocated and available pipes in this worker process.",
     },
     [FAM_HAPROXY_PROCESS_CURRENT_CONNECTION_RATE] = {

@@ -1,0 +1,2 @@
+# TYPE haproxy_up gauge
+haproxy_up{hostname="localhost.localdomain",instance="local"} 0
