@@ -6,7 +6,6 @@ set(BUILD_PLUGIN_CGROUPS 0)
 
 if(PLUGIN_CGROUPS)
     if(BUILD_LINUX)
-        check_include_file(linux/config.h HAVE_LINUX_CONFIG_H)
         set(BUILD_PLUGIN_CGROUPS 1)
     else()
         set(BUILD_PLUGIN_CGROUPS_REASON "Linux only" PARENT_SCOPE)
@@ -21,10 +20,6 @@ if(BUILD_PLUGIN_CGROUPS)
     add_library(cgroups MODULE ${PLUGIN_CGROUPS_SRC} ${MEMORYSTAT_H})
     target_link_libraries(cgroups PRIVATE libmetric libutils)
     set_target_properties(cgroups PROPERTIES PREFIX "")
-
-    if(HAVE_LINUX_CONFIG_H)
-        target_compile_definitions(cgroups PUBLIC HAVE_LINUX_CONFIG_H)
-    endif()
 
 #    add_executable(test_plugin_cgroups EXCLUDE_FROM_ALL cgroups_test.c ${PLUGIN_CGROUPS_SRC})
 #    target_link_libraries(test_plugin_cgroups libtest libmetric libutils -lm)

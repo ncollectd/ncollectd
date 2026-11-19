@@ -25,6 +25,9 @@ The plugin has the following options:
 Select \fIcgroup\fP based on the name.
 By default only selected cgroups are collected if a selection is made.
 If no selection is configured at all, \fBall\fP cgroups are selected.
+The root cgroup is matched with the name \fI/\fP.
+The selection does not stop the plugin from descending into the children
+of a non selected cgroup: they are matched by their own name.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
 See \fBFILTER CONFIGURATION\fP in

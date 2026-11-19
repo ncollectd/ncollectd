@@ -61,3 +61,4 @@ thp_collapse_alloc,       FAM_CGROUPS_MEMORY_TRANSPARENT_HUGEPAGES_COLLAPSE_ALLO
 swap,                     FAM_CGROUPS_MEMORY_SWAP_BYTES,                             -1
 cache,                    FAM_CGROUPS_MEMORY_PAGE_CACHE_BYTES,                       -1
 mapped_file,              FAM_CGROUPS_MEMORY_PAGE_CACHE_MAPPED_BYTES,                -1
+rss,                      FAM_CGROUPS_MEMORY_ANONYMOUS_BYTES,                        -1
