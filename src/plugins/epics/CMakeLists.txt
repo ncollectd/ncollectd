@@ -1,4 +1,4 @@
-plugin_option(PLUGIN_EPICS "Redis plugin" ON)
+plugin_option(PLUGIN_EPICS "EPICS Channel Access process variables" ON)
 
 set(BUILD_PLUGIN_EPICS 0)
 
