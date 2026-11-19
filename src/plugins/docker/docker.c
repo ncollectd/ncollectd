@@ -10,7 +10,7 @@
 
 #include <curl/curl.h>
 
-#define DOCKER_MIN_VERSION "1.17"
+#define DOCKER_MIN_VERSION "1.40"
 
 enum {
     FAM_DOCKER_CONTAINER,
@@ -85,7 +85,7 @@ static metric_family_t fams_docker[FAM_DOCKER_MAX] = {
     [FAM_DOCKER_CONTAINER_MEMORY_LIMIT_BYTES] = {
         .name = "docker_container_memory_limit_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Max allowed memory for the the container."
+        .help = "Max allowed memory for the container."
     },
     [FAM_DOCKER_CONTAINER_NETWORK_RECEIVE_BYTES] = {
         .name = "docker_container_network_receive_bytes",
@@ -113,6 +113,7 @@ typedef struct {
     uint64_t pids_current;
     uint64_t pids_limit;
     uint64_t cpu_usage;
+    uint64_t cpu_user;
     uint64_t cpu_system;
     uint64_t online_cpus;
     uint64_t mem_usage;
@@ -132,7 +133,8 @@ typedef enum {
     DOCKER_STATS_JSON_CPU_STATS,
     DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE,
     DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_TOTAL_USAGE,
-    DOCKER_STATS_JSON_CPU_STATS_SYSTEM_CPU_USAGE,
+    DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_USAGE_IN_USERMODE,
+    DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_USAGE_IN_KERNELMODE,
     DOCKER_STATS_JSON_CPU_STATS_ONLINE_CPUS,
     DOCKER_STATS_JSON_MEMORY_STATS,
     DOCKER_STATS_JSON_MEMORY_STATS_USAGE,
@@ -164,6 +166,8 @@ struct docker_stats_s {
     char curl_error[CURL_ERROR_SIZE];
     json_parser_t handle;
     cdtime_t last;
+    cdtime_t retry;
+    bool has_stats;
     docker_container_stats_t stats;
     docker_container_stats_json_ctx_t ctx;
 };
@@ -180,6 +184,7 @@ typedef struct {
 typedef enum {
     DOCKER_INFO_JSON_NONE,
     DOCKER_INFO_JSON_ID,
+    DOCKER_INFO_JSON_NAMES,
     DOCKER_INFO_JSON_IMAGE,
     DOCKER_INFO_JSON_STATE,
     DOCKER_INFO_JSON_IMAGEID,
@@ -200,11 +205,15 @@ struct docker_instance_s {
     char *socket_path;
     char *url;
     char *url_info;
-    int timeout;
+    char *cacert;
+    char *clientcert;
+    char *clientkey;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     pthread_t thread_id;
     bool thread_running;
+    bool shutdown;
     CURL *curl;
     char curl_error[CURL_ERROR_SIZE];
     CURLM *curl_multi;
@@ -229,9 +238,6 @@ static bool docker_container_stats_json_number(void *ctx, const char *number_val
         case DOCKER_STATS_JSON_CPU_STATS_ONLINE_CPUS:
             strtouint(number, &sctx->stats.online_cpus);
             break;
-        case DOCKER_STATS_JSON_CPU_STATS_SYSTEM_CPU_USAGE:
-            strtouint(number, &sctx->stats.cpu_system);
-            break;
         case DOCKER_STATS_JSON_PIDS_STATS_LIMIT:
             strtouint(number, &sctx->stats.pids_limit);
             break;
@@ -249,9 +255,15 @@ static bool docker_container_stats_json_number(void *ctx, const char *number_val
         }
         break;
     case 3:
-        switch (sctx->stack[1]) {
+        switch (sctx->stack[2]) {
         case DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_TOTAL_USAGE:
             strtouint(number, &sctx->stats.cpu_usage);
+            break;
+        case DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_USAGE_IN_USERMODE:
+            strtouint(number, &sctx->stats.cpu_user);
+            break;
+        case DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_USAGE_IN_KERNELMODE:
+            strtouint(number, &sctx->stats.cpu_system);
             break;
         case DOCKER_STATS_JSON_NETWORKS_RX_BYTES: {
             uint64_t value = 0;
@@ -286,7 +298,9 @@ static bool docker_container_stats_json_start_map(void *ctx)
 {
     docker_container_stats_json_ctx_t *sctx = ctx;
     sctx->depth++;
-    sctx->stack[sctx->depth] = DOCKER_STATS_JSON_NONE;
+    if (sctx->depth >= JSON_MAX_DEPTH)
+        return false;
+    sctx->stack[sctx->depth-1] = DOCKER_STATS_JSON_NONE;
 
     if (sctx->depth == 1)
         memset(&sctx->stats, 0, sizeof(sctx->stats));
@@ -350,12 +364,6 @@ static bool docker_container_stats_json_map_key(void * ctx, const char * key, si
                 else
                     sctx->stack[1] = DOCKER_STATS_JSON_NONE;
                 break;
-            case 16:
-                if (strncmp("system_cpu_usage", (const char *)key, key_len) == 0)
-                    sctx->stack[1] = DOCKER_STATS_JSON_CPU_STATS_SYSTEM_CPU_USAGE;
-                else
-                    sctx->stack[1] = DOCKER_STATS_JSON_NONE;
-                break;
             default:
                 sctx->stack[1] = DOCKER_STATS_JSON_NONE;
                 break;
@@ -389,9 +397,15 @@ static bool docker_container_stats_json_map_key(void * ctx, const char * key, si
                 } else {
                     sctx->stack[1] = DOCKER_STATS_JSON_NONE;
                 }
+            } else {
+                sctx->stack[1] = DOCKER_STATS_JSON_NONE;
             }
             break;
+        case DOCKER_STATS_JSON_NETWORKS:
+            sctx->stack[1] = DOCKER_STATS_JSON_NETWORKS;
+            break;
         default:
+            sctx->stack[1] = DOCKER_STATS_JSON_NONE;
             break;
         }
         break;
@@ -399,10 +413,16 @@ static bool docker_container_stats_json_map_key(void * ctx, const char * key, si
         if (sctx->stack[1] == DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE) {
             if ((key_len == 11) && (strncmp("total_usage", (const char *)key, key_len) == 0)) {
                 sctx->stack[2] = DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_TOTAL_USAGE;
+            } else if ((key_len == 17) &&
+                       (strncmp("usage_in_usermode", (const char *)key, key_len) == 0)) {
+                sctx->stack[2] = DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_USAGE_IN_USERMODE;
+            } else if ((key_len == 19) &&
+                       (strncmp("usage_in_kernelmode", (const char *)key, key_len) == 0)) {
+                sctx->stack[2] = DOCKER_STATS_JSON_CPU_STATS_CPU_USAGE_USAGE_IN_KERNELMODE;
             } else {
                 sctx->stack[2] = DOCKER_STATS_JSON_NONE;
             }
-        } else if (sctx->stack[0] == DOCKER_STATS_JSON_NETWORKS) {
+        } else if (sctx->stack[1] == DOCKER_STATS_JSON_NETWORKS) {
             switch (key_len) {
             case 8:
                 if (strncmp("rx_bytes", (const char *)key, key_len) == 0) {
@@ -426,6 +446,8 @@ static bool docker_container_stats_json_map_key(void * ctx, const char * key, si
                     sctx->stack[2] = DOCKER_STATS_JSON_NONE;
                 break;
             }
+        } else {
+            sctx->stack[2] = DOCKER_STATS_JSON_NONE;
         }
         break;
     }
@@ -440,6 +462,7 @@ static bool docker_container_stats_json_end_map(void *ctx)
     if (sctx->depth == 1) {
         pthread_mutex_lock(&sctx->docker->lock);
         memcpy(&sctx->docker_stats->stats, &sctx->stats, sizeof(sctx->stats));
+        sctx->docker_stats->has_stats = true;
         pthread_mutex_unlock(&sctx->docker->lock);
     }
 
@@ -450,7 +473,7 @@ static bool docker_container_stats_json_end_map(void *ctx)
         sctx->depth = 0;
     }
 
-    return false;
+    return true;
 }
 
 static xson_callbacks_t docker_container_stats_json_callbacks = {
@@ -477,101 +500,157 @@ static void docker_stats_free(docker_stats_t *docker_stats)
         docker_stats->curl = NULL;
     }
 
+    json_parser_free(&docker_stats->handle);
+
     free(docker_stats);
+}
+
+static void docker_stats_parser_reset(docker_stats_t *docker_stats)
+{
+    json_parser_free(&docker_stats->handle);
+    docker_stats->ctx.depth = 0;
+    json_parser_init(&docker_stats->handle, JSON_ALLOW_MULTIPLE_VALUES,
+                     &docker_container_stats_json_callbacks, &docker_stats->ctx);
+}
+
+static cdtime_t docker_stats_retry(docker_instance_t *docker, cdtime_t retry)
+{
+    cdtime_t now = cdtime();
+    if ((retry == 0) || (now < retry))
+        return retry;
+
+    c_avl_iterator_t *iter = c_avl_get_iterator(docker->ids);
+    if (iter == NULL)
+        return retry;
+
+    cdtime_t next = 0;
+    char *id = NULL;
+    docker_stats_t *docker_stats = NULL;
+    while (c_avl_iterator_next(iter, (void *)&id, (void *)&docker_stats) == 0) {
+        if (docker_stats->retry == 0)
+            continue;
+
+        if (docker_stats->retry <= now) {
+            docker_stats->retry = 0;
+            curl_multi_add_handle(docker->curl_multi, docker_stats->curl);
+        } else if ((next == 0) || (docker_stats->retry < next)) {
+            next = docker_stats->retry;
+        }
+    }
+    c_avl_iterator_destroy(iter);
+
+    return next;
+}
+
+static cdtime_t docker_stats_done(docker_instance_t *docker, cdtime_t retry)
+{
+    CURLMsg *msg = NULL;
+    int msgs_left = 0;
+
+    while ((msg = curl_multi_info_read(docker->curl_multi, &msgs_left)) != NULL) {
+        if (msg->msg != CURLMSG_DONE)
+            continue;
+
+        CURL *curl = msg->easy_handle;
+        CURLcode result = msg->data.result;
+
+        docker_stats_t *docker_stats = NULL;
+        curl_easy_getinfo(curl, CURLINFO_PRIVATE, &docker_stats);
+        curl_multi_remove_handle(docker->curl_multi, curl);
+        if (docker_stats == NULL)
+            continue;
+
+        if (result != CURLE_OK)
+            PLUGIN_WARNING("Stats request for container '%s' failed: (%d) %s",
+                           docker_stats->id, (int)result, docker_stats->curl_error);
+
+        docker_stats_parser_reset(docker_stats);
+
+        docker_stats->retry = cdtime() + plugin_get_interval();
+        if ((retry == 0) || (docker_stats->retry < retry))
+            retry = docker_stats->retry;
+    }
+
+    return retry;
 }
 
 static void *docker_thread(void *data)
 {
     docker_instance_t *docker = data;
 
-    if (docker->curl_multi == NULL) {
-        docker->curl_multi = curl_multi_init();
-        if (docker->curl_multi == NULL) {
-            PLUGIN_ERROR("curl_multi_init failed.");
-            pthread_exit(NULL);
-        }
-    }
-
-    docker->thread_running = true;
+    cdtime_t retry = 0;
 
     while (true) {
         int still_running = 0;
+        int numfds;
+        CURLMcode mc;
 
         docker_stats_t *docker_stats = NULL;
-        c_avl_iterator_t *iter = NULL;
         llentry_t *entry = NULL;
 
         pthread_mutex_lock(&docker->lock);
 
+        if (docker->shutdown) {
+            pthread_mutex_unlock(&docker->lock);
+            break;
+        }
+
         while ((entry = llist_head(docker->ladd)) != NULL) {
             llist_remove(docker->ladd, entry);
+            docker_stats = entry->value;
+            curl_multi_add_handle(docker->curl_multi, docker_stats->curl);
             free(entry);
         }
 
-        iter = c_avl_get_iterator(docker->ids);
-        char *id = NULL;
-        if (iter != NULL) {
-            while (c_avl_iterator_next(iter, (void *)&id, (void *)&docker_stats) == 0) {
-                curl_multi_add_handle(docker->curl_multi, docker_stats->curl);
-            }
-            c_avl_iterator_destroy(iter);
+        while ((entry = llist_head(docker->ldel)) != NULL) {
+            llist_remove(docker->ldel, entry);
+            docker_stats = entry->value;
+            curl_multi_remove_handle(docker->curl_multi, docker_stats->curl);
+            docker_stats_free(docker_stats);
+            free(entry);
         }
+
+        retry = docker_stats_retry(docker, retry);
 
         pthread_mutex_unlock(&docker->lock);
 
-        do {
-            CURLMcode mc;
-            int numfds;
+        mc = curl_multi_perform(docker->curl_multi, &still_running);
+        if (mc != CURLM_OK)
+            PLUGIN_ERROR("curl_multi_perform failed: %s", curl_multi_strerror(mc));
 
-            pthread_mutex_lock(&docker->lock);
+        retry = docker_stats_done(docker, retry);
 
-            while ((entry = llist_head(docker->ladd)) != NULL) {
-                llist_remove(docker->ladd, entry);
-                docker_stats = entry->value;
-                curl_multi_add_handle(docker->curl_multi, docker_stats->curl);
-                free(entry);
-            }
-
-            while ((entry = llist_head(docker->ldel)) != NULL) {
-                llist_remove(docker->ldel, entry);
-                docker_stats = entry->value;
-                curl_multi_remove_handle(docker->curl_multi, docker_stats->curl);
-                docker_stats_free(docker_stats);
-                free(entry);
-            }
-
-            pthread_mutex_unlock(&docker->lock);
-
-            mc = curl_multi_perform(docker->curl_multi, &still_running);
-// fprintf(stderr, "curl_multi_perform: %d %d\n", (int)mc, still_running);
-            if (mc != CURLM_OK) {
-
-                break;
-            }
-                /* wait for activity, timeout or wakeup */
-            mc = curl_multi_poll(docker->curl_multi, NULL, 0, 1000, &numfds);
-            if (mc != CURLM_OK) {
-
-            }
-
-        } while(still_running);
-
-        pthread_mutex_lock(&docker->lock);
-
-        iter = c_avl_get_iterator(docker->ids);
-        if (iter != NULL) {
-            while (c_avl_iterator_next(iter, (void *)&id, (void *)&docker_stats) == 0) {
-                curl_multi_remove_handle(docker->curl_multi, docker_stats->curl);
-            }
-            c_avl_iterator_destroy(iter);
+        /* wait for activity, timeout or wakeup */
+        mc = curl_multi_poll(docker->curl_multi, NULL, 0, 1000, &numfds);
+        if (mc != CURLM_OK) {
+            PLUGIN_ERROR("curl_multi_poll failed: %s", curl_multi_strerror(mc));
+            struct timespec ts = {.tv_sec = 1, .tv_nsec = 0};
+            nanosleep(&ts, NULL);
         }
-
-        pthread_mutex_unlock(&docker->lock);
-
     }
 
-    docker->thread_running = false;
     pthread_exit(NULL);
+}
+
+static int docker_thread_start(docker_instance_t *docker)
+{
+    if (docker->curl_multi == NULL) {
+        docker->curl_multi = curl_multi_init();
+        if (docker->curl_multi == NULL) {
+            PLUGIN_ERROR("curl_multi_init failed.");
+            return -1;
+        }
+    }
+
+    int status = plugin_thread_create(&docker->thread_id, docker_thread, docker, "docker");
+    if (status != 0) {
+        PLUGIN_ERROR("pthread_create() failed: %s", STRERROR(status));
+        return -1;
+    }
+
+    docker->thread_running = true;
+
+    return 0;
 }
 
 static size_t docker_stats_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
@@ -595,6 +674,40 @@ static size_t docker_stats_curl_callback(void *buf, size_t size, size_t nmemb, v
     }
 
     return len;
+}
+
+static int docker_curl_setopt_tls(docker_instance_t *docker, CURL *curl)
+{
+    CURLcode rcode = 0;
+
+    if (docker->cacert != NULL) {
+        rcode = curl_easy_setopt(curl, CURLOPT_CAINFO, docker->cacert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_CAINFO failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (docker->clientcert != NULL) {
+        rcode = curl_easy_setopt(curl, CURLOPT_SSLCERT, docker->clientcert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSLCERT failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (docker->clientkey != NULL) {
+        rcode = curl_easy_setopt(curl, CURLOPT_SSLKEY, docker->clientkey);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSLKEY failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdtime_t now)
@@ -634,7 +747,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_NOSIGNAL failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -642,7 +755,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEFUNCTION failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -650,7 +763,15 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_WRITEDATA failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
+        return NULL;
+    }
+
+    rcode = curl_easy_setopt(docker_stats->curl, CURLOPT_PRIVATE, docker_stats);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_PRIVATE failed: %s",
+                     curl_easy_strerror(rcode));
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -658,7 +779,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERAGENT failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -666,7 +787,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -674,7 +795,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -682,7 +803,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -691,14 +812,19 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
-/*
-    curl_easy_setopt(docker_stats->curl, CURLOPT_TIMEOUT_MS,
-                                   (docker->timeout >= 0) ? (long)docker->timeout
+
+    rcode = curl_easy_setopt(docker_stats->curl, CURLOPT_CONNECTTIMEOUT_MS,
+                                   (docker->timeout > 0) ? (long)CDTIME_T_TO_MS(docker->timeout)
                                    : (long)CDTIME_T_TO_MS(plugin_get_interval()));
-*/
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_CONNECTTIMEOUT_MS failed: %s",
+                     curl_easy_strerror(rcode));
+        docker_stats_free(docker_stats);
+        return NULL;
+    }
 #endif
 #ifdef HAVE_CURLOPT_UNIX_SOCKET_PATH
     if (docker->socket_path != NULL) {
@@ -706,33 +832,40 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
         if (rcode != CURLE_OK) {
             PLUGIN_ERROR("curl_easy_setopt CURLOPT_UNIX_SOCKET_PATH failed: %s",
                          curl_easy_strerror(rcode));
-            free(docker_stats);
+            docker_stats_free(docker_stats);
             return NULL;
         }
     }
 #endif
-    // curl_easy_setopt(docker_stats->curl, CURLOPT_VERBOSE, (long)1);
-
-    char url[512];
+    if (docker_curl_setopt_tls(docker, docker_stats->curl) != 0) {
+        docker_stats_free(docker_stats);
+        return NULL;
+    }
 
     bool slash = false;
     if (docker->url != NULL) {
         size_t url_len = strlen(docker->url);
-        if (docker->url[url_len-1] == '/')
+        if ((url_len > 0) && (docker->url[url_len-1] == '/'))
             slash = true;
     }
 
-    ssnprintf(url, sizeof(url), "%s%s%s%s/stats?stream=1"
-                              , docker->url != NULL ? docker->url : "http://127.0.0.1"
-                              , slash ? "" : "/"
-                              , "v" DOCKER_MIN_VERSION "/containers/"
-                              , id);
+    char *url = ssnprintf_alloc("%s%s%s%s/stats?stream=1"
+                                , docker->url != NULL ? docker->url : "http://127.0.0.1"
+                                , slash ? "" : "/"
+                                , "v" DOCKER_MIN_VERSION "/containers/"
+                                , id);
+    if (url == NULL) {
+        PLUGIN_ERROR("ssnprintf_alloc failed.");
+        docker_stats_free(docker_stats);
+        return NULL;
+    }
 
     rcode = curl_easy_setopt(docker_stats->curl, CURLOPT_URL, url);
+    free(url);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
                      curl_easy_strerror(rcode));
-        free(docker_stats);
+        docker_stats_free(docker_stats);
         return NULL;
     }
 
@@ -758,6 +891,7 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
     status = c_avl_insert(docker->ids, docker_stats->id, docker_stats);
     if (status != 0) {
         llist_remove(docker->ladd, entry);
+        llentry_destroy(entry);
         pthread_mutex_unlock(&docker->lock);
         docker_stats_free(docker_stats);
         PLUGIN_ERROR("c_avl_insert failed.");
@@ -766,7 +900,8 @@ static docker_stats_t *docker_stats_add(docker_instance_t *docker, char *id, cdt
 
     pthread_mutex_unlock(&docker->lock);
 
-    curl_multi_wakeup(&docker->curl_multi);
+    if (docker->curl_multi != NULL)
+        curl_multi_wakeup(docker->curl_multi);
 
     return docker_stats;
 }
@@ -782,6 +917,11 @@ static int docker_stats_purge(docker_instance_t *docker, cdtime_t last)
     pthread_mutex_lock(&docker->lock);
 
     c_avl_iterator_t *iter = c_avl_get_iterator(docker->ids);
+    if (iter == NULL) {
+        pthread_mutex_unlock(&docker->lock);
+        PLUGIN_ERROR("c_avl_get_iterator failed.");
+        return -1;
+    }
     while (c_avl_iterator_next(iter, (void *)&id, (void *)&docker_stats) == 0) {
         if (last > docker_stats->last)
             strarray_add(&to_be_deleted, &to_be_deleted_num, id);
@@ -789,21 +929,25 @@ static int docker_stats_purge(docker_instance_t *docker, cdtime_t last)
     c_avl_iterator_destroy(iter);
 
     for (size_t i = 0; i < to_be_deleted_num; i++) {
-        c_avl_remove(docker->ids, to_be_deleted[i], (void *)&id, (void *)&docker_stats);
-
-        llentry_t *entry = llentry_create(NULL, docker_stats);
+        llentry_t *entry = llentry_create(NULL, NULL);
         if (entry == NULL) {
             PLUGIN_ERROR("llentry_create failed.");
             continue;
         }
 
+        if (c_avl_remove(docker->ids, to_be_deleted[i], (void *)&id, (void *)&docker_stats) != 0) {
+            llentry_destroy(entry);
+            continue;
+        }
+
+        entry->value = docker_stats;
         llist_append(docker->ldel, entry);
     }
 
     pthread_mutex_unlock(&docker->lock);
 
-    if (to_be_deleted_num > 0)
-        curl_multi_wakeup(&docker->curl_multi);
+    if ((to_be_deleted_num > 0) && (docker->curl_multi != NULL))
+        curl_multi_wakeup(docker->curl_multi);
 
     strarray_free(to_be_deleted, to_be_deleted_num);
 
@@ -818,6 +962,15 @@ static bool docker_container_info_json_string(void *ctx, const char *string, siz
         switch (sctx->stack[0]) {
         case DOCKER_INFO_JSON_ID:
             sstrnncpy(sctx->info.id, sizeof(sctx->info.id), string, string_len);
+            break;
+        case DOCKER_INFO_JSON_NAMES:
+            if (sctx->info.name[0] != '\0')
+                break;
+            if ((string_len > 0) && (string[0] == '/')) {
+                string++;
+                string_len--;
+            }
+            sstrnncpy(sctx->info.name, sizeof(sctx->info.name), string, string_len);
             break;
         case DOCKER_INFO_JSON_IMAGE:
             sstrnncpy(sctx->info.image, sizeof(sctx->info.image), string, string_len);
@@ -864,7 +1017,9 @@ static bool docker_container_info_json_start_map(void *ctx)
 {
     docker_container_info_json_ctx_t *sctx = ctx;
     sctx->depth++;
-    sctx->stack[sctx->depth] = DOCKER_INFO_JSON_NONE;
+    if (sctx->depth >= JSON_MAX_DEPTH)
+        return false;
+    sctx->stack[sctx->depth-1] = DOCKER_INFO_JSON_NONE;
 
     if (sctx->depth == 1)
         memset(&sctx->info, 0, sizeof(sctx->info));
@@ -891,6 +1046,8 @@ static bool docker_container_info_json_map_key(void * ctx, const char * key, siz
         case 5:
             if (strncmp("Image", (const char *)key, key_len) == 0) {
                 sctx->stack[0] = DOCKER_INFO_JSON_IMAGE;
+            } else if (strncmp("Names", (const char *)key, key_len) == 0) {
+                sctx->stack[0] = DOCKER_INFO_JSON_NAMES;
             } else if (strncmp("State", (const char *)key, key_len) == 0) {
                 sctx->stack[0] = DOCKER_INFO_JSON_STATE;
             } else {
@@ -922,16 +1079,14 @@ static bool docker_container_info_json_end_map(void *ctx)
 
     if ((sctx->depth == 1) && (sctx->info.id[0] != '\0')) {
 
-        docker_stats_t *docker_stats = docker_stats_add(sctx->docker, sctx->info.id, cdtime());
-        if (docker_stats == NULL) {
-            // FIXME
-        }
+        docker_stats_add(sctx->docker, sctx->info.id, cdtime());
 
-        if ((sctx->info.image[0] != '\0') && (sctx->info.name[0] != '\0')) {
+        if ((sctx->info.image[0] != '\0') || (sctx->info.name[0] != '\0')) {
             label_set_t info = {
-                .num = 2,
+                .num = 3,
                 .ptr = (label_pair_t[]){
                     {.name = "image", .value = sctx->info.image},
+                    {.name = "image_id", .value = sctx->info.imageid},
                     {.name = "name", .value = sctx->info.name},
                 }
             };
@@ -1076,7 +1231,7 @@ static int docker_curl_init(docker_instance_t *docker)
     }
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
     rcode = curl_easy_setopt(docker->curl, CURLOPT_TIMEOUT_MS,
-                                   (docker->timeout >= 0) ? (long)docker->timeout
+                                   (docker->timeout > 0) ? (long)CDTIME_T_TO_MS(docker->timeout)
                                    : (long)CDTIME_T_TO_MS(plugin_get_interval()));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
@@ -1094,6 +1249,9 @@ static int docker_curl_init(docker_instance_t *docker)
         }
     }
 #endif
+    if (docker_curl_setopt_tls(docker, docker->curl) != 0)
+        return -1;
+
     rcode = curl_easy_setopt(docker->curl, CURLOPT_URL, docker->url_info);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
@@ -1113,6 +1271,12 @@ static void docker_curl_cleanup(docker_instance_t *docker)
     }
 }
 
+static void docker_fams_reset(docker_instance_t *docker)
+{
+    for (size_t i = 0; i < FAM_DOCKER_MAX; i++)
+        metric_family_metric_reset(&docker->fams[i]);
+}
+
 static int docker_read(user_data_t *user_data)
 {
     docker_instance_t *docker = user_data->data;
@@ -1120,6 +1284,9 @@ static int docker_read(user_data_t *user_data)
         PLUGIN_ERROR("docker instance is NULL.");
         return -1;
     }
+
+    if (!docker->thread_running && (docker_thread_start(docker) != 0))
+        return -1;
 
     if (docker_curl_init(docker) != 0) {
         docker_curl_cleanup(docker);
@@ -1139,6 +1306,7 @@ static int docker_read(user_data_t *user_data)
         PLUGIN_ERROR("curl_easy_perform failed: (%d) %s", (int)code, docker->curl_error);
         json_parser_free(&docker->handle);
         docker_curl_cleanup(docker);
+        docker_fams_reset(docker);
         return -1;
     }
 
@@ -1148,6 +1316,7 @@ static int docker_read(user_data_t *user_data)
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
         json_parser_free(&docker->handle);
+        docker_fams_reset(docker);
         return -1;
     }
 
@@ -1158,22 +1327,24 @@ static int docker_read(user_data_t *user_data)
     pthread_mutex_lock(&docker->lock);
 
     c_avl_iterator_t *iter = c_avl_get_iterator(docker->ids);
+    if (iter == NULL)
+        PLUGIN_ERROR("c_avl_get_iterator failed.");
     docker_stats_t *docker_stats = NULL;
     char *id = NULL;
     while (c_avl_iterator_next(iter, (void*)&id, (void *)&docker_stats) == 0) {
+        if (!docker_stats->has_stats)
+            continue;
 
-#if 0
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_CPU_USER_SECONDS],
-                             VALUE_COUNTER(
+                             VALUE_COUNTER_FLOAT64((double)docker_stats->stats.cpu_user / 1e9),
                              &docker->labels,
                              &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
-#endif
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_CPU_SYSTEM_SECONDS],
-                             VALUE_COUNTER(docker_stats->stats.cpu_system), // FIXME
+                             VALUE_COUNTER_FLOAT64((double)docker_stats->stats.cpu_system / 1e9),
                              &docker->labels,
                              &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_CPU_USAGE_SECONDS],
-                             VALUE_COUNTER(docker_stats->stats.cpu_usage), // FIXME
+                             VALUE_COUNTER_FLOAT64((double)docker_stats->stats.cpu_usage / 1e9),
                              &docker->labels,
                              &LABEL_PAIR_CONST("id", docker_stats->id), NULL);
         metric_family_append(&docker->fams[FAM_DOCKER_CONTAINER_ONLINE_CPUS],
@@ -1221,35 +1392,44 @@ static void docker_instance_free(void *arg)
     if (docker == NULL)
         return;
 
+    if (docker->thread_running) {
+        pthread_mutex_lock(&docker->lock);
+        docker->shutdown = true;
+        pthread_mutex_unlock(&docker->lock);
+
+        curl_multi_wakeup(docker->curl_multi);
+
+        int status = pthread_join(docker->thread_id, NULL);
+        if (status != 0)
+            PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
+        docker->thread_running = false;
+    }
+
     if (docker->curl != NULL) {
         curl_easy_cleanup(docker->curl);
         docker->curl = NULL;
     }
 
-    if (docker->curl_multi != NULL) {
-        curl_multi_cleanup(docker->curl_multi);
-        docker->curl_multi = NULL;
-    }
-
-    pthread_mutex_destroy(&docker->lock);
-
     free(docker->instance);
     free(docker->socket_path);
     free(docker->url);
     free(docker->url_info);
+    free(docker->cacert);
+    free(docker->clientcert);
+    free(docker->clientkey);
     label_set_reset(&docker->labels);
     plugin_filter_free(docker->filter);
 
-    if (docker->ladd != NULL) {
-        for (llentry_t *e = llist_head(docker->ladd); e != NULL; e = e->next) {
-            docker_stats_free(e->value);
-        }
+    /* the entries of ladd are also in ids */
+    if (docker->ladd != NULL)
         llist_destroy(docker->ladd);
-    }
 
     if (docker->ldel != NULL) {
         for (llentry_t *e = llist_head(docker->ldel); e != NULL; e = e->next) {
-            docker_stats_free(e->value);
+            docker_stats_t *docker_stats = e->value;
+            if (docker->curl_multi != NULL)
+                curl_multi_remove_handle(docker->curl_multi, docker_stats->curl);
+            docker_stats_free(docker_stats);
         }
         llist_destroy(docker->ldel);
     }
@@ -1261,10 +1441,19 @@ static void docker_instance_free(void *arg)
             int status = c_avl_pick(docker->ids, (void *)&id, (void *)&docker_stats);
             if (status != 0)
                 break;
+            if (docker->curl_multi != NULL)
+                curl_multi_remove_handle(docker->curl_multi, docker_stats->curl);
             docker_stats_free(docker_stats);
         }
         c_avl_destroy(docker->ids);
     }
+
+    if (docker->curl_multi != NULL) {
+        curl_multi_cleanup(docker->curl_multi);
+        docker->curl_multi = NULL;
+    }
+
+    pthread_mutex_destroy(&docker->lock);
 
     free(docker);
 }
@@ -1276,6 +1465,8 @@ static int docker_config_instance(config_item_t *ci)
         PLUGIN_ERROR("calloc failed.");
         return -1;
     }
+
+    pthread_mutex_init(&docker->lock, NULL);
 
     docker->ladd = llist_create();
     if (docker->ladd == NULL) {
@@ -1298,15 +1489,11 @@ static int docker_config_instance(config_item_t *ci)
         return -1;
     }
 
-    pthread_mutex_init(&docker->lock, NULL);
-
-    docker->timeout = -1;
-
     memcpy(docker->fams, fams_docker, FAM_DOCKER_MAX * sizeof(docker->fams[0]));
 
     int status = cf_util_get_string(ci, &docker->instance);
     if (status != 0) {
-        free(docker);
+        docker_instance_free(docker);
         return status;
     }
     assert(docker->instance != NULL);
@@ -1317,12 +1504,24 @@ static int docker_config_instance(config_item_t *ci)
 
         if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &docker->url);
+            if ((status == 0) && (docker->url[0] == '\0')) {
+                PLUGIN_ERROR("Option 'url' in %s:%d must not be empty.",
+                             cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp("socket-path", child->key) == 0) {
             status = cf_util_get_string(child, &docker->socket_path);
-        } else if (strcasecmp("labels", child->key) == 0) {
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &docker->cacert);
+        } else if (strcasecmp("client-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &docker->clientcert);
+        } else if (strcasecmp("client-key", child->key) == 0) {
+            status = cf_util_get_string(child, &docker->clientkey);
+        } else if ((strcasecmp("label", child->key) == 0) ||
+                   (strcasecmp("labels", child->key) == 0)) {
             status = cf_util_get_label(child, &docker->labels);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &docker->timeout);
+            status = cf_util_get_cdtime(child, &docker->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp(child->key, "filter") == 0) {
@@ -1343,12 +1542,11 @@ static int docker_config_instance(config_item_t *ci)
     }
 
     if ((docker->url == NULL) && (docker->socket_path == NULL)) {
-        PLUGIN_ERROR("missing ... FIXME"); // FIXME
+        PLUGIN_ERROR("Missing 'url' or 'socket-path' option in instance '%s' in %s:%d.",
+                     docker->instance, cf_get_file(ci), cf_get_lineno(ci));
         docker_instance_free(docker);
         return -1;
     }
-
-    char url[512];
 
     bool slash = false;
     if (docker->url != NULL) {
@@ -1357,20 +1555,11 @@ static int docker_config_instance(config_item_t *ci)
             slash = true;
     }
 
-    ssnprintf(url, sizeof(url), "%s%s%s", docker->url != NULL ? docker->url : "http://127.0.0.1"
-                                        , slash ? "" : "/"
-                                        , "v" DOCKER_MIN_VERSION "/containers/json?limit=0");
-    docker->url_info = strdup(url);
+    docker->url_info = ssnprintf_alloc("%s%s%s", docker->url != NULL ? docker->url : "http://127.0.0.1"
+                                               , slash ? "" : "/"
+                                               , "v" DOCKER_MIN_VERSION "/containers/json?limit=0");
     if (docker->url_info == NULL) {
-        PLUGIN_ERROR("strdup failed");
-        docker_instance_free(docker);
-        return -1;
-    }
-
-
-    status = plugin_thread_create(&docker->thread_id, docker_thread, docker, "docker");
-    if (status != 0) {
-        PLUGIN_ERROR("pthread_create() failed.");
+        PLUGIN_ERROR("ssnprintf_alloc failed.");
         docker_instance_free(docker);
         return -1;
     }
