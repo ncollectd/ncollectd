@@ -60,14 +60,29 @@ static diskstats_t *disklist;
 static char *path_proc_diskstats;
 
 extern exclist_t excl_disk;
-extern char *conf_udev_name_attr;
-extern metric_family_t fams[];
+extern char *disk_conf_udev_name_attr;
+extern metric_family_t disk_fams[];
 
 static double disk_calc_time_incr(int64_t delta_time, int64_t delta_ops, double scale)
 {
     double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
     double avg_time = ((double)delta_time) / ((double)delta_ops);
     return interval * avg_time * scale;
+}
+
+/* The counters in /proc/diskstats are unsigned long: on 64-bit kernels they
+ * do not wrap around, so a decrease means that the device was re-created and
+ * the counter restarted from zero. Assuming a 32-bit wrap-around in that case
+ * would add a bogus jump of ~2^32 to the accumulated counters. */
+static uint64_t disk_counter_diff(uint64_t old_value, uint64_t new_value)
+{
+#if ULONG_MAX > UINT32_MAX
+    if (new_value < old_value)
+        return new_value;
+    return new_value - old_value;
+#else
+    return counter_diff(old_value, new_value);
+#endif
 }
 
 #ifdef HAVE_LIBUDEV_H
@@ -193,29 +208,29 @@ int disk_read(void)
             flush_time = atoll(fields[19]);
         }
 
-        int64_t diff_read_sectors = counter_diff(ds->read_sectors, read_sectors);
+        int64_t diff_read_sectors = disk_counter_diff(ds->read_sectors, read_sectors);
         ds->read_bytes += 512 * diff_read_sectors;
         ds->read_sectors = read_sectors;
 
-        int64_t diff_write_sectors = counter_diff(ds->write_sectors, write_sectors);
+        int64_t diff_write_sectors = disk_counter_diff(ds->write_sectors, write_sectors);
         ds->write_bytes += 512 * diff_write_sectors;
         ds->write_sectors = write_sectors;
 
         /* Calculate the average time an io-op needs to complete */
         if (is_disk) {
-            int64_t diff_read_ops = counter_diff(ds->read_ops, read_ops);
+            int64_t diff_read_ops = disk_counter_diff(ds->read_ops, read_ops);
             ds->read_ops = read_ops;
 
-            int64_t diff_write_ops = counter_diff(ds->write_ops, write_ops);
+            int64_t diff_write_ops = disk_counter_diff(ds->write_ops, write_ops);
             ds->write_ops = write_ops;
 
-            int64_t diff_read_time = counter_diff(ds->read_time, read_time);
+            int64_t diff_read_time = disk_counter_diff(ds->read_time, read_time);
             ds->read_time = read_time;
 
             if (diff_read_ops != 0)
                 ds->avg_read_time += disk_calc_time_incr(diff_read_time, diff_read_ops, 1e-3);
 
-            int64_t diff_write_time = counter_diff(ds->write_time, write_time);
+            int64_t diff_write_time = disk_counter_diff(ds->write_time, write_time);
             ds->write_time = write_time;
             if (diff_write_ops != 0)
                 ds->avg_write_time += disk_calc_time_incr(diff_write_time, diff_write_ops, 1e-3);
@@ -229,36 +244,37 @@ int disk_read(void)
             if (io_time)
                 ds->has_io_time = true;
 
-            if (discard_time) {
-                int64_t diff_discard_ops = counter_diff(ds->discard_ops, discard_ops);
+            if (numfields >= 18) {            
+                int64_t diff_discard_ops = disk_counter_diff(ds->discard_ops, discard_ops);
                 ds->discard_ops = discard_ops;
 
-                int64_t diff_discard_sectors = counter_diff(ds->discard_sectors, discard_sectors);
+                int64_t diff_discard_sectors = disk_counter_diff(ds->discard_sectors, discard_sectors);
                 ds->discard_bytes += 512 * diff_discard_sectors;
                 ds->discard_sectors = discard_sectors;
 
-                int64_t diff_discard_time = counter_diff(ds->discard_time, discard_time);
+                int64_t diff_discard_time = disk_counter_diff(ds->discard_time, discard_time);
                 ds->discard_time = discard_time;
 
                 if (diff_discard_ops != 0)
                     ds->avg_discard_time += disk_calc_time_incr(diff_discard_time,
                                                                 diff_discard_ops, 1e-3);
-
-                ds->has_discard = true;
+                if (discard_ops != 0)
+                    ds->has_discard = true;
             }
 
-            if (flush_time) {
-                int64_t diff_flush_ops = counter_diff(ds->flush_ops, flush_ops);
+            if (numfields >= 20) {
+                int64_t diff_flush_ops = disk_counter_diff(ds->flush_ops, flush_ops);
                 ds->flush_ops = flush_ops;
 
-                int64_t diff_flush_time = counter_diff(ds->flush_time, flush_time);
+                int64_t diff_flush_time = disk_counter_diff(ds->flush_time, flush_time);
                 ds->flush_time = flush_time;
 
                 if (diff_flush_ops != 0)
                     ds->avg_flush_time += disk_calc_time_incr(diff_flush_time,
                                                               diff_flush_ops, 1e-3);
 
-                ds->has_flush = true;
+                if (flush_ops != 0)
+                    ds->has_flush = true;
             }
         }
 
@@ -279,8 +295,8 @@ int disk_read(void)
 
 #ifdef HAVE_LIBUDEV_H
         char *alt_name = NULL;
-        if (conf_udev_name_attr != NULL) {
-            alt_name = disk_udev_attr_name(handle_udev, disk_name, conf_udev_name_attr);
+        if (disk_conf_udev_name_attr != NULL) {
+            alt_name = disk_udev_attr_name(handle_udev, disk_name, disk_conf_udev_name_attr);
             if (alt_name != NULL)
                 output_name = alt_name;
         }
@@ -297,90 +313,90 @@ int disk_read(void)
         label_pair_const_t device_label = LABEL_PAIR_CONST("device", output_name);
 
         if ((ds->read_bytes != 0) || (ds->write_bytes != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_BYTES],
+            metric_family_append(&disk_fams[FAM_DISK_READ_BYTES],
                                  VALUE_COUNTER(ds->read_bytes), NULL, &device_label, NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_BYTES],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_BYTES],
                                  VALUE_COUNTER(ds->write_bytes), NULL, &device_label, NULL);
         }
 
         if ((ds->read_ops != 0) || (ds->write_ops != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_OPS],
+            metric_family_append(&disk_fams[FAM_DISK_READ_OPS],
                                  VALUE_COUNTER(read_ops), NULL, &device_label, NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_OPS],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_OPS],
                                  VALUE_COUNTER(write_ops), NULL, &device_label, NULL);
         }
 
         if ((ds->read_time != 0) || (ds->write_time != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_READ_TIME],
                                  VALUE_COUNTER_FLOAT64((double)read_time/1000.0),
                                  NULL, &device_label, NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_TIME],
                                  VALUE_COUNTER_FLOAT64((double)write_time/1000.0),
                                  NULL, &device_label, NULL);
         }
 
         if ((ds->avg_read_time != 0) || (ds->avg_write_time != 0)) {
-            metric_family_append(&fams[FAM_DISK_READ_WEIGHTED_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_READ_WEIGHTED_TIME],
                                  VALUE_COUNTER_FLOAT64(ds->avg_read_time),
                                  NULL, &device_label, NULL);
 
-            metric_family_append(&fams[FAM_DISK_WRITE_WEIGHTED_TIME],
+            metric_family_append(&disk_fams[FAM_DISK_WRITE_WEIGHTED_TIME],
                                  VALUE_COUNTER_FLOAT64(ds->avg_write_time),
                                  NULL, &device_label, NULL);
         }
 
         if (is_disk) {
             if (ds->has_merged) {
-                metric_family_append(&fams[FAM_DISK_READ_MERGED],
+                metric_family_append(&disk_fams[FAM_DISK_READ_MERGED],
                                      VALUE_COUNTER(read_merged), NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_WRITE_MERGED],
+                metric_family_append(&disk_fams[FAM_DISK_WRITE_MERGED],
                                      VALUE_COUNTER(write_merged), NULL, &device_label, NULL);
             }
             if (ds->has_in_progress)
-                metric_family_append(&fams[FAM_DISK_PENDING_OPERATIONS],
+                metric_family_append(&disk_fams[FAM_DISK_PENDING_OPERATIONS],
                                      VALUE_GAUGE(in_progress), NULL, &device_label, NULL);
             if (ds->has_io_time) {
-                metric_family_append(&fams[FAM_DISK_IO_TIME],
+                metric_family_append(&disk_fams[FAM_DISK_IO_TIME],
                                      VALUE_COUNTER_FLOAT64((double)io_time/1000.0), NULL,
                                      &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_IO_WEIGHTED_TIME],
+                metric_family_append(&disk_fams[FAM_DISK_IO_WEIGHTED_TIME],
                                      VALUE_COUNTER_FLOAT64((double)weighted_time/1000.0), NULL,
                                      &device_label, NULL);
             }
 
             if (ds->has_discard) {
-                metric_family_append(&fams[FAM_DISK_DISCARD_BYTES],
+                metric_family_append(&disk_fams[FAM_DISK_DISCARD_BYTES],
                                      VALUE_COUNTER(ds->discard_bytes), NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_DISCARD_MERGED],
+                metric_family_append(&disk_fams[FAM_DISK_DISCARD_MERGED],
                                      VALUE_COUNTER(discard_merged), NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_DISCARD_OPS],
+                metric_family_append(&disk_fams[FAM_DISK_DISCARD_OPS],
                                      VALUE_COUNTER(discard_ops), NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_DISCARD_TIME],
+                metric_family_append(&disk_fams[FAM_DISK_DISCARD_TIME],
                                      VALUE_COUNTER_FLOAT64((double)discard_time/1000.0),
                                      NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_DISCARD_WEIGHTED_TIME],
+                metric_family_append(&disk_fams[FAM_DISK_DISCARD_WEIGHTED_TIME],
                                      VALUE_COUNTER_FLOAT64(ds->avg_discard_time),
                                      NULL, &device_label, NULL);
             }
 
             if (ds->has_flush) {
-                metric_family_append(&fams[FAM_DISK_FLUSH_OPS],
+                metric_family_append(&disk_fams[FAM_DISK_FLUSH_OPS],
                                      VALUE_COUNTER(flush_ops), NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_FLUSH_TIME],
+                metric_family_append(&disk_fams[FAM_DISK_FLUSH_TIME],
                                      VALUE_COUNTER_FLOAT64((double)flush_time/1000.0),
                                      NULL, &device_label, NULL);
 
-                metric_family_append(&fams[FAM_DISK_FLUSH_WEIGHTED_TIME],
+                metric_family_append(&disk_fams[FAM_DISK_FLUSH_WEIGHTED_TIME],
                                      VALUE_COUNTER_FLOAT64(ds->avg_flush_time),
                                      NULL, &device_label, NULL);
             }
@@ -416,7 +432,7 @@ int disk_read(void)
     }
     fclose(fh);
 
-    plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);
+    plugin_dispatch_metric_family_array(disk_fams, FAM_DISK_MAX, 0);
     return 0;
 }
 
@@ -429,7 +445,7 @@ int disk_init(void)
     }
 
 #ifdef HAVE_LIBUDEV_H
-    if (conf_udev_name_attr != NULL) {
+    if (disk_conf_udev_name_attr != NULL) {
         handle_udev = udev_new();
         if (handle_udev == NULL) {
             PLUGIN_ERROR("udev_new() failed!");

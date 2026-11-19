@@ -24,8 +24,8 @@
 #include "disk.h"
 
 extern exclist_t excl_disk;
-extern char *conf_udev_name_attr;
-extern metric_family_t fams[];
+extern char *disk_conf_udev_name_attr;
+extern metric_family_t disk_fams[];
 
 static int pnumdisk;
 static perfstat_disk_t *stat_disk;
@@ -61,9 +61,17 @@ int disk_read(void)
         return -1;
     }
 
+    if (numdisk == 0)
+        return 0;
+
     if (numdisk != pnumdisk || stat_disk == NULL) {
         free(stat_disk);
         stat_disk = calloc(numdisk, sizeof(*stat_disk));
+        if (stat_disk == NULL) {
+            PLUGIN_ERROR("calloc failed.");
+            pnumdisk = 0;
+            return -1;
+        }
     }
     pnumdisk = numdisk;
 
@@ -138,61 +146,69 @@ int disk_read(void)
            continue;
         }
 
-        metric_family_append(&fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(read_bytes), NULL,
+        metric_family_append(&disk_fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(read_bytes), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
-        metric_family_append(&fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(write_bytes), NULL,
-                             &LABEL_PAIR_CONST("device", disk_name), NULL);
-
-        metric_family_append(&fams[FAM_DISK_READ_OPS], VALUE_COUNTER(read_ops), NULL,
-                             &LABEL_PAIR_CONST("device", disk_name), NULL);
-        metric_family_append(&fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(write_bytes), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_READ_TIME],
+        metric_family_append(&disk_fams[FAM_DISK_READ_OPS], VALUE_COUNTER(read_ops), NULL,
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(write_ops), NULL,
+                             &LABEL_PAIR_CONST("device", disk_name), NULL);
+
+        metric_family_append(&disk_fams[FAM_DISK_READ_TIME],
                              VALUE_COUNTER_FLOAT64(HTIC2SEC(read_time)), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
-        metric_family_append(&fams[FAM_DISK_WRITE_TIME],
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_TIME],
                              VALUE_COUNTER_FLOAT64(HTIC2SEC(write_time)), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_READ_WEIGHTED_TIME],
+        metric_family_append(&disk_fams[FAM_DISK_READ_WEIGHTED_TIME],
                              VALUE_COUNTER_FLOAT64(ds->avg_read_time), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
-        metric_family_append(&fams[FAM_DISK_WRITE_WEIGHTED_TIME],
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_WEIGHTED_TIME],
                              VALUE_COUNTER_FLOAT64(ds->avg_write_time), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_IO_TIME],
+        metric_family_append(&disk_fams[FAM_DISK_IO_TIME],
                              VALUE_COUNTER_FLOAT64(HTIC2SEC(stat_disk[i].time)), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_PENDING_OPERATIONS],
+        metric_family_append(&disk_fams[FAM_DISK_PENDING_OPERATIONS],
                              VALUE_GAUGE(stat_disk[i].qdepth), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_READ_TIMEOUT],
+        metric_family_append(&disk_fams[FAM_DISK_READ_TIMEOUT],
                              VALUE_COUNTER(stat_disk[i].rtimeout), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
-        metric_family_append(&fams[FAM_DISK_WRITE_TIMEOUT],
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_TIMEOUT],
                              VALUE_COUNTER(stat_disk[i].wtimeout), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_READ_FAILED],
+        metric_family_append(&disk_fams[FAM_DISK_READ_FAILED],
                              VALUE_COUNTER(stat_disk[i].rfailed), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
-        metric_family_append(&fams[FAM_DISK_WRITE_FAILED],
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_FAILED],
                              VALUE_COUNTER(stat_disk[i].wfailed), NULL,
                              &LABEL_PAIR_CONST("device", disk_name), NULL);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);
+    plugin_dispatch_metric_family_array(disk_fams, FAM_DISK_MAX, 0);
     return 0;
 }
 
 int disk_shutdown(void)
 {
-    if (stat_disk != NULL)
-        free(stat_disk);
+    free(stat_disk);
+    stat_disk = NULL;
+    pnumdisk = 0;
+
+    while (disklist != NULL) {
+        diskstats_t *next = disklist->next;
+        free(disklist->name);
+        free(disklist);
+        disklist = next;
+    }
 
     exclist_reset(&excl_disk);
 

@@ -14,7 +14,7 @@
 #include "disk.h"
 
 extern exclist_t excl_disk;
-extern metric_family_t fams[];
+extern metric_family_t disk_fams[];
 
 static struct io_sysctl *drives = NULL;
 static size_t ndrive = 0;
@@ -39,14 +39,17 @@ int disk_read(void)
         return -1;
     }
     /* number of drives changed, reallocate buffer */
-    if (nndrive != ndrive) {
-        drives = (struct io_sysctl *)realloc(drives, size);
-        if (drives == NULL) {
+    if ((nndrive != ndrive) || (drives == NULL)) {
+        struct io_sysctl *tmp = realloc(drives, nndrive * sizeof(*drives));
+        if (tmp == NULL) {
             PLUGIN_ERROR("memory allocation failure");
             return -1;
         }
+        drives = tmp;
         ndrive = nndrive;
     }
+
+    size = ndrive * sizeof(*drives);
 
     /* get stats for all drives */
     mib[0] = CTL_HW;
@@ -56,6 +59,10 @@ int disk_read(void)
         PLUGIN_ERROR("sysctl for drive stats failed");
         return -1;
     }
+    /* the number of drives may have decreased between both calls */
+    nndrive = size / sizeof(*drives);
+    if (nndrive < ndrive)
+        ndrive = nndrive;
 
     for (i = 0; i < ndrive; i++) {
         if (drives[i].type != IOSTAT_DISK)
@@ -63,25 +70,25 @@ int disk_read(void)
         if (!exclist_match(&excl_disk, drives[i].name))
             continue;
 
-        metric_family_append(&fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(drives[i].rbytes), NULL,
+        metric_family_append(&disk_fams[FAM_DISK_READ_BYTES], VALUE_COUNTER(drives[i].rbytes), NULL,
                              &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(drives[i].wbytes), NULL,
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_BYTES], VALUE_COUNTER(drives[i].wbytes), NULL,
                              &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_READ_OPS], VALUE_COUNTER(drives[i].rxfer), NULL,
+        metric_family_append(&disk_fams[FAM_DISK_READ_OPS], VALUE_COUNTER(drives[i].rxfer), NULL,
                              &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(drives[i].wxfer), NULL,
+        metric_family_append(&disk_fams[FAM_DISK_WRITE_OPS], VALUE_COUNTER(drives[i].wxfer), NULL,
                              &LABEL_PAIR_CONST("device", drives[i].name), NULL);
 
-        metric_family_append(&fams[FAM_DISK_IO_TIME],
+        metric_family_append(&disk_fams[FAM_DISK_IO_TIME],
                              VALUE_COUNTER_FLOAT64((double)drives[i].time_sec +
                                                    (double)drives[i].time_usec * 1e-6), NULL,
                              &LABEL_PAIR_CONST("device", drives[i].name), NULL);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_DISK_MAX, 0);
+    plugin_dispatch_metric_family_array(disk_fams, FAM_DISK_MAX, 0);
     return 0;
 }
 
