@@ -27,6 +27,9 @@ You can define multiple \fIcounters\fP blocks to fine-tune the connections
 you are interested in:
 .Bl -tag -width Ds
 .It \fBcounter\fP \fIcounter-name\fP
+Count the connections that match all the filters of the block in the
+\fBsystem_tcp_connections\fP metric, with the \fIcounter-name\fP in the
+\fBcounter\fP label. At least one filter option is required.
 .Bl -tag -width Ds
 .It \fBlocal-ip\fP \fIaddress\fP|\fIaddress\fP/\fIprefix\fP
 Filter tcp connections for this local ip or network (with the CIDR notation).

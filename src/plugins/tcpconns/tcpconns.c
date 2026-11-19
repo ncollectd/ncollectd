@@ -89,16 +89,17 @@ static metric_family_t fams[FAM_TCP_MAX] = {
 
 void conn_submit_all(const char *tcp_state[], int tcp_state_min, int tcp_state_max)
 {
-    for (int i = 1; i <= tcp_state_max; i++) {
+    for (int i = tcp_state_min; i <= tcp_state_max; i++) {
         metric_family_append(&fams[FAM_TCP_ALL_CONNECTIONS], VALUE_GAUGE(count_total[i]), NULL,
-                             &LABEL_PAIR_CONST("state", tcp_state[i]),
-                             NULL);
+                             &LABEL_PAIR_CONST("state", tcp_state[i]), NULL);
     }
 
     for (tcp_counter_t *counter = tcp_counter_list_head; counter != NULL; counter = counter->next) {
         for (int i = tcp_state_min; i <= tcp_state_max; i++) {
-            label_pair_const_t label_pairs[5];
+            label_pair_const_t label_pairs[6];
             size_t label_num = 0;
+
+            label_pairs[label_num++] = LABEL_PAIR_CONST("counter", counter->name);
 
             if (counter->local.str_port != NULL)
                 label_pairs[label_num++] = LABEL_PAIR_CONST("local_port", counter->local.str_port);
@@ -122,12 +123,6 @@ void conn_submit_all(const char *tcp_state[], int tcp_state_min, int tcp_state_m
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_TCP_MAX, 0);
-
-    memset(&count_total, 0, sizeof(count_total));
-
-    for (tcp_counter_t *counter = tcp_counter_list_head; counter != NULL; counter = counter->next) {
-        memset(counter->count, 0, sizeof(counter->count));
-    }
 }
 
 static bool tcpconn_port_cmp(inet_ports_t *ports, uint16_t port)
@@ -147,9 +142,27 @@ static bool tcpconn_port_cmp(inet_ports_t *ports, uint16_t port)
 
 static bool tcpconn_cmp(inet_addr_t *iaddr, struct sockaddr *saddr)
 {
-    if (iaddr->family == AF_INET) {
+    struct sockaddr_in mapped_addr;
+
+    /* IPv4 connections of dual-stack sockets are reported as IPv4-mapped IPv6 addresses. */
+    if ((saddr->sa_family == AF_INET6) && (iaddr->family == AF_INET)) {
+        struct sockaddr_in6 *in6_addr = (struct sockaddr_in6 *)saddr;
+        if (IN6_IS_ADDR_V4MAPPED(&in6_addr->sin6_addr)) {
+            mapped_addr = (struct sockaddr_in) {
+                .sin_family = AF_INET,
+                .sin_port   = in6_addr->sin6_port,
+            };
+            memcpy(&mapped_addr.sin_addr.s_addr, &in6_addr->sin6_addr.s6_addr[12],
+                   sizeof(mapped_addr.sin_addr.s_addr));
+            saddr = (struct sockaddr *)&mapped_addr;
+        }
+    }
+
+    if (saddr->sa_family == AF_INET) {
         struct sockaddr_in *in_addr = (struct sockaddr_in *)saddr;
         if (iaddr->flags & TCPCONNS_CFG_ADDR) {
+            if (iaddr->family != AF_INET)
+                return false;
             if ((iaddr->in_addr.s_addr & iaddr->in_mask.s_addr) !=
                 (in_addr->sin_addr.s_addr & iaddr->in_mask.s_addr))
                 return false;
@@ -159,9 +172,11 @@ static bool tcpconn_cmp(inet_addr_t *iaddr, struct sockaddr *saddr)
             if (!tcpconn_port_cmp(&iaddr->ports, in_addr->sin_port))
                 return false;
         }
-    } else {
+    } else if (saddr->sa_family == AF_INET6) {
         struct sockaddr_in6 *in6_addr = (struct sockaddr_in6 *)saddr;
         if (iaddr->flags & TCPCONNS_CFG_ADDR) {
+            if (iaddr->family != AF_INET6)
+                return false;
             for (size_t i = 0; i < 16; i++) {
                 if ((iaddr->in6_addr.s6_addr[i] & iaddr->in6_mask.s6_addr[i]) !=
                     (in6_addr->sin6_addr.s6_addr[i] & iaddr->in6_mask.s6_addr[i]))
@@ -172,6 +187,8 @@ static bool tcpconn_cmp(inet_addr_t *iaddr, struct sockaddr *saddr)
             if (!tcpconn_port_cmp(&iaddr->ports, in6_addr->sin6_port))
                 return false;
         }
+    } else {
+        return false;
     }
 
     return true;
@@ -257,6 +274,20 @@ static int inet_port_append(config_item_t *ci, inet_ports_t *ports, int start, i
     return 0;
 }
 
+static int tcpconn_parse_port(config_item_t *ci, const char *str, int *ret_port)
+{
+    char *endptr = NULL;
+    errno = 0;
+    long port = strtol(str, &endptr, 10);
+    if ((errno != 0) || (endptr == str) || (*endptr != '\0') || (port < 1) || (port > 65535)) {
+        PLUGIN_ERROR("Invalid port '%s' in %s:%d.", str, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    *ret_port = (int)port;
+    return 0;
+}
+
 static int tcpconn_config_port(config_item_t *ci, inet_addr_t *addr)
 {
     if ((ci->values_num != 1) ||
@@ -269,12 +300,23 @@ static int tcpconn_config_port(config_item_t *ci, inet_addr_t *addr)
 
     inet_ports_t *ports = &addr->ports;
 
+    free(addr->str_port);
+    addr->str_port = NULL;
+    free(ports->ptr);
+    ports->ptr = NULL;
+    ports->num = 0;
+
     if (ci->values[0].type == CONFIG_TYPE_NUMBER) {
-        int status = inet_port_append(ci, ports, ci->values[0].value.number, 0);
+        double number = ci->values[0].value.number;
+        if (!((number >= 1) && (number <= 65535) && (number == (int)number))) {
+            PLUGIN_ERROR("Invalid port: %g in %s:%d.", number, cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
+        }
+        int status = inet_port_append(ci, ports, (int)number, 0);
         if (status != 0)
             return -1;
         char buffer[ITOA_MAX];
-        itoa(ci->values[0].value.number, buffer);
+        itoa((int)number, buffer);
         addr->str_port = strdup(buffer);
         if (addr->str_port == NULL) {
             PLUGIN_ERROR("strdup failed.");
@@ -300,34 +342,21 @@ static int tcpconn_config_port(config_item_t *ci, inet_addr_t *addr)
 
             char *end = strchr(start, '-');
             if (end == NULL) {
-                char *endptr = NULL;
-                int nstart = strtol(start, &endptr, 10);
-                if ((endptr == NULL) || (*endptr != '\0')) {
-                    PLUGIN_ERROR("Cannot parse number '%s' at %s:%d.",
-                                 start, cf_get_file(ci), cf_get_lineno(ci));
+                int nstart = 0;
+                if (tcpconn_parse_port(ci, start, &nstart) != 0)
                     return -1;
-                }
                 int status = inet_port_append(ci, ports, nstart, 0);
                 if (status != 0)
                     return -1;
             } else {
                 *end = '\0';
                 end++;
-                char *endptr = NULL;
-                int nstart = strtol(start, &endptr, 10);
-                if ((endptr == NULL) || (*endptr != '\0')) {
-                    PLUGIN_ERROR("Cannot parse number '%s' at %s:%d.",
-                                 start, cf_get_file(ci), cf_get_lineno(ci));
+                int nstart = 0;
+                if (tcpconn_parse_port(ci, start, &nstart) != 0)
                     return -1;
-                }
-
-                endptr = NULL;
-                int nend = strtol(end, &endptr, 10);
-                if ((endptr == NULL) || (*endptr != '\0')) {
-                    PLUGIN_ERROR("Cannot parse number '%s' at %s:%d.",
-                                 end, cf_get_file(ci), cf_get_lineno(ci));
+                int nend = 0;
+                if (tcpconn_parse_port(ci, end, &nend) != 0)
                     return -1;
-                }
                 int status = inet_port_append(ci, ports, nstart, nend);
                 if (status != 0)
                     return -1;
@@ -359,11 +388,17 @@ static int tcpconn_config_addr(config_item_t *ci, inet_addr_t *addr)
     if (strchr(ip_str, ':') != NULL)
         addr->family = AF_INET6;
 
-    int prefix = 0;
+    int prefix = -1;
     char *prefix_str = strchr(ip_str, '/');
     if (prefix_str != NULL) {
         *prefix_str = '\0';
         prefix_str++;
+        if ((*prefix_str == '\0') || (strlen(prefix_str) > 3)) {
+            PLUGIN_ERROR("Invalid address prefix: '%s' in %s:%d.", prefix_str,
+                         cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
+        }
+
         char *c = prefix_str;
         while (*c != '\0') {
             if (!isdigit((unsigned char)*c)) {
@@ -377,34 +412,35 @@ static int tcpconn_config_addr(config_item_t *ci, inet_addr_t *addr)
     }
 
     if (addr->family == AF_INET) {
-        memset(&addr->in_mask.s_addr, 0, sizeof(addr->in_mask.s_addr));
-        if (prefix != 0) {
-            if (prefix > 32) {
-                PLUGIN_ERROR("Invalid address prefix: '%s' in %s:%d.", prefix_str,
-                             cf_get_file(ci), cf_get_lineno(ci));
-                return -1;
-            }
-            addr->in_mask.s_addr = htonl((1 << (32 - prefix)) - 1);
+        if (prefix > 32) {
+            PLUGIN_ERROR("Invalid address prefix: '%s' in %s:%d.", prefix_str,
+                         cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
         }
-        addr->in_mask.s_addr = ~addr->in_mask.s_addr;
+
+        if (prefix < 0)
+            prefix = 32;
+
+        addr->in_mask.s_addr = 0;
+        if (prefix > 0)
+            addr->in_mask.s_addr = htonl(UINT32_MAX << (32 - prefix));
     } else if (addr->family == AF_INET6) {
+        if (prefix > 128) {
+            PLUGIN_ERROR("Invalid address prefix: '%s' in %s:%d.", prefix_str,
+                         cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
+        }
+
+        if (prefix < 0)
+            prefix = 128;
+
         memset(&addr->in6_mask, 0, sizeof(addr->in6_mask));
-        if (prefix != 0)  {
-            if (prefix > 128) {
-                PLUGIN_ERROR("Invalid address prefix: '%s' in %s:%d.", prefix_str,
-                             cf_get_file(ci), cf_get_lineno(ci));
-                return -1;
-            }
-            for (int i = prefix, j = 0; i > 0; i -= 8, j++) {
-                if (i > 8)  {
-                    addr->in6_mask.s6_addr[j] = 0xff;
-                } else {
-                    addr->in6_mask.s6_addr[j] = (unsigned long)(0xffU << (8 - i));
-                }
-            }
-        } else {
-            for (int i = 0; i < 16; i++) {
-                addr->in6_mask.s6_addr[i] = 0xff;
+
+        for (int i = prefix, j = 0; i > 0; i -= 8, j++) {
+            if (i > 8)  {
+                addr->in6_mask.s6_addr[j] = 0xff;
+            } else {
+                addr->in6_mask.s6_addr[j] = (unsigned long)(0xffU << (8 - i));
             }
         }
     }
@@ -457,7 +493,7 @@ static int tcpconn_config_counter(config_item_t *ci)
         }
 
         if (status != 0)
-            return -1;
+            break;
     }
 
     if (status != 0) {
@@ -465,9 +501,17 @@ static int tcpconn_config_counter(config_item_t *ci)
         return -1;
     }
 
+    if ((counter->local.flags == 0) && (counter->remote.flags == 0)) {
+        PLUGIN_ERROR("Counter '%s' in %s:%d requires at least one filter option.",
+                     counter->name, cf_get_file(ci), cf_get_lineno(ci));
+        tcpconn_free_counter(counter);
+        return -1;
+    }
+
     if ((counter->local.family != 0) && (counter->remote.family !=0)) {
         if (counter->local.family != counter->remote.family) {
-            PLUGIN_ERROR("Mixing IPv4 and IPv6 in counter.");
+            PLUGIN_ERROR("Counter '%s' in %s:%d mixing IPv4 and IPv6.",
+                         counter->name, cf_get_file(ci), cf_get_lineno(ci));
             tcpconn_free_counter(counter);
             return -1;
         }
@@ -519,6 +563,22 @@ int conn_shutdown(void)
     return 0;
 }
 
+static void conn_reset_counts(void)
+{
+    memset(&count_total, 0, sizeof(count_total));
+
+    for (tcp_counter_t *counter = tcp_counter_list_head; counter != NULL; counter = counter->next) {
+        memset(counter->count, 0, sizeof(counter->count));
+    }
+}
+
+static int conn_generic_read(void)
+{
+    conn_reset_counts();
+
+    return conn_read();
+}
+
 static int conn_generic_shutdown(void)
 {
     tcp_counter_t *counter = tcp_counter_list_head;
@@ -536,6 +596,6 @@ void module_register(void)
 {
     plugin_register_config("tcpconns", conn_config);
     plugin_register_init("tcpconns", conn_init);
-    plugin_register_read("tcpconns", conn_read);
+    plugin_register_read("tcpconns", conn_generic_read);
     plugin_register_shutdown("tcpconns", conn_generic_shutdown);
 }

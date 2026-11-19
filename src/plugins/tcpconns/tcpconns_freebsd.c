@@ -49,22 +49,33 @@ static const char *tcp_state[] = {
 
 int conn_read(void)
 {
+    char *buffer = NULL;
     size_t buffer_len = 0;
-    int status = sysctlbyname("net.inet.tcp.pcblist", NULL, &buffer_len, 0, 0);
-    if (status < 0) {
-        PLUGIN_ERROR("sysctlbyname failed.");
-        return -1;
+    int status = -1;
+
+    for (int i = 0; i < 4; i++) {
+        size_t len = 0;
+        status = sysctlbyname("net.inet.tcp.pcblist", NULL, &len, NULL, 0);
+        if (status < 0)
+            break;
+
+        len += len / 8;
+        char *tmp = realloc(buffer, len);
+        if (tmp == NULL) {
+            PLUGIN_ERROR("realloc failed.");
+            free(buffer);
+            return -1;
+        }
+        buffer = tmp;
+        buffer_len = len;
+
+        status = sysctlbyname("net.inet.tcp.pcblist", buffer, &buffer_len, NULL, 0);
+        if ((status == 0) || (errno != ENOMEM))
+            break;
     }
 
-    char *buffer = malloc(buffer_len);
-    if (buffer == NULL) {
-        PLUGIN_ERROR("malloc failed.");
-        return -1;
-    }
-
-    status = sysctlbyname("net.inet.tcp.pcblist", buffer, &buffer_len, 0, 0);
     if (status < 0) {
-        PLUGIN_ERROR("sysctlbyname failed.");
+        PLUGIN_ERROR("sysctlbyname failed: %s", STRERRNO);
         free(buffer);
         return -1;
     }
@@ -75,11 +86,14 @@ int conn_read(void)
         return -1;
     }
 
-    struct xinpgen *in_ptr;
-    struct xinpgen *in_orig = (struct xinpgen *)buffer;
-    for (in_ptr = (struct xinpgen *)(((char *)in_orig) + in_orig->xig_len);
-             in_ptr->xig_len > sizeof(struct xinpgen);
-             in_ptr = (struct xinpgen *)(((char *)in_ptr) + in_ptr->xig_len)) {
+
+    size_t offset = in_orig->xig_len;
+    while ((offset < buffer_len) && ((buffer_len - offset) >= sizeof(struct xinpgen))) {
+        struct xinpgen *in_ptr = (struct xinpgen *)(buffer + offset);
+        if ((in_ptr->xig_len < sizeof(struct xtcpcb)) || (in_ptr->xig_len > (buffer_len - offset)))
+            break;
+        offset += in_ptr->xig_len;
+
 #if __FreeBSD_version >= 1200026
         struct xtcpcb *tp = (struct xtcpcb *)in_ptr;
         struct xinpcb *inp = &tp->xt_inp;

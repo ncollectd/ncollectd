@@ -79,7 +79,7 @@ static kvm_t *kvmd;
 static u_long inpcbtable_off;
 
 #define TCP_STATE_LISTEN 1
-#define TCP_STATE_MIN 1
+#define TCP_STATE_MIN 0
 #define TCP_STATE_MAX 10
 
 #define N_TCBTABLE 0
@@ -122,7 +122,6 @@ int conn_read(void)
         return -1;
     }
 
-    /* inpt_queue is a TAILQ on OpenBSD */
     /* Get the first pcb */
     struct inpcb inpcb;
     struct inpcb *next = (struct inpcb *)TAILQ_FIRST(&table.inpt_queue);
@@ -147,9 +146,6 @@ int conn_read(void)
         }
 
         if (inpcb.inp_af == AF_INET) {
-            if (inet_lnaof(in4p_laddr(&inpcb)) == INADDR_ANY)
-                continue;
-
             struct sockaddr_in saddr = {
                 .sin_family      = AF_INET,
                 .sin_port        = ntohs(inpcb.inp_lport),
@@ -165,9 +161,6 @@ int conn_read(void)
             conn_handle_ports((struct sockaddr *)&saddr, (struct sockaddr *)&daddr,
                               tcpcb.t_state, TCP_STATE_MIN, TCP_STATE_MAX);
         } else if (inpcb.inp_af == AF_INET6) {
-            if (IN6_IS_ADDR_UNSPECIFIED(&in6p_laddr(&inpcb)))
-                continue;
-
             struct sockaddr_in6 saddr = {
                 .sin6_family       = AF_INET6,
                 .sin6_port         = ntohs(inpcb.inp_lport)
@@ -189,6 +182,16 @@ int conn_read(void)
     }
 
     conn_submit_all(tcp_state, TCP_STATE_MIN, TCP_STATE_MAX);
+
+    return 0;
+}
+
+int conn_shutdown(void)
+{
+    if (kvmd != NULL) {
+        kvm_close(kvmd);
+        kvmd = NULL;
+    }
 
     return 0;
 }
