@@ -10,6 +10,7 @@
 \fBload-plugin\fP ethstat
 \fBplugin\fP ethstat {
     \fBinterface\fP \fIname\fP {
+        \fBgauge\fP [\fIincl|include|excl|exclude\fP] \fIstat-name\fP
         \fBfilter\fP {
             ...
         }
@@ -25,7 +26,14 @@ The plugin supports the following options:
 .Bl -tag -width Ds
 .It \fBinterface\fP \fIname\fP
 Collect statistical information about interface \fIname\fP.
+All the statistics are reported as counters unless selected with the
+\fBgauge\fP option.
 .Bl -tag -width Ds
+.It \fBgauge\fP [\fIincl|include|excl|exclude\fP] \fIstat-name\fP
+Report the statistics whose driver name match \fIstat-name\fP as gauges
+instead of counters.
+\fIstat-name\fP can be a string or a regular expression.
+This option can be given multiple times.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
 See \fBFILTER CONFIGURATION\fP in

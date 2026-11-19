@@ -9,6 +9,7 @@
 #include "plugin.h"
 #include "libutils/common.h"
 #include "libutils/time.h"
+#include "libutils/exclist.h"
 
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
@@ -25,6 +26,7 @@
 
 typedef struct {
     char *device;
+    exclist_t gauge;
     plugin_filter_t *filter;
 } interface_t;
 
@@ -35,15 +37,40 @@ static void ethstat_submit_value(interface_t *interface, const char *name, uint6
                                                          cdtime_t ts)
 {
     char fam_name[ETH_GSTRING_LEN + 32];
-    ssnprintf(fam_name, sizeof(fam_name), "system_ethstat_%s", name);
+    int len = ssnprintf(fam_name, sizeof(fam_name), "system_ethstat_%s", name);
+    if ((len < 0) || ((size_t)len >= sizeof(fam_name)))
+        len = sizeof(fam_name) - 1;
+
+    /* Driver names can contain characters not valid in a metric name
+     * (e.g. "[0]: rx_ucast_packets", "rx-0.packets", "port.rx_bytes"):
+     * replace them with '_' and collapse consecutive '_'. */
+    size_t prefix_len = strlen("system_ethstat_");
+    size_t n = prefix_len;
+    for (size_t i = prefix_len; i < (size_t)len; i++) {
+        char c = fam_name[i];
+        if (!isalnum((int)(unsigned char)c))
+            c = '_';
+        if ((c == '_') && (fam_name[n-1] == '_'))
+            continue;
+        fam_name[n++] = c;
+    }
+    while ((n > prefix_len) && (fam_name[n-1] == '_'))
+        n--;
+    fam_name[n] = '\0';
+
+    if (n == prefix_len)
+        return;
+
+    bool is_gauge = (exclist_size(&interface->gauge) > 0) &&
+                    exclist_match(&interface->gauge, name);
 
     metric_family_t fam = {
         .name = fam_name,
-        .type = METRIC_TYPE_COUNTER,
+        .type = is_gauge ? METRIC_TYPE_GAUGE : METRIC_TYPE_COUNTER,
     };
 
-    metric_family_append(&fam, VALUE_COUNTER(value), NULL,
-                         &LABEL_PAIR_CONST("device", interface->device), NULL);
+    metric_family_append(&fam, is_gauge ? VALUE_GAUGE((double)value) : VALUE_COUNTER(value),
+                         NULL, &LABEL_PAIR_CONST("device", interface->device), NULL);
 
     plugin_dispatch_metric_family_filtered(&fam, interface->filter, ts);
 }
@@ -75,8 +102,12 @@ static int ethstat_read_interface(interface_t *interface)
         return -1;
     }
 
-    size_t strings_size = sizeof(struct ethtool_gstrings) + (n_stats * ETH_GSTRING_LEN);
-    size_t stats_size = sizeof(struct ethtool_stats) + (n_stats * sizeof(uint64_t));
+    /* The kernel recomputes the number of stats on each ioctl and copies that
+     * many elements, ignoring the size given by us. Oversize the buffers in
+     * case the number grows between the calls (e.g. queues reconfigured). */
+    size_t n_alloc = (n_stats * 2) + 64;
+    size_t strings_size = sizeof(struct ethtool_gstrings) + (n_alloc * ETH_GSTRING_LEN);
+    size_t stats_size = sizeof(struct ethtool_stats) + (n_alloc * sizeof(uint64_t));
 
     struct ethtool_gstrings *strings = calloc(1, strings_size);
     struct ethtool_stats *stats = calloc(1, stats_size);
@@ -113,6 +144,13 @@ static int ethstat_read_interface(interface_t *interface)
         return -1;
     }
 
+    /* Use the counts returned by the kernel. */
+    n_stats = n_alloc;
+    if ((size_t)strings->len < n_stats)
+        n_stats = (size_t)strings->len;
+    if ((size_t)stats->n_stats < n_stats)
+        n_stats = (size_t)stats->n_stats;
+
     cdtime_t ts = cdtime();
 
     for (size_t i = 0; i < n_stats; i++) {
@@ -121,6 +159,9 @@ static int ethstat_read_interface(interface_t *interface)
         stat_name[ETH_GSTRING_LEN-1] = '\0';
         while (isspace((int)*stat_name))
             stat_name++;
+
+        if (*stat_name == '\0')
+            continue;
 
         PLUGIN_DEBUG("device = '%s': %s = %" PRIu64, interface->device, stat_name,
                                                      (uint64_t)stats->data[i]);
@@ -150,6 +191,7 @@ static int ethstat_config_interface(const config_item_t *ci)
     interfaces = tmp;
     interface_t *interface = &interfaces[interfaces_num];
     interface->device = NULL;
+    interface->gauge = (exclist_t){0};
     interface->filter = NULL;
 
     int status = cf_util_get_string(ci, &interface->device);
@@ -159,7 +201,9 @@ static int ethstat_config_interface(const config_item_t *ci)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
-        if (strcasecmp("filter", child->key) == 0) {
+        if (strcasecmp("gauge", child->key) == 0) {
+            status = cf_util_exclist(child, &interface->gauge);
+        } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &interface->filter);
         } else {
             PLUGIN_ERROR("The configuration option '%s' in %s:%d is not allowed here.",
@@ -173,13 +217,14 @@ static int ethstat_config_interface(const config_item_t *ci)
 
     if (status != 0) {
         free(interface->device);
+        exclist_reset(&interface->gauge);
         plugin_filter_free(interface->filter);
         return -1;
     }
 
     interfaces_num++;
 
-    PLUGIN_INFO("Registered interface %s", interface->device);
+    PLUGIN_DEBUG("Registered interface %s", interface->device);
 
     return 0;
 }
@@ -192,7 +237,7 @@ static int ethstat_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("interface", child->key) == 0) {
-            ethstat_config_interface(child);
+            status = ethstat_config_interface(child);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                          child->key, cf_get_file(child), cf_get_lineno(child));
@@ -213,6 +258,7 @@ static int ethstat_shutdown(void)
 
     for (size_t i = 0; i < interfaces_num; i++) {
         free(interfaces[i].device);
+        exclist_reset(&interfaces[i].gauge);
         plugin_filter_free(interfaces[i].filter);
     }
 

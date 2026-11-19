@@ -9,6 +9,7 @@ NCOLLECTD-ETHSTAT(5) - File Formats Manual
 	load-plugin ethstat
 	plugin ethstat {
 	    interface name {
+	        gauge [incl|include|excl|exclude] stat-name
 	        filter {
 	            ...
 	        }
@@ -26,6 +27,15 @@ The plugin supports the following options:
 **interface** *name*
 
 > Collect statistical information about interface *name*.
+> All the statistics are reported as counters unless selected with the
+> **gauge** option.
+
+> **gauge** \[*incl|include|excl|exclude*] *stat-name*
+
+> > Report the statistics whose driver name match *stat-name* as gauges
+> > instead of counters.
+> > *stat-name* can be a string or a regular expression.
+> > This option can be given multiple times.
 
 > **filter**
 
