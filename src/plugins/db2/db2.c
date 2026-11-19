@@ -8,8 +8,10 @@
 #include "libutils/dtoa.h"
 #include "libdbquery/dbquery.h"
 
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #include <sqlcli1.h>
+#pragma GCC diagnostic pop
 
 typedef struct {
     char *name;
@@ -21,6 +23,7 @@ typedef struct {
     char *alias;
     char *user;
     char *pass;
+    cdtime_t timeout;
 
     db_query_preparation_area_t **q_prep_areas;
     db_query_t **queries;
@@ -28,6 +31,8 @@ typedef struct {
 
     SQLHDBC hdbc;
     SQLHENV henv;
+    bool connected;
+    unsigned int version;
 } db2_database_t;
 
 static db_query_t **queries;
@@ -37,16 +42,18 @@ static int db2_read_database(user_data_t *ud);
 
 static const char *db2_strerror(SQLHANDLE hdl, SQLSMALLINT htype, char *buffer, size_t size)
 {
-    SQLCHAR sqlstate[6];
-    SQLINTEGER nerror;
+    SQLCHAR sqlstate[SQL_SQLSTATE_SIZE + 1] = {0};
+    SQLINTEGER nerror = 0;
     SQLCHAR emsg[4096];
     SQLSMALLINT emsg_size = 0;
 
     SQLRETURN rc = SQLGetDiagRec(htype, hdl, 1, sqlstate, &nerror,
                                         emsg, sizeof(emsg) - 1, &emsg_size);
-    if (rc != SQL_NO_DATA_FOUND) {
+    if (SQL_SUCCEEDED(rc)) {
+        if ((emsg_size < 0) || (emsg_size > (SQLSMALLINT)(sizeof(emsg) - 1)))
+            emsg_size = sizeof(emsg) - 1;
         emsg[emsg_size] = '\0';
-        ssnprintf(buffer, size, "SqlState: %s ErrorCode: %d  %s\n", sqlstate, nerror, emsg);
+        ssnprintf(buffer, size, "SqlState: %s ErrorCode: %d %s", sqlstate, nerror, emsg);
         return buffer;
     }
 
@@ -56,33 +63,64 @@ static const char *db2_strerror(SQLHANDLE hdl, SQLSMALLINT htype, char *buffer, 
 
 static int db2_disconnect(db2_database_t *db)
 {
+    int status = 0;
+
     if (db->hdbc != SQL_NULL_HDBC) {
-        SQLRETURN rc = SQLDisconnect(db->hdbc);
-        if (rc != SQL_SUCCESS) {
-            char errbuf[1024];
-            PLUGIN_ERROR("unable to disconnect %s: %s", db->name,
-                         db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
-            return -1;
+        SQLRETURN rc;
+        if (db->connected) {
+            rc = SQLDisconnect(db->hdbc);
+            if (!SQL_SUCCEEDED(rc)) {
+                char errbuf[1024];
+                PLUGIN_ERROR("unable to disconnect %s: %s", db->name,
+                             db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
+                status = -1;
+            }
+            db->connected = false;
+            db->version = 0;
         }
 
         rc = SQLFreeHandle(SQL_HANDLE_DBC, db->hdbc);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             PLUGIN_ERROR("unable to free connection handle %s", db->name);
-            return -1;
+            status = -1;
         }
         db->hdbc = SQL_NULL_HDBC;
     }
 
     if (db->henv != SQL_NULL_HENV) {
         SQLRETURN rc = SQLFreeHandle(SQL_HANDLE_ENV, db->henv);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             PLUGIN_ERROR("unable to free environment handle %s", db->name);
-            return -1;
+            status = -1;
         }
         db->henv = SQL_NULL_HENV;
     }
 
-    return 0;
+    return status;
+}
+
+static SQLULEN db2_timeout(db2_database_t *db)
+{
+    cdtime_t timeout = db->timeout != 0 ? db->timeout : plugin_get_interval();
+    uint64_t seconds = (CDTIME_T_TO_MS(timeout) + 999) / 1000;
+
+    if (seconds < 1)
+        return 1;
+    /* maximum login timeout accepted by the DB2 CLI */
+    if (seconds > 32767)
+        return 32767;
+    return (SQLULEN)seconds;
+}
+
+static void db2_set_query_timeout(db2_database_t *db, SQLHSTMT hstmt)
+{
+    SQLRETURN rc = SQLSetStmtAttr(hstmt, SQL_ATTR_QUERY_TIMEOUT,
+                                  (SQLPOINTER)(uintptr_t)db2_timeout(db), 0);
+    if (!SQL_SUCCEEDED(rc)) {
+        char errbuf[1024];
+        PLUGIN_WARNING("Unable to set the query timeout in %s: %s", db->name,
+                       db2_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
+    }
 }
 
 static unsigned int db2_version(db2_database_t *db)
@@ -91,7 +129,7 @@ static unsigned int db2_version(db2_database_t *db)
     SQLSMALLINT len = 0;
 
     SQLRETURN rc = SQLGetInfo(db->hdbc, SQL_DBMS_VER, buffer, sizeof(buffer) - 1, &len);
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLGetInfo failed in %s: %s", db->name,
                      db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -103,22 +141,14 @@ static unsigned int db2_version(db2_database_t *db)
 
     buffer[len] = '\0';
 
-    unsigned int version = 0;
-    unsigned int mult = 1;
-    char *dot;
-    char *start = (char *)buffer;
-    int i = 0;
-    for (i = 0; (dot = strrchr(start, '.')) != NULL && i < 5; i++) {
-        version += atoi(dot + 1) * mult;
-        *dot = '\0';
-        mult *= 100;
-    }
-    version += atoi(start) * mult;
-
-    if (i == 5)
+    /* SQL_DBMS_VER has the form mm.vv.rrrr, e.g. 11.05.0800 -> 11050800 */
+    unsigned int major = 0, minor = 0, release = 0;
+    if (sscanf((char *)buffer, "%u.%u.%u", &major, &minor, &release) != 3) {
+        PLUGIN_WARNING("Cannot parse the version '%s' of %s.", (char *)buffer, db->name);
         return 0;
+    }
 
-    return version;
+    return major * 1000000 + minor * 10000 + release;
 }
 
 static int db2_ping(db2_database_t *db)
@@ -127,16 +157,18 @@ static int db2_ping(db2_database_t *db)
 
     SQLHSTMT hstmt = SQL_NULL_HSTMT;
     SQLRETURN rc = SQLAllocHandle(SQL_HANDLE_STMT, db->hdbc, &hstmt);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLAllocHandle STMT failed in %s: %s", db->name,
                      db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
         return 0;
     }
 
+    db2_set_query_timeout(db, hstmt);
+
     /* coverity[NEGATIVE_RETURNS] */
     rc = SQLExecDirect(hstmt, (UCHAR *)ping_query, SQL_NTS);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("Error executing ping query in %s: %s", db->name,
                      db2_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
@@ -144,8 +176,9 @@ static int db2_ping(db2_database_t *db)
         return 0;
     }
 
-    while (SQLMoreResults(hstmt) != SQL_NO_DATA)
-        ;
+    do {
+        rc = SQLMoreResults(hstmt);
+    } while (SQL_SUCCEEDED(rc));
 
     if (hstmt != SQL_NULL_HSTMT)
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -157,6 +190,7 @@ static int db2_get_data(SQLHSTMT hstmt, SQLUSMALLINT idx, SQLSMALLINT type,
                                           char *buffer, size_t buffer_size)
 {
     SQLSMALLINT ctype = SQL_C_CHAR;
+    SQLLEN size = (SQLLEN)buffer_size;
 
     switch(type) {
     case SQL_XML:
@@ -166,6 +200,8 @@ static int db2_get_data(SQLHSTMT hstmt, SQLUSMALLINT idx, SQLSMALLINT type,
     case SQL_LONGVARBINARY:
     case SQL_BINARY:
         ctype = SQL_C_BINARY;
+        /* binary data is not NUL terminated by SQLGetData */
+        size = (SQLLEN)buffer_size - 1;
         break;
     default:
         ctype = SQL_C_CHAR;
@@ -173,13 +209,24 @@ static int db2_get_data(SQLHSTMT hstmt, SQLUSMALLINT idx, SQLSMALLINT type,
     }
 
     buffer[0] = '\0';
-    SQLLEN ptr;
-    SQLRETURN rc = SQLGetData(hstmt, idx, ctype, buffer, buffer_size, &ptr);
-    if (rc != SQL_SUCCESS) {
+    SQLLEN ptr = 0;
+    SQLRETURN rc = SQLGetData(hstmt, idx, ctype, buffer, size, &ptr);
+    /* Values longer than the buffer are truncated (SQL_SUCCESS_WITH_INFO). */
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLGetData failed: %s",
                      db2_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
         return -1;
+    }
+
+    if (ptr == SQL_NULL_DATA)
+        return 1;
+
+    if (ctype == SQL_C_BINARY) {
+        /* SQL_NO_TOTAL or truncated: the buffer is full */
+        if ((ptr < 0) || (ptr > size))
+            ptr = size;
+        buffer[ptr] = '\0';
     }
 
     return 0;
@@ -232,7 +279,7 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
     assert(statement != NULL);
 
     rc = SQLAllocHandle(SQL_HANDLE_STMT, db->hdbc, &hstmt);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLAllocHandle STMT failed in %s: %s", db->name,
                      db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -240,9 +287,11 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
         goto error;
     }
 
+    db2_set_query_timeout(db, hstmt);
+
     /* coverity[NEGATIVE_RETURNS] */
     rc = SQLExecDirect(hstmt, (UCHAR *)statement, SQL_NTS);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLExecDirect failed in %s: %s", db->name,
                      db2_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
@@ -252,11 +301,18 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
         SQLSMALLINT columns;
 
         rc = SQLNumResultCols(hstmt, &columns);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("db2_read_database_query (%s, %s): SQLNumResultCols failed : %s",
                         db->name, db_query_get_name(q),
                         db2_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
+            status = -1;
+            goto error;
+        }
+
+        if (columns <= 0) {
+            PLUGIN_ERROR("db2_read_database_query (%s, %s): The statement returned no columns.",
+                         db->name, db_query_get_name(q));
             status = -1;
             goto error;
         }
@@ -314,7 +370,7 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
         rc = SQLDescribeCol(hstmt, (SQLUSMALLINT)(i + 1), column_name,
                                    DATA_MAX_NAME_LEN, &column_name_len, &(column_types[i]),
                                    NULL, NULL, NULL);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("db2_read_database_query (%s, %s): SQLDescribeCol %zu failed : %s",
                           db->name, db_query_get_name(q), i + 1,
@@ -322,6 +378,8 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
             status = -1;
             goto error;
         }
+        if ((column_name_len < 0) || (column_name_len >= DATA_MAX_NAME_LEN))
+            column_name_len = DATA_MAX_NAME_LEN - 1;
         column_names[i][column_name_len] = '\0';
     }
 
@@ -341,7 +399,7 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
             break;
         }
 
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("db2_read_database_query (%s, %s): SQLFetch failed : %s",
                          db->name, db_query_get_name(q),
@@ -351,18 +409,30 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
         }
 
         /* Copy the value of the columns to `column_values' */
+        bool null_value = false;
         for (size_t i = 0; i < column_num; i++) {
             status = db2_get_data(hstmt, (SQLUSMALLINT)(i + 1), column_types[i],
                                            column_values[i], DATA_MAX_NAME_LEN);
 
-            if (status != 0) {
+            if (status < 0) {
                 PLUGIN_ERROR("db2_read_database_query (%s, %s): "
-                              "db2_result_get_field (%" PRIsz ") \"%s\" failed.",
+                              "db2_get_data (%" PRIsz ") \"%s\" failed.",
                               db->name, db_query_get_name(q), i + 1, column_names[i]);
                 status = -1;
                 goto error;
             }
+
+            if (status > 0) {
+                PLUGIN_DEBUG("db2_read_database_query (%s, %s): column %" PRIsz " \"%s\" "
+                             "is NULL, skipping the row.",
+                             db->name, db_query_get_name(q), i + 1, column_names[i]);
+                null_value = true;
+                break;
+            }
         }
+
+        if (null_value)
+            continue;
 
         /* If all values were copied successfully, call `db_query_handle_result'
          * to dispatch the row to the daemon. */
@@ -374,12 +444,11 @@ static int db2_read_database_query(db2_database_t *db, db_query_t *q,
         }
     }
 
-    /* Tell the db query interface that we're done with this query. */
-    db_query_finish_result(q, prep_area);
-
     status = 0;
 
 error:
+    /* Tell the db query interface that we're done with this query. */
+    db_query_finish_result(q, prep_area);
 
     if (column_names != NULL) {
         free(column_names[0]);
@@ -404,8 +473,6 @@ error:
 
 static int db2_connect(db2_database_t *db)
 {
-    SQLCHAR buffer[256];
-    SQLSMALLINT len;
     SQLRETURN rc = SQL_SUCCESS;
     int status;
 
@@ -418,52 +485,66 @@ static int db2_connect(db2_database_t *db)
     db2_disconnect(db);
 
     rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &(db->henv));
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         PLUGIN_ERROR("db2_connect(%s): Unable to allocate environment handle", db->name);
         return -1;
     }
 
     /* set options */
     rc = SQLSetEnvAttr(db->henv, SQL_ATTR_ODBC_VERSION, (void *)SQL_OV_ODBC3, 0);
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         PLUGIN_ERROR("db2_connect(%s): Unable to set ODBC3 attribute", db->name);
         return -1;
     }
 
     rc = SQLAllocHandle(SQL_HANDLE_DBC, db->henv, &db->hdbc);
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         PLUGIN_ERROR("db2_connect(%s): Unable to allocate connection handle", db->name);
         return -1;
     }
 
+    rc = SQLSetConnectAttr(db->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
+                           (SQLPOINTER)(uintptr_t)db2_timeout(db), 0);
+    if (!SQL_SUCCEEDED(rc)) {
+        char errbuf[1024];
+        PLUGIN_WARNING("db2_connect(%s): Unable to set the login timeout: %s", db->name,
+                       db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
+    }
+
     if (db->conn != NULL) {
-        rc = SQLDriverConnect(db->hdbc, NULL, (SQLCHAR *)db->conn, SQL_NTS, buffer,
-                                        sizeof(buffer), &len, SQL_DRIVER_COMPLETE);
-        if (rc == SQL_SUCCESS_WITH_INFO) {
-            buffer[len] = '\0';
-            PLUGIN_WARNING("db2_connect(%s): SQLDriverConnect "
-                           "reported the following diagnostics: %s", db->name, buffer);
-            return 0;
-        }
-        if (rc != SQL_SUCCESS) {
+        rc = SQLDriverConnect(db->hdbc, NULL, (SQLCHAR *)db->conn, SQL_NTS, NULL, 0, NULL,
+                                        SQL_DRIVER_NOPROMPT);
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("db2_connect(%s): SQLDriverConnect failed : %s", db->name,
                          db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
             db2_disconnect(db);
             return -1;
         }
+        if (rc == SQL_SUCCESS_WITH_INFO) {
+            char errbuf[1024];
+            PLUGIN_WARNING("db2_connect(%s): SQLDriverConnect reported the following "
+                           "diagnostics: %s", db->name,
+                           db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
+        }
     } else {
         rc = SQLConnect(db->hdbc, (SQLCHAR *)db->alias, SQL_NTS, (SQLCHAR *)db->user,
                                   SQL_NTS, (SQLCHAR *)db->pass, SQL_NTS);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("db2_connect(%s): SQLConnect failed: %s", db->name,
                           db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
             db2_disconnect(db);
             return -1;
         }
+        if (rc == SQL_SUCCESS_WITH_INFO) {
+            char errbuf[1024];
+            PLUGIN_WARNING("db2_connect(%s): SQLConnect reported the following diagnostics: %s",
+                           db->name, db2_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
+        }
     }
 
+    db->connected = true;
     return 0;
 }
 
@@ -488,8 +569,11 @@ static int db2_read_database(user_data_t *ud)
     metric_family_append(&fam_up, VALUE_GAUGE(1), &db->labels, NULL);
     plugin_dispatch_metric_family(&fam_up, 0);
 
-    unsigned int db_version = db2_version(db);
+    if (db->version == 0)
+        db->version = db2_version(db);
+    unsigned int db_version = db->version;
 
+    size_t executed = 0;
     int success = 0;
     for (size_t i = 0; i < db->queries_num; i++) {
         /* Check if we know the database's version and if so, if this query applies
@@ -497,12 +581,13 @@ static int db2_read_database(user_data_t *ud)
         if ((db_version != 0) && (db_query_check_version(db->queries[i], db_version) == 0))
             continue;
 
+        executed++;
         status = db2_read_database_query(db, db->queries[i], db->q_prep_areas[i]);
         if (status == 0)
             success++;
     }
 
-    if (success == 0) {
+    if ((executed > 0) && (success == 0)) {
         PLUGIN_ERROR("All queries failed for database `%s'.", db->name);
         return -1;
     }
@@ -558,6 +643,8 @@ static int db2_config_add_database(config_item_t *ci)
                                                      &db->queries, &db->queries_num);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &db->timeout);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &db->filter);
         } else {
@@ -580,6 +667,9 @@ static int db2_config_add_database(config_item_t *ci)
             PLUGIN_WARNING("Only 'alias' or 'connection' can be given for database '%s'", db->name);
             status = -1;
         }
+        if ((db->conn != NULL) && ((db->user != NULL) || (db->pass != NULL)))
+            PLUGIN_WARNING("'user' and 'password' are ignored with 'connection' for database "
+                           "'%s': use UID and PWD in the connection string.", db->name);
     }
 
     while ((status == 0) && (db->queries_num > 0)) {
@@ -607,7 +697,12 @@ static int db2_config_add_database(config_item_t *ci)
         return -1;
     }
 
-    label_set_add(&db->labels, true, "instance", db->name);
+    status = label_set_add(&db->labels, true, "instance", db->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the instance label for database '%s'.", db->name);
+        db2_database_free(db);
+        return -1;
+    }
 
     return plugin_register_complex_read("db2", db->name, db2_read_database, interval,
                                         &(user_data_t){.data=db, .free_func=db2_database_free });

@@ -39,6 +39,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBquery\fP \fIquery-name\fP
         \fBfilter\fP {
             ...
@@ -75,6 +76,8 @@ Specifies the connection string to use to connect to the database.
 A connection string consists of a series of keyword value pairs separated by
 semicolons (\f(CW;\fP).
 The equal sign (\f(CW=\fP) connects each keyword and its value.
+The \fBuser\fP and \fBpassword\fP options are not used with a connection
+string: give the user and password with the \fIUID\fP and \fIPWD\fP keywords.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBdatabase\fP block.
@@ -84,10 +87,14 @@ Prepends \fIprefix\fP to the metrics name.
 Sets the interval (in seconds) in which the values will be collected from this
 database.
 By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+Sets the timeout (in seconds) to connect to the database and to execute
+each query; slower operations are aborted.
+By default the \fBinterval\fP of this database is used.
 .It \fBquery\fP \fIquery-name\fP
 Associates the query named \fIquery-name\fP with this database connection.
 The query needs to be defined \fIbefore\fP this statement, i. e. all query
-blocks you want to refer to must be placed above the database block you
+blocks you want to refer to must be placed above the \fBinstance\fP block you
 want to refer to them from.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
@@ -113,6 +120,8 @@ the same query again and again is not desirable.
 Sets the statement that should be executed on the server.
 This is \fBnot\fP interpreted by ncollectd, but simply passed to the
 database server.
+Rows with a NULL value in any column are skipped; use \fBCOALESCE\fP in the
+statement to replace NULL values.
 .It \fBmin-version\fP \fIversion\fP
 .It \fBmax-version\fP \fIversion\fP
 Only use this query for the specified database version.
@@ -120,6 +129,9 @@ You can use these options to provide multiple queries with the same name but
 with a slightly different syntax.
 The plugin will use only those queries, where the specified minimum
 and maximum versions fit the version of the database in use.
+The version of the database is the \fBSQL_DBMS_VER\fP string \fImm.vv.rrrr\fP
+reported by the server, compared as the number \fImmvvrrrr\fP: for example
+version 11.05.0800 is 11050800 and version 10.01.0000 is 10010000.
 .It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metrics name.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
