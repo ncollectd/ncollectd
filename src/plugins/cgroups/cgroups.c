@@ -11,10 +11,6 @@
 #include "libutils/exclist.h"
 #include "libutils/mount.h"
 
-#ifdef HAVE_LINUX_CONFIG_H
-#include <linux/config.h>
-#endif
-
 enum {
     FAM_CGROUPS_CPU_USAGE_SECONDS,
     FAM_CGROUPS_CPU_USER_SECONDS,
@@ -598,50 +594,52 @@ static metric_family_t fams[FAM_CGROUPS_MAX] = {
         .help = "Number of discard IOs",
     },
     [FAM_CGROUPS_PRESSURE_CPU_WAITING] = {
-        .name = "system_cgroups_pressure_cpu_waiting",
+        .name = "system_cgroups_pressure_cpu_waiting_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The share of time in which at least some tasks in the cgroup "
+        .help = "Total time in seconds in which at least some tasks in the cgroup "
                 "are stalled on the cpu.",
     },
     [FAM_CGROUPS_PRESSURE_CPU_STALLED] = {
-        .name = "system_cgroups_pressure_cpu_stalled",
+        .name = "system_cgroups_pressure_cpu_stalled_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The share of time in which all non-idle tasks in the cgroup "
+        .help = "Total time in seconds in which all non-idle tasks in the cgroup "
                 "are stalled on the cpu simultaneously.",
     },
     [FAM_CGROUPS_PRESSURE_IO_WAITING] = {
-        .name = "system_cgroups_pressure_io_waiting",
+        .name = "system_cgroups_pressure_io_waiting_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The share of time in which at least some tasks in the cgroup "
+        .help = "Total time in seconds in which at least some tasks in the cgroup "
                 "are stalled on the io.",
     },
     [FAM_CGROUPS_PRESSURE_IO_STALLED] = {
-        .name = "system_cgroups_pressure_io_stalled",
+        .name = "system_cgroups_pressure_io_stalled_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The share of time in which all non-idle tasks in the cgroup "
+        .help = "Total time in seconds in which all non-idle tasks in the cgroup "
                 "are stalled on the io simultaneously."
     },
     [FAM_CGROUPS_PRESSURE_MEMORY_WAITING] = {
-        .name = "system_cgroups_pressure_memory_waiting",
+        .name = "system_cgroups_pressure_memory_waiting_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The share of time in which at least some tasks in the cgroup "
+        .help = "Total time in seconds in which at least some tasks in the cgroup "
                 "are stalled on the memory.",
     },
     [FAM_CGROUPS_PRESSURE_MEMORY_STALLED] = {
-        .name = "system_cgroups_pressure_memory_stalled",
+        .name = "system_cgroups_pressure_memory_stalled_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The share of time in which all non-idle tasks in the cgroup "
+        .help = "Total time in seconds in which all non-idle tasks in the cgroup "
                 "are stalled on the memory simultaneously.",
     },
 };
 
 #include "plugins/cgroups/memorystat.h"
 
-#ifndef CONFIG_HZ
-#define CONFIG_HZ 100
-#endif
+/* Limit the recursion depth: unprivileged users can create arbitrarily
+ * deep cgroup trees in delegated subtrees. */
+#define CGROUPS_MAX_DEPTH 32
 
 static exclist_t excl_cgroup;
+
+static double clock_ticks = 100;
 
 static plugin_filter_t *filter;
 
@@ -650,6 +648,7 @@ typedef enum {
     KIND_CGROUP_V1_CPUACCT,
     KIND_CGROUP_V1_BLKIO,
     KIND_CGROUP_V1_MEMORY,
+    KIND_CGROUP_V1_PIDS,
 } kind_cgroup_t;
 
 static int read_blkio_io(int dir_fd, const char *filename, const char *cgroup_name,
@@ -716,7 +715,7 @@ static int read_io_stat(int dir_fd, const char *cgroup_name)
         char *fields[16];
 
         int numfields = strsplit(buf, fields, STATIC_ARRAY_SIZE(fields));
-        if (numfields < 7)
+        if (numfields < 2)
             continue;
 
         char *major = fields[0];
@@ -725,7 +724,7 @@ static int read_io_stat(int dir_fd, const char *cgroup_name)
             continue;
         *(minor++) = 0;
 
-        for (int i=1; i < 7; i++) {
+        for (int i=1; i < numfields; i++) {
             char *key = fields[i];
             char *value = strchr(fields[i], '=');
             if (value == NULL)
@@ -785,7 +784,7 @@ static int read_cpu_stat_v1(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "cpuacct.stat", "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('cpuacct.stat') at '%s' failed: %s", cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('cpuacct.stat') at '%s' failed: %s", cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -821,15 +820,22 @@ static int read_cpu_stat_v1(int dir_fd, const char *cgroup_name)
 
         if (!strcmp(key, "user"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_USER_SECONDS],
-                                 VALUE_COUNTER_FLOAT64((double)counter / 1000000000.0), NULL,
+                                 VALUE_COUNTER_FLOAT64((double)counter / clock_ticks), NULL,
                                  &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
         else if (!strcmp(key, "system"))
             metric_family_append(&fams[FAM_CGROUPS_CPU_SYSTEM_SECONDS],
-                                 VALUE_COUNTER_FLOAT64((double)counter / 1000000000.0), NULL,
+                                 VALUE_COUNTER_FLOAT64((double)counter / clock_ticks), NULL,
                                  &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
     }
 
     fclose(fh);
+
+    /* cpuacct.usage is in nanoseconds */
+    uint64_t usage = 0;
+    if (filetouint_at(dir_fd, "cpuacct.usage", &usage) == 0)
+        metric_family_append(&fams[FAM_CGROUPS_CPU_USAGE_SECONDS],
+                             VALUE_COUNTER_FLOAT64((double)usage / 1000000000.0), NULL,
+                             &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
 
     return 0;
 }
@@ -838,7 +844,7 @@ static int read_cpu_max(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "cpu.max", "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('%s') failed: %s", cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('%s') failed: %s", cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -886,7 +892,7 @@ static int read_cpu_stat_v2(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "cpu.stat", "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('%s') failed: %s", cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('%s') failed: %s", cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -945,12 +951,36 @@ static int read_memory_max(int dir_fd, char *path, const char *cgroup_name, metr
 
     char *tbuf = strntrim(buf, (size_t)len);
 
-    uint64_t max = 0;
+    /* "max" means no limit: do not report a value. */
+    if (strcmp(tbuf, "max") == 0)
+        return 0;
 
-    if (strcmp(tbuf, "max") != 0)
-        strtouint(tbuf, &max);
+    uint64_t max = 0;
+    int status = strtouint(tbuf, &max);
+    if (status != 0) {
+        PLUGIN_DEBUG("Invalid value '%s' in '%s' at '%s'.", tbuf, path, cgroup_name);
+        return -1;
+    }
 
     metric_family_append(fam, VALUE_GAUGE(max), NULL,
+                         &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
+
+    return 0;
+}
+
+static int read_memory_limit_v1(int dir_fd, const char *cgroup_name)
+{
+    uint64_t limit = 0;
+    int status = filetouint_at(dir_fd, "memory.limit_in_bytes", &limit);
+    if (status != 0)
+        return -1;
+
+    /* Without a limit the kernel reports PAGE_COUNTER_MAX * PAGE_SIZE
+     * (9223372036854771712 with 4KiB pages): treat it as unlimited. */
+    if (limit >= 0x7FFFFFFFFFFFF000ULL)
+        return 0;
+
+    metric_family_append(&fams[FAM_CGROUPS_MEMORY_MAX_BYTES], VALUE_GAUGE(limit), NULL,
                          &LABEL_PAIR_CONST("cgroup", cgroup_name), NULL);
 
     return 0;
@@ -960,7 +990,7 @@ static int read_memory_events(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "memory.events", "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('memory.events') at '%s' failed: %s", cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('memory.events') at '%s' failed: %s", cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -1018,7 +1048,7 @@ static int read_memory_numa_stat(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "memory.numa_stat", "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('memory.numa_stat') at '%s' failed: %s", cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('memory.numa_stat') at '%s' failed: %s", cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -1083,7 +1113,7 @@ static int read_memory_stat(int dir_fd, const char *cgroup_name)
 {
     FILE *fh = fopenat(dir_fd, "memory.stat", "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('memory.stat') at '%s' failed: %s", cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('memory.stat') at '%s' failed: %s", cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -1133,7 +1163,7 @@ static int read_pressure_file(int dir_fd, const char *filename, const char *cgro
 {
     FILE *fh = fopenat(dir_fd, filename, "r");
     if (fh == NULL) {
-        PLUGIN_DEBUG("fdopen ('%s') at %s failed: %s", filename, cgroup_name, STRERRNO);
+        PLUGIN_DEBUG("fopenat ('%s') at %s failed: %s", filename, cgroup_name, STRERRNO);
         return -1;
     }
 
@@ -1148,7 +1178,12 @@ static int read_pressure_file(int dir_fd, const char *filename, const char *cgro
         if (strncmp(fields[4], "total=", strlen("total=")) != 0)
             continue;
 
-        value_t value = VALUE_COUNTER(atoll(fields[4] + strlen("total=")));
+        /* total is the accumulated stall time in microseconds */
+        uint64_t total = 0;
+        if (strtouint(fields[4] + strlen("total="), &total) != 0)
+            continue;
+
+        value_t value = VALUE_COUNTER_FLOAT64((double)total / 1000000.0);
 
         if ((strcmp(fields[0], "some") == 0) && (fam_waiting != NULL)) {
             metric_family_append(fam_waiting, value, NULL,
@@ -1252,7 +1287,13 @@ static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup
             read_cgroup_file(cgroup_fd, "memory.usage_in_bytes", cgroup_name,
                                         &fams[FAM_CGROUPS_MEMORY_BYTES]);
 
+            read_memory_limit_v1(cgroup_fd, cgroup_name);
+
             read_memory_stat(cgroup_fd, cgroup_name);
+            break;
+        case KIND_CGROUP_V1_PIDS:
+            read_cgroup_file(cgroup_fd, "pids.current", cgroup_name,
+                                        &fams[FAM_CGROUPS_PROCESSES]);
             break;
     }
 
@@ -1260,8 +1301,14 @@ static int read_cgroup_stats(int cgroup_fd, const char *cgroup_name, kind_cgroup
 }
 
 static int read_cgroup(int dir_fd, const char *filename,
-                       const char *cgroup_name, kind_cgroup_t kind)
+                       const char *cgroup_name, kind_cgroup_t kind, int depth)
 {
+    if (depth > CGROUPS_MAX_DEPTH) {
+        PLUGIN_WARNING("Maximum cgroup depth (%d) reached at '%s', not descending further.",
+                       CGROUPS_MAX_DEPTH, cgroup_name);
+        return 0;
+    }
+
     DIR *dir = opendirat(dir_fd, filename);
     if (dir == NULL)
         return 0;
@@ -1275,8 +1322,13 @@ static int read_cgroup(int dir_fd, const char *filename,
     while ((dirent = readdir(dir)) != NULL) {
         if ((dirent->d_type == DT_DIR) && (dirent->d_name[0] != '.')) {
             char path[PATH_MAX];
-            ssnprintf(path, sizeof(path), "%s/%s", cgroup_name, dirent->d_name);
-            read_cgroup(cgroup_fd, dirent->d_name, path, kind);
+            int len = ssnprintf(path, sizeof(path), "%s/%s", cgroup_name, dirent->d_name);
+            if ((len < 0) || ((size_t)len >= sizeof(path))) {
+                PLUGIN_WARNING("cgroup path '%s/%s' is too long, skipping.",
+                               cgroup_name, dirent->d_name);
+                continue;
+            }
+            read_cgroup(cgroup_fd, dirent->d_name, path, kind, depth + 1);
         }
     }
 
@@ -1296,10 +1348,30 @@ static int read_cgroup_root(int dir_fd, const char *dirname, const char *filenam
 
     if (S_ISDIR(statbuf.st_mode)) {
         kind_cgroup_t kind = *(kind_cgroup_t *)user_data;
-        read_cgroup(dir_fd, filename, filename, kind);
+        read_cgroup(dir_fd, filename, filename, kind, 0);
     }
 
     return 0;
+}
+
+static void read_cgroup_mount_root(const char *dir, kind_cgroup_t kind)
+{
+    int dir_fd = open(dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (dir_fd < 0) {
+        PLUGIN_DEBUG("open ('%s') failed: %s", dir, STRERRNO);
+        return;
+    }
+
+    if (exclist_match(&excl_cgroup, "/"))
+        read_cgroup_stats(dir_fd, "/", kind);
+
+    close(dir_fd);
+}
+
+static void read_cgroup_mount(const char *dir, kind_cgroup_t kind)
+{
+    read_cgroup_mount_root(dir, kind);
+    walk_directory(dir, read_cgroup_root, &kind, 0);
 }
 
 static int cgroups_read(void)
@@ -1314,30 +1386,33 @@ static int cgroups_read(void)
     bool cgroup_v1_cpuacct_found = false;
     bool cgroup_v1_blkio_found = false;
     bool cgroup_v1_memory_found = false;
+    bool cgroup_v1_pids_found = false;
 
     for (cu_mount_t *mnt_ptr = mnt_list; mnt_ptr != NULL; mnt_ptr = mnt_ptr->next) {
         if (!cgroup_v2_found && (strcmp(mnt_ptr->type, "cgroup2") == 0)) {
-            kind_cgroup_t kind = KIND_CGROUP_V2;
-            walk_directory(mnt_ptr->dir, read_cgroup_root, &kind, 0);
+            read_cgroup_mount(mnt_ptr->dir, KIND_CGROUP_V2);
             cgroup_v2_found = true;
         } else if (strcmp(mnt_ptr->type, "cgroup") == 0) {
             if (!cgroup_v1_cpuacct_found &&
                 cu_mount_checkoption(mnt_ptr->options, "cpuacct", /* full = */ 1)) {
-                kind_cgroup_t kind = KIND_CGROUP_V1_CPUACCT;
-                walk_directory(mnt_ptr->dir, read_cgroup_root, &kind, 0);
+                read_cgroup_mount(mnt_ptr->dir, KIND_CGROUP_V1_CPUACCT);
                 cgroup_v1_cpuacct_found = true;
             }
             if (!cgroup_v1_blkio_found &&
                 cu_mount_checkoption(mnt_ptr->options, "blkio", /* full = */ 1)) {
-                kind_cgroup_t kind = KIND_CGROUP_V1_BLKIO;
-                walk_directory(mnt_ptr->dir, read_cgroup_root, &kind, 0);
+                read_cgroup_mount(mnt_ptr->dir, KIND_CGROUP_V1_BLKIO);
                 cgroup_v1_blkio_found = true;
             }
             if (!cgroup_v1_memory_found &&
                 cu_mount_checkoption(mnt_ptr->options, "memory", /* full = */ 1)) {
-                kind_cgroup_t kind = KIND_CGROUP_V1_MEMORY;
-                walk_directory(mnt_ptr->dir, read_cgroup_root, &kind, 0);
+                read_cgroup_mount(mnt_ptr->dir, KIND_CGROUP_V1_MEMORY);
                 cgroup_v1_memory_found = true;
+            }
+            if (!cgroup_v1_pids_found &&
+                cu_mount_checkoption(mnt_ptr->options, "pids", /* full = */ 1)) {
+                kind_cgroup_t kind = KIND_CGROUP_V1_PIDS;
+                walk_directory(mnt_ptr->dir, read_cgroup_root, &kind, 0);
+                cgroup_v1_pids_found = true;
             }
         }
     }
@@ -1345,7 +1420,7 @@ static int cgroups_read(void)
     cu_mount_freelist(mnt_list);
 
     if (!cgroup_v2_found && !cgroup_v1_cpuacct_found &&
-        !cgroup_v1_blkio_found && !cgroup_v1_memory_found) {
+        !cgroup_v1_blkio_found && !cgroup_v1_memory_found && !cgroup_v1_pids_found) {
         PLUGIN_WARNING("Unable to find cgroup mount-point.");
         return -1;
     }
@@ -1378,6 +1453,14 @@ static int cgroups_config(config_item_t *ci)
     return 0;
 }
 
+static int cgroups_init(void)
+{
+    long ticks = sysconf(_SC_CLK_TCK);
+    if (ticks > 0)
+        clock_ticks = (double)ticks;
+    return 0;
+}
+
 static int cgroups_shutdown(void)
 {
     exclist_reset(&excl_cgroup);
@@ -1388,6 +1471,7 @@ static int cgroups_shutdown(void)
 void module_register(void)
 {
     plugin_register_config("cgroups", cgroups_config);
+    plugin_register_init("cgroups", cgroups_init);
     plugin_register_read("cgroups", cgroups_read);
     plugin_register_shutdown("cgroups", cgroups_shutdown);
 }

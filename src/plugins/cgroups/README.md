@@ -26,6 +26,9 @@ The plugin has the following options:
 > Select *cgroup* based on the name.
 > By default only selected cgroups are collected if a selection is made.
 > If no selection is configured at all, **all** cgroups are selected.
+> The root cgroup is matched with the name */*.
+> The selection does not stop the plugin from descending into the children
+> of a non selected cgroup: they are matched by their own name.
 
 **filter**
 
