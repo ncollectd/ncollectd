@@ -38,6 +38,7 @@ NCOLLECTD-DB2(5) - File Formats Manual
 	        label key value
 	        metric-prefix prefix
 	        interval seconds
+	        timeout seconds
 	        query query-name
 	        filter {
 	            ...
@@ -87,6 +88,8 @@ generate one or more data sets from each row returned according to these rules.
 > > A connection string consists of a series of keyword value pairs separated by
 > > semicolons (;).
 > > The equal sign (=) connects each keyword and its value.
+> > The **user** and **password** options are not used with a connection
+> > string: give the user and password with the *UID* and *PWD* keywords.
 
 > **label** *key* *value*
 
@@ -103,11 +106,17 @@ generate one or more data sets from each row returned according to these rules.
 > > database.
 > > By default the global **interval** setting will be used.
 
+> **timeout** *seconds*
+
+> > Sets the timeout (in seconds) to connect to the database and to execute
+> > each query; slower operations are aborted.
+> > By default the **interval** of this database is used.
+
 > **query** *query-name*
 
 > > Associates the query named *query-name* with this database connection.
 > > The query needs to be defined *before* this statement, i. e. all query
-> > blocks you want to refer to must be placed above the database block you
+> > blocks you want to refer to must be placed above the **instance** block you
 > > want to refer to them from.
 
 > **filter**
@@ -137,6 +146,8 @@ generate one or more data sets from each row returned according to these rules.
 > > Sets the statement that should be executed on the server.
 > > This is **not** interpreted by ncollectd, but simply passed to the
 > > database server.
+> > Rows with a NULL value in any column are skipped; use **COALESCE** in the
+> > statement to replace NULL values.
 
 > **min-version** *version*
 
@@ -147,6 +158,9 @@ generate one or more data sets from each row returned according to these rules.
 > > with a slightly different syntax.
 > > The plugin will use only those queries, where the specified minimum
 > > and maximum versions fit the version of the database in use.
+> > The version of the database is the **SQL_DBMS_VER** string *mm.vv.rrrr*
+> > reported by the server, compared as the number *mmvvrrrr*: for example
+> > version 11.05.0800 is 11050800 and version 10.01.0000 is 10010000.
 
 > **metric-prefix** *prefix*
 
