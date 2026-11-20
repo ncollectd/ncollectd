@@ -37,6 +37,8 @@ typedef struct {
     int status;
     pid_t pid;
     bool running;
+    bool thread_started;
+    pthread_t thread;
     pthread_mutex_t lock;
 } program_t;
 
@@ -48,6 +50,7 @@ static void *exec_read_one(void *arg)
     char buffer_err[4096];
     char *pbuffer = buffer;
     char *pbuffer_err = buffer_err;
+    bool discard = false;
 
     int fd, fd_err;
     int status = exec_fork_child(&pm->exec, false, NULL, &fd, &fd_err);
@@ -58,9 +61,22 @@ static void *exec_read_one(void *arg)
         pthread_mutex_unlock(&pm->lock);
         pthread_exit((void *)1);
     }
-    pm->pid = status;
+    if (status == 0) {
+        PLUGIN_ERROR("exec_fork_child returned an invalid pid.");
+        close(fd);
+        if (fd_err >= 0)
+            close(fd_err);
+        pthread_mutex_lock(&pm->lock);
+        pm->running = false;
+        pthread_mutex_unlock(&pm->lock);
+        pthread_exit((void *)1);
+    }
 
-    assert(pm->pid != 0);
+    pid_t pid = status;
+
+    pthread_mutex_lock(&pm->lock);
+    pm->pid = pid;
+    pthread_mutex_unlock(&pm->lock);
 
     struct pollfd fds[2] = {{0}};
     fds[0].fd = fd;
@@ -71,9 +87,11 @@ static void *exec_read_one(void *arg)
     cdtime_t last_dispatch = cdtime();
     cdtime_t last_read = cdtime();
     cdtime_t timeout = pm->interval/2;
+    int poll_timeout = (CDTIME_T_TO_MS(timeout) > INT_MAX) ? INT_MAX
+                                                            : (int)CDTIME_T_TO_MS(timeout);
 
     while (true) {
-        status = poll(fds, STATIC_ARRAY_SIZE(fds), CDTIME_T_TO_MS(timeout));
+        status = poll(fds, STATIC_ARRAY_SIZE(fds), poll_timeout);
         if (status < 0) {
             if ((errno == EINTR) || (errno == EAGAIN))
                 continue;
@@ -106,6 +124,13 @@ static void *exec_read_one(void *arg)
         }
 
         if (fds[0].revents & (POLLIN | POLLHUP)) {
+            if ((size_t)(pbuffer - buffer) >= (sizeof(buffer) - 1)) {
+                /* The buffer is full without a newline: discard the line. */
+                PLUGIN_WARNING("Line too long from '%s', discarding it.", pm->exec.exec);
+                pbuffer = buffer;
+                discard = true;
+            }
+
             int len = read(fd, pbuffer, sizeof(buffer) - 1 - (pbuffer - buffer));
             if (len < 0) {
                 if (errno == EAGAIN || errno == EINTR)
@@ -125,6 +150,13 @@ static void *exec_read_one(void *arg)
             char *pnl;
             while ((pnl = strchr(pbuffer, '\n'))) {
                 *pnl = '\0';
+                if (discard) {
+                    /* Skip the remainder of the discarded line. */
+                    discard = false;
+                    pbuffer = ++pnl;
+                    continue;
+                }
+
                 if ((pnl > pbuffer) && (*(pnl - 1) == '\r'))
                     *(pnl - 1) = '\0';
 
@@ -142,7 +174,9 @@ static void *exec_read_one(void *arg)
             }
 
             /* not completely read ? */
-            if (pbuffer - buffer < len) {
+            if (discard) {
+                pbuffer = buffer;
+            } else if (pbuffer - buffer < len) {
                 len -= pbuffer - buffer;
                 memmove(buffer, pbuffer, len);
                 pbuffer = buffer + len;
@@ -153,6 +187,13 @@ static void *exec_read_one(void *arg)
             PLUGIN_ERROR("Failed to read pipe from '%s'.", pm->exec.exec);
             break;
         } else if (fds[1].revents & (POLLIN | POLLHUP)) {
+            if ((size_t)(pbuffer_err - buffer_err) >= (sizeof(buffer_err) - 1)) {
+                /* The buffer is full without a newline: log what we have. */
+                *pbuffer_err = '\0';
+                PLUGIN_ERROR("exec_read_one: error = %s", buffer_err);
+                pbuffer_err = buffer_err;
+            }
+
             int len = read(fd_err, pbuffer_err,
                                    sizeof(buffer_err) - 1 - (pbuffer_err - buffer_err));
 
@@ -165,7 +206,7 @@ static void *exec_read_one(void *arg)
                 PLUGIN_DEBUG("Program '%s' has closed STDERR.", pm->exec.exec);
 
                 /* Clean up file descriptor */
-                if (fd_err > 0)
+                if (fd_err >= 0)
                     close(fd_err);
                 fd_err = -1;
                 fds[1].fd = -1;
@@ -181,7 +222,7 @@ static void *exec_read_one(void *arg)
             char *pnl;
             while ((pnl = strchr(pbuffer_err, '\n'))) {
                 *pnl = '\0';
-                if (*(pnl - 1) == '\r')
+                if ((pnl > pbuffer_err) && (*(pnl - 1) == '\r'))
                     *(pnl - 1) = '\0';
 
                 PLUGIN_ERROR("exec_read_one: error = %s", pbuffer_err);
@@ -200,7 +241,7 @@ static void *exec_read_one(void *arg)
             PLUGIN_WARNING("Ignoring STDERR for program '%s'.", pm->exec.exec);
             /* Clean up file descriptor */
             if ((fds[1].revents & POLLNVAL) == 0) {
-                if (fd_err > 0)
+                if (fd_err >= 0)
                     close(fd_err);
                 fd_err = -1;
             }
@@ -213,14 +254,22 @@ static void *exec_read_one(void *arg)
     metric_parser_reset(pm->mp);
 
     PLUGIN_DEBUG("exec_read_one: Waiting for '%s' to exit.", pm->exec.exec);
-    if (waitpid(pm->pid, &status, 0) < 0) {
-        PLUGIN_DEBUG("waitpid failed: %s", STRERRNO);
+    /* Wait for the child without reaping it, so the pid can not be reused
+       while exec_free may still send a signal to it. */
+    siginfo_t info;
+    while (waitid(P_PID, pid, &info, WEXITED | WNOWAIT) < 0) {
+        if (errno != EINTR) {
+            PLUGIN_DEBUG("waitid failed: %s", STRERRNO);
+            break;
+        }
     }
-    PLUGIN_DEBUG("Child %i exited with status %i.", (int)pm->pid, status);
-
-    pm->pid = 0;
 
     pthread_mutex_lock(&pm->lock);
+    if (waitpid(pid, &status, 0) < 0) {
+        PLUGIN_DEBUG("waitpid failed: %s", STRERRNO);
+    }
+    PLUGIN_DEBUG("Child %i exited with status %i.", (int)pid, status);
+    pm->pid = 0;
     pm->running = false;
     pthread_mutex_unlock(&pm->lock);
 
@@ -243,15 +292,24 @@ static int exec_read(user_data_t *user_data)
         return 0;
     }
 
+    /* Join the previous thread, it has already finished. */
+    if (pm->thread_started) {
+        pthread_join(pm->thread, NULL);
+        pm->thread_started = false;
+    }
+
     pm->running = true;
     pthread_mutex_unlock(&pm->lock);
 
-    pthread_t t;
-    int status = plugin_thread_create(&t, exec_read_one, (void *)pm, "exec read");
+    int status = plugin_thread_create(&pm->thread, exec_read_one, (void *)pm, "exec read");
     if (status == 0) {
-        pthread_detach(t);
+        pm->thread_started = true;
     } else {
         PLUGIN_ERROR("plugin_thread_create failed.");
+        pthread_mutex_lock(&pm->lock);
+        pm->running = false;
+        pthread_mutex_unlock(&pm->lock);
+        return -1;
     }
 
     return 0;
@@ -264,12 +322,20 @@ static void exec_free(void *arg)
     if (pm == NULL)
         return;
 
+    pthread_mutex_lock(&pm->lock);
     if (pm->pid > 0) {
         kill(pm->pid, SIGTERM);
         PLUGIN_INFO("Sent SIGTERM to %d", (int)pm->pid);
-
-        waitpid(pm->pid, NULL, 0);
     }
+    pthread_mutex_unlock(&pm->lock);
+
+    /* The reader thread reaps the child and uses pm, wait for it. */
+    if (pm->thread_started) {
+        pthread_join(pm->thread, NULL);
+        pm->thread_started = false;
+    }
+
+    pthread_mutex_destroy(&pm->lock);
 
     free(pm->instance);
 
@@ -298,6 +364,7 @@ static int exec_config_exec(config_item_t *ci)
         return -1;
     }
     pm->interval = plugin_get_interval();
+    pthread_mutex_init(&pm->lock, NULL);
 
     int status = cf_util_get_string(ci, &pm->instance);
     if (status != 0) {
@@ -346,8 +413,6 @@ static int exec_config_exec(config_item_t *ci)
         exec_free(pm);
         return -1;
     }
-
-    pthread_mutex_init(&pm->lock, NULL);
 
     char interval[DTOA_MAX];
     dtoa(CDTIME_T_TO_DOUBLE(pm->interval), interval, DTOA_MAX);

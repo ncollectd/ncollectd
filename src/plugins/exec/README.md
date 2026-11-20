@@ -24,8 +24,7 @@ NCOLLECTD-EXEC(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **exec** plugin forks off an executable either to receive values or to
-dispatch notifications to the outside world.
+The **exec** plugin forks off an executable to receive metrics from it.
 
 The **instance** defines an program to exec.
 These programs are forked and values that it writes to STDOUT are
@@ -45,8 +44,12 @@ executed every **interval** seconds.
 If **interval** is short (the default is 10 seconds) this may result in
 serious system load.
 
-The forked executable is expected to print metrics to STDOUT.
-The expected format is as follows:
+The forked executable is expected to print metrics to STDOUT in the
+OpenMetrics text exposition format.
+The metrics read are dispatched when a line with # EOF (or # END) is
+read, when the program exits, or after **interval** seconds without receiving
+the end marker.
+Each line written to STDERR is logged as an error.
 
 When ncollectd exits it sends a SIGTERM to all still running
 child-processes upon which they have to quit.
@@ -62,11 +65,10 @@ child-processes upon which they have to quit.
 
 **user** *username*
 
-> Execute the executable **cmd** as user *user*.
+> Execute the executable **cmd** as user *username*.
 
 **group** *groupname*
 
-> Execute the executable **cmd** as user *user*.
 > If the **group** is set, the effective group of the executed program is set
 > to that group.
 > Please note that in order to change the user and/or group the daemon needs
