@@ -8,11 +8,22 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP fchost
-\fBplugin\fP fchost
+\fBplugin\fP fchost {
+    \fBhost\fP [\fIincl|include|excl|exclude\fP] \fIhost\fP
+}
 .Ed
 .Sh DESCRIPTION
 The \fBfchost\fP plugin collectd information about HBA/Fibre Channel used
-in the system, collecting data from files in path \fI/sys/class/fchost\fP.
+in the system, collecting data from files in path \fI/sys/class/fc_host\fP.
+.Pp
+The plugin support the following options:
+.Bl -tag -width Ds
+.It \fBhost\fP [\fIincl|include|excl|exclude\fP] \fIhost\fP
+Select the \fIhost\fP (like \f(CWhost0\fP) to collectd data from.
+If no \fBhost\fP option is configured, all hosts are collected.
+See \fBINCLUDE AND EXCLUDE LISTS\fP in
+.Xr ncollectd.conf 5 .
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

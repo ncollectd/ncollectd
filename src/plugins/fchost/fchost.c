@@ -4,6 +4,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/exclist.h"
 
 enum {
     FAM_FCHOST_PORT_ONLINE,
@@ -156,13 +157,15 @@ static fchost_stats_t fchost_stats[] = {
     { "statistics/fcp_input_requests",           0, FAM_FCHOST_FCP_INPUT_REQUESTS                },
     { "statistics/fcp_output_requests",          0, FAM_FCHOST_FCP_OUTPUT_REQUESTS               },
     { "statistics/fcp_control_requests",         0, FAM_FCHOST_FCP_CONTROL_REQUESTS              },
-    { "statistics/fcp_input_megabytes",         10, FAM_FCHOST_FCP_INPUT_BYTES                   },
-    { "statistics/fcp_output_megabytes",        10, FAM_FCHOST_FCP_OUTPUT_BYTES                  },
+    { "statistics/fcp_input_megabytes",         20, FAM_FCHOST_FCP_INPUT_BYTES                   },
+    { "statistics/fcp_output_megabytes",        20, FAM_FCHOST_FCP_OUTPUT_BYTES                  },
 };
 
 static size_t fchost_stats_size = STATIC_ARRAY_SIZE(fchost_stats);
 
 static char *path_sys_fchost = NULL;
+static exclist_t excl_host;
+static complain_t fchost_complaint = {0};
 
 static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
                              __attribute__((unused)) void *ud)
@@ -175,6 +178,9 @@ static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
     }
 
     if (S_ISDIR(statbuf.st_mode)) {
+        if (!exclist_match(&excl_host, filename))
+            return 0;
+
         int dir_host_fd = openat(dir_fd, filename, O_RDONLY | O_DIRECTORY);
         if (dir_host_fd < 0) {
             PLUGIN_ERROR("open (%s) in %s failed: %s.", filename, path, STRERRNO);
@@ -182,19 +188,21 @@ static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
         }
 
         char port_name[256];
-        status = read_file_at(dir_host_fd, "port_name", port_name, sizeof(port_name));
-        if (status != 0) {
+        ssize_t len = read_file_at(dir_host_fd, "port_name", port_name, sizeof(port_name));
+        if (len <= 0) {
             PLUGIN_ERROR("open 'port_name' in %s failed: %s.", path, STRERRNO);
             close(dir_host_fd);
             return -1;
         }
+        strstripnewline(port_name);
 
         double fchost_port_state = 0;
         char port_state[64];
-        status = read_file_at(dir_host_fd, "port_state", port_state, sizeof(port_state));
-        if (status != 0) {
+        len = read_file_at(dir_host_fd, "port_state", port_state, sizeof(port_state));
+        if (len <= 0) {
             PLUGIN_ERROR("open 'port_state' in %s failed: %s.", path, STRERRNO);
         } else {
+            strstripnewline(port_state);
             if (strcasecmp(port_state, "Online") == 0)
                 fchost_port_state = 1;
         }
@@ -227,12 +235,43 @@ static int fchost_read_hosts(int dir_fd, const char *path, const char *filename,
 
 static int fchost_read(void)
 {
+    if (access(path_sys_fchost, F_OK) != 0) {
+        PLUGIN_ONCE_WARNING(&fchost_complaint, "Cannot access '%s': %s",
+                            path_sys_fchost, STRERRNO);
+        return 0;
+    }
+
+    PLUGIN_RELEASE_INFO(&fchost_complaint, "Directory '%s' is accessible again.",
+                        path_sys_fchost);
+
     int status = walk_directory(path_sys_fchost, fchost_read_hosts, NULL, 0);
 
     plugin_dispatch_metric_family_array(fams, FAM_FCHOST_MAX, 0);
 
     if (status != 0)
         return -1;
+
+    return 0;
+}
+
+static int fchost_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp(child->key, "host") == 0) {
+            status = cf_util_exclist(child, &excl_host);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
 
     return 0;
 }
@@ -251,11 +290,13 @@ static int fchost_init(void)
 static int fchost_shutdown(void)
 {
     free(path_sys_fchost);
+    exclist_reset(&excl_host);
     return 0;
 }
 
 void module_register(void)
 {
+    plugin_register_config("fchost", fchost_config);
     plugin_register_init("fchost", fchost_init);
     plugin_register_read("fchost", fchost_read);
     plugin_register_shutdown("fchost", fchost_shutdown);
