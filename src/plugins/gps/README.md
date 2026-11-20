@@ -68,7 +68,7 @@ The following elements are collected:
 **pause-connect** *seconds*
 
 > Pause to apply between attempts of connection to gpsd in seconds
-> (default 5 sec).
+> (default 5 sec, minimum 1 sec).
 
 **label** *key* *value*
 
