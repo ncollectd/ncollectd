@@ -8,6 +8,7 @@
 #include "libutils/random.h"
 
 #include "hmac.h"
+#include "md5.h"
 
 /* AIX doesn't have MSG_DONTWAIT */
 #ifndef MSG_DONTWAIT
@@ -257,6 +258,7 @@ static size_t freeradius_stats_size = STATIC_ARRAY_SIZE(freeradius_stats);
 
 typedef struct {
     int fd;
+    uint8_t id;
     char *name;
     char *host;
     int port;
@@ -540,6 +542,66 @@ static metric_family_t fams[FAM_FREERADIUS_MAX] = {
     },
 };
 
+static bool freeradius_digest_equal(const uint8_t *a, const uint8_t *b)
+{
+    /* Constant time comparison. */
+    uint8_t diff = 0;
+    for (size_t i = 0; i < MD5_DIGEST_SIZE; i++)
+        diff |= a[i] ^ b[i];
+    return diff == 0;
+}
+
+/* Verify the Response Authenticator (RFC 2865 section 3) and, if present,
+ * the Message-Authenticator attribute (RFC 2869 section 5.14) of the response. */
+static bool freeradius_verify_response(const uint8_t *resp, size_t len,
+                                       const uint8_t *req_vector,
+                                       char *secret, size_t secret_len)
+{
+    uint8_t digest[MD5_DIGEST_SIZE];
+
+    if (len < sizeof(radius_hdr_t))
+        return false;
+
+    MD5_CTX md5;
+    MD5Init(&md5);
+    MD5Update(&md5, resp, 4);
+    MD5Update(&md5, req_vector, RADIUS_RANDOM_VECTOR_LEN);
+    MD5Update(&md5, resp + sizeof(radius_hdr_t), len - sizeof(radius_hdr_t));
+    MD5Update(&md5, (const uint8_t *)secret, secret_len);
+    MD5Final(digest, &md5);
+
+    if (!freeradius_digest_equal(digest, resp + 4))
+        return false;
+
+    size_t offset = sizeof(radius_hdr_t);
+    while ((offset + 2) <= len) {
+        const radius_avp_raw_t *avp = (const radius_avp_raw_t *)(resp + offset);
+        if ((avp->length < 2) || ((offset + avp->length) > len))
+            return false;
+
+        if (avp->type == RADIUS_ATTR_ID_MESSAGE_AUTHENTICATOR) {
+            if (avp->length != sizeof(radius_avp_auth_t))
+                return false;
+
+            uint8_t tmp[4096];
+            if (len > sizeof(tmp))
+                return false;
+            memcpy(tmp, resp, len);
+            /* The Message-Authenticator is calculated with the Request Authenticator
+             * and the value of the attribute filled with zeros. */
+            memcpy(tmp + 4, req_vector, RADIUS_RANDOM_VECTOR_LEN);
+            memset(tmp + offset + 2, 0, MD5_DIGEST_SIZE);
+            hmac_md5(tmp, len, (uint8_t *)secret, secret_len, digest);
+
+            return freeradius_digest_equal(digest, resp + offset + 2);
+        }
+
+        offset += avp->length;
+    }
+
+    return true;
+}
+
 static int freeradius_read(user_data_t *user_data)
 {
     freeradius_ctx_t *ctx = user_data->data;
@@ -550,13 +612,13 @@ static int freeradius_read(user_data_t *user_data)
     if (ctx->fd < 0) {
         ctx->fd = socket_connect_udp(ctx->host, ctx->port, 0);
         if (ctx->fd < 0)
-            return -1;
+            goto error;
 
         struct timeval tv = CDTIME_T_TO_TIMEVAL(ctx->timeout);
         int status = setsockopt (ctx->fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof (tv));
         if (status != 0) {
             PLUGIN_ERROR("setsockopt setting SO_RCVTIMEO failed: %s", STRERRNO);
-            return -1;
+            goto error;
         }
     }
 
@@ -564,7 +626,7 @@ static int freeradius_read(user_data_t *user_data)
 
     pkt.hdr.code = RADIUS_CODE_STATUS_SERVER;
     pkt.hdr.length = htons(sizeof(pkt));
-    pkt.hdr.id = RADIUS_ATTR_ID_MESSAGE_AUTHENTICATOR;
+    pkt.hdr.id = ctx->id++;
     cdrand(pkt.hdr.vector, sizeof(pkt.hdr.vector));
 
     pkt.vsa.type = RADIUS_ATTR_ID_VENDOR_SPECIFIC;
@@ -592,27 +654,54 @@ static int freeradius_read(user_data_t *user_data)
     }
 
     uint8_t resp[1452];
-    ssize_t rsize = recv(ctx->fd, resp, sizeof(resp), 0);
-    if (rsize <= 0) {
-        PLUGIN_ERROR("Error receiving packet: %s.", STRERRNO);
-        goto error;
+    ssize_t rsize = 0;
+    cdtime_t end = cdtime() + ctx->timeout;
+    while (true) {
+        rsize = recv(ctx->fd, resp, sizeof(resp), 0);
+        if (rsize <= 0) {
+            PLUGIN_ERROR("Error receiving packet: %s.", STRERRNO);
+            goto error;
+        }
+        /* Discard the late responses to previous requests. */
+        if ((rsize >= (ssize_t)sizeof(radius_hdr_t)) &&
+            (((radius_hdr_t *)resp)->id == pkt.hdr.id))
+            break;
+        if (cdtime() >= end) {
+            PLUGIN_ERROR("Error receiving packet: no response with the expected id.");
+            goto error;
+        }
     }
 
     cdtime_t submit = cdtime();
 
+    if (rsize < (ssize_t)sizeof(radius_hdr_t)) {
+        PLUGIN_ERROR("Error in received packet: packet too short.");
+        goto error;
+    }
+
     radius_hdr_t *hdr = (radius_hdr_t *)resp;
     hdr->length = ntohs(hdr->length);
-    if ((ssize_t)hdr->length != rsize) {
+    /* Octets beyond the Length field are padding and must be ignored. */
+    if ((hdr->length < sizeof(radius_hdr_t)) || ((ssize_t)hdr->length > rsize)) {
         PLUGIN_ERROR("Error in received packet: invalid packet size.");
         goto error;
     }
+
+    /* Restore the length in network byte order to verify the authenticators. */
+    hdr->length = htons(hdr->length);
+    if (!freeradius_verify_response(resp, (size_t)rsize, pkt.hdr.vector,
+                                    ctx->secret, secret_len)) {
+        PLUGIN_ERROR("Error in received packet: invalid authenticator.");
+        goto error;
+    }
+    hdr->length = ntohs(hdr->length);
 
     if (hdr->code != RADIUS_CODE_ACCESS_ACCEPT) {
         PLUGIN_ERROR("Error in received packet: unexpected code in header.");
         goto error;
     }
 
-    if (hdr->id != RADIUS_ATTR_ID_MESSAGE_AUTHENTICATOR) {
+    if (hdr->id != pkt.hdr.id) {
         PLUGIN_ERROR("Error in received packet: unexpected id in header.");
         goto error;
     }
@@ -621,12 +710,12 @@ static int freeradius_read(user_data_t *user_data)
 
     size_t offset = sizeof(radius_hdr_t);
     while(true) {
-        if (offset >= hdr->length)
+        if ((offset + 2) > hdr->length)
             break;
 
         radius_avp_raw_t *avp = (radius_avp_raw_t *)(resp + offset);
 
-        if (avp->length == 0)
+        if (avp->length < 2)
             break;
 
         offset += avp->length;
@@ -678,7 +767,15 @@ static int freeradius_read(user_data_t *user_data)
     return 0;
 
 error:
+    /* Close the socket to discard any pending response and to resolve
+     * the host again in the next read. */
+    if (ctx->fd >= 0) {
+        close(ctx->fd);
+        ctx->fd = -1;
+    }
+
     metric_family_append(&ctx->fams[FAM_FREERADIUS_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
+
     plugin_dispatch_metric_family(&ctx->fams[FAM_FREERADIUS_UP], 0);
 
     return 0;
@@ -691,7 +788,7 @@ static void freeradius_free(void *arg)
     if (ctx == NULL)
         return;
 
-    if (ctx->fd > 0)
+    if (ctx->fd >= 0)
         close(ctx->fd);
 
     free(ctx->name);
@@ -783,7 +880,7 @@ static int freeradius_config_instance (config_item_t *ci)
     } else {
         if (interval == 0)
             interval = plugin_get_interval();
-        if (ctx->timeout > interval) {
+        if (ctx->timeout >= interval) {
             PLUGIN_ERROR("Timeout: %.3f it's bigger than plugin interval: %.3f.",
                          CDTIME_T_TO_DOUBLE(ctx->timeout), CDTIME_T_TO_DOUBLE(interval));
             freeradius_free(ctx);
