@@ -65,4 +65,9 @@ void hmac_md5(uint8_t *data, size_t data_len, uint8_t *key,  size_t key_len, uin
     MD5Update(&context, pad.outer, 64);
     MD5Update(&context, digest, 16);
     MD5Final(digest, &context);
+
+    /* Clear the padding derived from the key. */
+    volatile uint8_t *p = (volatile uint8_t *)&pad;
+    for (size_t i = 0; i < sizeof(pad); i++)
+        p[i] = 0;
 }

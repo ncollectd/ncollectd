@@ -40,16 +40,19 @@ The following options are accepted within each \fBinstance\fP block:
 Hostname of the host running \fBfreeradius\fP "status" virtual server.
 Defaults to \fIlocalhost\fP.
 .It \fBport\fP \fIport\fP
-TCP port of the "status" virtual server to connect to.
+UDP port of the "status" virtual server to connect to.
 Defaults to \fB18121\fP.
 .It \fBsecret\fP \fIsecret\fP
 \fISecret\fP used to calculate message-authenticator.
+The \fBsecret\fP or \fBsecret-env\fP option is required.
 .It \fBsecret-env\fP \fIenv-name\fP
 Get the secret used to calculate message-authenticator from the environment
 variable \fIenv-name\fP.
 .It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for the request to the
 freeradius server.
+It must be lower than the interval.
+Defaults to half of the interval.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP

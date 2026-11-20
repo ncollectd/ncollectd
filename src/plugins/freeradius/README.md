@@ -43,12 +43,13 @@ The following options are accepted within each **instance** block:
 
 **port** *port*
 
-> TCP port of the "status" virtual server to connect to.
+> UDP port of the "status" virtual server to connect to.
 > Defaults to **18121**.
 
 **secret** *secret*
 
 > *Secret* used to calculate message-authenticator.
+> The **secret** or **secret-env** option is required.
 
 **secret-env** *env-name*
 
@@ -58,7 +59,8 @@ The following options are accepted within each **instance** block:
 **timeout** *seconds*
 
 > The **timeout** option sets the overall timeout for the request to the
-> freeradius server.
+> freeradius server. It must be lower than the interval.
+> Defaults to half of the interval.
 
 **label** *key* *value*
 
