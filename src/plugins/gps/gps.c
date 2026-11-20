@@ -17,7 +17,6 @@
 #define CGPS_DEFAULT_PORT "2947"
 #define CGPS_DEFAULT_TIMEOUT MS_TO_CDTIME_T(15)
 #define CGPS_DEFAULT_PAUSE_CONNECT TIME_T_TO_CDTIME_T(5)
-#define CGPS_MAX_ERROR 100
 #define CGPS_CONFIG "?WATCH={\"enable\":true,\"json\":true,\"nmea\":false}\r\n"
 
 enum {
@@ -164,12 +163,12 @@ typedef struct {
     pthread_cond_t thread_cond;
     volatile int thread_shutdown;
     volatile int thread_running;
+    bool thread_created;
 } cgps_instance_t;
 
 static void *cgps_thread(void *data)
 {
     cgps_instance_t *cgps = data;
-    unsigned int err_count;
 
     cgps->thread_running = true;
 
@@ -178,8 +177,6 @@ static void *cgps_thread(void *data)
         if (cgps->thread_shutdown)
             goto quit;
         pthread_mutex_unlock(&cgps->thread_lock);
-
-        err_count = 0;
 
 #if GPSD_API_MAJOR_VERSION > 4
         int status = gps_open(cgps->host, cgps->port, &cgps->gpsdata);
@@ -204,7 +201,6 @@ static void *cgps_thread(void *data)
         }
 
         gps_stream(&cgps->gpsdata, WATCH_ENABLE | WATCH_JSON | WATCH_NEWSTYLE, NULL);
-        gps_send(&cgps->gpsdata, CGPS_CONFIG);
 
         while (true) {
             pthread_mutex_lock(&cgps->thread_lock);
@@ -227,21 +223,20 @@ static void *cgps_thread(void *data)
             status = gps_read(&cgps->gpsdata);
 #endif
             if (status == -1) {
-                PLUGIN_WARNING("incorrect data! (err_count: %u)", err_count);
-                err_count++;
+                /* The connection was closed or failed: reconnect after a pause
+                 * instead of spinning on a socket that is always readable. */
+                PLUGIN_WARNING("reading from gpsd at %s:%s failed, reconnecting.",
+                               cgps->host, cgps->port);
+                gps_close(&cgps->gpsdata);
 
-                if (err_count > CGPS_MAX_ERROR) {
-                    // Server is not responding ...
-                    if (gps_send(&cgps->gpsdata, CGPS_CONFIG) == -1) {
-                        PLUGIN_WARNING("gpsd seems to be down, reconnecting");
-                        gps_close(&cgps->gpsdata);
-                        break;
-                    } else { // Server is responding ...
-                        err_count = 0;
-                    }
-                }
-
-                continue;
+                cdtime_t until = cdtime() + cgps->pause_connect;
+                pthread_mutex_lock(&cgps->thread_lock);
+                pthread_cond_timedwait(&cgps->thread_cond,
+                                       &cgps->thread_lock, &CDTIME_T_TO_TIMESPEC(until));
+                if (cgps->thread_shutdown)
+                    goto quit;
+                pthread_mutex_unlock(&cgps->thread_lock);
+                break;
             }
 
             pthread_mutex_lock(&cgps->data_lock);
@@ -253,7 +248,7 @@ static void *cgps_thread(void *data)
             cgps->cgps_data.pdop = cgps->gpsdata.dop.pdop;
             cgps->cgps_data.mode = cgps->gpsdata.fix.mode;
 
-            if (cgps->cgps_data.satellites_used > 0) {
+            if (cgps->gpsdata.fix.mode >= MODE_2D) {
                 cgps->cgps_data.latitude = cgps->gpsdata.fix.latitude;
                 cgps->cgps_data.epy = cgps->gpsdata.fix.epy;
                 cgps->cgps_data.longitude = cgps->gpsdata.fix.longitude;
@@ -261,7 +256,7 @@ static void *cgps_thread(void *data)
 #if GPSD_API_MAJOR_VERSION >= 9
                 cgps->cgps_data.altitude = cgps->gpsdata.fix.altMSL;
 #else
-                cgps->cgps_data.altitude = NAN;
+                cgps->cgps_data.altitude = cgps->gpsdata.fix.altitude;
 #endif
                 cgps->cgps_data.epv = cgps->gpsdata.fix.epv;
                 cgps->cgps_data.track = cgps->gpsdata.fix.track;
@@ -304,28 +299,35 @@ static int cgps_read(user_data_t *user_data)
 {
     cgps_instance_t *cgps = user_data->data;
 
+    /* The thread is started on the first read and not in the config callback,
+     * so it is created after the daemon has forked. */
+    if (!cgps->thread_created) {
+        int status = plugin_thread_create(&cgps->thread_id, cgps_thread, cgps, "gps");
+        if (status != 0) {
+            PLUGIN_ERROR("pthread_create() failed.");
+            return -1;
+        }
+        cgps->thread_created = true;
+    }
+
     pthread_mutex_lock(&cgps->data_lock);
     cgps_data_t cgps_data = cgps->cgps_data;
     pthread_mutex_unlock(&cgps->data_lock);
-
-    metric_t m = {0};
-    if (cgps->instance != NULL)
-        metric_label_set(&m, "instance", cgps->instance);
-
-    for (size_t i = 0; i < cgps->labels.num; i++) {
-        metric_label_set(&m, cgps->labels.ptr[i].name, cgps->labels.ptr[i].value);
-    }
 
     metric_family_append(&cgps->fams[FAM_GPSD_SATELLITES_VISIBLE],
                          VALUE_GAUGE((double) cgps_data.satellites_visible), &cgps->labels, NULL);
     metric_family_append(&cgps->fams[FAM_GPSD_SATELLITES_USED],
                          VALUE_GAUGE((double) cgps_data.satellites_used), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_HDOP],
-                         VALUE_GAUGE(cgps_data.hdop), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_VDOP],
-                         VALUE_GAUGE(cgps_data.vdop), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_PDOP],
-                         VALUE_GAUGE(cgps_data.pdop), &cgps->labels, NULL);
+
+    if (!isnan(cgps_data.hdop))
+        metric_family_append(&cgps->fams[FAM_GPSD_HDOP],
+                             VALUE_GAUGE(cgps_data.hdop), &cgps->labels, NULL);
+    if (!isnan(cgps_data.vdop))
+        metric_family_append(&cgps->fams[FAM_GPSD_VDOP],
+                             VALUE_GAUGE(cgps_data.vdop), &cgps->labels, NULL);
+    if (!isnan(cgps_data.pdop))
+        metric_family_append(&cgps->fams[FAM_GPSD_PDOP],
+                             VALUE_GAUGE(cgps_data.pdop), &cgps->labels, NULL);
 
     enum {
         GPS_MODE_STATE_NO_FIX,
@@ -360,32 +362,38 @@ static int cgps_read(user_data_t *user_data)
 
     metric_family_append(&cgps->fams[FAM_GPSD_MODE], VALUE_STATE_SET(set), &cgps->labels, NULL);
 
-    memset(&m.value, 0, sizeof(m.value));
-
-    metric_family_append(&cgps->fams[FAM_GPSD_LATITUDE_DEGREES],
-                         VALUE_GAUGE(cgps_data.latitude), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_EPY_METERS],
-                         VALUE_GAUGE(cgps_data.epy), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_LONGITUDE_DEGREES],
-                         VALUE_GAUGE(cgps_data.longitude), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_EPX_METERS],
-                         VALUE_GAUGE(cgps_data.epx), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_ALTITUDE],
-                         VALUE_GAUGE(cgps_data.altitude), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_EPV],
-                         VALUE_GAUGE(cgps_data.epv), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_SPEED_METERS_PER_SECOND],
-                         VALUE_GAUGE(cgps_data.speed), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_EPS_METERS_PER_SECOND],
-                         VALUE_GAUGE(cgps_data.eps), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_CLIMB_METERS_PER_SECOND],
-                         VALUE_GAUGE(cgps_data.climb), &cgps->labels, NULL);
-    metric_family_append(&cgps->fams[FAM_GPSD_EPC_METERS_PER_SECOND],
-                         VALUE_GAUGE(cgps_data.epc), &cgps->labels, NULL);
+    if (!isnan(cgps_data.latitude))
+        metric_family_append(&cgps->fams[FAM_GPSD_LATITUDE_DEGREES],
+                             VALUE_GAUGE(cgps_data.latitude), &cgps->labels, NULL);
+    if (!isnan(cgps_data.epy))
+        metric_family_append(&cgps->fams[FAM_GPSD_EPY_METERS],
+                             VALUE_GAUGE(cgps_data.epy), &cgps->labels, NULL);
+    if (!isnan(cgps_data.longitude))
+        metric_family_append(&cgps->fams[FAM_GPSD_LONGITUDE_DEGREES],
+                             VALUE_GAUGE(cgps_data.longitude), &cgps->labels, NULL);
+    if (!isnan(cgps_data.epx))
+        metric_family_append(&cgps->fams[FAM_GPSD_EPX_METERS],
+                             VALUE_GAUGE(cgps_data.epx), &cgps->labels, NULL);
+    if (!isnan(cgps_data.altitude))
+        metric_family_append(&cgps->fams[FAM_GPSD_ALTITUDE],
+                             VALUE_GAUGE(cgps_data.altitude), &cgps->labels, NULL);
+    if (!isnan(cgps_data.epv))
+        metric_family_append(&cgps->fams[FAM_GPSD_EPV],
+                             VALUE_GAUGE(cgps_data.epv), &cgps->labels, NULL);
+    if (!isnan(cgps_data.speed))
+        metric_family_append(&cgps->fams[FAM_GPSD_SPEED_METERS_PER_SECOND],
+                             VALUE_GAUGE(cgps_data.speed), &cgps->labels, NULL);
+    if (!isnan(cgps_data.eps))
+        metric_family_append(&cgps->fams[FAM_GPSD_EPS_METERS_PER_SECOND],
+                             VALUE_GAUGE(cgps_data.eps), &cgps->labels, NULL);
+    if (!isnan(cgps_data.climb))
+        metric_family_append(&cgps->fams[FAM_GPSD_CLIMB_METERS_PER_SECOND],
+                             VALUE_GAUGE(cgps_data.climb), &cgps->labels, NULL);
+    if (!isnan(cgps_data.epc))
+        metric_family_append(&cgps->fams[FAM_GPSD_EPC_METERS_PER_SECOND],
+                             VALUE_GAUGE(cgps_data.epc), &cgps->labels, NULL);
 
     plugin_dispatch_metric_family_array_filtered(cgps->fams, FAM_GPSD_MAX, cgps->filter, 0);
-
-    metric_reset(&m, METRIC_TYPE_GAUGE);
 
     return 0;
 }
@@ -397,7 +405,7 @@ static void cgps_free(void *data)
 
     cgps_instance_t *cgps = data;
 
-    if (cgps->thread_running) {
+    if (cgps->thread_created) {
         cgps->thread_shutdown = true;
         pthread_cond_broadcast(&cgps->thread_cond);
         void *res;
@@ -413,6 +421,7 @@ static void cgps_free(void *data)
     pthread_mutex_unlock(&cgps->data_lock);
     pthread_mutex_destroy(&cgps->data_lock);
 
+    free(cgps->instance);
     free(cgps->port);
     free(cgps->host);
     label_set_reset(&cgps->labels);
@@ -507,6 +516,13 @@ static int cgps_config_instance(config_item_t *ci)
         cgps->timeout = CGPS_DEFAULT_TIMEOUT;
     }
 
+    // A pause lower than one second would retry the connection in a busy loop.
+    if (cgps->pause_connect < TIME_T_TO_CDTIME_T(1)) {
+        PLUGIN_WARNING("pause-connect set to %.3f sec. setting to minimum (1 sec.).",
+                       CDTIME_T_TO_DOUBLE(cgps->pause_connect));
+        cgps->pause_connect = TIME_T_TO_CDTIME_T(1);
+    }
+
     if (cgps->host == NULL) {
         cgps->host = sstrdup(CGPS_DEFAULT_HOST);
         if (cgps->host == NULL) {
@@ -522,18 +538,16 @@ static int cgps_config_instance(config_item_t *ci)
         }
     }
 
-    label_set_add(&cgps->labels, true, "instance", cgps->instance);
+    status = label_set_add(&cgps->labels, true, "instance", cgps->instance);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add instance label.");
+        cgps_free(cgps);
+        return -1;
+    }
 
     PLUGIN_DEBUG("config{host: \"%s\", port: \"%s\", timeout: %.6f sec., pause connect: %.3f sec.}",
                  cgps->host, cgps->port,
                  CDTIME_T_TO_DOUBLE(cgps->timeout), CDTIME_T_TO_DOUBLE(cgps->pause_connect));
-
-    status = plugin_thread_create(&cgps->thread_id, cgps_thread, cgps, "gps");
-    if (status != 0) {
-        PLUGIN_ERROR("pthread_create() failed.");
-        cgps_free(cgps);
-        return -1;
-    }
 
     return plugin_register_complex_read("gps", cgps->instance, cgps_read, interval,
                                         &(user_data_t){.data = cgps, .free_func = cgps_free});
