@@ -24,8 +24,7 @@
 }
 .Ed
 .Sh DESCRIPTION
-The \fBexec\fP plugin forks off an executable either to receive values or to
-dispatch notifications to the outside world.
+The \fBexec\fP plugin forks off an executable to receive metrics from it.
 .Pp
 The \fBinstance\fP defines an program to exec.
 These programs are forked and values that it writes to \f(CWSTDOUT\fP are
@@ -45,8 +44,12 @@ executed every \fBinterval\fP seconds.
 If \fBinterval\fP is short (the default is 10 seconds) this may result in
 serious system load.
 .Pp
-The forked executable is expected to print metrics to \f(CWSTDOUT\fP.
-The expected format is as follows:
+The forked executable is expected to print metrics to \f(CWSTDOUT\fP in the
+OpenMetrics text exposition format.
+The metrics read are dispatched when a line with \f(CW# EOF\fP (or \f(CW# END\fP) is
+read, when the program exits, or after \fBinterval\fP seconds without receiving
+the end marker.
+Each line written to \f(CWSTDERR\fP is logged as an error.
 .Pp
 When ncollectd exits it sends a \f(CWSIGTERM\fP to all still running
 child-processes upon which they have to quit.
@@ -59,9 +62,8 @@ may be changed.
 If you want to be absolutely sure that something is passed as-is please
 enclose it in quotes.
 .It \fBuser\fP \fIusername\fP
-Execute the executable \fBcmd\fP as user \fIuser\fP.
+Execute the executable \fBcmd\fP as user \fIusername\fP.
 .It \fBgroup\fP \fIgroupname\fP
-Execute the executable \fBcmd\fP as user \fIuser\fP.
 If the \fBgroup\fP is set, the effective group of the executed program is set
 to that group.
 Please note that in order to change the user and/or group the daemon needs
