@@ -24,6 +24,7 @@
         \fBpost\fP \fIdata\fP
         \fBproxy\fP \fIproxy-url\fP
         \fBproxy-tunnel\fP \fItrue|false\fP
+        \fBmax-response-size\fP \fIbytes\fP
         \fBinterval\fP \fIseconds\fP
         \fBtimeout\fP \fIseconds\fP
         \fBmetric-prefix\fP \fIprefix\fP
@@ -100,6 +101,9 @@ The complete data to be posted is given as the argument.
 This option will usually need to be accompanied by a \fBheader\fP option
 to set an appropriate \f(CWContent-Type\fP for the post body
 (e.g. to \f(CWapplication/x-www-form-urlencoded\fP).
+.It \fBmax-response-size\fP \fIbytes\fP
+Maximum size in bytes of the response body, larger responses are discarded.
+A value of \fB0\fP disables the limit. Defaults to \fB16777216\fP (16 MiB).
 .It \fBproxy\fP \fIproxy-url\fP
 Set the proxy URL to send requests through the HTTP proxy.
 .It \fBproxy-tunnel\fP \fItrue|false\fP
@@ -124,8 +128,7 @@ Can appear multiple times in the \fBinstance\fP block.
 .It \fBmatch\fP \fItype\fP
 One or more \fBmatch\fP blocks that define how to match information in the data
 returned by \fIlibcurl\fP.
-If the \fBmeasure-response-time\fP or \fBmeasure-response-code\fP options are
-set to \fItrue\fP, \fBmatch\fP blocks are optional.
+If the \fBcollect\fP option is set, \fBmatch\fP blocks are optional.
 .It \fBcollect\fP \fIflags\fP
 .Bl -tag -width Ds
 .It \fBtotal_time\fP

@@ -23,6 +23,7 @@ NCOLLECTD-HTTP(5) - File Formats Manual
 	        post data
 	        proxy proxy-url
 	        proxy-tunnel true|false
+	        max-response-size bytes
 	        interval seconds
 	        timeout seconds
 	        metric-prefix prefix
@@ -124,6 +125,11 @@ The following options are valid within **instance** blocks:
 > to set an appropriate Content-Type for the post body
 > (e.g. to application/x-www-form-urlencoded).
 
+**max-response-size** *bytes*
+
+> Maximum size in bytes of the response body, larger responses are discarded.
+> A value of **0** disables the limit. Defaults to **16777216** (16 MiB).
+
 **proxy** *proxy-url*
 
 > Set the proxy URL to send requests through the HTTP proxy.
@@ -161,8 +167,7 @@ The following options are valid within **instance** blocks:
 
 > One or more **match** blocks that define how to match information in the data
 > returned by *libcurl*.
-> If the **measure-response-time** or **measure-response-code** options are
-> set to *true*, **match** blocks are optional.
+> If the **collect** option is set, **match** blocks are optional.
 
 **collect** *flags*
 

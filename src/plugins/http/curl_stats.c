@@ -60,6 +60,7 @@ typedef enum {
     DISPATCH_SPEED = 0,
     DISPATCH_GAUGE,
     DISPATCH_OFF_T,
+    DISPATCH_OFF_T_SPEED,
     DISPATCH_SIZE,
 } curl_stats_type_t;
 
@@ -84,12 +85,12 @@ static struct {
     { COLLECT_SIZE_DOWNLOAD,           CURLINFO_SIZE_DOWNLOAD,             DISPATCH_GAUGE, "download_bytes"         },
 #endif
 #ifdef HAVE_CURLINFO_SPEED_DOWNLOAD_T
-    { COLLECT_SPEED_DOWNLOAD,          CURLINFO_SPEED_DOWNLOAD_T,          DISPATCH_OFF_T, "download_bitrate"       },
+    { COLLECT_SPEED_DOWNLOAD,          CURLINFO_SPEED_DOWNLOAD_T,          DISPATCH_OFF_T_SPEED, "download_bitrate" },
 #else
     { COLLECT_SPEED_DOWNLOAD,          CURLINFO_SPEED_DOWNLOAD,            DISPATCH_SPEED, "download_bitrate"       },
 #endif
 #ifdef HAVE_CURLINFO_SPEED_UPLOAD_T
-    { COLLECT_SPEED_UPLOAD,            CURLINFO_SPEED_UPLOAD_T,            DISPATCH_OFF_T, "upload_bitrate"         },
+    { COLLECT_SPEED_UPLOAD,            CURLINFO_SPEED_UPLOAD_T,            DISPATCH_OFF_T_SPEED, "upload_bitrate"   },
 #else
     { COLLECT_SPEED_UPLOAD,            CURLINFO_SPEED_UPLOAD,              DISPATCH_SPEED, "upload_bitrate"         },
 #endif
@@ -156,6 +157,14 @@ int curl_stats_dispatch(CURL *curl, uint64_t flags, plugin_filter_t *filter,
                 if (code != CURLE_OK)
                     continue;
                 value = VALUE_GAUGE(raw);
+            }   break;
+            case DISPATCH_OFF_T_SPEED: {
+                /* libcurl reports bytes per second, convert to bits per second. */
+                curl_off_t raw;
+                code = curl_easy_getinfo(curl, curl_stats_field_specs[field].info, &raw);
+                if (code != CURLE_OK)
+                    continue;
+                value = VALUE_GAUGE((double)raw * 8);
             }   break;
             case DISPATCH_SIZE: {
                 long raw;
