@@ -16,8 +16,8 @@ struct hba_device {
     char *device;
 };
 
-static unsigned int refresh = 30;
-static unsigned int cnt_read_loop;
+static cdtime_t refresh_interval = TIME_T_TO_CDTIME_T(300);
+static cdtime_t last_refresh;
 static struct hba_device *hba_list;
 
 static exclist_t excl_hba = {0};
@@ -96,7 +96,7 @@ static metric_family_t fams[FAM_HBA_MAX] = {
     [FAM_HBA_DUMPED_FRAMES] = {
         .name = "system_hba_dumped_frames",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total nimber of number of lost frames.",
+        .help = "Total number of lost frames.",
     },
     [FAM_HBA_LINK_FAILURE] = {
         .name = "system_hba_link_failure",
@@ -156,7 +156,7 @@ static void hba_odm_list(char *criteria)
     }
 
     struct Class *cudv_class = odm_open_class_rdonly(CuDv_CLASS);
-    if ((*(int *)cudv_class == -1) || (cudv_class == NULL)) {
+    if ((cudv_class == NULL) || (cudv_class == (struct Class *)-1)) {
         PLUGIN_ERROR("odm_open_class(CuDv_CLASS) failed");
         odm_terminate();
         return;
@@ -167,10 +167,11 @@ static void hba_odm_list(char *criteria)
     int first_next = ODM_FIRST;
     do {
        struct CuDv cudv;
-       status = *(int *) odm_get_obj(cudv_class, criteria, &cudv, first_next);
-       if (status == 0)
+       /* odm_get_obj returns NULL if no more objects match and -1 on error. */
+       void *ret = odm_get_obj(cudv_class, criteria, &cudv, first_next);
+       if (ret == NULL)
            break;
-       if (status == -1) {
+       if (ret == (void *)-1) {
             char *errmsg;
             status = odm_err_msg (odmerrno, &errmsg);
             if (status < 0)
@@ -219,18 +220,18 @@ static void hba_odm_list(char *criteria)
     return;
 }
 
-int hba_get_stats (char *adapter, char *device)
+static int hba_get_stats (char *adapter, char *device)
 {
     struct scsi_chba scsi_chba;
 
     int fd = open(device, O_RDONLY);
     if (fd < 0) {
         PLUGIN_ERROR("open %s failed: %s", device, STRERRNO);
-        close (fd);
         return -1;
     }
 
     memset(&scsi_chba, 0, sizeof(struct scsi_chba));
+    scsi_chba.version = SCSI_VERSION_1;
     scsi_chba.flags = 0;
     scsi_chba.cmd = FC_SCSI_ADAP_STAT;
 
@@ -276,6 +277,7 @@ int hba_get_stats (char *adapter, char *device)
                          &LABEL_PAIR_CONST("adapter", adapter), NULL);
 
     memset(&scsi_chba, 0, sizeof(struct scsi_chba));
+    scsi_chba.version = SCSI_VERSION_1;
     scsi_chba.flags = 0;
     scsi_chba.cmd = FC_TRAFFIC_STAT;
     scsi_chba.un.traffic_info.trans_type = FC_SCSI_FCP_TYPE;
@@ -311,9 +313,19 @@ int hba_get_stats (char *adapter, char *device)
 static int hba_read (void)
 {
     if ((cnt_read_loop >= refresh) || (hba_list == NULL)) {
-        hba_odm_list("parent LIKE fcs* AND status=1");
+        /* Only the fscsi devices (FCP protocol) support SCIOLCHBA, the other
+         * children of the fcs adapters (fcnet, sfwcomm) do not. */
+        hba_odm_list("name LIKE fscsi* AND status=1");
         cnt_read_loop = 0;
     }
+
+    cdtime_t now = cdtime();
+    if ((hba_list == NULL) ||
+        ((refresh_interval != 0) && ((now - last_refresh) >= refresh_interval))) {
+        hba_odm_list("parent LIKE fcs* AND status=1");
+        last_refresh = now;
+    }
+
 
     if (hba_list == NULL)
         return 0;
@@ -328,8 +340,6 @@ static int hba_read (void)
         hba_get_stats (hba_list[i].adapter, device);
     }
 
-    cnt_read_loop++;
-
     plugin_dispatch_metric_family_array(fams, FAM_HBA_MAX, 0);
 
     return 0;
@@ -338,8 +348,6 @@ static int hba_read (void)
 static int hba_config (config_item_t *ci)
 {
     int status = 0;
-
-    cdtime_t refresh_interval = TIME_T_TO_CDTIME_T(300);
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
@@ -356,15 +364,6 @@ static int hba_config (config_item_t *ci)
 
         if (status != 0)
             return -1;
-    }
-
-    if (refresh_interval != 0) {
-        double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
-        if (interval != 0) {
-           refresh = (unsigned int)(CDTIME_T_TO_DOUBLE(refresh_interval)/interval);
-           if (refresh == 0)
-               refresh = 1;
-        }
     }
 
     return 0;

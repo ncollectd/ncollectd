@@ -28,6 +28,7 @@ The following configuration options are available:
 **refresh-interval** *seconds*
 
 > Interval to refresh the hba list from the ODM.
+> If set to 0 the list is not refreshed.
 > The default value is 300 seconds.
 
 # SEE ALSO
