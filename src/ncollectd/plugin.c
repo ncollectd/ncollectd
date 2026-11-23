@@ -811,10 +811,17 @@ void plugin_complain_log (int level, complain_t *c, const char *file, int line, 
     cdtime_t now = cdtime();
     if ((c->last + c->interval) > now)
         return;
+
     c->last = now;
-    c->interval *= 2;
+
+    if (c->interval == 0)
+        c->interval = plugin_get_interval();
+    else
+        c->interval *= 2;
+
     if (c->interval > TIME_T_TO_CDTIME_T(86400))
         c->interval = TIME_T_TO_CDTIME_T(86400);
+
     c->complained_once = true;
 
     va_start(ap, format);
@@ -829,6 +836,7 @@ void plugin_once_log (int level, complain_t *c, const char *file, int line, cons
 
     if (c->complained_once)
         return;
+
     c->complained_once = true;
 
     va_start(ap, format);
@@ -841,8 +849,9 @@ void plugin_release_log (int level, complain_t *c, const char *file, int line, c
 {
     va_list ap;
 
-    if (c->interval == 0)
+    if (!c->complained_once)
         return;
+
     c->interval = 0;
     c->complained_once = false;
 
@@ -893,10 +902,17 @@ void daemon_complain_log (int level, complain_t *c, const char *file, int line, 
     cdtime_t now = cdtime();
     if ((c->last + c->interval) > now)
         return;
+
     c->last = now;
-    c->interval *= 2;
+
+    if (c->interval == 0)
+        c->interval = 60;
+    else
+        c->interval *= 2;
+
     if (c->interval > TIME_T_TO_CDTIME_T(86400))
         c->interval = TIME_T_TO_CDTIME_T(86400);
+
     c->complained_once = true;
 
     va_start(ap, format);
@@ -911,6 +927,7 @@ void daemon_once_log (int level, complain_t *c, const char *file, int line, cons
 
     if (c->complained_once)
         return;
+
     c->complained_once = true;
 
     va_start(ap, format);
@@ -923,8 +940,9 @@ void daemon_release_log (int level, complain_t *c, const char *file, int line, c
 {
     va_list ap;
 
-    if (c->interval == 0)
+    if (!c->complained_once)
         return;
+
     c->interval = 0;
     c->complained_once = false;
 
