@@ -100,7 +100,7 @@ static metric_family_t fams[FAM_IB_MAX] = {
     [FAM_IB_PORT_XMIT_DATA] = {
         .name = "system_infiniband_port_xmit_data",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of data octets, divided by 4, received on all VLs at the port.",
+        .help = "Total number of data octets, divided by 4, transmitted on all VLs from the port.",
     },
     [FAM_IB_PORT_RCV_PACKETS] = {
         .name = "system_infiniband_port_rcv_packets",
@@ -112,7 +112,7 @@ static metric_family_t fams[FAM_IB_MAX] = {
         .name = "system_infiniband_port_xmit_packets",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of packets, including packets containing errors, "
-                "and excluding link packets, received from all VLs on the port.",
+                "and excluding link packets, transmitted on all VLs from the port.",
     },
     [FAM_IB_PORT_RCV_ERRORS] = {
         .name = "system_infiniband_port_rcv_errors",
@@ -139,12 +139,12 @@ static metric_family_t fams[FAM_IB_MAX] = {
     [FAM_IB_PORT_RCV_CONSTRAINT_ERRORS] = {
         .name = "system_infiniband_port_rcv_constraint_errors",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of packets not transmitted from the switch physical port",
+        .help = "Total number of packets received on the switch physical port that are discarded.",
     },
     [FAM_IB_PORT_XMIT_CONSTRAINT_ERRORS] = {
         .name = "system_infiniband_port_xmit_constraint_errors",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of packets received on the switch physical port that are discarded.",
+        .help = "Total number of packets not transmitted from the switch physical port.",
     },
     [FAM_IB_VL15_DROPPED] = {
         .name = "system_infiniband_VL15_dropped",
@@ -251,7 +251,8 @@ static struct {
 static char *path_sys_infiniband;
 static char *path_sys_glob;
 static exclist_t excl_port;
-static const int device_tok_idx = 3, port_tok_idx = 5;
+/* Index of the components after path_sys_infiniband: <device>/ports/<port>/state */
+static const int device_tok_idx = 0, port_tok_idx = 2;
 
 static int ib_parse_glob_port(char *path, char **device, char **port)
 {
@@ -259,6 +260,12 @@ static int ib_parse_glob_port(char *path, char **device, char **port)
     int j = 0;
     *device = NULL;
     *port = NULL;
+
+    size_t prefix_len = strlen(path_sys_infiniband);
+    if (strncmp(path, path_sys_infiniband, prefix_len) != 0)
+        return 1;
+    path += prefix_len;
+
     tok = strtok_r(path, "/", &saveptr);
     while (tok != NULL) {
         if (j == device_tok_idx)
@@ -300,26 +307,29 @@ static int ib_read_port(const char *device, const char *port)
          /*
             * Used to parse files like this:
             * rate:       "100 Gb/sec"
+            * rate:       "2.5 Gb/sec (1X SDR)"
             * state:      "4: ACTIVE"
             * phys_state: "5: LinkUp"
             */
-            while(*ptr != '\0') {
-                if (!isdigit(*ptr)) {
-                    *(ptr++) = '\0';
-                    break;
-                }
-                ptr++;
-            }
+            char *end = ptr;
+            while (isdigit((unsigned char)*end) || (*end == '.'))
+                end++;
+            *end = '\0';
         }
+
+        if (*ptr == '\0')
+            continue;
 
         value_t value = {0};
         if (fams[ib_files[i].fam].type == METRIC_TYPE_GAUGE) {
             double raw = 0;
-            strtodouble(ptr, &raw);
+            if (strtodouble(ptr, &raw) != 0)
+                continue;
             value = VALUE_GAUGE(raw);
         } else if (fams[ib_files[i].fam].type == METRIC_TYPE_COUNTER) {
             uint64_t raw = 0;
-            strtouint(ptr, &raw);
+            if (strtouint(ptr, &raw) != 0)
+                continue;
             value = VALUE_COUNTER(raw);
         } else {
             continue;
@@ -345,12 +355,15 @@ static int infiniband_read(void)
             if (ib_parse_glob_port(g.gl_pathv[i], &device, &port) == 0) {
                 ssnprintf(port_name, sizeof(port_name), "%s:%s", device, port);
                 if (exclist_match(&excl_port, port_name))
-                    rc &= ib_read_port(device, port);
+                    rc |= ib_read_port(device, port);
             }
         }
+        globfree(&g);
     }
 
-    globfree(&g);
+
+    plugin_dispatch_metric_family_array(fams, FAM_IB_MAX, 0);
+
     return rc;
 }
 
