@@ -12,6 +12,8 @@
 
 #include <curl/curl.h>
 
+#define HTTP_MAX_RESPONSE_SIZE_DEFAULT (16 * 1024 * 1024)
+
 #include "curl_stats.h"
 
 typedef struct {
@@ -30,14 +32,16 @@ typedef struct {
     char *cacert;
     struct curl_slist *headers;
     char *post_body;
-    int timeout;
+    cdtime_t timeout;
     uint64_t curl_stats_flags;
     char *proxy;
     bool proxy_tunnel;
+    unsigned int max_response_size;
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
     strbuf_t buffer;
     plugin_match_t *matches;
+    complain_t response_complaint;
 } chttp_ctx_t;
 
 static size_t chttp_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
@@ -49,6 +53,13 @@ static size_t chttp_curl_callback(void *buf, size_t size, size_t nmemb, void *us
     chttp_ctx_t *ctx = user_data;
     if (ctx == NULL)
         return 0;
+
+    if ((ctx->max_response_size > 0) &&
+        ((strbuf_len(&ctx->buffer) + len) > ctx->max_response_size)) {
+        PLUGIN_ERROR("Response from '%s' is larger than %u bytes.",
+                     ctx->url, ctx->max_response_size);
+        return 0;
+    }
 
     int status = strbuf_putstrn(&ctx->buffer, buf, len);
     if (status != 0) {
@@ -271,9 +282,9 @@ static int chttp_curl_init(chttp_ctx_t *ctx)
     }
 
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
-    if (ctx->timeout >= 0) {
+    if (ctx->timeout > 0) {
         rcode = curl_easy_setopt(ctx->curl, CURLOPT_TIMEOUT_MS,
-                                            (long)ctx->timeout);
+                                            (long)CDTIME_T_TO_MS(ctx->timeout));
         if (rcode != CURLE_OK) {
             PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                          curl_easy_strerror(rcode));
@@ -353,13 +364,21 @@ static int chttp_read(user_data_t *ud)
                                    ctx->metric_prefix, &ctx->labels);
 
     long rc = 0;
-    curl_easy_getinfo(ctx->curl, CURLINFO_RESPONSE_CODE, &rc);
-    if ((rc >= 200) && (rc < 300)) {
+    if (curl_easy_getinfo(ctx->curl, CURLINFO_RESPONSE_CODE, &rc) != CURLE_OK)
+        rc = 0;
+    /* A response code of 0 means the protocol has no response code (file://) */
+    if ((rc == 0) || ((rc >= 200) && (rc < 300))) {
+        PLUGIN_RELEASE_INFO(&ctx->response_complaint,
+                  "'%s' returned a successful response code.", ctx->url);
         if (strbuf_len(&ctx->buffer) > 0) {
             status = plugin_match(ctx->matches, ctx->buffer.ptr);
             if (status != 0)
                 PLUGIN_WARNING("plugin_match failed.");
         }
+    } else {
+        PLUGIN_COMPLAIN_WARNING(&ctx->response_complaint,
+                   "'%s' returned the response code %ld, the matches are not applied.",
+                   ctx->url, rc);
     }
 
     plugin_match_dispatch(ctx->matches, ctx->filter, &ctx->labels, true);
@@ -383,7 +402,7 @@ static int chttp_config_instance(config_item_t *ci)
     ctx->digest = false;
     ctx->verify_peer = true;
     ctx->verify_host = true;
-    ctx->timeout = -1;
+    ctx->timeout = 0;
 
     ctx->instance = strdup(ci->values[0].value.string);
     if (ctx->instance == NULL) {
@@ -457,10 +476,12 @@ static int chttp_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &ctx->proxy);
         } else if (strcasecmp("proxy-tunnel", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctx->proxy_tunnel);
+        } else if (strcasecmp("max-response-size", child->key) == 0) {
+            status = cf_util_get_unsigned_int(child, &ctx->max_response_size);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &ctx->timeout);
+            status = cf_util_get_cdtime(child, &ctx->timeout);
         } else if (strcasecmp("collect", child->key) == 0) {
             status = curl_stats_from_config(child, &ctx->curl_stats_flags);
         } else if (strcasecmp("filter", child->key) == 0) {
@@ -515,6 +536,17 @@ static int chttp_config_instance(config_item_t *ci)
 
 static int chttp_config(config_item_t *ci)
 {
+    /* Initialize libcurl before any other libcurl function is used. */
+    static bool curl_initialized = false;
+    if (!curl_initialized) {
+        CURLcode rcode = curl_global_init(CURL_GLOBAL_SSL);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_global_init failed: %s", curl_easy_strerror(rcode));
+            return -1;
+        }
+        curl_initialized = true;
+    }
+
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
@@ -531,14 +563,7 @@ static int chttp_config(config_item_t *ci)
     return 0;
 }
 
-static int chttp_init(void)
-{
-    curl_global_init(CURL_GLOBAL_SSL);
-    return 0;
-}
-
 void module_register(void)
 {
     plugin_register_config("http", chttp_config);
-    plugin_register_init("http", chttp_init);
 }
