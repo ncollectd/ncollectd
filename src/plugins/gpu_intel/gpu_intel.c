@@ -33,6 +33,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/itoa.h"
 
 /* collectd plugin API callback finished OK */
 #define RET_OK                    0
@@ -45,6 +46,211 @@
 #define RET_ZE_DEVICE_GET_FAIL   -6
 #define RET_ZE_DEVICE_PROPS_FAIL -7
 #define RET_NO_GPUS              -9
+
+enum {
+    FAM_GPU_INTEL_MEMORY_USED_BYTES,
+    FAM_GPU_INTEL_MEMORY_USAGE_RATIO,
+    FAM_GPU_INTEL_MEMORY_HEALTH,
+    FAM_GPU_INTEL_MEMORY_BW_RATIO,
+    FAM_GPU_INTEL_MEMORY_BW_BYTES_PER_SECOND,
+    FAM_GPU_INTEL_MEMORY_BW_BYTES,
+    FAM_GPU_INTEL_FREQUENCY_MHZ,
+    FAM_GPU_INTEL_FREQUENCY_RATIO,
+    FAM_GPU_INTEL_FREQUENCY_THROTTLE_REASON,
+    FAM_GPU_INTEL_THROTTLED_RATIO,
+    FAM_GPU_INTEL_THROTTLED_USECS,
+    FAM_GPU_INTEL_TEMPERATURE_CELSIUS,
+    FAM_GPU_INTEL_TEMPERATURE_RATIO,
+    FAM_GPU_INTEL_FABRIC_PORT_RATIO,
+    FAM_GPU_INTEL_FABRIC_PORT_BYTES_PER_SECOND,
+    FAM_GPU_INTEL_FABRIC_PORT_BYTES,
+    FAM_GPU_INTEL_FABRIC_PORT_STATUS,
+    FAM_GPU_INTEL_FABRIC_PORT_ISSUES,
+    FAM_GPU_INTEL_FABRIC_PORT_CONFIG,
+    FAM_GPU_INTEL_POWER_RATIO,
+    FAM_GPU_INTEL_POWER_WATTS,
+    FAM_GPU_INTEL_ENERGY_UJOULES,
+    FAM_GPU_INTEL_ENGINE_RATIO,
+    FAM_GPU_INTEL_ENGINE_USE_USECS,
+    FAM_GPU_INTEL_RESETS,
+    FAM_GPU_INTEL_PROGRAMMING_ERRORS,
+    FAM_GPU_INTEL_DRIVER_ERRORS,
+    FAM_GPU_INTEL_COMPUTE_ERRORS,
+    FAM_GPU_INTEL_FIXED_FUNCTION_ERRORS,
+    FAM_GPU_INTEL_CACHE_ERRORS,
+    FAM_GPU_INTEL_DISPLAY_ERRORS,
+    FAM_GPU_INTEL_UNKNOWN_ERRORS,
+    FAM_GPU_INTEL_ALL_ERRORS,
+    FAM_GPU_INTEL_MAX
+};
+
+static metric_family_t fams[FAM_GPU_INTEL_MAX] = {
+    [FAM_GPU_INTEL_MEMORY_USED_BYTES] = {
+        .name = "gpu_intel_memory_used_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Sampled memory usage (in bytes)",
+    },
+    [FAM_GPU_INTEL_MEMORY_USAGE_RATIO] = {
+        .name = "gpu_intel_memory_usage_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Sampled memory usage ratio (0-1)",
+    },
+    [FAM_GPU_INTEL_MEMORY_HEALTH] = {
+        .name = "gpu_intel_memory_health",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Memory module health status",
+    },
+    [FAM_GPU_INTEL_MEMORY_BW_RATIO] = {
+        .name = "gpu_intel_memory_bw_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Average memory bandwidth usage ratio (0-1) over query interval",
+    },
+    [FAM_GPU_INTEL_MEMORY_BW_BYTES_PER_SECOND] = {
+        .name = "gpu_intel_memory_bw_bytes_per_second",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory bandwidth usage rate (in bytes per second)",
+    },
+    [FAM_GPU_INTEL_MEMORY_BW_BYTES] = {
+        .name = "gpu_intel_memory_bw_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Memory bandwidth usage total (in bytes)",
+    },
+    [FAM_GPU_INTEL_FREQUENCY_MHZ] = {
+        .name = "gpu_intel_frequency_mhz",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Sampled HW frequency (in MHz)",
+    },
+    [FAM_GPU_INTEL_FREQUENCY_RATIO] = {
+        .name = "gpu_intel_frequency_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Sampled HW frequency ratio vs (non-overclocked) max frequency",
+    },
+    [FAM_GPU_INTEL_FREQUENCY_THROTTLE_REASON] = {
+        .name = "gpu_intel_frequency_throttle_reason",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Sampled HW frequency throttling reasons",
+    },
+    [FAM_GPU_INTEL_THROTTLED_RATIO] = {
+        .name = "gpu_intel_throttled_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Ratio (0-1) of HW frequency being throttled during query interval",
+    },
+    [FAM_GPU_INTEL_THROTTLED_USECS] = {
+        .name = "gpu_intel_throttled_usecs",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total time HW frequency has been throttled (in microseconds)",
+    },
+    [FAM_GPU_INTEL_TEMPERATURE_CELSIUS] = {
+        .name = "gpu_intel_temperature_celsius",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Temperature sensor value (in Celsius) when queried",
+    },
+    [FAM_GPU_INTEL_TEMPERATURE_RATIO] = {
+        .name = "gpu_intel_temperature_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Temperature sensor value ratio to its max value when queried",
+    },
+    [FAM_GPU_INTEL_FABRIC_PORT_RATIO] = {
+        .name = "gpu_intel_fabric_port_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Average fabric port bandwidth usage ratio (0-1) over query interval",
+    },
+    [FAM_GPU_INTEL_FABRIC_PORT_BYTES_PER_SECOND] = {
+        .name = "gpu_intel_fabric_port_bytes_per_second",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Fabric port throughput rate (in bytes per second)",
+    },
+    [FAM_GPU_INTEL_FABRIC_PORT_BYTES] = {
+        .name = "gpu_intel_fabric_port_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Fabric port throughput total (in bytes)",
+    },
+    [FAM_GPU_INTEL_FABRIC_PORT_STATUS] = {
+        .name = "gpu_intel_fabric_port_status",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Fabric port status",
+    },
+    [FAM_GPU_INTEL_FABRIC_PORT_ISSUES] = {
+        .name = "gpu_intel_fabric_port_issues",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Fabric port quality issues and failure reasons",
+    },
+    [FAM_GPU_INTEL_FABRIC_PORT_CONFIG] = {
+        .name = "gpu_intel_fabric_port_config",
+        .type = METRIC_TYPE_STATE_SET,
+        .help = "Fabric port configuration",
+    },
+    [FAM_GPU_INTEL_POWER_RATIO] = {
+        .name = "gpu_intel_power_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Ratio of average power usage vs sustained or burst power limit",
+    },
+    [FAM_GPU_INTEL_POWER_WATTS] = {
+        .name = "gpu_intel_power_watts",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Average power usage (in Watts) over query interval",
+    },
+    [FAM_GPU_INTEL_ENERGY_UJOULES] = {
+        .name = "gpu_intel_energy_ujoules",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total energy consumption since boot (in microjoules)",
+    },
+    [FAM_GPU_INTEL_ENGINE_RATIO] = {
+        .name = "gpu_intel_engine_ratio",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Average GPU engine / group utilization ratio (0-1) over query interval",
+    },
+    [FAM_GPU_INTEL_ENGINE_USE_USECS] = {
+        .name = "gpu_intel_engine_use_usecs",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "GPU engine / group execution time (activity) total (in microseconds)",
+    },
+    [FAM_GPU_INTEL_RESETS] = {
+        .name = "gpu_intel_resets",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of HW accelerator resets attempted by the driver",
+    },
+    [FAM_GPU_INTEL_PROGRAMMING_ERRORS] = {
+        .name = "gpu_intel_programming_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of (non-correctable) HW exceptions generated by the way workloads program the HW",
+    },
+    [FAM_GPU_INTEL_DRIVER_ERRORS] = {
+        .name = "gpu_intel_driver_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "total count of (non-correctable) low-level driver communication errors",
+    },
+    [FAM_GPU_INTEL_COMPUTE_ERRORS] = {
+        .name = "gpu_intel_compute_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of errors that have occurred in the (shader) accelerator HW",
+    },
+    [FAM_GPU_INTEL_FIXED_FUNCTION_ERRORS] = {
+        .name = "gpu_intel_fixed_function_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of errors that have occurred in the fixed-function accelerator HW",
+    },
+    [FAM_GPU_INTEL_CACHE_ERRORS] = {
+        .name = "gpu_intel_cache_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of ECC errors that have occurred in the on-chip caches",
+    },
+    [FAM_GPU_INTEL_DISPLAY_ERRORS] = {
+        .name = "gpu_intel_display_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of ECC errors that have occurred in the display",
+    },
+    [FAM_GPU_INTEL_UNKNOWN_ERRORS] = {
+        .name = "gpu_intel_unknown_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of errors in unsupported categories",
+    },
+    [FAM_GPU_INTEL_ALL_ERRORS] = {
+        .name = "gpu_intel_all_errors",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total count of errors in all categories",
+    },
+};
 
 /* handles for the GPU devices discovered by Sysman library */
 typedef struct {
@@ -78,6 +284,9 @@ typedef struct {
     zes_device_handle_t handle;
     /* how many times metrics have been checked */
     uint64_t check_count;
+
+    label_set_t labels;
+    metric_family_t fams[FAM_GPU_INTEL_MAX];
 } gpu_device_t;
 
 typedef enum {
@@ -98,12 +307,7 @@ static const struct {
 
 static gpu_device_t *gpus;
 static uint32_t gpu_count;
-static struct {
-    bool gpuinfo;
-    uint64_t flags;
-    output_t output;
-    uint32_t samples;
-} config;
+static plugin_filter_t *filter;
 
 enum {
     COLLECT_ENGINE           = (1 <<  0),
@@ -114,10 +318,19 @@ enum {
     COLLECT_MEMORY_BANDWIDTH = (1 <<  5),
     COLLECT_POWER            = (1 <<  6),
     COLLECT_POWER_RATIO      = (1 <<  7),
-    COLLECT_ERRORS           = (1 <<  9),
+    COLLECT_ERRORS           = (1 <<  8),
     COLLECT_SEPARATE_ERRORS  = (1 <<  9),
     COLLECT_TEMPERATURE      = (1 << 10),
     COLLECT_THROTTLETIME     = (1 << 11),
+    /* flags selecting metric queries, the other flags only modify them */
+    COLLECT_QUERIES          = (COLLECT_ENGINE | COLLECT_FABRIC | COLLECT_FREQUENCY |
+                                COLLECT_MEMORY | COLLECT_MEMORY_BANDWIDTH | COLLECT_POWER |
+                                COLLECT_ERRORS | COLLECT_TEMPERATURE | COLLECT_THROTTLETIME),
+    COLLECT_ALL              = (COLLECT_ENGINE | COLLECT_ENGINE_SINGLE | COLLECT_FABRIC |
+                                COLLECT_FREQUENCY | COLLECT_MEMORY | COLLECT_MEMORY_BANDWIDTH |
+                                COLLECT_POWER | COLLECT_POWER_RATIO | COLLECT_ERRORS |
+                                COLLECT_SEPARATE_ERRORS | COLLECT_TEMPERATURE |
+                                COLLECT_THROTTLETIME)
 };
 
 static cf_flags_t gpu_intel_flags[] = {
@@ -136,7 +349,17 @@ static cf_flags_t gpu_intel_flags[] = {
 };
 static size_t gpu_intel_flags_size = STATIC_ARRAY_SIZE(gpu_intel_flags);
 
+static struct {
+    bool gpuinfo;
+    uint64_t flags;
+    output_t output;
+    uint32_t samples;
+} config = {
+    .flags = COLLECT_ALL,
+};
+
 #define MAX_SAMPLES        64
+
 
 /* Free array of arrays allocated with gpu_subarray_realloc().
  *
@@ -226,68 +449,18 @@ static int gpu_config_free(void)
         gpus[i].pci_dev = NULL;
         free(gpus[i].dev_file);
         gpus[i].dev_file = NULL;
+
+
+        label_set_reset(&gpus[i].labels);
     }
 #undef FREE_GPU_SAMPLING_ARRAYS
 #undef FREE_GPU_ARRAY
     free(gpus);
     gpus = NULL;
-    return RET_OK;
-}
+    gpu_count = 0;
 
-/* show plugin GPU metrics config options, return RET_OK
- * if at least some metric is enabled, otherwise error code
- */
-static int gpu_config_check(void)
-{
-    if (!config.output) {
-        config.output = OUTPUT_ALL;
-    }
+    plugin_filter_free(filter);
 
-    if (config.gpuinfo) {
-        PLUGIN_INFO("- 'samples': %u", config.samples);
-
-        double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
-        if (config.samples > 1) {
-            PLUGIN_INFO("- internal sampling interval: %.2fs", interval);
-            PLUGIN_INFO("- query / aggregation submit interval: %.2fs", config.samples * interval);
-        } else {
-            PLUGIN_INFO("- query / submit interval: %.2fs", interval);
-        }
-
-        unsigned i;
-        PLUGIN_INFO("metrics-output'' variants:");
-        for (i = 0; i < STATIC_ARRAY_SIZE(metrics_output); i++) {
-            if (config.output & metrics_output[i].value) {
-                PLUGIN_INFO("- %s", metrics_output[i].name);
-            }
-        }
-    }
-
-    return RET_OK;
-}
-
-/* Set GPU specific flags to initial global configuration values
- * for each GPU.    Allocations of metrics arrays are done when metrics
- * are queried for the first time (not here), and re-allocated if
- * number of types for given metric changes.
- *
- * Return RET_OK if config is OK, (negative) error value otherwise
- */
-static int gpu_config_init(unsigned int count)
-{
-    if (!config.samples) {
-        config.samples = 1;
-    }
-    if (gpu_config_check()) {
-        gpu_config_free();
-        return RET_NO_METRICS;
-    }
-    unsigned int i;
-    for (i = 0; i < count; i++) {
-        gpus[i].flags = config.flags;
-        gpus[i].check_count = 0;
-    }
-    gpu_count = count;
     return RET_OK;
 }
 
@@ -404,7 +577,7 @@ static bool gpu_info(zes_device_handle_t dev, char **pci_bdf, char **pci_dev)
 
         PLUGIN_INFO("UMD/KMD driver info:");
         PLUGIN_INFO("- version:        %s", props.driverVersion);
-        PLUGIN_INFO("- max alloc:  %lu MiB", core->maxMemAllocSize / (1024 * 1024));
+        PLUGIN_INFO("- max alloc:  %" PRIu64 " MiB", core->maxMemAllocSize / (1024 * 1024));
 
         PLUGIN_INFO("HW info:");
         PLUGIN_INFO("- # sub devs: %u", props.numSubdevices);
@@ -444,7 +617,7 @@ static bool gpu_info(zes_device_handle_t dev, char **pci_bdf, char **pci_dev)
             memname = "Unknown";
         }
         PLUGIN_INFO("Memory - %s:", memname);
-        PLUGIN_INFO("- size:               %lu MiB", mems[i].totalSize / (1024 * 1024));
+        PLUGIN_INFO("- size:               %" PRIu64 " MiB", mems[i].totalSize / (1024 * 1024));
         PLUGIN_INFO("- bus width:  %u", mems[i].maxBusWidth);
         PLUGIN_INFO("- max clock:  %u", mems[i].maxClockRate);
     }
@@ -484,12 +657,18 @@ static bool add_gpu_labels(gpu_device_t *gpu, zes_device_handle_t dev)
         globfree(&devfs);
         return true;
     }
+    char *path_sys_drm = plugin_syspath("class/drm");
+    if (path_sys_drm == NULL) {
+        PLUGIN_ERROR("Cannot get sys path.");
+        globfree(&devfs);
+        return true;
+    }
     const size_t prefix_size = strlen(BDF_LINE);
     for (size_t i = 0; i < devfs.gl_pathc; i++) {
         char path[PATH_MAX], *dev_file;
         dev_file = basename(devfs.gl_pathv[i]);
 
-        snprintf(path, sizeof(path), "/sys/class/drm/%s/device/uevent", dev_file);
+        snprintf(path, sizeof(path), "%s/%s/device/uevent", path_sys_drm, dev_file);
         FILE *fp = fopen(path, "r");
         if (fp == NULL) {
             PLUGIN_INFO("device <-> BDF mapping, file missing: %s", path);
@@ -515,6 +694,7 @@ static bool add_gpu_labels(gpu_device_t *gpu, zes_device_handle_t dev)
             break;
         }
     }
+    free(path_sys_drm);
     globfree(&devfs);
 #undef DEVFS_GLOB
 #undef BDF_LINE
@@ -551,224 +731,6 @@ static int gpu_scan(ze_driver_handle_t *drivers, uint32_t driver_count, uint32_t
     if (config.gpuinfo)
         PLUGIN_INFO("scan: %u GPUs in total from %u L0 drivers", *scan_count, driver_count);
     return RET_OK;
-}
-
-/* Allocate 'scan_count' GPU structs to 'gpus' and fetch Sysman handle & name
- * for them.
- *
- * Counts of still found & ignored GPUs are set to 'scan_count' and
- * 'scan_ignored' arguments before returning.
- *
- * Return RET_OK for success if at least one GPU device info fetch succeeded,
- * otherwise (negative) error value for last error encountered
- */
-static int gpu_fetch(ze_driver_handle_t *drivers, uint32_t driver_count,
-                     uint32_t *scan_count, uint32_t *scan_ignored)
-{
-    assert(!gpus);
-    assert(*scan_count > 0);
-
-    gpus = calloc(*scan_count, sizeof(*gpus));
-    if (gpus == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        return RET_ZE_DEVICE_GET_FAIL;
-    }
-
-    uint32_t ignored = 0, count = 0;
-    int retval = RET_NO_GPUS;
-    ze_result_t ret;
-
-    for (uint32_t drv_idx = 0; drv_idx < driver_count; drv_idx++) {
-        uint32_t dev_count = 0;
-        ret = zeDeviceGet(drivers[drv_idx], &dev_count, NULL);
-        if (ret != ZE_RESULT_SUCCESS) {
-            PLUGIN_ERROR("failed to get device count for driver %u => 0x%x", drv_idx, ret);
-            retval = RET_ZE_DEVICE_GET_FAIL;
-            continue;
-        }
-
-        ze_device_handle_t *devs = calloc(dev_count, sizeof(*devs));
-        if (devs == NULL) {
-            PLUGIN_ERROR("calloc failed.");
-            return RET_ZE_DEVICE_GET_FAIL;
-        }
-
-        ret = zeDeviceGet(drivers[drv_idx], &dev_count, devs);
-        if (ret != ZE_RESULT_SUCCESS) {
-            PLUGIN_ERROR("failed to get %u devices for driver %u => 0x%x", dev_count, drv_idx, ret);
-            free(devs);
-            devs = NULL;
-            retval = RET_ZE_DEVICE_GET_FAIL;
-            continue;
-        }
-        /* Get all GPU devices for the driver */
-        for (uint32_t dev_idx = 0; dev_idx < dev_count; dev_idx++) {
-            ze_device_properties_t props = {.pNext = NULL};
-            ret = zeDeviceGetProperties(devs[dev_idx], &props);
-            if (ret != ZE_RESULT_SUCCESS) {
-                PLUGIN_ERROR("failed to get driver %u device %u properties => 0x%x",
-                             drv_idx, dev_idx, ret);
-                retval = RET_ZE_DEVICE_PROPS_FAIL;
-                continue;
-            }
-            assert(ZE_DEVICE_TYPE_GPU == props.type);
-            if (count >= *scan_count) {
-                ignored++;
-                continue;
-            }
-            gpus[count].handle = (zes_device_handle_t)devs[dev_idx];
-            if (!add_gpu_labels(&(gpus[count]), devs[dev_idx])) {
-                PLUGIN_ERROR("failed to get driver %u device %u information", drv_idx, dev_idx);
-                ignored++;
-                continue;
-            }
-            count++;
-        }
-        free(devs);
-        devs = NULL;
-    }
-
-    if (count > 0) {
-        retval = RET_OK;
-        if (config.gpuinfo) {
-            PLUGIN_INFO("fetch: %u/%u GPUs in total from %u L0 drivers", count, *scan_count,
-                         driver_count);
-        }
-    } else {
-        PLUGIN_ERROR("fetch for GPU devices failed");
-        gpu_config_free();
-    }
-
-    *scan_ignored = ignored;
-    *scan_count = count;
-    return retval;
-}
-
-/* Scan Sysman for GPU devices
- * Return RET_OK for success, (negative) error value otherwise
- */
-static int gpu_init(void)
-{
-    if (gpus) {
-        PLUGIN_NOTICE("skipping extra gpu_init() call");
-        return RET_OK;
-    }
-
-    setenv("ZES_ENABLE_SYSMAN", "1", 1);
-    ze_result_t ret = zeInit(ZE_INIT_FLAG_GPU_ONLY);
-    if (ret != ZE_RESULT_SUCCESS) {
-        PLUGIN_ERROR("Level Zero API init failed => 0x%x", ret);
-        return RET_ZE_INIT_FAIL;
-    }
-    /* Discover all the drivers */
-    uint32_t driver_count = 0;
-    ret = zeDriverGet(&driver_count, NULL);
-    if (ret != ZE_RESULT_SUCCESS) {
-        PLUGIN_ERROR("failed to get L0 GPU drivers count => 0x%x", ret);
-        return RET_ZE_DRIVER_GET_FAIL;
-    }
-    if (!driver_count) {
-        PLUGIN_ERROR("no drivers found with Level-Zero Sysman API");
-        return RET_NO_DRIVERS;
-    }
-
-    ze_driver_handle_t *drivers = calloc(driver_count, sizeof(*drivers));
-    if (drivers == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        return RET_ZE_DRIVER_GET_FAIL;
-    }
-
-    ret = zeDriverGet(&driver_count, drivers);
-    if (ret != ZE_RESULT_SUCCESS) {
-        PLUGIN_ERROR("failed to get %u L0 drivers => 0x%x", driver_count, ret);
-        free(drivers);
-        return RET_ZE_DRIVER_GET_FAIL;
-    }
-    /* scan number of Sysman provided GPUs... */
-    int fail;
-    uint32_t count;
-    if ((fail = gpu_scan(drivers, driver_count, &count)) < 0) {
-        free(drivers);
-        return fail;
-    }
-    uint32_t ignored = 0, scanned = count;
-    if (count) {
-        /* ...and allocate & fetch data for them */
-        if ((fail = gpu_fetch(drivers, driver_count, &count, &ignored)) < 0) {
-            free(drivers);
-            return fail;
-        }
-    }
-    free(drivers);
-
-    if (scanned > count)
-        PLUGIN_WARNING("%u GPUs disappeared after first scan", scanned - count);
-    if (ignored)
-        PLUGIN_WARNING("%u GPUs appeared after first scan (are ignored)", ignored);
-    if (!count) {
-        PLUGIN_ERROR("no GPU devices found with Level-Zero Sysman API");
-        return RET_NO_GPUS;
-    }
-
-    return gpu_config_init(count);
-}
-
-/* Add device labels to all metrics in given metric family and submit family to
- * collectd.    Resets metric family after dispatch */
-static void gpu_submit(gpu_device_t *gpu, metric_family_t *fam)
-{
-    metric_t *m = fam->metric.ptr;
-    for (size_t i = 0; i < fam->metric.num; i++) {
-        metric_label_set(m + i, "pci_bdf", gpu->pci_bdf);
-        if (gpu->dev_file) {
-            metric_label_set(m + i, "dev_file", gpu->dev_file);
-        }
-        if (gpu->pci_dev) {
-            metric_label_set(m + i, "pci_dev", gpu->pci_dev);
-        }
-    }
-    int status = plugin_dispatch_metric_family(fam, 0);
-    if (status != 0)
-        PLUGIN_ERROR("gpu_submit(%s, %s) failed: %s", gpu->pci_bdf, fam->name, strerror(status));
-    metric_family_metric_reset(fam);
-}
-
-/* because of family name change, each RAS metric needs to be submitted +
- * reset separately */
-static void ras_submit(gpu_device_t *gpu, const char *name, const char *help,
-                                          const char *type, const char *subdev, double value)
-{
-    metric_family_t fam = {
-            .type = METRIC_TYPE_COUNTER,
-            /*
-             * String literals are const, so they are passed as such to
-             * here, but .name & .help members are not, so casts are
-             * necessary.
-             *
-             * Note that same casts happen implicitly when string
-             * literals are assigned directly to these members, GCC
-             * just does not warn about that unless "-Write-strings"
-             * warning is enabled, which is NOT part of even "-Wall
-             * -Wextra".
-             *
-             * This cast is safe as long as metric_family_free() is not
-             * called on these families (which is the case).
-             */
-            .name = discard_const(name),
-            .help = discard_const(help),
-    };
-    metric_t m = {0};
-
-    m.value = VALUE_COUNTER_FLOAT64(value);
-    if (type) {
-        metric_label_set(&m, "type", type);
-    }
-    if (subdev) {
-        metric_label_set(&m, "sub_dev", subdev);
-    }
-    metric_family_metric_append(&fam, m);
-    metric_reset(&m, METRIC_TYPE_COUNTER);
-    gpu_submit(gpu, &fam);
 }
 
 /* Report error set types, return true for success */
@@ -820,10 +782,10 @@ static bool gpu_ras(gpu_device_t *gpu)
             type = "unknown";
         }
         char buf[12];
-        const char *subdev = NULL;
+        const char *sub_dev = NULL;
         if (props.onSubdevice) {
             ssnprintf(buf, sizeof(buf), "%u", props.subdeviceId);
-            subdev = buf;
+            sub_dev = buf;
         }
         const bool clear = false;
         zes_ras_state_t values = {.pNext = NULL};
@@ -836,172 +798,157 @@ static bool gpu_ras(gpu_device_t *gpu)
 
         bool correctable;
         uint64_t value, total = 0;
-        const char *catname, *help;
         for (int cat_idx = 0; cat_idx < ZES_MAX_RAS_ERROR_CATEGORY_COUNT; cat_idx++) {
             value = values.category[cat_idx];
             total += value;
             if (!(gpu->flags & COLLECT_SEPARATE_ERRORS))
                 continue;
             correctable = true;
+
+            int fam;
             switch (cat_idx) {
                 // categories which are not correctable, see:
                 // https://spec.oneapi.io/level-zero/latest/sysman/PROG.html#querying-ras-errors
             case ZES_RAS_ERROR_CAT_RESET:
-                help = "Total count of HW accelerator resets attempted by the driver";
-                catname = "gpu_intel_resets";
+                fam = FAM_GPU_INTEL_RESETS;
                 correctable = false;
                 break;
             case ZES_RAS_ERROR_CAT_PROGRAMMING_ERRORS:
-                help = "Total count of (non-correctable) HW exceptions generated by the "
-                       "way workloads program the HW";
-                catname = "gpu_intel_programming_errors";
+                fam = FAM_GPU_INTEL_PROGRAMMING_ERRORS;
                 correctable = false;
                 break;
             case ZES_RAS_ERROR_CAT_DRIVER_ERRORS:
-                help = "total count of (non-correctable) low-level driver communication "
-                       "errors";
-                catname = "gpu_intel_driver_errors";
+                fam = FAM_GPU_INTEL_DRIVER_ERRORS;
                 correctable = false;
                 break;
                 // categories which can have both correctable and uncorrectable errors
             case ZES_RAS_ERROR_CAT_COMPUTE_ERRORS:
-                help = "Total count of errors that have occurred in the (shader) "
-                       "accelerator HW";
-                catname = "gpu_intel_compute_errors";
+                fam = FAM_GPU_INTEL_COMPUTE_ERRORS;
                 break;
             case ZES_RAS_ERROR_CAT_NON_COMPUTE_ERRORS:
-                help = "Total count of errors that have occurred in the fixed-function "
-                             "accelerator HW";
-                catname = "gpu_intel_fixed_function_errors";
+                fam = FAM_GPU_INTEL_FIXED_FUNCTION_ERRORS;
                 break;
             case ZES_RAS_ERROR_CAT_CACHE_ERRORS:
-                help = "Total count of ECC errors that have occurred in the on-chip "
-                             "caches";
-                catname = "gpu_intel_cache_errors";
+                fam = FAM_GPU_INTEL_CACHE_ERRORS;
                 break;
             case ZES_RAS_ERROR_CAT_DISPLAY_ERRORS:
-                help = "Total count of ECC errors that have occurred in the display";
-                catname = "gpu_intel_display_errors";
+                fam = FAM_GPU_INTEL_DISPLAY_ERRORS;
                 break;
             default:
-                help = "Total count of errors in unsupported categories";
-                catname = "gpu_intel_unknown_errors";
+                fam = FAM_GPU_INTEL_UNKNOWN_ERRORS;
             }
+
             if (correctable) {
-                ras_submit(gpu, catname, help, type, subdev, value);
+                metric_family_append(&gpu->fams[fam], VALUE_COUNTER(value), &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             } else if (props.type == ZES_RAS_ERROR_TYPE_UNCORRECTABLE) {
-                ras_submit(gpu, catname, help, NULL, subdev, value);
+                metric_family_append(&gpu->fams[fam], VALUE_COUNTER(value), &gpu->labels,
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             }
         }
-        catname = "gpu_intel_all_errors";
-        help = "Total count of errors in all categories";
-        ras_submit(gpu, catname, help, type, subdev, total);
+
+        metric_family_append(&gpu->fams[FAM_GPU_INTEL_ALL_ERRORS],
+                             VALUE_COUNTER(total), &gpu->labels,
+                             &LABEL_PAIR_CONST("type", type),
+                             &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         ok = true;
     }
+
     free(ras);
     return ok;
 }
 
-static void metric_set_subdev(metric_t *m, bool onsub, uint32_t subid)
-{
-    if (onsub) {
-        char buf[12];
-        ssnprintf(buf, sizeof(buf), "%u", subid);
-        metric_label_set(m, "sub_dev", buf);
-    }
-}
-
-/* set memory metric labels based on its properties, return ZE_RESULT_SUCCESS
- * for success
- */
-static ze_result_t set_mem_labels(zes_mem_handle_t mem, metric_t *metric)
+/* set memory metric labels based on its properties, return ZE_RESULT_SUCCESS for success */
+static ze_result_t get_mem_labels(zes_mem_handle_t mem,  const char **location, const char **type,
+                                  const char **sub_dev, char sub_dev_buf[ITOA_MAX])
 {
     zes_mem_properties_t props = {.pNext = NULL};
     ze_result_t ret = zesMemoryGetProperties(mem, &props);
     if (ret != ZE_RESULT_SUCCESS)
         return ret;
 
-    const char *location;
     switch (props.location) {
     case ZES_MEM_LOC_SYSTEM:
-        location = "system";
+        *location = "system";
         break;
     case ZES_MEM_LOC_DEVICE:
-        location = "device";
+        *location = "device";
         break;
     default:
-        location = "unknown";
+        *location = "unknown";
     }
 
-    const char *type;
     switch (props.type) {
     case ZES_MEM_TYPE_HBM:
-        type = "HBM";
+        *type = "HBM";
         break;
     case ZES_MEM_TYPE_DDR:
-        type = "DDR";
+        *type = "DDR";
         break;
     case ZES_MEM_TYPE_DDR3:
-        type = "DDR3";
+        *type = "DDR3";
         break;
     case ZES_MEM_TYPE_DDR4:
-        type = "DDR4";
+        *type = "DDR4";
         break;
     case ZES_MEM_TYPE_DDR5:
-        type = "DDR5";
+        *type = "DDR5";
         break;
     case ZES_MEM_TYPE_LPDDR:
-        type = "LPDDR";
+        *type = "LPDDR";
         break;
     case ZES_MEM_TYPE_LPDDR3:
-        type = "LPDDR3";
+        *type = "LPDDR3";
         break;
     case ZES_MEM_TYPE_LPDDR4:
-        type = "LPDDR4";
+        *type = "LPDDR4";
         break;
     case ZES_MEM_TYPE_LPDDR5:
-        type = "LPDDR5";
+        *type = "LPDDR5";
         break;
     case ZES_MEM_TYPE_GDDR4:
-        type = "GDDR4";
+        *type = "GDDR4";
         break;
     case ZES_MEM_TYPE_GDDR5:
-        type = "GDDR5";
+        *type = "GDDR5";
         break;
     case ZES_MEM_TYPE_GDDR5X:
-        type = "GDDR5X";
+        *type = "GDDR5X";
         break;
     case ZES_MEM_TYPE_GDDR6:
-        type = "GDDR6";
+        *type = "GDDR6";
         break;
     case ZES_MEM_TYPE_GDDR6X:
-        type = "GDDR6X";
+        *type = "GDDR6X";
         break;
     case ZES_MEM_TYPE_GDDR7:
-        type = "GDDR7";
+        *type = "GDDR7";
         break;
     case ZES_MEM_TYPE_SRAM:
-        type = "SRAM";
+        *type = "SRAM";
         break;
     case ZES_MEM_TYPE_L1:
-        type = "L1";
+        *type = "L1";
         break;
     case ZES_MEM_TYPE_L3:
-        type = "L3";
+        *type = "L3";
         break;
     case ZES_MEM_TYPE_GRF:
-        type = "GRF";
+        *type = "GRF";
         break;
     case ZES_MEM_TYPE_SLM:
-        type = "SLM";
+        *type = "SLM";
         break;
     default:
-        type = "unknown";
+        *type = "unknown";
     }
 
-    metric_label_set(metric, "type", type);
-    metric_label_set(metric, "location", location);
-    metric_set_subdev(metric, props.onSubdevice, props.subdeviceId);
+    if (props.onSubdevice) {
+        uitoa(props.subdeviceId, sub_dev_buf);
+        *sub_dev = sub_dev_buf;
+    }
+
     return ZE_RESULT_SUCCESS;
 }
 
@@ -1037,6 +984,7 @@ static bool gpu_mems(gpu_device_t *gpu, unsigned int cache_idx)
         return false;
     }
 
+    bool reallocated = false;
     if ((gpu->memory_count != mem_count) || (gpu->memory == NULL)) {
         PLUGIN_INFO(" Sysman reports %u memory modules", mem_count);
         gpu->memory = (zes_mem_state_t **)gpu_subarray_realloc(
@@ -1046,22 +994,11 @@ static bool gpu_mems(gpu_device_t *gpu, unsigned int cache_idx)
             return false;
         }
         gpu->memory_count = mem_count;
+        reallocated = true;
         assert(gpu->memory);
     }
 
-    metric_family_t fam_bytes = {
-            .help = "Sampled memory usage (in bytes)",
-            .name = "gpu_intel_memory_used_bytes",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_ratio = {
-            .help = "Sampled memory usage ratio (0-1)",
-            .name = "gpu_intel_memory_usage_ratio",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_t metric = {0};
-
-    bool reported_ratio = false, reported_base = false, ok = false;
+    bool ok = false;
     for (uint32_t i = 0; i < mem_count; i++) {
         /* fetch memory samples */
         ret = zesMemoryGetState(mems[i], &(gpu->memory[cache_idx][i]));
@@ -1071,6 +1008,12 @@ static bool gpu_mems(gpu_device_t *gpu, unsigned int cache_idx)
             break;
         }
         ok = true;
+        if (reallocated) {
+            /* fill the slots of the current aggregation cycle that were not
+             * sampled before the (re)allocation with the current sample */
+            for (uint32_t j = cache_idx + 1; j < config.samples; j++)
+                gpu->memory[j][i] = gpu->memory[cache_idx][i];
+        }
         if (cache_idx > 0) {
             continue;
         }
@@ -1080,55 +1023,58 @@ static bool gpu_mems(gpu_device_t *gpu, unsigned int cache_idx)
             ok = false;
             break;
         }
+
+        const char *type = NULL;
+        const char *location = NULL;
+        const char *sub_dev = NULL;
+        char sub_dev_buf[ITOA_MAX];
+
         /* process samples */
-        ret = set_mem_labels(mems[i], &metric);
+        ret = get_mem_labels(mems[i], &type, &location, &sub_dev, sub_dev_buf);
         if (ret != ZE_RESULT_SUCCESS) {
             PLUGIN_ERROR("failed to get memory module %u properties => 0x%x", i, ret);
             ok = false;
             break;
         }
         /* get health status from last i.e. zeroeth sample */
-        zes_mem_health_t value = gpu->memory[0][i].health;
-        if (value != ZES_MEM_HEALTH_UNKNOWN) {
-            const char *health;
-            switch (value) {
-            case ZES_MEM_HEALTH_OK:
-                health = "ok";
-                break;
-            case ZES_MEM_HEALTH_DEGRADED:
-                health = "degraded";
-                break;
-            case ZES_MEM_HEALTH_CRITICAL:
-                health = "critical";
-                break;
-            case ZES_MEM_HEALTH_REPLACE:
-                health = "replace";
-                break;
-            default:
-                health = "unknown";
-            }
-            metric_label_set(&metric, "health", health);
+        zes_mem_health_t health = gpu->memory[0][i].health;
+        if (health != ZES_MEM_HEALTH_UNKNOWN) {
+            state_t states[] = {
+                    {.name = "ok",       .enabled = health == ZES_MEM_HEALTH_OK},
+                    {.name = "degraded", .enabled = health == ZES_MEM_HEALTH_DEGRADED},
+                    {.name = "critical", .enabled = health == ZES_MEM_HEALTH_CRITICAL},
+                    {.name = "replace",  .enabled = health == ZES_MEM_HEALTH_REPLACE},
+            };
+            state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_HEALTH],
+                                 VALUE_STATE_SET(set), &gpu->labels,
+                                 &LABEL_PAIR_CONST("type", type),
+                                 &LABEL_PAIR_CONST("location", location),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         }
         double mem_used;
         if (config.samples < 2) {
             const uint64_t mem_free = gpu->memory[0][i].free;
             /* Sysman reports just memory size & free amounts => calculate used */
-            mem_used = mem_size - mem_free;
-            if (config.output & OUTPUT_BASE) {
-                metric.value = VALUE_GAUGE(mem_used);
-                metric_family_metric_append(&fam_bytes, metric);
-                reported_base = true;
-            }
-            if (config.output & OUTPUT_RATIO) {
-                metric.value = VALUE_GAUGE(mem_used / mem_size);
-                metric_family_metric_append(&fam_ratio, metric);
-                reported_ratio = true;
-            }
+            mem_used = (mem_free > mem_size) ? 0 : mem_size - mem_free;
+            if (config.output & OUTPUT_BASE)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_USED_BYTES],
+                                     VALUE_GAUGE(mem_used),  &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+
+            if (config.output & OUTPUT_RATIO)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_USAGE_RATIO],
+                                     VALUE_GAUGE(mem_used / mem_size),  &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         } else {
             /* find min & max values for memory free from
              * (the configured number of) samples
              */
-            uint64_t free_min = (uint64_t)0xffffffff;
+            uint64_t free_min = UINT64_MAX;
             uint64_t free_max = 0, mem_free;
             for (uint32_t j = 0; j < config.samples; j++) {
                 mem_free = gpu->memory[j][i].free;
@@ -1140,53 +1086,40 @@ static bool gpu_mems(gpu_device_t *gpu, unsigned int cache_idx)
                 }
             }
             /* smallest used amount of memory within interval */
-            mem_used = mem_size - free_max;
-            metric_label_set(&metric, "function", "min");
-            if (config.output & OUTPUT_BASE) {
-                metric.value = VALUE_GAUGE(mem_used);
-                metric_family_metric_append(&fam_bytes, metric);
-                reported_base = true;
-            }
-            if (config.output & OUTPUT_RATIO) {
-                metric.value = VALUE_GAUGE(mem_used / mem_size);
-                metric_family_metric_append(&fam_ratio, metric);
-                reported_ratio = true;
-            }
+            mem_used = (free_max > mem_size) ? 0 : mem_size - free_max;
+            if (config.output & OUTPUT_BASE)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_USED_BYTES],
+                                     VALUE_GAUGE(mem_used),  &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+            if (config.output & OUTPUT_RATIO)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_USAGE_RATIO],
+                                     VALUE_GAUGE(mem_used / mem_size),  &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             /* largest used amount of memory within interval */
-            mem_used = mem_size - free_min;
-            metric_label_set(&metric, "function", "max");
-            if (config.output & OUTPUT_BASE) {
-                metric.value = VALUE_GAUGE(mem_used);
-                metric_family_metric_append(&fam_bytes, metric);
-                reported_base = true;
-            }
-            if (config.output & OUTPUT_RATIO) {
-                metric.value = VALUE_GAUGE(mem_used / mem_size);
-                metric_family_metric_append(&fam_ratio, metric);
-                reported_ratio = true;
-            }
+            mem_used = (free_min > mem_size) ? 0 : mem_size - free_min;
+            if (config.output & OUTPUT_BASE)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_USED_BYTES],
+                                     VALUE_GAUGE(mem_used),  &gpu->labels,
+                                     &LABEL_PAIR_CONST("function", "max"),
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+            if (config.output & OUTPUT_RATIO)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_USAGE_RATIO],
+                                     VALUE_GAUGE(mem_used / mem_size),  &gpu->labels,
+                                     &LABEL_PAIR_CONST("function", "max"),
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         }
-        metric_reset(&metric, METRIC_TYPE_GAUGE);
     }
-    if (reported_base) {
-        gpu_submit(gpu, &fam_bytes);
-    }
-    if (reported_ratio) {
-        gpu_submit(gpu, &fam_ratio);
-    }
+
     free(mems);
     return ok;
-}
-
-static void add_bw_gauges(metric_t *metric, metric_family_t *fam, double reads, double writes)
-{
-    metric->value = VALUE_GAUGE(reads);
-    metric_label_set(metric, "direction", "read");
-    metric_family_metric_append(fam, *metric);
-
-    metric->value = VALUE_GAUGE(writes);
-    metric_label_set(metric, "direction", "write");
-    metric_family_metric_append(fam, *metric);
 }
 
 /* Report memory modules bandwidth usage, return true for success.  */
@@ -1226,25 +1159,6 @@ static bool gpu_mems_bw(gpu_device_t *gpu)
         gpu->membw_count = mem_count;
     }
 
-    metric_family_t fam_ratio = {
-            .help = "Average memory bandwidth usage ratio (0-1) over query interval",
-            .name = "gpu_intel_memory_bw_ratio",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_rate = {
-            .help = "Memory bandwidth usage rate (in bytes per second)",
-            .name = "gpu_intel_memory_bw_bytes_per_second",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_counter = {
-            .help = "Memory bandwidth usage total (in bytes)",
-            .name = "gpu_intel_memory_bw_bytes",
-            .type = METRIC_TYPE_COUNTER,
-    };
-    metric_t metric = {0};
-
-    bool reported_rate = false, reported_ratio = false, reported_base = false;
-
     bool ok = false;
     for (uint32_t i = 0; i < mem_count; i++) {
         zes_mem_bandwidth_t bw;
@@ -1254,21 +1168,30 @@ static bool gpu_mems_bw(gpu_device_t *gpu)
             ok = false;
             break;
         }
-        ret = set_mem_labels(mems[i], &metric);
+
+        const char *type = NULL;
+        const char *location = NULL;
+        const char *sub_dev = NULL;
+        char sub_dev_buf[ITOA_MAX];
+        ret = get_mem_labels(mems[i], &type, &location, &sub_dev, sub_dev_buf);
         if (ret != ZE_RESULT_SUCCESS) {
             PLUGIN_ERROR("failed to get memory module %u properties => 0x%x", i, ret);
             ok = false;
             break;
         }
         if (config.output & OUTPUT_BASE) {
-            metric.value = VALUE_COUNTER(bw.writeCounter);
-            metric_label_set(&metric, "direction", "write");
-            metric_family_metric_append(&fam_counter, metric);
-
-            metric.value = VALUE_COUNTER(bw.readCounter);
-            metric_label_set(&metric, "direction", "read");
-            metric_family_metric_append(&fam_counter, metric);
-            reported_base = true;
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_BW_BYTES],
+                                 VALUE_COUNTER(bw.writeCounter), &gpu->labels,
+                                 &LABEL_PAIR_CONST("type", type),
+                                 &LABEL_PAIR_CONST("location", location),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev),
+                                 &LABEL_PAIR_CONST("direction", "write"), NULL);
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_BW_BYTES],
+                                 VALUE_COUNTER(bw.readCounter), &gpu->labels,
+                                 &LABEL_PAIR_CONST("type", type),
+                                 &LABEL_PAIR_CONST("location", location),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev),
+                                 &LABEL_PAIR_CONST("direction", "read"), NULL);
         }
         zes_mem_bandwidth_t *old = &gpu->membw[i];
         if (old->timestamp && bw.timestamp > old->timestamp &&
@@ -1281,26 +1204,40 @@ static bool gpu_mems_bw(gpu_device_t *gpu)
 
             if (config.output & OUTPUT_RATE) {
                 double factor = 1.0e6 / timediff;
-                add_bw_gauges(&metric, &fam_rate, factor * reads, factor * writes);
-                reported_rate = true;
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_BW_BYTES_PER_SECOND],
+                                     VALUE_GAUGE(factor * reads), &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev),
+                                     &LABEL_PAIR_CONST("direction", "read"), NULL);
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_BW_BYTES_PER_SECOND],
+                                     VALUE_GAUGE(factor * writes), &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev),
+                                     &LABEL_PAIR_CONST("direction", "write"), NULL);
             }
             if ((config.output & OUTPUT_RATIO) && old->maxBandwidth) {
                 double factor = 1.0e6 / (old->maxBandwidth * timediff);
-                add_bw_gauges(&metric, &fam_ratio, factor * reads, factor * writes);
-                reported_ratio = true;
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_BW_RATIO],
+                                     VALUE_GAUGE(factor * reads), &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev),
+                                     &LABEL_PAIR_CONST("direction", "read"), NULL);
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_MEMORY_BW_RATIO],
+                                     VALUE_GAUGE(factor * writes), &gpu->labels,
+                                     &LABEL_PAIR_CONST("type", type),
+                                     &LABEL_PAIR_CONST("location", location),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev),
+                                     &LABEL_PAIR_CONST("direction", "write"), NULL);
             }
         }
-        metric_reset(&metric, METRIC_TYPE_COUNTER);
+
         *old = bw;
         ok = true;
     }
 
-    if (reported_ratio)
-        gpu_submit(gpu, &fam_ratio);
-    if (reported_rate)
-        gpu_submit(gpu, &fam_rate);
-    if (reported_base)
-        gpu_submit(gpu, &fam_counter);
     free(mems);
     return ok;
 }
@@ -1308,7 +1245,8 @@ static bool gpu_mems_bw(gpu_device_t *gpu)
 /* set frequency metric labels based on its properties and maxfreq for non-NULL
  * pointer, return ZE_RESULT_SUCCESS for success
  */
-static ze_result_t set_freq_labels(zes_freq_handle_t freq, metric_t *metric, double *maxfreq)
+static ze_result_t get_freq_labels(zes_freq_handle_t freq, const char **type, const char **sub_dev,
+                                   char sub_dev_buf[ITOA_MAX], double *maxfreq)
 {
     zes_freq_properties_t props = {.pNext = NULL};
     ze_result_t ret = zesFrequencyGetProperties(freq, &props);
@@ -1318,58 +1256,23 @@ static ze_result_t set_freq_labels(zes_freq_handle_t freq, metric_t *metric, dou
     if (maxfreq)
         *maxfreq = props.max;
 
-    const char *type;
     switch (props.type) {
     case ZES_FREQ_DOMAIN_GPU:
-        type = "gpu";
+        *type = "gpu";
         break;
     case ZES_FREQ_DOMAIN_MEMORY:
-        type = "memory";
+        *type = "memory";
         break;
     default:
-        type = "unknown";
+        *type = "unknown";
     }
 
-    metric_label_set(metric, "location", type);
-    metric_set_subdev(metric, props.onSubdevice, props.subdeviceId);
+    if (props.onSubdevice) {
+        uitoa(props.subdeviceId, sub_dev_buf);
+        *sub_dev = sub_dev_buf;
+    }
+
     return ZE_RESULT_SUCCESS;
-}
-
-/* set label explaining frequency throttling reason(s) */
-static void set_freq_throttled_label(metric_t *metric, zes_freq_throttle_reason_flags_t reasons)
-{
-    static const struct {
-        zes_freq_throttle_reason_flags_t flag;
-        const char *reason;
-    } flags[] = {
-            {ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP, "average-power"},
-            {ZES_FREQ_THROTTLE_REASON_FLAG_BURST_PWR_CAP, "burst-power"},
-            {ZES_FREQ_THROTTLE_REASON_FLAG_CURRENT_LIMIT, "current"},
-            {ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT, "temperature"},
-            {ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT, "PSU-alert"},
-            {ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE, "SW-freq-range"},
-            {ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE, "HW-freq-range"},
-    };
-    bool found = false;
-    const char *reason = NULL;
-
-    for (unsigned int i = 0; i < STATIC_ARRAY_SIZE(flags); i++) {
-        if (reasons & flags[i].flag) {
-            if (found) {
-                reason = "many";
-                break;
-            }
-            reason = flags[i].reason;
-            found = true;
-        }
-    }
-
-    if (reasons) {
-        if (!found) {
-            reason = "unknown";
-        }
-        metric_label_set(metric, "throttled_by", reason);
-    }
 }
 
 /* Report frequency domains request & actual frequency, return true for success
@@ -1404,27 +1307,20 @@ static bool gpu_freqs(gpu_device_t *gpu, unsigned int cache_idx)
         return false;
     }
 
-    if (gpu->frequency_count != freq_count) {
+    bool reallocated = false;
+    if ((gpu->frequency_count != freq_count) || (gpu->frequency == NULL)) {
         PLUGIN_INFO(" Sysman reports %u frequency domains", freq_count);
         gpu->frequency = (zes_freq_state_t **)gpu_subarray_realloc(
                          (void **)gpu->frequency, freq_count, sizeof(gpu->frequency[0][0]));
+        if (gpu->frequency == NULL) {
+            free(freqs);
+            return false;
+        }
         gpu->frequency_count = freq_count;
-        assert(gpu->frequency);
+        reallocated = true;
     }
 
-    metric_family_t fam_freq = {
-            .help = "Sampled HW frequency (in MHz)",
-            .name = "gpu_intel_frequency_mhz",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_ratio = {
-            .help = "Sampled HW frequency ratio vs (non-overclocked) max frequency",
-            .name = "gpu_intel_frequency_ratio",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_t metric = {0};
-
-    bool reported_ratio = false, reported_base = false, ok = false;
+    bool ok = false;
     for (uint32_t i = 0; i < freq_count; i++) {
         /* fetch freq samples */
         ret = zesFrequencyGetState(freqs[i], &(gpu->frequency[cache_idx][i]));
@@ -1434,51 +1330,94 @@ static bool gpu_freqs(gpu_device_t *gpu, unsigned int cache_idx)
             break;
         }
         ok = true;
+        if (reallocated) {
+            /* fill the slots of the current aggregation cycle that were not
+             * sampled before the (re)allocation with the current sample */
+            for (uint32_t j = cache_idx + 1; j < config.samples; j++)
+                gpu->frequency[j][i] = gpu->frequency[cache_idx][i];
+        }
         if (cache_idx > 0) {
             continue;
         }
         /* process samples */
-        double maxfreq;
-        ret = set_freq_labels(freqs[i], &metric, &maxfreq);
+        const char *type = NULL;
+        const char *sub_dev = NULL;
+        char sub_dev_buf[ITOA_MAX];
+        double maxfreq = 0;
+        ret = get_freq_labels(freqs[i], &type, &sub_dev, sub_dev_buf,  &maxfreq);
         if (ret != ZE_RESULT_SUCCESS) {
             PLUGIN_ERROR("Failed to get frequency domain %u properties => 0x%x", i, ret);
             ok = false;
             break;
         }
-        double value;
+        zes_freq_throttle_reason_flags_t reasons = 0;
+        for (uint32_t j = 0; j < config.samples; j++) {
+            reasons |= gpu->frequency[j][i].throttleReasons;
+        }
+
+        static const struct {
+            zes_freq_throttle_reason_flags_t flag;
+            const char *reason;
+        } flags[] = {
+                {ZES_FREQ_THROTTLE_REASON_FLAG_AVE_PWR_CAP, "average-power"},
+                {ZES_FREQ_THROTTLE_REASON_FLAG_BURST_PWR_CAP, "burst-power"},
+                {ZES_FREQ_THROTTLE_REASON_FLAG_CURRENT_LIMIT, "current"},
+                {ZES_FREQ_THROTTLE_REASON_FLAG_THERMAL_LIMIT, "temperature"},
+                {ZES_FREQ_THROTTLE_REASON_FLAG_PSU_ALERT, "PSU-alert"},
+                {ZES_FREQ_THROTTLE_REASON_FLAG_SW_RANGE, "SW-freq-range"},
+                {ZES_FREQ_THROTTLE_REASON_FLAG_HW_RANGE, "HW-freq-range"},
+        };
+        state_t states[STATIC_ARRAY_SIZE(flags) + 1];
+
+        for (unsigned int j = 0; j < STATIC_ARRAY_SIZE(flags); j++) {
+            states[j].name = discard_const(flags[j].reason);
+            states[j].enabled = (reasons & flags[j].flag) != 0;
+            reasons &= ~flags[j].flag;
+        }
+        /* remaining flags are reasons not known by the plugin */
+        states[STATIC_ARRAY_SIZE(flags)].name = "unknown";
+        states[STATIC_ARRAY_SIZE(flags)].enabled = reasons != 0;
+        state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
+
+        metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_THROTTLE_REASON],
+                             VALUE_STATE_SET(set), &gpu->labels,
+                             &LABEL_PAIR_CONST("type", "request"),
+                             &LABEL_PAIR_CONST("location", type),
+                             &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
 
         if (config.samples < 2) {
-            set_freq_throttled_label(&metric, gpu->frequency[0][i].throttleReasons);
             /* negative value = unsupported:
              * https://spec.oneapi.com/level-zero/latest/sysman/api.html#_CPPv416zes_freq_state_t
              */
-            value = gpu->frequency[0][i].request;
+            double value = gpu->frequency[0][i].request;
             if (value >= 0) {
-                metric_label_set(&metric, "type", "request");
-                if (config.output & OUTPUT_BASE) {
-                    metric.value = VALUE_GAUGE(value);
-                    metric_family_metric_append(&fam_freq, metric);
-                    reported_base = true;
-                }
-                if ((config.output & OUTPUT_RATIO) && maxfreq > 0) {
-                    metric.value = VALUE_GAUGE(value / maxfreq);
-                    metric_family_metric_append(&fam_ratio, metric);
-                    reported_ratio = true;
-                }
+                if (config.output & OUTPUT_BASE)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_MHZ],
+                                         VALUE_GAUGE(value), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "request"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if ((config.output & OUTPUT_RATIO) && maxfreq > 0)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_RATIO],
+                                         VALUE_GAUGE(value / maxfreq), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "request"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             }
             value = gpu->frequency[0][i].actual;
             if (value >= 0) {
-                metric_label_set(&metric, "type", "actual");
-                if (config.output & OUTPUT_BASE) {
-                    metric.value = VALUE_GAUGE(value);
-                    metric_family_metric_append(&fam_freq, metric);
-                    reported_base = true;
-                }
-                if ((config.output & OUTPUT_RATIO) && maxfreq > 0) {
-                    metric.value = VALUE_GAUGE(value / maxfreq);
-                    metric_family_metric_append(&fam_ratio, metric);
-                    reported_ratio = true;
-                }
+                if (config.output & OUTPUT_BASE)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_MHZ],
+                                         VALUE_GAUGE(value), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "actual"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if ((config.output & OUTPUT_RATIO) && maxfreq > 0)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_RATIO],
+                                         VALUE_GAUGE(value / maxfreq), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "actual"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             }
         } else {
             /* find min & max values for actual frequency & its request
@@ -1486,88 +1425,81 @@ static bool gpu_freqs(gpu_device_t *gpu, unsigned int cache_idx)
              */
             double req_min = 1.0e12, req_max = -1.0e12;
             double act_min = 1.0e12, act_max = -1.0e12;
-            zes_freq_throttle_reason_flags_t reasons = 0;
             for (uint32_t j = 0; j < config.samples; j++) {
-                reasons |= gpu->frequency[j][i].throttleReasons;
-                value = gpu->frequency[j][i].request;
-                if (value < req_min) {
+                double value = gpu->frequency[j][i].request;
+                if (value < req_min)
                     req_min = value;
-                }
-                if (value > req_max) {
+                if (value > req_max)
                     req_max = value;
-                }
                 value = gpu->frequency[j][i].actual;
-                if (value < act_min) {
+                if (value < act_min)
                     act_min = value;
-                }
-                if (value > act_max) {
+                if (value > act_max)
                     act_max = value;
-                }
             }
-            set_freq_throttled_label(&metric, reasons);
             if (req_max >= 0.0) {
-                metric_label_set(&metric, "type", "request");
-                metric_label_set(&metric, "function", "min");
-                if (config.output & OUTPUT_BASE) {
-                    metric.value = VALUE_GAUGE(req_min);
-                    metric_family_metric_append(&fam_freq, metric);
-                    reported_base = true;
-                }
-                if ((config.output & OUTPUT_RATIO) && maxfreq > 0) {
-                    metric.value = VALUE_GAUGE(req_min / maxfreq);
-                    metric_family_metric_append(&fam_ratio, metric);
-                    reported_ratio = true;
-                }
-                metric_label_set(&metric, "function", "max");
-                if (config.output & OUTPUT_BASE) {
-                    metric.value = VALUE_GAUGE(req_max);
-                    metric_family_metric_append(&fam_freq, metric);
-                    reported_base = true;
-                }
-                if ((config.output & OUTPUT_RATIO) && maxfreq > 0) {
-                    metric.value = VALUE_GAUGE(req_max / maxfreq);
-                    metric_family_metric_append(&fam_ratio, metric);
-                    reported_ratio = true;
-                }
+                if (config.output & OUTPUT_BASE)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_MHZ],
+                                         VALUE_GAUGE(req_min), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "request"),
+                                         &LABEL_PAIR_CONST("function", "min"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if ((config.output & OUTPUT_RATIO) && maxfreq > 0)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_RATIO],
+                                         VALUE_GAUGE(req_min / maxfreq), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "request"),
+                                         &LABEL_PAIR_CONST("function", "min"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if (config.output & OUTPUT_BASE)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_MHZ],
+                                         VALUE_GAUGE(req_max), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "request"),
+                                         &LABEL_PAIR_CONST("function", "max"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if ((config.output & OUTPUT_RATIO) && maxfreq > 0)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_RATIO],
+                                         VALUE_GAUGE(req_max / maxfreq), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "request"),
+                                         &LABEL_PAIR_CONST("function", "max"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             }
             if (act_max >= 0.0) {
-                metric_label_set(&metric, "type", "actual");
-                metric_label_set(&metric, "function", "min");
-                if (config.output & OUTPUT_BASE) {
-                    metric.value = VALUE_GAUGE(act_min);
-                    metric_family_metric_append(&fam_freq, metric);
-                    reported_base = true;
-                }
-                if ((config.output & OUTPUT_RATIO) && maxfreq > 0) {
-                    metric.value = VALUE_GAUGE(act_min / maxfreq);
-                    metric_family_metric_append(&fam_ratio, metric);
-                    reported_ratio = true;
-                }
-                metric_label_set(&metric, "function", "max");
-                if (config.output & OUTPUT_BASE) {
-                    metric.value = VALUE_GAUGE(act_max);
-                    metric_family_metric_append(&fam_freq, metric);
-                    reported_base = true;
-                }
-                if ((config.output & OUTPUT_RATIO) && maxfreq > 0) {
-                    metric.value = VALUE_GAUGE(act_max / maxfreq);
-                    metric_family_metric_append(&fam_ratio, metric);
-                    reported_ratio = true;
-                }
+                if (config.output & OUTPUT_BASE)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_MHZ],
+                                         VALUE_GAUGE(act_min), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "actual"),
+                                         &LABEL_PAIR_CONST("function", "min"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if ((config.output & OUTPUT_RATIO) && maxfreq > 0)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_RATIO],
+                                         VALUE_GAUGE(act_min / maxfreq), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "actual"),
+                                         &LABEL_PAIR_CONST("function", "min"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if (config.output & OUTPUT_BASE)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_MHZ],
+                                         VALUE_GAUGE(act_max), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "actual"),
+                                         &LABEL_PAIR_CONST("function", "max"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                if ((config.output & OUTPUT_RATIO) && maxfreq > 0)
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FREQUENCY_RATIO],
+                                         VALUE_GAUGE(act_min / maxfreq), &gpu->labels,
+                                         &LABEL_PAIR_CONST("type", "actual"),
+                                         &LABEL_PAIR_CONST("function", "max"),
+                                         &LABEL_PAIR_CONST("location", type),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             }
-        }
-        metric_reset(&metric, METRIC_TYPE_GAUGE);
-        if (!(reported_base || reported_ratio)) {
-            PLUGIN_ERROR("neither requests nor actual frequencies supported for domain %u", i);
-            ok = false;
-            break;
         }
     }
 
-    if (reported_base)
-        gpu_submit(gpu, &fam_freq);
-    if (reported_ratio)
-        gpu_submit(gpu, &fam_ratio);
     free(freqs);
     return ok;
 }
@@ -1614,19 +1546,7 @@ static bool gpu_freqs_throttle(gpu_device_t *gpu)
         gpu->throttle_count = freq_count;
     }
 
-    metric_family_t fam_ratio = {
-            .name = "gpu_intel_throttled_ratio",
-            .type = METRIC_TYPE_GAUGE,
-            .help = "Ratio (0-1) of HW frequency being throttled during query interval",
-    };
-    metric_family_t fam_counter = {
-            .name = "gpu_intel_throttled_usecs",
-            .type = METRIC_TYPE_COUNTER,
-            .help = "Total time HW frequency has been throttled (in microseconds)",
-    };
-    metric_t metric = {0};
-
-    bool reported_ratio = false, reported_base = false, ok = false;
+    bool ok = false;
     for (uint32_t i = 0; i < freq_count; i++) {
         zes_freq_throttle_time_t throttle;
         ret = zesFrequencyGetThrottleTime(freqs[i], &throttle);
@@ -1635,36 +1555,33 @@ static bool gpu_freqs_throttle(gpu_device_t *gpu)
             ok = false;
             break;
         }
-        ret = set_freq_labels(freqs[i], &metric, NULL);
+        const char *type = NULL;
+        const char *sub_dev = NULL;
+        char sub_dev_buf[ITOA_MAX];
+        ret = get_freq_labels(freqs[i], &type, &sub_dev, sub_dev_buf,  NULL);
         if (ret != ZE_RESULT_SUCCESS) {
             PLUGIN_ERROR("failed to get frequency domain %u properties => 0x%x", i, ret);
             ok = false;
             break;
         }
-        if (config.output & OUTPUT_BASE) {
-            /* cannot convert microsecs to secs as counters are integers */
-            metric.value = VALUE_COUNTER(throttle.throttleTime);
-            metric_family_metric_append(&fam_counter, metric);
-            reported_base = true;
-        }
+        if (config.output & OUTPUT_BASE)
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_THROTTLED_USECS],
+                                 VALUE_COUNTER(throttle.throttleTime), &gpu->labels,
+                                 &LABEL_PAIR_CONST("location", type),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         zes_freq_throttle_time_t *old = &gpu->throttle[i];
         if (old->timestamp && throttle.timestamp > old->timestamp &&
-            (config.output & OUTPUT_RATIO)) {
-            /* micro seconds => throttle ratio */
-            metric.value = VALUE_GAUGE((throttle.throttleTime - old->throttleTime) /
-                                       (double)(throttle.timestamp - old->timestamp));
-            metric_family_metric_append(&fam_ratio, metric);
-            reported_ratio = true;
-        }
-        metric_reset(&metric, METRIC_TYPE_GAUGE);
+            (config.output & OUTPUT_RATIO))
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_THROTTLED_RATIO],
+                                 VALUE_GAUGE((throttle.throttleTime - old->throttleTime) /
+                                              (double)(throttle.timestamp - old->timestamp)),
+                                 &gpu->labels,
+                                 &LABEL_PAIR_CONST("location", type),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         *old = throttle;
         ok = true;
     }
 
-    if (reported_ratio)
-        gpu_submit(gpu, &fam_ratio);
-    if (reported_base)
-        gpu_submit(gpu, &fam_counter);
     free(freqs);
     return ok;
 }
@@ -1702,19 +1619,7 @@ static bool gpu_temps(gpu_device_t *gpu)
         gpu->temp_count = temp_count;
     }
 
-    metric_family_t fam_temp = {
-            .help = "Temperature sensor value (in Celsius) when queried",
-            .name = "gpu_intel_temperature_celsius",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_ratio = {
-            .help = "Temperature sensor value ratio to its max value when queried",
-            .name = "gpu_intel_temperature_ratio",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_t metric = {0};
-
-    bool reported_ratio = false, reported_base = false, ok = false;
+    bool ok = false;
     for (uint32_t i = 0; i < temp_count; i++) {
         zes_temp_properties_t props = {.pNext = NULL};
         ret = zesTemperatureGetProperties(temps[i], &props);
@@ -1757,87 +1662,29 @@ static bool gpu_temps(gpu_device_t *gpu)
             ok = false;
             break;
         }
-        metric_label_set(&metric, "location", type);
-        metric_set_subdev(&metric, props.onSubdevice, props.subdeviceId);
-        if (config.output & OUTPUT_BASE) {
-            metric.value = VALUE_GAUGE(value);
-            metric_family_metric_append(&fam_temp, metric);
-            reported_base = true;
+
+        const char *sub_dev = NULL;
+        char sub_dev_buf[ITOA_MAX];
+        if (props.onSubdevice) {
+            uitoa(props.subdeviceId, sub_dev_buf);
+            sub_dev = sub_dev_buf;
         }
-        if (props.maxTemperature > 0 && (config.output & OUTPUT_RATIO)) {
-            metric.value = VALUE_GAUGE(value / props.maxTemperature);
-            metric_family_metric_append(&fam_ratio, metric);
-            reported_ratio = true;
-        }
-        metric_reset(&metric, METRIC_TYPE_GAUGE);
+
+        if (config.output & OUTPUT_BASE)
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_TEMPERATURE_CELSIUS],
+                                 VALUE_COUNTER(value), &gpu->labels,
+                                 &LABEL_PAIR_CONST("location", type),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+        if (props.maxTemperature > 0 && (config.output & OUTPUT_RATIO))
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_TEMPERATURE_RATIO],
+                                 VALUE_COUNTER(value / props.maxTemperature), &gpu->labels,
+                                 &LABEL_PAIR_CONST("location", type),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         ok = true;
     }
 
-    if (reported_base)
-        gpu_submit(gpu, &fam_temp);
-    if (reported_ratio)
-        gpu_submit(gpu, &fam_ratio);
     free(temps);
     return ok;
-}
-
-/* status / health labels */
-static void add_fabric_state_labels(metric_t *metric, zes_fabric_port_state_t *state)
-{
-    const char *status;
-    switch (state->status) {
-    case ZES_FABRIC_PORT_STATUS_UNKNOWN:
-        status = "unknown";
-        break;
-    case ZES_FABRIC_PORT_STATUS_HEALTHY:
-        status = "healthy";
-        break;
-    case ZES_FABRIC_PORT_STATUS_DEGRADED:
-        status = "degraded";
-        break;
-    case ZES_FABRIC_PORT_STATUS_FAILED:
-        status = "failed";
-        break;
-    case ZES_FABRIC_PORT_STATUS_DISABLED:
-        status = "disabled";
-        break;
-    default:
-        status = "unsupported";
-    }
-    metric_label_set(metric, "status", status);
-
-    const char *issues = NULL;
-    switch (state->qualityIssues) {
-    case 0:
-        break;
-    case ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS:
-        issues = "link";
-        break;
-    case ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED:
-        issues = "speed";
-        break;
-    default:
-        issues = "link+speed";
-    }
-
-    switch (state->failureReasons) {
-    case 0:
-        break;
-    case ZES_FABRIC_PORT_FAILURE_FLAG_FAILED:
-        issues = "failure";
-        break;
-    case ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT:
-        issues = "training";
-        break;
-    case ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING:
-        issues = "flapping";
-        break;
-    default:
-        issues = "multiple";
-    }
-
-    if (issues)
-        metric_label_set(metric, "issues", issues);
 }
 
 /* Report metrics for relevant fabric ports, return true for success */
@@ -1877,26 +1724,6 @@ static bool gpu_fabrics(gpu_device_t *gpu)
         }
         gpu->fabric_count = port_count;
     }
-
-    metric_family_t fam_ratio = {
-            .help =
-                    "Average fabric port bandwidth usage ratio (0-1) over query interval",
-            .name = "gpu_intel_fabric_port_ratio",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_rate = {
-            .help = "Fabric port throughput rate (in bytes per second)",
-            .name = "gpu_intel_fabric_port_bytes_per_second",
-            .type = METRIC_TYPE_GAUGE,
-    };
-    metric_family_t fam_counter = {
-            .help = "Fabric port throughput total (in bytes)",
-            .name = "gpu_intel_fabric_port_bytes",
-            .type = METRIC_TYPE_COUNTER,
-    };
-    metric_t metric = {0};
-
-    bool reported_rate = false, reported_ratio = false, reported_base = false;
 
     bool ok = false;
     for (uint32_t i = 0; i < port_count; i++) {
@@ -1942,42 +1769,92 @@ static bool gpu_fabrics(gpu_device_t *gpu)
         /* port setting / identity setting labels */
 
         link.desc[sizeof(link.desc) - 1] = '\0';
-        metric_label_set(&metric, "link", link.desc);
-        metric_label_set(&metric, "enabled", conf.enabled ? "on" : "off");
-        metric_label_set(&metric, "beaconing", conf.beaconing ? "on" : "off");
-
         props.model[sizeof(props.model) - 1] = '\0';
-        metric_label_set(&metric, "model", props.model);
-        metric_set_subdev(&metric, props.onSubdevice, props.subdeviceId);
 
-        /* topology labels */
-
-        char buf[32];
+        char port[32];
         zes_fabric_port_id_t *pid = &props.portId;
-        snprintf(buf, sizeof(buf), "%08x.%08x.%02x", pid->fabricId, pid->attachId,
-                         pid->portNumber);
-        metric_label_set(&metric, "port", buf);
+        snprintf(port, sizeof(port), "%08x.%08x.%02x", pid->fabricId, pid->attachId,
+                       pid->portNumber);
 
         pid = &state.remotePortId;
-        snprintf(buf, sizeof(buf), "%08x.%08x.%02x", pid->fabricId, pid->attachId,
+        char remote[32];
+        snprintf(remote, sizeof(remote), "%08x.%08x.%02x", pid->fabricId, pid->attachId,
                          pid->portNumber);
-        metric_label_set(&metric, "remote", buf);
 
-        /* status / health labels */
+        const char *sub_dev = NULL;
+        char sub_dev_buf[ITOA_MAX];
+        if (props.onSubdevice) {
+            uitoa(props.subdeviceId, sub_dev_buf);
+            sub_dev = sub_dev_buf;
+        }
 
-        add_fabric_state_labels(&metric, &state);
+        const zes_fabric_port_status_t status = state.status;
+        state_t status_states[] = {
+                {.name = "unknown",  .enabled = status == ZES_FABRIC_PORT_STATUS_UNKNOWN},
+                {.name = "healthy",  .enabled = status == ZES_FABRIC_PORT_STATUS_HEALTHY},
+                {.name = "degraded", .enabled = status == ZES_FABRIC_PORT_STATUS_DEGRADED},
+                {.name = "failed",   .enabled = status == ZES_FABRIC_PORT_STATUS_FAILED},
+                {.name = "disabled", .enabled = status == ZES_FABRIC_PORT_STATUS_DISABLED},
+        };
+        state_set_t status_set = { .num = STATIC_ARRAY_SIZE(status_states), .ptr = status_states };
+        metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_STATUS],
+                             VALUE_STATE_SET(status_set), &gpu->labels,
+                             &LABEL_PAIR_CONST("link", link.desc),
+                             &LABEL_PAIR_CONST("model", props.model),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("remote", remote),
+                             &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+
+        const zes_fabric_port_qual_issue_flags_t quality = state.qualityIssues;
+        const zes_fabric_port_failure_flags_t failure = state.failureReasons;
+        state_t issues_states[] = {
+                {.name = "link",     .enabled = (quality & ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_LINK_ERRORS) != 0},
+                {.name = "speed",    .enabled = (quality & ZES_FABRIC_PORT_QUAL_ISSUE_FLAG_SPEED) != 0},
+                {.name = "failure",  .enabled = (failure & ZES_FABRIC_PORT_FAILURE_FLAG_FAILED) != 0},
+                {.name = "training", .enabled = (failure & ZES_FABRIC_PORT_FAILURE_FLAG_TRAINING_TIMEOUT) != 0},
+                {.name = "flapping", .enabled = (failure & ZES_FABRIC_PORT_FAILURE_FLAG_FLAPPING) != 0},
+        };
+        state_set_t issues_set = { .num = STATIC_ARRAY_SIZE(issues_states), .ptr = issues_states };
+        metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_ISSUES],
+                             VALUE_STATE_SET(issues_set), &gpu->labels,
+                             &LABEL_PAIR_CONST("link", link.desc),
+                             &LABEL_PAIR_CONST("model", props.model),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("remote", remote),
+                             &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+
+        state_t config_states[] = {
+                {.name = "enabled",   .enabled = conf.enabled != 0},
+                {.name = "beaconing", .enabled = conf.beaconing != 0},
+        };
+        state_set_t config_set = { .num = STATIC_ARRAY_SIZE(config_states), .ptr = config_states };
+        metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_CONFIG],
+                             VALUE_STATE_SET(config_set), &gpu->labels,
+                             &LABEL_PAIR_CONST("link", link.desc),
+                             &LABEL_PAIR_CONST("model", props.model),
+                             &LABEL_PAIR_CONST("port", port),
+                             &LABEL_PAIR_CONST("remote", remote),
+                             &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
 
         /* add counters with direction labels */
-
         if (config.output & OUTPUT_BASE) {
-            metric.value = VALUE_COUNTER(bw.txCounter);
-            metric_label_set(&metric, "direction", "write");
-            metric_family_metric_append(&fam_counter, metric);
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_BYTES],
+                                 VALUE_COUNTER(bw.txCounter), &gpu->labels,
+                                 &LABEL_PAIR_CONST("direction", "write"),
+                                 &LABEL_PAIR_CONST("link", link.desc),
+                                 &LABEL_PAIR_CONST("model", props.model),
+                                 &LABEL_PAIR_CONST("port", port),
+                                 &LABEL_PAIR_CONST("remote", remote),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_BYTES],
+                                 VALUE_COUNTER(bw.rxCounter), &gpu->labels,
+                                 &LABEL_PAIR_CONST("direction", "read"),
+                                 &LABEL_PAIR_CONST("link", link.desc),
+                                 &LABEL_PAIR_CONST("model", props.model),
+                                 &LABEL_PAIR_CONST("port", port),
+                                 &LABEL_PAIR_CONST("remote", remote),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
 
-            metric.value = VALUE_COUNTER(bw.rxCounter);
-            metric_label_set(&metric, "direction", "read");
-            metric_family_metric_append(&fam_counter, metric);
-            reported_base = true;
         }
 
         /* add rate + ratio gauges with direction labels */
@@ -1993,8 +1870,22 @@ static bool gpu_fabrics(gpu_device_t *gpu)
 
             if (config.output & OUTPUT_RATE) {
                 double factor = 1.0e6 / timediff;
-                add_bw_gauges(&metric, &fam_rate, factor * reads, factor * writes);
-                reported_rate = true;
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_BYTES_PER_SECOND],
+                                     VALUE_GAUGE(factor * reads), &gpu->labels,
+                                     &LABEL_PAIR_CONST("direction", "read"),
+                                     &LABEL_PAIR_CONST("link", link.desc),
+                                     &LABEL_PAIR_CONST("model", props.model),
+                                     &LABEL_PAIR_CONST("port", port),
+                                     &LABEL_PAIR_CONST("remote", remote),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_BYTES_PER_SECOND],
+                                     VALUE_GAUGE(factor * writes), &gpu->labels,
+                                     &LABEL_PAIR_CONST("direction", "write"),
+                                     &LABEL_PAIR_CONST("link", link.desc),
+                                     &LABEL_PAIR_CONST("model", props.model),
+                                     &LABEL_PAIR_CONST("port", port),
+                                     &LABEL_PAIR_CONST("remote", remote),
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
             }
             if (config.output & OUTPUT_RATIO) {
                 int64_t maxr = props.maxRxSpeed.bitRate * props.maxRxSpeed.width / 8;
@@ -2002,22 +1893,30 @@ static bool gpu_fabrics(gpu_device_t *gpu)
                 if (maxr > 0 && maxw > 0) {
                     double rfactor = 1.0e6 / (maxr * timediff);
                     double wfactor = 1.0e6 / (maxw * timediff);
-                    add_bw_gauges(&metric, &fam_ratio, rfactor * reads, wfactor * writes);
-                    reported_ratio = true;
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_RATIO],
+                                         VALUE_GAUGE(rfactor * reads), &gpu->labels,
+                                         &LABEL_PAIR_CONST("direction", "read"),
+                                         &LABEL_PAIR_CONST("link", link.desc),
+                                         &LABEL_PAIR_CONST("model", props.model),
+                                         &LABEL_PAIR_CONST("port", port),
+                                         &LABEL_PAIR_CONST("remote", remote),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+                    metric_family_append(&gpu->fams[FAM_GPU_INTEL_FABRIC_PORT_RATIO],
+                                         VALUE_GAUGE(wfactor * writes), &gpu->labels,
+                                         &LABEL_PAIR_CONST("direction", "write"),
+                                         &LABEL_PAIR_CONST("link", link.desc),
+                                         &LABEL_PAIR_CONST("model", props.model),
+                                         &LABEL_PAIR_CONST("port", port),
+                                         &LABEL_PAIR_CONST("remote", remote),
+                                         &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
                 }
             }
         }
-        metric_reset(&metric, METRIC_TYPE_COUNTER);
+
         *old = bw;
         ok = true;
     }
 
-    if (reported_ratio)
-        gpu_submit(gpu, &fam_ratio);
-    if (reported_rate)
-        gpu_submit(gpu, &fam_rate);
-    if (reported_base)
-        gpu_submit(gpu, &fam_counter);
     free(ports);
     return ok;
 }
@@ -2060,27 +1959,13 @@ static bool gpu_powers(gpu_device_t *gpu)
         gpu->power_count = power_count;
     }
 
-    metric_family_t fam_ratio = {
-            .name = "gpu_intel_power_ratio",
-            .type = METRIC_TYPE_GAUGE,
-            .help = "Ratio of average power usage vs sustained or burst power limit",
-    };
-    metric_family_t fam_power = {
-            .name = "gpu_intel_power_watts",
-            .type = METRIC_TYPE_GAUGE,
-            .help = "Average power usage (in Watts) over query interval",
-    };
-    metric_family_t fam_energy = {
-            .name = "gpu_intel_energy_ujoules",
-            .type = METRIC_TYPE_COUNTER,
-            .help = "Total energy consumption since boot (in microjoules)",
-    };
-    metric_t metric = {0};
-
     ze_result_t limit_ret = ZE_RESULT_SUCCESS;
-    bool reported_ratio = false, reported_rate = false, reported_base = false;
-    bool ratio_fail = false;
     bool ok = false;
+
+    /* nominal time between power queries (in us), used to select the power
+     * limit for the ratio so that the selection does not depend on jitter */
+    const double query_interval = 1.0e6 * CDTIME_T_TO_DOUBLE(plugin_get_interval()) *
+                                  config.samples;
 
     for (uint32_t i = 0; i < power_count; i++) {
         zes_power_properties_t props = {.pNext = NULL};
@@ -2097,12 +1982,19 @@ static bool gpu_powers(gpu_device_t *gpu)
             ok = false;
             break;
         }
-        metric_set_subdev(&metric, props.onSubdevice, props.subdeviceId);
-        if (config.output & OUTPUT_BASE) {
-            metric.value = VALUE_COUNTER(counter.energy);
-            metric_family_metric_append(&fam_energy, metric);
-            reported_base = true;
+
+        char buf[12];
+        const char *sub_dev = NULL;
+        if (props.onSubdevice) {
+            ssnprintf(buf, sizeof(buf), "%u", props.subdeviceId);
+            sub_dev = buf;
         }
+
+        if (config.output & OUTPUT_BASE)
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_ENERGY_UJOULES],
+                                 VALUE_COUNTER(counter.energy), &gpu->labels,
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+
         zes_power_energy_counter_t *old = &gpu->power[i];
         if (old->timestamp && counter.timestamp > old->timestamp &&
                 (config.output & (OUTPUT_RATIO | OUTPUT_RATE))) {
@@ -2110,13 +2002,12 @@ static bool gpu_powers(gpu_device_t *gpu)
             uint64_t energy_diff = counter.energy - old->energy;
             double time_diff = counter.timestamp - old->timestamp;
 
-            if (config.output & OUTPUT_RATE) {
-                /* microJoules / microSeconds => watts */
-                metric.value = VALUE_GAUGE(energy_diff / time_diff);
-                metric_family_metric_append(&fam_power, metric);
-                reported_rate = true;
-            }
-            if ((config.output & OUTPUT_RATIO) && (gpu->flags & COLLECT_POWER)) {
+            if (config.output & OUTPUT_RATE)
+                metric_family_append(&gpu->fams[FAM_GPU_INTEL_POWER_WATTS],
+                                     /* microJoules / microSeconds => watts */
+                                     VALUE_GAUGE(energy_diff / time_diff), &gpu->labels,
+                                     &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+            if ((config.output & OUTPUT_RATIO) && (gpu->flags & COLLECT_POWER_RATIO)) {
                 zes_power_burst_limit_t burst;
                 zes_power_sustained_limit_t sustain;
                 /* TODO: future spec version deprecates zesPowerGetLimits():
@@ -2133,46 +2024,29 @@ static bool gpu_powers(gpu_device_t *gpu)
                      * https://spec.oneapi.io/level-zero/latest/sysman/api.html#zes-power-energy-counter-t
                      */
                     if (sustain.enabled &&
-                        (time_diff >= 1000 * sustain.interval || !burst.enabled)) {
+                        (query_interval >= 1000.0 * sustain.interval || !burst.enabled)) {
                         name = "sustained";
                         limit = sustain.power;
                     } else if (burst.enabled) {
                         name = "burst";
                         limit = burst.power;
                     }
-                    if (limit > 0) {
-                        metric_label_set(&metric, "limit", name);
-                        metric.value = VALUE_GAUGE(1000 * energy_diff / (limit * time_diff));
-                        metric_family_metric_append(&fam_ratio, metric);
-                        reported_ratio = true;
-                    } else {
-                        ratio_fail = true;
-                    }
-                } else {
-                    ratio_fail = true;
+                    if (limit > 0)
+                        metric_family_append(&gpu->fams[FAM_GPU_INTEL_POWER_RATIO],
+                                             VALUE_GAUGE(1000 * energy_diff / (limit * time_diff)),
+                                             &gpu->labels,
+                                             &LABEL_PAIR_CONST("limit", name),
+                                             &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
                 }
             }
         }
-        metric_reset(&metric, METRIC_TYPE_GAUGE);
+
         *old = counter;
         ok = true;
     }
 
-    if (reported_base)
-        gpu_submit(gpu, &fam_energy);
-    if (reported_rate)
-        gpu_submit(gpu, &fam_power);
-
-    if (reported_ratio) {
-        gpu_submit(gpu, &fam_ratio);
-    } else if (ratio_fail) {
-        gpu->flags &= ~COLLECT_POWER_RATIO;
-        if (ok)
-            PLUGIN_WARNING("failed to get power limit(s) for any of the %u domain(s), "
-                           "last error = 0x%x", power_count, limit_ret);
-    }
-
     free(powers);
+
     return ok;
 }
 
@@ -2219,20 +2093,8 @@ static bool gpu_engines(gpu_device_t *gpu)
         gpu->engine_count = engine_count;
     }
 
-    metric_family_t fam_ratio = {
-            .name = "gpu_intel_engine_ratio",
-            .type = METRIC_TYPE_GAUGE,
-            .help = "Average GPU engine / group utilization ratio (0-1) over query interval",
-    };
-    metric_family_t fam_counter = {
-            .name = "gpu_intel_engine_use_usecs",
-            .type = METRIC_TYPE_COUNTER,
-            .help = "GPU engine / group execution time (activity) total (in microseconds)",
-    };
-    metric_t metric = {0};
-
     int type_idx[16] = {0};
-    bool reported_ratio = false, reported_base = false, ok = false;
+    bool ok = false;
     for (uint32_t i = 0; i < engine_count; i++) {
         zes_engine_properties_t props = {.pNext = NULL};
         ret = zesEngineGetProperties(engines[i], &props);
@@ -2308,7 +2170,8 @@ static bool gpu_engines(gpu_device_t *gpu)
         } else {
             if (!(gpu->flags &COLLECT_ENGINE_SINGLE))
                 continue;
-            assert(props.type < sizeof(type_idx));
+            if (props.type >= STATIC_ARRAY_SIZE(type_idx))
+                continue;
             /* include engine index as there can be multiple engines of same type */
             snprintf(buf, sizeof(buf), "%s-%03d", type, type_idx[props.type]);
             type_idx[props.type]++;
@@ -2321,30 +2184,32 @@ static bool gpu_engines(gpu_device_t *gpu)
             ok = false;
             break;
         }
-        metric_set_subdev(&metric, props.onSubdevice, props.subdeviceId);
-        metric_label_set(&metric, "type", vname);
-        if (config.output & OUTPUT_BASE) {
-            metric.value = VALUE_COUNTER(stats.activeTime);
-            metric_family_metric_append(&fam_counter, metric);
-            reported_base = true;
+
+        char sub_dev_buf[12];
+        const char *sub_dev = NULL;
+        if (props.onSubdevice) {
+            ssnprintf(sub_dev_buf, sizeof(sub_dev_buf), "%u", props.subdeviceId);
+            sub_dev = buf;
         }
+
+        if (config.output & OUTPUT_BASE)
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_ENGINE_USE_USECS],
+                                 VALUE_COUNTER(stats.activeTime), &gpu->labels,
+                                 &LABEL_PAIR_CONST("type", vname),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
         zes_engine_stats_t *old = &gpu->engine[i];
-        if (old->timestamp && stats.timestamp > old->timestamp &&
-                (config.output & OUTPUT_RATIO)) {
-            metric.value = VALUE_GAUGE((double)(stats.activeTime - old->activeTime) /
-                                               (stats.timestamp - old->timestamp));
-            metric_family_metric_append(&fam_ratio, metric);
-            reported_ratio = true;
-        }
-        metric_reset(&metric, METRIC_TYPE_GAUGE);
+        if (old->timestamp && stats.timestamp > old->timestamp && (config.output & OUTPUT_RATIO))
+            metric_family_append(&gpu->fams[FAM_GPU_INTEL_ENGINE_RATIO],
+                                  VALUE_GAUGE((double)(stats.activeTime - old->activeTime) /
+                                              (stats.timestamp - old->timestamp)),
+                                 &gpu->labels,
+                                 &LABEL_PAIR_CONST("type", vname),
+                                 &LABEL_PAIR_CONST("sub_dev", sub_dev), NULL);
+
         *old = stats;
         ok = true;
     }
 
-    if (reported_ratio)
-        gpu_submit(gpu, &fam_ratio);
-    if (reported_base)
-        gpu_submit(gpu, &fam_counter);
     free(engines);
 
     return ok;
@@ -2391,7 +2256,7 @@ static int gpu_read(void)
          */
         gpu->check_count++;
         if (cache_idx > 0) {
-            if (gpu->flags) {
+            if (gpu->flags & COLLECT_QUERIES) {
                 /* there are still valid counters at least for this GPU */
                 retval = RET_OK;
             }
@@ -2432,25 +2297,24 @@ static int gpu_read(void)
             gpu->flags &= ~COLLECT_THROTTLETIME;
         }
 
-        if (!(gpu->flags & (COLLECT_ENGINE | COLLECT_ENGINE_SINGLE | COLLECT_FABRIC |
-                COLLECT_FREQUENCY | COLLECT_MEMORY | COLLECT_MEMORY_BANDWIDTH |
-                COLLECT_POWER | COLLECT_ERRORS | COLLECT_SEPARATE_ERRORS |
-                COLLECT_TEMPERATURE | COLLECT_THROTTLETIME))) {
+        if (!(gpu->flags & COLLECT_QUERIES)) {
             /* all metrics missing -> disable use of that GPU */
             PLUGIN_ERROR("No metrics from GPU-%u, disabling its querying", i);
             gpu->flags = 0ULL;
         } else {
             retval = RET_OK;
         }
+
+        plugin_dispatch_metric_family_array_filtered(gpu->fams, FAM_GPU_INTEL_MAX, filter, 0);
     }
+
+
     return retval;
 }
 
 static int gpu_config(config_item_t *ci)
 {
     int status = 0;
-
-    config.flags = ~0;
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
@@ -2476,14 +2340,15 @@ static int gpu_config(config_item_t *ci)
                         }
                     }
                     if (!found) {
+                        PLUGIN_ERROR("Invalid '%s' config key value '%s'", child->key, flag);
                         free(flags);
-                        PLUGIN_ERROR("Invalid '%s' config key value '%s'", child->key, ci->values[0].value.string);
                         return RET_INVALID_CONFIG;
                     }
                 }
                 free(flags);
                 if (!config.output) {
-                    PLUGIN_ERROR("Invalid '%s' config key value '%s'", child->key, ci->values[0].value.string);
+                    PLUGIN_ERROR("Invalid '%s' config key value '%s'", child->key,
+                                 child->values[0].value.string);
                     return RET_INVALID_CONFIG;
                 }
             }
@@ -2502,12 +2367,16 @@ static int gpu_config(config_item_t *ci)
                 /* number of samples cannot be changed without freeing per-GPU
                  * metrics cache arrays & members, zeroing metric counters and
                  * GPU cache index counter.  However, this parse function should
-                 * be called only before gpu structures have been initialized, so
-                 * just assert here
+                 * be called only before gpu structures have been initialized
                  */
-                assert(gpus == NULL);
+                if (gpus != NULL) {
+                    PLUGIN_ERROR("'samples' cannot be changed after initialization");
+                    return RET_INVALID_CONFIG;
+                }
                 config.samples = samples;
             }
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -2519,6 +2388,249 @@ static int gpu_config(config_item_t *ci)
     }
 
     return 0;
+}
+
+/* show plugin GPU metrics config options, return RET_OK
+ * if at least some metric is enabled, otherwise error code
+ */
+static int gpu_config_check(void)
+{
+    if (!config.output) {
+        config.output = OUTPUT_ALL;
+    }
+
+    if (config.gpuinfo) {
+        PLUGIN_INFO("- 'samples': %u", config.samples);
+
+        double interval = CDTIME_T_TO_DOUBLE(plugin_get_interval());
+        if (config.samples > 1) {
+            PLUGIN_INFO("- internal sampling interval: %.2fs", interval);
+            PLUGIN_INFO("- query / aggregation submit interval: %.2fs", config.samples * interval);
+        } else {
+            PLUGIN_INFO("- query / submit interval: %.2fs", interval);
+        }
+
+        unsigned i;
+        PLUGIN_INFO("metrics-output'' variants:");
+        for (i = 0; i < STATIC_ARRAY_SIZE(metrics_output); i++) {
+            if (config.output & metrics_output[i].value) {
+                PLUGIN_INFO("- %s", metrics_output[i].name);
+            }
+        }
+    }
+
+    if (!(config.flags & COLLECT_QUERIES)) {
+        PLUGIN_ERROR("no metrics enabled with the 'collect' option");
+        return RET_NO_METRICS;
+    }
+
+    return RET_OK;
+}
+
+/* Set GPU specific flags to initial global configuration values
+ * for each GPU.    Allocations of metrics arrays are done when metrics
+ * are queried for the first time (not here), and re-allocated if
+ * number of types for given metric changes.
+ *
+ * Return RET_OK if config is OK, (negative) error value otherwise
+ */
+static int gpu_config_init(unsigned int count)
+{
+    if (!config.samples) {
+        config.samples = 1;
+    }
+    if (gpu_config_check()) {
+        gpu_count = count;
+        gpu_config_free();
+        return RET_NO_METRICS;
+    }
+    unsigned int i;
+    for (i = 0; i < count; i++) {
+        gpus[i].flags = config.flags;
+        gpus[i].check_count = 0;
+    }
+    gpu_count = count;
+    return RET_OK;
+}
+
+/* Allocate 'scan_count' GPU structs to 'gpus' and fetch Sysman handle & name
+ * for them.
+ *
+ * Counts of still found & ignored GPUs are set to 'scan_count' and
+ * 'scan_ignored' arguments before returning.
+ *
+ * Return RET_OK for success if at least one GPU device info fetch succeeded,
+ * otherwise (negative) error value for last error encountered
+ */
+static int gpu_fetch(ze_driver_handle_t *drivers, uint32_t driver_count,
+                     uint32_t *scan_count, uint32_t *scan_ignored)
+{
+    assert(!gpus);
+    assert(*scan_count > 0);
+
+    gpus = calloc(*scan_count, sizeof(*gpus));
+    if (gpus == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return RET_ZE_DEVICE_GET_FAIL;
+    }
+
+    uint32_t ignored = 0, count = 0;
+    int retval = RET_NO_GPUS;
+    ze_result_t ret;
+
+    for (uint32_t drv_idx = 0; drv_idx < driver_count; drv_idx++) {
+        uint32_t dev_count = 0;
+        ret = zeDeviceGet(drivers[drv_idx], &dev_count, NULL);
+        if (ret != ZE_RESULT_SUCCESS) {
+            PLUGIN_ERROR("failed to get device count for driver %u => 0x%x", drv_idx, ret);
+            retval = RET_ZE_DEVICE_GET_FAIL;
+            continue;
+        }
+
+        ze_device_handle_t *devs = calloc(dev_count, sizeof(*devs));
+        if (devs == NULL) {
+            PLUGIN_ERROR("calloc failed.");
+            gpu_count = count;
+            gpu_config_free();
+            return RET_ZE_DEVICE_GET_FAIL;
+        }
+
+        ret = zeDeviceGet(drivers[drv_idx], &dev_count, devs);
+        if (ret != ZE_RESULT_SUCCESS) {
+            PLUGIN_ERROR("failed to get %u devices for driver %u => 0x%x", dev_count, drv_idx, ret);
+            free(devs);
+            devs = NULL;
+            retval = RET_ZE_DEVICE_GET_FAIL;
+            continue;
+        }
+        /* Get all GPU devices for the driver */
+        for (uint32_t dev_idx = 0; dev_idx < dev_count; dev_idx++) {
+            ze_device_properties_t props = {.pNext = NULL};
+            ret = zeDeviceGetProperties(devs[dev_idx], &props);
+            if (ret != ZE_RESULT_SUCCESS) {
+                PLUGIN_ERROR("failed to get driver %u device %u properties => 0x%x",
+                             drv_idx, dev_idx, ret);
+                retval = RET_ZE_DEVICE_PROPS_FAIL;
+                continue;
+            }
+            if (props.type != ZE_DEVICE_TYPE_GPU) {
+                PLUGIN_WARNING("driver %u device %u is not a GPU => ignored", drv_idx, dev_idx);
+                continue;
+            }
+            if (count >= *scan_count) {
+                ignored++;
+                continue;
+            }
+            gpus[count].handle = (zes_device_handle_t)devs[dev_idx];
+            if (!add_gpu_labels(&(gpus[count]), devs[dev_idx])) {
+                PLUGIN_ERROR("failed to get driver %u device %u information", drv_idx, dev_idx);
+                ignored++;
+                continue;
+            }
+
+            label_set_add(&gpus[count].labels, true, "pci_bdf", gpus[count].pci_bdf);
+            if (gpus[count].dev_file)
+                label_set_add(&gpus[count].labels, true, "dev_file", gpus[count].dev_file);
+            if (gpus[count].pci_dev)
+                label_set_add(&gpus[count].labels, true, "pci_dev", gpus[count].pci_dev);
+
+            memcpy(gpus[count].fams, fams, sizeof(gpus[count].fams[0])*FAM_GPU_INTEL_MAX);
+
+            count++;
+        }
+        free(devs);
+        devs = NULL;
+    }
+
+    if (count > 0) {
+        retval = RET_OK;
+        if (config.gpuinfo) {
+            PLUGIN_INFO("fetch: %u/%u GPUs in total from %u L0 drivers", count, *scan_count,
+                         driver_count);
+        }
+    } else {
+        PLUGIN_ERROR("fetch for GPU devices failed");
+        gpu_config_free();
+    }
+
+    *scan_ignored = ignored;
+    *scan_count = count;
+    return retval;
+}
+
+/* Scan Sysman for GPU devices
+ * Return RET_OK for success, (negative) error value otherwise
+ */
+static int gpu_init(void)
+{
+    if (gpus) {
+        PLUGIN_NOTICE("skipping extra gpu_init() call");
+        return RET_OK;
+    }
+
+    /* setenv() is not thread-safe, so avoid it when already set as needed */
+    const char *sysman = getenv("ZES_ENABLE_SYSMAN");
+    if (((sysman == NULL) || (strcmp(sysman, "1") != 0)) &&
+        (setenv("ZES_ENABLE_SYSMAN", "1", 1) != 0)) {
+        PLUGIN_ERROR("failed to set ZES_ENABLE_SYSMAN environment variable: %s", STRERRNO);
+        return RET_ZE_INIT_FAIL;
+    }
+    ze_result_t ret = zeInit(ZE_INIT_FLAG_GPU_ONLY);
+    if (ret != ZE_RESULT_SUCCESS) {
+        PLUGIN_ERROR("Level Zero API init failed => 0x%x", ret);
+        return RET_ZE_INIT_FAIL;
+    }
+    /* Discover all the drivers */
+    uint32_t driver_count = 0;
+    ret = zeDriverGet(&driver_count, NULL);
+    if (ret != ZE_RESULT_SUCCESS) {
+        PLUGIN_ERROR("failed to get L0 GPU drivers count => 0x%x", ret);
+        return RET_ZE_DRIVER_GET_FAIL;
+    }
+    if (!driver_count) {
+        PLUGIN_ERROR("no drivers found with Level-Zero Sysman API");
+        return RET_NO_DRIVERS;
+    }
+
+    ze_driver_handle_t *drivers = calloc(driver_count, sizeof(*drivers));
+    if (drivers == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        return RET_ZE_DRIVER_GET_FAIL;
+    }
+
+    ret = zeDriverGet(&driver_count, drivers);
+    if (ret != ZE_RESULT_SUCCESS) {
+        PLUGIN_ERROR("failed to get %u L0 drivers => 0x%x", driver_count, ret);
+        free(drivers);
+        return RET_ZE_DRIVER_GET_FAIL;
+    }
+    /* scan number of Sysman provided GPUs... */
+    int fail;
+    uint32_t count;
+    if ((fail = gpu_scan(drivers, driver_count, &count)) < 0) {
+        free(drivers);
+        return fail;
+    }
+    uint32_t ignored = 0, scanned = count;
+    if (count) {
+        /* ...and allocate & fetch data for them */
+        if ((fail = gpu_fetch(drivers, driver_count, &count, &ignored)) < 0) {
+            free(drivers);
+            return fail;
+        }
+    }
+    free(drivers);
+
+    if (scanned > count)
+        PLUGIN_WARNING("%u GPUs disappeared after first scan", scanned - count);
+    if (ignored)
+        PLUGIN_WARNING("%u GPUs appeared after first scan (are ignored)", ignored);
+    if (!count) {
+        PLUGIN_ERROR("no GPU devices found with Level-Zero Sysman API");
+        return RET_NO_GPUS;
+    }
+
+    return gpu_config_init(count);
 }
 
 void module_register(void)

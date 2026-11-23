@@ -18,6 +18,11 @@
 .Sh DESCRIPTION
 This plugin is available on Linux only.
 It uses level-Zero Sysman API to read GPU information.
+The Level-Zero loader provides that API only when the
+\f(CWZES_ENABLE_SYSMAN\fP environment variable is set to \f(CW1\fP.
+If it is not, the plugin sets it at initialization, but changing the
+environment of a running multi-threaded process is not safe, so it is
+better to set it in the environment of the ncollectd daemon.
 .Pp
 Options below give overview of what information it could provide, but
 the information actually available through it depends on what is
@@ -42,6 +47,8 @@ Memory bandwidth metrics collection.
 .It \fBpower\fP
 Power usage metrics collection.
 .It \fBpower_ratio\fP
+Power usage ratio (vs. sustained or burst power limit) metrics
+collection, requires \fBpower\fP.
 .It \fBerrors\fP
 RAS (Reliability, Availability, and Serviceability) error
 metrics collection.
@@ -54,6 +61,19 @@ Temperature metrics collection.
 .It \fBthrottle_time\fP
 Frequency throttling time metric collection.
 .El
+.Pp
+Putting up \fB!\fP in front of an option disables that option,
+for example: \fI!engine_single\fP.
+With \fIall\fP you can enable all options, and with \fI!all\fP you can
+disable all.
+Options are applied in order on top of the default set, so to
+collect only some of the metrics disable all of them first,
+for example:
+.Bd -literal
+  \fBcollect\fP \fI"!all"\fP \fIengine\fP \fImemory\fP
+.Ed
+.Pp
+By default all options are enabled.
 .It \fBlog-gpu-info\fP \fItrue|false\fP
 If enabled, plugin logs at start some information about plugin
 settings, all the GPUs detected through Sysman API, and enables
