@@ -18,6 +18,11 @@ NCOLLECTD-GPU\_INTEL(5) - File Formats Manual
 
 This plugin is available on Linux only.
 It uses level-Zero Sysman API to read GPU information.
+The Level-Zero loader provides that API only when the ZES\_ENABLE\_SYSMAN
+environment variable is set to "1".
+If it is not, the plugin sets it at initialization, but changing the
+environment of a running multi-threaded process is not safe, so it is
+better to set it in the environment of the ncollectd daemon.
 
 Options below give overview of what information it could provide, but
 the information actually available through it depends on what is
@@ -57,6 +62,9 @@ Sysman backend (compute) driver implementation.
 
 > **power\_ratio**
 
+> > Power usage ratio (vs. sustained or burst power limit) metrics
+> > collection, requires **power**.
+
 > **errors**
 
 > > RAS (Reliability, Availability, and Serviceability) error
@@ -75,6 +83,18 @@ Sysman backend (compute) driver implementation.
 > **throttle\_time**
 
 > > Frequency throttling time metric collection.
+
+> Putting up **!** in front of an option disables that option,
+> for example: *!engine\_single*.
+> With *all* you can enable all options, and with *!all* you can
+> disable all.
+> Options are applied in order on top of the default set, so to
+> collect only some of the metrics disable all of them first,
+> for example:
+
+> >   **collect** *"!all"* *engine* *memory*
+
+> By default all options are enabled.
 
 **log-gpu-info** *true|false*
 
