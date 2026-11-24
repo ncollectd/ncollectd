@@ -108,17 +108,20 @@ Each block requires one string argument as the name.
 
 > **timeout** *seconds*
 
-> > Sets the timeout value for ldap operations, in seconds.
-> > By default, the configured *interval* is used to set the timeout.
-> > Use **-1** to disable (infinite timeout).
+> > Sets the timeout value for ldap operations and for the network
+> > connection, in seconds.
+> > By default, half of the configured *interval* is used to set the timeout.
 
 > **verify-host** *true|false*
 
-> > Enables or disables peer host name verification.
-> > If enabled, the plugin checks if the Common Name or a
+> > Enables or disables peer certificate verification.
+> > If enabled, the plugin checks the SSL certificate of the server
+> > and if the Common Name or a
 > > Subject Alternate Name field of the SSL certificate matches the
 > > host name provided by the **url** option.
-> > If this identity check fails, the connection is aborted.
+> > If this check fails, the connection is aborted.
+> > If disabled, **any** certificate is accepted without any verification
+> > (not only the host name check is disabled).
 > > Enabled by default.
 
 > **version** *version*

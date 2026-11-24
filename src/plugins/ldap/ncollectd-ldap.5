@@ -94,15 +94,18 @@ for the details.
 Defines whether TLS must be used when connecting to the OpenLDAP server.
 Disabled by default.
 .It \fBtimeout\fP \fIseconds\fP
-Sets the timeout value for ldap operations, in seconds.
-By default, the configured \fIinterval\fP is used to set the timeout.
-Use \fB-1\fP to disable (infinite timeout).
+Sets the timeout value for ldap operations and for the network
+connection, in seconds.
+By default, half of the configured \fIinterval\fP is used to set the timeout.
 .It \fBverify-host\fP \fItrue|false\fP
-Enables or disables peer host name verification.
-If enabled, the plugin checks if the \f(CWCommon Name\fP or a
+Enables or disables peer certificate verification.
+If enabled, the plugin checks the SSL certificate of the server
+and if the \f(CWCommon Name\fP or a
 \f(CWSubject Alternate Name\fP field of the SSL certificate matches the
 host name provided by the \fBurl\fP option.
-If this identity check fails, the connection is aborted.
+If this check fails, the connection is aborted.
+If disabled, \fBany\fP certificate is accepted without any verification
+(not only the host name check is disabled).
 Enabled by default.
 .It \fBversion\fP \fIversion\fP
 An integer which sets the LDAP protocol version number to use when connecting
