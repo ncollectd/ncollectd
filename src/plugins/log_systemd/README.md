@@ -9,7 +9,7 @@ NCOLLECTD-LOG\_SYSTEMD(5) - File Formats Manual
 	load-plugin log_systemd
 	plugin log_systemd {
 	    log-level debug|info|notice|warning|err
-	    notify-level okay|warning|failure
+	    notify-level ok|warning|failure
 	}
 
 # DESCRIPTION
@@ -31,14 +31,14 @@ The plugin supports the following options:
 > Please note that *debug* is only available if collectd has been compiled
 > with debugging support.
 
-**notify-level** *okay|warning|failure*
+**notify-level** *ok|warning|failure*
 
 > Controls which notifications should be sent to the system journal.
 > The default behaviour is not to send any.
 > Less severe notifications always imply logging more severe notifications:
-> Setting this to **okay** means all notifications will be sent to systemd,
+> Setting this to **ok** means all notifications will be sent to systemd,
 > setting this to **warning** will send **warning** and **failure**
-> notifications but will dismiss **okay** notifications.
+> notifications but will dismiss **ok** notifications.
 > Setting this option to **failure** will only send failures to systemd.
 
 # SEE ALSO

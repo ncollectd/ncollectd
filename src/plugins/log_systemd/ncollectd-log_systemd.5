@@ -10,7 +10,7 @@
 \fBload-plugin\fP log_systemd
 \fBplugin\fP log_systemd {
     \fBlog-level\fP \fIdebug|info|notice|warning|err\fP
-    \fBnotify-level\fP \fIokay|warning|failure\fP
+    \fBnotify-level\fP \fIok|warning|failure\fP
 }
 .Ed
 .Sh DESCRIPTION
@@ -29,13 +29,13 @@ systemd journal.
 .Pp
 Please note that \fIdebug\fP is only available if collectd has been compiled
 with debugging support.
-.It \fBnotify-level\fP \fIokay|warning|failure\fP
+.It \fBnotify-level\fP \fIok|warning|failure\fP
 Controls which notifications should be sent to the system journal.
 The default behaviour is not to send any.
 Less severe notifications always imply logging more severe notifications:
-Setting this to \fBokay\fP means all notifications will be sent to systemd,
+Setting this to \fBok\fP means all notifications will be sent to systemd,
 setting this to \fBwarning\fP will send \fBwarning\fP and \fBfailure\fP
-notifications but will dismiss \fBokay\fP notifications.
+notifications but will dismiss \fBok\fP notifications.
 Setting this option to \fBfailure\fP will only send failures to systemd.
 .El
 .Sh "SEE ALSO"

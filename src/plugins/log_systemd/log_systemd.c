@@ -5,6 +5,8 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
+#include <stdatomic.h>
+
 #define SD_JOURNAL_SUPPRESS_LOCATION
 #include <systemd/sd-journal.h>
 
@@ -16,8 +18,31 @@
 
 static severity_t notif_severity;
 
+/* Format a journal field in buf and point iov to it. The length is limited
+ * to the bytes really written in buf, the field is truncated if needed. */
+__attribute__((format(printf, 4, 5)))
+static bool sd_iov_set(struct iovec *iov, char *buf, size_t size, const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    int len = vsnprintf(buf, size, format, ap);
+    va_end(ap);
+
+    if (len <= 0)
+        return false;
+
+    iov->iov_base = buf;
+    iov->iov_len = ((size_t)len >= size) ? size - 1 : (size_t)len;
+    return true;
+}
+
+static atomic_flag sendv_error_reported = ATOMIC_FLAG_INIT;
+
 static void sd_log(const log_msg_t *msg, user_data_t __attribute__((unused)) * user_data)
 {
+    if (msg == NULL)
+        return;
+
     if (msg->severity > log_level)
         return;
 
@@ -26,50 +51,52 @@ static void sd_log(const log_msg_t *msg, user_data_t __attribute__((unused)) * u
 
     char func[256] = "";
     if (msg->func != NULL) {
-        iov[n].iov_len = ssnprintf(func, sizeof(func), "CODE_FUNC=%s", msg->func);
-        if (iov[n].iov_len > 0)
-            iov[n++].iov_base = func;
+        if (sd_iov_set(&iov[n], func, sizeof(func), "CODE_FUNC=%s", msg->func))
+            n++;
     }
 
     char file[256] = "";
     if (msg->file != NULL) {
-        iov[n].iov_len = ssnprintf(file, sizeof(file), "CODE_FILE=%s", msg->file);
-        if (iov[n].iov_len > 0)
-            iov[n++].iov_base = file;
+        if (sd_iov_set(&iov[n], file, sizeof(file), "CODE_FILE=%s", msg->file))
+            n++;
     }
 
     char line[256] = "";
     if (msg->line > 0) {
-        iov[n].iov_len = ssnprintf(line, sizeof(line), "CODE_LINE=%d", msg->line);
-        if (iov[n].iov_len > 0)
-            iov[n++].iov_base = line;
+        if (sd_iov_set(&iov[n], line, sizeof(line), "CODE_LINE=%d", msg->line))
+            n++;
     }
 
     char priority[64] = "";
-    iov[n].iov_len = ssnprintf(priority, sizeof(priority), "PRIORITY=%d", msg->severity);
-    if (iov[n].iov_len > 0)
-        iov[n++].iov_base = priority;
+    if (sd_iov_set(&iov[n], priority, sizeof(priority), "PRIORITY=%d", msg->severity))
+        n++;
 
     char plugin[256] = "";
     if (msg->plugin != NULL) {
-        iov[n].iov_len = ssnprintf(plugin, sizeof(plugin), "PLUGIN=%s", msg->plugin);
-        if (iov[n].iov_len > 0)
-            iov[n++].iov_base = plugin;
+        if (sd_iov_set(&iov[n], plugin, sizeof(plugin), "PLUGIN=%s", msg->plugin))
+            n++;
     }
 
     char message[1024] = "";
     if (msg->msg != NULL) {
-        iov[n].iov_len = ssnprintf(message, sizeof(message), "MESSAGE=%s", msg->msg);
-        if (iov[n].iov_len > 0)
-            iov[n++].iov_base = message;
+        if (sd_iov_set(&iov[n], message, sizeof(message), "MESSAGE=%s", msg->msg))
+            n++;
     }
 
-    if (n > 0)
-        sd_journal_sendv(iov, n);
+    if (n > 0) {
+        int status = sd_journal_sendv(iov, n);
+        /* Can not use the plugin log functions here, report it once to stderr. */
+        if ((status < 0) && !atomic_flag_test_and_set(&sendv_error_reported))
+            fprintf(stderr, "log_systemd plugin: sd_journal_sendv failed: %s\n",
+                            STRERROR(-status));
+    }
 }
 
 static int sd_notification(const notification_t *n, user_data_t __attribute__((unused)) *user_data)
 {
+    if (n == NULL)
+        return EINVAL;
+
     if (n->severity > notif_severity)
         return 0;
 
@@ -89,8 +116,12 @@ static int sd_notification(const notification_t *n, user_data_t __attribute__((u
     }
 
     strbuf_t buf = STRBUF_CREATE;
-    strbuf_print(&buf, "Notification: ");
-    notification_marshal(&buf, n);
+    int status = strbuf_print(&buf, "Notification: ");
+    status |= notification_marshal(&buf, n);
+    if ((status != 0) || (buf.ptr == NULL)) {
+        strbuf_destroy(&buf);
+        return -1;
+    }
 
     log_msg_t msg = { .severity = log_severity, .msg = buf.ptr };
 
