@@ -25,7 +25,10 @@
 }
 .Ed
 .Sh DESCRIPTION
-The \fBmatch_csv\fP plugin parse lines in the CSV format,
+The \fBmatch_csv\fP plugin parse lines in the CSV format.
+When the input has several lines (for example the body of an \fBhttp\fP or
+\fBfcgi\fP response), each line is parsed as a separate record.
+Empty lines and lines starting with \fB#\fP are ignored.
 .Bl -tag -width Ds
 .It \fBmetric-prefix\fP \fIprefix\fP
 Prepend the \fIprefix\fP to the metrics found in the \fBmetric\fP blocks.
@@ -34,8 +37,13 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBtime-from\fP \fIindex\fP
 Configure to read the timestamp of the metric from the field with the
 zero-based index.
+Currently the timestamp is ignored by the match framework and the
+metrics are dispatched with the current time.
 .It \fBfield-separator\fP \fIchar\fP
 Any character a delimiter between the different columns of the table.
+The newline character is not allowed.
+Quoting is not supported: the separator always splits the fields, even
+inside quotes, and the quotes are kept as part of the values.
 .It \fBmetric\fP
 .Bl -tag -width Ds
 .It \fBmetric\fP \fImetric\fP
@@ -81,10 +89,14 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Prepend the \fIprefix\fP to the metrics found in the \fBmetric-from\fP.
 .It \fBmetric-from\fP \fIindex\fP
 Configure to read the metric from the field with the zero-based index.
+The characters that are not allowed in a metric name are replaced
+by \fB_\fP.
 .It \fBlabel-from\fP \fIkey\fP \fIindex\fP
 Set the label \fIkey\fP with the value from the field with the zero-based index.
 .It \fBvalue-from\fP \fIindex\fP
 Configure to read the value from the field with the zero-based index.
+Unless the type is \fBinc\fP, the metric is not updated when this field is
+empty or is not a valid number (a warning is logged in the latter case).
 .El
 .El
 .Sh "SEE ALSO"

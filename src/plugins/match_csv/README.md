@@ -25,7 +25,10 @@ NCOLLECTD-MATCH\_CSV(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **match\_csv** plugin parse lines in the CSV format,
+The **match\_csv** plugin parse lines in the CSV format.
+When the input has several lines (for example the body of an **http** or
+**fcgi** response), each line is parsed as a separate record.
+Empty lines and lines starting with **#** are ignored.
 
 **metric-prefix** *prefix*
 
@@ -39,10 +42,15 @@ The **match\_csv** plugin parse lines in the CSV format,
 
 > Configure to read the timestamp of the metric from the field with the
 > zero-based index.
+> Currently the timestamp is ignored by the match framework and the
+> metrics are dispatched with the current time.
 
 **field-separator** *char*
 
 > Any character a delimiter between the different columns of the table.
+> The newline character is not allowed.
+> Quoting is not supported: the separator always splits the fields, even
+> inside quotes, and the quotes are kept as part of the values.
 
 **metric**
 
@@ -117,6 +125,8 @@ The **match\_csv** plugin parse lines in the CSV format,
 > **metric-from** *index*
 
 > > Configure to read the metric from the field with the zero-based index.
+> > The characters that are not allowed in a metric name are replaced
+> > by **\_**.
 
 > **label-from** *key* *index*
 
@@ -125,6 +135,8 @@ The **match\_csv** plugin parse lines in the CSV format,
 > **value-from** *index*
 
 > > Configure to read the value from the field with the zero-based index.
+> > Unless the type is **inc**, the metric is not updated when this field is
+> > empty or is not a valid number (a warning is logged in the latter case).
 
 # SEE ALSO
 
