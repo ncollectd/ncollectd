@@ -174,6 +174,8 @@ Moreof - no java binding is required in collectd to do so.
 
 > > > **metric** *metric*
 
+> > > > Metric name for the attribute. This option is mandatory.
+
 > > > **type** *gauge|counter*
 
 > > > **label** *key* *value*
