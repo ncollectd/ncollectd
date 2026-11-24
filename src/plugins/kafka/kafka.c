@@ -151,6 +151,8 @@ typedef struct {
 
 #if RD_KAFKA_VERSION > 0x020000ff
 
+#define KAFKA_DESCRIBE_GROUPS_BATCH 32
+
 static int kafka_topic_offset_cmp(const void *a, const void *b)
 {
     const kafka_topic_offset_t *oa = a;
@@ -238,7 +240,7 @@ static int kafka_group_lag_cmp(const void *a, const void *b)
 
     int ret = strcmp(ga->topic, gb->topic);
     if (ret == 0)
-        return strcmp(ga->group, gb->topic);
+        return strcmp(ga->group, gb->group);
 
     return ret;
 }
@@ -309,14 +311,14 @@ static void kafka_group_lag_reset(c_avl_tree_t *tree, metric_family_t *fam, labe
     }
 }
 
-static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_id)
+static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, rd_kafka_queue_t *queue,
+                                          const char **groups, size_t groups_cnt,
+                                          const char *cluster_id)
 {
     rd_kafka_event_t *event = NULL;
     rd_kafka_resp_err_t resp_err;
     char errbuf[1024];
     int status = 0;
-
-    rd_kafka_queue_t *queue = rd_kafka_queue_new(ctx->rk);
 
     rd_kafka_AdminOptions_t *options =
         rd_kafka_AdminOptions_new(ctx->rk, RD_KAFKA_ADMIN_OP_DESCRIBECONSUMERGROUPS);
@@ -328,7 +330,7 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
         goto exit;
     }
 
-    rd_kafka_DescribeConsumerGroups(ctx->rk, NULL, 0, options, queue);
+    rd_kafka_DescribeConsumerGroups(ctx->rk, groups, groups_cnt, options, queue);
 
     event = rd_kafka_queue_poll(queue, -1);
     if (event == NULL) {
@@ -346,6 +348,10 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
 
     const rd_kafka_DescribeConsumerGroups_result_t *result =
         rd_kafka_event_DescribeConsumerGroups_result(event);
+    if (result == NULL) {
+        status = -1;
+        goto exit;
+    }
 
     size_t result_groups_cnt = 0;
     const rd_kafka_ConsumerGroupDescription_t **result_groups =
@@ -359,13 +365,18 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
         const rd_kafka_ConsumerGroupDescription_t *group = result_groups[i];
 
         const char *group_id = rd_kafka_ConsumerGroupDescription_group_id(group);
+        const rd_kafka_error_t *error = rd_kafka_ConsumerGroupDescription_error(group);
+        if (error != NULL) {
+            PLUGIN_WARNING("Failed to describe consumer group '%s': %s",
+                           group_id, rd_kafka_error_string(error));
+            continue;
+        }
 //      const char *partition_assignor = rd_kafka_ConsumerGroupDescription_partition_assignor(group);
 
         rd_kafka_consumer_group_state_t state = rd_kafka_ConsumerGroupDescription_state(group);
 
         size_t member_cnt = rd_kafka_ConsumerGroupDescription_member_count(group);
 
-//      const rd_kafka_error_t *error = rd_kafka_ConsumerGroupDescription_error(group);
 //      const rd_kafka_Node_t *coordinator = rd_kafka_ConsumerGroupDescription_coordinator(group);
 
 #if 0
@@ -447,47 +458,8 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
                 members_empty++; // No assignment
             } else if (partitions->cnt == 0) {
                 members_empty++; // Empty assignment
-            } else {
-//                printf("    Assignment:\n");
-//                print_partition_list(stdout, topic_partitions, 0, "      ");
-
-                for (int k = 0; k < partitions->cnt; k++) {
-                    char partition_id[ITOA_MAX];
-                    itoa(partitions->elems[k].partition, partition_id);
-                    char *topic = partitions->elems[k].topic;
-
-                    metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_PARTITION_OFFSET],
-                                         VALUE_GAUGE(partitions->elems[k].offset),
-                                         &ctx->labels,
-                                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
-                                         &LABEL_PAIR_CONST("group_id", group_id),
-                                         &LABEL_PAIR_CONST("topic", topic),
-                                         &LABEL_PAIR_CONST("partition_id", partition_id),
-                                         NULL);
-                    // rd_kafka_err2str(partitions->elems[k].err));
-
-                    int64_t offset = kafka_topic_offset_get(ctx->topic_offsets, topic,
-                                                            partitions->elems[k].partition);
-                    if (offset < 0)
-                        continue;
-                    int64_t lag = offset - partitions->elems[k].offset;
-                    if (lag < 0)
-                        lag = 0;
-                    kafka_group_lag_add(ctx->group_lag, topic, group_id, lag);
-
-                    metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_PARTITION_LAG],
-                                         VALUE_GAUGE(lag), &ctx->labels,
-                                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
-                                         &LABEL_PAIR_CONST("group_id", group_id),
-                                         &LABEL_PAIR_CONST("topic", topic),
-                                         &LABEL_PAIR_CONST("partition_id", partition_id),
-                                         NULL);
-                }
             }
         }
-
-        kafka_group_lag_reset(ctx->group_lag, &ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_LAG],
-                                              &ctx->labels, cluster_id);
 
         metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_EMPTY_MEMBERS],
                              VALUE_GAUGE(members_empty), &ctx->labels,
@@ -497,6 +469,213 @@ static int kafka_describe_consumer_groups(kafka_ctx_t *ctx, const char *cluster_
 
     status = 0;
 exit:
+    if (event != NULL)
+        rd_kafka_event_destroy(event);
+    if (options != NULL)
+        rd_kafka_AdminOptions_destroy(options);
+
+    return status;
+}
+
+static int kafka_consumer_group_offsets(kafka_ctx_t *ctx, rd_kafka_queue_t *queue,
+                                        const char *group_id, const char *cluster_id)
+{
+    rd_kafka_event_t *event = NULL;
+    rd_kafka_resp_err_t resp_err;
+    char errbuf[1024];
+    int status = 0;
+
+    rd_kafka_AdminOptions_t *options =
+        rd_kafka_AdminOptions_new(ctx->rk, RD_KAFKA_ADMIN_OP_LISTCONSUMERGROUPOFFSETS);
+
+    resp_err = rd_kafka_AdminOptions_set_request_timeout(options, 10*1000/*10s*/,errbuf, sizeof(errbuf));
+    if (resp_err != 0) {
+        PLUGIN_ERROR("Failed to set timeout: %s.", errbuf);
+        status = -1;
+        goto exit;
+    }
+
+    rd_kafka_ListConsumerGroupOffsets_t *list = rd_kafka_ListConsumerGroupOffsets_new(group_id, NULL);
+    if (list == NULL) {
+        status = -1;
+        goto exit;
+    }
+
+    rd_kafka_ListConsumerGroupOffsets(ctx->rk, &list, 1, options, queue);
+    rd_kafka_ListConsumerGroupOffsets_destroy(list);
+
+    event = rd_kafka_queue_poll(queue, -1);
+    if (event == NULL) {
+        status = -1;
+        goto exit;
+    }
+
+    resp_err = rd_kafka_event_error(event);
+    if (resp_err != 0) {
+        PLUGIN_WARNING("Failed to list offsets of consumer group '%s': %s",
+                       group_id, rd_kafka_event_error_string(event));
+        goto exit;
+    }
+
+    const rd_kafka_ListConsumerGroupOffsets_result_t *result =
+        rd_kafka_event_ListConsumerGroupOffsets_result(event);
+    if (result == NULL) {
+        status = -1;
+        goto exit;
+    }
+
+    size_t result_groups_cnt = 0;
+    const rd_kafka_group_result_t **result_groups =
+        rd_kafka_ListConsumerGroupOffsets_result_groups(result, &result_groups_cnt);
+
+    for (size_t i = 0; i < result_groups_cnt; i++) {
+        const rd_kafka_error_t *error = rd_kafka_group_result_error(result_groups[i]);
+        if (error != NULL) {
+            PLUGIN_WARNING("Failed to list offsets of consumer group '%s': %s",
+                           group_id, rd_kafka_error_string(error));
+            continue;
+        }
+
+        const rd_kafka_topic_partition_list_t *partitions =
+            rd_kafka_group_result_partitions(result_groups[i]);
+        if (partitions == NULL)
+            continue;
+
+        for (int j = 0; j < partitions->cnt; j++) {
+            const rd_kafka_topic_partition_t *partition = &partitions->elems[j];
+            /* Partitions without a committed offset report RD_KAFKA_OFFSET_INVALID. */
+            if ((partition->err != RD_KAFKA_RESP_ERR_NO_ERROR) || (partition->offset < 0))
+                continue;
+
+            char partition_id[ITOA_MAX];
+            itoa(partition->partition, partition_id);
+
+            metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_PARTITION_OFFSET],
+                                 VALUE_GAUGE(partition->offset), &ctx->labels,
+                                 &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                                 &LABEL_PAIR_CONST("group_id", group_id),
+                                 &LABEL_PAIR_CONST("topic", partition->topic),
+                                 &LABEL_PAIR_CONST("partition_id", partition_id),
+                                 NULL);
+
+            int64_t high = kafka_topic_offset_get(ctx->topic_offsets, partition->topic,
+                                                  partition->partition);
+            if (high < 0)
+                continue;
+            int64_t lag = high - partition->offset;
+            if (lag < 0)
+                lag = 0;
+            kafka_group_lag_add(ctx->group_lag, partition->topic, group_id, lag);
+
+            metric_family_append(&ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_PARTITION_LAG],
+                                 VALUE_GAUGE(lag), &ctx->labels,
+                                 &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                                 &LABEL_PAIR_CONST("group_id", group_id),
+                                 &LABEL_PAIR_CONST("topic", partition->topic),
+                                 &LABEL_PAIR_CONST("partition_id", partition_id),
+                                 NULL);
+        }
+    }
+
+    kafka_group_lag_reset(ctx->group_lag, &ctx->fams[FAM_KAFKA_CONSUMER_GROUP_TOPIC_LAG],
+                                          &ctx->labels, cluster_id);
+
+exit:
+    if (event != NULL)
+        rd_kafka_event_destroy(event);
+    if (options != NULL)
+        rd_kafka_AdminOptions_destroy(options);
+
+    return status;
+}
+
+static int kafka_group_id_cmp(const void *a, const void *b)
+{
+    return strcmp(*(const char * const *)a, *(const char * const *)b);
+}
+
+static int kafka_consumer_groups(kafka_ctx_t *ctx, const char *cluster_id)
+{
+    rd_kafka_event_t *event = NULL;
+    rd_kafka_resp_err_t resp_err;
+    const char **groups = NULL;
+    char errbuf[1024];
+    int status = 0;
+
+    rd_kafka_queue_t *queue = rd_kafka_queue_new(ctx->rk);
+
+    rd_kafka_AdminOptions_t *options =
+        rd_kafka_AdminOptions_new(ctx->rk, RD_KAFKA_ADMIN_OP_LISTCONSUMERGROUPS);
+
+    resp_err = rd_kafka_AdminOptions_set_request_timeout(options, 10*1000/*10s*/,errbuf, sizeof(errbuf));
+    if (resp_err != 0) {
+        PLUGIN_ERROR("Failed to set timeout: %s.", errbuf);
+        status = -1;
+        goto exit;
+    }
+
+    rd_kafka_ListConsumerGroups(ctx->rk, options, queue);
+
+    event = rd_kafka_queue_poll(queue, -1);
+    if (event == NULL) {
+        status = -1;
+        goto exit;
+    }
+
+    resp_err = rd_kafka_event_error(event);
+    if (resp_err != 0) {
+        PLUGIN_ERROR("ListConsumerGroups failed[%" PRId32 "]: %s",
+                     resp_err, rd_kafka_event_error_string(event));
+        status = -1;
+        goto exit;
+    }
+
+    const rd_kafka_ListConsumerGroups_result_t *result =
+        rd_kafka_event_ListConsumerGroups_result(event);
+    if (result == NULL) {
+        status = -1;
+        goto exit;
+    }
+
+    size_t listings_cnt = 0;
+    const rd_kafka_ConsumerGroupListing_t **listings =
+        rd_kafka_ListConsumerGroups_result_valid(result, &listings_cnt);
+    if (listings_cnt == 0)
+        goto exit;
+
+    groups = calloc(listings_cnt, sizeof(*groups));
+    if (groups == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        status = -1;
+        goto exit;
+    }
+
+    for (size_t i = 0; i < listings_cnt; i++)
+        groups[i] = rd_kafka_ConsumerGroupListing_group_id(listings[i]);
+
+    /* DescribeConsumerGroups rejects the whole request if a group is repeated. */
+    qsort(groups, listings_cnt, sizeof(*groups), kafka_group_id_cmp);
+    size_t groups_cnt = 0;
+    for (size_t i = 0; i < listings_cnt; i++) {
+        if ((groups_cnt == 0) || (strcmp(groups[groups_cnt - 1], groups[i]) != 0))
+            groups[groups_cnt++] = groups[i];
+    }
+
+    for (size_t i = 0; i < groups_cnt; i += KAFKA_DESCRIBE_GROUPS_BATCH) {
+        size_t batch_cnt = groups_cnt - i;
+        if (batch_cnt > KAFKA_DESCRIBE_GROUPS_BATCH)
+            batch_cnt = KAFKA_DESCRIBE_GROUPS_BATCH;
+
+        status = kafka_describe_consumer_groups(ctx, queue, groups + i, batch_cnt, cluster_id);
+        if (status != 0)
+            break;
+    }
+
+    for (size_t i = 0; (status == 0) && (i < groups_cnt); i++)
+        status = kafka_consumer_group_offsets(ctx, queue, groups[i], cluster_id);
+
+exit:
+    free(groups);
     if (event != NULL)
         rd_kafka_event_destroy(event);
     if (options != NULL)
@@ -531,10 +710,6 @@ static int kafka_read(user_data_t *user_data)
         return 0;
     }
 
-    metric_family_append(&ctx->fams[FAM_KAFKA_UP], VALUE_GAUGE(1), &ctx->labels,
-                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
-                         NULL);
-
 #if 0
 char *rd_kafka_clusterid (rd_kafka_t *rk, int timeout_ms);
 rd_kafka_mem_free (rd_kafka_t *rk, void *ptr);
@@ -549,11 +724,22 @@ FAM_KAFKA_CLUSTER
     rd_kafka_resp_err_t err = rd_kafka_metadata(ctx->rk, 1, NULL, &metadata, 5000);
     if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
         PLUGIN_ERROR("Failed to acquire metadata: %s\n", rd_kafka_err2str(err));
+        metric_family_append(&ctx->fams[FAM_KAFKA_UP], VALUE_GAUGE(0), &ctx->labels,
+                             &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                             NULL);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_KAFKA_UP], ctx->filter, 0);
+        rd_kafka_mem_free(ctx->rk, cluster_id);
         return 0;
     }
 
+    metric_family_append(&ctx->fams[FAM_KAFKA_UP], VALUE_GAUGE(1), &ctx->labels,
+                         &LABEL_PAIR_CONST("cluster_id", cluster_id),
+                         NULL);
+
+    int32_t controller_id = rd_kafka_controllerid(ctx->rk, 5000);
+
     for (int i = 0; i < metadata->broker_cnt; i++) {
-        char *controller = metadata->brokers[i].id ? "true" : "false";
+        char *controller = metadata->brokers[i].id == controller_id ? "true" : "false";
         char broker_id[ITOA_MAX];
         itoa(metadata->brokers[i].id, broker_id);
         char port[ITOA_MAX];
@@ -597,7 +783,8 @@ FAM_KAFKA_CLUSTER
             int64_t low = 0;
             int64_t high = 0;
 
-            err = rd_kafka_query_watermark_offsets (ctx->rk, topic->topic, j, &low, &high, 5000);
+            err = rd_kafka_query_watermark_offsets (ctx->rk, topic->topic, partition->id,
+                                                    &low, &high, 5000);
             if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
                 PLUGIN_WARNING("Failed to get watermark offsets: %s\n", rd_kafka_err2str(err));
                 continue;
@@ -628,7 +815,7 @@ FAM_KAFKA_CLUSTER
     rd_kafka_metadata_destroy(metadata);
 
 #if RD_KAFKA_VERSION > 0x020000ff
-    kafka_describe_consumer_groups(ctx, cluster_id);
+    kafka_consumer_groups(ctx, cluster_id);
     kafka_topic_offset_reset(ctx->topic_offsets);
 #endif
 
