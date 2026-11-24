@@ -151,19 +151,48 @@ static int ldap_init_host(ldap_t *st)
         return -1;
     }
 
-    ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
+    rc = ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
+    if (rc != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_PROTOCOL_VERSION on %s.", st->url);
+        goto error;
+    }
 
     struct timeval tm = CDTIME_T_TO_TIMEVAL(st->timeout);
-    ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &tm);
+    rc = ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &tm);
+    if (rc != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_TIMEOUT on %s.", st->url);
+        goto error;
+    }
 
-    ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
+    rc = ldap_set_option(st->ld, LDAP_OPT_NETWORK_TIMEOUT, &tm);
+    if (rc != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_NETWORK_TIMEOUT on %s.", st->url);
+        goto error;
+    }
 
-    if (st->cacert != NULL)
-        ldap_set_option(st->ld, LDAP_OPT_X_TLS_CACERTFILE, st->cacert);
+    rc = ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
+    if (rc != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set LDAP_OPT_RESTART on %s.", st->url);
+        goto error;
+    }
+
+    if (st->cacert != NULL) {
+        rc = ldap_set_option(st->ld, LDAP_OPT_X_TLS_CACERTFILE, st->cacert);
+        if (rc != LDAP_OPT_SUCCESS) {
+            PLUGIN_ERROR("Failed to set LDAP_OPT_X_TLS_CACERTFILE to '%s' on %s.",
+                         st->cacert, st->url);
+            goto error;
+        }
+    }
 
     if (st->verifyhost == false) {
+        /* This disables all the certificate checks, not only the host name. */
         int never = LDAP_OPT_X_TLS_NEVER;
-        ldap_set_option(st->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
+        rc = ldap_set_option(st->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
+        if (rc != LDAP_OPT_SUCCESS) {
+            PLUGIN_ERROR("Failed to set LDAP_OPT_X_TLS_REQUIRE_CERT on %s.", st->url);
+            goto error;
+        }
     }
 
     if (st->starttls) {
@@ -195,6 +224,11 @@ static int ldap_init_host(ldap_t *st)
 
     PLUGIN_DEBUG("Successfully connected to %s", st->url);
     return 0;
+
+error:
+    ldap_unbind_ext_s(st->ld, NULL, NULL);
+    st->ld = NULL;
+    return -1;
 }
 
 static int ldap_submit(ldap_t *ldap, ldap_query_t *query, ldap_metric_t *metric, LDAPMessage *e)
@@ -219,11 +253,11 @@ static int ldap_submit(ldap_t *ldap, ldap_query_t *query, ldap_metric_t *metric,
     if (metric->metric_from != NULL) {
         struct berval **list = ldap_get_values_len(ldap->ld, e, metric->metric_from);
         if (list == NULL) {
-            PLUGIN_ERROR("Cannot find attribute '%s'.", metric->metric_from);
-            status = -1;
+            /* The entry does not apply to this metric. */
+            PLUGIN_DEBUG("Cannot find attribute '%s'.", metric->metric_from);
             goto error;
         }
-        strbuf_putstr(&buf, list[0]->bv_val);
+        strbuf_putstrn(&buf, list[0]->bv_val, list[0]->bv_len);
         ldap_value_free_len(list);
     } else {
         strbuf_putstr(&buf, metric->metric);
@@ -234,8 +268,8 @@ static int ldap_submit(ldap_t *ldap, ldap_query_t *query, ldap_metric_t *metric,
     if (metric->help_from != NULL) {
         help_list = ldap_get_values_len(ldap->ld, e, metric->help_from);
         if (help_list == NULL) {
-            PLUGIN_ERROR("Cannot find attribute '%s'.", metric->help_from);
-            status = -1;
+            /* The entry does not apply to this metric. */
+            PLUGIN_DEBUG("Cannot find attribute '%s'.", metric->help_from);
             goto error;
         }
         fam.help = help_list[0]->bv_val;
@@ -254,8 +288,8 @@ static int ldap_submit(ldap_t *ldap, ldap_query_t *query, ldap_metric_t *metric,
     for (size_t i = 0; i < query->labels_from.num; i++) {
         struct berval **list = ldap_get_values_len(ldap->ld, e, query->labels_from.ptr[i].value);
         if (list == NULL) {
-            PLUGIN_ERROR("Cannot find attribute '%s'.", query->labels_from.ptr[i].value);
-            status = -1;
+            /* The entry does not apply to this metric. */
+            PLUGIN_DEBUG("Cannot find attribute '%s'.", query->labels_from.ptr[i].value);
             goto error;
         }
         metric_label_set(&m, query->labels_from.ptr[i].name, list[0]->bv_val);
@@ -269,8 +303,8 @@ static int ldap_submit(ldap_t *ldap, ldap_query_t *query, ldap_metric_t *metric,
     for (size_t i = 0; i < metric->labels_from.num; i++) {
         struct berval **list = ldap_get_values_len(ldap->ld, e, metric->labels_from.ptr[i].value);
         if (list == NULL) {
-            PLUGIN_ERROR("Cannot find attribute '%s'.", metric->labels_from.ptr[i].value);
-            status = -1;
+            /* The entry does not apply to this metric. */
+            PLUGIN_DEBUG("Cannot find attribute '%s'.", metric->labels_from.ptr[i].value);
             goto error;
         }
         metric_label_set(&m, metric->labels_from.ptr[i].name, list[0]->bv_val);
@@ -279,8 +313,8 @@ static int ldap_submit(ldap_t *ldap, ldap_query_t *query, ldap_metric_t *metric,
 
     value_list = ldap_get_values_len(ldap->ld, e, metric->value_from);
     if (value_list == NULL) {
-        PLUGIN_ERROR("Cannot find attribute '%s'.", metric->value_from);
-        status = -1;
+        /* The entry does not apply to this metric. */
+        PLUGIN_DEBUG("Cannot find attribute '%s'.", metric->value_from);
         goto error;
     }
 
@@ -336,16 +370,33 @@ static int ldap_read_host(user_data_t *ud)
 
         char *filter = query->filter != NULL ? query->filter : "(objectClass=*)";
 
-        LDAPMessage *result;
+        LDAPMessage *result = NULL;
         int rc = ldap_search_ext_s(ldap->ld, query->base, query->scope, filter,
                                    query->attrs, 0, NULL, NULL, NULL, 0, &result);
 
         if (unlikely(rc != LDAP_SUCCESS)) {
-            PLUGIN_ERROR("Failed to execute search: %s", ldap_err2string(rc));
-            ldap_msgfree(result);
-            ldap_unbind_ext_s(ldap->ld, NULL, NULL);
-            ldap->ld = NULL;
-            return -1;
+            if ((rc == LDAP_SERVER_DOWN) || (rc == LDAP_TIMEOUT) ||
+                (rc == LDAP_CONNECT_ERROR) || (rc == LDAP_UNAVAILABLE)) {
+                /* Connection error: reconnect in the next read. */
+                PLUGIN_ERROR("Instance '%s': failed to execute search '%s': %s",
+                             ldap->name, query->name, ldap_err2string(rc));
+                ldap_msgfree(result);
+                ldap_unbind_ext_s(ldap->ld, NULL, NULL);
+                ldap->ld = NULL;
+                return -1;
+            }
+
+            if ((rc == LDAP_SIZELIMIT_EXCEEDED) || (rc == LDAP_TIMELIMIT_EXCEEDED) ||
+                (rc == LDAP_ADMINLIMIT_EXCEEDED)) {
+                /* Process the partial results. */
+                PLUGIN_WARNING("Instance '%s': search '%s' returned partial results: %s",
+                               ldap->name, query->name, ldap_err2string(rc));
+            } else {
+                PLUGIN_ERROR("Instance '%s': failed to execute search '%s': %s",
+                             ldap->name, query->name, ldap_err2string(rc));
+                ldap_msgfree(result);
+                continue;
+            }
         }
 
         for (LDAPMessage *e = ldap_first_entry(ldap->ld, result);
@@ -362,8 +413,8 @@ static int ldap_read_host(user_data_t *ud)
                 if ((dn != NULL) && (metric->dn != NULL) && (strcmp(dn, metric->dn) != 0))
                     continue;
 
-                if ((cn_list != NULL) && (metric->cn != NULL) &&
-                    (strcmp((*cn_list[0]).bv_val, metric->cn) != 0))
+                if ((metric->cn != NULL) &&
+                    ((cn_list == NULL) || (strcmp((*cn_list[0]).bv_val, metric->cn) != 0)))
                     continue;
 
                 ldap_submit(ldap, query, metric, e);
@@ -390,7 +441,7 @@ static int ldap_config_metric(config_item_t *ci, ldap_query_t *query)
     }
 
     int status = 0;
-    
+
     metric->type = METRIC_TYPE_GAUGE;
 
     for (int i = 0; i < ci->children_num; i++) {
@@ -426,6 +477,18 @@ static int ldap_config_metric(config_item_t *ci, ldap_query_t *query)
 
         if (status != 0)
             break;
+    }
+
+    if ((status == 0) && (metric->metric == NULL) && (metric->metric_from == NULL)) {
+        PLUGIN_ERROR("The 'metric' block in %s:%d requires a 'metric' or 'metric-from' option.",
+                     cf_get_file(ci), cf_get_lineno(ci));
+        status = -1;
+    }
+
+    if ((status == 0) && (metric->value_from == NULL)) {
+        PLUGIN_ERROR("The 'metric' block in %s:%d requires a 'value-from' option.",
+                     cf_get_file(ci), cf_get_lineno(ci));
+        status = -1;
     }
 
     if (status != 0) {
@@ -479,8 +542,14 @@ static int ldap_config_scope(config_item_t *ci, int *scope)
 static int ldap_config_attrs(config_item_t *ci, char **attrs[])
 {
 
-    if ((ci == NULL) || (*attrs == NULL))
+    if ((ci == NULL) || (attrs == NULL))
         return -1;
+
+    if (*attrs != NULL) {
+        PLUGIN_ERROR("The '%s' option in %s:%d is already set.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
 
     if (ci->values_num <= 0) {
         PLUGIN_ERROR("The '%s' option in %s:%d requires a list of strings.",
@@ -496,7 +565,8 @@ static int ldap_config_attrs(config_item_t *ci, char **attrs[])
         }
     }
 
-    *attrs = calloc(ci->values_num, sizeof(char *));
+    /* The array must be NULL terminated. */
+    *attrs = calloc(ci->values_num + 1, sizeof(char *));
     if (*attrs == NULL) {
         PLUGIN_ERROR("calloc failed: %s.", STRERRNO);
         return -1;
@@ -514,6 +584,9 @@ error:
     for (int i=0 ; i < ci->values_num; i++) {
         free((*attrs)[i]);
     }
+
+    free(*attrs);
+    *attrs = NULL;
 
     return -1;
 }
@@ -695,14 +768,15 @@ static int ldap_config_instance(config_item_t *ci)
 
     /* Check if URL is valid */
     if ((status == 0) && (st->url != NULL)) {
-        LDAPURLDesc *ludpp;
+        LDAPURLDesc *ludpp = NULL;
 
         if (ldap_url_parse(st->url, &ludpp) != 0) {
             PLUGIN_ERROR("Instance '%s': Invalid 'url': `%s'", st->name, st->url);
             status = -1;
         }
 
-        ldap_free_urldesc(ludpp);
+        if (ludpp != NULL)
+            ldap_free_urldesc(ludpp);
     }
 
     if (status != 0) {
