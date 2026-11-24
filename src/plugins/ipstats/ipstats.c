@@ -5,6 +5,7 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "plugin.h"
+#include "libutils/common.h"
 
 #include <sys/sysctl.h>
 #include <sys/types.h>
@@ -347,15 +348,22 @@ static metric_family_t fams[FAM_IP_MAX] = {
     }
 };
 
+static complain_t ip_complaint;
+static complain_t ip6_complaint;
+
 static int ipstats_read(void)
 {
-    struct ipstat ipstat;
+    struct ipstat ipstat = {0};
     size_t ipslen = sizeof(ipstat);
     char mib[] = "net.inet.ip.stats";
 
     if (sysctlbyname(mib, &ipstat, &ipslen, NULL, 0) != 0) {
-        PLUGIN_WARNING("ipstats plugin: sysctl \"%s\" failed.", mib);
+        PLUGIN_COMPLAIN_WARNING(&ip_complaint, "ipstats plugin: sysctl \"%s\" failed.", mib);
+    } else if (ipslen != sizeof(ipstat)) {
+        PLUGIN_COMPLAIN_WARNING(&ip_complaint, "ipstats plugin: sysctl \"%s\" returned %zu bytes, "
+                                "expected %zu.", mib, ipslen, sizeof(ipstat));
     } else {
+        PLUGIN_RELASE_INFO(&ip_complaint, "ipstats plugin: sysctl \"%s\" succeeded.", mib);
         metric_family_append(&fams[FAM_IP_PACKETS],
                              VALUE_COUNTER(ipstat.ips_total), NULL, NULL);
         metric_family_append(&fams[FAM_IP_BADSUM_PACKETS],
@@ -416,13 +424,17 @@ static int ipstats_read(void)
                              VALUE_COUNTER(ipstat.ips_badaddr), NULL, NULL);
     }
 
-    struct ip6stat ip6stat;
+    struct ip6stat ip6stat = {0};
     size_t ip6slen = sizeof(ip6stat);
     char mib6[] = "net.inet6.ip6.stats";
 
     if (sysctlbyname(mib6, &ip6stat, &ip6slen, NULL, 0) != 0) {
-        PLUGIN_WARNING("ipstats plugin: sysctl \"%s\" failed.", mib6);
+        PLUGIN_COMPLAIN_WARNING(&ip6_complaint, "ipstats plugin: sysctl \"%s\" failed.", mib6);
+    } else if (ip6slen != sizeof(ip6stat)) {
+        PLUGIN_COMPLAIN_WARNING(&ip6_complaint, "ipstats plugin: sysctl \"%s\" returned %zu bytes, "
+                                "expected %zu.", mib6, ip6slen, sizeof(ip6stat));
     } else {
+        PLUGIN_RELASE_INFO(&ip6_complaint, "ipstats plugin: sysctl \"%s\" succeeded.", mib);
         metric_family_append(&fams[FAM_IP6_PACKETS],
                              VALUE_COUNTER(ip6stat.ip6s_total), NULL, NULL);
         metric_family_append(&fams[FAM_IP6_TOOSHORT_PACKETS],
