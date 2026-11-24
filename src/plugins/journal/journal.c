@@ -5,6 +5,8 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
+#include <stdatomic.h>
+
 #include <systemd/sd-journal.h>
 
 typedef struct {
@@ -12,14 +14,18 @@ typedef struct {
     char *unit;
     char *namespace;
     char *path;
+    char *cursor;
     label_set_t labels;
     sd_journal *journal;
     plugin_filter_t *filter;
     plugin_match_t *matches;
     pthread_t thread_id;
     pthread_mutex_t lock;
+    bool thread_created;
     bool thread_running;
 } journal_t;
+
+#define JOURNAL_REOPEN_DELAY 10
 
 static size_t journal_get_data(sd_journal *j, char *label,
                                               char *prefix, size_t prefix_len,
@@ -45,62 +51,93 @@ static size_t journal_get_data(sd_journal *j, char *label,
     return data_len;
 }
 
+static int journal_open(journal_t *ctx)
+{
+    int status = 0;
+
+    if (ctx->namespace != NULL) {
+#ifdef HAVE_SD_JOURNAL_OPEN_NAMESPACE
+        status = sd_journal_open_namespace(&ctx->journal, ctx->namespace, 0);
+#else
+        status = -1;
+#endif
+    } else if (ctx->path != NULL) {
+        status = sd_journal_open_directory(&ctx->journal, ctx->path, 0);
+    } else {
+        status = sd_journal_open(&ctx->journal, SD_JOURNAL_LOCAL_ONLY);
+    }
+
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to open journal: %s.", STRERROR(-status));
+        ctx->journal = NULL;
+        return -1;
+    }
+
+    if (ctx->unit != NULL) {
+        char filter[256];
+        ssnprintf(filter, sizeof(filter), "_SYSTEMD_UNIT=%s", ctx->unit);
+        sd_journal_add_match(ctx->journal, filter, 0);
+    }
+
+    /* After a reopen continue after the last read entry. */
+    if (ctx->cursor != NULL) {
+        status = sd_journal_seek_cursor(ctx->journal, ctx->cursor);
+        if (status >= 0) {
+            sd_journal_next(ctx->journal);
+            return 0;
+        }
+        PLUGIN_WARNING("Failed to seek to the last read entry of the journal.");
+    }
+
+    status = sd_journal_seek_tail(ctx->journal);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to seek to the tail of the journal.");
+    }
+
+    sd_journal_previous(ctx->journal);
+
+    return 0;
+}
+
 static void *journal_thread_read(void *data)
 {
     journal_t *ctx = data;
 
     ctx->thread_running = true;
 
-    if (ctx->journal == NULL) {
-        int status = 0;
-
-        if (ctx->namespace != NULL) {
-#ifdef HAVE_SD_JOURNAL_OPEN_NAMESPACE
-            status = sd_journal_open_namespace(&ctx->journal, ctx->namespace, 0);
-#else
-            status = -1;
-#endif
-        } else if (ctx->path != NULL) {
-            status = sd_journal_open_directory(&ctx->journal, ctx->path, 0);
-        } else {
-            status = sd_journal_open(&ctx->journal, SD_JOURNAL_LOCAL_ONLY);
-        }
-
-        if (status != 0) {
-            PLUGIN_ERROR("Failed to open journal: %s.", STRERROR(-status));
-            pthread_exit(NULL);
-        }
-
-        if (ctx->unit != NULL) {
-            char filter[256];
-            ssnprintf(filter, sizeof(filter), "_SYSTEMD_UNIT=%s", ctx->unit);
-            sd_journal_add_match(ctx->journal, filter, 0);
-        }
-
-        status = sd_journal_seek_tail(ctx->journal);
-        if (status != 0) {
-            PLUGIN_ERROR("Failed to seek to the tail of the journal.");
-        }
-
-        sd_journal_previous(ctx->journal);
-    }
-
-
     while (ctx->thread_running) {
+        if (ctx->journal == NULL) {
+            if (journal_open(ctx) != 0) {
+                /* Retry later. */
+                for (int i = 0; (i < JOURNAL_REOPEN_DELAY) && ctx->thread_running; i++)
+                    sleep(1);
+                continue;
+            }
+        }
+
         int status = sd_journal_next(ctx->journal);
         if (status == 0) {
             status = sd_journal_wait(ctx->journal, (uint64_t) 1000000);
             if (status < 0)
-                PLUGIN_ERROR("Failed to wait for changes: %s\n", STRERROR(-status));
+                PLUGIN_ERROR("Failed to wait for changes: %s", STRERROR(-status));
             continue;
         }
 
         if (status < 0) {
-            PLUGIN_ERROR("Failed to read the next message in the journal.");
-            break;
+            PLUGIN_ERROR("Failed to read the next message in the journal: %s, reopening it.",
+                         STRERROR(-status));
+            sd_journal_close(ctx->journal);
+            ctx->journal = NULL;
+            continue;
         }
 
-        char message[4096];
+        char *cursor = NULL;
+        if (sd_journal_get_cursor(ctx->journal, &cursor) >= 0) {
+            free(ctx->cursor);
+            ctx->cursor = cursor;
+        }
+
+        char message[1024];
         size_t message_len = journal_get_data(ctx->journal, "MESSAGE",
                                                       "MESSAGE=", strlen("MESSAGE="),
                                                        message, sizeof(message));
@@ -114,13 +151,32 @@ static void *journal_thread_read(void *data)
             PLUGIN_WARNING("plugin_match failed.");
     }
 
-
     pthread_exit(NULL);
 }
 
 static int journal_read(user_data_t *ud)
 {
     journal_t *ctx = ud->data;
+
+    if (!ctx->thread_running) {
+        int status = plugin_thread_create(&ctx->thread_id, journal_thread_read, ctx, "journal");
+        if (status != 0) {
+            PLUGIN_ERROR("pthread_create() failed.");
+            return -1;
+        }
+        return 0;
+    }
+
+    /* The thread is created here and not in the config callback because
+     * the threads do not survive the fork() when the daemon is daemonized. */
+    if (!ctx->thread_created) {
+        int status = plugin_thread_create(&ctx->thread_id, journal_thread_read, ctx, "journal");
+        if (status != 0) {
+            PLUGIN_ERROR("pthread_create() failed: %s", STRERROR(status));
+            return -1;
+        }
+        ctx->thread_created = true;
+    }
 
     pthread_mutex_lock(&ctx->lock);
 
@@ -138,13 +194,12 @@ static void journal_free(void *arg)
     if (journal == NULL)
         return;
 
-    if (journal->thread_running) {
-        journal->thread_running = false;
-        if (pthread_kill(journal->thread_id, 0) == 0) {
-            int status = pthread_join(journal->thread_id, NULL);
-            if (status != 0)
-                PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
-        }
+    if (journal->thread_created) {
+        atomic_store(&journal->thread_running, false);
+        int status = pthread_join(journal->thread_id, NULL);
+        if (status != 0)
+            PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
+        journal->thread_created = false;
     }
 
     pthread_mutex_destroy(&journal->lock);
@@ -153,6 +208,7 @@ static void journal_free(void *arg)
     free(journal->unit);
     free(journal->namespace);
     free(journal->path);
+    free(journal->cursor);
 
     label_set_reset(&journal->labels);
 
@@ -228,13 +284,6 @@ static int journal_config_instance(config_item_t *ci)
     }
 
     label_set_add(&journal->labels, true, "instance", journal->name);
-
-    status = plugin_thread_create(&journal->thread_id, journal_thread_read, journal, "journal");
-    if (status != 0) {
-        PLUGIN_ERROR("pthread_create() failed.");
-        journal_free(journal);
-        return -1;
-    }
 
     return plugin_register_complex_read("journal", name, journal_read, interval,
                                         &(user_data_t){.data=journal, .free_func=journal_free});
