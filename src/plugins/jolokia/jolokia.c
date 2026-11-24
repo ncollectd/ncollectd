@@ -9,7 +9,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/complain.h"
 #include "libutils/llist.h"
 #include "libutils/strbuf.h"
 #include "libutils/avltree.h"
@@ -28,9 +27,18 @@
 
 #define MBEAN_MAX_KEY_SIZE  4096
 
+/* Maximum size of a response body. */
+#define JLK_MAX_RESPONSE_SIZE (16 * 1024 * 1024)
+
+typedef struct {
+    xson_tree_parser_t *parser;
+    size_t received;
+} jlk_response_t;
+
 typedef struct {
     char *name;
     label_set_t labels;
+    bool pattern;
 } object_name_t;
 
 typedef struct {
@@ -81,15 +89,48 @@ typedef struct {
     size_t mbeans_size;
     char **post_body;
     size_t *mbeans;
+    complain_t complaint;
 } jlk_t;
 
-size_t g_mbean_set_num;
+static size_t g_mbean_set_num;
 static jlk_mbean_set_t *g_mbean_set;
 
 static void jlk_object_name_reset(object_name_t *on)
 {
     free(on->name);
+    on->name = NULL;
     label_set_reset(&on->labels);
+    on->pattern = false;
+}
+
+/* Return a pointer to the end of a property value: the next ',' or the end
+   of the string. Quoted values can contain ',' and escaped quotes. */
+static char *jlk_object_name_value_end(char *value)
+{
+    if (*value == '"') {
+        char *ptr = value + 1;
+        while (*ptr != '\0') {
+            if ((*ptr == '\\') && (ptr[1] != '\0')) {
+                ptr += 2;
+                continue;
+            }
+            if (*ptr == '"')
+                break;
+            ptr++;
+        }
+        if (*ptr != '"')
+            return NULL;
+        ptr++;
+        if ((*ptr != ',') && (*ptr != '\0'))
+            return NULL;
+        return ptr;
+    }
+
+    char *end = strchr(value, ',');
+    if (end == NULL)
+        end = value + strlen(value);
+
+    return end;
 }
 
 static int jlk_object_name_parse(object_name_t *on, char *str)
@@ -98,16 +139,26 @@ static int jlk_object_name_parse(object_name_t *on, char *str)
     if (labels == NULL)
         return -1;
 
-    labels++;
-
+    /* The domain name does not include the ':'. */
     size_t name_len = labels - str;
     on->name = strndup(str, name_len);
     if (on->name == NULL)
         return -1;
 
+    labels++;
+
     while (true) {
         if (*labels == '\0')
             return 0;
+
+        /* Property list pattern: "domain:key=value,*" */
+        if ((labels[0] == '*') && ((labels[1] == ',') || (labels[1] == '\0'))) {
+            on->pattern = true;
+            if (labels[1] == '\0')
+                break;
+            labels += 2;
+            continue;
+        }
 
         char *key = labels;
         char *value = strchr(key, '=');
@@ -119,12 +170,12 @@ static int jlk_object_name_parse(object_name_t *on, char *str)
         if (*value == '\0')
             return -1;
 
-        char *end = strchr(value, ',');
-        size_t value_len = 0;
+        char *end = jlk_object_name_value_end(value);
         if (end == NULL)
-            value_len = strlen(value);
-        else
-            value_len = end - value;
+            return -1;
+        size_t value_len = end - value;
+        if (*end == '\0')
+            end = NULL;
 
         _label_set_add(&on->labels, true, true, key, key_len, value, value_len);
 
@@ -136,10 +187,42 @@ static int jlk_object_name_parse(object_name_t *on, char *str)
     return 0;
 }
 
+static bool jlk_object_name_value_match(const char *va, const char *vb)
+{
+    if ((va[0] == '*') && (va[1] == '\0'))
+        return true;
+
+    if ((vb[0] == '*') && (vb[1] == '\0'))
+        return true;
+
+    return strcmp(va, vb) == 0;
+}
+
+/* All the properties of "pattern" must be present in "other". */
+static bool jlk_object_name_pattern_match(object_name_t *pattern, object_name_t *other)
+{
+    for (size_t i = 0; i < pattern->labels.num; i++) {
+        label_pair_t *pair = &pattern->labels.ptr[i];
+        label_pair_t *other_pair = label_set_read(other->labels, pair->name);
+        if (other_pair == NULL)
+            return false;
+        if (!jlk_object_name_value_match(pair->value, other_pair->value))
+            return false;
+    }
+
+    return true;
+}
+
 static bool jlk_object_name_cmp(object_name_t *oa, object_name_t *ob)
 {
     if (strcmp(oa->name, ob->name) != 0)
         return false;
+
+    if (oa->pattern)
+        return jlk_object_name_pattern_match(oa, ob);
+
+    if (ob->pattern)
+        return jlk_object_name_pattern_match(ob, oa);
 
     if (oa->labels.num != ob->labels.num)
         return false;
@@ -166,6 +249,7 @@ static bool jlk_object_name_cmp(object_name_t *oa, object_name_t *ob)
 static int jlk_object_name_to_str(object_name_t *on, strbuf_t *buf)
 {
     int status = strbuf_putstr(buf, on->name);
+    status |= strbuf_putchar(buf, ':');
     for (size_t i=0; i < on->labels.num; i++) {
         if (i != 0)
             status |= strbuf_putchar(buf, ',');
@@ -173,6 +257,11 @@ static int jlk_object_name_to_str(object_name_t *on, strbuf_t *buf)
         status |= strbuf_putstr(buf, pair->name);
         status |= strbuf_putchar(buf, '=');
         status |= strbuf_putstr(buf, pair->value);
+    }
+    if (on->pattern) {
+        if (on->labels.num > 0)
+            status |= strbuf_putchar(buf, ',');
+        status |= strbuf_putchar(buf, '*');
     }
     return status;
 }
@@ -239,6 +328,10 @@ static void jlk_submit(jlk_t *jlk, jlk_mbean_t *mbean, jlk_mbean_attribute_t *at
     value_t value = {0};
 
     if (attribute->type == METRIC_TYPE_COUNTER) {
+        /* Negative values (e.g. -1 for "not available") or values out of range
+           cannot be represented as a counter. */
+        if (!isfinite(number) || (number < 0) || (number >= 18446744073709551616.0))
+            return;
         uint64_t inumber = number;
         if (number != (double)inumber)
             value = VALUE_COUNTER_FLOAT64(number);
@@ -430,6 +523,7 @@ static int jlk_parse_response(jlk_t *jlk, c_avl_tree_t *mbeans, xson_value_t *tr
 
     xson_value_t *request = NULL;
     xson_value_t *value = NULL;
+    char *error = NULL;
     double rstatus = 0;
     double timestamp = 0;
 
@@ -448,16 +542,31 @@ static int jlk_parse_response(jlk_t *jlk, c_avl_tree_t *mbeans, xson_value_t *tr
             rstatus = xson_value_get_number(xson_keyval_value(kv));
         } else if (strcmp(key, "timestamp") == 0) {
             timestamp = xson_value_get_number(xson_keyval_value(kv));
+        } else if (strcmp(key, "error") == 0) {
+            xson_value_t *error_value = xson_keyval_value(kv);
+            if (xson_value_is_string(error_value))
+                error = xson_value_get_string(error_value);
         }
+    }
+
+    if (rstatus != 200) {
+        char *mbean = NULL;
+        if ((request != NULL) && xson_value_is_object(request)) {
+            xson_value_t *mbean_value = xson_value_object_find(request, "mbean");
+            if ((mbean_value != NULL) && xson_value_is_string(mbean_value))
+                mbean = xson_value_get_string(mbean_value);
+        }
+        PLUGIN_COMPLAIN_WARNING(&jlk->complaint,
+                   "instance '%s': request for mbean '%s' failed with "
+                   "status %.0f: %s", jlk->instance, mbean == NULL ? "unknown" : mbean,
+                   rstatus, error == NULL ? "unknown error" : error);
+        return 0;
     }
 
     if (request == NULL)
         return 0;
 
     if (value == NULL)
-        return 0;
-
-    if (rstatus != 200)
         return 0;
 
     char buff[MBEAN_MAX_KEY_SIZE];
@@ -481,11 +590,17 @@ static size_t jlk_curl_callback(void *buf, size_t size, size_t nmemb, void *user
     if (len <= 0)
         return len;
 
-    xson_tree_parser_t *parser = user_data;
-    if (parser == NULL)
+    jlk_response_t *response = user_data;
+    if ((response == NULL) || (response->parser == NULL))
         return 0;
 
-    int status = xson_tree_parser_chunk(parser, buf, len);
+    if (len > (JLK_MAX_RESPONSE_SIZE - response->received)) {
+        PLUGIN_ERROR("Response size exceeds the limit of %d bytes.", JLK_MAX_RESPONSE_SIZE);
+        return 0;
+    }
+    response->received += len;
+
+    int status = xson_tree_parser_chunk(response->parser, buf, len);
     if (status != 0) {
         PLUGIN_ERROR("Failed to parse response");
         return 0;
@@ -548,6 +663,8 @@ static int jlk_curl_init(jlk_t *jlk)
         if (jlk->pass != NULL)
             credentials_size += strlen(jlk->pass);
 
+        /* The curl handle can be recreated, free the previous credentials. */
+        free(jlk->credentials);
         jlk->credentials = calloc(1, credentials_size);
         if (jlk->credentials == NULL) {
             PLUGIN_ERROR("calloc failed.");
@@ -562,6 +679,14 @@ static int jlk_curl_init(jlk_t *jlk)
                          curl_easy_strerror(rcode));
             return -1;
         }
+    }
+
+    rcode = curl_easy_setopt(jlk->curl, CURLOPT_MAXFILESIZE_LARGE,
+                             (curl_off_t)JLK_MAX_RESPONSE_SIZE);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXFILESIZE_LARGE failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
     }
 
     rcode = curl_easy_setopt(jlk->curl, CURLOPT_SSL_VERIFYPEER, (long)jlk->verify_peer);
@@ -680,7 +805,7 @@ static int jlk_read(user_data_t *ud)
     int status = jlk_curl_init(jlk);
     if (status != 0) {
         jlk_curl_cleanup(jlk);
-        return 0;
+        return -1;
     }
 
     for (size_t i = 0; i < jlk->mbeans_size; i++) {
@@ -692,7 +817,8 @@ static int jlk_read(user_data_t *ud)
         if (parser == NULL)
             return -1;
 
-        status = jlk_curl_perform(jlk, jlk->post_body[i], parser);
+        jlk_response_t response = {.parser = parser, .received = 0};
+        status = jlk_curl_perform(jlk, jlk->post_body[i], &response);
         if (status < 0) {
             if (error_buffer[0] != '\0')
                 PLUGIN_ERROR("json_parse failed: %s", error_buffer);
@@ -925,6 +1051,12 @@ static int jlk_config_add_attribute(config_item_t *ci, jlk_mbean_attribute_set_t
     if (status != 0)
         return -1;
 
+    if (attribute->metric_name == NULL) {
+        PLUGIN_ERROR("Missing 'metric' option in attribute '%s' at %s:%d.",
+                     attribute->attribute, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
     return 0;
 }
 
@@ -970,18 +1102,22 @@ static int jlk_config_add_mbean(config_item_t *ci, c_avl_tree_t *mbeans)
             break;
     }
 
-    if (status != 0)
+    if (status != 0) {
+        jlk_mbean_free(mbean);
         return -1;
+    }
 
     status = jlk_object_name_parse(&mbean->on, mbean->mbean);
     if (status != 0) {
         PLUGIN_ERROR("Failed to parse mbean: '%s'.", mbean->mbean);
+        jlk_mbean_free(mbean);
         return -1;
     }
 
     char *mbean_key = jlk_mbean_key(mbean);
     if (mbean_key == NULL) {
         PLUGIN_ERROR("Invalid mbean name: '%s'.", mbean->mbean);
+        jlk_mbean_free(mbean);
         return -1;
     }
 
@@ -1000,6 +1136,8 @@ static int jlk_config_add_mbean(config_item_t *ci, c_avl_tree_t *mbeans)
         PLUGIN_ERROR("Failed to insert mbean '%s' at  %s:%d in avl tree.",
                      mbean->mbean, cf_get_file(ci), cf_get_lineno(ci));
         jlk_mbean_free(mbean);
+        free(mbean_key);
+        return -1;
     }
 
     return 0;
@@ -1010,6 +1148,14 @@ static int jlk_config_add_mbean_set(config_item_t *ci)
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
         PLUGIN_ERROR("The 'mbeans' block needs exactly one string argument.");
         return -1;
+    }
+
+    for (size_t i = 0; i < g_mbean_set_num; i++) {
+        if (strcmp(g_mbean_set[i].name, ci->values[0].value.string) == 0) {
+            PLUGIN_ERROR("The 'mbeans' block '%s' at %s:%d is already defined.",
+                         ci->values[0].value.string, cf_get_file(ci), cf_get_lineno(ci));
+            return -1;
+        }
     }
 
     jlk_mbean_set_t *tmp = realloc(g_mbean_set, sizeof(jlk_mbean_set_t) * (g_mbean_set_num + 1));
@@ -1207,12 +1353,14 @@ static int jlk_config_add_instance(config_item_t *ci)
         status = jlk_build_post(mbean_set->mbeans, &buf);
         if (status != 0) {
             PLUGIN_ERROR("Failed to build POST data");
+            strbuf_destroy(&buf);
             jlk_free(jlk);
             return -1;
         }
         char *post = strdup(buf.ptr);
         if (post == NULL) {
             PLUGIN_ERROR("strdup failed.");
+            strbuf_destroy(&buf);
             jlk_free(jlk);
             return -1;
         }
