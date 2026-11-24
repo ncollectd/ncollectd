@@ -5,6 +5,8 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
+#include <fcntl.h>
+
 #define KEEPALIVED_STATS_FILE "/tmp/keepalived.stats"
 #define KEEPALIVED_DATA_FILE "/tmp/keepalived.data"
 #define KEEPALIVED_PID_FILE "/var/run/keepalived.pid"
@@ -44,9 +46,9 @@ static metric_family_t fams[FAM_KEEPALIVED_MAX] = {
         .help =  "State of vrrp",
     },
     [FAM_KEEPALIVED_GRATUITOUS_ARP_DELAY] = {
-        .name = "keepalived_gratuitous_arp_delay",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "Gratuitous ARP delay",
+        .name = "keepalived_gratuitous_arp_delay_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Gratuitous ARP delay in seconds",
     },
     [FAM_KEEPALIVED_ADVERTISEMENTS_RECEIVE] = {
         .name = "keepalived_advertisements_received",
@@ -154,6 +156,22 @@ typedef struct {
     metric_family_t fams[FAM_KEEPALIVED_MAX];
 } keepalived_t;
 
+static bool stat_changed(const struct stat *sb1, const struct stat *sb2)
+{
+    if ((sb1->st_ino != sb2->st_ino) || (sb1->st_size != sb2->st_size))
+        return true;
+
+    /* Compare with nanosecond resolution, the file can be rewritten
+     * within the same second. */
+#ifdef KERNEL_DARWIN
+    return (sb1->st_mtimespec.tv_sec != sb2->st_mtimespec.tv_sec) ||
+           (sb1->st_mtimespec.tv_nsec != sb2->st_mtimespec.tv_nsec);
+#else
+    return (sb1->st_mtim.tv_sec != sb2->st_mtim.tv_sec) ||
+           (sb1->st_mtim.tv_nsec != sb2->st_mtim.tv_nsec);
+#endif
+}
+
 static int dump_file(pid_t pid, int signal, const char *filename)
 {
     bool found = true;
@@ -162,7 +180,7 @@ static int dump_file(pid_t pid, int signal, const char *filename)
     if (status != 0)
         found = false;
 
-    status = kill(pid, SIGUSR1);
+    status = kill(pid, signal);
     if (status != 0)  {
         PLUGIN_ERROR("Cannot send signal %d to %d", signal, pid);
         return -1;
@@ -176,7 +194,7 @@ static int dump_file(pid_t pid, int signal, const char *filename)
         if (status == 0) {
             if (!found)
                 return 0;
-            if (sb1.st_mtime != sb2.st_mtime)
+            if (stat_changed(&sb1, &sb2))
                 return 0;
         }
     }
@@ -186,33 +204,77 @@ static int dump_file(pid_t pid, int signal, const char *filename)
     return -1;
 }
 
+static FILE *keepalived_fopen(const char *path)
+{
+    /* Do not follow symlinks nor block on FIFOs, the default paths are in a
+     * world writable directory. */
+    int fd = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) {
+        PLUGIN_ERROR("open (%s): %s", path, STRERRNO);
+        return NULL;
+    }
+
+    struct stat sb = {0};
+    if (fstat(fd, &sb) != 0) {
+        PLUGIN_ERROR("fstat (%s): %s", path, STRERRNO);
+        close(fd);
+        return NULL;
+    }
+
+    if (!S_ISREG(sb.st_mode)) {
+        PLUGIN_ERROR("'%s' is not a regular file.", path);
+        close(fd);
+        return NULL;
+    }
+
+    if ((sb.st_uid != 0) && (sb.st_uid != geteuid())) {
+        PLUGIN_ERROR("'%s' is not owned by root.", path);
+        close(fd);
+        return NULL;
+    }
+
+    FILE *fh = fdopen(fd, "r");
+    if (fh == NULL) {
+        PLUGIN_ERROR("fdopen (%s): %s", path, STRERRNO);
+        close(fd);
+        return NULL;
+    }
+
+    return fh;
+}
+
 static void split_kv(char *line, char **rkey, char **rval, char sep)
 {
-    char *key = line;
-    *rkey = key;
-
+    *rkey = NULL;
     *rval = NULL;
+
+    char *key = line;
     char *end = strchr(key, sep);
     if (end == NULL)
        return;
+    *rkey = key;
 
     char *val = end+1;
 
-    do {
-        *end = '\0';
+    while ((end > line) && (end[-1] == ' '))
         end--;
-    } while ((*end == ' ') && (end != line));
+    *end = '\0';
 
-    while ((*val == ' ') || (*val == '\n')) {
-        val++;
+    size_t val_len = strlen(val);
+    while ((val_len > 0) && ((val[val_len - 1] == ' ') || (val[val_len - 1] == '\t') ||
+                             (val[val_len - 1] == '\r') || (val[val_len - 1] == '\n'))) {
+        val_len--;
+        val[val_len] = '\0';
     }
 
     if (*val == '\0')
       return;
 
+    while ((*val == ' ') || (*val == '\n')) {
+        val++;
+    }
+
     *rval = val;
-
-
 }
 
 static int read_keepalived_data(keepalived_t *kpd, int pid)
@@ -221,11 +283,9 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
     if (status != 0)
         return -1;
 
-    FILE *fh = fopen(kpd->data_path, "r");
-    if (fh == NULL) {
-        PLUGIN_ERROR("fopen (%s): %s", kpd->data_path, STRERRNO);
+    FILE *fh = keepalived_fopen(kpd->data_path);
+    if (fh == NULL)
         return -1;
-    }
 
     keepalived_data_section_t section = KEEPALIVED_DATA_SECTION_NONE;
 
@@ -238,7 +298,9 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
         if ((key == NULL) || (val == NULL))
             continue;
 
-        if ((key[0] == ' ') && (key[1] != ' ')) {
+        /* keepalived 1.x indents the fields with two spaces, 2.x with three. */
+        size_t indent = strspn(key, " ");
+        if (indent == 1) {
             key += 1;
             if (strcmp("VRRP Instance", key) == 0) {
                 section = KEEPALIVED_DATA_SECTION_INSTANCE;
@@ -251,11 +313,13 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
                 if (val != NULL)
                     sstrncpy(sname, val, sizeof(sname));
             }
-        } else if ((key[0] == ' ') && (key[1] == ' ') && (key[2] != ' ')) {
-            key += 2;
+        } else if ((indent == 2) || (indent == 3)) {
+            key += indent;
 
             switch (section) {
             case KEEPALIVED_DATA_SECTION_INSTANCE:
+                if (iname[0] == '\0')
+                    break;
                 if (strcmp("State", key) == 0) {
                     state_t states[] = {
                         { .name = "INIT",   .enabled = false },
@@ -278,13 +342,15 @@ static int read_keepalived_data(keepalived_t *kpd, int pid)
                     uint64_t value = 0;
                     if (strtouint(val, &value) == 0)
                         metric_family_append(&kpd->fams[FAM_KEEPALIVED_GRATUITOUS_ARP_DELAY],
-                                             VALUE_COUNTER(value), &kpd->labels,
+                                             VALUE_GAUGE(value), &kpd->labels,
                                              &LABEL_PAIR_CONST("iname", iname ),
                                              NULL);
 
                 }
                 break;
             case KEEPALIVED_DATA_SECTION_SCRIPT:
+                if (sname[0] == '\0')
+                    break;
                 if (strcmp("Status", key) == 0) {
                     state_t states[] = {
                         { .name = "BAD",  .enabled = false },
@@ -338,11 +404,9 @@ static int read_keepalived_stats(keepalived_t *kpd, int pid)
     if (status != 0)
         return -1;
 
-    FILE *fh = fopen(kpd->stats_path, "r");
-    if (fh == NULL) {
-        PLUGIN_ERROR("fopen (%s): %s", kpd->stats_path, STRERRNO);
+    FILE *fh = keepalived_fopen(kpd->stats_path);
+    if (fh == NULL)
         return -1;
-    }
 
     keepalived_stats_section_t section = KEEPALIVED_STATS_SECTION_NONE;
 
@@ -455,12 +519,33 @@ static pid_t keepalived_get_pid(keepalived_t *kpd)
         return -1;
     }
 
-    if (rpid == 0) {
-        PLUGIN_ERROR("Pid in '%s' must be > 0", kpd->pid_path);
+    /* Reject values that would be truncated or interpreted by kill(2) as
+     * a process group or as "all processes", and also init. */
+    if ((rpid <= 1) || (rpid > INT_MAX)) {
+        PLUGIN_ERROR("Invalid pid %" PRIu64 " in '%s'.", rpid, kpd->pid_path);
         return -1;
     }
 
-    pid_t pid = rpid;
+    pid_t pid = (pid_t)rpid;
+
+#ifdef KERNEL_LINUX
+    /* Make sure the pid belongs to keepalived and was not reused by
+     * another process after keepalived died. */
+    char path[64];
+    ssnprintf(path, sizeof(path), "/proc/%d/comm", (int)pid);
+    char comm[64] = "";
+    ssize_t len = read_text_file_contents(path, comm, sizeof(comm));
+    if (len <= 0) {
+        PLUGIN_ERROR("Cannot read '%s'.", path);
+        return -1;
+    }
+    strstripnewline(comm);
+    if (strcmp(comm, "keepalived") != 0) {
+        PLUGIN_ERROR("Process %d from '%s' is not keepalived ('%s').",
+                     (int)pid, kpd->pid_path, comm);
+        return -1;
+    }
+#endif
 
     status = kill(pid, 0);
     if (status != 0)  {
