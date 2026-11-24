@@ -8,16 +8,14 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libmetric/metric_chars.h"
 
-#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 
 typedef struct {
     char *key;
-    int value_from;
+    ssize_t value_from;
 } metric_label_from_t;
 
 struct match_csv_metric_s {
@@ -52,16 +50,69 @@ static cdtime_t match_csv_parse_time(char const *tbuf)
     if ((errno != 0) || (endptr == NULL) || (endptr[0] != 0))
         return cdtime();
 
+    if (!isfinite(t) || (t < 0) || (t >= CDTIME_T_TO_DOUBLE(UINT64_MAX)))
+        return cdtime();
+
     return DOUBLE_TO_CDTIME_T(t);
 }
 
-int match_csv_read_metric(match_csv_t *csv, match_csv_metric_t *csv_metric,
-                          match_metric_family_set_t *set,
-                          char **fields, ssize_t fields_num)
+static bool match_csv_check_value(match_metric_type_t type, char const *value)
+{
+    char *endptr = NULL;
+
+    errno = 0;
+    if ((type & MATCH_METRIC_TYPE_MASK) == MATCH_METRIC_TYPE_COUNTER) {
+        while (isspace((unsigned char)*value))
+            value++;
+        if (*value == '-')
+            return false;
+        (void)strtoull(value, &endptr, 0);
+    } else {
+        (void)strtod(value, &endptr);
+    }
+
+    if ((errno != 0) || (endptr == value))
+        return false;
+
+    while (isspace((unsigned char)*endptr))
+        endptr++;
+
+    return *endptr == '\0';
+}
+
+static void match_csv_sanitize_metric_name(char *name, size_t pos)
+{
+    for (size_t i = pos; name[i] != '\0'; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if ((valid_metric_chars[c] == 0) || ((i == 0) && (valid_metric_chars[c] != 1)))
+            name[i] = '_';
+    }
+}
+
+static int match_csv_read_metric(match_csv_t *csv, match_csv_metric_t *csv_metric,
+                                 match_metric_family_set_t *set,
+                                 char **fields, ssize_t fields_num)
 {
     assert(csv_metric->value_from >= 0);
     if (csv_metric->value_from >= fields_num)
         return EINVAL;
+    if (csv_metric->metric_from >= fields_num)
+        return EINVAL;
+    for (size_t i = 0; i < csv_metric->labels_from_num; i++) {
+        if (csv_metric->labels_from[i].value_from >= fields_num)
+            return EINVAL;
+    }
+
+    char const *value = fields[csv_metric->value_from];
+    if ((csv_metric->type != MATCH_METRIC_TYPE_GAUGE_INC) &&
+        (csv_metric->type != MATCH_METRIC_TYPE_COUNTER_INC)) {
+        if (value[0] == '\0')
+            return 0;
+        if (!match_csv_check_value(csv_metric->type, value)) {
+            PLUGIN_WARNING("Invalid value '%s' in field %zd.", value, csv_metric->value_from);
+            return EINVAL;
+        }
+    }
 
     cdtime_t t = 0;
     if (csv->time_from >= 0) {
@@ -78,37 +129,55 @@ int match_csv_read_metric(match_csv_t *csv, match_csv_metric_t *csv_metric,
         strbuf_print(&buf, csv_metric->metric_prefix);
 
     if (csv_metric->metric_from >= 0) {
-        assert(csv_metric->metric_from < fields_num);
+        size_t pos = strbuf_len(&buf);
         strbuf_print(&buf, fields[csv_metric->metric_from]);
+        if (buf.ptr != NULL)
+            match_csv_sanitize_metric_name(buf.ptr, pos);
     } else {
         strbuf_print(&buf, csv_metric->metric);
     }
 
+    if (buf.ptr == NULL) {
+        PLUGIN_WARNING("Cannot build the metric name for value field %zd.",
+                       csv_metric->value_from);
+        return EINVAL;
+    }
+
     label_set_t mlabel = {0};
+    int status = 0;
 
     for (size_t i = 0; i < csv->labels.num; i++) {
-        label_set_add(&mlabel, true, csv->labels.ptr[i].name, csv->labels.ptr[i].value);
+        status = label_set_add(&mlabel, true, csv->labels.ptr[i].name, csv->labels.ptr[i].value);
+        if (status != 0)
+            goto out;
     }
 
     for (size_t i = 0; i < csv_metric->labels.num; i++) {
-        label_set_add(&mlabel, true, csv_metric->labels.ptr[i].name,
-                                     csv_metric->labels.ptr[i].value);
+        status = label_set_add(&mlabel, true, csv_metric->labels.ptr[i].name,
+                                              csv_metric->labels.ptr[i].value);
+        if (status != 0)
+            goto out;
     }
 
     if (csv_metric->labels_from_num > 0) {
         for (size_t i = 0; i < csv_metric->labels_from_num; ++i) {
-            assert(csv_metric->labels_from[i].value_from < fields_num);
-            label_set_add(&mlabel, true, csv_metric->labels_from[i].key,
-                                         fields[csv_metric->labels_from[i].value_from]);
+            status = label_set_add(&mlabel, true, csv_metric->labels_from[i].key,
+                                                  fields[csv_metric->labels_from[i].value_from]);
+            if (status != 0)
+                goto out;
         }
     }
 
-    plugin_match_metric_family_set_add(set, buf.ptr, csv_metric->help, NULL, csv_metric->type,
-                                       &mlabel, fields[csv_metric->value_from], t);
+    status = plugin_match_metric_family_set_add(set, buf.ptr, csv_metric->help, NULL,
+                                                csv_metric->type, &mlabel, value, t);
+
+out:
+    if (status != 0)
+        PLUGIN_WARNING("Failed to add metric from value field %zd.", csv_metric->value_from);
 
     label_set_reset(&mlabel);
     strbuf_destroy(&buf);
-    return 0;
+    return status;
 }
 
 static bool match_csv_check_index(ssize_t index, size_t fields_num)
@@ -123,13 +192,25 @@ static bool match_csv_check_index(ssize_t index, size_t fields_num)
     return false;
 }
 
-
-static int match_csv_match(match_metric_family_set_t *set, char *buffer, void *user_data)
+static bool match_csv_check_metric(match_csv_t *csv, match_csv_metric_t *csv_metric,
+                                   size_t fields_num)
 {
-    match_csv_t *csv = user_data;
-    if (csv == NULL)
-        return -1;
+    if (!match_csv_check_index(csv_metric->value_from, fields_num) ||
+        !match_csv_check_index(csv_metric->metric_from, fields_num) ||
+        !match_csv_check_index(csv->time_from, fields_num))
+        return false;
 
+    for (size_t i = 0; i < csv_metric->labels_from_num; i++) {
+        if (!match_csv_check_index(csv_metric->labels_from[i].value_from, fields_num))
+            return false;
+    }
+
+    return true;
+}
+
+
+static int match_csv_match_line(match_csv_t *csv, match_metric_family_set_t *set, char *buffer)
+{
     size_t buffer_size = strlen(buffer);
 
     /* Remove newlines at the end of line. */
@@ -151,11 +232,6 @@ static int match_csv_match(match_metric_family_set_t *set, char *buffer, void *u
     for (size_t i = 0; i < buffer_size; i++) {
         if (buffer[i] == csv->field_separator)
             metrics_num++;
-    }
-
-    if (metrics_num == 1) {
-        PLUGIN_ERROR("Last line does not contain enough values.");
-        return -1;
     }
 
     /* Create a list of all values */
@@ -180,14 +256,40 @@ static int match_csv_match(match_metric_family_set_t *set, char *buffer, void *u
 
     match_csv_metric_t *csv_metric = csv->metrics;
     while (csv_metric != NULL) {
-        if (match_csv_check_index(csv_metric->value_from, metrics_num) &&
-            match_csv_check_index(csv->time_from, metrics_num))
+        if (match_csv_check_metric(csv, csv_metric, metrics_num))
             match_csv_read_metric(csv, csv_metric, set, metrics, metrics_num);
         csv_metric = csv_metric->next;
     }
 
     free(metrics);
     return 0;
+}
+
+static int match_csv_match(match_metric_family_set_t *set, char *buffer, void *user_data)
+{
+    match_csv_t *csv = user_data;
+    if (csv == NULL)
+        return -1;
+
+    char *copy = strdup(buffer);
+    if (copy == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        return ENOMEM;
+    }
+
+    int status = 0;
+    char *saveptr = NULL;
+    char *ptr = copy;
+    char *line;
+    while ((line = strtok_r(ptr, "\n", &saveptr)) != NULL) {
+        ptr = NULL;
+        int ret = match_csv_match_line(csv, set, line);
+        if (ret != 0)
+            status = ret;
+    }
+
+    free(copy);
+    return status;
 }
 
 static void match_csv_destroy(void *user_data)
@@ -205,6 +307,7 @@ static void match_csv_destroy(void *user_data)
         label_set_reset(&csv_metric->labels);
         for (size_t i = 0; i < csv_metric->labels_from_num; i++)
             free(csv_metric->labels_from[i].key);
+        free(csv_metric->labels_from);
         free(csv_metric);
         csv_metric = next;
     }
@@ -243,6 +346,14 @@ static int match_csv_config_append_label(metric_label_from_t **var, size_t *len,
         PLUGIN_ERROR("'%s' expects a string and a numerical argument.", ci->key);
         return -1;
     }
+    if (ci->values[1].value.number < 0) {
+        PLUGIN_ERROR("The index of '%s' must be positive (or zero).", ci->key);
+        return -1;
+    }
+    if (!label_check_name(ci->values[0].value.string, strlen(ci->values[0].value.string))) {
+        PLUGIN_ERROR("Invalid label name '%s' in '%s'.", ci->values[0].value.string, ci->key);
+        return -1;
+    }
 
     metric_label_from_t *tmp = realloc(*var, ((*len) + 1) * sizeof(**var));
     if (tmp == NULL) {
@@ -257,7 +368,7 @@ static int match_csv_config_append_label(metric_label_from_t **var, size_t *len,
         return -1;
     }
 
-    tmp[*len].value_from = ci->values[1].value.number;
+    tmp[*len].value_from = (ssize_t)ci->values[1].value.number;
 
     *len = (*len) + 1;
     return 0;
@@ -339,7 +450,7 @@ static int match_csv_config_metric(const config_item_t *ci, match_csv_t *csv)
             break;
         }
 
-        if ((csv_metric->metric != NULL) && (csv_metric->metric_from > 0)) {
+        if ((csv_metric->metric != NULL) && (csv_metric->metric_from >= 0)) {
             PLUGIN_WARNING("Only one of 'metric' or 'metric-from' can be set ");
             status = -1;
             break;
@@ -373,6 +484,11 @@ static int match_csv_config_get_separator(config_item_t *ci, char *ret_char)
         return -1;
     }
 
+    if (ci->values[0].value.string[0] == '\n') {
+        PLUGIN_WARNING("The '%s' config option cannot be a newline.", ci->key);
+        return -1;
+    }
+
     *ret_char = ci->values[0].value.string[0];
     return 0;
 }
@@ -398,6 +514,10 @@ static int match_csv_config(const config_item_t *ci, void **user_data)
             status = cf_util_get_label(option, &csv->labels);
         } else if (strcasecmp("time-from", option->key) == 0) {
             status = match_csv_config_get_index(option, &csv->time_from);
+            if (status == 0)
+                PLUGIN_WARNING("The 'time-from' option in %s:%d has no effect: "
+                               "the metrics are dispatched with the current time.",
+                               cf_get_file(option), cf_get_lineno(option));
         } else if (strcasecmp("field-separator", option->key) == 0) {
             status = match_csv_config_get_separator(option, &csv->field_separator);
         } else if (strcasecmp("metric", option->key) == 0) {
