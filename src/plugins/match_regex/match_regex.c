@@ -129,8 +129,8 @@ static int match_regex_match(match_metric_family_set_t *set, char *buffer, void 
     if (user_data == NULL)
         return -1;
 
-    match_regex_metric_t *regex_metric = regex->metrics;
-    while (regex_metric != NULL) {
+    for (match_regex_metric_t *regex_metric = regex->metrics; regex_metric != NULL;
+         regex_metric = regex_metric->next) {
         regmatch_t re_match[32];
 
         if (regex_metric->excluderegex != NULL) {
@@ -223,8 +223,6 @@ static int match_regex_match(match_metric_family_set_t *set, char *buffer, void 
 
         label_set_reset(&mlabel);
         strbuf_destroy(&buf);
-
-        regex_metric = regex_metric->next;
     }
 
     return 0;
