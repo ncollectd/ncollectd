@@ -469,7 +469,7 @@ void jsonpath_print_item(strbuf_t *buf, jsonpath_item_t *v, bool in_key, bool bs
         strbuf_putchar(buf, ')');
         break;
     default:
-        fprintf(stderr, "unrecognized jsonpath item type: %u\n", v->type);
+        PLUGIN_DEBUG("unrecognized jsonpath item type: %u", v->type);
         break;
     }
 
@@ -527,8 +527,10 @@ void jsonpath_item_free(jsonpath_item_t *item)
         case JSONPATH_MATCH:
         case JSONPATH_SEARCH:
             jsonpath_item_free(item->value.regex.expr);
-            free(item->value.regex.pattern);
-            regfree(&item->value.regex.regex);
+            if (item->value.regex.pattern != NULL) {
+                free(item->value.regex.pattern);
+                regfree(&item->value.regex.regex);
+            }
             break;
         case JSONPATH_PLUS:
         case JSONPATH_MINUS:
@@ -613,6 +615,7 @@ static void jsonpath_fill_followers(jsonpath_item_t *item)
             jsonpath_item_t *inext = jsonpath_get_next(item);
             for (int32_t i = 0; i < item->value.iunion.len; i++) {
                 jsonpath_item_t *uitem = item->value.iunion.items[i];
+                jsonpath_fill_followers(uitem);
                 while (uitem != NULL) {
                     if (uitem->next == NULL)
                         break;
@@ -645,20 +648,32 @@ jsonpath_item_t *jsonpath_parser(const char *query, char *buffer_error, size_t b
 {
     yyscan_t scanner;
 
-    jsonpath_string_t scanstring = {0};
-    jsonpath_yylex_init_extra(&scanstring, &scanner);
-//  jsonpath_yyset_debug(1, scanner);
-
-    YY_BUFFER_STATE  buffer = jsonpath_yy_scan_string(query, scanner);
-
     jsonpath_parse_result_t parse_result = {0};
     parse_result.expr = NULL;
     parse_result.error = true;
+
+    jsonpath_scanner_extra_t extra = {0};
+    extra.result = &parse_result;
+    if (jsonpath_yylex_init_extra(&extra, &scanner) != 0) {
+        if ((buffer_error != NULL) && (buffer_error_size > 0))
+            sstrncpy(buffer_error, "cannot initialize the scanner", buffer_error_size);
+        return NULL;
+    }
+//  jsonpath_yyset_debug(1, scanner);
+
+    YY_BUFFER_STATE  buffer = jsonpath_yy_scan_string(query, scanner);
+    if (buffer == NULL) {
+        jsonpath_yylex_destroy(scanner);
+        if ((buffer_error != NULL) && (buffer_error_size > 0))
+            sstrncpy(buffer_error, "cannot create the scanner buffer", buffer_error_size);
+        return NULL;
+    }
+
     int status = jsonpath_yyparse(scanner, &parse_result);
 
     jsonpath_yy_delete_buffer(buffer, scanner);
     jsonpath_yylex_destroy(scanner);
-    free(scanstring.val);
+    free(extra.scanstring.val);
 
     if (status != 0) {
         if (parse_result.error == true) {

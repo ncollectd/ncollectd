@@ -47,9 +47,9 @@ Prepend the \fIprefix\fP to the metrics found.
 .It \fBmetric\fP \fImetric\fP
 Set the metric name.
 .It \fBmetric-path\fP \fIpath\fP
-Set metric value from the jsonpath selector \fIpath\fP in the current node.
+Set metric name from the jsonpath selector \fIpath\fP in the current node.
 .It \fBmetric-root-path\fP \fIpath\fP
-Set metric value from the jsonpath selector \fIpath\fP in the root node.
+Set metric name from the jsonpath selector \fIpath\fP in the root node.
 .It \fBtype\fP \fIgauge\fP [\fIaverage|min|max|last|inc|add|persist\fP]|\fIcounter\fP [\fIset|add|inc\fP]
 .Bl -tag -width Ds
 .It \fBgauge\fP
@@ -94,9 +94,13 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBlabel-path\fP \fIkey\fP \fIpath\fP
 Set the label \fIkey\fP with the value from the jsonpath selector \fIpath\fP
 in the current node.
+The value is taken verbatim from the document and every distinct value
+creates a new time series, so use only fields with a small set of values.
 .It \fBlabel-root-path\fP \fIkey\fP \fIpath\fP
 Set the label \fIkey\fP with the value from the jsonpath selector \fIpath\fP
 in the root node.
+The value is taken verbatim from the document and every distinct value
+creates a new time series, so use only fields with a small set of values.
 .It \fBvalue-path\fP \fIpath\fP
 Set metric value from the jsonpath selector \fIpath\fP in the current node.
 .It \fBvalue-root-path\fP \fIpath\fP
@@ -104,9 +108,13 @@ Set metric value from the jsonpath selector \fIpath\fP in the root node.
 .It \fBtime-path\fP \fIpath\fP
 Set metric timestamp in seconds from the jsonpath selector \fIpath\fP
 in the current node.
+Currently the timestamp is ignored by the match framework and the
+metrics are dispatched with the current time.
 .It \fBtime-root-path\fP \fIpath\fP
 Set metric timestamp in seconds from the jsonpath selector \fIpath\fP
 in the root node.
+Currently the timestamp is ignored by the match framework and the
+metrics are dispatched with the current time.
 .El
 .El
 .Sh "SEE ALSO"

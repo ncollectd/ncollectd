@@ -58,11 +58,11 @@ selectors.
 
 > **metric-path** *path*
 
-> > Set metric value from the jsonpath selector *path* in the current node.
+> > Set metric name from the jsonpath selector *path* in the current node.
 
 > **metric-root-path** *path*
 
-> > Set metric value from the jsonpath selector *path* in the root node.
+> > Set metric name from the jsonpath selector *path* in the root node.
 
 > **type** *gauge* \[*average|min|max|last|inc|add|persist*]|*counter* \[*set|add|inc*]
 
@@ -136,11 +136,15 @@ selectors.
 
 > > Set the label *key* with the value from the jsonpath selector *path*
 > > in the current node.
+> > The value is taken verbatim from the document and every distinct value
+> > creates a new time series, so use only fields with a small set of values.
 
 > **label-root-path** *key* *path*
 
 > > Set the label *key* with the value from the jsonpath selector *path*
 > > in the root node.
+> > The value is taken verbatim from the document and every distinct value
+> > creates a new time series, so use only fields with a small set of values.
 
 > **value-path** *path*
 
@@ -154,11 +158,15 @@ selectors.
 
 > > Set metric timestamp in seconds from the jsonpath selector *path*
 > > in the current node.
+> > Currently the timestamp is ignored by the match framework and the
+> > metrics are dispatched with the current time.
 
 > **time-root-path** *path*
 
 > > Set metric timestamp in seconds from the jsonpath selector *path*
 > > in the root node.
+> > Currently the timestamp is ignored by the match framework and the
+> > metrics are dispatched with the current time.
 
 # SEE ALSO
 

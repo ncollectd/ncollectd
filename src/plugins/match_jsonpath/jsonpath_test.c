@@ -67,7 +67,7 @@ static struct test test[] = {
     {
         .id = "array_slice_with_large_number_for_end",
         .selector = "$[2:113667776004]",
-        .alt_selector = "$[2:1998626308]",
+        .alt_selector = "$[2:2147483646]",
         .document = "[\"first\", \"second\", \"third\", \"forth\", \"fifth\"]",
         .result = (char *[]){"\"third\"", "\"forth\"", "\"fifth\"", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
@@ -75,7 +75,7 @@ static struct test test[] = {
     {
         .id = "array_slice_with_large_number_for_end_and_negative_step",
         .selector = "$[2:-113667776004:-1]",
-        .alt_selector = "$[2:-1998626308:-1]",
+        .alt_selector = "$[2:-2147483646:-1]",
         .document = "[\"first\", \"second\", \"third\", \"forth\", \"fifth\"]",
         .result = (char *[]){"\"third\"", "\"second\"", "\"first\"", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
@@ -83,7 +83,7 @@ static struct test test[] = {
     {
         .id = "array_slice_with_large_number_for_start",
         .selector = "$[-113667776004:2]",
-        .alt_selector = "$[-1998626308:2]",
+        .alt_selector = "$[-2147483646:2]",
         .document = "[\"first\", \"second\", \"third\", \"forth\", \"fifth\"]",
         .result = (char *[]){"\"first\"", "\"second\"", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
@@ -91,7 +91,7 @@ static struct test test[] = {
     {
         .id = "array_slice_with_large_number_for_start_end_negative_step",
         .selector = "$[113667776004:2:-1]",
-        .alt_selector = "$[1998626308:2:-1]",
+        .alt_selector = "$[2147483646:2:-1]",
         .document = "[\"first\", \"second\", \"third\", \"forth\", \"fifth\"]",
         .result = (char *[]){"\"fifth\"","\"forth\"", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
@@ -4492,7 +4492,6 @@ static struct test test[] = {
         .result = (char *[]){NULL},
         .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
     },
-#if 0
     {
         .id ="index selector, min exact index",
         .selector = "$[-9007199254740991]",
@@ -4519,15 +4518,12 @@ static struct test test[] = {
         .result = NULL,
         .rcode = JSONPATH_EXEC_RESULT_ERROR
     },
-#endif
-#if 0
     {
         .id ="index selector, overflowing index",
         .selector = "$[231584178474632390847141970017375815706539969331281128078915168015826259279872]",
         .result = NULL,
         .rcode = JSONPATH_EXEC_RESULT_ERROR
     },
-#endif
     {
         .id ="index selector, not actually an index, overflowing index leads into general text",
         .selector = "$[231584178474632390847141970017375815706539969331281128078915168SomeRandomText]",
@@ -4920,7 +4916,6 @@ static struct test test[] = {
         .result = (char *[]){"\"A\"",NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
-#if 0
     {
         .id ="name selector, double quotes, surrogate pair 𝄞",
         .selector = "$[\"\\uD834\\uDD1E\"]",
@@ -4949,7 +4944,6 @@ static struct test test[] = {
         .result = (char *[]){"\"A\"",NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
-#endif
 #if 0
     {
         .id ="name selector, double quotes, invalid escaped single quote",
@@ -5035,6 +5029,7 @@ static struct test test[] = {
         .result = NULL,
         .rcode = JSONPATH_EXEC_RESULT_ERROR
     },
+#endif
     {
         .id ="name selector, double quotes, unicode escape plus",
         .selector = "$[\"\\u+1234\"]",
@@ -5107,7 +5102,6 @@ static struct test test[] = {
         .result = NULL,
         .rcode = JSONPATH_EXEC_RESULT_ERROR
     },
-#endif
     {
         .id ="name selector, single quotes",
         .selector = "$['a']",
@@ -5400,7 +5394,6 @@ static struct test test[] = {
         .result = (char *[]){"\"A\"",NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
-#if 0
     {
         .id ="name selector, single quotes, surrogate pair 𝄞",
         .selector = "$['\\uD834\\uDD1E']",
@@ -5415,6 +5408,7 @@ static struct test test[] = {
         .result = (char *[]){"\"A\"",NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
+#if 0
     {
         .id ="name selector, single quotes, invalid escaped double quote",
         .selector = "$['\\\"']",
@@ -7648,6 +7642,286 @@ static struct test test[] = {
         .selector = "$[1:5:\r2]",
         .document = "[1,2,3,4,5,6]",
         .result = (char *[]){"2","4",NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "arithmetic, modulo by zero",
+        .selector = "$.a % 0",
+        .document = "{\"a\": 5}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "arithmetic, modulo by a value lower than one",
+        .selector = "$.a % 0.5",
+        .document = "{\"a\": 5.25}",
+        .result = (char *[]){"0.25", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "arithmetic, modulo by zero in filter",
+        .selector = "$[?(@.a % 0 == 1)]",
+        .document = "[{\"a\": 5}]",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "arithmetic, modulo by value from document in filter",
+        .selector = "$[?(@.a % @.b == 1)]",
+        .document = "[{\"a\": 5, \"b\": 0}, {\"a\": 7, \"b\": 3}]",
+        .result = (char *[]){"{\"a\":7,\"b\":3}", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "filter expression with invalid regular expression",
+        .selector = "$[?(@.n =~ \"(\")]",
+        .document = "[{\"n\": \"x\"}]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "filter expression with match and invalid regular expression",
+        .selector = "$[?(match(@.n, \"[a-\"))]",
+        .document = "[{\"n\": \"x\"}]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "filter expression with search and invalid regular expression",
+        .selector = "$[?(search(@.n, \"a{1\"))]",
+        .document = "[{\"n\": \"x\"}]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "filter expression with index and child",
+        .selector = "$[?(@[0].x == 1)]",
+        .document = "[[{\"x\": 1}], [{\"x\": 2}]]",
+        .result = (char *[]){"[{\"x\":1}]", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "filter expression with wildcard and child",
+        .selector = "$[?(@[*].a == 2)]",
+        .document = "[[{\"a\": 1}, {\"a\": 2}], [{\"a\": 3}]]",
+        .result = (char *[]){"[{\"a\":1},{\"a\":2}]", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "filter expression with bracket notation and child",
+        .selector = "$[?(@['k'].a == 2)]",
+        .document = "[{\"k\": {\"a\": 2}}, {\"k\": {\"a\": 3}}]",
+        .result = (char *[]){"{\"k\":{\"a\":2}}", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "filter expression with recursive descent and child",
+        .selector = "$[?(@..k.a == 2)]",
+        .document = "[{\"x\": {\"k\": {\"a\": 2}}}, {\"x\": {\"k\": {\"a\": 3}}}]",
+        .result = (char *[]){"{\"x\":{\"k\":{\"a\":2}}}", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "index selector, hexadecimal index",
+        .selector = "$[0x1]",
+        .document = "[\"first\",\"second\"]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "index selector, binary index",
+        .selector = "$[0b1]",
+        .document = "[\"first\",\"second\"]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "index selector, index with underscore",
+        .selector = "$[1_0]",
+        .document = "[\"first\",\"second\"]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "index selector, index larger than int32",
+        .selector = "$[4294967296]",
+        .document = "[\"first\",\"second\"]",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "filter expression, numeric literal with underscore",
+        .selector = "$[?(@.a == 1_000)]",
+        .document = "[{\"a\": 1}, {\"a\": 1000}]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "filter expression, overflowing numeric literal",
+        .selector = "$[?(@.a == 1e999)]",
+        .document = "[{\"a\": 1}]",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "bracket notation with consecutive unicode escapes",
+        .selector = "$[\"\\u0041\\u0042\"]",
+        .document = "{\"AB\": 1}",
+        .result = (char *[]){"1", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "bracket notation with unicode surrogate pair",
+        .selector = "$[\"\\uD83D\\uDE00\"]",
+        .document = "{\"\xF0\x9F\x98\x80\": 2}",
+        .result = (char *[]){"2", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "bracket notation with lone high surrogate",
+        .selector = "$[\"\\uD83D\"]",
+        .document = "{\"a\": 1}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "bracket notation with lone low surrogate",
+        .selector = "$[\"\\uDE00\"]",
+        .document = "{\"a\": 1}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "bracket notation with unicode null escape",
+        .selector = "$[\"a\\u0000b\"]",
+        .document = "{\"ab\": 1}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "arithmetic, unary minus on a string",
+        .selector = "-$.a",
+        .document = "{\"a\": \"x\"}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "function min, unary minus on a string",
+        .selector = "min(-$.a)",
+        .document = "{\"a\": \"x\"}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "function avg, empty array",
+        .selector = "avg($.a)",
+        .document = "{\"a\": []}",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "function max, string argument",
+        .selector = "max($.a)",
+        .document = "{\"a\": \"string\"}",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "function max, mixed array",
+        .selector = "max($.a)",
+        .document = "{\"a\": [-3, \"x\", -1]}",
+        .result = (char *[]){"-1", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "arithmetic, division by zero",
+        .selector = "$.a / 0",
+        .document = "{\"a\": 5}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "function double, non numeric string",
+        .selector = "double($.a)",
+        .document = "{\"a\": \"abc\"}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "functions, length, missing data compared with zero",
+        .selector = "$[?length(@.a)==0]",
+        .document = "[{\"d\":\"f\"}]",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "filter expression, infinite values are equal",
+        .selector = "$[?(@.a * 10 == @.a * 10)]",
+        .document = "[{\"a\": 1e308}]",
+        .result = (char *[]){"{\"a\":1e+308}", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "root followed by invalid escape sequence",
+        .selector = "$ \\x",
+        .document = "{\"a\": 1}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "string literal with invalid unicode escape sequence",
+        .selector = "\"\\uZZ\"",
+        .document = "{\"a\": 1}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "filter expression with function max on current node",
+        .selector = "$[?(max(@.a) > 1)]",
+        .document = "[{\"a\": [1, 3]}, {\"a\": [0, 1]}]",
+        .result = (char *[]){"{\"a\":[1,3]}", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "filter expression, less than with both sides missing",
+        .selector = "$[?(@.x < @.y)]",
+        .document = "[{\"z\": 1}]",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "filter expression, greater than with both sides missing",
+        .selector = "$[?(@.x > @.y)]",
+        .document = "[{\"z\": 1}]",
+        .result = (char *[]){NULL},
+        .rcode = JSONPATH_EXEC_RESULT_NOT_FOUND,
+    },
+    {
+        .id = "filter expression, less or equal than with both sides missing",
+        .selector = "$[?(@.x <= @.y)]",
+        .document = "[{\"z\": 1}]",
+        .result = (char *[]){"{\"z\":1}", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "dot notation with single quote in the name",
+        .selector = "$.a'b",
+        .document = "{\"ab\": 1}",
+        .result = NULL,
+        .rcode = JSONPATH_EXEC_RESULT_ERROR,
+    },
+    {
+        .id = "dot notation with a long name after a short one",
+        .selector = "$.a.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        .document = "{\"a\": {\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\": 7}}",
+        .result = (char *[]){"7", NULL},
+        .rcode = JSONPATH_EXEC_RESULT_OK,
+    },
+    {
+        .id = "array slice with the largest step",
+        .selector = "$[2::2147483647]",
+        .document = "[0, 1, 2, 3, 4]",
+        .result = (char *[]){"2", NULL},
         .rcode = JSONPATH_EXEC_RESULT_OK,
     },
     {

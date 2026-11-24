@@ -28,11 +28,11 @@ if(BUILD_PLUGIN_MATCH_JSONPATH)
     set(PLUGIN_MATCH_JSONPATH_SRC match_jsonpath.c ${PLUGIN_JSONPATH_SRC})
 
     add_library(match_jsonpath MODULE ${PLUGIN_MATCH_JSONPATH_SRC})
-    target_link_libraries(match_jsonpath PRIVATE libmetric libutils libxson)
+    target_link_libraries(match_jsonpath PRIVATE libmetric libutils libxson m)
     set_target_properties(match_jsonpath PROPERTIES PREFIX "")
 
     add_executable(test_plugin_match_jsonpath EXCLUDE_FROM_ALL jsonpath_test.c ${PLUGIN_JSONPATH_SRC})
-    target_link_libraries(test_plugin_match_jsonpath libtest libmetric libxson libutils m)
+    target_link_libraries(test_plugin_match_jsonpath libxson libutils libtest libmetric libutils m)
     add_dependencies(build_tests test_plugin_match_jsonpath)
     add_test(NAME test_plugin_match_jsonpath COMMAND test_plugin_match_jsonpath WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 

@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "jsonpath.h"
+#include "libutils/common.h"
 #include "libxson/tree.h"
 
 #ifndef MIN
@@ -60,16 +61,31 @@ static jsonpath_exec_result_t jsonpath_exec_any_item(jsonpath_exec_ctx_t *ctx, j
                                                      uint32_t level, uint32_t first, uint32_t last,
                                                      bool unwrap_next);
 
-static void xson_value_list_append(xson_value_list_t *jvl, xson_value_t *jbv)
+static int xson_value_list_append(xson_value_list_t *jvl, xson_value_t *jbv)
 {
+    if (jbv == NULL)
+        return -1;
+
     if (jvl->singleton) {
-        jvl->list = jsonpath_list_make2(jvl->singleton, jbv);
+        jsonpath_list_t *list = jsonpath_list_make2(jvl->singleton, jbv);
+        if (list == NULL) {
+            xson_value_free(jbv);
+            return -1;
+        }
+        jvl->list = list;
         jvl->singleton = NULL;
     } else if (!jvl->list) {
         jvl->singleton = jbv;
     } else {
-        jvl->list = jsonpath_list_append(jvl->list, jbv);
+        jsonpath_list_t *list = jsonpath_list_append(jvl->list, jbv);
+        if (list == NULL) {
+            xson_value_free(jbv);
+            return -1;
+        }
+        jvl->list = list;
     }
+
+    return 0;
 }
 
 static int xson_value_list_length(const xson_value_list_t *jvl)
@@ -200,14 +216,24 @@ static double numeric_mul_opt_error(double num1, double num2, __attribute__((unu
     return num1 * num2;
 }
 
-static double numeric_div_opt_error(double num1, double num2, __attribute__((unused)) bool *error)
+static double numeric_div_opt_error(double num1, double num2, bool *error)
 {
+    if (num2 == 0) {
+        *error = true;
+        return 0;
+    }
+
     return num1 / num2;
 }
 
-static double numeric_mod_opt_error(double num1, double num2, __attribute__((unused)) bool *error)
+static double numeric_mod_opt_error(double num1, double num2, bool *error)
 {
-    return (int64_t)num1 % (int64_t)num2;
+    if ((num2 == 0) || !isfinite(num1) || !isfinite(num2)) {
+        *error = true;
+        return 0;
+    }
+
+    return fmod(num1, num2);
 }
 
 static double numeric_uminus(double num1, __attribute__((unused)) bool *error)
@@ -230,16 +256,15 @@ static double numeric_ceil(double num1, __attribute__((unused)) bool *error)
     return ceil(num1);
 }
 
-static void jsonpath_error(jsonpath_exec_ctx_t *ctx, const char *format, ...)
+static __attribute__((format(printf, 2, 3))) void jsonpath_error(jsonpath_exec_ctx_t *ctx,
+                                                                 const char *format, ...)
 {
     if ((ctx->buffer_error == NULL) || (ctx->buffer_error_size == 0))
         return;
 
     va_list ap;
     va_start(ap, format);
-    char msg[1024];
-    vsnprintf(msg, sizeof(msg), format, ap);
-    msg[sizeof(msg) - 1] = '\0';
+    vsnprintf(ctx->buffer_error, ctx->buffer_error_size, format, ap);
     va_end(ap);
 }
 
@@ -288,7 +313,11 @@ static int jsonpath_exec_any_item_value(jsonpath_exec_ctx_t *ctx,
             if (*res == JSONPATH_EXEC_RESULT_OK && !found)
                 return 1;
         } else if (found) {
-            xson_value_list_append(found, xson_value_clone(v));
+            if (xson_value_list_append(found, xson_value_clone(v)) != 0) {
+                jsonpath_error(ctx, "out of memory");
+                *res = JSONPATH_EXEC_RESULT_ERROR;
+                return 1;
+            }
         } else {
             *res = JSONPATH_EXEC_RESULT_OK;
             return 0;
@@ -419,16 +448,14 @@ static jsonpath_exec_result_t jsonpath_exec_binary_expr(jsonpath_exec_ctx_t *ctx
 
     rnum = rval->number;
 
-    if (ctx->throw_errors) {
-        res = func(lnum, rnum, NULL);
-    } else {
-        bool error = false;
-        res = func(lnum, rnum, &error);
-        if (error) {
-            xson_value_list_destroy(&lseq);
-            xson_value_list_destroy(&rseq);
-            return JSONPATH_EXEC_RESULT_ERROR;
-        }
+    bool error = false;
+    res = func(lnum, rnum, &error);
+    if (error) {
+        jsonpath_error(ctx, "division by zero or non-finite operand in jsonpath operator %s",
+                       jsonpath_operation_name(jsp->type));
+        xson_value_list_destroy(&lseq);
+        xson_value_list_destroy(&rseq);
+        return JSONPATH_EXEC_RESULT_ERROR;
     }
 
     elem = jsonpath_get_next(jsp);
@@ -482,6 +509,7 @@ static jsonpath_exec_result_t jsonpath_exec_unary_expr(jsonpath_exec_ctx_t *ctx,
 
             jsonpath_error(ctx, "operand of unary jsonpath operator %s is not a numeric value",
                            jsonpath_operation_name(jsp->type));
+            xson_value_list_destroy(&seq);
             return JSONPATH_EXEC_RESULT_ERROR;
         }
 
@@ -533,8 +561,12 @@ static jsonpath_exec_result_t jsonpath_execute_next_item(jsonpath_exec_ctx_t *ct
     if (has_next)
         return jsonpath_exec_item(ctx, next, v, found);
 
-    if (found != NULL)
-        xson_value_list_append(found, xson_value_clone(v));
+    if (found != NULL) {
+        if (xson_value_list_append(found, xson_value_clone(v)) != 0) {
+            jsonpath_error(ctx, "out of memory");
+            return JSONPATH_EXEC_RESULT_ERROR;
+        }
+    }
 
     return JSONPATH_EXEC_RESULT_OK;
 }
@@ -571,12 +603,14 @@ static jsonpath_bool_t jsonpath_exec_predicate(jsonpath_exec_ctx_t *ctx, jsonpat
             xson_value_list_destroy(&lseq);
             xson_value_list_destroy(&rseq);
 
-            if (pred->type == JSONPATH_EQUAL)
+            switch (pred->type) {
+            case JSONPATH_EQUAL:
+            case JSONPATH_LESSOREQUAL:
+            case JSONPATH_GREATEROREQUAL:
                 return JSONPATH_BOOL_TRUE;
-            else if (pred->type == JSONPATH_NOTEQUAL)
+            default:
                 return JSONPATH_BOOL_FALSE;
-
-            return JSONPATH_BOOL_TRUE;
+            }
         }
     }
 
@@ -647,7 +681,9 @@ static jsonpath_bool_t jsonpath_compare_items(int32_t op, xson_value_t *jb1, xso
         cmp = b1 == b2 ? 0 : b1 ? 1 : -1;
     }   break;
     case XSON_TYPE_NUMBER:
-        cmp = jb1->number - jb2->number;
+        if (isnan(jb1->number) || isnan(jb2->number))
+            return JSONPATH_BOOL_UNKNOWN;
+        cmp = (jb1->number < jb2->number) ? -1 : (jb1->number > jb2->number) ? 1 : 0;
         break;
     case XSON_TYPE_STRING:
         cmp = strcmp(jb1->string, jb2->string);
@@ -1010,7 +1046,7 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
 
             res = JSONPATH_EXEC_RESULT_NOT_FOUND;
             if (step >= 0) {
-                for (int32_t i = start; i < end; i += step) {
+                for (int64_t i = start; i < end; i += step) {
                     xson_value_t *v = xson_value_array_at(jb, i);
                     if (v == NULL)
                         continue;
@@ -1027,7 +1063,7 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
                         break;
                 }
             } else {
-                for (int32_t i = start; end < i; i += step) {
+                for (int64_t i = start; end < i; i += step) {
                     xson_value_t *v = xson_value_array_at(jb, i);
                     if (v == NULL)
                         continue;
@@ -1115,6 +1151,7 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
         xson_value_list_t lseq = {0};
 
         size_t size = 0;
+        bool has_size = false;
         res = jsonpath_exec_item_nothrow(ctx, jsp->value.arg, jb, &lseq);
         if (res != JSONPATH_EXEC_RESULT_ERROR) {
             if (xson_value_list_length(&lseq) == 1) {
@@ -1122,11 +1159,14 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
                 if (lval != NULL) {
                     if (xson_value_type(lval) == XSON_TYPE_ARRAY) {
                         size = xson_value_array_size(lval);
+                        has_size = true;
                     } else if (xson_value_type(lval) == XSON_TYPE_OBJECT) {
                         size = xson_value_object_size(lval);
+                        has_size = true;
                     } else if (xson_value_type(lval) == XSON_TYPE_STRING) {
                         if (lval->string != NULL)
                             size = strlen(lval->string); // FIXME unicode
+                        has_size = true;
                     }
                 }
             }
@@ -1134,9 +1174,13 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
 
         xson_value_list_destroy(&lseq);
 
-        xson_value_t xnum = {0};
-        xson_value_set_number(&xnum, size);
-        res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+        if (has_size) {
+            xson_value_t xnum = {0};
+            xson_value_set_number(&xnum, size);
+            res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+        } else if (res != JSONPATH_EXEC_RESULT_ERROR) {
+            res = JSONPATH_EXEC_RESULT_NOT_FOUND;
+        }
     }   break;
     case JSONPATH_COUNT: {
         xson_value_list_t lseq = {0};
@@ -1208,16 +1252,19 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
 
         xson_value_list_destroy(&lseq);
 
-        sum = sum / n;
-
-        xson_value_t xnum = {0};
-        xson_value_set_number(&xnum, sum);
-        res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+        if (n > 0) {
+            xson_value_t xnum = {0};
+            xson_value_set_number(&xnum, sum / n);
+            res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+        } else if (res != JSONPATH_EXEC_RESULT_ERROR) {
+            res = JSONPATH_EXEC_RESULT_NOT_FOUND;
+        }
     }   break;
     case JSONPATH_MAX: {
         xson_value_list_t lseq = {0};
 
-        double max = INFINITY;
+        double max = 0;
+        bool has_max = false;
 
         res = jsonpath_exec_item(ctx, jsp->value.arg, jb, &lseq);
         if (res != JSONPATH_EXEC_RESULT_ERROR) {
@@ -1230,14 +1277,14 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
                             xson_value_t *nv = &lval->array.values[i];
                             if (nv->type != XSON_TYPE_NUMBER)
                                 continue;
-                            if (max == INFINITY) {
+                            if (!has_max || (nv->number > max)) {
                                 max = nv->number;
-                            } else if (nv->number > max) {
-                                max = nv->number;
+                                has_max = true;
                             }
                         }
                     } else if (xson_value_type(lval) == XSON_TYPE_NUMBER) {
                         max = lval->number;
+                        has_max = true;
                     }
                 }
             } else if (len > 1) {
@@ -1249,10 +1296,9 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
                     }
                     if (lval->type != XSON_TYPE_NUMBER)
                         continue;
-                    if (max == INFINITY) {
+                    if (!has_max || (lval->number > max)) {
                         max = lval->number;
-                    } else if (lval->number > max) {
-                        max = lval->number;
+                        has_max = true;
                     }
 
                 }
@@ -1261,9 +1307,13 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
 
         xson_value_list_destroy(&lseq);
 
-        xson_value_t xnum = {0};
-        xson_value_set_number(&xnum, max);
-        res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+        if (has_max) {
+            xson_value_t xnum = {0};
+            xson_value_set_number(&xnum, max);
+            res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+        } else if (res != JSONPATH_EXEC_RESULT_ERROR) {
+            res = JSONPATH_EXEC_RESULT_NOT_FOUND;
+        }
     }   break;
     case JSONPATH_MIN: {
         xson_value_list_t lseq = {0};
@@ -1300,8 +1350,9 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
 
                 }
             }
-            xson_value_list_destroy(&lseq);
         }
+
+        xson_value_list_destroy(&lseq);
 
         if (min != INFINITY) {
             xson_value_t xnum = {0};
@@ -1330,10 +1381,17 @@ static jsonpath_exec_result_t jsonpath_exec_item_opt_unwrap_target(jsonpath_exec
                 if (lval->type == XSON_TYPE_NUMBER) {
                     res = jsonpath_execute_next_item(ctx, jsp, NULL, lval, found);
                 } else if (lval->type == XSON_TYPE_STRING) {
-                    double num =  atof(lval->string);     
-                    xson_value_t xnum = {0};
-                    xson_value_set_number(&xnum, num);
-                    res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+                    double num = 0;
+                    if ((lval->string == NULL) || (lval->string[0] == '\0') ||
+                        (strtodouble(lval->string, &num) != 0) || !isfinite(num)) {
+                        jsonpath_error(ctx, "jsonpath double method can not convert the string "
+                                            "to a numeric value");
+                        res = JSONPATH_EXEC_RESULT_ERROR;
+                    } else {
+                        xson_value_t xnum = {0};
+                        xson_value_set_number(&xnum, num);
+                        res = jsonpath_execute_next_item(ctx, jsp, NULL, &xnum, found);
+                    }
                 } else {
                     jsonpath_error(ctx, "jsonpath double method can only convert strings or numbers");
                     res = JSONPATH_EXEC_RESULT_ERROR;
@@ -1362,9 +1420,16 @@ jsonpath_exec_result_t jsonpath_exec(jsonpath_item_t *jsp, xson_value_t *jbv,
     ctx.buffer_error = buffer_error;
     ctx.buffer_error_size = buffer_error_size;
 
+    if ((buffer_error != NULL) && (buffer_error_size > 0))
+        buffer_error[0] = '\0';
+
     jsonpath_exec_result_t res = jsonpath_exec_item(&ctx, jsp, jbv, result);
     if (res == JSONPATH_EXEC_RESULT_ERROR)
         return res;
+
+    /* Errors of filter predicates are not errors of the whole expression. */
+    if ((buffer_error != NULL) && (buffer_error_size > 0))
+        buffer_error[0] = '\0';
 
     return xson_value_list_is_empty(result) ? JSONPATH_EXEC_RESULT_NOT_FOUND
                                             : JSONPATH_EXEC_RESULT_OK;
