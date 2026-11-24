@@ -8,11 +8,22 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP lvm
-\fBplugin\fP lvm
+\fBplugin\fP lvm {
+    \fBexec\fP \fI/path/to/lvm\fP
+}
 .Ed
 .Sh DESCRIPTION
 The \fBlvm\fP plugin collects metrics form the Logical Volume Manager (LVM),
 of the usage of Volume Grousp (VG) and Logical Volumes (LV).
+.Pp
+The plugin runs \fB/usr/sbin/lvm fullreport\fP with \fB--reportformat json_std\fP,
+which requires lvm2 version 2.03.17 or later.
+.Pp
+The \fBlvm\fP plugin supports the following options:
+.Bl -tag -width Ds
+.It \fBexec\fP \fIpath\fP
+Path to the \fBlvm\fP executable. Default is \fI/usr/sbin/lvm\fP.
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

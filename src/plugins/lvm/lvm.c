@@ -14,17 +14,23 @@
 #include "libxson/json_parse.h"
 
 #include <poll.h>
+#include <signal.h>
 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
 #endif
 
 #define NO_VALUE UINT64_MAX
-#define PERCENT_SCALE_FACTOR 1e-8
 
 #ifndef DM_NAME_LEN
 #define DM_NAME_LEN 128
 #endif
+
+#define LVM_EXEC_DEFAULT "/usr/sbin/lvm"
+
+extern char **environ;
+
+static char *lvm_exec;
 
 enum {
     FAM_LVM_VG_SIZE_BYTES,
@@ -127,8 +133,8 @@ typedef struct {
             char lv_attr[32];
             uint64_t lv_size;
             uint64_t lv_metadata_size;
-            uint64_t data_percent;
-            uint64_t metadata_percent;
+            double data_percent;
+            double metadata_percent;
         } lv;
     };
 } lvm_json_ctx_t;
@@ -173,11 +179,10 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
     case 's':
     case 'S': {
         /* Snapshot.  Also report used/free space. */
-        if (sctx->lv.data_percent == UINT64_MAX)
+        if (isnan(sctx->lv.data_percent))
             break;
 
-        uint64_t used_bytes = sctx->lv.lv_size *
-                              (sctx->lv.data_percent * PERCENT_SCALE_FACTOR);
+        uint64_t used_bytes = sctx->lv.lv_size * (sctx->lv.data_percent / 100.0);
 
         metric_family_append(&fams[FAM_LVM_LV_DATA_USED_BYTES],
                              VALUE_GAUGE(used_bytes), NULL,
@@ -195,15 +200,14 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
              and metadata volumes, not this one.    Report used/free
              space, then ignore. */
 
-        if ((sctx->lv.data_percent == UINT64_MAX) ||
-            (sctx->lv.metadata_percent == UINT64_MAX) ||
+        if (isnan(sctx->lv.data_percent) ||
+            isnan(sctx->lv.metadata_percent) ||
             (sctx->lv.lv_metadata_size == UINT64_MAX) ||
             (sctx->lv.data_lv[0] == '\0') ||
             (sctx->lv.metadata_lv[0] == '\0'))
             return -1;
 
-        uint64_t used_bytes = sctx->lv.lv_size *
-                              (sctx->lv.data_percent * PERCENT_SCALE_FACTOR);
+        uint64_t used_bytes = sctx->lv.lv_size * (sctx->lv.data_percent / 100.0);
 
         metric_family_append(&fams[FAM_LVM_LV_DATA_USED_BYTES],
                              VALUE_GAUGE(used_bytes), NULL,
@@ -217,8 +221,7 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
                              NULL);
 
 
-        used_bytes = sctx->lv.lv_metadata_size *
-                     (sctx->lv.metadata_percent * PERCENT_SCALE_FACTOR);
+        used_bytes = sctx->lv.lv_metadata_size * (sctx->lv.metadata_percent / 100.0);
 
         metric_family_append(&fams[FAM_LVM_LV_METADATA_USED_BYTES],
                              VALUE_GAUGE(used_bytes), NULL,
@@ -237,8 +240,7 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
         return 0;
         break;
     case 'V':
-        return 0;
-        /* Thin volume or thin snapshot. Ignore. */
+        /* Thin volume or thin snapshot. Report only the size. */
         break;
     }
 
@@ -250,12 +252,32 @@ static int lvm_metrics_lv(lvm_json_ctx_t *sctx)
     return 0;
 }
 
+/* Copy a LV name removing the brackets lvm uses for hidden volumes. */
+static void lvm_copy_lv_name(char *dst, size_t dst_size, const char *string, size_t string_len)
+{
+    if ((string_len >= 2) && (string[0] == '[') && (string[string_len - 1] == ']')) {
+        string++;
+        string_len -= 2;
+    }
+    sstrnncpy(dst, dst_size, string, string_len);
+}
+
 static bool lvm_parse_number(const char *string, size_t string_len, uint64_t *value)
 {
     char number[64];
     sstrnncpy(number, sizeof(number), string, string_len);
 
     if (parse_uinteger(number, value) != 0)
+        return false;
+    return true;
+}
+
+static bool lvm_parse_percent(const char *string, size_t string_len, double *value)
+{
+    char number[64];
+    sstrnncpy(number, sizeof(number), string, string_len);
+
+    if (parse_double(number, value) != 0)
         return false;
     return true;
 }
@@ -285,13 +307,13 @@ static bool lvm_json_number(void *ctx, const char *string, size_t string_len)
             return lvm_parse_number(string, string_len, &sctx->lv.lv_size);
             break;
         case LVM_JSON_REPORT_LV_DATA_PERCENT:
-            return lvm_parse_number(string, string_len, &sctx->lv.data_percent);
+            return lvm_parse_percent(string, string_len, &sctx->lv.data_percent);
             break;
         case LVM_JSON_REPORT_LV_LV_METADATA_SIZE:
             return lvm_parse_number(string, string_len, &sctx->lv.lv_metadata_size);
             break;
         case LVM_JSON_REPORT_LV_METADATA_PERCENT:
-            return lvm_parse_number(string, string_len, &sctx->lv.metadata_percent);
+            return lvm_parse_percent(string, string_len, &sctx->lv.metadata_percent);
             break;
         default:
             break;
@@ -329,7 +351,7 @@ static bool lvm_json_string(void *ctx, const char *string, size_t string_len)
             return lvm_parse_number(string, string_len, &sctx->vg.lv_count);
             break;
         case LVM_JSON_REPORT_LV_LV_NAME:
-            sstrnncpy(sctx->lv.lv_name, sizeof(sctx->lv.lv_name), string, string_len);
+            lvm_copy_lv_name(sctx->lv.lv_name, sizeof(sctx->lv.lv_name), string, string_len);
             break;
         case LVM_JSON_REPORT_LV_LV_ATTR:
             sstrnncpy(sctx->lv.lv_attr, sizeof(sctx->lv.lv_attr), string, string_len);
@@ -338,19 +360,20 @@ static bool lvm_json_string(void *ctx, const char *string, size_t string_len)
             return lvm_parse_number(string, string_len, &sctx->lv.lv_size);
             break;
         case LVM_JSON_REPORT_LV_DATA_LV:
-            sstrnncpy(sctx->lv.data_lv, sizeof(sctx->lv.data_lv), string, string_len);
+            lvm_copy_lv_name(sctx->lv.data_lv, sizeof(sctx->lv.data_lv), string, string_len);
             break;
         case LVM_JSON_REPORT_LV_METADATA_LV:
-            sstrnncpy(sctx->lv.metadata_lv, sizeof(sctx->lv.metadata_lv), string, string_len);
+            lvm_copy_lv_name(sctx->lv.metadata_lv, sizeof(sctx->lv.metadata_lv),
+                             string, string_len);
             break;
         case LVM_JSON_REPORT_LV_DATA_PERCENT:
-            return lvm_parse_number(string, string_len, &sctx->lv.data_percent);
+            return lvm_parse_percent(string, string_len, &sctx->lv.data_percent);
             break;
         case LVM_JSON_REPORT_LV_LV_METADATA_SIZE:
             return lvm_parse_number(string, string_len, &sctx->lv.lv_metadata_size);
             break;
         case LVM_JSON_REPORT_LV_METADATA_PERCENT:
-            return lvm_parse_number(string, string_len, &sctx->lv.metadata_percent);
+            return lvm_parse_percent(string, string_len, &sctx->lv.metadata_percent);
             break;
         default:
             break;
@@ -381,8 +404,8 @@ static bool lvm_json_start_map(void *ctx)
             sctx->lv.lv_attr[0] = '\0';
             sctx->lv.lv_size = UINT64_MAX;
             sctx->lv.lv_metadata_size = UINT64_MAX;
-            sctx->lv.data_percent = UINT64_MAX;
-            sctx->lv.metadata_percent = UINT64_MAX;
+            sctx->lv.data_percent = NAN;
+            sctx->lv.metadata_percent = NAN;
             break;
         default:
             break;
@@ -527,7 +550,7 @@ static bool lvm_json_end_map(void *ctx)
     }
 
     if (sctx->depth > 0) {
-        sctx->stack[sctx->depth] = LVM_JSON_NONE;
+        sctx->stack[sctx->depth - 1] = LVM_JSON_NONE;
         sctx->depth--;
     } else {
         sctx->depth = 0;
@@ -550,10 +573,12 @@ static xson_callbacks_t lvm_json_callbacks = {
     .xson_end_array   = NULL,
 };
 
+static complain_t lvm_exit_complaint;
+
 static int lvm_read(void)
 {
     char *argv[] = {
-        "/usr/sbin/lvm", "fullreport",
+        lvm_exec != NULL ? lvm_exec : LVM_EXEC_DEFAULT, "fullreport",
         "--all",
         "--units=b",
         "--nosuffix",
@@ -576,7 +601,8 @@ static int lvm_read(void)
         .group = NULL,
         .exec = argv[0],
         .argv = argv,
-        .envp = NULL,
+        /* Pass the daemon environment (PATH, LVM_SYSTEM_DIR, ...) to lvm. */
+        .envp = environ,
     };
 
     int fd_out, fd_err;
@@ -600,11 +626,24 @@ static int lvm_read(void)
     char buffer_err[4096];
     char *pbuffer_err = buffer_err;
 
+    /* Do not wait for the child for more than one interval. */
+    cdtime_t deadline = cdtime() + plugin_get_interval();
+    bool timed_out = false;
+
     while (true) {
-        int status = poll(fds, STATIC_ARRAY_SIZE(fds), -1);
+        cdtime_t now = cdtime();
+        if (now >= deadline) {
+            timed_out = true;
+            break;
+        }
+
+        int status = poll(fds, STATIC_ARRAY_SIZE(fds), (int)CDTIME_T_TO_MS(deadline - now) + 1);
         if (status < 0) {
             if (errno == EINTR)
                 continue;
+            break;
+        } else if (status == 0) {
+            timed_out = true;
             break;
         }
 
@@ -621,7 +660,7 @@ static int lvm_read(void)
             json_status_t jstatus = json_parser_parse(&handle, (unsigned char *)buffer, len);
             if (jstatus != JSON_STATUS_OK) {
                 unsigned char *errmsg = json_parser_get_error(&handle, 0, NULL, 0);
-                PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
+                PLUGIN_ERROR("json_parser_parse failed: %s", (const char *)errmsg);
                 json_parser_free_error(errmsg);
 
                 if (fd_out >= 0)
@@ -636,8 +675,16 @@ static int lvm_read(void)
             PLUGIN_ERROR("Failed to read pipe from '%s'.", cexec.exec);
             break;
         } else if (fds[1].revents & (POLLIN | POLLHUP)) {
-            int len = read(fd_err, pbuffer_err,
-                                   sizeof(buffer_err) - 1 - (pbuffer_err - buffer_err));
+            size_t avail = sizeof(buffer_err) - 1 - (pbuffer_err - buffer_err);
+            if (avail == 0) {
+                /* The buffer is full without a newline, flush it as a line. */
+                *pbuffer_err = '\0';
+                PLUGIN_ERROR("stderr: %s", buffer_err);
+                pbuffer_err = buffer_err;
+                avail = sizeof(buffer_err) - 1;
+            }
+
+            int len = read(fd_err, pbuffer_err, avail);
 
             if (len < 0) {
                 if (errno == EAGAIN || errno == EINTR)
@@ -664,7 +711,7 @@ static int lvm_read(void)
             char *pnl;
             while ((pnl = strchr(pbuffer_err, '\n'))) {
                 *pnl = '\0';
-                if (*(pnl - 1) == '\r')
+                if ((pnl > pbuffer_err) && (*(pnl - 1) == '\r'))
                     *(pnl - 1) = '\0';
 
                 PLUGIN_ERROR("stderr: %s", pbuffer_err);
@@ -692,16 +739,39 @@ static int lvm_read(void)
         }
     }
 
+    /* Close the pipes before waiting so the child cannot block writing to them. */
+    if (fd_out >= 0)
+        close(fd_out);
+    if (fd_err >= 0)
+        close(fd_err);
+
+    if (timed_out) {
+        PLUGIN_ERROR("Program '%s' timed out, killing it.", cexec.exec);
+        kill(pid, SIGKILL);
+    }
+
     int status = 0;
     if (waitpid(pid, &status, 0) < 0) {
         PLUGIN_DEBUG("waitpid failed: %s", STRERRNO);
     }
     PLUGIN_DEBUG("Child %i exited with status %i.", (int)pid, status);
 
-    if (fd_out >= 0)
-        close(fd_out);
-    if (fd_err >= 0)
-        close(fd_err);
+    if (!WIFEXITED(status) || (WEXITSTATUS(status) != 0)) {
+        PLUGIN_ONCE_ERROR(&lvm_exit_complaint,
+                          "'%s' exited with status %i (note that lvm2 >= 2.03.17 "
+                          "is required for '--reportformat json_std').", cexec.exec,
+                          WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+    } else {
+        PLUGIN_RELEASE_INFO(&lvm_exit_complaint, "'%s' exited successfully.", cexec.exec);
+    }
+
+    if (timed_out) {
+        json_parser_free(&handle);
+        /* Drop the metrics appended before the parse error. */
+        for (size_t i = 0; i < FAM_LVM_MAX; i++)
+            metric_family_metric_reset(&fams[i]);
+        return -1;
+    }
 
     json_status_t jstatus = json_parser_complete(&handle);
     if (jstatus != JSON_STATUS_OK) {
@@ -709,6 +779,9 @@ static int lvm_read(void)
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
         json_parser_free(&handle);
+        /* Drop the metrics appended before the parse error. */
+        for (size_t i = 0; i < FAM_LVM_MAX; i++)
+            metric_family_metric_reset(&fams[i]);
         return -1;
     }
     json_parser_free(&handle);
@@ -718,19 +791,48 @@ static int lvm_read(void)
     return 0;
 }
 
+static int lvm_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("exec", child->key) == 0) {
+            status = cf_util_get_string(child, &lvm_exec);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+static int lvm_shutdown(void)
+{
+    free(lvm_exec);
+    lvm_exec = NULL;
+    return 0;
+}
+
 static int lvm_init(void)
 {
 #if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_SYS_ADMIN)
     if (plugin_check_capability(CAP_SYS_ADMIN) != 0) {
         if (getuid() == 0)
-            PLUGIN_WARNING("lvm plugin: Running ncollectd as root, but the "
+            PLUGIN_WARNING("Running ncollectd as root, but the "
                            "CAP_SYS_ADMIN capability is missing. The plugin's read "
                            "function will probably fail. Is your init system dropping "
                            "capabilities?");
         else
             PLUGIN_WARNING("ncollectd doesn't have the CAP_SYS_ADMIN "
-                           "capability. If you don't want to run collectd as root, try "
-                           "running \"setcap cap_sys_admin=ep\" on the collectd binary.");
+                           "capability. If you don't want to run ncollectd as root, try "
+                           "running \"setcap cap_sys_admin=ep\" on the ncollectd binary.");
     }
 #endif
     return 0;
@@ -738,6 +840,8 @@ static int lvm_init(void)
 
 void module_register(void)
 {
+    plugin_register_config("lvm", lvm_config);
     plugin_register_init("lvm", lvm_init);
     plugin_register_read("lvm", lvm_read);
+    plugin_register_shutdown("lvm", lvm_shutdown);
 }
