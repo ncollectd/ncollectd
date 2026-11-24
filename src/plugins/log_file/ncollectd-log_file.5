@@ -11,8 +11,7 @@
 \fBplugin\fP log_file {
     \fBlog-level\fP \fIdebug|info|notice|warning|err\fP
     \fBfile\fP \fI/path/to/file\fP
-    \fBprint-timestamp\fP \fItrue|false\fP
-    \fBprint-severity\fP \fItrue|false\fP
+    \fBformat\fP \fItext|logfmt|json|logstash\fP [[\fI!\fP]\fIall|timestamp|severity|plugin|file|line|function|message\fP ...]
 }
 .Ed
 .Sh DESCRIPTION
@@ -41,13 +40,17 @@ The special strings \fBstdout\fP and \fBstderr\fP can be used to write to
 the standard output and standard error channels, respectively.
 This, of course, only makes much sense when ncollectd is running in
 foreground or non-daemon-mode.
-.It \fBprint-timestamp\fP \fItrue|false\fP
-Prefix all lines printed by the current time.
-Defaults to \fBtrue\fP.
-.It \fBprint-severity\fP \fItrue|false\fP
-When enabled, all lines are prefixed by the severity of the log message, for
-example "warning".
-Defaults to \fBfalse\fP.
+If the file does not exist it is created with mode 0640 (subject to the umask).
+.It \fBformat\fP \fItext|logfmt|json|logstash\fP [[\fI!\fP]\fIall|timestamp|severity|plugin|file|line|function|message\fP ...]
+Selects the format used to write the log messages: \fBtext\fP, \fBlogfmt\fP,
+\fBjson\fP or \fBlogstash\fP.
+Defaults to \fBtext\fP.
+The optional arguments select which fields are written: \fBtimestamp\fP,
+\fBseverity\fP, \fBplugin\fP, \fBfile\fP, \fBline\fP, \fBfunction\fP and \fBmessage\fP,
+or \fBall\fP of them. Prefix a field with \fB!\fP to remove it.
+The arguments are applied in order; by default all the fields are written.
+For example, \fBformat text !file !line !function\fP writes the timestamp,
+the severity, the plugin name and the message.
 .El
 .Pp
 There is no need to notify the daemon after moving or removing the

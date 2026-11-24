@@ -10,8 +10,7 @@ NCOLLECTD-LOG\_FILE(5) - File Formats Manual
 	plugin log_file {
 	    log-level debug|info|notice|warning|err
 	    file /path/to/file
-	    print-timestamp true|false
-	    print-severity true|false
+	    format text|logfmt|json|logstash [[!]all|timestamp|severity|plugin|file|line|function|message ...]
 	}
 
 # DESCRIPTION
@@ -44,17 +43,19 @@ The plugin has de following options:
 > the standard output and standard error channels, respectively.
 > This, of course, only makes much sense when ncollectd is running in
 > foreground or non-daemon-mode.
+> If the file does not exist it is created with mode 0640 (subject to the umask).
 
-**print-timestamp** *true|false*
+**format** *text|logfmt|json|logstash* \[\[!]*all|timestamp|severity|plugin|file|line|function|message* ...]
 
-> Prefix all lines printed by the current time.
-> Defaults to **true**.
-
-**print-severity** *true|false*
-
-> When enabled, all lines are prefixed by the severity of the log message, for
-> example "warning".
-> Defaults to **false**.
+> Selects the format used to write the log messages: **text**, **logfmt**,
+> **json** or **logstash**.
+> Defaults to **text**.
+> The optional arguments select which fields are written: **timestamp**,
+> **severity**, **plugin**, **file**, **line**, **function** and **message**,
+> or **all** of them. Prefix a field with **!** to remove it.
+> The arguments are applied in order; by default all the fields are written.
+> For example, `format text !file !line !function` writes the timestamp,
+> the severity, the plugin name and the message.
 
 There is no need to notify the daemon after moving or removing the
 log file (e. g. when rotating the logs).
