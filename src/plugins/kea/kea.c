@@ -94,7 +94,7 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
     },
     [FAM_KEA_DHCP4_GLOBAL4_ADDRESSES_DECLINED] = {
         .name = "kea_dhcp4_global4_addresses_declined",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Declined counts from all subnets",
     },
     [FAM_KEA_DHCP4_GLOBAL4_ADDRESSES_DECLINED_RECLAIMED] = {
@@ -109,7 +109,7 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
     },
     [FAM_KEA_DHCP6_GLOBAL6_ADDRESSES_DECLINED] = {
         .name = "kea_dhcp6_global6_addresses_declined",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Declined counts from all subnets",
     },
     [FAM_KEA_DHCP6_GLOBAL6_CUMULATIVE_NAS_ASSIGNED] = {
@@ -134,12 +134,12 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
     },
     [FAM_KEA_DHCP4_ADDRESSES_ASSIGNED] = {
         .name = "kea_dhcp4_addresses_assigned",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Assigned addresses",
     },
     [FAM_KEA_DHCP4_ADDRESSES_DECLINED] = {
         .name = "kea_dhcp4_addresses_declined",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Declined counts",
     },
     [FAM_KEA_DHCP4_ADDRESSES_DECLINED_RECLAIMED] = {
@@ -154,7 +154,7 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
     },
     [FAM_KEA_DHCP4_ADDRESSES] = {
         .name = "kea_dhcp4_addresses",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Size of subnet address pool",
     },
     [FAM_KEA_DHCP4_CUMULATIVE_ADDRESSES_ASSIGNED] = {  // FIXME ¿?
@@ -179,22 +179,22 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
     },
     [FAM_KEA_DHCP6_NA] = {
         .name = "kea_dhcp6_na",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Size of non-temporary address pool",
     },
     [FAM_KEA_DHCP6_NA_ASSIGNED] = {
         .name = "kea_dhcp6_na_assigned",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Assigned non-temporary addresses (IA_NA)",
     },
     [FAM_KEA_DHCP6_PD] = {
         .name = "kea_dhcp6_pd",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Size of prefix delegation pool",
     },
     [FAM_KEA_DHCP6_PD_ASSIGNED] = {
         .name = "kea_dhcp6_pd_assigned",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Assigned prefix delegations (IA_PD)",
     },
     [FAM_KEA_DHCP6_ADDRESSES_RECLAIMED] = {
@@ -204,7 +204,7 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
     },
     [FAM_KEA_DHCP6_ADDRESSES_DECLINED] = {
         .name = "kea_dhcp6_addresses_declined",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Declined counts",
     },
     [FAM_KEA_DHCP6_ADDRESSES_DECLINED_RECLAIMED] = {
@@ -247,6 +247,7 @@ static metric_family_t fams_kea[FAM_KEA_MAX] = {
 #include "plugins/kea/kea_stats.h"
 
 #define CONFIG_HASH_SIZE 256
+#define KEA_RESPONSE_MAX_SIZE (64 * 1024 * 1024)
 
 typedef enum {
     KEA_NONE,
@@ -259,6 +260,8 @@ typedef struct {
     char *subnet;
     size_t pool_size;
     char **pools;
+    size_t pd_pool_size;
+    char **pd_pools;
 } kea_subnet_t;
 
 typedef struct {
@@ -285,6 +288,12 @@ static void kea_subnet_free(kea_subnet_t *subnet)
             free(subnet->pools[i]);
         }
         free(subnet->pools);
+    }
+    if (subnet->pd_pools != NULL) {
+        for (size_t i = 0; i < subnet->pd_pool_size; i++) {
+            free(subnet->pd_pools[i]);
+        }
+        free(subnet->pd_pools);
     }
 
     free(subnet);
@@ -337,6 +346,49 @@ static int kea_subnet_add_pool(kea_subnet_t *subnet, const char *pool, size_t po
     return 0;
 }
 
+static int kea_subnet_add_pd_pool(kea_subnet_t *subnet, const char *prefix, int prefix_len)
+{
+    if (subnet == NULL)
+        return -1;
+
+    char pd_pool[256];
+    ssnprintf(pd_pool, sizeof(pd_pool), "%s/%d", prefix, prefix_len);
+
+    char *apool = strdup(pd_pool);
+    if (apool == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        return -1;
+    }
+
+    char **tmp = realloc(subnet->pd_pools, sizeof(*subnet->pd_pools) * (subnet->pd_pool_size + 1));
+    if (tmp == NULL) {
+        free(apool);
+        PLUGIN_ERROR("realloc failed.");
+        return -1;
+    }
+
+    subnet->pd_pools = tmp;
+    subnet->pd_pools[subnet->pd_pool_size] = apool;
+    subnet->pd_pool_size++;
+
+    return 0;
+}
+
+static char *kea_subnet_get_pd_pool(kea_subnet_t *subnet, const char *pool_id)
+{
+    if (subnet == NULL)
+        return NULL;
+
+    if (subnet->pd_pools == NULL)
+        return NULL;
+
+    size_t n = atoi(pool_id);
+    if (n >= subnet->pd_pool_size)
+        return NULL;
+
+    return subnet->pd_pools[n];
+}
+
 static char *kea_subnet_get_pool(kea_subnet_t *subnet, const char *pool_id)
 {
     if (subnet == NULL)
@@ -357,17 +409,29 @@ static int kea_config_add_subnet(kea_t *kea, kea_subnet_t *subnet)
     if (subnet == NULL)
         return -1;
 
+    if (subnet->id == NULL) {
+        PLUGIN_WARNING("Ignoring subnet without id.");
+        kea_subnet_free(subnet);
+        return -1;
+    }
+
     if (kea->subnets == NULL) {
         kea->subnets = c_avl_create((int (*)(const void *, const void *))strcmp);
         if (kea->subnets == NULL) {
             PLUGIN_ERROR("cannot create avl tree.");
+            kea_subnet_free(subnet);
             return -1;
         }
     }
 
     int status = c_avl_insert(kea->subnets, subnet->id, subnet);
     if (status != 0) {
-
+        if (status > 0)
+            PLUGIN_WARNING("Duplicate subnet id '%s'.", subnet->id);
+        else
+            PLUGIN_ERROR("c_avl_insert failed.");
+        kea_subnet_free(subnet);
+        return -1;
     }
 
     return 0;
@@ -407,6 +471,7 @@ static void kea_free(void *arg)
     free(kea->instance);
     free(kea->socketpath);
     label_set_reset(&kea->labels);
+    plugin_filter_free(kea->filter);
 
     if (kea->subnets != NULL) {
         kea_config_reset(kea->subnets);
@@ -436,6 +501,63 @@ static int kea_cmd(kea_t *kea, char *cmd)
 }
 
 typedef enum {
+    KEA_RESULT_KEY_NONE,
+    KEA_RESULT_KEY_RESULT,
+    KEA_RESULT_KEY_TEXT,
+} kea_result_key_t;
+
+/* "result" and "text" keys of the top level map of the responses. */
+typedef struct {
+    kea_result_key_t key;
+    bool has_result;
+    long result;
+    char text[256];
+} kea_result_t;
+
+static void kea_result_map_key(kea_result_t *r, size_t depth, const char *key, size_t key_len)
+{
+    if (depth != 1)
+        return;
+
+    if ((key_len == 6) && (strncmp(key, "result", key_len) == 0)) {
+        r->key = KEA_RESULT_KEY_RESULT;
+    } else if ((key_len == 4) && (strncmp(key, "text", key_len) == 0)) {
+        r->key = KEA_RESULT_KEY_TEXT;
+    } else {
+        r->key = KEA_RESULT_KEY_NONE;
+    }
+}
+
+static void kea_result_number(kea_result_t *r, size_t depth, const char *num, size_t num_len)
+{
+    if ((depth != 1) || (r->key != KEA_RESULT_KEY_RESULT))
+        return;
+
+    char number[64];
+    sstrnncpy(number, sizeof(number), num, num_len);
+    r->result = strtol(number, NULL, 10);
+    r->has_result = true;
+}
+
+static void kea_result_string(kea_result_t *r, size_t depth, const char *str, size_t str_len)
+{
+    if ((depth != 1) || (r->key != KEA_RESULT_KEY_TEXT))
+        return;
+
+    sstrnncpy(r->text, sizeof(r->text), str, str_len);
+}
+
+static int kea_result_check(kea_result_t *r, const char *cmd)
+{
+    if (r->has_result && (r->result != 0)) {
+        PLUGIN_ERROR("Command '%s' failed with result %ld: %s", cmd, r->result, r->text);
+        return -1;
+    }
+
+    return 0;
+}
+
+typedef enum {
     KEA_STATS_JSON_NONE,
     KEA_STATS_JSON_ARGS,
     KEA_STATS_JSON_ARGS_METRIC,
@@ -448,11 +570,14 @@ typedef struct {
     size_t depth;
     kea_t *kea;
     char key[256];
+    kea_result_t result;
 } kea_json_stats_ctx_t;
 
 static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
 {
     kea_json_stats_ctx_t *sctx = ctx;
+
+    kea_result_number(&sctx->result, sctx->depth, num, num_len);
 
     if (sctx->depth != 4)
         return true;
@@ -464,6 +589,7 @@ static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
     char *key = sctx->key;
     char *subnet_id = NULL;
     char *pool_id = NULL;
+    char *pd_pool_id = NULL;
     if (strncmp(sctx->key, "subnet[", strlen("subnet[")) == 0) {
         subnet_id = key + strlen("subnet[");
         key = strchr(subnet_id, ']');
@@ -474,6 +600,13 @@ static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
         if (strncmp(key, ".pool[", strlen(".pool[")) == 0) {
             pool_id = key + strlen(".pool[");
             key = strchr(pool_id, ']');
+            if (key == NULL)
+                return true;
+            *key = '\0';
+            key++;
+        } else if (strncmp(key, ".pd-pool[", strlen(".pd-pool[")) == 0) {
+            pd_pool_id = key + strlen(".pd-pool[");
+            key = strchr(pd_pool_id, ']');
             if (key == NULL)
                 return true;
             *key = '\0';
@@ -532,10 +665,26 @@ static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
     sstrnncpy(number, sizeof(number), (const char *)num, num_len);
 
     value_t value = {0};
+    char *endptr = NULL;
+    errno = 0;
     if (fam->type == METRIC_TYPE_COUNTER) {
-        value = VALUE_COUNTER(atol(number));
+        if (number[0] == '-') {
+            PLUGIN_DEBUG("Ignoring negative counter value '%s' for '%s'.", number, skey);
+            return true;
+        }
+        uint64_t counter = strtoull(number, &endptr, 10);
+        if ((endptr == number) || (errno != 0)) {
+            PLUGIN_DEBUG("Invalid counter value '%s' for '%s'.", number, skey);
+            return true;
+        }
+        value = VALUE_COUNTER(counter);
     } else if (fam->type == METRIC_TYPE_GAUGE) {
-        value = VALUE_GAUGE(atof(number));
+        double gauge = strtod(number, &endptr);
+        if ((endptr == number) || (errno != 0)) {
+            PLUGIN_DEBUG("Invalid gauge value '%s' for '%s'.", number, skey);
+            return true;
+        }
+        value = VALUE_GAUGE(gauge);
     } else {
         return true;
     }
@@ -548,16 +697,25 @@ static bool kea_json_stats_number(void *ctx, const char *num, size_t num_len)
     label_pair_t *label3 = NULL;
 
     if (subnet_id != NULL) {
+        /* Always add the subnet id to avoid series with identical labels
+         * when the subnet is not found in the configuration. */
+        labels[n].name = "id";
+        labels[n].value = subnet_id;
+        n++;
         kea_subnet_t *subnet = kea_config_get_subnet(sctx->kea, subnet_id);
         if (subnet != NULL) {
-            labels[n].name = "id";
-            labels[n].value = subnet->id;
-            n++;
             if (pool_id != NULL) {
                 char *pool = kea_subnet_get_pool(subnet, pool_id);
                 if (pool != NULL) {
                     labels[n].name = "pool";
                     labels[n].value = pool;
+                    n++;
+                }
+            } else if (pd_pool_id != NULL) {
+                char *pd_pool = kea_subnet_get_pd_pool(subnet, pd_pool_id);
+                if (pd_pool != NULL) {
+                    labels[n].name = "pool";
+                    labels[n].value = pd_pool;
                     n++;
                 }
             }
@@ -593,6 +751,8 @@ static bool kea_json_stats_map_key(void * ctx, const char *ukey, size_t key_len)
     if (sctx == NULL)
         return false;
 
+    kea_result_map_key(&sctx->result, sctx->depth, ukey, key_len);
+
     switch(sctx->depth) {
     case 1:
         if ((key_len == 9) && (strncmp(ukey, "arguments", key_len) == 0)) {
@@ -611,6 +771,13 @@ static bool kea_json_stats_map_key(void * ctx, const char *ukey, size_t key_len)
         break;
     }
 
+    return true;
+}
+
+static bool kea_json_stats_string(void *ctx, const char *str, size_t str_len)
+{
+    kea_json_stats_ctx_t *sctx = ctx;
+    kea_result_string(&sctx->result, sctx->depth, str, str_len);
     return true;
 }
 
@@ -685,7 +852,7 @@ static xson_callbacks_t kea_json_stats_callbacks = {
     .xson_integer     = NULL,
     .xson_double      = NULL,
     .xson_number      = kea_json_stats_number,
-    .xson_string      = NULL,
+    .xson_string      = kea_json_stats_string,
     .xson_start_map   = kea_json_stats_start_map,
     .xson_map_key     = kea_json_stats_map_key,
     .xson_end_map     = kea_json_stats_end_map,
@@ -712,6 +879,8 @@ static int kea_read_stats(kea_t *kea)
         if (status != JSON_STATUS_OK)
             break;
     }
+    if (len < 0)
+        PLUGIN_ERROR("read failed: %s", STRERRNO);
 
     json_status_t status = json_parser_complete(&handle);
     if (status != JSON_STATUS_OK) {
@@ -719,11 +888,15 @@ static int kea_read_stats(kea_t *kea)
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
         json_parser_free (&handle);
+        close(fd);
         return -1;
     }
     json_parser_free(&handle);
 
     close(fd);
+
+    if (kea_result_check(&ctx.result, "statistic-get-all") != 0)
+        return -1;
 
     return 0;
 }
@@ -732,6 +905,7 @@ typedef enum {
     KEA_CONFIG_JSON_NONE,
     KEA_CONFIG_JSON_ARGS,
     KEA_CONFIG_JSON_ARGS_DHCP4,
+    KEA_CONFIG_JSON_ARGS_DHCP4_SHARED_NETWORKS,
     KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4,
     KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY,
     KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID,
@@ -740,6 +914,7 @@ typedef enum {
     KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY,
     KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY_POOL,
     KEA_CONFIG_JSON_ARGS_DHCP6,
+    KEA_CONFIG_JSON_ARGS_DHCP6_SHARED_NETWORKS,
     KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6,
     KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY,
     KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID,
@@ -747,26 +922,47 @@ typedef enum {
     KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS,
     KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY,
     KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY_POOL,
+    KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS,
+    KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY,
+    KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY_PREFIX,
+    KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY_PREFIX_LEN,
     KEA_CONFIG_JSON_ARGS_HASH,
 } kea_json_config_key_t;
+
+/* The subnets inside "shared-networks" are parsed with the same automaton
+ * as the subnets of the "Dhcp4"/"Dhcp6" maps shifted by SHARED_NETWORKS_OFFSET
+ * levels: "shared-networks": [ { "subnet4": [ ... ] } ] */
+#define SHARED_NETWORKS_OFFSET 2
 
 typedef struct {
     kea_json_config_key_t stack[JSON_MAX_DEPTH];
     size_t depth;
+    size_t offset;
     kea_server_t kind;
     kea_subnet_t *subnet;
+    char pd_prefix[256];
+    int pd_prefix_len;
     kea_t *kea;
 } kea_json_config_ctx_t;
 
 static bool kea_json_config_number(void *ctx, const char *str, size_t str_len)
 {
     kea_json_config_ctx_t *sctx = ctx;
+    size_t depth = sctx->depth - sctx->offset;
+    kea_json_config_key_t *stack = sctx->stack + sctx->offset;
 
-    if (sctx->depth == 5) {
-        if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID) {
+    if (depth == 5) {
+        if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID) {
             kea_subnet_set_id(sctx->subnet, str, str_len);
-        } else if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID) {
+        } else if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID) {
             kea_subnet_set_id(sctx->subnet, str, str_len);
+        }
+    } else if (sctx->depth == 7) {
+        if ((sctx->stack[5] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY) &&
+            (sctx->stack[6] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY_PREFIX_LEN)) {
+            char number[32];
+            sstrnncpy(number, sizeof(number), str, str_len);
+            sctx->pd_prefix_len = atoi(number);
         }
     }
 
@@ -776,32 +972,38 @@ static bool kea_json_config_number(void *ctx, const char *str, size_t str_len)
 static bool kea_json_config_string(void *ctx, const char *str, size_t str_len)
 {
     kea_json_config_ctx_t *sctx = ctx;
+    size_t depth = sctx->depth - sctx->offset;
+    kea_json_config_key_t *stack = sctx->stack + sctx->offset;
 
-    switch(sctx->depth) {
+    switch(depth) {
     case 2:
-        if (sctx->stack[1] == KEA_CONFIG_JSON_ARGS_HASH) {
+        if (stack[1] == KEA_CONFIG_JSON_ARGS_HASH) {
             sstrnncpy(sctx->kea->config_hash, CONFIG_HASH_SIZE, str, str_len);
         }
         break;
     case 5:
-        if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID) {
+        if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID) {
             kea_subnet_set_id(sctx->subnet, str, str_len);
-        } else if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_SUBNET) {
+        } else if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_SUBNET) {
             kea_subnet_set_subnet(sctx->subnet, str, str_len);
-        } else if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID) {
+        } else if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID) {
             kea_subnet_set_id(sctx->subnet, str, str_len);
-        } else if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_SUBNET) {
+        } else if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_SUBNET) {
             kea_subnet_set_subnet(sctx->subnet, str, str_len);
         }
         break;
     case 7:
-        if (sctx->stack[5] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY) {
-            if (sctx->stack[6] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY_POOL) {
+        if (stack[5] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY) {
+            if (stack[6] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY_POOL) {
                 kea_subnet_add_pool(sctx->subnet, str, str_len);
             }
-        } else if (sctx->stack[5] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY) {
-            if (sctx->stack[6] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY_POOL) {
+        } else if (stack[5] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY) {
+            if (stack[6] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY_POOL) {
                 kea_subnet_add_pool(sctx->subnet, str, str_len);
+            }
+        } else if (sctx->stack[5] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY) {
+            if (sctx->stack[6] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY_PREFIX) {
+                sstrnncpy(sctx->pd_prefix, sizeof(sctx->pd_prefix), str, str_len);
             }
         }
         break;
@@ -813,100 +1015,119 @@ static bool kea_json_config_string(void *ctx, const char *str, size_t str_len)
 static bool kea_json_config_map_key(void * ctx, const char *ukey, size_t key_len)
 {
     kea_json_config_ctx_t *sctx = ctx;
+    size_t depth = sctx->depth - sctx->offset;
+    kea_json_config_key_t *stack = sctx->stack + sctx->offset;
 
-    switch(sctx->depth) {
+    switch(depth) {
     case 1:
         if ((key_len == 9) && (strncmp(ukey, "arguments", key_len) == 0)) {
-            sctx->stack[0] = KEA_CONFIG_JSON_ARGS;
+            stack[0] = KEA_CONFIG_JSON_ARGS;
         } else {
-            sctx->stack[1] = KEA_CONFIG_JSON_NONE;
+            stack[0] = KEA_CONFIG_JSON_NONE;
         }
         break;
     case 2:
-        if (sctx->stack[0] == KEA_CONFIG_JSON_ARGS) {
+        if (stack[0] == KEA_CONFIG_JSON_ARGS) {
             if ((key_len == 5) && (strncmp(ukey, "Dhcp4", key_len) == 0)) {
-                sctx->stack[1] = KEA_CONFIG_JSON_ARGS_DHCP4;
+                stack[1] = KEA_CONFIG_JSON_ARGS_DHCP4;
                 sctx->kind = KEA_DHCP4;
             } else if ((key_len == 5) && (strncmp(ukey, "Dhcp6", key_len) == 0)) {
-                sctx->stack[1] = KEA_CONFIG_JSON_ARGS_DHCP6;
+                stack[1] = KEA_CONFIG_JSON_ARGS_DHCP6;
                 sctx->kind = KEA_DHCP6;
             } else if ((key_len == 4) && (strncmp(ukey, "hash", key_len) == 0)) {
-                sctx->stack[1] = KEA_CONFIG_JSON_ARGS_HASH;
+                stack[1] = KEA_CONFIG_JSON_ARGS_HASH;
             } else {
-                sctx->stack[1] = KEA_CONFIG_JSON_NONE;
+                stack[1] = KEA_CONFIG_JSON_NONE;
             }
         } else {
-            sctx->stack[1] = KEA_CONFIG_JSON_NONE;
+            stack[1] = KEA_CONFIG_JSON_NONE;
         }
         break;
     case 3:
-        switch(sctx->stack[1]) {
+        switch(stack[1]) {
         case KEA_CONFIG_JSON_ARGS_DHCP4:
             if ((key_len == 7) && (strncmp(ukey, "subnet4", key_len) == 0)) {
-                sctx->stack[2] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4;
+                stack[2] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4;
+            } else if ((sctx->offset == 0) && (key_len == 15) &&
+                       (strncmp(ukey, "shared-networks", key_len) == 0)) {
+                stack[2] = KEA_CONFIG_JSON_ARGS_DHCP4_SHARED_NETWORKS;
             } else {
-                sctx->stack[2] = KEA_CONFIG_JSON_NONE;
+                stack[2] = KEA_CONFIG_JSON_NONE;
             }
             break;
         case KEA_CONFIG_JSON_ARGS_DHCP6:
             if ((key_len == 7) && (strncmp(ukey, "subnet6", key_len) == 0)) {
-                sctx->stack[2] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6;
+                stack[2] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6;
+            } else if ((sctx->offset == 0) && (key_len == 15) &&
+                       (strncmp(ukey, "shared-networks", key_len) == 0)) {
+                stack[2] = KEA_CONFIG_JSON_ARGS_DHCP6_SHARED_NETWORKS;
             } else {
-                sctx->stack[2] = KEA_CONFIG_JSON_NONE;
+                stack[2] = KEA_CONFIG_JSON_NONE;
             }
             break;
         default:
-            sctx->stack[2] = KEA_CONFIG_JSON_NONE;
+            stack[2] = KEA_CONFIG_JSON_NONE;
             break;
         }
         break;
     case 5:
-        switch(sctx->stack[3]) {
+        switch(stack[3]) {
         case KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY:
             if ((key_len == 2) && (strncmp(ukey, "id", key_len) == 0)) {
-                sctx->stack[4] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID;
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_ID;
             } else if ((key_len == 6) && (strncmp(ukey, "subnet", key_len) == 0)) {
-                sctx->stack[4] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_SUBNET;
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_SUBNET;
             } else if ((key_len == 5) && (strncmp(ukey, "pools", key_len) == 0)) {
-                sctx->stack[4] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS;
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS;
             } else {
-                sctx->stack[4] = KEA_CONFIG_JSON_NONE;
+                stack[4] = KEA_CONFIG_JSON_NONE;
             }
             break;
         case KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY:
             if ((key_len == 2) && (strncmp(ukey, "id", key_len) == 0)) {
-                sctx->stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID;
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_ID;
             } else if ((key_len == 6) && (strncmp(ukey, "subnet", key_len) == 0)) {
-                sctx->stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_SUBNET;
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_SUBNET;
             } else if ((key_len == 5) && (strncmp(ukey, "pools", key_len) == 0)) {
-                sctx->stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS;
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS;
+            } else if ((key_len == 8) && (strncmp(ukey, "pd-pools", key_len) == 0)) {
+                stack[4] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS;
             } else {
-                sctx->stack[4] = KEA_CONFIG_JSON_NONE;
+                stack[4] = KEA_CONFIG_JSON_NONE;
             }
             break;
         default:
-            sctx->stack[4] = KEA_CONFIG_JSON_NONE;
+            stack[4] = KEA_CONFIG_JSON_NONE;
             break;
         }
         break;
     case 7:
-        switch(sctx->stack[5]) {
+        switch(stack[5]) {
         case KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY:
             if ((key_len == 4) && (strncmp(ukey, "pool", key_len) == 0)) {
-                sctx->stack[6] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY_POOL;
+                stack[6] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY_POOL;
             } else {
-                sctx->stack[6] = KEA_CONFIG_JSON_NONE;
+                stack[6] = KEA_CONFIG_JSON_NONE;
             }
             break;
         case KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY:
             if ((key_len == 4) && (strncmp(ukey, "pool", key_len) == 0)) {
-                sctx->stack[6] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY_POOL;
+                stack[6] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY_POOL;
+            } else {
+                stack[6] = KEA_CONFIG_JSON_NONE;
+            }
+            break;
+        case KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY:
+            if ((key_len == 6) && (strncmp(ukey, "prefix", key_len) == 0)) {
+                sctx->stack[6] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY_PREFIX;
+            } else if ((key_len == 10) && (strncmp(ukey, "prefix-len", key_len) == 0)) {
+                sctx->stack[6] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY_PREFIX_LEN;
             } else {
                 sctx->stack[6] = KEA_CONFIG_JSON_NONE;
             }
             break;
         default:
-            sctx->stack[6] = KEA_CONFIG_JSON_NONE;
+            stack[6] = KEA_CONFIG_JSON_NONE;
             break;
         }
         break;
@@ -922,8 +1143,11 @@ static bool kea_json_config_start_map(void *ctx)
     if (sctx->depth >= JSON_MAX_DEPTH)
         return false;
 
-    if (sctx->depth == 5) {
-        switch(sctx->stack[3]) {
+    size_t depth = sctx->depth - sctx->offset;
+    kea_json_config_key_t *stack = sctx->stack + sctx->offset;
+
+    if (depth == 5) {
+        switch(stack[3]) {
         case KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY:
             sctx->subnet = calloc(1, sizeof(*sctx->subnet));
             if (sctx->subnet == NULL) {
@@ -938,12 +1162,25 @@ static bool kea_json_config_start_map(void *ctx)
                 return false;
             }
             break;
+        case KEA_CONFIG_JSON_ARGS_DHCP4:
+        case KEA_CONFIG_JSON_ARGS_DHCP6:
+            /* Element of the "shared-networks" array: parse it as a
+             * "Dhcp4"/"Dhcp6" map. */
+            stack[4] = KEA_CONFIG_JSON_NONE;
+            sctx->offset += SHARED_NETWORKS_OFFSET;
+            break;
         default:
-            sctx->stack[4] = KEA_CONFIG_JSON_NONE;
+            stack[4] = KEA_CONFIG_JSON_NONE;
             break;
         }
+    } else if (sctx->depth == 7) {
+        if (sctx->stack[5] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY) {
+            sctx->pd_prefix[0] = '\0';
+            sctx->pd_prefix_len = 0;
+        }
+        sctx->stack[6] = KEA_CONFIG_JSON_NONE;
     } else {
-        sctx->stack[sctx->depth-1] = KEA_CONFIG_JSON_NONE;
+        stack[depth-1] = KEA_CONFIG_JSON_NONE;
     }
 
     return true;
@@ -953,20 +1190,31 @@ static bool kea_json_config_end_map(void *ctx)
 {
     kea_json_config_ctx_t *sctx = ctx;
 
-    if (sctx->depth == 5) {
-        if ((sctx->stack[3] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY) ||
-            (sctx->stack[3] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY)) {
+    if (sctx->depth == 0)
+        return false;
+
+    size_t depth = sctx->depth - sctx->offset;
+    kea_json_config_key_t *stack = sctx->stack + sctx->offset;
+
+    if (depth == 7) {
+        if ((stack[5] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_PD_POOLS_ARRAY) &&
+            (sctx->pd_prefix[0] != '\0')) {
+            kea_subnet_add_pd_pool(sctx->subnet, sctx->pd_prefix, sctx->pd_prefix_len);
+        }
+    } else if (depth == 5) {
+        if ((stack[3] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY) ||
+            (stack[3] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY)) {
             kea_config_add_subnet(sctx->kea, sctx->subnet);
             sctx->subnet = NULL;
         }
+    } else if ((depth == 3) && (sctx->offset >= SHARED_NETWORKS_OFFSET)) {
+        /* End of an element of the "shared-networks" array. */
+        sctx->offset -= SHARED_NETWORKS_OFFSET;
     }
 
+    /* Do not reset the state of the parent level: if it is an array
+     * the next elements must be parsed with the same state. */
     sctx->depth--;
-    if (sctx->depth > 0) {
-        sctx->stack[sctx->depth-1] = KEA_CONFIG_JSON_NONE;
-    } else {
-        sctx->depth = 0;
-    }
 
     return true;
 }
@@ -978,24 +1226,31 @@ static bool kea_json_config_start_array(void *ctx)
     if (sctx->depth >= JSON_MAX_DEPTH)
         return false;
 
-    if (sctx->depth == 4) {
-        if (sctx->stack[2] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4) {
-            sctx->stack[3] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY;
-        } else if (sctx->stack[2] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6) {
-            sctx->stack[3] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY;
+    size_t depth = sctx->depth - sctx->offset;
+    kea_json_config_key_t *stack = sctx->stack + sctx->offset;
+
+    if (depth == 4) {
+        if (stack[2] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4) {
+            stack[3] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY;
+        } else if (stack[2] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6) {
+            stack[3] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY;
+        } else if (stack[2] == KEA_CONFIG_JSON_ARGS_DHCP4_SHARED_NETWORKS) {
+            stack[3] = KEA_CONFIG_JSON_ARGS_DHCP4;
+        } else if (stack[2] == KEA_CONFIG_JSON_ARGS_DHCP6_SHARED_NETWORKS) {
+            stack[3] = KEA_CONFIG_JSON_ARGS_DHCP6;
         } else {
-            sctx->stack[3] = KEA_CONFIG_JSON_NONE;
+            stack[3] = KEA_CONFIG_JSON_NONE;
         }
-    } else if (sctx->depth == 6) {
-        if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS) {
-            sctx->stack[5] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY;
-        } else if (sctx->stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS) {
-            sctx->stack[5] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY;
+    } else if (depth == 6) {
+        if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS) {
+            stack[5] = KEA_CONFIG_JSON_ARGS_DHCP4_SUBNET4_ARRAY_POOLS_ARRAY;
+        } else if (stack[4] == KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS) {
+            stack[5] = KEA_CONFIG_JSON_ARGS_DHCP6_SUBNET6_ARRAY_POOLS_ARRAY;
         } else {
-            sctx->stack[5] = KEA_CONFIG_JSON_NONE;
+            stack[5] = KEA_CONFIG_JSON_NONE;
         }
     } else {
-        sctx->stack[sctx->depth-1] = KEA_CONFIG_JSON_NONE;
+        stack[depth-1] = KEA_CONFIG_JSON_NONE;
     }
 
     return true;
@@ -1005,12 +1260,12 @@ static bool kea_json_config_end_array(void *ctx)
 {
     kea_json_config_ctx_t *sctx = ctx;
 
+    if (sctx->depth == 0)
+        return false;
+
+    /* Do not reset the state of the parent level: if it is an array
+     * the next elements must be parsed with the same state. */
     sctx->depth--;
-    if (sctx->depth > 0) {
-        sctx->stack[sctx->depth-1] = KEA_CONFIG_JSON_NONE;
-    } else {
-        sctx->depth = 0;
-    }
 
     return true;
 }
@@ -1048,14 +1303,17 @@ static int kea_read_config(kea_t *kea)
         if (status != JSON_STATUS_OK)
             break;
     }
+    if (len < 0)
+        PLUGIN_ERROR("read failed: %s", STRERRNO);
 
     json_status_t status = json_parser_complete(&handle);
     if (status != JSON_STATUS_OK) {
         unsigned char *errmsg = json_parser_get_error(&handle, 0, NULL, 0);
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
-        free(ctx.subnet);
+        kea_subnet_free(ctx.subnet);
         json_parser_free_error(errmsg);
         json_parser_free (&handle);
+        close(fd);
         return -1;
     }
     json_parser_free(&handle);
@@ -1077,7 +1335,19 @@ typedef struct {
     kea_json_config_hash_key_t stack[JSON_MAX_DEPTH];
     size_t depth;
     char *hash;
+    kea_result_t result;
 } kea_json_config_hash_ctx_t;
+
+static bool kea_json_config_hash_number(void *ctx, const char *num, size_t num_len)
+{
+    kea_json_config_hash_ctx_t *sctx = ctx;
+    if (sctx == NULL)
+        return false;
+
+    kea_result_number(&sctx->result, sctx->depth, num, num_len);
+
+    return true;
+}
 
 static bool kea_json_config_hash_string(void *ctx, const char *str, size_t str_len)
 {
@@ -1096,6 +1366,8 @@ static bool kea_json_config_hash_map_key(void * ctx, const char *ukey, size_t ke
     kea_json_config_hash_ctx_t *sctx = ctx;
     if (sctx == NULL)
         return false;
+
+    kea_result_map_key(&sctx->result, sctx->depth, ukey, key_len);
 
     switch(sctx->depth) {
     case 1:
@@ -1123,7 +1395,7 @@ static bool kea_json_config_hash_start_map(void *ctx)
     sctx->depth++;
     if (sctx->depth >= JSON_MAX_DEPTH)
         return false;
-    sctx->stack[sctx->depth] = KEA_CONFIG_HASH_JSON_NONE;
+    sctx->stack[sctx->depth-1] = KEA_CONFIG_HASH_JSON_NONE;
     return true;
 }
 
@@ -1146,7 +1418,7 @@ static xson_callbacks_t kea_json_config_hash_callbacks = {
     .xson_boolean     = NULL,
     .xson_integer     = NULL,
     .xson_double      = NULL,
-    .xson_number      = NULL,
+    .xson_number      = kea_json_config_hash_number,
     .xson_string      = kea_json_config_hash_string,
     .xson_start_map   = kea_json_config_hash_start_map,
     .xson_map_key     = kea_json_config_hash_map_key,
@@ -1169,10 +1441,22 @@ static int kea_read_config_hash(kea_t *kea, char hash[CONFIG_HASH_SIZE])
 
     char buffer[4096];
     ssize_t len = 0;
+    size_t total = 0;
     while ((len = read(fd, buffer, sizeof(buffer))) > 0) {
+        total += len;
+        if (total > KEA_RESPONSE_MAX_SIZE) {
+            PLUGIN_ERROR("Response larger than %d bytes.", KEA_RESPONSE_MAX_SIZE);
+            break;
+        }
         json_status_t status = json_parser_parse(&handle, (unsigned char *)buffer, len);
         if (status != JSON_STATUS_OK)
             break;
+    }
+
+    if (total > KEA_RESPONSE_MAX_SIZE) {
+        json_parser_free(&handle);
+        close(fd);
+        return -1;
     }
 
     json_status_t status = json_parser_complete(&handle);
@@ -1181,11 +1465,15 @@ static int kea_read_config_hash(kea_t *kea, char hash[CONFIG_HASH_SIZE])
         PLUGIN_ERROR("json_parse_complete failed: %s", (const char *)errmsg);
         json_parser_free_error(errmsg);
         json_parser_free (&handle);
+        close(fd);
         return -1;
     }
     json_parser_free(&handle);
 
     close(fd);
+
+    if (kea_result_check(&ctx.result, "config-hash-get") != 0)
+        return -1;
 
     return 0;
 }
@@ -1198,8 +1486,6 @@ static int kea_read (user_data_t *ud)
     }
 
     kea_t *kea = ud->data;
-
-    int status = 0;
 
     bool read_config = true;
     if (kea->config_hash[0] != '\0') {
@@ -1217,7 +1503,7 @@ static int kea_read (user_data_t *ud)
 
     cdtime_t when = cdtime();
 
-    kea_read_stats(kea);
+    int status = kea_read_stats(kea);
 
     metric_family_append(&kea->fams[FAM_KEA_UP], VALUE_GAUGE(status == 0 ? 1 : 0),
                          &kea->labels, NULL);
