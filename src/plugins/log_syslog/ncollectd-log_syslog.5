@@ -31,6 +31,9 @@ if the \fBnotify-level\fP option is provided.
 .Bl -tag -width Ds
 .It \fBhost\fP \fIhost\fP
 .It \fBport\fP \fIport\fP
+Send the messages to a remote syslog server at \fIhost\fP and \fIport\fP
+(default 514).
+Only UDP is supported, so each message must fit in a datagram.
 .It \fBlog-level\fP [\fIdebug|info|notice|warning|err\fP]
 Sets the log-level.
 If, for example, set to \fInotice\fP, then all events with severity
