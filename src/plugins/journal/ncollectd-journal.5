@@ -30,6 +30,13 @@ the lines using a match plugin.
 The configuration consists of one or more \fBinstance\fP blocks that define a
 systemd journal reader and a match plugin to process the log lines.
 .Pp
+The journal is read from its end when the plugin starts, the entries written
+while ncollectd is not running are not processed.
+If the journal can not be read it is reopened and the reading continues after
+the last processed entry.
+To read the system journal the user running ncollectd must be a member of
+the \fIsystemd-journal\fP group.
+.Pp
 The \fBinstance\fP block has the following options:
 .Bl -tag -width Ds
 .It \fBnamespace\fP \fInamespace\fP
