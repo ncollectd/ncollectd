@@ -31,8 +31,12 @@ Use the specified pidfile for the keepalived.
 Default to \fI/var/run/keepalived.pid\fP.
 .It \fBstats-path\fP \fI/path/to/stats\fP
 Default to \fI/tmp/keepalived.stats\fP
+The file must be a regular file owned by root, symbolic links are not followed.
+It is recommended to configure keepalived to write it outside \fI/tmp\fP.
 .It \fBdata-path\fP \fI/path/to/data\fP
 Default to \fI/tmp/keepalived.data\fP
+The file must be a regular file owned by root, symbolic links are not followed.
+It is recommended to configure keepalived to write it outside \fI/tmp\fP.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
