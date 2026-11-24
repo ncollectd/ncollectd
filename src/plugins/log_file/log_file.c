@@ -10,6 +10,8 @@
 #include "libutils/common.h"
 #include "libformat/format.h"
 
+#include <fcntl.h>
+
 #ifdef NCOLLECTD_DEBUG
 static int log_level = LOG_DEBUG;
 #else
@@ -30,12 +32,12 @@ static void logfile_log(const log_msg_t *msg, user_data_t __attribute__((unused)
     if (msg->severity > log_level)
         return;
 
-    char message[1024] = "";
-    strbuf_t buf = STRBUF_CREATE_STATIC(message);
+    strbuf_t buf = STRBUF_CREATE;
 
     int status = format_log(&buf, log_fmt, log_flags, msg);
-    if (status != 0) {
+    if ((status != 0) || (buf.ptr == NULL)) {
         fprintf(stderr, "logfile plugin: format message failed.\n");
+        strbuf_destroy(&buf);
         return;
     }
 
@@ -50,10 +52,24 @@ static void logfile_log(const log_msg_t *msg, user_data_t __attribute__((unused)
     } else if (strcasecmp(log_file, "stdout") == 0) {
         fh = stdout;
     } else {
-        fh = fopen(log_file, "a");
+        int flags = O_WRONLY | O_APPEND | O_CREAT;
+#ifdef O_CLOEXEC
+        flags |= O_CLOEXEC;
+#endif
+        int fd = open(log_file, flags, 0640);
+        if (fd < 0) {
+            fprintf(stderr, "logfile plugin: open (%s) failed: %s\n", log_file, STRERRNO);
+        } else {
+#ifndef O_CLOEXEC
+            fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+            fh = fdopen(fd, "a");
+            if (fh == NULL) {
+                fprintf(stderr, "logfile plugin: fdopen (%s) failed: %s\n", log_file, STRERRNO);
+                close(fd);
+            }
+        }
         do_close = true;
-        if (fh == NULL)
-            fprintf(stderr, "logfile plugin: fopen (%s) failed: %s\n", log_file, STRERRNO);
     }
 
     if (fh != NULL) {
@@ -67,20 +83,44 @@ static void logfile_log(const log_msg_t *msg, user_data_t __attribute__((unused)
     }
 
     pthread_mutex_unlock(&file_lock);
-    return;
+
+    strbuf_destroy(&buf);
 }
 
 static int logfile_notification(const notification_t *n,
                                 user_data_t __attribute__((unused)) * user_data)
 {
+    if (n == NULL)
+        return 0;
+
+    int severity;
+    switch (n->severity) {
+        case NOTIF_FAILURE:
+            severity = LOG_ERR;
+            break;
+        case NOTIF_WARNING:
+            severity = LOG_WARNING;
+            break;
+        case NOTIF_OKAY:
+            severity = LOG_NOTICE;
+            break;
+        default:
+            severity = LOG_ERR;
+            break;
+    }
+
     strbuf_t buf = STRBUF_CREATE;
 
-    strbuf_print(&buf, "Notification: ");
-
-    notification_marshal(&buf, n);
+    int status = strbuf_print(&buf, "Notification: ");
+    status |= notification_marshal(&buf, n);
+    if ((status != 0) || (buf.ptr == NULL)) {
+        fprintf(stderr, "logfile plugin: marshal notification failed.\n");
+        strbuf_destroy(&buf);
+        return -1;
+    }
 
     log_msg_t log = {
-        .severity = LOG_INFO,
+        .severity = severity,
         .time = (n->time != 0) ? n->time : cdtime(),
         .msg = buf.ptr,
     };
