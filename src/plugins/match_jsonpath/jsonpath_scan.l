@@ -31,17 +31,17 @@ void jsonpath_yyerror(JSONPATH_YYLTYPE *yylloc, void *scanner, jsonpath_parse_re
 %option bison-locations
 %option noyywrap
 %option noinput
+%option nodefault
 %option nounput
 %option nostdinit
 %option never-interactive
 %option reentrant
-%option extra-type="jsonpath_string_t *"
+%option extra-type="jsonpath_scanner_extra_t *"
 %option prefix="jsonpath_yy"
 
 %x xq
 %x xsq
 %x xnq
-%x xc
 
 special         [\?\%\$\.\[\]\{\}\(\)\|\&\!\=\<\>\@\#\,\*:\-\+\/]
 blank           [ \t\n\r\f]
@@ -49,14 +49,9 @@ other           [^\?\%\$\.\[\]\{\}\(\)\|\&\!\=\<\>\@\#\,\*:\-\+\/\\\"\' \t\n\r\f
 
 decdigit        [0-9]
 hexdigit        [0-9A-Fa-f]
-octdigit        [0-7]
-bindigit        [0-1]
 
-decinteger      (0|[1-9](_?{decdigit})*)
-decdigits       {decdigit}(_?{decdigit})*
-hexinteger      0[xX]{hexdigit}(_?{hexdigit})*
-octinteger      0[oO]{octdigit}(_?{octdigit})*
-bininteger      0[bB]{bindigit}(_?{bindigit})*
+decinteger      (0|[1-9]{decdigit}*)
+decdigits       {decdigit}+
 decimal         (({decinteger}(\.{decdigits})?)|\.{decdigits})
 real            ({decinteger}|{decimal})[Ee][-+]?{decdigits}
 realfail        ({decinteger}|{decimal})[Ee][-+]
@@ -76,18 +71,18 @@ hex_fail        \\x{hexdigit}{0,1}
                             add_string(yylloc, yyscanner, false, yytext, yyleng);
                         }
 <xnq>{blank}+           {
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             BEGIN INITIAL;
                             return check_keyword(yyscanner);
                         }
-<xnq>({special}|\")     {
-                            yylval->str = *yyextra;
+<xnq>({special}|\"|\')  {
+                            yylval->str = yyextra->scanstring;
                             yyless(0);
                             BEGIN INITIAL;
                             return check_keyword(yyscanner);
                         }
 <xnq><<EOF>>            {
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             BEGIN INITIAL;
                             return check_keyword(yyscanner);
                         }
@@ -99,39 +94,39 @@ hex_fail        \\x{hexdigit}{0,1}
 <xnq,xq,xsq>\\v         {   add_char(yylloc, yyscanner, false, '\v'); }
 <xnq,xq,xsq>{unicode}+  {
                             if (!parse_unicode(yylloc, yyscanner, yytext, yyleng))
-                                yyterminate();
+                                return LEXERROR_P;
                         }
 <xnq,xq,xsq>{hex_char}  {
                             if (!parse_hexchar(yylloc, yyscanner, yytext))
-                                yyterminate();
+                                return LEXERROR_P;
                         }
 <xnq,xq,xsq>{unicode}*{unicodefail} {
                             jsonpath_yyerror(yylloc, yyscanner, NULL,
                                              "invalid Unicode escape sequence");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 <xnq,xq,xsq>{hex_fail}  {
                             jsonpath_yyerror(yylloc, yyscanner, NULL,
                                              "invalid hexadecimal character sequence");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 <xnq,xq,xsq>{unicode}+\\ {
                             yyless(yyleng - 1);
                             if (!parse_unicode(yylloc, yyscanner, yytext, yyleng))
-                                yyterminate();
+                                return LEXERROR_P;
                         }
 <xnq,xq,xsq>\\.         {   add_char(yylloc, yyscanner, false, yytext[1]); }
 <xnq,xq,xsq>\\          {
                            jsonpath_yyerror(yylloc, yyscanner, NULL,
                                             "unexpected end after backslash");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 <xq,xsq><<EOF>>         {
                            jsonpath_yyerror(yylloc, yyscanner, NULL, "unterminated quoted string");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 <xq>\"                  {
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             BEGIN INITIAL;
                             return QSTRING_P;
                         }
@@ -139,7 +134,7 @@ hex_fail        \\x{hexdigit}{0,1}
 
 <xsq>[^\\\']+           {   add_string(yylloc, yyscanner, false, yytext, yyleng); }
 <xsq>\'                 {
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             BEGIN INITIAL;
                             return QSTRING_P;
                         }
@@ -159,57 +154,39 @@ hex_fail        \\x{hexdigit}{0,1}
 {decinteger}            {
                             add_string(yylloc, yyscanner, true, yytext, yyleng);
                             add_char(yylloc, yyscanner, false, '\0');
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             return INT_P;
                         }
 {real}                  {
                             add_string(yylloc, yyscanner, true, yytext, yyleng);
                             add_char(yylloc, yyscanner, false, '\0');
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             return NUMERIC_P;
                         }
 {decimal}               {
                             add_string(yylloc, yyscanner, true, yytext, yyleng);
                             add_char(yylloc, yyscanner, false, '\0');
-                            yylval->str = *yyextra;
+                            yylval->str = yyextra->scanstring;
                             return NUMERIC_P;
-                        }
-{hexinteger}            {
-                            add_string(yylloc, yyscanner, true, yytext, yyleng);
-                            add_char(yylloc, yyscanner, false, '\0');
-                            yylval->str = *yyextra;
-                            return INT_P;
-                        }
-{octinteger}            {
-                            add_string(yylloc, yyscanner, true, yytext, yyleng);
-                            add_char(yylloc, yyscanner, false, '\0');
-                            yylval->str = *yyextra;
-                            return INT_P;
-                        }
-{bininteger}            {
-                            add_string(yylloc, yyscanner, true, yytext, yyleng);
-                            add_char(yylloc, yyscanner, false, '\0');
-                            yylval->str = *yyextra;
-                            return INT_P;
                         }
 {realfail}              {
                             jsonpath_yyerror(yylloc, yyscanner, NULL, "invalid numeric literal");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 {decinteger_junk}       {
                             jsonpath_yyerror(yylloc, yyscanner, NULL,
                                              "trailing junk after numeric literal");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 {decimal_junk}          {
                             jsonpath_yyerror(yylloc, yyscanner, NULL,
                                              "trailing junk after numeric literal");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 {real_junk}             {
                             jsonpath_yyerror(yylloc, yyscanner, NULL,
                                              "trailing junk after numeric literal");
-                            yyterminate();
+                            return LEXERROR_P;
                         }
 \"                      {
                             add_char(yylloc, yyscanner, true, '\0');
@@ -232,17 +209,19 @@ hex_fail        \\x{hexdigit}{0,1}
 
 %%
 
-void jsonpath_yyerror(__attribute__((unused)) JSONPATH_YYLTYPE *loc,
-                      __attribute__((unused)) void *scanner,
+void jsonpath_yyerror(__attribute__((unused)) JSONPATH_YYLTYPE *loc, void *scanner,
                       jsonpath_parse_result_t *result, const char *message)
 {
+    if ((result == NULL) && (scanner != NULL))
+        result = yyget_extra(scanner)->result;
 
-    if (result != NULL) {
-        result->error = true;
+    if (result == NULL)
+        return;
+
+    result->error = true;
+    /* Keep the first error, a lexical error is followed by a generic syntax error. */
+    if (result->error_msg[0] == '\0')
         snprintf(result->error_msg, sizeof(result->error_msg), "%s", message);
-    } else {
-        fprintf(stderr, "jsonpath_yyerror : %s\n", message);
-    }
 }
 
 typedef struct {
@@ -285,7 +264,7 @@ static enum jsonpath_yytokentype check_keyword(void *scanner)
                              *stop_high = keywords + keywords_len,
                              *stop_middle;
 
-    jsonpath_string_t *scanstring = yyget_extra(scanner);
+    jsonpath_string_t *scanstring = &yyget_extra(scanner)->scanstring;
 
     if (scanstring->len > keywords[keywords_len - 1].len)
         return res;
@@ -320,30 +299,24 @@ static enum jsonpath_yytokentype check_keyword(void *scanner)
  */
 static int resize_string(void *scanner, bool init, int append_len)
 {
-    jsonpath_string_t *scanstring = yyget_extra(scanner);
+    jsonpath_string_t *scanstring = &yyget_extra(scanner)->scanstring;
     if (init) {
-        if (scanstring->val == NULL) {
-            scanstring->total = append_len < 32 ? 32 : append_len;
-            scanstring->val = calloc(1, scanstring->total);
-            if (scanstring->val == NULL)
-                return -1;
+        scanstring->len = 0;
+        if (scanstring->val != NULL)
             scanstring->val[0] = '\0';
-            scanstring->len = 0;
-        } else {
-            scanstring->val[0] = '\0';
-            scanstring->len = 0;
+    }
+
+    if ((scanstring->val == NULL) || (scanstring->len + append_len >= scanstring->total)) {
+        int total = scanstring->total > 0 ? scanstring->total : 32;
+        while ((scanstring->len + append_len + 1) >= total)
+            total *= 2;
+        char *tmp = realloc(scanstring->val, total);
+        if (tmp == NULL) {
+            jsonpath_yyerror(NULL, scanner, NULL, "out of memory");
+            return -1;
         }
-    } else {
-        if (scanstring->len + append_len >= scanstring->total) {
-            int total = scanstring->total;
-            while ((scanstring->len + append_len + 1) >= total)
-                total *= 2;
-            char *tmp = realloc(scanstring->val, total);
-            if (tmp == NULL)
-                return -1;
-            scanstring->val = tmp;
-            scanstring->total = total;
-        }
+        scanstring->val = tmp;
+        scanstring->total = total;
     }
 
     return 0;
@@ -353,7 +326,7 @@ static int resize_string(void *scanner, bool init, int append_len)
 static void add_string(__attribute__((unused)) JSONPATH_YYLTYPE *loc, void *scanner, bool init,
                                      char *s, int l)
 {
-    jsonpath_string_t *scanstring = yyget_extra(scanner);
+    jsonpath_string_t *scanstring = &yyget_extra(scanner)->scanstring;
     if (resize_string(scanner, init, l + 1) != 0)
         return;
     memcpy(scanstring->val + scanstring->len, s, l);
@@ -365,7 +338,7 @@ static void add_string(__attribute__((unused)) JSONPATH_YYLTYPE *loc, void *scan
 static void add_char(__attribute__((unused)) JSONPATH_YYLTYPE *loc, void *scanner, bool init,
                      char c)
 {
-    jsonpath_string_t *scanstring = yyget_extra(scanner);
+    jsonpath_string_t *scanstring = &yyget_extra(scanner)->scanstring;
     if (resize_string(scanner, init, 1) != 0)
         return;
     scanstring->val[scanstring->len] = c;
@@ -406,6 +379,11 @@ static bool parse_hexchar(JSONPATH_YYLTYPE *loc, void *scanner, char *s)
 
     ch = (s2 << 4) | s3;
 
+    if (ch == 0) {
+        jsonpath_yyerror(loc, scanner, NULL, "unsupported hexadecimal escape sequence \\x00");
+        return false;
+    }
+
     add_char(loc, scanner, false, ch);
     return true;
 }
@@ -420,17 +398,8 @@ static void hex2digit(unsigned int *val, const unsigned char *hex)
     }
 }
 
-static bool parse_unicode(JSONPATH_YYLTYPE *loc, void *scanner, char *s, int l)
+static void add_unicode_char(JSONPATH_YYLTYPE *loc, void *scanner, unsigned int codepoint)
 {
-    if (l != 6)
-        return false;
-
-    if ((s[0] != '\\') || (s[1] != 'u'))
-        return false;
-
-    unsigned int codepoint = 0;
-    hex2digit(&codepoint, (unsigned char *)s + 2);
-
     if (codepoint < 0x80) {
         add_char(loc, scanner, false, (char) codepoint);
     } else if (codepoint < 0x0800) {
@@ -447,6 +416,59 @@ static bool parse_unicode(JSONPATH_YYLTYPE *loc, void *scanner, char *s, int l)
         add_char(loc, scanner, false, (char)((codepoint & 0x3F) | 0x80));
     } else {
         add_char(loc, scanner, false, '?');
+    }
+}
+
+static bool parse_unicode(JSONPATH_YYLTYPE *loc, void *scanner, char *s, int l)
+{
+    if ((l <= 0) || ((l % 6) != 0)) {
+        jsonpath_yyerror(loc, scanner, NULL, "invalid Unicode escape sequence");
+        return false;
+    }
+
+    unsigned int hi_surrogate = 0;
+
+    for (int i = 0; i < l; i += 6) {
+        if ((s[i] != '\\') || (s[i + 1] != 'u')) {
+            jsonpath_yyerror(loc, scanner, NULL, "invalid Unicode escape sequence");
+            return false;
+        }
+
+        unsigned int codepoint = 0;
+        hex2digit(&codepoint, (unsigned char *)s + i + 2);
+
+        if ((codepoint >= 0xD800) && (codepoint <= 0xDBFF)) {
+            if (hi_surrogate != 0) {
+                jsonpath_yyerror(loc, scanner, NULL, "invalid Unicode surrogate pair");
+                return false;
+            }
+            hi_surrogate = codepoint;
+            continue;
+        }
+
+        if ((codepoint >= 0xDC00) && (codepoint <= 0xDFFF)) {
+            if (hi_surrogate == 0) {
+                jsonpath_yyerror(loc, scanner, NULL, "invalid Unicode surrogate pair");
+                return false;
+            }
+            codepoint = 0x10000 + ((hi_surrogate - 0xD800) << 10) + (codepoint - 0xDC00);
+            hi_surrogate = 0;
+        } else if (hi_surrogate != 0) {
+            jsonpath_yyerror(loc, scanner, NULL, "invalid Unicode surrogate pair");
+            return false;
+        }
+
+        if (codepoint == 0) {
+            jsonpath_yyerror(loc, scanner, NULL, "unsupported Unicode escape sequence \\u0000");
+            return false;
+        }
+
+        add_unicode_char(loc, scanner, codepoint);
+    }
+
+    if (hi_surrogate != 0) {
+        jsonpath_yyerror(loc, scanner, NULL, "invalid Unicode surrogate pair");
+        return false;
     }
 
     return true;

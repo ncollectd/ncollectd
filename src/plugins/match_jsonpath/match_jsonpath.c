@@ -4,6 +4,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/complain.h"
 #include "libutils/strbuf.h"
 #include "libutils/dtoa.h"
 #include "libxson/tree.h"
@@ -12,6 +13,7 @@
 typedef struct {
     char *path;
     jsonpath_item_t *expr;
+    c_complain_t complaint;
 } metric_path_t;
 
 typedef struct {
@@ -48,10 +50,23 @@ typedef struct {
     match_jsonpath_metric_t *metrics;
 } match_jsonpath_t;
 
+static jsonpath_exec_result_t metric_path_exec(metric_path_t *mpath, xson_value_t *val,
+                                               xson_value_list_t *vresult)
+{
+    char error[256] = {'\0'};
+    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, vresult,
+                                                   error, sizeof(error));
+    if (eresult == JSONPATH_EXEC_RESULT_ERROR)
+        c_complain(LOG_WARNING, &mpath->complaint, "Evaluating jsonpath '%s' failed: %s",
+                   mpath->path, error[0] != '\0' ? error : "unknown error");
+
+    return eresult;
+}
+
 static char *metric_path_match_string(metric_path_t *mpath, xson_value_t *val)
 {
     xson_value_list_t vresult = {0};
-    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, &vresult, NULL, 0);
+    jsonpath_exec_result_t eresult = metric_path_exec(mpath, val, &vresult);
     if (eresult == JSONPATH_EXEC_RESULT_NOT_FOUND) {
         xson_value_list_destroy(&vresult);
         return NULL;
@@ -100,10 +115,18 @@ static char *metric_path_match_string(metric_path_t *mpath, xson_value_t *val)
     return NULL;
 }
 
+static cdtime_t metric_path_double_to_time(double number)
+{
+    if (!isfinite(number) || (number < 0) || (number >= CDTIME_T_TO_DOUBLE(UINT64_MAX)))
+        return 0;
+
+    return DOUBLE_TO_CDTIME_T(number);
+}
+
 static cdtime_t metric_path_match_time(metric_path_t *mpath, xson_value_t *val)
 {
     xson_value_list_t vresult = {0};
-    jsonpath_exec_result_t eresult = jsonpath_exec(mpath->expr, val, &vresult, NULL, 0);
+    jsonpath_exec_result_t eresult = metric_path_exec(mpath, val, &vresult);
     if (eresult == JSONPATH_EXEC_RESULT_NOT_FOUND) {
         xson_value_list_destroy(&vresult);
         return 0;
@@ -119,6 +142,7 @@ static cdtime_t metric_path_match_time(metric_path_t *mpath, xson_value_t *val)
         return 0;
     }
 
+    cdtime_t t = 0;
     if (vresult.singleton != NULL) {
         xson_value_t *value = vresult.singleton;
         switch(value->type) {
@@ -132,20 +156,16 @@ static cdtime_t metric_path_match_time(metric_path_t *mpath, xson_value_t *val)
             double number = 0;
             int status = strtodouble(value->string, &number);
             if (status == 0)
-                return DOUBLE_TO_CDTIME_T(number);
-            return 0;
+                t = metric_path_double_to_time(number);
         }   break;
-        case XSON_TYPE_NUMBER: {
-            double number = value->number;
-            xson_value_list_destroy(&vresult);
-            return DOUBLE_TO_CDTIME_T(number);
-        }   break;
+        case XSON_TYPE_NUMBER:
+            t = metric_path_double_to_time(value->number);
+            break;
         }
-        return 0;
     }
 
     xson_value_list_destroy(&vresult);
-    return 0;
+    return t;
 }
 
 static int match_jsonpath_match_metric(match_metric_family_set_t *set,
@@ -191,6 +211,13 @@ static int match_jsonpath_match_metric(match_metric_family_set_t *set,
         free(str);
     }
 
+    if (strbuf_len(&buf) == 0) {
+        PLUGIN_WARNING("Empty metric name for path '%s', ignoring metric.", jp_metric->path.path);
+        free(value);
+        strbuf_destroy(&buf);
+        return -1;
+    }
+
     char *help = NULL;
     if (jp_metric->help != NULL) {
         help = strdup(jp_metric->help);
@@ -201,48 +228,57 @@ static int match_jsonpath_match_metric(match_metric_family_set_t *set,
     }
 
     label_set_t mlabel = {0};
+    int status = 0;
 
     for (size_t i = 0; i < jp->labels.num; i++) {
-        label_set_add(&mlabel, true, jp->labels.ptr[i].name, jp->labels.ptr[i].value);
+        if (label_set_add(&mlabel, true, jp->labels.ptr[i].name, jp->labels.ptr[i].value) != 0)
+            status = -1;
     }
 
     for (size_t i = 0; i < jp_metric->labels.num; i++) {
-        label_set_add(&mlabel, true, jp_metric->labels.ptr[i].name,
-                                     jp_metric->labels.ptr[i].value);
+        if (label_set_add(&mlabel, true, jp_metric->labels.ptr[i].name,
+                                         jp_metric->labels.ptr[i].value) != 0)
+            status = -1;
     }
 
     for (size_t i = 0; i < jp_metric->labels_path_num; i++) {
         char *str = metric_path_match_string(&jp_metric->labels_path[i].path, current);
         if (str != NULL) {
-            label_set_add(&mlabel, true, jp_metric->labels_path[i].key, str);
+            if (label_set_add(&mlabel, true, jp_metric->labels_path[i].key, str) != 0)
+                status = -1;
             free(str);
         }
     }
 
     for (size_t i = 0; i < jp_metric->labels_root_path_num; i++) {
-        char *str = metric_path_match_string(&jp_metric->labels_root_path[i].path, current);
+        char *str = metric_path_match_string(&jp_metric->labels_root_path[i].path, root);
         if (str != NULL) {
-            label_set_add(&mlabel, true, jp_metric->labels_root_path[i].key, str);
+            if (label_set_add(&mlabel, true, jp_metric->labels_root_path[i].key, str) != 0)
+                status = -1;
             free(str);
         }
 
     }
 
-    cdtime_t t = 0;
-    if (jp_metric->time_path.expr != NULL)
-        t = metric_path_match_time(&jp_metric->time_path, current);
-    else if (jp_metric->time_root_path.expr != NULL)
-        t = metric_path_match_time(&jp_metric->time_root_path, root);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the labels of metric '%s', ignoring metric.", buf.ptr);
+    } else {
+        cdtime_t t = 0;
+        if (jp_metric->time_path.expr != NULL)
+            t = metric_path_match_time(&jp_metric->time_path, current);
+        else if (jp_metric->time_root_path.expr != NULL)
+            t = metric_path_match_time(&jp_metric->time_root_path, root);
 
-    plugin_match_metric_family_set_add(set, buf.ptr, help, NULL, jp_metric->type,
-                                       &mlabel, value, t);
+        plugin_match_metric_family_set_add(set, buf.ptr, help, NULL, jp_metric->type,
+                                           &mlabel, value, t);
+    }
 
     label_set_reset(&mlabel);
     strbuf_destroy(&buf);
     free(help);
     free(value);
 
-    return 0;
+    return status;
 }
 
 static int match_jsonpath_match(match_metric_family_set_t *set, char *buffer, void *user_data)
@@ -265,7 +301,7 @@ static int match_jsonpath_match(match_metric_family_set_t *set, char *buffer, vo
     for (jp_metric = jp->metrics; jp_metric != NULL; jp_metric = jp_metric->next) {
 
         xson_value_list_t vresult = {0};
-        jsonpath_exec_result_t eresult = jsonpath_exec(jp_metric->path.expr, root, &vresult, NULL, 0);
+        jsonpath_exec_result_t eresult = metric_path_exec(&jp_metric->path, root, &vresult);
         if (eresult == JSONPATH_EXEC_RESULT_NOT_FOUND) {
             xson_value_list_destroy(&vresult);
             continue;
@@ -412,6 +448,7 @@ static int config_metric_path_label_append(const config_item_t *ci, metric_label
         PLUGIN_ERROR("strdup failed.");
         return -1;
     }
+    C_COMPLAIN_INIT(&tmp[*len].path.complaint);
     
     char error[256] = {'\0'};
     tmp[*len].path.expr = jsonpath_parser(tmp[*len].path.path, error, sizeof(error));
@@ -461,6 +498,11 @@ static int config_match_jsonpath_metric(const config_item_t *ci, match_jsonpath_
             status = config_metric_path(option, &jp_metric->help_root_path);
         } else if (strcasecmp("metric", option->key) == 0) {
             status = cf_util_get_string(option, &jp_metric->metric);
+            if ((status == 0) && (jp_metric->metric[0] == '\0')) {
+                PLUGIN_ERROR("The 'metric' option in %s:%d can not be empty.",
+                             cf_get_file(option), cf_get_lineno(option));
+                status = -1;
+            }
         } else if (strcasecmp("metric-path", option->key) == 0) {
             status = config_metric_path(option, &jp_metric->metric_path);
         } else if (strcasecmp("metric-root-path", option->key) == 0) {
@@ -488,10 +530,8 @@ static int config_match_jsonpath_metric(const config_item_t *ci, match_jsonpath_
             status = -1;
         }
 
-        if (status != 0) {
-            fprintf(stderr, "config_match_jsonpath_metric %s\n", option->key);
+        if (status != 0)
             break;
-        }
     }
 
     if (status != 0)
@@ -542,6 +582,12 @@ static int config_match_jsonpath_metric(const config_item_t *ci, match_jsonpath_
         PLUGIN_ERROR("Error 'time-path' and 'time-root-path' "
                      "are set in metric block at %s:%d", cf_get_file(ci), cf_get_lineno(ci));
         return -1;
+    }
+
+    if ((jp_metric->time_path.expr != NULL) || (jp_metric->time_root_path.expr != NULL)) {
+        PLUGIN_WARNING("The 'time-path' and 'time-root-path' options in metric block at %s:%d "
+                       "have no effect: the metrics are dispatched with the current time.",
+                       cf_get_file(ci), cf_get_lineno(ci));
     }
 
     return 0;

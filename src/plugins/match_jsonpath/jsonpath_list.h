@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+
 typedef struct {
     void *ptr_value;
 } jsonpath_list_cell_t;
@@ -53,7 +57,13 @@ static inline jsonpath_list_cell_t *jsonpath_list_last_cell(const jsonpath_list_
 
 static int jsonpath_list_enlarge(jsonpath_list_t *list, int min_size)
 {
-    int new_max_len = min_size;
+    if (min_size > (INT_MAX / 2))
+        return -1;
+
+    /* As in pg_list.c grow geometrically to avoid a realloc for each new cell. */
+    int new_max_len = 16;
+    while (new_max_len < min_size)
+        new_max_len *= 2;
 
     if (list->elements == list->initial_elements) {
         /*
@@ -63,10 +73,11 @@ static int jsonpath_list_enlarge(jsonpath_list_t *list, int min_size)
          * keeping all list cells in the same context, but it seems reasonable
          * to create such a guarantee now.)
          */
-        list->elements = calloc(1, new_max_len * sizeof(jsonpath_list_cell_t));
-        if (list->elements == NULL)
+        jsonpath_list_cell_t *tmp = calloc(1, new_max_len * sizeof(jsonpath_list_cell_t));
+        if (tmp == NULL)
             return -1;
-        memcpy(list->elements, list->initial_elements, list->length * sizeof(jsonpath_list_cell_t));
+        memcpy(tmp, list->initial_elements, list->length * sizeof(jsonpath_list_cell_t));
+        list->elements = tmp;
     } else {
         /* Normally, let repalloc deal with enlargement */
         jsonpath_list_cell_t *tmp = realloc(list->elements,
@@ -96,6 +107,9 @@ static inline jsonpath_list_t *jsonpath_list_new(int min_size)
     int max_size = min_size;
 
     jsonpath_list_t *list = calloc(1, sizeof(*list) + max_size * sizeof(jsonpath_list_cell_t));
+    if (list == NULL)
+        return NULL;
+
     list->length = min_size;
     list->max_length = max_size;
     list->elements = list->initial_elements;
@@ -107,9 +121,11 @@ static inline jsonpath_list_t *jsonpath_list_append(jsonpath_list_t *list, void 
 {
     if (list == NULL) {
         list = jsonpath_list_new(1);
+        if (list == NULL)
+            return NULL;
     } else {
         if (jsonpath_list_new_tail_cell(list) != 0)
-            return list;
+            return NULL;
     }
 
     jsonpath_list_last(list) = datum;
@@ -120,13 +136,16 @@ static inline jsonpath_list_t *jsonpath_list_prepend(jsonpath_list_t *list, void
 {
     if (list == NULL) {
         list = jsonpath_list_new(1);
+        if (list == NULL)
+            return NULL;
         jsonpath_list_last(list) = datum;
         return list;
     }
 
-    if (list->length >= list->max_length)
-        jsonpath_list_enlarge(list, list->length + 1);
-
+    if (list->length >= list->max_length) {
+        if (jsonpath_list_enlarge(list, list->length + 1) != 0)
+            return NULL;
+    }
     memmove(list->elements + 1, list->elements, sizeof(jsonpath_list_cell_t) * list->length);
     list->elements[0].ptr_value = datum;
     list->length++;
@@ -178,6 +197,8 @@ static inline jsonpath_list_t *jsonpath_list_delete_first(jsonpath_list_t *list)
 static inline jsonpath_list_t *jsonpath_list_make1(void *datum1)
 {
     jsonpath_list_t *list = jsonpath_list_new(1);
+    if (list == NULL)
+        return NULL;
 
     list->elements[0] = (jsonpath_list_cell_t) {.ptr_value = (datum1)};
     return list;
@@ -186,6 +207,8 @@ static inline jsonpath_list_t *jsonpath_list_make1(void *datum1)
 static inline jsonpath_list_t *jsonpath_list_make2(void *datum1, void *datum2)
 {
     jsonpath_list_t *list = jsonpath_list_new(2);
+    if (list == NULL)
+        return NULL;
 
     list->elements[0] = (jsonpath_list_cell_t) {.ptr_value = (datum1)};
     list->elements[1] = (jsonpath_list_cell_t) {.ptr_value = (datum2)};

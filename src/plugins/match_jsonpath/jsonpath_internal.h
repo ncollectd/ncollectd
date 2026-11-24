@@ -12,4 +12,9 @@ typedef struct {
 
 #include "jsonpath.h"
 
+typedef struct {
+    jsonpath_string_t scanstring;
+    jsonpath_parse_result_t *result;
+} jsonpath_scanner_extra_t;
+
 extern int jsonpath_yyparse(void *scanner, jsonpath_parse_result_t *result);
