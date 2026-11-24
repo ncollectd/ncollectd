@@ -62,6 +62,10 @@ static syslog_facility_t syslog_facility[] = {
 
 static size_t syslog_facility_size = STATIC_ARRAY_SIZE(syslog_facility);
 
+/* Set while sending a message: the PLUGIN_* calls in the send path go back to
+ * sl_log through plugin_log, this flag avoids an infinite recursion. */
+static _Thread_local bool sl_in_log;
+
 typedef struct {
     char *instance;
     syslog_kind_t kind;
@@ -109,9 +113,6 @@ static int sl_fmt_msg(strbuf_t *buf, const log_msg_t *msg)
 
 static int sl_rfc5424(int fd, cdtime_t time, int facility, int severity, const char *msg)
 {
-    char message[1024] = "";
-    strbuf_t buf = STRBUF_CREATE_STATIC(message);
-
     struct tm tm;
     struct timespec t_spec = CDTIME_T_TO_TIMESPEC(time);
     NORMALIZE_TIMESPEC(t_spec);
@@ -119,6 +120,8 @@ static int sl_rfc5424(int fd, cdtime_t time, int facility, int severity, const c
         PLUGIN_ERROR("gmtime_r failed: %s", STRERRNO);
         return -1;
     }
+
+    strbuf_t buf = STRBUF_CREATE;
 
     uint8_t prival =  (facility << 3) + severity;
     int status = strbuf_printf(&buf, "<%i>%i %d-%02d-%02dT%02d:%02d:%02d.%06"PRIu64"Z ",
@@ -150,21 +153,23 @@ static int sl_rfc5424(int fd, cdtime_t time, int facility, int severity, const c
     if (ret < 0)
         PLUGIN_WARNING("Failed to write message: %s.", STRERRNO);
 
+    strbuf_destroy(&buf);
+
     return 0;
 }
 
 static int sl_rfc3164(int fd, cdtime_t time, int facility, int severity, const char *msg)
 {
-    char message[2048] = "";
-    strbuf_t buf = STRBUF_CREATE_STATIC(message);
-
     struct tm tm;
     struct timespec t_spec = CDTIME_T_TO_TIMESPEC(time);
     NORMALIZE_TIMESPEC(t_spec);
-    if (gmtime_r(&t_spec.tv_sec, &tm) == NULL) {
-        PLUGIN_ERROR("gmtime_r failed: %s", STRERRNO);
+    /* The RFC 3164 timestamp has no time zone, receivers expect local time. */
+    if (localtime_r(&t_spec.tv_sec, &tm) == NULL) {
+        PLUGIN_ERROR("localtime_r failed: %s", STRERRNO);
         return -1;
     }
+
+    strbuf_t buf = STRBUF_CREATE;
 
     uint8_t prival =  (facility << 3) + severity;
 
@@ -191,6 +196,8 @@ static int sl_rfc3164(int fd, cdtime_t time, int facility, int severity, const c
     if (ret < 0)
         PLUGIN_WARNING("Failed to write message: %s.", STRERRNO);
 
+    strbuf_destroy(&buf);
+
     return 0;
 }
 
@@ -204,13 +211,20 @@ static void sl_log(const log_msg_t *msg, user_data_t *ud)
     if (msg->severity > ctx->log_level)
         return;
 
-    char message[1024] = "";
-    strbuf_t buf = STRBUF_CREATE_STATIC(message);
+    if (sl_in_log)
+        return;
+    sl_in_log = true;
+
+    strbuf_t buf = STRBUF_CREATE;
     sl_fmt_msg(&buf, msg);
+    if (buf.ptr == NULL) {
+        strbuf_destroy(&buf);
+        return;
+    }
 
     switch(ctx->kind) {
     case SYSLOG_LOCAL:
-        syslog(msg->severity, "%s", buf.ptr);
+        syslog((ctx->facility << 3) | msg->severity, "%s", buf.ptr);
         break;
     case SYSLOG_RFC3164:
         sl_rfc3164(ctx->fd, msg->time, ctx->facility, msg->severity, buf.ptr);
@@ -219,6 +233,10 @@ static void sl_log(const log_msg_t *msg, user_data_t *ud)
         sl_rfc5424(ctx->fd, msg->time, ctx->facility, msg->severity, buf.ptr);
         break;
     }
+
+    sl_in_log = false;
+
+    strbuf_destroy(&buf);
 }
 
 static int sl_notification(const notification_t *n, user_data_t *ud)
@@ -246,14 +264,21 @@ static int sl_notification(const notification_t *n, user_data_t *ud)
             log_severity = LOG_ERR;
     }
 
-    char message[1024] = "";
-    strbuf_t buf = STRBUF_CREATE_STATIC(message);
+    if (sl_in_log)
+        return 0;
+    sl_in_log = true;
+
+    strbuf_t buf = STRBUF_CREATE;
     strbuf_putstr(&buf, "Notification: ");
     notification_marshal(&buf, n);
+    if (buf.ptr == NULL) {
+        strbuf_destroy(&buf);
+        return 0;
+    }
 
     switch(ctx->kind) {
     case SYSLOG_LOCAL:
-        syslog(log_severity, "%s", buf.ptr);
+        syslog((ctx->facility << 3) | log_severity, "%s", buf.ptr);
         break;
     case SYSLOG_RFC3164:
         sl_rfc3164(ctx->fd, n->time, ctx->facility, log_severity, buf.ptr);
@@ -262,6 +287,8 @@ static int sl_notification(const notification_t *n, user_data_t *ud)
         sl_rfc5424(ctx->fd, n->time, ctx->facility, log_severity, buf.ptr);
         break;
     }
+
+    sl_in_log = false;
 
     return 0;
 }
@@ -277,7 +304,7 @@ static void sl_free(void *arg)
     if (ctx->rc > 0)
         return;
 
-    if (ctx->fd > 0)
+    if (ctx->fd >= 0)
         close(ctx->fd);
 
     free(ctx->instance);
@@ -366,7 +393,8 @@ static int sl_config_instance(config_item_t *ci)
 #else
     ctx->log_level = LOG_INFO;
 #endif
-    ctx->notif_severity = NOTIF_FAILURE;
+    /* By default no notifications are sent. */
+    ctx->notif_severity = 0;
     int ttl = -1;
 
     for (int i = 0; i < ci->children_num; i++) {
@@ -403,6 +431,12 @@ static int sl_config_instance(config_item_t *ci)
     if ((ctx->host != NULL) && (ctx->kind == SYSLOG_LOCAL))
         ctx->kind = SYSLOG_RFC3164;
 
+    if ((ctx->host == NULL) && (ctx->kind != SYSLOG_LOCAL)) {
+        PLUGIN_ERROR("The 'host' option is required with 'type' rfc3164 or rfc5424.");
+        sl_free(ctx);
+        return -1;
+    }
+
     if (ctx->host != NULL) {
         ctx->fd = socket_connect_udp(ctx->host, ctx->port, ttl);
         if (ctx->fd < 0) {
@@ -413,10 +447,16 @@ static int sl_config_instance(config_item_t *ci)
 
     user_data_t user_data = { .data = ctx, .free_func = sl_free };
 
-    ctx->rc++;
-    plugin_register_log("log_syslog", ctx->instance, sl_log, &user_data);
-    ctx->rc++;
-    plugin_register_notification("log_syslog", ctx->instance, sl_notification, &user_data);
+    /* The context is shared by both callbacks and is freed when both have
+     * released it, a failed registration releases its reference. */
+    ctx->rc = 2;
+    int status_log = plugin_register_log("log_syslog", ctx->instance, sl_log, &user_data);
+    int status_notif = plugin_register_notification("log_syslog", ctx->instance,
+                                                    sl_notification, &user_data);
+    if ((status_log != 0) || (status_notif != 0)) {
+        PLUGIN_ERROR("Failed to register the log or notification callback.");
+        return -1;
+    }
 
     return 0;
 }

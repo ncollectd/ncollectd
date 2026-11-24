@@ -33,6 +33,10 @@ if the **notify-level** option is provided.
 
 **port** *port*
 
+> Send the messages to a remote syslog server at *host* and *port*
+> (default 514).
+> Only UDP is supported, so each message must fit in a datagram.
+
 **log-level** \[*debug|info|notice|warning|err*]
 
 > Sets the log-level.
