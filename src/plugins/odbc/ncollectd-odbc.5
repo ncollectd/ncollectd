@@ -39,6 +39,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBping-query\fP \fIquery\fP
         \fBquery\fP \fIquery-name\fP
         \fBfilter\fP {
@@ -91,6 +92,9 @@ Prepends \fIprefix\fP to the metrics name.
 Sets the interval (in seconds) in which the values will be collected from this
 database.
 By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+Sets the timeout (in seconds) for the login to the database and for each query.
+By default the \fBinterval\fP of the instance will be used.
 .It \fBping-query\fP \fIquery\fP
 Specifies a query to test the connection to the database.
 .It \fBquery\fP \fIquery-name\fP

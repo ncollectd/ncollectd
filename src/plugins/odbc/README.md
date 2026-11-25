@@ -38,6 +38,7 @@ NCOLLECTD-ODBC(5) - File Formats Manual
 	        label key value
 	        metric-prefix prefix
 	        interval seconds
+	        timeout seconds
 	        ping-query query
 	        query query-name
 	        filter {
@@ -109,6 +110,11 @@ to these rules.
 > > Sets the interval (in seconds) in which the values will be collected from this
 > > database.
 > > By default the global **interval** setting will be used.
+
+> **timeout** *seconds*
+
+> > Sets the timeout (in seconds) for the login to the database and for each query.
+> > By default the **interval** of the instance will be used.
 
 > **ping-query** *query*
 
