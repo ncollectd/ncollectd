@@ -5,12 +5,7 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
-#include <systemd/sd-daemon.h>
 #include <systemd/sd-bus.h>
-
-#ifdef HAVE_LINUX_CONFIG_H
-#include <linux/config.h>
-#endif
 
 enum {
     FAM_SSSD_UP,
@@ -37,6 +32,18 @@ static metric_family_t fams[FAM_SSSD_MAX] = {
     },
 };
 
+/* Errors from the InfoPipe calls (e.g. "Access denied" when ncollectd is not in
+ * the [ifp] allowed_uids) are reported with an increasing interval instead of
+ * on every read. */
+static complain_t sssd_complaint;
+static bool sssd_read_failed;
+
+#define SSSD_COMPLAIN(...)                                                     \
+    do {                                                                       \
+        sssd_read_failed = true;                                               \
+        PLUGIN_COMPLAIN_ERROR(&sssd_complaint, __VA_ARGS__);    \
+    } while (0)
+
 #define BUS_ERROR_MSG(e, error) bus_error_msg(e, error, (char[ERRBUF_SIZE]){0}, ERRBUF_SIZE)
 
 static const char* bus_error_msg(const sd_bus_error *e, int error, char *buf, size_t buflen)
@@ -61,7 +68,7 @@ static int sssd_active_server(sd_bus *bus, char *domain, char *decode_domain, ch
                                                 "org.freedesktop.sssd.infopipe.Domains.Domain",
                                                 "ActiveServer");
     if (status < 0) {
-        PLUGIN_ERROR("Failed to crate call to "
+        PLUGIN_ERROR("Failed to create call to "
                      "org.freedesktop.sssd.infopipe.Domains.Domain.ActiveServer.");
         sd_bus_error_free(&error);
         return -1;
@@ -77,8 +84,8 @@ static int sssd_active_server(sd_bus *bus, char *domain, char *decode_domain, ch
 
     status = sd_bus_call(bus, m, 0, &error, &reply);
     if (status < 0) {
-        PLUGIN_ERROR("Call to org.freedesktop.sssd.infopipe.Domains.Domain.ActiveServer"
-                     "failed: %s.", BUS_ERROR_MSG(&error, status));
+        SSSD_COMPLAIN("Call to org.freedesktop.sssd.infopipe.Domains.Domain.ActiveServer "
+                      "failed: %s.", BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         sd_bus_message_unref(m);
         return -1;
@@ -94,6 +101,12 @@ static int sssd_active_server(sd_bus *bus, char *domain, char *decode_domain, ch
                      "org.freedesktop.sssd.infopipe.Domains.Domain.ActiveServer.");
         sd_bus_message_unref(reply);
         return -1;
+    }
+
+    /* No active server. */
+    if ((active == NULL) || (active[0] == '\0')) {
+        sd_bus_message_unref(reply);
+        return 0;
     }
 
     label_set_t info = {
@@ -120,8 +133,8 @@ static int sssd_list_services(sd_bus *bus, char *domain, char *decode_domain)
                                          "ListServices", &error, &reply, NULL);
 
     if (status < 0) {
-        PLUGIN_ERROR("Call to org.freedesktop.sssd.infopipe.Domains.Domain.ListServices "
-                     "failed: %s.", BUS_ERROR_MSG(&error, status));
+        SSSD_COMPLAIN("Call to org.freedesktop.sssd.infopipe.Domains.Domain.ListServices "
+                      "failed: %s.", BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         return -1;
     }
@@ -152,6 +165,7 @@ static int sssd_list_services(sd_bus *bus, char *domain, char *decode_domain)
     return 0;
 }
 
+/* Returns 1 if the domain is online, 0 if it is offline and -1 on error. */
 static int sssd_is_online(sd_bus *bus, char *domain)
 {
     sd_bus_message *reply = NULL;
@@ -161,8 +175,8 @@ static int sssd_is_online(sd_bus *bus, char *domain)
                                          "org.freedesktop.sssd.infopipe.Domains.Domain",
                                          "IsOnline", &error, &reply, NULL);
     if (status < 0)  {
-        PLUGIN_ERROR("Call to org.freedesktop.sssd.infopipe.Domains.Domain.IsOnline failed: %s.",
-                     BUS_ERROR_MSG(&error, status));
+        SSSD_COMPLAIN("Call to org.freedesktop.sssd.infopipe.Domains.Domain.IsOnline failed: %s.",
+                      BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         return -1;
     }
@@ -172,14 +186,14 @@ static int sssd_is_online(sd_bus *bus, char *domain)
     int online = 0;
     status = sd_bus_message_read(reply, "b", &online);
     if (status <= 0) {
-        PLUGIN_ERROR("Failed to read reponse from "
+        PLUGIN_ERROR("Failed to read response from "
                      "org.freedesktop.sssd.infopipe.Domains.Domain.IsOnline.");
         sd_bus_message_unref(reply);
         return -1;
     }
 
     sd_bus_message_unref(reply);
-    return 0;
+    return online ? 1 : 0;
 }
 
 static int sssd_list_domains(sd_bus *bus)
@@ -192,8 +206,8 @@ static int sssd_list_domains(sd_bus *bus)
                                          "org.freedesktop.sssd.infopipe",
                                          "ListDomains", &error, &reply, NULL);
     if (status < 0) {
-       PLUGIN_ERROR("Call to org.freedesktop.sssd.infopipe.ListDomains failed: %s.",
-                     BUS_ERROR_MSG(&error, status));
+       SSSD_COMPLAIN("Call to org.freedesktop.sssd.infopipe.ListDomains failed: %s.",
+                      BUS_ERROR_MSG(&error, status));
        sd_bus_error_free(&error);
        return -1;
     }
@@ -231,7 +245,7 @@ static int sssd_list_domains(sd_bus *bus)
 
         value_t online = VALUE_GAUGE(0);
         status = sssd_is_online(bus, domain);
-        if (status == 0)
+        if (status > 0)
             online = VALUE_GAUGE(1);
 
         metric_family_append(&fams[FAM_SSSD_DOMAIN_ONLINE], online, NULL,
@@ -259,7 +273,7 @@ static int sssd_ping(sd_bus *bus)
                                                          "org.freedesktop.sssd.infopipe",
                                                          "Ping");
     if (status < 0) {
-        PLUGIN_ERROR("Failed to created method call to org.freedesktop.sssd.infopipe.Ping.");
+        PLUGIN_ERROR("Failed to create method call to org.freedesktop.sssd.infopipe.Ping.");
         return -1;
     }
 
@@ -272,8 +286,8 @@ static int sssd_ping(sd_bus *bus)
 
     status = sd_bus_call(bus, m, 0, &error, &reply);
     if (status < 0) {
-        PLUGIN_ERROR("Call to org.freedesktop.sssd.infopipe.Ping failed: %s.",
-                     BUS_ERROR_MSG(&error, status));
+        SSSD_COMPLAIN("Call to org.freedesktop.sssd.infopipe.Ping failed: %s.",
+                      BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         sd_bus_message_unref(m);
         return -1;
@@ -303,14 +317,20 @@ static int sssd_read(void)
 {
     sd_bus *bus = NULL;
 
-    if (sd_booted() <= 0)
-        return -1;
-
     int status = sd_bus_default_system(&bus);
     if (status < 0) {
-        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERRNO);
-        return -1;
+        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERROR(-status));
+        metric_family_append(&fams[FAM_SSSD_UP], VALUE_GAUGE(0), NULL, NULL);
+        plugin_dispatch_metric_family(&fams[FAM_SSSD_UP], 0);
+        return 0;
     }
+
+    sssd_read_failed = false;
+
+    /* Do not block the read thread for the default sd-bus timeout (25s). */
+    uint64_t timeout = CDTIME_T_TO_US(plugin_get_interval()) / 2;
+    if (timeout > 0)
+        sd_bus_set_method_call_timeout(bus, timeout);
 
     status = sssd_ping(bus);
     if (status != 0) {
@@ -325,6 +345,9 @@ static int sssd_read(void)
     sssd_list_domains(bus);
 
     sd_bus_unref(bus);
+
+    if (!sssd_read_failed)
+        PLUGIN_RELEASE_INFO(&sssd_complaint, "InfoPipe calls succeeded again.");
 
     plugin_dispatch_metric_family_array(fams, FAM_SSSD_MAX, 0);
 
