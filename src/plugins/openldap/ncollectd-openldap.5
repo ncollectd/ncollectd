@@ -73,8 +73,7 @@ Defines whether TLS must be used when connecting to the OpenLDAP server.
 Disabled by default.
 .It \fBtimeout\fP \fIseconds\fP
 Sets the timeout value for ldap operations, in seconds.
-By default, the configured \fIinterval\fP is used to set the timeout.
-Use \fB-1\fP to disable (infinite timeout).
+By default, half of the configured \fIinterval\fP is used to set the timeout.
 .It \fBverify-host\fP \fItrue|false\fP
 Enables or disables peer host name verification.
 If enabled, the plugin checks if the \f(CWCommon Name\fP or a

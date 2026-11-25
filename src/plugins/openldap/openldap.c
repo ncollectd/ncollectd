@@ -200,19 +200,45 @@ static int openldap_init_host(openldap_t *st)
         return -1;
     }
 
-    ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
+    rc = ldap_set_option(st->ld, LDAP_OPT_PROTOCOL_VERSION, &st->version);
+    if (rc != LDAP_OPT_SUCCESS) {
+        PLUGIN_ERROR("Failed to set the protocol version %d for %s.", st->version, st->url);
+        ldap_unbind_ext_s(st->ld, NULL, NULL);
+        st->ld = NULL;
+        return -1;
+    }
 
     struct timeval tm = CDTIME_T_TO_TIMEVAL(st->timeout);
-    ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &tm);
+    if (ldap_set_option(st->ld, LDAP_OPT_TIMEOUT, &tm) != LDAP_OPT_SUCCESS)
+        PLUGIN_WARNING("Failed to set the timeout for %s.", st->url);
 
-    ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON);
+    if (ldap_set_option(st->ld, LDAP_OPT_NETWORK_TIMEOUT, &tm) != LDAP_OPT_SUCCESS)
+        PLUGIN_WARNING("Failed to set the timeout for %s.", st->url);
 
-    if (st->cacert != NULL)
-        ldap_set_option(st->ld, LDAP_OPT_X_TLS_CACERTFILE, st->cacert);
+    if (ldap_set_option(st->ld, LDAP_OPT_RESTART, LDAP_OPT_ON) != LDAP_OPT_SUCCESS)
+        PLUGIN_WARNING("Failed to set the restart option for %s.", st->url);
+
+    if (st->cacert != NULL) {
+        if (ldap_set_option(st->ld, LDAP_OPT_X_TLS_CACERTFILE, st->cacert) != LDAP_OPT_SUCCESS)
+            PLUGIN_WARNING("Failed to set the CA certificate file for %s.", st->url);
+    }
 
     if (st->verifyhost == false) {
         int never = LDAP_OPT_X_TLS_NEVER;
-        ldap_set_option(st->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never);
+        if (ldap_set_option(st->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &never) != LDAP_OPT_SUCCESS)
+            PLUGIN_WARNING("Failed to disable certificate verification for %s.", st->url);
+    }
+
+    if ((st->cacert != NULL) || (st->verifyhost == false)) {
+        /* Create a new TLS context so the per handle TLS options take effect. */
+        int is_server = 0;
+        rc = ldap_set_option(st->ld, LDAP_OPT_X_TLS_NEWCTX, &is_server);
+        if (rc != LDAP_OPT_SUCCESS) {
+            PLUGIN_ERROR("Failed to create a new TLS context for %s.", st->url);
+            ldap_unbind_ext_s(st->ld, NULL, NULL);
+            st->ld = NULL;
+            return -1;
+        }
     }
 
     if (st->starttls) {
@@ -246,6 +272,19 @@ static int openldap_init_host(openldap_t *st)
     return 0;
 }
 
+/* Parse the first value of an attribute as an unsigned integer.
+ * Returns zero on success. */
+static int openldap_get_uinteger(struct berval **list, uint64_t *ret)
+{
+    if ((list == NULL) || (list[0] == NULL) || (list[0]->bv_val == NULL))
+        return -1;
+
+    char buffer[64];
+    sstrnncpy(buffer, sizeof(buffer), list[0]->bv_val, list[0]->bv_len);
+
+    return parse_uinteger(buffer, ret);
+}
+
 static int openldap_read_host(user_data_t *ud)
 {
     char *attrs[] = {
@@ -270,14 +309,15 @@ static int openldap_read_host(user_data_t *ud)
         return -1;
     }
 
-    LDAPMessage *result;
+    LDAPMessage *result = NULL;
     int rc = ldap_search_ext_s(st->ld, "cn=Monitor", LDAP_SCOPE_SUBTREE,
                                "(|(!(cn=* *))(cn=Database*))", attrs, 0, NULL, NULL,
                                NULL, 0, &result);
 
     if (unlikely(rc != LDAP_SUCCESS)) {
         PLUGIN_ERROR("Failed to execute search: %s", ldap_err2string(rc));
-        ldap_msgfree(result);
+        if (result != NULL)
+            ldap_msgfree(result);
         ldap_unbind_ext_s(st->ld, NULL, NULL);
         st->ld = NULL;
         metric_family_append(&st->fams[FAM_OPENLDAP_UP],
@@ -296,16 +336,12 @@ static int openldap_read_host(user_data_t *ud)
         if (dn == NULL)
             continue;
 
-        unsigned long long counter = 0;
-        unsigned long long opc = 0;
-        unsigned long long opi = 0;
-        unsigned long long info = 0;
+        uint64_t counter = 0;
+        uint64_t opc = 0;
+        uint64_t opi = 0;
+        uint64_t info = 0;
+        uint64_t value = 0;
 
-        struct berval counter_data;
-        struct berval opc_data;
-        struct berval opi_data;
-        struct berval info_data;
-        struct berval olmbdb_data;
         struct berval nc_data;
 
         struct berval **counter_list = NULL;
@@ -315,261 +351,259 @@ static int openldap_read_host(user_data_t *ud)
         struct berval **olmbdb_list = NULL;
         struct berval **nc_list = NULL;
 
-        if ((counter_list = ldap_get_values_len(st->ld, e, "monitorCounter")) != NULL) {
-            counter_data = *counter_list[0];
-            counter = atoll(counter_data.bv_val);
-        }
+        counter_list = ldap_get_values_len(st->ld, e, "monitorCounter");
+        bool have_counter = openldap_get_uinteger(counter_list, &counter) == 0;
 
-        if ((opc_list = ldap_get_values_len(st->ld, e, "monitorOpCompleted")) != NULL) {
-            opc_data = *opc_list[0];
-            opc = atoll(opc_data.bv_val);
-        }
+        opc_list = ldap_get_values_len(st->ld, e, "monitorOpCompleted");
+        bool have_opc = openldap_get_uinteger(opc_list, &opc) == 0;
 
-        if ((opi_list = ldap_get_values_len(st->ld, e, "monitorOpInitiated")) != NULL) {
-            opi_data = *opi_list[0];
-            opi = atoll(opi_data.bv_val);
-        }
+        opi_list = ldap_get_values_len(st->ld, e, "monitorOpInitiated");
+        bool have_opi = openldap_get_uinteger(opi_list, &opi) == 0;
 
-        if ((info_list = ldap_get_values_len(st->ld, e, "monitoredInfo")) != NULL) {
-            info_data = *info_list[0];
-            info = atoll(info_data.bv_val);
-        }
+        info_list = ldap_get_values_len(st->ld, e, "monitoredInfo");
+        bool have_info = openldap_get_uinteger(info_list, &info) == 0;
 
         if (strcmp(dn, "cn=Total,cn=Connections,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_CONNECTIONS],
                                      VALUE_COUNTER(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=Current,cn=Connections,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_CURRENT_CONNECTIONS],
                                       VALUE_GAUGE(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "all"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "all"), NULL);
         } else if (strcmp(dn, "cn=Bind,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "bind"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "bind"), NULL);
         } else if (strcmp(dn, "cn=UnBind,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "unbind"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "unbind"), NULL);
         } else if (strcmp(dn, "cn=Search,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "search"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "search"), NULL);
         } else if (strcmp(dn, "cn=Compare,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "compare"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "compare"), NULL);
         } else if (strcmp(dn, "cn=Modify,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "modify"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "modify"), NULL);
         } else if (strcmp(dn, "cn=Modrdn,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "modrdn"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "modrdn"), NULL);
         } else if (strcmp(dn, "cn=Add,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "add"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "add"), NULL);
         } else if (strcmp(dn, "cn=Delete,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "delete"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "delete"), NULL);
         } else if (strcmp(dn, "cn=Abandon,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "abandon"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "abandon"), NULL);
         } else if (strcmp(dn, "cn=Extended,cn=Operations,cn=Monitor") == 0) {
-            if (opc_list != NULL)
+            if (have_opc)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_COMPLETED],
                                      VALUE_COUNTER(opc), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "extended"), NULL);
-            if (opi_list != NULL)
+            if (have_opi)
                 metric_family_append(&st->fams[FAM_OPENLDAP_OPERATIONS_INITIATED],
                                      VALUE_COUNTER(opi), &st->labels,
                                      &LABEL_PAIR_CONST("operation", "extended"), NULL);
         } else if ((strncmp(dn, "cn=Database", 11) == 0) &&
                    ((nc_list = ldap_get_values_len(st->ld, e, "namingContexts")) != NULL)) {
+            if ((nc_list[0] == NULL) || (nc_list[0]->bv_val == NULL)) {
+                ldap_value_free_len(nc_list);
+                nc_list = NULL;
+                goto next_entry;
+            }
             nc_data = *nc_list[0];
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBEntryCache")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_BDB_ENTRY_CACHE_SIZE],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_BDB_ENTRY_CACHE_SIZE],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBDNCache")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_BDB_DN_CACHE_SIZE],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_BDB_DN_CACHE_SIZE],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmBDBIDLCache")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_BDB_IDL_CACHE_SIZE],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_BDB_IDL_CACHE_SIZE],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBEntries")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_ENTRIES],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_MDB_ENTRIES],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBPagesMax")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_MAX],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_MAX],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBPagesUsed")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_USED],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_USED],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBPagesFree")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_FREE],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_MDB_PAGES_FREE],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBReadersMax")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_READERS_MAX],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_MDB_READERS_MAX],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             if ((olmbdb_list = ldap_get_values_len(st->ld, e, "olmMDBReadersUsed")) != NULL) {
-                olmbdb_data = *olmbdb_list[0];
-                metric_family_append(&st->fams[FAM_OPENLDAP_MDB_READERS_USED],
-                            VALUE_GAUGE(atoll(olmbdb_data.bv_val)), &st->labels,
-                            &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
+                if (openldap_get_uinteger(olmbdb_list, &value) == 0)
+                    metric_family_append(&st->fams[FAM_OPENLDAP_MDB_READERS_USED],
+                                VALUE_GAUGE(value), &st->labels,
+                                &LABEL_PAIR_CONST("database", nc_data.bv_val), NULL);
                 ldap_value_free_len(olmbdb_list);
             }
 
             ldap_value_free_len(nc_list);
         } else if (strcmp(dn, "cn=Bytes,cn=Statistics,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_SEND_BYTES],
                                      VALUE_COUNTER(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=PDU,cn=Statistics,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_SEND_PDUS],
                                      VALUE_COUNTER(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=Entries,cn=Statistics,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_SEND_ENTRIES],
                                      VALUE_COUNTER(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=Referrals,cn=Statistics,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_SEND_REFERRALS],
                                      VALUE_COUNTER(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=Open,cn=Threads,cn=Monitor") == 0) {
-            if (info_list != NULL)
+            if (have_info)
                 metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
                                      VALUE_GAUGE(info), &st->labels,
                                      &LABEL_PAIR_CONST("status", "open"), NULL);
         } else if (strcmp(dn, "cn=Starting,cn=Threads,cn=Monitor") == 0) {
-            if (info_list != NULL)
+            if (have_info)
                 metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
                                      VALUE_GAUGE(info), &st->labels,
                                      &LABEL_PAIR_CONST("status", "stating"), NULL);
         } else if (strcmp(dn, "cn=Active,cn=Threads,cn=Monitor") == 0) {
-            if (info_list != NULL)
+            if (have_info)
                 metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
                                      VALUE_GAUGE(info), &st->labels,
                                      &LABEL_PAIR_CONST("status", "active"), NULL);
         } else if (strcmp(dn, "cn=Pending,cn=Threads,cn=Monitor") == 0) {
-            if (info_list != NULL)
+            if (have_info)
                 metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
                                      VALUE_GAUGE(info), &st->labels,
                                      &LABEL_PAIR_CONST("status", "pending"), NULL);
         } else if (strcmp(dn, "cn=Backload,cn=Threads,cn=Monitor") == 0) {
-            if (info_list != NULL)
+            if (have_info)
                 metric_family_append(&st->fams[FAM_OPENLDAP_THREADS],
                                      VALUE_GAUGE(info), &st->labels,
                                      &LABEL_PAIR_CONST("status", "backload"), NULL);
         } else if (strcmp(dn, "cn=Read,cn=Waiters,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_WAITERS_READ],
                                      VALUE_GAUGE(counter), &st->labels, NULL);
         } else if (strcmp(dn, "cn=Write,cn=Waiters,cn=Monitor") == 0) {
-            if (counter_list != NULL)
+            if (have_counter)
                 metric_family_append(&st->fams[FAM_OPENLDAP_WAITERS_WRITE],
                                      VALUE_GAUGE(counter), &st->labels, NULL);
         }
 
+next_entry:
         ldap_value_free_len(counter_list);
         ldap_value_free_len(opc_list);
         ldap_value_free_len(opi_list);
@@ -625,6 +659,11 @@ static int openldap_config_add(config_item_t *ci)
             status = cf_util_get_boolean(child, &st->verifyhost);
         } else if (strcasecmp("version", child->key) == 0) {
             status = cf_util_get_int(child, &st->version);
+            if ((status == 0) && (st->version != LDAP_VERSION2) &&
+                                 (st->version != LDAP_VERSION3)) {
+                PLUGIN_ERROR("Instance '%s': 'version' must be 2 or 3.", st->name);
+                status = -1;
+            }
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("label", child->key) == 0) {
@@ -648,14 +687,15 @@ static int openldap_config_add(config_item_t *ci)
 
     /* Check if URL is valid */
     if ((status == 0) && (st->url != NULL)) {
-        LDAPURLDesc *ludpp;
+        LDAPURLDesc *ludpp = NULL;
 
         if (ldap_url_parse(st->url, &ludpp) != 0) {
             PLUGIN_ERROR("Instance '%s': Invalid 'url': `%s'", st->name, st->url);
             status = -1;
         }
 
-        ldap_free_urldesc(ludpp);
+        if (ludpp != NULL)
+            ldap_free_urldesc(ludpp);
     }
 
     if (status != 0) {
