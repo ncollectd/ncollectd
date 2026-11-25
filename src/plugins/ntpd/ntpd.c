@@ -19,7 +19,7 @@
 #endif
 
 #define NTPD_DEFAULT_HOST "localhost"
-#define NTPD_DEFAULT_PORT "123"
+#define NTPD_DEFAULT_PORT 123
 
 #define	MAX_MAC_LEN	(6 * sizeof(uint32_t))	/* any MAC */
 
@@ -161,7 +161,6 @@ enum {
     FAM_NTPD_KERNEL_PLL_FREQUENCY,
     FAM_NTPD_KERNEL_PLL_MAXIMUM_ERROR,
     FAM_NTPD_KERNEL_PLL_ESTIMATED_ERROR,
-    FAM_NTPD_KERNEL_CLOCK_STATUS,
     FAM_NTPD_KERNEL_PLL_TIME_CONSTANT,
     FAM_NTPD_KERNEL_CLOCK_PRECISION,
     FAM_NTPD_KERNEL_CLOCK_FREQUENCY_TOLERANCE,
@@ -196,6 +195,7 @@ enum {
     FAM_NTPD_NTS_KE_PROBES_BAD,
     FAM_NTPD_PEER_STRATUM,
     FAM_NTPD_PEER_DISPERSION_SECONDS,
+    FAM_NTPD_PEER_JITTER_SECONDS,
     FAM_NTPD_PEER_OFFSET_SECONDS,
     FAM_NTPD_PEER_DELAY_SECONDS,
     FAM_NTPD_PEER_STATUS,
@@ -215,22 +215,22 @@ static metric_family_t fams[FAM_NTPD_MAX] = {
                 "3 Not synchronized.",
     },
     [FAM_NTPD_STRATUM] = {
-        .name = "nptd_stratum",
+        .name = "ntpd_stratum",
         .type = METRIC_TYPE_GAUGE,
         .help = "The distance from the reference clock."
     },
     [FAM_NPTD_ROOT_DELAY] = {
-        .name = "nptd_root_delay_seconds",
+        .name = "ntpd_root_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Roundtrip delay to the primary reference clock in seconds."
     },
     [FAM_NPTD_ROOT_DISPERSION] = {
-        .name = "nptd_root_dispersion_seconds",
+        .name = "ntpd_root_dispersion_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Dispersion to the primary reference clock in seconds."
     },
     [FAM_NPTD_ROOT_DISTANCE] = {
-        .name = "nptd_root_distance_seconds",
+        .name = "ntpd_root_distance_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Distance to the primary reference clock in seconds."
     },
@@ -258,6 +258,11 @@ static metric_family_t fams[FAM_NTPD_MAX] = {
         .name = "ntpd_peer_dispersion_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "NTPD peer dispersion",
+    },
+    [FAM_NTPD_PEER_JITTER_SECONDS] = {
+        .name = "ntpd_peer_jitter_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "NTPD peer jitter",
     },
     [FAM_NTPD_PEER_OFFSET_SECONDS] = {
         .name = "ntpd_peer_offset_seconds",
@@ -469,11 +474,6 @@ static metric_family_t fams[FAM_NTPD_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Estimated error for the kernel phase-locked loop in seconds.",
     },
-    [FAM_NTPD_KERNEL_CLOCK_STATUS] = {
-        .name = "ntpd_kernel_clock_status.",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "Kernel clock status array bits.",
-    },
     [FAM_NTPD_KERNEL_PLL_TIME_CONSTANT] = {
         .name = "ntpd_kernel_pll_time_constant",
         .type = METRIC_TYPE_GAUGE,
@@ -680,7 +680,7 @@ typedef struct {
 typedef struct {
     char *name;
     char *host;
-    char *port;
+    int port;
     cdtime_t timeout;
     uint64_t flags;
     label_set_t labels;
@@ -726,15 +726,12 @@ static char *kv_parser_pair(char *str, kv_t *kv)
             ptr++;
         if (*ptr != '"')
             return NULL;
-        if (ptr == value)
-            return NULL;
+        /* Empty values are allowed, the caller decides what to do with them. */
         *ptr = '\0';
         ptr++;
     } else {
         while ((*ptr != '\0') && (*ptr != ',') && (*ptr != '"') && (*ptr != '\r') && (*ptr != '\n'))
             ptr++;
-        if (ptr == value)
-            return NULL;
         if (*ptr != '\0') {
             *ptr = '\0';
             ptr++;
@@ -891,29 +888,29 @@ static int ntp_get_response(ntpd_ctx_t *ctx, int opcode, int associd,
         }
 
         if (recvsize < (ssize_t)CTL_HEADER_LEN) {
-            PLUGIN_ERROR("Short (%zd bytes) packet received.", recvsize);
+            PLUGIN_DEBUG("Short (%zd bytes) packet received.", recvsize);
             continue;
         }
         if ((PKT_VERSION(rpkt.li_vn_mode) > NTP_VERSION) ||
             (PKT_VERSION(rpkt.li_vn_mode) < NTP_OLDVERSION)) {
-            PLUGIN_ERROR("Packet received with version %d.", PKT_VERSION(rpkt.li_vn_mode));
+            PLUGIN_DEBUG("Packet received with version %d.", PKT_VERSION(rpkt.li_vn_mode));
             continue;
         }
         if (PKT_MODE(rpkt.li_vn_mode) != MODE_CONTROL) {
-            PLUGIN_ERROR("Packet received with mode %d.", PKT_MODE(rpkt.li_vn_mode));
+            PLUGIN_DEBUG("Packet received with mode %d.", PKT_MODE(rpkt.li_vn_mode));
             continue;
         }
         if (!CTL_ISRESPONSE(rpkt.r_m_e_op)) {
-            PLUGIN_ERROR("Received request packet, wanted response.");
+            PLUGIN_DEBUG("Received request packet, wanted response.");
             continue;
         }
         if (ntohs(rpkt.sequence) != ctx->sequence) {
-            PLUGIN_ERROR("Received sequnce number %d, wanted %d.",
+            PLUGIN_DEBUG("Received sequence number %d, wanted %d.",
                          ntohs(rpkt.sequence), ctx->sequence);
             continue;
         }
         if (CTL_OP(rpkt.r_m_e_op) != opcode) {
-            PLUGIN_ERROR("Received opcode %d, wanted %d.", CTL_OP(rpkt.r_m_e_op), opcode);
+            PLUGIN_DEBUG("Received opcode %d, wanted %d.", CTL_OP(rpkt.r_m_e_op), opcode);
             continue;
         }
         if (CTL_ISERROR(rpkt.r_m_e_op)) {
@@ -923,7 +920,7 @@ static int ntp_get_response(ntpd_ctx_t *ctx, int opcode, int associd,
             return -1;
         }
         if (ntohs(rpkt.associd) != associd) {
-            PLUGIN_ERROR("Association ID %d doesn't match expected %d\n",
+            PLUGIN_DEBUG("Association ID %d doesn't match expected %d",
                          ntohs(rpkt.associd), associd);
             continue; // FIXME ¿?
         }
@@ -953,7 +950,8 @@ static int ntp_get_response(ntpd_ctx_t *ctx, int opcode, int associd,
             PLUGIN_ERROR("Received count of 0 in non-final fragment\n");
             continue;
         }
-        if (offset + count > DATASIZE) {
+        /* Reserve one byte for the NUL terminator added by the callers. */
+        if (offset + count >= DATASIZE) {
             PLUGIN_ERROR("Offset %u, count %u, too big for buffer\n", offset, count);
             return -1;
         }
@@ -1069,10 +1067,25 @@ static ssize_t ntpd_send_request(ntpd_ctx_t *ctx, int opcode, associd_t associd,
     return 0;
 }
 
+static void ntpd_drain_socket(ntpd_ctx_t *ctx)
+{
+    /* Discard late responses to previous requests. */
+    while (true) {
+        struct ntp_control rpkt;
+        ssize_t size = recv(ctx->sd, (void *)&rpkt, sizeof(rpkt), MSG_DONTWAIT);
+        if ((size < 0) && (errno == EINTR))
+            continue;
+        if (size < 0)
+            break;
+    }
+}
+
 static int ntpd_query(ntpd_ctx_t *ctx, int opcode, associd_t associd,
                       const char *qdata, size_t qsize,
                       uint16_t *rstatus, char **rdata , size_t *rsize)
 {
+    ntpd_drain_socket(ctx);
+
     ctx->sequence++;
 
     int status  = ntpd_send_request(ctx, opcode, associd, qdata, qsize);
@@ -1093,7 +1106,7 @@ static int ntpd_readvar(ntpd_ctx_t *ctx, associd_t associd, char *var,
     uint16_t rstatus = 0;
     char qdata[CTL_MAX_DATA_LEN];
 
-    strncpy(qdata, var, sizeof(qdata));
+    sstrncpy(qdata, var, sizeof(qdata));
     size_t qdatalen = strlen(qdata);
 
     int status = ntpd_query(ctx, CTL_OP_READVAR, associd, qdata, qdatalen, &rstatus, &data, &rsize);
@@ -1154,7 +1167,11 @@ static int ntpd_read_sys_vars(ntpd_ctx_t *ctx)
                 const struct ntpd_vars *ntpd_var = ntpd_vars_get_key(val, val_len);
                 if (ntpd_var == NULL)
                     continue;
-                data_frags_append(&ctx->sys_vars, val, val_len);
+                if (data_frags_append(&ctx->sys_vars, val, val_len) != 0) {
+                    PLUGIN_ERROR("Failed to append var '%s'.", val);
+                    data_frags_reset(&ctx->sys_vars);
+                    return -1;
+                }
             }
         } else {
             return -1;
@@ -1167,8 +1184,11 @@ static int ntpd_read_sys_vars(ntpd_ctx_t *ctx)
 
         kv_t kv[256] = {0};
         size_t len = ntpd_readvars(ctx, 0, dfrag->buffer, data, kv, 256);
-        if (len == 0)
+        if (len == 0) {
+            /* Force to read again the sys_var_list in the next read. */
+            data_frags_reset(&ctx->sys_vars);
             return -1;
+        }
 
         for (size_t i = 0;  i < len ; i++) {
             const struct ntpd_vars *ntpd_var = ntpd_vars_get_key(kv[i].key, strlen(kv[i].key));
@@ -1274,7 +1294,7 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
         return 0;
     }
 
-    ntp_stat_t *ntp_stat = calloc(dsize, sizeof(ntp_stat_t));
+    ntp_stat_t *ntp_stat = calloc(dsize / sizeof(ntp_stat_t), sizeof(ntp_stat_t));
     if (ntp_stat == NULL) {
         PLUGIN_ERROR("malloc failed");
         return -1;
@@ -1287,10 +1307,11 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
     }
 
     for (size_t n = 0; n < ntp_stat_size; n++) {
-        kv_t kv[5] = {0};
+        kv_t kv[6] = {0};
         size_t len = ntpd_readvars(ctx, ntp_stat[n].assid,
-                                   "srcadr,stratum,delay,offset,jitter", data, kv, 5);
-        if (len != 5)
+                                   "srcadr,stratum,delay,offset,jitter,dispersion",
+                                   data, kv, 6);
+        if (len != 6)
             continue;
 
         enum {
@@ -1298,7 +1319,8 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
             FOUND_STRATUM = (1 << 1),
             FOUND_DELAY   = (1 << 2),
             FOUND_OFFSET  = (1 << 3),
-            FOUND_JITTER  = (1 << 4)
+            FOUND_JITTER  = (1 << 4),
+            FOUND_DISPERSION = (1 << 5)
         };
 
         char *srcadr = NULL;
@@ -1306,6 +1328,7 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
         double delay = 0.0;
         double offset = 0.0;
         double jitter = 0.0;
+        double dispersion = 0.0;
 
         int found = 0;
 
@@ -1344,12 +1367,21 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
                 }
                 jitter *= 0.001;
                 found |= FOUND_JITTER;
+            } else if (strcmp(kv[i].key, "dispersion") == 0) {
+                if (parse_double(kv[i].value, &dispersion) != 0) {
+                    PLUGIN_WARNING("Unable to parse var '%s' with value '%s'.",
+                                   kv[i].key, kv[i].value);
+                    break;
+                }
+                dispersion *= 0.001;
+                found |= FOUND_DISPERSION;
             } else {
                 break;
             }
         }
 
-        if (found != (FOUND_SRCADR|FOUND_STRATUM|FOUND_DELAY|FOUND_OFFSET|FOUND_JITTER))
+        if (found != (FOUND_SRCADR|FOUND_STRATUM|FOUND_DELAY|FOUND_OFFSET|FOUND_JITTER|
+                      FOUND_DISPERSION))
             continue;
 
         if (strcmp(srcadr, "0.0.0.0") == 0)
@@ -1359,6 +1391,9 @@ static int ntpd_read_peer_vars(ntpd_ctx_t *ctx)
                              VALUE_GAUGE(stratum), &ctx->labels,
                              &LABEL_PAIR_CONST("peer", srcadr), NULL);
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_DISPERSION_SECONDS],
+                             VALUE_GAUGE(dispersion), &ctx->labels,
+                             &LABEL_PAIR_CONST("peer", srcadr), NULL);
+        metric_family_append(&ctx->fams[FAM_NTPD_PEER_JITTER_SECONDS],
                              VALUE_GAUGE(jitter), &ctx->labels,
                              &LABEL_PAIR_CONST("peer", srcadr), NULL);
         metric_family_append(&ctx->fams[FAM_NTPD_PEER_OFFSET_SECONDS],
@@ -1382,19 +1417,22 @@ static int ntpd_read(user_data_t *user_data)
     ntpd_ctx_t *ctx = user_data->data;
 
     if (ctx->sd < 0) {
-        int port = atoi(ctx->port);
-        ctx->sd = socket_connect_udp(ctx->host, port, 0);
+        ctx->sd = socket_connect_udp(ctx->host, ctx->port, 0);
         if (ctx->sd < 0) {
             metric_family_append(&ctx->fams[FAM_NTPD_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
-            plugin_dispatch_metric_family(&ctx->fams[FAM_NTPD_UP], 0);
+            plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_NTPD_UP], ctx->filter, 0);
             return 0;
         }
     }
 
     int status = ntpd_read_sys_vars(ctx);
     if (status != 0) {
+        /* Discard the metrics appended before the failure. */
+        for (size_t i = 0; i < FAM_NTPD_MAX; i++) {
+            metric_family_metric_reset(&ctx->fams[i]);
+        }
         metric_family_append(&ctx->fams[FAM_NTPD_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
-        plugin_dispatch_metric_family(&ctx->fams[FAM_NTPD_UP], 0);
+        plugin_dispatch_metric_family_filtered(&ctx->fams[FAM_NTPD_UP], ctx->filter, 0);
         return 0;
     }
 
@@ -1416,7 +1454,6 @@ static void ntpd_free(void *arg)
 
     free(ctx->name);
     free(ctx->host);
-    free(ctx->port);
 
     data_frags_reset(&ctx->sys_vars);
 
@@ -1457,7 +1494,7 @@ static int ntpd_config_instance(config_item_t *ci)
         if (strcasecmp("host", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->host);
         } else if (strcasecmp("port", child->key) == 0) {
-            status = cf_util_get_service(child, &ctx->port);
+            status = cf_util_get_port_number(child, &ctx->port);
         } else if (strcasecmp("collect", child->key) == 0) {
             status = cf_util_get_flags(child, ntpd_flags, ntpd_flags_size, &ctx->flags);
         } else if (strcasecmp("timeout", child->key) == 0) {
@@ -1490,18 +1527,18 @@ static int ntpd_config_instance(config_item_t *ci)
         }
     }
 
-    if (ctx->port == NULL) {
-        ctx->port = strdup(NTPD_DEFAULT_PORT);
-        if (ctx->port == NULL) {
-            ntpd_free(ctx);
-            return -1;
-        }
-    }
+    if (ctx->port <= 0)
+        ctx->port = NTPD_DEFAULT_PORT;
 
     if (ctx->timeout == 0)
         ctx->timeout = TIME_T_TO_CDTIME_T(2);
 
-    label_set_add(&ctx->labels, true, "instance", ctx->name);
+    status = label_set_add(&ctx->labels, true, "instance", ctx->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add instance label.");
+        ntpd_free(ctx);
+        return -1;
+    }
 
     return plugin_register_complex_read("ntpd", ctx->name, ntpd_read, interval,
                                         &(user_data_t){.data = ctx, .free_func = ntpd_free});

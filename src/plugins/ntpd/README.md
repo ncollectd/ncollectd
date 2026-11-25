@@ -61,6 +61,10 @@ The following options are accepted within each **instance** block:
 
 **collect** *flags* ...
 
+> Select the set of metrics to collect, by default **sysinfo** and **peers** are
+> collected. Each flag is added to the default set, prefix a flag with **!** to
+> remove it from the set (e.g. **!peers**).
+
 > **sysinfo**
 
 > > Collect the set of metrics such as those from the command: ntpq -c sysinfo.

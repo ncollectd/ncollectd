@@ -50,6 +50,10 @@ this instance.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBcollect\fP \fIflags\fP ...
+Select the set of metrics to collect, by default \fBsysinfo\fP and \fBpeers\fP are
+collected.
+Each flag is added to the default set, prefix a flag with \fB!\fP to
+remove it from the set (e.g. \fB!peers\fP).
 .Bl -tag -width Ds
 .It \fBsysinfo\fP
 Collect the set of metrics such as those from the command: \f(CWntpq -c sysinfo\fP.

@@ -30,7 +30,6 @@ koffset,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_OFFSET,        
 kfreq,                    COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_FREQUENCY,             0
 kmaxerr,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_MAXIMUM_ERROR,         0.001
 kesterr,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_ESTIMATED_ERROR,       0.001
-kstflags,                 COLLECT_KERNINFO,  FAM_NTPD_KERNEL_CLOCK_STATUS,              0
 ktimeconst,               COLLECT_KERNINFO,  FAM_NTPD_KERNEL_PLL_TIME_CONSTANT,         0
 kprecis,                  COLLECT_KERNINFO,  FAM_NTPD_KERNEL_CLOCK_PRECISION,           0.001
 kfreqtol,                 COLLECT_KERNINFO,  FAM_NTPD_KERNEL_CLOCK_FREQUENCY_TOLERANCE, 0
