@@ -8,6 +8,9 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
+#include <sys/socket.h>
+#include <sys/time.h>
+
 #include <upsclient.h>
 
 #ifdef HAVE_UPSCONN_T
@@ -64,7 +67,7 @@ static metric_family_t fams[FAM_UPS_MAX] = {
     [FAM_UPS_LOAD_RATIO] = {
         .name = "ups_load_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Load on UPS (percent)",
+        .help = "Load on UPS (ratio 0-1)",
     },
     [FAM_UPS_INPUT_VOLTAGE_VOLTS] = {
         .name = "ups_input_voltage_volts",
@@ -84,7 +87,7 @@ static metric_family_t fams[FAM_UPS_MAX] = {
     [FAM_UPS_INPUT_LOAD_RATIO] = {
         .name = "ups_input_load_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Load on (ePDU) input (percent of full)",
+        .help = "Load on (ePDU) input (ratio of full, 0-1)",
     },
     [FAM_UPS_INPUT_REALPOWER_WATTS] = {
         .name = "ups_input_realpower_watts",
@@ -104,7 +107,7 @@ static metric_family_t fams[FAM_UPS_MAX] = {
     [FAM_UPS_OUTPUT_CURRENT_AMPS] = {
         .name = "ups_output_current_amps",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Input current (A)",
+        .help = "Output current (A)",
     },
     [FAM_UPS_OUTPUT_FREQUENCY_HZ] = {
         .name = "ups_output_frequency_hz",
@@ -124,7 +127,7 @@ static metric_family_t fams[FAM_UPS_MAX] = {
     [FAM_UPS_BATTERY_CHARGE_RATIO] = {
         .name = "ups_battery_charge_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Battery charge (percent)",
+        .help = "Battery charge (ratio 0-1)",
     },
     [FAM_UPS_BATTERY_VOLTAGE_VOLTS] = {
         .name = "ups_battery_voltage_volts",
@@ -159,7 +162,7 @@ static metric_family_t fams[FAM_UPS_MAX] = {
     [FAM_UPS_AMBIENT_HUMIDITY_RATIO] = {
         .name = "ups_ambient_humidity_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Ambient relative humidity (percent)",
+        .help = "Ambient relative humidity (ratio 0-1)",
     },
 };
 
@@ -180,6 +183,9 @@ typedef struct nut_ups_s {
 
 static char *ca_path;
 static bool can_verify_peer;
+#ifdef HAVE_UPSCLI_INIT
+static bool upscli_initialized;
+#endif
 
 static void nut_disconnect(nut_ups_t *ups)
 {
@@ -212,10 +218,19 @@ static void free_nut_ups(void *arg)
 
 static int nut_connect(nut_ups_t *ups)
 {
+    if (ups->verify_peer && !can_verify_peer) {
+        PLUGIN_ERROR("'verify-peer' is enabled for '%s' but no usable 'ca-path' "
+                     "has been configured, refusing to connect.", ups->name);
+        free(ups->conn);
+        ups->conn = NULL;
+        return -1;
+    }
+
     int ssl_flags = UPSCLI_CONN_TRYSSL;
-    if (ups->force_ssl)
+    /* verify-peer implies force-ssl */
+    if (ups->force_ssl || ups->verify_peer)
         ssl_flags |= UPSCLI_CONN_REQSSL;
-    if (can_verify_peer && ups->verify_peer)
+    if (ups->verify_peer)
         ssl_flags |= UPSCLI_CONN_CERTVERIF;
 
     int status = 0;
@@ -236,9 +251,18 @@ static int nut_connect(nut_ups_t *ups)
 
     PLUGIN_INFO("Connection to (%s, %i) established.", ups->hostname, ups->port);
 
+    /* libupsclient reads with blocking recv(): bound it so a hung upsd
+     * cannot block the read thread forever. */
+    int fd = upscli_fd(ups->conn);
+    if ((fd >= 0) && (ups->connect_timeout > 0)) {
+        struct timeval rcv_tv = CDTIME_T_TO_TIMEVAL(ups->connect_timeout);
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &rcv_tv, sizeof(rcv_tv)) != 0)
+            PLUGIN_WARNING("setsockopt (SO_RCVTIMEO) failed: %s", STRERRNO);
+    }
+
     // Output INFO or WARNING based on SSL and VERIFICATION
     int ssl_status = upscli_ssl(ups->conn); // 1 for SSL, 0 for not, -1 for error
-    if (ssl_status == 1 && ups->verify_peer) {
+    if ((ssl_status == 1) && (ssl_flags & UPSCLI_CONN_CERTVERIF)) {
         PLUGIN_INFO("Connection is secured with SSL and certificate has been verified.");
     } else if (ssl_status == 1) {
         PLUGIN_INFO("Connection is secured with SSL with no verification of server SSL certificate.");
@@ -282,7 +306,7 @@ static int nut_read(user_data_t *user_data)
 
     char **answer;
     NUT_SIZE_TYPE answer_num;
-    while (upscli_list_next(ups->conn, query_num, query, &answer_num, &answer) == 1) {
+    while ((status = upscli_list_next(ups->conn, query_num, query, &answer_num, &answer)) == 1) {
         if (answer_num < 4)
             continue;
 
@@ -359,18 +383,34 @@ static int nut_read(user_data_t *user_data)
         }
 
         if (fam != NULL) {
-            double value = atof(answer[3]);
+            double value = 0;
+            if (strtodouble(answer[3], &value) != 0)
+                continue;
+            /* NUT reports these values as percentages (0-100) */
+            if ((fam == &ups->fams[FAM_UPS_LOAD_RATIO]) ||
+                (fam == &ups->fams[FAM_UPS_INPUT_LOAD_RATIO]) ||
+                (fam == &ups->fams[FAM_UPS_BATTERY_CHARGE_RATIO]) ||
+                (fam == &ups->fams[FAM_UPS_AMBIENT_HUMIDITY_RATIO]))
+                value /= 100.0;
             if (tokens_num > 2) {
-                metric_family_append(fam, VALUE_GAUGE(value), NULL,
+                metric_family_append(fam, VALUE_GAUGE(value), &ups->labels,
                                      &LABEL_PAIR_CONST("context", tokens[1]),
                                      &LABEL_PAIR_CONST("instance", ups->upsname),
                                      NULL);
             } else {
-                metric_family_append(fam, VALUE_GAUGE(value), NULL,
+                metric_family_append(fam, VALUE_GAUGE(value), &ups->labels,
                                      &LABEL_PAIR_CONST("instance", ups->upsname),
                                      NULL);
             }
         }
+    }
+
+    if (status < 0) {
+        PLUGIN_ERROR("upscli_list_next (%s) failed: %s", ups->upsname, upscli_strerror(ups->conn));
+        nut_disconnect(ups);
+        for (size_t i = 0; i < FAM_UPS_MAX; i++)
+            metric_family_metric_reset(&ups->fams[i]);
+        return -1;
     }
 
     plugin_dispatch_metric_family_array_filtered(ups->fams, FAM_UPS_MAX, ups->filter, 0);
@@ -386,14 +426,12 @@ static int nut_config_instance(config_item_t *ci)
     }
     memcpy(ups->fams, fams, FAM_UPS_MAX * sizeof(*fams));
 
-    int status = cf_util_get_string(ci, &ups->name);
+    int status = cf_util_get_string(ci, &ups->instance);
     if (status != 0) {
         PLUGIN_ERROR("Missing instance name in %s:%d.",cf_get_file(ci), cf_get_lineno(ci));
         free_nut_ups(ups);
         return -1;
     }
-
-    ups->connect_timeout = plugin_get_interval();
 
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
@@ -428,14 +466,26 @@ static int nut_config_instance(config_item_t *ci)
         return -1;
     }
 
+    if (ups->name == NULL) {
+        ups->name = strdup(ups->instance);
+        if (ups->name == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            free_nut_ups(ups);
+            return -1;
+        }
+    }
+
+    if (ups->connect_timeout == 0)
+        ups->connect_timeout = interval != 0 ? interval : plugin_get_interval();
+
     status = upscli_splitname(ups->name, &ups->upsname, &ups->hostname, &ups->port);
     if (status != 0) {
         PLUGIN_ERROR("nut_add_ups: upscli_splitname (%s) failed.", ups->name);
         free_nut_ups(ups);
-        return 1;
+        return -1;
     }
 
-    PLUGIN_DEBUG("nut_add_ups (name = %s);", ups->instance);
+    PLUGIN_DEBUG("nut_add_ups (instance = %s, name = %s);", ups->instance, ups->name);
 
     return plugin_register_complex_read("nut", ups->instance, nut_read, interval,
                                         &(user_data_t){.data = ups,.free_func = free_nut_ups});
@@ -465,14 +515,20 @@ static int nut_config(config_item_t *ci)
     if (status != 0)
         return -1;
 
+    return 0;
+}
+
+static int nut_init(void)
+{
 #ifdef HAVE_UPSCLI_INIT
-    if (ca_path != NULL) {
-        status = upscli_init(0, ca_path, NULL, NULL);
+    if ((ca_path != NULL) && !upscli_initialized) {
+        int status = upscli_init(0, ca_path, NULL, NULL);
         if (status != 1) {
             PLUGIN_ERROR("upscli_init '%s' failed", ca_path);
             upscli_cleanup();
             return -1;
         }
+        upscli_initialized = true;
         can_verify_peer = true;
     }
 #else
@@ -489,13 +545,19 @@ static int nut_config(config_item_t *ci)
 static int nut_shutdown(void)
 {
 #ifdef HAVE_UPSCLI_INIT
-    upscli_cleanup();
+    if (upscli_initialized) {
+        upscli_cleanup();
+        upscli_initialized = false;
+    }
 #endif
+    free(ca_path);
+    ca_path = NULL;
     return 0;
 }
 
 void module_register(void)
 {
     plugin_register_config("nut", nut_config);
+    plugin_register_init("nut", nut_init);
     plugin_register_shutdown("nut", nut_shutdown);
 }
