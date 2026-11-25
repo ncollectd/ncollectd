@@ -13,13 +13,14 @@
         \fBhost\fP \fIhostname\fP
         \fBport\fP \fIport\fP
         \fBqos\fP \fIqos\fP
-        \fBclient-id\fP [\fI0-2\fP]
+        \fBclient-id\fP \fIclient-id\fP
         \fBuser\fP \fIusername\fP
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
         \fBclean-session\fP \fItrue|false\fP
         \fBca-cert\fP \fI/path/to/ca\fP
+        \fBca-path\fP \fI/path/to/ca-dir\fP
         \fBcertificate-file\fP \fI/path/to/cert\fP
         \fBcertificate-key-file\fP \fI/path/to/key\fP
         \fBtls-protocol\fP \fIprotocol\fP
@@ -52,9 +53,10 @@ At least once
 .It \fB2\fP
 Exactly once
 .El
-.It \fBclient-id\fP \fIncollectd\fP
+.It \fBclient-id\fP \fIclient-id\fP
 MQTT client ID to use.
-Defaults to the hostname used by ncollectd.
+Defaults to the hostname used by ncollectd followed by a dash and the
+instance name.
 .It \fBuser\fP \fIusername\fP
 Username used when authenticating to the Mosquitto broker.
 .It \fBuser-env\fP \fIenv-name\fP
@@ -62,6 +64,7 @@ Get the username used when authenticating to the Mosquitto broker from the
 environment variable \fIenv-name\fP.
 .It \fBpassword\fP \fIpassword\fP
 Password used when authenticating to the Mosquitto broker.
+Only used if \fBuser\fP is also set.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password used when authenticating to the Mosquitto broker from the
 environment variable \fIenv-name\fP.
@@ -75,6 +78,10 @@ Path to the PEM-encoded CA certificate file.
 Setting this option enables TLS communication with the MQTT broker,
 and as such, \fIport\fP should be the TLS-enabled port of the MQTT broker.
 This option enables the use of TLS.
+.It \fBca-path\fP \fI/path/to/ca-dir\fP
+Path to a directory containing PEM-encoded CA certificates, for example
+the system store \fI/etc/ssl/certs\fP.
+Like \fBca-cert\fP, setting this option enables the use of TLS.
 .It \fBcertificate-file\fP \fI/path/to/cert\fP
 Path to the PEM-encoded certificate file to use as client certificate when
 connecting to the MQTT broker.

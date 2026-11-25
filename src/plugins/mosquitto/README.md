@@ -12,13 +12,14 @@ NCOLLECTD-MOSQUITTO(5) - File Formats Manual
 	        host hostname
 	        port port
 	        qos qos
-	        client-id [0-2]
+	        client-id client-id
 	        user username
 	        user-env env-name
 	        password password
 	        password-env env-name
 	        clean-session true|false
 	        ca-cert /path/to/ca
+	        ca-path /path/to/ca-dir
 	        certificate-file /path/to/cert
 	        certificate-key-file /path/to/key
 	        tls-protocol protocol
@@ -62,10 +63,11 @@ The following options are accepted within each **instance** block:
 
 > > Exactly once
 
-**client-id** *ncollectd*
+**client-id** *client-id*
 
 > MQTT client ID to use.
-> Defaults to the hostname used by ncollectd.
+> Defaults to the hostname used by ncollectd followed by a dash and the
+> instance name.
 
 **user** *username*
 
@@ -79,6 +81,7 @@ The following options are accepted within each **instance** block:
 **password** *password*
 
 > Password used when authenticating to the Mosquitto broker.
+> Only used if **user** is also set.
 
 **password-env** *env-name*
 
@@ -98,6 +101,12 @@ The following options are accepted within each **instance** block:
 > Setting this option enables TLS communication with the MQTT broker,
 > and as such, *port* should be the TLS-enabled port of the MQTT broker.
 > This option enables the use of TLS.
+
+**ca-path** */path/to/ca-dir*
+
+> Path to a directory containing PEM-encoded CA certificates, for example
+> the system store */etc/ssl/certs*.
+> Like **ca-cert**, setting this option enables the use of TLS.
 
 **certificate-file** */path/to/cert*
 
