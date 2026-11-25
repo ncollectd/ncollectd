@@ -87,13 +87,13 @@ enum {
     FAM_REDIS_EXPIRED_KEYS,
     FAM_REDIS_EXPIRED_STALE_RATIO,
     FAM_REDIS_EXPIRED_TIME_CAP_REACHED,
-    FAM_REDIS_EXPIRE_CYCLE_CPU_MSECONDS,
+    FAM_REDIS_EXPIRE_CYCLE_CPU_SECONDS,
     FAM_REDIS_EVICTED_KEYS,
     FAM_REDIS_KEYSPACE_HITS,
     FAM_REDIS_KEYSPACE_MISSES,
     FAM_REDIS_PUBSUB_CHANNELS,
     FAM_REDIS_PUBSUB_PATTERNS,
-    FAM_REDIS_LATEST_FORK_USECECONDS,
+    FAM_REDIS_LATEST_FORK_SECONDS,
     FAM_REDIS_FORKS,
     FAM_REDIS_MIGRATE_CACHED_SOCKETS,
     FAM_REDIS_SLAVE_EXPIRES_TRACKED_KEYS,
@@ -124,7 +124,7 @@ enum {
     FAM_REDIS_MASTER_REPL_OFFSET,
     FAM_REDIS_SECOND_REPL_OFFSET,
     FAM_REDIS_REPLICATION_BACKLOG_ACTIVE,
-    FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTE,
+    FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTES,
     FAM_REDIS_REPLICATION_BACKLOG_FIRST_BYTE_OFFSET,
     FAM_REDIS_REPLICATION_BACKLOG_HIST_BYTES,
     FAM_REDIS_MASTER_LINK_UP,
@@ -577,8 +577,8 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "The count of times that active expiry cycles have stopped early.",
     },
-    [FAM_REDIS_EXPIRE_CYCLE_CPU_MSECONDS] = {
-        .name = "redis_expire_cycle_cpu_mseconds",
+    [FAM_REDIS_EXPIRE_CYCLE_CPU_SECONDS] = {
+        .name = "redis_expire_cycle_cpu_seconds",
         .type = METRIC_TYPE_COUNTER,
         .help = "The cumulative amount of time spend on active expiry cycles.",
     },
@@ -607,10 +607,10 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Global number of pub/sub pattern with client subscriptions.",
     },
-    [FAM_REDIS_LATEST_FORK_USECECONDS] = {
-        .name = "redis_latest_fork_usececonds",
+    [FAM_REDIS_LATEST_FORK_SECONDS] = {
+        .name = "redis_latest_fork_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Duration of the latest fork operation in microseconds.",
+        .help = "Duration of the latest fork operation in seconds.",
     },
     [FAM_REDIS_FORKS] = {
         .name = "redis_forks",
@@ -774,8 +774,8 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Flag indicating replication backlog is active.",
     },
-    [FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTE] = {
-        .name = "redis_replication_backlog_size_byte",
+    [FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTES] = {
+        .name = "redis_replication_backlog_size_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Total size in bytes of the replication backlog buffer.",
     },
@@ -837,7 +837,7 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
     [FAM_REDIS_COMMANDS_FAILED] = {
         .name = "redis_commands_failed",
         .type = METRIC_TYPE_COUNTER,
-        .help = "The number of failed calls (errors within the command execution.",
+        .help = "The number of failed calls (errors within the command execution).",
     },
     [FAM_REDIS_DB_KEYS] = {
         .name = "redis_db_keys",
@@ -851,7 +851,7 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
     },
     [FAM_REDIS_ERRORS] = {
         .name = "redis_errors",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "The number of errors that occurred within Redis, "
                 "based upon the reply error prefix.",
     },
@@ -896,17 +896,17 @@ static metric_family_t fams_redis[FAM_REDIS_MAX] = {
         .help = "Failures simulations.",
     },
     [FAM_REDIS_SENTINEL_MASTER_STATUS] = {
-        .name = "sentinel_master_status",
+        .name = "redis_sentinel_master_status",
         .type = METRIC_TYPE_STATE_SET,
         .help = "Master status on Sentinel.",
     },
     [FAM_REDIS_SENTINEL_MASTER_SLAVES] = {
-        .name = "sentinel_master_slaves",
+        .name = "redis_sentinel_master_slaves",
         .type = METRIC_TYPE_GAUGE,
         .help = "The number of slaves of the master.",
     },
     [FAM_REDIS_SENTINEL_MASTER_SENTINELS] = {
-        .name = "sentinel_master_sentinels",
+        .name = "redis_sentinel_master_sentinels",
         .type = METRIC_TYPE_GAUGE,
         .help = "The number of sentinels monitoring this master.",
     },

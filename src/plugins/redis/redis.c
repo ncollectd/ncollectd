@@ -85,6 +85,71 @@ static void *c_redisCommand(redis_node_t *rn, const char *format, ...)
     va_end(ap);
 
     if (unlikely(reply == NULL)) {
+        if (c->err == 0) {
+            PLUGIN_ERROR("Unable to format command '%s'.", format);
+            return NULL;
+        }
+        PLUGIN_ERROR("Connection error: %s", c->errstr);
+        redisFree(rn->redisContext);
+        rn->redisContext = NULL;
+    }
+
+    return reply;
+}
+
+static void *c_redisCommandString(redis_node_t *rn, const char *command)
+{
+    redisContext *c = rn->redisContext;
+
+    if (unlikely(c == NULL))
+        return NULL;
+
+    /* Split the command on spaces and send it with redisCommandArgv, so the
+     * user supplied string is never interpreted as a hiredis format string. */
+    char *buffer = strdup(command);
+    if (buffer == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        return NULL;
+    }
+
+    size_t argv_size = 1;
+    for (const char *ptr = buffer; *ptr != '\0'; ptr++) {
+        if (*ptr == ' ')
+            argv_size++;
+    }
+
+    const char **argv = calloc(argv_size, sizeof(*argv));
+    size_t *argvlen = calloc(argv_size, sizeof(*argvlen));
+    if ((argv == NULL) || (argvlen == NULL)) {
+        PLUGIN_ERROR("calloc failed.");
+        free(argv);
+        free(argvlen);
+        free(buffer);
+        return NULL;
+    }
+
+    int argc = 0;
+    char *saveptr = NULL;
+    for (char *arg = strtok_r(buffer, " ", &saveptr); arg != NULL;
+               arg = strtok_r(NULL, " ", &saveptr)) {
+        argv[argc] = arg;
+        argvlen[argc] = strlen(arg);
+        argc++;
+    }
+
+    void *reply = NULL;
+    if (argc > 0)
+        reply = redisCommandArgv(c, argc, argv, argvlen);
+
+    free(argv);
+    free(argvlen);
+    free(buffer);
+
+    if (unlikely(reply == NULL)) {
+        if (c->err == 0) {
+            PLUGIN_ERROR("Invalid command '%s'.", command);
+            return NULL;
+        }
         PLUGIN_ERROR("Connection error: %s", c->errstr);
         redisFree(rn->redisContext);
         rn->redisContext = NULL;
@@ -103,7 +168,7 @@ static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
     }
     freeReplyObject(rr);
 
-    rr = c_redisCommand(rn, rq->query);
+    rr = c_redisCommandString(rn, rq->query);
     if (unlikely(rr == NULL)) {
         PLUGIN_WARNING("unable to carry out query '%s'.", rq->query);
         return -1;
@@ -121,7 +186,7 @@ static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
     case REDIS_REPLY_STRING:
         if (rq->type == METRIC_TYPE_GAUGE) {
             double ret_value = 0;
-            if (parse_double(rr->str, &ret_value) == -1) {
+            if (parse_double(rr->str, &ret_value) != 0) {
                 PLUGIN_WARNING("Query '%s': Unable to parse value.", rq->query);
                 freeReplyObject(rr);
                 return -1;
@@ -129,7 +194,7 @@ static int redis_handle_query(redis_node_t *rn, redis_query_t *rq)
             value = VALUE_GAUGE(ret_value);
         } else if (rq->type == METRIC_TYPE_COUNTER) {
             uint64_t ret_value = 0;
-            if (parse_uinteger(rr->str, &ret_value) == -1) {
+            if (parse_uinteger(rr->str, &ret_value) != 0) {
                 PLUGIN_WARNING("Query '%s': Unable to parse value.", rq->query);
                 freeReplyObject(rr);
                 return -1;
@@ -189,6 +254,10 @@ static void redis_check_connection(redis_node_t *rn)
         redisFree(rh);
         return;
     }
+
+    /* The connect timeout does not apply to reads and writes. */
+    if (unlikely(redisSetTimeout(rh, rn->timeout) != REDIS_OK))
+        PLUGIN_WARNING("unable to set timeout on node '%s': %s.", rn->name, rh->errstr);
 
     rn->redisContext = rh;
 
@@ -370,35 +439,42 @@ static int redis_read_info_slave(redis_node_t *rn, char *value)
 
 static int redis_read_info_cmdstat(redis_node_t *rn, char *key, char *value)
 {
+/* "cmdstat_%s:calls=%lld,usec=%lld,usec_per_call=%.2f,rejected_calls=%lld,failed_calls=%lld" */
     char *command = key + strlen("cmdstat_");
 
-    char *command_calls = value;
-    if (unlikely(strncmp(command_calls, "calls=", strlen("calls=")) != 0))
-        return -1;
-    command_calls += strlen("calls=");
+    char *saveptr = NULL;
+    for (char *field = strtok_r(value, ",", &saveptr); field != NULL;
+               field = strtok_r(NULL, ",", &saveptr)) {
+        char *field_value = strchr(field, '=');
+        if (unlikely(field_value == NULL))
+            continue;
+        *(field_value++) = '\0';
 
-    char *command_usec = strchr(command_calls, ',');
-    if (unlikely(command_usec == NULL))
-        return -1;
-    *(command_usec++) = '\0';
+        uint64_t raw = 0;
+        if (strcmp(field, "calls") == 0) {
+            if (parse_uinteger(field_value, &raw) != 0)
+                continue;
+            metric_family_append(&rn->fams[FAM_REDIS_COMMANDS], VALUE_COUNTER(raw),
+                                 &rn->labels, &LABEL_PAIR_CONST("cmd", command), NULL);
+        } else if (strcmp(field, "usec") == 0) {
+            if (parse_uinteger(field_value, &raw) != 0)
+                continue;
+            metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_DURATION_SECONDS],
+                                 VALUE_COUNTER_FLOAT64(((double)raw) / 1000000.0),
+                                 &rn->labels, &LABEL_PAIR_CONST("cmd", command), NULL);
+        } else if (strcmp(field, "rejected_calls") == 0) {
+            if (parse_uinteger(field_value, &raw) != 0)
+                continue;
+            metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_REJECTED], VALUE_COUNTER(raw),
+                                 &rn->labels, &LABEL_PAIR_CONST("cmd", command), NULL);
+        } else if (strcmp(field, "failed_calls") == 0) {
+            if (parse_uinteger(field_value, &raw) != 0)
+                continue;
+            metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_FAILED], VALUE_COUNTER(raw),
+                                 &rn->labels, &LABEL_PAIR_CONST("cmd", command), NULL);
+        }
+    }
 
-    if (unlikely(strncmp(command_usec, "usec=", strlen("usec=")) != 0))
-        return -1;
-    command_usec += strlen("usec=");
-
-    char *end= strchr(command_usec, ',');
-    if (unlikely(end == NULL))
-        return -1;
-    *end = '\0';
-
-    metric_family_append(&rn->fams[FAM_REDIS_COMMANDS],
-                         VALUE_COUNTER(atoll(command_calls)), &rn->labels,
-                         &LABEL_PAIR_CONST("cmd", command), NULL);
-
-    metric_family_append(&rn->fams[FAM_REDIS_COMMANDS_DURATION_SECONDS],
-                         VALUE_COUNTER_FLOAT64(((double)atoll(command_usec)) / 1000000.0),
-                         &rn->labels,
-                         &LABEL_PAIR_CONST("cmd", command), NULL);
     return 0;
 }
 
@@ -441,6 +517,27 @@ static void redis_read_info(redis_node_t *rn)
     redisReply *rr = c_redisCommand(rn, "INFO ALL");
     if (unlikely(rr == NULL)) {
         PLUGIN_WARNING("unable to get INFO from node '%s'.", rn->name);
+        /* Replace the redis_up=1 added by the caller and dispatch it now,
+         * so it does not accumulate until the next read. */
+        metric_family_metric_reset(&rn->fams[FAM_REDIS_UP]);
+        metric_family_append(&rn->fams[FAM_REDIS_UP], VALUE_GAUGE(0), &rn->labels, NULL);
+        plugin_dispatch_metric_family_filtered(&rn->fams[FAM_REDIS_UP], rn->filter, 0);
+        return;
+    }
+
+    bool is_string = rr->type == REDIS_REPLY_STRING;
+#ifdef REDIS_REPLY_VERB
+    is_string = is_string || (rr->type == REDIS_REPLY_VERB);
+#endif
+    if (unlikely(!is_string || (rr->str == NULL))) {
+        if (rr->type == REDIS_REPLY_ERROR)
+            PLUGIN_WARNING("INFO failed on node '%s': %s.", rn->name, rr->str);
+        else
+            PLUGIN_WARNING("Unexpected reply type (%i) to INFO from node '%s'.",
+                           rr->type, rn->name);
+        freeReplyObject(rr);
+        /* Dispatch redis_up so it does not accumulate until the next read. */
+        plugin_dispatch_metric_family_filtered(&rn->fams[FAM_REDIS_UP], rn->filter, 0);
         return;
     }
 
@@ -540,6 +637,32 @@ static void redis_read_info(redis_node_t *rn)
                 }
                 value = VALUE_COUNTER_FLOAT64(raw);
             }   break;
+            case FAM_REDIS_VERSION_INFO: {
+                label_set_t info = {
+                    .num = 1,
+                    .ptr = (label_pair_t[]){
+                        {.name = "version", .value = val},
+                    }
+                };
+                metric_family_append(&rn->fams[ri->fam], VALUE_INFO(info), &rn->labels, NULL);
+                continue;
+            }   break;
+            case FAM_REDIS_LATEST_FORK_SECONDS: {
+                double raw = 0;
+                if (parse_double(val, &raw) != 0) {
+                    PLUGIN_WARNING("Unable to parse field '%s'.", key);
+                    continue;
+                }
+                value = VALUE_GAUGE(raw / 1000000.0);
+            }   break;
+            case FAM_REDIS_EXPIRE_CYCLE_CPU_SECONDS: {
+                double raw = 0;
+                if (parse_double(val, &raw) != 0) {
+                    PLUGIN_WARNING("Unable to parse field '%s'.", key);
+                    continue;
+                }
+                value = VALUE_COUNTER_FLOAT64(raw / 1000.0);
+            }   break;
             case FAM_REDIS_MASTER_LINK_UP:
                 if (strcmp(val, "up") == 0)
                     value = VALUE_GAUGE(1);
@@ -561,6 +684,8 @@ static void redis_read_info(redis_node_t *rn)
                         continue;
                     }
                     value = VALUE_COUNTER(raw);
+                } else {
+                    continue;
                 }
             break;
             }
@@ -660,6 +785,12 @@ static redis_query_t *redis_config_query(config_item_t *ci)
         if (status != 0)
             goto err;
     }
+
+    if (rq->metric == NULL) {
+        PLUGIN_ERROR("Missing 'metric' option in query '%s'.", rq->query);
+        goto err;
+    }
+
     return rq;
 
 err:
@@ -739,11 +870,17 @@ static int redis_config_instance(config_item_t *ci)
             break;
     }
 
+    if (status == 0)
+        status = label_set_add(&rn->labels, true, "instance", rn->name);
+
     if (status == 0) {
         redis_query_t *rq = rn->queries;
-        while (rq != NULL) {
+        while ((rq != NULL) && (status == 0)) {
             for (size_t i = 0; i < rn->labels.num; i++) {
-                label_set_add(&rq->labels, false, rn->labels.ptr[i].name, rn->labels.ptr[i].value);
+                status = label_set_add(&rq->labels, false, rn->labels.ptr[i].name,
+                                                           rn->labels.ptr[i].value);
+                if (status != 0)
+                    break;
             }
             rq = rq->next;
         }
@@ -753,8 +890,6 @@ static int redis_config_instance(config_item_t *ci)
         redis_instance_free(rn);
         return status;
     }
-
-    label_set_add(&rn->labels, true, "instance", rn->name);
 
     return plugin_register_complex_read("redis", rn->name, redis_read, interval,
                                         &(user_data_t){.data=rn, .free_func=redis_instance_free});

@@ -90,7 +90,7 @@ instance running in an specified host and port.
 
 > **metric** *name*
 
-> > Set the metric name.
+> > Set the metric name. This option is mandatory.
 
 > **type** *gauge*|*counter*
 
