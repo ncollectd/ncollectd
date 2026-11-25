@@ -196,7 +196,7 @@ almost-expired-pushed,               FAM_RECURSOR_ALMOST_EXPIRED_PUSHED, 0, NULL
 almost-expired-run,                  FAM_RECURSOR_ALMOST_EXPIRED_RUN, 0, NULL, NULL
 almost-expired-exceptions,           FAM_RECURSOR_ALMOST_EXPIRED_EXCEPTIONS, 0, NULL, NULL
 idle-tcpout-connections,             FAM_RECURSOR_IDLE_TCPOUT_CONNECTIONS , 0, NULL, NULL
-maintenance-usec,                    FAM_RECURSOR_MAINTENANCE_USEC, 0, NULL, NULL
+maintenance-usec,                    FAM_RECURSOR_MAINTENANCE_SECONDS, 0.000001, NULL, NULL
 maintenance-calls,                   FAM_RECURSOR_MAINTENANCE_CALLS, 0, NULL, NULL
 nod-events,                          FAM_RECURSOR_NOD_EVENTS, 0, NULL, NULL
 udr-events,                          FAM_RECURSOR_UDR_EVENTS, 0, NULL, NULL
