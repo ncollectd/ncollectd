@@ -43,6 +43,7 @@
         \fBssl-ca\fP "\fI/path/to/ca.pem\fP"
         \fBssl-ca-path\fP "\fI/path/to/cas/\fP"
         \fBssl-cipher\fP \fIcyphers\fP
+        \fBssl-mode\fP \fIdisabled|preferred|required|verify-ca|verify-identity\fP
         \fBconnect-timeout\fP \fIseconds\fP
         \fBheartbeat-utc\fP  \fItrue|false\fP
         \fBheartbeat-schema\fP \fIschema\fP
@@ -71,7 +72,7 @@ A \fBinstance\fP block defines one connection to a MySQL database.
 It accepts a single argument which specifies the name of the database.
 None of the other options are required.
 MySQL will use default values as documented in the
-\f(CWmysql_real_connect()\fP and \f(CWmysql_ssl_set()\fP sections in the
+\f(CWmysql_real_connect()\fP and \f(CWmysql_options()\fP sections in the
 \fBMySQL reference manual\fP.
 Each database needs a \fIinstance-name\fP as string argument in the starting
 tag of the block.
@@ -118,8 +119,32 @@ If provided, the CA file in PEM format (check OpenSSL docs).
 If provided, the CA directory (check OpenSSL docs).
 .It \fBssl-cipher\fP \fIcyphers\fP
 If provided, the SSL cipher to use.
+.It \fBssl-mode\fP \fIdisabled|preferred|required|verify-ca|verify-identity\fP
+Specify the security state of the connection to the server.
+If not set, the default of the client library is used.
+The following modes are supported:
+.Bl -tag -width Ds
+.It \fBdisabled\fP
+Establish an unencrypted connection.
+.It \fBpreferred\fP
+Establish an encrypted connection if the server supports it,
+otherwise fall back to an unencrypted connection.
+.It \fBrequired\fP
+Establish an encrypted connection or fail.
+.It \fBverify-ca\fP
+Like \fBrequired\fP, and verify the server certificate against the
+configured CA certificates.
+.It \fBverify-identity\fP
+Like \fBverify-ca\fP, and verify that the server host name matches
+the identity in the server certificate.
+.El
+.Pp
+With MariaDB Connector/C \fBverify-ca\fP also verifies the server host
+name.
 .It \fBconnect-timeout\fP \fIseconds\fP
 Sets the connect timeout for the MySQL client.
+Reading from and writing to the server time out after the
+collection \fBinterval\fP.
 .It \fBheartbeat-utc\fP  \fItrue|false\fP
 Use UTC for timestamps of the current server.
 Defauilt if \fIfalse\fP.
@@ -151,9 +176,9 @@ Collect \f(CWHandler_*\fP values from \f(CWSHOW GLOBAL STATUS\fP command.
 .It \fBinnodb\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_METRICS\fP table.
 .It \fBinnodb_cmp\fP
-Collect values from \f(CWINFORMATION_SCHEMA.INNODB_CMPMEM\fP table.
-.It \fBinnodb_cmpmem\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_CMP\fP table.
+.It \fBinnodb_cmpmem\fP
+Collect values from \f(CWINFORMATION_SCHEMA.INNODB_CMPMEM\fP table.
 .It \fBinnodb_tablespace\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INNODB_SYS_TABLESPACES\fP table.
 .It \fBmyisam\fP
@@ -179,17 +204,17 @@ Collect values from \f(CWINFORMATION_SCHEMA.USER_STATISTICS\fP table.
 .It \fBindex\fP
 Collect values from \f(CWINFORMATION_SCHEMA.INDEX_STATISTICS\fP table.
 .It \fBtable\fP
-Collect values from \f(CWINFORMATION_SCHEMA.TABLE_STATISTICS\fP table.
-.It \fBtable\fP
-Collect values from \f(CWINFORMATION_SCHEMA.TABLES\fP table.
+Collect values from \f(CWINFORMATION_SCHEMA.TABLE_STATISTICS\fP
+and \f(CWINFORMATION_SCHEMA.TABLES\fP tables.
 .It \fBresponse_time\fP
 Collect values from \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME\fP table.
 In Percona server collect values from
 \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_READ\fP
 and \f(CWINFORMATION_SCHEMA.QUERY_RESPONSE_TIME_WRITE\fP and table.
 .It \fBmaster\fP
-.It \fBslave\fP
-Enable the collection of primary / replica statistics in a replication setup.
+.It \fBreplica_status\fP
+Enable the collection of primary / replica statistics in a replication setup
+(\f(CWSHOW MASTER STATUS\fP and \f(CWSHOW REPLICA STATUS\fP commands).
 In order to be able to get access to these statistics, the user needs special
 privileges.
 .It \fBheartbeat\fP

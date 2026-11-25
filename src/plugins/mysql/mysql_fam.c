@@ -30,7 +30,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     [FAM_MYSQL_ACCESS_DENIED_ERRORS] = {
         .name = "mysql_access_denied_errors",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of connection attempts that were aborted prior to authentication.",
+        .help = "Number of access denied errors.",
     },
     [FAM_MYSQL_BUSY_TIME_SECONDS] = {
         .name = "mysql_busy_time_seconds",
@@ -57,10 +57,10 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of connection attempts (both successful and unsuccessful)",
     },
-    [FAM_MYSQL_CPU_TIME] = {
-        .name = "mysql_cpu_time",
+    [FAM_MYSQL_CPU_TIME_SECONDS] = {
+        .name = "mysql_cpu_time_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Total CPU time used",
+        .help = "Total CPU time used in seconds",
     },
     [FAM_MYSQL_STATEMENT_TIME_EXCEEDED] = {
         .name = "mysql_statement_time_exceeded",
@@ -283,7 +283,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_THREADS_CREATED] = {
         .name = "mysql_threads_created",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of threads created to respond to client connections.",
     },
     [FAM_MYSQL_THREADS_RUNNING] = {
@@ -440,63 +440,63 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .help = "The number of Aria log fsyncs.",
     },
     [FAM_MYSQL_BINLOG_COMMITS] = {
-        .name = "mysq_binlog_commits",
+        .name = "mysql_binlog_commits",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of transactions committed to the binary log.",
     },
     [FAM_MYSQL_BINLOG_GROUP_COMMITS] = {
-        .name = "mysq_binlog_group_commits",
+        .name = "mysql_binlog_group_commits",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of group commits done to the binary log."
     },
     [FAM_MYSQL_BINLOG_GROUP_COMMIT_TRIGGER_COUNT] = {
-        .name = "mysq_binlog_group_commit_trigger_count",
+        .name = "mysql_binlog_group_commit_trigger_count",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of group commits triggered because of the number of "
                 "binary log commits in the group reached the limit.",
     },
     [FAM_MYSQL_BINLOG_GROUP_COMMIT_TRIGGER_LOCK_WAIT] = {
-        .name = "mysq_binlog_group_commit_trigger_lock_wait",
+        .name = "mysql_binlog_group_commit_trigger_lock_wait",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of group commits triggered because a "
                 "binary log commit was being delayed because of a lock wait "
                 "where the lock was held by a prior binary log commit.",
     },
     [FAM_MYSQL_BINLOG_GROUP_COMMIT_TRIGGER_TIMEOUT] = {
-        .name = "mysq_binlog_group_commit_trigger_timeout",
-        .type = METRIC_TYPE_GAUGE,
+        .name = "mysql_binlog_group_commit_trigger_timeout",
+        .type = METRIC_TYPE_COUNTER,
         .help = "",
     },
     [FAM_MYSQL_BINLOG_SNAPSHOT_POSITION] = {
-        .name = "mysq_binlog_snapshot_position",
+        .name = "mysql_binlog_snapshot_position",
         .type = METRIC_TYPE_GAUGE,
         .help = "",
     },
     [FAM_MYSQL_BINLOG_WRITTEN_BYTES] = {
-        .name = "mysq_binlog_written_bytes",
-        .type = METRIC_TYPE_GAUGE,
+        .name = "mysql_binlog_written_bytes",
+        .type = METRIC_TYPE_COUNTER,
         .help = "The number of bytes written to the binary log."
     },
     [FAM_MYSQL_BINLOG_CACHE_DISK_USE] = {
-        .name = "mysq_binlog_cache_disk_use",
-        .type = METRIC_TYPE_GAUGE,
+        .name = "mysql_binlog_cache_disk_use",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of transactions which used a temporary disk cache because "
                 "they could not fit in the regular binary log cache.",
     },
     [FAM_MYSQL_BINLOG_CACHE_USE] = {
-        .name = "mysq_binlog_cache_use",
-        .type = METRIC_TYPE_GAUGE,
+        .name = "mysql_binlog_cache_use",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of transaction which used the regular binary log cache, "
                 "being smaller than binlog_cache_size.",
     },
     [FAM_MYSQL_BINLOG_STMT_CACHE_DISK_USE] = {
-        .name = "mysq_binlog_stmt_cache_disk_use",
-        .type = METRIC_TYPE_GAUGE,
+        .name = "mysql_binlog_stmt_cache_disk_use",
+        .type = METRIC_TYPE_COUNTER,
         .help = "",
     },
     [FAM_MYSQL_BINLOG_STMT_CACHE_USE] = {
-        .name = "mysq_binlog_stmt_cache_use",
-        .type = METRIC_TYPE_GAUGE,
+        .name = "mysql_binlog_stmt_cache_use",
+        .type = METRIC_TYPE_COUNTER,
         .help = "",
     },
     [FAM_MYSQL_COMMANDS] = {
@@ -623,7 +623,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     [FAM_MYSQL_INNODB_INSERT_BUFFER_DISCARDED_INSERTS] = {
         .name = "mysql_innodb_insert_buffer_discarded_inserts",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of discarded buffered delete operations.",
+        .help = "Number of discarded buffered insert operations.",
     },
     [FAM_MYSQL_INNODB_INSERT_BUFFER_MERGED_DELETE_MARKS] = {
         .name = "mysql_innodb_insert_buffer_merged_delete_marks",
@@ -753,7 +753,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .help = "Total number of undo tablespace truncation operations.",
     },
     [FAM_MYSQL_INNODB_PAGE_COMPRESSION_SAVED_BYTES] = {
-        .name = "mysql_innodb_page_compression_saved",
+        .name = "mysql_innodb_page_compression_saved_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of bytes saved by page compression.",
     },
@@ -952,7 +952,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_LOCK_REC_LOCKS] = {
         .name = "mysql_innodb_lock_rec_locks",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Current number of record locks on tables",
     },
     [FAM_MYSQL_INNODB_LOCK_TABLE_LOCK_CREATED] = {
@@ -967,33 +967,33 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_LOCK_TABLE_LOCKS] = {
         .name = "mysql_innodb_lock_table_locks",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Current number of table locks on tables",
     },
     [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_CURRENT_WAITS] = {
         .name = "mysql_innodb_lock_row_lock_current_waits",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of row locks currently being waited for (innodb_row_lock_current_waits)",
     },
-    [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME] = {
-        .name = "mysql_innodb_lock_row_lock_time",
+    [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_SECONDS] = {
+        .name = "mysql_innodb_lock_row_lock_time_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Time spent in acquiring row locks, in milliseconds (innodb_row_lock_time)",
+        .help = "Time spent in acquiring row locks, in seconds (innodb_row_lock_time)",
     },
-    [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_MAX] = {
-        .name = "mysql_innodb_lock_row_lock_time_max",
+    [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_MAX_SECONDS] = {
+        .name = "mysql_innodb_lock_row_lock_time_max_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The maximum time to acquire a row lock, in milliseconds (innodb_row_lock_time_max)",
+        .help = "The maximum time to acquire a row lock, in seconds (innodb_row_lock_time_max)",
     },
     [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_WAITS] = {
         .name = "mysql_innodb_lock_row_lock_waits",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of times a row lock had to be waited for (innodb_row_lock_waits)",
     },
-    [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_AVG] = {
-        .name = "mysql_innodb_lock_row_lock_time_avg",
+    [FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_AVG_SECONDS] = {
+        .name = "mysql_innodb_lock_row_lock_time_avg_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The average time to acquire a row lock, in milliseconds (innodb_row_lock_time_avg)",
+        .help = "The average time to acquire a row lock, in seconds (innodb_row_lock_time_avg)",
     },
     [FAM_MYSQL_INNODB_BUFFER_POOL_SIZE] = {
         .name = "mysql_innodb_buffer_pool_size",
@@ -1112,7 +1112,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_BATCH_SCANNED_PER_CALL] = {
         .name = "mysql_innodb_buffer_flush_batch_scanned_per_call",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Pages scanned per flush batch scan",
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_BATCH_TOTAL_PAGES] = {
@@ -1157,12 +1157,12 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_ADAPTIVE_AVG_TIME] = {
         .name = "mysql_innodb_buffer_flush_adaptive_avg_time",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Avg time (ms) spent for adaptive flushing recently.",
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_ADAPTIVE_AVG_PASS] = {
         .name = "mysql_innodb_buffer_flush_adaptive_avg_pass",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of adaptive flushes passed during the recent Avg period.",
     },
     [FAM_MYSQL_INNODB_BUFFER_LRU_GET_FREE_LOOPS] = {
@@ -1177,22 +1177,22 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_AVG_PAGE_RATE] = {
         .name = "mysql_innodb_buffer_flush_avg_page_rate",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Average number of pages at which flushing is happening",
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_LSN_AVG_RATE] = {
         .name = "mysql_innodb_buffer_flush_lsn_avg_rate",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Average redo generation rate",
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_PCT_FOR_DIRTY] = {
         .name = "mysql_innodb_buffer_flush_pct_for_dirty",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Percent of IO capacity used to avoid max dirty page limit",
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_PCT_FOR_LSN] = {
         .name = "mysql_innodb_buffer_flush_pct_for_lsn",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Percent of IO capacity used to avoid reusable redo space limit",
     },
     [FAM_MYSQL_INNODB_BUFFER_FLUSH_SYNC_WAITS] = {
@@ -1257,7 +1257,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_BUFFER_LRU_BATCH_SCANNED_PER_CALL] = {
         .name = "mysql_innodb_buffer_LRU_batch_scanned_per_call",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Pages scanned per LRU batch call",
     },
     [FAM_MYSQL_INNODB_BUFFER_LRU_BATCH_FLUSH_TOTAL_PAGES] = {
@@ -1312,7 +1312,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_BUFFER_LRU_SEARCH_SCANNED_PER_CALL] = {
         .name = "mysql_innodb_buffer_LRU_search_scanned_per_call",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Page scanned per single LRU search",
     },
     [FAM_MYSQL_INNODB_BUFFER_LRU_UNZIP_SEARCH_SCANNED] = {
@@ -1327,7 +1327,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_BUFFER_LRU_UNZIP_SEARCH_SCANNED_PER_CALL] = {
         .name = "mysql_innodb_buffer_LRU_unzip_search_scanned_per_call",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Page scanned per single LRU unzip search",
     },
     [FAM_MYSQL_INNODB_BUFFER_PAGE_READ] = {
@@ -1357,12 +1357,12 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_OS_PENDING_READS] = {
         .name = "mysql_innodb_os_pending_reads",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of reads pending",
     },
     [FAM_MYSQL_INNODB_OS_PENDING_WRITES] = {
         .name = "mysql_innodb_os_pending_writes",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of writes pending",
     },
     [FAM_MYSQL_INNODB_OS_LOG_WRITTEN_BYTES] = {
@@ -1417,7 +1417,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_TRX_ACTIVE_TRANSACTIONS] = {
         .name = "mysql_innodb_trx_active_transactions",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of active transactions",
     },
     [FAM_MYSQL_INNODB_TRX_RSEG_HISTORY_LEN] = {
@@ -1427,12 +1427,12 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_TRX_UNDO_SLOTS_USED] = {
         .name = "mysql_innodb_trx_undo_slots_used",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of undo slots used",
     },
     [FAM_MYSQL_INNODB_TRX_UNDO_SLOTS_CACHED] = {
         .name = "mysql_innodb_trx_undo_slots_cached",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of undo slots cached",
     },
     [FAM_MYSQL_INNODB_TRX_RSEG_CURRENT_SIZE] = {
@@ -1461,19 +1461,19 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of undo log pages handled by the purge.",
     },
-    [FAM_MYSQL_INNODB_PURGE_DML_DELAY_USEC] = {
-        .name = "mysql_innodb_purge_dml_delay_usec",
+    [FAM_MYSQL_INNODB_PURGE_DML_DELAY_SECONDS] = {
+        .name = "mysql_innodb_purge_dml_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Microseconds DML to be delayed due to purge lagging.",
+        .help = "Seconds DML to be delayed due to purge lagging.",
     },
     [FAM_MYSQL_INNODB_PURGE_STOP_COUNT] = {
         .name = "mysql_innodb_purge_stop_count",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of times purge was stopped.",
     },
     [FAM_MYSQL_INNODB_PURGE_RESUME_COUNT] = {
         .name = "mysql_innodb_purge_resume_count",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of times purge was resumed.",
     },
     [FAM_MYSQL_INNODB_LOG_CHECKPOINTS] = {
@@ -1714,7 +1714,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_IBUF_SIZE] = {
         .name = "mysql_innodb_ibuf_size",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Change buffer size in pages",
     },
     [FAM_MYSQL_INNODB_MASTER_THREAD_SLEEPS] = {
@@ -1724,7 +1724,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_ACTIVITY_COUNT] = {
         .name = "mysql_innodb_activity_count",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Current server activity count",
     },
     [FAM_MYSQL_INNODB_MASTER_ACTIVE_LOOPS] = {
@@ -1737,20 +1737,20 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of times master thread performs its tasks when server is idle",
     },
-    [FAM_MYSQL_INNODB_BACKGROUND_DROP_TABLE_USEC] = {
-        .name = "mysql_innodb_background_drop_table_usec",
+    [FAM_MYSQL_INNODB_BACKGROUND_DROP_TABLE_SECONDS] = {
+        .name = "mysql_innodb_background_drop_table_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Time (in microseconds) spent to process drop table list",
+        .help = "Time (in seconds) spent to process drop table list",
     },
-    [FAM_MYSQL_INNODB_LOG_FLUSH_USEC] = {
-        .name = "mysql_innodb_log_flush_usec",
+    [FAM_MYSQL_INNODB_LOG_FLUSH_SECONDS] = {
+        .name = "mysql_innodb_log_flush_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Time (in microseconds) spent to flush log records",
+        .help = "Time (in seconds) spent to flush log records",
     },
-    [FAM_MYSQL_INNODB_DICT_LRU_USEC] = {
-        .name = "mysql_innodb_dict_lru_usec",
+    [FAM_MYSQL_INNODB_DICT_LRU_SECONDS] = {
+        .name = "mysql_innodb_dict_lru_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Time (in microseconds) spent to process DICT LRU list",
+        .help = "Time (in seconds) spent to process DICT LRU list",
     },
     [FAM_MYSQL_INNODB_DICT_LRU_COUNT_ACTIVE] = {
         .name = "mysql_innodb_dict_lru_count_active",
@@ -1864,22 +1864,22 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_DDL_BACKGROUND_DROP_INDEXES] = {
         .name = "mysql_innodb_ddl_background_drop_indexes",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of indexes waiting to be dropped after failed index creation",
     },
     [FAM_MYSQL_INNODB_DDL_BACKGROUND_DROP_TABLES] = {
         .name = "mysql_innodb_ddl_background_drop_tables",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of tables in background drop table list",
     },
     [FAM_MYSQL_INNODB_DDL_ONLINE_CREATE_INDEX] = {
         .name = "mysql_innodb_ddl_online_create_index",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of indexes being created online",
     },
     [FAM_MYSQL_INNODB_DDL_PENDING_ALTER_TABLE] = {
         .name = "mysql_innodb_ddl_pending_alter_table",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of ALTER TABLE, CREATE INDEX, DROP INDEX in progress",
     },
     [FAM_MYSQL_INNODB_DDL_SORT_FILE_ALTER_TABLE] = {
@@ -1939,12 +1939,12 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_INNODB_CMPMEM_USED_PAGES] = {
         .name = "mysql_innodb_cmpmem_used_pages",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of blocks of the size PAGE_SIZE that are currently in use.",
     },
     [FAM_MYSQL_INNODB_CMPMEM_FREE_PAGES] = {
         .name = "mysql_innodb_cmpmem_free_pages",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of blocks of the size PAGE_SIZE that "
                 "are currently available for allocation.",
     },
@@ -2061,13 +2061,13 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_SLAVE_CONNECTIONS] = {
         .name = "mysql_slave_connections",
-        .type = METRIC_TYPE_GAUGE, // XXX
+        .type = METRIC_TYPE_COUNTER, // XXX
         .help = "Number of REGISTER_SLAVE attempts. "
                 "In practice the number of times slaves has tried to connect to the master.",
     },
     [FAM_MYSQL_SLAVE_OPEN_TEMP_TABLES] = {
         .name = "mysql_slave_open_temp_tables",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of temporary tables the slave has open.",
     },
     [FAM_MYSQL_SLAVE_RECEIVED_HEARTBEATS] = {
@@ -2122,7 +2122,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
                 "replication source server.",
     },
     [FAM_MYSQL_SSL_CONNECT_RENEGOTIATES] = {
-        .name = "mysqĺ_ssl_connect_renegotiates",
+        .name = "mysql_ssl_connect_renegotiates",
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of negotiates needed to establish the connection "
               "to an SSL-enabled replication source server.",
@@ -2149,7 +2149,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
                 "SSL-enabled replication source server.",
     },
     [FAM_MYSQL_SSL_SESSION_CACHE_HITS] = {
-        .name = "mysq_ssl_session_cache_hits",
+        .name = "mysql_ssl_session_cache_hits",
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of SSL session cache hits.",
     },
@@ -2164,7 +2164,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .help = "The number of SSL session cache overflows.",
     },
     [FAM_MYSQL_SSL_SESSION_CACHE_SIZE] = {
-        .name = "mysql_sl_session_cache_size",
+        .name = "mysql_ssl_session_cache_size",
         .type = METRIC_TYPE_GAUGE,
         .help = "The SSL session cache size.",
     },
@@ -2183,9 +2183,14 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "How many SSL session cache entries were used.",
     },
+    [FAM_MYSQL_SSL_VERIFY_DEPTH] = {
+        .name = "mysql_ssl_verify_depth",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The verification depth for replication SSL connections.",
+    },
     [FAM_MYSQL_WSREP_APPLIER_THREAD_COUNT] = {
         .name = "mysql_wsrep_applier_thread_count",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Current number of applier threads.",
     },
     [FAM_MYSQL_WSREP_LOCAL_BF_ABORTS] = {
@@ -2308,6 +2313,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_WSREP_EVS_DELAYED] = {
         .name = "mysql_wsrep_evs_delayed",
+        .type = METRIC_TYPE_INFO,
         .help = "Provides a comma separated list of all the nodes "
                 "this node has registered on its delayed list.",
     },
@@ -2344,7 +2350,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     },
     [FAM_MYSQL_WSREP_OPEN_TRANSACTIONS] = {
         .name = "mysql_wsrep_open_transactions",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "The number of locally running transactions which have been registered "
                 "inside the wsrep provider.",
     },
@@ -2421,8 +2427,8 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
         .help = "The cumulative number of seconds there was activity "
                 "on connections from this user.",
     },
-    [FAM_MYSQL_USER_CPU_TIME] = {
-        .name = "mysql_user_cpu_time",
+    [FAM_MYSQL_USER_CPU_TIME_SECONDS] = {
+        .name = "mysql_user_cpu_time_seconds",
         .type = METRIC_TYPE_COUNTER,
         .help = "The cumulative CPU time elapsed while servicing this user's connections.",
     },
@@ -2703,7 +2709,7 @@ metric_family_t fam_mysql_status[FAM_MYSQL_STATUS_MAX] = {
     [FAM_MYSQL_HEARTBEAT_DELAY_SECONDS] = {
         .name = "mysql_heartbeat_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Timestamp stored in the heartbeat table.",
+        .help = "Replication delay in seconds measured with the heartbeat table.",
     },
     [FAM_MYSQL_MASTER_BINARY_LOG_POSITION] = {
         .name = "mysql_master_binary_log_position",
