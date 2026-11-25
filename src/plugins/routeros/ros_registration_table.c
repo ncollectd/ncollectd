@@ -12,6 +12,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#include "plugin.h"
+
 #include "ros_api.h"
 #include "ros_parse.h"
 
@@ -62,15 +64,9 @@ typedef struct {
     void *user_data;
 } rt_internal_data_t;
 
-static ros_registration_table_t *rt_reply_to_regtable (const ros_reply_t *r)
+static ros_registration_table_t *rt_reply_to_regtable_entry (const ros_reply_t *r)
 {
     ros_registration_table_t *ret;
-
-    if (r == NULL)
-        return (NULL);
-
-    if (strcmp ("re", ros_reply_status (r)) != 0)
-        return (rt_reply_to_regtable (ros_reply_next (r)));
 
     ret = malloc (sizeof (*ret));
     if (ret == NULL)
@@ -107,9 +103,27 @@ static ros_registration_table_t *rt_reply_to_regtable (const ros_reply_t *r)
     ret->rx_ccq = ros_sstrtod (ros_reply_param_val_by_key (r, "rx-ccq"));
     ret->tx_ccq = ros_sstrtod (ros_reply_param_val_by_key (r, "tx-ccq"));
 
-    ret->next = rt_reply_to_regtable (ros_reply_next (r));
-
     return (ret);
+}
+
+static ros_registration_table_t *rt_reply_to_regtable (const ros_reply_t *r, int *status)
+{
+    ros_registration_table_t *head = NULL;
+    ros_registration_table_t **tail = &head;
+
+    for (; r != NULL; r = ros_reply_next (r)) {
+        if (strcmp ("re", ros_reply_status (r)) != 0)
+            continue;
+
+        *tail = rt_reply_to_regtable_entry (r);
+        if (*tail == NULL) {
+            *status = ENOMEM;
+            break;
+        }
+        tail = &(*tail)->next;
+    }
+
+    return head;
 }
 
 static void rt_regtable_free (ros_registration_table_t *r)
@@ -125,11 +139,24 @@ static int rt_internal_handler (ros_connection_t *c, const ros_reply_t *r, void 
 {
     ros_registration_table_t *rt_data;
     rt_internal_data_t *internal_data;
-    int status;
+    int status = 0;
 
-    rt_data = rt_reply_to_regtable (r);
+    /* The menu does not exist without the (legacy) wireless package. */
+    if (ros_reply_trap_message (r) != NULL) {
+        PLUGIN_DEBUG ("Wireless registration table not available: %s",
+                      ros_reply_trap_message (r));
+        return 0;
+    }
+
+    rt_data = rt_reply_to_regtable (r, &status);
+    if (status != 0) {
+        rt_regtable_free (rt_data);
+        return status;
+    }
+
+    /* No registered clients: nothing to report. */
     if (rt_data == NULL)
-        return (errno);
+        return 0;
 
     internal_data = user_data;
 

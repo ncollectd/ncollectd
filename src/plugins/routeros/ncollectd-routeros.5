@@ -12,10 +12,15 @@
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
+        \fBssl\fP \fItrue|false\fP
+        \fBca-cert\fP \fI/path/to/ca\fP
+        \fBverify-peer\fP \fItrue|false\fP
+        \fBverify-host\fP \fItrue|false\fP
         \fBuser\fP \fIuser\fP
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBinterval\fP \fIseconds\fP
         \fBfilter\fP {
             ...
@@ -35,12 +40,32 @@ Within each block, the following options are understood:
 Hostname or IP-address of the router to connect to.
 .It \fBport\fP \fIport\fP
 Port name or port number used when connecting.
-If left unspecified, the default will be chosen by \fIlibrouteros\fP,
-currently "8728".
-This option expects a string argument, even when a numeric port number is given.
+If left unspecified, "8728" is used, or "8729" (the \fIapi-ssl\fP service)
+when \fBssl\fP is enabled.
+.It \fBssl\fP \fItrue|false\fP
+Connect to the \fIapi-ssl\fP service of the router using TLS.
+Without TLS the user name, the password and all the data are sent in
+clear text over the network.
+The router must have a certificate assigned to the \fIapi-ssl\fP service:
+without one RouterOS only offers anonymous ciphers, which are not accepted.
+Defaults to \fIfalse\fP.
+.It \fBca-cert\fP \fI/path/to/ca\fP
+File with the PEM-encoded CA certificates used to verify the certificate
+of the router.
+If not set, the default CA certificates of the system are used.
+.It \fBverify-peer\fP \fItrue|false\fP
+Enable or disable the verification of the certificate of the router.
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable the check that the certificate of the router matches
+the host name or address given in \fBhost\fP.
+Only used when \fBverify-peer\fP is enabled.
+Enabled by default.
 .It \fBuser\fP \fIuser\fP
 Use the user name \fIuser\fP to authenticate.
 Defaults to "admin".
+It is recommended to use a dedicated user with read-only rights
+(a group with the policies \fIread\fP and \fIapi\fP) instead.
 .It \fBuser-env\fP \fIenv-name\fP
 Get the user name \fIuser\fP to authenticate from the environment
 variable \fIenv-name\fP.
@@ -49,6 +74,12 @@ Set the password used to authenticate.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password used to authenticate from the environment
 variable \fIenv-name\fP.
+.It \fBtimeout\fP \fIseconds\fP
+Timeout for establishing the connection to the router and for every
+read or write on it, rounded to whole seconds (at least one second).
+If the router does not respond in time the connection is closed and
+reopened in the next interval.
+Defaults to half of the \fBinterval\fP.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected
 from this instance.

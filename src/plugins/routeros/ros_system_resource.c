@@ -12,6 +12,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#include "plugin.h"
+
 #include "ros_api.h"
 #include "ros_parse.h"
 
@@ -22,11 +24,12 @@ typedef struct {
 
 static int rt_reply_to_system_resource (const ros_reply_t *r, ros_system_resource_t *ret)
 {
-    if (r == NULL)
-        return (EINVAL);
+    while ((r != NULL) && (strcmp ("re", ros_reply_status (r)) != 0))
+        r = ros_reply_next (r);
 
-    if (strcmp ("re", ros_reply_status (r)) != 0)
-        return (rt_reply_to_system_resource (ros_reply_next (r), ret));
+    /* no !re sentence */
+    if (r == NULL)
+        return (ENOENT);
 
     ret->uptime = ros_sstrtodate (ros_reply_param_val_by_key (r, "uptime"));
 
@@ -58,9 +61,17 @@ static int sr_internal_handler (ros_connection_t *c, const ros_reply_t *r, void 
     rt_internal_data_t *internal_data;
     int status;
 
+    const char *trap = ros_reply_trap_message (r);
+    if (trap != NULL) {
+        PLUGIN_ERROR ("Command '/system/resource/print' failed: %s", trap);
+        return EPROTO;
+    }
+
     memset (&sys_res, 0, sizeof (sys_res));
     status = rt_reply_to_system_resource (r, &sys_res);
-    if (status != 0)
+    if (status == ENOENT) /* nothing to report */
+        return 0;
+    else if (status != 0)
         return (status);
 
     internal_data = user_data;

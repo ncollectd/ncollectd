@@ -27,13 +27,19 @@ enum {
     FAM_ROUTEROS_REGTABLE_TX_SIGNAL_QUALITY,
     FAM_ROUTEROS_REGTABLE_RX_BYTES,
     FAM_ROUTEROS_REGTABLE_TX_BYTES,
+    FAM_ROUTEROS_REGTABLE_RX_FRAMES,
+    FAM_ROUTEROS_REGTABLE_TX_FRAMES,
     FAM_ROUTEROS_REGTABLE_SIGNAL_TO_NOISE,
+    FAM_ROUTEROS_UPTIME,
+    FAM_ROUTEROS_CPU_COUNT,
     FAM_ROUTEROS_CPU_LOAD,
     FAM_ROUTEROS_MEMORY_USED_BYTES,
     FAM_ROUTEROS_MEMORY_FREE_BYTES,
+    FAM_ROUTEROS_HDD_USED_BYTES,
+    FAM_ROUTEROS_HDD_FREE_BYTES,
     FAM_ROUTEROS_SECTORS_WRITTEN,
     FAM_ROUTEROS_BAD_BLOCKS,
-    FAM_ROUTEROS_SYSTEM_VOTAGE,
+    FAM_ROUTEROS_SYSTEM_VOLTAGE,
     FAM_ROUTEROS_SYSTEM_TEMPERATURE,
     FAM_ROUTEROS_MAX,
 };
@@ -42,127 +48,157 @@ static metric_family_t fams[FAM_ROUTEROS_MAX] = {
     [FAM_ROUTEROS_UP] = {
         .name = "routeros_up",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Could the router be reached and queried.",
     },
     [FAM_ROUTEROS_IF_RX_PACKETS] = {
         .name = "routeros_if_rx_packets",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of packets received on the interface.",
     },
     [FAM_ROUTEROS_IF_TX_PACKETS] = {
         .name = "routeros_if_tx_packets",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of packets transmitted on the interface.",
     },
     [FAM_ROUTEROS_IF_RX_BYTES] = {
         .name = "routeros_if_rx_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of bytes received on the interface.",
     },
     [FAM_ROUTEROS_IF_TX_BYTES] = {
         .name = "routeros_if_tx_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of bytes transmitted on the interface.",
     },
     [FAM_ROUTEROS_IF_RX_ERRORS] = {
         .name = "routeros_if_rx_errors",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of receive errors on the interface.",
     },
     [FAM_ROUTEROS_IF_TX_ERRORS] = {
         .name = "routeros_if_tx_errors",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of transmit errors on the interface.",
     },
     [FAM_ROUTEROS_IF_RX_DROPPED] = {
         .name = "routeros_if_rx_dropped",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of received packets dropped on the interface.",
     },
     [FAM_ROUTEROS_IF_TX_DROPPED] = {
         .name = "routeros_if_tx_dropped",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of transmitted packets dropped on the interface.",
     },
     [FAM_ROUTEROS_REGTABLE_RX_BITRATE] = {
         .name = "routeros_regtable_rx_bitrate",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Receive rate from the wireless client in bits per second.",
     },
     [FAM_ROUTEROS_REGTABLE_TX_BITRATE] = {
         .name = "routeros_regtable_tx_bitrate",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Transmit rate to the wireless client in bits per second.",
     },
     [FAM_ROUTEROS_REGTABLE_RX_SIGNAL_POWER] = {
         .name = "routeros_regtable_rx_signal_power",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Signal strength received from the wireless client in dBm.",
     },
     [FAM_ROUTEROS_REGTABLE_TX_SIGNAL_POWER] = {
         .name = "routeros_regtable_tx_signal_power",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Transmit signal strength reported by the wireless client in dBm.",
     },
     [FAM_ROUTEROS_REGTABLE_RX_SIGNAL_QUALITY] = {
         .name = "routeros_regtable_rx_signal_quality",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Receive client connection quality (CCQ) in percent.",
     },
     [FAM_ROUTEROS_REGTABLE_TX_SIGNAL_QUALITY] = {
         .name = "routeros_regtable_tx_signal_quality",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Transmit client connection quality (CCQ) in percent.",
     },
     [FAM_ROUTEROS_REGTABLE_RX_BYTES] = {
         .name = "routeros_regtable_rx_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of bytes received from the wireless client.",
     },
     [FAM_ROUTEROS_REGTABLE_TX_BYTES] = {
         .name = "routeros_regtable_tx_bytes",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of bytes transmitted to the wireless client.",
+    },
+    [FAM_ROUTEROS_REGTABLE_RX_FRAMES] = {
+        .name = "routeros_regtable_rx_frames",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of frames received from the wireless client.",
+    },
+    [FAM_ROUTEROS_REGTABLE_TX_FRAMES] = {
+        .name = "routeros_regtable_tx_frames",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of frames transmitted to the wireless client.",
     },
     [FAM_ROUTEROS_REGTABLE_SIGNAL_TO_NOISE] = {
         .name = "routeros_regtable_signal_to_noise",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Signal to noise ratio of the wireless client in dB.",
+    },
+    [FAM_ROUTEROS_UPTIME] = {
+        .name = "routeros_uptime_seconds",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Time since the router was booted in seconds.",
+    },
+    [FAM_ROUTEROS_CPU_COUNT] = {
+        .name = "routeros_cpu_count",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of CPUs of the router.",
     },
     [FAM_ROUTEROS_CPU_LOAD] = {
         .name = "routeros_cpu_load",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "CPU load of the router in percent.",
     },
     [FAM_ROUTEROS_MEMORY_USED_BYTES] = {
         .name = "routeros_memory_used_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Used memory of the router in bytes.",
     },
     [FAM_ROUTEROS_MEMORY_FREE_BYTES] = {
         .name = "routeros_memory_free_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Free memory of the router in bytes.",
+    },
+    [FAM_ROUTEROS_HDD_USED_BYTES] = {
+        .name = "routeros_hdd_used_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Used space of the storage of the router in bytes.",
+    },
+    [FAM_ROUTEROS_HDD_FREE_BYTES] = {
+        .name = "routeros_hdd_free_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Free space of the storage of the router in bytes.",
     },
     [FAM_ROUTEROS_SECTORS_WRITTEN] = {
         .name = "routeros_sectors_written",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Total number of sectors written to the storage of the router.",
     },
     [FAM_ROUTEROS_BAD_BLOCKS] = {
         .name = "routeros_bad_blocks",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Bad blocks of the storage of the router as reported by RouterOS.",
     },
-    [FAM_ROUTEROS_SYSTEM_VOTAGE] = {
-        .name = "routeros_system_votage",
+    [FAM_ROUTEROS_SYSTEM_VOLTAGE] = {
+        .name = "routeros_system_voltage",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Supply voltage of the router in volts.",
     },
     [FAM_ROUTEROS_SYSTEM_TEMPERATURE] = {
         .name = "routeros_system_temperature",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Temperature of the router in degrees Celsius.",
     },
 };
 
@@ -172,6 +208,11 @@ typedef struct {
     char *service;
     char *username;
     char *password;
+    cdtime_t timeout;
+    bool ssl;
+    char *ca_cert;
+    bool verify_peer;
+    bool verify_host;
 
     label_set_t labels;
     plugin_filter_t *filter;
@@ -188,7 +229,7 @@ static int handle_interface(__attribute__((unused)) ros_connection_t *c,
     cr_data_t *rd = user_data;
 
     while (i != NULL) {
-        if (!i->running) {
+        if (!i->running || (i->name == NULL) || (i->name[0] == '\0')) {
             i = i->next;
             continue;
         }
@@ -233,10 +274,12 @@ static int handle_regtable(__attribute__((unused)) ros_connection_t *c,
 
     while (r != NULL) {
         const char *name = r->radio_name;
-        if (name == NULL)
+        if ((name == NULL) || (name[0] == '\0'))
             name = r->mac_address;
-        if (name == NULL)
-            name = "default";
+        if ((name == NULL) || (name[0] == '\0')) {
+            r = r->next;
+            continue;
+        }
 
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_RX_BITRATE],
                              VALUE_GAUGE(1000000.0 * r->rx_rate), &rd->labels,
@@ -278,6 +321,16 @@ static int handle_regtable(__attribute__((unused)) ros_connection_t *c,
                              &LABEL_PAIR_CONST("interface", r->interface),
                              &LABEL_PAIR_CONST("radio", name),
                              NULL);
+        metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_RX_FRAMES],
+                             VALUE_COUNTER(r->rx_frames), &rd->labels,
+                             &LABEL_PAIR_CONST("interface", r->interface),
+                             &LABEL_PAIR_CONST("radio", name),
+                             NULL);
+        metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_TX_FRAMES],
+                             VALUE_COUNTER(r->tx_frames), &rd->labels,
+                             &LABEL_PAIR_CONST("interface", r->interface),
+                             &LABEL_PAIR_CONST("radio", name),
+                             NULL);
         metric_family_append(&rd->fams[FAM_ROUTEROS_REGTABLE_SIGNAL_TO_NOISE],
                              VALUE_GAUGE(r->signal_to_noise), &rd->labels,
                              &LABEL_PAIR_CONST("interface", r->interface),
@@ -297,12 +350,26 @@ static int handle_system_resource(__attribute__((unused)) ros_connection_t *c,
         return EINVAL;
     cr_data_t *rd = user_data;
 
+    if (r->uptime > 0)
+        metric_family_append(&rd->fams[FAM_ROUTEROS_UPTIME],
+                             VALUE_GAUGE(r->uptime), &rd->labels, NULL);
+    if (r->cpu_count > 0)
+        metric_family_append(&rd->fams[FAM_ROUTEROS_CPU_COUNT],
+                             VALUE_GAUGE(r->cpu_count), &rd->labels, NULL);
     metric_family_append(&rd->fams[FAM_ROUTEROS_CPU_LOAD],
                          VALUE_GAUGE(r->cpu_load), &rd->labels, NULL);
-    metric_family_append(&rd->fams[FAM_ROUTEROS_MEMORY_USED_BYTES],
-                         VALUE_GAUGE(r->total_memory - r->free_memory), &rd->labels, NULL);
+    if ((r->total_memory > 0) && (r->total_memory >= r->free_memory))
+        metric_family_append(&rd->fams[FAM_ROUTEROS_MEMORY_USED_BYTES],
+                             VALUE_GAUGE(r->total_memory - r->free_memory), &rd->labels, NULL);
     metric_family_append(&rd->fams[FAM_ROUTEROS_MEMORY_FREE_BYTES],
                          VALUE_GAUGE(r->free_memory), &rd->labels, NULL);
+    if ((r->total_hdd_space > 0) && (r->total_hdd_space >= r->free_hdd_space)) {
+        metric_family_append(&rd->fams[FAM_ROUTEROS_HDD_USED_BYTES],
+                             VALUE_GAUGE(r->total_hdd_space - r->free_hdd_space),
+                             &rd->labels, NULL);
+        metric_family_append(&rd->fams[FAM_ROUTEROS_HDD_FREE_BYTES],
+                             VALUE_GAUGE(r->free_hdd_space), &rd->labels, NULL);
+    }
     metric_family_append(&rd->fams[FAM_ROUTEROS_SECTORS_WRITTEN],
                          VALUE_COUNTER(r->write_sect_total), &rd->labels, NULL);
     metric_family_append(&rd->fams[FAM_ROUTEROS_BAD_BLOCKS],
@@ -320,7 +387,7 @@ static int handle_system_health(__attribute__((unused)) ros_connection_t *c,
 
     cr_data_t *rd = user_data;
 
-    metric_family_append(&rd->fams[FAM_ROUTEROS_SYSTEM_VOTAGE],
+    metric_family_append(&rd->fams[FAM_ROUTEROS_SYSTEM_VOLTAGE],
                          VALUE_GAUGE(r->voltage), &rd->labels, NULL);
     metric_family_append(&rd->fams[FAM_ROUTEROS_SYSTEM_TEMPERATURE],
                          VALUE_GAUGE(r->temperature), &rd->labels, NULL);
@@ -339,7 +406,19 @@ static int cr_read(user_data_t *user_data)
         return EINVAL;
 
     if (rd->connection == NULL) {
-        rd->connection = ros_connect(rd->node, rd->service, rd->username, rd->password);
+        unsigned int timeout = (unsigned int)CDTIME_T_TO_TIME_T(rd->timeout);
+        if (timeout == 0)
+            timeout = 1;
+        ros_connect_opts_t connect_opts = {
+            .connect_timeout = timeout,
+            .receive_timeout = timeout,
+            .ssl = rd->ssl,
+            .ca_cert = rd->ca_cert,
+            .verify_peer = rd->verify_peer,
+            .verify_host = rd->verify_host,
+        };
+        rd->connection = ros_connect_with_options(rd->node, rd->service, rd->username,
+                                                  rd->password, &connect_opts);
         if (rd->connection == NULL) {
             PLUGIN_ERROR("ros_connect failed: %s", STRERRNO);
             metric_family_append(&rd->fams[FAM_ROUTEROS_UP], VALUE_GAUGE(0), &rd->labels, NULL);
@@ -349,8 +428,6 @@ static int cr_read(user_data_t *user_data)
     }
 
     cdtime_t submit = cdtime();
-
-    metric_family_append(&rd->fams[FAM_ROUTEROS_UP], VALUE_GAUGE(1), &rd->labels, NULL);
 
     assert(rd->connection != NULL);
     while (true) {
@@ -381,6 +458,9 @@ static int cr_read(user_data_t *user_data)
         break;
     }
 
+    metric_family_append(&rd->fams[FAM_ROUTEROS_UP], VALUE_GAUGE(status == 0 ? 1 : 0),
+                         &rd->labels, NULL);
+
     if (status != 0) {
         ros_disconnect(rd->connection);
         rd->connection = NULL;
@@ -406,6 +486,7 @@ static void cr_free_data(void *ptr)
     free(rd->service);
     free(rd->username);
     free(rd->password);
+    free(rd->ca_cert);
 
     label_set_reset(&rd->labels);
 
@@ -425,6 +506,9 @@ static int cr_config_router(config_item_t *ci)
     }
 
     memcpy(router_data->fams, fams, sizeof(router_data->fams[0])*FAM_ROUTEROS_MAX);
+
+    router_data->verify_peer = true;
+    router_data->verify_host = true;
 
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
@@ -446,6 +530,23 @@ static int cr_config_router(config_item_t *ci)
             status = cf_util_get_label(child, &router_data->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &router_data->timeout);
+        } else if (strcasecmp("ssl", child->key) == 0) {
+            status = cf_util_get_boolean(child, &router_data->ssl);
+#ifndef ROUTEROS_HAVE_SSL
+            if ((status == 0) && router_data->ssl) {
+                PLUGIN_ERROR("Option '%s' in %s:%d: the plugin was built without TLS support.",
+                             child->key, cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
+#endif
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &router_data->ca_cert);
+        } else if (strcasecmp("verify-peer", child->key) == 0) {
+            status = cf_util_get_boolean(child, &router_data->verify_peer);
+        } else if (strcasecmp("verify-host", child->key) == 0) {
+            status = cf_util_get_boolean(child, &router_data->verify_host);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &router_data->filter);
         } else {
@@ -483,9 +584,16 @@ static int cr_config_router(config_item_t *ci)
         return status;
     }
 
+    if (router_data->timeout == 0) {
+        if (interval == 0)
+            router_data->timeout = plugin_get_interval() / 2;
+        else
+            router_data->timeout = interval / 2;
+    }
+
     label_set_add(&router_data->labels, true, "instance", router_data->name);
 
-    return plugin_register_complex_read("routeros", router_data->node, cr_read, interval,
+    return plugin_register_complex_read("routeros", router_data->name, cr_read, interval,
                             &(user_data_t){.data=router_data, .free_func=cr_free_data});
 }
 

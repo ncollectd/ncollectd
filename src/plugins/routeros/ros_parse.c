@@ -108,7 +108,7 @@ int ros_sstrto_rx_tx_counters (const char *str, uint64_t *rx, uint64_t *tx)
     errno = 0;
     endptr = NULL;
     *tx = (uint64_t) strtoull (ptr, &endptr, /* base = */ 10);
-    if ((endptr == str) || (errno != 0)) {
+    if ((endptr == ptr) || (errno != 0)) {
         *rx = 0;
         *tx = 0;
         return EIO;
@@ -143,6 +143,9 @@ uint64_t _ros_sstrtodate (const char *str, bool have_hour)
     case 'm': ret *=          60; break;
     case 's': ret *=           1; break;
     case ':': ret *= have_hour ? 60 : 3600; have_hour = true; break;
+    default:
+        /* end of the string or unknown separator */
+        return ret;
     }
 
     return ret + _ros_sstrtodate (endptr + 1, have_hour);

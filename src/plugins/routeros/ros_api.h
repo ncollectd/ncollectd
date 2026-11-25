@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #define ROUTEROS_API_PORT "8728"
+#define ROUTEROS_API_SSL_PORT "8729"
 
 struct ros_connection_s;
 typedef struct ros_connection_s ros_connection_t;
@@ -24,10 +25,19 @@ typedef int (*ros_reply_handler_t) (ros_connection_t *c, const ros_reply_t *r,
  */
 struct ros_connect_opts_s
 {
-    /* receive_timeout is the receive timeout in seconds. */
+    /* receive_timeout is the receive and send timeout in seconds. */
     unsigned int receive_timeout;
     /* connect_timeout is the connect timeout in seconds. */
     unsigned int connect_timeout;
+    /* ssl enables TLS (the api-ssl service). */
+    bool ssl;
+    /* ca_cert is the file with the CA certificates used to verify the
+     * router certificate, NULL to use the system default. */
+    const char *ca_cert;
+    /* verify_peer and verify_host enable the verification of the router
+     * certificate and of the host name (or address) in it. */
+    bool verify_peer;
+    bool verify_host;
 };
 typedef struct ros_connect_opts_s ros_connect_opts_t;
 
@@ -55,6 +65,9 @@ const ros_reply_t *ros_reply_next (const ros_reply_t *r);
 int ros_reply_num (const ros_reply_t *r);
 
 const char *ros_reply_status (const ros_reply_t *r);
+
+/* Message of the first !trap sentence of the reply, NULL if there is none. */
+const char *ros_reply_trap_message (const ros_reply_t *r);
 
 /* Receiving reply parameters */
 const char *ros_reply_param_key_by_index (const ros_reply_t *r,
