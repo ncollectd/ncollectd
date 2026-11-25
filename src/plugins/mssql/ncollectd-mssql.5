@@ -39,6 +39,7 @@
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBping-query\fP \fIquery\fP
         \fBquery\fP \fIquery-name\fP
         \fBfilter\fP {
@@ -62,11 +63,19 @@ the block.
 .Bl -tag -width Ds
 .It \fBserver\fP \fIserver\fP
 The server name of the database to connect to.
+If the name is found in
+.Xr freetds.conf 5 ,
+the settings of that entry (host, port, tds version, ...) are used.
+The plugin has no TLS options: set \fBencryption\fP to \fIrequire\fP (and
+\fBca file\fP to verify the server certificate) in that entry to enforce
+encrypted connections.
 .It \fBdatabase\fP \fIdatabase\fP
 Select the database.
 Defaults to \fIno database\fP.
 .It \fBuser\fP \fIuser\fP
-User to connect to database
+User to connect to database.
+If no user is set, an empty user name is sent, which FreeTDS uses to
+request Kerberos authentication.
 .It \fBuser-env\fP \fIenv-name\fP
 Get the user to connect to database from the environment variable
 \fIenv-name\fP.
@@ -84,6 +93,11 @@ Prepends \fIprefix\fP to the metrics name.
 Sets the interval (in seconds) in which the values will be collected from this
 database.
 By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+Sets the timeout, in seconds, to log in to the server and to wait for the
+response of a query.
+When it expires the connection is closed and opened again in the next read.
+By default, the configured \fBinterval\fP is used to set the timeout.
 .It \fBping-query\fP \fIquery\fP
 Specifies a query to test the connection to the database.
 .It \fBquery\fP \fIquery-name\fP
@@ -115,6 +129,8 @@ the same query again and again is not desirable.
 Sets the statement that should be executed on the server.
 This is \fBnot\fP interpreted by ncollectd, but simply passed to the database
 server.
+Only the first result set returned by the statement is used, the results
+of statements without columns (e.g. \fBSET NOCOUNT ON\fP) are skipped.
 .It \fBmin-version\fP \fIversion\fP
 .It \fBmax-version\fP \fIversion\fP
 Only use this query for the specified database version.
@@ -166,4 +182,5 @@ There must be only one \fBvalue-from\fP option inside each \fBresult\fP block.
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
-.Xr ncollectd.conf 5
+.Xr ncollectd.conf 5 ,
+.Xr freetds.conf 5

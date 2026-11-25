@@ -9,6 +9,8 @@
 #include <sybfront.h>
 #include <sybdb.h>
 
+#define MSSQL_MAX_COLUMN_SIZE 4096
+
 typedef struct {
     char *name;
     char *metric_prefix;
@@ -21,6 +23,7 @@ typedef struct {
     char *dbname;
 
     char *ping_query;
+    cdtime_t timeout;
 
     db_query_preparation_area_t **q_prep_areas;
     db_query_t **queries;
@@ -31,6 +34,8 @@ typedef struct {
 } mssql_database_t;
 
 static int do_dbinit;
+
+static pthread_mutex_t login_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static db_query_t **queries;
 static size_t queries_num;
@@ -92,22 +97,24 @@ static unsigned int mssql_version(mssql_database_t *db)
     RETCODE rc = dbcmd(db->dbproc, "SELECT CAST(SERVERPROPERTY('productversion') AS VARCHAR)");
     if (rc == FAIL) {
         PLUGIN_ERROR("dbcmd() failed.");
-        return -1;
+        return 0;
     }
 
     rc = dbsqlexec(db->dbproc);
     if (rc == FAIL) {
         PLUGIN_ERROR("dbsqlexec() failed.");
         dbfreebuf(db->dbproc);
-        return -1;
+        return 0;
     }
 
     char buffer[256];
     buffer[0] = '\0';
     int status = 0;
 
-    if (dbresults(db->dbproc) != SUCCEED)
+    if (dbresults(db->dbproc) != SUCCEED) {
+        dbcanquery(db->dbproc);
         return 0;
+    }
 
     int ncols = dbnumcols(db->dbproc);
     if (ncols != 1) {
@@ -129,10 +136,12 @@ static unsigned int mssql_version(mssql_database_t *db)
         return 0;
     }
 
-    dbnextrow(db->dbproc);
+    int row_code = dbnextrow(db->dbproc);
 
     dbcanquery(db->dbproc);
 
+    if (row_code != REG_ROW)
+        return 0;
     if (buffer[0] == '\0')
         return 0;
     if (status == -1)
@@ -174,6 +183,9 @@ static unsigned int mssql_version(mssql_database_t *db)
 
 static bool mssql_ping(mssql_database_t *db)
 {
+    if (dbdead(db->dbproc))
+        return false;
+
     if (db->ping_query == NULL)
         return true;
 
@@ -235,9 +247,9 @@ static int mssql_read_database_query(mssql_database_t *db, db_query_t *q,
 {
     char **column_names = NULL;
     char **column_values = NULL;
-    int *column_types = NULL;
     int *column_status = NULL;
     int column_num = 0;
+    bool prepared = false;
 
     int status = 0;
     char *statement = db_query_get_statement(q);
@@ -258,13 +270,21 @@ static int mssql_read_database_query(mssql_database_t *db, db_query_t *q,
         goto error;
     }
 
-    RETCODE rrc = dbresults(db->dbproc);
+    /* Skip the results of statements without columns, e.g. SET NOCOUNT ON. */
+    RETCODE rrc;
+    while ((rrc = dbresults(db->dbproc)) == SUCCEED) {
+        column_num = dbnumcols(db->dbproc);
+        if (column_num > 0)
+            break;
+    }
+
     if (rrc != SUCCEED) {
+        if (rrc == NO_MORE_RESULTS)
+            PLUGIN_ERROR("mssql_read_database_query (%s, %s): the statement returned "
+                         "no result set.", db->name, db_query_get_name(q));
         status = -1;
         goto error;
     }
-
-    column_num = dbnumcols(db->dbproc);
 
     column_names = calloc(column_num, sizeof(*column_names));
     if (column_names == NULL) {
@@ -281,13 +301,6 @@ static int mssql_read_database_query(mssql_database_t *db, db_query_t *q,
     }
     for (int i = 1; i < column_num; i++) {
         column_names[i] = column_names[i - 1] + DATA_MAX_NAME_LEN;
-    }
-
-    column_types = calloc(column_num, sizeof(*column_types));
-    if (column_types == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        status = -1;
-        goto error;
     }
 
     column_status = calloc(column_num, sizeof(*column_status));
@@ -308,35 +321,48 @@ static int mssql_read_database_query(mssql_database_t *db, db_query_t *q,
         char *column_name = column_names[col];
 
         char *name = dbcolname(db->dbproc, col + 1);
+        if (name == NULL) {
+            PLUGIN_ERROR("mssql_read_database_query (%s, %s): dbcolname failed for column %d.",
+                         db->name, db_query_get_name(q), col + 1);
+            status = -1;
+            goto error;
+        }
         sstrncpy(column_name, name, DATA_MAX_NAME_LEN);
 
         int type = dbcoltype(db->dbproc, col + 1);
 
         int size = dbcollen(db->dbproc, col +1);
 
-        if (type != SYBCHAR) {
+        if (type != SYBCHAR)
             size = dbprcollen(db->dbproc, col + 1);
-            if (size > 255)
-                size = 255;
-        }
 
-        column_types[col] = type;
+        if ((size <= 0) || (size > MSSQL_MAX_COLUMN_SIZE))
+            size = MSSQL_MAX_COLUMN_SIZE;
 
         char *buffer = calloc(1, size + 1);
         if (buffer == NULL) {
             PLUGIN_ERROR("calloc failed.");
+            status = -1;
             goto error;
         }
 
         column_values[col] = buffer;
 
         rc = dbbind(db->dbproc, col + 1, NTBSTRINGBIND,  size+1, (BYTE*)buffer);
-        if (rc == FAIL)
+        if (rc == FAIL) {
+            PLUGIN_ERROR("mssql_read_database_query (%s, %s): dbbind failed for column '%s'.",
+                         db->name, db_query_get_name(q), column_name);
+            status = -1;
             goto error;
+        }
 
         rc = dbnullbind(db->dbproc, col + 1, &column_status[col]);
-        if (rc == FAIL)
+        if (rc == FAIL) {
+            PLUGIN_ERROR("mssql_read_database_query (%s, %s): dbnullbind failed for column '%s'.",
+                         db->name, db_query_get_name(q), column_name);
+            status = -1;
             goto error;
+        }
 
     }
 
@@ -348,38 +374,45 @@ static int mssql_read_database_query(mssql_database_t *db, db_query_t *q,
         goto error;
     }
 
+    prepared = true;
+
     /* Iterate over all rows and call `db_query_handle_result' with each list of values. */
-    while ((rrc != NO_MORE_RESULTS) && (rrc != FAIL)) {
-        int row_code;
-        while ((row_code = dbnextrow(db->dbproc)) != NO_MORE_ROWS) {
-            if (row_code != REG_ROW)
-                continue;
-
-            for (int col = 0; col < column_num; col++) {
-                if (column_status[col] == -1)
-                    column_values[col][0] = '\0';
-            }
-
-            /* If all values were copied successfully, call `db_query_handle_result'
-             * to dispatch the row to the daemon. */
-            status = db_query_handle_result(q, prep_area, column_values, db->filter);
-            if (status != 0) {
-                PLUGIN_ERROR("mssql_read_database_query (%s, %s): db_query_handle_result failed.",
-                             db->name, db_query_get_name(q));
-                goto error;
-            }
+    int row_code;
+    while ((row_code = dbnextrow(db->dbproc)) != NO_MORE_ROWS) {
+        if ((row_code == FAIL) || (row_code == BUF_FULL)) {
+            PLUGIN_ERROR("mssql_read_database_query (%s, %s): dbnextrow failed.",
+                         db->name, db_query_get_name(q));
+            status = -1;
+            goto error;
         }
 
-        rrc = dbresults(db->dbproc);
-    }
+        if (row_code != REG_ROW)
+            continue;
 
-    /* Tell the db query interface that we're done with this query. */
-    db_query_finish_result(q, prep_area);
+        for (int col = 0; col < column_num; col++) {
+            if (column_status[col] == -1)
+                column_values[col][0] = '\0';
+        }
+
+        /* If all values were copied successfully, call `db_query_handle_result'
+         * to dispatch the row to the daemon. */
+        status = db_query_handle_result(q, prep_area, column_values, db->filter);
+        if (status != 0) {
+            PLUGIN_ERROR("mssql_read_database_query (%s, %s): db_query_handle_result failed.",
+                         db->name, db_query_get_name(q));
+            goto error;
+        }
+    }
 
     status = 0;
 
 error:
-    dbcanquery(db->dbproc);
+    /* Tell the db query interface that we're done with this query. */
+    if (prepared)
+        db_query_finish_result(q, prep_area);
+
+    /* Only the first result set is used: discard any pending rows and results. */
+    dbcancel(db->dbproc);
 
     if (column_names != NULL) {
         free(column_names[0]);
@@ -392,9 +425,6 @@ error:
         }
         free(column_values);
     }
-
-    if (column_types != NULL)
-        free(column_types);
 
     if (column_status != NULL)
         free(column_status );
@@ -417,10 +447,31 @@ static int mssql_connect(mssql_database_t *db)
         return -1;
     }
 
-    DBSETLUSER(login, db->user);
-    DBSETLPWD(login, db->pass);
+    if ((db->user != NULL) && (DBSETLUSER(login, db->user) == FAIL)) {
+        PLUGIN_ERROR("Unable to set the user for instance '%s'.", db->name);
+        dbloginfree(login);
+        return -1;
+    }
 
+    if ((db->pass != NULL) && (DBSETLPWD(login, db->pass) == FAIL)) {
+        PLUGIN_ERROR("Unable to set the password for instance '%s'.", db->name);
+        dbloginfree(login);
+        return -1;
+    }
+
+    double seconds = CDTIME_T_TO_DOUBLE(db->timeout);
+    int timeout = 1;
+    if (seconds > (double)INT_MAX)
+        timeout = INT_MAX;
+    else if (seconds > 1.0)
+        timeout = (int)seconds;
+
+    /* The db-lib login timeout is global, set it and connect atomically. */
+    pthread_mutex_lock(&login_lock);
+    dbsetlogintime(timeout);
     db->dbproc = dbopen(login, db->server);
+    pthread_mutex_unlock(&login_lock);
+
     if (db->dbproc == NULL) {
         dbloginfree(login);
         return -1;
@@ -428,10 +479,19 @@ static int mssql_connect(mssql_database_t *db)
 
     dbloginfree(login);
 
+    char timeout_str[16];
+    ssnprintf(timeout_str, sizeof(timeout_str), "%d", timeout);
+    if (dbsetopt(db->dbproc, DBSETTIME, timeout_str, 0) == FAIL) {
+        PLUGIN_ERROR("Unable to set the query timeout for instance '%s'.", db->name);
+        mssql_disconnect(db);
+        return -1;
+    }
+
     if (db->dbname != NULL) {
         RETCODE rc = dbuse(db->dbproc, db->dbname);
         if (rc == FAIL) {
             PLUGIN_ERROR("Unable to use to database %s.", db->dbname);
+            mssql_disconnect(db);
             return -1;
         }
     }
@@ -515,6 +575,8 @@ static int mssql_config_add_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->ping_query);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &db->timeout);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &db->filter);
         } else {
@@ -533,6 +595,9 @@ static int mssql_config_add_database(config_item_t *ci)
             status = -1;
         }
     }
+
+    if (db->timeout == 0)
+        db->timeout = (interval != 0) ? interval : plugin_get_interval();
 
     while ((status == 0) && (db->queries_num > 0)) {
         db->q_prep_areas = calloc(db->queries_num, sizeof(*db->q_prep_areas));
