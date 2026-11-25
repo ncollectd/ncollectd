@@ -72,6 +72,7 @@ typedef struct {
     char curl_error[CURL_ERROR_SIZE];
     xson_tree_parser_t *parser;
     char parser_error[CURL_ERROR_SIZE];
+    size_t received;
     redfish_instance_t *instance;
     redfish_query_t *query;
 } redfish_request_t;
@@ -98,10 +99,12 @@ struct redfish_instance_s {
 };
 
 #define REDFISH_VERSION "v1"
+/* Maximum size of a response body. */
+#define REDFISH_MAX_RESPONSE_SIZE (16 * 1024 * 1024)
 
 static c_avl_tree_t *queries;
 
-void redfish_request_reset(redfish_request_t *request)
+static void redfish_request_reset(redfish_request_t *request)
 {
     request->curl_error[0] = '\0';
     if (request->curl != NULL) {
@@ -146,6 +149,9 @@ static void redfish_instance_free(void *data)
     }
     free(instance->requests);
 
+    if (instance->curl_multi != NULL)
+        curl_multi_cleanup(instance->curl_multi);
+
     free(instance);
 }
 
@@ -156,6 +162,7 @@ static void redfish_property_free(redfish_property_t *property)
 
     free(property->name);
     free(property->metric);
+    free(property->help);
     label_set_reset(&property->labels);
     label_set_reset(&property->labels_from);
     strlist_destroy(&property->select_attr);
@@ -245,9 +252,14 @@ static bool redfish_get_status(xson_value_t *xvalue)
     return false;
 }
 
+/* Returns 0 on success, 1 if the value is a JSON null (not available)
+   and -1 if the value cannot be parsed. */
 static int redfish_get_value(xson_value_t *xvalue, metric_type_t type, value_t *value,
                          double scale, double shift)
 {
+    if (xson_value_is_null(xvalue))
+        return 1;
+
     if (type == METRIC_TYPE_GAUGE) {
         double number = 0;
         if (xson_value_is_string(xvalue)) {
@@ -255,6 +267,8 @@ static int redfish_get_value(xson_value_t *xvalue, metric_type_t type, value_t *
                 return -1;
         } else if (xson_value_is_number(xvalue)) {
             number = xson_value_get_number(xvalue);
+        } else {
+            return -1;
         }
         if (scale != 0)
             number *= scale;
@@ -268,8 +282,15 @@ static int redfish_get_value(xson_value_t *xvalue, metric_type_t type, value_t *
                 return -1;
             *value = VALUE_COUNTER(number);
         } else if (xson_value_is_number(xvalue)) {
-            *value = VALUE_COUNTER((uint64_t)xson_value_get_number(xvalue));
+            double number = xson_value_get_number(xvalue);
+            if (!isfinite(number) || (number < 0) || (number >= 18446744073709551616.0))
+                return -1;
+            *value = VALUE_COUNTER((uint64_t)number);
+        } else {
+            return -1;
         }
+    } else {
+        return -1;
     }
 
     return 0;
@@ -295,7 +316,8 @@ static void redfish_process_attribute(const redfish_instance_t *instance,
         int status = redfish_get_value(vattr, attribute->type, &value,
                                        attribute->scale, attribute->shift);
         if (status != 0) {
-            PLUGIN_WARNING("Cannot parse value for attribute '%s'.", attribute->name);
+            if (status < 0)
+                PLUGIN_WARNING("Cannot parse value for attribute '%s'.", attribute->name);
             return;
         }
     }
@@ -362,7 +384,7 @@ static void redfish_process_resource_object(const redfish_instance_t *instance,
 {
     xson_value_t *vprop = xson_value_object_find(obj, property->name);
     if (vprop == NULL) {
-        PLUGIN_ERROR("Failure retreiving property '%s' from resource '%s'",
+        PLUGIN_ERROR("Failure retrieving property '%s' from resource '%s'",
                      property->name, resource->name);
         return;
     }
@@ -375,7 +397,8 @@ static void redfish_process_resource_object(const redfish_instance_t *instance,
         int status = redfish_get_value(vprop, property->type, &value,
                                        property->scale, property->shift);
         if (status != 0) {
-            PLUGIN_WARNING("Cannot parse value for property '%s'.", property->name);
+            if (status < 0)
+                PLUGIN_WARNING("Cannot parse value for property '%s'.", property->name);
             return;
         }
     }
@@ -539,9 +562,16 @@ static size_t redfish_request_callback(void *buf, size_t size, size_t nmemb, voi
     if (request->parser == NULL)
         return 0;
 
+    if (len > (REDFISH_MAX_RESPONSE_SIZE - request->received)) {
+        PLUGIN_ERROR("Response size exceeds the limit of %d bytes.",
+                     REDFISH_MAX_RESPONSE_SIZE);
+        return 0;
+    }
+    request->received += len;
+
     int status = xson_tree_parser_chunk(request->parser, buf, len);
     if (status != 0) {
-        PLUGIN_ERROR("Failed to parse response");
+        PLUGIN_ERROR("Failed to parse response: %s", request->parser_error);
         return 0;
     }
 
@@ -550,10 +580,14 @@ static size_t redfish_request_callback(void *buf, size_t size, size_t nmemb, voi
 
 static int redfish_add_header(struct curl_slist **list, const char *key, const char *value)
 {
-    char header[1024];
-    ssnprintf(header, sizeof(header), "%s: %s", key, value);
+    size_t size = strlen(key) + strlen(value) + 3;
+    char *header = malloc(size);
+    if (header == NULL)
+        return -1;
+    ssnprintf(header, size, "%s: %s", key, value);
 
     struct curl_slist *temp = curl_slist_append(*list, header);
+    free(header);
     if (temp == NULL)
         return -1;
 
@@ -562,7 +596,7 @@ static int redfish_add_header(struct curl_slist **list, const char *key, const c
     return 0;
 }
 
-int redfish_request_init(redfish_request_t *request)
+static int redfish_request_init(redfish_request_t *request)
 {
     request->curl = curl_easy_init();
     if (request->curl == NULL) {
@@ -621,9 +655,35 @@ int redfish_request_init(redfish_request_t *request)
         return -1;
     }
 
-    rcode = curl_easy_setopt(request->curl, CURLOPT_MAXREDIRS, 50L);
+    rcode = curl_easy_setopt(request->curl, CURLOPT_MAXREDIRS, 5L);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    /* Only allow redirects to http or https. */
+#if CURL_AT_LEAST_VERSION(7, 85, 0)
+    rcode = curl_easy_setopt(request->curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_REDIR_PROTOCOLS_STR failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#else
+    rcode = curl_easy_setopt(request->curl, CURLOPT_REDIR_PROTOCOLS,
+                             (long)(CURLPROTO_HTTP | CURLPROTO_HTTPS));
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_REDIR_PROTOCOLS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#endif
+
+    rcode = curl_easy_setopt(request->curl, CURLOPT_MAXFILESIZE_LARGE,
+                             (curl_off_t)REDFISH_MAX_RESPONSE_SIZE);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXFILESIZE_LARGE failed: %s",
                      curl_easy_strerror(rcode));
         return -1;
     }
@@ -638,10 +698,13 @@ int redfish_request_init(redfish_request_t *request)
 
     redfish_add_header(&request->headers, "Accept", "application/json");
     redfish_add_header(&request->headers, "OData-Version", "4.0");
-    if(request->instance->token) {
-        char tmp[1024];
-        ssnprintf(tmp, sizeof(tmp), "Bearer %s", request->instance->token);
-        redfish_add_header(&request->headers, "Authorization", tmp);
+    if (request->instance->token != NULL) {
+        /* Redfish session tokens are sent in the X-Auth-Token header (DSP0266). */
+        if (redfish_add_header(&request->headers, "X-Auth-Token",
+                               request->instance->token) != 0) {
+            PLUGIN_ERROR("Failed to add the X-Auth-Token header.");
+            return -1;
+        }
     }
 
     rcode = curl_easy_setopt(request->curl, CURLOPT_HTTPHEADER, request->headers);
@@ -711,14 +774,22 @@ int redfish_request_init(redfish_request_t *request)
         }
     }
 
-    char url[1024];
     size_t len = strlen(request->instance->url);
-    ssnprintf(url, sizeof(url), "%s%sredfish/%s%s", request->instance->url,
-                                request->instance->url[len-1] == '/' ? "" : "/",
-                                request->instance->version,
-                                request->query->endpoint);
+    const char *sep = ((len > 0) && (request->instance->url[len-1] == '/')) ? "" : "/";
+    size_t url_size = len + strlen(sep) + strlen("redfish/") +
+                      strlen(request->instance->version) +
+                      strlen(request->query->endpoint) + 1;
+    char *url = malloc(url_size);
+    if (url == NULL) {
+        PLUGIN_ERROR("malloc failed.");
+        return -1;
+    }
+    ssnprintf(url, url_size, "%s%sredfish/%s%s", request->instance->url, sep,
+                             request->instance->version, request->query->endpoint);
 
+    /* libcurl copies the URL string. */
     rcode = curl_easy_setopt(request->curl, CURLOPT_URL, url);
+    free(url);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
                      curl_easy_strerror(rcode));
@@ -728,6 +799,7 @@ int redfish_request_init(redfish_request_t *request)
     if (request->parser != NULL)
         xson_tree_parser_free(request->parser);
 
+    request->received = 0;
     request->parser = xson_tree_parser_init(request->parser_error, sizeof(request->parser_error));
     if (request->parser == NULL) {
         PLUGIN_ERROR("xson_tree_parser_init failed.");
@@ -755,7 +827,8 @@ static int redfish_request_end(redfish_request_t *request)
     if ((code != 0) && ((code < 200) || (code > 299))) {
         char *url = NULL;
         curl_easy_getinfo(request->curl, CURLINFO_EFFECTIVE_URL, &url);
-        PLUGIN_ERROR("curl response code for '%s' != 2XX: %ld.\n", url, code);
+        PLUGIN_ERROR("curl response code for '%s' != 2XX: %ld.",
+                     url != NULL ? url : "?", code);
         xson_tree_parser_free(request->parser);
         request->parser = NULL;
         return -1;
@@ -815,7 +888,11 @@ static int redfish_read(user_data_t *user_data)
             PLUGIN_ERROR("curl_multi_init failed.");
             return -1;
         }
-        curl_multi_setopt(instance->curl_multi, CURLMOPT_MAX_HOST_CONNECTIONS, 4L);
+        CURLMcode mc = curl_multi_setopt(instance->curl_multi,
+                                         CURLMOPT_MAX_HOST_CONNECTIONS, 4L);
+        if (mc != CURLM_OK)
+            PLUGIN_WARNING("curl_multi_setopt CURLMOPT_MAX_HOST_CONNECTIONS failed: %s",
+                           curl_multi_strerror(mc));
     }
 
     for (size_t i = 0; i < instance->requests_num; i++) {
@@ -828,7 +905,11 @@ static int redfish_read(user_data_t *user_data)
             }
         }
 
-        curl_multi_add_handle(instance->curl_multi, request->curl);
+        CURLMcode mc = curl_multi_add_handle(instance->curl_multi, request->curl);
+        if (mc != CURLM_OK) {
+            PLUGIN_ERROR("curl_multi_add_handle failed: %s", curl_multi_strerror(mc));
+            redfish_request_reset(request);
+        }
     }
 
     int still_running = 0;
@@ -879,9 +960,7 @@ static int redfish_read(user_data_t *user_data)
         }
     }
 
-    curl_multi_cleanup(instance->curl_multi);
-    instance->curl_multi = NULL;
-
+    /* Keep the multi handle between reads to reuse its connection cache. */
     return 0;
 }
 
@@ -898,8 +977,8 @@ static int redfish_config_get_uint64_array (const config_item_t *ci,
     }
 
     for (int i=0 ; i < ci->values_num; i++) {
-        if (ci->values[i].type != CONFIG_TYPE_NUMBER) {
-            PLUGIN_ERROR("The argument %d in option '%s' at %s:%d must be a number.",
+        if ((ci->values[i].type != CONFIG_TYPE_NUMBER) || (ci->values[i].value.number < 0)) {
+            PLUGIN_ERROR("The argument %d in option '%s' at %s:%d must be a non-negative number.",
                          i+1, ci->key, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
@@ -1227,7 +1306,7 @@ static int redfish_config_query(config_item_t *ci)
     }
 
     if (query->endpoint[0] != '/') {
-        PLUGIN_ERROR("'end-point' for querty '%s' is missing root ('/').", query->name);
+        PLUGIN_ERROR("'end-point' for query '%s' is missing root ('/').", query->name);
         redfish_query_free(query);
         return -1;
     }
@@ -1267,8 +1346,8 @@ static int redfish_config_request(config_item_t *ci, redfish_instance_t *instanc
         char *query = ci->values[i].value.string;
 
         redfish_query_t *rquery;
-        if (c_avl_get(queries, (void *)query, (void *)&rquery) != 0) {
-            PLUGIN_ERROR("Cannot find query '%s' for instanace '%s'", query, instance->name);
+        if ((queries == NULL) || (c_avl_get(queries, (void *)query, (void *)&rquery) != 0)) {
+            PLUGIN_ERROR("Cannot find query '%s' for instance '%s'", query, instance->name);
             return -1;
         }
 
@@ -1306,7 +1385,7 @@ static int redfish_config_instance(config_item_t *ci)
 
     cdtime_t interval = 0;
 
-    instance->timeout = plugin_get_interval();
+    instance->timeout = 0;
     instance->verify_peer = true;
     instance->verify_host = true;
 
@@ -1360,7 +1439,7 @@ static int redfish_config_instance(config_item_t *ci)
     }
 
     while (status == 0) {
-        if (instance->url == NULL) {
+        if ((instance->url == NULL) || (instance->url[0] == '\0')) {
             PLUGIN_ERROR("Instance '%s' has no 'url' attribute", instance->name);
             status = -1;
             break;
@@ -1381,6 +1460,10 @@ static int redfish_config_instance(config_item_t *ci)
 
         if (instance->requests_num == 0)
             PLUGIN_WARNING("Instance '%s' does not have queries", instance->name);
+
+        /* A timeout of zero would disable the curl timeout, use the interval. */
+        if (instance->timeout == 0)
+            instance->timeout = (interval != 0) ? interval : plugin_get_interval();
 
         if (instance->version == NULL) {
             instance->version = strdup(REDFISH_VERSION);
@@ -1447,7 +1530,10 @@ static int redfish_shutdown(void)
         }
         c_avl_iterator_destroy(i);
         c_avl_destroy(queries);
+        queries = NULL;
     }
+
+    curl_global_cleanup();
 
     return 0;
 }
