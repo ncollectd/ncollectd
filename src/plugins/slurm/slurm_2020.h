@@ -71,7 +71,7 @@ enum slurm_node_states {
     UNKNOWN2
 };
 
-char *node_state_names[] = {
+static const char *const node_state_names[] = {
     [MAINT_NONRESP]        = "MAINT_NONRESP",
     [MAINT]                = "MAINT",
     [REBOOT_NONRESP]       = "REBOOT_NONRESP",

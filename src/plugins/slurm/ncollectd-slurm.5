@@ -7,7 +7,9 @@
 .Nd Documentation of ncollectd's slurm plugin
 .Sh SYNOPSIS
 .Bd -literal -compact
-\fBload-plugin\fP slurm
+\fBload-plugin\fP slurm {
+    \fBglobals\fP \fItrue\fP
+}
 \fBplugin\fP slurm
 .Ed
 .Sh DESCRIPTION
@@ -16,8 +18,9 @@ information, as well as internal health statistics.
 It takes no options.
 It should run on a node that is capable of running the \fIsinfo\fP and
 \fIsqueue\fP commands, i.e. it has a running slurmd and a valid slurm.conf.
-Note that this plugin needs the \fBglobals\fP option set to \fBtrue\fP in
-order to function properly.
+Note that this plugin needs the \fBglobals\fP option of \fBload-plugin\fP set to
+\fBtrue\fP in order to function properly, because libslurm loads its own plugins
+(e.g. auth/munge) that need to resolve symbols of libslurm.
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5
