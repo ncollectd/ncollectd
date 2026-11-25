@@ -15,7 +15,7 @@
 #include "plugins/protocols/snmp6_fam.h"
 #include "plugins/protocols/flags.h"
 %}
-struct snmp_metric {
+struct snmp6_metric {
     char *key;
     uint64_t flags;
     int fam;
@@ -89,6 +89,7 @@ Icmp6OutNeighborSolicits,       COLLECT_ICMP6,    FAM_ICMP6_OUT_NEIGHBOR_SOLICIT
 Icmp6OutNeighborAdvertisements, COLLECT_ICMP6,    FAM_ICMP6_OUT_NEIGHBOR_ADVERTISEMENT
 Icmp6OutRedirects,              COLLECT_ICMP6,    FAM_ICMP6_OUT_OUT_REDIRECT
 Icmp6OutMLDv2Reports,           COLLECT_ICMP6,    FAM_ICMP6_OUT_MULTICAST_LISTENER_DISCOVERY_REPORTS
+Icmp6OutRateLimitHost,          COLLECT_ICMP6,    FAM_ICMP6_OUT_RATE_LIMIT_HOST
 Udp6InDatagrams,                COLLECT_UDP6,     FAM_UDP6_IN_DATAGRAMS
 Udp6NoPorts,                    COLLECT_UDP6,     FAM_UDP6_NO_PORTS
 Udp6InErrors,                   COLLECT_UDP6,     FAM_UDP6_IN_ERRORS

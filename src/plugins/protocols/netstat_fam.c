@@ -77,7 +77,7 @@ static metric_family_t fams[FAM_NETSTAT_MAX] = {
     },
     [FAM_TCP_PAWS_ACTIVE] = {
         .name = "system_tcp_paws_active",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Packets are dropped by PAWS (Protection Against Wrapped Sequence numbers) "
                 "in Syn-Sent status."
     },
@@ -858,6 +858,11 @@ These 4 counters calculate how many packets received per ECN status. They count 
         .type = METRIC_TYPE_COUNTER,
         .help = "Client-side fallback during 3-way handshake.",
     },
+    [FAM_MPTCP_MP_CAPABLE_ENDP_ATTEMPT] = {
+        .name = "system_mptcp_mp_capable_endp_attempt",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Prohibited MP_CAPABLE attempts to a port-based endpoint.",
+    },
     [FAM_MPTCP_MP_FALLBACK_TOKEN_INIT] = {
         .name = "system_mptcp_mp_fallback_token_init",
         .type = METRIC_TYPE_COUNTER,
@@ -1218,7 +1223,8 @@ int netstat_init(void)
 
     if (access(path_proc_netstat, R_OK) != 0) {
         PLUGIN_ERROR("Cannot access %s: %s", path_proc_netstat, STRERRNO);
-        return -1;
+        /* Not fatal: the other protocols can still be collected. */
+        return 0;
     }
 
     proc_netstat_found = true;
@@ -1246,10 +1252,10 @@ int netstat_read(uint64_t flags, plugin_filter_t *filter)
         return -1;
     }
 
-    char key_buffer[4096];
-    char value_buffer[4096];
-    char *key_fields[256];
-    char *value_fields[256];
+    char key_buffer[16384];
+    char value_buffer[16384];
+    char *key_fields[512];
+    char *value_fields[512];
 
     int status = -1;
     while (true) {
@@ -1268,9 +1274,19 @@ int netstat_read(uint64_t flags, plugin_filter_t *filter)
             }
         }
 
+        if ((strchr(key_buffer, '\n') == NULL) && (feof(fh) == 0)) {
+            PLUGIN_ERROR("Keys line in %s is too long.", path_proc_netstat);
+            break;
+        }
+
         char *value_ptr = fgets(value_buffer, sizeof(value_buffer), fh);
         if (value_ptr == NULL) {
             PLUGIN_ERROR("read_file (%s): Could not read values line.", path_proc_netstat);
+            break;
+        }
+
+        if ((strchr(value_buffer, '\n') == NULL) && (feof(fh) == 0)) {
+            PLUGIN_ERROR("Values line in %s is too long.", path_proc_netstat);
             break;
         }
 
@@ -1305,6 +1321,11 @@ int netstat_read(uint64_t flags, plugin_filter_t *filter)
             break;
         }
 
+        if (key_fields_num >= (int)STATIC_ARRAY_SIZE(key_fields))
+            PLUGIN_WARNING("Too many fields in %s for protocol '%s', "
+                           "only the first %d are parsed.",
+                           path_proc_netstat, key_buffer, key_fields_num);
+
         char name[256];
         size_t name_key_len = strlen(key_buffer);
 
@@ -1330,7 +1351,9 @@ int netstat_read(uint64_t flags, plugin_filter_t *filter)
                     continue;
                 metric_family_append(&fams[m->fam], VALUE_GAUGE(value), NULL, NULL);
             } else if (fams[m->fam].type == METRIC_TYPE_COUNTER) {
-                uint64_t value = atol(value_fields[i]);
+                uint64_t value = 0;
+                if (strtouint(value_fields[i], &value) != 0)
+                    continue;
                 metric_family_append(&fams[m->fam], VALUE_COUNTER(value), NULL, NULL);
             }
         }
