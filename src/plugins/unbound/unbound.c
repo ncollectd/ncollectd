@@ -20,10 +20,8 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
-#define UNBOUND_SERVER_CERT_FILE "/etc/unbound/unbound_server.pem"
-#define UNBOUND_CONTROL_KEY_FILE "/etc/unbound/unbound_control.key"
-#define UNBOUND_CONTROL_CERT_FILE "/etc/unbound/unbound_control.pem"
 #define UNBOUND_CONTROL_PORT 8953
+#define UNBOUND_MAX_RESPONSE_SIZE (4 * 1024 * 1024)
 
 enum {
     FAM_UNBOUND_UP,
@@ -185,7 +183,7 @@ static metric_family_t fams[FAM_UNBOUND_MAX] = {
     },
     [FAM_UNBOUND_THREAD_REQUESTLIST_OVERWRITTEN] = {
         .name = "unbound_thread_requestlist_overwritten",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of requests in the request list that were overwritten by newer entries.",
     },
     [FAM_UNBOUND_THREAD_REQUESTLIST_EXCEEDED] = {
@@ -205,12 +203,12 @@ static metric_family_t fams[FAM_UNBOUND_MAX] = {
         .help = "Current size of the request list, only the requests from client queries.",
     },
     [FAM_UNBOUND_THREAD_RECURSION_TIME_AVG] = {
-        .name = "unbound_thread_recursion_time_avg",
+        .name = "unbound_thread_recursion_time_avg_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Average time it took to answer queries that needed recursive processing.",
     },
     [FAM_UNBOUND_THREAD_RECURSION_TIME_MEDIAN] = {
-        .name = "unbound_thread_recursion_time_median",
+        .name = "unbound_thread_recursion_time_median_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "The median of the time it took to answer queries that "
                 "needed recursive processing.",
@@ -283,7 +281,7 @@ static metric_family_t fams[FAM_UNBOUND_MAX] = {
     },
     [FAM_UNBOUND_REQUESTLIST_OVERWRITTEN] = {
         .name = "unbound_requestlist_overwritten",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of requests in the request list that were overwritten by newer entries.",
     },
     [FAM_UNBOUND_REQUESTLIST_EXCEEDED] = {
@@ -303,12 +301,12 @@ static metric_family_t fams[FAM_UNBOUND_MAX] = {
         .help = "Current size of the request list, only the requests from client queries.",
     },
     [FAM_UNBOUND_RECURSION_TIME_AVG] = {
-        .name = "unbound_recursion_time_avg",
+        .name = "unbound_recursion_time_avg_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "Average time it took to answer queries that needed recursive processing.",
     },
     [FAM_UNBOUND_RECURSION_TIME_MEDIAN] = {
-        .name = "unbound_recursion_time_median",
+        .name = "unbound_recursion_time_median_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "The median of the time it took to answer queries "
                 "that needed recursive processing.",
@@ -619,32 +617,32 @@ static int unbound_parse_metric(unbound_t *unbound, char *line)
             key =  buffer;
         }
     } else if (key[0] == 'n') {
-        if ((key_len > 14) && (memcmp("num.query.type", key, 14) == 0)) {
+        if ((key_len > 15) && (memcmp("num.query.type", key, 14) == 0) && (key[14] == '.')) {
             key[14] = '\0';
             key_len = 14;
             lkey = "type";
             lvalue = key + 15;
-        } else if ((key_len > 14) && (memcmp("num.rpz.action", key, 14) == 0)) {
+        } else if ((key_len > 15) && (memcmp("num.rpz.action", key, 14) == 0) && (key[14] == '.')) {
             key[14] = '\0';
             key_len = 14;
             lkey = "action";
             lvalue = key + 15;
-        } else if ((key_len > 15) && (memcmp("num.query.class", key, 15) == 0)) {
+        } else if ((key_len > 16) && (memcmp("num.query.class", key, 15) == 0) && (key[15] == '.')) {
             key[15] = '\0';
             key_len = 15;
             lkey = "class";
             lvalue = key + 16;
-        } else if ((key_len > 15) && (memcmp("num.query.flags", key, 15) == 0)) {
+        } else if ((key_len > 16) && (memcmp("num.query.flags", key, 15) == 0) && (key[15] == '.')) {
             key[15] = '\0';
             key_len = 15;
             lkey = "flag";
             lvalue = key + 16;
-        } else if ((key_len > 16) && (memcmp("num.query.opcode", key, 16) == 0)) {
+        } else if ((key_len > 17) && (memcmp("num.query.opcode", key, 16) == 0) && (key[16] == '.')) {
             key[16] = '\0';
             key_len = 16;
             lkey = "opcode";
             lvalue = key + 17;
-        } else if ((key_len > 16) && (memcmp("num.answer.rcode", key, 16) == 0)) {
+        } else if ((key_len > 17) && (memcmp("num.answer.rcode", key, 16) == 0) && (key[16] == '.')) {
             key[16] = '\0';
             key_len = 16;
             lkey = "rcode";
@@ -662,7 +660,10 @@ static int unbound_parse_metric(unbound_t *unbound, char *line)
     value_t mvalue = {0};
 
     if (unbound->fams[um->fam].type == METRIC_TYPE_COUNTER) {
-        mvalue = VALUE_COUNTER(atoll(value));
+        uint64_t counter = 0;
+        if ((value[0] == '-') || (strtouint(value, &counter) != 0))
+            return -1;
+        mvalue = VALUE_COUNTER(counter);
     } else if (unbound->fams[um->fam].type == METRIC_TYPE_GAUGE) {
         mvalue = VALUE_GAUGE(atof(value));
     } else {
@@ -698,20 +699,41 @@ static void unbound_free(void *data)
     free(unbound);
 }
 
+static int unbound_connect_tcp(unbound_t *unbound)
+{
+    int fd = socket_connect_tcp(unbound->host, unbound->port, 0, 0);
+    if (fd < 0)
+        return -1;
+
+    /* Avoid blocking the read thread forever on a hung server. */
+    cdtime_t timeout = unbound->timeout > 0 ? unbound->timeout : plugin_get_interval();
+    struct timeval tvout = CDTIME_T_TO_TIMEVAL(timeout);
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tvout, sizeof(tvout)) != 0)
+        PLUGIN_WARNING("Failed to set the socket receive timeout: %s", STRERRNO);
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tvout, sizeof(tvout)) != 0)
+        PLUGIN_WARNING("Failed to set the socket send timeout: %s", STRERRNO);
+
+    return fd;
+}
+
 static int unbound_read_ssl(unbound_t *unbound)
 {
     int fd = -1;
     SSL *ssl = NULL;
     int status = 0;
 
-    const SSL_METHOD *method = SSLv23_client_method();
+    const SSL_METHOD *method = TLS_client_method();
     SSL_CTX *ctx = SSL_CTX_new(method);
     if (ctx == NULL) {
         PLUGIN_ERROR("Unable to create a new SSL context structure.");
         return -1;
     }
 
-    SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
+    if (SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION) != 1) {
+        PLUGIN_ERROR("Unable to set the minimum TLS version.");
+        status = -1;
+        goto error;
+    }
 
     status = SSL_CTX_use_certificate_file(ctx, unbound->control_cert_file, SSL_FILETYPE_PEM);
     if(status != 1) {
@@ -738,6 +760,7 @@ static int unbound_read_ssl(unbound_t *unbound)
     if (status != 1) {
         PLUGIN_ERROR("Error setting up SSL_CTX verify, server cert for '%s'",
                      unbound->server_cert_file);
+        status = -1;
         goto error;
     }
 
@@ -751,7 +774,7 @@ static int unbound_read_ssl(unbound_t *unbound)
     }
     SSL_set_connect_state(ssl);
 
-    fd = socket_connect_tcp(unbound->host, unbound->port, 0, 0);
+    fd = unbound_connect_tcp(unbound);
     if (fd < 0) {
         status = -1;
         goto error;
@@ -786,7 +809,7 @@ static int unbound_read_ssl(unbound_t *unbound)
     int command_len = strlen(command);
 
     status = SSL_write(ssl, command, command_len);
-    if (status <= 0) {
+    if (status != command_len) {
         unsigned long  err = ERR_peek_error();
         PLUGIN_ERROR("could not SSL_write %s", ERR_reason_error_string(err) );
         status = -1;
@@ -803,11 +826,25 @@ static int unbound_read_ssl(unbound_t *unbound)
         if (rsize <= 0) {
             unsigned long err = ERR_peek_error();
             PLUGIN_ERROR("could not SSL_read %d %s", rsize,  ERR_reason_error_string(err) );
-            break;
+            strbuf_destroy(&buf);
+            status = -1;
+            goto error;
         }
         buffer[rsize] = '\0';
 
-        strbuf_putstrn(&buf, buffer, rsize);
+        if ((strbuf_len(&buf) + rsize) > UNBOUND_MAX_RESPONSE_SIZE) {
+            PLUGIN_ERROR("Response from unbound is too large.");
+            strbuf_destroy(&buf);
+            status = -1;
+            goto error;
+        }
+
+        if (strbuf_putstrn(&buf, buffer, rsize) != 0) {
+            PLUGIN_ERROR("Failed to store the response from unbound.");
+            strbuf_destroy(&buf);
+            status = -1;
+            goto error;
+        }
     }
 
     if (strbuf_len(&buf) > 0) {
@@ -821,6 +858,8 @@ static int unbound_read_ssl(unbound_t *unbound)
     }
 
     strbuf_destroy(&buf);
+
+    SSL_shutdown(ssl);
 
     status = 0;
 
@@ -842,7 +881,7 @@ static int unbound_read_stream(unbound_t *unbound)
     if (unbound->socketpath != NULL)
         fd = socket_connect_unix_stream(unbound->socketpath, unbound->timeout);
     else
-        fd = socket_connect_tcp(unbound->host, unbound->port, 0, 0);
+        fd = unbound_connect_tcp(unbound);
 
     if (fd < 0)
         return -1;
@@ -957,29 +996,38 @@ static int unbound_config_instance (config_item_t *ci)
         return -1;
     }
 
-    if ((unbound->host != NULL) && (strcmp(unbound->host, "::1") != 0) &&
-        (strcmp(unbound->host, "127.0.0.1") != 0) && (strcmp(unbound->host, "localhost") != 0)) {
+    int tls_files = (unbound->server_cert_file != NULL) +
+                    (unbound->control_key_file != NULL) +
+                    (unbound->control_cert_file != NULL);
 
-        if (unbound->server_cert_file == NULL) {
-            PLUGIN_ERROR("Missing 'server-cert' option.");
-            unbound_free(unbound);
-            return -1;
-        }
-
-        if (unbound->control_key_file == NULL) {
-            PLUGIN_ERROR("Missing 'control-key' option.");
-            unbound_free(unbound);
-            return -1;
-        }
-
-        if (unbound->control_cert_file == NULL) {
-            PLUGIN_ERROR("Missing 'control-cert' option");
-            unbound_free(unbound);
-            return -1;
-        }
+    if ((tls_files == 0) && (unbound->host != NULL) &&
+        (strcmp(unbound->host, "::1") != 0) &&
+        (strcmp(unbound->host, "127.0.0.1") != 0) &&
+        (strcmp(unbound->host, "localhost") != 0)) {
+        PLUGIN_ERROR("Missing 'server-cert', 'control-key' and 'control-cert' options "
+                     "for remote host '%s'.", unbound->host);
+        unbound_free(unbound);
+        return -1;
     }
 
-    label_set_add(&unbound->labels, true, "instance", unbound->name);
+    /* TLS needs all the files: the server certificate, the client key and certificate. */
+    if ((tls_files != 0) && (tls_files != 3)) {
+        if (unbound->server_cert_file == NULL)
+            PLUGIN_ERROR("Missing 'server-cert' option.");
+        if (unbound->control_key_file == NULL)
+            PLUGIN_ERROR("Missing 'control-key' option.");
+        if (unbound->control_cert_file == NULL)
+            PLUGIN_ERROR("Missing 'control-cert' option.");
+        unbound_free(unbound);
+        return -1;
+    }
+
+    status = label_set_add(&unbound->labels, true, "instance", unbound->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the 'instance' label.");
+        unbound_free(unbound);
+        return -1;
+    }
 
     return plugin_register_complex_read("unbound", unbound->name, unbound_read, interval,
                                         &(user_data_t){.data = unbound, .free_func = unbound_free});
