@@ -13,6 +13,9 @@
 // #define SERVER_SOCKET LOCALSTATEDIR "/run/pdns.controlsocket"
 #define SERVER_SOCKET LOCALSTATEDIR "/run/pdns/pdns.controlsocket"
 
+/* Maximum size of the response, "SHOW *" returns a few KiB. */
+#define PDNS_MAX_RESPONSE_SIZE (1024 * 1024)
+
 enum {
     FAM_PDNS_UDP_QUERIES,
     FAM_PDNS_UDP_DO_QUERIES,
@@ -346,14 +349,14 @@ static metric_family_t fams_server[FAM_PDNS_MAX] = {
         .help = "UDP 'in checksum' errors over IPv6.",
     },
     [FAM_PDNS_SYS_MSEC] = {
-        .name = "pdns_sys_msec",
+        .name = "pdns_sys_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of msec spent in system time.",
+        .help = "Number of seconds spent in system time.",
     },
     [FAM_PDNS_USER_MSEC] = {
-        .name = "pdns_user_msec",
+        .name = "pdns_user_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Number of msec spent in user time.",
+        .help = "Number of seconds spent in user time.",
     },
     [FAM_PDNS_CPU_IOWAIT] = {
         .name = "pdns_cpu_iowait",
@@ -444,7 +447,7 @@ static metric_family_t fams_server[FAM_PDNS_MAX] = {
     [FAM_PDNS_BACKEND_QUERIES] = {
         .name = "pdns_backend_queries",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Size of the queue of zones to be XFRd.",
+        .help = "Number of queries sent to the backend(s).",
     },
     [FAM_PDNS_QUERY_CACHE_HIT] = {
         .name = "pdns_query_cache_hit",
@@ -552,8 +555,17 @@ static int pdns_read(user_data_t *user_data)
         return -1;
     }
 
+    cdtime_t end = cdtime() + server->timeout;
+
     struct timeval timeout = CDTIME_T_TO_TIMEVAL(server->timeout);
     int status = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    if (status != 0) {
+        PLUGIN_ERROR("setsockopt failed: %s", STRERRNO);
+        close(sd);
+        return -1;
+    }
+
+    status = setsockopt(sd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     if (status != 0) {
         PLUGIN_ERROR("setockopt failed: %s", STRERRNO);
         close(sd);
@@ -588,6 +600,12 @@ static int pdns_read(user_data_t *user_data)
             break;
         }
 
+        if ((buffer_size + status) > PDNS_MAX_RESPONSE_SIZE) {
+            PLUGIN_ERROR("Socket '%s' response too big.", server->sockaddr.sun_path);
+            status = -1;
+            break;
+        }
+
         char *buffer_new = realloc(buffer, buffer_size + status + 1);
         if (buffer_new == NULL) {
             PLUGIN_ERROR("realloc failed: %s", STRERRNO);
@@ -599,6 +617,14 @@ static int pdns_read(user_data_t *user_data)
         memcpy(buffer + buffer_size, temp, status);
         buffer_size += status;
         buffer[buffer_size] = 0;
+
+        /* The timeout of the socket is per call, check the overall timeout. */
+        if (cdtime() > end) {
+            PLUGIN_ERROR("Socket '%s' timeout reading the response.",
+                         server->sockaddr.sun_path);
+            status = -1;
+            break;
+        }
     }
     close(sd);
 
@@ -615,10 +641,17 @@ static int pdns_read(user_data_t *user_data)
 
         char *value = strchr(key, '=');
         if (value == NULL)
-            break;
+            continue;
 
         *value = '\0';
         value++;
+
+        /* Remove trailing white spaces. */
+        size_t value_len = strlen(value);
+        while ((value_len > 0) && isspace((unsigned char)value[value_len - 1])) {
+            value_len--;
+            value[value_len] = '\0';
+        }
 
         if (value[0] == '\0')
             continue;
@@ -634,9 +667,22 @@ static int pdns_read(user_data_t *user_data)
 
         value_t mvalue = {0};
         if (fam->type == METRIC_TYPE_COUNTER) {
-            mvalue = VALUE_COUNTER(atoll(value));
+            uint64_t counter = 0;
+            if (strtouint(value, &counter) != 0) {
+                PLUGIN_DEBUG("Invalid value '%s' for key '%s'.", value, key);
+                continue;
+            }
+            if ((m->fam == FAM_PDNS_SYS_MSEC) || (m->fam == FAM_PDNS_USER_MSEC))
+                mvalue = VALUE_COUNTER_FLOAT64((double)counter / 1000.0);
+            else
+                mvalue = VALUE_COUNTER(counter);
         } else if (fam->type == METRIC_TYPE_GAUGE) {
-            mvalue = VALUE_GAUGE(atof(value));
+            double gauge = 0;
+            if (strtodouble(value, &gauge) != 0) {
+                PLUGIN_DEBUG("Invalid value '%s' for key '%s'.", value, key);
+                continue;
+            }
+            mvalue = VALUE_GAUGE(gauge);
         } else {
             continue;
         }
@@ -650,7 +696,7 @@ static int pdns_read(user_data_t *user_data)
     return 0;
 }
 
-int pdns_config_instance(config_item_t *ci)
+static int pdns_config_instance(config_item_t *ci)
 {
     pdns_t *server = calloc(1, sizeof(*server));
     if (server == NULL) {
@@ -705,6 +751,13 @@ int pdns_config_instance(config_item_t *ci)
            pdns_free(server);
            return -1;
         }
+    }
+
+    if (strlen(server->sockpath) >= sizeof(server->sockaddr.sun_path)) {
+        PLUGIN_ERROR("Socket path '%s' is too long, the maximum length is %zu.",
+                     server->sockpath, sizeof(server->sockaddr.sun_path) - 1);
+        pdns_free(server);
+        return -1;
     }
 
     if (server->timeout == 0) {
