@@ -31,7 +31,7 @@ Server_Connections_connected,                 0.0, FAM_PROXYSQL_SERVER_CONNECTIO
 Server_Connections_created,                   0.0, FAM_PROXYSQL_SERVER_CONNECTIONS_CREATED, NULL, NULL
 Server_Connections_delayed,                   0.0, FAM_PROXYSQL_SERVER_CONNECTIONS_DELAYED, NULL, NULL
 Servers_table_version,                        0.0, -1, NULL, NULL
-Backend_query_time_nsec,                      0.0, FAM_PROXYSQL_BACKEND_QUERY_TIME_SECONDS, NULL, NULL
+Backend_query_time_nsec,                     1e-9, FAM_PROXYSQL_BACKEND_QUERY_TIME_SECONDS, NULL, NULL
 Queries_backends_bytes_recv,                  0.0, FAM_PROXYSQL_QUERIES_BACKENDS_RECV_BYTES, NULL, NULL
 Queries_backends_bytes_sent,                  0.0, FAM_PROXYSQL_QUERIES_BACKENDS_SENT_BYTES, NULL, NULL
 Queries_frontends_bytes_recv,                 0.0, FAM_PROXYSQL_QUERIES_FRONTENDS_RECV_BYTES, NULL, NULL
@@ -96,7 +96,7 @@ Mirror_concurrency,                           0.0, FAM_PROXYSQL_MIRROR_CONCURREN
 Mirror_que_length,                            0.0, FAM_PROXYSQL_MIRROR_QUEUE_LENGTH, NULL, NULL
 queries_with_max_lag_ms,                      0.0, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG, NULL, NULL
 queries_with_max_lag_ms__delayed,             0.0, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG_DELAYED, NULL, NULL
-queries_with_max_lag_ms__total_wait_time_us,  0.0, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG_WAIT_TIME_SECONDS, NULL, NULL
+queries_with_max_lag_ms__total_wait_time_us, 1e-6, FAM_PROXYSQL_QUERIES_WITH_MAX_LAG_WAIT_TIME_SECONDS, NULL, NULL
 get_aws_aurora_replicas_skipped_during_query, 0.0, FAM_PROXYSQL_AWS_AURORA_REPLICAS_SKIPPED_DURING_QUERY, NULL, NULL
 Access_Denied_Max_Connections,                0.0, FAM_PROXYSQL_ACCESS_DENIED_MAX_CONNECTIONS, NULL, NULL
 Access_Denied_Max_User_Connections,           0.0, FAM_PROXYSQL_ACCESS_DENIED_MAX_USER_CONNECTIONS, NULL, NULL
@@ -121,7 +121,7 @@ Query_Cache_bytes_OUT,                        0.0, FAM_PROXYSQL_QUERY_CACHE_OUT_
 Query_Cache_count_GET,                        0.0, FAM_PROXYSQL_QUERY_CACHE_COUNT_GET, NULL, NULL
 Query_Cache_count_GET_OK,                     0.0, FAM_PROXYSQL_QUERY_CACHE_COUNT_GET_OK, NULL, NULL
 Query_Cache_count_SET,                        0.0, FAM_PROXYSQL_QUERY_CACHE_COUNT_SET, NULL, NULL
-Query_Processor_time_nsec,                    0.0, FAM_PROXYSQL_QUERY_PROCESSOR_TIME_SECONDS, NULL, NULL
+Query_Processor_time_nsec,                   1e-9, FAM_PROXYSQL_QUERY_PROCESSOR_TIME_SECONDS, NULL, NULL
 jemalloc_allocated,                           0.0, FAM_PROXYSQL_JEMALLOC_ALLOCATED_BYTES, NULL, NULL
 jemalloc_active,                              0.0, FAM_PROXYSQL_JEMALLOC_ACTIVE_BYTES, NULL, NULL
 jemalloc_mapped,                              0.0, FAM_PROXYSQL_JEMALLOC_MAPPED_BYTES, NULL, NULL

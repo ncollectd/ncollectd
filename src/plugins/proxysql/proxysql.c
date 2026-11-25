@@ -22,6 +22,11 @@
 #include <mysql/mysql.h>
 #endif
 
+#if !defined(MARIADB_BASE_VERSION) && !defined(MARIADB_PACKAGE_VERSION_ID) && \
+    defined(MYSQL_VERSION_ID) && (MYSQL_VERSION_ID >= 50711)
+#define PROXYSQL_HAVE_SSL_MODE
+#endif
+
 enum {
     FAM_PROXYSQL_UP,
     FAM_PROXYSQL_UPTIME_SECONDS,
@@ -164,7 +169,7 @@ static metric_family_t proxysql_fams[FAM_PROXYSQL_MAX] = {
     },
     [FAM_PROXYSQL_CLIENT_CONNECTIONS_CONNECTED] = {
         .name = "proxysql_client_connections_connected",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Client connections that are currently connected",
     },
     [FAM_PROXYSQL_CLIENT_CONNECTIONS_CREATED] = {
@@ -189,7 +194,7 @@ static metric_family_t proxysql_fams[FAM_PROXYSQL_MAX] = {
     },
     [FAM_PROXYSQL_SERVER_CONNECTIONS_CONNECTED] = {
         .name = "proxysql_server_connections_connected",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Backend connections that are currently connected.",
     },
     [FAM_PROXYSQL_SERVER_CONNECTIONS_CREATED] = {
@@ -292,12 +297,12 @@ static metric_family_t proxysql_fams[FAM_PROXYSQL_MAX] = {
     [FAM_PROXYSQL_AUTOMATIC_DETECTED_SQL_INJECTION] = {
         .name = "proxysql_automatic_detected_sql_injection",
         .type = METRIC_TYPE_COUNTER,
-	    .help = "Blocked a detected 'sql injection' attempt.",
+        .help = "Blocked a detected 'sql injection' attempt.",
     },
     [FAM_PROXYSQL_WHITELISTED_SQLI_FINGERPRINT] = {
         .name = "proxysql_whitelisted_sqli_fingerprint",
         .type = METRIC_TYPE_COUNTER,
-		.help = "Detected a whitelisted 'sql injection' fingerprint.",
+        .help = "Detected a whitelisted 'sql injection' fingerprint.",
     },
     [FAM_PROXYSQL_GENERATED_ERROR_PACKETS] = {
         .name = "proxysql_generated_error_packets",
@@ -425,13 +430,13 @@ static metric_family_t proxysql_fams[FAM_PROXYSQL_MAX] = {
     },
     [FAM_PROXYSQL_MIRROR_CONCURRENCY] = {
         .name = "proxysql_mirror_concurrency",
-        .type = METRIC_TYPE_COUNTER,
-		.help = "Mirror current concurrency",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Mirror current concurrency",
     },
     [FAM_PROXYSQL_MIRROR_QUEUE_LENGTH] = {
         .name = "proxysql_mirror_queue_length",
-        .type = METRIC_TYPE_COUNTER,
-		.help = "Mirror queue length",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Mirror queue length",
     },
     [FAM_PROXYSQL_QUERIES_WITH_MAX_LAG] = {
         .name = "proxysql_queries_with_max_lag",
@@ -680,13 +685,13 @@ static metric_family_t proxysql_fams[FAM_PROXYSQL_MAX] = {
     },
     [FAM_PROXYSQL_CONNECTION_POOL_CONNECTIONS_USED] = {
         .name = "proxysql_connection_pool_connections_used",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "How many connections are currently used by ProxySQL "
                 "for sending queries to the backend server",
     },
     [FAM_PROXYSQL_CONNECTION_POOL_CONNECTIONS_FREE] = {
         .name = "proxysql_connection_pool_connections_free",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "How many connections are currently free.",
     },
     [FAM_PROXYSQL_CONNECTION_POOL_CONNECTIONS_OK] = {
@@ -791,6 +796,53 @@ static void proxysql_free(void *arg)
     free(db);
 }
 
+static int proxysql_set_ssl_options(proxysql_t *db)
+{
+#ifdef PROXYSQL_HAVE_SSL_MODE
+    struct {
+        enum mysql_option option;
+        const char *value;
+    } ssl_options[] = {
+        { MYSQL_OPT_SSL_KEY,    db->key    },
+        { MYSQL_OPT_SSL_CERT,   db->cert   },
+        { MYSQL_OPT_SSL_CA,     db->ca     },
+        { MYSQL_OPT_SSL_CAPATH, db->capath },
+        { MYSQL_OPT_SSL_CIPHER, db->cipher },
+    };
+
+    for (size_t i = 0; i < STATIC_ARRAY_SIZE(ssl_options); i++) {
+        if (ssl_options[i].value == NULL)
+            continue;
+        if (mysql_options(db->con, ssl_options[i].option, ssl_options[i].value) != 0) {
+            PLUGIN_ERROR("Failed to set the TLS options of instance '%s': %s",
+                         db->instance, mysql_error(db->con));
+            return -1;
+        }
+    }
+#else
+    mysql_ssl_set(db->con, db->key, db->cert, db->ca, db->capath, db->cipher);
+#endif
+
+    if ((db->ca == NULL) && (db->capath == NULL))
+        return 0;
+
+    /* With a CA require TLS and verify the server certificate. */
+#ifdef PROXYSQL_HAVE_SSL_MODE
+    unsigned int ssl_mode = SSL_MODE_VERIFY_CA;
+    int status = mysql_options(db->con, MYSQL_OPT_SSL_MODE, &ssl_mode);
+#else
+    my_bool verify = 1;
+    int status = mysql_options(db->con, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+#endif
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to enable the server certificate verification of instance '%s': %s",
+                     db->instance, mysql_error(db->con));
+        return -1;
+    }
+
+    return 0;
+}
+
 static MYSQL *proxysql_get_connection(proxysql_t *db)
 {
     const char *cipher;
@@ -814,14 +866,25 @@ static MYSQL *proxysql_get_connection(proxysql_t *db)
 
     db->con = mysql_init(NULL);
     if (db->con == NULL) {
-        PLUGIN_ERROR("proxysql_init failed: %s", mysql_error(db->con));
+        PLUGIN_ERROR("mysql_init failed.");
         return NULL;
     }
 
     /* Configure TCP connect timeout (default: 0) */
-    db->con->options.connect_timeout = db->timeout;
+    unsigned int connect_timeout = (unsigned int)db->timeout;
+    mysql_options(db->con, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
 
-    mysql_ssl_set(db->con, db->key, db->cert, db->ca, db->capath, db->cipher);
+    unsigned int rw_timeout = (unsigned int)((CDTIME_T_TO_MS(plugin_get_interval()) + 999) / 1000);
+    if (rw_timeout == 0)
+        rw_timeout = 1;
+    mysql_options(db->con, MYSQL_OPT_READ_TIMEOUT, &rw_timeout);
+    mysql_options(db->con, MYSQL_OPT_WRITE_TIMEOUT, &rw_timeout);
+
+    if (proxysql_set_ssl_options(db) != 0) {
+        mysql_close(db->con);
+        db->con = NULL;
+        return NULL;
+    }
 
     MYSQL *con = mysql_real_connect(db->con, db->host, db->user, db->pass, NULL,
                                     db->port, db->socket, 0);
@@ -866,6 +929,32 @@ static MYSQL_RES *exec_query(MYSQL *con, const char *query)
     return res;
 }
 
+static int proxysql_parse_value(metric_type_t type, const char *str, double scale,
+                                value_t *ret_value)
+{
+    if (type == METRIC_TYPE_GAUGE) {
+        double gauge = 0;
+        if (strtodouble(str, &gauge) != 0)
+            return -1;
+        if (scale != 0.0)
+            gauge *= scale;
+        *ret_value = VALUE_GAUGE(gauge);
+    } else if (type == METRIC_TYPE_COUNTER) {
+        uint64_t counter = 0;
+        if (strtouint(str, &counter) != 0)
+            return -1;
+        if (scale != 0.0) {
+            *ret_value = VALUE_COUNTER_FLOAT64((double)counter * scale);
+        } else {
+            *ret_value = VALUE_COUNTER(counter);
+        }
+    } else {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int proxysql_stats_mysql_global(proxysql_t *db, MYSQL *con)
 {
     const char *query = "SELECT Variable_Name, Variable_Value FROM stats_mysql_global;";
@@ -893,15 +982,8 @@ static int proxysql_stats_mysql_global(proxysql_t *db, MYSQL *con)
         metric_family_t *fam = &db->fams[kv->fam];
 
         value_t value = {0};
-        if (fam->type == METRIC_TYPE_GAUGE) {
-            value = VALUE_GAUGE(atof(val));
-        } else if (fam->type == METRIC_TYPE_COUNTER) {
-            if (kv->scale != 0.0) {
-                value = VALUE_COUNTER_FLOAT64((double)atoll(val) * kv->scale);
-            } else {
-                value = VALUE_COUNTER(atoll(val));
-            }
-        }
+        if (proxysql_parse_value(fam->type, val, kv->scale, &value) != 0)
+            continue;
 
         if (kv->lname != NULL) {
             metric_family_append(fam, value, &db->labels,
@@ -940,15 +1022,8 @@ static int proxysql_stats_memory_metricsl(proxysql_t *db, MYSQL *con)
         metric_family_t *fam = &db->fams[kv->fam];
 
         value_t value = {0};
-        if (fam->type == METRIC_TYPE_GAUGE) {
-            value = VALUE_GAUGE(atof(val));
-        } else if (fam->type == METRIC_TYPE_COUNTER) {
-            if (kv->scale != 0.0) {
-                value = VALUE_COUNTER_FLOAT64((double)atoll(val) * kv->scale);
-            } else {
-                value = VALUE_COUNTER(atoll(val));
-            }
-        }
+        if (proxysql_parse_value(fam->type, val, kv->scale, &value) != 0)
+            continue;
 
         if (kv->lname != NULL) {
             metric_family_append(fam, value, &db->labels,
@@ -994,20 +1069,37 @@ static int proxysql_stats_mysql_commands_counters(proxysql_t *db, MYSQL *con)
         if (!do_historgram)
             continue;
 
-        histogram->sum = atof(row[1]) * 1e-6;
+        double total_time_us = 0;
+        if (strtodouble(row[1], &total_time_us) != 0)
+            continue;
 
-        histogram->buckets[1].counter = atof(row[3]); // cnt_100us
-        histogram->buckets[2].counter = histogram->buckets[1].counter + atof(row[4]); // cnt_500us
-        histogram->buckets[3].counter = histogram->buckets[2].counter + atof(row[5]); // cnt_1ms
-        histogram->buckets[4].counter = histogram->buckets[3].counter + atof(row[6]); // cnt_5ms
-        histogram->buckets[5].counter = histogram->buckets[4].counter + atof(row[7]); // cnt_10ms
-        histogram->buckets[6].counter = histogram->buckets[5].counter + atof(row[8]); // cnt_50ms
-        histogram->buckets[7].counter = histogram->buckets[6].counter + atof(row[9]); // cnt_100ms
-        histogram->buckets[8].counter = histogram->buckets[7].counter + atof(row[10]); // cnt_500ms
-        histogram->buckets[9].counter = histogram->buckets[8].counter + atof(row[11]); // cnt_1s
-        histogram->buckets[10].counter = histogram->buckets[9].counter + atof(row[12]); // cnt_5s
-        histogram->buckets[11].counter = histogram->buckets[10].counter + atof(row[13]); // cnt_10s
-        histogram->buckets[0].counter = histogram->buckets[11].counter + atof(row[14]); // cnt_inf
+        uint64_t cnt[12] = {0}; // cnt_100us, ..., cnt_10s, cnt_INFs
+        for (size_t i = 0; i < STATIC_ARRAY_SIZE(cnt); i++) {
+            if (strtouint(row[3 + i], &cnt[i]) != 0) {
+                do_historgram = false;
+                break;
+            }
+        }
+
+        if (!do_historgram)
+            continue;
+
+        histogram->sum = total_time_us * 1e-6;
+
+        /* The buckets are sorted by descending boundary:
+         * buckets[1] is 10s and buckets[11] is 100us. */
+        histogram->buckets[11].counter = cnt[0]; // cnt_100us
+        histogram->buckets[10].counter = histogram->buckets[11].counter + cnt[1]; // cnt_500us
+        histogram->buckets[9].counter = histogram->buckets[10].counter + cnt[2]; // cnt_1ms
+        histogram->buckets[8].counter = histogram->buckets[9].counter + cnt[3]; // cnt_5ms
+        histogram->buckets[7].counter = histogram->buckets[8].counter + cnt[4]; // cnt_10ms
+        histogram->buckets[6].counter = histogram->buckets[7].counter + cnt[5]; // cnt_50ms
+        histogram->buckets[5].counter = histogram->buckets[6].counter + cnt[6]; // cnt_100ms
+        histogram->buckets[4].counter = histogram->buckets[5].counter + cnt[7]; // cnt_500ms
+        histogram->buckets[3].counter = histogram->buckets[4].counter + cnt[8]; // cnt_1s
+        histogram->buckets[2].counter = histogram->buckets[3].counter + cnt[9]; // cnt_5s
+        histogram->buckets[1].counter = histogram->buckets[2].counter + cnt[10]; // cnt_10s
+        histogram->buckets[0].counter = histogram->buckets[1].counter + cnt[11]; // cnt_inf
 
         metric_family_append(&db->fams[FAM_PROXYSQL_COMMAND_TIME_SECONDS],
                              VALUE_HISTOGRAM(histogram), &db->labels,
@@ -1038,12 +1130,18 @@ static int proxysql_stats_mysql_users(proxysql_t *db, MYSQL *con)
         if ((row[0] == NULL) || (row[1] == NULL) || (row[2] == NULL))
             continue;
 
+        double connections = 0;
+        double max_connections = 0;
+        if ((strtodouble(row[1], &connections) != 0) ||
+            (strtodouble(row[2], &max_connections) != 0))
+            continue;
+
         metric_family_append(&db->fams[FAM_PROXYSQL_USER_FRONTEND_CONNECTIONS],
-                             VALUE_GAUGE(atof(row[1])), &db->labels,
+                             VALUE_GAUGE(connections), &db->labels,
                              &LABEL_PAIR_CONST("username", row[0]),
                              NULL);
         metric_family_append(&db->fams[FAM_PROXYSQL_USER_FRONTEND_MAX_CONNECTIONS],
-                             VALUE_GAUGE(atof(row[2])), &db->labels,
+                             VALUE_GAUGE(max_connections), &db->labels,
                              &LABEL_PAIR_CONST("username", row[0]),
                              NULL);
     }
@@ -1096,13 +1194,19 @@ static int proxysql_stats_mysql_connection_pool(proxysql_t *db, MYSQL *con)
             continue;
 
         if (row[3] != NULL) {
-            int status = atoi(row[3]);
             state_t states[] = {
-                    { .name = "ONLINE",        .enabled = status == 1 },
-                    { .name = "SHUNNED",       .enabled = status == 2 },
-                    { .name = "OFFLINE_SOFT",  .enabled = status == 3 },
-                    { .name = "OFFLINE_HARD.", .enabled = status == 4 },
+                    { .name = "ONLINE",                  .enabled = false },
+                    { .name = "SHUNNED",                 .enabled = false },
+                    { .name = "OFFLINE_SOFT",            .enabled = false },
+                    { .name = "OFFLINE_HARD",            .enabled = false },
+                    { .name = "SHUNNED_REPLICATION_LAG", .enabled = false },
             };
+            for (size_t i = 0; i < STATIC_ARRAY_SIZE(states); i++) {
+                if (strcmp(states[i].name, row[3]) == 0) {
+                    states[i].enabled = true;
+                    break;
+                }
+            }
             state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
             metric_family_append(&db->fams[FAM_PROXYSQL_CONNECTION_POOL_STATUS],
                                  VALUE_STATE_SET(set), &db->labels,
@@ -1118,18 +1222,9 @@ static int proxysql_stats_mysql_connection_pool(proxysql_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                if (fields[n].scale != 0.0) {
-                    value = VALUE_COUNTER_FLOAT64((double)atoll(row[fields[n].field]) *
-                                                  fields[n].scale);
-                } else {
-                    value = VALUE_COUNTER(atoll(row[fields[n].field]));
-                }
-            } else {
+            if (proxysql_parse_value(db->fams[fields[n].fam].type, row[fields[n].field],
+                                     fields[n].scale, &value) != 0)
                 continue;
-            }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
                                  &LABEL_PAIR_CONST("hostgroup", row[0]),
@@ -1227,6 +1322,11 @@ static int proxysql_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &db->cipher);
         } else if (strcasecmp("connect-timeout", child->key) == 0) {
             status = cf_util_get_int(child, &db->timeout);
+            if ((status == 0) && (db->timeout < 0)) {
+                PLUGIN_ERROR("The '%s' option in %s:%d must be a non-negative number.",
+                             child->key, cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &db->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
@@ -1248,7 +1348,12 @@ static int proxysql_config_instance(config_item_t *ci)
         return -1;
     }
 
-    label_set_add(&db->labels, true, "instance", db->instance);
+    status = label_set_add(&db->labels, true, "instance", db->instance);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the 'instance' label to instance '%s'.", db->instance);
+        proxysql_free(db);
+        return -1;
+    }
 
     return plugin_register_complex_read("proxysql", db->instance, proxysql_read, interval,
                                         &(user_data_t){.data=db, .free_func=proxysql_free});
