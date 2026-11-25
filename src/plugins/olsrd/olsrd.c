@@ -11,6 +11,8 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/types.h>
+#include <fcntl.h>
+#include <poll.h>
 
 #define OLSRD_DEFAULT_NODE "localhost"
 #define OLSRD_DEFAULT_SERVICE "2006"
@@ -30,37 +32,37 @@ static metric_family_t fams[FAM_OLSRD_MAX] = {
     [FAM_OLSRD_LINK_QUALITY_RATIO] = {
         .name = "olsrd_link_quality_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Link quality (LQ) of the link to the neighbor.",
     },
     [FAM_OLSRD_NEIGHBOR_LINK_QUALITY_RATIO] = {
         .name = "olsrd_neighbor_link_quality_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Neighbor link quality (NLQ) of the link to the neighbor.",
     },
     [FAM_OLSRD_ROUTE_METRIC_HOPS] = {
         .name = "olsrd_route_metric_hops",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of hops of the route to the destination.",
     },
     [FAM_OLSRD_ROUTE_METRIC_COST] = {
         .name = "olsrd_route_metric_cost",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Expected transmission count (ETX) of the route to the destination.",
     },
     [FAM_OLSRD_TOPOLOGY_LINK_QUALITY_RATIO] = {
         .name = "olsrd_topology_link_quality_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Link quality (LQ) of the topology entry.",
     },
     [FAM_OLSRD_TOPOLOGY_NEIGHBOR_LINK_QUALITY_RATIO] = {
         .name = "olsrd_topology_neighbor_link_quality_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Neighbor link quality (NLQ) of the topology entry.",
     },
     [FAM_OLSRD_TOPOLOGY_COST] = {
         .name = "olsrd_topology_cost",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Cost of the topology entry.",
     },
 };
 
@@ -71,6 +73,7 @@ typedef struct {
     label_set_t labels;
     plugin_filter_t *filter;
     metric_family_t fams[FAM_OLSRD_MAX];
+    complain_t format_complaint;
 } olsrd_t;
 
 /* Strip trailing newline characters. Returns length of string. */
@@ -108,6 +111,57 @@ static size_t strtabsplit(char *string, char **fields, size_t size)
     return i;
 }
 
+/* Connect with a timeout and set the send and receive timeouts of the socket. */
+static int olsrd_connect_timeout(int fd, const struct sockaddr *addr, socklen_t addrlen,
+                                 cdtime_t timeout)
+{
+    int flags = fcntl(fd, F_GETFL);
+    if (flags < 0)
+        return -1;
+
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
+        return -1;
+
+    int status = connect(fd, addr, addrlen);
+    if ((status != 0) && (errno == EINPROGRESS)) {
+        struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+        do {
+            status = poll(&pfd, 1, (int)CDTIME_T_TO_MS(timeout));
+        } while ((status < 0) && (errno == EINTR));
+
+        if (status == 0) {
+            errno = ETIMEDOUT;
+            return -1;
+        } else if (status < 0) {
+            return -1;
+        }
+
+        int error = 0;
+        socklen_t error_len = sizeof(error);
+        if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &error_len) != 0)
+            return -1;
+        if (error != 0) {
+            errno = error;
+            return -1;
+        }
+        status = 0;
+    }
+
+    if (status != 0)
+        return -1;
+
+    if (fcntl(fd, F_SETFL, flags) < 0)
+        return -1;
+
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(timeout);
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) != 0)
+        PLUGIN_WARNING("setsockopt(SO_RCVTIMEO) failed: %s", STRERRNO);
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) != 0)
+        PLUGIN_WARNING("setsockopt(SO_SNDTIMEO) failed: %s", STRERRNO);
+
+    return 0;
+}
+
 static FILE *olsrd_connect(olsrd_t *oi)
 {
     struct addrinfo *ai_list;
@@ -133,7 +187,9 @@ static FILE *olsrd_connect(olsrd_t *oi)
             continue;
         }
 
-        status = connect(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+        /* Do not block the read thread for more than one interval. */
+        status = olsrd_connect_timeout(fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen,
+                                       plugin_get_interval());
         if (status != 0) {
             PLUGIN_ERROR("connect failed: %s", STRERRNO);
             close(fd);
@@ -153,6 +209,17 @@ static FILE *olsrd_connect(olsrd_t *oi)
     freeaddrinfo(ai_list);
 
     return fh;
+}
+
+/* Parse a numeric field, "INFINITE" is used by txtinfo for unreachable costs. */
+static int olsrd_parse_value(const char *field, double *value)
+{
+    if (strcasecmp(field, "INFINITE") == 0) {
+        *value = INFINITY;
+        return 0;
+    }
+
+    return strtodouble(field, value);
 }
 
 static int olsrd_cb_ignore(__attribute__((unused)) olsrd_t *oi,
@@ -176,8 +243,8 @@ static int olsrd_cb_links(olsrd_t *oi, size_t fields_num, char **fields)
 
     double value = 0;
 
-    if (strtodouble(fields[3], &value) != 0) {
-        PLUGIN_ERROR("Cannot parse link quality: %s", fields[3]);
+    if (olsrd_parse_value(fields[3], &value) != 0) {
+        PLUGIN_DEBUG("Cannot parse link quality: %s", fields[3]);
     } else {
          metric_family_append(&oi->fams[FAM_OLSRD_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
@@ -186,8 +253,8 @@ static int olsrd_cb_links(olsrd_t *oi, size_t fields_num, char **fields)
                              NULL);
     }
 
-    if (strtodouble(fields[4], &value) != 0) {
-        PLUGIN_ERROR("Cannot parse neighbor link quality: %s", fields[4]);
+    if (olsrd_parse_value(fields[4], &value) != 0) {
+        PLUGIN_DEBUG("Cannot parse neighbor link quality: %s", fields[4]);
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_NEIGHBOR_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
@@ -212,8 +279,8 @@ static int olsrd_cb_routes(olsrd_t *oi, size_t fields_num, char **fields)
 
     double value = 0;
 
-    if (strtodouble(fields[2], &value) != 0) {
-        PLUGIN_ERROR("Unable to parse metric: %s", fields[2]);
+    if (olsrd_parse_value(fields[2], &value) != 0) {
+        PLUGIN_DEBUG("Unable to parse metric: %s", fields[2]);
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_ROUTE_METRIC_HOPS],
                              VALUE_GAUGE(value), &oi->labels,
@@ -222,8 +289,8 @@ static int olsrd_cb_routes(olsrd_t *oi, size_t fields_num, char **fields)
                              NULL);
     }
 
-    if (strtodouble(fields[3], &value) != 0) {
-        PLUGIN_ERROR("Unable to parse ETX: %s", fields[3]);
+    if (olsrd_parse_value(fields[3], &value) != 0) {
+        PLUGIN_DEBUG("Unable to parse ETX: %s", fields[3]);
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_ROUTE_METRIC_COST],
                              VALUE_GAUGE(value), &oi->labels,
@@ -248,8 +315,8 @@ static int olsrd_cb_topology(olsrd_t *oi, size_t fields_num, char **fields)
 
     double value = 0;
 
-    if (strtodouble(fields[2], &value) != 0) {
-        PLUGIN_ERROR("Unable to parse LQ: %s", fields[2]);
+    if (olsrd_parse_value(fields[2], &value) != 0) {
+        PLUGIN_DEBUG("Unable to parse LQ: %s", fields[2]);
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_TOPOLOGY_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
@@ -258,8 +325,8 @@ static int olsrd_cb_topology(olsrd_t *oi, size_t fields_num, char **fields)
                              NULL);
     }
 
-    if (strtodouble(fields[3], &value) != 0) {
-        PLUGIN_ERROR("Unable to parse NLQ: %s", fields[3]);
+    if (olsrd_parse_value(fields[3], &value) != 0) {
+        PLUGIN_DEBUG("Unable to parse NLQ: %s", fields[3]);
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_TOPOLOGY_NEIGHBOR_LINK_QUALITY_RATIO],
                              VALUE_GAUGE(value), &oi->labels,
@@ -268,8 +335,8 @@ static int olsrd_cb_topology(olsrd_t *oi, size_t fields_num, char **fields)
                              NULL);
     }
 
-    if (strtodouble(fields[4], &value) != 0) {
-        PLUGIN_ERROR("Unable to parse Cost: %s", fields[3]);
+    if (olsrd_parse_value(fields[4], &value) != 0) {
+        PLUGIN_DEBUG("Unable to parse Cost: %s", fields[4]);
     } else {
         metric_family_append(&oi->fams[FAM_OLSRD_TOPOLOGY_COST],
                              VALUE_GAUGE(value), &oi->labels,
@@ -296,7 +363,10 @@ static int olsrd_read_table(FILE *fh, olsrd_t *oi,
             char *fields[32];
             size_t fields_num = strtabsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
 
-            (*callback)(oi, fields_num, fields);
+            if ((*callback)(oi, fields_num, fields) != 0)
+                PLUGIN_ONCE_WARNING(&oi->format_complaint,
+                                    "Unexpected number of columns (%zu) in a table row "
+                                    "from %s:%s.", fields_num, oi->host, oi->port);
         }
         lineno++;
     }
@@ -363,6 +433,11 @@ static int olsrd_read(user_data_t *user_data)
         if (status != 0)
             break;
     }
+
+    if (ferror(fh))
+        PLUGIN_WARNING("Error reading the response from %s:%s, the metrics may be incomplete.",
+                       oi->host, oi->port);
+
     fclose(fh);
 
     plugin_dispatch_metric_family_array_filtered(oi->fams, FAM_OLSRD_MAX, oi->filter, 0);
