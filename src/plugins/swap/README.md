@@ -23,6 +23,9 @@ On *Linux* and *Solaris*, the following options are available:
 > reported only, i.e. the globally used and available space over all devices.
 > If **true** is configured, the used and available space of each device
 > will be reported separately.
+> In that case the used space of each device includes the swap cached pages,
+> while in the summary they are not accounted as used; the swap cached
+> space is always reported globally.
 
 > This option is only available if the **swap** plugin can read
 > */proc/swaps* (under Linux) or use the
