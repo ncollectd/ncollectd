@@ -35,10 +35,10 @@ lock_table_lock_created,                    FAM_MYSQL_INNODB_LOCK_TABLE_LOCK_CRE
 lock_table_lock_removed,                    FAM_MYSQL_INNODB_LOCK_TABLE_LOCK_REMOVED, NULL, NULL
 lock_table_locks,                           FAM_MYSQL_INNODB_LOCK_TABLE_LOCKS, NULL, NULL
 lock_row_lock_current_waits,                FAM_MYSQL_INNODB_LOCK_ROW_LOCK_CURRENT_WAITS, NULL, NULL
-lock_row_lock_time,                         FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME, NULL, NULL
-lock_row_lock_time_max,                     FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_MAX, NULL, NULL
+lock_row_lock_time,                         FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_SECONDS, NULL, NULL
+lock_row_lock_time_max,                     FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_MAX_SECONDS, NULL, NULL
 lock_row_lock_waits,                        FAM_MYSQL_INNODB_LOCK_ROW_LOCK_WAITS, NULL, NULL
-lock_row_lock_time_avg,                     FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_AVG, NULL, NULL
+lock_row_lock_time_avg,                     FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_AVG_SECONDS, NULL, NULL
 buffer_pool_size,                           FAM_MYSQL_INNODB_BUFFER_POOL_SIZE, NULL, NULL
 buffer_pool_reads,                          FAM_MYSQL_INNODB_BUFFER_POOL_READS, NULL, NULL
 buffer_pool_read_requests,                  FAM_MYSQL_INNODB_BUFFER_POOL_READ_REQUESTS, NULL, NULL
@@ -162,7 +162,7 @@ purge_del_mark_records,                     FAM_MYSQL_INNODB_PURGE_DEL_MARK_RECO
 purge_upd_exist_or_extern_records,          FAM_MYSQL_INNODB_PURGE_UPD_EXIST_OR_EXTERN_RECORDS, NULL, NULL
 purge_invoked,                              FAM_MYSQL_INNODB_PURGE_INVOKED, NULL, NULL
 purge_undo_log_pages,                       FAM_MYSQL_INNODB_PURGE_UNDO_LOG_PAGES, NULL, NULL
-purge_dml_delay_usec,                       FAM_MYSQL_INNODB_PURGE_DML_DELAY_USEC, NULL, NULL
+purge_dml_delay_usec,                       FAM_MYSQL_INNODB_PURGE_DML_DELAY_SECONDS, NULL, NULL
 purge_stop_count,                           FAM_MYSQL_INNODB_PURGE_STOP_COUNT, NULL, NULL
 purge_resume_count,                         FAM_MYSQL_INNODB_PURGE_RESUME_COUNT, NULL, NULL
 log_checkpoints,                            FAM_MYSQL_INNODB_LOG_CHECKPOINTS, NULL, NULL
@@ -217,9 +217,9 @@ innodb_master_thread_sleeps,                FAM_MYSQL_INNODB_MASTER_THREAD_SLEEP
 innodb_activity_count,                      FAM_MYSQL_INNODB_ACTIVITY_COUNT, NULL, NULL
 innodb_master_active_loops,                 FAM_MYSQL_INNODB_MASTER_ACTIVE_LOOPS, NULL, NULL
 innodb_master_idle_loops,                   FAM_MYSQL_INNODB_MASTER_IDLE_LOOPS, NULL, NULL
-innodb_background_drop_table_usec,          FAM_MYSQL_INNODB_BACKGROUND_DROP_TABLE_USEC, NULL, NULL
-innodb_log_flush_usec,                      FAM_MYSQL_INNODB_LOG_FLUSH_USEC, NULL, NULL
-innodb_dict_lru_usec,                       FAM_MYSQL_INNODB_DICT_LRU_USEC, NULL, NULL
+innodb_background_drop_table_usec,          FAM_MYSQL_INNODB_BACKGROUND_DROP_TABLE_SECONDS, NULL, NULL
+innodb_log_flush_usec,                      FAM_MYSQL_INNODB_LOG_FLUSH_SECONDS, NULL, NULL
+innodb_dict_lru_usec,                       FAM_MYSQL_INNODB_DICT_LRU_SECONDS, NULL, NULL
 innodb_dict_lru_count_active,               FAM_MYSQL_INNODB_DICT_LRU_COUNT_ACTIVE, NULL, NULL
 innodb_dict_lru_count_idle,                 FAM_MYSQL_INNODB_DICT_LRU_COUNT_IDLE, NULL, NULL
 innodb_dblwr_writes,                        FAM_MYSQL_INNODB_DBLWR_WRITES, NULL, NULL

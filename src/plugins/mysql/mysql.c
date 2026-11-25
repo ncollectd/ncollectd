@@ -50,7 +50,7 @@ static cf_flags_t cmysql_flags[] = {
     { "table",               COLLECT_TABLE_STATS       },
     { "response_time",       COLLECT_RESPONSE_TIME     },
     { "master",              COLLECT_MASTER_STATS      },
-    { "slave",               COLLECT_SLAVE_STATS       },
+    { "replica_status",      COLLECT_SLAVE_STATS       },
     { "heartbeat",           COLLECT_HEARTBEAT         },
 };
 static size_t cmysql_flags_size = STATIC_ARRAY_SIZE(cmysql_flags);
@@ -82,6 +82,20 @@ typedef enum {
     SERVER_MYSQL
 } cmysql_server_t;
 
+typedef enum {
+    CMYSQL_SSL_MODE_UNSET,
+    CMYSQL_SSL_MODE_DISABLED,
+    CMYSQL_SSL_MODE_PREFERRED,
+    CMYSQL_SSL_MODE_REQUIRED,
+    CMYSQL_SSL_MODE_VERIFY_CA,
+    CMYSQL_SSL_MODE_VERIFY_IDENTITY
+} cmysql_ssl_mode_t;
+
+#if !defined(MARIADB_BASE_VERSION) && !defined(MARIADB_PACKAGE_VERSION_ID) && \
+    defined(MYSQL_VERSION_ID) && (MYSQL_VERSION_ID >= 50711)
+#define CMYSQL_HAVE_SSL_MODE
+#endif
+
 typedef struct {
     char *instance;
     char *host;
@@ -93,6 +107,7 @@ typedef struct {
     char *ca;
     char *capath;
     char *cipher;
+    cmysql_ssl_mode_t ssl_mode;
     char *socket;
     int port;
     int timeout;
@@ -157,6 +172,65 @@ static void cmysql_database_free(void *arg)
     free(db);
 }
 
+static int cmysql_set_ssl_options(cmysql_database_t *db)
+{
+#ifdef CMYSQL_HAVE_SSL_MODE
+    if (db->key != NULL)
+        mysql_options(db->con, MYSQL_OPT_SSL_KEY, db->key);
+    if (db->cert != NULL)
+        mysql_options(db->con, MYSQL_OPT_SSL_CERT, db->cert);
+    if (db->ca != NULL)
+        mysql_options(db->con, MYSQL_OPT_SSL_CA, db->ca);
+    if (db->capath != NULL)
+        mysql_options(db->con, MYSQL_OPT_SSL_CAPATH, db->capath);
+    if (db->cipher != NULL)
+        mysql_options(db->con, MYSQL_OPT_SSL_CIPHER, db->cipher);
+
+    unsigned int mode = SSL_MODE_PREFERRED;
+    switch (db->ssl_mode) {
+    case CMYSQL_SSL_MODE_UNSET:
+        return 0;
+    case CMYSQL_SSL_MODE_DISABLED:
+        mode = SSL_MODE_DISABLED;
+        break;
+    case CMYSQL_SSL_MODE_PREFERRED:
+        mode = SSL_MODE_PREFERRED;
+        break;
+    case CMYSQL_SSL_MODE_REQUIRED:
+        mode = SSL_MODE_REQUIRED;
+        break;
+    case CMYSQL_SSL_MODE_VERIFY_CA:
+        mode = SSL_MODE_VERIFY_CA;
+        break;
+    case CMYSQL_SSL_MODE_VERIFY_IDENTITY:
+        mode = SSL_MODE_VERIFY_IDENTITY;
+        break;
+    }
+
+    if (mysql_options(db->con, MYSQL_OPT_SSL_MODE, &mode) != 0) {
+        PLUGIN_ERROR("Failed to set the TLS mode of instance '%s': %s",
+                     db->instance, mysql_error(db->con));
+        return -1;
+    }
+#else
+    if (db->ssl_mode != CMYSQL_SSL_MODE_DISABLED)
+        mysql_ssl_set(db->con, db->key, db->cert, db->ca, db->capath, db->cipher);
+
+    if (db->ssl_mode == CMYSQL_SSL_MODE_UNSET)
+        return 0;
+
+    /* There is no MYSQL_OPT_SSL_MODE: verify-ca also checks the host name and
+     * required is checked after connecting. */
+    my_bool verify = db->ssl_mode >= CMYSQL_SSL_MODE_VERIFY_CA;
+    if (mysql_options(db->con, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify) != 0) {
+        PLUGIN_ERROR("Failed to set the TLS server certificate verification of instance '%s': %s",
+                     db->instance, mysql_error(db->con));
+        return -1;
+    }
+#endif
+    return 0;
+}
+
 static MYSQL *cmysql_get_connection(cmysql_database_t *db)
 {
     const char *cipher;
@@ -180,14 +254,24 @@ static MYSQL *cmysql_get_connection(cmysql_database_t *db)
 
     db->con = mysql_init(NULL);
     if (db->con == NULL) {
-        PLUGIN_ERROR("mysql_init failed: %s", mysql_error(db->con));
+        PLUGIN_ERROR("mysql_init failed (out of memory).");
         return NULL;
     }
 
-    /* Configure TCP connect timeout (default: 0) */
-    db->con->options.connect_timeout = db->timeout;
+    unsigned int connect_timeout = (unsigned int)db->timeout;
+    mysql_options(db->con, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
 
-    mysql_ssl_set(db->con, db->key, db->cert, db->ca, db->capath, db->cipher);
+    unsigned int rw_timeout = (unsigned int)((CDTIME_T_TO_MS(plugin_get_interval()) + 999) / 1000);
+    if (rw_timeout == 0)
+        rw_timeout = 1;
+    mysql_options(db->con, MYSQL_OPT_READ_TIMEOUT, &rw_timeout);
+    mysql_options(db->con, MYSQL_OPT_WRITE_TIMEOUT, &rw_timeout);
+
+    if (cmysql_set_ssl_options(db) != 0) {
+        mysql_close(db->con);
+        db->con = NULL;
+        return NULL;
+    }
 
     MYSQL *con = mysql_real_connect(db->con, db->host, db->user, db->pass, db->database,
                                     db->port, db->socket, 0);
@@ -200,6 +284,16 @@ static MYSQL *cmysql_get_connection(cmysql_database_t *db)
     }
 
     cipher = mysql_get_ssl_cipher(db->con);
+    if ((cipher == NULL) && (db->ssl_mode >= CMYSQL_SSL_MODE_REQUIRED)) {
+        c_complain(LOG_ERR, &db->conn_complaint,
+                   "Connection to database %s at server %s is not encrypted, "
+                   "but TLS is required.",
+                   (db->database != NULL) ? db->database : "<none>",
+                   (db->host != NULL) ? db->host : "localhost");
+        mysql_close(db->con);
+        db->con = NULL;
+        return NULL;
+    }
 
     db->mysql_version = mysql_get_server_version(db->con);
 
@@ -207,6 +301,12 @@ static MYSQL *cmysql_get_connection(cmysql_database_t *db)
     if (info != NULL) {
         if (strstr(info, "MariaDB") != NULL) {
             db->mysql_server = SERVER_MARIADB;
+            /* MariaDB >= 10 announces itself as "5.5.5-<version>-MariaDB" and
+             * only MariaDB Connector/C strips that prefix. */
+            unsigned long major = 0, minor = 0, patch = 0;
+            if ((strncmp(info, "5.5.5-", strlen("5.5.5-")) == 0) &&
+                (sscanf(info + strlen("5.5.5-"), "%lu.%lu.%lu", &major, &minor, &patch) == 3))
+                db->mysql_version = major * 10000 + minor * 100 + patch;
         } else if (strstr(info, "Percona") != NULL) {
             db->mysql_server = SERVER_PERCONA;
         } else {
@@ -247,6 +347,71 @@ static MYSQL_RES *exec_query(MYSQL *con, const char *query)
     return res;
 }
 
+static int cmysql_strtogauge(const char *str, double *ret_value)
+{
+    if (str == NULL)
+        return -1;
+
+    errno = 0;
+    char *endptr = NULL;
+    double value = strtod(str, &endptr);
+    if ((endptr != str) && (*endptr == '\0') && (errno == 0)) {
+        *ret_value = value;
+        return 0;
+    }
+
+    if ((strcasecmp(str, "ON") == 0) || (strcasecmp(str, "YES") == 0)) {
+        *ret_value = 1;
+        return 0;
+    } else if ((strcasecmp(str, "OFF") == 0) || (strcasecmp(str, "NO") == 0)) {
+        *ret_value = 0;
+        return 0;
+    }
+
+    return -1;
+}
+
+/* A fractional part is truncated, as some counters are reported as decimals. */
+static int cmysql_strtocounter(const char *str, uint64_t *ret_value)
+{
+    if (str == NULL)
+        return -1;
+
+    while (isspace((unsigned char)*str))
+        str++;
+
+    if (!isdigit((unsigned char)*str))
+        return -1;
+
+    errno = 0;
+    char *endptr = NULL;
+    uint64_t value = (uint64_t)strtoull(str, &endptr, 10);
+    if ((errno != 0) || ((*endptr != '\0') && (*endptr != '.')))
+        return -1;
+
+    *ret_value = value;
+    return 0;
+}
+
+static int cmysql_strtovalue(metric_type_t type, const char *str, value_t *ret_value)
+{
+    if (type == METRIC_TYPE_GAUGE) {
+        double gauge = 0;
+        if (cmysql_strtogauge(str, &gauge) != 0)
+            return -1;
+        *ret_value = VALUE_GAUGE(gauge);
+        return 0;
+    } else if (type == METRIC_TYPE_COUNTER) {
+        uint64_t counter = 0;
+        if (cmysql_strtocounter(str, &counter) != 0)
+            return -1;
+        *ret_value = VALUE_COUNTER(counter);
+        return 0;
+    }
+
+    return -1;
+}
+
 static int cmysql_read_primary_stats(cmysql_database_t *db, MYSQL *con)
 {
     char *query = "SHOW MASTER STATUS";
@@ -275,9 +440,10 @@ static int cmysql_read_primary_stats(cmysql_database_t *db, MYSQL *con)
         return -1;
     }
 
-    if (row[1] != NULL)
-        metric_family_append(&db->fams[FAM_MYSQL_HEARTBEAT_DELAY_SECONDS],
-                             VALUE_GAUGE(atoll(row[1])), &db->labels, NULL);
+    double position = 0;
+    if (cmysql_strtogauge(row[1], &position) == 0)
+        metric_family_append(&db->fams[FAM_MYSQL_MASTER_BINARY_LOG_POSITION],
+                             VALUE_GAUGE(position), &db->labels, NULL);
 
     row = mysql_fetch_row(res);
     if (row != NULL)
@@ -288,16 +454,26 @@ static int cmysql_read_primary_stats(cmysql_database_t *db, MYSQL *con)
     return 0;
 }
 
+static int cmysql_field_index(MYSQL_RES *res, const char *name, const char *alt_name)
+{
+    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+    unsigned int fields_num = mysql_num_fields(res);
+
+    if (fields == NULL)
+        return -1;
+
+    for (unsigned int i = 0; i < fields_num; i++) {
+        if (fields[i].name == NULL)
+            continue;
+        if ((strcasecmp(fields[i].name, name) == 0) || (strcasecmp(fields[i].name, alt_name) == 0))
+            return (int)i;
+    }
+
+    return -1;
+}
+
 static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
 {
-    /* WTF? libmysqlclient does not seem to provide any means to
-     * translate a column name to a column index ... :-/ */
-    const int READ_MASTER_LOG_POS_IDX = 6;
-    const int SLAVE_IO_RUNNING_IDX = 10;
-    const int SLAVE_SQL_RUNNING_IDX = 11;
-    const int EXEC_MASTER_LOG_POS_IDX = 21;
-    const int SECONDS_BEHIND_MASTER_IDX = 32;
-
     char *query = "SHOW SLAVE STATUS";
 
     if (((db->mysql_server == SERVER_MYSQL) || (db->mysql_server == SERVER_PERCONA)) &&
@@ -311,41 +487,53 @@ static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
 
     MYSQL_ROW row = mysql_fetch_row(res);
     if (row == NULL) {
-        PLUGIN_ERROR("Failed to get replica statistics: '%s' did not return any rows.", query);
+        PLUGIN_DEBUG("'%s' did not return any rows, the server is not a replica.", query);
         mysql_free_result(res);
-        return -1;
+        return 0;
     }
 
-    int field_num = mysql_num_fields(res);
-    if (field_num < 33) {
-        PLUGIN_ERROR("Failed to get replica statistics: '%s' returned less than 33 columns.", query);
-        mysql_free_result(res);
-        return -1;
+    int read_master_log_pos_idx = cmysql_field_index(res, "Read_Master_Log_Pos",
+                                                          "Read_Source_Log_Pos");
+    int slave_io_running_idx = cmysql_field_index(res, "Slave_IO_Running", "Replica_IO_Running");
+    int slave_sql_running_idx = cmysql_field_index(res, "Slave_SQL_Running", "Replica_SQL_Running");
+    int exec_master_log_pos_idx = cmysql_field_index(res, "Exec_Master_Log_Pos",
+                                                          "Exec_Source_Log_Pos");
+    int seconds_behind_master_idx = cmysql_field_index(res, "Seconds_Behind_Master",
+                                                            "Seconds_Behind_Source");
+
+    if (slave_sql_running_idx >= 0) {
+        double slave_sql_running = 0;
+        if ((row[slave_sql_running_idx] != NULL) &&
+            (strcasecmp(row[slave_sql_running_idx], "yes") == 0))
+            slave_sql_running = 1;
+        metric_family_append(&db->fams[FAM_MYSQL_SLAVE_SQL_RUNNING],
+                             VALUE_GAUGE(slave_sql_running), &db->labels, NULL);
     }
 
-    double slave_sql_running = 0;
-    if ((row[SLAVE_SQL_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_SQL_RUNNING_IDX], "yes") == 0))
-        slave_sql_running = 1;
-    metric_family_append(&db->fams[FAM_MYSQL_SLAVE_SQL_RUNNING],
-                         VALUE_GAUGE(slave_sql_running), &db->labels, NULL);
+    if (slave_io_running_idx >= 0) {
+        double slave_io_running = 0;
+        if ((row[slave_io_running_idx] != NULL) &&
+            (strcasecmp(row[slave_io_running_idx], "yes") == 0))
+            slave_io_running = 1;
+        metric_family_append(&db->fams[FAM_MYSQL_SLAVE_IO_RUNNING],
+                             VALUE_GAUGE(slave_io_running), &db->labels, NULL);
+    }
 
-    double slave_io_running = 0;
-    if ((row[SLAVE_IO_RUNNING_IDX] != NULL) && (strcasecmp(row[SLAVE_IO_RUNNING_IDX], "yes") == 0))
-        slave_io_running = 1;
-    metric_family_append(&db->fams[FAM_MYSQL_SLAVE_IO_RUNNING],
-                         VALUE_GAUGE(slave_io_running), &db->labels, NULL);
-
-    if (row[READ_MASTER_LOG_POS_IDX] != NULL)
+    double gauge = 0;
+    if ((read_master_log_pos_idx >= 0) &&
+        (cmysql_strtogauge(row[read_master_log_pos_idx], &gauge) == 0))
         metric_family_append(&db->fams[FAM_MYSQL_SLAVE_READ_MASTER_LOG_POSITION],
-                             VALUE_GAUGE(atoll(row[READ_MASTER_LOG_POS_IDX])), &db->labels, NULL);
+                             VALUE_GAUGE(gauge), &db->labels, NULL);
 
-    if (row[EXEC_MASTER_LOG_POS_IDX] != NULL)
+    if ((exec_master_log_pos_idx >= 0) &&
+        (cmysql_strtogauge(row[exec_master_log_pos_idx], &gauge) == 0))
         metric_family_append(&db->fams[FAM_MYSQL_SLAVE_EXEC_MASTER_LOG_POSITION],
-                             VALUE_GAUGE(atoll(row[EXEC_MASTER_LOG_POS_IDX])), &db->labels, NULL);
+                             VALUE_GAUGE(gauge), &db->labels, NULL);
 
-    if (row[SECONDS_BEHIND_MASTER_IDX] != NULL)
+    if ((seconds_behind_master_idx >= 0) &&
+        (cmysql_strtogauge(row[seconds_behind_master_idx], &gauge) == 0))
         metric_family_append(&db->fams[FAM_MYSQL_SLAVE_BEHIND_MASTER_SECONDS],
-                             VALUE_GAUGE(atof(row[SECONDS_BEHIND_MASTER_IDX])), &db->labels, NULL);
+                             VALUE_GAUGE(gauge), &db->labels, NULL);
 
     row = mysql_fetch_row(res);
     if (row != NULL)
@@ -359,12 +547,21 @@ static int cmysql_read_replica_stats(cmysql_database_t *db, MYSQL *con)
 static int cmysql_read_heartbeat(cmysql_database_t *db, MYSQL *con)
 {
     char query[512];
-    ssnprintf(query, sizeof(query),
-              "SELECT MAX(UNIX_TIMESTAMP(%s) - UNIX_TIMESTAMP(ts)) AS delay, server_id"
-              "  FROM %s.%s GROUP BY server_id",
-              db->heartbeat_utc ? "UTC_TIMESTAMP(6)" : "NOW(6)",
-              db->heartbeat_schema != NULL ? db->heartbeat_schema : "heartbeat",
-              db->heartbeat_table != NULL ? db->heartbeat_table : "heartbeat");
+    strbuf_t buf = STRBUF_CREATE_STATIC(query);
+
+    int status = strbuf_putstr(&buf, "SELECT MAX(UNIX_TIMESTAMP(");
+    status |= strbuf_putstr(&buf, db->heartbeat_utc ? "UTC_TIMESTAMP(6)" : "NOW(6)");
+    status |= strbuf_putstr(&buf, ") - UNIX_TIMESTAMP(ts)) AS delay, server_id  FROM `");
+    status |= strbuf_print_escaped(&buf, db->heartbeat_schema != NULL ? db->heartbeat_schema
+                                                                       : "heartbeat", "`", '`');
+    status |= strbuf_putstr(&buf, "`.`");
+    status |= strbuf_print_escaped(&buf, db->heartbeat_table != NULL ? db->heartbeat_table
+                                                                      : "heartbeat", "`", '`');
+    status |= strbuf_putstr(&buf, "` GROUP BY server_id");
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to build the heartbeat query of instance '%s'.", db->instance);
+        return -1;
+    }
 
     MYSQL_RES *res = exec_query(con, query);
     if (res == NULL)
@@ -380,8 +577,12 @@ static int cmysql_read_heartbeat(cmysql_database_t *db, MYSQL *con)
         if ((row[0] == NULL) || (row[1] == NULL))
             continue;
 
+        double delay = 0;
+        if (cmysql_strtogauge(row[0], &delay) != 0)
+            continue;
+
         metric_family_append(&db->fams[FAM_MYSQL_HEARTBEAT_DELAY_SECONDS],
-                            VALUE_GAUGE(atof(row[0])), &db->labels,
+                            VALUE_GAUGE(delay), &db->labels,
                             &LABEL_PAIR_CONST("server_id", row[1]),
                             NULL);
     }
@@ -403,6 +604,11 @@ static int cmysql_read_query_response_time(cmysql_database_t *db, MYSQL *con,
     }
 
     histogram_t *h = histogram_new();
+    if (h == NULL) {
+        PLUGIN_ERROR("histogram_new failed.");
+        mysql_free_result(res);
+        return -1;
+    }
     double sum = 0.0;
 
     MYSQL_ROW row;
@@ -413,17 +619,24 @@ static int cmysql_read_query_response_time(cmysql_database_t *db, MYSQL *con,
         if (strncmp("TOO LONG", row[0], strlen("TOO LONG")) == 0)
             continue;
 
-        double maximum = atof(row[0]);
-        uint64_t counter = atoll(row[1]);
-        sum += atof(row[2]);
+        double maximum = 0;
+        uint64_t counter = 0;
+        double total = 0;
+        if ((cmysql_strtogauge(row[0], &maximum) != 0) ||
+            (cmysql_strtocounter(row[1], &counter) != 0) ||
+            (cmysql_strtogauge(row[2], &total) != 0))
+            continue;
+        sum += total;
 
-        histogram_t *tmp = histogram_bucket_append(h, maximum, counter);
-        if (tmp == NULL) {
+        /* On failure histogram_bucket_append returns the unchanged histogram. */
+        size_t num = histogram_buckets(h);
+        h = histogram_bucket_append(h, maximum, counter);
+        if ((maximum != INFINITY) && (histogram_buckets(h) == num)) {
+            PLUGIN_ERROR("histogram_bucket_append failed.");
             histogram_destroy(h);
             h = NULL;
             break;
         }
-        h = tmp;
     }
 
     if (h != NULL) {
@@ -502,13 +715,9 @@ static int cmysql_read_table(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                value = VALUE_COUNTER(atoll(row[fields[n].field]));
-            } else {
+            if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                  &value) != 0)
                 continue;
-            }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
                                  &LABEL_PAIR_CONST("table_schema", row[0]),
@@ -588,17 +797,14 @@ static int cmysql_read_client_statistics(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                if (fields[n].fam == FAM_MYSQL_CLIENT_BUSY_TIME_SECONDS) {
-                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
-                } else if (fields[n].fam == FAM_MYSQL_CLIENT_CPU_TIME_SECONDS) {
-                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
-                } else {
-                    value = VALUE_COUNTER(atoll(row[fields[n].field]));
-                }
-            } else {
+            if ((fields[n].fam == FAM_MYSQL_CLIENT_BUSY_TIME_SECONDS) ||
+                (fields[n].fam == FAM_MYSQL_CLIENT_CPU_TIME_SECONDS)) {
+                double seconds = 0;
+                if (cmysql_strtogauge(row[fields[n].field], &seconds) != 0)
+                    continue;
+                value = VALUE_COUNTER_FLOAT64(seconds);
+            } else if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                         &value) != 0) {
                 continue;
             }
 
@@ -644,7 +850,7 @@ static int cmysql_read_user_statistics(cmysql_database_t *db, MYSQL *con)
         { 2,  FAM_MYSQL_USER_CONCURRENT_CONNECTIONS      },
         { 3,  FAM_MYSQL_USER_CONNECTED_TIME_SECONDS      },
         { 4,  FAM_MYSQL_USER_BUSY_TIME_SECONDS           },
-        { 5,  FAM_MYSQL_USER_CPU_TIME                    },
+        { 5,  FAM_MYSQL_USER_CPU_TIME_SECONDS            },
         { 6,  FAM_MYSQL_USER_RECEIVED_BYTES              },
         { 7,  FAM_MYSQL_USER_SENT_BYTES                  },
         { 8,  FAM_MYSQL_USER_BINLOG_WRITTEN_BYTES        },
@@ -678,17 +884,14 @@ static int cmysql_read_user_statistics(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                if (fields[n].fam == FAM_MYSQL_USER_BUSY_TIME_SECONDS) {
-                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
-                } else if (fields[n].fam == FAM_MYSQL_USER_CPU_TIME) {
-                    value = VALUE_COUNTER_FLOAT64(atof(row[fields[n].field]));
-                } else {
-                    value = VALUE_COUNTER(atoll(row[fields[n].field]));
-                }
-            } else {
+            if ((fields[n].fam == FAM_MYSQL_USER_BUSY_TIME_SECONDS) ||
+                (fields[n].fam == FAM_MYSQL_USER_CPU_TIME_SECONDS)) {
+                double seconds = 0;
+                if (cmysql_strtogauge(row[fields[n].field], &seconds) != 0)
+                    continue;
+                value = VALUE_COUNTER_FLOAT64(seconds);
+            } else if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                         &value) != 0) {
                 continue;
             }
 
@@ -726,9 +929,10 @@ static int cmysql_read_index_statistics(cmysql_database_t *db, MYSQL *con)
         if ((row[0] == NULL) || (row[1] == NULL) || (row[2] == NULL))
             continue;
 
-        if (row[3] != NULL)
+        uint64_t rows_read = 0;
+        if (cmysql_strtocounter(row[3], &rows_read) == 0)
             metric_family_append(&db->fams[FAM_MYSQL_INDEX_ROWS_READ],
-                                VALUE_COUNTER(atoll(row[3])),  &db->labels,
+                                VALUE_COUNTER(rows_read),  &db->labels,
                                 &LABEL_PAIR_CONST("table_schema", row[0]),
                                 &LABEL_PAIR_CONST("table_name", row[1]),
                                 &LABEL_PAIR_CONST("index_name", row[2]),
@@ -780,13 +984,9 @@ static int cmysql_read_table_statistics(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                value = VALUE_GAUGE(atoll(row[fields[n].field]));
-            } else {
+            if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                  &value) != 0)
                 continue;
-            }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
                                  &LABEL_PAIR_CONST("table_schema", row[0]),
@@ -841,13 +1041,9 @@ static int cmysql_read_innodb_tablespace(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                value = VALUE_COUNTER(atoll(row[fields[n].field]));
-            } else {
+            if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                  &value) != 0)
                 continue;
-            }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
                                  &LABEL_PAIR_CONST("tablespace", row[0]),
@@ -897,13 +1093,9 @@ static int cmysql_read_innodb_cmp(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                value = VALUE_COUNTER(atoll(row[fields[n].field]));
-            } else {
+            if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                  &value) != 0)
                 continue;
-            }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
                                  &LABEL_PAIR_CONST("page_size", row[0]),
@@ -952,13 +1144,9 @@ static int cmysql_read_innodb_cmpmem(cmysql_database_t *db, MYSQL *con)
             if (row[fields[n].field] == NULL)
                 continue;
 
-            if (db->fams[fields[n].fam].type == METRIC_TYPE_GAUGE) {
-                value = VALUE_GAUGE(atof(row[fields[n].field]));
-            } else if (db->fams[fields[n].fam].type == METRIC_TYPE_COUNTER) {
-                value = VALUE_COUNTER(atoll(row[fields[n].field]));
-            } else {
+            if (cmysql_strtovalue(db->fams[fields[n].fam].type, row[fields[n].field],
+                                  &value) != 0)
                 continue;
-            }
 
             metric_family_append(&db->fams[fields[n].fam], value, &db->labels,
                                  &LABEL_PAIR_CONST("page_size", row[0]),
@@ -1005,9 +1193,30 @@ static int cmysql_read_innodb_metrics(cmysql_database_t *db, MYSQL *con)
 
         value_t value = {0};
         if (fam->type == METRIC_TYPE_GAUGE) {
-            value = VALUE_GAUGE(atof(val));
+            double gauge = 0;
+            if (cmysql_strtogauge(val, &gauge) != 0)
+                continue;
+            if ((minnodb->fam == FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_MAX_SECONDS) ||
+                (minnodb->fam == FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_AVG_SECONDS)) {
+                value = VALUE_GAUGE(gauge * 1e-3);
+            } else if (minnodb->fam == FAM_MYSQL_INNODB_PURGE_DML_DELAY_SECONDS) {
+                value = VALUE_GAUGE(gauge * 1e-6);
+            } else {
+                value = VALUE_GAUGE(gauge);
+            }
         } else if (fam->type == METRIC_TYPE_COUNTER) {
-            value = VALUE_COUNTER(atoll(val));
+            uint64_t counter = 0;
+            if (cmysql_strtocounter(val, &counter) != 0)
+                continue;
+            if (minnodb->fam == FAM_MYSQL_INNODB_LOCK_ROW_LOCK_TIME_SECONDS) {
+                value = VALUE_COUNTER_FLOAT64((double)counter * 1e-3);
+            } else if ((minnodb->fam == FAM_MYSQL_INNODB_BACKGROUND_DROP_TABLE_SECONDS) ||
+                       (minnodb->fam == FAM_MYSQL_INNODB_LOG_FLUSH_SECONDS) ||
+                       (minnodb->fam == FAM_MYSQL_INNODB_DICT_LRU_SECONDS)) {
+                value = VALUE_COUNTER_FLOAT64((double)counter * 1e-6);
+            } else {
+                value = VALUE_COUNTER(counter);
+            }
         }
 
         if (minnodb->lname != NULL) {
@@ -1052,16 +1261,39 @@ static int cmysql_read_status(cmysql_database_t *db, MYSQL *con)
 
         metric_family_t *fam = &db->fams[mstatus->fam];
 
+        if (mstatus->fam == FAM_MYSQL_WSREP_EVS_DELAYED) {
+            label_set_t info = {
+                .num = 1,
+                .ptr = (label_pair_t[]){
+                    {.name = "nodes", .value = val}
+                }
+            };
+            metric_family_append(fam, VALUE_INFO(info), &db->labels, NULL);
+            continue;
+        }
+
         value_t value = {0};
         if (fam->type == METRIC_TYPE_GAUGE) {
-            value = VALUE_GAUGE(atof(val));
+            double gauge = 0;
+            if (cmysql_strtogauge(val, &gauge) != 0)
+                continue;
+            value = VALUE_GAUGE(gauge);
         } else if (fam->type == METRIC_TYPE_COUNTER) {
-            if (mstatus->fam == FAM_MYSQL_BUSY_TIME_SECONDS) {
-                value = VALUE_COUNTER_FLOAT64(atof(val));
+            double seconds = 0;
+            uint64_t counter = 0;
+            if ((mstatus->fam == FAM_MYSQL_BUSY_TIME_SECONDS) ||
+                (mstatus->fam == FAM_MYSQL_CPU_TIME_SECONDS)) {
+                if (cmysql_strtogauge(val, &seconds) != 0)
+                    continue;
+                value = VALUE_COUNTER_FLOAT64(seconds);
             } else if (mstatus->fam == FAM_MYSQL_WSREP_FLOW_CONTROL_PAUSED_SECONDS) {
-                value = VALUE_COUNTER_FLOAT64((double)atoll(val) * 1e-9);
+                if (cmysql_strtocounter(val, &counter) != 0)
+                    continue;
+                value = VALUE_COUNTER_FLOAT64((double)counter * 1e-9);
             } else {
-                value = VALUE_COUNTER((uint64_t)atoll(val));
+                if (cmysql_strtocounter(val, &counter) != 0)
+                    continue;
+                value = VALUE_COUNTER(counter);
             }
         }
 
@@ -1113,28 +1345,11 @@ static int cmysql_read_database_query(cmysql_database_t *db, MYSQL *con,
         goto error;
     }
 
-    column_names[0] = calloc(column_num, DATA_MAX_NAME_LEN);
-    if (column_names[0] == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        goto error;
-    }
-    for (size_t i = 1; i < column_num; i++) {
-        column_names[i] = column_names[i - 1] + DATA_MAX_NAME_LEN;
-    }
-
     column_values = calloc(column_num, sizeof(*column_values));
     if (column_values == NULL) {
         PLUGIN_ERROR("calloc failed.");
         goto error;
     }
-
-    column_values[0] = calloc(column_num, DATA_MAX_NAME_LEN);
-    if (column_values[0] == NULL) {
-        PLUGIN_ERROR("calloc failed.");
-        goto error;
-    }
-    for (size_t i = 1; i < column_num; i++)
-        column_values[i] = column_values[i - 1] + DATA_MAX_NAME_LEN;
 
     for (size_t i = 0; i < column_num; i++) {
         MYSQL_FIELD *field = mysql_fetch_field(res);
@@ -1144,7 +1359,7 @@ static int cmysql_read_database_query(cmysql_database_t *db, MYSQL *con,
             goto error;
         }
 
-        sstrncpy(column_names[i], field->name, DATA_MAX_NAME_LEN);
+        column_names[i] = field->name;
     }
 
     status = db_query_prepare_result(q, prep_area, db->metric_prefix, &db->labels,
@@ -1157,22 +1372,14 @@ static int cmysql_read_database_query(cmysql_database_t *db, MYSQL *con,
     /* Iterate over all rows and call `db_query_handle_result' with each list of values. */
     MYSQL_ROW row;
     while ((row = mysql_fetch_row(res))) {
-        /* Copy the value of the columns to `column_values' */
-        for (size_t i = 0; i < column_num; i++) {
-            if (row[i] == NULL) {
-                column_values[i][0] = '\0';
-            } else {
-                sstrncpy(column_values[i], row[i], DATA_MAX_NAME_LEN);
-            }
-        }
+        for (size_t i = 0; i < column_num; i++)
+            column_values[i] = (row[i] != NULL) ? row[i] : "";
 
-        /* If all values were copied successfully, call `db_query_handle_result'
-         * to dispatch the row to the daemon. */
         status = db_query_handle_result(q, prep_area, column_values, db->filter);
         if (status != 0) {
             PLUGIN_ERROR("%s in %s: db_query_handle_result failed.",
                          db->instance, db_query_get_name(q));
-            goto error;
+            continue;
         }
     }
 
@@ -1183,15 +1390,8 @@ static int cmysql_read_database_query(cmysql_database_t *db, MYSQL *con,
 
 error:
 
-    if (column_names != NULL) {
-        free(column_names[0]);
-        free(column_names);
-    }
-
-    if (column_values != NULL) {
-        free(column_values[0]);
-        free(column_values);
-    }
+    free(column_names);
+    free(column_values);
 
     if (res != NULL)
         mysql_free_result(res);
@@ -1207,6 +1407,10 @@ static int cmysql_read(user_data_t *ud)
     }
 
     cmysql_database_t *db = (cmysql_database_t *)ud->data;
+
+    /* Read callbacks run in any of the read threads and the connection is
+     * shared between them. */
+    mysql_thread_init();
 
     /* An error message will have been printed in this case */
     MYSQL *con = cmysql_get_connection(db);
@@ -1277,6 +1481,49 @@ static int cmysql_read(user_data_t *ud)
     return 0;
 }
 
+static int cmysql_config_identifier(config_item_t *ci, char **ret_string)
+{
+    int status = cf_util_get_string(ci, ret_string);
+    if (status != 0)
+        return status;
+
+    if ((*ret_string)[0] == '\0') {
+        PLUGIN_ERROR("The '%s' option in %s:%d must not be empty.",
+                     ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int cmysql_config_ssl_mode(config_item_t *ci, cmysql_ssl_mode_t *ret_mode)
+{
+    char mode[32];
+
+    int status = cf_util_get_string_buffer(ci, mode, sizeof(mode));
+    if (status != 0)
+        return status;
+
+    if (strcasecmp(mode, "disabled") == 0) {
+        *ret_mode = CMYSQL_SSL_MODE_DISABLED;
+    } else if (strcasecmp(mode, "preferred") == 0) {
+        *ret_mode = CMYSQL_SSL_MODE_PREFERRED;
+    } else if (strcasecmp(mode, "required") == 0) {
+        *ret_mode = CMYSQL_SSL_MODE_REQUIRED;
+    } else if (strcasecmp(mode, "verify-ca") == 0) {
+        *ret_mode = CMYSQL_SSL_MODE_VERIFY_CA;
+    } else if (strcasecmp(mode, "verify-identity") == 0) {
+        *ret_mode = CMYSQL_SSL_MODE_VERIFY_IDENTITY;
+    } else {
+        PLUGIN_ERROR("Invalid value '%s' for option '%s' in %s:%d, must be: "
+                     "'disabled', 'preferred', 'required', 'verify-ca' or 'verify-identity'.",
+                     mode, ci->key, cf_get_file(ci), cf_get_lineno(ci));
+        return -1;
+    }
+
+    return 0;
+}
+
 /* Configuration handling functions
  *
  * plugin mysql {
@@ -1343,16 +1590,23 @@ static int cmysql_config_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->capath);
         } else if (strcasecmp("ssl-cipher", child->key) == 0) {
             status = cf_util_get_string(child, &db->cipher);
+        } else if (strcasecmp("ssl-mode", child->key) == 0) {
+            status = cmysql_config_ssl_mode(child, &db->ssl_mode);
         } else if (strcasecmp("connect-timeout", child->key) == 0) {
             status = cf_util_get_int(child, &db->timeout);
+            if ((status == 0) && (db->timeout < 0)) {
+                PLUGIN_ERROR("The '%s' option in %s:%d must be a non-negative number.",
+                             child->key, cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp("metric-prefix", child->key) == 0) {
             status = cf_util_get_string(child, &db->metric_prefix);
         } else if (strcasecmp("heartbeat-utc", child->key) == 0) {
             status = cf_util_get_boolean(child, &db->heartbeat_utc);
         } else if (strcasecmp("heartbeat-schema", child->key) == 0) {
-            status = cf_util_get_string(child, &db->heartbeat_schema);
+            status = cmysql_config_identifier(child, &db->heartbeat_schema);
         } else if (strcasecmp("heartbeat-table", child->key) == 0) {
-            status = cf_util_get_string(child, &db->heartbeat_table);
+            status = cmysql_config_identifier(child, &db->heartbeat_table);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &db->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
@@ -1436,16 +1690,28 @@ static int cmysql_config(config_item_t *ci)
     return 0;
 }
 
+static int cmysql_init(void)
+{
+    if (mysql_library_init(0, NULL, NULL) != 0) {
+        PLUGIN_ERROR("mysql_library_init failed.");
+        return -1;
+    }
+
+    return 0;
+}
+
 static int cmysql_shutdown(void)
 {
     db_query_free(queries, queries_num);
     queries = NULL;
     queries_num = 0;
+    mysql_library_end();
     return 0;
 }
 
 void module_register(void)
 {
     plugin_register_config("mysql", cmysql_config);
+    plugin_register_init("mysql", cmysql_init);
     plugin_register_shutdown("mysql", cmysql_shutdown);
 }

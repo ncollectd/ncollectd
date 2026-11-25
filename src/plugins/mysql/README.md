@@ -42,6 +42,7 @@ NCOLLECTD-MYSQL(5) - File Formats Manual
 	        ssl-ca "/path/to/ca.pem"
 	        ssl-ca-path "/path/to/cas/"
 	        ssl-cipher cyphers
+	        ssl-mode disabled|preferred|required|verify-ca|verify-identity
 	        connect-timeout seconds
 	        heartbeat-utc  true|false
 	        heartbeat-schema schema
@@ -72,7 +73,7 @@ The plugin will complain loudly in case anything goes wrong.
 > It accepts a single argument which specifies the name of the database.
 > None of the other options are required.
 > MySQL will use default values as documented in the
-> mysql\_real\_connect() and mysql\_ssl\_set() sections in the
+> mysql\_real\_connect() and mysql\_options() sections in the
 > **MySQL reference manual**.
 > Each database needs a *instance-name* as string argument in the starting
 > tag of the block.
@@ -145,9 +146,43 @@ The plugin will complain loudly in case anything goes wrong.
 
 > > If provided, the SSL cipher to use.
 
+> **ssl-mode** *disabled|preferred|required|verify-ca|verify-identity*
+
+> > Specify the security state of the connection to the server.
+> > If not set, the default of the client library is used.
+> > The following modes are supported:
+
+> > **disabled**
+
+> > > Establish an unencrypted connection.
+
+> > **preferred**
+
+> > > Establish an encrypted connection if the server supports it,
+> > > otherwise fall back to an unencrypted connection.
+
+> > **required**
+
+> > > Establish an encrypted connection or fail.
+
+> > **verify-ca**
+
+> > > Like **required**, and verify the server certificate against the
+> > > configured CA certificates.
+
+> > **verify-identity**
+
+> > > Like **verify-ca**, and verify that the server host name matches
+> > > the identity in the server certificate.
+
+> > With MariaDB Connector/C **verify-ca** also verifies the server host
+> > name.
+
 > **connect-timeout** *seconds*
 
 > > Sets the connect timeout for the MySQL client.
+> > Reading from and writing to the server time out after the
+> > collection **interval**.
 
 > **heartbeat-utc** *true|false*
 
@@ -205,11 +240,11 @@ The plugin will complain loudly in case anything goes wrong.
 
 > > **innodb\_cmp**
 
-> > > Collect values from INFORMATION\_SCHEMA.INNODB\_CMPMEM table.
+> > > Collect values from INFORMATION\_SCHEMA.INNODB\_CMP table.
 
 > > **innodb\_cmpmem**
 
-> > > Collect values from INFORMATION\_SCHEMA.INNODB\_CMP table.
+> > > Collect values from INFORMATION\_SCHEMA.INNODB\_CMPMEM table.
 
 > > **innodb\_tablespace**
 
@@ -257,11 +292,8 @@ The plugin will complain loudly in case anything goes wrong.
 
 > > **table**
 
-> > > Collect values from INFORMATION\_SCHEMA.TABLE\_STATISTICS table.
-
-> > **table**
-
-> > > Collect values from INFORMATION\_SCHEMA.TABLES table.
+> > > Collect values from INFORMATION\_SCHEMA.TABLE\_STATISTICS
+> > > and INFORMATION\_SCHEMA.TABLES tables.
 
 > > **response\_time**
 
@@ -272,9 +304,10 @@ The plugin will complain loudly in case anything goes wrong.
 
 > > **master**
 
-> > **slave**
+> > **replica\_status**
 
-> > > Enable the collection of primary / replica statistics in a replication setup.
+> > > Enable the collection of primary / replica statistics in a replication setup
+> > > (SHOW MASTER STATUS and SHOW REPLICA STATUS commands).
 > > > In order to be able to get access to these statistics, the user needs special
 > > > privileges.
 
