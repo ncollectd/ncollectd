@@ -6,6 +6,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libmetric/metric_chars.h"
 
 typedef struct {
     char *key;
@@ -71,17 +72,31 @@ static int match_table_read_metric(match_table_t *tbl, match_table_metric_t *tbl
     assert(tbl_metric->value_from < fields_num);
 
     strbuf_t buf = STRBUF_CREATE;
+    int status = 0;
 
     if (tbl->metric_prefix != NULL)
-        strbuf_print(&buf, tbl->metric_prefix);
+        status |= strbuf_print(&buf, tbl->metric_prefix);
     if (tbl_metric->metric_prefix != NULL)
-        strbuf_print(&buf, tbl_metric->metric_prefix);
+        status |= strbuf_print(&buf, tbl_metric->metric_prefix);
 
     if (tbl_metric->metric_from >= 0) {
         assert(tbl_metric->metric_from < (int)fields_num);
-        strbuf_print(&buf, fields[tbl_metric->metric_from]);
+        /* The name comes from the input data: replace invalid characters. */
+        for (const char *c = fields[tbl_metric->metric_from]; *c != '\0'; c++) {
+            char valid = valid_metric_chars[(unsigned char)*c];
+            if ((valid == 0) || ((strbuf_len(&buf) == 0) && (valid != 1)))
+                status |= strbuf_putchar(&buf, '_');
+            else
+                status |= strbuf_putchar(&buf, *c);
+        }
     } else {
-        strbuf_print(&buf, tbl_metric->metric);
+        status |= strbuf_print(&buf, tbl_metric->metric);
+    }
+
+    if ((status != 0) || (buf.ptr == NULL)) {
+        PLUGIN_ERROR("Failed to build metric name.");
+        strbuf_destroy(&buf);
+        return -1;
     }
 
     label_set_t mlabel = {0};
@@ -172,6 +187,12 @@ static int match_table_config_append_label(tbl_label_t **var, int *len, config_i
         return -1;
     }
 
+    double column = ci->values[1].value.number;
+    if ((column < 0) || (column > INT_MAX) || (column != (double)(int)column)) {
+        PLUGIN_ERROR("'%s' expects a non-negative integer as column number.", ci->key);
+        return -1;
+    }
+
     tbl_label_t *tmp = realloc(*var, ((*len) + 1) * sizeof(**var));
     if (tmp == NULL) {
         PLUGIN_ERROR("realloc failed: %s.", STRERRNO);
@@ -185,7 +206,7 @@ static int match_table_config_append_label(tbl_label_t **var, int *len, config_i
         return -1;
     }
 
-    tmp[*len].value_from = ci->values[1].value.number;
+    tmp[*len].value_from = (int)column;
 
     *len = (*len) + 1;
     return 0;
@@ -229,6 +250,10 @@ static int match_table_config_metric(match_table_t *tbl, config_item_t *ci)
             status = cf_util_get_string(child, &tbl_metric->metric);
         } else if (strcasecmp(child->key, "metric-from") == 0) {
             status = cf_util_get_int(child, &tbl_metric->metric_from);
+            if ((status == 0) && (tbl_metric->metric_from < 0)) {
+                PLUGIN_ERROR("'metric-from' expects a non-negative column number.");
+                status = -1;
+            }
         } else if (strcasecmp(child->key, "metric-prefix") == 0) {
             status = cf_util_get_string(child, &tbl_metric->metric_prefix);
         } else if (strcasecmp(child->key, "label") == 0) {
@@ -238,6 +263,10 @@ static int match_table_config_metric(match_table_t *tbl, config_item_t *ci)
                                                      &tbl_metric->labels_from_num, child);
         } else if (strcasecmp(child->key, "value-from") == 0) {
             status = cf_util_get_int(child, &tbl_metric->value_from);
+            if ((status == 0) && (tbl_metric->value_from < 0)) {
+                PLUGIN_ERROR("'value-from' expects a non-negative column number.");
+                status = -1;
+            }
         } else {
             PLUGIN_WARNING("Ignoring unknown config key '%s' in 'result'.", child->key);
             status = -1;
@@ -255,13 +284,23 @@ static int match_table_config_metric(match_table_t *tbl, config_item_t *ci)
         status = -1;
     }
 
-    if (tbl_metric->metric != NULL && tbl_metric->metric_from > 0) {
+    if (tbl_metric->metric != NULL && tbl_metric->metric_from >= 0) {
         PLUGIN_ERROR("Only one of 'metric' or 'metric-from' can be set in match_table.");
         status = -1;
     }
 
     if (tbl_metric->value_from < 0) {
         PLUGIN_ERROR("No 'value-from' option specified for 'metric' in match_table");
+        status = -1;
+    }
+
+    if (tbl_metric->type == 0) {
+        PLUGIN_ERROR("No 'type' option specified for 'metric' in match_table");
+        status = -1;
+    }
+
+    if (tbl_metric->type == 0) {
+        PLUGIN_ERROR("No 'type' option specified for 'metric' in match_table");
         status = -1;
     }
 
@@ -290,6 +329,10 @@ static int match_table_config(const config_item_t *ci, void **user_data)
             status = cf_util_get_string(option, &tbl->sep);
         } else if (strcasecmp(option->key, "skip-lines") == 0) {
             status = cf_util_get_int(option, &tbl->skip_lines);
+            if ((status == 0) && (tbl->skip_lines < 0)) {
+                PLUGIN_ERROR("'tbl->skip_line' expects a non-negative number.");
+                status = -1;
+            }
         } else if (strcasecmp(option->key, "metric-prefix") == 0) {
             status = cf_util_get_string(option, &tbl->metric_prefix);
         } else if (strcasecmp(option->key, "label") == 0) {

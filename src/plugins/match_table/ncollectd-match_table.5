@@ -99,6 +99,9 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Prepend the \fIprefix\fP to the metrics found in the \fBmetric-from\fP.
 .It \fBmetric-from\fP \fIcolumn\fP
 Configure to read the metric from the column with the zero-based index.
+Characters not valid in a metric name are replaced with an underscore.
+Each distinct value creates a new metric family, so avoid columns with
+unbounded values.
 .It \fBlabel-from\fP \fIkey\fP \fIcolumn\fP
 Set the label \fIkey\fP with the value from the column with the zero-based index.
 .It \fBvalue-from\fP \fIcolumn\fP
