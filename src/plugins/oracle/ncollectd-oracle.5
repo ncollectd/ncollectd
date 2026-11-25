@@ -31,12 +31,12 @@
     }
     \fBinstance\fP \fIname\fP {
         \fBconnect-id\fP \fIconnect-id\fP
-        \fBhost\fP \fIhost\fP
         \fBuser\fP \fIusername\fP
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBquery\fP \fIquery-name\fP
@@ -80,6 +80,11 @@ Prepends \fIprefix\fP to the metrics name.
 Sets the interval (in seconds) in which the values will be collected from this
 database.
 By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+Sets the timeout for each call to the database (requires OCI 18c or later).
+The timeout of the connection establishment can be set with
+\fISQLNET.OUTBOUND_CONNECT_TIMEOUT\fP in the \fIsqlnet.ora\fP file.
+By default there is no timeout.
 .It \fBquery\fP \fIquery-name\fP
 Associates the query named \fIquery-name\fP with this database connection.
 The query needs to be defined \fIbefore\fP this statement, i. e. all query
