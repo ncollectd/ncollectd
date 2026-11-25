@@ -11,6 +11,11 @@ NCOLLECTD-NSD(5) - File Formats Manual
 	    instance name {
 	        host host
 	        port port
+	        socket-path path
+	        server-cert file
+	        control-key file
+	        control-cert file
+	        timeout seconds
 	        label key value
 	        interval seconds
 	        filter {
@@ -32,6 +37,33 @@ The configuration consists of one or more **instance** blocks:
 **port** *port*
 
 > Port to connect.
+
+**socket-path** *path*
+
+> Path of the NSD control unix socket. If set, **host** and **port** are ignored.
+
+**server-cert** *file*
+
+> Server certificate used to verify the server.
+> Defaults to */etc/nsd/nsd\_server.pem*.
+
+**control-key** *file*
+
+> Private key of the client.
+> Defaults to */etc/nsd/nsd\_control.key*.
+
+**control-cert** *file*
+
+> Certificate of the client.
+> Defaults to */etc/nsd/nsd\_control.pem*.
+
+> TLS is used when the **host** is not a local address or when any of
+> **server-cert**, **control-key** or **control-cert** is set.
+
+**timeout** *seconds*
+
+> Timeout for the send and receive operations with the server.
+> By default half of the **interval** is used.
 
 **server-name** *servername*
 

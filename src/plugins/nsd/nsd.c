@@ -86,7 +86,7 @@ static metric_family_t fams[FAM_NSD_MAX] = {
         .help = "Size of the DNS database in memory, in bytes.",
     },
     [FAM_NSD_XFRD_MEMORY_BYTES] = {
-        .name = "nsd_xfed_memory_bytes",
+        .name = "nsd_xfrd_memory_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Size of memory for zone transfers and notifies in xfrd process, "
                 "excludes TSIG data, in bytes.",
@@ -174,12 +174,12 @@ static metric_family_t fams[FAM_NSD_MAX] = {
     },
     [FAM_NSD_ZONE_MASTER] = {
         .name = "nsd_zone_master",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of master zones served. These are zones with no ‘request-xfr:’ entries.",
     },
     [FAM_NSD_ZONE_SLAVE] = {
         .name = "nsd_zone_slave",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "Number of slave zones served. These are zones with ‘request-xfr’ entries.",
     },
 };
@@ -312,19 +312,54 @@ static void nsd_free(void *data)
     free(nsd);
 }
 
+static int nsd_connect_tcp(nsd_t *nsd)
+{
+    int fd = socket_connect_tcp(nsd->host, nsd->port, 0, 0);
+    if (fd < 0)
+        return -1;
+
+    /* Avoid blocking the read thread if the server does not answer. */
+    if (nsd->timeout > 0) {
+        struct timeval tvout = CDTIME_T_TO_TIMEVAL(nsd->timeout);
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tvout, sizeof(tvout)) != 0)
+            PLUGIN_WARNING("Failed to set the socket receive timeout: %s", STRERRNO);
+        if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tvout, sizeof(tvout)) != 0)
+            PLUGIN_WARNING("Failed to set the socket send timeout: %s", STRERRNO);
+    }
+
+    return fd;
+}
+
 static int nsd_read_ssl(nsd_t *nsd)
 {
     int fd = -1;
     SSL *ssl = NULL;
+    int rc = -1;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    const SSL_METHOD *method = TLS_client_method();
+#else
     const SSL_METHOD *method = SSLv23_client_method();
+#endif
     SSL_CTX *ctx = SSL_CTX_new(method);
     if (ctx == NULL) {
         PLUGIN_ERROR("Unable to create a new SSL context structure.");
         return -1;
     }
 
-    SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    if (SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION) != 1) {
+        PLUGIN_ERROR("Failed to set the minimum TLS version.");
+        SSL_CTX_free(ctx);
+        return -1;
+    }
+#else
+    SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+#endif
+#ifdef SSL_OP_IGNORE_UNEXPECTED_EOF
+    /* NSD can close the connection without sending a close_notify. */
+    SSL_CTX_set_options(ctx, SSL_OP_IGNORE_UNEXPECTED_EOF);
+#endif
 
     int status = SSL_CTX_use_certificate_file(ctx, nsd->control_cert_file, SSL_FILETYPE_PEM);
     if(status != 1) {
@@ -359,7 +394,7 @@ static int nsd_read_ssl(nsd_t *nsd)
     }
     SSL_set_connect_state(ssl);
 
-    fd = socket_connect_tcp(nsd->host, nsd->port, 0, 0);
+    fd = nsd_connect_tcp(nsd);
     if (fd < 0)
         goto error;
 
@@ -376,7 +411,11 @@ static int nsd_read_ssl(nsd_t *nsd)
         goto error;
     }
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    X509 *cert = SSL_get1_peer_certificate(ssl);
+#else
     X509 *cert = SSL_get_peer_certificate(ssl);
+#endif
     if (cert == NULL) {
         PLUGIN_ERROR("SSL server presented no peer certificate");
         goto error;
@@ -398,11 +437,14 @@ static int nsd_read_ssl(nsd_t *nsd)
         char buffer[4096];
         int buffer_size = sizeof(buffer);
         int rsize = SSL_read(ssl, buffer, buffer_size - 1);
-        if (rsize == 0)
-            break;
         if (rsize <= 0) {
-            unsigned long err = ERR_peek_error();
-            PLUGIN_ERROR("could not SSL_read %d %s", rsize,  ERR_reason_error_string(err) );
+            int err = SSL_get_error(ssl, rsize);
+            /* The server can close the connection with or without a close_notify. */
+            if ((err == SSL_ERROR_ZERO_RETURN) ||
+                ((err == SSL_ERROR_SYSCALL) && (ERR_peek_error() == 0)))
+                break;
+            const char *reason = ERR_reason_error_string(ERR_peek_error());
+            PLUGIN_ERROR("could not SSL_read: %d %s", err, reason == NULL ? "" : reason);
             break;
         }
         buffer[rsize] = '\0';
@@ -410,7 +452,10 @@ static int nsd_read_ssl(nsd_t *nsd)
         strbuf_putstrn(&buf, buffer, rsize);
     }
 
+    /* NSD can close the connection without a close_notify, so any data
+       received is considered a valid response. */
     if (strbuf_len(&buf) > 0) {
+        rc = 0;
         char *ptr = buf.ptr;
         char *saveptr = NULL;
         char *line;
@@ -430,7 +475,7 @@ error:
     if (ctx != NULL)
         SSL_CTX_free(ctx);
 
-    return 0;
+    return rc;
 }
 
 static int nsd_read_stream(nsd_t *nsd)
@@ -440,7 +485,7 @@ static int nsd_read_stream(nsd_t *nsd)
     if (nsd->socketpath != NULL)
         fd = socket_connect_unix_stream(nsd->socketpath, nsd->timeout);
     else
-        fd = socket_connect_tcp(nsd->host, nsd->port, 0, 0);
+        fd = nsd_connect_tcp(nsd);
 
     if (fd < 0)
         return -1;
@@ -460,10 +505,17 @@ static int nsd_read_stream(nsd_t *nsd)
     }
 
     char buffer[1024];
-    while (fgets(buffer, sizeof(buffer), fh) != NULL)
+    size_t lines = 0;
+    while (fgets(buffer, sizeof(buffer), fh) != NULL) {
         nsd_parse_metric(nsd, buffer);
+        lines++;
+    }
 
     fclose(fh);
+
+    /* An empty response means that the server could not be queried. */
+    if (lines == 0)
+        return -1;
 
     return 0;
 }
@@ -554,27 +606,37 @@ static int nsd_config_instance (config_item_t *ci)
         return -1;
     }
 
-    if ((nsd->host != NULL) && (strcmp(nsd->host, "::1") != 0) &&
-        (strcmp(nsd->host, "127.0.0.1") != 0) && (strcmp(nsd->host, "localhost") != 0)) {
+    bool remote = (nsd->host != NULL) && (strcmp(nsd->host, "::1") != 0) &&
+                  (strcmp(nsd->host, "127.0.0.1") != 0) && (strcmp(nsd->host, "localhost") != 0);
+    bool any_cert = (nsd->server_cert_file != NULL) || (nsd->control_key_file != NULL) ||
+                    (nsd->control_cert_file != NULL);
 
-        if (nsd->server_cert_file == NULL) {
-            PLUGIN_ERROR("Missing 'server-cert' option.");
-            nsd_free(nsd);
-            return -1;
-        }
+    /* TLS is used with remote hosts or if any certificate option is set,
+       use the nsd-control default files for the missing ones. */
+    if ((nsd->socketpath == NULL) && (remote || any_cert)) {
+        struct {
+            char **file;
+            const char *def;
+        } files[] = {
+            { &nsd->server_cert_file,  NSD_SERVER_CERT_FILE  },
+            { &nsd->control_key_file,  NSD_CONTROL_KEY_FILE  },
+            { &nsd->control_cert_file, NSD_CONTROL_CERT_FILE },
+        };
 
-        if (nsd->control_key_file == NULL) {
-            PLUGIN_ERROR("Missing 'control-key' option.");
-            nsd_free(nsd);
-            return -1;
-        }
-
-        if (nsd->control_cert_file == NULL) {
-            PLUGIN_ERROR("Missing 'control-cert' option");
-            nsd_free(nsd);
-            return -1;
+        for (size_t i = 0; i < STATIC_ARRAY_SIZE(files); i++) {
+            if (*files[i].file != NULL)
+                continue;
+            *files[i].file = strdup(files[i].def);
+            if (*files[i].file == NULL) {
+                PLUGIN_ERROR("strdup failed.");
+                nsd_free(nsd);
+                return -1;
+            }
         }
     }
+
+    if (nsd->timeout == 0)
+        nsd->timeout = ((interval != 0) ? interval : plugin_get_interval()) / 2;
 
     label_set_add(&nsd->labels, true, "instance", nsd->name);
 
@@ -606,6 +668,7 @@ static int nsd_config(config_item_t *ci)
 
 static int nsd_init(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
     SSL_load_error_strings();
@@ -614,6 +677,13 @@ static int nsd_init(void)
         PLUGIN_ERROR("Could not initialize the OpenSSL library.");
         return -1;
     }
+#else
+    if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS,
+                         NULL) != 1) {
+        PLUGIN_ERROR("Could not initialize the OpenSSL library.");
+        return -1;
+    }
+#endif
 
     return 0;
 }
