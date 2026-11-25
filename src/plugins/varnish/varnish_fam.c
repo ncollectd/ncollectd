@@ -197,6 +197,16 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Backend conn. retry.",
     },
+    [FAM_VARNISH_BACKEND_TOTAL_WAIT] = {
+        .name = "varnish_backend_total_wait",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Backend conn. waited for an available connection.",
+    },
+    [FAM_VARNISH_BACKEND_TOTAL_WAIT_FAIL] = {
+        .name = "varnish_backend_total_wait_fail",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Backend conn. wait failed.",
+    },
     [FAM_VARNISH_FETCH_HEAD] = {
         .name = "varnish_fetch_head",
         .type = METRIC_TYPE_COUNTER,
@@ -336,6 +346,11 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .help = "Number of times an HTTP/2 stream was refused because "
                 "the queue was too long already.",
     },
+    [FAM_VARNISH_REQUEST_RESET] = {
+        .name = "varnish_request_reset",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times a client left before the VCL processing of its requests completed.",
+    },
     [FAM_VARNISH_OBJECTS] = {
         .name = "varnish_objects",
         .type = METRIC_TYPE_GAUGE,
@@ -387,6 +402,11 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .name = "varnish_lost_hdr",
         .type = METRIC_TYPE_COUNTER,
         .help = "HTTP header overflows.",
+    },
+    [FAM_VARNISH_OBJECTS_SUPERSEDED] = {
+        .name = "varnish_objects_superseded",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of objects superseded by newer ones.",
     },
     [FAM_VARNISH_SESSIONS] = {
         .name = "varnish_sessions",
@@ -463,6 +483,16 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of bytes forwarded to clients in pipe sessions.",
     },
+    [FAM_VARNISH_TRANSIT_STORED_BYTES] = {
+        .name = "varnish_transit_stored_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of bytes stored while transiting uncacheable objects.",
+    },
+    [FAM_VARNISH_TRANSIT_BUFFERED_BYTES] = {
+        .name = "varnish_transit_buffered_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of bytes buffered while transiting uncacheable objects.",
+    },
     [FAM_VARNISH_SESSION_CLOSED] = {
         .name = "varnish_session_closed",
         .type = METRIC_TYPE_COUNTER,
@@ -513,6 +543,16 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .name = "varnish_workspace_session_overflow",
         .type = METRIC_TYPE_COUNTER,
         .help = "Number of times we ran out of space in workspace_session.",
+    },
+    [FAM_VARNISH_HTTP1_IOVS_FLUSH] = {
+        .name = "varnish_http1_iovs_flush",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of premature flushes due to too few http1_iovs.",
+    },
+    [FAM_VARNISH_HTTP1_ABSOLUTE_FORM] = {
+        .name = "varnish_http1_absolute_form",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of HTTP/1 requests with the target in absolute form.",
     },
     [FAM_VARNISH_SHM_RECORDS] = {
         .name = "varnish_shm_records",
@@ -855,6 +895,36 @@ metric_family_t fams[FAM_VARNISH_MAX] = {
         .name = "varnish_mempool_randry",
         .type = METRIC_TYPE_COUNTER,
         .help = "Pool ran dry.",
+    },
+    [FAM_VARNISH_VCP_REF_HIT] = {
+        .name = "varnish_vcp_ref_hit",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times an existing connection pool was referenced.",
+    },
+    [FAM_VARNISH_VCP_REF_MISS] = {
+        .name = "varnish_vcp_ref_miss",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of times a new connection pool was created.",
+    },
+    [FAM_VARNISH_WAITER_CONNECTIONS] = {
+        .name = "varnish_waiter_connections",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of connections tracked by the waiter.",
+    },
+    [FAM_VARNISH_WAITER_REMOTE_CLOSE] = {
+        .name = "varnish_waiter_remote_close",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of connections closed by the remote end while in the waiter.",
+    },
+    [FAM_VARNISH_WAITER_TIMEOUT] = {
+        .name = "varnish_waiter_timeout",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of connections timed out in the waiter.",
+    },
+    [FAM_VARNISH_WAITER_ACTION] = {
+        .name = "varnish_waiter_action",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of waiter actions.",
     },
     [FAM_VARNISH_LOCK_CREATED] = {
         .name = "varnish_lock_created",

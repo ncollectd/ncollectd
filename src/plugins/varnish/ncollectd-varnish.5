@@ -26,10 +26,10 @@ The \fBvanish\fP plugin collects information about Varnish or Vinyl Cache, an HT
 The configuration consists of one or more \fBinstance\fP blocks.
 Inside each \fBinstance\fP blocks, the following options are recognized:
 .Bl -tag -width Ds
-.It \fBvhs-instance\fP \fIvsh-instanace-name\fP
-The \fIvsh-instanace-name\fP is the parameter passed to "varnishd -n".
-If left empty, it will collectd statistics from the default "varnishd" instance
-(this should work fine in most cases).
+.It \fBvsh-instance\fP \fIvsh-instance-name\fP
+The \fIvsh-instance-name\fP is the parameter passed to "varnishd -n".
+If left empty or set to \fIlocalhost\fP, it will collect statistics from the default
+"varnishd" instance (this should work fine in most cases).
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP

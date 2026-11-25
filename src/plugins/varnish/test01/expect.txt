@@ -70,6 +70,10 @@ varnish_backend_total_reuse_total{hostname="localhost.localdomain",instance="loc
 varnish_backend_total_recycle_total{hostname="localhost.localdomain",instance="local"} 3920100
 # TYPE varnish_backend_total_retry counter
 varnish_backend_total_retry_total{hostname="localhost.localdomain",instance="local"} 13921873
+# TYPE varnish_backend_total_wait counter
+varnish_backend_total_wait_total{hostname="localhost.localdomain",instance="local"} 1175918
+# TYPE varnish_backend_total_wait_fail counter
+varnish_backend_total_wait_fail_total{hostname="localhost.localdomain",instance="local"} 1658216
 # TYPE varnish_fetch_head counter
 varnish_fetch_head_total{hostname="localhost.localdomain",instance="local"} 15497581
 # TYPE varnish_fetch_length counter
@@ -90,6 +94,8 @@ varnish_fetch_204_total{hostname="localhost.localdomain",instance="local"} 14735
 varnish_fetch_304_total{hostname="localhost.localdomain",instance="local"} 5775572
 # TYPE varnish_fetch_failed counter
 varnish_fetch_failed_total{hostname="localhost.localdomain",instance="local"} 13671898
+# TYPE varnish_fetch_no_thread counter
+varnish_fetch_no_thread_total{hostname="localhost.localdomain",instance="local"} 11058635
 # TYPE varnish_thread_pools gauge
 varnish_thread_pools{hostname="localhost.localdomain",instance="local"} 609472
 # TYPE varnish_threads gauge
@@ -116,6 +122,8 @@ varnish_session_queued_total{hostname="localhost.localdomain",instance="local"} 
 varnish_session_dropped_total{hostname="localhost.localdomain",instance="local"} 13124183
 # TYPE varnish_request_dropped counter
 varnish_request_dropped_total{hostname="localhost.localdomain",instance="local"} 12070566
+# TYPE varnish_request_reset counter
+varnish_request_reset_total{hostname="localhost.localdomain",instance="local"} 3361354
 # TYPE varnish_objects gauge
 varnish_objects{hostname="localhost.localdomain",instance="local"} 6730811
 # TYPE varnish_objects_vampire gauge
@@ -134,6 +142,8 @@ varnish_objects_lru_nuked_total{hostname="localhost.localdomain",instance="local
 varnish_objects_lru_moved_total{hostname="localhost.localdomain",instance="local"} 244600
 # TYPE varnish_objects_lru_limited counter
 varnish_objects_lru_limited_total{hostname="localhost.localdomain",instance="local"} 6378943
+# TYPE varnish_objects_superseded counter
+varnish_objects_superseded_total{hostname="localhost.localdomain",instance="local"} 2595833
 # TYPE varnish_lost_hdr counter
 varnish_lost_hdr_total{hostname="localhost.localdomain",instance="local"} 6411700
 # TYPE varnish_sessions counter
@@ -166,6 +176,10 @@ varnish_pipe_hdr_bytes_total{hostname="localhost.localdomain",instance="local"} 
 varnish_pipe_in_bytes_total{hostname="localhost.localdomain",instance="local"} 14158454
 # TYPE varnish_pipe_out_bytes counter
 varnish_pipe_out_bytes_total{hostname="localhost.localdomain",instance="local"} 10375815
+# TYPE varnish_transit_stored_bytes counter
+varnish_transit_stored_bytes_total{hostname="localhost.localdomain",instance="local"} 10782591
+# TYPE varnish_transit_buffered_bytes counter
+varnish_transit_buffered_bytes_total{hostname="localhost.localdomain",instance="local"} 8699236
 # TYPE varnish_session_closed counter
 varnish_session_closed_total{hostname="localhost.localdomain",instance="local"} 6722782
 # TYPE varnish_session_closed_error counter
@@ -193,6 +207,8 @@ varnish_session_close_total{hostname="localhost.localdomain",instance="local",re
 varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RANGE_SHORT"} 3039380
 varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="REQ_HTTP20"} 5726977
 varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="VCL_FAILURE"} 11196115
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="RAPID_RESET"} 14747331
+varnish_session_close_total{hostname="localhost.localdomain",instance="local",reason="BANKRUPT"} 10960638
 # TYPE varnish_workspace_backend_overflow counter
 varnish_workspace_backend_overflow_total{hostname="localhost.localdomain",instance="local"} 14848074
 # TYPE varnish_workspace_client_overflow counter
@@ -201,6 +217,10 @@ varnish_workspace_client_overflow_total{hostname="localhost.localdomain",instanc
 varnish_workspace_thread_overflow_total{hostname="localhost.localdomain",instance="local"} 2636358
 # TYPE varnish_workspace_session_overflow counter
 varnish_workspace_session_overflow_total{hostname="localhost.localdomain",instance="local"} 8446673
+# TYPE varnish_http1_iovs_flush counter
+varnish_http1_iovs_flush_total{hostname="localhost.localdomain",instance="local"} 10831395
+# TYPE varnish_http1_absolute_form counter
+varnish_http1_absolute_form_total{hostname="localhost.localdomain",instance="local"} 9035479
 # TYPE varnish_shm_records counter
 varnish_shm_records_total{hostname="localhost.localdomain",instance="local"} 13907595
 # TYPE varnish_shm_writes counter
@@ -351,6 +371,22 @@ varnish_mempool_randry_total{hostname="localhost.localdomain",id="req0",instance
 varnish_mempool_randry_total{hostname="localhost.localdomain",id="sess0",instance="local"} 14920707
 varnish_mempool_randry_total{hostname="localhost.localdomain",id="req1",instance="local"} 8833582
 varnish_mempool_randry_total{hostname="localhost.localdomain",id="sess1",instance="local"} 8768253
+# TYPE varnish_vcp_ref_hit counter
+varnish_vcp_ref_hit_total{hostname="localhost.localdomain",instance="local"} 1692099
+# TYPE varnish_vcp_ref_miss counter
+varnish_vcp_ref_miss_total{hostname="localhost.localdomain",instance="local"} 10305014
+# TYPE varnish_waiter_connections gauge
+varnish_waiter_connections{hostname="localhost.localdomain",id="pool0",instance="local"} 10850024
+varnish_waiter_connections{hostname="localhost.localdomain",id="pool1",instance="local"} 6727417
+# TYPE varnish_waiter_remote_close counter
+varnish_waiter_remote_close_total{hostname="localhost.localdomain",id="pool0",instance="local"} 5729123
+varnish_waiter_remote_close_total{hostname="localhost.localdomain",id="pool1",instance="local"} 5153429
+# TYPE varnish_waiter_timeout counter
+varnish_waiter_timeout_total{hostname="localhost.localdomain",id="pool0",instance="local"} 841677
+varnish_waiter_timeout_total{hostname="localhost.localdomain",id="pool1",instance="local"} 11406892
+# TYPE varnish_waiter_action counter
+varnish_waiter_action_total{hostname="localhost.localdomain",id="pool0",instance="local"} 12863110
+varnish_waiter_action_total{hostname="localhost.localdomain",id="pool1",instance="local"} 10823551
 # TYPE varnish_lock_created counter
 varnish_lock_created_total{hostname="localhost.localdomain",id="ban",instance="local"} 2488764
 varnish_lock_created_total{hostname="localhost.localdomain",id="busyobj",instance="local"} 13968862

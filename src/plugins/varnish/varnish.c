@@ -68,10 +68,21 @@ typedef struct {
     plugin_filter_t *filter;
     uint64_t flags;
     metric_family_t fams[FAM_VARNISH_MAX];
+    uint8_t fams_warned[FAM_VARNISH_MAX];
 } varnish_instance_t;
 
 #if defined(HAVE_VARNISH_V6) || defined(HAVE_VARNISH_V5)
-static bool varnish_check_fmt(const struct VSC_point *const pt, int nfam, metric_family_t *fam)
+/* Only warn once per metric family to avoid flooding the log on every read. */
+static bool varnish_warn_once(varnish_instance_t *conf, int nfam)
+{
+    if (conf->fams_warned[nfam])
+        return false;
+    conf->fams_warned[nfam] = 1;
+    return true;
+}
+
+static bool varnish_check_fmt(varnish_instance_t *conf, const struct VSC_point *const pt,
+                              int nfam, metric_family_t *fam)
 {
     if (pt->format == 'i')
         return true;
@@ -84,18 +95,22 @@ static bool varnish_check_fmt(const struct VSC_point *const pt, int nfam, metric
             return true;
     }
 
-    PLUGIN_ERROR("For vanish metric '%s' associate to metric family '%s' found "
-                 "unexpected format '%c'.", pt->name, fam->name, pt->format);
+    if (varnish_warn_once(conf, nfam))
+        PLUGIN_WARNING("For varnish metric '%s' associated to metric family '%s' found "
+                       "unexpected format '%c'.", pt->name, fam->name, pt->format);
     return false;
 }
-static bool varnish_check_sem(const struct VSC_point *const pt, int nfam, metric_family_t *fam)
+static bool varnish_check_sem(varnish_instance_t *conf, const struct VSC_point *const pt,
+                              int nfam, metric_family_t *fam)
 {
     if (fam->type == METRIC_TYPE_COUNTER) {
         if (pt->semantics == 'c')
             return true;
 
-        PLUGIN_ERROR("For varnish metric '%s' associate to metric family '%s' "
-                     "expect 'c' (COUNTER) but get '%c'.", pt->name, fam->name, pt->semantics);
+        if (varnish_warn_once(conf, nfam))
+            PLUGIN_WARNING("For varnish metric '%s' associated to metric family '%s' "
+                           "expected 'c' (COUNTER) but got '%c'.",
+                           pt->name, fam->name, pt->semantics);
         return false;
     }
 
@@ -107,12 +122,15 @@ static bool varnish_check_sem(const struct VSC_point *const pt, int nfam, metric
         if ((pt->semantics == 'b') && (nfam == FAM_VARNISH_VBE_UP))
             return true;
 
-        PLUGIN_ERROR("For varnish metric '%s' associate to metric family '%s' "
-                     "expect 'g' (GAUGE) but get '%c'.", pt->name, fam->name, pt->semantics);
+        if (varnish_warn_once(conf, nfam))
+            PLUGIN_WARNING("For varnish metric '%s' associated to metric family '%s' "
+                           "expected 'g' (GAUGE) but got '%c'.",
+                           pt->name, fam->name, pt->semantics);
         return false;
     }
 
-    PLUGIN_ERROR("Unsupported metric type from metric family '%s'.", fam->name);
+    if (varnish_warn_once(conf, nfam))
+        PLUGIN_WARNING("Unsupported metric type from metric family '%s'.", fam->name);
     return false;
 }
 #endif
@@ -194,7 +212,8 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
     int size = ssnprintf(mname, sizeof(mname), "%s.%s", tokens[0], tokens[tokens_num-1]);
     if (size >= (int)sizeof(mname)) {
         PLUGIN_ERROR("overflow in the concatenation \"%s.%s\"", tokens[0], tokens[tokens_num-1]);
-        return -1;
+        /* Ignore only this counter, a non zero return value stops the iteration. */
+        return 0;
     }
 
     const struct varnish_stats_metric *vsh_metric = varnish_stats_get_key (mname, strlen(mname));
@@ -207,9 +226,9 @@ static int varnish_monitor(void *priv, const struct VSC_point *const pt)
     metric_family_t *fam = &(conf->fams[vsh_metric->fam]);
 
 #if defined(HAVE_VARNISH_V6) || defined(HAVE_VARNISH_V5)
-    if (!varnish_check_fmt(pt, vsh_metric->fam, fam))
+    if (!varnish_check_fmt(conf, pt, vsh_metric->fam, fam))
         return 0;
-    if (!varnish_check_sem(pt, vsh_metric->fam, fam))
+    if (!varnish_check_sem(conf, pt, vsh_metric->fam, fam))
         return 0;
 #endif
 
@@ -278,6 +297,7 @@ static int varnish_read_instance(varnish_instance_t *conf)
     vsc = VSC_New();
     if (vsc == NULL) {
         PLUGIN_ERROR("VSC_New() failed.");
+        VSM_Destroy(&vd);
         return -1;
     }
 #endif
