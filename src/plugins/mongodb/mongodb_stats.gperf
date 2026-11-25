@@ -22,7 +22,7 @@ struct mongodb_stats {
 };
 %%
 uptime,                                                                  0, FAM_MONGODB_UPTIME_SECONDS, NULL, NULL, NULL, NULL
-asserts.warning,                                                         0, FAM_MONGODB_ASSERTS_REGULAR, NULL, NULL, NULL, NULL
+asserts.regular,                                                         0, FAM_MONGODB_ASSERTS_REGULAR, NULL, NULL, NULL, NULL
 asserts.msg,                                                             0, FAM_MONGODB_ASSERTS_MSG, NULL, NULL, NULL, NULL
 asserts.user,                                                            0, FAM_MONGODB_ASSERTS_USER, NULL, NULL, NULL, NULL
 asserts.rollovers,                                                       0, FAM_MONGODB_ASSERTS_ROLLOVERS , NULL, NULL, NULL, NULL
@@ -185,7 +185,7 @@ locks.oplog.deadlockCount.W,                                             0, FAM_
 locks.oplog.deadlockCount.r,                                             0, FAM_MONGODB_LOCK_DEAD_LOCK, "type", "oplog", "mode", "intent shared"
 locks.oplog.deadlockCount.w,                                             0, FAM_MONGODB_LOCK_DEAD_LOCK, "type", "oplog", "mode", "intent exclusive"
 mirroredReads.seen,                                                      0, FAM_MONGODB_MIRRORED_READS_SEEN, NULL, NULL, NULL, NULL
-mirroredReads.sent,                                                      0, FAM_MONGODB_MIRRORED_READS_SEEN, NULL, NULL, NULL, NULL
+mirroredReads.sent,                                                      0, FAM_MONGODB_MIRRORED_READS_SENT, NULL, NULL, NULL, NULL
 network.bytesIn,                                                         0, FAM_MONGODB_NETWORK_IN_BYTES, NULL, NULL, NULL, NULL
 network.bytesOut,                                                        0, FAM_MONGODB_NETWORK_OUT_BYTES, NULL, NULL, NULL, NULL
 network.numSlowDNSOperations,                                            0, FAM_MONGODB_NETWORK_SLOW_DNS_OPERATIONS, NULL, NULL, NULL, NULL
@@ -207,11 +207,11 @@ network.compression.zlib.decompressor.bytesOut,                          0, FAM_
 network.serviceExecutors.passthrough.threadsRunning,                     0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_THREADS_RUNNING, "executor", "passthrough", NULL, NULL
 network.serviceExecutors.passthrough.clientsInTotal,                     0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS,         "executor", "passthrough", NULL, NULL
 network.serviceExecutors.passthrough.clientsRunning,                     0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_RUNNING, "executor", "passthrough", NULL, NULL
-network.serviceExecutors.passthrough.clientsWaitingForData,              0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_RUNNING, "executor", "passthrough", NULL, NULL
+network.serviceExecutors.passthrough.clientsWaitingForData,              0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_WAITING_FOR_DATA, "executor", "passthrough", NULL, NULL
 network.serviceExecutors.fixed.threadsRunning,                           0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_THREADS_RUNNING, "executor", "fixed" , NULL, NULL
 network.serviceExecutors.fixed.clientsInTotal,                           0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS,         "executor", "fixed", NULL, NULL
 network.serviceExecutors.fixed.clientsRunning,                           0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_RUNNING, "executor", "fixed", NULL, NULL
-network.serviceExecutors.fixed.clientsWaitingForData,                    0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_RUNNING, "executor", "fixed", NULL, NULL
+network.serviceExecutors.fixed.clientsWaitingForData,                    0, FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_WAITING_FOR_DATA, "executor", "fixed", NULL, NULL
 opcounters.insert,                                                       0, FAM_MONGODB_OPERATION_INSERT, NULL, NULL, NULL, NULL
 opcounters.query,                                                        0, FAM_MONGODB_OPERATION_QUERY, NULL, NULL, NULL, NULL
 opcounters.update,                                                       0, FAM_MONGODB_OPERATION_UPDATE, NULL, NULL, NULL, NULL
@@ -226,7 +226,7 @@ opcountersRepl.getmore,                                                  0, FAM_
 opcountersRepl.command,                                                  0, FAM_MONGODB_REPLICATED_OPERATION_COMMAND, NULL, NULL, NULL, NULL
 mem.resident,                                                      1048576, FAM_MONGODB_MEMORY_RESIDENT_BYTES, NULL, NULL, NULL, NULL
 mem.virtual,                                                       1048576, FAM_MONGODB_MEMORY_VIRTUAL_BYTES, NULL, NULL, NULL, NULL
-metrics.commands.<UNKNOWN>,                                              0, FAM_MONGODB_COMMANDS_FAILED, "command", "<UNKNOWN>", NULL, NULL
+metrics.commands.<UNKNOWN>,                                              0, FAM_MONGODB_COMMANDS,        "command", "<UNKNOWN>", NULL, NULL
 metrics.commands._addShard.failed,                                       0, FAM_MONGODB_COMMANDS_FAILED, "command", "_addShard", NULL, NULL
 metrics.commands._addShard.total,                                        0, FAM_MONGODB_COMMANDS,        "command", "_addShard", NULL, NULL
 metrics.commands._configsvrAbortReshardCollection.failed,                0, FAM_MONGODB_COMMANDS_FAILED, "command", "_configsvrAbortReshardCollection", NULL, NULL
@@ -430,7 +430,7 @@ metrics.commands.clusterUpdate.total,                                    0, FAM_
 metrics.commands.collMod.failed,                                         0, FAM_MONGODB_COMMANDS_FAILED, "command", "collMod", NULL, NULL
 metrics.commands.collMod.total,                                          0, FAM_MONGODB_COMMANDS,        "command", "collMod", NULL, NULL
 metrics.commands.collMod.validator.failed,                               0, FAM_MONGODB_COMMANDS_FAILED, "command", "collMod.validator", NULL, NULL
-metrics.commands.collMod.validator.total,                                0, FAM_MONGODB_COMMANDS_FAILED, "command", "collMod.validator", NULL, NULL
+metrics.commands.collMod.validator.total,                                0, FAM_MONGODB_COMMANDS,        "command", "collMod.validator", NULL, NULL
 metrics.commands.collStats.failed,                                       0, FAM_MONGODB_COMMANDS_FAILED, "command", "collStats", NULL, NULL
 metrics.commands.collStats.total,                                        0, FAM_MONGODB_COMMANDS,        "command", "collStats", NULL, NULL
 metrics.commands.commitShardSplit.failed,                                0, FAM_MONGODB_COMMANDS_FAILED, "command", "commitShardSplit", NULL, NULL
@@ -456,7 +456,7 @@ metrics.commands.count.total,                                            0, FAM_
 metrics.commands.create.failed,                                          0, FAM_MONGODB_COMMANDS_FAILED, "command", "create", NULL, NULL
 metrics.commands.create.total,                                           0, FAM_MONGODB_COMMANDS,        "command", "create", NULL, NULL
 metrics.commands.create.validator.failed,                                0, FAM_MONGODB_COMMANDS_FAILED, "command", "create.validator", NULL, NULL
-metrics.commands.create.validator.total,                                 0, FAM_MONGODB_COMMANDS_FAILED, "command", "create.validator", NULL, NULL
+metrics.commands.create.validator.total,                                 0, FAM_MONGODB_COMMANDS,        "command", "create.validator", NULL, NULL
 metrics.commands.createIndexes.failed,                                   0, FAM_MONGODB_COMMANDS_FAILED, "command", "createIndexes", NULL, NULL
 metrics.commands.createIndexes.total,                                    0, FAM_MONGODB_COMMANDS,        "command", "createIndexes", NULL, NULL
 metrics.commands.createRole.failed,                                      0, FAM_MONGODB_COMMANDS_FAILED, "command", "createRole", NULL, NULL
@@ -1036,7 +1036,7 @@ metrics.cursor.open.noTimeout,                                           0, FAM_
 metrics.cursor.open.pinned,                                              0, FAM_MONGODB_CURSOR_OPEN_PINNED, NULL, NULL, NULL, NULL
 metrics.cursor.open.total,                                               0, FAM_MONGODB_CURSOR_CURRENT_OPEN, NULL, NULL, NULL, NULL
 metrics.cursor.open.singleTarget,                                        0, FAM_MONGODB_CURSOR_OPEN_SINGLE_TARGET, NULL, NULL, NULL, NULL
-metrics.cursor.open.multiTarget,                                         0, FAM_MONGODB_CURSOR_OPEN_MULTI_TARGER, NULL, NULL, NULL, NULL
+metrics.cursor.open.multiTarget,                                         0, FAM_MONGODB_CURSOR_OPEN_MULTI_TARGET, NULL, NULL, NULL, NULL
 dbStats.collections,                                                     0, FAM_MONGODB_DATABASE_COLLECTIONS, NULL, NULL, NULL, NULL
 dbStats.views,                                                           0, FAM_MONGODB_DATABASE_VIEWS, NULL, NULL, NULL, NULL
 dbStats.objects,                                                         0, FAM_MONGODB_DATABASE_OBJECTS, NULL, NULL, NULL, NULL

@@ -31,9 +31,15 @@ typedef struct {
     int port;
     char *user;
     char *password;
+    bool tls;
+    char *tls_ca_file;
+    char *tls_cert_file;
+    bool tls_verify;
     label_set_t labels;
     plugin_filter_t *filter;
     bool prefer_secondary_query;
+    int32_t timeout_ms;
+    mongoc_read_prefs_t *read_prefs;
     mongoc_client_t *client;
     metric_family_t fams[FAM_MONGODB_MAX];
 } mongodb_inst_t;
@@ -48,9 +54,12 @@ static void mongodb_free(void *arg)
     free(ctx->host);
     free(ctx->user);
     free(ctx->password);
+    free(ctx->tls_ca_file);
+    free(ctx->tls_cert_file);
     label_set_reset(&ctx->labels);
     plugin_filter_free(ctx->filter);
     mongoc_client_destroy(ctx->client);
+    mongoc_read_prefs_destroy(ctx->read_prefs);
 
     free(ctx);
 }
@@ -61,7 +70,8 @@ static int mongodb_cmd_ping(mongodb_inst_t *ctx)
 
     bson_t reply = BSON_INITIALIZER;
     bson_error_t error;
-    if (!mongoc_client_command_simple(ctx->client, "admin", cmd, NULL, &reply, &error)) {
+    if (!mongoc_client_command_simple(ctx->client, "admin", cmd, ctx->read_prefs,
+                                      &reply, &error)) {
         PLUGIN_ERROR("%s", error.message);
         bson_destroy (&reply);
         bson_destroy (cmd);
@@ -105,6 +115,50 @@ static int mongodb_connect(mongodb_inst_t *ctx)
         }
     }
 
+    if (ctx->tls) {
+        if (!mongoc_uri_set_option_as_bool(uri, MONGOC_URI_TLS, true)) {
+            PLUGIN_ERROR("Failed to set tls in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+
+        if ((ctx->tls_ca_file != NULL) &&
+            !mongoc_uri_set_option_as_utf8(uri, MONGOC_URI_TLSCAFILE, ctx->tls_ca_file)) {
+            PLUGIN_ERROR("Failed to set tls CA file in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+
+        if ((ctx->tls_cert_file != NULL) &&
+            !mongoc_uri_set_option_as_utf8(uri, MONGOC_URI_TLSCERTIFICATEKEYFILE,
+                                                ctx->tls_cert_file)) {
+            PLUGIN_ERROR("Failed to set tls certificate file in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+
+        if (!ctx->tls_verify &&
+            !mongoc_uri_set_option_as_bool(uri, MONGOC_URI_TLSALLOWINVALIDCERTIFICATES, true)) {
+            PLUGIN_ERROR("Failed to set tls allow invalid certificates in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+    }
+
+    if (ctx->timeout_ms > 0) {
+        /* Avoid blocking the read thread for the default 30 seconds of the driver. */
+        if (!mongoc_uri_set_option_as_int32(uri, MONGOC_URI_SERVERSELECTIONTIMEOUTMS,
+                                            ctx->timeout_ms) ||
+            !mongoc_uri_set_option_as_int32(uri, MONGOC_URI_CONNECTTIMEOUTMS,
+                                            ctx->timeout_ms) ||
+            !mongoc_uri_set_option_as_int32(uri, MONGOC_URI_SOCKETTIMEOUTMS,
+                                            ctx->timeout_ms)) {
+            PLUGIN_ERROR("Failed to set timeouts in URI.");
+            mongoc_uri_destroy(uri);
+            return -1;
+        }
+    }
+
     if (!mongoc_uri_set_database(uri, "admin")) {
         PLUGIN_ERROR("Failed to set database 'admin' in URI.");
         mongoc_uri_destroy(uri);
@@ -119,6 +173,18 @@ static int mongodb_connect(mongodb_inst_t *ctx)
     }
 
     mongoc_uri_destroy(uri);
+
+    if (ctx->prefer_secondary_query) {
+        if (ctx->read_prefs == NULL) {
+            ctx->read_prefs = mongoc_read_prefs_new(MONGOC_READ_SECONDARY_PREFERRED);
+            if (ctx->read_prefs == NULL) {
+                PLUGIN_ERROR("Cannot create read preferences object.");
+                return -1;
+            }
+        }
+        /* Used by listDatabases. */
+        mongoc_client_set_read_prefs(ctx->client, ctx->read_prefs);
+    }
 
     if (mongodb_cmd_ping(ctx) == 0)
        return 0;
@@ -198,7 +264,8 @@ static int mongodb_process_database(mongodb_inst_t *ctx, char *db_name)
     bson_t *request = BCON_NEW("dbStats", BCON_INT32(1),
                                "scale", BCON_INT32(1),
                                "freeStorage", BCON_INT32(1));
-    if (!mongoc_client_command_simple(ctx->client, db_name, request, NULL, &reply, &error)) {
+    if (!mongoc_client_command_simple(ctx->client, db_name, request, ctx->read_prefs,
+                                      &reply, &error)) {
         PLUGIN_ERROR("dbStats command failed: %s.", error.message);
         goto leave;
     }
@@ -209,14 +276,16 @@ static int mongodb_process_database(mongodb_inst_t *ctx, char *db_name)
         goto leave;
     }
 
-    char buffer[128];
+    char buffer[256];
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
     strbuf_putstr(&buf, "dbStats.");
     size_t offset = strbuf_offset(&buf);
     while (bson_iter_next (&iter)) {
         strbuf_resetto(&buf, offset);
-        strbuf_putstr(&buf, bson_iter_key(&iter));
+        /* Skip the keys that do not fit in the buffer. */
+        if (strbuf_putstr(&buf, bson_iter_key(&iter)) != 0)
+            continue;
         if (bson_iter_type(&iter) != BSON_TYPE_DOCUMENT)
             mongodb_metric_append(ctx, &iter, &buf, "database", db_name);
     }
@@ -276,9 +345,16 @@ static int mongodb_lookup(mongodb_inst_t *ctx, bson_iter_t *iter, strbuf_t *buf,
             if (bson_iter_init(&siter, &b)) {
                 size_t offset = strbuf_offset(buf);
                 while (bson_iter_next (&siter)) {
+                    int status = 0;
                     if (depth > 0)
-                        strbuf_putchar(buf, '.');
-                    strbuf_putstr(buf, bson_iter_key(&siter));
+                        status = strbuf_putchar(buf, '.');
+                    if (status == 0)
+                        status = strbuf_putstr(buf, bson_iter_key(&siter));
+                    /* Skip the keys that do not fit in the buffer. */
+                    if (status != 0) {
+                        strbuf_resetto(buf, offset);
+                        continue;
+                    }
                     if (BSON_ITER_HOLDS_DOCUMENT(&siter)) {
                         mongodb_lookup(ctx, &siter, buf, depth + 1);
                     } else {
@@ -300,9 +376,11 @@ static int mongodb_server_status(mongodb_inst_t *ctx)
 
     bson_t reply = BSON_INITIALIZER;
     bson_error_t error;
-    if (!mongoc_client_command_simple(ctx->client, "admin", &cmd, NULL, &reply, &error)) {
-        PLUGIN_ERROR("serverStatus  failed: %s.", error.message);
+    if (!mongoc_client_command_simple(ctx->client, "admin", &cmd, ctx->read_prefs,
+                                      &reply, &error)) {
+        PLUGIN_ERROR("serverStatus failed: %s.", error.message);
         bson_destroy(&cmd);
+        bson_destroy(&reply);
         return -1;
     }
 
@@ -318,8 +396,13 @@ static int mongodb_server_status(mongodb_inst_t *ctx)
     strbuf_t buf = STRBUF_CREATE_STATIC(buffer);
 
     while (bson_iter_next (&iter)) {
+        /* Empty keys break the strbuf_offset/strbuf_resetto pairing. */
+        if (bson_iter_key(&iter)[0] == '\0')
+            continue;
         strbuf_reset(&buf);
-        strbuf_putstr(&buf, bson_iter_key(&iter));
+        /* Skip the keys that do not fit in the buffer. */
+        if (strbuf_putstr(&buf, bson_iter_key(&iter)) != 0)
+            continue;
         if (BSON_ITER_HOLDS_DOCUMENT(&iter)) {
             mongodb_lookup(ctx, &iter, &buf, 1);
         } else {
@@ -385,6 +468,7 @@ static int mongodb_config_instance(config_item_t *ci)
     }
 
     ctx->port = MONGOC_DEFAULT_PORT;
+    ctx->tls_verify = true;
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; ++i) {
         config_item_t *child = ci->children + i;
@@ -401,6 +485,14 @@ static int mongodb_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &ctx->password);
         } else if (strcasecmp("password-env", child->key) == 0) {
             status = cf_util_get_string_env(child, &ctx->password);
+        } else if (strcasecmp("tls", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->tls);
+        } else if (strcasecmp("tls-ca-file", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->tls_ca_file);
+        } else if (strcasecmp("tls-cert-file", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->tls_cert_file);
+        } else if (strcasecmp("tls-verify", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctx->tls_verify);
         } else if (strcasecmp("prefer-secondary-query", child->key) == 0) {
             status = cf_util_get_boolean(child, &ctx->prefer_secondary_query);
         } else if (strcasecmp("label", child->key) == 0) {
@@ -440,6 +532,15 @@ static int mongodb_config_instance(config_item_t *ci)
         mongodb_free(ctx);
         return -1;
     }
+
+    /* The timeouts are derived from the read interval. */
+    cdtime_t timeout = interval != 0 ? interval : plugin_get_interval();
+    uint64_t timeout_ms = CDTIME_T_TO_MS(timeout);
+    if (timeout_ms > INT32_MAX)
+        timeout_ms = INT32_MAX;
+    ctx->timeout_ms = (int32_t)timeout_ms;
+
+    label_set_add(&ctx->labels, true, "instance", ctx->name);
 
     return plugin_register_complex_read("mongodb", ctx->name, mongodb_read, interval,
                                         &(user_data_t){.data=ctx, .free_func=mongodb_free});

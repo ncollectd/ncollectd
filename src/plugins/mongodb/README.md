@@ -15,6 +15,10 @@ NCOLLECTD-MONGODB(5) - File Formats Manual
 	        user-env env-name
 	        password password
 	        password-env env-name
+	        tls true|false
+	        tls-ca-file path
+	        tls-cert-file path
+	        tls-verify true|false
 	        prefer-secondary-query true|false
 	        label key value
 	        interval seconds
@@ -56,7 +60,26 @@ The following options are available:
 > Get the password to authenticating to a *MongoDB* database from the
 > environment variable *env-name*.
 
+**tls** *true|false*
+
+> Use TLS to connect to the server. Defaults to false.
+
+**tls-ca-file** *path*
+
+> File with the certificate authorities used to verify the server certificate.
+
+**tls-cert-file** *path*
+
+> File with the client certificate and private key in PEM format.
+
+**tls-verify** *true|false*
+
+> Verify the server certificate. Defaults to true.
+
 **prefer-secondary-query** *true|false*
+
+> If enabled, the queries are sent with the read preference *secondaryPreferred*.
+> Defaults to false.
 
 **label** *key* *value*
 

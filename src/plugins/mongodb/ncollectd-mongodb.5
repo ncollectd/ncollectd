@@ -16,6 +16,10 @@
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
+        \fBtls\fP \fItrue|false\fP
+        \fBtls-ca-file\fP \fIpath\fP
+        \fBtls-cert-file\fP \fIpath\fP
+        \fBtls-verify\fP \fItrue|false\fP
         \fBprefer-secondary-query\fP \fItrue|false\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
@@ -46,7 +50,19 @@ but if you want to use authentication all three fields must be set.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password to authenticating to a \fIMongoDB\fP database from the
 environment variable \fIenv-name\fP.
+.It \fBtls\fP \fItrue|false\fP
+Use TLS to connect to the server.
+Defaults to false.
+.It \fBtls-ca-file\fP \fIpath\fP
+File with the certificate authorities used to verify the server certificate.
+.It \fBtls-cert-file\fP \fIpath\fP
+File with the client certificate and private key in PEM format.
+.It \fBtls-verify\fP \fItrue|false\fP
+Verify the server certificate.
+Defaults to true.
 .It \fBprefer-secondary-query\fP \fItrue|false\fP
+If enabled, the queries are sent with the read preference \fIsecondaryPreferred\fP.
+Defaults to false.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBinstance\fP block.

@@ -108,7 +108,7 @@ metric_family_t fams_mongodb[FAM_MONGODB_MAX] = {
     },
     [FAM_MONGODB_PAGE_FAULTS] = {
         .name = "mongodb_page_faults",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "The total number of page faults.",
     },
     [FAM_MONGODB_LOCK_ACQUIRE] = {
@@ -201,8 +201,8 @@ metric_family_t fams_mongodb[FAM_MONGODB_MAX] = {
     },
     [FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS] = {
         .name = "mongodb_network_service_executors_clients",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of clients allocated to this service executor.",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Number of clients currently allocated to this service executor.",
     },
     [FAM_MONGODB_NETWORK_SERVICE_EXECUTORS_CLIENTS_RUNNING] = {
         .name = "mongodb_network_service_executors_clients_running",
@@ -415,13 +415,13 @@ metrics.commands.findAndModify.arrayFilters
     },
     [FAM_MONGODB_CURSOR_OPEN_NO_TIMEOUT] = {
         .name = "mongodb_cursor_open_no_timeout",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "The number of open cursors with the option DBQuery.Option.noTimeout set "
                 "to prevent timeout after a period of inactivity.",
     },
     [FAM_MONGODB_CURSOR_OPEN_PINNED] = {
         .name = "mongodb_cursor_open_pinned",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = "The number of 'pinned' open cursors.",
     },
 
@@ -432,13 +432,13 @@ metrics.commands.findAndModify.arrayFilters
     },
     [FAM_MONGODB_CURSOR_OPEN_SINGLE_TARGET] = {
         .name = "mongodb_cursor_open_single_target",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "The total number of cursors that only target a single shard.",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of open cursors that only target a single shard.",
     },
-    [FAM_MONGODB_CURSOR_OPEN_MULTI_TARGER] = {
-        .name = "mongodb_cursor_open_multi_targer",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "The total number of cursors that only target more than one shard.",
+    [FAM_MONGODB_CURSOR_OPEN_MULTI_TARGET] = {
+        .name = "mongodb_cursor_open_multi_target",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of open cursors that target more than one shard.",
     },
     [FAM_MONGODB_DATABASE_COLLECTIONS] = {
         .name = "mongodb_database_collections",
