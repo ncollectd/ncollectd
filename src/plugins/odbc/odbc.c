@@ -24,6 +24,8 @@ struct codbc_database_s {
 
     char *ping_query;
 
+    cdtime_t timeout;
+
     db_query_preparation_area_t **q_prep_areas;
     db_query_t **queries;
     size_t queries_num;
@@ -39,6 +41,17 @@ static size_t databases_num;
 
 static int codbc_read_database(user_data_t *ud);
 
+/* Timeout in seconds for login and queries: the configured timeout or,
+ * by default, the read interval. */
+static SQLULEN codbc_timeout(codbc_database_t *db)
+{
+    cdtime_t timeout = db->timeout != 0 ? db->timeout : plugin_get_interval();
+    time_t secs = CDTIME_T_TO_TIME_T(timeout);
+    if (secs <= 0)
+        secs = 1;
+    return (SQLULEN)secs;
+}
+
 static const char *codbc_strerror(SQLHANDLE hdl, SQLSMALLINT htype, char *buffer, size_t size)
 {
     SQLCHAR sqlstate[6];
@@ -48,46 +61,67 @@ static const char *codbc_strerror(SQLHANDLE hdl, SQLSMALLINT htype, char *buffer
     SQLRETURN rc;
 
     rc = SQLGetDiagRec(htype, hdl, 1, sqlstate, &nerror, emsg, sizeof(emsg) - 1, &emsg_size);
-    if (rc != SQL_NO_DATA_FOUND) {
-        emsg[emsg_size] = '\0';
-        ssnprintf(buffer, size, "SqlState: %s ErrorCode: %d  %s\n", sqlstate, (int)nerror, emsg);
+    if (!SQL_SUCCEEDED(rc)) {
+        buffer[0] = '\0';
         return buffer;
     }
 
-    buffer[0] = '\0';
+    /* On truncation emsg_size is the full length of the message. */
+    if ((emsg_size < 0) || (emsg_size > (SQLSMALLINT)(sizeof(emsg) - 1)))
+        emsg_size = sizeof(emsg) - 1;
+    emsg[emsg_size] = '\0';
+    sqlstate[sizeof(sqlstate) - 1] = '\0';
+    ssnprintf(buffer, size, "SqlState: %s ErrorCode: %d  %s\n", sqlstate, (int)nerror, emsg);
     return buffer;
+}
+
+/* Returns true if the last diagnostic record of the handle reports a
+ * connection exception (SQLSTATE class 08). */
+static bool codbc_is_connection_error(SQLHANDLE hdl, SQLSMALLINT htype)
+{
+    SQLCHAR sqlstate[6] = {0};
+    SQLINTEGER nerror;
+    SQLCHAR emsg[16];
+    SQLSMALLINT emsg_size = 0;
+
+    SQLRETURN rc = SQLGetDiagRec(htype, hdl, 1, sqlstate, &nerror, emsg, sizeof(emsg), &emsg_size);
+    if (!SQL_SUCCEEDED(rc))
+        return false;
+
+    return (sqlstate[0] == '0') && (sqlstate[1] == '8');
 }
 
 static int codbc_disconnect(codbc_database_t *db)
 {
     SQLRETURN rc;
+    int status = 0;
 
     if (db->hdbc != SQL_NULL_HDBC) {
         rc = SQLDisconnect(db->hdbc);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("unable to disconnect %s: %s", db->name,
                          codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
-            return -1;
+            status = -1;
         }
         rc = SQLFreeHandle(SQL_HANDLE_DBC, db->hdbc);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             PLUGIN_ERROR("unable to free connection handle %s", db->name);
-            return -1;
+            status = -1;
         }
         db->hdbc = SQL_NULL_HDBC;
     }
 
     if (db->henv != SQL_NULL_HENV) {
         rc = SQLFreeHandle(SQL_HANDLE_ENV, db->henv);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             PLUGIN_ERROR("unable to free environment handle %s", db->name);
-            return -1;
+            status = -1;
         }
         db->henv = SQL_NULL_HENV;
     }
 
-    return 0;
+    return status;
 }
 
 static unsigned int codbc_version(codbc_database_t *db)
@@ -96,7 +130,7 @@ static unsigned int codbc_version(codbc_database_t *db)
     SQLSMALLINT len = 0;
 
     SQLRETURN rc = SQLGetInfo(db->hdbc, SQL_DBMS_VER, buffer, sizeof(buffer) - 1, &len);
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLGetInfo failed in %s: %s", db->name,
                      codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -131,20 +165,28 @@ static int codbc_ping(codbc_database_t *db)
     SQLHSTMT hstmt = SQL_NULL_HSTMT;
     SQLRETURN rc;
 
-    if (db->ping_query == NULL)
+    if (db->ping_query == NULL) {
+        /* Without a ping query ask the driver if the connection is dead. */
+        SQLUINTEGER dead = SQL_CD_FALSE;
+        rc = SQLGetConnectAttr(db->hdbc, SQL_ATTR_CONNECTION_DEAD, &dead, 0, NULL);
+        if (SQL_SUCCEEDED(rc) && (dead == SQL_CD_TRUE))
+            return 0;
         return 1;
+    }
 
     rc = SQLAllocHandle(SQL_HANDLE_STMT, db->hdbc, &hstmt);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLAllocHandle STMT failed in %s: %s", db->name,
                      codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
         return 0;
     }
 
+    SQLSetStmtAttr(hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)codbc_timeout(db), 0);
+
     /* coverity[NEGATIVE_RETURNS] */
     rc = SQLExecDirect(hstmt, (UCHAR *)(db->ping_query), SQL_NTS);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("Error executing ping in %s: %s", db->name,
                      codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -152,8 +194,17 @@ static int codbc_ping(codbc_database_t *db)
         return 0;
     }
 
-    while (SQLMoreResults(hstmt) != SQL_NO_DATA)
-        ;
+    do {
+        rc = SQLMoreResults(hstmt);
+    } while (SQL_SUCCEEDED(rc));
+
+    if (rc != SQL_NO_DATA) {
+        char errbuf[1024];
+        PLUGIN_ERROR("Error fetching ping results in %s: %s", db->name,
+                     codbc_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
+        SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+        return 0;
+    }
 
     if (hstmt != SQL_NULL_HSTMT)
         SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
@@ -161,31 +212,29 @@ static int codbc_ping(codbc_database_t *db)
     return 1;
 }
 
-static int codbc_get_data(SQLHSTMT hstmt, SQLUSMALLINT idx, SQLSMALLINT type,
-                                          char *buffer, size_t buffer_size)
+static int codbc_get_data(SQLHSTMT hstmt, SQLUSMALLINT idx, char *buffer, size_t buffer_size)
 {
-    SQLSMALLINT ctype = SQL_C_CHAR;
-
-    switch(type) {
-    case SQL_BIT:
-    case SQL_VARBINARY:
-    case SQL_LONGVARBINARY:
-    case SQL_BINARY:
-        ctype = SQL_C_BINARY;
-        break;
-    default:
-        ctype = SQL_C_CHAR;
-        break;
-    }
-
+    /* Always fetch the data as a NUL terminated string: the driver converts
+     * binary columns to hexadecimal and bits to "0"/"1". */
     buffer[0] = '\0';
-    SQLLEN ptr;
-    SQLRETURN rc = SQLGetData(hstmt, idx, ctype, buffer, buffer_size, &ptr);
-    if (rc != SQL_SUCCESS) {
+    SQLLEN ptr = 0;
+    SQLRETURN rc = SQLGetData(hstmt, idx, SQL_C_CHAR, buffer, buffer_size, &ptr);
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLGetData failed: %s",
                      codbc_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
         return -1;
+    }
+
+    if (ptr == SQL_NULL_DATA) {
+        buffer[0] = '\0';
+        return 0;
+    }
+
+    if (rc == SQL_SUCCESS_WITH_INFO) {
+        char errbuf[1024];
+        PLUGIN_WARNING("SQLGetData reported: %s",
+                       codbc_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
     }
 
     return 0;
@@ -232,12 +281,13 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
     SQLRETURN rc;
 
     int status = 0;
+    bool prepared = false;
 
     char *statement = db_query_get_statement(q);
     assert(statement != NULL);
 
     rc = SQLAllocHandle(SQL_HANDLE_STMT, db->hdbc, &hstmt);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLAllocHandle STMT failed in %s: %s", db->name,
                      codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -245,19 +295,21 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
         goto error;
     }
 
+    SQLSetStmtAttr(hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)codbc_timeout(db), 0);
+
     /* coverity[NEGATIVE_RETURNS] */
     rc = SQLExecDirect(hstmt, (UCHAR *)statement, SQL_NTS);
-    if ((rc != SQL_SUCCESS) && (rc != SQL_SUCCESS_WITH_INFO)) {
+    if (!SQL_SUCCEEDED(rc)) {
         char errbuf[1024];
         PLUGIN_ERROR("SQLExecDirect failed in %s: %s", db->name,
                      codbc_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
-        status = -1;
+        status = codbc_is_connection_error(hstmt, SQL_HANDLE_STMT) ? -2 : -1;
         goto error;
     } else { /* Get the number of columns */
         SQLSMALLINT columns;
 
         rc = SQLNumResultCols(hstmt, &columns);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("codbc_read_database_query (%s, %s): SQLNumResultCols failed : %s",
                         db->name, db_query_get_name(q),
@@ -319,7 +371,7 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
         rc = SQLDescribeCol(hstmt, (SQLUSMALLINT)(i + 1), column_name,
                                    DATA_MAX_NAME_LEN, &column_name_len, &(column_types[i]),
                                    NULL, NULL, NULL);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("codbc_read_database_query (%s, %s): SQLDescribeCol %zu failed : %s",
                           db->name, db_query_get_name(q), i + 1,
@@ -327,6 +379,9 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
             status = -1;
             goto error;
         }
+        /* On truncation column_name_len is the full length of the name. */
+        if ((column_name_len < 0) || (column_name_len >= DATA_MAX_NAME_LEN))
+            column_name_len = DATA_MAX_NAME_LEN - 1;
         column_names[i][column_name_len] = '\0';
     }
 
@@ -337,6 +392,7 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
         PLUGIN_ERROR("db_query_prepare_result failed with status %i.", status);
         goto error;
     }
+    prepared = true;
 
     /* Iterate over all rows and call `db_query_handle_result' with each list of
      * values. */
@@ -346,18 +402,18 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
             break;
         }
 
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("codbc_read_database_query (%s, %s): SQLFetch failed : %s",
                          db->name, db_query_get_name(q),
                          codbc_strerror(hstmt, SQL_HANDLE_STMT, errbuf, sizeof(errbuf)));
-            status = -1;
+            status = codbc_is_connection_error(hstmt, SQL_HANDLE_STMT) ? -2 : -1;
             goto error;
         }
 
         /* Copy the value of the columns to `column_values' */
         for (size_t i = 0; i < column_num; i++) {
-            status = codbc_get_data(hstmt, (SQLUSMALLINT)(i + 1), column_types[i],
+            status = codbc_get_data(hstmt, (SQLUSMALLINT)(i + 1),
                                            column_values[i], DATA_MAX_NAME_LEN);
 
             if (status != 0) {
@@ -379,12 +435,12 @@ static int codbc_read_database_query(codbc_database_t *db, db_query_t *q,
         }
     }
 
-    /* Tell the db query interface that we're done with this query. */
-    db_query_finish_result(q, prep_area);
-
     status = 0;
 
 error:
+    /* Tell the db query interface that we're done with this query. */
+    if (prepared)
+        db_query_finish_result(q, prep_area);
 
     if (column_names != NULL) {
         free(column_names[0]);
@@ -409,8 +465,6 @@ error:
 
 static int codbc_connect(codbc_database_t *db)
 {
-    SQLCHAR buffer[256];
-    SQLSMALLINT len;
     SQLRETURN rc = SQL_SUCCESS;
     int status;
 
@@ -423,34 +477,45 @@ static int codbc_connect(codbc_database_t *db)
     codbc_disconnect(db);
 
     rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &(db->henv));
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         PLUGIN_ERROR("codbc_connect(%s): Unable to allocate environment handle", db->name);
+        db->henv = SQL_NULL_HENV;
         return -1;
     }
 
     /* set options */
     rc = SQLSetEnvAttr(db->henv, SQL_ATTR_ODBC_VERSION, (void *)SQL_OV_ODBC3, 0);
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         PLUGIN_ERROR("codbc_connect(%s): Unable to set ODBC3 attribute", db->name);
+        codbc_disconnect(db);
         return -1;
     }
 
     rc = SQLAllocHandle(SQL_HANDLE_DBC, db->henv, &db->hdbc);
-    if (rc != SQL_SUCCESS) {
+    if (!SQL_SUCCEEDED(rc)) {
         PLUGIN_ERROR("codbc_connect(%s): Unable to allocate connection handle", db->name);
+        db->hdbc = SQL_NULL_HDBC;
+        codbc_disconnect(db);
         return -1;
     }
 
+    /* Not all drivers support these attributes, so ignore errors. */
+    SQLSetConnectAttr(db->hdbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)codbc_timeout(db), 0);
+    SQLSetConnectAttr(db->hdbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)codbc_timeout(db), 0);
+
     if (db->conn != NULL) {
-        rc = SQLDriverConnect(db->hdbc, NULL, (SQLCHAR *)db->conn, SQL_NTS, buffer,
-                                        sizeof(buffer), &len, SQL_DRIVER_COMPLETE);
+        /* Do not ask for the completed connection string: it is not used and
+         * it may contain credentials. */
+        rc = SQLDriverConnect(db->hdbc, NULL, (SQLCHAR *)db->conn, SQL_NTS, NULL,
+                                        0, NULL, SQL_DRIVER_NOPROMPT);
         if (rc == SQL_SUCCESS_WITH_INFO) {
-            buffer[len] = '\0';
+            char errbuf[1024];
             PLUGIN_WARNING("codbc_connect(%s): SQLDriverConnect "
-                           "reported the following diagnostics: %s", db->name, buffer);
+                           "reported the following diagnostics: %s", db->name,
+                           codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
             return 0;
         }
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("codbc_connect(%s): SQLDriverConnect failed : %s", db->name,
                         codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -460,7 +525,7 @@ static int codbc_connect(codbc_database_t *db)
     } else {
         rc = SQLConnect(db->hdbc, (SQLCHAR *)db->dsn, SQL_NTS, (SQLCHAR *)db->user,
                                   SQL_NTS, (SQLCHAR *)db->pass, SQL_NTS);
-        if (rc != SQL_SUCCESS) {
+        if (!SQL_SUCCEEDED(rc)) {
             char errbuf[1024];
             PLUGIN_ERROR("codbc_connect(%s): SQLConnect failed: %s", db->name,
                           codbc_strerror(db->hdbc, SQL_HANDLE_DBC, errbuf, sizeof(errbuf)));
@@ -496,6 +561,11 @@ static int codbc_read_database(user_data_t *ud)
         status = codbc_read_database_query(db, db->queries[i], db->q_prep_areas[i]);
         if (status == 0)
             success++;
+        if (status == -2) {
+            /* Connection lost: drop it so it is re-established in the next read. */
+            codbc_disconnect(db);
+            break;
+        }
     }
 
     if (success == 0) {
@@ -520,9 +590,11 @@ static int codbc_read_database(user_data_t *ud)
  *   }
  *
  *   instance "instance" {
- *       driver "mysql"
+ *       dsn "dsn" | connection "ODBC connection string"
+ *       user "user"
+ *       password "password"
  *       interval 120
- *       connetion "ODBC connection string"
+ *       ping-query "SELECT 1"
  *       query "query"
  *   }
  * }
@@ -578,6 +650,8 @@ static int codbc_config_add_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->ping_query);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &db->timeout);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &db->filter);
         } else {
