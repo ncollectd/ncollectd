@@ -14,10 +14,10 @@
 
 typedef struct {
     char *name;
-    char *host;
     char *connect_id;
     char *username;
     char *password;
+    cdtime_t timeout;
 
     char *metric_prefix;
     label_set_t labels;
@@ -96,16 +96,19 @@ static void o_database_free(void *arg)
     label_set_reset(&db->labels);
     plugin_filter_free(db->filter);
 
+    /* OCILogoff ends the session and frees the handles allocated by OCILogon. */
     if (db->oci_service_context != NULL)
-        OCIHandleFree(db->oci_service_context, OCI_HTYPE_SVCCTX);
+        OCILogoff(db->oci_service_context, db->oci_error);
 
-    for (size_t i = 0; i < db->queries_num; i++) {
-        OCIStmt *oci_statement = db_query_preparation_area_get_user_data(db->q_prep_areas[i]);
-        if (oci_statement != NULL) {
-            OCIHandleFree(oci_statement, OCI_HTYPE_STMT);
-            db_query_preparation_area_set_user_data(db->q_prep_areas[i], NULL);
+    if (db->q_prep_areas != NULL) {
+        for (size_t i = 0; i < db->queries_num; i++) {
+            OCIStmt *oci_statement = db_query_preparation_area_get_user_data(db->q_prep_areas[i]);
+            if (oci_statement != NULL) {
+                OCIHandleFree(oci_statement, OCI_HTYPE_STMT);
+                db_query_preparation_area_set_user_data(db->q_prep_areas[i], NULL);
+            }
+            db_query_delete_preparation_area(db->q_prep_areas[i]);
         }
-        db_query_delete_preparation_area(db->q_prep_areas[i]);
     }
     free(db->q_prep_areas);
 
@@ -189,6 +192,7 @@ static int o_read_database_query(o_database_t *db,
  *  ! column_names  ! column_num x DATA_MAX_NAME_LEN    !
  *  ! column_values ! column_num x DATA_MAX_NAME_LEN    !
  *  ! oci_defines   ! column_num x sizeof (OCIDefine *) !
+ *  ! indicators    ! column_num x sizeof (sb2)         !
  *  +---------------+-----------------------------------+
  *
  */
@@ -203,7 +207,8 @@ static int o_read_database_query(o_database_t *db,
         free(column_values[0]);  \
         free(column_values);     \
     }                             \
-    free(oci_defines)
+    free(oci_defines);            \
+    free(indicators)
 
 #define ALLOC_OR_FAIL(ptr, ptr_size)                               \
     do {                                                           \
@@ -220,6 +225,7 @@ static int o_read_database_query(o_database_t *db,
     char **column_names = NULL;
     char **column_values = NULL;
     OCIDefine **oci_defines = NULL;
+    sb2 *indicators = NULL;
 
     ALLOC_OR_FAIL(column_names, column_num * sizeof(char *));
     ALLOC_OR_FAIL(column_names[0], column_num * DATA_MAX_NAME_LEN);
@@ -232,6 +238,7 @@ static int o_read_database_query(o_database_t *db,
         column_values[i] = column_values[i - 1] + DATA_MAX_NAME_LEN;
 
     ALLOC_OR_FAIL(oci_defines, column_num * sizeof(OCIDefine *));
+    ALLOC_OR_FAIL(indicators, column_num * sizeof(sb2));
     /* End of buffer allocations. */
 
     /* ``Define'' the returned data, i. e. bind the columns to the buffers allocated above. */
@@ -245,11 +252,11 @@ static int o_read_database_query(o_database_t *db,
         status = OCIParamGet(oci_statement, OCI_HTYPE_STMT, db->oci_error,
                                                  (void *)&oci_param, (ub4)(i + 1));
         if (status != OCI_SUCCESS) {
-            /* This is probably alright */
             PLUGIN_DEBUG("o_read_database_query: status = %#x (= %i);", (unsigned int)status, status);
             o_report_error("o_read_database_query", db->name, db_query_get_name(q),
                            "OCIParamGet", db->oci_error);
-            break;
+            FREE_ALL;
+            return -1;
         }
 
         column_name = NULL;
@@ -260,19 +267,21 @@ static int o_read_database_query(o_database_t *db,
             OCIDescriptorFree(oci_param, OCI_DTYPE_PARAM);
             o_report_error("o_read_database_query", db->name, db_query_get_name(q),
                            "OCIAttrGet (OCI_ATTR_NAME)", db->oci_error);
-            continue;
+            FREE_ALL;
+            return -1;
         }
 
-        OCIDescriptorFree(oci_param, OCI_DTYPE_PARAM);
-        oci_param = NULL;
-
         /* Copy the name to column_names. Warning: The ``string'' returned by OCI
-         * may not be null terminated! */
+         * may not be null terminated! The name points into the descriptor, so it
+         * must be copied before freeing it. */
         memset(column_names[i], 0, DATA_MAX_NAME_LEN);
         if (column_name_length >= DATA_MAX_NAME_LEN)
             column_name_length = DATA_MAX_NAME_LEN - 1;
         memcpy(column_names[i], column_name, column_name_length);
         column_names[i][column_name_length] = 0;
+
+        OCIDescriptorFree(oci_param, OCI_DTYPE_PARAM);
+        oci_param = NULL;
 
         PLUGIN_DEBUG("o_read_database_query: column_names[%" PRIsz "] = %s;"
                      " column_name_length = %" PRIu32 ";",
@@ -280,11 +289,12 @@ static int o_read_database_query(o_database_t *db,
 
         status = OCIDefineByPos(oci_statement, &oci_defines[i], db->oci_error,
                                                (ub4)(i + 1), column_values[i], DATA_MAX_NAME_LEN,
-                                               SQLT_STR, NULL, NULL, NULL, OCI_DEFAULT);
+                                               SQLT_STR, &indicators[i], NULL, NULL, OCI_DEFAULT);
         if (status != OCI_SUCCESS) {
             o_report_error("o_read_database_query", db->name, db_query_get_name(q),
                            "OCIDefineByPos", db->oci_error);
-            continue;
+            FREE_ALL;
+            return -1;
         }
     }
 
@@ -308,6 +318,17 @@ static int o_read_database_query(o_database_t *db,
             o_report_error("o_read_database_query", db->name, db_query_get_name(q),
                            "OCIStmtFetch2", db->oci_error);
             break;
+        }
+
+        for (size_t i = 0; i < column_num; i++) {
+            if (indicators[i] == -1) {
+                /* NULL value: the buffer was not written by the fetch. */
+                column_values[i][0] = '\0';
+            } else if (indicators[i] != 0) {
+                PLUGIN_WARNING("o_read_database_query (%s, %s): value of column '%s' "
+                               "was truncated.", db->name, db_query_get_name(q),
+                               column_names[i]);
+            }
         }
 
         status = db_query_handle_result(q, prep_area, column_values, db->filter);
@@ -361,7 +382,7 @@ static int o_read_database(user_data_t *ud)
 
         if (connection_status != OCI_SERVER_NORMAL) {
             PLUGIN_INFO("Connection to %s lost. Trying to reconnect.", db->name);
-            OCIHandleFree(db->oci_service_context, OCI_HTYPE_SVCCTX);
+            OCILogoff(db->oci_service_context, db->oci_error);
             db->oci_service_context = NULL;
         }
     }
@@ -385,33 +406,55 @@ static int o_read_database(user_data_t *ud)
             /* TODO: Print NOTIFY message. */
         }
         assert(db->oci_service_context != NULL);
+
+        if (db->timeout > 0) {
+#ifdef OCI_ATTR_CALL_TIMEOUT
+            /* Limit the time of each round trip to the database (OCI >= 18c). */
+            ub4 call_timeout = (ub4)CDTIME_T_TO_MS(db->timeout);
+            status = OCIAttrSet(db->oci_service_context, OCI_HTYPE_SVCCTX, &call_timeout,
+                                0, OCI_ATTR_CALL_TIMEOUT, db->oci_error);
+            if (status != OCI_SUCCESS)
+                o_report_error("o_read_database", db->name, NULL,
+                               "OCIAttrSet (OCI_ATTR_CALL_TIMEOUT)", db->oci_error);
+#else
+            PLUGIN_WARNING("The 'timeout' option is not supported by this OCI version.");
+#endif
+        }
     }
 
     PLUGIN_DEBUG("o_read_database: db->connect_id = %s; db->oci_service_context = %p;",
                   db->connect_id, (void *)db->oci_service_context);
 
-    for (size_t i = 0; i < db->queries_num; i++)
-        o_read_database_query(db, db->queries[i], db->q_prep_areas[i]);
+    int success = 0;
+    for (size_t i = 0; i < db->queries_num; i++) {
+        status = o_read_database_query(db, db->queries[i], db->q_prep_areas[i]);
+        if (status == 0)
+            success++;
+    }
+
+    if ((db->queries_num > 0) && (success == 0))
+        return -1;
 
     return 0;
 }
 
 /*
  * plugin oracle {
- *   Query "qinstance0" {
+ *   query "qinstance0" {
  *       statement "SELECT name, value FROM table"
  *       result {
- *           Type "gauge"
- *           InstancesFrom "name"
- *           ValuesFrom "value"
+ *           type "gauge"
+ *           metric "metric_name"
+ *           label-from "name" "name"
+ *           value-from "value"
  *       }
  *   }
  *
- *   database "instance1" {
- *       ConnectID "db01"
- *       Username "oracle"
- *       Password "secret"
- *       Query "qinstance0"
+ *   instance "instance1" {
+ *       connect-id "db01"
+ *       user "oracle"
+ *       password "secret"
+ *       query "qinstance0"
  *   }
  * }
  */
@@ -463,6 +506,8 @@ static int o_config_add_database(config_item_t *ci)
             status = cf_util_get_string(child, &db->metric_prefix);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &db->timeout);
         } else if (strcasecmp("query", child->key) == 0) {
             status = db_query_pick_from_list(child, queries, queries_num,
                                                     &db->queries, &db->queries_num);

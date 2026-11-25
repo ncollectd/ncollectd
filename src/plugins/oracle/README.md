@@ -30,12 +30,12 @@ NCOLLECTD-ORACLE(5) - File Formats Manual
 	    }
 	    instance name {
 	        connect-id connect-id
-	        host host
 	        user username
 	        user-env env-name
 	        password password
 	        password-env env-name
 	        interval seconds
+	        timeout seconds
 	        metric-prefix prefix
 	        label key value
 	        query query-name
@@ -96,6 +96,13 @@ connect to an Oracle&#174; Database and lets you execute SQL statements there.
 > > Sets the interval (in seconds) in which the values will be collected from this
 > > database.
 > > By default the global **interval** setting will be used.
+
+> **timeout** *seconds*
+
+> > Sets the timeout for each call to the database (requires OCI 18c or later).
+> > The timeout of the connection establishment can be set with
+> > *SQLNET.OUTBOUND\_CONNECT\_TIMEOUT* in the *sqlnet.ora* file.
+> > By default there is no timeout.
 
 > **query** *query-name*
 
