@@ -30,6 +30,8 @@ typedef enum {
 #endif
 
 static cgroup_systemd_t cgroup_type = CGROUP_UNKNOWN;
+static char *path_sys_cgroup;
+static char path_cgroup_systemd[PATH_MAX];
 static char **units;
 static size_t units_size;
 
@@ -753,12 +755,11 @@ static int get_property_uint32(sd_bus *bus, const char *destination, const char 
 
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
+    sd_bus_error_free(&error);
     if (status < 0) {
         sd_bus_message_unref(reply);
         return -1;
     }
-
-    sd_bus_error_free(&error);
 
     status = sd_bus_message_enter_container(reply, 'v', "u");
     if (status < 0) {
@@ -788,12 +789,11 @@ static int get_property_uint64(sd_bus *bus, const char *destination, const char 
 
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
+    sd_bus_error_free(&error);
     if (status < 0) {
         sd_bus_message_unref(reply);
         return -1;
     }
-
-    sd_bus_error_free(&error);
 
     status = sd_bus_message_enter_container(reply, 'v', "t");
     if (status < 0) {
@@ -823,12 +823,11 @@ static int get_property_buffer(sd_bus *bus, const char *destination, const char 
     sd_bus_error error = SD_BUS_ERROR_NULL;
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
+    sd_bus_error_free(&error);
     if (status < 0) {
         sd_bus_message_unref(reply);
         return -1;
     }
-
-    sd_bus_error_free(&error);
 
     status = sd_bus_message_enter_container(reply, 'v', "s");
     if (status < 0) {
@@ -1006,24 +1005,24 @@ static int read_cpu_max(int dir_fd, const char *unit_name)
     if (numfields != 2)
         return -1;
 
-    double max_cpu = 0;
+    /* No limit. */
+    if (strcmp(fields[0], "max") == 0)
+        return 0;
 
-    if (strcmp(fields[0], "max") != 0)  {
-        double max = 0;
-        int status = strtodouble(fields[0], &max);
-        if (status != 0)
-            return -1;
+    double max = 0;
+    int status = strtodouble(fields[0], &max);
+    if (status != 0)
+        return -1;
 
-        double period = 0;
-        status = strtodouble(fields[1], &period);
-        if (status != 0)
-            return -1;
+    double period = 0;
+    status = strtodouble(fields[1], &period);
+    if (status != 0)
+        return -1;
 
-        if ((max == 0) || (period == 0))
-            return -1;
+    if ((max == 0) || (period == 0))
+        return -1;
 
-        max_cpu = max / period;
-    }
+    double max_cpu = max / period;
 
     metric_family_append(&fam[FAM_SYSTEMD_UNIT_CPU_MAX_SECONDS],
                          VALUE_GAUGE(max_cpu), NULL,
@@ -1155,10 +1154,13 @@ static int read_memory_max(int dir_fd, char *path, const char *unit_name, metric
 
     char *tbuf = strntrim(buf, (size_t)len);
 
-    uint64_t max = 0;
+    /* No limit. */
+    if (strcmp(tbuf, "max") == 0)
+        return 0;
 
-    if (strcmp(tbuf, "max") != 0)
-        strtouint(tbuf, &max);
+    uint64_t max = 0;
+    if (strtouint(tbuf, &max) != 0)
+        return -1;
 
     metric_family_append(fam_max, VALUE_GAUGE(max), NULL,
                          &LABEL_PAIR_CONST("unit", unit_name), NULL);
@@ -1244,7 +1246,10 @@ static int read_pressure_file(int dir_fd, const char *filename, const char *unit
         if (strncmp(fields[4], "total=", strlen("total=")) != 0)
             continue;
 
-        value_t value = VALUE_COUNTER(atoll(fields[4] + strlen("total=")));
+        uint64_t total = 0;
+        if (strtouint(fields[4] + strlen("total="), &total) != 0)
+            continue;
+        value_t value = VALUE_COUNTER(total);
 
         if ((strcmp(fields[0], "some") == 0) && (fam_waiting != NULL)) {
             metric_family_append(fam_waiting, value, NULL,
@@ -1289,17 +1294,29 @@ static int read_cgroup_file(int dir_fd, const char *filename,
 
 static char *cgroup_systemd_path(cgroup_systemd_t type)
 {
+    if (path_sys_cgroup == NULL)
+        return NULL;
+
+    const char *subdir = NULL;
     switch(type) {
     case CGROUP_UNKNOWN:
         return NULL;
     case CGROUP_V2_SYSTEMD:
-        return "/sys/fs/cgroup/systemd";
+        subdir = "/systemd";
+        break;
     case CGROUP_V2_UNIFIED:
-        return "/sys/fs/cgroup/unified";
+        subdir = "/unified";
+        break;
     case CGROUP_V2_ALL:
-        return "/sys/fs/cgroup";
+        subdir = "";
+        break;
     }
-    return NULL;
+
+    if (subdir == NULL)
+        return NULL;
+
+    ssnprintf(path_cgroup_systemd, sizeof(path_cgroup_systemd), "%s%s", path_sys_cgroup, subdir);
+    return path_cgroup_systemd;
 }
 
 static int read_cgroup(int cgroup_fd, sd_bus *bus, char *unit_path, const char *unit_name,
@@ -1376,53 +1393,59 @@ static int read_cgroup(int cgroup_fd, sd_bus *bus, char *unit_path, const char *
 
 static cgroup_systemd_t cgroup_systemd_type(void)
 {
+    if (path_sys_cgroup == NULL)
+        return CGROUP_UNKNOWN;
+
+    char path[PATH_MAX];
     struct statfs fs;
-    int status = statfs("/sys/fs/cgroup/", &fs);
+    int status = statfs(path_sys_cgroup, &fs);
     if (status < 0) {
-        PLUGIN_ERROR("statfs failed on '/sys/fs/cgroup/': %s", STRERRNO);
+        PLUGIN_ERROR("statfs failed on '%s': %s", path_sys_cgroup, STRERRNO);
         return CGROUP_UNKNOWN;
     }
 
     if (fs.f_type == CGROUP2_SUPER_MAGIC) {
-        PLUGIN_INFO("Found cgroup2 on /sys/fs/cgroup/, full unified hierarchy.");
+        PLUGIN_INFO("Found cgroup2 on %s, full unified hierarchy.", path_sys_cgroup);
         return CGROUP_V2_ALL;
     }
 
     if (fs.f_type == SYSFS_MAGIC) {
-        PLUGIN_ERROR("No filesystem is currently mounted on /sys/fs/cgroup.");
+        PLUGIN_ERROR("No filesystem is currently mounted on %s.", path_sys_cgroup);
         return CGROUP_UNKNOWN;
     }
 
     if (fs.f_type != TMPFS_MAGIC) {
-        PLUGIN_ERROR("Unknown filesystem type %llx mounted on /sys/fs/cgroup.",
-                     (unsigned long long)fs.f_type);
+        PLUGIN_ERROR("Unknown filesystem type %llx mounted on %s.",
+                     (unsigned long long)fs.f_type, path_sys_cgroup);
         return CGROUP_UNKNOWN;
     }
 
-    status = statfs("/sys/fs/cgroup/unified/", &fs);
+    ssnprintf(path, sizeof(path), "%s/unified", path_sys_cgroup);
+    status = statfs(path, &fs);
     if ((status == 0) && (fs.f_type == CGROUP2_SUPER_MAGIC)) {
-        PLUGIN_INFO("Found cgroup2 on /sys/fs/cgroup/unified, unified hierarchy for systemd.");
+        PLUGIN_INFO("Found cgroup2 on %s, unified hierarchy for systemd.", path);
         return CGROUP_V2_UNIFIED;
     }
 
-    status = statfs("/sys/fs/cgroup/systemd/", &fs);
+    ssnprintf(path, sizeof(path), "%s/systemd", path_sys_cgroup);
+    status = statfs(path, &fs);
     if (status < 0) {
         if (errno == ENOENT) {
             PLUGIN_ERROR("Unsupported cgroupsv1 setup detected: systemd hierarchy not found.");
             return CGROUP_UNKNOWN;
         }
-        PLUGIN_ERROR("statfs failed on '/sys/fs/cgroup/systemd': %s", STRERRNO);
+        PLUGIN_ERROR("statfs failed on '%s': %s", path, STRERRNO);
         return CGROUP_UNKNOWN;
     }
 
     if (fs.f_type == CGROUP2_SUPER_MAGIC) {
-        PLUGIN_INFO("Found cgroup2 on /sys/fs/cgroup/systemd, "
-                    "unified hierarchy for systemd controller (v232 variant)");
+        PLUGIN_INFO("Found cgroup2 on %s, "
+                    "unified hierarchy for systemd controller (v232 variant)", path);
         return CGROUP_V2_SYSTEMD;
     }
 
-    PLUGIN_INFO("Unexpected filesystem type %llx mounted on /sys/fs/cgroup/systemd.",
-                 (unsigned long long) fs.f_type);
+    PLUGIN_INFO("Unexpected filesystem type %llx mounted on %s.",
+                 (unsigned long long) fs.f_type, path);
     return CGROUP_UNKNOWN;
 }
 
@@ -1445,7 +1468,8 @@ static int unit_service(sd_bus *bus, char *name, char *unit_path)
     uint64_t tasks_max = 0;
     status = get_property_uint64(bus, "org.freedesktop.systemd1", unit_path,
                                       "org.freedesktop.systemd1.Service", "TasksMax", &tasks_max);
-    if (status == 0)
+    /* UINT64_MAX means no limit (infinity). */
+    if ((status == 0) && (tasks_max != UINT64_MAX))
         metric_family_append(&fam[FAM_SYSTEMD_UNIT_TASKS_MAX], VALUE_GAUGE(tasks_max), NULL,
                              &LABEL_PAIR_CONST("unit", name), NULL);
 
@@ -1499,6 +1523,81 @@ static int unit_timer(sd_bus *bus, char *name, char *unit_path)
     return 0;
 }
 
+#define UNIT_SUB_STATES_MAX 32
+
+static char *service_sub_states[] = {
+    "dead", "condition", "start-pre", "start", "start-post", "running", "exited",
+    "reload", "reload-signal", "reload-notify", "stop", "stop-watchdog", "stop-sigterm",
+    "stop-sigkill", "stop-post", "final-watchdog", "final-sigterm", "final-sigkill",
+    "failed", "dead-before-auto-restart", "failed-before-auto-restart",
+    "dead-resources-pinned", "auto-restart", "auto-restart-queued", "cleaning",
+};
+
+static char *socket_sub_states[] = {
+    "dead", "start-pre", "start-chown", "start-post", "listening", "deferred", "running",
+    "stop-pre", "stop-pre-sigterm", "stop-pre-sigkill", "stop-post", "final-sigterm",
+    "final-sigkill", "failed", "cleaning",
+};
+
+static char *timer_sub_states[] = {
+    "dead", "waiting", "running", "elapsed", "failed",
+};
+
+static char *mount_sub_states[] = {
+    "dead", "mounting", "mounting-done", "mounted", "remounting", "unmounting",
+    "remounting-sigterm", "remounting-sigkill", "unmounting-sigterm", "unmounting-sigkill",
+    "failed", "cleaning",
+};
+
+static char *device_sub_states[] = {
+    "dead", "tentative", "plugged",
+};
+
+static char *scope_sub_states[] = {
+    "dead", "start-chown", "running", "abandoned", "stop-sigterm", "stop-sigkill", "failed",
+};
+
+static char *slice_sub_states[] = {
+    "dead", "active",
+};
+
+static char *target_sub_states[] = {
+    "dead", "active",
+};
+
+static char *path_sub_states[] = {
+    "dead", "waiting", "running", "failed",
+};
+
+static char *swap_sub_states[] = {
+    "dead", "activating", "activating-done", "active", "deactivating",
+    "deactivating-sigterm", "deactivating-sigkill", "failed", "cleaning",
+};
+
+static char *automount_sub_states[] = {
+    "dead", "waiting", "running", "failed",
+};
+
+typedef struct {
+    const char *suffix;
+    char **states;
+    size_t num;
+} unit_sub_states_t;
+
+static const unit_sub_states_t unit_sub_states[] = {
+    { ".service",   service_sub_states,   STATIC_ARRAY_SIZE(service_sub_states)   },
+    { ".socket",    socket_sub_states,    STATIC_ARRAY_SIZE(socket_sub_states)    },
+    { ".timer",     timer_sub_states,     STATIC_ARRAY_SIZE(timer_sub_states)     },
+    { ".mount",     mount_sub_states,     STATIC_ARRAY_SIZE(mount_sub_states)     },
+    { ".device",    device_sub_states,    STATIC_ARRAY_SIZE(device_sub_states)    },
+    { ".scope",     scope_sub_states,     STATIC_ARRAY_SIZE(scope_sub_states)     },
+    { ".slice",     slice_sub_states,     STATIC_ARRAY_SIZE(slice_sub_states)     },
+    { ".target",    target_sub_states,    STATIC_ARRAY_SIZE(target_sub_states)    },
+    { ".path",      path_sub_states,      STATIC_ARRAY_SIZE(path_sub_states)      },
+    { ".swap",      swap_sub_states,      STATIC_ARRAY_SIZE(swap_sub_states)      },
+    { ".automount", automount_sub_states, STATIC_ARRAY_SIZE(automount_sub_states) },
+};
+
 static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
                        char *load_state, char *active_state, char *sub_state)
 {
@@ -1540,56 +1639,36 @@ static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
     metric_family_append(&fam[FAM_SYSTEMD_UNIT_ACTIVE_STATE], VALUE_STATE_SET(active_set), NULL,
                          &LABEL_PAIR_CONST("unit", unit), NULL);
 
-    state_t sub_states[] = {
-        { .name = "dead",                       .enabled = false },
-        { .name = "condition",                  .enabled = false },
-        { .name = "start-pre",                  .enabled = false },
-        { .name = "start",                      .enabled = false },
-        { .name = "start-post",                 .enabled = false },
-        { .name = "running",                    .enabled = false },
-        { .name = "exited",                     .enabled = false },
-        { .name = "reload",                     .enabled = false },
-        { .name = "reload-signal",              .enabled = false },
-        { .name = "reload-notify",              .enabled = false },
-        { .name = "stop",                       .enabled = false },
-        { .name = "stop-watchdog",              .enabled = false },
-        { .name = "stop-sigterm",               .enabled = false },
-        { .name = "stop-sigkill",               .enabled = false },
-        { .name = "stop-post",                  .enabled = false },
-        { .name = "final-watchdog",             .enabled = false },
-        { .name = "final-sigterm",              .enabled = false },
-        { .name = "final-sigkill",              .enabled = false },
-        { .name = "failed",                     .enabled = false },
-        { .name = "dead-before-auto-restart",   .enabled = false },
-        { .name = "failed-before-auto-restart", .enabled = false },
-        { .name = "dead-resources-pinned",      .enabled = false },
-        { .name = "auto-restart",               .enabled = false },
-        { .name = "auto-restart-queued",        .enabled = false },
-        { .name = "cleaning",                   .enabled = false },
-    };
-    state_set_t sub_set = { .num = STATIC_ARRAY_SIZE(sub_states), .ptr = sub_states };
-    for (size_t j = 0; j < sub_set.num ; j++) {
-        if (strcmp(sub_set.ptr[j].name, sub_state) == 0) {
-            sub_set.ptr[j].enabled = true;
+    const unit_sub_states_t *uss = NULL;
+    for (size_t i = 0; i < STATIC_ARRAY_SIZE(unit_sub_states); i++) {
+        if (strendswith(unit, unit_sub_states[i].suffix)) {
+            uss = &unit_sub_states[i];
             break;
         }
     }
-    metric_family_append(&fam[FAM_SYSTEMD_UNIT_SUB_STATE], VALUE_STATE_SET(sub_set), NULL,
-                         &LABEL_PAIR_CONST("unit", unit), NULL);
+
+    if (uss != NULL) {
+        state_t sub_states[UNIT_SUB_STATES_MAX];
+        state_set_t sub_set = { .num = uss->num, .ptr = sub_states };
+        for (size_t j = 0; j < sub_set.num ; j++) {
+            sub_set.ptr[j].name = uss->states[j];
+            sub_set.ptr[j].enabled = strcmp(uss->states[j], sub_state) == 0;
+        }
+        metric_family_append(&fam[FAM_SYSTEMD_UNIT_SUB_STATE], VALUE_STATE_SET(sub_set), NULL,
+                             &LABEL_PAIR_CONST("unit", unit), NULL);
+    }
 
 
-    double start_time = 0.0;
     if (strcmp(active_state, "active") == 0) {
         uint64_t timestamp = 0;
         int status = get_property_uint64(bus, "org.freedesktop.systemd1", unit_path,
                                               "org.freedesktop.systemd1.Unit",
                                               "ActiveEnterTimestamp", &timestamp);
         if (status == 0)
-            start_time = (double)timestamp/1e6;
+            metric_family_append(&fam[FAM_SYSTEMD_UNIT_START_TIME_SECONDS],
+                                 VALUE_GAUGE((double)timestamp/1e6), NULL,
+                                 &LABEL_PAIR_CONST("unit", unit), NULL);
     }
-
-    metric_family_append(&fam[FAM_SYSTEMD_UNIT_START_TIME_SECONDS], VALUE_GAUGE(start_time), NULL,
-                         &LABEL_PAIR_CONST("unit", unit), NULL);
 
 
     if (strendswith(unit, ".service")) {
@@ -1602,6 +1681,12 @@ static int submit_unit(int cgroup_fd, sd_bus *bus, char *unit, char *unit_path,
         unit_timer(bus, unit, unit_path);
     } else if (strendswith(unit, ".slice")) {
         read_cgroup(cgroup_fd, bus, unit_path, unit, "org.freedesktop.systemd1.Slice");
+    } else if (strendswith(unit, ".scope")) {
+        read_cgroup(cgroup_fd, bus, unit_path, unit, "org.freedesktop.systemd1.Scope");
+    } else if (strendswith(unit, ".mount")) {
+        read_cgroup(cgroup_fd, bus, unit_path, unit, "org.freedesktop.systemd1.Mount");
+    } else if (strendswith(unit, ".swap")) {
+        read_cgroup(cgroup_fd, bus, unit_path, unit, "org.freedesktop.systemd1.Swap");
     }
 
     return 0;
@@ -1616,19 +1701,32 @@ static int systemd_read(void)
         return -1;
 
     if (geteuid() != 0) {
-        sd_bus_default_system(&bus);
+        int status = sd_bus_default_system(&bus);
+        if (status < 0) {
+            PLUGIN_ERROR("Cannot connect to the system bus: %s", STRERROR(-status));
+            return -1;
+        }
     } else {
         int status = sd_bus_new(&bus);
         if (status < 0)
           return -1;
 
         status = sd_bus_set_address(bus, "unix:path=/run/systemd/private");
-        if (status < 0)
-           return -1;
+        if (status < 0) {
+            sd_bus_unref(bus);
+            return -1;
+        }
 
         status = sd_bus_start(bus);
-        if (status < 0)
-           sd_bus_default_system(&bus);
+        if (status < 0) {
+            sd_bus_unref(bus);
+            bus = NULL;
+            status = sd_bus_default_system(&bus);
+            if (status < 0) {
+                PLUGIN_ERROR("Cannot connect to the system bus: %s", STRERROR(-status));
+                return -1;
+            }
+        }
     }
 
     sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -1639,7 +1737,7 @@ static int systemd_read(void)
                                              "org.freedesktop.systemd1.Manager",
                                              "ListUnits", &error, &reply, NULL);
         if (status < 0)
-           return -1;
+           goto error;
     } else {
         sd_bus_message *m = NULL;
         int status = sd_bus_message_new_method_call(bus, &m, "org.freedesktop.systemd1",
@@ -1647,18 +1745,18 @@ static int systemd_read(void)
                                                              "org.freedesktop.systemd1.Manager",
                                                              "ListUnitsByNames");
         if (status < 0)
-            return -1;
+            goto error;
 
         status = sd_bus_message_append_strv(m, units);
         if (status < 0) {
             sd_bus_message_unref(m);
-            return -1;
+            goto error;
         }
 
         status = sd_bus_call(bus, m, 0, &error, &reply);
         if (status < 0) {
             sd_bus_message_unref(m);
-            return -1;
+            goto error;
         }
 
         sd_bus_message_unref(m);
@@ -1714,6 +1812,12 @@ static int systemd_read(void)
     plugin_dispatch_metric_family_array_filtered(fam, FAM_SYSTEMD_MAX, filter, 0);
 
     return 0;
+
+error:
+    sd_bus_error_free(&error);
+    sd_bus_message_unref(reply);
+    sd_bus_unref(bus);
+    return -1;
 }
 
 static int systemd_config_append_unit(config_item_t *ci, char *suffix)
@@ -1745,8 +1849,9 @@ static int systemd_config_append_unit(config_item_t *ci, char *suffix)
 
     units = tmp;
 
-    for (int i=0 ; i < ci->values_num; i++) {
-        units[units_size + i] = NULL;
+    /* Keep the array NULL terminated even if an allocation below fails. */
+    for (size_t i = units_size; i < new_size; i++) {
+        units[i] = NULL;
     }
 
     size_t old_units_size = units_size;
@@ -1838,12 +1943,24 @@ static int systemd_shutdown(void)
 
     plugin_filter_free(filter);
 
+    free(path_sys_cgroup);
+    path_sys_cgroup = NULL;
+
     return 0;
 }
 
 static int systemd_init(void)
 {
+    path_sys_cgroup = plugin_syspath("fs/cgroup");
+    if (path_sys_cgroup == NULL) {
+        PLUGIN_ERROR("Cannot get sys path.");
+        return -1;
+    }
+
     cgroup_type = cgroup_systemd_type();
+    if ((cgroup_type == CGROUP_V2_UNIFIED) || (cgroup_type == CGROUP_V2_SYSTEMD))
+        PLUGIN_WARNING("The cgroup hierarchy is not fully unified, "
+                       "the cgroup resource metrics will not be available.");
     return 0;
 }
 
