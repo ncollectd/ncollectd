@@ -19,6 +19,12 @@
 
 #define PART_NAME_SIZE 128
 
+#if SLURM_VERSION_NUMBER >= SLURM_VERSION_NUM(22, 5, 0)
+#define SLURM_GET_ERRNO errno
+#else
+#define SLURM_GET_ERRNO slurm_get_errno()
+#endif
+
 /* this function declaration is missing in slurm.h */
 extern void slurm_free_stats_response_msg(stats_info_response_msg_t *msg);
 
@@ -277,6 +283,8 @@ static const char *job_state_names[JOB_END] = {
     [JOB_OOM]       = "oom",
 };
 
+static complain_t slurm_complaint;
+
 static partition_state_t *alloc_partition_states(uint32_t num_partitions,
                                                  partition_info_t *partitions)
 {
@@ -294,21 +302,22 @@ static partition_state_t *alloc_partition_states(uint32_t num_partitions,
 }
 
 static partition_state_t *find_partition(partition_state_t *partitions, uint32_t num_partitions,
-                                         char *name)
+                                         const char *name, size_t name_len)
 {
-    partition_state_t *part = NULL;
-
     for (uint32_t i = 0; i < num_partitions; i++) {
-        if (strncmp(name, partitions[i].name, PART_NAME_SIZE) == 0)
-            part = &partitions[i];
+        if ((strlen(partitions[i].name) == name_len) &&
+            (strncmp(name, partitions[i].name, name_len) == 0))
+            return &partitions[i];
     }
 
-    return part;
+    return NULL;
 }
 
 static void slurm_submit_partition(partition_state_t *partition)
 {
     for (int i = 0; i < JOB_END; i++) {
+        if (job_state_names[i] == NULL)
+            continue;
         metric_family_append(&fams[FAM_SLURM_JOB_STATE],
                              VALUE_GAUGE(partition->jobs_states_count[i]), NULL,
                              &LABEL_PAIR_CONST("partition", partition->name),
@@ -339,13 +348,13 @@ static void slurm_submit_stats(stats_info_response_msg_t *stats_resp)
     metric_family_append(&fams[FAM_SLURM_DBD_AGENT_QUEUE],
                          VALUE_GAUGE(stats_resp->dbd_agent_queue_size), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_SCHEDULE_CYCLE_MAX_SECONDS],
-                         VALUE_GAUGE((double)stats_resp->schedule_cycle_max/100000.0),
+                         VALUE_GAUGE((double)stats_resp->schedule_cycle_max/1000000.0),
                          NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_SCHEDULE_CYCLE_LAST_SECONDS],
-                         VALUE_GAUGE((double)stats_resp->schedule_cycle_last/100000.0),
+                         VALUE_GAUGE((double)stats_resp->schedule_cycle_last/1000000.0),
                          NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_SCHEDULE_CYCLE_SUM_SECONDS],
-                         VALUE_COUNTER_FLOAT64((double)stats_resp->schedule_cycle_sum/100000.0),
+                         VALUE_COUNTER_FLOAT64((double)stats_resp->schedule_cycle_sum/1000000.0),
                          NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_SCHEDULE_CYCLES],
                          VALUE_COUNTER(stats_resp->schedule_cycle_counter), NULL, NULL);
@@ -380,13 +389,13 @@ static void slurm_submit_stats(stats_info_response_msg_t *stats_resp)
     metric_family_append(&fams[FAM_SLURM_BACKFILL_CYCLES],
                          VALUE_COUNTER(stats_resp->bf_cycle_counter), NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILL_CYCLE_SECONDS],
-                         VALUE_COUNTER_FLOAT64((double)stats_resp->bf_cycle_sum/100000.0),
+                         VALUE_COUNTER_FLOAT64((double)stats_resp->bf_cycle_sum/1000000.0),
                          NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILL_CYCLE_LAST_SECONDS],
-                         VALUE_GAUGE((double)stats_resp->bf_cycle_last/100000.0),
+                         VALUE_GAUGE((double)stats_resp->bf_cycle_last/1000000.0),
                          NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILL_CYCLE_MAX_SECONDS],
-                         VALUE_GAUGE((double)stats_resp->bf_cycle_max/100000.0),
+                         VALUE_GAUGE((double)stats_resp->bf_cycle_max/1000000.0),
                          NULL, NULL);
     metric_family_append(&fams[FAM_SLURM_BACKFILL_LAST_DEPTH],
                          VALUE_GAUGE(stats_resp->bf_last_depth), NULL, NULL);
@@ -412,22 +421,25 @@ static int slurm_read(void)
 {
     job_info_msg_t *job_buffer_ptr = NULL;
     if (slurm_load_jobs((time_t)NULL, &job_buffer_ptr, SHOW_ALL)) {
-        PLUGIN_ERROR("slurm_load_jobs error");
+        PLUGIN_ONCE_ERROR(&slurm_complaint, "slurm_load_jobs failed: %s",
+                          slurm_strerror(SLURM_GET_ERRNO));
         return -1;
     }
 
     node_info_msg_t *node_buffer_ptr = NULL;
     if (slurm_load_node((time_t)NULL, &node_buffer_ptr, SHOW_ALL)) {
+        PLUGIN_ONCE_ERROR(&slurm_complaint, "slurm_load_node failed: %s",
+                          slurm_strerror(SLURM_GET_ERRNO));
         slurm_free_job_info_msg(job_buffer_ptr);
-        PLUGIN_ERROR("slurm_load_node error");
         return -1;
     }
 
     partition_info_msg_t *part_buffer_ptr = NULL;
-    if (slurm_load_partitions((time_t)NULL, &part_buffer_ptr, 0)) {
+    if (slurm_load_partitions((time_t)NULL, &part_buffer_ptr, SHOW_ALL)) {
+        PLUGIN_ONCE_ERROR(&slurm_complaint, "slurm_load_partitions failed: %s",
+                          slurm_strerror(SLURM_GET_ERRNO));
         slurm_free_job_info_msg(job_buffer_ptr);
         slurm_free_node_info_msg(node_buffer_ptr);
-        PLUGIN_ERROR("slurm_load_partitions error");
         return -1;
     }
 
@@ -435,12 +447,15 @@ static int slurm_read(void)
     stats_info_request_msg_t stats_req;
     stats_req.command_id = STAT_COMMAND_GET;
     if (slurm_get_statistics(&stats_resp, &stats_req)) {
+        PLUGIN_ONCE_ERROR(&slurm_complaint, "slurm_get_statistics failed: %s",
+                          slurm_strerror(SLURM_GET_ERRNO));
         slurm_free_job_info_msg(job_buffer_ptr);
         slurm_free_node_info_msg(node_buffer_ptr);
         slurm_free_partition_info_msg(part_buffer_ptr);
-        PLUGIN_ERROR("slurm_get_statistics error");
         return -1;
     }
+
+    PLUGIN_RELEASE_INFO(&slurm_complaint, "Successfully read data from the slurm controller.");
 
     /* SLURM APIs provide *non-relational* data about nodes, partitions and jobs.
      * We allocate a data structure that relates all three together, and the following
@@ -460,17 +475,34 @@ static int slurm_read(void)
     /* fill partition_states array with per-partition job state information */
     for (uint32_t i = 0; i < job_buffer_ptr->record_count; i++) {
         job_info_t *job_ptr = &job_buffer_ptr->job_array[i];
-        partition_state_t *partition_state = find_partition(partition_states, num_partitions,
-                                                                              job_ptr->partition);
-        if (!partition_state) {
-            PLUGIN_ERROR("slurm_read: cannot find partition %s from jobid %u"
-                          "in partition list returned by slurm_load_partitions",
-                          job_ptr->partition, job_ptr->job_id);
+        if (job_ptr->partition == NULL)
             continue;
-        }
 
-        uint8_t job_state = job_ptr->job_state & JOB_STATE_BASE;
-        partition_state->jobs_states_count[job_state]++;
+        uint32_t job_state = job_ptr->job_state & JOB_STATE_BASE;
+        if (job_state >= JOB_END)
+            continue;
+
+        /* Pending jobs can be submitted to a comma separated list of partitions,
+         * account the job in each partition. */
+        const char *name = job_ptr->partition;
+        while (true) {
+            size_t name_len = strcspn(name, ",");
+            if (name_len > 0) {
+                partition_state_t *partition_state = find_partition(partition_states,
+                                                                    num_partitions,
+                                                                    name, name_len);
+                if (partition_state != NULL) {
+                    partition_state->jobs_states_count[job_state]++;
+                } else {
+                    PLUGIN_DEBUG("cannot find partition %.*s from jobid %u "
+                                 "in partition list returned by slurm_load_partitions",
+                                 (int)name_len, name, job_ptr->job_id);
+                }
+            }
+            if (name[name_len] == '\0')
+                break;
+            name += name_len + 1;
+        }
     }
 
     /* fill partition_states array with per-partition node state information */
@@ -478,17 +510,22 @@ static int slurm_read(void)
         partition_info_t *part_ptr = &part_buffer_ptr->partition_array[i];
 
         partition_state_t *partition_state = find_partition(partition_states, num_partitions,
-                                                                              part_ptr->name);
+                                                            part_ptr->name,
+                                                            strlen(part_ptr->name));
         if (!partition_state) {
             PLUGIN_ERROR("slurm_read: cannot find partition %s"
                          " in partition list returned by slurm_load_partitions", part_ptr->name);
             continue;
         }
 
-        for (int j = 0; part_ptr->node_inx; j += 2) {
-            if (part_ptr->node_inx[j] == -1)
-                break;
+        if (part_ptr->node_inx == NULL)
+            continue;
+
+        for (int j = 0; (part_ptr->node_inx[j] != -1) && (part_ptr->node_inx[j + 1] != -1); j += 2) {
             for (int k = part_ptr->node_inx[j]; k <= part_ptr->node_inx[j + 1]; k++) {
+                /* The node table may have changed between the RPCs. */
+                if ((k < 0) || ((uint32_t)k >= node_buffer_ptr->record_count))
+                    break;
                 node_info_t *node_ptr = &node_buffer_ptr->node_array[k];
                 /* some non-existant nodes (name is NULL) may show up as node_state FUTURE */
                 uint8_t node_state = slurm_node_state(node_ptr->node_state);
