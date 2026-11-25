@@ -76,12 +76,19 @@ If provided, the X509 key in PEM format.
 If provided, the X509 cert in PEM format.
 .It \fBssl-ca\fP "\fI/path/to/ca.pem\fP"
 If provided, the CA file in PEM format (check OpenSSL docs).
+If \fBssl-ca\fP or \fBssl-ca-path\fP is set, the connection must be
+encrypted and the server certificate must be signed by one of these
+CA certificates, otherwise the connection fails.
+With MariaDB Connector/C the server host name is verified as well.
 .It \fBssl-ca-path\fP "\fI/path/to/cas/\fP"
 If provided, the CA directory (check OpenSSL docs).
+See \fBssl-ca\fP for the verification of the server certificate.
 .It \fBssl-cipher\fP \fIcyphers\fP
 If provided, the SSL cipher to use.
 .It \fBconnect-timeout\fP \fIseconds\fP
 Sets the connect timeout for the client.
+Reading from and writing to the server time out after the
+collection \fBinterval\fP.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from
 this proxysql server.

@@ -95,10 +95,15 @@ Each block requires one string argument as the instance name.
 **ssl-ca** */path/to/ca.pem*
 
 > If provided, the CA file in PEM format (check OpenSSL docs).
+> If **ssl-ca** or **ssl-ca-path** is set, the connection must be
+> encrypted and the server certificate must be signed by one of these
+> CA certificates, otherwise the connection fails.
+> With MariaDB Connector/C the server host name is verified as well.
 
 **ssl-ca-path** */path/to/cas/*
 
 > If provided, the CA directory (check OpenSSL docs).
+> See **ssl-ca** for the verification of the server certificate.
 
 **ssl-cipher** *cyphers*
 
@@ -107,6 +112,8 @@ Each block requires one string argument as the instance name.
 **connect-timeout** *seconds*
 
 > Sets the connect timeout for the client.
+> Reading from and writing to the server time out after the
+> collection **interval**.
 
 **interval** *seconds*
 
