@@ -43,6 +43,9 @@ The following options are accepted within each block:
 > in the file system, too.
 > This is used for PowerDNS Recursor versions less than 4.6.0.
 > The default is /var/run/ncollectd-recursor with the suffix of the instance name.
+> The socket is created world writable so the recursor can answer, any local
+> user can send data to it.
+> On Linux an abstract socket can be used prefixing the name with `@`.
 
 **timeout** *seconds*
 

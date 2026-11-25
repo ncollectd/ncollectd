@@ -40,6 +40,9 @@ When using UDP over UNIX domain sockets, the client socket needs a name
 in the file system, too.
 This is used for PowerDNS Recursor versions less than 4.6.0.
 The default is \f(CW/var/run/ncollectd-recursor\fP with the suffix of the instance name.
+The socket is created world writable so the recursor can answer, any local
+user can send data to it.
+On Linux an abstract socket can be used prefixing the name with \f(CW@\fP.
 .It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for the requests.
 .It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"

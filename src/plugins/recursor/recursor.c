@@ -10,6 +10,8 @@
 #include "libutils/common.h"
 #include "libutils/socket.h"
 
+#include <sys/stat.h>
+
 #define RECURSOR_SOCKET "/var/run/pdns-recursor/pdns_recursor.controlsocket"
 #define LOCAL_SOCKPATH "/var/run/" PACKAGE_NAME "-recursor"
 
@@ -143,7 +145,7 @@ enum {
     FAM_RECURSOR_ALMOST_EXPIRED_RUN,
     FAM_RECURSOR_ALMOST_EXPIRED_EXCEPTIONS,
     FAM_RECURSOR_IDLE_TCPOUT_CONNECTIONS,
-    FAM_RECURSOR_MAINTENANCE_USEC,
+    FAM_RECURSOR_MAINTENANCE_SECONDS,
     FAM_RECURSOR_MAINTENANCE_CALLS,
     FAM_RECURSOR_NOD_EVENTS,
     FAM_RECURSOR_UDR_EVENTS,
@@ -826,10 +828,10 @@ static metric_family_t fams_recursor[FAM_RECURSOR_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of connections in the TCP idle outgoing connections pool.",
     },
-    [FAM_RECURSOR_MAINTENANCE_USEC] = {
-        .name = "recursor_maintenance_usec",
+    [FAM_RECURSOR_MAINTENANCE_SECONDS] = {
+        .name = "recursor_maintenance_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = "Time spent doing internal maintenance, including Lua maintenance.",
+        .help = "Time spent doing internal maintenance, including Lua maintenance, in seconds.",
     },
     [FAM_RECURSOR_MAINTENANCE_CALLS] = {
         .name = "recursor_maintenance_calls",
@@ -899,6 +901,29 @@ static void recursor_free(void *arg)
     free(recursor);
 }
 
+/* Reads exactly count bytes from a stream socket. Unlike sread, EAGAIN is not
+ * retried as it is returned when the SO_RCVTIMEO timeout expires. */
+static int recursor_recv_full(int sd, void *buf, size_t count)
+{
+    char *ptr = buf;
+    size_t nleft = count;
+
+    while (nleft > 0) {
+        ssize_t status = recv(sd, ptr, nleft, /* flags = */ 0);
+        if ((status < 0) && (errno == EINTR))
+            continue;
+        if (status < 0)
+            return -1;
+        if (status == 0) {
+            errno = ECONNRESET;
+            return -1;
+        }
+        nleft -= (size_t)status;
+        ptr += (size_t)status;
+    }
+
+    return 0;
+}
 
 static char *recursor_cmd(recursor_t *recursor, char *buffer, size_t size)
 {
@@ -907,6 +932,13 @@ static char *recursor_cmd(recursor_t *recursor, char *buffer, size_t size)
     switch (recursor->version) {
     case RECURSOR_PROTOCOL_V1:
     case RECURSOR_PROTOCOL_V2:
+        /* Remove a stale local socket (e.g. left after a crash), otherwise
+         * bind fails with EADDRINUSE. */
+        if (recursor->local_sockpath[0] != '@') {
+            struct stat sb;
+            if ((lstat(recursor->local_sockpath, &sb) == 0) && S_ISSOCK(sb.st_mode))
+                unlink(recursor->local_sockpath);
+        }
         sd = socket_connect_unix_dgram(recursor->local_sockpath, recursor->sockpath,
                                        recursor->timeout);
         break;
@@ -935,8 +967,43 @@ static char *recursor_cmd(recursor_t *recursor, char *buffer, size_t size)
         return NULL;
     }
 
+    if (recursor->version == RECURSOR_PROTOCOL_V3) {
+        /* The response is a 4 bytes return code, the size of the data as
+         * size_t and the data. In a stream socket it can arrive in pieces. */
+        char header[sizeof(uint32_t) + sizeof(size_t)];
+        if (recursor_recv_full(sd, header, sizeof(header)) != 0) {
+            PLUGIN_ERROR("Socket '%s' recv failed: %s", recursor->sockpath, STRERRNO);
+            close(sd);
+            return NULL;
+        }
+
+        size_t response_size = 0;
+        memcpy(&response_size, header + sizeof(uint32_t), sizeof(size_t));
+        if (response_size > (size - 1)) {
+            PLUGIN_ERROR("Response too large: %zu bytes.", response_size);
+            close(sd);
+            return NULL;
+        }
+
+        if (recursor_recv_full(sd, buffer, response_size) != 0) {
+            PLUGIN_ERROR("Socket '%s' recv failed: %s", recursor->sockpath, STRERRNO);
+            close(sd);
+            return NULL;
+        }
+
+        close(sd);
+        buffer[response_size] = '\0';
+        return buffer;
+    }
+
     status = recv(sd, buffer, size - 1, /* flags = */ 0);
     if (status < 0) {
+        PLUGIN_ERROR("Socket '%s' recv failed: %s", recursor->sockpath, STRERRNO);
+        close(sd);
+        return NULL;
+    }
+    if (status == 0) {
+        PLUGIN_ERROR("Socket '%s': empty response.", recursor->sockpath);
         close(sd);
         return NULL;
     }
@@ -948,6 +1015,12 @@ static char *recursor_cmd(recursor_t *recursor, char *buffer, size_t size)
             if (response == 0) {
                 status = recv(sd, buffer, size - 1, /* flags = */ 0);
                 if (status < 0) {
+                    PLUGIN_ERROR("Socket '%s' recv failed: %s", recursor->sockpath, STRERRNO);
+                    close(sd);
+                    return NULL;
+                }
+                if (status == 0) {
+                    PLUGIN_ERROR("Socket '%s': empty response.", recursor->sockpath);
                     close(sd);
                     return NULL;
                 }
@@ -974,19 +1047,9 @@ static char *recursor_cmd(recursor_t *recursor, char *buffer, size_t size)
         }
         return buffer + 4;
         break;
-    case RECURSOR_PROTOCOL_V3: {
-        if (buffer_size <= (4 + sizeof(size_t))) {
-            PLUGIN_ERROR("Response too small.");
-            return NULL;
-        }
-        size_t response_size = 0;
-        memcpy(&response_size, buffer + 4, sizeof(size_t));
-        if (response_size != (buffer_size - 4 - sizeof(size_t))) {
-            PLUGIN_ERROR("Invalid data size.");
-            return NULL;
-        }
-        return buffer + 4 + sizeof(size_t);
-    }   break;
+    case RECURSOR_PROTOCOL_V3:
+        /* Already handled. */
+        break;
     }
 
     return NULL;
@@ -1012,15 +1075,25 @@ static int recursor_read(user_data_t *user_data)
 
     metric_family_append(&recursor->fams[FAM_RECURSOR_UP], VALUE_GAUGE(1), &recursor->labels, NULL);
 
-    /* Skip the `get' at the beginning ¿? */
     char *saveptr = NULL;
-    char *key;
-    while ((key = strtok_r(response, " \t\n\r", &saveptr)) != NULL) {
+    char *line;
+    while ((line = strtok_r(response, "\n", &saveptr)) != NULL) {
         response = NULL;
 
-        char *value = strtok_r(NULL, " \t\n\r", &saveptr);
-        if (value == NULL)
-            break;
+        /* Each line is "key<TAB>value": split by the first tab or space. */
+        char *key = line + strspn(line, " \t");
+        size_t klen = strcspn(key, " \t\r");
+        if (key[klen] == '\0')
+            continue;
+        key[klen] = '\0';
+
+        char *value = key + klen + 1;
+        value += strspn(value, " \t");
+        size_t value_len = strlen(value);
+        while ((value_len > 0) && isspace((unsigned char)value[value_len - 1]))
+            value[--value_len] = '\0';
+        if (value_len == 0)
+            continue;
 
         const struct recursor_metric *m = recursor_get_key(key, strlen(key));
         if (m == NULL) {
@@ -1039,7 +1112,7 @@ static int recursor_read(user_data_t *user_data)
 
                 uint64_t num = 0;
                 if (parse_uinteger(value, &num) != 0) {
-                    PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+                    PLUGIN_DEBUG("Failed to parse number for '%s': '%s'.", key, value);
                     continue;
                 }
 
@@ -1055,7 +1128,7 @@ static int recursor_read(user_data_t *user_data)
 
                 uint64_t num = 0;
                 if (parse_uinteger(value, &num) != 0) {
-                    PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+                    PLUGIN_DEBUG("Failed to parse number for '%s': '%s'.", key, value);
                     continue;
                 }
 
@@ -1078,7 +1151,7 @@ static int recursor_read(user_data_t *user_data)
         if (fam->type == METRIC_TYPE_COUNTER) {
             uint64_t num = 0;
             if (parse_uinteger(value, &num) != 0) {
-                PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+                PLUGIN_DEBUG("Failed to parse number for '%s': '%s'.", key, value);
                continue;
             }
             if (m->scale == 0) {
@@ -1089,7 +1162,7 @@ static int recursor_read(user_data_t *user_data)
         } else if (fam->type == METRIC_TYPE_GAUGE) {
             double num = 0;
             if (parse_double(value, &num) != 0) {
-                PLUGIN_ERROR("Failed to parse number: '%s'.", value);
+                PLUGIN_DEBUG("Failed to parse number for '%s': '%s'.", key, value);
                continue;
             }
             if (m->scale == 0) {
@@ -1114,7 +1187,7 @@ static int recursor_read(user_data_t *user_data)
     return 0;
 }
 
-int recursor_config_instance(config_item_t *ci)
+static int recursor_config_instance(config_item_t *ci)
 {
     recursor_t *recursor = calloc(1, sizeof(*recursor));
     if (recursor == NULL) {
@@ -1226,7 +1299,12 @@ int recursor_config_instance(config_item_t *ci)
         }
     }
 
-    label_set_add(&recursor->labels, true, "instance", recursor->name);
+    status = label_set_add(&recursor->labels, true, "instance", recursor->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the 'instance' label.");
+        recursor_free(recursor);
+        return -1;
+    }
 
     return plugin_register_complex_read("recursor", recursor->name,
                                         recursor_read, interval,
