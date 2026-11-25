@@ -85,6 +85,7 @@ Available configuration options for a **instance** block:
 > ICMPv4 packet is exactly 64 bytes, similar to the behaviour of normal
 > ping(1)
 > command.
+> The maximum *size* is 4028 bytes.
 
 **timeout** *seconds*
 

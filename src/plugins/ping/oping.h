@@ -6,6 +6,10 @@
 
 #define PING_ERRMSG_LEN 256
 #define PING_TABLE_LEN 5381
+#define PING_BUFFER_LEN 4096
+/* Largest payload whose echo reply fits in PING_BUFFER_LEN together with the
+ * largest IPv4 header (60 bytes) and the ICMP header (8 bytes). */
+#define PING_MAX_DATA_LEN (PING_BUFFER_LEN - 60 - 8)
 
 struct pinghost {
     /* username: name passed in by the user */
@@ -24,6 +28,7 @@ struct pinghost {
     uint8_t recv_qos;
     char *data;
     void *context;
+    int resolve_pending;
     struct pinghost *next;
     struct pinghost *table_next;
 };
@@ -44,6 +49,7 @@ struct pingobj {
     char set_mark;
     int mark;
     char errmsg[PING_ERRMSG_LEN];
+    int send_errors;
     pinghost_t *head;
     pinghost_t *table[PING_TABLE_LEN];
 };
