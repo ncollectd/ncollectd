@@ -70,8 +70,9 @@ static bool report_by_device;
 /* No global variables */
 
 #elif defined(HAVE_LIBKVM_GETSWAPINFO)
+#define SWAP_HAVE_KVM 1
 static kvm_t *kvm_obj;
-int kvm_pagesize;
+static int kvm_pagesize;
 
 #elif defined(HAVE_PERFSTAT)
 static int pagesize;
@@ -125,6 +126,28 @@ static metric_family_t fams[FAM_SWAP_MAX] = {
 };
 
 #ifdef KERNEL_LINUX
+/* Decode the octal escape sequences (\ooo) used by the kernel in /proc/swaps
+ * for spaces, tabs, newlines and backslashes in the file name. */
+static void swap_unescape_path(char *dst, const char *src, size_t dst_size)
+{
+    size_t n = 0;
+
+    if (dst_size == 0)
+        return;
+
+    while ((*src != '\0') && (n < (dst_size - 1))) {
+        if ((src[0] == '\\') && (src[1] >= '0') && (src[1] <= '3') &&
+                                 (src[2] >= '0') && (src[2] <= '7') &&
+                                 (src[3] >= '0') && (src[3] <= '7')) {
+            dst[n++] = (char)(((src[1] - '0') << 6) | ((src[2] - '0') << 3) | (src[3] - '0'));
+            src += 4;
+        } else {
+            dst[n++] = *(src++);
+        }
+    }
+    dst[n] = '\0';
+}
+
 static int swap_read_separate(void)
 {
     FILE *fh = fopen(path_proc_swaps, "r");
@@ -143,22 +166,26 @@ static int swap_read_separate(void)
         double total;
         double used;
 
+        /* Deleted but still active swap files have a " (deleted)" suffix
+         * in the file name, so take the numeric fields from the end. */
         numfields = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
-        if (numfields != 5)
+        if (numfields < 5)
             continue;
 
-        sstrncpy(path, fields[0], sizeof(path));
+        swap_unescape_path(path, fields[0], sizeof(path));
 
+        char *total_field = fields[numfields - 3];
         errno = 0;
         endptr = NULL;
-        total = strtod(fields[2], &endptr);
-        if ((endptr == fields[2]) || (errno != 0))
+        total = strtod(total_field, &endptr);
+        if ((endptr == total_field) || (errno != 0))
             continue;
 
+        char *used_field = fields[numfields - 2];
         errno = 0;
         endptr = NULL;
-        used = strtod(fields[3], &endptr);
-        if ((endptr == fields[3]) || (errno != 0))
+        used = strtod(used_field, &endptr);
+        if ((endptr == used_field) || (errno != 0))
             continue;
 
         if (total < used)
@@ -175,7 +202,9 @@ static int swap_read_separate(void)
     return 0;
 }
 
-static int swap_read_combined(void)
+/* If cached_only is true only SwapCached is reported, used and free are
+ * reported per device by swap_read_separate. */
+static int swap_read_combined(bool cached_only)
 {
     FILE *fh = fopen(path_proc_meminfo, "r");
     if (fh == NULL) {
@@ -206,6 +235,13 @@ static int swap_read_combined(void)
     }
 
     fclose(fh);
+
+    if (cached_only) {
+        if (!isnan(swap_cached))
+            metric_family_append(&fams[FAM_SWAP_CACHED_BYTES],
+                                 VALUE_GAUGE(swap_cached * 1024.0), NULL, NULL);
+        return 0;
+    }
 
     if (isnan(swap_total) || isnan(swap_free))
         return ENOENT;
@@ -275,8 +311,8 @@ static int swap_read(void)
 {
     if (report_by_device)
         swap_read_separate();
-    else
-        swap_read_combined();
+
+    swap_read_combined(report_by_device);
 
     swap_read_io();
 
@@ -420,17 +456,21 @@ static int swap_read(void)
 
     if (total < avail) {
         PLUGIN_ERROR("Total swap space (%g) is less than free swap space (%g).", total, avail);
+        for (size_t i = 0; i < FAM_SWAP_MAX; i++)
+            metric_family_metric_reset(&fams[i]);
         free(s_paths);
         free(s);
         return -1;
     }
 
     /* If the "separate" option was specified (report_by_device == true) all
-     * values have already been dispatched from within the loop. */
+     * values have already been appended from within the loop. */
     if (!report_by_device) {
         metric_family_append(&fams[FAM_SWAP_USED_BYTES], VALUE_GAUGE(total - avail), NULL, NULL);
         metric_family_append(&fams[FAM_SWAP_FREE_BYTES], VALUE_GAUGE(avail), NULL, NULL);
     }
+
+    plugin_dispatch_metric_family_array(fams, FAM_SWAP_MAX, 0);
 
     free(s_paths);
     free(s);
@@ -456,10 +496,8 @@ static int swap_read_io(void)
     uint64_t swap_in = uvmexp.pgswapin * pagesize;
     uint64_t swap_out = uvmexp.pgswapout * pagesize;
 
-    metric_family_append(&fams[FAM_SWAP_USED_BYTES], VALUE_COUNTER(swap_in), NULL, NULL);
-    metric_family_append(&fams[FAM_SWAP_FREE_BYTES], VALUE_COUNTER(swap_out), NULL, NULL);
-
-    plugin_dispatch_metric_family_array(fams, FAM_SWAP_MAX, 0);
+    metric_family_append(&fams[FAM_SWAP_IN_BYTES], VALUE_COUNTER(swap_in), NULL, NULL);
+    metric_family_append(&fams[FAM_SWAP_OUT_BYTES], VALUE_COUNTER(swap_out), NULL, NULL);
 
     return (0);
 }
@@ -481,10 +519,13 @@ static int swap_read(void)
     }
 
     int status = swapctl(SWAP_STATS, swap_entries, swap_num);
-    if (status != swap_num) {
+    if (status < 0) {
         PLUGIN_ERROR("swapctl (SWAP_STATS) failed with status %i.", status);
         free(swap_entries);
         return -1;
+    } else if (status < swap_num) {
+        /* less elements returned than requested, a device was removed */
+        swap_num = status;
     }
 
 #if defined(DEV_BSIZE) && (DEV_BSIZE > 0)
@@ -527,12 +568,14 @@ static int swap_read(void)
 
     if (total < used) {
         PLUGIN_ERROR("Total swap space (%g) is less than used swap space (%g).", total, used);
+        for (size_t i = 0; i < FAM_SWAP_MAX; i++)
+            metric_family_metric_reset(&fams[i]);
         free(swap_entries);
         return -1;
     }
 
     /* If the "separate" option was specified (report_by_device == 1), all
-     * values have already been dispatched from within the loop. */
+     * values have already been appended from within the loop. */
     if (!report_by_device) {
         metric_family_append(&fams[FAM_SWAP_USED_BYTES], VALUE_GAUGE(used), NULL, NULL);
         metric_family_append(&fams[FAM_SWAP_FREE_BYTES], VALUE_GAUGE(total - used), NULL, NULL);
@@ -542,6 +585,8 @@ static int swap_read(void)
 #ifdef KERNEL_NETBSD
     swap_read_io();
 #endif
+
+    plugin_dispatch_metric_family_array(fams, FAM_SWAP_MAX, 0);
     return 0;
 }
     /* #endif HAVE_SWAPCTL && HAVE_SWAPCTL_THREE_ARGS */
@@ -707,6 +752,15 @@ static int swap_shutdown(void)
     free(path_proc_vmstat);
     return 0;
 }
+#elif defined(SWAP_HAVE_KVM)
+static int swap_shutdown(void)
+{
+    if (kvm_obj != NULL) {
+        kvm_close(kvm_obj);
+        kvm_obj = NULL;
+    }
+    return 0;
+}
 #endif
 
 void module_register(void)
@@ -714,7 +768,7 @@ void module_register(void)
     plugin_register_config("swap", swap_config);
     plugin_register_init("swap", swap_init);
     plugin_register_read("swap", swap_read);
-#ifdef KERNEL_LINUX
+#if defined(KERNEL_LINUX) || defined(SWAP_HAVE_KVM)
     plugin_register_shutdown("swap", swap_shutdown);
 #endif
 }
