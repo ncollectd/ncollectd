@@ -178,9 +178,19 @@ typedef struct {
 typedef struct {
     char *instance;
     char *url;
+    char *socket_path;
+    char *user;
+    char *pass;
+    bool verify_peer;
+    bool verify_host;
+    char *cacert;
+    char *client_cert;
+    char *client_key;
+    char *client_key_pass;
+    char *ssl_ciphers;
     char *url_stats;
     char *url_info;
-    int timeout;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     CURL *curl;
@@ -249,8 +259,12 @@ static bool podman_container_stats_json_number(void *ctx, const char *number_val
 static bool podman_container_stats_json_start_map(void *ctx)
 {
     podman_container_stats_json_ctx_t *sctx = ctx;
+
+    if ((sctx->depth + 1) >= JSON_MAX_DEPTH)
+        return false;
+
     sctx->depth++;
-    sctx->stack[sctx->depth] = PODMAN_CONTAINER_STATS_JSON_NONE;
+    sctx->stack[sctx->depth-1] = PODMAN_CONTAINER_STATS_JSON_NONE;
 
     if ((sctx->depth == 2) && (sctx->stack[0] == PODMAN_CONTAINER_STATS_JSON_STATS))
         memset(&sctx->stats, 0, sizeof(sctx->stats));
@@ -264,7 +278,7 @@ static bool podman_container_stats_json_map_key(void * ctx, const char * key, si
 
     switch (sctx->depth) {
     case 1:
-        if ((key_len == 5) && (strncmp("stats", key, key_len) == 0)) {
+        if ((key_len == 5) && (strncmp("Stats", key, key_len) == 0)) {
             sctx->stack[0] = PODMAN_CONTAINER_STATS_JSON_STATS;
             return 1;
         }
@@ -373,11 +387,9 @@ static bool podman_container_stats_json_end_map(void *ctx)
         }
     }
 
-    sctx->depth--;
     if (sctx->depth > 0) {
-        sctx->stack[sctx->depth-1] = PODMAN_CONTAINER_STATS_JSON_NONE;
-    } else {
-        sctx->depth = 0;
+        sctx->depth--;
+        sctx->stack[sctx->depth] = PODMAN_CONTAINER_STATS_JSON_NONE;
     }
 
     return true;
@@ -396,6 +408,66 @@ static xson_callbacks_t podman_container_stats_json_callbacks = {
     .xson_start_array = NULL,
     .xson_end_array   = NULL,
 };
+
+static int podman_parse_rfc3339(const char *str, size_t str_len, uint64_t *ret)
+{
+    static const int ydays[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+    char buf[64];
+    sstrnncpy(buf, sizeof(buf), str, str_len);
+
+    int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0, len = 0;
+    if (sscanf(buf, "%4d-%2d-%2dT%2d:%2d:%2d%n", &year, &month, &day,
+                                                 &hour, &minute, &second, &len) != 6)
+        return -1;
+
+    if ((year < 1970) || (month < 1) || (month > 12) || (day < 1) || (day > 31) ||
+        (hour < 0) || (hour > 23) || (minute < 0) || (minute > 59) ||
+        (second < 0) || (second > 60))
+        return -1;
+
+    const char *ptr = buf + len;
+    if (*ptr == '.') {
+        ptr++;
+        while ((*ptr >= '0') && (*ptr <= '9'))
+            ptr++;
+    }
+
+    int64_t offset = 0;
+    if (*ptr == 'Z') {
+        ptr++;
+    } else if ((*ptr == '+') || (*ptr == '-')) {
+        int off_hour = 0, off_minute = 0;
+        len = 0;
+        if (sscanf(ptr + 1, "%2d:%2d%n", &off_hour, &off_minute, &len) != 2)
+            return -1;
+        if ((off_hour < 0) || (off_hour > 23) || (off_minute < 0) || (off_minute > 59))
+            return -1;
+        offset = off_hour * 3600 + off_minute * 60;
+        if (*ptr == '-')
+            offset = -offset;
+        ptr += 1 + len;
+    } else {
+        return -1;
+    }
+
+    if (*ptr != '\0')
+        return -1;
+
+    int64_t tm_year = year - 1900;
+    int64_t tm_yday = ydays[month - 1] + day - 1;
+    if ((month > 2) && ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0)))
+        tm_yday++;
+
+    /* POSIX "Seconds Since the Epoch" formula. */
+    int64_t t = second + minute * 60 + hour * 3600 + tm_yday * 86400 +
+                (tm_year - 70) * 31536000 + ((tm_year - 69) / 4) * 86400 -
+                ((tm_year - 1) / 100) * 86400 + ((tm_year + 299) / 400) * 86400 - offset;
+    if (t <= 0)
+        return -1;
+
+    *ret = (uint64_t)t;
+    return 0;
+}
 
 static bool podman_container_info_json_string(void *ctx, const char *string, size_t string_len)
 {
@@ -416,7 +488,7 @@ static bool podman_container_info_json_string(void *ctx, const char *string, siz
             sstrnncpy(sctx->info.state, sizeof(sctx->info.state), string, string_len);
             break;
         case PODMAN_CONTAINER_INFO_JSON_CREATED:
-            // FIXME "Created": "2023-07-04T23:09:50.817461235+02:00",
+            podman_parse_rfc3339(string, string_len, &sctx->info.created);
             break;
         default:
             break;
@@ -464,8 +536,12 @@ static bool podman_container_info_json_number(void *ctx, const char *number_val,
 static bool podman_container_info_json_start_map(void *ctx)
 {
     podman_container_info_json_ctx_t *sctx = ctx;
+
+    if ((sctx->depth + 1) >= JSON_MAX_DEPTH)
+        return false;
+
     sctx->depth++;
-    sctx->stack[sctx->depth] = PODMAN_CONTAINER_INFO_JSON_NONE;
+    sctx->stack[sctx->depth-1] = PODMAN_CONTAINER_INFO_JSON_NONE;
 
     if (sctx->depth == 1)
         memset(&sctx->info, 0, sizeof(sctx->info));
@@ -574,9 +650,10 @@ static bool podman_container_info_json_end_map(void *ctx)
                                  &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         }
 
-        metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_CREATED_SECONDS],
-                             VALUE_GAUGE(sctx->info.created), sctx->labels,
-                             &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
+        if (sctx->info.created > 0)
+            metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_CREATED_SECONDS],
+                                 VALUE_GAUGE(sctx->info.created), sctx->labels,
+                                 &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
         metric_family_append(&sctx->fams[FAM_PODMAN_CONTAINER_STARTED_SECONDS],
                              VALUE_GAUGE(sctx->info.started), sctx->labels,
                              &LABEL_PAIR_CONST("id", sctx->info.id), NULL);
@@ -592,11 +669,9 @@ static bool podman_container_info_json_end_map(void *ctx)
 
     }
 
-    sctx->depth--;
     if (sctx->depth > 0) {
-        sctx->stack[sctx->depth-1] = PODMAN_CONTAINER_INFO_JSON_NONE;
-    } else {
-        sctx->depth = 0;
+        sctx->depth--;
+        sctx->stack[sctx->depth] = PODMAN_CONTAINER_INFO_JSON_NONE;
     }
 
     return true;
@@ -694,12 +769,123 @@ static int podman_curl_init(podman_instance_t *podman)
         return -1;
     }
 
+#ifdef HAVE_CURLOPT_UNIX_SOCKET_PATH
+    if (podman->socket_path != NULL) {
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_UNIX_SOCKET_PATH, podman->socket_path);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_UNIX_SOCKET_PATH failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+#endif
+
+    if (podman->user != NULL) {
+#ifdef HAVE_CURLOPT_USERNAME
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_USERNAME, podman->user);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERNAME failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_PASSWORD,
+                                 (podman->pass == NULL) ? "" : podman->pass);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_PASSWORD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+#else
+        char credentials[1024];
+        int status = snprintf(credentials, sizeof(credentials), "%s:%s", podman->user,
+                              (podman->pass == NULL) ? "" : podman->pass);
+        if ((status < 0) || ((size_t)status >= sizeof(credentials))) {
+            PLUGIN_ERROR("Credentials would have been truncated.");
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_USERPWD, credentials);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+#endif
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_SSL_VERIFYPEER, (long)podman->verify_peer);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYPEER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_SSL_VERIFYHOST, podman->verify_host ? 2L : 0L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYHOST failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    if (podman->cacert != NULL) {
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_CAINFO, podman->cacert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_CAINFO failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (podman->client_cert != NULL) {
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_SSLCERT, podman->client_cert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSLCERT failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (podman->client_key != NULL) {
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_SSLKEY, podman->client_key);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSLKEY failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (podman->client_key_pass != NULL) {
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_KEYPASSWD, podman->client_key_pass);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_KEYPASSWD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    if (podman->ssl_ciphers != NULL) {
+        rcode = curl_easy_setopt(podman->curl, CURLOPT_SSL_CIPHER_LIST, podman->ssl_ciphers);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_CIPHER_LIST failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
+    cdtime_t timeout = podman->timeout != 0 ? podman->timeout : plugin_get_interval();
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
-    rcode = curl_easy_setopt(podman->curl, CURLOPT_TIMEOUT_MS,
-                               (podman->timeout >= 0) ? (long)podman->timeout
-                               : (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_TIMEOUT_MS, (long)CDTIME_T_TO_MS(timeout));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#else
+    long timeout_secs = (long)CDTIME_T_TO_TIME_T(timeout);
+    rcode = curl_easy_setopt(podman->curl, CURLOPT_TIMEOUT, timeout_secs > 0 ? timeout_secs : 1L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT failed: %s",
                      curl_easy_strerror(rcode));
         return -1;
     }
@@ -728,8 +914,6 @@ static int podman_curl_read(podman_instance_t *podman, const char *url,
         }
     }
 
-    json_parser_init(&podman->handle, 0, &callbacks, ctx);
-
     CURLcode rcode = curl_easy_setopt(podman->curl, CURLOPT_URL, url);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
@@ -737,6 +921,8 @@ static int podman_curl_read(podman_instance_t *podman, const char *url,
         podman_curl_cleanup(podman);
         return -1;
     }
+
+    json_parser_init(&podman->handle, 0, &callbacks, ctx);
 
 
     if (curl_easy_perform(podman->curl) != CURLE_OK) {
@@ -808,6 +994,14 @@ static void podman_instance_free(void *arg)
 
     free(podman->instance);
     free(podman->url);
+    free(podman->socket_path);
+    free(podman->user);
+    free(podman->pass);
+    free(podman->cacert);
+    free(podman->client_cert);
+    free(podman->client_key);
+    free(podman->client_key_pass);
+    free(podman->ssl_ciphers);
     free(podman->url_stats);
     free(podman->url_info);
     label_set_reset(&podman->labels);
@@ -824,9 +1018,10 @@ static int podman_config_instance(config_item_t *ci)
         return -1;
     }
 
-    podman->timeout = -1;
-
     memcpy(podman->fams, fams_podman, FAM_PODMAN_MAX * sizeof(podman->fams[0]));
+
+    podman->verify_peer = true;
+    podman->verify_host = true;
 
     int status = cf_util_get_string(ci, &podman->instance);
     if (status != 0) {
@@ -841,10 +1036,40 @@ static int podman_config_instance(config_item_t *ci)
 
         if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &podman->url);
+        } else if (strcasecmp("socket-path", child->key) == 0) {
+#ifdef HAVE_CURLOPT_UNIX_SOCKET_PATH
+            status = cf_util_get_string(child, &podman->socket_path);
+#else
+            PLUGIN_ERROR("Option '%s' in %s:%d is not supported by this libcurl version.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+#endif
+        } else if (strcasecmp("user", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &podman->user);
+        } else if (strcasecmp("password", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->pass);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &podman->pass);
+        } else if (strcasecmp("verify-peer", child->key) == 0) {
+            status = cf_util_get_boolean(child, &podman->verify_peer);
+        } else if (strcasecmp("verify-host", child->key) == 0) {
+            status = cf_util_get_boolean(child, &podman->verify_host);
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->cacert);
+        } else if (strcasecmp("client-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->client_cert);
+        } else if (strcasecmp("client-key", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->client_key);
+        } else if (strcasecmp("client-key-pass", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->client_key_pass);
+        } else if (strcasecmp("ssl-ciphers", child->key) == 0) {
+            status = cf_util_get_string(child, &podman->ssl_ciphers);
         } else if (strcasecmp("labels", child->key) == 0) {
             status = cf_util_get_label(child, &podman->labels);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &podman->timeout);
+            status = cf_util_get_cdtime(child, &podman->timeout);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("filter", child->key) == 0) {
@@ -864,31 +1089,37 @@ static int podman_config_instance(config_item_t *ci)
         return -1;
     }
 
-    if (podman->url == NULL) {
-        PLUGIN_ERROR("Instance '%s': No 'url' has been configured.", podman->instance);
+    if ((podman->url == NULL) && (podman->socket_path != NULL)) {
+        podman->url = strdup("http://localhost");
+        if (podman->url == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            podman_instance_free(podman);
+            return -1;
+        }
+    }
+
+    if ((podman->url == NULL) || (podman->url[0] == '\0')) {
+        PLUGIN_ERROR("Instance '%s': No 'url' or 'socket-path' has been configured.",
+                     podman->instance);
         podman_instance_free(podman);
         return -1;
     }
-
-    char url[512] = {0};
 
     size_t url_len = strlen(podman->url);
     bool slash = podman->url[url_len-1] == '/' ? true : false;
 
-    ssnprintf(url, sizeof(url), "%s%s%s", podman->url, slash ? "" : "/",
-                                "v1.0.0/libpod/containers/json");
-    podman->url_info = strdup(url);
+    podman->url_info = ssnprintf_alloc("%s%s%s", podman->url, slash ? "" : "/",
+                                       "v1.0.0/libpod/containers/json");
     if (podman->url_info == NULL) {
-        PLUGIN_ERROR("strdup failed.");
+        PLUGIN_ERROR("ssnprintf_alloc failed.");
         podman_instance_free(podman);
         return -1;
     }
 
-    ssnprintf(url, sizeof(url), "%s%s%s", podman->url, slash ? "" : "/",
-                                "v1.0.0/libpod/containers/stats?stream=false");
-    podman->url_stats = strdup(url);
+    podman->url_stats = ssnprintf_alloc("%s%s%s", podman->url, slash ? "" : "/",
+                                        "v1.0.0/libpod/containers/stats?stream=false");
     if (podman->url_stats == NULL) {
-        PLUGIN_ERROR("strdup failed.");
+        PLUGIN_ERROR("ssnprintf_alloc failed.");
         podman_instance_free(podman);
         return -1;
     }

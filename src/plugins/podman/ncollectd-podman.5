@@ -11,6 +11,18 @@
 \fBplugin\fP podman {
     \fBinstance\fP \fIinstance\fP {
         \fBurl\fP \fIurl\fP
+        \fBsocket-path\fP \fI/path/to/unix/socket\fP
+        \fBuser\fP \fIusername\fP
+        \fBuser-env\fP \fIenv-name\fP
+        \fBpassword\fP \fIpassword\fP
+        \fBpassword-env\fP \fIenv-name\fP
+        \fBverify-peer\fP \fItrue|false\fP
+        \fBverify-host\fP \fItrue|false\fP
+        \fBca-cert\fP \fIfile\fP
+        \fBclient-cert\fP \fI/path/to/client-cert\fP
+        \fBclient-key\fP \fI/path/to/client-key\fP
+        \fBclient-key-pass\fP \fIkey-pass\fP
+        \fBssl-ciphers\fP "\fIlist of ciphers\fP"
         \fBlabels\fP \fIkey\fP \fIvalue\fP
         \fBtimeout\fP \fIseconds\fP
         \fBinterval\fP \fIseconds\fP
@@ -29,12 +41,63 @@ The following options are valid within \fBinstance\fP blocks:
 .Bl -tag -width Ds
 .It \fBurl\fP \fIurl\fP
 Podman instance \fIurl\fP to connect.
+When \fBsocket-path\fP is set, the host part of the \fIurl\fP is only used for the
+HTTP \fIHost\fP header and the \fIurl\fP defaults to \fIhttp://localhost\fP.
+.It \fBsocket-path\fP \fI/path/to/unix/socket\fP
+Will connect to the Unix domain socket instead of establishing a TCP connection
+to a host, e.g. \fI/run/podman/podman.sock\fP or, for rootless Podman,
+\fI$XDG_RUNTIME_DIR/podman/podman.sock\fP.
+.It \fBuser\fP \fIusername\fP
+Optional user name needed for authentication.
+.It \fBuser-env\fP \fIenv-name\fP
+Get the user name needed for authentication from the environment variable
+\fIenv-name\fP.
+.It \fBpassword\fP \fIpassword\fP
+Optional password needed for authentication.
+.It \fBpassword-env\fP \fIenv-name\fP
+Get the password needed for authentication from the environment variable
+\fIenv-name\fP.
+.It \fBverify\-peer\fP \fBtrue|false\fP
+Enable or disable peer SSL certificate verification.
+See
+.Lk http://curl.haxx.se/docs/sslcerts.html
+for details.
+Enabled by default.
+.It \fBverify-host\fP \fItrue|false\fP
+Enable or disable peer host name verification.
+If enabled, the plugin checks if the \fICommon Name\fP or a
+\fISubject Alternate Name\fP field of the SSL certificate matches the host
+name provided by the \fBurl\fP option.
+If this identity check fails, the connection is aborted.
+Obviously, only works when connecting to a SSL enabled server.
+Enabled by default.
+.It \fBca-cert\fP \fIfile\fP
+File that holds one or more SSL certificates.
+If you want to use HTTPS you will possibly need this option.
+What CA certificates come bundled with \fIlibcurl\fP and are checked by
+default depends on the distribution you use.
+.It \fBclient-cert\fP \fI/path/to/client-cert\fP
+File that holds the SSL certificate to be used for certificate-based
+authentication, as required by a Podman service started with
+\fB\-\-tls\-client\-ca\fP.
+.It \fBclient-key\fP \fI/path/to/client-key\fP
+File that holds the private key in PEM format to be used for certificate-based
+authentication.
+.It \fBclient-key-pass\fP \fIkey-pass\fP
+Password required to load the private key in \fBclient-key\fP.
+.It \fBssl-ciphers\fP \fIlist of ciphers\fP
+Specifies which ciphers to use in the connection.
+The list of ciphers must specify valid ciphers.
+See
+.Lk http://www.openssl.org/docs/apps/ciphers.html
+for details.
 .It \fBlabels\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBinstance\fP block.
 .It \fBtimeout\fP \fIseconds\fP
 The \fBtimeout\fP option sets the overall timeout for request to the podman
-instance.
+instance, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
 instanced.
