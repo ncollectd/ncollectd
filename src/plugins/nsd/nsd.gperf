@@ -19,7 +19,7 @@ struct nsd_metric {
 };
 %%
 num.queries,      FAM_NSD_QUERIES, NULL, NULL
-serverqueries,    FAM_NSD_SERVER_QUERIES, NULL, NULL
+server.queries,   FAM_NSD_SERVER_QUERIES, NULL, NULL
 time.boot,        FAM_NSD_UPTIME_SECONDS, NULL, NULL
 size.db.disk,     FAM_NSD_DB_DISK_BYTES, NULL, NULL
 size.db.mem,      FAM_NSD_DB_MEMORY_BYTES, NULL, NULL

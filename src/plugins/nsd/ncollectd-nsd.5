@@ -12,6 +12,11 @@
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
+        \fBsocket-path\fP \fIpath\fP
+        \fBserver-cert\fP \fIfile\fP
+        \fBcontrol-key\fP \fIfile\fP
+        \fBcontrol-cert\fP \fIfile\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
         \fBfilter\fP {
@@ -29,6 +34,23 @@ The configuration consists of one or more \fBinstance\fP blocks:
 Hostname to connect.
 .It \fBport\fP \fIport\fP
 Port to connect.
+.It \fBsocket-path\fP \fIpath\fP
+Path of the NSD control unix socket. If set, \fBhost\fP and \fBport\fP are ignored.
+.It \fBserver-cert\fP \fIfile\fP
+Server certificate used to verify the server.
+Defaults to \fI/etc/nsd/nsd_server.pem\fP.
+.It \fBcontrol-key\fP \fIfile\fP
+Private key of the client.
+Defaults to \fI/etc/nsd/nsd_control.key\fP.
+.It \fBcontrol-cert\fP \fIfile\fP
+Certificate of the client.
+Defaults to \fI/etc/nsd/nsd_control.pem\fP.
+.Pp
+TLS is used when the \fBhost\fP is not a local address or when any of
+\fBserver-cert\fP, \fBcontrol-key\fP or \fBcontrol-cert\fP is set.
+.It \fBtimeout\fP \fIseconds\fP
+Timeout for the send and receive operations with the server.
+By default half of the \fBinterval\fP is used.
 .It \fBserver-name\fP \fIservername\fP
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
