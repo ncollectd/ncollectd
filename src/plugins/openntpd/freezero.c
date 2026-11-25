@@ -18,6 +18,6 @@ freezero(void *ptr, size_t sz)
 	if (ptr == NULL)
 		return;
 
-	bzero(ptr, sz);
+	memset(ptr, 0, sz);
 	free(ptr);
 }

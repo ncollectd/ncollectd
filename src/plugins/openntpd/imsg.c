@@ -167,29 +167,6 @@ int imsg_compose(struct imsgbuf *ibuf, uint32_t type, uint32_t peerid, pid_t pid
     return (1);
 }
 
-int imsg_composev(struct imsgbuf *ibuf, uint32_t type, uint32_t peerid, pid_t pid,
-        int fd, const struct iovec *iov, int iovcnt)
-{
-    struct ibuf *wbuf;
-    int      i, datalen = 0;
-
-    for (i = 0; i < iovcnt; i++)
-        datalen += iov[i].iov_len;
-
-    if ((wbuf = imsg_create(ibuf, type, peerid, pid, datalen)) == NULL)
-        return (-1);
-
-    for (i = 0; i < iovcnt; i++)
-        if (imsg_add(wbuf, iov[i].iov_base, iov[i].iov_len) == -1)
-            return (-1);
-
-    wbuf->fd = fd;
-
-    imsg_close(ibuf, wbuf);
-
-    return (1);
-}
-
 /* ARGSUSED */
 struct ibuf * imsg_create(struct imsgbuf *ibuf, uint32_t type, uint32_t peerid, pid_t pid,
         uint16_t datalen)
