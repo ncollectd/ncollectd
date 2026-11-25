@@ -89,12 +89,18 @@ static int protocols_config(config_item_t *ci)
 
 static int protocols_init(void)
 {
-    netstat_init();
-    snmp_init();
-    snmp6_init();
-    sctp_init();
+    int status = 0;
 
-    return 0;
+    if (netstat_init() != 0)
+        status = -1;
+    if (snmp_init() != 0)
+        status = -1;
+    if (snmp6_init() != 0)
+        status = -1;
+    if (sctp_init() != 0)
+        status = -1;
+
+    return status;
 }
 
 static int protocols_shutdown(void)

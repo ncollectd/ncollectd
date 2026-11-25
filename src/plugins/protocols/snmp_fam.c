@@ -268,6 +268,16 @@ static metric_family_t fams[FAM_SNMP_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of ICMP Address Mask Reply messages sent."
     },
+    [FAM_ICMP_OUT_RATE_LIMIT_GLOBAL] = {
+        .name = "system_icmp_out_rate_limit_global",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of ICMP messages not sent due to the global rate limit."
+    },
+    [FAM_ICMP_OUT_RATE_LIMIT_HOST] = {
+        .name = "system_icmp_out_rate_limit_host",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of ICMP messages not sent due to the per host rate limit."
+    },
     [FAM_ICMP_IN_TYPE] = {
         .name = "system_icmp_in_type",
         .type = METRIC_TYPE_COUNTER,
@@ -481,7 +491,8 @@ int snmp_init(void)
 
     if (access(path_proc_snmp, R_OK) != 0) {
         PLUGIN_ERROR("Cannot access %s: %s", path_proc_snmp, STRERRNO);
-        return -1;
+        /* Not fatal: the other protocols can still be collected. */
+        return 0;
     }
 
     proc_snmp_found = true;
@@ -588,13 +599,17 @@ int snmp_read(uint64_t flags, plugin_filter_t *filter)
 
                     if (strncmp("InType", key_fields[i], strlen("InType")) == 0) {
                         char *type = key_fields[i] + strlen("InType");
-                        uint64_t value = atol(value_fields[i]);
+                        uint64_t value = 0;
+                        if (strtouint(value_fields[i], &value) != 0)
+                            continue;
                         metric_family_append(&fams[FAM_ICMP_IN_TYPE], VALUE_COUNTER(value), NULL,
                                              &LABEL_PAIR_CONST("type", type),
                                              NULL);
                     } else if (strncmp("OutType", key_fields[i], strlen("OutType")) == 0) {
                         char *type = key_fields[i] + strlen("OutType");
-                        uint64_t value = atol(value_fields[i]);
+                        uint64_t value = 0;
+                        if (strtouint(value_fields[i], &value) != 0)
+                            continue;
                         metric_family_append(&fams[FAM_ICMP_OUT_TYPE], VALUE_COUNTER(value), NULL,
                                              &LABEL_PAIR_CONST("type", type),
                                              NULL);
@@ -613,7 +628,9 @@ int snmp_read(uint64_t flags, plugin_filter_t *filter)
                     continue;
                 metric_family_append(&fams[m->fam], VALUE_GAUGE(value), NULL, NULL);
             } else if (fams[m->fam].type == METRIC_TYPE_COUNTER) {
-                uint64_t value = atol(value_fields[i]);
+                uint64_t value = 0;
+                if (strtouint(value_fields[i], &value) != 0)
+                    continue;
                 metric_family_append(&fams[m->fam], VALUE_COUNTER(value), NULL, NULL);
             }
         }

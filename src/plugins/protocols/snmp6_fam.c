@@ -371,6 +371,11 @@ static metric_family_t fams[FAM_SNMP6_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "The number of ICMPv6 Multicast Listener Discovery Reports messages sent.",
     },
+    [FAM_ICMP6_OUT_RATE_LIMIT_HOST] = {
+        .name = "system_icmp6_out_rate_limit_host",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "The number of ICMPv6 messages not sent due to the per host rate limit.",
+    },
     [FAM_ICMP6_IN_TYPE] = {
         .name = "system_icmp6_in_type",
         .type = METRIC_TYPE_COUNTER,
@@ -495,7 +500,8 @@ int snmp6_init(void)
 
     if (access(path_proc_snmp6, R_OK) != 0) {
         PLUGIN_ERROR("Cannot access %s: %s", path_proc_snmp6, STRERRNO);
-        return -1;
+        /* Not fatal: the other protocols can still be collected. */
+        return 0;
     }
 
     proc_snmp6_found = true;
@@ -537,14 +543,18 @@ int snmp6_read(uint64_t flags, plugin_filter_t *filter)
                 if (!(flags & COLLECT_ICMP6))
                     continue;
                 char *type = fields[0] + strlen("Icmp6InType");
-                uint64_t value = atol(fields[1]);
+                uint64_t value = 0;
+                if (strtouint(fields[1], &value) != 0)
+                    continue;
                 metric_family_append(&fams[FAM_ICMP6_IN_TYPE], VALUE_COUNTER(value),
                                      NULL, &LABEL_PAIR_CONST("type", type), NULL);
             } else if (strncmp("Icmp6OutType", fields[0], strlen("Icmp6OutType")) == 0) {
                 if (!(flags & COLLECT_ICMP6))
                     continue;
                 char *type = fields[0] + strlen("Icmp6OutType");
-                uint64_t value = atol(fields[1]);
+                uint64_t value = 0;
+                if (strtouint(fields[1], &value) != 0)
+                    continue;
                 metric_family_append(&fams[FAM_ICMP6_OUT_TYPE], VALUE_COUNTER(value),
                                      NULL, &LABEL_PAIR_CONST("type", type), NULL);
             }
@@ -552,7 +562,7 @@ int snmp6_read(uint64_t flags, plugin_filter_t *filter)
             continue;
         }
 
-        if (!(m->flags))
+        if (!(m->flags & flags))
             continue;
 
         if (fams[m->fam].type == METRIC_TYPE_GAUGE) {
@@ -561,7 +571,9 @@ int snmp6_read(uint64_t flags, plugin_filter_t *filter)
                 continue;
             metric_family_append(&fams[m->fam], VALUE_GAUGE(value), NULL, NULL);
         } else if (fams[m->fam].type == METRIC_TYPE_COUNTER) {
-            uint64_t value = atol(fields[1]);
+            uint64_t value = 0;
+            if (strtouint(fields[1], &value) != 0)
+                continue;
             metric_family_append(&fams[m->fam], VALUE_COUNTER(value), NULL, NULL);
         }
 

@@ -198,8 +198,13 @@ int sctp_init(void)
     }
 
     if (access(path_proc_sctp, R_OK) != 0) {
-        PLUGIN_ERROR("Cannot access %s: %s", path_proc_sctp, STRERRNO);
-        return -1;
+        /* The file only exists when the sctp module is loaded,
+           it will be checked again in every read. */
+        if (errno == ENOENT)
+            PLUGIN_INFO("Cannot access %s: %s", path_proc_sctp, STRERRNO);
+        else
+            PLUGIN_ERROR("Cannot access %s: %s", path_proc_sctp, STRERRNO);
+        return 0;
     }
 
     proc_sctp_found = true;
@@ -215,11 +220,14 @@ int sctp_shutdown(void)
 
 int sctp_read(uint64_t flags, plugin_filter_t *filter)
 {
-    if (!proc_sctp_found)
-        return 0;
-
     if (!(flags & COLLECT_SCTP))
         return 0;
+
+    if (!proc_sctp_found) {
+        if ((path_proc_sctp == NULL) || (access(path_proc_sctp, R_OK) != 0))
+            return 0;
+        proc_sctp_found = true;
+    }
 
     FILE *fh = fopen(path_proc_sctp, "r");
     if (fh == NULL) {
@@ -248,7 +256,9 @@ int sctp_read(uint64_t flags, plugin_filter_t *filter)
                 continue;
             metric_family_append(&fams[m->fam], VALUE_GAUGE(value), NULL, NULL);
         } else if (fams[m->fam].type == METRIC_TYPE_COUNTER) {
-            uint64_t value = atol(fields[1]);
+            uint64_t value = 0;
+            if (strtouint(fields[1], &value) != 0)
+                continue;
             metric_family_append(&fams[m->fam], VALUE_COUNTER(value), NULL, NULL);
         }
 

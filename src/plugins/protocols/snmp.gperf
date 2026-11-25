@@ -40,7 +40,7 @@ IpReasmFails,               COLLECT_IP,      FAM_IP_REASSEMBLY_FAILS
 IpFragOKs,                  COLLECT_IP,      FAM_IP_FRAGMENTED_OKS
 IpFragFails,                COLLECT_IP,      FAM_IP_FRAGMENTED_FAILS
 IpFragCreates,              COLLECT_IP,      FAM_IP_FRAGMENTED_CREATES
-IPOutTransmits,             COLLECT_IP,      FAM_IP_OUT_TRANSMITS
+IpOutTransmits,             COLLECT_IP,      FAM_IP_OUT_TRANSMITS
 IcmpInMsgs,                 COLLECT_ICMP,    FAM_ICMP_IN_MESSAGES
 IcmpInErrors,               COLLECT_ICMP,    FAM_ICMP_IN_ERRORS
 IcmpInCsumErrors,           COLLECT_ICMP,    FAM_ICMP_IN_CSUM_ERRORS
@@ -68,6 +68,8 @@ IcmpOutTimestamps,          COLLECT_ICMP,    FAM_ICMP_OUT_TIMESTAMP_REQUEST
 IcmpOutTimestampReps,       COLLECT_ICMP,    FAM_ICMP_OUT_TIMESTAMP_REPLY
 IcmpOutAddrMasks,           COLLECT_ICMP,    FAM_ICMP_OUT_ADDRESS_MASK_REQUEST
 IcmpOutAddrMaskReps,        COLLECT_ICMP,    FAM_ICMP_OUT_ADDRESS_MASK_REPLY
+IcmpOutRateLimitGlobal,     COLLECT_ICMP,    FAM_ICMP_OUT_RATE_LIMIT_GLOBAL
+IcmpOutRateLimitHost,       COLLECT_ICMP,    FAM_ICMP_OUT_RATE_LIMIT_HOST
 TcpRtoAlgorithm,            COLLECT_TCP,     FAM_TCP_RTO_ALGORITHM
 TcpRtoMin,                  COLLECT_TCP,     FAM_TCP_RTO_MINIMUM
 TcpRtoMax,                  COLLECT_TCP,     FAM_TCP_RTO_MAXIMUM
