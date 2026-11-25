@@ -14,6 +14,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#include "plugin.h"
+
 #include "ros_api.h"
 #include "ros_parse.h"
 
@@ -22,15 +24,9 @@ typedef struct {
     void *user_data;
 } rt_internal_data_t;
 
-static ros_interface_t *rt_reply_to_interface (const ros_reply_t *r)
+static ros_interface_t *rt_reply_to_interface_entry (const ros_reply_t *r)
 {
     ros_interface_t *ret;
-
-    if (r == NULL)
-        return (NULL);
-
-    if (strcmp ("re", ros_reply_status (r)) != 0)
-        return (rt_reply_to_interface (ros_reply_next (r)));
 
     ret = malloc (sizeof (*ret));
     if (ret == NULL)
@@ -68,9 +64,27 @@ static ros_interface_t *rt_reply_to_interface (const ros_reply_t *r)
     ret->running = ros_sstrtob (ros_reply_param_val_by_key (r, "running"));
     ret->enabled = !ros_sstrtob (ros_reply_param_val_by_key (r, "disabled"));
 
-    ret->next = rt_reply_to_interface (ros_reply_next (r));
-
     return ret;
+}
+
+static ros_interface_t *rt_reply_to_interface (const ros_reply_t *r, int *status)
+{
+    ros_interface_t *head = NULL;
+    ros_interface_t **tail = &head;
+
+    for (; r != NULL; r = ros_reply_next (r)) {
+        if (strcmp ("re", ros_reply_status (r)) != 0)
+            continue;
+
+        *tail = rt_reply_to_interface_entry (r);
+        if (*tail == NULL) {
+            *status = ENOMEM;
+            break;
+        }
+        tail = &(*tail)->next;
+    }
+
+    return head;
 }
 
 static void if_interface_free (ros_interface_t *r)
@@ -86,11 +100,23 @@ static int if_internal_handler (ros_connection_t *c, const ros_reply_t *r, void 
 {
     ros_interface_t *if_data;
     rt_internal_data_t *internal_data;
-    int status;
+    int status = 0;
 
-    if_data = rt_reply_to_interface (r);
+    const char *trap = ros_reply_trap_message (r);
+    if (trap != NULL) {
+        PLUGIN_ERROR ("Command '/interface/print' failed: %s", trap);
+        return EPROTO;
+    }
+
+    if_data = rt_reply_to_interface (r, &status);
+    if (status != 0) {
+        if_interface_free (if_data);
+        return status;
+    }
+
+    /* No interfaces: nothing to report. */
     if (if_data == NULL)
-        return (errno);
+        return 0;
 
     internal_data = user_data;
 
