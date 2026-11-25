@@ -11,6 +11,7 @@
 \fBplugin\fP openvpn {
     \fBinstance\fP \fIname\fP {
         \fBstatus-file\fP \fI/path/to/status\fP
+        \fBcollect-users\fP \fItrue|false\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
         \fBfilter\fP {
@@ -34,6 +35,12 @@ The \fBinstance\fP block has the following options:
 .Bl -tag -width Ds
 .It \fBstatus-file\fP \fI/path/to/status\fP
 Specifies the location of the status file.
+.It \fBcollect-users\fP \fItrue|false\fP
+When enabled, the per client metrics (with the \fIcommon_name\fP label) are
+collected.
+Each connected client generates its own set of metrics, disable this option
+on servers with many clients to limit the number of series.
+The default is \fBtrue\fP.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
