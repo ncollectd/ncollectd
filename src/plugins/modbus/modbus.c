@@ -776,7 +776,7 @@ static int mb_config_add_data(config_item_t *ci)
     }
 
     assert(data->name != NULL);
-    if (data->metric[0] == 0) {
+    if ((data->metric == NULL) || (data->metric[0] == '\0')) {
         PLUGIN_ERROR("Data block '%s': No Metric name has been specified.", data->name);
         data_free_one(data);
         return -1;
