@@ -86,8 +86,7 @@ The following options are accepted within each **instance** block:
 **timeout** *seconds*
 
 > Sets the timeout value for ldap operations, in seconds.
-> By default, the configured *interval* is used to set the timeout.
-> Use **-1** to disable (infinite timeout).
+> By default, half of the configured *interval* is used to set the timeout.
 
 **verify-host** *true|false*
 
