@@ -17,8 +17,12 @@
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
-        \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+        \fBssl-mode\fP \fIdisable|allow|prefer|require|verify-ca|verify-full\fP
+        \fBssl-root-cert\fP \fIfile\fP
+        \fBssl-cert\fP \fIfile\fP
+        \fBssl-key\fP \fIfile\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBfilter\fP {
             ...
@@ -57,7 +61,7 @@ Specify the password to be used when connecting to the server.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password to be used when connecting to the server from the
 environment variable \fIenv-name\fP.
-.It \fBssl-mode\fP \fIdisable|allow|prefer|require\fP
+.It \fBssl-mode\fP \fIdisable|allow|prefer|require|verify-ca|verify-full\fP
 Specify whether to use an SSL connection when contacting the server.
 The following modes are supported:
 .Bl -tag -width Ds
@@ -71,10 +75,27 @@ First, try to connect using SSL.
 If that fails, try without using SSL.
 .It \fBrequire\fP
 Use SSL only.
+.It \fBverify-ca\fP
+Use SSL only and verify that the server certificate is issued by a trusted
+certificate authority.
+.It \fBverify-full\fP
+Use SSL only, verify that the server certificate is issued by a trusted
+certificate authority and that the server host name matches the certificate.
 .El
+.Pp
+Only \fBverify-ca\fP and \fBverify-full\fP authenticate the server.
+.It \fBssl-root-cert\fP \fIfile\fP
+File with the SSL certificate authorities used to verify the server certificate.
+.It \fBssl-cert\fP \fIfile\fP
+File with the client SSL certificate.
+.It \fBssl-key\fP \fIfile\fP
+File with the secret key used for the client certificate.
 .It \fBinterval\fP \fIseconds\fP
 Specify the interval with which the database should be queried.
 The default is to use the global \fBinterval\fP setting.
+.It \fBtimeout\fP \fIseconds\fP
+Maximum time to wait while connecting to the server.
+The default is to use the \fBinterval\fP of the instance.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBdatabase\fP block.

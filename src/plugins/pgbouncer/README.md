@@ -16,8 +16,12 @@ NCOLLECTD-PGBOUNCER(5) - File Formats Manual
 	        user-env env-name
 	        password password
 	        password-env env-name
-	        ssl-mode disable|allow|prefer|require
+	        ssl-mode disable|allow|prefer|require|verify-ca|verify-full
+	        ssl-root-cert file
+	        ssl-cert file
+	        ssl-key file
 	        interval seconds
+	        timeout seconds
 	        label key value
 	        filter {
 	            ...
@@ -72,7 +76,7 @@ described below.
 > > Get the password to be used when connecting to the server from the
 > > environment variable *env-name*.
 
-> **ssl-mode** *disable|allow|prefer|require*
+> **ssl-mode** *disable|allow|prefer|require|verify-ca|verify-full*
 
 > > Specify whether to use an SSL connection when contacting the server.
 > > The following modes are supported:
@@ -95,10 +99,39 @@ described below.
 
 > > > Use SSL only.
 
+> > **verify-ca**
+
+> > > Use SSL only and verify that the server certificate is issued by a trusted
+> > > certificate authority.
+
+> > **verify-full**
+
+> > > Use SSL only, verify that the server certificate is issued by a trusted
+> > > certificate authority and that the server host name matches the certificate.
+
+> > Only **verify-ca** and **verify-full** authenticate the server.
+
+> **ssl-root-cert** *file*
+
+> > File with the SSL certificate authorities used to verify the server certificate.
+
+> **ssl-cert** *file*
+
+> > File with the client SSL certificate.
+
+> **ssl-key** *file*
+
+> > File with the secret key used for the client certificate.
+
 > **interval** *seconds*
 
 > > Specify the interval with which the database should be queried.
 > > The default is to use the global **interval** setting.
+
+> **timeout** *seconds*
+
+> > Maximum time to wait while connecting to the server.
+> > The default is to use the **interval** of the instance.
 
 > **label** *key* *value*
 

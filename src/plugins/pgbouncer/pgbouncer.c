@@ -24,7 +24,6 @@ enum {
     FAM_PGBOUNCER_QUERIES_POOLED,
     FAM_PGBOUNCER_QUERIES_DURATION_SECONDS,
     FAM_PGBOUNCER_RECEIVED_BYTES,
-    FAM_PGBOUNCER_QUERIES,
     FAM_PGBOUNCER_SENT_BYTES,
     FAM_PGBOUNCER_CLIENT_WAIT_SECONDS,
     FAM_PGBOUNCER_SQL_TRANSACTIONS_POOLED,
@@ -106,11 +105,6 @@ static metric_family_t pgbouncer_fams[FAM_PGBOUNCER_MAX] = {
         .name = "pgbouncer_received_bytes",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total volume in bytes of network traffic received by pgbouncer, shown as bytes.",
-    },
-    [FAM_PGBOUNCER_QUERIES] = {
-        .name = "pgbouncer_queries",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "Total number of SQL requests pooled by pgbouncer, shown as requests.",
     },
     [FAM_PGBOUNCER_SENT_BYTES] = {
         .name = "pgbouncer_sent_bytes",
@@ -277,6 +271,10 @@ typedef struct {
     char *user;
     char *password;
     char *sslmode;
+    char *sslrootcert;
+    char *sslcert;
+    char *sslkey;
+    cdtime_t timeout;
 
     label_set_t labels;
     plugin_filter_t *filter;
@@ -299,6 +297,9 @@ static void pgb_instance_delete(void *data)
     free(db->user);
     free(db->password);
     free(db->sslmode);
+    free(db->sslrootcert);
+    free(db->sslcert);
+    free(db->sslkey);
 
     label_set_reset(&db->labels);
     plugin_filter_free(db->filter);
@@ -311,6 +312,15 @@ static int pgb_connect(pgb_instance_t *db)
     if ((!db) || (!db->database))
         return -1;
 
+    /* Avoid blocking the read thread forever on an unreachable server,
+     * by default use the read interval as timeout. */
+    cdtime_t timeout = db->timeout != 0 ? db->timeout : plugin_get_interval();
+    time_t timeout_secs = CDTIME_T_TO_TIME_T(timeout);
+    if (timeout_secs < 1)
+        timeout_secs = 1;
+    char connect_timeout[32];
+    ssnprintf(connect_timeout, sizeof(connect_timeout), "%lld", (long long)timeout_secs);
+
     const char *keywords[] = {
         "dbname",
         "host",
@@ -319,6 +329,10 @@ static int pgb_connect(pgb_instance_t *db)
         "password",
         "sslmode",
         "application_name",
+        "connect_timeout",
+        "sslrootcert",
+        "sslcert",
+        "sslkey",
         NULL
     };
     const char *values[] = {
@@ -329,6 +343,10 @@ static int pgb_connect(pgb_instance_t *db)
         db->password,
         db->sslmode,
         PACKAGE_NAME "/pgbouncer",
+        connect_timeout,
+        db->sslrootcert,
+        db->sslcert,
+        db->sslkey,
         NULL
     };
 
@@ -344,19 +362,21 @@ static int pgb_check_connection(pgb_instance_t *db)
     if (!db->conn) {
         init = true;
 
-        /* trigger c_release() */
+        /* trigger c_release(), start the rate-limit at the read interval */
         if (db->conn_complaint.interval == 0)
-            db->conn_complaint.interval = 1;
+            db->conn_complaint.interval = plugin_get_interval();
 
         pgb_connect(db);
     }
 
     if (PQstatus(db->conn) != CONNECTION_OK) {
-        PQreset(db->conn);
+        /* Do not retry immediately a connection just made. */
+        if (!init)
+            PQreset(db->conn);
 
-        /* trigger c_release() */
+        /* trigger c_release(), start the rate-limit at the read interval */
         if (db->conn_complaint.interval == 0)
-            db->conn_complaint.interval = 1;
+            db->conn_complaint.interval = plugin_get_interval();
 
         if (PQstatus(db->conn) != CONNECTION_OK) {
             c_complain(LOG_ERR, &db->conn_complaint,
@@ -414,7 +434,7 @@ static int pgb_metric_append(const PGresult *res, int row, const char *column_na
         if (scale != 1.0)
             metric_family_append_va(fam, VALUE_COUNTER_FLOAT64(atof(value) * scale), labels, ap);
         else
-            metric_family_append_va(fam, VALUE_COUNTER(atoi(value)), labels, ap);
+            metric_family_append_va(fam, VALUE_COUNTER(atoull(value)), labels, ap);
         break;
     case METRIC_TYPE_GAUGE:
         metric_family_append_va(fam, VALUE_GAUGE(atof(value) * scale), labels, ap);
@@ -444,6 +464,8 @@ static int pgb_show_databases(PGconn *conn, metric_family_t *fams, label_set_t *
     } columns[] = {
         { FAM_PGBOUNCER_DATABASE_POOL_SIZE,           "pool_size",           1.0 },
         { FAM_PGBOUNCER_DATABASE_RESERVE_POOL,        "reserve_pool",        1.0 },
+        /* Since PgBouncer 1.24 reserve_pool is named reserve_pool_size. */
+        { FAM_PGBOUNCER_DATABASE_RESERVE_POOL,        "reserve_pool_size",   1.0 },
         { FAM_PGBOUNCER_DATABASE_MAX_CONNECTIONS,     "max_connections",     1.0 },
         { FAM_PGBOUNCER_DATABASE_CURRENT_CONNECTIONS, "current_connections", 1.0 },
         { FAM_PGBOUNCER_DATABASE_PAUSED,              "paused",              1.0 },
@@ -493,7 +515,8 @@ static int pgb_show_stats(PGconn *conn, metric_family_t *fams, label_set_t *labe
         { FAM_PGBOUNCER_QUERIES_POOLED,                "total_query_count",             1.0  },
         { FAM_PGBOUNCER_QUERIES_DURATION_SECONDS,      "total_query_time",              1e-6 },
         { FAM_PGBOUNCER_RECEIVED_BYTES,                "total_received",                1.0  },
-        { FAM_PGBOUNCER_QUERIES,                       "total_requests",                1.0  },
+        /* Before PgBouncer 1.8 total_query_count was named total_requests. */
+        { FAM_PGBOUNCER_QUERIES_POOLED,                "total_requests",                1.0  },
         { FAM_PGBOUNCER_SENT_BYTES,                    "total_sent",                    1.0  },
         { FAM_PGBOUNCER_CLIENT_WAIT_SECONDS,           "total_wait_time",               1e-6 },
         { FAM_PGBOUNCER_SQL_TRANSACTIONS_POOLED,       "total_xact_count",              1.0  },
@@ -629,7 +652,7 @@ static int pgb_show_lists(PGconn *conn, metric_family_t *fams, label_set_t *labe
 
                 switch(fam->type) {
                 case METRIC_TYPE_COUNTER:
-                    metric_family_append(fam, VALUE_COUNTER(atoi(item)), labels, NULL);
+                    metric_family_append(fam, VALUE_COUNTER(atoull(item)), labels, NULL);
                     break;
                 case METRIC_TYPE_GAUGE:
                     metric_family_append(fam, VALUE_GAUGE(atof(item)), labels, NULL);
@@ -663,14 +686,21 @@ static int pgb_read(user_data_t *ud)
         return 0;
     }
 
-    metric_family_append(&db->fams[FAM_PGBOUNCER_UP], VALUE_GAUGE(1), &db->labels, NULL);
-
     cdtime_t submit = cdtime();
 
-    pgb_show_databases(db->conn, db->fams, &db->labels);
-    pgb_show_stats(db->conn, db->fams, &db->labels);
-    pgb_show_pools(db->conn, db->fams, &db->labels);
-    pgb_show_lists(db->conn, db->fams, &db->labels);
+    int failed = 0;
+    if (pgb_show_databases(db->conn, db->fams, &db->labels) != 0)
+        failed++;
+    if (pgb_show_stats(db->conn, db->fams, &db->labels) != 0)
+        failed++;
+    if (pgb_show_pools(db->conn, db->fams, &db->labels) != 0)
+        failed++;
+    if (pgb_show_lists(db->conn, db->fams, &db->labels) != 0)
+        failed++;
+
+    /* PQstatus only reports a lost connection after an operation fails. */
+    bool up = (failed == 0) || (PQstatus(db->conn) == CONNECTION_OK);
+    metric_family_append(&db->fams[FAM_PGBOUNCER_UP], VALUE_GAUGE(up ? 1 : 0), &db->labels, NULL);
 
     plugin_dispatch_metric_family_array_filtered(db->fams, FAM_PGBOUNCER_MAX, db->filter, submit);
 
@@ -714,10 +744,18 @@ static int pgb_config_instance(config_item_t *ci)
             status = cf_util_get_string_env(child, &db->password);
         } else if (strcasecmp(child->key, "ssl-mode") == 0) {
             status = cf_util_get_string(child, &db->sslmode);
+        } else if (strcasecmp(child->key, "ssl-root-cert") == 0) {
+            status = cf_util_get_string(child, &db->sslrootcert);
+        } else if (strcasecmp(child->key, "ssl-cert") == 0) {
+            status = cf_util_get_string(child, &db->sslcert);
+        } else if (strcasecmp(child->key, "ssl-key") == 0) {
+            status = cf_util_get_string(child, &db->sslkey);
         } else if (strcasecmp(child->key, "label") == 0) {
             status = cf_util_get_label(child, &db->labels);
         } else if (strcasecmp(child->key, "interval") == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "timeout") == 0) {
+            status = cf_util_get_cdtime(child, &db->timeout);
         } else if (strcasecmp(child->key, "filter") == 0) {
             status = plugin_filter_configure(child, &db->filter);
         } else {
