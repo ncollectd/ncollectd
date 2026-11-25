@@ -103,87 +103,90 @@ static metric_family_t fams[FAM_MMC_MAX] = {
     [FAM_MMC_BAD_BLOCKS] = {
         .name = "system_mmc_bad_blocks",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of bad blocks.",
     },
     [FAM_MMC_BLOCK_ERASES] = {
         .name = "system_mmc_block_erases",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of block erases.",
     },
     [FAM_MMC_SPARE_BLOCKS] = {
         .name = "system_mmc_spare_blocks",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of remaining spare blocks.",
     },
     [FAM_MMC_POWER_CYCLES] = {
         .name = "system_mmc_power_cycles",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of power cycles.",
     },
     [FAM_MMC_TEMPERATURE] = {
         .name = "system_mmc_temperature",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Current temperature of the device in degrees Celsius.",
     },
     [FAM_MMC_ERASES_SLC_MIN] = {
         .name = "system_mmc_erases_slc_min",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Minimum number of erases of the SLC blocks.",
     },
     [FAM_MMC_ERASES_SLC_MAX] = {
         .name = "system_mmc_erases_slc_max",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Maximum number of erases of the SLC blocks.",
     },
     [FAM_MMC_ERASES_SLC_AVG] = {
         .name = "system_mmc_erases_slc_avg",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Average number of erases of the SLC blocks.",
     },
     [FAM_MMC_ERASES_MLC_MIN] = {
         .name = "system_mmc_erases_mlc_min",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Minimum number of erases of the MLC blocks.",
     },
     [FAM_MMC_ERASES_MLC_MAX] = {
         .name = "system_mmc_erases_mlc_max",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Maximum number of erases of the MLC blocks.",
     },
     [FAM_MMC_ERASES_MLC_AVG] = {
         .name = "system_mmc_erases_mlc_avg",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Average number of erases of the MLC blocks.",
     },
     [FAM_MMC_ERASES_SYS_MAX] = {
         .name = "system_mmc_erases_sys_max",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Maximum number of erases of the system blocks.",
     },
     [FAM_MMC_ERASES_SYS_MIN] = {
         .name = "system_mmc_erases_sys_min",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Minimum number of erases of the system blocks.",
     },
     [FAM_MMC_ERASES_SYS_AVG] = {
         .name = "system_mmc_erases_sys_avg",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Average number of erases of the system blocks.",
     },
     [FAM_MMC_LIFE_TIME_EST_TYP_A] = {
         .name = "system_mmc_life_time_est_typ_a",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Estimated life time used of the type A memory, in steps of 10% "
+                "(eMMC 5.0 DEVICE_LIFE_TIME_EST_TYP_A).",
     },
     [FAM_MMC_LIFE_TIME_EST_TYP_B] = {
         .name = "system_mmc_life_time_est_typ_b",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Estimated life time used of the type B memory, in steps of 10% "
+                "(eMMC 5.0 DEVICE_LIFE_TIME_EST_TYP_B).",
     },
     [FAM_MMC_PRE_EOL_INFO] = {
         .name = "system_mmc_pre_eol_info",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Pre end of life information: 1 normal, 2 warning, 3 urgent "
+                "(eMMC 5.0 PRE_EOL_INFO).",
     },
 };
 
@@ -197,6 +200,42 @@ typedef struct dev_cache_entry_s {
 } dev_cache_entry_t;
 
 static dev_cache_entry_t *block_dev_cache = NULL;
+
+// List of block devices that could not be opened, used to report the
+// failure only once per device instead of once per read interval.
+typedef struct dev_complain_entry_s {
+    char *path;
+    complain_t complaint;
+    struct dev_complain_entry_s *next;
+} dev_complain_entry_t;
+
+static dev_complain_entry_t *block_dev_complain = NULL;
+
+static complain_t *mmc_block_dev_complaint(const char *dev_path, bool create)
+{
+    for (dev_complain_entry_t *piv = block_dev_complain; piv != NULL; piv = piv->next) {
+        if (strcmp(dev_path, piv->path) == 0)
+            return &piv->complaint;
+    }
+
+    if (!create)
+        return NULL;
+
+    dev_complain_entry_t *entry = calloc(1, sizeof(*entry));
+    if (entry == NULL)
+        return NULL;
+
+    entry->path = strdup(dev_path);
+    if (entry->path == NULL) {
+        free(entry);
+        return NULL;
+    }
+
+    entry->next = block_dev_complain;
+    block_dev_complain = entry;
+
+    return &entry->complaint;
+}
 
 static exclist_t excl_device;
 
@@ -288,22 +327,32 @@ static int mmc_open_block_dev(const char *dev_name, const char *dev_path)
     // This dev_path was not opened before. Open it now:
     int block_fd = open(dev_path, O_RDWR);
     if (block_fd < 0) {
-        PLUGIN_INFO("(%s) failed to open block device (%s): (%s)", dev_name, dev_path, strerror(errno));
+        int err = errno;
+        complain_t *complaint = mmc_block_dev_complaint(dev_path, true);
+        if (complaint != NULL)
+            PLUGIN_ONCE_WARNING(complaint,
+                                "mmc plugin: (%s) failed to open block device (%s): (%s)",
+                                dev_name, dev_path, STRERROR(err));
         return -1;
     }
+
+    complain_t *complaint = mmc_block_dev_complaint(dev_path, false);
+    if (complaint != NULL)
+        PLUGIN_RELEASE_INFO(complaint, "mmc plugin: (%s) block device (%s) opened successfully.",
+                            dev_name, dev_path);
 
     // And add it to the cache of already opened block devices:
     dev_cache_entry_t *cache_entry = calloc(1, sizeof(*cache_entry));
     if (cache_entry == NULL) {
+        PLUGIN_ERROR("(%s) failed to allocate memory (%s)", dev_name, STRERRNO);
         close(block_fd);
-        PLUGIN_ERROR("(%s) failed to allocate memory (%s)", dev_name, strerror(errno));
         return -1;
     }
 
     cache_entry->path = strdup(dev_path);
     if (cache_entry->path == NULL) {
+        PLUGIN_ERROR("(%s) failed to copy path string (%s)", dev_name, STRERRNO);
         close(block_fd);
-        PLUGIN_ERROR("(%s) failed to copy path string (%s)", dev_name, strerror(errno));
         free(cache_entry);
         return -1;
     }
@@ -374,7 +423,7 @@ static int mmc_read_micron(struct udev_device *mmc_dev, struct udev_device *bloc
     uint16_t bb_initial, bb_runtime, bb_remaining;
     if (mmc_micron_cmd56(block_fd, MICRON_CMD56ARG_BAD_BLOCKS, &bb_initial,
                                    &bb_runtime, &bb_remaining) != 0) {
-        PLUGIN_INFO("(%s) failed to send ioctl to %s: %s", dev_name, dev_path, strerror(errno));
+        PLUGIN_INFO("(%s) failed to send ioctl to %s: %s", dev_name, dev_path, STRERRNO);
         mmc_close_block_dev(block_fd);
         return 1;
     }
@@ -382,7 +431,7 @@ static int mmc_read_micron(struct udev_device *mmc_dev, struct udev_device *bloc
     uint16_t er_slc_min, er_slc_max, er_slc_avg;
     if (mmc_micron_cmd56(block_fd, MICRON_CMD56ARG_ERASES_SLC, &er_slc_min,
                                    &er_slc_max, &er_slc_avg) != 0) {
-        PLUGIN_INFO("(%s) failed to send ioctl to %s: %s", dev_name, dev_path, strerror(errno));
+        PLUGIN_INFO("(%s) failed to send ioctl to %s: %s", dev_name, dev_path, STRERRNO);
         mmc_close_block_dev(block_fd);
         return 1;
     }
@@ -390,7 +439,7 @@ static int mmc_read_micron(struct udev_device *mmc_dev, struct udev_device *bloc
     uint16_t er_mlc_min, er_mlc_max, er_mlc_avg;
     if (mmc_micron_cmd56(block_fd, MICRON_CMD56ARG_ERASES_MLC, &er_mlc_min,
                                    &er_mlc_max, &er_mlc_avg) != 0) {
-        PLUGIN_INFO("(%s) failed to send ioctl to %s: %s", dev_name, dev_path, strerror(errno));
+        PLUGIN_INFO("(%s) failed to send ioctl to %s: %s", dev_name, dev_path, STRERRNO);
         mmc_close_block_dev(block_fd);
         return 1;
     }
@@ -449,16 +498,16 @@ static int mmc_read_sandisk(struct udev_device *mmc_dev, struct udev_device *blo
     mmc_ioc_cmd_set_data(cmd_read_report, cmd_data);
 
     if (ioctl(block_fd, MMC_IOC_CMD, &cmd_en_report_mode) < 0) {
-        mmc_close_block_dev(block_fd);
         PLUGIN_INFO("(%s) failed to send enable report mode MMC ioctl to %s: %s",
-                    dev_name, dev_path, strerror(errno));
+                    dev_name, dev_path, STRERRNO);
+        mmc_close_block_dev(block_fd);
         return 1;
     }
 
     if (ioctl(block_fd, MMC_IOC_CMD, &cmd_read_report) < 0) {
-        mmc_close_block_dev(block_fd);
         PLUGIN_INFO("(%s) failed to send read_report MMC ioctl to %s: %s",
-                    dev_name, dev_path, strerror(errno));
+                    dev_name, dev_path, STRERRNO);
+        mmc_close_block_dev(block_fd);
         return 1;
     }
 
@@ -544,32 +593,27 @@ static int mmc_read_ssr_swissbit(struct udev_device *mmc_dev)
 
     PLUGIN_DEBUG("(%s): [ssr]=%s", dev_name, attr);
 
-    int value;
-
     char bad_blocks[SWISSBIT_LENGTH_SPARE_BLOCKS];
-    sstrncpy(bad_blocks, &attr[SWISSBIT_SSR_START_SPARE_BLOCKS], sizeof(bad_blocks) - 1);
-    bad_blocks[sizeof(bad_blocks) - 1] = '\0';
-    value = (int)strtol(bad_blocks, NULL, 16);
+    sstrncpy(bad_blocks, &attr[SWISSBIT_SSR_START_SPARE_BLOCKS], sizeof(bad_blocks));
+    int spare_blocks = (int)strtol(bad_blocks, NULL, 16);
     /* convert to more common bad blocks information */
-    value = abs(value - 100);
+    int value = abs(spare_blocks - 100);
     PLUGIN_DEBUG("(%s): [bad_blocks] str=%s int=%d", dev_name, bad_blocks, value);
     metric_family_append(&fams[FAM_MMC_BAD_BLOCKS], VALUE_GAUGE(value), NULL,
                          &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     char block_erases[SWISSBIT_LENGTH_BLOCK_ERASES];
-    sstrncpy(block_erases, &attr[SWISSBIT_SSR_START_BLOCK_ERASES], sizeof(block_erases) - 1);
-    block_erases[sizeof(block_erases) - 1] = '\0';
-    value = (int)strtol(block_erases, NULL, 16);
-    PLUGIN_DEBUG("(%s): [block_erases] str=%s int=%d", dev_name, block_erases, value);
-    metric_family_append(&fams[FAM_MMC_BLOCK_ERASES], VALUE_GAUGE(value), NULL,
+    sstrncpy(block_erases, &attr[SWISSBIT_SSR_START_BLOCK_ERASES], sizeof(block_erases));
+    uint64_t erases = (uint64_t)strtoull(block_erases, NULL, 16);
+    PLUGIN_DEBUG("(%s): [block_erases] str=%s int=%" PRIu64, dev_name, block_erases, erases);
+    metric_family_append(&fams[FAM_MMC_BLOCK_ERASES], VALUE_GAUGE((double)erases), NULL,
                          &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     char power_on[SWISSBIT_LENGTH_POWER_ON];
-    sstrncpy(power_on, &attr[SWISSBIT_SSR_START_POWER_ON], sizeof(power_on) - 1);
-    power_on[sizeof(power_on) - 1] = '\0';
-    value = (int)strtol(power_on, NULL, 16);
-    PLUGIN_DEBUG("(%s): [power_on] str=%s int=%d", dev_name, power_on, value);
-    metric_family_append(&fams[FAM_MMC_POWER_CYCLES], VALUE_GAUGE(value), NULL,
+    sstrncpy(power_on, &attr[SWISSBIT_SSR_START_POWER_ON], sizeof(power_on));
+    uint64_t power_cycles = (uint64_t)strtoull(power_on, NULL, 16);
+    PLUGIN_DEBUG("(%s): [power_on] str=%s int=%" PRIu64, dev_name, power_on, power_cycles);
+    metric_family_append(&fams[FAM_MMC_POWER_CYCLES], VALUE_GAUGE((double)power_cycles), NULL,
                          &LABEL_PAIR_CONST("device", dev_name), NULL);
 
     return 0;
@@ -586,6 +630,7 @@ static int mmc_read(void)
     struct udev_enumerate *enumerate = udev_enumerate_new(handle_udev);
     if (enumerate == NULL) {
         PLUGIN_ERROR("udev_enumerate_new failed");
+        udev_unref(handle_udev);
         return -1;
     }
 
@@ -593,12 +638,16 @@ static int mmc_read(void)
 
     if (udev_enumerate_scan_devices(enumerate) < 0) {
         PLUGIN_WARNING("udev scan devices failed");
+        udev_enumerate_unref(enumerate);
+        udev_unref(handle_udev);
         return -1;
     }
 
     struct udev_list_entry *devices = udev_enumerate_get_list_entry(enumerate);
     if (devices == NULL) {
         PLUGIN_WARNING("udev did not return any block devices");
+        udev_enumerate_unref(enumerate);
+        udev_unref(handle_udev);
         return -1;
     }
 
@@ -643,10 +692,10 @@ static int mmc_read(void)
         if (mmc_read_manfid(mmc_dev, &manfid) == 0) {
             switch (manfid) {
             case MANUFACTUR_MICRON:
-                have_stats |= (mmc_read_micron(mmc_dev, block_dev) == 1);
+                have_stats |= (mmc_read_micron(mmc_dev, block_dev) == 0);
                 break;
             case MANUFACTUR_SANDISK:
-                have_stats |= (mmc_read_sandisk(mmc_dev, block_dev) == 1);
+                have_stats |= (mmc_read_sandisk(mmc_dev, block_dev) == 0);
                 break;
             case MANUFACTUR_SWISSBIT:
                 have_stats |= (mmc_read_ssr_swissbit(mmc_dev) == 0);
@@ -690,10 +739,17 @@ static int mmc_config(config_item_t *ci)
     return 0;
 }
 
-int mmc_shutdown(void)
+static int mmc_shutdown(void)
 {
     while (block_dev_cache != NULL) {
         mmc_close_block_dev(block_dev_cache->fd);
+    }
+
+    while (block_dev_complain != NULL) {
+        dev_complain_entry_t *next = block_dev_complain->next;
+        free(block_dev_complain->path);
+        free(block_dev_complain);
+        block_dev_complain = next;
     }
 
     exclist_reset(&excl_device);
