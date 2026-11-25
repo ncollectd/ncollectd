@@ -45,8 +45,6 @@ struct match_xpath_metric_s {
     char *value_from;
     char *time_from;
 
-    int is_table;  // ???
-    unsigned long magic; // ???
     struct match_xpath_metric_s *next;
 };
 typedef struct match_xpath_metric_s match_xpath_metric_t;
@@ -81,10 +79,24 @@ static void match_xpath_destroy(void *user_data)
     while(xpath_metric != NULL) {
         match_xpath_metric_t *next = xpath_metric->next;
         free(xpath_metric->path);
+        free(xpath_metric->metric);
+        free(xpath_metric->metric_prefix);
+        free(xpath_metric->metric_from);
+        free(xpath_metric->help);
+        label_set_reset(&xpath_metric->labels);
+        for (size_t i = 0; i < xpath_metric->labels_from_num; i++) {
+            free(xpath_metric->labels_from[i].key);
+            free(xpath_metric->labels_from[i].value_from);
+        }
+        free(xpath_metric->labels_from);
         free(xpath_metric->value_from);
+        free(xpath_metric->time_from);
         free(xpath_metric);
         xpath_metric = next;
     }
+
+    free(xpath->metric_prefix);
+    label_set_reset(&xpath->labels);
 
     if (xpath->ns_list.namespaces != NULL) {
         for (size_t i = 0; i < xpath->ns_list.num; i++) {
@@ -129,8 +141,8 @@ static char *match_xpath_get_text_node(xmlXPathContextPtr xpath_ctx, char *expr,
     size_t tmp_size = (values_node) ? values_node->nodeNr : 0;
 
     if (tmp_size == 0) {
-        PLUGIN_WARNING("relative xpath expression \"%s\" from '%s' doesn't match "
-                       "any of the nodes.", expr, option);
+        PLUGIN_DEBUG("relative xpath expression \"%s\" from '%s' doesn't match "
+                     "any of the nodes.", expr, option);
         xmlXPathFreeObject(values_node_obj);
         return NULL;
     }
@@ -159,8 +171,8 @@ static char *match_xpath_get_text_node(xmlXPathContextPtr xpath_ctx, char *expr,
     return node_value;
 }
 
-int match_xpath_match_node(match_xpath_t *xpath, match_xpath_metric_t *xpath_metric,
-                           match_metric_family_set_t *set,  xmlXPathContextPtr xpath_ctx)
+static int match_xpath_match_node(match_xpath_t *xpath, match_xpath_metric_t *xpath_metric,
+                                  match_metric_family_set_t *set,  xmlXPathContextPtr xpath_ctx)
 {
     cdtime_t t = 0;
     if (xpath_metric->time_from != NULL) {
@@ -172,6 +184,7 @@ int match_xpath_match_node(match_xpath_t *xpath, match_xpath_metric_t *xpath_met
     }
 
     strbuf_t buf = STRBUF_CREATE;
+    bool has_name = false;
 
     if (xpath->metric_prefix != NULL)
         strbuf_print(&buf, xpath->metric_prefix);
@@ -181,10 +194,12 @@ int match_xpath_match_node(match_xpath_t *xpath, match_xpath_metric_t *xpath_met
     if (xpath_metric->metric_from != NULL) {
         char *value = match_xpath_get_text_node(xpath_ctx, xpath_metric->metric_from, "MetricFrom");
         if (value != NULL) {
+            has_name = value[0] != '\0';
             strbuf_print(&buf, value);
             xmlFree(value);
         }
-    } else {
+    } else if (xpath_metric->metric != NULL) {
+        has_name = xpath_metric->metric[0] != '\0';
         strbuf_print(&buf, xpath_metric->metric);
     }
 
@@ -211,6 +226,14 @@ int match_xpath_match_node(match_xpath_t *xpath, match_xpath_metric_t *xpath_met
         }
     }
 
+    if (!has_name || (buf.ptr == NULL)) {
+        PLUGIN_WARNING("Unable to get the metric name for xpath expression \"%s\". "
+                       "Skipping the node.", xpath_metric->path);
+        label_set_reset(&mlabel);
+        strbuf_destroy(&buf);
+        return -1;
+    }
+
     char *value = match_xpath_get_text_node(xpath_ctx, xpath_metric->value_from, "ValueFrom");
     if (value != NULL) {
         plugin_match_metric_family_set_add(set, buf.ptr, xpath_metric->help, NULL,
@@ -234,23 +257,11 @@ static int match_xpath_match_metric(match_xpath_t *xpath, match_xpath_metric_t *
     int total_nodes = (base_nodes) ? base_nodes->nodeNr : 0;
 
     if (total_nodes == 0) {
-        PLUGIN_ERROR("xpath expression \"%s\" doesn't match any of the nodes. "
+        PLUGIN_DEBUG("xpath expression \"%s\" doesn't match any of the nodes. "
                      "Skipping the xpath block...", xpath_metric->path);
         xmlXPathFreeObject(base_node_obj);
         return -1;
     }
-
-    /* If base_xpath returned multiple results, then */
-    /* InstanceFrom or PluginInstanceFrom in the xpath block is required */
-#if 0
-    if ((total_nodes > 1) && (xpath->instance == NULL) && (xpath->plugin_instance_from == NULL)) {
-        PLUGIN_ERROR("InstanceFrom or PluginInstanceFrom is must in xpath block "
-                     "since the base xpath expression \"%s\" "
-                     "returned multiple results. Skipping the xpath block...", xpath->path);
-        xmlXPathFreeObject(base_node_obj);
-        return -1;
-    }
-#endif
 
     for (int i = 0; i < total_nodes; i++) {
         xpath_ctx->node = base_nodes->nodeTab[i];
@@ -268,9 +279,13 @@ static int match_xpath_match(match_metric_family_set_t *set, char *buffer, void 
         return -1;
 
     /* Load the XML */
-    xmlDocPtr doc = xmlParseDoc(BAD_CAST buffer);
+    /* Explicit parser options: no network access, no entity substitution and
+     * no DTD loading, without depending on the libxml2 global defaults. */
+    xmlDocPtr doc = xmlReadMemory(buffer, (int)strlen(buffer), NULL, NULL,
+                                  XML_PARSE_NONET | XML_PARSE_NOERROR |
+                                  XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
     if (doc == NULL) {
-        PLUGIN_ERROR("Failed to parse the xml document - %s", buffer);
+        PLUGIN_ERROR("Failed to parse the xml document - %.128s", buffer);
         return -1;
     }
 
@@ -333,6 +348,8 @@ static int match_xpath_config_append_label(metric_label_from_t **var,
     tmp[*len].value_from = strdup(ci->values[1].value.string);
     if (tmp[*len].value_from == NULL) {
         PLUGIN_ERROR("strdup failed.");
+        free(tmp[*len].key);
+        tmp[*len].key = NULL;
         return -1;
     }
 
@@ -342,7 +359,7 @@ static int match_xpath_config_append_label(metric_label_from_t **var,
 
 /*
   match xpath {
-      mamespace-Prefix URL
+      namespace prefix URL
       metric-prefix
       label
       metric {
@@ -374,7 +391,7 @@ static int match_xpath_config_metric(const config_item_t *ci, match_xpath_t *xpa
         config_item_t *child = ci->children + i;
 
         if (strcasecmp("xpath", child->key) == 0)
-            status = cf_util_get_string(ci, &xpath_metric->path);
+            status = cf_util_get_string(child, &xpath_metric->path);
         else if (strcasecmp("type", child->key) == 0)
             status = cf_util_get_match_metric_type(child, &xpath_metric->type);
         else if (strcasecmp("metric", child->key) == 0)
@@ -412,14 +429,19 @@ static int match_xpath_config_metric(const config_item_t *ci, match_xpath_t *xpa
         return -1;
     }
 
-    /* error out if xpath->path is an empty string */
-    if (strlen(xpath_metric->path) == 0) {
-        PLUGIN_ERROR("invalid xpath. xpath value can't be an empty string");
+    /* error out if xpath->path is missing or an empty string */
+    if ((xpath_metric->path == NULL) || (xpath_metric->path[0] == '\0')) {
+        PLUGIN_ERROR("'xpath' missing or empty in 'metric' block.");
         return -1;
     }
 
     if (xpath_metric->value_from == NULL) {
         PLUGIN_WARNING("`ValuesFrom' missing in `xpath' block.");
+        return -1;
+    }
+
+    if ((xpath_metric->metric == NULL) && (xpath_metric->metric_from == NULL)) {
+        PLUGIN_ERROR("'metric' or 'metric-from' missing in 'metric' block.");
         return -1;
     }
 
@@ -505,6 +527,10 @@ void module_register(void)
     proc.config = match_xpath_config;
     proc.destroy = match_xpath_destroy;
     proc.match = match_xpath_match;
+
+    /* libxml2 must be initialized from the main thread before being used
+     * from the read threads. */
+    xmlInitParser();
 
     plugin_register_match("xpath", proc);
 }
