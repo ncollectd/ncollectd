@@ -10,6 +10,7 @@ NCOLLECTD-OPENVPN(5) - File Formats Manual
 	plugin openvpn {
 	    instance name {
 	        status-file /path/to/status
+	        collect-users true|false
 	        label key value
 	        interval seconds
 	        filter {
@@ -34,6 +35,14 @@ The **instance** block has the following options:
 **status-file** */path/to/status*
 
 > Specifies the location of the status file.
+
+**collect-users** *true|false*
+
+> When enabled, the per client metrics (with the *common_name* label) are
+> collected.
+> Each connected client generates its own set of metrics, disable this option
+> on servers with many clients to limit the number of series.
+> The default is **true**.
 
 **label** *key* *value*
 
