@@ -8,11 +8,21 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP systemd_resolved
-\fBplugin\fP systemd_resolved
+\fBplugin\fP systemd_resolved {
+    \fBsocket-path\fP \fIpath\fP
+}
 .Ed
 .Sh DESCRIPTION
 The \fBsystemd_resolved\fP plugin collects statistics from
 \fBsystemd-resolved\fP.
+It calls the \fIio.systemd.Resolve.Monitor.DumpStatistics\fP varlink method,
+available since systemd 252.
+The monitor socket is only accessible by root.
+.Bl -tag -width Ds
+.It \fBsocket-path\fP \fIpath\fP
+Path of the systemd-resolved monitor varlink socket.
+Defaults to \fI/run/systemd/resolve/io.systemd.Resolve.Monitor\fP.
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

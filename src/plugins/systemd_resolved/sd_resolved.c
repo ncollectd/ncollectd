@@ -82,7 +82,10 @@ static metric_family_t fams[FAM_SYSTEMD_RESOLVED_MAX] = {
 
 #include "plugins/systemd_resolved/sd_resolved.h"
 
-static char *sd_resolved_path = "/run/systemd/resolve/io.systemd.Resolve.Monitor";
+#define SD_RESOLVED_MONITOR_PATH "/run/systemd/resolve/io.systemd.Resolve.Monitor"
+
+static char *sd_resolved_path;
+static complain_t sd_resolved_complaint;
 
 typedef enum {
     SD_RESOLVED_JSON_NONE,
@@ -126,7 +129,12 @@ static bool sd_resolved_json_number(void *ctx, const char *str, size_t str_len)
 
         value_t value = {0};
         if (fam->type == METRIC_TYPE_COUNTER) {
-            value = VALUE_COUNTER(atol(number));
+            uint64_t counter = 0;
+            if (parse_uinteger(number, &counter) != 0) {
+                PLUGIN_WARNING("Cannot parse '%s' as an unsigned integer.", number);
+                return true;
+            }
+            value = VALUE_COUNTER(counter);
         } else if (fam->type == METRIC_TYPE_GAUGE) {
             value = VALUE_GAUGE(atof(number));
         } else {
@@ -151,20 +159,25 @@ static bool sd_resolved_json_start_map(void *ctx)
     return true;
 }
 
+static bool sd_resolved_json_key_eq(const char *key, size_t key_len, const char *str)
+{
+    return (key_len == strlen(str)) && (memcmp(key, str, key_len) == 0);
+}
+
 static bool sd_resolved_json_map_key(void * ctx, const char *ukey, size_t key_len)
 {
     const char *key = (const char *)ukey;
     sd_resolved_json_ctx_t *sctx = ctx;
 
+    /* Unknown keys are ignored. */
     switch (sctx->depth) {
     case 1:
-        if (strncmp("error", key, key_len) == 0) {
+        if (sd_resolved_json_key_eq(key, key_len, "error")) {
             sctx->stack[0] = SD_RESOLVED_JSON_ERROR;
-        } else if (strncmp("parameters", key, key_len) == 0) {
+        } else if (sd_resolved_json_key_eq(key, key_len, "parameters")) {
             sctx->stack[0] = SD_RESOLVED_JSON_PARAMETERS;
         } else {
             sctx->stack[0] = SD_RESOLVED_JSON_NONE;
-            return false;
         }
         break;
     case 2:
@@ -172,9 +185,6 @@ static bool sd_resolved_json_map_key(void * ctx, const char *ukey, size_t key_le
             strbuf_reset(&sctx->key);
             strbuf_putstrn(&sctx->key, ukey, key_len);
             sctx->key1_len = strbuf_offset(&sctx->key);
-        } else {
-            sctx->stack[0] = SD_RESOLVED_JSON_NONE;
-            return false;
         }
         break;
     case 3:
@@ -182,13 +192,9 @@ static bool sd_resolved_json_map_key(void * ctx, const char *ukey, size_t key_le
             strbuf_resetto(&sctx->key, sctx->key1_len);
             strbuf_putchar(&sctx->key, '.');
             strbuf_putstrn(&sctx->key, ukey, key_len);
-        } else {
-            sctx->stack[0] = SD_RESOLVED_JSON_NONE;
-            return false;
         }
         break;
     default:
-        return false;
         break;
     }
 
@@ -228,7 +234,18 @@ static int sd_resolved_read_varlink(void)
     const char *method = "{\"method\":\"io.systemd.Resolve.Monitor.DumpStatistics\","
                          "\"parameters\":{\"allowInteractiveAuthentication\":false}}";
 
-    int fd = socket_connect_unix_stream(sd_resolved_path, plugin_get_interval());
+    const char *path = sd_resolved_path != NULL ? sd_resolved_path : SD_RESOLVED_MONITOR_PATH;
+
+    /* The monitor socket is only accessible by root, avoid logging an error
+       in every read if it is not accessible. */
+    if (access(path, R_OK | W_OK) != 0) {
+        PLUGIN_COMPLAIN_ERROR(&sd_resolved_complaint, "Cannot access '%s': %s", path, STRERRNO);
+        return -1;
+    }
+
+    PLUGIN_RELEASE_INFO(&sd_resolved_complaint, "Socket '%s' is accessible again.", path);
+
+    int fd = socket_connect_unix_stream(path, plugin_get_interval());
     if (fd < 0)
         return -1;
 
@@ -288,8 +305,12 @@ static int sd_resolved_read(void)
 {
     int status = sd_resolved_read_varlink();
     if (status != 0) {
+        /* Drop the partial metrics, only report the up metric. */
+        for (size_t i = 0; i < FAM_SYSTEMD_RESOLVED_MAX; i++) {
+            metric_family_metric_reset(&fams[i]);
+        }
         metric_family_append(&fams[FAM_SYSTEMD_RESOLVED_UP], VALUE_GAUGE(0), NULL, NULL);
-        plugin_dispatch_metric_family_array(fams, FAM_SYSTEMD_RESOLVED_MAX, 0);
+        plugin_dispatch_metric_family(&fams[FAM_SYSTEMD_RESOLVED_UP], 0);
         return 0;
     }
 
@@ -300,7 +321,38 @@ static int sd_resolved_read(void)
     return 0;
 }
 
+static int sd_resolved_config(config_item_t *ci)
+{
+    int status = 0;
+
+    for (int i = 0; i < ci->children_num; i++) {
+        config_item_t *child = ci->children + i;
+
+        if (strcasecmp("socket-path", child->key) == 0) {
+            status = cf_util_get_string(child, &sd_resolved_path);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
+        }
+
+        if (status != 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+static int sd_resolved_shutdown(void)
+{
+    free(sd_resolved_path);
+    sd_resolved_path = NULL;
+    return 0;
+}
+
 void module_register(void)
 {
+    plugin_register_config("systemd_resolved", sd_resolved_config);
     plugin_register_read("systemd_resolved", sd_resolved_read);
+    plugin_register_shutdown("systemd_resolved", sd_resolved_shutdown);
 }
