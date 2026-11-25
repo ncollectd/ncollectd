@@ -26,11 +26,11 @@ The **vanish** plugin collects information about Varnish or Vinyl Cache, an HTTP
 The configuration consists of one or more **instance** blocks.
 Inside each **instance** blocks, the following options are recognized:
 
-**vhs-instance** *vsh-instanace-name*
+**vsh-instance** *vsh-instance-name*
 
-> The *vsh-instanace-name* is the parameter passed to "varnishd -n".
-> If left empty, it will collectd statistics from the default "varnishd" instance
-> (this should work fine in most cases).
+> The *vsh-instance-name* is the parameter passed to "varnishd -n".
+> If left empty or set to *localhost*, it will collect statistics from the default
+> "varnishd" instance (this should work fine in most cases).
 
 **label** *key* *value*
 
