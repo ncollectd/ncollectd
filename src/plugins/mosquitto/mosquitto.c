@@ -77,8 +77,8 @@ static metric_family_t fams[FAM_MOSQUITTO_MAX] = {
     },
     [FAM_MOSQUITTO_CLIENTS_DISCONNECTED] = {
         .name = "mosquitto_clients_disconnected",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "The total number of persistent clients (with clean session disabled) "
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of persistent clients (with clean session disabled) "
                 "that are registered at the broker but are currently disconnected.",
     },
     [FAM_MOSQUITTO_CLIENTS_MAXIMUM] = {
@@ -136,8 +136,8 @@ static metric_family_t fams[FAM_MOSQUITTO_MAX] = {
     },
     [FAM_MOSQUITTO_MESSAGES_RETAINED] = {
         .name = "mosquitto_messages_retained",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "The total number of retained messages active on the broker.",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of retained messages active on the broker.",
     },
     [FAM_MOSQUITTO_STORE_MESSAGES] = {
         .name = "mosquitto_store_messages",
@@ -151,8 +151,8 @@ static metric_family_t fams[FAM_MOSQUITTO_MAX] = {
     },
     [FAM_MOSQUITTO_SUBSCRIPTIONS] = {
         .name = "mosquitto_subscriptions",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "The total number of subscriptions active on the broker.",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of subscriptions active on the broker.",
     },
 };
 
@@ -201,6 +201,7 @@ typedef struct {
     char *username;
     char *password;
     char *cacertificatefile;
+    char *capath;
     char *certificatefile;
     char *certificatekeyfile;
     char *tlsprotocol;
@@ -220,6 +221,7 @@ typedef struct {
     bool clean_session;
 
     c_complain_t complaint_cantpublish;
+    c_complain_t complaint_payload;
 } ncmosquitto_instance_t;
 
 #if LIBMOSQUITTO_MAJOR == 0
@@ -292,6 +294,7 @@ static void ncmosquitto_free(void *arg)
     free(conf->username);
     free(conf->password);
     free(conf->cacertificatefile);
+    free(conf->capath);
     free(conf->certificatefile);
     free(conf->certificatekeyfile);
     free(conf->tlsprotocol);
@@ -328,12 +331,20 @@ static void ncmosquitto_on_message(
             memcpy(playload, msg->payload, playload_size);
             playload[playload_size] = '\0';
 
+            /* Only accept unsigned decimal integers without trailing garbage. */
+            char *endptr = NULL;
+            errno = 0;
             uint64_t value = 0;
-            int status = strtouint(playload, &value);
-            if (status != 0) {
-                PLUGIN_ERROR("Failed to convert \"%s\" to integer", playload);
+            if (isdigit((unsigned char)playload[0]))
+                value = (uint64_t)strtoull(playload, &endptr, 10);
+            if ((endptr == NULL) || (errno != 0) || (*endptr != '\0')) {
+                c_complain(LOG_ERR, &conf->complaint_payload,
+                           "Failed to convert \"%s\" from topic \"%s\" to integer",
+                           playload, msg->topic);
                 break;
             }
+            c_release(LOG_INFO, &conf->complaint_payload,
+                      "Successfully converted payload from topic \"%s\"", msg->topic);
 
             int type = conf->fams[conf->subs[i].fam].type;
             if (type == METRIC_TYPE_COUNTER) {
@@ -396,15 +407,21 @@ static int ncmosquitto_reconnect(ncmosquitto_instance_t *conf)
 static int ncmosquitto_connect(ncmosquitto_instance_t *conf)
 {
     char const *client_id;
+    char default_client_id[256];
     int status;
 
     if (conf->mosq != NULL)
         return ncmosquitto_reconnect(conf);
 
-    if (conf->client_id)
+    if (conf->client_id) {
         client_id = conf->client_id;
-    else
-        client_id = plugin_get_hostname();
+    } else {
+        /* Include the instance name so several instances connected to the
+         * same broker do not take over each other's session. */
+        ssnprintf(default_client_id, sizeof(default_client_id), "%s-%s",
+                  plugin_get_hostname(), conf->name);
+        client_id = default_client_id;
+    }
 
 #if LIBMOSQUITTO_MAJOR == 0
     conf->mosq = mosquitto_new(client_id, /* user data = */ conf);
@@ -417,8 +434,8 @@ static int ncmosquitto_connect(ncmosquitto_instance_t *conf)
     }
 
 #if LIBMOSQUITTO_MAJOR != 0
-    if (conf->cacertificatefile) {
-        status = mosquitto_tls_set(conf->mosq, conf->cacertificatefile, NULL,
+    if ((conf->cacertificatefile != NULL) || (conf->capath != NULL)) {
+        status = mosquitto_tls_set(conf->mosq, conf->cacertificatefile, conf->capath,
                                                conf->certificatefile, conf->certificatekeyfile,
                                                /* pw_callback */ NULL);
         if (status != MOSQ_ERR_SUCCESS) {
@@ -447,7 +464,10 @@ static int ncmosquitto_connect(ncmosquitto_instance_t *conf)
     }
 #endif
 
-    if (conf->username && conf->password) {
+    if ((conf->username == NULL) && (conf->password != NULL))
+        PLUGIN_WARNING("A password is configured without user, it will be ignored.");
+
+    if (conf->username != NULL) {
         status = mosquitto_username_pw_set(conf->mosq, conf->username, conf->password);
         if (status != MOSQ_ERR_SUCCESS) {
             PLUGIN_ERROR("mosquitto_username_pw_set failed: %s",
@@ -486,39 +506,60 @@ static int ncmosquitto_connect(ncmosquitto_instance_t *conf)
     return 0;
 }
 
+#define NCMOSQUITTO_MAX_BACKOFF 60
+
+/* Wait before reconnecting, doubling the wait time on each consecutive
+ * failure up to NCMOSQUITTO_MAX_BACKOFF seconds. */
+static void ncmosquitto_backoff(ncmosquitto_instance_t *conf, unsigned int *backoff)
+{
+    if (*backoff == 0)
+        *backoff = 1;
+    else if (*backoff < NCMOSQUITTO_MAX_BACKOFF)
+        *backoff = MIN(*backoff * 2, NCMOSQUITTO_MAX_BACKOFF);
+
+    for (unsigned int i = 0; (i < *backoff) && conf->loop; i++)
+        sleep(1);
+}
+
 static void *ncmosquitto_subscribers_thread(void *arg)
 {
     ncmosquitto_instance_t *conf = arg;
+    unsigned int backoff = 0;
     int status;
-
-    conf->loop = 1;
 
     while (conf->loop) {
         status = ncmosquitto_connect(conf);
         if (status != 0) {
-            sleep(1);
+            ncmosquitto_backoff(conf, &backoff);
             continue;
         }
 
 /* The documentation says "0" would map to the default (1000ms), but
- * that does not work on some versions. */
+ * that does not work on some versions. A short timeout keeps the
+ * thread responsive when the plugin is shutting down. */
 #if LIBMOSQUITTO_MAJOR == 0
-        status = mosquitto_loop(conf->mosq, /* timeout = */ 1000 /* ms */);
+        status = mosquitto_loop(conf->mosq, /* timeout = */ 250 /* ms */);
 #else
-        status = mosquitto_loop(conf->mosq, /* timeout[ms] = */ 1000,
+        status = mosquitto_loop(conf->mosq, /* timeout[ms] = */ 250,
                                             /* max_packets = */ 100);
 #endif
         if (status == MOSQ_ERR_CONN_LOST) {
+            c_complain(LOG_ERR, &conf->complaint_cantpublish,
+                       "Connection to broker \"%s:%d\" lost.", conf->host, conf->port);
             conf->connected = false;
+            ncmosquitto_backoff(conf, &backoff);
             continue;
         } else if (status != MOSQ_ERR_SUCCESS) {
-            PLUGIN_ERROR("mosquitto_loop failed: %s", mosquitto_strerror(status));
+            c_complain(LOG_ERR, &conf->complaint_cantpublish,
+                       "mosquitto_loop failed: %s", mosquitto_strerror(status));
             mosquitto_destroy(conf->mosq);
             conf->mosq = NULL;
             conf->connected = false;
+            ncmosquitto_backoff(conf, &backoff);
             continue;
         }
 
+        backoff = 0;
         PLUGIN_DEBUG("mosquitto_loop succeeded.");
     }
 
@@ -528,6 +569,21 @@ static void *ncmosquitto_subscribers_thread(void *arg)
 static int ncmosquitto_read(user_data_t *user_data)
 {
     ncmosquitto_instance_t *conf = user_data->data;
+
+    /* The subscriber thread is started in the first read, after
+     * mosquitto_lib_init() has been called in the init callback. */
+    if (!conf->loop) {
+        conf->loop = true;
+        int status = plugin_thread_create(&conf->thread,
+                                          /* func  = */ ncmosquitto_subscribers_thread,
+                                          /* args  = */ conf,
+                                          /* name  = */ "mosquitto");
+        if (status != 0) {
+            conf->loop = false;
+            PLUGIN_ERROR("pthread_create failed: %s", STRERROR(status));
+            return -1;
+        }
+    }
 
     if (!conf->connected) {
         metric_family_append(&conf->fams[FAM_MOSQUITTO_UP], VALUE_GAUGE(0), &conf->labels, NULL);
@@ -559,19 +615,6 @@ static int ncmosquitto_read(user_data_t *user_data)
     return 0;
 }
 
-/*
- * <Instance "name">
- *   Host "example.com"
- *   Port 1883
- *   ClientId "ncollectd"
- *   User "guest"
- *   Password "secret"
- *   CACert "ca.pem"                     Enables TLS if set
- *   CertificateFile "client-cert.pem"   optional
- *   CertificateKeyFile "client-key.pem" optional
- *   TLSProtocol "tlsv1.2"               optional
- * </Instance>
- */
 static int ncmosquitto_config_instance(config_item_t *ci)
 {
     ncmosquitto_instance_t *conf = calloc(1, sizeof(*conf));
@@ -607,6 +650,7 @@ static int ncmosquitto_config_instance(config_item_t *ci)
     memcpy(conf->subs, ncmosquitto_subs, sizeof(*conf->subs)*ncmosquitto_subs_size);
 
     C_COMPLAIN_INIT(&conf->complaint_cantpublish);
+    C_COMPLAIN_INIT(&conf->complaint_payload);
 
     cdtime_t interval = 0;
     for (int i = 0; i < ci->children_num; i++) {
@@ -638,6 +682,8 @@ static int ncmosquitto_config_instance(config_item_t *ci)
             status = cf_util_get_boolean(child, &conf->clean_session);
         } else if (strcasecmp("ca-cert", child->key) == 0) {
             status = cf_util_get_string(child, &conf->cacertificatefile);
+        } else if (strcasecmp("ca-path", child->key) == 0) {
+            status = cf_util_get_string(child, &conf->capath);
         } else if (strcasecmp("certificate-file", child->key) == 0) {
             status = cf_util_get_string(child, &conf->certificatefile);
         } else if (strcasecmp("certificate-key-file", child->key) == 0) {
@@ -666,14 +712,9 @@ static int ncmosquitto_config_instance(config_item_t *ci)
         return status;
     }
 
-    label_set_add(&conf->labels, true, "instance", conf->name);
-
-    status = plugin_thread_create(&conf->thread,
-                                   /* func  = */ ncmosquitto_subscribers_thread,
-                                   /* args  = */ conf,
-                                   /* name  = */ "mosquitto");
+    status = label_set_add(&conf->labels, true, "instance", conf->name);
     if (status != 0) {
-        PLUGIN_ERROR("pthread_create failed: %s", STRERRNO);
+        PLUGIN_ERROR("Failed to add instance label.");
         ncmosquitto_free(conf);
         return -1;
     }
@@ -682,13 +723,6 @@ static int ncmosquitto_config_instance(config_item_t *ci)
                                         &(user_data_t){.data=conf, .free_func=ncmosquitto_free, });
 }
 
-/*
- * <Plugin mosquitto>
- *   <Instance  "name">
- *       # ...
- *   </Instance>
- * </Plugin>
- */
 static int ncmosquitto_config(config_item_t *ci)
 {
     int status = 0;
