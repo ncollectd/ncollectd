@@ -39,7 +39,8 @@ the following options are accepted within each block:
 
 **timeout** *seconds*
 
-> The **timeout** option sets the overall timeout for the requests.
+> The **timeout** option sets the timeout for each receive operation
+> on the control socket.
 
 **label** *key* *value*
 

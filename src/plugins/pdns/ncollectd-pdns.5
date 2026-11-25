@@ -36,7 +36,8 @@ Configures the path to the UNIX domain socket to be used when connecting to the
 daemon.
 By default \f(CW/run/pdns/pdns.controlsocket\fP will be used.
 .It \fBtimeout\fP \fIseconds\fP
-The \fBtimeout\fP option sets the overall timeout for the requests.
+The \fBtimeout\fP option sets the timeout for each receive operation
+on the control socket.
 .It \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
  Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
