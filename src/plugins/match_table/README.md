@@ -8,7 +8,6 @@ NCOLLECTD-MATCH\_TABLE(5) - File Formats Manual
 
 	match table {
 	    separator string
-	    skip-lines lines
 	    metric-prefix prefix
 	    label key value
 	    metric {
@@ -48,10 +47,6 @@ The following options are available inside a **match** block:
 > &#92;n and &#92;r respectively.
 > Please note that the double backslashes are required because of ncollectd's
 > config parsing.
-
-**skip-lines** *lines*
-
-> Skip the number of *lines* at the beginning of the file.
 
 **metric-prefix** *prefix*
 
@@ -135,6 +130,9 @@ The following options are available inside a **match** block:
 > **metric-from** *column*
 
 > > Configure to read the metric from the column with the zero-based index.
+> > Characters not valid in a metric name are replaced with an underscore.
+> > Each distinct value creates a new metric family, so avoid columns with
+> > unbounded values.
 
 > **label-from** *key* *column*
 
