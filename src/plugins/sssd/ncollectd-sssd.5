@@ -12,6 +12,20 @@
 .Ed
 .Sh DESCRIPTION
 The \fBsssd\fP plugin collects information from SSSD daemon.
+.Pp
+The information is read from the SSSD InfoPipe D-Bus service
+(\fIorg.freedesktop.sssd.infopipe\fP), so the \fBifp\fP responder must be enabled
+in
+.Xr sssd.conf 5
+and the user running ncollectd must be listed in the
+\fBallowed_uids\fP option of the \fB[ifp]\fP section, e.g.:
+.Bd -literal
+[sssd]
+services = nss, pam, ifp
+
+[ifp]
+allowed_uids = root
+.Ed
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5
