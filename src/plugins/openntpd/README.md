@@ -25,6 +25,7 @@ The **openntpd** plugin collects per-peer ntp data such as time offset and time
 dispersion.
 
 For talking to **openntpd**, it mimics what the **ntpdctl** control program does.
+The control protocol is version dependent, OpenNTPD 6.2 or later is required.
 
 The configuration of the **openntpd** plugin consists of one or more
 **instance** blocks.

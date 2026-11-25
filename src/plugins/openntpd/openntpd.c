@@ -19,6 +19,9 @@
 #define	TRUSTLEVEL_BADPEER 6
 #define	MAX_DISPLAY_WIDTH  80
 
+/* The imsg types and the ctl_show_* structures match OpenNTPD 6.2 or later. */
+#define OPENNTPD_MIN_VERSION "6.2"
+
 enum {
     FAM_OPENNTPD_UP,
     FAM_OPENNTPD_CLOCK_STRATUM,
@@ -68,117 +71,117 @@ static metric_family_t fams[FAM_OPENNTPD_MAX] = {
     [FAM_OPENNTPD_CLOCK_OFFSET] = {
         .name = "openntpd_clock_offset_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Offset of the local clock in seconds.",
     },
     [FAM_OPENNTPD_CONSTRAINT_ERRORS] = {
         .name = "openntpd_constraint_errors",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of constraint errors.",
     },
     [FAM_OPENNTPD_AVAILABLE_PEERS] = {
         .name = "openntpd_available_peers",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of configured peers.",
     },
     [FAM_OPENNTPD_VALID_PEERS] = {
         .name = "openntpd_valid_peers",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of valid peers.",
     },
     [FAM_OPENNTPD_AVAILABLE_SENSORS] = {
         .name = "openntpd_available_sensors",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of configured sensors.",
     },
     [FAM_OPENNTPD_VALID_SENSORS] = {
         .name = "openntpd_valid_sensors",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Number of valid sensors.",
     },
     [FAM_OPENNTPD_PEER_STRATUM] = {
         .name = "openntpd_peer_stratum",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Stratum of the peer.",
     },
     [FAM_OPENNTPD_PEER_SYNCEDTO] = {
         .name = "openntpd_peer_syncedto",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Is the local clock synced to this peer.",
     },
     [FAM_OPENNTPD_PEER_WEIGHT] = {
         .name = "openntpd_peer_weight",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Weight of the peer.",
     },
     [FAM_OPENNTPD_PEER_TRUSTLEVEL] = {
         .name = "openntpd_peer_trustlevel",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Trust level of the peer.",
     },
     [FAM_OPENNTPD_PEER_NEXT] = {
-        .name = "openntpd_peer_next",
+        .name = "openntpd_peer_next_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Seconds until the next query to the peer.",
     },
     [FAM_OPENNTPD_PEER_POLL] = {
-        .name = "openntpd_peer_poll",
+        .name = "openntpd_peer_poll_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Polling interval of the peer in seconds.",
     },
     [FAM_OPENNTPD_PEER_OFFSET] = {
-        .name = "openntpd_peer_offset",
+        .name = "openntpd_peer_offset_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Offset of the peer in seconds.",
     },
     [FAM_OPENNTPD_PEER_DELAY] = {
-        .name = "openntpd_peer_delay",
+        .name = "openntpd_peer_delay_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Network delay to the peer in seconds.",
     },
     [FAM_OPENNTPD_PEER_JITTER] = {
-        .name = "openntpd_peer_jitter",
+        .name = "openntpd_peer_jitter_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Jitter of the peer in seconds.",
     },
     [FAM_OPENNTPD_SENSOR_SYNCEDTO] = {
         .name = "openntpd_sensor_syncedto",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Is the local clock synced to this sensor.",
     },
     [FAM_OPENNTPD_SENSOR_WEIGHT] = {
         .name = "openntpd_sensor_weight",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Weight of the sensor.",
     },
     [FAM_OPENNTPD_SENSOR_GOOD] = {
         .name = "openntpd_sensor_good",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Is the sensor good.",
     },
     [FAM_OPENNTPD_SENSOR_STRATUM] = {
         .name = "openntpd_sensor_stratum",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Stratum of the sensor.",
     },
     [FAM_OPENNTPD_SENSOR_NEXT] = {
-        .name = "openntpd_sensor_next",
+        .name = "openntpd_sensor_next_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Seconds until the next query to the sensor.",
     },
     [FAM_OPENNTPD_SENSOR_POLL] = {
-        .name = "openntpd_sensor_poll",
+        .name = "openntpd_sensor_poll_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Polling interval of the sensor in seconds.",
     },
     [FAM_OPENNTPD_SENSOR_OFFSET] = {
-        .name = "openntpd_sensor_offset",
+        .name = "openntpd_sensor_offset_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Offset of the sensor in seconds.",
     },
     [FAM_OPENNTPD_SENSOR_CORRECTION] = {
-        .name = "openntpd_sensor_correction",
+        .name = "openntpd_sensor_correction_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Correction of the sensor in seconds.",
     },
 };
 
@@ -256,7 +259,8 @@ struct ctl_show_sensor {
 static int read_status_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 {
     if (imsg->hdr.len != IMSG_HEADER_SIZE + sizeof(struct ctl_show_status)) {
-        PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_STATUS received");
+        PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_STATUS received, OpenNTPD " OPENNTPD_MIN_VERSION
+                     " or later is required.");
         return -1;
     }
 
@@ -279,9 +283,8 @@ static int read_status_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
     metric_family_append(&ctx->fams[FAM_OPENNTPD_CLOCK_SYNCED], VALUE_GAUGE(cstatus->synced),
                          &ctx->labels, NULL);
 
-    double clock_offset = cstatus->clock_offset < 0 ?
-                          -1.0 * cstatus->clock_offset : cstatus->clock_offset;
-    metric_family_append(&ctx->fams[FAM_OPENNTPD_CLOCK_OFFSET], VALUE_GAUGE(clock_offset * 0.001),
+    metric_family_append(&ctx->fams[FAM_OPENNTPD_CLOCK_OFFSET],
+                         VALUE_GAUGE(cstatus->clock_offset * 0.001),
                          &ctx->labels, NULL);
     
     return 0;
@@ -289,22 +292,15 @@ static int read_status_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 
 static int read_peer_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 {
-    if (imsg->hdr.type == IMSG_CTL_SHOW_PEERS_END) {
-        if (imsg->hdr.len != IMSG_HEADER_SIZE + sizeof(int)) {
-            PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_PEERS_END received");
-            return -1;
-        }
-        return 0;
-    }
-
     if (imsg->hdr.len != IMSG_HEADER_SIZE + sizeof(struct ctl_show_peer)) {
-        PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_PEERS received");
+        PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_PEERS received, OpenNTPD " OPENNTPD_MIN_VERSION
+                     " or later is required.");
         return -1;
     }
 
     struct ctl_show_peer *cpeer = (struct ctl_show_peer *)imsg->data;
 
-    if (strlen(cpeer->peer_desc) > MAX_DISPLAY_WIDTH - 1) {
+    if (strnlen(cpeer->peer_desc, MAX_DISPLAY_WIDTH) == MAX_DISPLAY_WIDTH) {
         PLUGIN_ERROR("Peer_desc is too long");
         return -1;
     }
@@ -342,22 +338,15 @@ static int read_peer_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 
 static int read_sensor_msg(openntpd_ctx_t *ctx, struct imsg *imsg)
 {
-    if (imsg->hdr.type == IMSG_CTL_SHOW_SENSORS_END) {
-        if (imsg->hdr.len != IMSG_HEADER_SIZE + sizeof(int)) {
-            PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_SENSORS_END received");
-            return -1;
-        }
-        return 0;
-    }
-
     if (imsg->hdr.len != IMSG_HEADER_SIZE + sizeof(struct ctl_show_sensor)) {
-        PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_SENSORS received");
+        PLUGIN_ERROR("Invalid IMSG_CTL_SHOW_SENSORS received, OpenNTPD " OPENNTPD_MIN_VERSION
+                     " or later is required.");
         return -1;
     }
 
     struct ctl_show_sensor *csensor = (struct ctl_show_sensor *)imsg->data;
 
-    if (strlen(csensor->sensor_desc) > MAX_DISPLAY_WIDTH - 1) {
+    if (strnlen(csensor->sensor_desc, MAX_DISPLAY_WIDTH) == MAX_DISPLAY_WIDTH) {
         PLUGIN_ERROR("Sensor_desc is too long");
         return -1;
     }
@@ -404,11 +393,18 @@ static int openntpd_read(user_data_t *user_data)
     struct imsgbuf ibuf_ctl;
     imsg_init(&ibuf_ctl, fd);
 
-    imsg_compose(&ibuf_ctl, IMSG_CTL_SHOW_ALL, 0, 0, -1, NULL, 0);
+    if (imsg_compose(&ibuf_ctl, IMSG_CTL_SHOW_ALL, 0, 0, -1, NULL, 0) == -1) {
+        PLUGIN_ERROR("imsg_compose failed.");
+        close(fd);
+        metric_family_append(&ctx->fams[FAM_OPENNTPD_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
+        plugin_dispatch_metric_family(&ctx->fams[FAM_OPENNTPD_UP], 0);
+        return 0;
+    }
 
     while (ibuf_ctl.w.queued) {
         if ((msgbuf_write(&ibuf_ctl.w) <= 0) && (errno != EAGAIN)) {
             PLUGIN_ERROR("msgbuf_write error");
+            imsg_clear(&ibuf_ctl);
             close(fd);
             metric_family_append(&ctx->fams[FAM_OPENNTPD_UP], VALUE_GAUGE(0), &ctx->labels, NULL);
             plugin_dispatch_metric_family(&ctx->fams[FAM_OPENNTPD_UP], 0);
@@ -416,13 +412,16 @@ static int openntpd_read(user_data_t *user_data)
         }
     }
 
-    metric_family_append(&ctx->fams[FAM_OPENNTPD_UP], VALUE_GAUGE(1), &ctx->labels, NULL);
-
+    bool status_received = false;
     bool done = false;
     while (!done) {
         int n = imsg_read(&ibuf_ctl);
-        if ((n == -1) && (errno != EAGAIN)) {
-            PLUGIN_ERROR("imsg_read error");
+        if (n == -1) {
+            /* The socket has a receive timeout: EAGAIN means that it expired. */
+            if (errno == EAGAIN)
+                PLUGIN_ERROR("Timeout waiting for the response.");
+            else
+                PLUGIN_ERROR("imsg_read error: %s", STRERRNO);
             break;
         }
         if (n == 0) {
@@ -446,6 +445,8 @@ static int openntpd_read(user_data_t *user_data)
             switch (imsg.hdr.type) {
             case IMSG_CTL_SHOW_STATUS:
                 status = read_status_msg(ctx, &imsg);
+                if (status == 0)
+                    status_received = true;
                 break;
             case IMSG_CTL_SHOW_PEERS:
                 status = read_peer_msg(ctx, &imsg);
@@ -472,7 +473,11 @@ static int openntpd_read(user_data_t *user_data)
         }
     }
 
+    imsg_clear(&ibuf_ctl);
     close(fd);
+
+    metric_family_append(&ctx->fams[FAM_OPENNTPD_UP], VALUE_GAUGE(status_received ? 1 : 0),
+                         &ctx->labels, NULL);
 
     plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_OPENNTPD_MAX, ctx->filter, 0);
 
