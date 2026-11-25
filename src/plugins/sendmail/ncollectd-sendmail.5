@@ -11,6 +11,7 @@
 \fBplugin\fP sendmail {
     \fBinstance\fP \fIname\fP {
         \fBconfig-path\fP \fIconfig-file-path\fP
+        \fBstatus-path\fP \fIstatus-file-path\fP
         \fBqueue-path\fP \fIqueue-path\fP
         \fBhistogram-queue-size-buckets\fP [\fIbucket\fP] ...
         \fBhistogram-queue-age-buckets\fP [\fIbucket\fP] ...
@@ -26,6 +27,11 @@
 The \fBsendmail\fP plugin will collect statistics from a \fIsendmail\fP MTA
 using stastus file.
 .Pp
+The status file is a binary file written by \fIsendmail\fP with its native data
+layout, so \fIsendmail\fP and ncollectd must be built for the same ABI (same size
+of \fIlong\fP and \fItime_t\fP), otherwise the file will be rejected with an
+"Incorrect file size" error.
+.Pp
 The plugin configuration consists of one or more \fBinstance\fP blocks which
 specify one \fIsendmail\fP MTA each.
 Within the \fBinstance\fP blocks, the following options are allowed:
@@ -33,8 +39,14 @@ Within the \fBinstance\fP blocks, the following options are allowed:
 .It \fBconfig-path\fP \fIconfig-file-path\fP
 Set the sendmail config file path to get the mailers name and status file path.
 The default value is \f(CW/etc/mail/sendmail.cf\fP.
+.It \fBstatus-path\fP \fIstatus-file-path\fP
+Set the path of the sendmail status file.
+By default the path is taken from the \fBStatusFile\fP option in the sendmail
+config file, if it is not found the default value is \f(CW/etc/mail/statistics\fP.
 .It \fBqueue-path\fP \fIqueue-path\fP
 Set the path for de queue directory.
+If the queue directory has a \fIdf\fP subdirectory the data files are read
+from it.
 The default value is \f(CW/var/spool/mqueue\fP.
 .It \fBhistogram-queue-size-buckets\fP [\fIbucket\fP] ...
 Define the list of buckets for queue size histogram.

@@ -12,6 +12,7 @@
 
 #define DEFAULT_SENDMAIL_CF "/etc/mail/sendmail.cf"
 #define DEFAULT_QUEUE_DIR   "/var/spool/mqueue"
+#define DEFAULT_STATUS_FILE "/etc/mail/statistics"
 
 enum {
     FAM_SENDMAIL_FROM_CONNECTIONS,
@@ -22,7 +23,7 @@ enum {
     FAM_SENDMAIL_MAILER_TO_MESSAGES,
     FAM_SENDMAIL_MAILER_TO_BYTES,
     FAM_SENDMAIL_MAILER_REJECT_MESSAGES,
-    FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES,
+    FAM_SENDMAIL_MAILER_DISCARDED_MESSAGES,
     FAM_SENDMAIL_MAILER_QUARANTINED_MESSAGES,
     FAM_SENDMAIL_QUEUE_SIZE,
     FAM_SENDMAIL_QUEUE_MESSAGE_SIZE_BYTES,
@@ -34,6 +35,7 @@ typedef struct {
     char *name;
     char *queue_path;
     char *cf_path;
+    char *status_file;
     struct stat cf_stat;
     char status_path[MAXPATHLEN];
     double *buckets_queue_size_buckets;
@@ -42,7 +44,6 @@ typedef struct {
     size_t buckets_queue_age_size;
     label_set_t labels;
     plugin_filter_t *filter;
-    cdtime_t timeout;
     char mailers[MAILERS_MAX][MAILER_LEN + 1];
     metric_family_t fams[FAM_SENDMAIL_MAX];
 } sendmail_ctx_t;
@@ -134,8 +135,8 @@ static metric_family_t fams[FAM_SENDMAIL_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of messages rejected by the mailer.",
     },
-    [FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES] = {
-        .name = "sendmail_mailer_discarted_messages",
+    [FAM_SENDMAIL_MAILER_DISCARDED_MESSAGES] = {
+        .name = "sendmail_mailer_discarded_messages",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total number of messages discarded by the mailer.",
     },
@@ -161,33 +162,24 @@ static metric_family_t fams[FAM_SENDMAIL_MAX] = {
     },
 };
 
-static int sendmail_read_queue(sendmail_ctx_t *ctx)
+static int sendmail_read_queue_dir(const char *path, histogram_t *queue_msg_size,
+                                   histogram_t *queue_msg_age, uint64_t *queue_size)
 {
-    DIR *dh = opendir(ctx->queue_path);
+    DIR *dh = opendir(path);
     if (dh == NULL) {
-        PLUGIN_ERROR("Cannot open '%s': %s", ctx->queue_path, STRERRNO);
+        PLUGIN_ERROR("Cannot open '%s': %s", path, STRERRNO);
         return -1;
     }
 
     int dfd = dirfd(dh);
     if (dfd < 0) {
         PLUGIN_ERROR("Cannot get directory stream file descriptor '%s': %s",
-                      ctx->queue_path, STRERRNO);
-        closedir(dh);
-        return -1;
-    }
-
-    histogram_t *queue_msg_size = histogram_new_custom(ctx->buckets_queue_size_size,
-                                                       ctx->buckets_queue_size_buckets);
-    histogram_t *queue_msg_age = histogram_new_custom(ctx->buckets_queue_age_size,
-                                                      ctx->buckets_queue_age_buckets);
-    if ((queue_msg_size == NULL) || (queue_msg_age == NULL)) {
+                      path, STRERRNO);
         closedir(dh);
         return -1;
     }
 
     double now = CDTIME_T_TO_DOUBLE(cdtime());
-    uint64_t queue_size = 0;
 
     struct dirent *ent;
     while ((ent = readdir(dh)) != NULL) {
@@ -200,11 +192,11 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
             if (errno == ENOENT)
                 continue;
             PLUGIN_ERROR("Cannot stat file: '%s' in dir '%s': %s.",
-                         ent->d_name, ctx->queue_path, STRERRNO);
+                         ent->d_name, path, STRERRNO);
             continue;
         }
 
-        if ((statbuf.st_size > 0) && (S_ISREG(statbuf.st_mode))) {
+        if (S_ISREG(statbuf.st_mode)) {
 #ifdef KERNEL_DARWIN
             double waiting = now - TIMESPEC_TO_DOUBLE(&statbuf.st_mtimespec);
 #else
@@ -214,12 +206,45 @@ static int sendmail_read_queue(sendmail_ctx_t *ctx)
                 waiting = 0;
             histogram_update(queue_msg_age, waiting);
             histogram_update(queue_msg_size, statbuf.st_size);
-            queue_size++;
+            (*queue_size)++;
         }
-
     }
 
     closedir(dh);
+
+    return 0;
+}
+
+static int sendmail_read_queue(sendmail_ctx_t *ctx)
+{
+    histogram_t *queue_msg_size = histogram_new_custom(ctx->buckets_queue_size_size,
+                                                       ctx->buckets_queue_size_buckets);
+    histogram_t *queue_msg_age = histogram_new_custom(ctx->buckets_queue_age_size,
+                                                      ctx->buckets_queue_age_buckets);
+    if ((queue_msg_size == NULL) || (queue_msg_age == NULL)) {
+        PLUGIN_ERROR("Cannot create queue histograms.");
+        histogram_destroy(queue_msg_size);
+        histogram_destroy(queue_msg_age);
+        return -1;
+    }
+
+    /* Since sendmail 8.12 the data files are stored in the 'df' subdirectory
+       of the queue directory if it exists. */
+    char df_path[MAXPATHLEN];
+    ssnprintf(df_path, sizeof(df_path), "%s/df", ctx->queue_path);
+
+    const char *path = ctx->queue_path;
+    struct stat statbuf;
+    if ((stat(df_path, &statbuf) == 0) && S_ISDIR(statbuf.st_mode))
+        path = df_path;
+
+    uint64_t queue_size = 0;
+    int status = sendmail_read_queue_dir(path, queue_msg_size, queue_msg_age, &queue_size);
+    if (status != 0) {
+        histogram_destroy(queue_msg_size);
+        histogram_destroy(queue_msg_age);
+        return -1;
+    }
 
     metric_family_append(&ctx->fams[FAM_SENDMAIL_QUEUE_SIZE],
                          VALUE_GAUGE(queue_size), &ctx->labels, NULL);
@@ -249,8 +274,6 @@ static int sendmail_read_mailers(sendmail_ctx_t *ctx)
         (cf_stat.st_size == ctx->cf_stat.st_size))
         return 0;
 
-    memcpy(&ctx->cf_stat, &cf_stat, sizeof(struct stat));
-
     FILE *fh = fopen(ctx->cf_path, "r");
     if (fh == NULL) {
         PLUGIN_ERROR("Cannot open '%s': %s.", ctx->cf_path, STRERRNO);
@@ -258,13 +281,24 @@ static int sendmail_read_mailers(sendmail_ctx_t *ctx)
     }
 
     int n = 0;
-    sstrncpy(ctx->mailers[n++], "prog", MAILER_LEN);
-    sstrncpy(ctx->mailers[n++], "*file*", MAILER_LEN);
-    sstrncpy(ctx->mailers[n++], "*include*", MAILER_LEN);
+    sstrncpy(ctx->mailers[n++], "prog", sizeof(ctx->mailers[0]));
+    sstrncpy(ctx->mailers[n++], "*file*", sizeof(ctx->mailers[0]));
+    sstrncpy(ctx->mailers[n++], "*include*", sizeof(ctx->mailers[0]));
+
+    ctx->status_path[0] = '\0';
 
     char line[MAXPATHLEN+20];
+    bool skip = false;
 
     while (fgets(line, sizeof(line), fh) != NULL) {
+        /* Ignore the remainder of the lines that do not fit in the buffer. */
+        bool partial = (strchr(line, '\n') == NULL) && (feof(fh) == 0);
+        if (skip) {
+            skip = partial;
+            continue;
+        }
+        skip = partial;
+
         char *end = strchr(line, '#');
         if (end != NULL)
             *end = '\0';
@@ -297,14 +331,22 @@ static int sendmail_read_mailers(sendmail_ctx_t *ctx)
                     break;
             }
             if (i == n) {
-                sstrncpy(ctx->mailers[n], mailer, MAILER_LEN);
+                sstrncpy(ctx->mailers[n], mailer, sizeof(ctx->mailers[n]));
                 n++;
             }
 
         } else if (*c == 'O') {
             c++;
-            if (strncasecmp(c, " StatusFile", 11) == 0) {
-                if (isalnum((unsigned char)c[11]))
+            if (*c == 'S') {
+                /* Old short form: OS/path/to/statistics */
+                c++;
+                while (isspace((unsigned char)*c)) c++;
+                sstrncpy(ctx->status_path, c, sizeof(ctx->status_path));
+            } else if (isspace((unsigned char)*c)) {
+                while (isspace((unsigned char)*c)) c++;
+                if (strncasecmp(c, "StatusFile", 10) != 0)
+                    continue;
+                if (isalnum((unsigned char)c[10]))
                     continue;
                 c = strchr(c, '=');
                 if (c == NULL)
@@ -322,6 +364,9 @@ static int sendmail_read_mailers(sendmail_ctx_t *ctx)
 
     for (; n < MAILERS_MAX; n++)
         ctx->mailers[n][0] = '\0';
+
+    /* Update the cache only after reading the file successfully. */
+    memcpy(&ctx->cf_stat, &cf_stat, sizeof(struct stat));
 
     return 0;
 }
@@ -350,7 +395,7 @@ static int sendmail_read_mailstats_v2(sendmail_ctx_t *ctx, mailstats_v2_t *stats
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_REJECT_MESSAGES],
                              VALUE_COUNTER(stats->nr[i]), &ctx->labels,
                              &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
-        metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES],
+        metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARDED_MESSAGES],
                              VALUE_COUNTER(stats->nd[i]), &ctx->labels,
                              &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
     }
@@ -389,7 +434,7 @@ static int sendmail_read_mailstats_v3(sendmail_ctx_t *ctx, mailstats_v3_t *stats
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_REJECT_MESSAGES],
                              VALUE_COUNTER(stats->nr[i]), &ctx->labels,
                              &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
-        metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES],
+        metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARDED_MESSAGES],
                              VALUE_COUNTER(stats->nd[i]), &ctx->labels,
                              &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
 
@@ -429,7 +474,7 @@ static int sendmail_read_mailstats_v4(sendmail_ctx_t *ctx, mailstats_v4_t *stats
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_REJECT_MESSAGES],
                              VALUE_COUNTER(stats->nr[i]), &ctx->labels,
                              &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
-        metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARTED_MESSAGES],
+        metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_DISCARDED_MESSAGES],
                              VALUE_COUNTER(stats->nd[i]), &ctx->labels,
                              &LABEL_PAIR_CONST("mailer", ctx->mailers[i]), NULL);
         metric_family_append(&ctx->fams[FAM_SENDMAIL_MAILER_QUARANTINED_MESSAGES],
@@ -442,9 +487,13 @@ static int sendmail_read_mailstats_v4(sendmail_ctx_t *ctx, mailstats_v4_t *stats
 
 static int sendmail_read_mailstats(sendmail_ctx_t *ctx)
 {
-    int fd = open(ctx->status_path, O_RDONLY, 0600);
+    const char *status_path = ctx->status_file;
+    if (status_path == NULL)
+        status_path = ctx->status_path[0] != '\0' ? ctx->status_path : DEFAULT_STATUS_FILE;
+
+    int fd = open(status_path, O_RDONLY);
     if (fd < 0) {
-        PLUGIN_ERROR("Cannot open '%s': %s.", ctx->status_path, STRERRNO);
+        PLUGIN_ERROR("Cannot open '%s': %s.", status_path, STRERRNO);
         return -1;
     }
 
@@ -454,7 +503,7 @@ static int sendmail_read_mailstats(sendmail_ctx_t *ctx)
     close(fd);
 
     if (size < 0) {
-        PLUGIN_ERROR("Cannot read '%s': %s.", ctx->status_path, STRERRNO);
+        PLUGIN_ERROR("Cannot read '%s': %s.", status_path, STRERRNO);
         return -1;
     }
 
@@ -462,34 +511,34 @@ static int sendmail_read_mailstats(sendmail_ctx_t *ctx)
         return 0;
 
     if (stats.magic != MAILSTATS_MAGIC) {
-        PLUGIN_ERROR("Incorrect magic number in '%s'.", ctx->status_path);
+        PLUGIN_ERROR("Incorrect magic number in '%s'.", status_path);
         return -1;
     }
 
     switch(stats.version) {
     case 4:
         if ((size != sizeof(mailstats_v4_t)) || (stats.size != sizeof(mailstats_v4_t))) {
-            PLUGIN_ERROR("Incorrect file size: '%s'.", ctx->status_path);
+            PLUGIN_ERROR("Incorrect file size: '%s'.", status_path);
             return -1;
         }
         sendmail_read_mailstats_v4(ctx, (mailstats_v4_t *)&stats);
         break;
     case 3:
         if ((size != sizeof(mailstats_v3_t)) || (stats.size != sizeof(mailstats_v3_t))) {
-            PLUGIN_ERROR("Incorrect file size: '%s'.", ctx->status_path);
+            PLUGIN_ERROR("Incorrect file size: '%s'.", status_path);
             return -1;
         }
         sendmail_read_mailstats_v3(ctx, (mailstats_v3_t *)&stats);
         break;
     case 2:
         if ((size != sizeof(mailstats_v2_t)) || (stats.size != sizeof(mailstats_v2_t))) {
-            PLUGIN_ERROR("Incorrect file size: '%s'.", ctx->status_path);
+            PLUGIN_ERROR("Incorrect file size: '%s'.", status_path);
             return -1;
         }
         sendmail_read_mailstats_v2(ctx, (mailstats_v2_t *)&stats);
         break;
     default:
-        PLUGIN_ERROR("Incorrect stats version: '%s'.", ctx->status_path);
+        PLUGIN_ERROR("Incorrect stats version: '%s'.", status_path);
         break;
     }
 
@@ -522,6 +571,7 @@ static void sendmail_ctx_free(void *arg)
 
     free(ctx->name);
     free(ctx->cf_path);
+    free(ctx->status_file);
     free(ctx->queue_path);
 
     free(ctx->buckets_queue_size_buckets);
@@ -557,6 +607,8 @@ static int sendmail_config_instance (config_item_t *ci)
 
         if (strcasecmp("config-path", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->cf_path);
+        } else if (strcasecmp("status-path", child->key) == 0) {
+            status = cf_util_get_string(child, &ctx->status_file);
         } else if (strcasecmp("queue-path", child->key) == 0) {
             status = cf_util_get_string(child, &ctx->queue_path);
         } else if (strcasecmp("histogram-queue-size-buckets", child->key) == 0) {
@@ -630,6 +682,26 @@ static int sendmail_config_instance (config_item_t *ci)
         memcpy(ctx->buckets_queue_age_buckets, buckets,
                ctx->buckets_queue_age_size * sizeof(double));
     }
+
+    /* Check that the buckets are valid. */
+    histogram_t *h = histogram_new_custom(ctx->buckets_queue_size_size,
+                                          ctx->buckets_queue_size_buckets);
+    if (h == NULL) {
+        PLUGIN_ERROR("Invalid 'histogram-queue-size-buckets' in instance '%s', "
+                     "the buckets must be positive and strictly increasing.", ctx->name);
+        sendmail_ctx_free(ctx);
+        return -1;
+    }
+    histogram_destroy(h);
+
+    h = histogram_new_custom(ctx->buckets_queue_age_size, ctx->buckets_queue_age_buckets);
+    if (h == NULL) {
+        PLUGIN_ERROR("Invalid 'histogram-queue-age-buckets' in instance '%s', "
+                     "the buckets must be positive and strictly increasing.", ctx->name);
+        sendmail_ctx_free(ctx);
+        return -1;
+    }
+    histogram_destroy(h);
 
     label_set_add(&ctx->labels, true, "instance", ctx->name);
 
