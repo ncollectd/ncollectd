@@ -51,7 +51,7 @@ static int ping_timeval_add (struct timeval *tv1, struct timeval *tv2, struct ti
     res->tv_sec  = tv1->tv_sec  + tv2->tv_sec;
     res->tv_usec = tv1->tv_usec + tv2->tv_usec;
 
-    if (res->tv_usec > 1000000) {
+    if (res->tv_usec >= 1000000) {
         res->tv_usec -= 1000000;
         res->tv_sec++;
     }
@@ -269,7 +269,7 @@ static int ping_receive_one (pingobj_t *obj, struct timeval *now, int addrfam)
     /* Set up the receive buffer..  */
     struct msghdr msghdr;
     struct cmsghdr *cmsg;
-    char payload_buffer[4096];
+    char payload_buffer[PING_BUFFER_LEN];
     ssize_t payload_buffer_len;
     char control_buffer[4096];
     struct iovec payload_iovec;
@@ -407,6 +407,7 @@ static ssize_t ping_sendto (pingobj_t *obj, pinghost_t *ph, const void *buf, siz
     ssize_t ret;
 
     if (gettimeofday(ph->timer, NULL) == -1) {
+        ping_set_errno(obj, errno);
         timerclear(ph->timer);
         return -1;
     }
@@ -438,7 +439,7 @@ static int ping_send_one_ipv4 (pingobj_t *obj, pinghost_t *ph, int fd)
     struct icmp *icmp4;
     int status;
 
-    char   buf[4096] = {0};
+    char   buf[PING_BUFFER_LEN] = {0};
     size_t buflen;
 
     char *data;
@@ -455,8 +456,10 @@ static int ping_send_one_ipv4 (pingobj_t *obj, pinghost_t *ph, int fd)
 
     datalen = strlen(ph->data);
     buflen = ICMP_MINLEN + datalen;
-    if (sizeof (buf) < buflen)
+    if (sizeof (buf) < buflen) {
+        ping_set_error(obj, "ping_send_one_ipv4", "Packet too large");
         return EINVAL;
+    }
 
     data  = buf + ICMP_MINLEN;
     memcpy(data, ph->data, datalen);
@@ -467,7 +470,7 @@ static int ping_send_one_ipv4 (pingobj_t *obj, pinghost_t *ph, int fd)
 
     status = ping_sendto(obj, ph, buf, buflen, fd);
     if (status < 0) {
-        perror("ping_sendto");
+        PLUGIN_DEBUG("ping_sendto: %s", obj->errmsg);
         return -1;
     }
 
@@ -480,7 +483,7 @@ static int ping_send_one_ipv6 (pingobj_t *obj, pinghost_t *ph, int fd)
     struct icmp6_hdr *icmp6;
     int status;
 
-    char buf[4096] = {0};
+    char buf[PING_BUFFER_LEN] = {0};
     int  buflen;
 
     char *data;
@@ -497,8 +500,10 @@ static int ping_send_one_ipv6 (pingobj_t *obj, pinghost_t *ph, int fd)
 
     datalen = strlen (ph->data);
     buflen = sizeof(*icmp6) + datalen;
-    if ((int)sizeof(buf) < buflen)
+    if ((int)sizeof(buf) < buflen) {
+        ping_set_error(obj, "ping_send_one_ipv6", "Packet too large");
         return EINVAL;
+    }
 
     data  = buf + ICMP_MINLEN;
     memcpy(data, ph->data, datalen);
@@ -509,7 +514,7 @@ static int ping_send_one_ipv6 (pingobj_t *obj, pinghost_t *ph, int fd)
 
     status = ping_sendto(obj, ph, buf, buflen, fd);
     if (status < 0) {
-        perror("ping_sendto");
+        PLUGIN_DEBUG("ping_sendto: %s", obj->errmsg);
         return -1;
     }
 
@@ -621,17 +626,20 @@ static int ping_set_qos (pingobj_t *obj, uint8_t qos)
 
 static int ping_get_ident (void)
 {
-    int fd;
+    static pthread_mutex_t ident_lock = PTHREAD_MUTEX_INITIALIZER;
     static int did_seed = 0;
+    static unsigned int next_ident = 0;
+    int fd;
 
     int retval;
+
+    pthread_mutex_lock(&ident_lock);
 
     if (did_seed == 0) {
         if ((fd = open("/dev/urandom", O_RDONLY)) != -1) {
             unsigned int seed;
 
             if (read(fd, &seed, sizeof (seed)) != -1) {
-                did_seed = 1;
                 PLUGIN_DEBUG("Random seed:   %#x\n", seed);
                 srandom(seed);
             }
@@ -644,12 +652,18 @@ static int ping_get_ident (void)
             PLUGIN_DEBUG("open (/dev/urandom): %s\n", sstrerror(errno, errbuf, sizeof (errbuf)));
         }
 #endif
+        /* coverity[DC.WEAK_CRYPTO] */
+        next_ident = (unsigned int)random();
+        did_seed = 1;
     }
 
-    /* coverity[DC.WEAK_CRYPTO] */
-    retval = (int)random();
+    /* The identifiers are handed out sequentially from a random base, so that
+     * they are unique among the hosts of all instances. */
+    retval = (int)(next_ident++ & 0xFFFF);
 
-    PLUGIN_DEBUG("Random number: %#x\n", (unsigned int)retval);
+    pthread_mutex_unlock(&ident_lock);
+
+    PLUGIN_DEBUG("Ident: %#x\n", (unsigned int)retval);
 
     return retval;
 }
@@ -1018,8 +1032,10 @@ int ping_send (pingobj_t *obj)
     struct timeval nowtime;
     struct timeval timeout;
 
-    _Bool need_ipv4_socket = 0;
-    _Bool need_ipv6_socket = 0;
+    bool need_ipv4_socket = 0;
+    bool need_ipv6_socket = 0;
+
+    obj->send_errors = 0;
 
     for (ptr = obj->head; ptr != NULL; ptr = ptr->next) {
         ptr->latency  = -1.0;
@@ -1038,18 +1054,23 @@ int ping_send (pingobj_t *obj)
 
     if (need_ipv4_socket && obj->fd4 == -1) {
         obj->fd4 = ping_open_socket(obj, AF_INET);
-        if (obj->fd4 == -1)
-            return -1;
-        ping_set_ttl (obj, obj->ttl);
-        ping_set_qos (obj, obj->qos);
+        if (obj->fd4 != -1) {
+            ping_set_ttl (obj, obj->ttl);
+            ping_set_qos (obj, obj->qos);
+        }
     }
     if (need_ipv6_socket && obj->fd6 == -1) {
         obj->fd6 = ping_open_socket(obj, AF_INET6);
-        if (obj->fd6 == -1)
-            return -1;
-        ping_set_ttl(obj, obj->ttl);
-        ping_set_qos(obj, obj->qos);
+        if (obj->fd6 != -1) {
+            ping_set_ttl(obj, obj->ttl);
+            ping_set_qos(obj, obj->qos);
+        }
     }
+
+    /* The hosts of an address family whose socket could not be opened are
+     * skipped below and accounted as send errors. */
+    if (obj->fd4 == -1 && obj->fd6 == -1)
+        return -1;
 
     if (gettimeofday(&nowtime, NULL) == -1) {
         ping_set_errno(obj, errno);
@@ -1086,6 +1107,14 @@ int ping_send (pingobj_t *obj)
 
         int write_fd = -1;
         int max_fd = -1;
+
+        if ((host_to_ping != NULL) &&
+            !(host_to_ping->addrfamily == AF_INET && obj->fd4 != -1) &&
+            !(host_to_ping->addrfamily == AF_INET6 && obj->fd6 != -1)) {
+            error_count++;
+            host_to_ping = host_to_ping->next;
+            continue;
+        }
 
         FD_ZERO(&read_fds);
         FD_ZERO(&write_fds);
@@ -1180,8 +1209,10 @@ int ping_send (pingobj_t *obj)
         }
     }
 
-    if (error_count)
-        return -1 * error_count;
+    /* The hosts the echo request could not be sent to keep a negative
+     * latency and are accounted as lost by the caller. */
+    obj->send_errors = error_count;
+
     return pongs_received;
 }
 
@@ -1201,9 +1232,8 @@ int ping_host_resolve (pingobj_t *obj, pinghost_t *ph, const char *host)
     struct addrinfo  ai_hints;
     struct addrinfo *ai_list, *ai_ptr;
     int ai_return;
+    bool found = 0;
 
-    memset (ph->addr, '\0', sizeof(struct sockaddr_storage));
-    ph->addrlen = sizeof(struct sockaddr_storage);
     ph->latency = -1.0;
     ph->dropped = 0;
     ph->sequence = 0;
@@ -1273,6 +1303,7 @@ int ping_host_resolve (pingobj_t *obj, pinghost_t *ph, const char *host)
         memcpy (ph->addr, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
         ph->addrlen = ai_ptr->ai_addrlen;
         ph->addrfamily = ai_ptr->ai_family;
+        found = 1;
 
 #ifdef AI_CANONNAME
         if ((ai_ptr->ai_canonname != NULL) && (strcmp(ph->hostname, ai_ptr->ai_canonname) != 0)) {
@@ -1293,6 +1324,9 @@ int ping_host_resolve (pingobj_t *obj, pinghost_t *ph, const char *host)
     }
 
     freeaddrinfo(ai_list);
+
+    if (!found)
+        return -1;
 
     return 0;
 }

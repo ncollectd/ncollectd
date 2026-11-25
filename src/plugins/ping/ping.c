@@ -6,7 +6,6 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "libutils/complain.h"
 
 #include <netinet/in.h>
 #ifdef HAVE_NETDB_H
@@ -132,9 +131,9 @@ static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
             PLUGIN_WARNING("host %s has not answered %d PING requests, triggering resolve",
                             hl->host, inst->ping_max_missed);
 
-            int status = ping_host_resolve(pingobj, ph, hl->host);
-            if (status != 0)
-                PLUGIN_WARNING("ping_host_resolve (%s) failed.", hl->host);
+            /* The ping thread resolves the host before the next ping_send,
+             * without holding the lock. */
+            ph->resolve_pending = 1;
 #if 0
             /* we trigger the resolv simply be removing and adding the host to our
              * ping object */
@@ -153,11 +152,27 @@ static int ping_dispatch_all(pingobj_t *pingobj, ping_inst_t *inst)
     return 0;
 }
 
+static void ping_resolve_pending(pingobj_t *pingobj)
+{
+    for (pinghost_t *ph = pingobj->head; ph != NULL; ph = ph->next) {
+        if (!ph->resolve_pending)
+            continue;
+
+        ph->resolve_pending = 0;
+
+        int status = ping_host_resolve(pingobj, ph, ph->username);
+        if (status != 0)
+            PLUGIN_WARNING("ping_host_resolve (%s) failed: %s",
+                           ph->username, ping_get_error(pingobj));
+    }
+}
+
 static void *ping_thread(void *arg)
 {
     ping_inst_t *inst = arg;
 
-    c_complain_t complaint = C_COMPLAIN_INIT_STATIC;
+    /* Only the first of consecutive ping_send failures is logged. */
+    bool send_failed = false;
 
     pingobj_t *pingobj = ping_construct();
     if (pingobj == NULL) {
@@ -217,11 +232,23 @@ static void *ping_thread(void *arg)
 
         pthread_mutex_unlock(&inst->ping_lock);
 
+        ping_resolve_pending(pingobj);
+
         int status = ping_send(pingobj);
         if (status < 0) {
-            c_complain(LOG_ERR, &complaint, "ping_send failed: %s", ping_get_error(pingobj));
+            if (!send_failed)
+                PLUGIN_ERROR("ping_send failed: %s", ping_get_error(pingobj));
+            send_failed = true;
+        } else if (pingobj->send_errors > 0) {
+            if (!send_failed)
+                PLUGIN_ERROR("ping_send failed for %d host(s): %s",
+                             pingobj->send_errors, ping_get_error(pingobj));
+            send_failed = true;
+            send_successful = true;
         } else {
-            c_release(LOG_NOTICE, &complaint, "ping_send succeeded.");
+            if (send_failed)
+                PLUGIN_NOTICE("ping_send succeeded.");
+            send_failed = false;
             send_successful = true;
         }
 
@@ -281,7 +308,7 @@ static int ping_stop_thread(ping_inst_t *inst)
 
     if (!inst->ping_thread_loop) {
         pthread_mutex_unlock(&inst->ping_lock);
-        return -1;
+        return 0;
     }
 
     inst->ping_thread_loop = false;
@@ -308,8 +335,14 @@ static int ping_read(user_data_t *user_data)
     ping_inst_t *inst = user_data->data;
 
     pthread_mutex_lock(&inst->ping_lock);
+    bool ping_thread_loop = inst->ping_thread_loop;
     bool ping_thread_error = inst->ping_thread_error;
     pthread_mutex_unlock(&inst->ping_lock);
+
+    /* The thread is started here and not in the config callback, which runs
+     * before the daemon forks. */
+    if (!ping_thread_loop)
+        return ping_start_thread(inst);
 
     if (ping_thread_error) {
         PLUGIN_ERROR("The ping thread had a problem. Restarting it.");
@@ -385,9 +418,9 @@ static int ping_read(user_data_t *user_data)
         else if (pkg_recv == 1)
             latency_stddev = 0.0;
         else
-            latency_stddev = sqrt(((((double)pkg_recv) * latency_squared) -
-                                   (latency_total * latency_total)) /
-                                  ((double)(pkg_recv * (pkg_recv - 1))));
+            latency_stddev = sqrt(fmax(0.0, ((((double)pkg_recv) * latency_squared) -
+                                             (latency_total * latency_total)) /
+                                            (((double)pkg_recv) * ((double)(pkg_recv - 1)))));
 
         metric_family_append(&inst->fams[FAM_PING_LATENCY_STDDEV_SECONDS],
                              VALUE_GAUGE(latency_stddev), &hl->labels,
@@ -444,6 +477,9 @@ static void ping_instance_free(void *arg)
     plugin_filter_free(inst->filter);
 
     ping_hostlist_free(inst->hostlist_head);
+
+    pthread_cond_destroy(&inst->ping_cond);
+    pthread_mutex_destroy(&inst->ping_lock);
 
     free(inst);
 }
@@ -560,14 +596,18 @@ static int ping_config_instance(config_item_t *ci)
             }
         } else if (strcasecmp(child->key, "ping-interval") == 0) {
             status = cf_util_get_cdtime(child, &inst->ping_interval);
+            if ((status == 0) && (inst->ping_interval == 0)) {
+                PLUGIN_ERROR("'ping-interval' in %s:%d must be greater than zero.",
+                             cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp(child->key, "interval") == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp(child->key, "size") == 0) {
             int size = 0;
             status = cf_util_get_int(child, &size);
             if (status == 0) {
-                /* Max IP packet size - (IPv6 + ICMP) = 65535 - (40 + 8) = 65487 */
-                if (size <= 65487) {
+                if ((size >= 0) && (size <= PING_MAX_DATA_LEN)) {
                     free(inst->ping_data);
                     inst->ping_data = malloc(size + 1);
                     if (inst->ping_data == NULL) {
@@ -591,11 +631,19 @@ static int ping_config_instance(config_item_t *ci)
                     inst->ping_data[size] = 0;
                     inst->ping_data_size = size;
                 } else {
-                    PLUGIN_WARNING("Ignoring invalid 'size' %d.", size);
+                    PLUGIN_ERROR("Invalid 'size' %d in %s:%d, it must be between 0 and %d.",
+                                 size, cf_get_file(child), cf_get_lineno(child),
+                                 PING_MAX_DATA_LEN);
+                    status = -1;
                 }
             }
         } else if (strcasecmp(child->key, "timeout") == 0) {
             status = cf_util_get_cdtime(child, &inst->ping_timeout);
+            if ((status == 0) && (inst->ping_timeout == 0)) {
+                PLUGIN_ERROR("'timeout' in %s:%d must be greater than zero.",
+                             cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp(child->key, "max-missed") == 0) {
             status = cf_util_get_int(child, &inst->ping_max_missed);
             if (status == 0) {
@@ -656,8 +704,6 @@ static int ping_config_instance(config_item_t *ci)
             return -1;
         }
     }
-
-    ping_start_thread(inst);
 
     return plugin_register_complex_read("ping", inst->name, ping_read, interval,
                         &(user_data_t){.data = inst, .free_func = ping_instance_free});
