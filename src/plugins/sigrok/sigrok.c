@@ -19,12 +19,24 @@
  * plugin, at least, complains when written to with sub-second intervals.*/
 #define DEFAULT_MIN_DISPATCH_INTERVAL TIME_T_TO_CDTIME_T(0)
 
+/* Delay before rescanning the devices after the acquisition ended or failed. */
+#define SIGROK_RETRY_INTERVAL 30
+
 static pthread_t sr_thread;
 static int sr_thread_running = FALSE;
-GSList *config_devices;
+static pthread_mutex_t sr_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct sr_session *sr_sess;
+static bool sr_session_running;
+static bool sr_stop_requested;
+static GSList *config_devices;
 static int num_devices;
 static int loglevel = SR_LOG_WARN;
 static struct sr_context *sr_ctx;
+
+struct channel_dispatch {
+    char *channel;
+    cdtime_t last_dispatch;
+};
 
 struct config_device {
     char *name;
@@ -37,8 +49,39 @@ struct config_device {
     char **channel;
     struct sr_dev_inst *sdi;
     cdtime_t min_dispatch_interval;
-    cdtime_t last_dispatch;
+    size_t dispatch_num;
+    struct channel_dispatch *dispatch;
 };
+
+/* Return the time of the last dispatch for this channel of the device,
+ * creating the entry if needed. */
+static cdtime_t *sigrok_last_dispatch(struct config_device *cfdev, const char *channel)
+{
+    for (size_t i = 0; i < cfdev->dispatch_num; i++) {
+        if (strcmp(cfdev->dispatch[i].channel, channel) == 0)
+            return &cfdev->dispatch[i].last_dispatch;
+    }
+
+    struct channel_dispatch *tmp = realloc(cfdev->dispatch,
+                                           sizeof(*tmp) * (cfdev->dispatch_num + 1));
+    if (tmp == NULL) {
+        PLUGIN_ERROR("realloc failed.");
+        return NULL;
+    }
+    cfdev->dispatch = tmp;
+
+    char *name = strdup(channel);
+    if (name == NULL) {
+        PLUGIN_ERROR("strdup failed.");
+        return NULL;
+    }
+
+    cfdev->dispatch[cfdev->dispatch_num].channel = name;
+    cfdev->dispatch[cfdev->dispatch_num].last_dispatch = 0;
+    cfdev->dispatch_num++;
+
+    return &cfdev->dispatch[cfdev->dispatch_num - 1].last_dispatch;
+}
 
 static int sigrok_log_callback(void *cb_data __attribute__((unused)),
                                int msg_loglevel, const char *format, va_list args)
@@ -73,7 +116,7 @@ static const char *sigrok_type(const struct sr_datafeed_analog *analog)
     case SR_MQ_CONTINUITY:
         return "continuity";
     case SR_MQ_PULSE_WIDTH:
-        return "pulse_witdh";
+        return "pulse_width";
     case SR_MQ_CONDUCTANCE:
         return "conductance";
     case SR_MQ_POWER:
@@ -161,7 +204,7 @@ static const char *sigrok_units(const struct sr_datafeed_analog *analog)
     case SR_UNIT_UNITLESS:
         return NULL;
     case SR_UNIT_DECIBEL_SPL:
-        return "_sound_presure_level";
+        return "_sound_pressure_level";
     case SR_UNIT_CONCENTRATION:
         return "_concentration";
     case SR_UNIT_REVOLUTIONS_PER_MINUTE:
@@ -171,7 +214,7 @@ static const char *sigrok_units(const struct sr_datafeed_analog *analog)
     case SR_UNIT_WATT:
         return "_watts";
     case SR_UNIT_WATT_HOUR:
-        return "_watts_per_hour";
+        return "_watt_hours";
     case SR_UNIT_METER_SECOND:
         return "_meters_per_second";
     case SR_UNIT_HECTOPASCAL:
@@ -244,10 +287,6 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
     if (packet->type != SR_DF_ANALOG)
         return;
 
-    if ((cfdev->min_dispatch_interval != 0) &&
-            ((cdtime() - cfdev->last_dispatch) < cfdev->min_dispatch_interval))
-        return;
-
     metric_t m = {0};
 
     /* Ignore all but the first sample on the first probe. */
@@ -257,45 +296,60 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
     if (analog->meaning == NULL)
         return;
 
+    struct sr_channel *channel = NULL;
     if ((analog->meaning->channels != NULL) && (g_slist_length(analog->meaning->channels) > 0)) {
-        struct sr_channel *channel = g_slist_nth_data(analog->meaning->channels, 0);
-        if (channel != NULL) {
-            if (cfdev->channel_num > 0) {
-                bool channel_found = false;
-                for (size_t i = 0; i < cfdev->channel_num; i++) {
-                    if (strcasecmp(cfdev->channel[i], channel->name) == 0) {
-                        channel_found = true;
-                        break;
-                    }
+        channel = g_slist_nth_data(analog->meaning->channels, 0);
+        if ((channel != NULL) && (cfdev->channel_num > 0)) {
+            bool channel_found = false;
+            for (size_t i = 0; i < cfdev->channel_num; i++) {
+                if (strcasecmp(cfdev->channel[i], channel->name) == 0) {
+                    channel_found = true;
+                    break;
                 }
-                if (!channel_found)
-                    return;
             }
-            metric_label_set(&m, "channel", channel->name);
+            if (!channel_found)
+                return;
         }
     }
 
-    if (analog->num_samples > 1) {
-        float *data = malloc(analog->num_samples * sizeof(float));
-        if (data == NULL) {
-            PLUGIN_ERROR("malloc failed.");
+    /* The minimum interval is applied per channel: libsigrok sends one packet
+     * for each channel. */
+    cdtime_t *last_dispatch = NULL;
+    if (cfdev->min_dispatch_interval != 0) {
+        last_dispatch = sigrok_last_dispatch(cfdev,
+                            ((channel != NULL) && (channel->name != NULL)) ? channel->name : "");
+        if ((last_dispatch != NULL) &&
+            ((cdtime() - *last_dispatch) < cfdev->min_dispatch_interval))
             return;
-        }
-        if (sr_analog_to_float(analog, data) != SR_OK) {
-            free(data);
-            PLUGIN_ERROR("sr_analog_to_float failed.");
-            return;
-        }
-        m.value = VALUE_GAUGE(data[0]);
-        free(data);
-    } else {
-        float data;
-        if (sr_analog_to_float(analog, &data) != SR_OK) {
-            PLUGIN_ERROR("sr_analog_to_float failed.");
-            return;
-        }
-        m.value = VALUE_GAUGE(data);
     }
+
+    if ((channel != NULL) && (channel->name != NULL))
+        metric_label_set(&m, "channel", channel->name);
+
+    if (analog->num_samples == 0) {
+        metric_reset(&m, METRIC_TYPE_GAUGE);
+        return;
+    }
+
+    const char *type = sigrok_type(analog);
+    if (type == NULL) {
+        PLUGIN_DEBUG("Unknown measured quantity %d for device \"%s\", ignoring.",
+                     (int)analog->meaning->mq, cfdev->name);
+        metric_reset(&m, METRIC_TYPE_GAUGE);
+        return;
+    }
+
+    /* Only the first sample is used: convert just that one. */
+    struct sr_datafeed_analog first = *analog;
+    if (first.num_samples > 1)
+        first.num_samples = 1;
+
+    float data;
+    if (sr_analog_to_float(&first, &data) != SR_OK) {
+        PLUGIN_ERROR("sr_analog_to_float failed.");
+        return;
+    }
+    m.value = VALUE_GAUGE(data);
 
     strbuf_t buf = STRBUF_CREATE;
 
@@ -307,14 +361,18 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
     else
         strbuf_print(&buf, "sigrok_");
 
-    const char *type = sigrok_type(analog);
-    if (type != NULL)
-        strbuf_print(&buf, type);
+    strbuf_print(&buf, type);
 
     const char *units = sigrok_units(analog);
     if (units != NULL)
         strbuf_print(&buf, units);
 
+    if (buf.ptr == NULL) {
+        PLUGIN_ERROR("Failed to build the metric name.");
+        metric_reset(&m, METRIC_TYPE_GAUGE);
+        strbuf_destroy(&buf);
+        return;
+    }
     fam.name = buf.ptr;
 
     metric_label_set(&m, "device", cfdev->name);
@@ -357,17 +415,21 @@ static void sigrok_feed_callback(const struct sr_dev_inst *sdi,
     metric_reset(&m, fam.type);
 
     plugin_dispatch_metric_family(&fam, 0);
-    cfdev->last_dispatch = cdtime();
+    if (last_dispatch != NULL)
+        *last_dispatch = cdtime();
     strbuf_destroy(&buf);
 }
 
 static void sigrok_free_drvopts(struct sr_config *src)
 {
-    g_variant_unref(src->data);
+    if (src == NULL)
+        return;
+    if (src->data != NULL)
+        g_variant_unref(src->data);
     g_free(src);
 }
 
-static int sigrok_init_driver(struct sr_session *sr_sess, struct config_device *cfdev,
+static int sigrok_init_driver(struct sr_session *sess, struct config_device *cfdev,
                               struct sr_dev_driver *drv)
 {
     struct sr_config *src;
@@ -380,15 +442,20 @@ static int sigrok_init_driver(struct sr_session *sr_sess, struct config_device *
 
     drvopts = NULL;
     if (cfdev->conn) {
-        if (!(src = malloc(sizeof(*src))))
+        if (!(src = g_try_new0(struct sr_config, 1))) {
+            PLUGIN_ERROR("malloc failed.");
             return -1;
+        }
         src->key = SR_CONF_CONN;
         src->data = g_variant_new_string(cfdev->conn);
         drvopts = g_slist_append(drvopts, src);
     }
     if (cfdev->serialcomm) {
-        if (!(src = malloc(sizeof(*src))))
+        if (!(src = g_try_new0(struct sr_config, 1))) {
+            PLUGIN_ERROR("malloc failed.");
+            g_slist_free_full(drvopts, (GDestroyNotify)sigrok_free_drvopts);
             return -1;
+        }
         src->key = SR_CONF_SERIALCOMM;
         src->data = g_variant_new_string(cfdev->serialcomm);
         drvopts = g_slist_append(drvopts, src);
@@ -402,8 +469,10 @@ static int sigrok_init_driver(struct sr_session *sr_sess, struct config_device *
     }
 
     if (g_slist_length(devlist) > 1) {
-        PLUGIN_INFO("%u sigrok devices for device entry \"%s\": must be 1.",
-                    g_slist_length(devlist), cfdev->name);
+        PLUGIN_ERROR("%u sigrok devices for device entry \"%s\": must be 1.",
+                     g_slist_length(devlist), cfdev->name);
+        /* The device instances are owned by the driver and released by sr_exit(). */
+        g_slist_free(devlist);
         return -1;
     }
     cfdev->sdi = devlist->data;
@@ -417,40 +486,46 @@ static int sigrok_init_driver(struct sr_session *sr_sess, struct config_device *
                         model ? model : "", version ? version : "");
     PLUGIN_INFO("Device \"%s\" is a %s", cfdev->name, hwident);
 
-    if (sr_dev_open(cfdev->sdi) != SR_OK)
+    if (sr_dev_open(cfdev->sdi) != SR_OK) {
+        PLUGIN_ERROR("Failed to open device \"%s\".", cfdev->name);
+        cfdev->sdi = NULL;
         return -1;
+    }
 
-    if (sr_session_dev_add(sr_sess, cfdev->sdi) != SR_OK)
+    if (sr_session_dev_add(sess, cfdev->sdi) != SR_OK) {
+        PLUGIN_ERROR("Failed to add device \"%s\" to the session.", cfdev->name);
+        sr_dev_close(cfdev->sdi);
+        cfdev->sdi = NULL;
         return -1;
+    }
 
     return 1;
 }
 
-static void *sigrok_read_thread(void *arg __attribute__((unused)))
+static void sigrok_run_session(void)
 {
     struct sr_dev_driver *drv, **drvlist;
-    struct sr_session *sr_sess = NULL;
-    GSList *l;
     struct config_device *cfdev;
+    GSList *l;
     int ret, i;
-
-    sr_log_callback_set(sigrok_log_callback, NULL);
-    sr_log_loglevel_set(loglevel);
 
     if ((ret = sr_init(&sr_ctx)) != SR_OK) {
         PLUGIN_ERROR("Failed to initialize libsigrok: %s.", sr_strerror(ret));
-        return NULL;
+        sr_ctx = NULL;
+        return;
     }
 
     if ((ret = sr_session_new(sr_ctx, &sr_sess)) != SR_OK) {
         PLUGIN_ERROR("Failed to create session: %s.", sr_strerror(ret));
-        return NULL;
+        sr_sess = NULL;
+        goto cleanup;
     }
 
     num_devices = 0;
     drvlist = sr_driver_list(sr_ctx);
     for (l = config_devices; l; l = l->next) {
         cfdev = l->data;
+        cfdev->sdi = NULL;
         drv = NULL;
         for (i = 0; drvlist[i]; i++) {
             if (!strcmp(drvlist[i]->name, cfdev->driver)) {
@@ -458,41 +533,67 @@ static void *sigrok_read_thread(void *arg __attribute__((unused)))
                 break;
             }
         }
-
-        if (!drv) {
-            PLUGIN_ERROR("Unknown driver \"%s\".", cfdev->driver);
-            return NULL;
+         if (!drv) {
+            PLUGIN_ERROR("Unknown driver \"%s\" for device \"%s\".", cfdev->driver, cfdev->name);
+            continue;
         }
 
-        if ((ret = sigrok_init_driver(sr_sess, cfdev, drv)) < 0)
+        /* A failing device does not prevent the others from working. */
+        ret = sigrok_init_driver(sr_sess, cfdev, drv);
+        if (ret < 0) {
             /* Error was already logged. */
-            return NULL;
+            cfdev->sdi = NULL;
+            continue;
+        }
 
         num_devices += ret;
     }
 
     if (num_devices > 0) {
         /* Do this only when we're sure there's hardware to talk to. */
-        if (sr_session_datafeed_callback_add(sr_sess, sigrok_feed_callback, NULL) != SR_OK)
-            return NULL;
-
-        /* Start acquisition on all devices. */
-        if (sr_session_start(sr_sess) != SR_OK)
-            return NULL;
-
-        /* Main loop, runs forever. */
-        sr_session_run(sr_sess);
-
-        sr_session_stop(sr_sess);
-        sr_session_dev_remove_all(sr_sess);
+        if (sr_session_datafeed_callback_add(sr_sess, sigrok_feed_callback, NULL) != SR_OK) {
+            PLUGIN_ERROR("Failed to add the datafeed callback.");
+        } else if (sr_session_start(sr_sess) != SR_OK) {
+            /* Start acquisition on all devices. */
+            PLUGIN_ERROR("Failed to start the acquisition.");
+        } else {
+            /* Main loop, runs until the acquisition ends. */
+            sr_session_run(sr_sess);
+        }
     }
 
-    sr_session_destroy(sr_sess);
+cleanup:
+    for (l = config_devices; l; l = l->next) {
+        cfdev = l->data;
+        if (cfdev->sdi != NULL) {
+            sr_dev_close(cfdev->sdi);
+            cfdev->sdi = NULL;
+        }
+    }
+
+    if (sr_sess != NULL) {
+        sr_session_dev_remove_all(sr_sess);
+        sr_session_destroy(sr_sess);
+    }
 
     sr_exit(sr_ctx);
+    sr_ctx = NULL;
+}
 
-    pthread_exit(NULL);
-    sr_thread_running = FALSE;
+static void *sigrok_read_thread(void *arg __attribute__((unused)))
+{
+    sr_log_callback_set(sigrok_log_callback, NULL);
+    sr_log_loglevel_set(loglevel);
+
+    if (config_devices == NULL)
+        return NULL;
+
+    while (true) {
+        sigrok_run_session();
+        PLUGIN_WARNING("Acquisition ended, retrying in %d seconds.", SIGROK_RETRY_INTERVAL);
+        /* sleep is a cancellation point. */
+        sleep(SIGROK_RETRY_INTERVAL);
+    }
 
     return NULL;
 }
@@ -534,6 +635,10 @@ static void sigrok_device_free(struct config_device *cfdev)
         free(cfdev->channel[i]);
     }
     free(cfdev->channel);
+    for (size_t i = 0; i < cfdev->dispatch_num; i++) {
+        free(cfdev->dispatch[i].channel);
+    }
+    free(cfdev->dispatch);
 
     free(cfdev);
 }
@@ -581,6 +686,12 @@ static int sigrok_config_device(config_item_t *ci)
         }
     }
 
+    if (cfdev->driver == NULL) {
+        PLUGIN_ERROR("Missing 'driver' option for device '%s'.", cfdev->name);
+        sigrok_device_free(cfdev);
+        return -1;
+    }
+
     config_devices = g_slist_append(config_devices, cfdev);
 
     return 0;
@@ -596,12 +707,12 @@ static int sigrok_config(config_item_t *ci)
             int tmp = -1;
             status = cf_util_get_int(item, &tmp);
             if (status != 0) {
-                continue;
+                return -1;
             } else if ((tmp < 0) || (tmp > 5)) {
                 PLUGIN_ERROR("The 'log-level' configuration option in %s:%d expects "
                              "an integer between 0 and 5 (inclusive); you provided %i.",
                              cf_get_file(item), cf_get_lineno(item), tmp);
-                status = -1;
+                return -1;
             }
             loglevel = tmp;
         } else if (!strcasecmp(item->key, "device")) {
@@ -639,7 +750,13 @@ static int sigrok_init(void)
 static int sigrok_shutdown(void)
 {
     if (sr_thread_running) {
-        pthread_cancel(sr_thread);
+        pthread_mutex_lock(&sr_lock);
+        sr_stop_requested = true;
+        /* sr_session_stop() can be called from another thread: the stop
+         * request is queued in the session main loop. */
+        if (sr_session_running)
+            sr_session_stop(sr_sess);
+        pthread_mutex_unlock(&sr_lock);
         pthread_join(sr_thread, NULL);
     }
 
