@@ -97,13 +97,13 @@ sync_partial_err,                FAM_REDIS_REPLICA_PARTIAL_RESYNC_DENIED
 expired_keys,                    FAM_REDIS_EXPIRED_KEYS
 expired_stale_perc,              FAM_REDIS_EXPIRED_STALE_RATIO
 expired_time_cap_reached_count,  FAM_REDIS_EXPIRED_TIME_CAP_REACHED
-expire_cycle_cpu_milliseconds,   FAM_REDIS_EXPIRE_CYCLE_CPU_MSECONDS
+expire_cycle_cpu_milliseconds,   FAM_REDIS_EXPIRE_CYCLE_CPU_SECONDS
 evicted_keys,                    FAM_REDIS_EVICTED_KEYS
 keyspace_hits,                   FAM_REDIS_KEYSPACE_HITS
 keyspace_misses,                 FAM_REDIS_KEYSPACE_MISSES
 pubsub_channels,                 FAM_REDIS_PUBSUB_CHANNELS
 pubsub_patterns,                 FAM_REDIS_PUBSUB_PATTERNS
-latest_fork_usec,                FAM_REDIS_LATEST_FORK_USECECONDS
+latest_fork_usec,                FAM_REDIS_LATEST_FORK_SECONDS
 total_forks,                     FAM_REDIS_FORKS
 migrate_cached_sockets,          FAM_REDIS_MIGRATE_CACHED_SOCKETS
 slave_expires_tracked_keys,      FAM_REDIS_SLAVE_EXPIRES_TRACKED_KEYS
@@ -134,7 +134,7 @@ master_failover_state,           FAM_REDIS_MASTER_FAILOVER_STATE
 master_repl_offset,              FAM_REDIS_MASTER_REPL_OFFSET
 second_repl_offset,              FAM_REDIS_SECOND_REPL_OFFSET
 repl_backlog_active,             FAM_REDIS_REPLICATION_BACKLOG_ACTIVE
-repl_backlog_size,               FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTE
+repl_backlog_size,               FAM_REDIS_REPLICATION_BACKLOG_SIZE_BYTES
 repl_backlog_first_byte_offset,  FAM_REDIS_REPLICATION_BACKLOG_FIRST_BYTE_OFFSET
 repl_backlog_histlen,            FAM_REDIS_REPLICATION_BACKLOG_HIST_BYTES
 master_link_status,              FAM_REDIS_MASTER_LINK_UP
