@@ -38,6 +38,7 @@ NCOLLECTD-MSSQL(5) - File Formats Manual
 	        label key value
 	        metric-prefix prefix
 	        interval seconds
+	        timeout seconds
 	        ping-query query
 	        query query-name
 	        filter {
@@ -64,6 +65,11 @@ to these rules.
 > **server** *server*
 
 > > The server name of the database to connect to.
+> > If the name is found in freetds.conf(5), the settings of that entry
+> > (host, port, tds version, ...) are used.
+> > The plugin has no TLS options: set **encryption** to *require* (and
+> > **ca file** to verify the server certificate) in that entry to enforce
+> > encrypted connections.
 
 > **database** *database*
 
@@ -72,7 +78,9 @@ to these rules.
 
 > **user** *user*
 
-> > User to connect to database
+> > User to connect to database.
+> > If no user is set, an empty user name is sent, which FreeTDS uses to
+> > request Kerberos authentication.
 
 > **user-env** *env-name*
 
@@ -102,6 +110,13 @@ to these rules.
 > > Sets the interval (in seconds) in which the values will be collected from this
 > > database.
 > > By default the global **interval** setting will be used.
+
+> **timeout** *seconds*
+
+> > Sets the timeout, in seconds, to log in to the server and to wait for the
+> > response of a query.
+> > When it expires the connection is closed and opened again in the next read.
+> > By default, the configured **interval** is used to set the timeout.
 
 > **ping-query** *query*
 
@@ -141,6 +156,8 @@ to these rules.
 > > Sets the statement that should be executed on the server.
 > > This is **not** interpreted by ncollectd, but simply passed to the database
 > > server.
+> > Only the first result set returned by the statement is used, the results
+> > of statements without columns (e.g. **SET NOCOUNT ON**) are skipped.
 
 > **min-version** *version*
 
@@ -220,5 +237,6 @@ to these rules.
 # SEE ALSO
 
 ncollectd(1),
-ncollectd.conf(5)
+ncollectd.conf(5),
+freetds.conf(5)
 
