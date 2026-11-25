@@ -125,6 +125,10 @@ typedef enum {
 
 static data_definition_t *data_head;
 
+/* Opening a session modifies global state of the net-snmp library (USM user
+ * list, key caches), so session opening is serialized between hosts. */
+static pthread_mutex_t csnmp_session_lock = PTHREAD_MUTEX_INITIALIZER;
+
 static int csnmp_read_host(user_data_t *ud);
 
 static void csnmp_oid_init(oid_t *dst, oid const *src, size_t n)
@@ -223,6 +227,41 @@ static void csnmp_data_definition_destroy(data_definition_t *dd)
     free(dd);
 }
 
+static void csnmp_transport_config_free(void *data, __attribute__((unused)) void *context)
+{
+    netsnmp_transport_config *config = data;
+    if (config == NULL)
+        return;
+
+    free(config->key);
+    free(config->value);
+    free(config);
+}
+
+static void csnmp_transport_config_destroy(netsnmp_container *container)
+{
+    if (container == NULL)
+        return;
+
+    CONTAINER_CLEAR(container, csnmp_transport_config_free, NULL);
+    CONTAINER_FREE(container);
+}
+
+static int csnmp_transport_config_add(netsnmp_container *container,
+                                      const char *key, const char *value)
+{
+    netsnmp_transport_config *config = netsnmp_transport_create_config(key, value);
+    if (config == NULL)
+        return -1;
+
+    if (CONTAINER_INSERT(container, config) != 0) {
+        csnmp_transport_config_free(config, NULL);
+        return -1;
+    }
+
+    return 0;
+}
+
 static void csnmp_host_open_session(host_definition_t *host)
 {
     struct snmp_session sess;
@@ -260,20 +299,22 @@ static void csnmp_host_open_session(host_definition_t *host)
                     (netsnmp_container_compare *)netsnmp_transport_config_compare;
             }
 
-            CONTAINER_INSERT(sess.transport_configuration,
-                             netsnmp_transport_create_config("localCert", host->local_cert));
-
-            if (host->peer_cert != NULL) {
-                CONTAINER_INSERT(sess.transport_configuration,
-                    netsnmp_transport_create_config("peerCert", host->peer_cert));
-            }
-            if (host->peer_hostname != NULL) {
-                CONTAINER_INSERT(sess.transport_configuration,
-                    netsnmp_transport_create_config("peerHostname", host->peer_hostname));
-            }
-            if (host->trust_cert != NULL) {
-                CONTAINER_INSERT(sess.transport_configuration,
-                    netsnmp_transport_create_config("trustCert", host->trust_cert));
+            int status = csnmp_transport_config_add(sess.transport_configuration,
+                                                    "localCert", host->local_cert);
+            if ((status == 0) && (host->peer_cert != NULL))
+                status = csnmp_transport_config_add(sess.transport_configuration,
+                                                    "peerCert", host->peer_cert);
+            if ((status == 0) && (host->peer_hostname != NULL))
+                status = csnmp_transport_config_add(sess.transport_configuration,
+                                                    "peerHostname", host->peer_hostname);
+            if ((status == 0) && (host->trust_cert != NULL))
+                status = csnmp_transport_config_add(sess.transport_configuration,
+                                                    "trustCert", host->trust_cert);
+            if (status != 0) {
+                PLUGIN_ERROR("Host %s: Failed to create the transport configuration.",
+                             host->name);
+                csnmp_transport_config_destroy(sess.transport_configuration);
+                return;
             }
         } else { /* ...otherwise use shared secrets */
             sess.securityName = host->username;
@@ -292,6 +333,7 @@ static void csnmp_host_open_session(host_definition_t *host)
                 if (error != SNMPERR_SUCCESS) {
                     PLUGIN_ERROR("host %s: Error generating Ku from auth_passphrase. (Error %d)",
                                  host->name, error);
+                    return;
                 }
             }
 
@@ -306,6 +348,7 @@ static void csnmp_host_open_session(host_definition_t *host)
                 if (error != SNMPERR_SUCCESS) {
                     PLUGIN_ERROR("host %s: Error generating Ku from priv_passphrase. (Error %d)",
                                  host->name, error);
+                    return;
                 }
             }
         }
@@ -331,6 +374,12 @@ static void csnmp_host_open_session(host_definition_t *host)
     /* snmp_sess_open will copy the 'struct snmp_session *'. */
     host->sess_handle = snmp_sess_open(&sess);
 
+    /* The transport configuration is only used while opening the session. */
+    if (sess.transport_configuration != NULL) {
+        csnmp_transport_config_destroy(sess.transport_configuration);
+        sess.transport_configuration = NULL;
+    }
+
     if (host->sess_handle == NULL) {
         char *errstr = NULL;
 
@@ -343,9 +392,12 @@ static void csnmp_host_open_session(host_definition_t *host)
 }
 
 /* TODO: Check if negative values wrap around. Problem: negative temperatures. */
-static value_t csnmp_value_list_to_value(const struct variable_list *vl,
-                                         metric_type_t type, double scale, double shift,
-                                         const char *host_name, const char *data_name)
+/* Returns zero and sets *value on success, or -1 if the value is undefined
+ * or cannot be converted; in that case the value must not be dispatched. */
+static int csnmp_value_list_to_value(const struct variable_list *vl,
+                                     metric_type_t type, double scale, double shift,
+                                     const char *host_name, const char *data_name,
+                                     value_t *value)
 {
     value_t ret = VALUE_UNKNOWN(NAN);
 
@@ -422,7 +474,7 @@ static value_t csnmp_value_list_to_value(const struct variable_list *vl,
             } else {
                 double raw = 0;
                 status = parse_double(string, &raw);
-                ret = VALUE_GAUGE(raw);
+                ret = VALUE_GAUGE((scale * raw) + shift);
             }
             if (status != 0) {
                 PLUGIN_ERROR("host %s: csnmp_value_list_to_value: Parsing string failed: %s",
@@ -430,38 +482,31 @@ static value_t csnmp_value_list_to_value(const struct variable_list *vl,
             }
         }
 
-        if (status != 0) {
-            if (type == METRIC_TYPE_COUNTER) {
-                ret = VALUE_COUNTER(0);
-            } else if (type == METRIC_TYPE_GAUGE) {
-                ret = VALUE_GAUGE(NAN);
-            } else {
-                PLUGIN_ERROR("Unknown data source type: %u.", type);
-                ret = VALUE_UNKNOWN(NAN);
-            }
-        }
+        if (status != 0)
+            return -1;
+    } else if (!defined) {
+        return -1;
     } else if (type == METRIC_TYPE_COUNTER) {
         ret = VALUE_COUNTER(tmp_unsigned);
     } else if (type == METRIC_TYPE_GAUGE) {
-        if (!defined) {
-            ret = VALUE_GAUGE(NAN);
-        } else if (prefer_signed) {
+        if (prefer_signed) {
             ret = VALUE_GAUGE((scale * tmp_signed) + shift);
         } else {
             ret = VALUE_GAUGE((scale * tmp_unsigned) + shift);
         }
     } else {
         PLUGIN_ERROR("csnmp_value_list_to_value: Unknown data source type: %u.", type);
-        ret = VALUE_UNKNOWN(NAN);
+        return -1;
     }
 
-    return ret;
+    *value = ret;
+    return 0;
 }
 
 /* csnmp_strvbcopy_hexstring converts the bit string contained in "vb" to a hex
- * representation and writes it to dst. Returns zero on success and ENOMEM if
- * dst is not large enough to hold the string. dst is guaranteed to be
- * nul-terminated. */
+ * representation and writes it to dst. Returns zero on success. If dst is not
+ * large enough to hold the string the output is truncated. dst is guaranteed
+ * to be nul-terminated. */
 static int csnmp_strvbcopy_hexstring(char *dst, const struct variable_list *vb, size_t dst_size)
 {
     char *buffer_ptr;
@@ -481,7 +526,7 @@ static int csnmp_strvbcopy_hexstring(char *dst, const struct variable_list *vb, 
 
         if (((size_t)status) >= buffer_free) { /* truncated */
             dst[dst_size - 1] = '\0';
-            return ENOMEM;
+            return 0;
         } else { /* if (status < buffer_free) */
             buffer_ptr += (size_t)status;
             buffer_free -= (size_t)status;
@@ -493,9 +538,9 @@ static int csnmp_strvbcopy_hexstring(char *dst, const struct variable_list *vb, 
 
 /* csnmp_strvbcopy copies the octet string or bit string contained in vb to
  * dst. If non-printable characters are detected, it will switch to a hex
- * representation of the string. Returns zero on success, EINVAL if vb does not
- * contain a string and ENOMEM if dst is not large enough to contain the
- * string. */
+ * representation of the string. Returns zero on success and EINVAL if vb does
+ * not contain a string. If dst is not large enough to contain the string the
+ * output is truncated. */
 static int csnmp_strvbcopy(char *dst, const struct variable_list *vb, size_t dst_size)
 {
     char *src;
@@ -506,9 +551,14 @@ static int csnmp_strvbcopy(char *dst, const struct variable_list *vb, size_t dst
     else if (vb->type == ASN_BIT_STR)
         src = (char *)vb->val.bitstring;
     else if (vb->type == ASN_IPADDRESS) {
-        return ssnprintf(dst, dst_size, "%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 "",
-                              (uint8_t)vb->val.string[0], (uint8_t)vb->val.string[1],
-                              (uint8_t)vb->val.string[2], (uint8_t)vb->val.string[3]);
+        if ((vb->val.string == NULL) || (vb->val_len < 4)) {
+            dst[0] = 0;
+            return EINVAL;
+        }
+        int status = ssnprintf(dst, dst_size, "%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 "",
+                                   (uint8_t)vb->val.string[0], (uint8_t)vb->val.string[1],
+                                   (uint8_t)vb->val.string[2], (uint8_t)vb->val.string[3]);
+        return (status < 0) ? -1 : 0;
     } else {
         dst[0] = 0;
         return EINVAL;
@@ -519,16 +569,13 @@ static int csnmp_strvbcopy(char *dst, const struct variable_list *vb, size_t dst
         num_chars = vb->val_len;
 
     for (size_t i = 0; i < num_chars; i++) {
-        /* Check for control characters. */
-        if ((unsigned char)src[i] < 32)
+        /* Check for control and non-ASCII characters. */
+        if (((unsigned char)src[i] < 32) || ((unsigned char)src[i] >= 127))
             return csnmp_strvbcopy_hexstring(dst, vb, dst_size);
         dst[i] = src[i];
     }
     dst[num_chars] = 0;
     dst[dst_size - 1] = '\0';
-
-    if (dst_size <= vb->val_len)
-        return ENOMEM;
 
     return 0;
 }
@@ -873,8 +920,6 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
         /* If SNMP v2 and later and bulk transfers enabled, use GETBULK PDU */
         if (host->version > 1 && host->bulk_size > 0) {
             req = snmp_pdu_create(SNMP_MSG_GETBULK);
-            req->non_repeaters = 0;
-            req->max_repetitions = host->bulk_size;
         } else {
             req = snmp_pdu_create(SNMP_MSG_GETNEXT);
         }
@@ -883,6 +928,11 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
             PLUGIN_ERROR("snmp_pdu_create failed.");
             status = -1;
             break;
+        }
+
+        if (req->command == SNMP_MSG_GETBULK) {
+            req->non_repeaters = 0;
+            req->max_repetitions = host->bulk_size;
         }
 
         size_t var_idx[oid_list_len];
@@ -906,11 +956,14 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
             break;
         }
 
-        if (req->command == SNMP_MSG_GETBULK) {
+        bool req_is_bulk = req->command == SNMP_MSG_GETBULK;
+        if (req_is_bulk) {
             /* In bulk mode the host will send 'max_repetitions' values per
                  requested variable, so we need to split it per number of variable
                  to stay 'in budget' */
-            req->max_repetitions = floor(host->bulk_size / oid_list_todo_num);
+            req->max_repetitions = host->bulk_size / oid_list_todo_num;
+            if (req->max_repetitions < 1)
+                req->max_repetitions = 1;
         }
 
         res = NULL;
@@ -971,9 +1024,17 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
                           data->name, oid_buffer, snmp_errstring(res->errstat));
 
             /* Get value index from todo list and skip OID found */
-            assert(res->errindex <= oid_list_todo_num);
+            if ((res->errindex < 1) || (res->errindex > oid_list_todo_num)) {
+                PLUGIN_ERROR("host %s; data %s: response error index %li out of range.",
+                             host->name, data->name, res->errindex);
+                status = -1;
+                break;
+            }
             size_t i = var_idx[res->errindex - 1];
-            assert(i < oid_list_len);
+            if (i >= oid_list_len) {
+                status = -1;
+                break;
+            }
             oid_list_todo[i] = 0;
 
             snmp_free_pdu(res);
@@ -983,18 +1044,18 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
 
         size_t j;
         for (vb = res->variables, j = 0; (vb != NULL); vb = vb->next_variable, j++) {
-            size_t i = j;
+            size_t k = j;
             /* If bulk request is active convert value index of the extra value */
-            if (host->version > 1 && host->bulk_size > 0)
-                i %= oid_list_todo_num;
-            /* Calculate value index from todo list */
-            while ((i < oid_list_len) && !oid_list_todo[i]) {
-                i++;
-                j++;
-            }
+            if (req_is_bulk)
+                k %= (size_t)oid_list_todo_num;
+            else if (k >= (size_t)oid_list_todo_num)
+                break;
+            /* Map the position in the request to the index in the oid list */
+            size_t i = var_idx[k];
             if (i >= oid_list_len)
                 break;
 
+            /* Skip values of OIDs that already left their subtree */
             if (oid_list_todo[i] == OID_TYPE_SKIP)
                 continue;
 
@@ -1015,15 +1076,15 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
                     continue;
                 }
 
+                /* A cell that cannot be converted only skips this row. */
                 csnmp_cell_char_t *cell = csnmp_get_char_cell(vb, &loid->oid);
                 if (cell == NULL) {
-                    PLUGIN_ERROR("host %s: csnmp_get_char_cell() failed.", host->name);
-                    status = -1;
-                    break;
+                    PLUGIN_DEBUG("host %s: csnmp_get_char_cell() failed.", host->name);
+                } else {
+                    PLUGIN_DEBUG("il->plugin_instance = '%s';", cell->value);
+                    csnmp_cells_append(&label_from_cells_head[i], &label_from_cells_tail[i],
+                                       cell);
                 }
-
-                PLUGIN_DEBUG("il->plugin_instance = '%s';", cell->value);
-                csnmp_cells_append(&label_from_cells_head[i], &label_from_cells_tail[i], cell);
             } else if (oid_list_todo[i] == OID_TYPE_FILTER) {
                 if ((vb->type == SNMP_ENDOFMIBVIEW) ||
                     (snmp_oid_ncompare(data->filter_oid.oid, data->filter_oid.len,
@@ -1038,13 +1099,11 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
                  * add it to the list */
                 csnmp_cell_char_t *cell = csnmp_get_char_cell(vb, &data->filter_oid);
                 if (cell == NULL) {
-                    PLUGIN_ERROR("host %s: csnmp_get_char_cell() failed.", host->name);
-                    status = -1;
-                    break;
+                    PLUGIN_DEBUG("host %s: csnmp_get_char_cell() failed.", host->name);
+                } else {
+                    PLUGIN_DEBUG("il->filter = '%s';", cell->value);
+                    csnmp_cells_append(&filter_cells_head, &filter_cells_tail, cell);
                 }
-
-                PLUGIN_DEBUG("il->filter = '%s';", cell->value);
-                csnmp_cells_append(&filter_cells_head, &filter_cells_tail, cell);
             } else if (oid_list_todo[i] == OID_TYPE_VARIABLE) {
                 oid_t vb_name;
                 oid_t suffix;
@@ -1070,23 +1129,26 @@ static int csnmp_read_table(host_definition_t *host, data_definition_t *data)
                     continue;
                 }
 
-                csnmp_cell_value_t *vt = calloc(1, sizeof(*vt));
-                if (vt == NULL) {
-                    PLUGIN_ERROR("calloc failed.");
-                    status = -1;
-                    break;
+                value_t value = {0};
+                if (csnmp_value_list_to_value(vb, data->type, data->scale, data->shift,
+                                              host->name, data->name, &value) == 0) {
+                    csnmp_cell_value_t *vt = calloc(1, sizeof(*vt));
+                    if (vt == NULL) {
+                        PLUGIN_ERROR("calloc failed.");
+                        status = -1;
+                        break;
+                    }
+
+                    vt->value = value;
+                    memcpy(&vt->suffix, &suffix, sizeof(vt->suffix));
+                    vt->next = NULL;
+
+                    if (value_cells_tail == NULL)
+                        value_cells_head = vt;
+                    else
+                        value_cells_tail->next = vt;
+                    value_cells_tail = vt;
                 }
-
-                vt->value = csnmp_value_list_to_value(vb, data->type, data->scale, data->shift,
-                                                          host->name, data->name);
-                memcpy(&vt->suffix, &suffix, sizeof(vt->suffix));
-                vt->next = NULL;
-
-                if (value_cells_tail == NULL)
-                    value_cells_head = vt;
-                else
-                    value_cells_tail->next = vt;
-                value_cells_tail = vt;
             }
 
             /* Copy OID to oid_list[i] */
@@ -1198,11 +1260,13 @@ static int csnmp_read_value(host_definition_t *host, data_definition_t *data)
         metric_label_set(&m, data->labels.ptr[i].name, data->labels.ptr[i].value);
     }
 
+    bool have_value = false;
     for (vb = res->variables; vb != NULL; vb = vb->next_variable) {
         if (snmp_oid_compare(data->value_oid.oid, data->value_oid.len,
                              vb->name, vb->name_length) == 0) {
-            m.value = csnmp_value_list_to_value(vb, data->type, data->scale, data->shift,
-                                                    host->name, data->name);
+            if (csnmp_value_list_to_value(vb, data->type, data->scale, data->shift,
+                                          host->name, data->name, &m.value) == 0)
+                have_value = true;
 
         } else  {
             for (size_t i = 0; i < data->labels_from.num; i++) {
@@ -1222,6 +1286,12 @@ static int csnmp_read_value(host_definition_t *host, data_definition_t *data)
     }
 
     snmp_free_pdu(res);
+
+    if (!have_value) {
+        PLUGIN_DEBUG("host %s; data %s: value not found or undefined.", host->name, data->name);
+        metric_reset(&m, data->type);
+        return 0;
+    }
 
     metric_family_t fam = {0};
 
@@ -1272,8 +1342,11 @@ static int csnmp_read_host(user_data_t *ud)
 {
     host_definition_t *host = ud->data;
 
-    if (host->sess_handle == NULL)
+    if (host->sess_handle == NULL) {
+        pthread_mutex_lock(&csnmp_session_lock);
         csnmp_host_open_session(host);
+        pthread_mutex_unlock(&csnmp_session_lock);
+    }
 
     if (host->sess_handle == NULL) {
         csnmp_metric_up(host, 0);
@@ -1646,7 +1719,7 @@ static int csnmp_config_add_host_auth_protocol(host_definition_t *hd, config_ite
 
 static int csnmp_config_add_host_priv_protocol(host_definition_t *hd, config_item_t *ci)
 {
-    char buffer[4];
+    char buffer[16];
     int status;
 
     status = cf_util_get_string_buffer(ci, buffer, sizeof(buffer));
@@ -1859,8 +1932,8 @@ static int csnmp_config_add_host(config_item_t *ci)
         return -1;
     }
 
-    PLUGIN_DEBUG("hd = { name = %s, address = %s, community = %s, version = %i }",
-                 hd->name, hd->address, hd->community, hd->version);
+    PLUGIN_DEBUG("hd = { name = %s, address = %s, version = %i }",
+                 hd->name, hd->address, hd->version);
 
     return plugin_register_complex_read("snmp", hd->name, csnmp_read_host, interval,
                             &(user_data_t){.data=hd, .free_func=csnmp_host_definition_destroy});
