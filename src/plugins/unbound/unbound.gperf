@@ -71,9 +71,9 @@ mem.mod.ipsecmod,                           FAM_UNBOUND_MOD_IPSEC_BYTES
 mem.streamwait,                             FAM_UNBOUND_STREAM_WAIT_BYTES
 mem.http.query_buffer,                      FAM_UNBOUND_HTTP_QUERY_BUFFER_BYTES
 mem.http.response_buffer,                   FAM_UNBOUND_HTTP_RESPONSE_BUFFER_BYTES
-num.query.type,                             FAM_UNBOUND_QUERY_TYPE,
-num.query.class,                            FAM_UNBOUND_QUERY_OPCODE
-num.query.opcode,                           FAM_UNBOUND_QUERY_CLASS
+num.query.type,                             FAM_UNBOUND_QUERY_TYPE
+num.query.class,                            FAM_UNBOUND_QUERY_CLASS
+num.query.opcode,                           FAM_UNBOUND_QUERY_OPCODE
 num.query.tcp,                              FAM_UNBOUND_QUERY_TCP
 num.query.tcpout,                           FAM_UNBOUND_QUERY_TCP_OUT
 num.query.udpout,                           FAM_UNBOUND_QUERY_UDP_OUT

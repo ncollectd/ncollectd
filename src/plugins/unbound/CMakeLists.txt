@@ -1,4 +1,4 @@
-plugin_option(PLUGIN_UNBOUND "Name Server Daemon (NSD) statistics" ON)
+plugin_option(PLUGIN_UNBOUND "Unbound resolver statistics" ON)
 
 set(BUILD_PLUGIN_UNBOUND 0)
 
