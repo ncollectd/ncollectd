@@ -12,12 +12,8 @@
 
 #include <mosquitto.h>
 
-#define MQTT_MAX_TOPIC_SIZE 1024
-#define MQTT_MAX_MESSAGE_SIZE (MQTT_MAX_TOPIC_SIZE + 1024)
 #define MQTT_DEFAULT_HOST "localhost"
 #define MQTT_DEFAULT_PORT 1883
-#define MQTT_DEFAULT_TOPIC_PREFIX "ncollectd"
-#define MQTT_DEFAULT_TOPIC "ncollectd/#"
 #ifndef MQTT_KEEPALIVE
 #define MQTT_KEEPALIVE 60
 #endif
@@ -113,6 +109,12 @@ static void mqtt_free(void *arg)
     free(conf->topic);
     free(conf->password);
     free(conf->client_id);
+    free(conf->name);
+    free(conf->cacertificatefile);
+    free(conf->certificatefile);
+    free(conf->certificatekeyfile);
+    free(conf->tlsprotocol);
+    free(conf->ciphersuite);
     free(conf);
 }
 
@@ -125,7 +127,7 @@ static int mqtt_reconnect(mqtt_client_conf_t *conf)
 
     status = mosquitto_reconnect(conf->mosq);
     if (status != MOSQ_ERR_SUCCESS) {
-        ERROR("mqtt_connect_broker: mosquitto_connect failed: %s",
+        PLUGIN_ERROR("mosquitto_reconnect failed: %s",
                     (status == MOSQ_ERR_ERRNO) ? STRERRNO : mosquitto_strerror(status));
         return -1;
     }
@@ -142,15 +144,21 @@ static int mqtt_reconnect(mqtt_client_conf_t *conf)
 static int mqtt_connect(mqtt_client_conf_t *conf)
 {
     char const *client_id;
+    char client_id_buf[256];
     int status;
 
     if (conf->mosq != NULL)
         return mqtt_reconnect(conf);
 
-    if (conf->client_id)
+    if (conf->client_id) {
         client_id = conf->client_id;
-    else
-        client_id = plugin_get_hostname();
+    } else {
+        /* The client id must be unique in the broker: use the hostname and
+         * the instance name. */
+        ssnprintf(client_id_buf, sizeof(client_id_buf), "%s-%s",
+                  plugin_get_hostname(), conf->name);
+        client_id = client_id_buf;
+    }
 
 #if LIBMOSQUITTO_MAJOR == 0
     conf->mosq = mosquitto_new(client_id, /* user data = */ conf);
@@ -209,7 +217,7 @@ static int mqtt_connect(mqtt_client_conf_t *conf)
 
 #if LIBMOSQUITTO_MAJOR == 0
     status = mosquitto_connect(conf->mosq, conf->host, conf->port,
-                               MQTT_KEEPALIVE, conf->clean_session);
+                               MQTT_KEEPALIVE, /* clean session */ true);
 #else
     status = mosquitto_connect(conf->mosq, conf->host, conf->port, MQTT_KEEPALIVE);
 #endif
@@ -247,6 +255,9 @@ static int publish(mqtt_client_conf_t *conf, void const *payload, size_t payload
                              "write_mqtt plugin: mosquitto_publish failed: %s",
                              (status == MOSQ_ERR_ERRNO) ? STRERRNO
                              : mosquitto_strerror(status));
+        /* These errors are not related to the connection. */
+        if ((status == MOSQ_ERR_INVAL) || (status == MOSQ_ERR_PAYLOAD_SIZE))
+            return -1;
         /* Mark our connection "down" regardless of the error as a safety
          * measure; we will try to reconnect the next time we have to publish a
          * message */
@@ -255,10 +266,12 @@ static int publish(mqtt_client_conf_t *conf, void const *payload, size_t payload
         return -1;
     }
 
+    /* Do not wait for network activity: with QoS 0 the broker does not answer
+     * and a non zero timeout would block the write thread on every publish. */
 #if LIBMOSQUITTO_MAJOR == 0
-    status = mosquitto_loop(conf->mosq, /* timeout = */ 1000 /* ms */);
+    status = mosquitto_loop(conf->mosq, /* timeout = */ 0 /* ms */);
 #else
-    status = mosquitto_loop(conf->mosq, /* timeout[ms] = */ 1000,
+    status = mosquitto_loop(conf->mosq, /* timeout[ms] = */ 0,
                                         /* max_packets = */ 1);
 #endif
 
@@ -285,21 +298,20 @@ static int mqtt_notify(notification_t const *n, user_data_t *user_data)
 
     mqtt_client_conf_t *conf = user_data->data;
 
-//  char payload[MQTT_MAX_MESSAGE_SIZE];
     strbuf_t buf = STRBUF_CREATE;
     int status = format_notification(conf->format_notification, &buf, n);
     if (status != 0) {
         PLUGIN_ERROR("format notification failed.");
+        strbuf_destroy(&buf);
         return status;
     }
     size_t size = strbuf_len(&buf);
 
     status = publish(conf, buf.ptr, size);
-    if (status != 0) {
-        PLUGIN_ERROR("publish failed: %s", mosquitto_strerror(status));
+    if (status != 0)
         return status;
-    }
 
+    strbuf_destroy(&buf);
     return status;
 }
 
@@ -309,7 +321,6 @@ static int mqtt_write(metric_family_t const *fam, user_data_t *user_data)
         return EINVAL;
     mqtt_client_conf_t *conf = user_data->data;
 
-//  char payload[MQTT_MAX_MESSAGE_SIZE];
     strbuf_t buf = STRBUF_CREATE;
     format_stream_metric_ctx_t ctx = {0};
 
@@ -318,16 +329,16 @@ static int mqtt_write(metric_family_t const *fam, user_data_t *user_data)
     status |= format_stream_metric_end(&ctx);
     if (status != 0) {
         PLUGIN_ERROR("format metric failed.");
+        strbuf_destroy(&buf);
         return status;
     }
     size_t size = strbuf_len(&buf);
 
     status = publish(conf, buf.ptr, size);
-    if (status != 0) {
-        PLUGIN_ERROR("publish failed: %s", mosquitto_strerror(status));
+    if (status != 0)
         return status;
-    }
 
+    strbuf_destroy(&buf);
     return status;
 }
 
@@ -385,6 +396,7 @@ static int mqtt_config_instance(config_item_t *ci)
                 conf->qos = tmp;
             }
         } else if (strcasecmp("store-rates", child->key) == 0) {
+            /* Ignored, kept for backward compatibility. */
             status = cf_util_get_boolean(child, &conf->store_rates);
         } else if (strcasecmp("retain", child->key) == 0) {
             status = cf_util_get_boolean(child, &conf->retain);
@@ -419,11 +431,23 @@ static int mqtt_config_instance(config_item_t *ci)
         return -1;
     }
 
+    if ((conf->password != NULL) && (conf->username == NULL))
+        PLUGIN_WARNING("The 'password' option is ignored without the 'user' option.");
+
     if(conf->topic == NULL) {
         PLUGIN_ERROR("Missing topic key.");
         mqtt_free(conf);
         return -1;
     }
+
+#if (LIBMOSQUITTO_MAJOR > 1) || ((LIBMOSQUITTO_MAJOR == 1) && (LIBMOSQUITTO_MINOR >= 4))
+    if (mosquitto_pub_topic_check(conf->topic) != MOSQ_ERR_SUCCESS) {
+        PLUGIN_ERROR("Invalid topic '%s': it must not be empty or contain wildcards.",
+                     conf->topic);
+        mqtt_free(conf);
+        return -1;
+    }
+#endif
 
     user_data_t user_data = (user_data_t){ .data = conf, .free_func = mqtt_free };
 
@@ -461,8 +485,17 @@ static int mqtt_init(void)
     return 0;
 }
 
+/* The instances are freed when the writers and notifiers are unregistered,
+ * before the shutdown callbacks are called. */
+static int mqtt_shutdown(void)
+{
+    mosquitto_lib_cleanup();
+    return 0;
+}
+
 void module_register(void)
 {
     plugin_register_config("write_mqtt", mqtt_config);
     plugin_register_init("write_mqtt", mqtt_init);
+    plugin_register_shutdown("write_mqtt", mqtt_shutdown);
 }

@@ -16,7 +16,6 @@ NCOLLECTD-WRITE\_MQTT(5) - File Formats Manual
 	        user user
 	        password user
 	        qos 0|1|2
-	        store-rates true|false
 	        retain true|false
 	        ca-cert file
 	        certificate-file file
@@ -49,8 +48,9 @@ Within each **instance** block, the following options are available:
 
 **client-id** *client-id*
 
-> MQTT client ID to use.
-> Defaults to the hostname used by **ncollectd**.
+> MQTT client ID to use, it must be unique in the broker.
+> Defaults to the hostname used by **ncollectd** followed by "-" and
+> the instance name.
 
 **user** *user*
 
@@ -88,8 +88,6 @@ Within each **instance** block, the following options are available:
 > **2**
 
 > > Exactly once
-
-**store-rates** *true|false*
 
 **retain** *true|false*
 
