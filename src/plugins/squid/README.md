@@ -21,6 +21,7 @@ NCOLLECTD-SQUID(5) - File Formats Manual
 	        header header
 	        label key value
 	        interval seconds
+	        timeout seconds
 	        filter {
 	            ...
 	        }
@@ -29,7 +30,7 @@ NCOLLECTD-SQUID(5) - File Formats Manual
 
 # DESCRIPTION
 
-The **squid** plugin read Squid metrics over http orfrom an unix socket.
+The **squid** plugin reads Squid metrics over http from the cache manager counters.
 
 In the **plugin** block, there may be one or more **instance** blocks.
 The following options are valid within **instance** blocks:
@@ -100,6 +101,12 @@ The following options are valid within **instance** blocks:
 > Sets the interval (in seconds) in which the values will be collected from this
 > URL.
 > By default the global **interval** setting will be used.
+
+**timeout** *seconds*
+
+> The **timeout** option sets the overall timeout for HTTP requests
+> to **url**, in seconds.
+> By default, the configured **interval** is used to set the timeout.
 
 **filter**
 

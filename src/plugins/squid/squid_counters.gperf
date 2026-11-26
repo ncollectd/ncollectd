@@ -57,8 +57,8 @@ icp.times_used,                0, FAM_SQUID_ICP_TIMES_USED
 cd.times_used,                 0, FAM_SQUID_CD_TIMES_USED
 cd.msgs_sent,                  0, FAM_SQUID_CD_SENT_MSGS
 cd.msgs_recv,                  0, FAM_SQUID_CD_RECV_MSGS
-cd.memory,                     0, FAM_SQUID_CD_MEMORY
-cd.local_memory,               0, FAM_SQUID_CD_LOCAL_MEMORY
+cd.memory,                  1024, FAM_SQUID_CD_MEMORY
+cd.local_memory,            1024, FAM_SQUID_CD_LOCAL_MEMORY
 cd.kbytes_sent,             1024, FAM_SQUID_CD_SENT_BYTES
 cd.kbytes_recv,             1024, FAM_SQUID_CD_RECV_BYTES
 unlink.requests,               0, FAM_SQUID_UNLINK_REQUESTS
