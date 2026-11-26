@@ -68,137 +68,137 @@ static metric_family_t fams[FAM_TURBOSTAT_MAX] = {
     [FAM_TURBOSTAT_CPU_C0_RATIO] = {
         .name = "system_turbostat_cpu_c0_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the CPU was in the C0 state (running).",
     },
     [FAM_TURBOSTAT_CPU_C1_RATIO] = {
         .name = "system_turbostat_cpu_c1_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the CPU was in the C1 state.",
     },
     [FAM_TURBOSTAT_CPU_FREQUENCY_AVERAGE] = {
         .name = "system_turbostat_cpu_frequency_average",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Average frequency of the CPU in MHz, including idle time.",
     },
     [FAM_TURBOSTAT_CPU_FREQUENCY_BUSY] = {
         .name = "system_turbostat_cpu_frequency_busy",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Average frequency of the CPU in MHz while it was in the C0 state.",
     },
     [FAM_TURBOSTAT_CPU_TSC] = {
         .name = "system_turbostat_cpu_tsc",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Average frequency of the Time Stamp Counter in MHz.",
     },
     [FAM_TURBOSTAT_CPU_SMI] = {
         .name = "system_turbostat_cpu_smi",
-        .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Number of System Management Interrupts.",
     },
     [FAM_TURBOSTAT_CORE_C3_RATIO] = {
         .name = "system_turbostat_core_c3_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the core was in the C3 state.",
     },
     [FAM_TURBOSTAT_CORE_C6_RATIO] = {
         .name = "system_turbostat_core_c6_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the core was in the C6 state.",
     },
     [FAM_TURBOSTAT_CORE_C7_RATIO] = {
         .name = "system_turbostat_core_c7_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the core was in the C7 state.",
     },
     [FAM_TURBOSTAT_CORE_TEMPERATURE_CELSIUS] = {
         .name = "system_turbostat_core_temperature_celsius",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Temperature of the core in degrees Celsius.",
     },
     [FAM_TURBOSTAT_PKG_TEMPERATURE_CELSIUS] = {
         .name = "system_turbostat_pkg_temperature_celsius",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Temperature of the package in degrees Celsius.",
     },
     [FAM_TURBOSTAT_PKG_PC2_RATIO] = {
         .name = "system_turbostat_pkg_pc2_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC2 state.",
     },
     [FAM_TURBOSTAT_PKG_PC3_RATIO] = {
         .name = "system_turbostat_pkg_pc3_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC3 state.",
     },
     [FAM_TURBOSTAT_PKG_PC6_RATIO] = {
         .name = "system_turbostat_pkg_pc6_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC6 state.",
     },
     [FAM_TURBOSTAT_PKG_PC7_RATIO] = {
         .name = "system_turbostat_pkg_pc7_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC7 state.",
     },
     [FAM_TURBOSTAT_PKG_PC8_RATIO] = {
         .name = "system_turbostat_pkg_pc8_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC8 state.",
     },
     [FAM_TURBOSTAT_PKG_PC9_RATIO] = {
         .name = "system_turbostat_pkg_pc9_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC9 state.",
     },
     [FAM_TURBOSTAT_PKG_PC10_RATIO] = {
         .name = "system_turbostat_pkg_pc10_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Ratio of time the package was in the PC10 state.",
     },
     [FAM_TURBOSTAT_PKG_POWER_WATTS] = {
         .name = "system_turbostat_pkg_power_watts",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Power consumed by the package in watts.",
     },
     [FAM_TURBOSTAT_PKG_TDP_WATTS] = {
         .name = "system_turbostat_pkg_tdp_watts",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Thermal design power of the package in watts.",
     },
     [FAM_TURBOSTAT_PKG_CORES_POWER_WATTS] = {
         .name = "system_turbostat_pkg_cores_power_watts",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Power consumed by the cores of the package in watts.",
     },
     [FAM_TURBOSTAT_PKG_GFX_POWER_WATTS] = {
         .name = "system_turbostat_pkg_gfx_power_watts",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Power consumed by the graphics of the package in watts.",
     },
     [FAM_TURBOSTAT_PKG_DRAM_POWER_WATTS] = {
         .name = "system_turbostat_pkg_dram_power_watts",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Power consumed by the DRAM attached to the package in watts.",
     },
     [FAM_TURBOSTAT_PKG_TURBO_ENABLED] = {
         .name = "system_turbostat_pkg_turbo_enabled",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Whether turbo mode is enabled in the package.",
     },
     [FAM_TURBOSTAT_PKG_PSTATES_ENABLED] = {
         .name = "system_turbostat_pkg_pstates_enabled",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Whether P-states are enabled in the package.",
     },
     [FAM_TURBOSTAT_PKG_UNCORE_RATIO] = {
         .name = "system_turbostat_pkg_uncore_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Uncore frequency ratio of the package.",
     },
     [FAM_TURBOSTAT_PKG_TCC_ACTIVATION_CELSIUS] = {
         .name = "system_turbostat_pkg_tcc_activation_celsius",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Thermal Control Circuit activation temperature in degrees Celsius.",
     },
 };
 
@@ -221,10 +221,9 @@ static affinity_policy_t affinity_policy = policy_allcpus_affinity;
  */
 
 /*
- * If set, aperf_mperf_unstable disables a/mperf based stats.
- * This includes: C0 & C1 states, frequency
- *
- * This value is automatically set if mperf or aperf go backward
+ * Set when mperf or aperf went backward at least once, used to warn only once.
+ * The a/mperf based stats (C0 & C1 states, frequency) are skipped only for the
+ * interval where the counters went backward (CPU_APERF_MPERF_INVALID flag).
  */
 static bool aperf_mperf_unstable;
 
@@ -243,6 +242,8 @@ static bool apply_config_core_cstate;
 static unsigned int do_pkg_cstate;
 static unsigned int config_pkg_cstate;
 static bool apply_config_pkg_cstate;
+/* Atom processors have the package C6 residency in MSR_ATOM_PKG_C6_RESIDENCY */
+static bool pkg_c6_atom;
 
 /*
  * Boolean indicating if the processor supports 'I/O System-Management Interrupt
@@ -328,13 +329,15 @@ static struct thread_data {
     unsigned int flags;
 #define CPU_IS_FIRST_THREAD_IN_CORE 0x2
 #define CPU_IS_FIRST_CORE_IN_PACKAGE 0x4
+#define CPU_APERF_MPERF_INVALID 0x8
 } *thread_delta, *thread_even, *thread_odd;
 
 static struct core_data {
     unsigned long long c3;
     unsigned long long c6;
     unsigned long long c7;
-    unsigned int core_temp_c;
+    int core_temp_c;
+    bool core_temp_valid;
     unsigned int core_id;
 } *core_delta, *core_even, *core_odd;
 
@@ -356,7 +359,8 @@ static struct pkg_data {
     uint8_t pstates_enabled;
     uint32_t uncore;
     unsigned int tcc_activation_temp;
-    unsigned int pkg_temp_c;
+    int pkg_temp_c;
+    bool pkg_temp_valid;
 } *package_delta, *package_even, *package_odd;
 
 #define DELTA_COUNTERS thread_delta, core_delta, package_delta
@@ -377,6 +381,7 @@ static bool initialized;
 struct cpu_topology {
     unsigned int package_id;
     unsigned int core_id;
+    unsigned int thread_no;
     bool first_core_in_package;
     bool first_thread_in_core;
 };
@@ -390,6 +395,9 @@ static struct topology {
 } topology;
 
 static cdtime_t time_even, time_odd, time_delta;
+
+static char *path_proc_stat;
+static char *path_sys_cpu;
 
 /*****************************
  *  MSR Manipulation helpers *
@@ -526,7 +534,9 @@ static int __attribute__((warn_unused_result)) get_counters(struct thread_data *
 
     if (do_dts) {
         READ_MSR(MSR_IA32_THERM_STATUS, &msr);
-        c->core_temp_c = p->tcc_activation_temp - ((msr >> 16) & 0x7F);
+        c->core_temp_c = (int)p->tcc_activation_temp - (int)((msr >> 16) & 0x7F);
+        /* bit 31: Reading Valid */
+        c->core_temp_valid = ((msr >> 31) & 0x1) && (c->core_temp_c >= 0);
     }
 
     /* collect package counters only for 1st core in package */
@@ -539,8 +549,12 @@ static int __attribute__((warn_unused_result)) get_counters(struct thread_data *
         READ_MSR(MSR_PKG_C2_RESIDENCY, &p->pc2);
     if (do_pkg_cstate & (1 << 3))
         READ_MSR(MSR_PKG_C3_RESIDENCY, &p->pc3);
-    if (do_pkg_cstate & (1 << 6))
-        READ_MSR(MSR_PKG_C6_RESIDENCY, &p->pc6);
+    if (do_pkg_cstate & (1 << 6)) {
+        if (pkg_c6_atom)
+            READ_MSR(MSR_ATOM_PKG_C6_RESIDENCY, &p->pc6);
+        else
+            READ_MSR(MSR_PKG_C6_RESIDENCY, &p->pc6);
+    }
     if (do_pkg_cstate & (1 << 7))
         READ_MSR(MSR_PKG_C7_RESIDENCY, &p->pc7);
     if (do_pkg_cstate & (1 << 8))
@@ -570,7 +584,8 @@ static int __attribute__((warn_unused_result)) get_counters(struct thread_data *
     }
     if (do_ptm) {
         READ_MSR(MSR_IA32_PACKAGE_THERM_STATUS, &msr);
-        p->pkg_temp_c = p->tcc_activation_temp - ((msr >> 16) & 0x7F);
+        p->pkg_temp_c = (int)p->tcc_activation_temp - (int)((msr >> 16) & 0x7F);
+        p->pkg_temp_valid = p->pkg_temp_c >= 0;
     }
     if (do_power_fields & TURBO_PLATFORM) {
         READ_MSR(MSR_IA32_MISC_ENABLE, &msr);
@@ -610,6 +625,7 @@ static inline void delta_package(struct pkg_data *delta,
     delta->pc9 = new->pc9 - old->pc9;
     delta->pc10 = new->pc10 - old->pc10;
     delta->pkg_temp_c = new->pkg_temp_c;
+    delta->pkg_temp_valid = new->pkg_temp_valid;
 
     delta->energy_pkg = new->energy_pkg - old->energy_pkg;
     delta->energy_cores = new->energy_cores - old->energy_cores;
@@ -634,6 +650,7 @@ static inline void delta_core(struct core_data *delta,
     delta->c6 = new->c6 - old->c6;
     delta->c7 = new->c7 - old->c7;
     delta->core_temp_c = new->core_temp_c;
+    delta->core_temp_valid = new->core_temp_valid;
 }
 
 /*
@@ -660,7 +677,12 @@ delta_thread(struct thread_data *delta, const struct thread_data *new,
     if ((new->aperf > old->aperf) && (new->mperf > old->mperf)) {
         delta->aperf = new->aperf - old->aperf;
         delta->mperf = new->mperf - old->mperf;
+        delta->flags &= ~CPU_APERF_MPERF_INVALID;
     } else {
+        /* Do not use stale values from the previous interval */
+        delta->aperf = 0;
+        delta->mperf = 0;
+        delta->flags |= CPU_APERF_MPERF_INVALID;
         if (!aperf_mperf_unstable) {
             PLUGIN_WARNING("APERF or MPERF went "
                             "backwards. Frequency results do not cover "
@@ -685,12 +707,14 @@ delta_thread(struct thread_data *delta, const struct thread_data *new,
     }
 
     if (delta->mperf == 0) {
-        PLUGIN_WARNING("cpu%u MPERF 0!", old->cpu_id);
+        if (!(delta->flags & CPU_APERF_MPERF_INVALID))
+            PLUGIN_WARNING("cpu%u MPERF 0!", old->cpu_id);
         delta->mperf = 1; /* divide by 0 protection */
     }
 
+    /* SMI count is reported as a counter: keep the absolute value */
     if (do_smi)
-        delta->smi_count = new->smi_count - old->smi_count;
+        delta->smi_count = new->smi_count;
 
     return 0;
 }
@@ -729,19 +753,17 @@ static int submit_counters(struct thread_data *t, struct core_data *c,
     ssnprintf(pkg, sizeof(pkg), "%u", p->package_id);
     metric_label_set(&m, "package", pkg);
 
-    if (!aperf_mperf_unstable) {
-        m.value = VALUE_GAUGE(100.0 * t->mperf / t->tsc);
+    /* Skip a/mperf based stats if the counters went backward in this interval */
+    if (!(t->flags & CPU_APERF_MPERF_INVALID)) {
+        m.value = VALUE_GAUGE(1.0 * t->mperf / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CPU_C0_RATIO], m);
-    }
-    if (!aperf_mperf_unstable) {
-        m.value = VALUE_GAUGE(100.0 * t->c1 / t->tsc);
+
+        m.value = VALUE_GAUGE(1.0 * t->c1 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CPU_C1_RATIO], m);
-    }
 
-    m.value = VALUE_GAUGE(1.0 / 1000000 * t->aperf / interval_float);
-    metric_family_metric_append(&fams[FAM_TURBOSTAT_CPU_FREQUENCY_AVERAGE], m);
+        m.value = VALUE_GAUGE(1.0 / 1000000 * t->aperf / interval_float);
+        metric_family_metric_append(&fams[FAM_TURBOSTAT_CPU_FREQUENCY_AVERAGE], m);
 
-    if ((!aperf_mperf_unstable) || (!(t->aperf > t->tsc || t->mperf > t->tsc))) {
         m.value = VALUE_GAUGE(1.0 * t->tsc / 1000000 * t->aperf / t->mperf / interval_float);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CPU_FREQUENCY_BUSY], m);
     }
@@ -752,7 +774,7 @@ static int submit_counters(struct thread_data *t, struct core_data *c,
 
     /* SMI */
     if (do_smi) {
-        m.value = VALUE_GAUGE(t->smi_count);
+        m.value = VALUE_COUNTER(t->smi_count);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CPU_SMI], m);
     }
 
@@ -763,19 +785,19 @@ static int submit_counters(struct thread_data *t, struct core_data *c,
     metric_label_set(&m, "cpu", NULL);
 
     if (do_core_cstate & (1 << 3)) {
-        m.value = VALUE_GAUGE(100.0 * c->c3 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * c->c3 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CORE_C3_RATIO], m);
     }
     if (do_core_cstate & (1 << 6)) {
-        m.value = VALUE_GAUGE(100.0 * c->c6 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * c->c6 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CORE_C6_RATIO], m);
     }
     if (do_core_cstate & (1 << 7)) {
-        m.value = VALUE_GAUGE(100.0 * c->c7 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * c->c7 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CORE_C7_RATIO], m);
     }
 
-    if (do_dts) {
+    if (do_dts && c->core_temp_valid) {
         m.value = VALUE_GAUGE(c->core_temp_c);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_CORE_TEMPERATURE_CELSIUS], m);
     }
@@ -786,37 +808,37 @@ static int submit_counters(struct thread_data *t, struct core_data *c,
 
     metric_label_set(&m, "core", NULL);
 
-    if (do_ptm) {
+    if (do_ptm && p->pkg_temp_valid) {
         m.value = VALUE_GAUGE(p->pkg_temp_c);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_TEMPERATURE_CELSIUS], m);
     }
 
     if (do_pkg_cstate & (1 << 2)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc2 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc2 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC2_RATIO], m);
     }
     if (do_pkg_cstate & (1 << 3)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc3 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc3 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC3_RATIO], m);
     }
     if (do_pkg_cstate & (1 << 6)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc6 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc6 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC6_RATIO], m);
     }
     if (do_pkg_cstate & (1 << 7)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc7 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc7 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC7_RATIO], m);
     }
     if (do_pkg_cstate & (1 << 8)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc8 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc8 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC8_RATIO], m);
     }
     if (do_pkg_cstate & (1 << 9)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc9 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc9 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC9_RATIO], m);
     }
     if (do_pkg_cstate & (1 << 10)) {
-        m.value = VALUE_GAUGE(100.0 * p->pc10 / t->tsc);
+        m.value = VALUE_GAUGE(1.0 * p->pc10 / t->tsc);
         metric_family_metric_append(&fams[FAM_TURBOSTAT_PKG_PC10_RATIO], m);
     }
 
@@ -1059,7 +1081,7 @@ static int __attribute__((warn_unused_result)) probe_cpu(void)
      */
     max_level = ebx = ecx = edx = 0;
     __get_cpuid(0, &max_level, &ebx, &ecx, &edx);
-    if (ebx != 0x756e6547 && edx != 0x49656e69 && ecx != 0x6c65746e) {
+    if (ebx != 0x756e6547 || edx != 0x49656e69 || ecx != 0x6c65746e) {
         PLUGIN_ERROR("Unsupported CPU (not Intel)");
         return -1;
     }
@@ -1119,13 +1141,16 @@ static int __attribute__((warn_unused_result)) probe_cpu(void)
         case 0x27:
             do_smi = false;
             do_core_cstate = 0;
-            do_pkg_cstate = (1 << 2) | (1 << 4) | (1 << 6);
+            /* PC4 is not supported by this plugin */
+            do_pkg_cstate = (1 << 2) | (1 << 6);
+            pkg_c6_atom = true;
             break;
         /* Silvermont */
         case 0x37: /* BYT */
         case 0x4D: /* AVN */
             do_smi = true;
-            do_core_cstate = (1 << 1) | (1 << 6);
+            /* Core C1 residency is not read, it is derived from tsc and mperf */
+            do_core_cstate = (1 << 6);
             do_pkg_cstate = (1 << 6);
             break;
         /* Nehalem */
@@ -1184,6 +1209,13 @@ static int __attribute__((warn_unused_result)) probe_cpu(void)
             do_pkg_cstate = (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7);
             break;
         case 0x3D: /* BDW */
+        /* Skylake client and derivatives */
+        case 0x4E: /* SKL mobile */
+        case 0x5E: /* SKL desktop */
+        case 0x8E: /* KBL, AML, WHL mobile */
+        case 0x9E: /* KBL, CFL desktop */
+        case 0xA5: /* CML */
+        case 0xA6: /* CML mobile */
             do_smi = true;
             do_core_cstate = (1 << 3) | (1 << 6) | (1 << 7);
             do_pkg_cstate = (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7) | (1 << 8) |
@@ -1202,7 +1234,12 @@ static int __attribute__((warn_unused_result)) probe_cpu(void)
         case 0x45: /* HSW */
         case 0x46: /* HSW */
         case 0x3D: /* BDW */
-        case 0x5E: /* SKL */
+        case 0x4E: /* SKL mobile */
+        case 0x5E: /* SKL desktop */
+        case 0x8E: /* KBL, AML, WHL mobile */
+        case 0x9E: /* KBL, CFL desktop */
+        case 0xA5: /* CML */
+        case 0xA6: /* CML mobile */
             do_rapl = RAPL_PKG | RAPL_CORES | RAPL_GFX;
             break;
         case 0x3F: /* HSX */
@@ -1248,8 +1285,11 @@ static int __attribute__((warn_unused_result)) probe_cpu(void)
 
     if (do_rapl) {
         unsigned long long msr;
-        if (get_msr(0, MSR_RAPL_POWER_UNIT, &msr))
+        if (get_msr(0, MSR_RAPL_POWER_UNIT, &msr)) {
+            PLUGIN_WARNING("Unable to read MSR_RAPL_POWER_UNIT, disabling RAPL.");
+            do_rapl = 0;
             return 0;
+        }
 
         rapl_power_units = 1.0 / (1 << (msr & 0xF));
         if (model == 0x37)
@@ -1316,33 +1356,70 @@ static int __attribute__((format(printf, 1, 2))) parse_int_file(const char *fmt,
     return (int)value;
 }
 
-static int get_threads_on_core(unsigned int cpu)
+static int get_threads_on_core(unsigned int cpu, unsigned int *thread_no)
 {
-    char path[80];
+    char path[PATH_MAX];
+    char buf[1024];
     FILE *filep;
-    int sib1, sib2;
-    int matches;
-    char character;
 
-    snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%u/topology/thread_siblings_list", cpu);
+    snprintf(path, sizeof(path), "%s/cpu%u/topology/thread_siblings_list", path_sys_cpu, cpu);
     filep = fopen(path, "r");
     if (!filep) {
         PLUGIN_ERROR("Failed to open '%s'", path);
         return -1;
     }
-    /*
-     * file format:
-     * if a pair of number with a character between: 2 siblings (eg. 1-2, or 1,4)
-     * otherwinse 1 sibling (self).
-     */
-    matches = fscanf(filep, "%d%c%d\n", &sib1, &character, &sib2);
+
+    if (fgets(buf, sizeof(buf), filep) == NULL) {
+        PLUGIN_ERROR("Failed to read '%s'", path);
+        fclose(filep);
+        return -1;
+    }
 
     fclose(filep);
 
-    if (matches == 3)
-        return 2;
-    else
-        return 1;
+    /*
+     * file format: comma separated list of cpus or ranges of cpus
+     * (eg. 1, 1-2, 1,4 or 0-1,4-5)
+     */
+    unsigned int count = 0;
+    bool found = false;
+    char *ptr = buf;
+    while (true) {
+        char *endptr = NULL;
+        errno = 0;
+        unsigned long start = strtoul(ptr, &endptr, 10);
+        if ((errno != 0) || (endptr == ptr))
+            break;
+        unsigned long end = start;
+        ptr = endptr;
+        if (*ptr == '-') {
+            ptr++;
+            errno = 0;
+            end = strtoul(ptr, &endptr, 10);
+            if ((errno != 0) || (endptr == ptr) || (end < start))
+                break;
+            ptr = endptr;
+        }
+
+        for (unsigned long n = start; n <= end; n++) {
+            if (n == cpu) {
+                *thread_no = count;
+                found = true;
+            }
+            count++;
+        }
+
+        if (*ptr != ',')
+            break;
+        ptr++;
+    }
+
+    if (!found) {
+        PLUGIN_ERROR("Failed to find cpu%u in '%s'", cpu, path);
+        return -1;
+    }
+
+    return (int)count;
 }
 
 /*
@@ -1355,15 +1432,15 @@ static int __attribute__((warn_unused_result)) for_all_proc_cpus(int(func)(unsig
     unsigned int cpu_num;
     int retval;
 
-    fp = fopen("/proc/stat", "r");
+    fp = fopen(path_proc_stat, "r");
     if (!fp) {
-        PLUGIN_ERROR("Failed to open /proc/stat");
+        PLUGIN_ERROR("Failed to open '%s'", path_proc_stat);
         return -1;
     }
 
     retval = fscanf(fp, "cpu %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d\n");
     if (retval != 0) {
-        PLUGIN_ERROR("Failed to parse /proc/stat");
+        PLUGIN_ERROR("Failed to parse '%s'", path_proc_stat);
         fclose(fp);
         return -1;
     }
@@ -1398,6 +1475,30 @@ static int mark_cpu_present(unsigned int cpu)
 {
     CPU_SET_S(cpu, cpu_present_setsize, cpu_present_set);
     return 0;
+}
+
+static unsigned int proc_cpu_count;
+
+static int count_proc_cpu(__attribute__((unused)) unsigned int cpu)
+{
+    proc_cpu_count++;
+    return 0;
+}
+
+/*
+ * Check if the list of cpus in /proc/stat differs from the cpu_present_set:
+ * a cpu appeared (not in cpu_present_set) or disappeared (offline).
+ */
+static bool cpu_topology_changed(void)
+{
+    if (for_all_proc_cpus(cpu_is_not_present))
+        return true;
+
+    proc_cpu_count = 0;
+    if (for_all_proc_cpus(count_proc_cpu) != 0)
+        return true;
+
+    return proc_cpu_count != (unsigned int)CPU_COUNT_S(cpu_present_setsize, cpu_present_set);
 }
 
 static int __attribute__((warn_unused_result)) allocate_cpu_set(cpu_set_t **set, size_t *size)
@@ -1463,7 +1564,7 @@ static int __attribute__((warn_unused_result)) topology_probe(void)
             continue;
         }
 
-        ret = parse_int_file("/sys/devices/system/cpu/cpu%u/topology/physical_package_id", i);
+        ret = parse_int_file("%s/cpu%u/topology/physical_package_id", path_sys_cpu, i);
         if (ret < 0)
             goto err;
         else
@@ -1471,27 +1572,27 @@ static int __attribute__((warn_unused_result)) topology_probe(void)
         if (cpu->package_id > max_package_id)
             max_package_id = cpu->package_id;
 
-        ret = parse_int_file("/sys/devices/system/cpu/cpu%u/topology/core_id", i);
+        ret = parse_int_file("%s/cpu%u/topology/core_id", path_sys_cpu, i);
         if (ret < 0)
             goto err;
         else
             cpu->core_id = (unsigned int)ret;
         if (cpu->core_id > max_core_id)
             max_core_id = cpu->core_id;
-        ret = parse_int_file("/sys/devices/system/cpu/cpu%u/topology/core_siblings_list", i);
+        ret = parse_int_file("%s/cpu%u/topology/core_siblings_list", path_sys_cpu, i);
         if (ret < 0)
             goto err;
         else if ((unsigned int)ret == i)
             cpu->first_core_in_package = true;
 
-        ret = get_threads_on_core(i);
+        ret = get_threads_on_core(i, &cpu->thread_no);
         if (ret < 0)
             goto err;
         else
             num_threads = (unsigned int)ret;
         if (num_threads > max_threads)
             max_threads = num_threads;
-        ret = parse_int_file("/sys/devices/system/cpu/cpu%u/topology/thread_siblings_list", i);
+        ret = parse_int_file("%s/cpu%u/topology/thread_siblings_list", path_sys_cpu, i);
         if (ret < 0)
             goto err;
         else if ((unsigned int)ret == i)
@@ -1507,6 +1608,7 @@ static int __attribute__((warn_unused_result)) topology_probe(void)
     return 0;
 err:
     free(topology.cpus);
+    topology.cpus = NULL;
     return ret;
 }
 
@@ -1562,8 +1664,7 @@ static void init_counter(struct thread_data *thread_base,
     struct pkg_data *p;
     struct cpu_topology *cpu = &topology.cpus[cpu_id];
 
-    t = GET_THREAD(thread_base, !(cpu->first_thread_in_core), cpu->core_id,
-                                 cpu->package_id);
+    t = GET_THREAD(thread_base, cpu->thread_no, cpu->core_id, cpu->package_id);
     c = GET_CORE(core_base, cpu->core_id, cpu->package_id);
     p = GET_PKG(pkg_base, cpu->package_id);
 
@@ -1714,12 +1815,12 @@ static int turbostat_read(void)
             return ret;
     }
 
-    if (for_all_proc_cpus(cpu_is_not_present)) {
+    if (cpu_topology_changed()) {
         free_all_buffers();
         if ((ret = setup_all_buffers()) < 0)
             return ret;
-        if (for_all_proc_cpus(cpu_is_not_present)) {
-            PLUGIN_ERROR("CPU appeared just after initialization");
+        if (cpu_topology_changed()) {
+            PLUGIN_ERROR("CPU topology changed just after initialization");
             return -1;
         }
     }
@@ -1761,8 +1862,16 @@ static int turbostat_read(void)
         if ((ret = for_all_cpus(submit_counters, DELTA_COUNTERS)) < 0)
             goto out;
     }
+
+    plugin_dispatch_metric_family_array(fams, FAM_TURBOSTAT_MAX, 0);
     ret = 0;
 out:
+    if (ret != 0) {
+        /* Drop any metric appended before the failure */
+        for (size_t i = 0; i < FAM_TURBOSTAT_MAX; i++)
+            metric_family_metric_reset(&fams[i]);
+    }
+
     restore_affinity();
 
     return ret;
@@ -1810,6 +1919,22 @@ static int turbostat_init(void)
 {
     struct stat sb;
     int ret;
+
+    if (path_proc_stat == NULL) {
+        path_proc_stat = plugin_procpath("stat");
+        if (path_proc_stat == NULL) {
+            PLUGIN_ERROR("Cannot get proc path.");
+            return -1;
+        }
+    }
+
+    if (path_sys_cpu == NULL) {
+        path_sys_cpu = plugin_syspath("devices/system/cpu");
+        if (path_sys_cpu == NULL) {
+            PLUGIN_ERROR("Cannot get sys path.");
+            return -1;
+        }
+    }
 
     if (stat("/dev/cpu/0/msr", &sb)) {
         PLUGIN_ERROR("Initialization failed: /dev/cpu/0/msr "
@@ -1887,8 +2012,23 @@ static int turbostat_config(config_item_t *ci)
     return 0;
 }
 
+static int turbostat_shutdown(void)
+{
+    free(path_proc_stat);
+    path_proc_stat = NULL;
+    free(path_sys_cpu);
+    path_sys_cpu = NULL;
+
+    free_all_buffers();
+    free(topology.cpus);
+    topology.cpus = NULL;
+
+    return 0;
+}
+
 void module_register(void)
 {
     plugin_register_init("turbostat", turbostat_init);
     plugin_register_config("turbostat", turbostat_config);
+    plugin_register_shutdown("turbostat", turbostat_shutdown);
 }
