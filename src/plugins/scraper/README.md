@@ -32,6 +32,7 @@ NCOLLECTD-SCRAPER(5) - File Formats Manual
 	        interval seconds
 	        label key value
 	        metric-prefix prefix
+	        max-size bytes
 	        filter {
 	            ...
 	        }
@@ -226,6 +227,12 @@ The scraper plugin collect metrics from a http endpoint.
 **metric-prefix** *prefix*
 
 > Prepends *prefix* to the metric name.
+
+**max-size** *bytes*
+
+> Maximum size in bytes of the response (or of the file/socket data).
+> If the limit is exceeded the read is aborted and no metrics are submitted.
+> By default (or if set to *0*) there is no limit.
 
 **interval** *seconds*
 
