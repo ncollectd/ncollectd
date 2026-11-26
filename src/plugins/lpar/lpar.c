@@ -8,7 +8,6 @@
 #include "libutils/common.h"
 
 #include <libperfstat.h>
-#include <sys/protosw.h>
 #include <sys/utsname.h>
 
 /* XINTFRAC was defined in libperfstat.h somewhere between AIX 5.3 and 6.1 */
@@ -23,6 +22,8 @@ static bool pool_stats;
 #ifdef PERFSTAT_SUPPORTS_DONATION
 static bool donate_flag;
 #endif
+
+static plugin_filter_t *filter;
 
 static perfstat_partition_total_t lparstats_old;
 
@@ -51,25 +52,23 @@ static metric_family_t fams[FAM_LPAR_MAX] = {
     [FAM_LPAR_USER] = {
         .name = "system_lpar_user",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of the entitled processing capacity used "
-                "while executing at the user level."
+        .help = "The physical processors consumed while executing at the user level."
     },
     [FAM_LPAR_SYSTEM] = {
         .name = "system_lpar_system",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of the entitled processing capacity used "
-                "while executing at the system level."
+        .help = "The physical processors consumed while executing at the system level."
     },
     [FAM_LPAR_WAIT] = {
         .name = "system_lpar_wait",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of the entitled processing capacity unused "
+        .help = "The physical processors consumed 
                 "while the partition was idle and had outstanding disk I/O request(s)."
     },
     [FAM_LPAR_IDLE] = {
         .name = "system_lpar_idle",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of the entitled processing capacity unused "
+        .help = "The physical processors consumed "
                 "while the partition was idle and did not have any outstanding disk I/O request."
     },
     [FAM_LPAR_CONSUMED] = {
@@ -80,25 +79,25 @@ static metric_family_t fams[FAM_LPAR_MAX] = {
     [FAM_LPAR_IDLE_DONATED] = {
         .name = "system_lpar_idle_donated",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of physical processor that is used by "
+        .help = "The physical processors that is used by "
                 "explicitly donated idle cycles, for dedicated partitions only."
     },
     [FAM_LPAR_BUSY_DONATED] = {
         .name = "system_lpar_busy_donated",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of physical processor that is used by "
+        .help = "The physical processors that is used by "
                 "donating busy cycles, for dedicated partitions only."
     },
     [FAM_LPAR_IDLE_STOLEN] = {
         .name = "system_lpar_idle_stolen",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of physical processor idle cycles stolen "
+        .help = "The physical processors idle cycles stolen "
                 "by the hypervisor from a dedicated partition."
     },
     [FAM_LPAR_BUSY_STOLEN] = {
         .name = "system_lpar_busy_stolen",
         .type = METRIC_TYPE_GAUGE,
-        .help = "The percentage of physical processor busy cycles stolen "
+        .help = "The physical processors busy cycles stolen "
                 "by the hypervisor from a dedicated partition."
     },
     [FAM_LPAR_POOL_IDLE] = {
@@ -238,7 +237,8 @@ static int lpar_read(void)
 
     memcpy(&lparstats_old, &lparstats, sizeof(lparstats_old));
 
-    plugin_dispatch_metric_family_array(fams, FAM_LPAR_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_LPAR_MAX, filter, 0);
+
     return 0;
 }
 
@@ -250,6 +250,8 @@ static int lpar_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "cpu-pool-stats") == 0) {
             status = cf_util_get_boolean(child, &pool_stats);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -287,10 +289,16 @@ static int lpar_init(void)
     return 0;
 }
 
+static int lpar_shutdown(void)
+{
+    plugin_filter_free(filter);
+    return 0;
+}
 
 void module_register(void)
 {
     plugin_register_config("lpar", lpar_config);
     plugin_register_init("lpar", lpar_init);
     plugin_register_read("lpar", lpar_read);
+    plugin_register_shutdown("lpar", lpar_shutdown);
 }
