@@ -22,13 +22,13 @@ typedef struct {
     cdtime_t timeout;
     int database;
     cdtime_t retention;
-    bool store_rates;
     redisContext *conn;
     strbuf_t buf_key;
     strbuf_t buf_metric;
 } write_redis_t;
 
 static char escape_key[256] = {
+    ['%'] = 1,
     ['#'] = 1,
     [':'] = 1,
     ['\n'] = 1,
@@ -36,14 +36,37 @@ static char escape_key[256] = {
     ['\t'] = 1
 };
 
+/* Escape the key separators with percent-encoding, so distinct metrics
+ * never map to the same key. */
+static int redis_escape_key(strbuf_t *buf, const char *str, size_t len)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    int status = 0;
+
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)str[i];
+        if (escape_key[c]) {
+            status |= strbuf_putchar(buf, '%');
+            status |= strbuf_putchar(buf, hex[c >> 4]);
+            status |= strbuf_putchar(buf, hex[c & 0x0f]);
+        } else {
+            status |= strbuf_putchar(buf, (char)c);
+        }
+    }
+
+    return status;
+}
+
 static int redis_cmd_argv(write_redis_t *node, int argc, const char **argv)
 {
     redisReply *rr = redisCommandArgv(node->conn, argc, argv, NULL);
     if (rr == NULL) {
+        const char *errstr = node->conn->err ? node->conn->errstr : "unknown error";
         if (node->socket)
-            PLUGIN_ERROR("command %s fail on '%s'.", argv[0], node->socket);
+            PLUGIN_ERROR("command %s fail on '%s': %s.", argv[0], node->socket, errstr);
         else
-            PLUGIN_ERROR("command %s fail on '%s:%d'.", argv[0], node->host, node->port);
+            PLUGIN_ERROR("command %s fail on '%s:%d': %s.", argv[0], node->host, node->port,
+                         errstr);
 
         redisFree(node->conn);
         node->conn = NULL;
@@ -53,6 +76,18 @@ static int redis_cmd_argv(write_redis_t *node, int argc, const char **argv)
     if ((rr->type == REDIS_REPLY_STATUS) || (rr->type == REDIS_REPLY_INTEGER)) {
         freeReplyObject(rr);
         return 0;
+    }
+
+    /* An error reply is a failure of the command, not of the connection. */
+    if (rr->type == REDIS_REPLY_ERROR) {
+        if (node->socket)
+            PLUGIN_WARNING("command %s failed on '%s': %s.", argv[0], node->socket,
+                           rr->str != NULL ? rr->str : "unknown error");
+        else
+            PLUGIN_WARNING("command %s failed on '%s:%d': %s.", argv[0], node->host, node->port,
+                           rr->str != NULL ? rr->str : "unknown error");
+        freeReplyObject(rr);
+        return -1;
     }
 
     if (node->socket)
@@ -96,19 +131,34 @@ static int redis_connect(write_redis_t *node)
         return -1;
     }
 
+    /* Apply the timeout also to the commands, not only to the connect. */
+    if (redisSetTimeout(node->conn, tv) != REDIS_OK) {
+        PLUGIN_WARNING("Failed to set the command timeout: %s.", node->conn->errstr);
+    }
+
     if (node->passwd != NULL) {
         const char *argv[] = {"AUTH", node->passwd};
         int status = redis_cmd_argv(node, 2, argv);
-        if (status != 0)
+        if (status != 0) {
+            if (node->conn != NULL) {
+                redisFree(node->conn);
+                node->conn = NULL;
+            }
             return -1;
+        }
     }
 
     char database[ITOA_MAX];
     itoa(node->database, database);
     const char *argv[] = {"SELECT", database};
     int status = redis_cmd_argv(node, 2, argv);
-    if (status != 0)
+    if (status != 0) {
+        if (node->conn != NULL) {
+            redisFree(node->conn);
+            node->conn = NULL;
+        }
         return -1;
+    }
 
     return 0;
 }
@@ -130,6 +180,10 @@ static int format_metric(write_redis_t *node, char *metric, char *metric_suffix,
 {
     const char *argv[REDIS_MAX_ARGS];
 
+    /* RedisTimeSeries does not accept non finite values. */
+    if (!isfinite(value))
+        return 0;
+
     strbuf_reset(&node->buf_metric);
     strbuf_t *buf_metric = &node->buf_metric;
     strbuf_reset(&node->buf_key);
@@ -141,20 +195,27 @@ static int format_metric(write_redis_t *node, char *metric, char *metric_suffix,
     if (metric_suffix != NULL)
         status |= strbuf_putstr(buf_metric, metric_suffix);
 
-    status |= strbuf_putnreplace_set(buf_key, buf_metric->ptr, strbuf_len(buf_metric),
-                                     escape_key, '_');
+    status |= redis_escape_key(buf_key, buf_metric->ptr, strbuf_len(buf_metric));
 
     size_t size1 = labels1 == NULL ? 0 : labels1->num;
     size_t n1 = 0;
     size_t size2 = labels2 == NULL ? 0 : labels2->num;
     size_t n2 = 0;
 
+    label_pair_t *pairs[REDIS_MAX_ARGS];
+    size_t pairs_num = 0;
+
     while ((n1 < size1) || (n2 < size2)) {
         label_pair_t *pair = NULL;
         if ((n1 < size1) && (n2 < size2)) {
-            if (strcmp(labels1->ptr[n1].name, labels2->ptr[n2].name) <= 0) {
+            int cmp = strcmp(labels1->ptr[n1].name, labels2->ptr[n2].name);
+            if (cmp < 0) {
                 pair = &labels1->ptr[n1++];
+            } else if (cmp > 0) {
+                pair = &labels2->ptr[n2++];
             } else {
+                /* Same label name in both sets: labels2 overrides labels1. */
+                n1++;
                 pair = &labels2->ptr[n2++];
             }
         } else if (n1 < size1) {
@@ -165,9 +226,11 @@ static int format_metric(write_redis_t *node, char *metric, char *metric_suffix,
 
         if (pair != NULL) {
             status |= strbuf_putchar(buf_key, ':');
-            status |= strbuf_putreplace_set(buf_key, pair->name, escape_key, '_');
+            status |= redis_escape_key(buf_key, pair->name, strlen(pair->name));
             status |= strbuf_putchar(buf_key, '#');
-            status |= strbuf_putreplace_set(buf_key, pair->value, escape_key, '_');
+            status |= redis_escape_key(buf_key, pair->value, strlen(pair->value));
+            if (pairs_num < STATIC_ARRAY_SIZE(pairs))
+                pairs[pairs_num++] = pair;
         }
     }
 
@@ -200,22 +263,11 @@ static int format_metric(write_redis_t *node, char *metric, char *metric_suffix,
     argv[argc++] = "__name__";
     argv[argc++] = buf_metric->ptr;
 
-    if (labels1 != NULL) {
-        for (size_t i = 0; i < labels1->num; i++) {
-            if ((argc + 2) >= REDIS_MAX_ARGS)
-                break;
-            argv[argc++] = labels1->ptr[i].name;
-            argv[argc++] = labels1->ptr[i].value;
-        }
-    }
-
-    if (labels2 != NULL) {
-        for (size_t i = 0; i < labels2->num; i++) {
-            if ((argc + 2) >= REDIS_MAX_ARGS)
-                break;
-            argv[argc++] = labels2->ptr[i].name;
-            argv[argc++] = labels2->ptr[i].value;
-        }
+    for (size_t i = 0; i < pairs_num; i++) {
+        if ((argc + 2) >= REDIS_MAX_ARGS)
+            break;
+        argv[argc++] = pairs[i]->name;
+        argv[argc++] = pairs[i]->value;
     }
 
     return redis_cmd(node, argc, argv);
@@ -270,7 +322,8 @@ static int write_redis_write(metric_family_t const *fam, user_data_t *ud)
         case METRIC_TYPE_SUMMARY: {
             summary_t *s = m->value.summary;
 
-            for (int j = s->num - 1; j >= 0; j--) {
+            for (size_t k = s->num; k > 0; k--) {
+                size_t j = k - 1;
                 char quantile[DTOA_MAX];
 
                 dtoa(s->quantiles[j].quantile, quantile, sizeof(quantile));
@@ -288,7 +341,8 @@ static int write_redis_write(metric_family_t const *fam, user_data_t *ud)
         case METRIC_TYPE_GAUGE_HISTOGRAM: {
             histogram_t *h = m->value.histogram;
 
-            for (int j = h->num - 1; j >= 0; j--) {
+            for (size_t k = h->num; k > 0; k--) {
+                size_t j = k - 1;
                 char le[DTOA_MAX];
                 dtoa(h->buckets[j].maximum, le, sizeof(le));
 
@@ -306,7 +360,8 @@ static int write_redis_write(metric_family_t const *fam, user_data_t *ud)
                                           &m->label, NULL, histogram_sum(h), m->time);
         }   break;
         }
-        if (status != 0)
+        /* Stop only if the connection was lost. */
+        if ((status != 0) && (node->conn == NULL))
             return status;
     }
 
@@ -347,7 +402,6 @@ static int write_redis_config_instance(config_item_t *ci)
     node->timeout = TIME_T_TO_CDTIME_T(1);
     node->conn = NULL;
     node->database = 0;
-    node->store_rates = true;
 
     int status = cf_util_get_string(ci, &node->instance);
     if (status != 0) {
@@ -372,10 +426,13 @@ static int write_redis_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &node->timeout);
         } else if (strcasecmp("database", child->key) == 0) {
             status = cf_util_get_int(child, &node->database);
+            if ((status == 0) && (node->database < 0)) {
+                PLUGIN_ERROR("The 'database' option in %s:%d must not be negative.",
+                             cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp("retention", child->key) == 0) {
             status = cf_util_get_cdtime(child, &node->retention);
-        } else if (strcasecmp("store-rates", child->key) == 0) {
-            status = cf_util_get_boolean(child, &node->store_rates);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

@@ -18,7 +18,6 @@
         \fBtimeout\fP \fIseconds\fP
         \fBdatabase\fP \fIdatabase\fP
         \fBretention\fP \fIseconds\fP
-        \fBstore-rates\fP \fItrue|false\fP
     }
 }
 .Ed
@@ -43,12 +42,13 @@ Use \fIpassword\fP to authenticate when connecting to \fIredis\fP.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password to authenticate from the environment variable \fIenv-name\fP.
 .It \fBtimeout\fP \fIseconds\fP
+Timeout for the connection and for each command sent to Redis.
+Defaults to \fB1\fP second.
 .It \fBdatabase\fP \fIdatabase\fP
 This index selects the Redis logical database to use for query.
 Defaults to \fB0\fP.
 .It \fBretention\fP \fIseconds\fP
 The maximum retention period for the metrics.
-.It \fBstore-rates\fP \fItrue|false\fP
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,

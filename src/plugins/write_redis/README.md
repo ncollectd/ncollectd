@@ -17,7 +17,6 @@ NCOLLECTD-WRITE\_REDIS(5) - File Formats Manual
 	        timeout seconds
 	        database database
 	        retention seconds
-	        store-rates true|false
 	    }
 	}
 
@@ -54,6 +53,9 @@ The plugin has the following options:
 
 **timeout** *seconds*
 
+> Timeout for the connection and for each command sent to Redis.
+> Defaults to **1** second.
+
 **database** *database*
 
 > This index selects the Redis logical database to use for query.
@@ -62,8 +64,6 @@ The plugin has the following options:
 **retention** *seconds*
 
 > The maximum retention period for the metrics.
-
-**store-rates** *true|false*
 
 # SEE ALSO
 
