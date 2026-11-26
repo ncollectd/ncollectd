@@ -26,7 +26,8 @@
 #endif
 
 typedef enum {
-    CHECK_STATUS_UNKNOW,
+    CHECK_STATUS_NONE,
+    CHECK_STATUS_UNKNOWN,
     CHECK_STATUS_OKAY,
     CHECK_STATUS_WARNING,
     CHECK_STATUS_FAILURE,
@@ -36,6 +37,7 @@ typedef struct {
     char *instance;
     cexec_t exec;
     cdtime_t interval;
+    cdtime_t timeout;
 
     char *notification;
     label_set_t labels;
@@ -50,72 +52,126 @@ typedef struct {
     int status;
     pid_t pid;
     bool running;
+    pthread_t thread;
+    bool thread_started;
+    complain_t complaint;
     pthread_mutex_t lock;
 } program_t;
 
 static const size_t MAX_CHECK_SIZE = 4096;
 
-static void nagios_check_dispatch_notification(program_t *pm, char *output)
+static void nagios_check_dispatch_notification(program_t *pm, char *output, const char *error)
 {
-    check_status_t check_status = CHECK_STATUS_UNKNOW;
+    check_status_t check_status = CHECK_STATUS_UNKNOWN;
     severity_t severity = NOTIF_OKAY;
+    char signal_msg[64] = "";
 
-    switch (WEXITSTATUS(pm->status)) {
-    case 0:
-        severity = NOTIF_OKAY;
-        check_status = CHECK_STATUS_OKAY;
-        break;
-    case 1:
-        severity = NOTIF_WARNING;
-        check_status = CHECK_STATUS_WARNING;
-        break;
-    case 2:
+    if (error != NULL) {
         severity = NOTIF_FAILURE;
         check_status = CHECK_STATUS_FAILURE;
-        break;
-    case 3:
+    } else if (!WIFEXITED(pm->status)) {
         severity = NOTIF_FAILURE;
         check_status = CHECK_STATUS_FAILURE;
-        break;
-    default:
-        severity = NOTIF_FAILURE;
-        check_status = CHECK_STATUS_FAILURE;
-        break;
+        if (WIFSIGNALED(pm->status))
+            ssnprintf(signal_msg, sizeof(signal_msg), "Check killed by signal %d",
+                      WTERMSIG(pm->status));
+        else
+            sstrncpy(signal_msg, "Check terminated abnormally", sizeof(signal_msg));
+    } else {
+        switch (WEXITSTATUS(pm->status)) {
+        case 0:
+            severity = NOTIF_OKAY;
+            check_status = CHECK_STATUS_OKAY;
+            break;
+        case 1:
+            severity = NOTIF_WARNING;
+            check_status = CHECK_STATUS_WARNING;
+            break;
+        case 2:
+            severity = NOTIF_FAILURE;
+            check_status = CHECK_STATUS_FAILURE;
+            break;
+        case 3:
+            severity = NOTIF_FAILURE;
+            check_status = CHECK_STATUS_UNKNOWN;
+            break;
+        default:
+            severity = NOTIF_FAILURE;
+            check_status = CHECK_STATUS_FAILURE;
+            break;
+        }
     }
 
     cdtime_t now = cdtime();
 
     if (check_status == pm->check_status) {
+        /* The state has not changed: the notification is fired again every
+         * 'refresh' interval if set, otherwise every interval if 'persist'
+         * is enabled. An OKAY state is only repeated if 'persist-ok' is set. */
+        if ((pm->persist_ok == false) && (check_status == CHECK_STATUS_OKAY))
+            return;
         if (pm->refresh_interval > 0) {
             if ((now - pm->last_notif) < pm->refresh_interval)
                 return;
-            if (pm->persist == false)
-                return;
-            if ((pm->persist_ok == false) && (check_status == CHECK_STATUS_OKAY))
-                return;
-        } else {
-            if (pm->persist == false)
-                return;
-            if ((pm->persist_ok == false) && (check_status == CHECK_STATUS_OKAY))
-                return;
+        } else if (pm->persist == false) {
+            return;
         }
     }
 
     pm->check_status = check_status;
     pm->last_notif = now;
 
+    /* Nagios plugin output format:
+     *   TEXT OUTPUT | OPTIONAL PERFDATA
+     *   LONG TEXT LINE 1
+     *   ...
+     *   LONG TEXT LINE N | PERFDATA LINE 2
+     *   PERFDATA LINE 3
+     *   ...
+     */
+    char *summary = NULL;
     char *long_output = NULL;
-    char *perfdata = NULL;
+    char *perfdata1 = NULL;
+    char *perfdata2 = NULL;
     if (output != NULL) {
-        perfdata = strchr(output, '|');
-        if (perfdata != NULL) {
-            *perfdata = '\0';
-            perfdata++;
-            long_output = strchr(perfdata, '|');
-            if (long_output != NULL) {
-                *long_output = '\0';
-                long_output++;
+        summary = output;
+        char *nl = strchr(output, '\n');
+        if (nl != NULL) {
+            *nl = '\0';
+            long_output = nl + 1;
+        }
+
+        char *sep = strchr(summary, '|');
+        if (sep != NULL) {
+            *sep = '\0';
+            perfdata1 = sep + 1;
+        }
+
+        if (long_output != NULL) {
+            sep = strchr(long_output, '|');
+            if (sep != NULL) {
+                *sep = '\0';
+                perfdata2 = sep + 1;
             }
+        }
+    }
+
+    strbuf_t perfdata = STRBUF_CREATE;
+    if (perfdata1 != NULL) {
+        perfdata1 = strntrim(perfdata1, strlen(perfdata1));
+        if (*perfdata1 != '\0')
+            strbuf_putstr(&perfdata, perfdata1);
+    }
+    if (perfdata2 != NULL) {
+        for (char *c = perfdata2; *c != '\0'; c++) {
+            if ((*c == '\n') || (*c == '\r'))
+                *c = ' ';
+        }
+        perfdata2 = strntrim(perfdata2, strlen(perfdata2));
+        if (*perfdata2 != '\0') {
+            if (strbuf_len(&perfdata) > 0)
+                strbuf_putchar(&perfdata, ' ');
+            strbuf_putstr(&perfdata, perfdata2);
         }
     }
 
@@ -128,20 +184,54 @@ static void nagios_check_dispatch_notification(program_t *pm, char *output)
     label_set_add_set(&n.label, true, pm->labels);
     label_set_add_set(&n.annotation, true, pm->annotations);
 
-    if ((output != NULL) && (*output != '\0')) {
-        strstripnewline(output);
-        notification_annotation_set(&n, "summary", output);
+    if (error != NULL) {
+        notification_annotation_set(&n, "summary", error);
+    } else if (signal_msg[0] != '\0') {
+        notification_annotation_set(&n, "summary", signal_msg);
+    } else if (summary != NULL) {
+        summary = strntrim(summary, strlen(summary));
+        if (*summary != '\0')
+            notification_annotation_set(&n, "summary", summary);
     }
-    if (perfdata != NULL) {
-        strstripnewline(perfdata);
-        notification_annotation_set(&n, "perfdata", perfdata);
-    }
+
+    if ((perfdata.ptr != NULL) && (strbuf_len(&perfdata) > 0))
+        notification_annotation_set(&n, "perfdata", perfdata.ptr);
+    strbuf_destroy(&perfdata);
+
     if (long_output != NULL) {
         strstripnewline(long_output);
         notification_annotation_set(&n, "long_output", long_output);
+        long_output = strntrim(long_output, strlen(long_output));
+        if (*long_output != '\0')
+            notification_annotation_set(&n, "long_output", long_output);
     }
 
     plugin_dispatch_notification(&n);
+
+    label_set_reset(&n.label);
+    label_set_reset(&n.annotation);
+}
+
+/* Wait for the child until the deadline.
+ * Returns 0 if the child has exited, 1 on timeout and -1 on error. */
+static int nagios_check_wait(pid_t pid, int *ret_status, cdtime_t deadline)
+{
+    while (true) {
+        pid_t ret = waitpid(pid, ret_status, WNOHANG);
+        if (ret == pid)
+            return 0;
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            return -1;
+        }
+        if (cdtime() >= deadline)
+            return 1;
+        struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
+        nanosleep(&ts, NULL);
+    }
+
+    return -1;
 }
 
 static void *nagios_check_read_one(void *arg)
@@ -162,7 +252,9 @@ static void *nagios_check_read_one(void *arg)
         pthread_mutex_unlock(&pm->lock);
         pthread_exit((void *)1);
     }
+    pthread_mutex_lock(&pm->lock);
     pm->pid = status;
+    pthread_mutex_unlock(&pm->lock);
 
     assert(pm->pid != 0);
 
@@ -174,11 +266,30 @@ static void *nagios_check_read_one(void *arg)
 
     strbuf_t buf = STRBUF_CREATE;
 
+    cdtime_t timeout = pm->timeout > 0 ? pm->timeout : pm->interval;
+    if (timeout == 0)
+        timeout = plugin_get_interval();
+    cdtime_t deadline = cdtime() + timeout;
+    bool timed_out = false;
+
     while (true) {
-        status = poll(fds, STATIC_ARRAY_SIZE(fds), -1);
+        cdtime_t now = cdtime();
+        if (now >= deadline) {
+            timed_out = true;
+            break;
+        }
+
+        int poll_timeout = (int)CDTIME_T_TO_MS(deadline - now);
+        if (poll_timeout <= 0)
+            poll_timeout = 1;
+
+        status = poll(fds, STATIC_ARRAY_SIZE(fds), poll_timeout);
         if (status < 0) {
             if (errno == EINTR)
                 continue;
+            break;
+        } else if (status == 0) {
+            timed_out = true;
             break;
         }
 
@@ -203,8 +314,7 @@ static void *nagios_check_read_one(void *arg)
                 if (pbuffer_len > avail)
                     pbuffer_len = avail;
                 status = strbuf_putstrn(&buf, pbuffer, pbuffer_len);
-                status |= strbuf_putchar(&buf, '\n');
-                if (status < 0)
+                if (status != 0)
                     PLUGIN_WARNING("Failed to fill check response buffer.");
             }
             pbuffer += len;
@@ -249,10 +359,10 @@ static void *nagios_check_read_one(void *arg)
             char *pnl;
             while ((pnl = strchr(pbuffer_err, '\n'))) {
                 *pnl = '\0';
-                if (*(pnl - 1) == '\r')
+                if ((pnl > pbuffer_err) && (*(pnl - 1) == '\r'))
                     *(pnl - 1) = '\0';
 
-                PLUGIN_ERROR("exec_read_one: error = %s", pbuffer_err);
+                PLUGIN_WARNING("Instance '%s': stderr: %s", pm->instance, pbuffer_err);
 
                 pbuffer_err = ++pnl;
             }
@@ -278,18 +388,39 @@ static void *nagios_check_read_one(void *arg)
     }
 
     PLUGIN_DEBUG("Waiting for '%s' to exit.", pm->exec.exec);
-    if (waitpid(pm->pid, &pm->status, 0) < 0) {
+    if (!timed_out) {
+        status = nagios_check_wait(pm->pid, &pm->status, deadline);
+        if (status > 0)
+            timed_out = true;
+    }
+
+    if (timed_out) {
+        PLUGIN_WARNING("Instance '%s': check timed out after %.3f seconds, killing pid %d.",
+                       pm->instance, CDTIME_T_TO_DOUBLE(timeout), (int)pm->pid);
+        kill(pm->pid, SIGTERM);
+        status = nagios_check_wait(pm->pid, &pm->status, cdtime() + TIME_T_TO_CDTIME_T(1));
+        if (status > 0) {
+            kill(pm->pid, SIGKILL);
+            status = waitpid(pm->pid, &pm->status, 0) < 0 ? -1 : 0;
+        }
+    }
+
+    if (status < 0) {
         PLUGIN_ERROR("waitpid failed: %s", STRERRNO);
+    } else if (timed_out) {
+        char error[128];
+        ssnprintf(error, sizeof(error), "Check timed out after %.3f seconds",
+                  CDTIME_T_TO_DOUBLE(timeout));
+        nagios_check_dispatch_notification(pm, buf.ptr, error);
     } else {
         PLUGIN_DEBUG("Child %i exited with status %i.", (int)pm->pid, pm->status);
-        nagios_check_dispatch_notification(pm, buf.ptr);
+        nagios_check_dispatch_notification(pm, buf.ptr, NULL);
     }
 
     strbuf_destroy(&buf);
 
-    pm->pid = 0;
-
     pthread_mutex_lock(&pm->lock);
+    pm->pid = 0;
     pm->running = false;
     pthread_mutex_unlock(&pm->lock);
 
@@ -309,18 +440,32 @@ static int nagios_check_read(user_data_t *user_data)
 
     if (pm->running) {
         pthread_mutex_unlock(&pm->lock);
+        PLUGIN_COMPLAIN_WARNING(&pm->complaint,
+                   "Instance '%s': previous check is still running, skipping execution.",
+                   pm->instance);
         return 0;
     }
 
     pm->running = true;
     pthread_mutex_unlock(&pm->lock);
 
-    pthread_t t = (pthread_t){0};
-    int status = plugin_thread_create(&t, nagios_check_read_one, (void *)pm, "exec read");
+    PLUGIN_RELEASE_INFO(&pm->complaint, "Instance '%s': previous check has finished.",
+                                        pm->instance);
+
+    /* The previous thread has finished (running was false), reap it. */
+    if (pm->thread_started) {
+        pthread_join(pm->thread, NULL);
+        pm->thread_started = false;
+    }
+
+    int status = plugin_thread_create(&pm->thread, nagios_check_read_one, (void *)pm, "exec read");
     if (status == 0) {
-        pthread_detach(t);
+        pm->thread_started = true;
     } else {
         PLUGIN_ERROR("plugin_thread_create failed.");
+        pthread_mutex_lock(&pm->lock);
+        pm->running = false;
+        pthread_mutex_unlock(&pm->lock);
     }
 
     return 0;
@@ -333,11 +478,35 @@ static void nagios_check_free(void *arg)
     if (pm == NULL)
         return;
 
-    if (pm->pid > 0) {
-        kill(pm->pid, SIGTERM);
-        PLUGIN_INFO("Sent SIGTERM to %hu", (unsigned short int)pm->pid);
+    if (pm->thread_started) {
+        pthread_mutex_lock(&pm->lock);
+        if (pm->running && (pm->pid > 0)) {
+            kill(pm->pid, SIGTERM);
+            PLUGIN_INFO("Sent SIGTERM to %d", (int)pm->pid);
+        }
+        pthread_mutex_unlock(&pm->lock);
 
-        waitpid(pm->pid, NULL, 0);
+        /* Give the check one second to exit before sending SIGKILL. */
+        for (int i = 0; i < 100; i++) {
+            pthread_mutex_lock(&pm->lock);
+            bool running = pm->running;
+            pthread_mutex_unlock(&pm->lock);
+            if (!running)
+                break;
+            struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
+            nanosleep(&ts, NULL);
+        }
+
+        pthread_mutex_lock(&pm->lock);
+        if (pm->running && (pm->pid > 0)) {
+            kill(pm->pid, SIGKILL);
+            PLUGIN_INFO("Sent SIGKILL to %d", (int)pm->pid);
+        }
+        pthread_mutex_unlock(&pm->lock);
+
+        /* The thread does the waitpid on the child. */
+        pthread_join(pm->thread, NULL);
+        pm->thread_started = false;
     }
 
     free(pm->instance);
@@ -348,6 +517,7 @@ static void nagios_check_free(void *arg)
     label_set_reset(&pm->labels);
     label_set_reset(&pm->annotations);
 
+    pthread_mutex_destroy(&pm->lock);
 
     free(pm);
 }
@@ -364,6 +534,7 @@ static int nagios_check_config_instance(config_item_t *ci)
         PLUGIN_ERROR("calloc failed.");
         return -1;
     }
+    pthread_mutex_init(&pm->lock, NULL);
     pm->interval = plugin_get_interval();
     pm->persist = false;
     pm->persist_ok = false;
@@ -388,6 +559,8 @@ static int nagios_check_config_instance(config_item_t *ci)
             status = cf_util_exec_append_env(child, &pm->exec);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &pm->interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &pm->timeout);
         } else if (strcasecmp("refresh", child->key) == 0) {
             status = cf_util_get_cdtime(child, &pm->refresh_interval);
         } else if (strcasecmp("persist", child->key) == 0) {
@@ -410,12 +583,23 @@ static int nagios_check_config_instance(config_item_t *ci)
             break;
     }
 
+    if ((status == 0) && (pm->exec.exec == NULL)) {
+        PLUGIN_ERROR("Missing 'cmd' option in instance '%s'.", pm->instance);
+        status = -1;
+    }
+
+    if ((status == 0) && (pm->notification == NULL)) {
+        pm->notification = strdup(pm->instance);
+        if (pm->notification == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            status = -1;
+        }
+    }
+
     if (status != 0) {
         nagios_check_free(pm);
         return -1;
     }
-
-    pthread_mutex_init(&pm->lock, NULL);
 
     return plugin_register_complex_read("nagios_check", pm->instance, nagios_check_read, pm->interval,
                                         &(user_data_t){.data = pm, .free_func = nagios_check_free});
@@ -449,8 +633,8 @@ static int nagios_check_init(void)
     if ((plugin_check_capability(CAP_SETUID) != 0) || (plugin_check_capability(CAP_SETGID) != 0)) {
         if (getuid() == 0)
             PLUGIN_WARNING("Running ncollectd as root, but the CAP_SETUID "
-                           "or CAP_SETGID capabilities are missing. The plugin's read function "
-                           "will probably fail. Is your init system dropping capabilities?");
+                           "or CAP_SETGID capabilities are missing. The plugin will probably "
+                           "fail to execute the checks. Is your init system dropping capabilities?");
         else
             PLUGIN_WARNING("ncollectd doesn't have the CAP_SETUID or "
                            "CAP_SETGID capabilities. If you don't want to run ncollectd as root, "
