@@ -73,6 +73,10 @@ The following configuration options are available:
 
 > >     sshd,bash,qemu
 
+> Process names are compared with the command name of the processes
+> (*comm*), which the kernel limits to 15 characters, longer names are
+> rejected.
+
 **mon-ipc-enabled** *true|false*
 
 > Determines whether or not to enable IPC monitoring.

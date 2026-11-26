@@ -56,28 +56,6 @@ int config_cores_parse(const config_item_t *ci, core_groups_list_t *cgl);
 
 /*
  * NAME
- *   config_cores_default
- *
- * DESCRIPTION
- *   Set number of cores starting from zero into individual
- *   core groups in *cgl list.
- *
- * PARAMETERS
- *   `num_cores'    Number of cores to be configured.
- *   `cgl'              Pointer to core groups list.
- *
- * RETURN VALUE
- *      Zero upon success or non-zero if an error occurred.
- *
- * NOTES
- *      The memory allocated for *cgroups in list needs to be freed
- *      with config_cores_cleanup. In case of error the memory is
- *      freed by the function itself.
- */
-int config_cores_default(int num_cores, core_groups_list_t *cgl);
-
-/*
- * NAME
  *   config_cores_cleanup
  *
  * DESCRIPTION

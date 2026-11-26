@@ -71,6 +71,10 @@ Allowed format is:
 .Bd -literal
     sshd,bash,qemu
 .Ed
+.Pp
+Process names are compared with the command name of the processes
+(\fIcomm\fP), which the kernel limits to 15 characters, longer names are
+rejected.
 .It \fBmon-ipc-enabled\fP \fItrue|false\fP
 Determines whether or not to enable IPC monitoring.
 If set to \fItrue\fP (the default), IPC monitoring statistics will be
