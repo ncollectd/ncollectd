@@ -32,10 +32,8 @@ typedef struct featurelist {
 static featurelist_t *first_feature;
 static featurelist_t *last_feature;
 
-extern char *conffile;
-extern bool use_labels;
-extern plugin_filter_t *filter;
-extern metric_family_t fams[FAM_SENSOR_MAX];
+static bool sensors_loaded;
+static complain_t sensors_complaint;
 
 static void ncsensors_free_features(void)
 {
@@ -45,6 +43,7 @@ static void ncsensors_free_features(void)
         return;
 
     sensors_cleanup();
+    sensors_loaded = false;
 
     for (featurelist_t *thisft = first_feature; thisft != NULL; thisft = nextft) {
         nextft = thisft->next;
@@ -55,18 +54,15 @@ static void ncsensors_free_features(void)
 
 static int ncsensors_load_conf(void)
 {
-    static int call_once;
-
-    if (call_once)
+    if (sensors_loaded)
         return 0;
 
-    call_once = 1;
-
     FILE *fh = NULL;
-    if (conffile != NULL) {
-        fh = fopen(conffile, "r");
+    if (sensors_conffile != NULL) {
+        fh = fopen(sensors_conffile, "r");
         if (fh == NULL) {
-            PLUGIN_ERROR("fopen(%s) failed: %s", conffile, STRERRNO);
+            PLUGIN_COMPLAIN_ERROR(&sensors_complaint, "fopen(%s) failed: %s",
+                                  sensors_conffile, STRERRNO);
             return -1;
         }
     }
@@ -76,7 +72,8 @@ static int ncsensors_load_conf(void)
         fclose(fh);
 
     if (status != 0) {
-        PLUGIN_ERROR("Cannot initialize sensors. Data will not be collected.");
+        PLUGIN_COMPLAIN_ERROR(&sensors_complaint,
+                              "Cannot initialize sensors. Data will not be collected.");
         return -1;
     }
 
@@ -153,17 +150,24 @@ static int ncsensors_load_conf(void)
 
     if (first_feature == NULL) {
         sensors_cleanup();
-        PLUGIN_INFO("lm_sensors reports no features. Data will not be collected.");
-        return -1;
+        PLUGIN_COMPLAIN_INFO(&sensors_complaint,
+                             "lm_sensors reports no features. Data will not be collected.");
+        return 1;
     }
+
+    PLUGIN_RELEASE_INFO(&sensors_complaint, "sensors initialized.");
+    sensors_loaded = true;
 
     return 0;
 }
 
 int ncsensors_read(void)
 {
-    if (ncsensors_load_conf() != 0)
+    int load_status = ncsensors_load_conf();
+    if (load_status < 0)
         return -1;
+    if (load_status > 0)
+        return 0;
 
     for (featurelist_t *fl = first_feature; fl != NULL; fl = fl->next) {
         double value;
@@ -179,31 +183,32 @@ int ncsensors_read(void)
 
         metric_family_t *fam = NULL;
         if (fl->feature->type == SENSORS_FEATURE_IN) {
-            fam = &fams[FAM_SENSOR_VOLTAGE_VOLTS];
+            fam = &sensors_fams[FAM_SENSOR_VOLTAGE_VOLTS];
         } else if (fl->feature->type == SENSORS_FEATURE_FAN) {
-            fam = &fams[FAM_SENSOR_FAN_SPEED_RPM];
+            fam = &sensors_fams[FAM_SENSOR_FAN_SPEED_RPM];
         } else if (fl->feature->type == SENSORS_FEATURE_TEMP) {
-            fam = &fams[FAM_SENSOR_TEMPERATURE_CELSIUS];
+            fam = &sensors_fams[FAM_SENSOR_TEMPERATURE_CELSIUS];
 #if SENSORS_API_VERSION >= 0x401
         } else if (fl->feature->type == SENSORS_FEATURE_POWER) {
 #if SENSORS_API_VERSION >= 0x410
             if (fl->subfeature->type == SENSORS_SUBFEATURE_POWER_INPUT) {
-                fam = &fams[FAM_SENSOR_POWER_WATTS];
+                fam = &sensors_fams[FAM_SENSOR_POWER_WATTS];
             }
 #endif
             if (fl->subfeature->type == SENSORS_SUBFEATURE_POWER_AVERAGE) {
-                fam = &fams[FAM_SENSOR_POWER_AVERAGE_WATTS];
+                fam = &sensors_fams[FAM_SENSOR_POWER_AVERAGE_WATTS];
             }
 #endif
 #if SENSORS_API_VERSION >= 0x410
         } else if (fl->feature->type == SENSORS_FEATURE_CURR) {
-            fam = &fams[FAM_SENSOR_CURRENT_AMPS];
+            fam = &sensors_fams[FAM_SENSOR_CURRENT_AMPS];
 #endif
 #if SENSORS_API_VERSION >= 0x431
         } else if (fl->feature->type == SENSORS_FEATURE_HUMIDITY) {
-            fam = &fams[FAM_SENSOR_HUMIDITY];
+            fam = &sensors_fams[FAM_SENSOR_HUMIDITY];
+            value = value / 100.0;
         } else if (fl->feature->type == SENSORS_FEATURE_INTRUSION) {
-            fam = &fams[FAM_SENSOR_INTRUSION_ALARM];
+            fam = &sensors_fams[FAM_SENSOR_INTRUSION_ALARM];
 #endif
         }
 
@@ -214,9 +219,9 @@ int ncsensors_read(void)
         tmpl.value = VALUE_GAUGE(value);
         metric_label_set(&tmpl, "chip", chip);
 
-        if (use_labels) {
+        if (sensors_use_labels) {
             char *sensor_label = sensors_get_label(fl->chip, fl->feature);
-            metric_label_set(&tmpl, "name", sensor_label);
+            metric_label_set(&tmpl, "name", sensor_label != NULL ? sensor_label : fl->feature->name);
             free(sensor_label);
         } else {
             metric_label_set(&tmpl, "name", fl->feature->name);
@@ -230,7 +235,7 @@ int ncsensors_read(void)
         metric_reset(&tmpl, METRIC_TYPE_GAUGE);
     }
 
-    plugin_dispatch_metric_family_array_filtered(fams, FAM_SENSOR_MAX, filter, 0);
+    plugin_dispatch_metric_family_array_filtered(sensors_fams, FAM_SENSOR_MAX, sensors_filter, 0);
 
     return 0;
 }
@@ -238,6 +243,10 @@ int ncsensors_read(void)
 int ncsensors_shutdown(void)
 {
     ncsensors_free_features();
-    plugin_filter_free(filter);
+    plugin_filter_free(sensors_filter);
+    sensors_filter = NULL;
+    free(sensors_conffile);
+    sensors_conffile = NULL;
+
     return 0;
 }

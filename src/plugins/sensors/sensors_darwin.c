@@ -6,8 +6,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
-#include "sensor.h"
-
+#include "sensors.h"
 
 #ifdef HAVE_MACH_MACH_TYPES_H
 #        include <mach/mach_types.h>
@@ -37,9 +36,6 @@
 
 static mach_port_t io_main_port = MACH_PORT_NULL;
 
-extern plugin_filter_t *filter;
-extern metric_family_t fams[FAM_SENSOR_MAX];
-
 int ncsensors_read(void)
 {
     if (!io_main_port || (io_main_port == MACH_PORT_NULL))
@@ -55,48 +51,51 @@ int ncsensors_read(void)
     }
 
     io_object_t io_obj;
+
     while ((io_obj = IOIteratorNext(iterator))) {
         CFMutableDictionaryRef prop_dict = NULL;
+        CFTypeRef property = NULL;
+        char type[256];
+        char location[256];
+        int value_int = 0;
+        int fam = -1;
+        double value_double = 0;
+
         status = IORegistryEntryCreateCFProperties(io_obj, &prop_dict, kCFAllocatorDefault,
                                                    kNilOptions);
         if (status != kIOReturnSuccess) {
             PLUGIN_DEBUG("IORegistryEntryCreateCFProperties failed: %s", mach_error_string(status));
+            IOObjectRelease(io_obj);
             continue;
         }
 
         /* Copy the sensor type. */
-        CFTypeRef property = NULL;
-        char type[256];
         if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("type"), &property))
-            continue;
+            goto next;
         if (CFGetTypeID(property) != CFStringGetTypeID())
-            continue;
+            goto next;
         if (!CFStringGetCString(property, type, sizeof(type), kCFStringEncodingASCII))
-            continue;
+            goto next;
         type[sizeof(type) - 1] = '\0';
 
         /* Copy the sensor location. This will be used as `instance'. */
         property = NULL;
-        char location[256];
         if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("location"), &property))
-            continue;
+            goto next;
         if (CFGetTypeID(property) != CFStringGetTypeID())
-            continue;
+            goto next;
         if (!CFStringGetCString(property, location, sizeof(location), kCFStringEncodingASCII))
-            continue;
+            goto next;
 
         /* Get the actual value. Some computation, based on the `type' is necessary. */
         property = NULL;
-        int value_int = 0;
         if (!CFDictionaryGetValueIfPresent(prop_dict, CFSTR("current-value"), &property))
-            continue;
+            goto next;
         if (CFGetTypeID(property) != CFNumberGetTypeID())
-            continue;
+            goto next;
         if (!CFNumberGetValue(property, kCFNumberIntType, &value_int))
-            continue;
+            goto next;
 
-        int fam = -1;
-        double value_double = 0;
         if (strcmp(type, "temperature") == 0) {
             value_double = ((double)value_int) / 65536.0;
             fam = FAM_SENSOR_TEMPERATURE_CELSIUS;
@@ -109,24 +108,21 @@ int ncsensors_read(void)
         } else if (strcmp(type, "voltage") == 0) {
             value_double = ((double)value_int) / 65536.0;
             fam = FAM_SENSOR_VOLTAGE_VOLTS;
-            value_double = ((double)value_int) / 10.0;
-            fam = FAM_SENSOR_FAN_SPEED_RPM;
         } else {
             PLUGIN_DEBUG("Read unknown sensor type: %s", type);
         }
 
-        if (fam >= 0) {
-            metric_family_append(&fams[fam], VALUE_GAUGE(value_double), NULL,
+        if (fam >= 0)
+            metric_family_append(&sensors_fams[fam], VALUE_GAUGE(value_double), NULL,
                                  &LABEL_PAIR_CONST("location", location), NULL);
-        }
-
+next:
         CFRelease(prop_dict);
         IOObjectRelease(io_obj);
     }
 
     IOObjectRelease(iterator);
 
-    plugin_dispatch_metric_family_array_filtered(fams, FAM_SENSOR_MAX, filter, 0);
+    plugin_dispatch_metric_family_array_filtered(sensors_fams, FAM_SENSOR_MAX, sensors_filter, 0);
 
     return 0;
 }
@@ -150,6 +146,11 @@ int ncsensors_init(void)
 
 int ncsensors_shutdown(void)
 {
-    plugin_filter_free(filter);
+    if (io_main_port != MACH_PORT_NULL) {
+        mach_port_deallocate(mach_task_self(), io_main_port);
+        io_main_port = MACH_PORT_NULL;
+    }
+
+    plugin_filter_free(sensors_filter);
     return 0;
 }
