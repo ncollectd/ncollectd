@@ -57,6 +57,9 @@ typedef struct {
     uint64_t files_num;
     uint64_t files_size;
 
+    unsigned int max_depth;
+    unsigned int depth;
+
     /* Selectors */
     char *name;
     int64_t mtime;
@@ -112,7 +115,7 @@ static int fc_read_dir_callback(__attribute__((unused)) int dirfd, const char *d
     if (dir == NULL)
         return -1;
 
-    snprintf(abs_path, sizeof(abs_path), "%s/%s", dirname, filename);
+    ssnprintf(abs_path, sizeof(abs_path), "%s/%s", dirname, filename);
 
     int status = lstat(abs_path, &statbuf);
     if (status != 0) {
@@ -121,8 +124,18 @@ static int fc_read_dir_callback(__attribute__((unused)) int dirfd, const char *d
     }
 
     if (S_ISDIR(statbuf.st_mode) && (dir->options & FC_RECURSIVE)) {
+        if (dir->depth >= dir->max_depth)
+            return 0;
+
+        unsigned int depth = dir->depth;
+
+        dir->depth++;
+
         status = walk_directory(abs_path, fc_read_dir_callback, dir,
                                 (dir->options & FC_HIDDEN) ? 1 : 0);
+
+        dir->depth = depth;
+
         return status;
     } else if ((dir->options & FC_REGULAR) && !S_ISREG(statbuf.st_mode)) {
         return 0;
@@ -236,6 +249,8 @@ static int fc_read_dir(fc_directory_conf_t *dir)
     dir->files_size = 0;
 
     dir->tnow = CDTIME_T_TO_DOUBLE(cdtime());
+
+    dir->depth = 0;
 
     if (dir->mtime != 0)
         dir->now = time(NULL);
@@ -411,8 +426,6 @@ static int fc_config_add_dir_size(fc_directory_conf_t *dir, config_item_t *ci)
     return 0;
 }
 
-
-
 static int fc_config_add_dir_option(fc_directory_conf_t *dir, config_item_t *ci, int bit)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_BOOLEAN)) {
@@ -494,6 +507,7 @@ static int fc_config_add_dir(config_item_t *ci)
         return -1;
     }
 
+    dir->max_depth = 256;
     dir->options = FC_RECURSIVE | FC_REGULAR;
 
     for (int i = 0; i < ci->children_num; i++) {
@@ -523,6 +537,8 @@ static int fc_config_add_dir(config_item_t *ci)
             status = fc_config_add_dir_option(dir, option, FC_HIDDEN);
         } else if (strcasecmp("regular-only", option->key) == 0) {
             status = fc_config_add_dir_option(dir, option, FC_REGULAR);
+        } else if (strcasecmp("max-deph", option->key) == 0) {
+            status = cf_util_get_unsigned_int(option, &dir->max_depth);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                          option->key, cf_get_file(option), cf_get_lineno(option));

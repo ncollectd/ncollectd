@@ -21,6 +21,7 @@ NCOLLECTD-FILECOUNT(5) - File Formats Manual
 	        recursive true|false
 	        include-hidden true|false
 	        regular-only true|false
+	        max-depth depth
 	    }
 	}
 
@@ -207,6 +208,11 @@ Within those blocks, the following options are recognized:
 
 > Controls whether or not to include only regular files in the count.
 > Defaults to *true*, i.e. by default non regular files are ignored.
+
+**max-depth** *depth*
+
+> Descend at most *depth* levels of directories below the starting-point.
+> The default value is 256.
 
 # SEE ALSO
 

@@ -22,6 +22,7 @@
         \fBrecursive\fP \fItrue|false\fP
         \fBinclude-hidden\fP \fItrue|false\fP
         \fBregular-only\fP \fItrue|false\fP
+        \fBmax-depth\fP \fIdepth\fP
     }
 }
 .Ed
@@ -144,6 +145,9 @@ are ignored.
 .It \fBregular-only\fP \fItrue|false\fP
 Controls whether or not to include only regular files in the count.
 Defaults to \fItrue\fP, i.e. by default non regular files are ignored.
+.It \fBmax-depth\fP \fIdepth\fP
+Descend at most \fIdepth\fP levels of directories below the starting-point.
+The default value is 256.
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
