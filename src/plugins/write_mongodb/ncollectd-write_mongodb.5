@@ -10,6 +10,7 @@
 \fBload-plugin\fP write_mongodb
 \fBplugin\fP write_mongodb {
     \fBinstance\fP \fIinstance\fP {
+        \fBuri\fP \fIuri\fP
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIport\fP
         \fBdatabase\fP \fIdatabase\fP
@@ -17,7 +18,6 @@
         \fBuser-env\fP \fIenv-name\fP
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
-        \fBstore-rates\fP \fItrue|false\fP
         \fBmetric-collection\fP \fIcollection-name\fP
         \fBmetric-timestamp-field\fP \fItimestamp-field-name\fP
         \fBmetric-metadata-field\fP \fImetadata-field-name\fP
@@ -40,6 +40,12 @@ a schema-less NoSQL database.
 .Pp
 Within each \fBinstance\fP block, the following options are available:
 .Bl -tag -width Ds
+.It \fBuri\fP \fIuri\fP
+Connection string in the \fImongodb://\fP format used to connect to the server.
+It allows to set options not available otherwise, like TLS
+(\fItls=true\fP, \fItlsCAFile\fP), replica sets or authentication options.
+If set, \fBhost\fP and \fBport\fP are ignored; \fBdatabase\fP, \fBuser\fP and
+\fBpassword\fP override the values in the URI.
 .It \fBhost\fP \fIhost\fP
 Hostname or address to connect to.
 Defaults to \f(CWlocalhost\fP.
@@ -56,7 +62,6 @@ but if you want to use authentication all three fields must be set.
 .It \fBpassword-env\fP \fIenv-name\fP
 Get the password fox authenticating to a \fIMongoDB\fP database from the
 environment variable \fIenv-name\fP.
-.It \fBstore-rates\fP \fItrue|false\fP
 .It \fBmetric-collection\fP \fIcollection-name\fP
 The collection name to write the metrics.
 The default name is "metrics".

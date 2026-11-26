@@ -9,6 +9,7 @@ NCOLLECTD-WRITE\_MONGODB(5) - File Formats Manual
 	load-plugin write_mongodb
 	plugin write_mongodb {
 	    instance instance {
+	        uri uri
 	        host host
 	        port port
 	        database database
@@ -16,7 +17,6 @@ NCOLLECTD-WRITE\_MONGODB(5) - File Formats Manual
 	        user-env env-name
 	        password password
 	        password-env env-name
-	        store-rates true|false
 	        metric-collection collection-name
 	        metric-timestamp-field timestamp-field-name
 	        metric-metadata-field metadata-field-name
@@ -39,6 +39,14 @@ The **write\_mongodb** plugin will insert metrics in a *MongoDB*,
 a schema-less NoSQL database.
 
 Within each **instance** block, the following options are available:
+
+**uri** *uri*
+
+> Connection string in the *mongodb://* format used to connect to the server.
+> It allows to set options not available otherwise, like TLS
+> (*tls=true*, *tlsCAFile*), replica sets or authentication options.
+> If set, **host** and **port** are ignored; **database**, **user** and
+> **password** override the values in the URI.
 
 **host** *host*
 
@@ -66,8 +74,6 @@ Within each **instance** block, the following options are available:
 
 > Get the password fox authenticating to a *MongoDB* database from the
 > environment variable *env-name*.
-
-**store-rates** *true|false*
 
 **metric-collection** *collection-name*
 
