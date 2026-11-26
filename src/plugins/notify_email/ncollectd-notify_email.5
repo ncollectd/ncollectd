@@ -14,6 +14,8 @@
     \fBsmtp-port\fP \fIport\fP
     \fBsmtp-user\fP \fIusername\fP
     \fBsmtp-password\fP \fIpassword\fP
+    \fBstarttls\fP \fIdisable|enable|require\fP
+    \fBtimeout\fP \fIseconds\fP
     \fBfrom\fP \fIaddress\fP
     \fBsubject\fP \fIsubject\fP
 }
@@ -43,17 +45,21 @@ Optional.
 .It \fBsmtp-password\fP \fIpassword\fP
 Password for ASMTP authentication.
 Optional.
+.It \fBstarttls\fP \fIdisable|enable|require\fP
+Use STARTTLS to encrypt the connection to the SMTP server.
+With \fBenable\fP TLS is used if offered by the server, with \fBrequire\fP
+the session fails if the server does not offer it.
+Default to \fBdisable\fP.
+.It \fBtimeout\fP \fIseconds\fP
+Timeout for each phase of the SMTP session.
+Default to the libESMTP timeouts (several minutes, as per RFC 5321).
 .It \fBfrom\fP \fIaddress\fP
 Email address from which the emails should appear to come from.
 Default to \f(CWroot@localhost\fP.
 .It \fBsubject\fP \fIsubject\fP
-Subject-template to use when sending emails.
-There must be exactly two string-placeholders in the subject,
-given in the standard
-.Xr printf 3
-syntax, i. e. \f(CW%s\fP.
-The first will be replaced with the severity, the second with the hostname.
-Default: \f(CWncollectd notify: %s@%s\fP
+Prefix of the subject used when sending emails.
+The notification name and severity are appended to it.
+Default: \f(CW"NCollectd notify: "\fP
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
