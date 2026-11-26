@@ -8,6 +8,7 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/socket.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -20,9 +21,11 @@
 #include <netinet/in.h>
 #endif
 
+#include <sys/uio.h>
+
 #define APCUPS_SERVER_TIMEOUT 15.0
 #define APCUPS_DEFAULT_HOST "localhost"
-#define APCUPS_DEFAULT_SERVICE "3551"
+#define APCUPS_DEFAULT_SERVICE 3551
 
 enum {
     FAM_APCUPS_INPUT_VOLTAGE_VOLTS,
@@ -55,12 +58,12 @@ static metric_family_t fams[FAM_APCUPS_MAX] = {
     [FAM_APCUPS_BATTERY_CHARGE_RATIO] = {
         .name = "apcups_battery_charge_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Battery charge (percent)",
+        .help = "Battery charge (ratio 0-1)",
     },
     [FAM_APCUPS_LOAD_RATIO] = {
         .name = "apcups_load_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Load on UPS (percent)",
+        .help = "Load on UPS (ratio 0-1)",
     },
     [FAM_APCUPS_BATTERY_TIMELEFT_SECONDS] = {
         .name = "apcups_battery_timeleft_seconds",
@@ -93,75 +96,28 @@ typedef struct {
 typedef struct {
     char *name;
     char *host;
-    char *service;
+    int service;
     bool persistent_conn;
     int sockfd;
     int retries;
     int iterations;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     metric_family_t fams[FAM_APCUPS_MAX];
 } apc_ctx_t;
 
-static int net_shutdown(int *fd)
+static int net_shutdown(apc_ctx_t *ctx, cdtime_t deadline)
 {
-    if ((fd == NULL) || (*fd < 0))
-        return EINVAL;
+    if (ctx->sockfd < 0)
+        return -1;
 
     uint16_t packet_size = 0;
-    (void)swrite(*fd, (void *)&packet_size, sizeof(packet_size));
-    close(*fd);
-    *fd = -1;
+    socket_poll_write(ctx->sockfd, (void *)&packet_size, sizeof(packet_size), deadline);
+    close(ctx->sockfd);
+    ctx->sockfd = -1;
 
     return 0;
-}
-
-/*
- * Open a TCP connection to the UPS network server
- * Returns -1 on error
- * Returns socket file descriptor otherwise
- */
-static int net_open(apc_ctx_t *ctx)
-{
-    /* TODO: Change this to `AF_UNSPEC' if apcupsd can handle IPv6 */
-    struct addrinfo ai_hints = {.ai_family = AF_INET, .ai_socktype = SOCK_STREAM};
-    struct addrinfo *ai_return;
-    struct addrinfo *ai_list;
-    int status = getaddrinfo(ctx->host, ctx->service, &ai_hints, &ai_return);
-    if (status != 0) {
-        PLUGIN_INFO("getaddrinfo failed: %s",
-                 (status == EAI_SYSTEM) ? STRERRNO : gai_strerror(status));
-        return -1;
-    }
-
-    /* Create socket */
-    int sd = -1;
-    for (ai_list = ai_return; ai_list != NULL; ai_list = ai_list->ai_next) {
-        sd = socket(ai_list->ai_family, ai_list->ai_socktype, ai_list->ai_protocol);
-        if (sd >= 0)
-            break;
-    }
-    /* `ai_list' still holds the current description of the socket.. */
-
-    if (sd < 0) {
-        PLUGIN_DEBUG("Unable to open a socket");
-        freeaddrinfo(ai_return);
-        return -1;
-    }
-
-    status = connect(sd, ai_list->ai_addr, ai_list->ai_addrlen);
-
-    freeaddrinfo(ai_return);
-
-    if (status != 0) { /* `connect(2)' failed */
-        PLUGIN_INFO("connect failed: %s", STRERRNO);
-        close(sd);
-        return -1;
-    }
-
-    PLUGIN_DEBUG("Done opening a socket %i", sd);
-
-    return sd;
 }
 
 /*
@@ -173,23 +129,25 @@ static int net_open(apc_ctx_t *ctx)
  * Returns -1 on hard end of file (i.e. network connection close)
  * Returns -2 on error
  */
-static int net_recv(int *sockfd, char *buf, int buflen)
+static int net_recv(apc_ctx_t *ctx, char *buf, int buflen, cdtime_t deadline)
 {
     /* get data size -- in short */
     uint16_t packet_size = 0;
-    if (sread(*sockfd, (void *)&packet_size, sizeof(packet_size)) != 0) {
-        close(*sockfd);
-        *sockfd = -1;
+
+    ssize_t size = socket_poll_read(ctx->sockfd, (void *)&packet_size, sizeof(packet_size),
+                                                 deadline);
+    if (size != sizeof(packet_size)) {
+        close(ctx->sockfd);
+        ctx->sockfd = -1;
         return -1;
     }
 
     packet_size = ntohs(packet_size);
     if (packet_size > buflen) {
         PLUGIN_ERROR("Received %" PRIu16 " bytes of payload "
-                    "but have only %i bytes of buffer available.",
-                    packet_size, buflen);
-        close(*sockfd);
-        *sockfd = -1;
+                     "but have only %i bytes of buffer available.", packet_size, buflen);
+        close(ctx->sockfd);
+        ctx->sockfd = -1;
         return -2;
     }
 
@@ -197,9 +155,11 @@ static int net_recv(int *sockfd, char *buf, int buflen)
         return 0;
 
     /* now read the actual data */
-    if (sread(*sockfd, (void *)buf, packet_size) != 0) {
-        close(*sockfd);
-        *sockfd = -1;
+    size = socket_poll_read(ctx->sockfd, (void *)buf, packet_size, deadline);
+    if (size != (ssize_t)packet_size) {
+        PLUGIN_ERROR("Failed to read payload.");
+        close(ctx->sockfd);
+        ctx->sockfd = -1;
         return -1;
     }
 
@@ -213,83 +173,42 @@ static int net_recv(int *sockfd, char *buf, int buflen)
  * Returns zero on success
  * Returns non-zero on error
  */
-static int net_send(int *sockfd, char *buff, int len)
+static int net_send(apc_ctx_t *ctx, char *buff, int len, cdtime_t deadline)
 {
     assert(len > 0);
-    assert(*sockfd >= 0);
+    assert(ctx->sockfd >= 0);
 
     /* send short containing size of data packet */
     uint16_t packet_size = htons((uint16_t)len);
 
-    if (swrite(*sockfd, (void *)&packet_size, sizeof(packet_size)) != 0) {
-        close(*sockfd);
-        *sockfd = -1;
+    ssize_t size = socket_poll_write(ctx->sockfd, (void *)&packet_size, sizeof(packet_size),
+                                                  deadline);
+    if (size != (ssize_t)sizeof(packet_size)) {
+        close(ctx->sockfd);
+        ctx->sockfd = -1;
         return -1;
     }
 
     /* send data packet */
-    if (swrite(*sockfd, (void *)buff, len) != 0) {
-        close(*sockfd);
-        *sockfd = -1;
+    size = socket_poll_write(ctx->sockfd, (void *)buff, len, deadline);
+    if (size != len) {
+        close(ctx->sockfd);
+        ctx->sockfd = -1;
         return -2;
     }
 
     return 0;
 }
 
-/* Get and print status from apcupsd NIS server */
-static int apc_query_server(apc_ctx_t *ctx, apc_detail_t *apcups_detail)
+/* Receive and parse the response to the "status" command */
+static int apcups_recv_status(apc_ctx_t *ctx, apc_detail_t *apcups_detail, double deadline)
 {
-
-    int status = 0;
-    int try = 0;
-    while (true) {
-        if (ctx->sockfd < 0) {
-            ctx->sockfd = net_open(ctx);
-            if (ctx->sockfd < 0) {
-                PLUGIN_ERROR("Connecting to the "
-                            "apcupsd failed.");
-                return -1;
-            }
-        }
-
-        status = net_send(&ctx->sockfd, "status", strlen("status"));
-        if (status != 0) {
-            /* net_send closes the socket on error. */
-            assert(ctx->sockfd < 0);
-            if (try == 0) {
-                try++;
-                ctx->retries++;
-                continue;
-            }
-
-            PLUGIN_ERROR("Writing to the socket failed.");
-            return -1;
-        }
-
-        break;
-    }
-
-    /* When collectd's collection interval is larger than apcupsd's
-     * timeout, we would have to retry / re-connect each iteration. Try to
-     * detect this situation and shut down the socket gracefully in that
-     * case. Otherwise, keep the socket open to avoid overhead. */
-    ctx->iterations++;
-    if ((ctx->iterations == 10) && (ctx->retries > 2)) {
-        PLUGIN_NOTICE("There have been %i retries in the first %i iterations. "
-                      "Will close the socket in future iterations.",
-                      ctx->retries, ctx->iterations);
-        ctx->persistent_conn = false;
-    }
-
     int n;
     char recvline[1024];
-    while ((n = net_recv(&ctx->sockfd, recvline, sizeof(recvline) - 1)) > 0) {
+    while ((n = net_recv(ctx, recvline, sizeof(recvline) - 1, deadline)) > 0) {
         assert((size_t)n < sizeof(recvline));
         recvline[n] = 0;
-#ifdef APCMAIN
-        printf("net_recv = '%s';\n", recvline);
-#endif
+        PLUGIN_DEBUG("net_recv = '%s'", recvline);
 
         char *toksaveptr = NULL;
         char *tokptr = strtok_r(recvline, " :\t", &toksaveptr);
@@ -302,9 +221,7 @@ static int apc_query_server(apc_ctx_t *ctx, apc_detail_t *apcups_detail)
             if (strtodouble(tokptr, &value) != 0)
                 continue;
 
-#ifdef APCMAIN
-            printf("    Found property: name = %s; value = %f;\n", key, value)
-#endif
+            PLUGIN_DEBUG("Found property: name = %s; value = %f", key, value)
 
             if (strcmp("LINEV", key) == 0) {
                 apcups_detail->linev = value;
@@ -328,13 +245,88 @@ static int apc_query_server(apc_ctx_t *ctx, apc_detail_t *apcups_detail)
             tokptr = strtok_r(NULL, ":", &toksaveptr);
         }
     }
-    status = errno; /* save errno, net_shutdown() may re-set it. */
+
+    return n;
+}
+
+/* Get and print status from apcupsd NIS server */
+static int apcups_query_server(apc_ctx_t *ctx, apc_detail_t *apcups_detail)
+{
+    cdtime_t deadline = 0;
+    if (ctx->timeout > 0)
+        deadline = cdtime() + ctx->timeout;
+
+    int status = 0;
+    int try = 0;
+
+    while (true) {
+        bool reused = ctx->sockfd >= 0;
+        if (ctx->sockfd < 0) {
+            ctx->sockfd = socket_poll_connect_tcp(AF_INET, ctx->host, ctx->service,
+                                                  0 , 0, deadline);
+            if (ctx->sockfd < 0) {
+                PLUGIN_ERROR("Connecting to the apcupsd failed.");
+                return -1;
+            }
+        }
+
+        status = net_send(ctx, "status", strlen("status"), deadline);
+        if (status != 0) {
+            /* net_send closes the socket on error. */
+            assert(ctx->sockfd < 0);
+            if (try == 0) {
+                try++;
+                ctx->retries++;
+                continue;
+            }
+
+            PLUGIN_ERROR("Writing to the socket failed.");
+            return -1;
+        }
+
+        status = apcups_recv_status(ctx, apcups_detail, deadline);
+        /* apcupsd may close an idle connection after the request was sent. */
+        if ((status == -1) && reused && (try == 0)) {
+            try++;
+            ctx->retries++;
+            continue;
+        }
+
+        break;
+    }
+
+    /* When ncollectd's collection interval is larger than apcupsd's
+     * timeout, we would have to retry / re-connect each iteration. Try to
+     * detect this situation and shut down the socket gracefully in that
+     * case. Otherwise, keep the socket open to avoid overhead. */
+    ctx->iterations++;
+    if (ctx->iterations == 10) {
+        if (ctx->persistent_conn && (ctx->retries > 2)) {
+            PLUGIN_NOTICE("There have been %i retries in the last %i iterations. "
+                          "Will close the socket in future iterations.",
+                          ctx->retries, ctx->iterations);
+            ctx->persistent_conn = false;
+        }
+        ctx->iterations = 0;
+        ctx->retries = 0;
+     }
+
+    if ((ctx->iterations == 10) && (ctx->retries > 2)) {
+        PLUGIN_NOTICE("There have been %i retries in the first %i iterations. "
+                      "Will close the socket in future iterations.",
+                      ctx->retries, ctx->iterations);
+        ctx->persistent_conn = false;
+    }
 
     if (!ctx->persistent_conn)
-        net_shutdown(&ctx->sockfd);
+        net_shutdown(ctx, deadline);
+    else
+        socket_flush(ctx->sockfd);
 
-    if (n < 0) {
-        PLUGIN_ERROR("Reading from socket failed: %s", STRERROR(status));
+    if (status < 0) {
+        /* Errors other than end of file are reported by net_recv(). */
+        if (status == -1)
+            PLUGIN_ERROR("Reading from socket failed: connection closed by peer.");
         return -1;
     }
 
@@ -348,11 +340,14 @@ static void apcups_free(void *arg)
     if (ctx == NULL)
         return;
 
-    net_shutdown(&ctx->sockfd);
+    
+    cdtime_t deadline = 0;
+    if (ctx->timeout > 0)
+        deadline = ctx->timeout + cdtime();
+    net_shutdown(ctx, deadline);
 
     free(ctx->name);
     free(ctx->host);
-    free(ctx->service);
     label_set_reset(&ctx->labels);
     plugin_filter_free(ctx->filter);
     free(ctx);
@@ -373,28 +368,36 @@ static int apcups_read(user_data_t *user_data)
         .linefreq = NAN,
     };
 
-    int status = apc_query_server(ctx, &apcups_detail);
+    int status = apcups_query_server(ctx, &apcups_detail);
     if (status != 0) {
         PLUGIN_DEBUG("apc_query_server (\"%s\", \"%s\") = %d", ctx->host, ctx->service, status);
         return status;
     }
 
-    metric_family_append(&ctx->fams[FAM_APCUPS_INPUT_VOLTAGE_VOLTS],
-                         VALUE_GAUGE(apcups_detail.linev), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_OUTPUT_VOLTAGE_VOLTS],
-                         VALUE_GAUGE(apcups_detail.outputv), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_BATTERY_VOLTAGE_VOLTS],
-                         VALUE_GAUGE(apcups_detail.battv), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_BATTERY_CHARGE_RATIO],
-                         VALUE_GAUGE(apcups_detail.bcharge), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_LOAD_RATIO],
-                         VALUE_GAUGE(apcups_detail.loadpct), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_BATTERY_TIMELEFT_SECONDS],
-                         VALUE_GAUGE(apcups_detail.timeleft), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_TEMPERATURE_CELSIUS],
-                         VALUE_GAUGE(apcups_detail.itemp), &ctx->labels, NULL);
-    metric_family_append(&ctx->fams[FAM_APCUPS_INPUT_FREQUENCY_HZ],
-                         VALUE_GAUGE(apcups_detail.linefreq), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.linev))
+        metric_family_append(&ctx->fams[FAM_APCUPS_INPUT_VOLTAGE_VOLTS],
+                             VALUE_GAUGE(apcups_detail.linev), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.outputv))
+        metric_family_append(&ctx->fams[FAM_APCUPS_OUTPUT_VOLTAGE_VOLTS],
+                             VALUE_GAUGE(apcups_detail.outputv), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.battv))
+        metric_family_append(&ctx->fams[FAM_APCUPS_BATTERY_VOLTAGE_VOLTS],
+                             VALUE_GAUGE(apcups_detail.battv), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.bcharge))
+        metric_family_append(&ctx->fams[FAM_APCUPS_BATTERY_CHARGE_RATIO],
+                             VALUE_GAUGE(apcups_detail.bcharge), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.loadpct))
+        metric_family_append(&ctx->fams[FAM_APCUPS_LOAD_RATIO],
+                             VALUE_GAUGE(apcups_detail.loadpct), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.timeleft))
+        metric_family_append(&ctx->fams[FAM_APCUPS_BATTERY_TIMELEFT_SECONDS],
+                             VALUE_GAUGE(apcups_detail.timeleft), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.itemp))
+        metric_family_append(&ctx->fams[FAM_APCUPS_TEMPERATURE_CELSIUS],
+                             VALUE_GAUGE(apcups_detail.itemp), &ctx->labels, NULL);
+    if (!isnan(apcups_detail.linefreq))
+        metric_family_append(&ctx->fams[FAM_APCUPS_INPUT_FREQUENCY_HZ],
+                             VALUE_GAUGE(apcups_detail.linefreq), &ctx->labels, NULL);
 
     plugin_dispatch_metric_family_array_filtered(ctx->fams, FAM_APCUPS_MAX, ctx->filter, 0);
 
@@ -430,13 +433,15 @@ static int apcups_config_instance(config_item_t *ci)
         if (strcasecmp(child->key, "host") == 0) {
             status = cf_util_get_string(child, &ctx->host);
         } else if (strcasecmp(child->key, "port") == 0) {
-            status = cf_util_get_service(child, &ctx->service);
+            status = cf_util_get_port_number(child, &ctx->service);
         } else if (strcasecmp(child->key, "persistent-connection") == 0) {
             status = cf_util_get_boolean(child, &ctx->persistent_conn);
         } else if (strcasecmp(child->key, "label") == 0) {
             status = cf_util_get_label(child, &ctx->labels);
         } else if (strcasecmp(child->key, "interval") == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp(child->key, "timeout") == 0) {
+            status = cf_util_get_cdtime(child, &ctx->timeout);
         } else if (strcasecmp(child->key, "filter") == 0) {
             status = plugin_filter_configure(child, &ctx->filter);
         } else {
@@ -464,6 +469,10 @@ static int apcups_config_instance(config_item_t *ci)
         }
     }
 
+
+    if (ctx->timeout == 0)
+        ctx->timeout = (interval != 0) ? interval : plugin_get_interval();
+
     if (ctx->host == NULL) {
         ctx->host = strdup(APCUPS_DEFAULT_HOST);
         if (ctx->host == NULL) {
@@ -473,21 +482,18 @@ static int apcups_config_instance(config_item_t *ci)
         }
     }
 
-    if (ctx->service == NULL) {
-        ctx->service = strdup(APCUPS_DEFAULT_SERVICE);
-        if (ctx->service == NULL) {
-            PLUGIN_ERROR("strdup failed.");
-            apcups_free(ctx);
-            return -1;
-        }
-    }
+    if (ctx->service == 0)
+        ctx->service = APCUPS_DEFAULT_SERVICE;
 
-    label_set_add(&ctx->labels, true, "instance", ctx->name);
+    status = label_set_add(&ctx->labels, true, "instance", ctx->name);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add the instance label.");
+        apcups_free(ctx);
+        return -1;
+    }
 
     return plugin_register_complex_read("apcups", ctx->name, apcups_read, interval,
                                         &(user_data_t){.data = ctx, .free_func = apcups_free});
-
-    return 0;
 }
 
 static int apcups_config(config_item_t *ci)

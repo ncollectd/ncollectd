@@ -14,6 +14,7 @@
         \fBport\fP \fIport\fP
         \fBpersistent-connection\fP \fItrue|false\fP
         \fBlabel\fP "\fIkey\fP" "\fIvalue\fP"
+        \fBtimeout\fP \fIseconds\fP
         \fBinterval\fP \fIseconds\fP
     }
 }
@@ -51,6 +52,10 @@ quickly, the plugin will try to detect this problem and switch to an
 open-read-close mode.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the timeout, in seconds, for connecting to
+\fBapcupsd\fP and for receiving its complete response.
+By default, the configured \fBinterval\fP is used to set the timeout.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected.
 By default the global \fBinterval\fP setting will be used.
