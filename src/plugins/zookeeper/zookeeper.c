@@ -7,8 +7,10 @@
 #include "plugin.h"
 #include "libutils/common.h"
 
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <netinet/tcp.h>
 #include <sys/un.h>
 
@@ -178,7 +180,7 @@ static metric_family_t fams[FAM_ZOOKEEPER_MAX] = {
     },
     [FAM_ZOOKEEPER_AUTH_FAILED] = {
         .name = "zookeeper_auth_failed",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_ZOOKEEPER_LATENCY_MIN_SECONDS] = {
@@ -458,7 +460,7 @@ static metric_family_t fams[FAM_ZOOKEEPER_MAX] = {
     },
     [FAM_ZOOKEEPER_REVALIDATE] = {
         .name = "zookeeper_revalidate",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of connection revalidations.",
     },
 };
@@ -472,10 +474,60 @@ typedef struct {
     char *instance;
     char *host;
     char *port;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     metric_family_t fams[FAM_ZOOKEEPER_MAX];
 } zookeeper_instance_t;
+
+static int zookeeper_connect_timeout(int sk, const struct sockaddr *addr, socklen_t addrlen,
+                                     cdtime_t timeout)
+{
+    int flags = fcntl(sk, F_GETFL);
+    if (flags < 0)
+        return -1;
+
+    if (fcntl(sk, F_SETFL, flags | O_NONBLOCK) < 0)
+        return -1;
+
+    int status = connect(sk, addr, addrlen);
+    if (status != 0) {
+        if (errno != EINPROGRESS)
+            return -1;
+
+        struct pollfd pfd = {.fd = sk, .events = POLLOUT};
+        do {
+            status = poll(&pfd, 1, (int)CDTIME_T_TO_MS(timeout));
+        } while ((status < 0) && (errno == EINTR));
+
+        if (status == 0) {
+            errno = ETIMEDOUT;
+            return -1;
+        }
+        if (status < 0)
+            return -1;
+
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(sk, SOL_SOCKET, SO_ERROR, &error, &len) < 0)
+            return -1;
+        if (error != 0) {
+            errno = error;
+            return -1;
+        }
+    }
+
+    if (fcntl(sk, F_SETFL, flags) < 0)
+        return -1;
+
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(timeout);
+    if (setsockopt(sk, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+        return -1;
+    if (setsockopt(sk, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0)
+        return -1;
+
+    return 0;
+}
 
 static int zookeeper_connect(zookeeper_instance_t *conf)
 {
@@ -487,7 +539,7 @@ static int zookeeper_connect(zookeeper_instance_t *conf)
                                                             .ai_socktype = SOCK_STREAM};
     int status = getaddrinfo(host, port, &ai_hints, &ai_list);
     if (status != 0) {
-        PLUGIN_INFO("getaddrinfo failed: %s",
+        PLUGIN_ERROR("getaddrinfo failed: %s",
                     (status == EAI_SYSTEM) ? STRERRNO : gai_strerror(status));
         return -1;
     }
@@ -499,7 +551,7 @@ static int zookeeper_connect(zookeeper_instance_t *conf)
             PLUGIN_WARNING("socket(2) failed: %s", STRERRNO);
             continue;
         }
-        status = (int)connect(sk, ai->ai_addr, ai->ai_addrlen);
+        status = zookeeper_connect_timeout(sk, ai->ai_addr, ai->ai_addrlen, conf->timeout);
         if (status != 0) {
             close(sk);
             sk = -1;
@@ -535,21 +587,30 @@ static int zookeeper_query(zookeeper_instance_t *conf, char *buffer, size_t buff
         return -1;
     }
 
-    status = (int)swrite(sk, "mntr\r\n", strlen("mntr\r\n"));
-    if (status != 0) {
-        PLUGIN_ERROR("write(2) failed: %s", STRERRNO);
-        close(sk);
-        return -1;
-    }
+    /* The "mntr" command is sent by zookeeper_connect. */
 
     memset(buffer, 0, buffer_size);
     buffer_fill = 0;
 
-    while ((status = (int)recv(sk, buffer + buffer_fill,
-                                   buffer_size - buffer_fill, /* flags = */ 0)) != 0) {
+    /* Reserve one byte for the terminating null byte. */
+    while (true) {
+        if (buffer_fill >= (buffer_size - 1)) {
+            PLUGIN_WARNING("Response larger than %zu bytes, truncated.", buffer_size - 1);
+            break;
+        }
+
+        status = (int)recv(sk, buffer + buffer_fill,
+                                buffer_size - 1 - buffer_fill, /* flags = */ 0);
+        if (status == 0)
+            break;
         if (status < 0) {
-            if ((errno == EAGAIN) || (errno == EINTR))
+            if (errno == EINTR)
                 continue;
+            if (errno == EAGAIN) {
+                PLUGIN_ERROR("Timeout reading from socket.");
+                close(sk);
+                return -1;
+            }
             PLUGIN_ERROR("Error reading from socket: %s", STRERRNO);
             close(sk);
             return -1;
@@ -557,6 +618,14 @@ static int zookeeper_query(zookeeper_instance_t *conf, char *buffer, size_t buff
 
         buffer_fill += (size_t)status;
     } /* while (recv) */
+    buffer[buffer_fill] = '\0';
+
+    if (buffer_fill >= (buffer_size - 1)) {
+        /* Drop the last, probably incomplete, line. */
+        char *end = strrchr(buffer, '\n');
+        if (end != NULL)
+            *end = '\0';
+    }
 
     status = 0;
     if (buffer_fill == 0) {
@@ -576,6 +645,12 @@ static int zookeeper_read_instance(zookeeper_instance_t *conf)
     if (zookeeper_query(conf, buf, sizeof(buf)) < 0)
         return -1;
 
+    if (strstr(buf, "is not in the whitelist") != NULL) {
+        PLUGIN_ERROR("The 'mntr' command is not allowed by the server, "
+                     "add it to '4lw.commands.whitelist'.");
+        return -1;
+    }
+
     char *ptr = buf;
     char *save_ptr = NULL;
     while ((line = strtok_r(ptr, "\n\r", &save_ptr)) != NULL) {
@@ -590,6 +665,10 @@ static int zookeeper_read_instance(zookeeper_instance_t *conf)
 
             switch (zm->fam) {
             case FAM_ZOOKEEPER_VERSION: {
+                /* "3.8.4-<hash>, built on ...": remove the trailing comma. */
+                size_t len = strlen(fields[1]);
+                while ((len > 0) && (fields[1][len - 1] == ','))
+                    fields[1][--len] = '\0';
                 label_set_t info = {
                     .num = 1,
                     .ptr = (label_pair_t[]){
@@ -603,11 +682,21 @@ static int zookeeper_read_instance(zookeeper_instance_t *conf)
                     {.name = "leader"     , .enabled = false},
                     {.name = "follower"   , .enabled = false},
                     {.name = "standalone" , .enabled = false},
+                    {.name = "observer"   , .enabled = false},
+                    {.name = "read-only"  , .enabled = false},
                 };
                 state_set_t set = { .num = STATIC_ARRAY_SIZE(states), .ptr = states };
                 state_set_enable(set, fields[1]);
                 metric_family_append(fam, VALUE_STATE_SET(set), &conf->labels, NULL);
             }   break;
+            case FAM_ZOOKEEPER_LATENCY_AVG_SECONDS:
+            case FAM_ZOOKEEPER_LATENCY_MIN_SECONDS:
+            case FAM_ZOOKEEPER_LATENCY_MAX_SECONDS:
+            case FAM_ZOOKEEPER_UPTIME_SECONDS:
+                /* ZooKeeper reports these values in milliseconds. */
+                metric_family_append(fam, VALUE_GAUGE(atof(fields[1]) / 1000.0),
+                                     &conf->labels, NULL);
+                break;
             default:
                 if (fam->type == METRIC_TYPE_COUNTER) {
                     metric_family_append(fam, VALUE_COUNTER(atoll(fields[1])), &conf->labels, NULL);
@@ -670,24 +759,19 @@ static int zookeper_config_instance(const config_item_t *ci)
 
     memcpy(conf->fams, fams, FAM_ZOOKEEPER_MAX * sizeof(*fams));
 
-    if (ci->values_num == 1) {
-        int status;
-
-        status = cf_util_get_string(ci, &conf->instance);
-        if (status != 0) {
-            free(conf);
-            return status;
-        }
-        assert(conf->instance != NULL);
-
-    } else if (ci->values_num > 1) {
-        PLUGIN_WARNING("'instance' blocks accept only one argument.");
+    if (ci->values_num != 1) {
+        PLUGIN_WARNING("'instance' blocks require exactly one argument.");
         free(conf);
         return EINVAL;
     }
 
+    int status = cf_util_get_string(ci, &conf->instance);
+    if (status != 0) {
+        free(conf);
+        return status;
+    }
+
     cdtime_t interval = 0;
-    int status = 0;
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
         if (strcasecmp("host", child->key) == 0) {
@@ -696,12 +780,15 @@ static int zookeper_config_instance(const config_item_t *ci)
             status = cf_util_get_string(child, &conf->port);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &conf->timeout);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &conf->labels);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &conf->filter);
         } else {
-            WARNING("Zookeeper plugin: Option `%s' not allowed here.", child->key);
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
             status = -1;
         }
 
@@ -713,6 +800,9 @@ static int zookeper_config_instance(const config_item_t *ci)
         zookeeper_config_free(conf);
         return status;
     }
+
+    if (conf->timeout == 0)
+        conf->timeout = (interval != 0) ? interval : plugin_get_interval();
 
     label_set_add(&conf->labels, true, "instance", conf->instance);
 
