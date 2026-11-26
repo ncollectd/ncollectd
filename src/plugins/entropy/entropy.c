@@ -45,6 +45,11 @@ static metric_family_t fams[FAM_HOST_ENTROPY_MAX] = {
     },
 };
 
+
+#if defined(KERNEL_NETBSD)
+static int fd = -1;
+#endif
+
 static int entropy_read(void)
 {
     double available = 0;
@@ -52,12 +57,12 @@ static int entropy_read(void)
 
 #ifdef KERNEL_LINUX
 
-    if (parse_double_file(path_proc_entropy_avail, &available) != 0) {
+    if (filetodouble(path_proc_entropy_avail, &available) != 0) {
         PLUGIN_ERROR("Reading '%s' failed.", path_proc_entropy_avail);
         return -1;
     }
 
-    if (parse_double_file(path_proc_poolsize, &poolsize) != 0) {
+    if (filetodouble(path_proc_poolsize, &poolsize) != 0) {
         PLUGIN_ERROR("Reading '%s' failed.", path_proc_poolsize);
         return -1;
     }
@@ -68,19 +73,19 @@ static int entropy_read(void)
  * will end up opening /dev/urandom lots of times.
  */
     rndpoolstat_t rs;
-    static int fd = 0;
 
-    if (fd == 0) {
-        fd = open(_PATH_URANDOM, O_RDONLY, 0644);
+    if (fd < 0) {
+        fd = open(_PATH_URANDOM, O_RDONLY);
         if (fd < 0) {
-            fd = 0;
+            PLUGIN_ERROR("Cannot open '%s': %s.", _PATH_URANDOM, STRERRNO);
             return -1;
         }
     }
 
     if (ioctl(fd, RNDGETPOOLSTAT, &rs) < 0) {
+        PLUGIN_ERROR("ioctl(RNDGETPOOLSTAT) on '%s' failed: %s.", _PATH_URANDOM, STRERRNO);
         close(fd);
-        fd = 0; /* signal a reopening on next attempt */
+        fd = -1; /* signal a reopening on next attempt */
         return -1;
     }
 
@@ -120,6 +125,13 @@ static int entropy_shutdown(void)
 {
     free(path_proc_entropy_avail);
     free(path_proc_poolsize);
+    return 0;
+}
+#elif defined(KERNEL_NETBSD)
+static int entropy_shutdown(void)
+{
+    if (fd >= 0)
+        close(fd);
     return 0;
 }
 #endif
