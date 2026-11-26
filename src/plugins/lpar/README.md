@@ -9,6 +9,9 @@ NCOLLECTD-LPAR(5) - File Formats Manual
 	load-plugin lpar
 	plugin lpar {
 	    cpu-pool-stats true|false
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -26,6 +29,12 @@ The following configuration options are available:
 > The partition needs to have pool authority in order to be able to acquire
 > this information.
 > Defaults to false.
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 

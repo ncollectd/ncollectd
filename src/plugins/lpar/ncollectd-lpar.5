@@ -10,6 +10,9 @@
 \fBload-plugin\fP lpar
 \fBplugin\fP lpar {
     \fBcpu-pool-stats\fP \fItrue|false\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -25,6 +28,11 @@ When enabled, statistics about the processor pool are read, too.
 The partition needs to have pool authority in order to be able to acquire
 this information.
 Defaults to false.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
+.El
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
