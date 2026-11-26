@@ -20,6 +20,8 @@
 #define EXPORTER_DEFAULT_STALENESS_DELTA TIME_T_TO_CDTIME_T_STATIC(300)
 #endif
 
+#define EXPORTER_EXPIRE_INTERVAL TIME_T_TO_CDTIME_T_STATIC(1)
+
 #define ACCESS_DENIED "<html><head><title>Access denied</title></head>"\
                       "<body>Access denied</body></html>"
 
@@ -36,7 +38,7 @@ enum {
     AUTH_DIGEST
 };
 
-typedef struct {
+typedef struct exporter_s {
     char *name;
     char *host;
     int port;
@@ -49,11 +51,15 @@ typedef struct {
     char *password;
     int  authmethod;
     cdtime_t staleness_delta;
+    cdtime_t last_expire;
     struct MHD_Daemon *httpd;
     format_stream_metric_t format;
     c_avl_tree_t *metrics;
     pthread_mutex_t metrics_lock;
+    struct exporter_s *next;
 } exporter_t;
+
+static exporter_t *exporter_list;
 
 static int exporter_metric_cmp(void const *a, void const *b)
 {
@@ -157,6 +163,83 @@ static bool exporter_auth(exporter_t *exporter, struct MHD_Connection *connectio
     return true;
 }
 
+/* Remove the metrics that have not been updated for 'staleness-delta' or for
+ * twice their interval, whichever is longer, and the families left empty.
+ * Must be called with metrics_lock held. */
+static void exporter_expire(exporter_t *exporter, cdtime_t now)
+{
+    char **to_be_deleted = NULL;
+    size_t to_be_deleted_num = 0;
+
+    exporter->last_expire = now;
+
+    char *name;
+    metric_family_t *fam;
+    c_avl_iterator_t *iter = c_avl_get_iterator(exporter->metrics);
+    while (c_avl_iterator_next(iter, (void *)&name, (void *)&fam) == 0) {
+        size_t num = 0;
+        for (size_t i = 0; i < fam->metric.num; i++) {
+            metric_t *m = &fam->metric.ptr[i];
+
+            cdtime_t timeout = exporter->staleness_delta;
+            if (timeout < (2 * m->interval))
+                timeout = 2 * m->interval;
+
+            if ((m->time < now) && ((now - m->time) > timeout)) {
+                metric_reset(m, fam->type);
+                continue;
+            }
+
+            if (num != i)
+                fam->metric.ptr[num] = *m;
+            num++;
+        }
+        fam->metric.num = num;
+
+        if (num == 0)
+            strarray_add(&to_be_deleted, &to_be_deleted_num, name);
+    }
+    c_avl_iterator_destroy(iter);
+
+    for (size_t i = 0; i < to_be_deleted_num; i++) {
+        if (c_avl_remove(exporter->metrics, to_be_deleted[i], (void *)&name, (void *)&fam) == 0)
+            metric_family_free(fam);
+    }
+
+    strarray_free(to_be_deleted, to_be_deleted_num);
+}
+
+static int exporter_format_family(format_stream_metric_ctx_t *ctx, metric_family_t const *fam,
+                                  cdtime_t staleness_delta)
+{
+    size_t first = 0;
+    while ((first < fam->metric.num) && (fam->metric.ptr[first].interval <= staleness_delta))
+        first++;
+
+    if (first == fam->metric.num)
+        return format_stream_metric_family(ctx, fam);
+
+    /* Prometheus has a globally configured timeout after which metrics are
+     * considered stale. This causes problems when metrics have an interval
+     * exceeding that limit. We emulate the behavior of "pushgateway" and *not*
+     * send a timestamp value – Prometheus will fill in the current time.
+     * The stored time is kept to expire the metric. */
+    metric_family_t copy = *fam;
+    copy.metric.ptr = calloc(fam->metric.num, sizeof(*copy.metric.ptr));
+    if (copy.metric.ptr == NULL)
+        return ENOMEM;
+    memcpy(copy.metric.ptr, fam->metric.ptr, fam->metric.num * sizeof(*copy.metric.ptr));
+
+    for (size_t i = first; i < copy.metric.num; i++) {
+        if (copy.metric.ptr[i].interval > staleness_delta)
+            copy.metric.ptr[i].time = 0;
+    }
+
+    int status = format_stream_metric_family(ctx, &copy);
+    free(copy.metric.ptr);
+    return status;
+}
+
 static MHD_RESULT http_handler(void *cls, struct MHD_Connection *connection,
                                __attribute__((unused)) const char *url, const char *method,
                                __attribute__((unused)) const char *version,
@@ -189,21 +272,17 @@ static MHD_RESULT http_handler(void *cls, struct MHD_Connection *connection,
     format_stream_metric_begin(&ctx, exporter->format, &buf);
 
     pthread_mutex_lock(&exporter->metrics_lock);
+
+    exporter_expire(exporter, cdtime());
+
     char *unused_name;
     metric_family_t *fam;
-    cdtime_t last = cdtime() - EXPORTER_DEFAULT_STALENESS_DELTA;
     c_avl_iterator_t *iter = c_avl_get_iterator(exporter->metrics);
     while (c_avl_iterator_next(iter, (void *)&unused_name, (void *)&fam) == 0) {
         if (fam->metric.num == 0)
             continue;
 
-        for (size_t i=0; i < fam->metric.num; i++) {
-            if ((fam->metric.ptr[i].time > 0) && (fam->metric.ptr[i].time < last)) {
-                // delete
-            }
-        }
-
-        format_stream_metric_family(&ctx, fam);
+        exporter_format_family(&ctx, fam, exporter->staleness_delta);
     }
     c_avl_iterator_destroy(iter);
     pthread_mutex_unlock(&exporter->metrics_lock);
@@ -378,6 +457,10 @@ static int exporter_write(metric_family_t const *fam, user_data_t *ud)
 
     pthread_mutex_lock(&exporter->metrics_lock);
 
+    cdtime_t now = cdtime();
+    if (now >= (exporter->last_expire + EXPORTER_EXPIRE_INTERVAL))
+        exporter_expire(exporter, now);
+
     metric_family_t *exporter_fam = NULL;
     if (c_avl_get(exporter->metrics, fam->name, (void *)&exporter_fam) != 0) {
         exporter_fam = metric_family_clone(fam);
@@ -415,12 +498,16 @@ static int exporter_write(metric_family_t const *fam, user_data_t *ud)
             continue;
         }
 
-        metric_value_clone(&mmatch->value, m->value, exporter_fam->type);
+        value_t value = {0};
+        int status = metric_value_clone(&value, m->value, exporter_fam->type);
+        if (status != 0) {
+            PLUGIN_ERROR("Failed to copy a value of metric '%s'.", fam->name);
+            continue;
+        }
+        /* Free the previous value before replacing it. */
+        metric_reset(&(metric_t){ .value = mmatch->value }, exporter_fam->type);
+        mmatch->value = value;
 
-        /* Prometheus has a globally configured timeout after which metrics are
-         * considered stale. This causes problems when metrics have an interval
-         * exceeding that limit. We emulate the behavior of "pushgateway" and *not*
-         * send a timestamp value – Prometheus will fill in the current time. */
         if (m->interval > exporter->staleness_delta) {
             static c_complain_t long_metric = C_COMPLAIN_INIT_STATIC;
             c_complain(LOG_NOTICE, &long_metric,
@@ -429,11 +516,10 @@ static int exporter_write(metric_family_t const *fam, user_data_t *ud)
                                  "suboptimal, please check the ncollectd.conf(5) manual page to "
                                  "understand what's going on.",
                                  CDTIME_T_TO_DOUBLE(exporter->staleness_delta));
-
-            mmatch->time = 0;
-        } else {
-            mmatch->time = m->time;
         }
+
+        mmatch->time = m->time;
+        mmatch->interval = m->interval;
     }
 
     pthread_mutex_unlock(&exporter->metrics_lock);
@@ -607,17 +693,47 @@ static int exporter_config_instance(config_item_t *ci)
 
     pthread_mutex_init(&exporter->metrics_lock, NULL);
 
-    exporter->httpd = exporter_start_daemon(exporter);
-    if (exporter->httpd == NULL) {
-        exporter_free(exporter);
+    /* The HTTP daemon is started from the init callback: its thread would not
+     * survive the fork() done when daemonizing after the configuration. */
+    status = plugin_register_write("write_exporter",  exporter->name, exporter_write, NULL, 0, 0,
+                                   &(user_data_t){ .data = exporter, .free_func = exporter_free });
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to register the write callback.");
         return -1;
     }
 
-    PLUGIN_DEBUG("Successfully started microhttpd %s", MHD_get_version());
+    exporter->next = exporter_list;
+    exporter_list = exporter;
 
-    plugin_register_write("write_exporter",  exporter->name, exporter_write, NULL, 0, 0,
-                          &(user_data_t){ .data = exporter, .free_func = exporter_free });
     return 0;
+}
+
+static int exporter_init(void)
+{
+    int ret = 0;
+
+    while (exporter_list != NULL) {
+        exporter_t *exporter = exporter_list;
+        exporter_list = exporter->next;
+        exporter->next = NULL;
+
+        exporter->httpd = exporter_start_daemon(exporter);
+        if (exporter->httpd == NULL) {
+            PLUGIN_ERROR("Failed to start the HTTP server of instance '%s'.", exporter->name);
+            ret = -1;
+
+            strbuf_t buf = STRBUF_CREATE;
+            /* This frees the exporter. */
+            if (strbuf_printf(&buf, "write_exporter/%s", exporter->name) == 0)
+                plugin_unregister_write(buf.ptr);
+            strbuf_destroy(&buf);
+            continue;
+        }
+
+        PLUGIN_DEBUG("Successfully started microhttpd %s", MHD_get_version());
+    }
+
+    return ret;
 }
 
 static int exporter_config(config_item_t *ci)
@@ -644,4 +760,5 @@ static int exporter_config(config_item_t *ci)
 void module_register(void)
 {
     plugin_register_config("write_exporter", exporter_config);
+    plugin_register_init("write_exporter", exporter_init);
 }
