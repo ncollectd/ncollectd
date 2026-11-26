@@ -14,15 +14,13 @@
         \fBgroup\fP \fIgroupname\fP
         \fBenv\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBrefresh\fP \fIseconds\fP
         \fBpersist\fP \fItrue|false\fP
         \fBpersist-ok\fP \fItrue|false\fP
         \fBnotification\fP \fIname\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBannotation\fP \fIkey\fP \fIvalue\fP
-        \fBfilter\fP {
-            ...
-        }
     }
 }
 .Ed
@@ -30,12 +28,19 @@
 The \fBnagios_check\fP plugin forks off a Nagios Plugin and dispatch the
 notifications with the state change.
 .Pp
+The exit code of the Nagios Plugin is mapped to the notification severity:
+\fI0\fP (OK) to \fBOKAY\fP, \fI1\fP (WARNING) to \fBWARNING\fP, \fI2\fP (CRITICAL) to
+\fBFAILURE\fP, and \fI3\fP (UNKNOWN) or any other exit code to \fBFAILURE\fP.
+UNKNOWN and CRITICAL are tracked as different states.
+If the plugin is killed by a signal a \fBFAILURE\fP notification is sent.
+.Pp
 The \fBinstance\fP defines the Nagios Plugin an program to exec, and has
 the following options:
 .Bl -tag -width Ds
 .It \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
 The program to execute it may be followed by optional arguments that are
 passed to the program.
+This option is mandatory.
 Please note that due to the configuration parsing numbers and boolean
 values may be changed.
 If you want to be absolutely sure that something is passed as-is please
@@ -57,26 +62,32 @@ Set the eviroment variable \f(CWkey=value\fP for the executed program.
 Sets the interval (in seconds) in which the values will be collected from this
 instanced.
 By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+Maximum time (in seconds) the check is allowed to run.
+If the check does not finish in time it is killed and a \fBFAILURE\fP
+notification is sent.
+By default the \fBinterval\fP of the instance is used.
 .It \fBrefresh\fP \fIseconds\fP
 Sets the refresh interval (in seconds) to fire the notification again
 even if the state has not changed.
+If the state is OKAY the notification is only fired again if
+\fBpersist-ok\fP is enabled.
 .It \fBpersist\fP \fItrue|false\fP
-Fire the notification again even if the state has not changed.
+Fire the notification again every interval even if the state has not changed.
+This option is ignored if \fBrefresh\fP is set.
 .It \fBpersist-ok\fP \fItrue|false\fP
 Fire the notification again when the state is OKAY and the state
-has not changed.
+has not changed (every \fBrefresh\fP interval if set, otherwise every
+interval if \fBpersist\fP is enabled).
 .It \fBnotification\fP \fIname\fP
 Sets de notification name.
+By default the instance name is used.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the notification.
 Can appear multiple time in the \fBinstance\fP block.
 .It \fBannotation\fP \fIkey\fP \fIvalue\fP
 Append the annotation \fIkey\fP=\fIvalue\fP to the notification.
 Can appear multiple time in the \fBinstance\fP block.
-.It \fBfilter\fP
-Configure a filter to modify or drop the metrics.
-See \fBFILTER CONFIGURATION\fP in
-.Xr ncollectd.conf 5 .
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
