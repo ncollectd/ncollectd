@@ -9,7 +9,11 @@ NCOLLECTD-THERMAL(5) - File Formats Manual
 	load-plugin thermal
 	plugin thermal {
 	    device  [incl|include|excl|exclude] device
+	    type  [incl|include|excl|exclude] type
 	    force-use-procfs true|false
+	    filter {
+	        ...
+	    }
 	}
 
 # DESCRIPTION
@@ -23,6 +27,10 @@ procfs file system, i. e. mostly system temperature information.
 > This option may be used multiple times to specify a list of devices.
 > If no selection is configured at all, **all** devices are selected.
 
+**type** \[*incl|include|excl|exclude*] *type*
+
+> Selects the type of the thermal device that you want to collect or ignore.
+
 **force-use-procfs** *true|false*
 
 > By default, the *thermal* plugin tries to read the statistics from the Linux
@@ -31,6 +39,12 @@ procfs file system, i. e. mostly system temperature information.
 > By setting this option to *true*, you can force the plugin to use
 > the latter.
 > This option defaults to *false*.
+
+**filter**
+
+> Configure a filter to modify or drop the metrics.
+> See **FILTER CONFIGURATION** in
+> ncollectd.conf(5)
 
 # SEE ALSO
 

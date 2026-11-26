@@ -42,6 +42,9 @@ static char *path_proc_thermal_zone;
 
 static bool force_procfs;
 static exclist_t excl_device;
+static exclist_t excl_type;
+
+static plugin_filter_t *filter;
 
 enum thermal_fs_e {
     THERMAL_NONE = 0,
@@ -53,40 +56,47 @@ static enum thermal_fs_e thermal_fs;
 
 enum dev_type { TEMP = 0, COOLING_DEV };
 
-static int thermal_sysfs_device_read(__attribute__((unused)) int dirfd,
+static int thermal_sysfs_device_read(int dirfd,
                                      const char __attribute__((unused)) * dir,
                                      const char *name,
                                      __attribute__((unused)) void *user_data)
 {
-    char filename[PATH_MAX];
-    bool success = false;
-
     if (!exclist_match(&excl_device, name))
-        return -1;
+        return 0;
 
-    snprintf(filename, sizeof(filename), "%s/%s/temp", path_sys_thermal, name);
+    int zone_fd = openat(dirfd, name, O_RDONLY | O_DIRECTORY);
+    if (zone_fd < 0)
+        return 0;
+
+    char *type = NULL;
+    char buffer_type[256];
+    if (read_file_at(zone_fd, "type", buffer_type, sizeof(buffer_type)) > 0) {
+        type = strntrim(buffer_type, strlen(buffer_type));
+        if (!exclist_match(&excl_type, type)) {
+            close(zone_fd);
+            return 0;
+        }
+    }
+
     double raw = 0;
-    if (parse_double_file(filename, &raw) == 0) {
+    if (filetodouble_at(zone_fd, "temp", &raw) == 0)
         metric_family_append(&fams[FAM_THERMAL_ZONE_CELSIUS], VALUE_GAUGE(raw/1000.0), NULL,
-                             &LABEL_PAIR_CONST("zone", name), NULL);
-        success = true;
-    }
+                             &LABEL_PAIR_CONST("zone", name),
+                             &LABEL_PAIR_CONST("type", type), NULL);
 
-    snprintf(filename, sizeof(filename), "%s/%s/cur_state", path_sys_thermal, name);
-    if (parse_double_file(filename, &raw) == 0) {
+    if (filetodouble_at(zone_fd, "cur_state", &raw) == 0)
         metric_family_append(&fams[FAM_COOLING_DEVICE_CUR_STATE], VALUE_GAUGE(raw), NULL,
-                             &LABEL_PAIR_CONST("device", name), NULL);
-        success = true;
-    }
+                             &LABEL_PAIR_CONST("device", name),
+                             &LABEL_PAIR_CONST("type", type), NULL);
 
-    snprintf(filename, sizeof(filename), "%s/%s/max_state", path_sys_thermal, name);
-    if (parse_double_file(filename, &raw) == 0) {
+    if (filetodouble_at(zone_fd, "max_state", &raw) == 0)
         metric_family_append(&fams[FAM_COOLING_DEVICE_MAX_STATE], VALUE_GAUGE(raw), NULL,
-                             &LABEL_PAIR_CONST("device", name), NULL);
-        success = true;
-    }
+                             &LABEL_PAIR_CONST("device", name), 
+                             &LABEL_PAIR_CONST("type", type), NULL);
 
-    return success ? 0 : -1;
+    close(zone_fd);
+
+    return 0;
 }
 
 static int thermal_procfs_device_read(__attribute__((unused)) int dirfd,
@@ -157,7 +167,8 @@ static int thermal_read(void)
         walk_directory(path_sys_thermal, thermal_sysfs_device_read, NULL, 0);
     }
 
-    plugin_dispatch_metric_family_array(fams, FAM_THERMAL_MAX, 0);
+    plugin_dispatch_metric_family_array_filtered(fams, FAM_THERMAL_MAX, filter, 0);
+
     return 0;
 }
 
@@ -167,10 +178,15 @@ static int thermal_config(config_item_t *ci)
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
+
         if (strcasecmp(child->key, "device") == 0) {
             status = cf_util_exclist(child, &excl_device);
+        } else if (strcasecmp(child->key, "type") == 0) {
+            status = cf_util_exclist(child, &excl_type);
         } else if (strcasecmp(child->key, "force-use-procfs") == 0) {
             status = cf_util_get_boolean(child, &force_procfs);
+        } else if (strcasecmp(child->key, "filter") == 0) {
+            status = plugin_filter_configure(child, &filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -206,6 +222,8 @@ static int thermal_init(void)
     } else if (access(path_proc_thermal_zone, R_OK | X_OK) == 0) {
         thermal_fs = THERMAL_PROCFS;
         ret = plugin_register_read("thermal", thermal_read);
+    } else {
+        PLUGIN_ERROR("Not found procfs or sysfs path for thermal.");
     }
 
     return ret;
@@ -216,6 +234,8 @@ static int thermal_shutdown(void)
     free(path_sys_thermal);
     free(path_proc_thermal_zone);
     exclist_reset(&excl_device);
+    exclist_reset(&excl_type);
+    plugin_filter_free(filter);
     return 0;
 }
 
