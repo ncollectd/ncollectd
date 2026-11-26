@@ -11,6 +11,7 @@ NCOLLECTD-ZOOKEEPER(5) - File Formats Manual
 	    instance name {
 	        host host
 	        port service
+	        timeout seconds
 	        label key value
 	        interval interval
 	        filter {
@@ -32,12 +33,17 @@ Within the **instance** blocks, the following options are allowed:
 **host** *host*
 
 > Hostname or address to connect to.
-> Defaults to localhost.
+> Defaults to 127.0.0.1.
 
 **port** *service*
 
 > Service name or port number to connect to.
 > Defaults to 2181.
+
+**timeout** *seconds*
+
+> Timeout for connecting to the server and for each read and write.
+> Defaults to the **interval** of the instance.
 
 **label** *key* *value*
 

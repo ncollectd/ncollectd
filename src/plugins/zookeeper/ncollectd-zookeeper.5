@@ -12,6 +12,7 @@
     \fBinstance\fP \fIname\fP {
         \fBhost\fP \fIhost\fP
         \fBport\fP \fIservice\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIinterval\fP
         \fBfilter\fP {
@@ -31,10 +32,13 @@ Within the \fBinstance\fP blocks, the following options are allowed:
 .Bl -tag -width Ds
 .It \fBhost\fP \fIhost\fP
 Hostname or address to connect to.
-Defaults to \f(CWlocalhost\fP.
+Defaults to \f(CW127.0.0.1\fP.
 .It \fBport\fP \fIservice\fP
 Service name or port number to connect to.
 Defaults to \f(CW2181\fP.
+.It \fBtimeout\fP \fIseconds\fP
+Timeout for connecting to the server and for each read and write.
+Defaults to the \fBinterval\fP of the instance.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIinterval\fP
