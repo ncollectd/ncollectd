@@ -70,8 +70,21 @@ static metric_family_t fams[FAM_CERTMONGER_MAX] = {
     }
 };
 
+#define BUS_ERROR_MSG(e, error) bus_error_msg(e, error, (char[ERRBUF_SIZE]){0}, ERRBUF_SIZE)
+
 static plugin_filter_t *filter;
 static exclist_t excl_request;
+
+static const char* bus_error_msg(const sd_bus_error *e, int error, char *buf, size_t buflen)
+{
+    if (sd_bus_error_has_name(e, SD_BUS_ERROR_ACCESS_DENIED))
+        return "Access denied";
+
+    if ((e != NULL) && (e->message != NULL))
+        return e->message;
+
+    return sstrerror(error, buf, buflen);
+}
 
 static int get_property_bool(sd_bus *bus, const char *destination, const char *path,
                              const char *interface, const char *member, int *value)
@@ -82,6 +95,8 @@ static int get_property_bool(sd_bus *bus, const char *destination, const char *p
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        PLUGIN_ERROR("Call method Get to path %s with interface org.freedesktop.DBus.Properties "
+                     "failed: %s.", path, BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
@@ -118,6 +133,8 @@ static int get_property_integer(sd_bus *bus, const char *destination, const char
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        PLUGIN_ERROR("Call method Get to path %s with interface org.freedesktop.DBus.Properties "
+                     "failed: %s.", path, BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
@@ -154,6 +171,8 @@ static int get_property_string(sd_bus *bus, const char *destination, const char 
     int status = sd_bus_call_method(bus, destination, path, "org.freedesktop.DBus.Properties",
                                          "Get", &error, &reply, "ss", interface, member);
     if (status < 0) {
+        PLUGIN_ERROR("Call method Get to path %s with interface org.freedesktop.DBus.Properties "
+                     "failed: %s.", path, BUS_ERROR_MSG(&error, status));
         sd_bus_error_free(&error);
         sd_bus_message_unref(reply);
         return -1;
@@ -271,7 +290,7 @@ static int certmonger_get_requests(sd_bus *bus)
         char *storage_type = NULL;
         char *storage_location = NULL;
 
-        status = request_property_string(bus, object_path, "cert-storage", &storage_type); 
+        status = request_property_string(bus, object_path, "cert-storage", &storage_type);
         if ((status == 0) && (storage_type != NULL)) {
             if (strcmp(storage_type, "FILE") == 0) {
                 request_property_string(bus, object_path, "cert-file", &storage_location);
@@ -282,7 +301,7 @@ static int certmonger_get_requests(sd_bus *bus)
                                nickname, storage_type);
             }
         }
-    
+
         label_set_t labels = {0};
 
         if (nickname != NULL)
@@ -300,50 +319,56 @@ static int certmonger_get_requests(sd_bus *bus)
         char *request_status = NULL;
         status = request_property_string(bus, object_path, "status", &request_status);
         if ((status == 0) && (request_status != NULL)) {
-            metric_family_append(&fams[FAM_CERTMONGER_REQUEST_STATUS], VALUE_GAUGE(1), &labels, 
+            metric_family_append(&fams[FAM_CERTMONGER_REQUEST_STATUS], VALUE_GAUGE(1), &labels,
                                  &LABEL_PAIR_CONST("status", request_status), NULL);
             free(request_status);
         }
 
         char *ca_error = NULL;
         status = request_property_string(bus, object_path, "ca-error", &ca_error);
+        int ca_status = ((status == 0) && (ca_error != NULL) && (ca_error[0] != '\0')) ? 1 : 0;
         metric_family_append(&fams[FAM_CERTMONGER_REQUEST_CA_ERROR],
-                             VALUE_GAUGE((status != 0) && (ca_error != NULL) ? 1 : 0),
-                             &labels, NULL);
+                             VALUE_GAUGE(ca_status), &labels, NULL);
         free(ca_error);
-        
-        
+
+
         int64_t key_generated_date = 0;
-        request_property_integer(bus, object_path, "key-generated-date", &key_generated_date);
-        if (key_generated_date > 0)
+        status = request_property_integer(bus, object_path, "key-generated-date",
+                                               &key_generated_date);
+        if ((status == 0) && (key_generated_date > 0))
             metric_family_append(&fams[FAM_CERTMONGER_REQUEST_KEY_GENERATED_DATE_SECONDS],
                                  VALUE_GAUGE(key_generated_date), &labels, NULL);
-            
+
         int64_t key_issued_count = 0;
-        request_property_integer(bus, object_path, "key-issued-count", &key_issued_count);
-        metric_family_append(&fams[FAM_CERTMONGER_REQUEST_KEY_ISSUED_COUNT],
-                             VALUE_GAUGE(key_issued_count), &labels, NULL);
-        
+        status = request_property_integer(bus, object_path, "key-issued-count", &key_issued_count);
+        if (status == 0)
+            metric_family_append(&fams[FAM_CERTMONGER_REQUEST_KEY_ISSUED_COUNT],
+                                 VALUE_GAUGE(key_issued_count), &labels, NULL);
+
         int64_t last_checked = 0;
-        request_property_integer(bus, object_path, "last-checked", &last_checked);
-        metric_family_append(&fams[FAM_CERTMONGER_REQUEST_LAST_CHECKED_DATE_SECONDS],
-                             VALUE_GAUGE(last_checked), &labels, NULL);
-        
+        status = request_property_integer(bus, object_path, "last-checked", &last_checked);
+        if ((status == 0) && (last_checked > 0))
+           metric_family_append(&fams[FAM_CERTMONGER_REQUEST_LAST_CHECKED_DATE_SECONDS],
+                                 VALUE_GAUGE(last_checked), &labels, NULL);
+
         int64_t not_valid_after = 0;
-        request_property_integer(bus, object_path, "not-valid-after",  &not_valid_after);
-        metric_family_append(&fams[FAM_CERTMONGER_REQUEST_NOT_VALID_AFTER_DATE_SECONDS],
-                             VALUE_GAUGE(not_valid_after), &labels, NULL);
- 
+        status = request_property_integer(bus, object_path, "not-valid-after",  &not_valid_after);
+        if ((status == 0) && (not_valid_after > 0))
+            metric_family_append(&fams[FAM_CERTMONGER_REQUEST_NOT_VALID_AFTER_DATE_SECONDS],
+                                 VALUE_GAUGE(not_valid_after), &labels, NULL);
+
 
         int64_t not_valid_before = 0;
-        request_property_integer(bus, object_path, "not-valid-before", &not_valid_before);
-        metric_family_append(&fams[FAM_CERTMONGER_REQUEST_NOT_VALID_BEFORE_DATE_SECONDS],
-                             VALUE_GAUGE(not_valid_before), &labels, NULL);
+        status = request_property_integer(bus, object_path, "not-valid-before", &not_valid_before);
+        if ((status == 0) && (not_valid_before > 0))
+            metric_family_append(&fams[FAM_CERTMONGER_REQUEST_NOT_VALID_BEFORE_DATE_SECONDS],
+                                 VALUE_GAUGE(not_valid_before), &labels, NULL);
 
         int stuck = 0;
-        request_property_bool(bus, object_path, "stuck", &stuck);
-        metric_family_append(&fams[FAM_CERTMONGER_REQUEST_STUCK], VALUE_GAUGE(stuck),
-                             &labels, NULL);
+        status = request_property_bool(bus, object_path, "stuck", &stuck);
+        if (status == 0)
+            metric_family_append(&fams[FAM_CERTMONGER_REQUEST_STUCK],
+                                 VALUE_GAUGE(stuck), &labels, NULL);
 
         label_set_reset(&labels);
     }
@@ -351,20 +376,19 @@ static int certmonger_get_requests(sd_bus *bus)
     sd_bus_message_exit_container(reply);
     sd_bus_message_unref(reply);
 
-    return 0; 
+    return 0;
 }
 
 static int certmonger_read(void)
 {
     sd_bus *bus = NULL;
 
-    if (sd_booted() <= 0)
-        return -1;
-
     int status = sd_bus_default_system(&bus);
     if (status < 0) {
-        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERRNO);
-        return -1;
+        PLUGIN_ERROR("Failed to connect to system bus: %s", STRERROR(-status));
+        metric_family_append(&fams[FAM_CERTMONGER_UP], VALUE_GAUGE(0), NULL, NULL);
+        plugin_dispatch_metric_family_filtered(&fams[FAM_CERTMONGER_UP], filter, 0);
+        return 0;
     }
 
     int requests = certmonger_get_requests(bus);
