@@ -24,6 +24,7 @@
 
 typedef struct {
     char *name;
+    char *uri;
     char *host;
     int port;
     char *database_name;
@@ -42,7 +43,6 @@ typedef struct {
     char *notification_labels_field;
     char *notification_annotations_field;
 
-    bool store_rates;
     bool connected;
     cf_send_t send;
 
@@ -67,12 +67,24 @@ static int write_mongodb_initialize(write_mongodb_t *db, char *collection)
         db->client = NULL;
     }
 
-    PLUGIN_INFO("Connecting to [%s]:%d", db->host, db->port);
+    mongoc_uri_t *uri = NULL;
+    if (db->uri != NULL) {
+        PLUGIN_INFO("Connecting to the configured URI");
 
-    mongoc_uri_t *uri = mongoc_uri_new_for_host_port(db->host, db->port);
-    if (uri == NULL) {
-        PLUGIN_ERROR("Cannot create URI object.");
-        return -1;
+        bson_error_t error;
+        uri = mongoc_uri_new_with_error(db->uri, &error);
+        if (uri == NULL) {
+            PLUGIN_ERROR("Cannot parse URI: %s", error.message);
+            return -1;
+        }
+    } else {
+        PLUGIN_INFO("Connecting to [%s]:%d", db->host, db->port);
+
+        uri = mongoc_uri_new_for_host_port(db->host, db->port);
+        if (uri == NULL) {
+            PLUGIN_ERROR("Cannot create URI object.");
+            return -1;
+        }
     }
 
     if (db->user != NULL) {
@@ -117,12 +129,28 @@ static int write_mongodb_initialize(write_mongodb_t *db, char *collection)
         return -1;
     }
 
-    if (!mongoc_database_has_collection(db->database, collection, NULL)) {
+    bson_error_t has_error = {0};
+    bool has_collection = mongoc_database_has_collection(db->database, collection, &has_error);
+    if (!has_collection && (has_error.code != 0)) {
+        PLUGIN_ERROR("Error checking collection '%s': %s", collection, has_error.message);
+        mongoc_database_destroy(db->database);
+        db->database = NULL;
+        mongoc_client_destroy(db->client);
+        db->client = NULL;
+        db->connected = false;
+        return -1;
+    }
+
+    if (!has_collection) {
 
         if (db->send == SEND_METRICS) {
             bson_t *b = bson_new();
             if (b == NULL) {
                 PLUGIN_ERROR("bson_new failed.");
+                mongoc_database_destroy(db->database);
+                db->database = NULL;
+                mongoc_client_destroy(db->client);
+                db->client = NULL;
                 return -1;
             }
 
@@ -138,7 +166,8 @@ static int write_mongodb_initialize(write_mongodb_t *db, char *collection)
             bson_error_t error;
             db->collection = mongoc_database_create_collection(db->database, collection, b, &error);
             if (db->collection == NULL) {
-                PLUGIN_ERROR("Error creating collection");
+                PLUGIN_ERROR("Error creating collection '%s': %s (domain %u, code %u)",
+                             collection, error.message, error.domain, error.code);
                 bson_destroy(b);
                 mongoc_database_destroy(db->database);
                 db->database = NULL;
@@ -152,7 +181,8 @@ static int write_mongodb_initialize(write_mongodb_t *db, char *collection)
             bson_error_t error;
             db->collection = mongoc_database_create_collection(db->database, collection, NULL, &error);
             if (db->collection == NULL) {
-                PLUGIN_ERROR("Error creating collection '%s'",error.message);
+                PLUGIN_ERROR("Error creating collection '%s': %s (domain %u, code %u)",
+                             collection, error.message, error.domain, error.code);
                 mongoc_database_destroy(db->database);
                 db->database = NULL;
                 mongoc_client_destroy(db->client);
@@ -214,7 +244,8 @@ static int write_mongodb_notif(notification_t const *n, user_data_t *ud)
         bson_error_t error;
         bool ret = mongoc_collection_delete_one(db->collection, selector,  NULL, NULL, &error);
         if (ret == false) {
-            PLUGIN_ERROR("Error inserting in collection.");
+            PLUGIN_ERROR("Error deleting from collection: %s (domain %u, code %u)",
+                         error.message, error.domain, error.code);
         }
 
         bson_destroy(selector);
@@ -260,13 +291,25 @@ static int write_mongodb_notif(notification_t const *n, user_data_t *ud)
         bson_append_document_end(b, &annotations);
     }
 
+    /* Keys with '.' or '$' would be interpreted as paths or operators by the server. */
+    size_t error_location;
+    if (!bson_validate(b, BSON_VALIDATE_UTF8 | BSON_VALIDATE_DOT_KEYS | BSON_VALIDATE_DOLLAR_KEYS,
+                       &error_location)) {
+        PLUGIN_ERROR("Error in generated BSON document at byte %" PRIsz, error_location);
+        bson_destroy(selector);
+        bson_destroy(b);
+        return -1;
+    }
+
     bson_t *update = BCON_NEW ("$set", BCON_DOCUMENT(b));
+    bson_t *opts = BCON_NEW ("upsert", BCON_BOOL(true));
 
     bson_error_t error;
-    bool ret = mongoc_collection_update (db->collection, MONGOC_UPDATE_UPSERT, selector, update,
-                                        NULL, &error);
+    bool ret = mongoc_collection_update_one(db->collection, selector, update, opts, NULL, &error);
+    bson_destroy(opts);
     if (ret == false) {
-        PLUGIN_ERROR("Error inserting in collection.");
+        PLUGIN_ERROR("Error updating collection: %s (domain %u, code %u)",
+                     error.message, error.domain, error.code);
     }
 
     bson_destroy(selector);
@@ -275,10 +318,38 @@ static int write_mongodb_notif(notification_t const *n, user_data_t *ud)
     return 0;
 }
 
-static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
-                                char *metric, char *metric_suffix,
-                                const label_set_t *labels1, const label_set_t *labels2,
-                                double value, cdtime_t time)
+static int write_mongodb_insert_documents(write_mongodb_t *db)
+{
+    if (db->documents_size == 0)
+        return 0;
+
+    int status = 0;
+
+    if (db->collection != NULL) {
+        bson_error_t error;
+        bool ret = mongoc_collection_insert_many(db->collection, (const bson_t **)db->documents,
+                                                 db->documents_size, NULL, NULL, &error);
+        if (ret == false) {
+            PLUGIN_ERROR("Error inserting in collection: %s (domain %u, code %u)",
+                         error.message, error.domain, error.code);
+            status = -1;
+        }
+    }
+
+    for(size_t i = 0; i < db->documents_size; i++) {
+        bson_destroy(db->documents[i]);
+        db->documents[i] = NULL;
+    }
+    db->documents_size = 0;
+
+    return status;
+}
+
+static int write_mongodb_metric_value(write_mongodb_t *db, strbuf_t *buf,
+                                      char *metric, char *metric_suffix,
+                                      const label_set_t *labels1, const label_set_t *labels2,
+                                      bool is_int64, int64_t int64_value, double value,
+                                      cdtime_t time)
 {
     bson_t *b = bson_new();
     if (b == NULL) {
@@ -306,14 +377,19 @@ static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
         BSON_APPEND_UTF8(&meta, "__name__", buf->ptr);
     }
 
+    /* A label named "__name__" would collide with the metric name. */
     if (labels1 != NULL) {
         for (size_t i = 0; i < labels1->num; i++) {
+            if (strcmp(labels1->ptr[i].name, "__name__") == 0)
+                continue;
             BSON_APPEND_UTF8(&meta, labels1->ptr[i].name, labels1->ptr[i].value);
         }
     }
 
     if (labels2 != NULL) {
         for (size_t i = 0; i < labels2->num; i++) {
+            if (strcmp(labels2->ptr[i].name, "__name__") == 0)
+                continue;
             BSON_APPEND_UTF8(&meta, labels2->ptr[i].name, labels2->ptr[i].value);
         }
     }
@@ -321,34 +397,49 @@ static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
     bson_append_document_end(b, &meta);
 
     BSON_APPEND_DATE_TIME(b, db->metric_timestamp_field, CDTIME_T_TO_MS(time));
-    BSON_APPEND_DOUBLE(b, db->metric_value_field, value);
+    if (is_int64)
+        BSON_APPEND_INT64(b, db->metric_value_field, int64_value);
+    else
+        BSON_APPEND_DOUBLE(b, db->metric_value_field, value);
 
     size_t error_location;
-    if (!bson_validate(b, BSON_VALIDATE_UTF8, &error_location)) {
+    if (!bson_validate(b, BSON_VALIDATE_UTF8 | BSON_VALIDATE_DOT_KEYS | BSON_VALIDATE_DOLLAR_KEYS,
+                       &error_location)) {
         PLUGIN_ERROR("Error in generated BSON document at byte %" PRIsz, error_location);
         bson_destroy(b);
         return -1;
     }
 
-    if ((db->documents_size) + 1 > db->documents_alloc) {
-        bson_error_t error;
-        bool status = mongoc_collection_insert_many(db->collection, (const bson_t **)db->documents,
-                                                    db->documents_size, NULL, NULL, &error);
-        if (status == false) {
-            PLUGIN_ERROR("Error inserting in collection.");
-        }
-
-        for(size_t i = 0; i < db->documents_size; i++) {
-            bson_destroy(db->documents[i]);
-            db->documents[i] = NULL;
-        }
-        db->documents_size = 0;
-    }
+    if ((db->documents_size) + 1 > db->documents_alloc)
+        write_mongodb_insert_documents(db);
 
     db->documents[db->documents_size] = b;
     db->documents_size++;
 
     return 0;
+}
+
+static int write_mongodb_metric(write_mongodb_t *db, strbuf_t *buf,
+                                char *metric, char *metric_suffix,
+                                const label_set_t *labels1, const label_set_t *labels2,
+                                double value, cdtime_t time)
+{
+    return write_mongodb_metric_value(db, buf, metric, metric_suffix, labels1, labels2,
+                                      false, 0, value, time);
+}
+
+/* Integer counters are written as int64 to avoid losing precision above 2^53. */
+static int write_mongodb_metric_uint64(write_mongodb_t *db, strbuf_t *buf,
+                                       char *metric, char *metric_suffix,
+                                       const label_set_t *labels1, const label_set_t *labels2,
+                                       uint64_t value, cdtime_t time)
+{
+    if (value > INT64_MAX)
+        return write_mongodb_metric_value(db, buf, metric, metric_suffix, labels1, labels2,
+                                          false, 0, (double)value, time);
+
+    return write_mongodb_metric_value(db, buf, metric, metric_suffix, labels1, labels2,
+                                      true, (int64_t)value, 0, time);
 }
 
 int write_mongodb_create_bson(write_mongodb_t *db, metric_family_t const *fam)
@@ -378,12 +469,14 @@ int write_mongodb_create_bson(write_mongodb_t *db, metric_family_t const *fam)
             status |= write_mongodb_metric(db, &buf, fam->name, NULL,
                                            &m->label, NULL, value, m->time);
         }   break;
-        case METRIC_TYPE_COUNTER: {
-            double value = m->value.counter.type == COUNTER_UINT64 ? m->value.counter.uint64
-                                                                   : m->value.counter.float64;
-            status |= write_mongodb_metric(db, &buf, fam->name, "_total",
-                                           &m->label, NULL, value, m->time);
-        }   break;
+        case METRIC_TYPE_COUNTER:
+            if (m->value.counter.type == COUNTER_UINT64)
+                status |= write_mongodb_metric_uint64(db, &buf, fam->name, "_total", &m->label,
+                                                      NULL, m->value.counter.uint64, m->time);
+            else
+                status |= write_mongodb_metric(db, &buf, fam->name, "_total", &m->label,
+                                               NULL, m->value.counter.float64, m->time);
+            break;
         case METRIC_TYPE_STATE_SET:
             for (size_t j = 0; j < m->value.state_set.num; j++) {
                 label_pair_t label_pair = {.name = fam->name,
@@ -413,8 +506,8 @@ int write_mongodb_create_bson(write_mongodb_t *db, metric_family_t const *fam)
                                                s->quantiles[j].value, m->time);
             }
 
-            status |= write_mongodb_metric(db, &buf, fam->name, "_count",
-                                           &m->label, NULL, s->count, m->time);
+            status |= write_mongodb_metric_uint64(db, &buf, fam->name, "_count",
+                                                  &m->label, NULL, s->count, m->time);
             status |= write_mongodb_metric(db, &buf, fam->name, "_sum",
                                            &m->label, NULL, s->sum, m->time);
         }   break;
@@ -428,13 +521,13 @@ int write_mongodb_create_bson(write_mongodb_t *db, metric_family_t const *fam)
 
                 label_pair_t label_pair = {.name = "le", .value = le};
                 label_set_t label_set = {.num = 1, .ptr = &label_pair};
-                status |= write_mongodb_metric(db, &buf, fam->name, "_bucket",
-                                               &m->label, &label_set, h->buckets[j].counter, m->time);
+                status |= write_mongodb_metric_uint64(db, &buf, fam->name, "_bucket", &m->label,
+                                                      &label_set, h->buckets[j].counter, m->time);
             }
 
-            status |= write_mongodb_metric(db, &buf, fam->name,
-                                           fam->type == METRIC_TYPE_HISTOGRAM ? "_count" : "_gcount",
-                                           &m->label, NULL, histogram_counter(h), m->time);
+            status |= write_mongodb_metric_uint64(db, &buf, fam->name,
+                                                  fam->type == METRIC_TYPE_HISTOGRAM ? "_count" : "_gcount",
+                                                  &m->label, NULL, histogram_counter(h), m->time);
             status |= write_mongodb_metric(db, &buf, fam->name,
                                            fam->type == METRIC_TYPE_HISTOGRAM ?  "_sum" : "_gsum",
                                            &m->label, NULL, histogram_sum(h), m->time);
@@ -442,10 +535,10 @@ int write_mongodb_create_bson(write_mongodb_t *db, metric_family_t const *fam)
         }
 
         if (status != 0)
-            return status;
+            break;
     }
 
-    strbuf_reset(&buf);
+    strbuf_destroy(&buf);
 
     return status;
 }
@@ -472,11 +565,25 @@ static int write_mongodb_fam(metric_family_t const *fam, user_data_t *ud)
     return 0;
 }
 
+static int write_mongodb_flush(__attribute__((unused)) cdtime_t timeout, user_data_t *ud)
+{
+    if ((ud == NULL) || (ud->data == NULL))
+        return -1;
+
+    return write_mongodb_insert_documents(ud->data);
+}
+
 static void write_mongodb_free(void *ptr)
 {
     write_mongodb_t *db = ptr;
     if (db == NULL)
         return;
+
+    /* insert the pending documents before closing the connection */
+    write_mongodb_insert_documents(db);
+
+    if (db->collection != NULL)
+        mongoc_collection_destroy(db->collection);
 
     if (db->database != NULL)
         mongoc_database_destroy(db->database);
@@ -484,12 +591,10 @@ static void write_mongodb_free(void *ptr)
     if (db->client != NULL)
         mongoc_client_destroy(db->client);
 
-    if (db->collection != NULL)
-        mongoc_collection_destroy(db->collection);
-
     db->connected = false;
 
     free(db->name);
+    free(db->uri);
     free(db->host);
     free(db->database_name);
     free(db->user);
@@ -526,7 +631,6 @@ static int write_mongodb_config_database(config_item_t *ci)
         return ENOMEM;
     }
     db->port = MONGOC_DEFAULT_PORT;
-    db->store_rates = true;
 
     int status = cf_util_get_string(ci, &db->name);
     if (status != 0) {
@@ -541,12 +645,15 @@ static int write_mongodb_config_database(config_item_t *ci)
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
 
-        if (strcasecmp("host", child->key) == 0) {
+        if (strcasecmp("uri", child->key) == 0) {
+            status = cf_util_get_string(child, &db->uri);
+        } else if (strcasecmp("host", child->key) == 0) {
             status = cf_util_get_string(child, &db->host);
         } else if (strcasecmp("port", child->key) == 0) {
             status = cf_util_get_port_number(child, &db->port);
         } else if (strcasecmp("store-rates", child->key) == 0) {
-            status = cf_util_get_boolean(child, &db->store_rates);
+            PLUGIN_WARNING("Option 'store-rates' in %s:%d is obsolete and ignored.",
+                           cf_get_file(child), cf_get_lineno(child));
         } else if (strcasecmp("database", child->key) == 0) {
             status = cf_util_get_string(child, &db->database_name);
         } else if (strcasecmp("user", child->key) == 0) {
@@ -659,7 +766,8 @@ static int write_mongodb_config_database(config_item_t *ci)
             return -1;
         }
 
-        return plugin_register_write("write_mongodb", db->name, write_mongodb_fam, NULL, 0, 0,
+        return plugin_register_write("write_mongodb", db->name, write_mongodb_fam,
+                                     write_mongodb_flush, 0, 0,
                                      &(user_data_t){ .data = db, .free_func = write_mongodb_free });
     } else if (db->send == SEND_NOTIFICATIONS) {
         if (db->notification_collection_name == NULL) {
