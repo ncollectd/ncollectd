@@ -197,12 +197,15 @@ static int tbl_read_table(user_data_t *user_data)
     }
 
     char buf[4096];
-    buf[sizeof(buf) - 1] = '\0';
     int line = 0;
     while (fgets(buf, sizeof(buf), fh) != NULL) {
-        if (buf[sizeof(buf) - 1] != '\0') {
-            buf[sizeof(buf) - 1] = '\0';
+        if ((strchr(buf, '\n') == NULL) && (feof(fh) == 0)) {
             PLUGIN_WARNING("Table %s: Truncated line: %s", tbl->file, buf);
+            /* Discard the rest of the line. */
+            int c;
+            while (((c = fgetc(fh)) != EOF) && (c != '\n'));
+            line++;
+            continue;
         }
         line++;
         if (line <= tbl->skip_lines)
@@ -238,6 +241,12 @@ static int tbl_config_append_label(tbl_label_t **var, int *len, config_item_t *c
         return -1;
     }
 
+    double value_from = ci->values[1].value.number;
+    if ((value_from < 0) || (value_from > INT_MAX) || (value_from != (int)value_from)) {
+        PLUGIN_ERROR("'%s' expects a non-negative integer as column number.", ci->key);
+        return -1;
+    }
+
     tbl_label_t *tmp = realloc(*var, ((*len) + 1) * sizeof(**var));
     if (tmp == NULL) {
         PLUGIN_ERROR("realloc failed: %s.", STRERRNO);
@@ -251,7 +260,7 @@ static int tbl_config_append_label(tbl_label_t **var, int *len, config_item_t *c
         return -1;
     }
 
-    tmp[*len].value_from = ci->values[1].value.number;
+    tmp[*len].value_from = (int)value_from;
 
     *len = (*len) + 1;
     return 0;
@@ -292,6 +301,10 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
             status = cf_util_get_string(c, &res->metric);
         } else if (strcasecmp(c->key, "metric-from") == 0) {
             status = cf_util_get_int(c, &res->metric_from);
+            if ((status == 0) && (res->metric_from < 0)) {
+                PLUGIN_ERROR("'metric-from' expects a non-negative column number.");
+                status = -1;
+            }
         } else if (strcasecmp(c->key, "metric-prefix") == 0) {
             status = cf_util_get_string(c, &res->metric_prefix);
         } else if (strcasecmp(c->key, "label") == 0) {
@@ -324,7 +337,7 @@ static int tbl_config_result(tbl_t *tbl, config_item_t *ci)
         status = -1;
     }
 
-    if ((res->metric != NULL) && (res->metric_from > 0)) {
+    if ((res->metric != NULL) && (res->metric_from >= 0)) {
         PLUGIN_ERROR("Only one of 'metric' or 'metric-from' can be set in "
                      "'Result' in table \"%s\".", tbl->file);
         status = -1;
@@ -348,7 +361,7 @@ static int tbl_config_table(config_item_t *ci)
 {
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
         PLUGIN_ERROR("'table' expects a single string argument.");
-        return 1;
+        return -1;
     }
 
     tbl_t *tbl = calloc(1, sizeof(tbl_t));
