@@ -23,7 +23,9 @@
 #include "libutils/strbuf.h"
 #include "libformat/format.h"
 
+#include <fcntl.h>
 #include <netdb.h>
+#include <poll.h>
 
 #ifndef DEFAULT_NODE
 #define DEFAULT_NODE "localhost"
@@ -32,6 +34,10 @@
 #ifndef DEFAULT_SERVICE
 #define DEFAULT_SERVICE "4242"
 #endif
+
+/* Exponential backoff between reconnection attempts. */
+#define CONNECT_BACKOFF_MIN TIME_T_TO_CDTIME_T(1)
+#define CONNECT_BACKOFF_MAX TIME_T_TO_CDTIME_T(60)
 
 #ifndef SEND_BUF_SIZE
 #define SEND_BUF_SIZE 65536
@@ -50,12 +56,17 @@ typedef struct {
     format_stream_metric_t format;
     strbuf_t buf;
 
+    bool format_failed_logged;
     bool connect_failed_log_enabled;
     int connect_dns_failed_attempts_remaining;
     cdtime_t next_random_ttl;
 
+    cdtime_t connect_backoff;
+    cdtime_t next_connect_attempt;
+
     cdtime_t resolve_interval;
     cdtime_t resolve_jitter;
+    cdtime_t timeout;
 } write_tcp_callback_t;
 
 static cdtime_t new_random_ttl(write_tcp_callback_t *cb)
@@ -82,6 +93,9 @@ static void set_sock_opts(int sockfd)
         if (status != 0)
             PLUGIN_WARNING("failed to set socket keepalive flag");
 
+        /* The keepalive idle time is about ten times the global interval and
+         * the keepalive probes interval is about the global interval, both
+         * rounded up to seconds. */
 #ifdef TCP_KEEPIDLE
         int tcp_keepidle = (int)((CDTIME_T_TO_MS(plugin_get_interval()) - 1) / 100 + 1);
         status = setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPIDLE, &tcp_keepidle,
@@ -100,6 +114,84 @@ static void set_sock_opts(int sockfd)
   }
 }
 
+static int write_tcp_poll(int fd, short events, cdtime_t timeout)
+{
+    struct pollfd pfd = {.fd = fd, .events = events};
+    int status;
+    do {
+        status = poll(&pfd, 1, (int)CDTIME_T_TO_MS(timeout));
+    } while ((status < 0) && (errno == EINTR));
+
+    if (status == 0) {
+        errno = ETIMEDOUT;
+        return -1;
+    }
+    if (status < 0)
+        return -1;
+
+    return 0;
+}
+
+/* Connect a non-blocking socket waiting at most timeout. */
+static int write_tcp_connect(int fd, const struct sockaddr *addr, socklen_t addrlen,
+                             cdtime_t timeout)
+{
+    if (connect(fd, addr, addrlen) == 0)
+        return 0;
+
+    if (errno != EINPROGRESS)
+        return -1;
+
+    if (write_tcp_poll(fd, POLLOUT, timeout) != 0)
+        return -1;
+
+    int error = 0;
+    socklen_t len = sizeof(error);
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0)
+        return -1;
+    if (error != 0) {
+        errno = error;
+        return -1;
+    }
+
+    return 0;
+}
+
+/* Write all the buffer in the non-blocking socket waiting at most timeout. */
+static int write_tcp_send(write_tcp_callback_t *cb, const char *buf, size_t len)
+{
+    cdtime_t end = cdtime() + cb->timeout;
+
+    while (len > 0) {
+        ssize_t n = write(cb->sock_fd, buf, len);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+#if defined(EWOULDBLOCK) && (EWOULDBLOCK != EAGAIN)
+            if ((errno != EAGAIN) && (errno != EWOULDBLOCK))
+#else
+            if (errno != EAGAIN)
+#endif
+                return -1;
+
+            cdtime_t now = cdtime();
+            if (now >= end) {
+                errno = ETIMEDOUT;
+                return -1;
+            }
+
+            if (write_tcp_poll(cb->sock_fd, POLLOUT, end - now) != 0)
+                return -1;
+            continue;
+        }
+
+        buf += n;
+        len -= (size_t)n;
+    }
+
+    return 0;
+}
+
 static int write_tcp_callback_init(write_tcp_callback_t *cb)
 {
     int status;
@@ -108,10 +200,12 @@ static int write_tcp_callback_init(write_tcp_callback_t *cb)
     const char *node = cb->node ? cb->node : DEFAULT_NODE;
     const char *service = cb->service ? cb->service : DEFAULT_SERVICE;
 
-    if (cb->sock_fd > 0)
+    if (cb->sock_fd >= 0)
         return 0;
 
     now = cdtime();
+    if (now < cb->next_connect_attempt)
+        return -1;
     if (cb->ai) {
         /* When we are here, we still have the IP in cache.
          * If we have remaining attempts without calling the DNS, we update the
@@ -167,7 +261,14 @@ static int write_tcp_callback_init(write_tcp_callback_t *cb)
 
         set_sock_opts(cb->sock_fd);
 
-        status = connect(cb->sock_fd, ai->ai_addr, ai->ai_addrlen);
+        int flags = fcntl(cb->sock_fd, F_GETFL);
+        if ((flags < 0) || (fcntl(cb->sock_fd, F_SETFL, flags | O_NONBLOCK) < 0)) {
+            close(cb->sock_fd);
+            cb->sock_fd = -1;
+            continue;
+        }
+
+        status = write_tcp_connect(cb->sock_fd, ai->ai_addr, ai->ai_addrlen, cb->timeout);
         if (status != 0) {
             close(cb->sock_fd);
             cb->sock_fd = -1;
@@ -178,9 +279,23 @@ static int write_tcp_callback_init(write_tcp_callback_t *cb)
     }
 
     if (cb->sock_fd < 0) {
-        PLUGIN_ERROR("Connecting to %s:%s failed. The last error was: %s", node, service, STRERRNO);
+        if (cb->connect_failed_log_enabled) {
+            PLUGIN_ERROR("Connecting to %s:%s failed. The last error was: %s",
+                         node, service, STRERRNO);
+            cb->connect_failed_log_enabled = 0;
+        }
+        if (cb->connect_backoff == 0)
+            cb->connect_backoff = CONNECT_BACKOFF_MIN;
+        else if (cb->connect_backoff < CONNECT_BACKOFF_MAX)
+            cb->connect_backoff *= 2;
+        if (cb->connect_backoff > CONNECT_BACKOFF_MAX)
+            cb->connect_backoff = CONNECT_BACKOFF_MAX;
+        cb->next_connect_attempt = cdtime() + cb->connect_backoff;
         return -1;
     }
+
+    cb->connect_backoff = 0;
+    cb->next_connect_attempt = 0;
 
     if (cb->connect_failed_log_enabled == 0) {
         PLUGIN_WARNING("Connecting to %s:%s succeeded.", node, service);
@@ -200,8 +315,10 @@ static void write_tcp_callback_free(void *data)
 
     cb = data;
 
-    close(cb->sock_fd);
-    cb->sock_fd = -1;
+    if (cb->sock_fd >= 0) {
+        close(cb->sock_fd);
+        cb->sock_fd = -1;
+    }
 
     strbuf_destroy(&cb->buf);
 
@@ -227,23 +344,32 @@ static int write_tcp_write(metric_family_t const *fam, user_data_t *user_data)
     status |= format_stream_metric_family(&ctx, fam);
     status |= format_stream_metric_end(&ctx);
 
-    if (status != 0)
-        return 0;
-
-    if (cb->sock_fd < 0) {
-        status = write_tcp_callback_init(cb);
-        if (status != 0) {
-            PLUGIN_ERROR("write_tcp_callback_init failed.");
-            return -1;
+    if (status != 0) {
+        if (!cb->format_failed_logged) {
+            PLUGIN_ERROR("Failed to format the metric family '%s'.", fam->name);
+            cb->format_failed_logged = true;
         }
+        return -1;
     }
 
-    ssize_t ret = swrite(cb->sock_fd, cb->buf.ptr, strbuf_len(&cb->buf));
-    if (ret != 0) {
-        PLUGIN_ERROR("send failed with status %zi (%s)", ret , STRERRNO);
-        close(cb->sock_fd);
-        cb->sock_fd = -1;
-        return -1;
+    /* If the write fails, reconnect and try once more: the connection may
+     * have been closed by the remote side. */
+    for (int attempt = 0; attempt < 2; attempt++) {
+        if (cb->sock_fd < 0) {
+            status = write_tcp_callback_init(cb);
+            if (status != 0) {
+                PLUGIN_ERROR("write_tcp_callback_init failed.");
+                return -1;
+            }
+        }
+
+        status = write_tcp_send(cb, cb->buf.ptr, strbuf_len(&cb->buf));
+        if (status != 0) {
+            PLUGIN_ERROR("send failed: %s", STRERRNO);
+            close(cb->sock_fd);
+            cb->sock_fd = -1;
+            return -1;
+        }
     }
 
     return 0;
@@ -256,6 +382,7 @@ static int write_tcp_config_instance(config_item_t *ci)
         PLUGIN_ERROR("calloc failed.");
         return -1;
     }
+    cb->sock_fd = -1;
 
     int status = cf_util_get_string(ci, &cb->instance);
     if (status != 0) {
@@ -263,7 +390,6 @@ static int write_tcp_config_instance(config_item_t *ci)
         return status;
     }
 
-    cb->sock_fd = -1;
     cb->connect_failed_log_enabled = 1;
     cb->next_random_ttl = new_random_ttl(cb);
     cb->format = FORMAT_STREAM_METRIC_OPENMETRICS_TEXT;
@@ -279,6 +405,8 @@ static int write_tcp_config_instance(config_item_t *ci)
             status = cf_util_get_cdtime(child, &cb->resolve_interval);
         } else if (strcasecmp("resolve-jitter", child->key) == 0) {
             status = cf_util_get_cdtime(child, &cb->resolve_jitter);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &cb->timeout);
         } else if (strcasecmp("format", child->key) == 0) {
             status = config_format_stream_metric(child, &cb->format);
         } else {
@@ -294,6 +422,9 @@ static int write_tcp_config_instance(config_item_t *ci)
         write_tcp_callback_free(cb);
         return -1;
     }
+
+    if (cb->timeout == 0)
+        cb->timeout = plugin_get_interval();
 
     status = strbuf_resize(&cb->buf, 4096);
     if (status != 0) {
