@@ -52,8 +52,10 @@ Set the \fIoid\fP for the notification timestamp.
 Set the \fIoid\fP for the notification severity.
 .It \fBlabels-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification labels.
+The labels are sent as a string with the format \f(CW{key="value",...}\fP.
 .It \fBannotations-oid\fB \fIoid\fP
 Set the \fIoid\fP for the notification annotations.
+The annotations are sent as a string with the format \f(CW{key="value",...}\fP.
 .El
 .It \fBtarget\fP \fItarget\fP
 The \fBtarget\fP block configure the destination of the \fISNMP Trap\fP and
@@ -62,7 +64,9 @@ They are identified by the name that is given in the opening line of the block.
 .Bl -tag -width Ds
 .It \fBaddress\fP \fPaddress\fP
 Set the address of the target to connect to.
-The default protocol is udp and the port is 161.
+The default protocol is udp and the port is 161, so the trap port 162
+must be given explicitly (e.g. \f(CWhost:162\fP).
+If not set, the default address is \f(CWlocalhost:162\fP.
 See the
 .Xr snmpcmd 1
 manual page for more details.
@@ -75,6 +79,7 @@ TODO
 Pass the \fIcommunity\fP to the target.
 .It \fBsession-reuse\fP \fIsession-reuse\fP
 Keep SNMP session open between notifications send.
+Defaults to \fBtrue\fP.
 .It \fBoids\fP \fIoids-name\fP
 Defines which OIDs are used in the Trap. \fIname\fP refers to one of the
 \fBoids\fP block above.
