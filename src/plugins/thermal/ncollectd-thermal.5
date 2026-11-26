@@ -10,7 +10,11 @@
 \fBload-plugin\fP thermal
 \fBplugin\fP thermal {
     \fBdevice\fP  [\fIincl|include|excl|exclude\fP] \fIdevice\fP
+    \fBtype\fP  [\fIincl|include|excl|exclude\fP] \fItype\fP
     \fBforce-use-procfs\fP \fItrue|false\fP
+    \fBfilter\fP {
+        ...
+    }
 }
 .Ed
 .Sh DESCRIPTION
@@ -21,6 +25,8 @@ procfs file system, i. e. mostly system temperature information.
 Selects the name of the thermal device that you want to collect or ignore.
 This option may be used multiple times to specify a list of devices.
 If no selection is configured at all, \fBall\fP devices are selected.
+.It \fBtype\fP  [\fIincl|include|excl|exclude\fP] \fItype\fP
+Selects the type of the thermal device that you want to collect or ignore.
 .It \fBforce-use-procfs\fP \fItrue|false\fP
 By default, the \fIthermal\fP plugin tries to read the statistics from the Linux
 \fIsysfs\fP interface.
@@ -28,6 +34,10 @@ If that is not available, the plugin falls back to the \fIprocfs\fP interface.
 By setting this option to \fItrue\fP, you can force the plugin to use
 the latter.
 This option defaults to \fIfalse\fP.
+.It \fBfilter\fP
+Configure a filter to modify or drop the metrics.
+See \fBFILTER CONFIGURATION\fP in
+.Xr ncollectd.conf 5
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
