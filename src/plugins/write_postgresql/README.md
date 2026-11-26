@@ -20,6 +20,7 @@ NCOLLECTD-WRITE\_POSTGRESQL(5) - File Formats Manual
 	        krb-srv-name name
 	        service service
 	        interval seconds
+	        flush-timeout seconds
 	        commit-interval seconds
 	        write metrics|notifications
 	        statement sql-statement
@@ -111,8 +112,14 @@ The following options are accepted within each **instance** block:
 
 **interval** *seconds*
 
-> Specify the interval with which the full callback in called to commit the data.
+> Specify the interval with which the flush callback is called to commit the data.
 > The default is to use the global **interval** setting.
+
+**flush-timeout** *seconds*
+
+> Timeout argument passed to the flush callback.
+> It is currently ignored by this plugin, which always commits the pending
+> transaction once **commit-interval** has expired.
 
 **commit-interval** *seconds*
 
@@ -138,6 +145,9 @@ The following options are accepted within each **instance** block:
 
 > > Four parameters will be passed to the statement and should be specified
 > > as tokens $1, $2, through $4 in the statement string.
+> > All the parameters are always passed, so every one of them must be
+> > referenced in the statement (use for example *$2::text* if the value is
+> > not needed), otherwise the server will fail to determine its data type.
 > > In general, it is advisable to create and call a custom function in the
 > > PostgreSQL database for this purpose.
 
@@ -163,6 +173,9 @@ The following options are accepted within each **instance** block:
 
 > > Five parameters will be passed to the statement and should be specified as
 > > tokens $1, $2, through $5 in the statement string.
+> > All the parameters are always passed, so every one of them must be
+> > referenced in the statement (use for example *$2::text* if the value is
+> > not needed), otherwise the server will fail to determine its data type.
 > > In general, it is advisable to create and call a custom function in the
 > > PostgreSQL database for this purpose.
 
