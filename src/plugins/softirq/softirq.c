@@ -44,11 +44,11 @@ static int softirq_read(void)
     }
 
     /* Get CPU count from the first line */
-    char cpu_buffer[1024];
-    char *cpu_fields[256];
+    char cpu_buffer[16384];
+    char *cpu_fields[1024];
     int cpu_count;
 
-    if (unlikely(fgets(cpu_buffer, sizeof(cpu_buffer), fh) != NULL)) {
+    if (fgets(cpu_buffer, sizeof(cpu_buffer), fh) != NULL) {
         cpu_count = strsplit(cpu_buffer, cpu_fields, STATIC_ARRAY_SIZE(cpu_fields));
         for (int i = 0; i < cpu_count; i++) {
             if (strncmp(cpu_fields[i], "CPU", 3) == 0)
@@ -60,8 +60,8 @@ static int softirq_read(void)
         return -1;
     }
 
-    char buffer[1024];
-    char *fields[256];
+    char buffer[16384];
+    char *fields[1024];
 
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
@@ -89,14 +89,12 @@ static int softirq_read(void)
 
         for (int i = 1; i <= softirq_values_to_parse; i++) {
             /* Per-CPU value */
-            uint64_t v;
-            int status = parse_uinteger(fields[i], &v);
-            if (status != 0)
-                break;
-            metric_family_append(&fam, VALUE_COUNTER(v), NULL,
-                                 &LABEL_PAIR_CONST("cpu", cpu_fields[i-1]),
-                                 &LABEL_PAIR_CONST("softirq", softirq_name),
-                                 NULL);
+            uint64_t value;
+            if (strtouint(fields[i], &value) == 0)
+                metric_family_append(&fam, VALUE_COUNTER(value), NULL,
+                                     &LABEL_PAIR_CONST("cpu", cpu_fields[i-1]),
+                                     &LABEL_PAIR_CONST("softirq", softirq_name),
+                                     NULL);
         }
     }
     fclose(fh);
