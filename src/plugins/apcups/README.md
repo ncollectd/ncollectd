@@ -13,6 +13,7 @@ NCOLLECTD-APCUPS(5) - File Formats Manual
 	        port port
 	        persistent-connection true|false
 	        label "key" "value"
+	        timeout seconds
 	        interval seconds
 	    }
 	}
@@ -58,6 +59,12 @@ The following options are accepted within each **instance** block:
 **label** *key* *value*
 
 > Append the label *key*=*value* to the submitting metrics.
+
+**timeout** *seconds*
+
+> The **timeout** option sets the timeout, in seconds, for connecting to
+> **apcupsd** and for receiving its complete response.
+> By default, the configured **interval** is used to set the timeout.
 
 **interval** *seconds*
 
