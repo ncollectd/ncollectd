@@ -17,17 +17,22 @@ typedef struct {
 
 typedef struct {
     bool found;
+    bool found_time;
     uint64_t count;
     uint64_t time;
 } thermal_throttle_t;
 
-static int core_max_id;
-static int package_max_id;
+static int core_max_id = -1;
+static int package_max_id = -1;
 
 static size_t cpus_num;
 static cpu_map_t *cpus;
 static size_t cpu_max_found;
+static size_t cpu_max_topology;
 
+/* Cores are indexed by (package_id, core_id) as core_id is only unique in
+ * a package: package_id * thermal_throttle_cores_per_package + core_id */
+static size_t thermal_throttle_cores_per_package;
 static size_t thermal_throttle_cores_num;
 static thermal_throttle_t *thermal_throttle_cores;
 
@@ -70,25 +75,44 @@ static metric_family_t fams[FAM_THERMAL_THROTTLE_MAX] = {
     }
 };
 
+/* Parses the cpu number of a "cpuN" directory name. */
+static int thermal_throttle_cpu_num(const char *filename, size_t *ret_cpu)
+{
+    if (strncmp("cpu", filename, strlen("cpu")) != 0)
+        return -1;
+
+    const char *cpu_num = filename + strlen("cpu");
+    if (!isdigit((unsigned char)*cpu_num))
+        return -1;
+
+    char *endptr = NULL;
+    errno = 0;
+    unsigned long cpu = strtoul(cpu_num, &endptr, 10);
+    if ((errno != 0) || (endptr == cpu_num) || (*endptr != '\0'))
+        return -1;
+
+    *ret_cpu = (size_t)cpu;
+    return 0;
+}
+
 static int thermal_throttle_cpu(int dir_fd, __attribute__((unused)) const char *dirname,
                                 const char *filename, __attribute__((unused)) void *user_data)
 {
-    if (strncmp("cpu", filename, strlen("cpu")) != 0)
+    size_t cpu = 0;
+    if (thermal_throttle_cpu_num(filename, &cpu) != 0)
         return 0;
-
-    const char *cpu_num = filename + strlen("cpu");
-    if (!isdigit(*cpu_num))
-        return 0;
-
-    size_t cpu = atoi(cpu_num);
     if (cpu > cpu_max_found)
         cpu_max_found = cpu;
     if (cpu >= cpus_num)
         return 0;
 
     int core_id = cpus[cpu].core_id;
-    if ((core_id >= 0) && ((size_t)core_id < thermal_throttle_cores_num)) {
-        if (!thermal_throttle_cores[core_id].found) {
+    int core_package_id = cpus[cpu].package_id;
+    if ((core_id >= 0) && ((size_t)core_id < thermal_throttle_cores_per_package) &&
+        (core_package_id >= 0) && ((size_t)core_package_id < thermal_throttle_packages_num)) {
+        size_t core_idx = (size_t)core_package_id * thermal_throttle_cores_per_package +
+                          (size_t)core_id;
+        if (!thermal_throttle_cores[core_idx].found) {
             char path[PATH_MAX];
 
             ssnprintf(path, sizeof(path), "%s/thermal_throttle/core_throttle_count", filename);
@@ -97,15 +121,17 @@ static int thermal_throttle_cpu(int dir_fd, __attribute__((unused)) const char *
             if (status != 0)
                 return 0;
 
+            thermal_throttle_cores[core_id].found = true;
+            thermal_throttle_cores[core_id].count = core_throttle_count;
+
+            /* core_throttle_total_time_ms is only available since Linux 5.7 */
             ssnprintf(path, sizeof(path), "%s/thermal_throttle/core_throttle_total_time_ms", filename);
             uint64_t core_throttle_time = 0;
             status = filetouint_at(dir_fd, path, &core_throttle_time);
-            if (status != 0)
-                return 0;
-
-            thermal_throttle_cores[core_id].found = true;
-            thermal_throttle_cores[core_id].count = core_throttle_count;
-            thermal_throttle_cores[core_id].time = core_throttle_time;
+            if (status == 0) {
+                thermal_throttle_cores[core_id].found_time = true;
+                thermal_throttle_cores[core_id].time = core_throttle_time;
+            }
         }
     }
 
@@ -120,44 +146,64 @@ static int thermal_throttle_cpu(int dir_fd, __attribute__((unused)) const char *
             if (status != 0)
                 return 0;
 
+            thermal_throttle_packages[package_id].found = true;
+            thermal_throttle_packages[package_id].count = package_throttle_count;
+
+            /* package_throttle_total_time_ms is only available since Linux 5.7 */
             ssnprintf(path, sizeof(path), "%s/thermal_throttle/package_throttle_total_time_ms", filename);
             uint64_t package_throttle_time = 0;
             status = filetouint_at(dir_fd, path, &package_throttle_time);
-            if (status != 0)
-                return 0;
-
-            thermal_throttle_packages[package_id].found = true;
-            thermal_throttle_packages[package_id].count = package_throttle_count;
-            thermal_throttle_packages[package_id].time = package_throttle_time;
+            if (status == 0) {
+                thermal_throttle_packages[package_id].found_time = true;
+                thermal_throttle_packages[package_id].time = package_throttle_time;
+            }
         }
     }
 
     return 0;
 }
 
+/* Reads a file with a signed integer, e.g. physical_package_id can be -1. */
+static int thermal_throttle_file_to_int(int dir_fd, const char *path, int *ret_value)
+{
+    char buffer[64];
+    ssize_t len = read_file_at(dir_fd, path, buffer, sizeof(buffer));
+    if (len < 0)
+        return -1;
+
+    char *endptr = NULL;
+    errno = 0;
+    long value = strtol(buffer, &endptr, 10);
+    if ((endptr == buffer) || (errno != 0) || (value < INT_MIN) || (value > INT_MAX))
+        return -1;
+
+    *ret_value = (int)value;
+    return 0;
+}
+
 static int thermal_throttle_topology(int dir_fd, __attribute__((unused)) const char *dirname,
                                      const char *filename, __attribute__((unused)) void *user_data)
 {
-    if (strncmp("cpu", filename, strlen("cpu")) != 0)
+    size_t cpu = 0;
+    if (thermal_throttle_cpu_num(filename, &cpu) != 0)
         return 0;
 
-    const char *cpu_num = filename + strlen("cpu");
-    if (!isdigit(*cpu_num))
-        return 0;
-
-    size_t cpu = atoi(cpu_num);
+    /* Track all the cpus, also the offline ones without topology, to compare
+     * with the cpus found in each read. */
+    if (cpu > cpu_max_topology)
+        cpu_max_topology = cpu;
 
     char path[PATH_MAX];
 
     ssnprintf(path, sizeof(path), "%s/topology/core_id", filename);
-    uint64_t core_id = 0;
-    int status = filetouint_at(dir_fd, path, &core_id);
+    int core_id = 0;
+    int status = thermal_throttle_file_to_int(dir_fd, path, &core_id);
     if (status != 0)
         return 0;
 
     ssnprintf(path, sizeof(path), "%s/topology/physical_package_id", filename);
-    uint64_t package_id = 0;
-    status = filetouint_at(dir_fd, path, &package_id);
+    int package_id = 0;
+    status = thermal_throttle_file_to_int(dir_fd, path, &package_id);
     if (status != 0)
         return 0;
 
@@ -179,11 +225,11 @@ static int thermal_throttle_topology(int dir_fd, __attribute__((unused)) const c
     cpus[cpu].core_id = core_id;
     cpus[cpu].package_id = package_id;
 
-    if ((int)core_id > core_max_id)
-        core_max_id = (int)core_id;
+    if (core_id > core_max_id)
+        core_max_id = core_id;
 
-    if ((int)package_id > package_max_id)
-        package_max_id = (int)package_id;
+    if (package_id > package_max_id)
+        package_max_id = package_id;
 
     return 0;
 }
@@ -195,15 +241,17 @@ static void thermal_throttle_free(void)
         cpus = NULL;
     }
     cpus_num = 0;
+    cpu_max_topology = 0;
 
-    core_max_id = 0;
-    package_max_id = 0;
+    core_max_id = -1;
+    package_max_id = -1;
 
     if (thermal_throttle_cores != NULL) {
         free(thermal_throttle_cores);
         thermal_throttle_cores = NULL;
     }
     thermal_throttle_cores_num = 0;
+    thermal_throttle_cores_per_package = 0;
 
     if (thermal_throttle_packages != NULL) {
         free(thermal_throttle_packages);
@@ -214,10 +262,7 @@ static void thermal_throttle_free(void)
 
 static int thermal_throttle_read(void)
 {
-    if ((cpus_num == 0) || ((cpu_max_found + 1) != cpus_num)) {
-        core_max_id = -1;
-        package_max_id = -1;
-
+    if ((cpus_num == 0) || (cpu_max_found != cpu_max_topology)) {
         thermal_throttle_free();
 
         walk_directory(path_sys_devices, thermal_throttle_topology, NULL, 0);
@@ -227,19 +272,21 @@ static int thermal_throttle_read(void)
             return 0;
         }
 
-        thermal_throttle_cores_num = core_max_id + 1;
-        thermal_throttle_cores = calloc(thermal_throttle_cores_num,
-                                        sizeof(*thermal_throttle_cores));
-        if (thermal_throttle_cores == NULL) {
+        thermal_throttle_packages_num = package_max_id + 1;
+        thermal_throttle_packages = calloc(thermal_throttle_packages_num,
+                                           sizeof(*thermal_throttle_packages));
+        if (thermal_throttle_packages == NULL) {
             PLUGIN_ERROR("calloc failed.");
             thermal_throttle_free();
             return 0;
         }
 
-        thermal_throttle_packages_num = package_max_id + 1;
-        thermal_throttle_packages = calloc(thermal_throttle_packages_num,
-                                           sizeof(*thermal_throttle_packages));
-        if (thermal_throttle_packages == NULL) {
+        thermal_throttle_cores_per_package = core_max_id + 1;
+        thermal_throttle_cores_num = thermal_throttle_cores_per_package *
+                                     thermal_throttle_packages_num;
+        thermal_throttle_cores = calloc(thermal_throttle_cores_num,
+                                        sizeof(*thermal_throttle_cores));
+        if (thermal_throttle_cores == NULL) {
             PLUGIN_ERROR("calloc failed.");
             thermal_throttle_free();
             return 0;
@@ -255,19 +302,36 @@ static int thermal_throttle_read(void)
 
     walk_directory(path_sys_devices, thermal_throttle_cpu, NULL, 0);
 
+    bool found = false;
+    for (size_t i = 0; (i < thermal_throttle_packages_num) && !found; i++)
+        found = thermal_throttle_packages[i].found;
+    for (size_t i = 0; (i < thermal_throttle_cores_num) && !found; i++)
+        found = thermal_throttle_cores[i].found;
+
+    static bool warned;
+    if (!found && !warned) {
+        PLUGIN_WARNING("No thermal_throttle information found in '%s'.", path_sys_devices);
+        warned = true;
+    }
+
     for (size_t i = 0; i < thermal_throttle_cores_num; i++) {
         if (thermal_throttle_cores[i].found) {
             char core_id_str[ITOA_MAX];
-            uitoa(i, core_id_str);
+            uitoa(i % thermal_throttle_cores_per_package, core_id_str);
+            char package_id_str[ITOA_MAX];
+            uitoa(i / thermal_throttle_cores_per_package, package_id_str);
 
             metric_family_append(&fams[FAM_THERMAL_THROTTLE_CORE_COUNT],
                                  VALUE_COUNTER(thermal_throttle_cores[i].count), NULL,
+                                 &LABEL_PAIR_CONST("package", package_id_str),
                                  &LABEL_PAIR_CONST("core", core_id_str),
                                  NULL);
-            metric_family_append(&fams[FAM_THERMAL_THROTTLE_CORE_TIME_SECONDS],
-                                 VALUE_COUNTER_FLOAT64(thermal_throttle_cores[i].time/1000.0), NULL,
-                                 &LABEL_PAIR_CONST("core", core_id_str),
-                                 NULL);
+            if (thermal_throttle_cores[i].found_time)
+                metric_family_append(&fams[FAM_THERMAL_THROTTLE_CORE_TIME_SECONDS],
+                                     VALUE_COUNTER_FLOAT64(thermal_throttle_cores[i].time/1000.0), NULL,
+                                     &LABEL_PAIR_CONST("package", package_id_str),
+                                     &LABEL_PAIR_CONST("core", core_id_str),
+                                     NULL);
         }
     }
 
@@ -280,10 +344,11 @@ static int thermal_throttle_read(void)
                                  VALUE_COUNTER(thermal_throttle_packages[i].count), NULL,
                                  &LABEL_PAIR_CONST("package", package_id_str),
                                  NULL);
-            metric_family_append(&fams[FAM_THERMAL_THROTTLE_PACKAGE_TIME_SECONDS],
-                                 VALUE_COUNTER_FLOAT64(thermal_throttle_packages[i].time/1000.0), NULL,
-                                 &LABEL_PAIR_CONST("package", package_id_str),
-                                 NULL);
+            if (thermal_throttle_packages[i].found_time)
+                metric_family_append(&fams[FAM_THERMAL_THROTTLE_PACKAGE_TIME_SECONDS],
+                                     VALUE_COUNTER_FLOAT64(thermal_throttle_packages[i].time/1000.0), NULL,
+                                     &LABEL_PAIR_CONST("package", package_id_str),
+                                     NULL);
         }
     }
 
