@@ -26,47 +26,49 @@ static metric_family_t fams[FAM_WPAR_MAX] = {
     [FAM_WPAR_CPU_USER] = {
         .name = "system_wpar_cpu_user",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Time spent by the WPAR in user mode, in hundredths of a second "
+                "normalized by the number of physical processors.",
     },
     [FAM_WPAR_CPU_SYSTEM] = {
         .name = "system_wpar_cpu_system",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Time spent by the WPAR in system mode, in hundredths of a second "
+                "normalized by the number of physical processors.",
     },
     [FAM_WPAR_LOAD_1M] = {
         .name = "system_wpar_load_1m",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "WPAR load average over the last minute.",
     },
     [FAM_WPAR_LOAD_5M] = {
         .name = "system_wpar_load_5m",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "WPAR load average over the last 5 minutes.",
     },
     [FAM_WPAR_LOAD_15M] = {
         .name = "system_wpar_load_15m",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "WPAR load average over the last 15 minutes.",
     },
     [FAM_WPAR_MEMORY_USER_BYTES] = {
         .name = "system_wpar_memory_user_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Real memory used by the WPAR in bytes.",
     },
     [FAM_WPAR_MEMORY_FREE_BYTES] = {
         .name = "system_wpar_memory_free_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Free real memory of the WPAR in bytes.",
     },
     [FAM_WPAR_MEMORY_CACHED_BYTES] = {
         .name = "system_wpar_memory_cached_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Real memory used by the WPAR for file pages in bytes.",
     },
     [FAM_WPAR_MEMORY_TOTAL_BYTES] = {
         .name = "system_wpar_memory_total_bytes",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Total real memory of the WPAR in bytes.",
     },
 };
 
@@ -79,6 +81,8 @@ static time_t time_saved;
 typedef struct wpar_cpu {
     u_longlong_t user;
     u_longlong_t sys;
+    long long wpar_id;
+    bool valid;
 } wpar_cpu_t;
 
 static wpar_cpu_t *prev_wcpu;
@@ -168,33 +172,35 @@ static int wpar_read (void)
         perfstat_memory_total_wpar_t wmemory;
         status = perfstat_memory_total_wpar(&id_wpar, &wmemory, sizeof(wmemory), 1);
         if (status < 0) {
+            /* Do not skip the CPU metrics if the memory metrics fail. */
             PLUGIN_WARNING("perfstat_memory_total_wpar(%s) failed: %s", wname, STRERRNO);
-            continue;
+        } else {
+            metric_family_append(&fams[FAM_WPAR_MEMORY_USER_BYTES],
+                                 VALUE_GAUGE(wmemory.real_inuse * pagesize), NULL,
+                                 &LABEL_PAIR_CONST("wpar_name", wname), NULL);
+            metric_family_append(&fams[FAM_WPAR_MEMORY_FREE_BYTES],
+                                 VALUE_GAUGE(wmemory.real_free * pagesize), NULL,
+                                 &LABEL_PAIR_CONST("wpar_name", wname), NULL);
+            metric_family_append(&fams[FAM_WPAR_MEMORY_CACHED_BYTES],
+                                 VALUE_GAUGE(wmemory.numperm * pagesize), NULL,
+                                 &LABEL_PAIR_CONST("wpar_name", wname), NULL);
+            metric_family_append(&fams[FAM_WPAR_MEMORY_TOTAL_BYTES],
+                                 VALUE_GAUGE(wmemory.real_total * pagesize), NULL,
+                                 &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         }
-
-        metric_family_append(&fams[FAM_WPAR_MEMORY_USER_BYTES],
-                             VALUE_GAUGE(wmemory.real_inuse * pagesize), NULL,
-                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
-        metric_family_append(&fams[FAM_WPAR_MEMORY_FREE_BYTES],
-                             VALUE_GAUGE(wmemory.real_free * pagesize), NULL,
-                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
-        metric_family_append(&fams[FAM_WPAR_MEMORY_CACHED_BYTES],
-                             VALUE_GAUGE(wmemory.numperm * pagesize), NULL,
-                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
-        metric_family_append(&fams[FAM_WPAR_MEMORY_TOTAL_BYTES],
-                             VALUE_GAUGE(wmemory.real_total * pagesize), NULL,
-                             &LABEL_PAIR_CONST("wpar_name", wname), NULL);
 
         /* CPU and load */
         perfstat_cpu_total_wpar_t wcpu;
         status = perfstat_cpu_total_wpar(&id_wpar, &wcpu, sizeof(wcpu), 1);
         if (status < 0) {
             PLUGIN_WARNING("perfstat_cpu_total_wpar(%s) failed: %s", wname, STRERRNO);
+            /* The next delta would span more than one interval. */
+            prev_wcpu[i].valid = false;
             continue;
         }
 
         double factor = 1.0 / ((double) (1 << SBITS));
-        float snum = ((double) wcpu.loadavg[0]) * factor;
+        double snum = ((double) wcpu.loadavg[0]) * factor;
         metric_family_append(&fams[FAM_WPAR_LOAD_1M], VALUE_GAUGE(snum), NULL,
                              &LABEL_PAIR_CONST("wpar_name", wname), NULL);
         double mnum = ((double) wcpu.loadavg[1]) * factor;
@@ -204,18 +210,31 @@ static int wpar_read (void)
         metric_family_append(&fams[FAM_WPAR_LOAD_15M], VALUE_GAUGE(lnum), NULL,
                              &LABEL_PAIR_CONST("wpar_name", wname), NULL);
 
-        if (hardware_ticks > 0) {
+        /* The previous values are stored by position, check that they belong
+           to the same WPAR, otherwise restart the counters. */
+        bool same_wpar = prev_wcpu[i].valid &&
+                         (prev_wcpu[i].wpar_id == (long long)wpar_total[i].wpar_id);
+        if (!same_wpar) {
+            cnt_wcpu[i].sys = 0;
+            cnt_wcpu[i].user = 0;
+        }
+
+        if ((hardware_ticks > 0) && same_wpar) {
             /* Number of physical processors */
             int pncpus = wcpu.ncpus;
             if (pncpus > 0) {
                 if (part.smt_thrds > 0 )
                     pncpus = wcpu.ncpus / part.smt_thrds;
-            
-                u_longlong_t diff_sys = (wcpu.psys - prev_wcpu[i].sys) * 100 * time_diff;
-                cnt_wcpu[i].sys += (diff_sys / hardware_ticks) / pncpus;
-            
-                u_longlong_t diff_user = (wcpu.puser - prev_wcpu[i].user) * 100 * time_diff;
-                cnt_wcpu[i].user += (diff_user / hardware_ticks) / pncpus;
+
+                if (wcpu.psys >= prev_wcpu[i].sys) {
+                    u_longlong_t diff_sys = (wcpu.psys - prev_wcpu[i].sys) * 100 * time_diff;
+                    cnt_wcpu[i].sys += (diff_sys / hardware_ticks) / pncpus;
+                }
+
+                if (wcpu.puser >= prev_wcpu[i].user) {
+                    u_longlong_t diff_user = (wcpu.puser - prev_wcpu[i].user) * 100 * time_diff;
+                    cnt_wcpu[i].user += (diff_user / hardware_ticks) / pncpus;
+                }
             }
         }
 
@@ -226,6 +245,8 @@ static int wpar_read (void)
 
         prev_wcpu[i].sys = wcpu.psys;
         prev_wcpu[i].user = wcpu.puser;
+        prev_wcpu[i].wpar_id = (long long)wpar_total[i].wpar_id;
+        prev_wcpu[i].valid = true;
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_WPAR_MAX, 0);
@@ -239,8 +260,21 @@ static int wpar_init(void)
     return 0;
 }
 
+static int wpar_shutdown(void)
+{
+    free(wpar_total);
+    wpar_total = NULL;
+    free(prev_wcpu);
+    prev_wcpu = NULL;
+    free(cnt_wcpu);
+    cnt_wcpu = NULL;
+    wpar_total_num = 0;
+    return 0;
+}
+
 void module_register (void)
 {
     plugin_register_init ("wpar", wpar_init);
     plugin_register_read ("wpar", wpar_read);
+    plugin_register_shutdown ("wpar", wpar_shutdown);
 }
