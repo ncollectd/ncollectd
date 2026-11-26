@@ -13,6 +13,7 @@ NCOLLECTD-WRITE\_TCP(5) - File Formats Manual
 	        port port
 	        resolve-interval seconds
 	        resolve-jitter seconds
+	        timeout seconds
 	        format-metric influxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote
 	    }
 	}
@@ -20,6 +21,12 @@ NCOLLECTD-WRITE\_TCP(5) - File Formats Manual
 # DESCRIPTION
 
 The **write\_tcp** plugin writes the metrics through a tcp connection.
+The metrics are sent in plain text, without encryption or authentication.
+There is no buffering: the metrics that can not be sent are lost.
+
+TCP keepalive is enabled in the connection, the keepalive idle time is
+about ten times the global **interval** and the interval between
+keepalive probes is about the global **interval**.
 
 The following options are accepted within each **instance** block:
 
@@ -34,6 +41,12 @@ The following options are accepted within each **instance** block:
 **resolve-interval** *seconds*
 
 **resolve-jitter** *seconds*
+
+**timeout** *seconds*
+
+> Timeout for connecting to the destination and for sending each metric family.
+> On timeout the connection is closed and the metrics are lost.
+> Defaults to the global **interval**.
 
 **format-metric** *influxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote*
 
