@@ -4,6 +4,8 @@
 
 #include "plugin.h"
 #include "libutils/common.h"
+#include "libutils/strbuf.h"
+#include "libmetric/marshal.h"
 #include <pthread.h>
 
 #include <net-snmp/net-snmp-config.h>
@@ -200,6 +202,7 @@ static int notify_snmp_oids_append_oid(notify_snmp_oids_t **oids, notify_snmp_en
     (*oids)->list = oids_list;
     int n = (*oids)->len;
 
+    oids_list[n].id = id;
     oids_list[n].string = strdup(string_oid);
     if (oids_list[n].string == NULL) {
         PLUGIN_ERROR("strdup failed.");
@@ -211,10 +214,11 @@ static int notify_snmp_oids_append_oid(notify_snmp_oids_t **oids, notify_snmp_en
         PLUGIN_ERROR("OIDs %s: snmp_parse_oid %s (%s) failed.",
                     ((*oids)->name == NULL) ? "default" : (*oids)->name,
                     notify_snmp_oids_map_id2name(oids_list[n].id), oids_list[n].string);
+        free(oids_list[n].string);
+        oids_list[n].string = NULL;
         return -1;
     }
 
-    oids_list[n].id = id;
     (*oids)->len++;
     return 0;
 }
@@ -253,7 +257,7 @@ static notify_snmp_oids_t *notify_snmp_get_default_oids(void)
     }
 
     if (notify_snmp_oids != NULL)
-        oids->next = notify_snmp_oids->next;
+        oids->next = notify_snmp_oids;
 
     notify_snmp_oids = oids;
 
@@ -265,7 +269,7 @@ static int notify_snmp_config_add_oids(config_item_t *ci)
     int status;
 
     if ((ci->values_num != 1) || (ci->values[0].type != CONFIG_TYPE_STRING)) {
-        PLUGIN_WARNING("The `Target' block needs exactly one string argument.");
+        PLUGIN_WARNING("The 'oids' block needs exactly one string argument.");
         return -1;
     }
 
@@ -304,7 +308,7 @@ static int notify_snmp_config_add_oids(config_item_t *ci)
     }
 
     if (notify_snmp_oids != NULL)
-        oids->next = notify_snmp_oids->next;
+        oids->next = notify_snmp_oids;
 
     notify_snmp_oids = oids;
 
@@ -325,7 +329,7 @@ static int notify_snmp_config_add_target(config_item_t *ci)
     }
 
     target->version = 1;
-    target->sess_reuse = false;
+    target->sess_reuse = true;
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
@@ -334,8 +338,11 @@ static int notify_snmp_config_add_target(config_item_t *ci)
             status = cf_util_get_string(child, &target->address);
         } else if (strcasecmp("version", child->key) == 0) {
             status = cf_util_get_int(child, &target->version);
-            if ((status == 0) && (target->version < 0 || target->version > 2))
-                target->version = 1;
+            if ((status == 0) && (target->version != 1) && (target->version != 2)) {
+                PLUGIN_ERROR("Invalid SNMP version %d in %s:%d, only 1 or 2 are supported.",
+                             target->version, cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp("community", child->key) == 0) {
             status = cf_util_get_string(child, &target->community);
         } else if (strcasecmp("oids", child->key) == 0) {
@@ -379,11 +386,23 @@ static int notify_snmp_config_add_target(config_item_t *ci)
         return -1;
     }
 
-    if (target->address == NULL)
-        target->address = strdup("localhost");
+    if (target->address == NULL) {
+        target->address = strdup("localhost:162");
+        if (target->address == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            notify_snmp_free_target(target);
+            return -1;
+        }
+    }
 
-    if (target->community == NULL)
+    if (target->community == NULL) {
         target->community = strdup("public");
+        if (target->community == NULL) {
+            PLUGIN_ERROR("strdup failed.");
+            notify_snmp_free_target(target);
+            return -1;
+        }
+    }
 
     if (notify_snmp_targets != NULL) {
         notify_snmp_target_t *targets = notify_snmp_targets;
@@ -401,27 +420,40 @@ static int notify_snmp_config_add_target(config_item_t *ci)
 /*
 plugin notify_snmp {
     oids ncollectd {
-        EnterpriseOID  "SNMPv2-SMI::experimental.101"
-        TrapOID        "SNMPv2-SMI::experimental.101.1"
-        NameOID        "SNMPv2-SMI::experimental.101.2.1"
-        TimeStampOID   "SNMPv2-SMI::experimental.101.2.2"
-        SeverityOID    "SNMPv2-SMI::experimental.101.2.3"
-        LabelsOID      "SNMPv2-SMI::experimental.101.2.4"
-        AnnotationsOID "SNMPv2-SMI::experimental.101.2.5"
+        enterprise-oid  "SNMPv2-SMI::experimental.101"
+        trap-oid        "SNMPv2-SMI::experimental.101.1"
+        name-oid        "SNMPv2-SMI::experimental.101.2.1"
+        severity-oid    "SNMPv2-SMI::experimental.101.2.2"
+        timestamp-oid   "SNMPv2-SMI::experimental.101.2.3"
+        labels-oid      "SNMPv2-SMI::experimental.101.2.4"
+        annotations-oid "SNMPv2-SMI::experimental.101.2.5"
     }
     target localhost {
-        Address "localhost:162"
-        Version 2
-        Community "public"
-        SessionReuse true
-        OIDs ncollectd
+        address "localhost:162"
+        version 2
+        community "public"
+        session-reuse true
+        oids ncollectd
     }
 }
 */
 
+static void notify_snmp_init_library(void)
+{
+    static bool have_init = false;
+
+    if (!have_init)
+        init_snmp(PACKAGE_NAME);
+
+    have_init = true;
+}
+
 static int notify_snmp_config(config_item_t *ci)
 {
     int status = 0;
+
+    /* The library must be initialized before parsing the OIDs. */
+    notify_snmp_init_library();
 
     for (int i = 0; i < ci->children_num; i++) {
         config_item_t *child = ci->children + i;
@@ -445,12 +477,10 @@ static void notify_snmp_exit_session(notify_snmp_target_t *target)
 {
 
     if (target->sess_handle != NULL && !target->sess_reuse) {
+        /* The session handle is freed by snmp_sess_close, do not use it after. */
         int status = snmp_sess_close(target->sess_handle);
-        if (status == 0) {
-            char *errstr = NULL;
-            snmp_sess_error(target->sess_handle, NULL, NULL, &errstr);
-            PLUGIN_WARNING("snmp_sess_close error: '%s'.", errstr);
-        }
+        if (status == 0)
+            PLUGIN_WARNING("target %s: snmp_sess_close failed.", target->name);
         target->sess_handle = NULL;
     }
 }
@@ -477,6 +507,7 @@ static int notify_snmp_init_session(notify_snmp_target_t *target)
         snmp_error(&session, NULL, NULL, &errstr);
         PLUGIN_ERROR("target %s: snmp_sess_open failed: %s",
                     target->name, (errstr == NULL) ? "Unknown problem" : errstr);
+        free(errstr);
         return -1;
     }
 
@@ -546,9 +577,10 @@ static netsnmp_pdu *notify_snmp_create_pdu(notify_snmp_target_t *target)
             return NULL;
         }
 
-        status = snmp_add_var(pdu, objid_snmptrap, sizeof(objid_snmptrap) / sizeof(oid),
-                                   'o', oid_trap->string);
-        if (status) {
+        /* Use the already parsed OID, avoid parsing the MIB in every notification. */
+        if (snmp_pdu_add_variable(pdu, objid_snmptrap, OID_LENGTH(objid_snmptrap),
+                                  ASN_OBJECT_ID, (const void *)oid_trap->objid,
+                                  oid_trap->len * sizeof(oid)) == NULL) {
             PLUGIN_ERROR("Target %s: snmp_add_var oid trap (%s) failed.",
                         target->name, oid_trap->string);
             snmp_free_pdu(pdu);
@@ -578,6 +610,7 @@ static int notify_snmp_sendsnmp(notify_snmp_target_t *target, const notification
     for (int i = 0; i < oids_len; i++) {
         char *value = NULL;
         char buffer[32];
+        strbuf_t buf = STRBUF_CREATE;
         int add_value = 1;
 
         switch (oids_list[i].id) {
@@ -607,10 +640,14 @@ static int notify_snmp_sendsnmp(notify_snmp_target_t *target, const notification
             value = buffer;
             break;
         case NOTIFY_SNMP_LABELS_OID:
-            value = NULL;
+            if (label_set_marshal(&buf, n->label) != 0)
+                PLUGIN_WARNING("Failed to format notification labels.");
+            value = buf.ptr;
             break;
         case NOTIFY_SNMP_ANNOTATIONS_OID:
-            value = NULL;
+            if (label_set_marshal(&buf, n->annotation) != 0)
+                PLUGIN_WARNING("Failed to format notification annotations.");
+            value = buf.ptr;
             break;
         default:
             add_value = 0;
@@ -620,6 +657,7 @@ static int notify_snmp_sendsnmp(notify_snmp_target_t *target, const notification
         if (add_value) {
             status = snmp_add_var(pdu, oids_list[i].objid, oids_list[i].len, 's',
                                                         value == NULL ? "" : value);
+            strbuf_destroy(&buf);
 
             if (status) {
                 char *errstr = NULL;
@@ -629,6 +667,7 @@ static int notify_snmp_sendsnmp(notify_snmp_target_t *target, const notification
                              target->name, notify_snmp_oids_map_id2name(oids_list[i].id),
                              oids_list[i].string,
                              (errstr == NULL) ? "Unknown problem" : errstr);
+                free(errstr);
                 snmp_free_pdu(pdu);
                 notify_snmp_exit_session(target);
                 return -1;
@@ -643,6 +682,7 @@ static int notify_snmp_sendsnmp(notify_snmp_target_t *target, const notification
         snmp_sess_error(target->sess_handle, NULL, NULL, &errstr);
         PLUGIN_ERROR("target %s: snmp_sess_send failed: %s.",
                       target->name, (errstr == NULL) ? "Unknown problem" : errstr);
+        free(errstr);
         snmp_free_pdu(pdu);
         notify_snmp_exit_session(target);
         return -1;
@@ -682,13 +722,7 @@ static int notify_snmp_notification(const notification_t *n,
 
 static int notify_snmp_init(void)
 {
-    static int have_init = 0;
-
-    if (have_init == 0) {
-        init_snmp(PACKAGE_NAME);
-    }
-
-    have_init = 1;
+    notify_snmp_init_library();
     return 0;
 }
 
@@ -726,5 +760,5 @@ void module_register(void)
     plugin_register_init("notify_snmp", notify_snmp_init);
     plugin_register_shutdown("notify_snmp", notify_snmp_shutdown);
     plugin_register_config("notify_snmp", notify_snmp_config);
-    plugin_register_notification(NULL, "notify_snmp", notify_snmp_notification, NULL);
+    plugin_register_notification("notify_snmp", NULL, notify_snmp_notification, NULL);
 }

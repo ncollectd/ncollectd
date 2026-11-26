@@ -64,10 +64,12 @@ The plugin's configuration consists of a number of **oids** and
 > **labels-oid**&zwnj;** **&zwnj;*oid*&zwnj;**&zwnj;**
 
 > > Set the *oid* for the notification labels.
+> > The labels are sent as a string with the format `{key="value",...}`.
 
 > **annotations-oid**&zwnj;** **&zwnj;*oid*&zwnj;**&zwnj;**
 
 > > Set the *oid* for the notification annotations.
+> > The annotations are sent as a string with the format `{key="value",...}`.
 
 **target** *target*
 
@@ -78,7 +80,9 @@ The plugin's configuration consists of a number of **oids** and
 > **address** **address**
 
 > > Set the address of the target to connect to.
-> > The default protocol is udp and the port is 161.
+> > The default protocol is udp and the port is 161, so the trap port 162
+> > must be given explicitly (e.g. `host:162`).
+> > If not set, the default address is `localhost:162`.
 > > See the
 > > snmpcmd(1)
 > > manual page for more details.
@@ -97,6 +101,7 @@ The plugin's configuration consists of a number of **oids** and
 > **session-reuse** *session-reuse*
 
 > > Keep SNMP session open between notifications send.
+> > Defaults to **true**.
 
 > **oids** *oids-name*
 
