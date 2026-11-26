@@ -9,9 +9,7 @@ extern void module_register(void);
 
 DEF_TEST(test01)
 {
-    char *config = "include-dir \"src/plugins/perl/lib\"\n"
-                   "include-dir \"src/plugins/perl/test01\"\n"
-                   "base-name \"NCollectd::Plugins\"\n"
+    char *config = "include-dir \"src/plugins/perl/test01\"\n"
                    "load-plugin \"Test01\"\n";
     config_item_t *ci = config_parse_buffer(config, strlen(config));
     CHECK_NOT_NULL(ci);
@@ -26,9 +24,7 @@ DEF_TEST(test01)
 int main(void)
 {
     module_register();
-
     RUN_TEST(test01);
-
     plugin_test_reset();
 
     END_TEST;

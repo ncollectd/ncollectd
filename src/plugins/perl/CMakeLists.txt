@@ -36,7 +36,8 @@ endif()
 set(BUILD_PLUGIN_PERL ${BUILD_PLUGIN_PERL} PARENT_SCOPE)
 
 if(BUILD_PLUGIN_PERL)
-    set(PLUGIN_PERL_SRC perl.c)
+    set(PLUGIN_PERL_SRC perl.c plconfig.c plmetric.c plnotification.c
+                        plmetricfamily.c plutils.c cperl.h)
     add_library(perl MODULE ${PLUGIN_PERL_SRC})
     target_link_libraries(perl PRIVATE libmetric libutils LibPerl::LibPerl m)
     set_target_properties(perl PROPERTIES PREFIX "")
