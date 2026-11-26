@@ -26,12 +26,15 @@ static int str_to_uint(const char *s, unsigned *n)
         return -EINVAL;
     char *endptr = NULL;
 
-    *n = (unsigned)strtoul(s, &endptr, 0);
-    if ((*s == '\0') || (*endptr != '\0')) {
+    errno = 0;
+    unsigned long long val = strtoull(s, &endptr, 0);
+    if ((*s == '\0') || (*endptr != '\0') || (strchr(s, '-') != NULL) ||
+        (errno != 0) || (val > UINT_MAX)) {
         PLUGIN_ERROR("Failed to parse '%s' into unsigned number", s);
         return -EINVAL;
     }
 
+    *n = (unsigned)val;
     return 0;
 }
 
@@ -93,15 +96,22 @@ static size_t str_list_to_nums(char *s, unsigned *nums, size_t nums_len)
             end = swap;
         }
 
-        for (unsigned i = start; i <= end; i++) {
-            if (is_in_list(i, nums, idx))
+        if ((size_t)(end - start) >= nums_len) {
+            PLUGIN_ERROR("Range %u-%u exceeds the cores number limit: %" PRIsz,
+                         start, end, nums_len);
+            return 0;
+        }
+
+        for (unsigned k = 0; k <= end - start; k++) {
+            unsigned core = start + k;
+            if (is_in_list(core, nums, idx))
                 continue;
             if (idx >= nums_len) {
                 PLUGIN_WARNING("exceeded the cores number limit: %" PRIsz,
                                 nums_len);
                 return idx;
             }
-            nums[idx] = i;
+            nums[idx] = core;
             idx++;
         }
     }
@@ -179,7 +189,6 @@ int config_cores_parse(const config_item_t *ci, core_groups_list_t *cgl)
     for (int i = 0; i < ci->values_num; i++) {
         size_t n;
         bool grouped = 1;
-        char str[DATA_MAX_NAME_LEN];
         unsigned cores[MAX_CORES] = {0};
 
         if (cg_idx >= STATIC_ARRAY_SIZE(cgroups)) {
@@ -194,12 +203,22 @@ int config_cores_parse(const config_item_t *ci, core_groups_list_t *cgl)
             goto parse_error;
         }
 
-        ret = check_core_grouping(str, ci->values[i].value.string, sizeof(str), &grouped);
+        size_t str_size = strlen(ci->values[i].value.string) + 1;
+        char *str = malloc(str_size);
+        if (str == NULL) {
+            PLUGIN_ERROR("Failed to allocate core group string.");
+            ret = -ENOMEM;
+            goto parse_error;
+        }
+
+        ret = check_core_grouping(str, ci->values[i].value.string, str_size, &grouped);
         if (ret != 0) {
+            free(str);
             PLUGIN_ERROR("Failed to parse config option [%d] %s.", i, ci->values[i].value.string);
             goto parse_error;
         }
         n = str_list_to_nums(str, cores, STATIC_ARRAY_SIZE(cores));
+        free(str);
         if (n == 0) {
             PLUGIN_ERROR("Failed to parse config option [%d] %s.", i, ci->values[i].value.string);
             ret = -EINVAL;
@@ -288,41 +307,6 @@ void config_cores_cleanup(core_groups_list_t *cgl)
     free(cgl->cgroups);
     cgl->cgroups = NULL;
     cgl->num_cgroups = 0;
-}
-
-int config_cores_default(int num_cores, core_groups_list_t *cgl)
-{
-    if ((cgl == NULL) || (num_cores < 0) || (num_cores > MAX_CORES))
-        return -EINVAL;
-
-    cgl->cgroups = calloc(num_cores, sizeof(*(cgl->cgroups)));
-    if (cgl->cgroups == NULL) {
-        PLUGIN_ERROR("Failed to allocate memory for core groups.");
-        return -ENOMEM;
-    }
-    cgl->num_cgroups = num_cores;
-
-    for (int i = 0; i < num_cores; i++) {
-        char desc[DATA_MAX_NAME_LEN];
-        ssnprintf(desc, sizeof(desc), "%d", i);
-
-        cgl->cgroups[i].cores = calloc(1, sizeof(*(cgl->cgroups[i].cores)));
-        if (cgl->cgroups[i].cores == NULL) {
-            PLUGIN_ERROR("Failed to allocate default cores for cgroup %d.", i);
-            config_cores_cleanup(cgl);
-            return -ENOMEM;
-        }
-        cgl->cgroups[i].num_cores = 1;
-        cgl->cgroups[i].cores[0] = i;
-
-        cgl->cgroups[i].desc = strdup(desc);
-        if (cgl->cgroups[i].desc == NULL) {
-            PLUGIN_ERROR("Failed to allocate description for cgroup %d.", i);
-            config_cores_cleanup(cgl);
-            return -ENOMEM;
-        }
-    }
-    return 0;
 }
 
 int config_cores_cmp_cgroups(const core_group_t *cg_a, const core_group_t *cg_b)

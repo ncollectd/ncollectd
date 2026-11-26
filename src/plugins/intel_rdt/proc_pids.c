@@ -23,8 +23,8 @@ int proc_pids_is_name_valid(const char *name)
         if (len > 0 && len <= MAX_PROC_NAME_LEN) {
             return 1;
         } else {
-            PLUGIN_DEBUG("Process name \'%s\' is too long. Max supported len is %d chars.",
-                          name, MAX_PROC_NAME_LEN);
+            PLUGIN_ERROR("Process name \'%s\' is too long. Max supported len is %d chars, "
+                         "longer names are truncated by the kernel.", name, MAX_PROC_NAME_LEN);
         }
     }
 
@@ -82,6 +82,7 @@ int pids_list_clear(pids_list_t *list)
     if (list->pids != NULL)
         free(list->pids);
 
+    list->pids = NULL;
     list->size = 0;
     list->allocated = 0;
 
@@ -133,7 +134,9 @@ static int read_proc_name(const char *procfs_path, const struct dirent *pid_entr
         return -1;
     FILE *f = fopen(path, "r");
     if (f == NULL) {
-        PLUGIN_ERROR("Failed to open comm file, error: %d\n", errno);
+        /* the process may have exited after the directory was read */
+        if ((errno != ENOENT) && (errno != ESRCH))
+            PLUGIN_ERROR("Failed to open '%s': %s", path, STRERRNO);
         free(path);
         return -1;
     }
@@ -290,9 +293,6 @@ int pids_list_diff(proc_pids_t *proc, pids_list_t *added, pids_list_t *removed)
     assert(proc);
     assert(added);
     assert(removed);
-
-    added->size = 0;
-    removed->size = 0;
 
     if ((proc->prev == NULL) || (proc->prev->size == 0)) {
         /* append all PIDs from curr to added*/

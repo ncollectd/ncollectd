@@ -9,10 +9,11 @@
 #include <sys/types.h>
 
 /*
- * Process name inside comm file is limited to 16 chars.
+ * Process name inside comm file is limited to 15 chars (TASK_COMM_LEN - 1),
+ * longer names are truncated by the kernel.
  * More info here: http://man7.org/linux/man-pages/man5/proc.5.html
  */
-#define MAX_PROC_NAME_LEN 16
+#define MAX_PROC_NAME_LEN 15
 
 /* Helper typedef for process name array
  * Extra 1 char is added for string null termination.
@@ -119,6 +120,7 @@ int pids_list_contains_pid(pids_list_t *list, const pid_t pid);
  *
  * DESCRIPTION
  *   Searches for differences in two given lists
+ *   The differences are appended to the `added' and `removed' lists.
  *
  * PARAMETERS
  *   `proc'            List of pids
