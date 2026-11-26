@@ -49,29 +49,14 @@ static metric_family_t fams[FAM_IPTABLES_MAX] = {
     },
 };
 
-/*
- * iptc_handle_t was available before libiptc was officially available as a
- * shared library. Note, that when the shared lib was introduced, the API and
- * ABI have changed slightly:
- * 'iptc_handle_t' used to be 'struct iptc_handle *' and most functions used
- * 'iptc_handle_t *' as an argument. Now, most functions use 'struct
- * iptc_handle *' (thus removing one level of pointer indirection).
- *
- * HAVE_IPTC_HANDLE_T is used to determine which API ought to be used. While
- * this is somewhat hacky, I didn't find better way to solve that :-/
- * -tokkee
- */
-#ifndef HAVE_IPTC_HANDLE_T
-typedef struct iptc_handle iptc_handle_t;
-#endif
-#ifndef HAVE_IP6TC_HANDLE_T
-typedef struct ip6tc_handle ip6tc_handle_t;
-#endif
-
 typedef enum {
     IPV4,
     IPV6
 } protocol_version_t;
+
+#ifndef XT_MAX_COMMENT_LEN
+#define XT_MAX_COMMENT_LEN 256
+#endif
 
 /*
  * Each table/chain combo that will be queried goes into this list
@@ -107,9 +92,12 @@ static int submit6_match(const struct ip6t_entry_match *match,
     } else {
         if (strcmp(match->u.user.name, "comment") != 0)
             return 0;
-        if ((chain->rule_type == RTYPE_COMMENT) &&
-            (strcmp(chain->rule.comment, (const char *)match->data) != 0))
-            return 0;
+        if (chain->rule_type == RTYPE_COMMENT) {
+            char comment[XT_MAX_COMMENT_LEN];
+            sstrncpy(comment, (const char *)match->data, XT_MAX_COMMENT_LEN);
+            if (strcmp(chain->rule.comment, comment) != 0)
+                return 0;
+        }
     }
 
     char brule[21];
@@ -182,7 +170,7 @@ static int submit_match(const struct ipt_entry_match *match,
 }
 
 /* ipv6 submit_chain */
-static void submit6_chain(ip6tc_handle_t *handle, ip_chain_t *chain,
+static void submit6_chain(struct ip6tc_handle *handle, ip_chain_t *chain,
                           metric_family_t *fam_ip6t_bytes,
                           metric_family_t *fam_ip6t_packets)
 {
@@ -209,7 +197,7 @@ static void submit6_chain(ip6tc_handle_t *handle, ip_chain_t *chain,
 }
 
 /* ipv4 submit_chain */
-static void submit_chain(iptc_handle_t *handle, ip_chain_t *chain,
+static void submit_chain(struct iptc_handle *handle, ip_chain_t *chain,
                          metric_family_t *fam_ipt_bytes,
                          metric_family_t *fam_ipt_packets)
 {
@@ -239,6 +227,9 @@ static void submit_chain(iptc_handle_t *handle, ip_chain_t *chain,
 
 static int iptables_read(void)
 {
+    if (chain_num == 0)
+        return 0;
+
     int num_failures = 0;
 
     /* Init the iptc handle structure and query the correct table */
@@ -251,48 +242,29 @@ static int iptables_read(void)
         }
 
         if (chain->ip_version == IPV4) {
-#ifdef HAVE_IPTC_HANDLE_T
-            iptc_handle_t _handle;
-            iptc_handle_t *handle = &_handle;
-
-            *handle = iptc_init(chain->table);
-#else
-            iptc_handle_t *handle;
-            handle = iptc_init(chain->table);
-#endif
-
+            struct iptc_handle *handle = iptc_init(chain->table);
             if (!handle) {
                 PLUGIN_ERROR("iptc_init (%s) failed: %s", chain->table, iptc_strerror(errno));
                 num_failures++;
                 continue;
             }
 
-            submit_chain(handle, chain,
-                         &fams[FAM_IPTABLES_BYTES], &fams[FAM_IPTABLES_PACKETS]);
-
+            submit_chain(handle, chain, &fams[FAM_IPTABLES_BYTES], &fams[FAM_IPTABLES_PACKETS]);
 
             iptc_free(handle);
         } else if (chain->ip_version == IPV6) {
-#ifdef HAVE_IP6TC_HANDLE_T
-            ip6tc_handle_t _handle;
-            ip6tc_handle_t *handle = &_handle;
-
-            *handle = ip6tc_init(chain->table);
-#else
-            ip6tc_handle_t *handle;
-            handle = ip6tc_init(chain->table);
-#endif
+            struct ip6tc_handle *handle = ip6tc_init(chain->table);
             if (!handle) {
                 PLUGIN_ERROR("ip6tc_init (%s) failed: %s", chain->table, ip6tc_strerror(errno));
                 num_failures++;
                 continue;
             }
 
-            submit6_chain(handle, chain,
-                          &fams[FAM_IP6TABLES_BYTES], &fams[FAM_IP6TABLES_PACKETS]);
+            submit6_chain(handle, chain, &fams[FAM_IP6TABLES_BYTES], &fams[FAM_IP6TABLES_PACKETS]);
             ip6tc_free(handle);
-        } else
+        } else {
             num_failures++;
+        }
     }
 
     plugin_dispatch_metric_family_array(fams, FAM_IPTABLES_MAX, 0);
@@ -329,24 +301,18 @@ static int iptables_config_rule(const config_item_t *ci, protocol_version_t ip_v
         int rule = 0;
         if (ci->values[2].type == CONFIG_TYPE_STRING) {
             comment = ci->values[2].value.string;
+            temp.rule.comment = strdup(comment);
+            if (temp.rule.comment == NULL)
+                return -1;
+            temp.rule_type = RTYPE_COMMENT;
         } else if (ci->values[2].type == CONFIG_TYPE_NUMBER) {
             rule = (int)ci->values[2].value.number;
-        } else {
-            return -1;
-        }
-
-        if (comment != NULL)
-            rule = atoi(comment);
-
-        if (rule) {
+            if (rule < 0)
+                return -1;
             temp.rule.num = rule;
             temp.rule_type = RTYPE_NUM;
-        } else if (comment != NULL){
-            temp.rule.comment = strdup(comment);
-            if (temp.rule.comment == NULL) {
-                return -1;
-            }
-            temp.rule_type = RTYPE_COMMENT;
+        } else {
+            return -1;
         }
     } else {
         temp.rule_type = RTYPE_COMMENT_ALL;
@@ -357,7 +323,8 @@ static int iptables_config_rule(const config_item_t *ci, protocol_version_t ip_v
             PLUGIN_ERROR("The '%s' option in %s:%d requires that the "
                          "fourth argument to be a string.",
                          ci->key, cf_get_file(ci), cf_get_lineno(ci));
-            free(temp.rule.comment);
+            if (temp.rule_type == RTYPE_COMMENT)
+                free(temp.rule.comment);
             return -1;
         }
         sstrncpy(temp.name, ci->values[3].value.string, sizeof(temp.name));
@@ -366,7 +333,8 @@ static int iptables_config_rule(const config_item_t *ci, protocol_version_t ip_v
     ip_chain_t **list = realloc(chain_list, (chain_num + 1) * sizeof(ip_chain_t *));
     if (list == NULL) {
         PLUGIN_ERROR("realloc failed: %s", STRERRNO);
-        free(temp.rule.comment);
+        if (temp.rule_type == RTYPE_COMMENT)
+            free(temp.rule.comment);
         return 1;
     }
 
@@ -374,7 +342,8 @@ static int iptables_config_rule(const config_item_t *ci, protocol_version_t ip_v
     ip_chain_t *final = malloc(sizeof(*final));
     if (final == NULL) {
         PLUGIN_ERROR("malloc failed: %s", STRERRNO);
-        free(temp.rule.comment);
+        if (temp.rule_type == RTYPE_COMMENT)
+            free(temp.rule.comment);
         return 1;
     }
     memcpy(final, &temp, sizeof(temp));
