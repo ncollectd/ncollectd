@@ -99,7 +99,8 @@ static int kafka_handle(kafka_topic_context_t *ctx)
         }
 
         if ((ctx->kafka = rd_kafka_new(RD_KAFKA_PRODUCER, conf, errbuf, sizeof(errbuf))) == NULL) {
-            PLUGIN_ERROR("cannot create kafka handle.");
+            PLUGIN_ERROR("cannot create kafka handle: %s", errbuf);
+            rd_kafka_conf_destroy(conf);
             return 1;
         }
 
@@ -134,6 +135,48 @@ static int kafka_handle(kafka_topic_context_t *ctx)
 
 }
 
+#define KAFKA_PRODUCE_RETRIES 3
+
+static int kafka_produce(kafka_topic_context_t *ctx, void *key, size_t keylen)
+{
+    size_t size = strbuf_len(&ctx->buf);
+
+    for (int i = 0; ; i++) {
+        int status = rd_kafka_produce(ctx->topic, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
+                                      ctx->buf.ptr, size, key, keylen, NULL);
+        if (status == 0)
+            break;
+
+        rd_kafka_resp_err_t err = kafka_error();
+        if ((err == RD_KAFKA_RESP_ERR__QUEUE_FULL) && (i < KAFKA_PRODUCE_RETRIES)) {
+            /* Wait for some messages to be delivered and retry. */
+            rd_kafka_poll(ctx->kafka, 100);
+            continue;
+        }
+
+        PLUGIN_ERROR("cannot produce message to topic '%s': %s",
+                     ctx->topic_name, rd_kafka_err2str(err));
+        return -1;
+    }
+
+    /* Serve delivery reports and other callbacks. */
+    rd_kafka_poll(ctx->kafka, 0);
+
+    return 0;
+}
+
+static int kafka_flush(__attribute__((unused)) cdtime_t timeout, user_data_t *user_data)
+{
+    if (user_data == NULL)
+        return EINVAL;
+
+    kafka_topic_context_t *ctx = user_data->data;
+    if (ctx->kafka != NULL)
+        rd_kafka_poll(ctx->kafka, 0);
+
+    return 0;
+}
+
 static int kafka_notif(notification_t const *n, user_data_t *user_data)
 {
     if ((n == NULL) || (user_data == NULL))
@@ -155,11 +198,7 @@ static int kafka_notif(notification_t const *n, user_data_t *user_data)
         return status;
     }
 
-    size_t size = strbuf_len(&ctx->buf);
-    rd_kafka_produce(ctx->topic, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
-                                 ctx->buf.ptr, size, key, keylen, NULL);
-
-    return 0;
+    return kafka_produce(ctx, key, keylen);
 }
 
 static int kafka_write(metric_family_t const *fam, user_data_t *user_data)
@@ -186,11 +225,7 @@ static int kafka_write(metric_family_t const *fam, user_data_t *user_data)
         return status;
     }
 
-    size_t size = strbuf_len(&ctx->buf);
-    rd_kafka_produce(ctx->topic, RD_KAFKA_PARTITION_UA, RD_KAFKA_MSG_F_COPY,
-                                 ctx->buf.ptr, size, key, keylen, NULL);
-
-    return 0;
+    return kafka_produce(ctx, key, keylen);
 }
 
 static void kafka_topic_context_free(void *p)
@@ -205,6 +240,13 @@ static void kafka_topic_context_free(void *p)
     free(ctx->key);
 
     strbuf_destroy(&ctx->buf);
+
+    /* Wait for outstanding messages to be delivered before destroying. */
+    if (ctx->kafka != NULL) {
+        rd_kafka_resp_err_t err = rd_kafka_flush(ctx->kafka, 10 * 1000);
+        if (err != RD_KAFKA_RESP_ERR_NO_ERROR)
+            PLUGIN_WARNING("cannot flush kafka messages: %s", rd_kafka_err2str(err));
+    }
 
     if (ctx->topic != NULL)
         rd_kafka_topic_destroy(ctx->topic);
@@ -261,7 +303,7 @@ static int kafka_config_instance(config_item_t *ci)
     rd_kafka_conf_t *conf;
     if ((conf = rd_kafka_conf_new()) == NULL) {
         kafka_topic_context_free(tctx);
-        WARNING("cannot allocate kafka configuration.");
+        PLUGIN_ERROR("cannot allocate kafka configuration.");
         return -1;
     }
 
@@ -269,12 +311,7 @@ static int kafka_config_instance(config_item_t *ci)
     tctx->format_notification = FORMAT_NOTIFICATION_JSON;
     tctx->key = NULL;
 
-    tctx->kafka_conf = rd_kafka_conf_dup(conf);
-    if (tctx->kafka_conf == NULL) {
-        kafka_topic_context_free(tctx);
-        PLUGIN_ERROR("cannot allocate memory for kafka config");
-        return -1;
-    }
+    tctx->kafka_conf = conf;
 
 #ifdef HAVE_LIBRDKAFKA_LOG_CB
     rd_kafka_conf_set_log_cb(tctx->kafka_conf, kafka_log);
@@ -298,9 +335,8 @@ static int kafka_config_instance(config_item_t *ci)
         } else if (strcasecmp("property", child->key) == 0) {
             status = kafka_config_property(child, tctx->kafka_conf);
         } else if (strcasecmp("key", child->key) == 0) {
-            if (cf_util_get_string(child, &tctx->key) != 0)
-                continue;
-            if (strcasecmp("random", tctx->key) == 0) {
+            status = cf_util_get_string(child, &tctx->key);
+            if ((status == 0) && (strcasecmp("random", tctx->key) == 0)) {
                 free(tctx->key);
                 tctx->key = strdup(kafka_random_key(KAFKA_RANDOM_KEY_BUFFER));
             }
@@ -311,11 +347,18 @@ static int kafka_config_instance(config_item_t *ci)
         } else if (strcasecmp("format-notification", child->key) == 0) {
             status = config_format_notification(child, &tctx->format_notification);
         } else {
-            PLUGIN_WARNING("Invalid directive: %s.", child->key);
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
         }
 
         if (status != 0)
             break;
+    }
+
+    if ((status == 0) && (tctx->topic_name == NULL)) {
+        PLUGIN_ERROR("Missing 'topic' option in instance '%s'.", tctx->name);
+        status = -1;
     }
 
     if (status != 0) {
@@ -329,10 +372,10 @@ static int kafka_config_instance(config_item_t *ci)
     user_data_t user_data = (user_data_t){.data = tctx, .free_func = kafka_topic_context_free};
 
     if (send == SEND_NOTIFICATIONS)
-        return plugin_register_notification("write_kafka", tctx->topic_name, kafka_notif,
+        return plugin_register_notification("write_kafka", tctx->name, kafka_notif,
                                                            &user_data);
 
-    return plugin_register_write("write_kafka", tctx->topic_name, kafka_write, NULL, 0, 0,
+    return plugin_register_write("write_kafka", tctx->name, kafka_write, kafka_flush, 0, 0,
                                                 &user_data);
 }
 
