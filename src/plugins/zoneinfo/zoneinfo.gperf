@@ -53,7 +53,7 @@ nr_throttled_written,              -1
 nr_kernel_misc_reclaimable,        -1
 nr_foll_pin_acquired,              -1
 nr_foll_pin_released,              -1
-nr_kernel_stack,                   FAM_ZONEINFO_KERNEL_STACKS
+nr_kernel_stack,                   FAM_ZONEINFO_KERNEL_STACK_BYTES
 nr_page_table_pages,               -1
 nr_swapcached,                     -1
 pgpromote_success,                 -1
@@ -74,7 +74,7 @@ nr_zone_inactive_file,             -1
 nr_zone_active_file,               -1
 nr_zone_unevictable,               -1
 nr_zone_write_pending,             -1
-nr_mlock,                          -1
+nr_mlock,                          FAM_ZONEINFO_MLOCK_PAGES
 nr_bounce,                         -1
 nr_zspages,                        -1
 nr_free_cma,                       -1

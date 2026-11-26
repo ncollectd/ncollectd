@@ -13,11 +13,19 @@ DEF_TEST(test01)
     return 0;
 }
 
+DEF_TEST(test02)
+{
+    EXPECT_EQ_INT(0, plugin_test_do_read("src/plugins/zoneinfo/test02/proc", NULL, NULL,
+                                         "src/plugins/zoneinfo/test02/expect.txt"));
+    return 0;
+}
+
 int main(void)
 {
     module_register();
 
     RUN_TEST(test01);
+    RUN_TEST(test02);
 
     END_TEST;
 }

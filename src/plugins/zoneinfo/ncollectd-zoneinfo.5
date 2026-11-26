@@ -13,6 +13,11 @@
 .Sh DESCRIPTION
 The \fBzoneinfo\fP plugin collectd information about memory zones reading
 the file \fI/proc/zoneinfo\fP.
+.Pp
+The metrics have the \fInode\fP and \fIzone\fP labels.
+Since Linux 4.8 some statistics are kept per NUMA node and are shown in the
+\fIper-node stats\fP section of the first populated zone of each node.
+These metrics only have the \fInode\fP label.
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

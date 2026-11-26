@@ -25,8 +25,9 @@ enum {
     FAM_ZONEINFO_FILE_PAGES,
     FAM_ZONEINFO_SLAB_RECLAIMABLE_PAGES,
     FAM_ZONEINFO_SLAB_UNRECLAIMABLE_PAGES,
-    FAM_ZONEINFO_MLOCK_STACK_PAGES,
+    FAM_ZONEINFO_MLOCK_PAGES,
     FAM_ZONEINFO_KERNEL_STACKS,
+    FAM_ZONEINFO_KERNEL_STACK_BYTES,
     FAM_ZONEINFO_MAPPED_PAGES,
     FAM_ZONEINFO_DIRTY_PAGES,
     FAM_ZONEINFO_WRITEBACK_PAGES,
@@ -141,15 +142,20 @@ static metric_family_t zoneinfo_fams[FAM_ZONEINFO_MAX] = {
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of unreclaimable slab pages.",
     },
-    [FAM_ZONEINFO_MLOCK_STACK_PAGES] = {
-        .name = "system_zoneinfo_mlock_stack_pages",
+    [FAM_ZONEINFO_MLOCK_PAGES] = {
+        .name = "system_zoneinfo_mlock_pages",
         .type = METRIC_TYPE_GAUGE,
-        .help = "mlock()ed pages found and moved off LRU.",
+        .help = "Number of mlock()ed pages found and moved off LRU.",
     },
     [FAM_ZONEINFO_KERNEL_STACKS] = {
         .name = "system_zoneinfo_kernel_stacks",
         .type = METRIC_TYPE_GAUGE,
         .help = "Number of kernel stacks.",
+    },
+    [FAM_ZONEINFO_KERNEL_STACK_BYTES] = {
+        .name = "system_zoneinfo_kernel_stack_bytes",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "Memory consumed by the kernel stacks in bytes.",
     },
     [FAM_ZONEINFO_MAPPED_PAGES] = {
         .name = "system_zoneinfo_mapped_pages",
@@ -231,9 +237,12 @@ static int zoneinfo_read(void)
     char buffer[256];
     char node[32] = {'\0'};
     char zone[64] = {'\0'};
+    bool per_node = false;
+    bool has_node_stats = false;
     char *fields[6];
     while(fgets(buffer, sizeof(buffer), fh) != NULL) {
         if (strncmp(buffer, "Node ", strlen("Node ")) == 0) {
+            per_node = false;
             int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
             if (fields_num != 4)
                 continue;
@@ -250,6 +259,22 @@ static int zoneinfo_read(void)
         }
 
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
+
+        /* Since Linux 4.8 the node statistics are printed between "per-node stats"
+         * and "pages free" in the first populated zone of each node. */
+        if ((fields_num == 2) && (strcmp(fields[0], "per-node") == 0) &&
+            (strcmp(fields[1], "stats") == 0)) {
+            per_node = true;
+            has_node_stats = true;
+            continue;
+        }
+
+        if ((fields_num == 3) && (strcmp(fields[0], "pages") == 0) &&
+            (strcmp(fields[1], "free") == 0)) {
+            per_node = false;
+            continue;
+        }
+
         if (fields_num != 2)
             continue;
 
@@ -259,17 +284,28 @@ static int zoneinfo_read(void)
         if (zoneinfo->fam < 0)
             continue;
 
-        if (zoneinfo_fams[zoneinfo->fam].type == METRIC_TYPE_COUNTER) {
-            uint64_t value = (uint64_t)strtoull(fields[1], NULL, 10);
-            metric_family_append(&zoneinfo_fams[zoneinfo->fam], VALUE_COUNTER(value), NULL,
+        int fam = zoneinfo->fam;
+        /* Before Linux 4.8 (the release that added the "per-node stats" section)
+         * nr_kernel_stack was the number of kernel stacks instead of KiB. */
+        if ((fam == FAM_ZONEINFO_KERNEL_STACK_BYTES) && !has_node_stats)
+            fam = FAM_ZONEINFO_KERNEL_STACKS;
+
+        const char *zone_label = per_node ? NULL : zone;
+
+        uint64_t value = 0;
+        if (strtouint(fields[1], &value) != 0)
+            continue;
+
+        if (zoneinfo_fams[fam].type == METRIC_TYPE_COUNTER) {
+            metric_family_append(&zoneinfo_fams[fam], VALUE_COUNTER(value), NULL,
                                 &LABEL_PAIR_CONST("node", node),
-                                &LABEL_PAIR_CONST("zone", zone), NULL);
-        } else if (zoneinfo_fams[zoneinfo->fam].type == METRIC_TYPE_GAUGE) {
-            double value = 0.0;
-            strtodouble(fields[1], &value);
-            metric_family_append(&zoneinfo_fams[zoneinfo->fam], VALUE_GAUGE(value), NULL,
+                                &LABEL_PAIR_CONST("zone", zone_label), NULL);
+        } else if (zoneinfo_fams[fam].type == METRIC_TYPE_GAUGE) {
+            if (fam == FAM_ZONEINFO_KERNEL_STACK_BYTES)
+                value *= 1024;
+            metric_family_append(&zoneinfo_fams[fam], VALUE_GAUGE(value), NULL,
                                 &LABEL_PAIR_CONST("node", node),
-                                &LABEL_PAIR_CONST("zone", zone), NULL);
+                                &LABEL_PAIR_CONST("zone", zone_label), NULL);
         }
 
     }
