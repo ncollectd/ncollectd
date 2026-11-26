@@ -52,6 +52,10 @@ static int zfs_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "collect") == 0) {
             status = cf_util_get_flags(child, zfs_flags_list, zfs_flags_list_size, &zfs_flags);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
+                          child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
         }
 
         if (status != 0)

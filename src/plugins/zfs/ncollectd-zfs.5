@@ -8,13 +8,52 @@
 .Sh SYNOPSIS
 .Bd -literal -compact
 \fBload-plugin\fP zfs
-\fBplugin\fP zfs
+\fBplugin\fP zfs {
+    \fBcollect\fP \fIflags\fP
+}
 .Ed
 .Sh DESCRIPTION
 The \fBzfs\fP plugin collects information about the Adaptive Replacement
 Cache (ARC) of the Zeta File-System (ZFS).
 It reports information such as the cache size, the various hits and misses
 and the transferred data.
+.Bl -tag -width Ds
+.It \fBcollect\fP \fIflags\fP
+Select which statistics to collect.
+A flag can be negated with a leading \fB!\fP, \fBall\fP selects all the flags.
+.Bl -tag -width Ds
+.It \fBabdstats\fP
+ABD (ARC buffer data) statistics.
+.It \fBarcstats\fP
+ARC statistics. Enabled by default.
+.It \fBdbufstats\fP
+DMU buffer statistics.
+.It \fBdmu_tx\fP
+DMU transaction statistics.
+.It \fBdnodestats\fP
+Dnode statistics.
+.It \fBfm\fP
+Fault management statistics.
+.It \fBqat\fP
+Intel QuickAssist Technology statistics.
+.It \fBvdev_cache_stats\fP
+Vdev cache statistics.
+.It \fBvdev_mirror_stats\fP
+Vdev mirror statistics.
+.It \fBxuio_stats\fP
+XUIO statistics.
+.It \fBzfetchstats\fP
+Prefetch statistics.
+.It \fBzil\fP
+ZFS Intent Log statistics.
+.It \fBstate\fP
+Pool state.
+.It \fBio\fP
+Pool I/O statistics.
+.It \fBobjset\fP
+Dataset statistics.
+.El
+.El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr ncollectd.conf 5

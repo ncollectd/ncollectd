@@ -543,12 +543,12 @@ metric_family_t fams_zfs[FAM_ZFS_MAX] = {
                 "while they had the mfu flag set in ARC.",
     },
     [FAM_ZFS_ARC_L2_BUFC_DATA_ASIZE_BYTES] = {
-        .name = "system_arc_l2_bufc_data_asize_bytes",
+        .name = "system_zfs_arc_l2_bufc_data_asize_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Allocated size in bytes of L2ARC cached buffers data.",
     },
     [FAM_ZFS_ARC_L2_BUFC_METADATA_ASIZE_BYTES] = {
-        .name = "system_arc_l2_bufc_metadata_asize_bytes",
+        .name = "system_zfs_arc_l2_bufc_metadata_asize_bytes",
         .type = METRIC_TYPE_GAUGE,
         .help = "Allocated size in bytes of L2ARC cached buffers metadata.",
     },
@@ -698,30 +698,37 @@ metric_family_t fams_zfs[FAM_ZFS_MAX] = {
     },
     [FAM_ZFS_ARC_L2_REBUILD_CKSUM_LB_ERRORS] = {
         .name = "system_zfs_arc_l2_rebuild_cksum_lb_errors",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of L2ARC log blocks which failed to be restored due to checksum errors.",
     },
     [FAM_ZFS_ARC_L2_REBUILD_LOWMEM] = {
         .name = "system_zfs_arc_l2_rebuild_lowmem",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of times the L2ARC rebuild was aborted due to low system memory.",
     },
     [FAM_ZFS_ARC_L2_REBUILD_SIZE] = {
         .name = "system_zfs_arc_l2_rebuild_size",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Logical size of L2ARC restored data, in bytes.",
     },
     [FAM_ZFS_ARC_L2_REBUILD_ASIZE] = {
         .name = "system_zfs_arc_l2_rebuild_asize",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Aligned size of L2ARC restored data, in bytes.",
     },
     [FAM_ZFS_ARC_L2_REBUILD_BUFS] = {
         .name = "system_zfs_arc_l2_rebuild_bufs",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of L2ARC log entries (buffers) that were successfully restored in ARC.",
     },
     [FAM_ZFS_ARC_L2_REBUILD_BUFS_PRECACHED] = {
         .name = "system_zfs_arc_l2_rebuild_bufs_precached",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of L2ARC log entries (buffers) already cached in ARC. These were not restored again.",
     },
     [FAM_ZFS_ARC_L2_REBUILD_LOG_BLKS] = {
         .name = "system_zfs_arc_l2_rebuild_log_blks",
+        .type = METRIC_TYPE_COUNTER,
         .help = "Number of L2ARC log blocks that were restored successfully. "
                 "Each log block may hold up to L2ARC_LOG_BLK_MAX_ENTRIES buffers.",
     },
@@ -939,13 +946,13 @@ metric_family_t fams_zfs[FAM_ZFS_MAX] = {
     },
     [FAM_ZFS_DBUF_CACHE_LEVEL] = {
         .name = "system_zfs_dbuf_cache_level",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = NULL,
 // The distribution of dbuf levels in the dbuf cache
     },
     [FAM_ZFS_DBUF_CACHE_LEVEL_BYTES] = {
         .name = "system_zfs_dbuf_cache_level_bytes",
-        .type = METRIC_TYPE_COUNTER,
+        .type = METRIC_TYPE_GAUGE,
         .help = NULL,
 // The total size of all dbufs at each level.
     },
@@ -1036,7 +1043,7 @@ metric_family_t fams_zfs[FAM_ZFS_MAX] = {
     },
     [FAM_ZFS_DBUF_METADATA_CACHE_OVERFLOW] = {
         .name = "system_zfs_dbuf_metadata_cache_overflow",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
 
@@ -1482,7 +1489,7 @@ erpt_duplicates;    /* num duplicate erpts */
 // See the documentation for itx_wr_state_t above.
     [FAM_ZFS_ZIL_ITX_INDIRECT_BYTES] = {
         .name = "system_zfs_zil_itx_indirect_bytes",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_ZFS_ZIL_ITX_COPIED_COUNT] = {
@@ -1492,7 +1499,7 @@ erpt_duplicates;    /* num duplicate erpts */
     },
     [FAM_ZFS_ZIL_ITX_COPIED_BYTES] = {
         .name = "system_zfs_zil_itx_copied_bytes",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
     [FAM_ZFS_ZIL_ITX_NEEDCOPY_COUNT] = {
@@ -1502,7 +1509,7 @@ erpt_duplicates;    /* num duplicate erpts */
     },
     [FAM_ZFS_ZIL_ITX_NEEDCOPY_BYTES] = {
         .name = "system_zfs_zil_itx_needcopy_bytes",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
 
@@ -1518,7 +1525,7 @@ erpt_duplicates;    /* num duplicate erpts */
     },
     [FAM_ZFS_ZIL_ITX_METASLAB_NORMAL_BYTES] = {
         .name = "system_zfs_zil_itx_metaslab_normal_bytes",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
 
@@ -1545,7 +1552,7 @@ erpt_duplicates;    /* num duplicate erpts */
     },
     [FAM_ZFS_ZIL_ITX_METASLAB_SLOG_BYTES] = {
         .name = "system_zfs_zil_itx_metaslab_slog_bytes",
-        .type = METRIC_TYPE_GAUGE,
+        .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
 
@@ -1672,6 +1679,36 @@ nread
 nunlinks
 nunlinked
 #endif
+    [FAM_ZFS_ZPOOL_READS] = {
+        .name = "system_zfs_zpool_reads",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of read operations.",
+    },
+    [FAM_ZFS_ZPOOL_WRITES] = {
+        .name = "system_zfs_zpool_writes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of write operations.",
+    },
+    [FAM_ZFS_ZPOOL_READ_BYTES] = {
+        .name = "system_zfs_zpool_read_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of bytes read.",
+    },
+    [FAM_ZFS_ZPOOL_WRITTEN_BYTES] = {
+        .name = "system_zfs_zpool_written_bytes",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Total number of bytes written.",
+    },
+    [FAM_ZFS_ZPOOL_WAIT_TIME_SECONDS] = {
+        .name = "system_zfs_zpool_wait_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Cumulative wait (pre-service) time in seconds.",
+    },
+    [FAM_ZFS_ZPOOL_RUN_TIME_SECONDS] = {
+        .name = "system_zfs_zpool_run_time_seconds",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Cumulative run (service) time in seconds.",
+    },
     [FAM_ZFS_ZPOOL_DATASET_WRITES] = {
         .name = "system_zfs_zpool_dataset_writes",
         .type = METRIC_TYPE_COUNTER,

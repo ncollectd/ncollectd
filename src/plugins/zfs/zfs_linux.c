@@ -251,7 +251,7 @@ static int zfs_read_proc_pool_objset(int dir_fd, const char *pool, const char *f
 
     for (size_t i = 0; metrics[i].name != NULL; i++) {
         if (metrics[i].found) {
-            metric_family_append(&fams_zfs[metrics[i].fam], VALUE_GAUGE(metrics[i].value), NULL,
+            metric_family_append(&fams_zfs[metrics[i].fam], VALUE_COUNTER(metrics[i].value), NULL,
                                  &LABEL_PAIR_CONST("dataset", dataset_name),
                                  &LABEL_PAIR_CONST("pool", pool), NULL);
         }
@@ -264,78 +264,55 @@ static int zfs_read_proc_pool_io(int dir_fd, const char *pool)
 {
     FILE *fh = fopenat(dir_fd, "io", "r");
     if (fh == NULL) {
-        PLUGIN_ERROR("Cannot fopen '%s/io': %s", pool, STRERRNO);
+        PLUGIN_DEBUG("Cannot fopen '%s/io': %s", pool, STRERRNO);
         return -1;
     }
 
+    /* The file has a kstat header line, a line with the field names:
+       nread nwritten reads writes wtime wlentime wupdate rtime rlentime rupdate wcnt rcnt
+       and a line with the values. */
     char buffer[512];
-
     char *fields[16];
+    bool found_header = false;
     while (fgets(buffer, sizeof(buffer), fh) != NULL) {
         int fields_num = strsplit(buffer, fields, STATIC_ARRAY_SIZE(fields));
         if (fields_num != 12)
+            continue;
+
+        if (!found_header) {
+            if (strcmp(fields[0], "nread") == 0)
+                found_header = true;
+            continue;
+        }
+
+        uint64_t values[12] = {0};
+        bool valid = true;
+        for (size_t i = 0; i < 12; i++) {
+            if (parse_uinteger(fields[i], &values[i]) != 0) {
+                valid = false;
+                break;
+            }
+        }
+        if (!valid)
             break;
 
-//nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
-#if 0
+        struct {
+            int fam;
+            value_t value;
+        } metrics[] = {
+            { FAM_ZFS_ZPOOL_READ_BYTES,        VALUE_COUNTER(values[0])                   },
+            { FAM_ZFS_ZPOOL_WRITTEN_BYTES,     VALUE_COUNTER(values[1])                   },
+            { FAM_ZFS_ZPOOL_READS,             VALUE_COUNTER(values[2])                   },
+            { FAM_ZFS_ZPOOL_WRITES,            VALUE_COUNTER(values[3])                   },
+            { FAM_ZFS_ZPOOL_WAIT_TIME_SECONDS, VALUE_COUNTER_FLOAT64((double)values[4] / 1e9) },
+            { FAM_ZFS_ZPOOL_RUN_TIME_SECONDS,  VALUE_COUNTER_FLOAT64((double)values[7] / 1e9) },
+        };
 
-
-              u_longlong_t     nread;      /* number of bytes read */
-              u_longlong_t     nwritten;   /* number of bytes written */
-              uint_t           reads;      /* number of read operations */
-              uint_t           writes;     /* number of write operations */
-           /*
-            * Accumulated time and queue length statistics.
-            *
-            * Time statistics are kept as a running sum of "active" time.
-            * Queue length statistics are kept as a running sum of the
-            * product of queue length and elapsed time at that length --
-            * that is, a Riemann sum for queue length integrated against time.
-            *
-            *               ^
-            *               |                       _________
-            *               8                       | i4    |
-            *               |                       |       |
-            *       Queue   6                       |       |
-            *       Length  |       _________       |       |
-            *               4       | i2    |_______|       |
-            *               |       |       i3              |
-            *               2_______|                       |
-            *               |    i1                         |
-            *               |_______________________________|
-            *               Time->  t1      t2      t3      t4
-            *
-            * At each change of state (entry or exit from the queue),
-            * we add the elapsed time (since the previous state change)
-            * to the active time if the queue length was non-zero during
-            * that interval; and we add the product of the elapsed time
-            * times the queue length to the running length*time sum.
-            *
-            * This method is generalizable to measuring residency
-            * in any defined system: instead of queue lengths, think
-            * of "outstanding RPC calls to server X".
-            *
-            * A large number of I/O subsystems have at least two basic
-            * "lists" of transactions they manage: one for transactions
-            * that have been accepted for processing but for which processing
-            * has yet to begin, and one for transactions which are actively
-            * being processed (but not done). For this reason, two cumulative
-            * time statistics are defined here: pre-service (wait) time,
-            * and service (run) time.
-            *
-            * The units of cumulative busy time are accumulated nanoseconds.
-            * The units of cumulative length*time products are elapsed time
-            * times queue length.
-            */
-              hrtime_t   wtime;            /* cumulative wait (pre-service) time */
-              hrtime_t   wlentime;         /* cumulative wait length*time product*/
-              hrtime_t   wlastupdate;      /* last time wait queue changed */
-              hrtime_t   rtime;            /* cumulative run (service) time */
-              hrtime_t   rlentime;         /* cumulative run length*time product */
-              hrtime_t   rlastupdate;      /* last time run queue changed */
-              uint_t     wcnt;             /* count of elements in wait state */
-              uint_t     rcnt;             /* count of elements in run state */
-#endif
+        for (size_t i = 0; i < STATIC_ARRAY_SIZE(metrics); i++) {
+            metric_family_append(&fams_zfs[metrics[i].fam], metrics[i].value, NULL,
+                                 &LABEL_PAIR_CONST("pool", pool), NULL);
+        }
+        break;
     }
 
     fclose(fh);
@@ -381,10 +358,6 @@ static int zfs_read_proc_file(const char *filename, const char *prefix)
     char path[PATH_MAX];
     ssnprintf(path, sizeof(path), "%s/%s", path_proc_zfs, filename);
 
-    /* coverity[TOCTOU] */
-    if (access(path, R_OK))
-        return 0;
-
     char name[256];
     size_t prefix_len = strlen(prefix);
     if (prefix_len > sizeof(name)-1)
@@ -393,6 +366,11 @@ static int zfs_read_proc_file(const char *filename, const char *prefix)
 
     FILE *fh = fopen(path, "r");
     if (fh == NULL) {
+        /* Some files are not available in all the ZFS versions. */
+        if (errno == ENOENT) {
+            PLUGIN_DEBUG("Cannot fopen '%s': %s", path, STRERRNO);
+            return 0;
+        }
         PLUGIN_ERROR("Cannot fopen '%s': %s", path, STRERRNO);
         return -1;
     }
