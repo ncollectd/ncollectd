@@ -74,7 +74,7 @@ static int xencpu_read(void)
 static void xencpu_close(void)
 {
     if (xc_handle) {
-        xc_interface_close(xc_handle)
+        xc_interface_close(xc_handle);
 #if XENCTRL_HAS_XC_INTERFACE
         xc_handle = NULL;
 #else
