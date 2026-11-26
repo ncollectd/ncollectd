@@ -17,6 +17,8 @@
         \fBdelete-gauges\fP \fItrue|false\fP
         \fBdelete-sets\fP \fItrue|false\fP
         \fBtimer-buckets\fP \fIbucket\fP [[\fIbucket\fP] ...]
+        \fBmax-metrics\fP \fInumber\fP
+        \fBmax-set-size\fP \fInumber\fP
         \fBinterval\fP \fIseconds\fP
         \fBmetric-prefix\fP \fIprefix\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
@@ -32,6 +34,16 @@ protocol and dispatches rates or other aggregates of these numbers periodically.
 .Pp
 The plugin implements the \fIcounter\fP, \fItimer\fP, \fIgauge\fP and \fIset\fP
 statds metrics.
+Timers are reported as cumulative histograms: like counters, they are not
+reset between intervals.
+Values that are not finite numbers, negative counter increments and
+negative timer values are discarded.
+.Pp
+.Pp
+The statsd protocol has no authentication: anyone who can send packets to the
+listening port can create new metrics and use memory of the daemon.
+Restrict the access to the port with a firewall and consider setting the
+\fBmax-metrics\fP and \fBmax-set-size\fP limits.
 .Pp
 The configuration of the \fBstatsd\fP plugin consists of one or more
 \fBinstance\fP blocks.
@@ -52,12 +64,26 @@ Defaults to \f(CW8125\fP.
 .It \fBdelete-sets\fP \fItrue|false\fP
 These options control what happens if metrics are not updated in an interval.
 If set to \fIfalse\fP, the default, metrics are dispatched unchanged, i.e. the
-rate of counters and size of sets will be zero, timers report \f(CWNaN\fP
+rate of counters and timers and the size of sets will be zero
 and gauges are unchanged.
 If set to \fBtrue\fP, the such metrics are not dispatched and removed from
 the internal cache.
 .It \fBtimer-buckets\fP \fIbucket\fP [[\fIbucket\fP] ...]
 Config the buckets for the timer histograms.
+Timer values are received in milliseconds and stored in the histograms
+in seconds, so the bucket boundaries are in seconds.
+Defaults to 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5 and 10.
+.It \fBmax-metrics\fP \fInumber\fP
+Maximum number of metrics (distinct combinations of type, name and tags)
+kept by this instance.
+When the limit is reached, lines for new metrics are dropped and the number
+of dropped lines is logged once per interval.
+Defaults to \f(CW0\fP, no limit.
+.It \fBmax-set-size\fP \fInumber\fP
+Maximum number of distinct values counted in each set during an interval.
+Values exceeding the limit are dropped and their number is logged once per
+interval.
+Defaults to \f(CW0\fP, no limit.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected
 from this instance.

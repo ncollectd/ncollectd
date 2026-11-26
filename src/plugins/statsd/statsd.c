@@ -9,7 +9,9 @@
 #include "libutils/common.h"
 
 #include <netdb.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <stdatomic.h>
 #include <sys/types.h>
 
 /* AIX doesn't have MSG_DONTWAIT */
@@ -40,7 +42,7 @@ typedef struct {
 typedef struct {
     pthread_t network_thread;
     bool network_thread_running;
-    bool network_thread_shutdown;
+    atomic_bool network_thread_shutdown;
 
     c_avl_tree_t *metrics_tree;
     pthread_mutex_t metrics_lock;
@@ -57,15 +59,21 @@ typedef struct {
     double *timer_buckets;
     size_t timer_buckets_num;
 
+    unsigned int max_metrics;
+    unsigned int max_set_size;
+    uint64_t metrics_dropped;
+    uint64_t set_values_dropped;
+
     char *metric_prefix;
     label_set_t labels;
     plugin_filter_t *filter;
 } statsd_instance_t;
 
-/* Must hold metrics_lock when calling this function. */
-static statsd_metric_t *statsd_metric_lookup_unsafe(statsd_instance_t *si,
-                                                    char const *name, char const *tags,
-                                                    statsd_metric_type_t type)
+
+/* Must hold metrics_lock when calling this function.
+ * Returns ENOSPC if the metric does not exist and max-metrics has been reached. */
+static int statsd_metric_lookup_unsafe(statsd_instance_t *si, char const *name, char const *tags,
+                                       statsd_metric_type_t type, statsd_metric_t **ret_metric)
 {
     char key[2048];
 
@@ -83,7 +91,7 @@ static statsd_metric_t *statsd_metric_lookup_unsafe(statsd_instance_t *si,
         key[0] = 's';
         break;
     default:
-        return NULL;
+        return -1;
     }
 
     key[1] = ':';
@@ -91,27 +99,36 @@ static statsd_metric_t *statsd_metric_lookup_unsafe(statsd_instance_t *si,
     if (tags != NULL) {
         size_t len = strlen(key);
         if ((len + strlen(tags)) >= sizeof(key))
-            return NULL;
+            return -1;
         key[len] = ',';
         sstrncpy(&key[len+1], tags, sizeof(key) - len - 1);
     }
 
     statsd_metric_t *metric;
     int status = c_avl_get(si->metrics_tree, key, (void *)&metric);
-    if (status == 0)
-        return metric;
+    if (status == 0) {
+        *ret_metric = metric;
+        return 0;
+    }
+
+    if (si->max_metrics > 0) {
+        if ((unsigned int)c_avl_size(si->metrics_tree) >= si->max_metrics) {
+            si->metrics_dropped++;
+            return ENOSPC;
+        }
+    }
 
     char *key_copy = strdup(key);
     if (key_copy == NULL) {
         PLUGIN_ERROR("strdup failed.");
-        return NULL;
+        return -1;
     }
 
     metric = calloc(1, sizeof(*metric));
     if (metric == NULL) {
         PLUGIN_ERROR("calloc failed.");
         free(key_copy);
-        return NULL;
+        return -1;
     }
 
     metric->type = type;
@@ -123,10 +140,11 @@ static statsd_metric_t *statsd_metric_lookup_unsafe(statsd_instance_t *si,
         PLUGIN_ERROR("c_avl_insert failed.");
         free(key_copy);
         free(metric);
-        return NULL;
+        return -1;
     }
 
-    return metric;
+    *ret_metric = metric;
+    return 0;
 }
 
 static int statsd_metric_set(statsd_instance_t *si, char const *name, char const *tags,
@@ -134,10 +152,11 @@ static int statsd_metric_set(statsd_instance_t *si, char const *name, char const
 {
     pthread_mutex_lock(&si->metrics_lock);
 
-    statsd_metric_t *metric = statsd_metric_lookup_unsafe(si, name, tags, type);
-    if (metric == NULL) {
+    statsd_metric_t *metric = NULL;
+    int status = statsd_metric_lookup_unsafe(si, name, tags, type, &metric);
+    if (status != 0) {
         pthread_mutex_unlock(&si->metrics_lock);
-        return -1;
+        return (status == ENOSPC) ? 0 : -1;
     }
 
     metric->value = value;
@@ -152,13 +171,20 @@ static int statsd_metric_add(statsd_instance_t *si, char const *name, char const
 {
     pthread_mutex_lock(&si->metrics_lock);
 
-    statsd_metric_t *metric = statsd_metric_lookup_unsafe(si, name, tags, type);
-    if (metric == NULL) {
+    statsd_metric_t *metric = NULL;
+    int status = statsd_metric_lookup_unsafe(si, name, tags, type, &metric);
+    if (status != 0) {
+        pthread_mutex_unlock(&si->metrics_lock);
+        return (status == ENOSPC) ? 0 : -1;
+    }
+
+    double value = metric->value + delta;
+    if (!isfinite(value)) {
         pthread_mutex_unlock(&si->metrics_lock);
         return -1;
     }
 
-    metric->value += delta;
+    metric->value = value;
     metric->updates_num++;
 
     pthread_mutex_unlock(&si->metrics_lock);
@@ -203,29 +229,20 @@ static int statsd_parse_value(char const *str, double *ret_value)
 }
 
 static int statsd_handle_counter(statsd_instance_t *si, char const *name, char const *tags,
-                                                        char const *value_str, char const *extra)
+                                                        char const *value_str, double scale)
 {
-    if ((extra != NULL) && (extra[0] != '@'))
-        return -1;
-
-    double scale = 1.0;
-    if (extra != NULL) {
-        int status = statsd_parse_value(extra + 1, &scale);
-        if (status != 0)
-            return status;
-
-        if (!isfinite(scale) || (scale <= 0.0) || (scale > 1.0))
-            return -1;
-    }
-
     double value = 1.0;
     int status = statsd_parse_value(value_str, &value);
     if (status != 0)
         return status;
 
+    double delta = value / scale;
+    if (!isfinite(delta) || (delta < 0.0))
+        return -1;
+
     /* Changes to the counter are added to (statsd_metric_t*)->value. ->counter is
      * only updated in statsd_metric_submit_unsafe(). */
-    return statsd_metric_add(si, name, tags, value / scale, STATSD_COUNTER);
+    return statsd_metric_add(si, name, tags, delta, STATSD_COUNTER);
 }
 
 static int statsd_handle_gauge(statsd_instance_t *si, char const *name, char const *tags,
@@ -236,6 +253,9 @@ static int statsd_handle_gauge(statsd_instance_t *si, char const *name, char con
     if (status != 0)
         return status;
 
+    if (!isfinite(value))
+        return -1;
+
     if ((value_str[0] == '+') || (value_str[0] == '-'))
         return statsd_metric_add(si, name, tags, value, STATSD_GAUGE);
     else
@@ -243,34 +263,24 @@ static int statsd_handle_gauge(statsd_instance_t *si, char const *name, char con
 }
 
 static int statsd_handle_timer(statsd_instance_t *si, char const *name, char const *tags,
-                                                      char const *value_str, char const *extra)
+                                                      char const *value_str, double scale)
 {
-    if ((extra != NULL) && (extra[0] != '@'))
-        return -1;
-
-    double scale = 1.0;
-    if (extra != NULL) {
-        int status = statsd_parse_value(extra + 1, &scale);
-        if (status != 0)
-            return status;
-
-        if (!isfinite(scale) || (scale <= 0.0) || (scale > 1.0))
-            return -1;
-    }
-
     double value_ms = 0.0;
     int status = statsd_parse_value(value_str, &value_ms);
     if (status != 0)
         return status;
 
-    cdtime_t value = MS_TO_CDTIME_T(value_ms / scale);
+    double value = (value_ms / scale) / 1000.0;
+    if (!isfinite(value) || (value < 0.0))
+        return -1;
 
     pthread_mutex_lock(&si->metrics_lock);
 
-    statsd_metric_t *metric = statsd_metric_lookup_unsafe(si, name, tags, STATSD_TIMER);
-    if (metric == NULL) {
+    statsd_metric_t *metric = NULL;
+    status = statsd_metric_lookup_unsafe(si, name, tags, STATSD_TIMER, &metric);
+    if (status != 0) {
         pthread_mutex_unlock(&si->metrics_lock);
-        return -1;
+        return (status == ENOSPC) ? 0 : -1;
     }
 
     if (metric->histogram == NULL) {
@@ -298,10 +308,11 @@ static int statsd_handle_set(statsd_instance_t *si, char const *name, char const
 {
     pthread_mutex_lock(&si->metrics_lock);
 
-    statsd_metric_t *metric = statsd_metric_lookup_unsafe(si, name, tags, STATSD_SET);
-    if (metric == NULL) {
+    statsd_metric_t *metric = NULL;
+    int status = statsd_metric_lookup_unsafe(si, name, tags, STATSD_SET, &metric);
+    if (status != 0) {
         pthread_mutex_unlock(&si->metrics_lock);
-        return -1;
+        return (status == ENOSPC) ? 0 : -1;
     }
 
     /* Make sure metric->set exists. */
@@ -314,6 +325,15 @@ static int statsd_handle_set(statsd_instance_t *si, char const *name, char const
         return -1;
     }
 
+    if (si->max_set_size > 0) {
+        if ((unsigned int)c_avl_size(metric->set) >= si->max_set_size) {
+            if (c_avl_get(metric->set, set_key_orig, NULL) != 0)
+                si->set_values_dropped++;
+            pthread_mutex_unlock(&si->metrics_lock);
+            return 0;
+        }
+    }
+
     char *set_key = strdup(set_key_orig);
     if (set_key == NULL) {
         pthread_mutex_unlock(&si->metrics_lock);
@@ -321,7 +341,7 @@ static int statsd_handle_set(statsd_instance_t *si, char const *name, char const
         return -1;
     }
 
-    int status = c_avl_insert(metric->set, set_key, /* value = */ NULL);
+    status = c_avl_insert(metric->set, set_key, /* value = */ NULL);
     if (status < 0) {
         pthread_mutex_unlock(&si->metrics_lock);
         PLUGIN_ERROR("c_avl_insert (\"%s\") failed with status %i.", set_key, status);
@@ -355,6 +375,29 @@ static int statsd_parse_line(statsd_instance_t *si, char *buffer)
     if (extra != NULL)
         *(extra++) = 0;
 
+    /* The fields after the type can be in any order: "@rate" and dogstatsd "#tags". */
+    double scale = 1.0;
+    bool has_rate = false;
+    char *dogstatsd_tags = NULL;
+    while (extra != NULL) {
+        char *field = extra;
+        extra = strchr(field, '|');
+        if (extra != NULL)
+            *(extra++) = 0;
+
+        if ((field[0] == '@') && !has_rate) {
+            if (statsd_parse_value(field + 1, &scale) != 0)
+                return -1;
+            if (!isfinite(scale) || (scale <= 0.0) || (scale > 1.0))
+                return -1;
+            has_rate = true;
+        } else if ((field[0] == '#') && (dogstatsd_tags == NULL)) {
+            dogstatsd_tags = field + 1;
+        } else {
+            return -1;
+        }
+    }
+
     char *tags = NULL;
     /* signalfx: metric.name[tagName=val,tag2Name=val2]:0|c */
     if ((tags = strchr(name, '[')) != NULL) {
@@ -371,26 +414,32 @@ static int statsd_parse_line(statsd_instance_t *si, char *buffer)
     /* influxdb: metric.name,tagName=val,tag2Name=val2:0|c */
     } else if ((tags = strchr(name, ',')) != NULL) {
         *(tags++) = 0;
-    /* dogstatsd: metric.name:0|c|#tagName:val,tag2Name:val2 */
-    } else if (extra != NULL && ((tags = strchr(extra, '#')) != NULL)) {
-        *(tags++) = 0;
-        char *ptr = tags;
-        while((ptr = strchr(ptr, ':')) != NULL)
-            *(ptr++) = '=';
-        if (*extra == '\0')
-            extra = NULL;
     }
 
+     /* dogstatsd: metric.name:0|c|#tagName:val,tag2Name:val2 */
+    if (dogstatsd_tags != NULL) {
+        if (tags != NULL)
+            return -1;
+        tags = dogstatsd_tags;
+        /* Only the first ':' of every tag separates the name from the value. */
+        char *ptr = tags;
+        while (*ptr != 0) {
+            ptr += strcspn(ptr, ":,");
+            if (*ptr == ':') {
+                *ptr = '=';
+                ptr += strcspn(ptr, ",");
+            }
+            if (*ptr == ',')
+                ptr++;
+        }
+    }
+
+    /* The sample rate is ignored for gauges and sets. */
     if (strcmp("c", type) == 0)
-        return statsd_handle_counter(si, name, tags, value, extra);
+        return statsd_handle_counter(si, name, tags, value, scale);
     else if (strcmp("ms", type) == 0)
-        return statsd_handle_timer(si, name, tags, value, extra);
-
-    /* extra is only valid for counters and timers */
-    if (extra != NULL)
-        return -1;
-
-    if (strcmp("g", type) == 0)
+        return statsd_handle_timer(si, name, tags, value, scale);
+    else if (strcmp("g", type) == 0)
         return statsd_handle_gauge(si, name, tags, value);
     else if (strcmp("s", type) == 0)
         return statsd_handle_set(si, name, tags, value);
@@ -459,8 +508,8 @@ static int statsd_network_init(statsd_instance_t *si, struct pollfd **ret_fds, s
 
     int status = getaddrinfo(si->node, si->service, &ai_hints, &ai_list);
     if (status != 0) {
-        PLUGIN_ERROR("getaddrinfo (\"%s\", \"%s\") failed: %s", si->node, si->service,
-                     gai_strerror(status));
+        PLUGIN_ERROR("getaddrinfo (\"%s\", \"%s\") failed: %s",
+                     (si->node != NULL) ? si->node : "::", si->service, gai_strerror(status));
         return status;
     }
 
@@ -481,6 +530,16 @@ static int statsd_network_init(statsd_instance_t *si, struct pollfd **ret_fds, s
             close(fd);
             continue;
         }
+
+#ifdef IPV6_V6ONLY
+        /* The IPv4 addresses get their own socket. */
+        if ((ai_ptr->ai_family == AF_INET6) &&
+            (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof(yes)) == -1)) {
+            PLUGIN_ERROR("setsockopt (ipv6only): %s", STRERRNO);
+            close(fd);
+            continue;
+        }
+#endif
 
         getnameinfo(ai_ptr->ai_addr, ai_ptr->ai_addrlen, str_node, sizeof(str_node),
                     str_service, sizeof(str_service),
@@ -537,8 +596,8 @@ static void *statsd_network_thread(void *args)
         pthread_exit((void *)0);
     }
 
-    while (!si->network_thread_shutdown) {
-        status = poll(fds, (nfds_t)fds_num, /* timeout = */ -1);
+    while (!atomic_load(&si->network_thread_shutdown)) {
+        status = poll(fds, (nfds_t)fds_num, /* timeout = */ 1000);
         if (status < 0) {
             if ((errno == EINTR) || (errno == EAGAIN))
                 continue;
@@ -650,7 +709,6 @@ static int statsd_metric_submit_unsafe(statsd_instance_t *si, char const *name,
         break;
     case STATSD_TIMER:
         m.value.histogram = histogram_clone(metric->histogram);
-        histogram_reset(metric->histogram);
         break;
     case STATSD_SET:
         if (metric->set == NULL)
@@ -663,7 +721,10 @@ static int statsd_metric_submit_unsafe(statsd_instance_t *si, char const *name,
         /* Rather than resetting value to zero, subtract delta so we correctly keep
          * track of residuals. */
         metric->value -= delta;
-        metric->counter += (uint64_t)delta;
+        if (delta >= 0x1p64)
+            metric->counter += UINT64_MAX;
+        else if (delta > 0.0)
+            metric->counter += (uint64_t)delta;
         m.value = VALUE_COUNTER(metric->counter);
     }   break;
     }
@@ -690,6 +751,11 @@ static int statsd_instance_read(user_data_t *user_data)
         pthread_mutex_unlock(&si->metrics_lock);
         return 0;
     }
+
+    uint64_t metrics_dropped = si->metrics_dropped;
+    uint64_t set_values_dropped = si->set_values_dropped;
+    si->metrics_dropped = 0;
+    si->set_values_dropped = 0;
 
     char **to_be_deleted = NULL;
     size_t to_be_deleted_num = 0;
@@ -734,6 +800,16 @@ static int statsd_instance_read(user_data_t *user_data)
     pthread_mutex_unlock(&si->metrics_lock);
 
     strarray_free(to_be_deleted, to_be_deleted_num);
+
+    if (metrics_dropped > 0)
+        PLUGIN_WARNING("Instance '%s': 'max-metrics' limit (%u) reached, "
+                       "dropped %" PRIu64 " line(s) for new metrics.",
+                       si->instance, si->max_metrics, metrics_dropped);
+    if (set_values_dropped > 0)
+        PLUGIN_WARNING("Instance '%s': 'max-set-size' limit (%u) reached, "
+                       "dropped %" PRIu64 " set value(s).",
+                       si->instance, si->max_set_size, set_values_dropped);
+
     return 0;
 }
 
@@ -744,8 +820,7 @@ static void statsd_instance_shutdown(void *arg)
         return;
 
     if (si->network_thread_running) {
-        si->network_thread_shutdown = true;
-        pthread_kill(si->network_thread, SIGTERM);
+        atomic_store(&si->network_thread_shutdown, true);
         pthread_join(si->network_thread, /* retval = */ NULL);
     }
     si->network_thread_running = false;
@@ -760,6 +835,7 @@ static void statsd_instance_shutdown(void *arg)
     c_avl_destroy(si->metrics_tree);
     si->metrics_tree = NULL;
 
+    free(si->instance);
     free(si->node);
     free(si->service);
     free(si->metric_prefix);
@@ -769,6 +845,7 @@ static void statsd_instance_shutdown(void *arg)
     free(si->timer_buckets);
 
     pthread_mutex_unlock(&si->metrics_lock);
+    pthread_mutex_destroy(&si->metrics_lock);
 
     free(si);
 }
@@ -805,6 +882,18 @@ static int statsd_instance_config(config_item_t *ci)
             status = cf_util_get_boolean(child, &si->delete_sets);
         } else if (strcasecmp("timer-buckets", child->key) == 0) {
             status = cf_util_get_double_array(child, &si->timer_buckets_num, &si->timer_buckets);
+            if (status == 0) {
+                if (!histogram_check_custom(si->timer_buckets_num, si->timer_buckets)) {
+                    PLUGIN_ERROR("The '%s' option in %s:%d requires positive, finite and "
+                                 "strictly increasing bucket boundaries.",
+                                 child->key, cf_get_file(child), cf_get_lineno(child));
+                    status = -1;
+                }
+            }
+        } else if (strcasecmp("max-metrics", child->key) == 0) {
+            status = cf_util_get_unsigned_int(child, &si->max_metrics);
+        } else if (strcasecmp("max-set-size", child->key) == 0) {
+            status = cf_util_get_unsigned_int(child, &si->max_set_size);
         } else if (strcasecmp("metric-prefix", child->key) == 0) {
             status = cf_util_get_string(child, &si->metric_prefix);
         } else if (strcasecmp("label", child->key) == 0) {
@@ -832,7 +921,7 @@ static int statsd_instance_config(config_item_t *ci)
 
     if (status == 0) {
         si->metrics_tree = c_avl_create((int (*)(const void *, const void *))strcmp);
-        if (status != 0) {
+        if (si->metrics_tree == NULL) {
             PLUGIN_ERROR("c_avl_create failed.");
             status = ENOMEM;
         }
