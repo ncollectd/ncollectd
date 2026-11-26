@@ -30,7 +30,7 @@ Inside the **instance** block, the following options are understood:
 
 **topic** *topic*
 
-> Set the topic to send messages.
+> Set the topic to send messages. This option is mandatory.
 
 **property** *key* *value*
 
@@ -43,7 +43,9 @@ Inside the **instance** block, the following options are understood:
 > Kafka breaks topic into partitions and guarantees that for a given topology,
 > the same consumer will be used for a specific key.
 > The special (case insensitive) string **random** can be used to specify
-> that an arbitrary partition should be used.
+> that an arbitrary partition should be used: a random key is generated once
+> at configuration time and used for all messages of this instance.
+> If **key** is not set, a different random key is used for each message.
 
 **format-metric** *influxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote*
 
