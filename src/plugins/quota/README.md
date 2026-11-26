@@ -14,6 +14,9 @@ NCOLLECTD-QUOTA(5) - File Formats Manual
 	    user-id [incl|include|excl|exclude]  uid
 	    user-name [incl|include|excl|exclude] username
 	    report-by-user-name true|false
+	    report-by-device true|false
+	    report-zero true|false
+	    reload-users-interval seconds
 	}
 
 # DESCRIPTION
@@ -53,6 +56,24 @@ The plugin supports the following options:
 > ncollectd.conf(5).
 
 **report-by-user-name** *true|false*
+
+> If true, the users are selected with the **user-name** option, otherwise
+> with the **user-id** option. Defaults to true.
+
+**report-by-device** *true|false*
+
+> If true, the label *disk* is the device name (without the leading "/dev/"),
+> otherwise the mount point. Defaults to false.
+
+**report-zero** *true|false*
+
+> If true, report the quotas of the users even if they do not use any inode
+> or disk space. Defaults to false.
+
+**reload-users-interval** *seconds*
+
+> Interval in seconds to reload the list of users. If 0 the list is reloaded
+> when /etc/passwd is modified. Defaults to 0.
 
 # SEE ALSO
 
