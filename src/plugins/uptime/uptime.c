@@ -10,6 +10,7 @@
 #ifdef KERNEL_LINUX
 #include <sys/sysinfo.h>
 #elif defined(HAVE_LIBKSTAT)
+#include "libutils/kstat.h"
 /* Using kstats chain to retrieve the boot time on Solaris / OpenSolaris systems */
 #elif defined(HAVE_SYS_SYSCTL_H)
 #include <sys/sysctl.h>
@@ -23,8 +24,8 @@
 #endif
 
 #ifdef HAVE_KSTAT_H
-#include <kstat.h>
 static kstat_ctl_t *kc;
+static kstat_t *ksp;
 #endif
 
 
@@ -34,16 +35,6 @@ static metric_family_t fam = {
     .help = "System uptime",
 };
 
-/*
- * On most unix systems the uptime is calculated by looking at the boot
- * time (stored in unix time, since epoch) and the current one. We are
- * going to do the same, reading the boot time value while executing
- * the uptime_init function (there is no need to read, every time the
- * plugin_read is called, a value that won't change). However, since
- * uptime_init is run only once, if the function fails in retrieving
- * the boot time, the plugin is unregistered and there is no chance to
- * try again later. Nevertheless, this is very unlikely to happen.
- */
 static time_t uptime_get_sys(void)
 {
     time_t result = 0;
@@ -60,37 +51,12 @@ static time_t uptime_get_sys(void)
     result = (time_t)info.uptime;
 
 #elif defined(HAVE_LIBKSTAT)
-    /* kstats chain already opened by update_kstat (using *kc), verify everything
-     * went fine. */
-    if (unlikely(kc == NULL)) {
-        PLUGIN_ERROR("kstat chain control structure not available.");
-        return -1;
-    }
-
-    if (kstat_chain_update(kc) < 0) {
-        PLUGIN_ERROR("kstat_chain_update failed.");
-        return -1;
-    }
-
-    kstat_t *ksp = kstat_lookup(kc, "unix", 0, "system_misc");
-    if (unlikely(ksp == NULL)) {
-        PLUGIN_ERROR("Cannot find unix:0:system_misc kstat.");
-        return -1;
-    }
-
-    kid_t kcid = kstat_read(kc, ksp, NULL);
-    if (unlikely(kcid < 0)) {
-        PLUGIN_ERROR("kstat_read failed.");
-        return -1;
-    }
-
-    kstat_named_t *knp = (kstat_named_t *)kstat_data_lookup(ksp, "boot_time");
-    if (unlikely(knp == NULL)) {
+    long long boot_time = get_kstat_value(ksp, "boot_time");
+    if (unlikely(boot_time < 0)) {
         PLUGIN_ERROR("kstat_data_lookup (boot_time) failed.");
         return -1;
     }
-
-    if (unlikely(knp->value.ui32 == 0)) {
+    if (unlikely(boot_time == 0)) {
         PLUGIN_ERROR("kstat_data_lookup returned success, but `boottime' is zero!");
         return -1;
     }
@@ -149,7 +115,37 @@ static int uptime_read(void)
     return 0;
 }
 
+static int uptime_init(void)
+{
+#if defined(HAVE_LIBKSTAT)
+    if (kc == NULL)
+        kc = kstat_open();
+
+    if (kc == NULL) {
+        PLUGIN_ERROR("kstat_open failed.");
+        return -1;
+    }
+
+    if (get_kstat(kc, &ksp, "unix", 0, "system_misc") != 0) {
+        ksp = NULL;
+        return -1;
+    }
+#endif
+    return 0;
+}
+
+static int uptime_shutdown(void)
+{
+#if defined(HAVE_LIBKSTAT)
+    if (kc != NULL)
+        kstat_close(kc);
+#endif
+    return 0;
+}
+
 void module_register(void)
 {
+    plugin_register_init("uptime", uptime_init);
+    plugin_register_shutdown("uptime", uptime_shutdown);
     plugin_register_read("uptime", uptime_read);
 }
