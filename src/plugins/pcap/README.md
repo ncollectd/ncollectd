@@ -16,16 +16,14 @@ NCOLLECTD-PCAP(5) - File Formats Manual
 	        filter expression
 	        label key value
 	        interval seconds
-	        filter {
-	            ...
-	        }
 	    }
 	}
 
 # DESCRIPTION
 
-The **pcap** plugin uses libpcap to get a copy of all traffic on the
-selected interfaces.
+The **pcap** plugin uses libpcap to capture the DNS traffic (UDP port 53)
+on the selected interface and collects statistics about the DNS queries
+and responses.
 
 The **pcap** plugin supports the following options:
 
@@ -39,6 +37,7 @@ The **pcap** plugin supports the following options:
 **promiscuous** *true|false*
 
 > Put the interface in promiscuous mode.
+> Defaults to false.
 
 **ignore-source** *source*
 
@@ -50,10 +49,11 @@ The **pcap** plugin supports the following options:
 
 **filter** *expression*
 
-> Process the packets on a network interface that match the boolean
+> Only process the packets that also match the boolean
 > *expression* (see
 > pcap-filter(7)
 > for the expression syntax).
+> The expression is combined with the built-in filter "udp port 53".
 
 **label** *key* *value*
 
@@ -65,12 +65,6 @@ The **pcap** plugin supports the following options:
 > Sets the interval (in seconds) in which the values will be collected from this
 > instance.
 > By default the global **interval** setting will be used.
-
-**filter**
-
-> Configure a filter to modify or drop the metrics.
-> See **FILTER CONFIGURATION** in
-> ncollectd.conf(5).
 
 # SEE ALSO
 

@@ -128,6 +128,15 @@ static void counter_list_add(counter_list_t **list, unsigned int key, unsigned i
     }
 }
 
+static void counter_list_free(counter_list_t *list)
+{
+    while (list != NULL) {
+        counter_list_t *next = list->next;
+        free(list);
+        list = next;
+    }
+}
+
 
 static void dns_child_callback(nc_dns_ctx_t *ctx, const rfc1035_header_t *dns)
 {
@@ -236,7 +245,7 @@ static int rfc1035_name_unpack(const char *buf, size_t sz, off_t *off, char *nam
     return 0;
 }
 
-int handle_dns(nc_dns_ctx_t *ctx, const char *buf, int len)
+int handle_dns(nc_dns_ctx_t *ctx, const char *buf, size_t len)
 {
     rfc1035_header_t qh;
     uint16_t us;
@@ -634,4 +643,16 @@ int nc_dns_init(nc_dns_ctx_t *ctx)
     pthread_mutex_init(&ctx->opcode_mutex, NULL);
     pthread_mutex_init(&ctx->rcode_mutex, NULL);
     return 0;
+}
+
+void nc_dns_free(nc_dns_ctx_t *ctx)
+{
+    counter_list_free(ctx->qtype_list);
+    counter_list_free(ctx->opcode_list);
+    counter_list_free(ctx->rcode_list);
+
+    pthread_mutex_destroy(&ctx->traffic_mutex);
+    pthread_mutex_destroy(&ctx->qtype_mutex);
+    pthread_mutex_destroy(&ctx->opcode_mutex);
+    pthread_mutex_destroy(&ctx->rcode_mutex);
 }

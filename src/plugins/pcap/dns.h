@@ -38,8 +38,10 @@ typedef struct {
     metric_family_t fams[FAM_PCAP_DNS_MAX];
 } nc_dns_ctx_t;
 
-int handle_dns(nc_dns_ctx_t *ctx, const char *buf, int len);
+int handle_dns(nc_dns_ctx_t *ctx, const char *buf, size_t len);
 
 int nc_dns_read(nc_dns_ctx_t *ctx, label_set_t *labels);
 
 int nc_dns_init(nc_dns_ctx_t *ctx);
+
+void nc_dns_free(nc_dns_ctx_t *ctx);
