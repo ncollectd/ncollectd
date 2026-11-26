@@ -45,6 +45,8 @@ static char const *pf_lcounters[LCNT_MAX + 1] = LCNT_NAMES;
 static char const *pf_fcounters[FCNT_MAX + 1] = FCNT_NAMES;
 static char const *pf_scounters[SCNT_MAX + 1] = SCNT_NAMES;
 
+static complain_t pf_complaint;
+
 #else
 #    error "Neither of them is defined: DIOCGETSTATUSNV DIOCGETSTATUS"
 #endif
@@ -64,27 +66,27 @@ static metric_family_t fams[FAM_PF_MAX] = {
     [FAM_PF_COUNTERS] = {
         .name = "system_pf_counters",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of packets by pf reason counter (match, bad-offset, fragment, ...).",
     },
     [FAM_PF_LIMITS] = {
         .name = "system_pf_limits",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of times a pf limit counter was hit.",
     },
     [FAM_PF_STATE] = {
         .name = "system_pf_state",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of pf state table operations (search, insert, removals).",
     },
     [FAM_PF_SOURCE] = {
         .name = "system_pf_source",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
+        .help = "Number of pf source tracking table operations (search, insert, removals).",
     },
     [FAM_PF_STATES] = {
         .name = "system_pf_states",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Current number of entries in the pf state table.",
     },
 };
 
@@ -95,6 +97,8 @@ static int pf_ioctl(int dev, uint cmd, size_t size, nvlist_t **nvl)
     size_t nvlen;
 
     void *data = nvlist_pack(*nvl, &nvlen);
+    if (data == NULL)
+        return (errno != 0) ? errno : ENOMEM;
     if (nvlen > size)
         size = nvlen;
 
@@ -113,7 +117,8 @@ retry:
     nv.size = size;
 
     status = ioctl(dev, cmd, &nv);
-    if ((status == -1) && (errno == ENOSPC)) {
+    int ioctl_errno = errno;
+    if ((status == -1) && (ioctl_errno == ENOSPC)) {
         size *= 2;
         free(nv.data);
         goto retry;
@@ -129,7 +134,7 @@ retry:
             goto out;
         }
     } else {
-        status = errno;
+        status = ioctl_errno;
     }
 
 out:
@@ -139,16 +144,36 @@ out:
     return status;
 }
 
-static void pf_status_counters(const nvlist_t *nvl, metric_family_t *fam, char *label)
+static void pf_status_counters(const nvlist_t *parent, const char *key,
+                               metric_family_t *fam, char *label)
 {
+    if (!nvlist_exists_nvlist(parent, key)) {
+        PLUGIN_ERROR("Cannot find '%s' in the pf status.", key);
+        return;
+    }
+
+    const nvlist_t *nvl = nvlist_get_nvlist(parent, key);
+
+    if (!nvlist_exists_number_array(nvl, "counters") ||
+        !nvlist_exists_string_array(nvl, "names")) {
+        PLUGIN_ERROR("Cannot find 'counters' or 'names' in '%s' of the pf status.", key);
+        return;
+    }
+
     size_t counters_len;
     const uint64_t *counts = nvlist_get_number_array(nvl, "counters", &counters_len);
     size_t names_len;
     const char *const *names = nvlist_get_string_array(nvl, "names", &names_len);
 
-    assert(counters_len == names_len);
+    size_t len = counters_len;
+    if (counters_len != names_len) {
+        PLUGIN_ERROR("Mismatch between the number of counters (%zu) and names (%zu) in '%s'.",
+                     counters_len, names_len, key);
+        if (names_len < len)
+            len = names_len;
+    }
 
-    for (size_t i = 0; i < counters_len; i++) {
+    for (size_t i = 0; i < len; i++) {
         metric_family_append(fam, VALUE_COUNTER(counts[i]), NULL,
                              &LABEL_PAIR_CONST(label, names[i]), NULL);
     }
@@ -163,7 +188,29 @@ static int pf_read(void)
         return -1;
     }
 
-#ifdef DIOCGETSTATUS
+#if defined(DIOCGETSTATUSNV)
+    nvlist_t *nvl = nvlist_create(0);
+    int status = pf_ioctl(fd, DIOCGETSTATUSNV, 4096, &nvl);
+    if (status != 0) {
+        PLUGIN_ERROR("ioctl(DIOCGETSTATUSNV) failed: %s", STRERROR(status));
+        nvlist_destroy(nvl);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+
+    pf_status_counters(nvl, "counters", &fams[FAM_PF_COUNTERS], "counter");
+    pf_status_counters(nvl, "lcounters", &fams[FAM_PF_LIMITS], "limit");
+    pf_status_counters(nvl, "fcounters", &fams[FAM_PF_STATE], "state");
+    pf_status_counters(nvl, "scounters", &fams[FAM_PF_SOURCE], "source");
+
+    if (nvlist_exists_number(nvl, "states"))
+        metric_family_append(&fams[FAM_PF_STATES],
+                             VALUE_GAUGE(nvlist_get_number(nvl, "states")), NULL, NULL);
+
+    nvlist_destroy(nvl);
+#elif defined(DIOCGETSTATUS)
     struct pf_status state;
     int status = ioctl(fd, DIOCGETSTATUS, &state);
     if (status != 0) {
@@ -175,9 +222,11 @@ static int pf_read(void)
     close(fd);
 
     if (!state.running) {
-        PLUGIN_WARNING("PF is not running.");
+        PLUGIN_COMPLAIN_WARNING(&pf_complaint, "PF is not running.");
         return -1;
     }
+
+    PLUGIN_RELEASE_INFO(&pf_complaint, "PF is running again.");
 
     for (int i = 0; i < PFRES_MAX; i++)
         metric_family_append(&fams[FAM_PF_COUNTERS], VALUE_COUNTER(state.counters[i]), NULL,
@@ -193,28 +242,6 @@ static int pf_read(void)
                              &LABEL_PAIR_CONST("source", pf_scounters[i]), NULL);
 
     metric_family_append(&fams[FAM_PF_STATES], VALUE_GAUGE(state.states), NULL, NULL);
-
-#elif defined(DIOCGETSTATUSNV)
-    nvlist_t *nvl = nvlist_create(0);
-    int status = pf_ioctl(fd, DIOCGETSTATUSNV, 4096, &nvl);
-    if (status != 0) {
-        PLUGIN_ERROR("ioctl(DIOCGETSTATUSNV) failed: %s", STRERRNO);
-        nvlist_destroy(nvl);
-        close(fd);
-        return -1;
-    }
-
-    close(fd);
-
-    pf_status_counters(nvlist_get_nvlist(nvl, "counters"), &fams[FAM_PF_COUNTERS], "counter");
-    pf_status_counters(nvlist_get_nvlist(nvl, "lcounters"), &fams[FAM_PF_LIMITS], "limit");
-    pf_status_counters(nvlist_get_nvlist(nvl, "fcounters"), &fams[FAM_PF_STATE], "state");
-    pf_status_counters(nvlist_get_nvlist(nvl, "scounters"), &fams[FAM_PF_SOURCE], "source");
-
-    metric_family_append(&fams[FAM_PF_STATES],
-                         VALUE_GAUGE(nvlist_get_number(nvl, "states")), NULL, NULL);
-
-    nvlist_destroy(nvl);
 #endif
 
     plugin_dispatch_metric_family_array(fams, FAM_PF_MAX, 0);
