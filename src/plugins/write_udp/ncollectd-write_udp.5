@@ -32,6 +32,9 @@ Defaults to localhost.
 Service name or port number to connect to.
 .It \fBttl\fP \fIttl\fP
 .It \fBpacket-max-size\fP \fIsize\fP
+Maximum size of the UDP packets sent, between \fB1024\fP and \fB65507\fP bytes.
+Defaults to \fB1428\fP.
+Metrics larger than this size are sent in their own datagram.
 .It \fBflush-interval\fP \fIseconds\fP
 .It \fBflush-timeout\fP \fIseconds\fP
 .It \fBformat-metric\fP \fIinfluxdb|graphite|kairosdb|opentsdb\fP

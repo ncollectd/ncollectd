@@ -30,6 +30,9 @@
 #define DEFAULT_SERVICE "2003"
 #endif
 
+/* Maximum UDP payload over IPv4: 65535 - (20 + 8) */
+#define UDP_MAX_PAYLOAD 65507
+
 /* Ethernet - (IPv6 + TCP) = 1500 - (40 + 32) = 1428 */
 #ifndef SEND_BUF_SIZE
 #define SEND_BUF_SIZE 1428
@@ -50,6 +53,9 @@ typedef struct {
     size_t send_buf_free;
     size_t send_buf_fill;
     cdtime_t send_buf_init_time;
+    complain_t init_complaint;
+    complain_t empty_complaint;
+    complain_t send_complaint;
 } write_udp_callback_t;
 
 static void write_udp_reset_buffer(write_udp_callback_t *cb)
@@ -64,14 +70,17 @@ static int write_udp_send_buffer(write_udp_callback_t *cb)
     if (cb->sock_fd < 0)
         return -1;
 
-    ssize_t status = swrite(cb->sock_fd, cb->send_buf, cb->send_buf_fill);
-    if (status != 0) {
-        PLUGIN_ERROR("send to %s:%s failed with status %zi (%s)",
-                     cb->host, cb->service, status, STRERRNO);
+    /* Send the whole buffer as one datagram. */
+    ssize_t status = send(cb->sock_fd, cb->send_buf, cb->send_buf_fill, 0);
+    if (status < 0) {
+        PLUGIN_COMPLAIN_ERROR(&cb->send_complaint, "send to %s:%s failed: %s",
+                              cb->host, cb->service, STRERRNO);
         close(cb->sock_fd);
         cb->sock_fd = -1;
         return -1;
     }
+
+    PLUGIN_RELEASE_INFO(&cb->send_complaint, "send to %s:%s succeeded.", cb->host, cb->service);
 
     return 0;
 }
@@ -102,7 +111,7 @@ static int write_udp_flush_internal(write_udp_callback_t *cb, cdtime_t timeout)
 
 static int write_udp_callback_init(write_udp_callback_t *cb)
 {
-    if (cb->sock_fd > 0)
+    if (cb->sock_fd >= 0)
         return 0;
 
     struct addrinfo ai_hints = {.ai_family = AF_UNSPEC,
@@ -111,8 +120,8 @@ static int write_udp_callback_init(write_udp_callback_t *cb)
     struct addrinfo *ai_list;
     int status = getaddrinfo(cb->host, cb->service, &ai_hints, &ai_list);
     if (status != 0) {
-        PLUGIN_ERROR("getaddrinfo (%s, %s) failed: %s",
-                     cb->host, cb->service, gai_strerror(status));
+        PLUGIN_COMPLAIN_ERROR(&cb->init_complaint, "getaddrinfo (%s, %s) failed: %s",
+                              cb->host, cb->service, gai_strerror(status));
         return -1;
     }
 
@@ -120,13 +129,13 @@ static int write_udp_callback_init(write_udp_callback_t *cb)
     for (struct addrinfo *ai_ptr = ai_list; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next) {
         cb->sock_fd = socket(ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
         if (cb->sock_fd < 0) {
-            PLUGIN_ERROR("failed to open socket: %s", STRERRNO);
+            PLUGIN_DEBUG("failed to open socket: %s", STRERRNO);
             continue;
         }
 
         status = connect(cb->sock_fd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
         if (status != 0) {
-            PLUGIN_ERROR("failed to connect to remote host: %s", STRERRNO);
+            PLUGIN_DEBUG("failed to connect to remote host: %s", STRERRNO);
             close(cb->sock_fd);
             cb->sock_fd = -1;
             continue;
@@ -155,6 +164,15 @@ static int write_udp_callback_init(write_udp_callback_t *cb)
     }
 
     freeaddrinfo(ai_list);
+
+    if (cb->sock_fd < 0) {
+        PLUGIN_COMPLAIN_ERROR(&cb->init_complaint,
+                              "failed to open a socket to %s:%s.", cb->host, cb->service);
+        return -1;
+    }
+
+    PLUGIN_RELEASE_INFO(&cb->init_complaint, "socket to %s:%s successfully opened.",
+                        cb->host, cb->service);
     return 0;
 }
 
@@ -212,17 +230,32 @@ static int write_udp_send_message(write_udp_callback_t *cb, char const *message,
             return -1;
     }
 
-    if (message_len >= cb->send_buf_free) {
+    if (message_len > cb->send_buf_free) {
         status = write_udp_flush_internal(cb, 0);
         if (status != 0)
             return status;
     }
 
-    /* Assert that we have enough space for this message. */
-    if (message_len >= cb->send_buf_free) {
-        PLUGIN_ERROR("No space free in buffer, only %zu bytes free, for message of %zu bytes.",
-                     cb->send_buf_free, message_len);
-        return -1;
+    /* The message does not fit in a packet, send it in its own datagram. */
+    if (message_len > cb->send_buf_free) {
+        if (message_len > UDP_MAX_PAYLOAD) {
+            PLUGIN_ERROR("Message of %zu bytes is larger than the maximum UDP payload.",
+                         message_len);
+            return -1;
+        }
+
+        if (cb->sock_fd < 0) {
+            status = write_udp_callback_init(cb);
+            if (status != 0)
+                return -1;
+        }
+
+        if (send(cb->sock_fd, message, message_len, 0) < 0) {
+            PLUGIN_ERROR("send to %s:%s failed: %s", cb->host, cb->service, STRERRNO);
+            return -1;
+        }
+
+        return 0;
     }
 
     /* `message_len + 1' because `message_len' does not include the
@@ -246,16 +279,29 @@ static int write_udp_write(metric_family_t const *fam, user_data_t *user_data)
 
     write_udp_callback_t *cb = user_data->data;
 
+    int ret = 0;
     for (size_t i=0; i < fam->metric.num ; i++) {
         strbuf_reset(&cb->buf);
         int status = format_dgram_metric(cb->format, &cb->buf, fam, &fam->metric.ptr[i]);
-        if (status == 0) {
-            size_t size = strbuf_len(&cb->buf);
-            write_udp_send_message(cb, cb->buf.ptr, size);
+        if (status != 0) {
+            PLUGIN_ERROR("Failed to format metric '%s'.", fam->name);
+            ret = -1;
+            continue;
         }
+
+        size_t size = strbuf_len(&cb->buf);
+        if (size == 0) {
+            PLUGIN_ONCE_WARNING(&cb->empty_complaint,
+                                "The format of metric '%s' produced an empty output.", fam->name);
+            continue;
+        }
+
+        status = write_udp_send_message(cb, cb->buf.ptr, size);
+        if (status != 0)
+            ret = -1;
     }
 
-    return 0;
+    return ret;
 }
 
 static int write_udp_config_instance(config_item_t *ci)
@@ -296,8 +342,9 @@ static int write_udp_config_instance(config_item_t *ci)
         } else if (strcasecmp("packet-max-size", child->key) == 0) {
             status = cf_util_get_int(child, &cb->packet_size);
             if (status == 0) {
-                if ((cb->packet_size < 1024) || (cb->packet_size > 65535)) {
-                    PLUGIN_ERROR("'packet-max-size' must be between 1024 and 65535.");
+                if ((cb->packet_size < 1024) || (cb->packet_size > UDP_MAX_PAYLOAD)) {
+                    PLUGIN_ERROR("'packet-max-size' must be between 1024 and %d.",
+                                 UDP_MAX_PAYLOAD);
                     status = -1;
                 }
             }
