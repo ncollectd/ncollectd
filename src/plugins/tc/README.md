@@ -21,7 +21,8 @@ The **tc** plugin collect metrics of Traffic Control in the Linux kernel.
 
 **interface** *interface*
 
-> Instruct the plugin to collect Traffic Control statistics for this interface.
+> Instruct the plugin to collect Traffic Control statistics (all qdiscs,
+> classes and filters) for this interface.
 
 > If **interface** is *all*, all interfaces will be selected.
 
@@ -64,11 +65,11 @@ The **tc** plugin collect metrics of Traffic Control in the Linux kernel.
 > that are associated with that interface will be collected.
 
 > Since a filter itself doesn't necessarily have a handle, the parent's handle
-> is used.
-> This may lead to problems when more than one filter is attached to a
-> qdisc or class.
-> This isn't nice, but we don't know how this could be done any better.
-> If you have a idea, please don't hesitate to tell us.
+> is used as identifier.
+> To tell apart several filters attached to the same qdisc or class, the
+> filter metrics have also the *prio* and *handle* labels.
+> The filters of the root qdisc and of the ingress (or clsact) qdisc are
+> collected.
 
 > As with the **interface** option you can specify **all** as the interface,
 > meaning all interfaces.

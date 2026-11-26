@@ -31,7 +31,7 @@
 #include <glob.h>
 #include <libmnl/libmnl.h>
 
-#define NETLINK_DEFAULT_BUF_SIZE_KB 16
+#define NETLINK_BUF_SIZE (32 * 1024)
 
 enum {
     FAM_TC_QDISC_BYTES,
@@ -129,17 +129,18 @@ typedef struct ir_ignorelist_s {
 struct qos_stats {
     struct gnet_stats_basic *bs;
     struct gnet_stats_queue *qs;
+    bool has_packets64;
+    uint64_t packets64;
 };
 
 static bool ir_ignorelist_invert = true;
 static ir_ignorelist_t *ir_ignorelist_head;
 
 static struct mnl_socket *nl;
+static unsigned int nl_seq;
 
 static char **iflist;
 static size_t iflist_len;
-
-static size_t nl_socket_buffer_size = NETLINK_DEFAULT_BUF_SIZE_KB * 1024;
 
 static int add_ignorelist(const char *dev, const char *type, const char *inst)
 {
@@ -233,7 +234,8 @@ static int check_ignorelist(const char *dev, const char *type, const char *type_
             continue;
         }
 
-        if (strcasecmp(i->type, type) != 0)
+        /* An "interface" entry applies to qdiscs, classes and filters of the device. */
+        if ((strcasecmp(i->type, "interface") != 0) && (strcasecmp(i->type, type) != 0))
             continue;
 
         if ((i->inst != NULL) && (type_instance != NULL) &&
@@ -278,6 +280,10 @@ static int update_iflist(struct ifinfomsg *msg, const char *dev)
             if (iflist[msg->ifi_index] != NULL)
                 free(iflist[msg->ifi_index]);
             iflist[msg->ifi_index] = strdup(dev);
+            if (iflist[msg->ifi_index] == NULL) {
+                PLUGIN_ERROR("update_iflist: strdup failed.");
+                return -1;
+            }
         }
     }
 
@@ -340,6 +346,18 @@ static int qos_attr_cb(const struct nlattr *attr, void *data)
         q_stats->qs = mnl_attr_get_payload(attr);
         return MNL_CB_OK;
     }
+
+#ifdef HAVE_TCA_STATS_PKT64
+    if (mnl_attr_get_type(attr) == TCA_STATS_PKT64) {
+        if (mnl_attr_validate(attr, MNL_TYPE_U64) < 0) {
+            PLUGIN_ERROR("TCA_STATS_PKT64 mnl_attr_validate failed.");
+            return MNL_CB_ERROR;
+        }
+        q_stats->packets64 = mnl_attr_get_u64(attr);
+        q_stats->has_packets64 = true;
+        return MNL_CB_OK;
+    }
+#endif
 
     return MNL_CB_OK;
 }
@@ -425,6 +443,21 @@ static int qos_filter_cb(const struct nlmsghdr *nlh, void *args)
     ssnprintf(tc_inst, sizeof(tc_inst), "%s-%x:%x",
                        kind, numberic_id >> 16, numberic_id & 0x0000FFFF);
 
+    /* Several filters can share the same parent: add the priority and the
+     * handle of the filter as labels to tell them apart. */
+    char filter_prio[16];
+    char filter_handle[16];
+    label_pair_const_t lp_prio_pair = LABEL_PAIR_CONST("prio", filter_prio);
+    label_pair_const_t lp_handle_pair = LABEL_PAIR_CONST("handle", filter_handle);
+    label_pair_const_t *lp_prio = NULL;
+    label_pair_const_t *lp_handle = NULL;
+    if (nlh->nlmsg_type == RTM_NEWTFILTER) {
+        ssnprintf(filter_prio, sizeof(filter_prio), "%u", TC_H_MAJ(tm->tcm_info) >> 16);
+        ssnprintf(filter_handle, sizeof(filter_handle), "%x", tm->tcm_handle);
+        lp_prio = &lp_prio_pair;
+        lp_handle = &lp_handle_pair;
+    }
+
     PLUGIN_DEBUG("got %s for %s (%i).", tc_type, dev, tm->tcm_ifindex);
 
     if (check_ignorelist(dev, tc_type, tc_inst))
@@ -448,15 +481,43 @@ static int qos_filter_cb(const struct nlmsghdr *nlh, void *args)
             if (q_stats.bs != NULL) {
                 metric_family_append(fam_tc_bytes, VALUE_COUNTER(q_stats.bs->bytes), NULL,
                                      &LABEL_PAIR_CONST("device", dev),
-                                     &LABEL_PAIR_CONST("kind", tc_inst), NULL);
-                metric_family_append(fam_tc_packets, VALUE_COUNTER(q_stats.bs->packets), NULL,
+                                     &LABEL_PAIR_CONST("kind", tc_inst),
+                                     lp_prio, lp_handle, NULL);
+                /* Prefer the 64-bit packet counter, the 32-bit one wraps. */
+                uint64_t packets = q_stats.has_packets64 ? q_stats.packets64
+                                                         : q_stats.bs->packets;
+                metric_family_append(fam_tc_packets, VALUE_COUNTER(packets), NULL,
                                      &LABEL_PAIR_CONST("device", dev),
-                                     &LABEL_PAIR_CONST("kind", tc_inst), NULL);
+                                     &LABEL_PAIR_CONST("kind", tc_inst),
+                                     lp_prio, lp_handle, NULL);
             }
             if (q_stats.qs != NULL) {
                 metric_family_append(fam_tc_dropped, VALUE_COUNTER(q_stats.qs->drops), NULL,
                                      &LABEL_PAIR_CONST("device", dev),
-                                     &LABEL_PAIR_CONST("kind", tc_inst), NULL);
+                                     &LABEL_PAIR_CONST("kind", tc_inst),
+                                     lp_prio, lp_handle, NULL);
+                if (nlh->nlmsg_type == RTM_NEWQDISC) {
+                    metric_family_append(&fams[FAM_TC_QDISC_CURRENT_QUEUE_LENGTH],
+                                         VALUE_GAUGE(q_stats.qs->qlen), NULL,
+                                         &LABEL_PAIR_CONST("device", dev),
+                                         &LABEL_PAIR_CONST("kind", tc_inst),
+                                         lp_prio, lp_handle, NULL);
+                    metric_family_append(&fams[FAM_TC_QDISC_BACKLOG],
+                                         VALUE_GAUGE(q_stats.qs->backlog), NULL,
+                                         &LABEL_PAIR_CONST("device", dev),
+                                         &LABEL_PAIR_CONST("kind", tc_inst),
+                                         lp_prio, lp_handle, NULL);
+                    metric_family_append(&fams[FAM_TC_QDISC_REQUEUES],
+                                         VALUE_COUNTER(q_stats.qs->requeues), NULL,
+                                         &LABEL_PAIR_CONST("device", dev),
+                                         &LABEL_PAIR_CONST("kind", tc_inst),
+                                         lp_prio, lp_handle, NULL);
+                    metric_family_append(&fams[FAM_TC_QDISC_OVERLIMITS],
+                                         VALUE_COUNTER(q_stats.qs->overlimits), NULL,
+                                         &LABEL_PAIR_CONST("device", dev),
+                                         &LABEL_PAIR_CONST("kind", tc_inst),
+                                         lp_prio, lp_handle, NULL);
+                }
             }
         }
 
@@ -480,13 +541,16 @@ static int qos_filter_cb(const struct nlmsghdr *nlh, void *args)
         if (!stats_submitted && ts != NULL) {
             metric_family_append(fam_tc_bytes, VALUE_COUNTER(ts->bytes), NULL,
                                  &LABEL_PAIR_CONST("device", dev),
-                                 &LABEL_PAIR_CONST("kind", tc_inst), NULL);
+                                 &LABEL_PAIR_CONST("kind", tc_inst),
+                                     lp_prio, lp_handle, NULL);
             metric_family_append(fam_tc_packets, VALUE_COUNTER(ts->packets), NULL,
                                  &LABEL_PAIR_CONST("device", dev),
-                                 &LABEL_PAIR_CONST("kind", tc_inst), NULL);
+                                 &LABEL_PAIR_CONST("kind", tc_inst),
+                                     lp_prio, lp_handle, NULL);
             metric_family_append(fam_tc_dropped, VALUE_COUNTER(ts->drops), NULL,
                                  &LABEL_PAIR_CONST("device", dev),
-                                 &LABEL_PAIR_CONST("kind", tc_inst), NULL);
+                                 &LABEL_PAIR_CONST("kind", tc_inst),
+                                     lp_prio, lp_handle, NULL);
         }
 
         break;
@@ -500,22 +564,61 @@ static int qos_filter_cb(const struct nlmsghdr *nlh, void *args)
     return MNL_CB_OK;
 }
 
+static void tc_socket_close(void)
+{
+    if (nl != NULL) {
+        mnl_socket_close(nl);
+        nl = NULL;
+    }
+}
+
+static int tc_socket_open(void)
+{
+    nl = mnl_socket_open(NETLINK_ROUTE);
+    if (nl == NULL) {
+        PLUGIN_ERROR("mnl_socket_open failed.");
+        return -1;
+    }
+
+    if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
+        PLUGIN_ERROR("mnl_socket_bind failed.");
+        tc_socket_close();
+        return -1;
+    }
+
+    return 0;
+}
+
+/* After a failure in the middle of a dump the rest of the dump is still
+ * queued in the socket: recreate the socket to discard it. */
+static int tc_socket_reset(void)
+{
+    tc_socket_close();
+    return tc_socket_open();
+}
+
 static int tc_read(void)
 {
-    char buf[nl_socket_buffer_size];
+    char buf[NETLINK_BUF_SIZE];
     struct nlmsghdr *nlh;
     struct rtgenmsg *rt;
     int ret;
 
     static const int type_id[] = {RTM_GETQDISC, RTM_GETTCLASS, RTM_GETTFILTER};
+    /* Without a parent the kernel only dumps the filters of the root qdisc,
+     * query also the filters attached to the ingress (or clsact) qdisc. */
+    static const uint32_t filter_parents[] = {0, TC_H_INGRESS};
     static const char *type_name[] = {"qdisc", "class", "filter"};
+
+    if ((nl == NULL) && (tc_socket_open() != 0))
+        return -1;
 
     unsigned int portid = mnl_socket_get_portid(nl);
 
     nlh = mnl_nlmsg_put_header(buf);
     nlh->nlmsg_type = RTM_GETLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    unsigned int seq = time(NULL);
+    unsigned int seq = ++nl_seq;
     nlh->nlmsg_seq = seq;
     rt = mnl_nlmsg_put_extra_header(nlh, sizeof(*rt));
     rt->rtgen_family = AF_PACKET;
@@ -525,21 +628,35 @@ static int tc_read(void)
         return -1;
     }
 
+    /* Forget the interfaces of the previous read, the dump will add the
+     * interfaces that still exist. */
+    for (size_t ifindex = 0; ifindex < iflist_len; ifindex++) {
+        free(iflist[ifindex]);
+        iflist[ifindex] = NULL;
+    }
+
+    const char *failed = "mnl_socket_recvfrom";
+
     ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
     while (ret > 0) {
         ret = mnl_cb_run(buf, ret, seq, portid, link_filter_cb, NULL);
-        if (ret <= MNL_CB_STOP)
+        if (ret <= MNL_CB_STOP) {
+            failed = "mnl_cb_run";
+            break;
+        }
             break;
         ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
     }
     if (ret < 0) {
-        PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERRNO);
+        PLUGIN_ERROR("%s failed: %s", failed, STRERRNO);
+        tc_socket_reset();
         return (-1);
     }
 
     /* `link_filter_cb' will update `iflist' which is used here to iterate over all interfaces. */
     for (size_t ifindex = 1; ifindex < iflist_len; ifindex++) {
         struct tcmsg *tm;
+        int wanted_ifindex = (int)ifindex;
 
         if (iflist[ifindex] == NULL)
             continue;
@@ -554,30 +671,37 @@ static int tc_read(void)
             PLUGIN_DEBUG("querying %s from %s (%" PRIsz ").",
                          type_name[type_index], iflist[ifindex], ifindex);
 
-            nlh = mnl_nlmsg_put_header(buf);
-            nlh->nlmsg_type = type_id[type_index];
-            nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-            /* coverity[Y2K38_SAFETY] */
-            nlh->nlmsg_seq = seq = time(NULL);
-            tm = mnl_nlmsg_put_extra_header(nlh, sizeof(*tm));
-            tm->tcm_family = AF_PACKET;
-            tm->tcm_ifindex = ifindex;
+            size_t parents_num = 1;
+            if (type_id[type_index] == RTM_GETTFILTER)
+                parents_num = STATIC_ARRAY_SIZE(filter_parents);
 
-            if (mnl_socket_sendto(nl, nlh, nlh->nlmsg_len) < 0) {
-                PLUGIN_ERROR("mnl_socket_sendto failed.");
-                continue;
-            }
+            for (size_t parent_index = 0; parent_index < parents_num; parent_index++) {
+                nlh = mnl_nlmsg_put_header(buf);
+                nlh->nlmsg_type = type_id[type_index];
+                nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+                /* coverity[Y2K38_SAFETY] */
+                nlh->nlmsg_seq = seq = time(NULL);
+                tm = mnl_nlmsg_put_extra_header(nlh, sizeof(*tm));
+                tm->tcm_family = AF_PACKET;
+                tm->tcm_ifindex = ifindex;
+                if (type_id[type_index] == RTM_GETTFILTER)
+                    tm->tcm_parent = filter_parents[parent_index];
 
-            ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
-            while (ret > 0) {
-                ret = mnl_cb_run(buf, ret, seq, portid, qos_filter_cb, &ifindex);
-                if (ret <= MNL_CB_STOP)
-                    break;
-                ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
-            }
-            if (ret < 0) {
-                PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERRNO);
-                continue;
+                if (mnl_socket_sendto(nl, nlh, nlh->nlmsg_len) < 0) {
+                    PLUGIN_ERROR("mnl_socket_sendto failed.");
+                    continue;
+                }
+
+                while (ret > 0) {
+                    ret = mnl_cb_run(buf, ret, seq, portid, qos_filter_cb, &wanted_ifindex);
+                    if (ret <= MNL_CB_STOP)
+                        break;
+                    ret = mnl_socket_recvfrom(nl, buf, sizeof(buf));
+                }
+                if (ret < 0) {
+                    PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERRNO);
+                    continue;
+                }
             }
         }
     }
@@ -602,14 +726,16 @@ static int ir_config_ignorelist(config_item_t *ci, const char *key, int args)
         arg1 = ci->values[0].value.string;
         break;
     case 2:
-        if ((ci->values_num != 2) || (ci->values[0].type != CONFIG_TYPE_STRING) ||
-                                     (ci->values[1].type != CONFIG_TYPE_STRING)) {
-            PLUGIN_ERROR("The '%s' option in %s:%d requires exactly two string argument.",
+        if ((ci->values_num < 1) || (ci->values_num > 2) ||
+            (ci->values[0].type != CONFIG_TYPE_STRING) ||
+            ((ci->values_num == 2) && (ci->values[1].type != CONFIG_TYPE_STRING))) {
+            PLUGIN_ERROR("The '%s' option in %s:%d requires one or two string arguments.",
                          ci->key, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
         arg1 = ci->values[0].value.string;
-        arg2 = ci->values[1].value.string;
+        if (ci->values_num == 2)
+            arg2 = ci->values[1].value.string;
         break;
     default:
         return -1;
@@ -633,7 +759,10 @@ static int tc_config(config_item_t *ci)
         } else if (strcasecmp(child->key, "filter") == 0) {
             status = ir_config_ignorelist(child, "filter", 2);
         } else if (strcasecmp(child->key, "ignore-selected") == 0) {
-            status = cf_util_get_boolean(child, &ir_ignorelist_invert);
+            bool ignore_selected = false;
+            status = cf_util_get_boolean(child, &ignore_selected);
+            if (status == 0)
+                ir_ignorelist_invert = !ignore_selected;
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));
@@ -652,26 +781,12 @@ static int tc_config(config_item_t *ci)
 
 static int tc_init(void)
 {
-    nl = mnl_socket_open(NETLINK_ROUTE);
-    if (nl == NULL) {
-        PLUGIN_ERROR("mnl_socket_open failed.");
-        return -1;
-    }
-
-    if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
-        PLUGIN_ERROR("mnl_socket_bind failed.");
-        return -1;
-    }
-
-    return 0;
+    return tc_socket_open();
 }
 
 static int tc_shutdown(void)
 {
-    if (nl) {
-        mnl_socket_close(nl);
-        nl = NULL;
-    }
+    tc_socket_close();
 
     ir_ignorelist_t *next = NULL;
     for (ir_ignorelist_t *i = ir_ignorelist_head; i != NULL; i = next) {
