@@ -24,17 +24,17 @@ static metric_family_t fams[FAM_WLM_MAX] = {
     [FAM_WLM_CPU_RATIO] = {
         .name = "system_wlm_cpu_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "CPU consumption ratio of the WLM class.",
     },
     [FAM_WLM_MEMORY_RATIO] = {
         .name = "system_wlm_memory_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Memory consumption ratio of the WLM class.",
     },
     [FAM_WLM_IO_RATIO] = {
         .name = "system_wlm_io_ratio",
         .type = METRIC_TYPE_GAUGE,
-        .help = NULL,
+        .help = "Disk I/O bandwidth consumption ratio of the WLM class.",
     },
 };
 
@@ -50,25 +50,33 @@ static int wlm_read (void)
         return -1;
     }
 
-    if (wlmcnt <= 0)
-        return 0;
+    /* Classes can be created between the two calls to wlm_get_info: if the
+     * buffer is too small, wlm_get_info fails and returns in wlmcnt the
+     * needed number of classes, so retry with a bigger buffer. */
+    for (int retry = 0; ; retry++) {
+        if (wlmcnt <= 0)
+            return 0;
 
-    /*  If necessary, reallocate the "wlminfo" memory */
-    if (prev_wlmcnt != wlmcnt || wlminfo == NULL) {
-        struct wlm_info *tmp = realloc(wlminfo, wlmcnt * sizeof(struct wlm_info));
-        if (tmp == NULL) {
-            PLUGIN_ERROR("realloc failed.");
+        /*  If necessary, reallocate the "wlminfo" memory */
+        if (prev_wlmcnt != wlmcnt || wlminfo == NULL) {
+            struct wlm_info *tmp = realloc(wlminfo, wlmcnt * sizeof(struct wlm_info));
+            if (tmp == NULL) {
+                PLUGIN_ERROR("realloc failed.");
+                return -1;
+            }
+            wlminfo = tmp;
+        }
+        prev_wlmcnt = wlmcnt;
+
+        /* Get wlm_info of all WLMs */
+        status = wlm_get_info(&wlmargs, wlminfo, &wlmcnt);
+        if (status == 0)
+            break;
+
+        if ((wlmcnt <= prev_wlmcnt) || (retry >= 3)) {
+            PLUGIN_WARNING ("wlm_get_info: %s", STRERRNO);
             return -1;
         }
-        wlminfo = tmp;
-    }
-    prev_wlmcnt = wlmcnt;
-
-    /* Get wlm_info of all WLMs */
-    status = wlm_get_info(&wlmargs, wlminfo, &wlmcnt);
-    if (status != 0) {
-        PLUGIN_WARNING ("wlm_get_info: %s", STRERRNO);
-        return -1;
     }
 
     /* Iterate over all WLMs and dispatch information */
@@ -113,7 +121,7 @@ static int wlm_config (config_item_t *ci)
         }
 
         if (status != 0)
-            break;
+            return -1;
     }
 
     return 0;
@@ -121,8 +129,10 @@ static int wlm_config (config_item_t *ci)
 
 static int wlm_init(void)
 {
-    if (wlm_initialize(WLM_VERSION) != 0) {
-        PLUGIN_WARNING ("wlm_initialize: %s", STRERRNO);
+    /* wlm_initialize returns the error code, it does not always set errno. */
+    int status = wlm_initialize(WLM_VERSION);
+    if (status != 0) {
+        PLUGIN_WARNING ("wlm_initialize: %s", STRERROR(status));
         return -1;
     }
 
