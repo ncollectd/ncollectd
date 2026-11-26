@@ -20,9 +20,16 @@
 #include <linux/genetlink.h>
 #include <linux/rtnetlink.h>
 
+#ifdef HAVE_SYS_CAPABILITY_H
+#include <sys/capability.h>
+#endif
+
 #define SOCKET_BUFFER_SIZE 8192
 #define WG_KEY_LEN 32
 #define WG_KEY_LEN_BASE64 ((((WG_KEY_LEN) + 2) / 3) * 4 + 1)
+#define WG_MAX_RETRIES 3
+
+static complain_t wireguard_complaint;
 
 enum {
     FAM_WIREGUARD_SENT_BYTES,
@@ -45,7 +52,7 @@ static metric_family_t fams[FAM_WIREGUARD_MAX] = {
     [FAM_WIREGUARD_LATEST_HANDSHAKE_SECONDS] = {
         .name = "system_wireguard_latest_handshake_seconds",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Seconds from the last handshake.",
+        .help = "Unix timestamp in seconds of the last handshake.",
     },
 };
 
@@ -339,11 +346,12 @@ static int parse_peers(const struct nlattr *attr, void *data)
     if (!ret)
         return ret;
 
+    /* Skip the peer without public key, but continue with the next ones. */
     if (!(peer.flags & WGPEER_HAS_PUBLIC_KEY))
-        return MNL_CB_ERROR;
+        return MNL_CB_OK;
 
-    if (!(peer.flags & WGPEER_HAS_ENDPOINT))
-        return MNL_CB_ERROR;
+    /* The endpoint is optional: a peer without handshake has no endpoint,
+     * the remote_ip and remote_port labels are omitted. */
 
     metric_t m = {0};
     metric_label_set(&m, "interface", device->name);
@@ -353,17 +361,17 @@ static int parse_peers(const struct nlattr *attr, void *data)
 
         const char *name = NULL;
         if (peer.endpoint.addr.sa_family == AF_INET)
-            name = inet_ntop(AF_INET, &(peer.endpoint.addr4), buffer, sizeof(buffer));
+            name = inet_ntop(AF_INET, &(peer.endpoint.addr4.sin_addr), buffer, sizeof(buffer));
         else if (peer.endpoint.addr.sa_family == AF_INET6)
-            name = inet_ntop(AF_INET6, &(peer.endpoint.addr6), buffer, sizeof(buffer));
+            name = inet_ntop(AF_INET6, &(peer.endpoint.addr6.sin6_addr), buffer, sizeof(buffer));
         if (name != NULL)
             metric_label_set(&m, "remote_ip", buffer);
 
         buffer[0] = '\0';
         if (peer.endpoint.addr.sa_family == AF_INET)
-            ssnprintf(buffer, sizeof(buffer), "%uh", htons(peer.endpoint.addr4.sin_port));
+            ssnprintf(buffer, sizeof(buffer), "%u", (unsigned int)ntohs(peer.endpoint.addr4.sin_port));
         else if (peer.endpoint.addr.sa_family == AF_INET6)
-            ssnprintf(buffer, sizeof(buffer), "%uh", htons(peer.endpoint.addr6.sin6_port));
+            ssnprintf(buffer, sizeof(buffer), "%u", (unsigned int)ntohs(peer.endpoint.addr6.sin6_port));
         metric_label_set(&m, "remote_port", buffer);
     }
 
@@ -429,13 +437,14 @@ static int kernel_get_device(const char *iface)
     char mnlg_buffer[SOCKET_BUFFER_SIZE];
     struct mnlg_socket nlg = {0};
     nlg.buf = mnlg_buffer;
+    int retries = 0;
 
 try_again:;
     int ret = 0;
 
     ret = mnlg_socket_open(&nlg, WG_GENL_NAME, WG_GENL_VERSION);
     if (ret != 0)
-        return -1;
+        return ret < 0 ? ret : -EINVAL;
 
     struct nlmsghdr *nlh = mnlg_msg_prepare(&nlg, WG_CMD_GET_DEVICE,
                                                   NLM_F_REQUEST | NLM_F_ACK | NLM_F_DUMP,
@@ -455,7 +464,7 @@ try_again:;
 out:
     mnlg_socket_close(&nlg);
     if (ret) {
-        if (ret == -EINTR)
+        if ((ret == -EINTR) && (retries++ < WG_MAX_RETRIES))
             goto try_again;
     }
     errno = -ret;
@@ -466,7 +475,9 @@ static int parse_linkinfo(const struct nlattr *attr, void *data)
 {
     struct interface *interface = data;
 
-    if (mnl_attr_get_type(attr) == IFLA_INFO_KIND && !strcmp(WG_GENL_NAME, mnl_attr_get_str(attr)))
+    if ((mnl_attr_get_type(attr) == IFLA_INFO_KIND) &&
+        (mnl_attr_validate(attr, MNL_TYPE_STRING) == 0) &&
+        !strcmp(WG_GENL_NAME, mnl_attr_get_str(attr)))
         interface->is_wireguard = true;
 
     return MNL_CB_OK;
@@ -478,7 +489,8 @@ static int parse_infomsg(const struct nlattr *attr, void *data)
 
     if (mnl_attr_get_type(attr) == IFLA_LINKINFO)
         return mnl_attr_parse_nested(attr, parse_linkinfo, data);
-    else if (mnl_attr_get_type(attr) == IFLA_IFNAME)
+    else if ((mnl_attr_get_type(attr) == IFLA_IFNAME) &&
+             (mnl_attr_validate(attr, MNL_TYPE_STRING) == 0))
         interface->name = mnl_attr_get_str(attr);
 
     return MNL_CB_OK;
@@ -492,8 +504,17 @@ static int read_devices_cb(const struct nlmsghdr *nlh, __attribute__((unused)) v
     if (ret != MNL_CB_OK)
         return ret;
 
-    if (interface.name && interface.is_wireguard)
-        kernel_get_device(interface.name);
+    if (interface.name && interface.is_wireguard) {
+        ret = kernel_get_device(interface.name);
+        if (ret < 0) {
+            PLUGIN_COMPLAIN_ERROR(&wireguard_complaint,
+                                  "Failed to get the wireguard device '%s': %s",
+                                  interface.name, STRERROR(-ret));
+        } else {
+            PLUGIN_RELEASE_INFO(&wireguard_complaint,
+                                "Successfully got the wireguard device '%s'.", interface.name);
+        }
+    }
 
     if (nlh->nlmsg_type != NLMSG_DONE)
         return MNL_CB_OK + 1;
@@ -503,15 +524,18 @@ static int read_devices_cb(const struct nlmsghdr *nlh, __attribute__((unused)) v
 
 static int wireguard_read(void)
 {
-    char *rtnl_buffer[SOCKET_BUFFER_SIZE];
+    char rtnl_buffer[SOCKET_BUFFER_SIZE] __attribute__((aligned(8)));
 
     struct mnl_socket *nl = mnl_socket_open(NETLINK_ROUTE);
-    if (!nl)
-        return -errno;
+    if (!nl) {
+        PLUGIN_ERROR("mnl_socket_open failed: %s", STRERRNO);
+        return -1;
+    }
 
     if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
+        PLUGIN_ERROR("mnl_socket_bind failed: %s", STRERRNO);
         mnl_socket_close(nl);
-        return -errno;
+        return -1;
     }
     /* coverity[Y2K38_SAFETY] */
     unsigned int seq = time(NULL);
@@ -525,13 +549,14 @@ static int wireguard_read(void)
     size_t message_len = nlh->nlmsg_len;
 
     if (mnl_socket_sendto(nl, rtnl_buffer, message_len) < 0) {
+        PLUGIN_ERROR("mnl_socket_sendto failed: %s", STRERRNO);
         mnl_socket_close(nl);
-        return -errno;
+        return -1;
     }
     while (true) {
         ssize_t len = mnl_socket_recvfrom(nl, rtnl_buffer, SOCKET_BUFFER_SIZE);
         if (len < 0) {
-            // return -errno;
+            PLUGIN_ERROR("mnl_socket_recvfrom failed: %s", STRERRNO);
             break;
         }
         len = mnl_cb_run(rtnl_buffer, len, seq, portid, read_devices_cb, NULL);
@@ -542,7 +567,7 @@ static int wireguard_read(void)
              * than retrying, potentially indefinitely, we just work with the
              * partial results. */
             if (errno != EINTR) {
-                // return -errno;
+                PLUGIN_ERROR("mnl_cb_run failed: %s", STRERRNO);
                 break;
             }
         }
@@ -556,7 +581,26 @@ static int wireguard_read(void)
     return 0;
 }
 
+static int wireguard_init(void)
+{
+#if defined(HAVE_SYS_CAPABILITY_H) && defined(CAP_NET_ADMIN)
+    if (plugin_check_capability(CAP_NET_ADMIN) != 0) {
+        if (getuid() == 0)
+            PLUGIN_WARNING("Running ncollectd as root, but the "
+                           "CAP_NET_ADMIN capability is missing. The plugin's read "
+                           "function will probably fail. Is your init system dropping "
+                           "capabilities?");
+        else
+            PLUGIN_WARNING("ncollectd doesn't have the CAP_NET_ADMIN "
+                           "capability. If you don't want to run ncollectd as root, try "
+                           "running \"setcap cap_net_admin=ep\" on the ncollectd binary.");
+    }
+#endif
+    return 0;
+}
+
 void module_register(void)
 {
+    plugin_register_init("wireguard", wireguard_init);
     plugin_register_read("wireguard", wireguard_read);
 }
