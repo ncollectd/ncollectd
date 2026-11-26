@@ -16,6 +16,7 @@
         \fBgroup\fP \fIgroupname\fP
         \fBenv\fP \fIkey\fP \fIvalue\fP
         \fBformat\fP \fItext|json|protob|env|environment\fP
+        \fBtimeout\fP \fIseconds\fP
     }
 }
 .Ed
@@ -27,8 +28,9 @@ notifications to the outside world.
 The program is forked once for each notification that is handled by the daemon.
 The notification is passed to the program on \f(CWSTDIN\fP in a fashion similar
 to HTTP-headers.
-This program is not serialized, so that several instances of this program may
-run at once if multiple notifications are received.
+Only one instance of the program is run at a time for each \fBif-match\fP
+block: notifications received while the program is still running are
+discarded.
 .Bl -tag -width Ds
 .It \fBcmd\fP \fIprogram\fP [\fIargs\fP] ...
 .It \fBuser\fP \fIusername\fP
@@ -44,8 +46,17 @@ If the daemon is run with superuser privileges, you must supply a non-root
 user here.
 .It \fBenv\fP \fIkey\fP \fIvalue\fP
 Set the eviroment variable \f(CWkey=value\fP for the executed program.
+The program does not inherit the environment of the daemon, only the
+variables set with \fBenv\fP (and the notification variables with the
+\fIenv\fP format) are passed, so set \fBPATH\fP if the program needs it.
 .It \fBformat\fP \fItext|json|protob|env|environment\fP
 How the notification is passed to the program.
+.It \fBtimeout\fP \fIseconds\fP
+Maximum time to wait for the program to read the notification and exit.
+When the timeout expires the program is terminated with \fBSIGTERM\fP
+and, if it does not exit in one second, with \fBSIGKILL\fP.
+Set to 0 to wait forever.
+Defaults to 60 seconds.
 .El
 .El
 .Sh "SEE ALSO"

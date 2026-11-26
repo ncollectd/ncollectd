@@ -15,6 +15,7 @@ NCOLLECTD-NOTIFY\_EXEC(5) - File Formats Manual
 	        group groupname
 	        env key value
 	        format text|json|protob|env|environment
+	        timeout seconds
 	    }
 	}
 
@@ -28,8 +29,9 @@ notifications to the outside world.
 > The program is forked once for each notification that is handled by the daemon.
 > The notification is passed to the program on STDIN in a fashion similar
 > to HTTP-headers.
-> This program is not serialized, so that several instances of this program may
-> run at once if multiple notifications are received.
+> Only one instance of the program is run at a time for each **if-match**
+> block: notifications received while the program is still running are
+> discarded.
 
 > **cmd** *program* \[*args*] ...
 
@@ -51,10 +53,21 @@ notifications to the outside world.
 > **env** *key* *value*
 
 > > Set the eviroment variable key=value for the executed program.
+> > The program does not inherit the environment of the daemon, only the
+> > variables set with **env** (and the notification variables with the
+> > *env* format) are passed, so set **PATH** if the program needs it.
 
 > **format** *text|json|protob|env|environment*
 
 > > How the notification is passed to the program.
+
+> **timeout** *seconds*
+
+> > Maximum time to wait for the program to read the notification and exit.
+> > When the timeout expires the program is terminated with **SIGTERM**
+> > and, if it does not exit in one second, with **SIGKILL**.
+> > Set to 0 to wait forever.
+> > Defaults to 60 seconds.
 
 # SEE ALSO
 
