@@ -38,6 +38,10 @@ The following options are accepted within each **instance** block:
 
 **packet-max-size** *size*
 
+> Maximum size of the UDP packets sent, between **1024** and **65507** bytes.
+> Defaults to **1428**.
+> Metrics larger than this size are sent in their own datagram.
+
 **flush-interval** *seconds*
 
 **flush-timeout** *seconds*
