@@ -10,6 +10,8 @@ NCOLLECTD-TAIL(5) - File Formats Manual
 	plugin tail {
 	    file filename {
 	        whole true|false
+	        reopen true|false
+	        max-lines lines
 	        label key value
 	        interval seconds
 	        match match {
@@ -32,6 +34,17 @@ The **file** block has the following options:
 **whole** *true|false*
 
 > Read the whole file in each interval.
+
+**reopen** *true|false*
+
+> Reopen the file on each interval.
+
+**max-lines** *lines*
+
+> Maximum number of lines to read from the file in each interval, the
+> remaining lines are read in the next intervals.
+> It is ignored if **whole** is *true*.
+> Defaults to 0, which means no limit.
 
 **label** *key* *value*
 
