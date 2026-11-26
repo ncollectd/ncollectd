@@ -21,6 +21,7 @@
         \fBkrb-srv-name\fP \fIname\fP
         \fBservice\fP \fIservice\fP
         \fBinterval\fP \fIseconds\fP
+        \fBflush-timeout\fP \fIseconds\fP
         \fBcommit-interval\fP \fIseconds\fP
         \fBwrite\fP \fImetrics|notifications\fP
         \fBstatement\fP \fIsql-statement\fP
@@ -84,8 +85,12 @@ connection parameters.
 See the section "The Connection Service File" in the
 \fBPostgreSQL Documentation\fP for details.
 .It \fBinterval\fP \fIseconds\fP
-Specify the interval with which the full callback in called to commit the data.
+Specify the interval with which the flush callback is called to commit the data.
 The default is to use the global \fBinterval\fP setting.
+.It \fBflush-timeout\fP \fIseconds\fP
+Timeout argument passed to the flush callback.
+It is currently ignored by this plugin, which always commits the pending
+transaction once \fBcommit-interval\fP has expired.
 .It \fBcommit-interval\fP \fIseconds\fP
 This option causes a writer to put several updates into a single transaction.
 This transaction will last for the specified amount of time.
@@ -104,6 +109,9 @@ Anything after the first semicolon will be ignored.
 .It \fBMetrics\fP
 Four parameters will be passed to the statement and should be specified
 as tokens $1, $2, through $4 in the statement string.
+All the parameters are always passed, so every one of them must be
+referenced in the statement (use for example \fI$2::text\fP if the value is
+not needed), otherwise the server will fail to determine its data type.
 In general, it is advisable to create and call a custom function in the
 PostgreSQL database for this purpose.
 .Pp
@@ -121,6 +129,9 @@ The timestamp of the queried value as an RFC 3339-formatted local time.
 .It \fBNotifications\fP
 Five parameters will be passed to the statement and should be specified as
 tokens $1, $2, through $5 in the statement string.
+All the parameters are always passed, so every one of them must be
+referenced in the statement (use for example \fI$2::text\fP if the value is
+not needed), otherwise the server will fail to determine its data type.
 In general, it is advisable to create and call a custom function in the
 PostgreSQL database for this purpose.
 .Pp

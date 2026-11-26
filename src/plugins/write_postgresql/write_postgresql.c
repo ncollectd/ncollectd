@@ -10,6 +10,7 @@
 #include "libutils/common.h"
 #include "libutils/complain.h"
 #include "libutils/dtoa.h"
+#include "libutils/itoa.h"
 
 #include <libpq-fe.h>
 #include <pg_config_manual.h>
@@ -34,9 +35,15 @@
   ((NULL == (host)) || ('\0' == *(host))) ? DEFAULT_PGSOCKET_DIR : host,       \
       C_PSQL_IS_UNIX_DOMAIN_SOCKET(host) ? "/.s.PGSQL." : ":", port
 
+/* Minimum time between two reconnection attempts. */
+#define WRITE_PSQL_RECONNECT_INTERVAL TIME_T_TO_CDTIME_T(10)
+/* Maximum wait while connecting, in seconds (libpq connect_timeout). */
+#define WRITE_PSQL_CONNECT_TIMEOUT "10"
+
 typedef struct {
     PGconn *conn;
     c_complain_t conn_complaint;
+    cdtime_t next_reconnect;
 
     int proto_version;
     int server_version;
@@ -63,6 +70,17 @@ typedef struct {
     int refcnt;
 } psql_database_t;
 
+/* Escape a string to be used as a double quoted element of a PostgreSQL array literal. */
+static int write_psql_putescape(strbuf_t *buf, const char *str)
+{
+    static char eset[256] = {
+        ['"'] = '"',
+        ['\\'] = '\\',
+    };
+
+    return strbuf_putescape_set(buf, str, eset, '\\');
+}
+
 static int write_psql_connect(psql_database_t *db)
 {
     if ((db == NULL) || (db->database == NULL))
@@ -78,6 +96,7 @@ static int write_psql_connect(psql_database_t *db)
         "krbsrvname",
         "service",
         "application_name",
+        "connect_timeout",
         NULL
     };
     const char *values[] = {
@@ -90,6 +109,7 @@ static int write_psql_connect(psql_database_t *db)
         db->krbsrvname,
         db->service,
         PACKAGE_NAME "/write_postgresql",
+        WRITE_PSQL_CONNECT_TIMEOUT,
         NULL
     };
 
@@ -113,6 +133,11 @@ static int write_psql_check_connection(psql_database_t *db)
     }
 
     if (PQstatus(db->conn) != CONNECTION_OK) {
+        cdtime_t now = cdtime();
+        /* do not block the writer trying to reconnect for every value */
+        if (now < db->next_reconnect)
+            return -1;
+
         PQreset(db->conn);
 
         /* trigger c_release() */
@@ -120,6 +145,7 @@ static int write_psql_check_connection(psql_database_t *db)
             db->conn_complaint.interval = 1;
 
         if (PQstatus(db->conn) != CONNECTION_OK) {
+            db->next_reconnect = now + WRITE_PSQL_RECONNECT_INTERVAL;
             c_complain(LOG_ERR, &db->conn_complaint,
                                 "Failed to connect to database %s: %s", db->database,
                                 PQerrorMessage(db->conn));
@@ -136,6 +162,9 @@ static int write_psql_check_connection(psql_database_t *db)
         int server_version;
 
         server_host = PQhost(db->conn);
+        char *server_port = PQport(db->conn);
+        if (server_port == NULL)
+            server_port = "";
         server_version = PQserverVersion(db->conn);
 
         c_do_release(LOG_INFO, &db->conn_complaint,
@@ -143,7 +172,7 @@ static int write_psql_check_connection(psql_database_t *db)
                                  "at server %s%s%s (server version: %d.%d.%d, "
                                  "protocol version: %d, pid: %d)",
                                  init ? "" : "re", PQdb(db->conn), PQuser(db->conn),
-                                 C_PSQL_SOCKET3(server_host, PQport(db->conn)),
+                                 C_PSQL_SOCKET3(server_host, server_port),
                                  C_PSQL_SERVER_VERSION3(server_version), db->proto_version,
                                  PQbackendPID(db->conn));
 
@@ -182,6 +211,20 @@ static int write_psql_commit(psql_database_t *db)
         } else {
             PLUGIN_WARNING("Failed to commit transaction: %s", PQerrorMessage(db->conn));
         }
+        PQclear(r);
+    }
+    return status;
+}
+
+static int write_psql_exec(psql_database_t *db, const char *query)
+{
+    int status = -1;
+    PGresult *r = PQexec(db->conn, query);
+    if (r != NULL) {
+        if (PQresultStatus(r) == PGRES_COMMAND_OK)
+            status = 0;
+        else
+            PLUGIN_WARNING("Failed to execute '%s': %s", query, PQerrorMessage(db->conn));
         PQclear(r);
     }
     return status;
@@ -229,6 +272,12 @@ static int write_psql_insert(psql_database_t *db, const char **params, size_t pa
     if ((db->commit_interval > 0) && (db->next_commit == 0))
         write_psql_begin(db);
 
+    /* Inside a transaction use a savepoint, so a failed statement does not
+     * abort (and roll back) all the rows inserted since the last commit. */
+    bool savepoint = false;
+    if (db->next_commit > 0)
+        savepoint = write_psql_exec(db, "SAVEPOINT ncollectd_insert") == 0;
+
     PGresult *res = PQexecParams(db->conn, db->statement, params_size,
                                  NULL, (const char *const *)params, NULL, NULL, 0);
     if ((PQresultStatus(res) != PGRES_COMMAND_OK) && (PQresultStatus(res) != PGRES_TUPLES_OK)) {
@@ -237,31 +286,47 @@ static int write_psql_insert(psql_database_t *db, const char **params, size_t pa
         bool success = false;
 
         if ((PQstatus(db->conn) != CONNECTION_OK) && (write_psql_check_connection(db) == 0)) {
+            /* the pending transaction died with the old connection: restart it */
+            savepoint = false;
+            db->next_commit = 0;
+            if (db->commit_interval > 0)
+                write_psql_begin(db);
+
             /* try again */
             res = PQexecParams(db->conn, db->statement, params_size,
                                NULL, (const char *const *)params, NULL, NULL, 0);
             if ((PQresultStatus(res) == PGRES_COMMAND_OK) ||
-                (PQresultStatus(res) == PGRES_TUPLES_OK)) {
-                PQclear(res);
-            }
-
-            success = true;
+                (PQresultStatus(res) == PGRES_TUPLES_OK))
+                success = true;
+            PQclear(res);
         }
 
         if (success == false) {
             PLUGIN_ERROR("Failed to execute SQL query: %s", PQerrorMessage(db->conn));
-            PLUGIN_INFO("SQL query was: '%s', params: %s, %s, %s, %s",
-                        db->statement, params[0], params[1], params[2], params[3]);
+            PLUGIN_INFO("SQL query was: '%s'", db->statement);
+            for (size_t i = 0; i < params_size; i++)
+                PLUGIN_INFO("SQL query param $%zu: %s", i + 1,
+                            params[i] != NULL ? params[i] : "NULL");
 
-            /* this will abort any current transaction -> restart */
-            if (db->next_commit > 0)
+            if (savepoint && (PQstatus(db->conn) == CONNECTION_OK)) {
+                /* discard only the failed statement and keep the transaction */
+                if ((write_psql_exec(db, "ROLLBACK TO SAVEPOINT ncollectd_insert; "
+                                         "RELEASE SAVEPOINT ncollectd_insert") != 0) &&
+                    (db->next_commit > 0))
+                    write_psql_commit(db);
+            } else if (db->next_commit > 0) {
+                /* this will abort any current transaction -> restart */
                 write_psql_commit(db);
+            }
 
             return -1;
         }
     } else {
        PQclear(res);
     }
+
+    if (savepoint)
+        write_psql_exec(db, "RELEASE SAVEPOINT ncollectd_insert");
 
     if ((db->next_commit > 0) && (cdtime() > db->next_commit))
         write_psql_commit(db);
@@ -298,16 +363,17 @@ static int write_psql_notif(notification_t const *n, user_data_t *ud)
         for (size_t i = 0; i < n->label.num; i++) {
             if (i != 0)
                 status |= strbuf_putchar(&buf, ',');
-            status |= strbuf_putstrn(&buf, "{'", 2);
-            status |= strbuf_putstr(&buf, n->label.ptr[i].name);
-            status |= strbuf_putstrn(&buf, "','", 3);
-            status |= strbuf_putescape_label(&buf, n->label.ptr[i].value);
-            status |= strbuf_putstrn(&buf, "'}", 2);
+            status |= strbuf_putstrn(&buf, "{\"", 2);
+            status |= write_psql_putescape(&buf, n->label.ptr[i].name);
+            status |= strbuf_putstrn(&buf, "\",\"", 3);
+            status |= write_psql_putescape(&buf, n->label.ptr[i].value);
+            status |= strbuf_putstrn(&buf, "\"}", 2);
         }
         status |= strbuf_putchar(&buf, '}');
         status |= strbuf_putchar(&buf, ' ');
         if (status != 0) {
             PLUGIN_ERROR("Failed to format labels.");
+            strbuf_destroy(&buf);
             return -1;
         }
     }
@@ -319,15 +385,16 @@ static int write_psql_notif(notification_t const *n, user_data_t *ud)
         for (size_t i = 0; i < n->annotation.num; i++) {
             if (i != 0)
                 status |= strbuf_putchar(&buf, ',');
-            status |= strbuf_putstrn(&buf, "{'", 2);
-            status |= strbuf_putstr(&buf, n->annotation.ptr[i].name);
-            status |= strbuf_putstrn(&buf, "','", 3);
-            status |= strbuf_putescape_label(&buf, n->annotation.ptr[i].value);
-            status |= strbuf_putstrn(&buf, "'}", 2);
+            status |= strbuf_putstrn(&buf, "{\"", 2);
+            status |= write_psql_putescape(&buf, n->annotation.ptr[i].name);
+            status |= strbuf_putstrn(&buf, "\",\"", 3);
+            status |= write_psql_putescape(&buf, n->annotation.ptr[i].value);
+            status |= strbuf_putstrn(&buf, "\"}", 2);
         }
         status |= strbuf_putchar(&buf, '}');
         if (status != 0) {
             PLUGIN_ERROR("Failed to format annotations.");
+            strbuf_destroy(&buf);
             return -1;
         }
     }
@@ -335,9 +402,10 @@ static int write_psql_notif(notification_t const *n, user_data_t *ud)
     if (labels_len > 0) {
         labels_str = buf.ptr;
         buf.ptr[labels_len-1] = '\0';
-        if (n->annotation.num > 0)
-            annotations_str = buf.ptr + labels_len;
     }
+
+    if (n->annotation.num > 0)
+        annotations_str = buf.ptr + labels_len;
 
     char *severity_str = NULL;
     switch(n->severity) {
@@ -359,17 +427,17 @@ static int write_psql_notif(notification_t const *n, user_data_t *ud)
     params[3] = severity_str;
     params[4] = time_str;
 
-    write_psql_insert(db, params, STATIC_ARRAY_SIZE(params));
+    status = write_psql_insert(db, params, STATIC_ARRAY_SIZE(params));
 
     strbuf_destroy(&buf);
 
-    return 0;
+    return status;
 }
 
-static int write_psql_metric(psql_database_t *db, strbuf_t *buf,
-                             char *metric, char *metric_suffix,
-                             const label_set_t *labels1, const label_set_t *labels2,
-                             double value, cdtime_t time)
+static int write_psql_metric_str(psql_database_t *db, strbuf_t *buf,
+                                 char *metric, char *metric_suffix,
+                                 const label_set_t *labels1, const label_set_t *labels2,
+                                 const char *value_str, cdtime_t time)
 {
     strbuf_reset(buf);
 
@@ -393,11 +461,11 @@ static int write_psql_metric(psql_database_t *db, strbuf_t *buf,
             for (size_t i = 0; i < labels1->num; i++, n++) {
                 if (n != 0)
                     status |= strbuf_putchar(buf, ',');
-                status |= strbuf_putstrn(buf, "{'", 2);
-                status |= strbuf_putstr(buf, labels1->ptr[i].name);
-                status |= strbuf_putstrn(buf, "','", 3);
-                status |= strbuf_putescape_label(buf, labels1->ptr[i].value);
-                status |= strbuf_putstrn(buf, "'}", 2);
+                status |= strbuf_putstrn(buf, "{\"", 2);
+                status |= write_psql_putescape(buf, labels1->ptr[i].name);
+                status |= strbuf_putstrn(buf, "\",\"", 3);
+                status |= write_psql_putescape(buf, labels1->ptr[i].value);
+                status |= strbuf_putstrn(buf, "\"}", 2);
             }
         }
 
@@ -405,11 +473,11 @@ static int write_psql_metric(psql_database_t *db, strbuf_t *buf,
             for (size_t i = 0; i < labels2->num; i++, n++) {
                 if (n != 0)
                     status |= strbuf_putchar(buf, ',');
-                status |= strbuf_putstrn(buf, "{'", 2);
-                status |= strbuf_putstr(buf, labels2->ptr[i].name);
-                status |= strbuf_putstrn(buf, "','", 3);
-                status |= strbuf_putescape_label(buf, labels2->ptr[i].value);
-                status |= strbuf_putstrn(buf, "'}", 2);
+                status |= strbuf_putstrn(buf, "{\"", 2);
+                status |= write_psql_putescape(buf, labels2->ptr[i].name);
+                status |= strbuf_putstrn(buf, "\",\"", 3);
+                status |= write_psql_putescape(buf, labels2->ptr[i].value);
+                status |= strbuf_putstrn(buf, "\"}", 2);
             }
         }
 
@@ -433,9 +501,6 @@ static int write_psql_metric(psql_database_t *db, strbuf_t *buf,
     if ((strbuf_len(buf) - (metric_len + 1)) > 0)
         labels_str = buf->ptr + metric_len + 1;
 
-    char value_str[DTOA_MAX];
-    dtoa(value, value_str, sizeof(value_str));
-
     const char *params[4];
     params[0] = metric_str;
     params[1] = labels_str;
@@ -443,6 +508,43 @@ static int write_psql_metric(psql_database_t *db, strbuf_t *buf,
     params[3] = time_str;
 
     return write_psql_insert(db, params, STATIC_ARRAY_SIZE(params));
+}
+
+static int write_psql_metric(psql_database_t *db, strbuf_t *buf,
+                             char *metric, char *metric_suffix,
+                             const label_set_t *labels1, const label_set_t *labels2,
+                             double value, cdtime_t time)
+{
+    char value_str[DTOA_MAX];
+    dtoa(value, value_str, sizeof(value_str));
+
+    return write_psql_metric_str(db, buf, metric, metric_suffix, labels1, labels2,
+                                 value_str, time);
+}
+
+/* Integers are formatted directly to avoid losing precision above 2^53. */
+static int write_psql_metric_int64(psql_database_t *db, strbuf_t *buf,
+                                   char *metric, char *metric_suffix,
+                                   const label_set_t *labels1, const label_set_t *labels2,
+                                   int64_t value, cdtime_t time)
+{
+    char value_str[ITOA_MAX];
+    itoa(value, value_str);
+
+    return write_psql_metric_str(db, buf, metric, metric_suffix, labels1, labels2,
+                                 value_str, time);
+}
+
+static int write_psql_metric_uint64(psql_database_t *db, strbuf_t *buf,
+                                    char *metric, char *metric_suffix,
+                                    const label_set_t *labels1, const label_set_t *labels2,
+                                    uint64_t value, cdtime_t time)
+{
+    char value_str[ITOA_MAX];
+    uitoa(value, value_str);
+
+    return write_psql_metric_str(db, buf, metric, metric_suffix, labels1, labels2,
+                                 value_str, time);
 }
 
 static int write_psql(metric_family_t const *fam, user_data_t *ud)
@@ -470,24 +572,30 @@ static int write_psql(metric_family_t const *fam, user_data_t *ud)
     for (size_t i = 0; i < fam->metric.num; i++) {
         metric_t *m = &fam->metric.ptr[i];
         switch(fam->type) {
-        case METRIC_TYPE_UNKNOWN: {
-            double value = m->value.unknown.type == UNKNOWN_FLOAT64 ?
-                           m->value.unknown.float64 : m->value.unknown.int64;
-            status |= write_psql_metric(db, &buf, fam->name, NULL,
-                                        &m->label, NULL, value, m->time);
-        }   break;
-        case METRIC_TYPE_GAUGE: {
-            double value = m->value.gauge.type == GAUGE_FLOAT64 ?
-                           m->value.gauge.float64 : m->value.gauge.int64;
-            status |= write_psql_metric(db, &buf, fam->name, NULL,
-                                        &m->label, NULL, value, m->time);
-        }   break;
-        case METRIC_TYPE_COUNTER: {
-            double value = m->value.counter.type == COUNTER_UINT64 ?
-                           m->value.counter.uint64 : m->value.counter.float64;
-            status |= write_psql_metric(db, &buf, fam->name, "_total",
-                                        &m->label, NULL, value, m->time);
-        }   break;
+        case METRIC_TYPE_UNKNOWN:
+            if (m->value.unknown.type == UNKNOWN_FLOAT64)
+                status |= write_psql_metric(db, &buf, fam->name, NULL, &m->label, NULL,
+                                            m->value.unknown.float64, m->time);
+            else
+                status |= write_psql_metric_int64(db, &buf, fam->name, NULL, &m->label, NULL,
+                                                  m->value.unknown.int64, m->time);
+            break;
+        case METRIC_TYPE_GAUGE:
+            if (m->value.gauge.type == GAUGE_FLOAT64)
+                status |= write_psql_metric(db, &buf, fam->name, NULL, &m->label, NULL,
+                                            m->value.gauge.float64, m->time);
+            else
+                status |= write_psql_metric_int64(db, &buf, fam->name, NULL, &m->label, NULL,
+                                                  m->value.gauge.int64, m->time);
+            break;
+        case METRIC_TYPE_COUNTER:
+            if (m->value.counter.type == COUNTER_UINT64)
+                status |= write_psql_metric_uint64(db, &buf, fam->name, "_total", &m->label, NULL,
+                                                   m->value.counter.uint64, m->time);
+            else
+                status |= write_psql_metric(db, &buf, fam->name, "_total", &m->label, NULL,
+                                            m->value.counter.float64, m->time);
+            break;
         case METRIC_TYPE_STATE_SET:
             for (size_t j = 0; j < m->value.state_set.num; j++) {
                 label_pair_t label_pair = {.name = fam->name,
@@ -516,8 +624,8 @@ static int write_psql(metric_family_t const *fam, user_data_t *ud)
                                             &m->label, &label_set, s->quantiles[j].value, m->time);
             }
 
-            status |= write_psql_metric(db, &buf, fam->name, "_count",
-                                        &m->label, NULL, s->count, m->time);
+            status |= write_psql_metric_uint64(db, &buf, fam->name, "_count",
+                                               &m->label, NULL, s->count, m->time);
             status |= write_psql_metric(db, &buf, fam->name, "_sum",
                                         &m->label, NULL, s->sum, m->time);
         }   break;
@@ -531,13 +639,13 @@ static int write_psql(metric_family_t const *fam, user_data_t *ud)
 
                 label_pair_t label_pair = {.name = "le", .value = le};
                 label_set_t label_set = {.num = 1, .ptr = &label_pair};
-                status |= write_psql_metric(db, &buf, fam->name, "_bucket",
-                                            &m->label, &label_set, h->buckets[j].counter, m->time);
+                status |= write_psql_metric_uint64(db, &buf, fam->name, "_bucket", &m->label,
+                                                   &label_set, h->buckets[j].counter, m->time);
             }
 
-            status |= write_psql_metric(db, &buf, fam->name,
-                                        fam->type == METRIC_TYPE_HISTOGRAM ? "_count" : "_gcount",
-                                        &m->label, NULL, histogram_counter(h), m->time);
+            status |= write_psql_metric_uint64(db, &buf, fam->name,
+                                               fam->type == METRIC_TYPE_HISTOGRAM ? "_count" : "_gcount",
+                                               &m->label, NULL, histogram_counter(h), m->time);
             status |= write_psql_metric(db, &buf, fam->name,
                                         fam->type == METRIC_TYPE_HISTOGRAM ?  "_sum" : "_gsum",
                                         &m->label, NULL, histogram_sum(h), m->time);
@@ -580,6 +688,8 @@ static int write_psql_config_database(config_item_t *ci)
         return -1;
     }
 
+    db->refcnt = 1;
+
     C_COMPLAIN_INIT(&db->conn_complaint);
 
     int status = cf_util_get_string(ci, &db->instance);
@@ -611,13 +721,13 @@ static int write_psql_config_database(config_item_t *ci)
             status = cf_util_get_string_env(child, &db->password);
         } else if (strcasecmp(child->key, "ssl-mode") == 0) {
             status = cf_util_get_string(child, &db->sslmode);
-        } else if (strcasecmp(child->key, "krb-srvname") == 0) {
+        } else if ((strcasecmp(child->key, "krb-srv-name") == 0)) {
             status = cf_util_get_string(child, &db->krbsrvname);
         } else if (strcasecmp(child->key, "service") == 0) {
             status = cf_util_get_string(child, &db->service);
         } else if (strcasecmp(child->key, "statement") == 0) {
             status = cf_util_get_string(child, &db->statement);
-        } else if (strcasecmp(child->key, "flush-interval") == 0) {
+        } else if ((strcasecmp(child->key, "interval") == 0)) {
             status = cf_util_get_cdtime(child, &flush_interval);
         } else if (strcasecmp(child->key, "flush-timeout") == 0) {
             status = cf_util_get_cdtime(child, &db->flush_timeout);
