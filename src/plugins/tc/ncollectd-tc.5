@@ -20,7 +20,8 @@
 The \fBtc\fP plugin collect metrics of Traffic Control in the Linux kernel.
 .Bl -tag -width Ds
 .It \fBinterface\fP \fIinterface\fP
-Instruct the plugin to collect Traffic Control statistics for this interface.
+Instruct the plugin to collect Traffic Control statistics (all qdiscs,
+classes and filters) for this interface.
 .Pp
 If \fBinterface\fP is \fIall\fP, all interfaces will be selected.
 .Pp
@@ -60,11 +61,11 @@ argument, i.e. without an identifier, all qdiscs, classes, or filters
 that are associated with that interface will be collected.
 .Pp
 Since a filter itself doesn't necessarily have a handle, the parent's handle
-is used.
-This may lead to problems when more than one filter is attached to a
-qdisc or class.
-This isn't nice, but we don't know how this could be done any better.
-If you have a idea, please don't hesitate to tell us.
+is used as identifier.
+To tell apart several filters attached to the same qdisc or class, the
+filter metrics have also the \fIprio\fP and \fIhandle\fP labels.
+The filters of the root qdisc and of the ingress (or clsact) qdisc are
+collected.
 .Pp
 As with the \fBinterface\fP option you can specify \fBall\fP as the interface,
 meaning all interfaces.
