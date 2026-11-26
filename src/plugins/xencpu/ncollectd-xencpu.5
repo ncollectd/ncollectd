@@ -13,8 +13,8 @@
 .Sh DESCRIPTION
 The \fBxencpu\fP plugin collects metrics of hardware CPU load for machine
 running Xen hypervisor.
-Load is calculated from 'idle time' value, provided by Xen.
-Result is reported using the C<percent> type, for each CPU (core).
+The 'idle time' value provided by Xen is reported for each CPU (core)
+as the counter \fBxen_cpu_idle_seconds\fP.
 .Pp
 This plugin doesn't have any options.
 .Sh "SEE ALSO"

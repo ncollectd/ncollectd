@@ -13,8 +13,8 @@ NCOLLECTD-XENCPU(5) - File Formats Manual
 
 The **xencpu** plugin collects metrics of hardware CPU load for machine
 running Xen hypervisor.
-Load is calculated from 'idle time' value, provided by Xen.
-Result is reported using the C&lt;percent&gt; type, for each CPU (core).
+The 'idle time' value provided by Xen is reported for each CPU (core)
+as the counter **xen\_cpu\_idle\_seconds**.
 
 This plugin doesn't have any options.
 
