@@ -17,15 +17,12 @@
         \fBfilter\fP \fIexpression\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
-        \fBfilter\fP {
-            ...
-        }
     }
 }
 .Ed
 .Sh DESCRIPTION
-The \fBpcap\fP plugin uses libpcap to get a copy of all traffic on the
-selected interfaces.
+The \fBpcap\fP plugin uses libpcap to capture the traffic on the selected
+interface and collects statistics about the traffic.
 .Pp
 The \fBpcap\fP plugin supports the following options:
 .Bl -tag -width Ds
@@ -36,15 +33,17 @@ to get packets from all interfaces.
 This may not work on certain platforms, such as Mac OS X.
 .It \fBpromiscuous\fP \fItrue|false\fP
 Put the interface in promiscuous mode.
+Defaults to false.
 .It \fBignore-source\fP \fIsource\fP
 Ignore packets that originate from this address.
 .It \fBignore-destination\fP \fIdestination\fP
 Ignore packets that has destination this address.
 .It \fBfilter\fP \fIexpression\fP
-Process the packets on a network interface that match the boolean
+Only process the packets that also match the boolean
 \fIexpression\fP (see
 .Xr pcap-filter 7
 for the expression syntax).
+The expression is combined with the built-in filter "udp port 53".
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple times in the \fBinstance\fP block.
@@ -52,10 +51,6 @@ Can appear multiple times in the \fBinstance\fP block.
 Sets the interval (in seconds) in which the values will be collected from this
 instance.
 By default the global \fBinterval\fP setting will be used.
-.It \fBfilter\fP
-Configure a filter to modify or drop the metrics.
-See \fBFILTER CONFIGURATION\fP in
-.Xr ncollectd.conf 5 .
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,

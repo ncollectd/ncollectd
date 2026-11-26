@@ -68,6 +68,8 @@
 #endif
 
 #define PCAP_SNAPLEN 1460
+#define PCAP_POLL_TIMEOUT_MS 1000
+#define PCAP_DNS_FILTER "udp port 53"
 #ifndef ETHER_HDR_LEN
 #    define ETHER_ADDR_LEN 6
 #    define ETHER_TYPE_LEN 2
@@ -112,7 +114,7 @@ struct ip_list_s {
 };
 typedef struct ip_list_s ip_list_t;
 
-typedef struct {
+typedef struct nc_pcap_ctx_s {
     char *name;
     char *interface;
     bool promiscuous;
@@ -124,8 +126,15 @@ typedef struct {
     pcap_t *pcap_obj;
     pthread_t listen_thread;
     int listen_thread_init;
+    pthread_mutex_t thread_lock;
+    pthread_cond_t thread_cond;
+    bool thread_stop;
     nc_dns_ctx_t dns;
+    struct nc_pcap_ctx_s *next;
 } nc_pcap_ctx_t;
+
+static pthread_mutex_t pcap_instances_lock = PTHREAD_MUTEX_INITIALIZER;
+static nc_pcap_ctx_t *pcap_instances;
 
 #define PCAP_SNAPLEN 1460
 // static int select_numeric_qtype = 1;
@@ -250,36 +259,52 @@ static void ignore_list_add_name(ip_list_t **list, const char *name)
     freeaddrinfo(ai_list);
 }
 
-static int handle_udp(nc_pcap_ctx_t *ctx, const struct udphdr *udp, int len)
+static void ignore_list_free(ip_list_t *list)
+{
+    while (list != NULL) {
+        ip_list_t *next = list->next;
+        free(list);
+        list = next;
+    }
+}
+
+static int handle_udp(nc_pcap_ctx_t *ctx, const struct udphdr *udp, size_t len)
 {
     char buf[PCAP_SNAPLEN];
+    if ((len < sizeof(*udp)) || ((len - sizeof(*udp)) > sizeof(buf)))
+        return 0;
     if ((ntohs(udp->UDP_DEST) != 53) && (ntohs(udp->UDP_SRC) != 53))
         return 0;
-    memcpy(buf, udp + 1, len - sizeof(*udp));
-    if (handle_dns(&ctx->dns, buf, len - sizeof(*udp)) == 0)
+    len -= sizeof(*udp);
+    memcpy(buf, udp + 1, len);
+    if (handle_dns(&ctx->dns, buf, len) == 0)
         return 0;
     return 1;
 }
 
 #ifdef HAVE_IPV6
-static int handle_ipv6(nc_pcap_ctx_t *ctx, const struct ip6_hdr *ipv6, int len)
+static int handle_ipv6(nc_pcap_ctx_t *ctx, const struct ip6_hdr *ipv6, size_t len)
 {
     char buf[PCAP_SNAPLEN];
-    unsigned int offset;
+    size_t offset;
     int nexthdr;
 
     struct in6_addr c_src_addr;
+    struct in6_addr c_dst_addr;
     uint16_t payload_len;
 
-    if (0 > len)
+    if (len < sizeof(struct ip6_hdr))
         return 0;
 
     offset = sizeof(struct ip6_hdr);
     nexthdr = ipv6->ip6_nxt;
     c_src_addr = ipv6->ip6_src;
+    c_dst_addr = ipv6->ip6_dst;
     payload_len = ntohs(ipv6->ip6_plen);
 
     if (ignore_list_match(ctx->ignore_src, &c_src_addr))
+        return 0;
+    if (ignore_list_match(ctx->ignore_dst, &c_dst_addr))
         return 0;
 
     /* Parse extension headers. This only handles the standard headers, as
@@ -294,7 +319,7 @@ static int handle_ipv6(nc_pcap_ctx_t *ctx, const struct ip6_hdr *ipv6, int len)
         uint16_t ext_hdr_len;
 
         /* Catch broken packets */
-        if ((offset + sizeof(struct ip6_ext)) > (unsigned int)len)
+        if ((offset + sizeof(struct ip6_ext)) > len)
             return 0;
 
         /* Cannot handle fragments. */
@@ -314,7 +339,7 @@ static int handle_ipv6(nc_pcap_ctx_t *ctx, const struct ip6_hdr *ipv6, int len)
     }
 
     /* Catch broken and empty packets */
-    if (((offset + payload_len) > (unsigned int)len) || (payload_len == 0) ||
+    if (((offset + payload_len) > len) || (payload_len == 0) ||
         (payload_len > PCAP_SNAPLEN))
         return 0;
 
@@ -329,7 +354,7 @@ static int handle_ipv6(nc_pcap_ctx_t *ctx, const struct ip6_hdr *ipv6, int len)
 }
 #else
 static int handle_ipv6(__attribute__((unused)) nc_pcap_ctx_t *ctx,
-                       __attribute__((unused)) const void *pkg, __attribute__((unused)) int len)
+                       __attribute__((unused)) const void *pkg, __attribute__((unused)) size_t len)
 {
     return 0;
 }
@@ -347,21 +372,32 @@ static void in6_addr_from_buffer(struct in6_addr *ia, const void *buf, size_t bu
     }
 }
 
-static int handle_ip(nc_pcap_ctx_t *ctx, const struct ip *ip, int len)
+static int handle_ip(nc_pcap_ctx_t *ctx, const struct ip *ip, size_t len)
 {
     char buf[PCAP_SNAPLEN];
-    int offset = ip->ip_hl << 2;
+    size_t offset;
     struct in6_addr c_src_addr;
     struct in6_addr c_dst_addr;
 
+    if (len < sizeof(struct ip))
+        return 0;
+
     if (ip->ip_v == 6)
         return handle_ipv6(ctx, (const void *)ip, len);
+
+    offset = ip->ip_hl << 2;
+    if ((ip->ip_hl < 5) || (offset > len))
+        return 0;
 
     in6_addr_from_buffer(&c_src_addr, &ip->ip_src.s_addr, sizeof(ip->ip_src.s_addr), AF_INET);
     in6_addr_from_buffer(&c_dst_addr, &ip->ip_dst.s_addr, sizeof(ip->ip_dst.s_addr), AF_INET);
     if (ignore_list_match(ctx->ignore_src, &c_src_addr))
         return 0;
+    if (ignore_list_match(ctx->ignore_dst, &c_dst_addr))
+        return 0;
     if (IPPROTO_UDP != ip->ip_p)
+        return 0;
+    if ((len - offset) > sizeof(buf))
         return 0;
     memcpy(buf, ((const char *)ip) + offset, len - offset);
     if (handle_udp(ctx, (struct udphdr *)buf, len - offset) == 0)
@@ -370,7 +406,7 @@ static int handle_ip(nc_pcap_ctx_t *ctx, const struct ip *ip, int len)
 }
 
 #ifdef HAVE_NET_IF_PPP_H
-static int handle_ppp(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
+static int handle_ppp(nc_pcap_ctx_t *ctx, const u_char *pkt, size_t len)
 {
     char buf[PCAP_SNAPLEN];
     unsigned short us;
@@ -395,14 +431,18 @@ static int handle_ppp(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
     }
     if (ETHERTYPE_IP != proto && PPP_IP != proto)
         return 0;
+    if (len > sizeof(buf))
+        return 0;
     memcpy(buf, pkt, len);
     return handle_ip(ctx, (struct ip *)buf, len);
 }
 #endif
 
-static int handle_null(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
+static int handle_null(nc_pcap_ctx_t *ctx, const u_char *pkt, size_t len)
 {
     unsigned int family;
+    if (len < sizeof(family))
+        return 0;
     memcpy(&family, pkt, sizeof(family));
     if (AF_INET != family)
         return 0;
@@ -410,9 +450,11 @@ static int handle_null(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
 }
 
 #ifdef DLT_LOOP
-static int handle_loop(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
+static int handle_loop(nc_pcap_ctx_t *ctx, const u_char *pkt, size_t len)
 {
     unsigned int family;
+    if (len < sizeof(family))
+        return 0;
     memcpy(&family, pkt, sizeof(family));
     if (AF_INET != ntohl(family))
         return 0;
@@ -422,28 +464,33 @@ static int handle_loop(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
 #endif
 
 #ifdef DLT_RAW
-static int handle_raw(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
+static int handle_raw(nc_pcap_ctx_t *ctx, const u_char *pkt, size_t len)
 {
     return handle_ip(ctx, (const struct ip *)pkt, len);
 }
 
 #endif
 
-static int handle_ether(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
+static int handle_ether(nc_pcap_ctx_t *ctx, const u_char *pkt, size_t len)
 {
     char buf[PCAP_SNAPLEN];
     const struct ether_header *e = (const void *)pkt;
-    unsigned short etype = ntohs(e->ether_type);
+    unsigned short etype;
     if (len < ETHER_HDR_LEN)
         return 0;
+    etype = ntohs(e->ether_type);
     pkt += ETHER_HDR_LEN;
     len -= ETHER_HDR_LEN;
     if (ETHERTYPE_8021Q == etype) {
+        if (len < 4)
+            return 0;
         etype = ntohs(*(const unsigned short *)(pkt + 2));
         pkt += 4;
         len -= 4;
     }
     if ((ETHERTYPE_IP != etype) && (ETHERTYPE_IPV6 != etype))
+        return 0;
+    if (len > sizeof(buf))
         return 0;
     memcpy(buf, pkt, len);
     if (ETHERTYPE_IPV6 == etype)
@@ -453,7 +500,7 @@ static int handle_ether(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
 }
 
 #ifdef DLT_LINUX_SLL
-static int handle_linux_sll(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
+static int handle_linux_sll(nc_pcap_ctx_t *ctx, const u_char *pkt, size_t len)
 {
     const struct sll_header {
         uint16_t pkt_type;
@@ -464,7 +511,7 @@ static int handle_linux_sll(nc_pcap_ctx_t *ctx, const u_char *pkt, int len)
     } * hdr;
     uint16_t etype;
 
-    if ((0 > len) || ((unsigned int)len < sizeof(struct sll_header)))
+    if (len < sizeof(struct sll_header))
         return 0;
 
     hdr = (const struct sll_header *)pkt;
@@ -534,6 +581,14 @@ static void handle_pcap(u_char *udata, const struct pcap_pkthdr *hdr, const u_ch
 #endif
 }
 
+static bool nc_pcap_thread_stopping(nc_pcap_ctx_t *ctx)
+{
+    pthread_mutex_lock(&ctx->thread_lock);
+    bool stop = ctx->thread_stop;
+    pthread_mutex_unlock(&ctx->thread_lock);
+    return stop;
+}
+
 static int nc_pcap_loop(nc_pcap_ctx_t *ctx)
 {
     /* Don't block any signals */
@@ -545,7 +600,7 @@ static int nc_pcap_loop(nc_pcap_ctx_t *ctx)
     PLUGIN_DEBUG("Creating PCAP object..");
     char pcap_error[PCAP_ERRBUF_SIZE];
     ctx->pcap_obj = pcap_open_live(ctx->interface,
-                                      PCAP_SNAPLEN, 0 /* Not promiscuous */,
+                                      PCAP_SNAPLEN, ctx->promiscuous ? 1 : 0,
                                       (int)CDTIME_T_TO_MS(ctx->interval / 2),
                                       pcap_error);
     if (ctx->pcap_obj == NULL) {
@@ -554,7 +609,8 @@ static int nc_pcap_loop(nc_pcap_ctx_t *ctx)
     }
 
     struct bpf_program fp = {0};
-    int status = pcap_compile(ctx->pcap_obj, &fp, "udp port 53", 1, 0);
+    int status = pcap_compile(ctx->pcap_obj, &fp,
+                              ctx->filter != NULL ? ctx->filter : PCAP_DNS_FILTER, 1, 0);
     if (status < 0) {
         PLUGIN_ERROR("pcap_compile failed: %s", get_pcap_error(ctx->pcap_obj, status));
         return status;
@@ -573,7 +629,34 @@ static int nc_pcap_loop(nc_pcap_ctx_t *ctx)
     dnstop_set_callback(dns_child_callback);
 #endif
 
-    status = pcap_loop(ctx->pcap_obj, -1, handle_pcap, (void *)ctx);
+    /* pcap_breakloop() does not wake up a thread blocked in pcap_loop() on every
+     * platform, so poll() with a timeout and check for a stop request. */
+    int fd = pcap_get_selectable_fd(ctx->pcap_obj);
+    if ((fd >= 0) && (pcap_setnonblock(ctx->pcap_obj, 1, pcap_error) < 0)) {
+        PLUGIN_ERROR("pcap_setnonblock failed: %s", pcap_error);
+        fd = -1;
+    }
+
+    while (true) {
+        if (nc_pcap_thread_stopping(ctx)) {
+            status = PCAP_ERROR_BREAK;
+            break;
+        }
+
+        if (fd >= 0) {
+            struct pollfd pfd = {.fd = fd, .events = POLLIN};
+            if ((poll(&pfd, 1, PCAP_POLL_TIMEOUT_MS) < 0) && (errno != EINTR)) {
+                PLUGIN_ERROR("poll failed: %s", STRERRNO);
+                status = PCAP_ERROR;
+                break;
+            }
+        }
+
+        status = pcap_dispatch(ctx->pcap_obj, -1, handle_pcap, (void *)ctx);
+        if (status < 0)
+            break;
+    }
+
     PLUGIN_INFO("pcap_loop exited with status %i.", status);
     /* We need to handle "PCAP_ERROR" specially because libpcap currently
      * doesn't return PCAP_ERROR_IFACE_NOT_UP for compatibility reasons. */
@@ -584,17 +667,20 @@ static int nc_pcap_loop(nc_pcap_ctx_t *ctx)
     return status;
 }
 
-static int sleep_one_interval(cdtime_t interval)
+static bool nc_pcap_thread_wait(nc_pcap_ctx_t *ctx, cdtime_t timeout)
 {
-    struct timespec ts = CDTIME_T_TO_TIMESPEC(interval);
-    while (nanosleep(&ts, &ts) != 0) {
-        if ((errno == EINTR) || (errno == EAGAIN))
-            continue;
+    cdtime_t until = cdtime() + timeout;
 
-        return errno;
+    pthread_mutex_lock(&ctx->thread_lock);
+    while (!ctx->thread_stop) {
+        if (pthread_cond_timedwait(&ctx->thread_cond, &ctx->thread_lock,
+                                   &CDTIME_T_TO_TIMESPEC(until)) == ETIMEDOUT)
+            break;
     }
+    bool stop = ctx->thread_stop;
+    pthread_mutex_unlock(&ctx->thread_lock);
 
-    return 0;
+    return stop;
 }
 
 static void *child_loop(__attribute__((unused)) void *dummy)
@@ -609,14 +695,33 @@ static void *child_loop(__attribute__((unused)) void *dummy)
         if (status != PCAP_ERROR_IFACE_NOT_UP)
             break;
 
-        sleep_one_interval(ctx->interval);
+        if (nc_pcap_thread_wait(ctx, ctx->interval)) {
+            status = PCAP_ERROR_BREAK;
+            break;
+        }
     }
 
     if (status != PCAP_ERROR_BREAK)
         PLUGIN_ERROR("PCAP returned error %s.", get_pcap_error(ctx->pcap_obj, status));
 
-    ctx->listen_thread_init = 0;
     return NULL;
+}
+
+static void nc_pcap_thread_stop(nc_pcap_ctx_t *ctx)
+{
+    if (!ctx->listen_thread_init)
+        return;
+
+    pthread_mutex_lock(&ctx->thread_lock);
+    ctx->thread_stop = true;
+    pthread_cond_broadcast(&ctx->thread_cond);
+    pthread_mutex_unlock(&ctx->thread_lock);
+
+    int status = pthread_join(ctx->listen_thread, NULL);
+    if (status != 0)
+        PLUGIN_ERROR("pthread_join failed: %s", STRERROR(status));
+
+    ctx->listen_thread_init = 0;
 }
 
 static int nc_pcap_read(user_data_t *ud)
@@ -638,6 +743,27 @@ static void nc_pcap_free(void *arg)
     if (arg == NULL)
         return;
     nc_pcap_ctx_t *ctx = arg;
+
+    pthread_mutex_lock(&pcap_instances_lock);
+    for (nc_pcap_ctx_t **ptr = &pcap_instances; *ptr != NULL; ptr = &(*ptr)->next) {
+        if (*ptr == ctx) {
+            *ptr = ctx->next;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&pcap_instances_lock);
+
+    nc_pcap_thread_stop(ctx);
+
+    free(ctx->name);
+    free(ctx->interface);
+    free(ctx->filter);
+    label_set_reset(&ctx->labels);
+    ignore_list_free(ctx->ignore_src);
+    ignore_list_free(ctx->ignore_dst);
+    nc_dns_free(&ctx->dns);
+    pthread_mutex_destroy(&ctx->thread_lock);
+    pthread_cond_destroy(&ctx->thread_cond);
 
     free(ctx);
 }
@@ -668,10 +794,14 @@ static int nc_pcap_config_instance(config_item_t *ci)
 
 //  memcpy(ctx->fams, fams, sizeof(ctx->fams[0])*FAM_PCAP_MAX);
 
+    nc_dns_init(&ctx->dns);
+    pthread_mutex_init(&ctx->thread_lock, NULL);
+    pthread_cond_init(&ctx->thread_cond, NULL);
+
     int status = cf_util_get_string(ci, &ctx->name);
     if (status != 0) {
         PLUGIN_ERROR("Missing instance name.");
-        free(ctx);
+        nc_pcap_free(ctx);
         return status;
     }
     assert(ctx->name != NULL);
@@ -709,23 +839,32 @@ static int nc_pcap_config_instance(config_item_t *ci)
         return -1;
     }
 
+    if (ctx->filter != NULL) {
+        char *filter = ssnprintf_alloc(PCAP_DNS_FILTER " and (%s)", ctx->filter);
+        if (filter == NULL) {
+            PLUGIN_ERROR("ssnprintf_alloc failed.");
+            nc_pcap_free(ctx);
+            return -1;
+        }
+        free(ctx->filter);
+        ctx->filter = filter;
+    }
+
 // (pcap_device != NULL) ? pcap_device : "any"
 
     label_set_add(&ctx->labels, true, "instance", ctx->name);
 
-    nc_dns_init(&ctx->dns);
+    status = plugin_register_complex_read("pcap", ctx->name, nc_pcap_read, ctx->interval,
+                                          &(user_data_t){.data = ctx, .free_func = nc_pcap_free});
+    if (status != 0)
+        return status;
 
-    status = plugin_thread_create(&ctx->listen_thread, child_loop, (void *)ctx, "pcap listen");
-    if (status != 0) {
-        PLUGIN_ERROR("pthread_create failed: %s", STRERRNO);
-        nc_pcap_free(ctx);
-        return -1;
-    }
+    pthread_mutex_lock(&pcap_instances_lock);
+    ctx->next = pcap_instances;
+    pcap_instances = ctx;
+    pthread_mutex_unlock(&pcap_instances_lock);
 
-    ctx->listen_thread_init = 1;
-
-    return plugin_register_complex_read("pcap", ctx->name, nc_pcap_read, ctx->interval,
-                                        &(user_data_t){.data = ctx, .free_func = nc_pcap_free});
+    return 0;
 }
 
 static int nc_pcap_config(config_item_t *ci)
@@ -765,7 +904,27 @@ static int nc_pcap_init(void)
     }
 #endif
 
-    return 0;
+    int ret = 0;
+
+    pthread_mutex_lock(&pcap_instances_lock);
+    for (nc_pcap_ctx_t *ctx = pcap_instances; ctx != NULL; ctx = ctx->next) {
+        if (ctx->listen_thread_init)
+            continue;
+
+        int status = plugin_thread_create(&ctx->listen_thread, child_loop, (void *)ctx,
+                                          "pcap listen");
+        if (status != 0) {
+            PLUGIN_ERROR("pthread_create failed for instance '%s': %s",
+                         ctx->name, STRERROR(status));
+            ret = -1;
+            continue;
+        }
+
+        ctx->listen_thread_init = 1;
+    }
+    pthread_mutex_unlock(&pcap_instances_lock);
+
+    return ret;
 }
 
 void module_register(void)
