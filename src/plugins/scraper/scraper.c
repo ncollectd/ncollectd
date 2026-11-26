@@ -10,6 +10,7 @@
 #include "libutils/common.h"
 #include "libutils/time.h"
 #include "libutils/socket.h"
+#include "libutils/complain.h"
 #include "libmetric/parser.h"
 
 #include <curl/curl.h>
@@ -32,6 +33,8 @@ typedef struct {
     bool proxy_tunnel;
     cdtime_t timeout;
     cdtime_t interval;
+    uint64_t max_size;
+    uint64_t read_size;
     char *metric_prefix;
     label_set_t label;
     plugin_filter_t *filter;
@@ -41,7 +44,29 @@ typedef struct {
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
     metric_parser_t *mp;
+    unsigned int parse_errors;
+    c_complain_t parse_complaint;
 } scraper_instance_t;
+
+static void scraper_parse_buffer(scraper_instance_t *target, char *buffer, size_t len)
+{
+    int status = metric_parse_buffer(target->mp, buffer, len);
+    if (status < 0)
+        target->parse_errors++;
+}
+
+static void scraper_parse_report(scraper_instance_t *target)
+{
+    if (target->parse_errors > 0) {
+        c_complain(LOG_WARNING, &target->parse_complaint,
+                   "Instance '%s': failed to parse %u chunk(s) of the response, "
+                   "some metrics may be lost.", target->instance, target->parse_errors);
+    } else {
+        c_release(LOG_INFO, &target->parse_complaint,
+                  "Instance '%s': response parsed successfully again.", target->instance);
+    }
+    target->parse_errors = 0;
+}
 
 static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *user_data)
 {
@@ -54,10 +79,19 @@ static size_t scraper_curl_callback(void *buf, size_t size, size_t nmemb, void *
     size_t len = size * nmemb;
     size_t buf_len = len;
 
-    int status = metric_parse_buffer(target->mp, buf, buf_len);
-    if (status < 0) {
-        // FIXME
-    }
+    /* Do not parse the body of a non successful HTTP response.
+     * The response code is zero if a non-HTTP transport was used. */
+    long rc = 0;
+    if (target->curl != NULL)
+        curl_easy_getinfo(target->curl, CURLINFO_RESPONSE_CODE, &rc);
+    if ((rc != 0) && ((rc < 200) || (rc > 299)))
+        return len;
+
+    target->read_size += len;
+    if ((target->max_size > 0) && (target->read_size > target->max_size))
+        return 0; /* Abort the transfer. */
+
+    scraper_parse_buffer(target, buf, buf_len);
 
     return len;
 }
@@ -146,6 +180,7 @@ static int scraper_curl_init(scraper_instance_t *target)
         if (target->pass != NULL)
             credentials_size += strlen(target->pass);
 
+        free(target->credentials);
         target->credentials = malloc(credentials_size);
         if (target->credentials == NULL) {
             PLUGIN_ERROR("malloc failed.");
@@ -241,6 +276,16 @@ static int scraper_curl_init(scraper_instance_t *target)
     }
 #endif
 
+    if (target->max_size > 0) {
+        rcode = curl_easy_setopt(target->curl, CURLOPT_MAXFILESIZE_LARGE,
+                                               (curl_off_t)target->max_size);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXFILESIZE_LARGE failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
     rcode = curl_easy_setopt(target->curl, CURLOPT_URL, target->url);
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_URL failed: %s",
@@ -284,11 +329,23 @@ static int scaper_read_url(scraper_instance_t *target)
         return 0;
     }
 
+    target->read_size = 0;
+
     int status = curl_easy_perform(target->curl);
-    if (status != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_perform failed with status %i: %s (%s)",
-                     status, target->curl_errbuf, target->url);
+    if ((target->max_size > 0) &&
+        ((status == CURLE_FILESIZE_EXCEEDED) || (target->read_size > target->max_size))) {
+        PLUGIN_ERROR("Instance '%s': response size exceeds the configured 'max-size' of %" PRIu64 " bytes.",
+                     target->instance, target->max_size);
         metric_parser_reset(target->mp);
+        scaper_curl_cleanup(target);
+        return 0;
+    }
+
+    if (status != CURLE_OK) {
+        PLUGIN_ERROR("Instance '%s': curl_easy_perform failed with status %i: %s",
+                     target->instance, status, target->curl_errbuf);
+        metric_parser_reset(target->mp);
+        target->parse_errors = 0;
         scaper_curl_cleanup(target);
         return 0;
     }
@@ -305,18 +362,22 @@ static int scaper_read_url(scraper_instance_t *target)
     //      curl_stats_dispatch(target->stats, target->curl, cjq_host(db),
     //      "prometheus", target->instance);
 
-    char *url = NULL;
-    curl_easy_getinfo(target->curl, CURLINFO_EFFECTIVE_URL, &url);
     long rc = 0;
     curl_easy_getinfo(target->curl, CURLINFO_RESPONSE_CODE, &rc);
     /* The response code is zero if a non-HTTP transport was used. */
-    if ((rc != 0) && (rc != 200)) {
-        PLUGIN_ERROR("curl_easy_perform failed with response code %ld (%s)", rc, url);
+    if ((rc != 0) && ((rc < 200) || (rc > 299))) {
+        PLUGIN_ERROR("Instance '%s': curl_easy_perform failed with response code %ld",
+                     target->instance, rc);
         metric_parser_reset(target->mp);
+        target->parse_errors = 0;
         scaper_curl_cleanup(target);
         return 0;
     }
 
+    scraper_parse_report(target);
+
+    /* Flush the last line if it does not end with a newline. */
+    metric_parse_buffer(target->mp, NULL, 0);
     metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);
     metric_parser_reset(target->mp);
 
@@ -332,15 +393,27 @@ static int scaper_read_file(scraper_instance_t *target)
     }
 
     char buffer[8192];
-    ssize_t len = 0;
-    while ((len = read(fd, buffer, sizeof(buffer))) > 0) {
-        int status = metric_parse_buffer(target->mp, buffer, len);
-        if (status < 0) {
-            // FIXME
+    while (true) {
+        ssize_t len = read(fd, buffer, sizeof(buffer));
+        if (len < 0) {
+            if (errno == EINTR)
+                continue;
+            PLUGIN_ERROR("read (%s): %s", target->file_path, STRERRNO);
+            close(fd);
+            metric_parser_reset(target->mp);
+            return -1;
         }
+        if (len == 0)
+            break;
+
+        scraper_parse_buffer(target, buffer, len);
     }
 
     close(fd);
+
+    /* Flush the last line if it does not end with a newline. */
+    metric_parse_buffer(target->mp, NULL, 0);
+    scraper_parse_report(target);
 
     metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);
     metric_parser_reset(target->mp);
@@ -365,15 +438,27 @@ static int scaper_read_socket(scraper_instance_t *target)
         return -1;
 
     char buffer[8192];
-    ssize_t len = 0;
-    while ((len = read(fd, buffer, sizeof(buffer))) > 0) {
-        int status = metric_parse_buffer(target->mp, buffer, len);
-        if (status < 0) {
-            // FIXME
+    while (true) {
+        ssize_t len = read(fd, buffer, sizeof(buffer));
+        if (len < 0) {
+            if (errno == EINTR)
+                continue;
+            PLUGIN_ERROR("read (%s): %s", target->socket_path, STRERRNO);
+            close(fd);
+            metric_parser_reset(target->mp);
+            return -1;
         }
+        if (len == 0)
+            break;
+
+        scraper_parse_buffer(target, buffer, len);
     }
 
     close(fd);
+
+    /* Flush the last line if it does not end with a newline. */
+    metric_parse_buffer(target->mp, NULL, 0);
+    scraper_parse_report(target);
 
     metric_parser_dispatch(target->mp, plugin_dispatch_metric_family_filtered, target->filter, 0);
     metric_parser_reset(target->mp);
@@ -498,6 +583,10 @@ static int scraper_config_url(scraper_instance_t *target, config_item_t *ci)
             status = cf_util_get_string(child, &target->proxy);
         } else if (strcasecmp("proxy-tunnel", child->key) == 0) {
             status = cf_util_get_boolean(child, &target->proxy_tunnel);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
         }
 
         if (status != 0)
@@ -527,6 +616,10 @@ static int scraper_config_socket(scraper_instance_t *target, config_item_t *ci)
 
         if (strcasecmp("timeout", child->key) == 0) {
             status = cf_util_get_cdtime(child, &target->timeout);
+        } else {
+            PLUGIN_ERROR("Option '%s' in %s:%d is not allowed here.",
+                         child->key, cf_get_file(child), cf_get_lineno(child));
+            status = -1;
         }
 
         if (status != 0)
@@ -572,6 +665,11 @@ static int scraper_config_target(config_item_t *ci)
             status = cf_util_get_label(child, &target->label);
         } else if (strcasecmp("metric-prefix", child->key) == 0) {
             status = cf_util_get_string(child, &target->metric_prefix);
+        } else if (strcasecmp("max-size", child->key) == 0) {
+            unsigned int max_size = 0;
+            status = cf_util_get_unsigned_int(child, &max_size);
+            if (status == 0)
+                target->max_size = max_size;
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &target->filter);
         } else {

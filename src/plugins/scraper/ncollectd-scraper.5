@@ -33,6 +33,7 @@
         \fBinterval\fP \fIseconds\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBmetric-prefix\fP \fIprefix\fP
+        \fBmax-size\fP \fIbytes\fP
         \fBfilter\fP {
             ...
         }
@@ -158,6 +159,10 @@ Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 Can appear multiple time in the \fBinstance\fP block.
 .It \fBmetric-prefix\fP \fIprefix\fP
 Prepends \fIprefix\fP to the metric name.
+.It \fBmax-size\fP \fIbytes\fP
+Maximum size in bytes of the response (or of the file/socket data).
+If the limit is exceeded the read is aborted and no metrics are submitted.
+By default (or if set to \fI0\fP) there is no limit.
 .It \fBinterval\fP \fIseconds\fP
 Sets the interval (in seconds) in which the values will be collected from this
 instance.
