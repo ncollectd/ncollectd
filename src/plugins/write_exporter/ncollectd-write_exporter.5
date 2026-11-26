@@ -42,8 +42,9 @@ This option is supported only for libmicrohttpd newer than 0.9.0.
 Port the embedded webserver should listen on.
 Defaults to \f(CWB9103\fP.
 .It \fBstaleness-delta\fP \fIseconds\fP
-Time in seconds after considers a metric "stale" if it hasn't seen any
-update for it.
+Time in seconds after which a metric that has not been updated is
+considered "stale" and removed: a metric is removed when it has not been
+updated for \fIseconds\fP or for twice its interval, whichever is longer.
 It defaults to \f(CW300\fP seconds (5 minutes).
 .It \fBprivate-key\fP \fIfile-path\fP
 .It \fBprivate-key-password\fP \fIpassword\fP

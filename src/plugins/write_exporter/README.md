@@ -47,8 +47,9 @@ The following options are accepted within each **instance** block:
 
 **staleness-delta** *seconds*
 
-> Time in seconds after considers a metric "stale" if it hasn't seen any
-> update for it.
+> Time in seconds after which a metric that has not been updated is
+> considered "stale" and removed: a metric is removed when it has not been
+> updated for *seconds* or for twice its interval, whichever is longer.
 > It defaults to 300 seconds (5 minutes).
 
 **private-key** *file-path*
