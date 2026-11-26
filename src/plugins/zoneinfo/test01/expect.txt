@@ -159,6 +159,13 @@ system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="0",zone=
 system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="1",zone="Normal"} 4365284715
 system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="2",zone="Normal"} 193876419262
 system_zoneinfo_nr_dirtied_total{hostname="localhost.localdomain",node="3",zone="Normal"} 515468151841
+# TYPE system_zoneinfo_mlock_pages gauge
+system_zoneinfo_mlock_pages{hostname="localhost.localdomain",node="0",zone="DMA"} 0
+system_zoneinfo_mlock_pages{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
+system_zoneinfo_mlock_pages{hostname="localhost.localdomain",node="0",zone="Normal"} 0
+system_zoneinfo_mlock_pages{hostname="localhost.localdomain",node="1",zone="Normal"} 0
+system_zoneinfo_mlock_pages{hostname="localhost.localdomain",node="2",zone="Normal"} 0
+system_zoneinfo_mlock_pages{hostname="localhost.localdomain",node="3",zone="Normal"} 0
 # TYPE system_zoneinfo_kernel_stacks gauge
 system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="0",zone="DMA"} 0
 system_zoneinfo_kernel_stacks{hostname="localhost.localdomain",node="0",zone="DMA32"} 0
