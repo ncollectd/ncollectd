@@ -12,9 +12,9 @@
 
 #include "sensors.h"
 
-char *conffile = NULL;
-bool use_labels = false;
-plugin_filter_t *filter = NULL;
+char *sensors_conffile = NULL;
+bool sensors_use_labels = false;
+plugin_filter_t *sensors_filter = NULL;
 
 metric_family_t fams[FAM_SENSOR_MAX] = {
     [FAM_SENSOR_VOLTAGE_VOLTS] = {
@@ -48,7 +48,7 @@ metric_family_t fams[FAM_SENSOR_MAX] = {
         .help = "Current in amps.",
     },
     [FAM_SENSOR_HUMIDITY] = {
-        .name = "system_sensor_humidity_ratio",
+        .name = "system_sensor_humidity_percent",
         .type = METRIC_TYPE_GAUGE,
         .help = "Ambient relative humidity (percent).",
     },
@@ -69,18 +69,18 @@ static int ncsensors_config(config_item_t *ci)
         config_item_t *child = ci->children + i;
         if (strcasecmp(child->key, "sensor-config-file") == 0) {
 #ifdef KERNEL_LINUX
-            status = cf_util_get_string(child, &conffile);
+            status = cf_util_get_string(child, &sensors_conffile);
 #else
             PLUGIN_WARNING("The 'sensor-config-file' is only supported in Linux.");
 #endif
         } else if (strcasecmp(child->key, "use-labels") == 0) {
 #ifdef KERNEL_LINUX
-            status = cf_util_get_boolean(child, &use_labels);
+            status = cf_util_get_boolean(child, &sensors_use_labels);
 #else
             PLUGIN_WARNING("The 'use_labels' is only supported in Linux.");
 #endif
         } else if (strcasecmp(child->key, "filter") == 0) {
-            status = plugin_filter_configure(child, &filter);
+            status = plugin_filter_configure(child, &sensors_filter);
         } else {
             PLUGIN_ERROR("Option '%s' in %s:%d is not allowed.",
                           child->key, cf_get_file(child), cf_get_lineno(child));

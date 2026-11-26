@@ -14,3 +14,7 @@ enum {
     FAM_SENSOR_MAX,
 };
 
+extern char *sensors_conffile;
+extern bool sensors_use_labels;
+extern plugin_filter_t *sensors_filter;
+extern metric_family_t sensors_fams[FAM_SENSOR_MAX];
