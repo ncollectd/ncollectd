@@ -46,7 +46,7 @@ static size_t counter_count;
 static struct mnl_socket *nl;
 static uint32_t portid;
 
-static void mnl_socket_fush(struct mnl_socket *nls)
+static void mnl_socket_flush(struct mnl_socket *nls)
 {
     char buf[MNL_SOCKET_BUFFER_SIZE];
 
@@ -191,7 +191,7 @@ static int nftables_read(void)
         if (ret == -1) {
             PLUGIN_ERROR("Error when reading from netlink socket: %s.", STRERRNO);
             num_failures++;
-            mnl_socket_fush(nl);
+            mnl_socket_flush(nl);
         }
     }
 
