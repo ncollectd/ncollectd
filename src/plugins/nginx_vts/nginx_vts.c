@@ -14,6 +14,7 @@ enum {
     FAM_NGINX_VTS_UP,
     FAM_NGINX_VTS_START_TIME_SECONDS,
     FAM_NGINX_VTS_CONNECTIONS,
+    FAM_NGINX_VTS_CONNECTIONS_PROCESSED,
     FAM_NGINX_VTS_SHM_USED_BYTES,
     FAM_NGINX_VTS_SHM_SIZE_BYTES,
     FAM_NGINX_VTS_SHM_NODES,
@@ -23,22 +24,18 @@ enum {
     FAM_NGINX_VTS_SERVER_RESPONSES,
     FAM_NGINX_VTS_SERVER_CACHE,
     FAM_NGINX_VTS_SERVER_REQUEST_SECONDS,
-    FAM_NGINX_VTS_SERVER_REQUEST_DURATION_SECONDS,
     FAM_NGINX_VTS_FILTER_REQUESTS,
     FAM_NGINX_VTS_FILTER_IN_BYTES,
     FAM_NGINX_VTS_FILTER_OUT_BYTES,
     FAM_NGINX_VTS_FILTER_RESPONSES,
     FAM_NGINX_VTS_FILTER_CACHE,
     FAM_NGINX_VTS_FILTER_REQUEST_SECONDS,
-    FAM_NGINX_VTS_FILTER_REQUEST_DURATION_SECONDS,
     FAM_NGINX_VTS_UPSTREAM_REQUESTS,
     FAM_NGINX_VTS_UPSTREAM_IN_BYTES,
     FAM_NGINX_VTS_UPSTREAM_OUT_BYTES,
     FAM_NGINX_VTS_UPSTREAM_RESPONSES,
     FAM_NGINX_VTS_UPSTREAM_REQUEST_SECONDS,
-    FAM_NGINX_VTS_UPSTREAM_REQUEST_DURATION_SECONDS,
     FAM_NGINX_VTS_UPSTREAM_RESPONSE_SECONDS,
-    FAM_NGINX_VTS_UPSTREAM_RESPONSE_DURATION_SECONDS,
     FAM_NGINX_VTS_CACHE_USED_BYTES,
     FAM_NGINX_VTS_CACHE_SIZE_BYTES,
     FAM_NGINX_VTS_CACHE_IN_BYTES,
@@ -61,7 +58,12 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
     [FAM_NGINX_VTS_CONNECTIONS] = {
         .name = "nginx_vts_connections",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Nginx connections.",
+        .help = "Nginx connections by status (active, reading, writing, waiting).",
+    },
+    [FAM_NGINX_VTS_CONNECTIONS_PROCESSED] = {
+        .name = "nginx_vts_connections_processed",
+        .type = METRIC_TYPE_COUNTER,
+        .help = "Nginx processed connections and requests (accepted, handled, requests).",
     },
     [FAM_NGINX_VTS_SHM_USED_BYTES] = {
         .name = "nginx_vts_shm_used_bytes",
@@ -97,11 +99,6 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
         .name = "nginx_vts_server_request_seconds",
         .type = METRIC_TYPE_COUNTER,
         .help = "Total request processing time in seconds.",
-    },
-    [FAM_NGINX_VTS_SERVER_REQUEST_DURATION_SECONDS] = {
-        .name = "nginx_vts_server_request_duration_seconds",
-        .type = METRIC_TYPE_HISTOGRAM,
-        .help = "The histogram of request processing time.",
     },
     [FAM_NGINX_VTS_SERVER_RESPONSES] = {
         .name = "nginx_vts_server_responses",
@@ -143,11 +140,6 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
-    [FAM_NGINX_VTS_FILTER_REQUEST_DURATION_SECONDS] = {
-        .name = "nginx_vts_filter_request_duration_seconds",
-        .type = METRIC_TYPE_HISTOGRAM,
-        .help = NULL,
-    },
     [FAM_NGINX_VTS_UPSTREAM_REQUESTS] = {
         .name = "nginx_vts_upstream_requests",
         .type = METRIC_TYPE_COUNTER,
@@ -173,19 +165,9 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
-    [FAM_NGINX_VTS_UPSTREAM_REQUEST_DURATION_SECONDS] = {
-        .name = "nginx_vts_upstream_request_duration_seconds",
-        .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
-    },
     [FAM_NGINX_VTS_UPSTREAM_RESPONSE_SECONDS] = {
         .name = "nginx_vts_upstream_response_seconds",
         .type = METRIC_TYPE_COUNTER,
-        .help = NULL,
-    },
-    [FAM_NGINX_VTS_UPSTREAM_RESPONSE_DURATION_SECONDS] = {
-        .name = "nginx_vts_upstream_response_duration_seconds",
-        .type = METRIC_TYPE_HISTOGRAM,
         .help = NULL,
     },
     [FAM_NGINX_VTS_CACHE_USED_BYTES] = {
@@ -209,7 +191,7 @@ static metric_family_t fams_nginx_vts[FAM_NGINX_VTS_MAX] = {
         .help = NULL,
     },
     [FAM_NGINX_VTS_CACHE_RESPONSES] = {
-        .name = "nginx_vts_cache_reponses",
+        .name = "nginx_vts_cache_responses",
         .type = METRIC_TYPE_COUNTER,
         .help = NULL,
     },
@@ -228,17 +210,21 @@ typedef enum {
     NGINX_VTS_JSON_SERVER_ZONE_OUT_BYTES,
     NGINX_VTS_JSON_SERVER_ZONE_REQUESTS,
     NGINX_VTS_JSON_SERVER_ZONE_RESPONSES,
+    NGINX_VTS_JSON_SERVER_ZONE_REQUEST_MSEC,
     NGINX_VTS_JSON_FILTER_ZONES,
     NGINX_VTS_JSON_FILTER_ZONE_IN_BYTES,
     NGINX_VTS_JSON_FILTER_ZONE_OUT_BYTES,
     NGINX_VTS_JSON_FILTER_ZONE_REQUESTS,
     NGINX_VTS_JSON_FILTER_ZONE_RESPONSES,
+    NGINX_VTS_JSON_FILTER_ZONE_REQUEST_MSEC,
     NGINX_VTS_JSON_UPSTREAM_ZONES,
     NGINX_VTS_JSON_UPSTREAM_ZONE_SERVER,
     NGINX_VTS_JSON_UPSTREAM_ZONE_IN_BYTES,
     NGINX_VTS_JSON_UPSTREAM_ZONE_OUT_BYTES,
     NGINX_VTS_JSON_UPSTREAM_ZONE_REQUESTS,
     NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSES,
+    NGINX_VTS_JSON_UPSTREAM_ZONE_REQUEST_MSEC,
+    NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSE_MSEC,
     NGINX_VTS_JSON_CACHE_ZONES,
     NGINX_VTS_JSON_CACHE_ZONE_USED_BYTES,
     NGINX_VTS_JSON_CACHE_ZONE_SIZE_BYTES,
@@ -260,7 +246,12 @@ typedef struct {
 typedef struct {
     char *instance;
     char *url;
-    int timeout;
+    char *user;
+    char *pass;
+    bool verify_peer;
+    bool verify_host;
+    char *cacert;
+    cdtime_t timeout;
     label_set_t labels;
     plugin_filter_t *filter;
     CURL *curl;
@@ -286,6 +277,10 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
     char number[64];
     sstrnncpy(number, sizeof(number), number_val, number_len);
 
+    uint64_t value = 0;
+    if (strtouint(number, &value) != 0)
+        return true;
+
     switch (sctx->depth) {
     case 1:
         if (sctx->stack[0] == NGINX_VTS_JSON_LOAD)
@@ -295,23 +290,31 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
     case 2:
         switch (sctx->stack[0]) {
         case NGINX_VTS_JSON_CONNECTIONS:
-            metric_family_append(&sctx->fams[FAM_NGINX_VTS_CONNECTIONS],
-                                 VALUE_GAUGE(atol(number)), sctx->labels,
-                                 &LABEL_PAIR_CONST("status", sctx->value1), NULL);
+            if ((strcmp(sctx->value1, "accepted") == 0) ||
+                (strcmp(sctx->value1, "handled") == 0) ||
+                (strcmp(sctx->value1, "requests") == 0)) {
+                metric_family_append(&sctx->fams[FAM_NGINX_VTS_CONNECTIONS_PROCESSED],
+                                     VALUE_COUNTER(value), sctx->labels,
+                                     &LABEL_PAIR_CONST("status", sctx->value1), NULL);
+            } else {
+                metric_family_append(&sctx->fams[FAM_NGINX_VTS_CONNECTIONS],
+                                     VALUE_GAUGE(value), sctx->labels,
+                                     &LABEL_PAIR_CONST("status", sctx->value1), NULL);
+            }
             break;
         case NGINX_VTS_JSON_SHARED_ZONES:
             switch (sctx->stack[1]) {
             case NGINX_VTS_JSON_SHARED_ZONE_MAX_SIZE:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_SHM_SIZE_BYTES],
-                                     VALUE_GAUGE(atol(number)), sctx->labels, NULL);
+                                     VALUE_GAUGE(value), sctx->labels, NULL);
                 break;
             case NGINX_VTS_JSON_SHARED_ZONE_USED_SIZE:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_SHM_USED_BYTES],
-                                     VALUE_GAUGE(atol(number)), sctx->labels, NULL);
+                                     VALUE_GAUGE(value), sctx->labels, NULL);
                 break;
             case NGINX_VTS_JSON_SHARED_ZONE_USED_MODE:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_SHM_NODES],
-                                     VALUE_GAUGE(atol(number)), sctx->labels, NULL);
+                                     VALUE_GAUGE(value), sctx->labels, NULL);
                 break;
             default:
                 break;
@@ -325,59 +328,82 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
         switch (sctx->stack[2]) {
         case NGINX_VTS_JSON_SERVER_ZONE_IN_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_IN_BYTES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("host", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_SERVER_ZONE_OUT_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_OUT_BYTES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("host", sctx->value1), NULL);
             break;
         case NGINX_VTS_JSON_SERVER_ZONE_REQUESTS:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_REQUESTS],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("host", sctx->value1), NULL);
+            break;
+        case NGINX_VTS_JSON_SERVER_ZONE_REQUEST_MSEC:
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_REQUEST_SECONDS],
+                                 VALUE_COUNTER_FLOAT64((double)atoll(number) / 1000.0),
+                                 sctx->labels, &LABEL_PAIR_CONST("host", sctx->value1), NULL);
+            break;
+        case NGINX_VTS_JSON_UPSTREAM_ZONE_REQUEST_MSEC:
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_REQUEST_SECONDS],
+                                 VALUE_COUNTER_FLOAT64((double)atoll(number) / 1000.0),
+                                 sctx->labels,
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
+                                 NULL);
+            break;
+        case NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSE_MSEC:
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_RESPONSE_SECONDS],
+                                 VALUE_COUNTER_FLOAT64((double)atoll(number) / 1000.0),
+                                 sctx->labels,
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
+                                 NULL);
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_IN_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_IN_BYTES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &LABEL_PAIR_CONST("host", sctx->value1), NULL);
+                                 VALUE_COUNTER(value), sctx->labels,
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
+                                 NULL);
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_OUT_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_OUT_BYTES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("upstream", sctx->value1),
                                  &LABEL_PAIR_CONST("backend", sctx->value2),
                                  NULL);
             break;
         case NGINX_VTS_JSON_UPSTREAM_ZONE_REQUESTS:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_REQUESTS],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("upstream", sctx->value1),
                                  &LABEL_PAIR_CONST("backend", sctx->value2),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_USED_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_USED_BYTES],
-                                 VALUE_GAUGE(atol(number)), sctx->labels,
+                                 VALUE_GAUGE(value), sctx->labels,
                                  &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_SIZE_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_SIZE_BYTES],
-                                 VALUE_GAUGE(atol(number)), sctx->labels,
+                                 VALUE_GAUGE(value), sctx->labels,
                                  &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_IN_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_IN_BYTES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
         case NGINX_VTS_JSON_CACHE_ZONE_OUT_BYTES:
             metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_OUT_BYTES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
+                                 VALUE_COUNTER(value), sctx->labels,
                                  &LABEL_PAIR_CONST("cache_zone", sctx->value1),
                                  NULL);
             break;
@@ -386,57 +412,33 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
         }
         break;
     case 4:
-        switch (sctx->stack[2]) {
-        case NGINX_VTS_JSON_SERVER_ZONE_RESPONSES:
-            if ((strlen(sctx->value2) == 3) &&
-                (sctx->value2[1] == 'x') && (sctx->value2[2] == 'x')) {
-                metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_RESPONSES],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &LABEL_PAIR_CONST("host", sctx->value1),
-                                     &LABEL_PAIR_CONST("code", sctx->value2),
-                                     NULL);
-            } else {
-                metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_CACHE],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
-                                     &LABEL_PAIR_CONST("host", sctx->value1),
-                                     &LABEL_PAIR_CONST("status", sctx->value2),
-                                     NULL);
-            }
-            break;
-        case NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSES:
-            metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_RESPONSES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
-                                 &LABEL_PAIR_CONST("backend", sctx->value2),
-                                 &LABEL_PAIR_CONST("code", sctx->value3),
-                                 NULL);
-            break;
-        case NGINX_VTS_JSON_CACHE_ZONE_RESPONSES:
-            metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_RESPONSES],
-                                 VALUE_COUNTER(atol(number)), sctx->labels,
-                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
-                                 &LABEL_PAIR_CONST("status", sctx->value2),
-                                 NULL);
-            break;
-        case NGINX_VTS_JSON_FILTER_ZONES:
+        if (sctx->stack[0] == NGINX_VTS_JSON_FILTER_ZONES) {
             switch(sctx->stack[3]) {
+            case NGINX_VTS_JSON_FILTER_ZONE_REQUEST_MSEC:
+                metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_REQUEST_SECONDS],
+                                     VALUE_COUNTER_FLOAT64((double)atoll(number) / 1000.0),
+                                     sctx->labels,
+                                     &LABEL_PAIR_CONST("filter", sctx->value1),
+                                     &LABEL_PAIR_CONST("filter_name", sctx->value2),
+                                     NULL);
+                break;
             case NGINX_VTS_JSON_FILTER_ZONE_IN_BYTES:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_IN_BYTES],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
+                                     VALUE_COUNTER(value), sctx->labels,
                                      &LABEL_PAIR_CONST("filter", sctx->value1),
                                      &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      NULL);
                 break;
             case NGINX_VTS_JSON_FILTER_ZONE_OUT_BYTES:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_OUT_BYTES],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
+                                     VALUE_COUNTER(value), sctx->labels,
                                      &LABEL_PAIR_CONST("filter", sctx->value1),
                                      &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      NULL);
                 break;
             case NGINX_VTS_JSON_FILTER_ZONE_REQUESTS:
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_REQUESTS],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
+                                     VALUE_COUNTER(value), sctx->labels,
                                      &LABEL_PAIR_CONST("filter", sctx->value1),
                                      &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      NULL);
@@ -444,6 +446,41 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
             default:
                 break;
             }
+            break;
+        }
+
+        switch (sctx->stack[2]) {
+        case NGINX_VTS_JSON_SERVER_ZONE_RESPONSES:
+            if ((strlen(sctx->value2) == 3) &&
+                (sctx->value2[1] == 'x') && (sctx->value2[2] == 'x')) {
+                metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_RESPONSES],
+                                     VALUE_COUNTER(value), sctx->labels,
+                                     &LABEL_PAIR_CONST("host", sctx->value1),
+                                     &LABEL_PAIR_CONST("code", sctx->value2),
+                                     NULL);
+            } else {
+                metric_family_append(&sctx->fams[FAM_NGINX_VTS_SERVER_CACHE],
+                                     VALUE_COUNTER(value), sctx->labels,
+                                     &LABEL_PAIR_CONST("host", sctx->value1),
+                                     &LABEL_PAIR_CONST("status", sctx->value2),
+                                     NULL);
+            }
+            break;
+        case NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSES:
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_UPSTREAM_RESPONSES],
+                                 VALUE_COUNTER(value), sctx->labels,
+                                 &LABEL_PAIR_CONST("upstream", sctx->value1),
+                                 &LABEL_PAIR_CONST("backend", sctx->value2),
+                                 &LABEL_PAIR_CONST("code", sctx->value3),
+                                 NULL);
+            break;
+        case NGINX_VTS_JSON_CACHE_ZONE_RESPONSES:
+            metric_family_append(&sctx->fams[FAM_NGINX_VTS_CACHE_RESPONSES],
+                                 VALUE_COUNTER(value), sctx->labels,
+                                 &LABEL_PAIR_CONST("cache_zone", sctx->value1),
+                                 &LABEL_PAIR_CONST("status", sctx->value2),
+                                 NULL);
+            break;
         default:
             break;
         }
@@ -451,17 +488,17 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
     case 5:
         switch (sctx->stack[3]) {
         case NGINX_VTS_JSON_FILTER_ZONE_RESPONSES:
-            if ((strlen(sctx->value2) == 3) &&
-                (sctx->value2[1] == 'x') && (sctx->value2[2] == 'x')) {
+            if ((strlen(sctx->value3) == 3) &&
+                (sctx->value3[1] == 'x') && (sctx->value3[2] == 'x')) {
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_RESPONSES],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
+                                     VALUE_COUNTER(value), sctx->labels,
                                      &LABEL_PAIR_CONST("filter", sctx->value1),
                                      &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      &LABEL_PAIR_CONST("code", sctx->value3),
                                      NULL);
             } else {
                 metric_family_append(&sctx->fams[FAM_NGINX_VTS_FILTER_CACHE],
-                                     VALUE_COUNTER(atol(number)), sctx->labels,
+                                     VALUE_COUNTER(value), sctx->labels,
                                      &LABEL_PAIR_CONST("filter", sctx->value1),
                                      &LABEL_PAIR_CONST("filter_name", sctx->value2),
                                      &LABEL_PAIR_CONST("status", sctx->value3),
@@ -480,6 +517,10 @@ static bool nginx_vts_json_number(void *ctx, const char *number_val, size_t numb
 static bool nginx_vts_json_start_map(void *ctx)
 {
     nginx_vts_json_ctx_t *sctx = ctx;
+    if ((sctx->depth + 1) >= JSON_MAX_DEPTH) {
+        PLUGIN_ERROR("JSON nesting is too deep.");
+        return false;
+    }
     sctx->depth++;
     sctx->stack[sctx->depth] = NGINX_VTS_JSON_NONE;
 
@@ -592,6 +633,12 @@ static bool nginx_vts_json_map_key(void * ctx, const char * key, size_t string_l
                     return true;
                 }
                 break;
+            case 18:
+                if (strncmp("requestMsecCounter", (const char *)key, string_len) == 0) {
+                    sctx->stack[2] = NGINX_VTS_JSON_SERVER_ZONE_REQUEST_MSEC;
+                    return true;
+                }
+                break;
             default:
                 break;
             }
@@ -629,6 +676,18 @@ static bool nginx_vts_json_map_key(void * ctx, const char * key, size_t string_l
             case 14:
                 if (strncmp("requestCounter", (const char *)key, string_len) == 0) {
                     sctx->stack[2] = NGINX_VTS_JSON_UPSTREAM_ZONE_REQUESTS;
+                    return true;
+                }
+                break;
+            case 18:
+                if (strncmp("requestMsecCounter", (const char *)key, string_len) == 0) {
+                    sctx->stack[2] = NGINX_VTS_JSON_UPSTREAM_ZONE_REQUEST_MSEC;
+                    return true;
+                }
+                break;
+            case 19:
+                if (strncmp("responseMsecCounter", (const char *)key, string_len) == 0) {
+                    sctx->stack[2] = NGINX_VTS_JSON_UPSTREAM_ZONE_RESPONSE_MSEC;
                     return true;
                 }
                 break;
@@ -700,6 +759,12 @@ static bool nginx_vts_json_map_key(void * ctx, const char * key, size_t string_l
                     return true;
                 }
                 break;
+            case 18:
+                if (strncmp("requestMsecCounter", (const char *)key, string_len) == 0) {
+                    sctx->stack[3] = NGINX_VTS_JSON_FILTER_ZONE_REQUEST_MSEC;
+                    return true;
+                }
+                break;
             default:
                 break;
             }
@@ -729,13 +794,12 @@ static bool nginx_vts_json_end_map(void *ctx)
 {
     nginx_vts_json_ctx_t *sctx = ctx;
 
-//fprintf(stderr, "end map %d\n", (int)sctx->depth);
+    if (sctx->depth == 0)
+        return false;
+
     sctx->depth--;
-    if (sctx->depth > 0) {
+    if (sctx->depth > 0)
         sctx->stack[sctx->depth-1] = NGINX_VTS_JSON_NONE;
-    } else {
-        sctx->depth = 0;
-    }
 
     return true;
 }
@@ -767,8 +831,12 @@ static size_t nginx_vts_curl_callback(void *buf, size_t size, size_t nmemb, void
         return 0;
 
     json_status_t status = json_parser_parse(&ngx->handle, buf, len);
-    if (status != JSON_STATUS_OK)
+    if (status != JSON_STATUS_OK) {
+        unsigned char *errmsg = json_parser_get_error(&ngx->handle, 0, NULL, 0);
+        PLUGIN_ERROR("json_parser_parse failed: %s", (const char *)errmsg);
+        json_parser_free_error(errmsg);
         return 0;
+    }
 
     return len;
 }
@@ -835,9 +903,84 @@ static int nginx_vts_curl_init(nginx_vts_instance_t *ngx)
         return -1;
     }
 
+    /* Only allow redirects to HTTP and HTTPS. */
+#if LIBCURL_VERSION_NUM >= 0x075500
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_REDIR_PROTOCOLS_STR failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#else
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_REDIR_PROTOCOLS,
+                             (long)(CURLPROTO_HTTP | CURLPROTO_HTTPS));
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_REDIR_PROTOCOLS failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+#endif
+
+    if (ngx->user != NULL) {
+#ifdef HAVE_CURLOPT_USERNAME
+        rcode = curl_easy_setopt(ngx->curl, CURLOPT_USERNAME, ngx->user);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERNAME failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(ngx->curl, CURLOPT_PASSWORD,
+                                 (ngx->pass == NULL) ? "" : ngx->pass);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_PASSWORD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+#else
+        char credentials[1024];
+        int status = ssnprintf(credentials, sizeof(credentials), "%s:%s", ngx->user,
+                                            ngx->pass == NULL ? "" : ngx->pass);
+        if ((status < 0) || (status >= (int)sizeof(credentials))) {
+            PLUGIN_ERROR("Credentials would have been truncated.");
+            return -1;
+        }
+
+        rcode = curl_easy_setopt(ngx->curl, CURLOPT_USERPWD, credentials);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_USERPWD failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+#endif
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_SSL_VERIFYPEER, (long)ngx->verify_peer);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYPEER failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    rcode = curl_easy_setopt(ngx->curl, CURLOPT_SSL_VERIFYHOST, ngx->verify_host ? 2L : 0L);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_SSL_VERIFYHOST failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
+
+    if (ngx->cacert != NULL) {
+        rcode = curl_easy_setopt(ngx->curl, CURLOPT_CAINFO, ngx->cacert);
+        if (rcode != CURLE_OK) {
+            PLUGIN_ERROR("curl_easy_setopt CURLOPT_CAINFO failed: %s",
+                         curl_easy_strerror(rcode));
+            return -1;
+        }
+    }
+
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
     rcode = curl_easy_setopt(ngx->curl, CURLOPT_TIMEOUT_MS,
-                               (ngx->timeout >= 0) ? (long)ngx->timeout
+                               (ngx->timeout != 0) ? (long)CDTIME_T_TO_MS(ngx->timeout)
                                : (long)CDTIME_T_TO_MS(plugin_get_interval()));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
@@ -924,6 +1067,9 @@ static void nginx_vts_instance_free(void *arg)
 
     free(ngx->instance);
     free(ngx->url);
+    free(ngx->user);
+    free(ngx->pass);
+    free(ngx->cacert);
     label_set_reset(&ngx->labels);
     plugin_filter_free(ngx->filter);
 
@@ -938,8 +1084,8 @@ static int nginx_vts_config_instance(config_item_t *ci)
         return -1;
     }
 
-    ngx->timeout = -1;
-
+    ngx->verify_peer = true;
+    ngx->verify_host = true;
     memcpy(ngx->fams, fams_nginx_vts, FAM_NGINX_VTS_MAX * sizeof(ngx->fams[0]));
 
     int status = cf_util_get_string(ci, &ngx->instance);
@@ -955,10 +1101,29 @@ static int nginx_vts_config_instance(config_item_t *ci)
 
         if (strcasecmp("url", child->key) == 0) {
             status = cf_util_get_string(child, &ngx->url);
+        } else if (strcasecmp("user", child->key) == 0) {
+            status = cf_util_get_string(child, &ngx->user);
+        } else if (strcasecmp("user-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ngx->user);
+        } else if (strcasecmp("password", child->key) == 0) {
+            status = cf_util_get_string(child, &ngx->pass);
+        } else if (strcasecmp("password-env", child->key) == 0) {
+            status = cf_util_get_string_env(child, &ngx->pass);
+        } else if (strcasecmp("verify-peer", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ngx->verify_peer);
+        } else if (strcasecmp("verify-host", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ngx->verify_host);
+        } else if (strcasecmp("ca-cert", child->key) == 0) {
+            status = cf_util_get_string(child, &ngx->cacert);
         } else if (strcasecmp("labels", child->key) == 0) {
             status = cf_util_get_label(child, &ngx->labels);
         } else if (strcasecmp("timeout", child->key) == 0) {
-            status = cf_util_get_int(child, &ngx->timeout);
+            status = cf_util_get_cdtime(child, &ngx->timeout);
+            if ((status == 0) && (ngx->timeout == 0)) {
+                PLUGIN_ERROR("Option '%s' in %s:%d must be greater than zero.",
+                              child->key, cf_get_file(child), cf_get_lineno(child));
+                status = -1;
+            }
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("filter", child->key) == 0) {
@@ -1004,7 +1169,16 @@ static int nginx_vts_config(config_item_t *ci)
     return 0;
 }
 
+static int nginx_vts_init(void)
+{
+    /* Call this while ncollectd is still single-threaded to avoid
+     * initialization issues in libgcrypt. */
+    curl_global_init(CURL_GLOBAL_SSL);
+    return 0;
+}
+
 void module_register(void)
 {
     plugin_register_config("nginx_vts", nginx_vts_config);
+    plugin_register_init("nginx_vts", nginx_vts_init);
 }
