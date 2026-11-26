@@ -24,7 +24,7 @@ enum {
     LOCK_CLASS_MAX,
 };
 
-char *lock_class_name[LOCK_CLASS_MAX] = {
+static char *lock_class_name[LOCK_CLASS_MAX] = {
     [LOCK_CLASS_POSIX] = "POSIX",
     [LOCK_CLASS_FLOCK] = "FLOCK",
     [LOCK_CLASS_LEASE] = "LEASE",
@@ -36,7 +36,7 @@ enum {
     LOCK_TYPE_MAX,
 };
 
-char *lock_type_name[LOCK_TYPE_MAX] = {
+static char *lock_type_name[LOCK_TYPE_MAX] = {
     [LOCK_TYPE_READ]  = "READ",
     [LOCK_TYPE_WRITE] = "WRITE",
 };
