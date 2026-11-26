@@ -6,8 +6,8 @@ NCOLLECTD-BTRFS(5) - File Formats Manual
 
 # SYNOPSIS
 
-	load-plugin brtfs
-	plugin brtfs {
+	load-plugin btrfs
+	plugin btrfs {
 	    refresh-mounts true|false
 	}
 
