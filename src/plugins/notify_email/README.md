@@ -13,6 +13,8 @@ NCOLLECTD-NOTIFY\_EMAIL(5) - File Formats Manual
 	    smtp-port port
 	    smtp-user username
 	    smtp-password password
+	    starttls disable|enable|require
+	    timeout seconds
 	    from address
 	    subject subject
 	}
@@ -53,6 +55,18 @@ Available configuration options:
 > Password for ASMTP authentication.
 > Optional.
 
+**starttls** *disable|enable|require*
+
+> Use STARTTLS to encrypt the connection to the SMTP server.
+> With **enable** TLS is used if offered by the server, with **require**
+> the session fails if the server does not offer it.
+> Default to **disable**.
+
+**timeout** *seconds*
+
+> Timeout for each phase of the SMTP session.
+> Default to the libESMTP timeouts (several minutes, as per RFC 5321).
+
 **from** *address*
 
 > Email address from which the emails should appear to come from.
@@ -60,13 +74,9 @@ Available configuration options:
 
 **subject** *subject*
 
-> Subject-template to use when sending emails.
-> There must be exactly two string-placeholders in the subject,
-> given in the standard
-> printf(3)
-> syntax, i. e. %s.
-> The first will be replaced with the severity, the second with the hostname.
-> Default: ncollectd notify: %s@%s
+> Prefix of the subject used when sending emails.
+> The notification name and severity are appended to it.
+> Default: "NCollectd notify: "
 
 # SEE ALSO
 
