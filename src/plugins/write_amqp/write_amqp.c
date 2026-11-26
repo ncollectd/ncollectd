@@ -70,9 +70,12 @@ typedef struct camqp_config_s {
 
     /* Number of seconds to wait before connection is retried */
     int connection_retry_delay;
+    /* Timeout for connecting to the broker and for RPC calls */
+    cdtime_t timeout;
+    /* Time of the last connection attempt, protected by "lock" */
+    time_t last_connect_time;
 
     uint8_t delivery_mode;
-    bool store_rates;
     format_stream_metric_t format_metric;
     format_notification_t format_notification;
 
@@ -85,11 +88,16 @@ static void camqp_close_connection(camqp_config_t *conf)
     if ((conf == NULL) || (conf->connection == NULL))
         return;
 
+#ifndef HAVE_AMQP_TCP_SOCKET
     int sockfd = amqp_get_sockfd(conf->connection);
+#endif
     amqp_channel_close(conf->connection, CAMQP_CHANNEL, AMQP_REPLY_SUCCESS);
     amqp_connection_close(conf->connection, AMQP_REPLY_SUCCESS);
+    /* With rabbitmq-c >= 0.4 amqp_destroy_connection() closes the socket. */
     amqp_destroy_connection(conf->connection);
+#ifndef HAVE_AMQP_TCP_SOCKET
     close(sockfd);
+#endif
     conf->connection = NULL;
 }
 
@@ -113,6 +121,8 @@ static void camqp_config_free(void *arg)
     free(conf->exchange);
     free(conf->exchange_type);
     free(conf->routing_key);
+
+    pthread_mutex_destroy(&conf->lock);
 
     free(conf);
 }
@@ -174,12 +184,14 @@ static char *camqp_strerror(camqp_config_t *conf, char *buffer, size_t buffer_si
         if (r.reply.id == AMQP_CONNECTION_CLOSE_METHOD) {
             amqp_connection_close_t *m = r.reply.decoded;
             char *tmp = camqp_bytes_cstring(&m->reply_text);
-            ssnprintf(buffer, buffer_size, "Server connection error %d: %s", m->reply_code, tmp);
+            ssnprintf(buffer, buffer_size, "Server connection error %d: %s", m->reply_code,
+                      tmp != NULL ? tmp : "(unknown)");
             free(tmp);
         } else if (r.reply.id == AMQP_CHANNEL_CLOSE_METHOD) {
             amqp_channel_close_t *m = r.reply.decoded;
             char *tmp = camqp_bytes_cstring(&m->reply_text);
-            ssnprintf(buffer, buffer_size, "Server channel error %d: %s", m->reply_code, tmp);
+            ssnprintf(buffer, buffer_size, "Server channel error %d: %s", m->reply_code,
+                      tmp != NULL ? tmp : "(unknown)");
             free(tmp);
         } else {
             ssnprintf(buffer, buffer_size, "Server error method %#" PRIx32, r.reply.id);
@@ -225,19 +237,12 @@ static int camqp_create_exchange(camqp_config_t *conf)
 static int camqp_create_exchange(camqp_config_t *conf)
 {
     amqp_exchange_declare_ok_t *ed_ret;
-    amqp_table_t argument_table;
-    struct amqp_table_entry_t_ argument_table_entries[1];
 
     if (conf->exchange_type == NULL)
         return 0;
 
-    /* Valid arguments: "auto_delete", "internal" */
-    argument_table.num_entries = STATIC_ARRAY_SIZE(argument_table_entries);
-    argument_table.entries = argument_table_entries;
-    argument_table_entries[0].key = amqp_cstring_bytes("auto_delete");
-    argument_table_entries[0].value.kind = AMQP_FIELD_KIND_BOOLEAN;
-    argument_table_entries[0].value.value.boolean = 1;
-
+    /* "auto_delete" is not a valid exchange argument, it can only be set as a
+     * parameter of amqp_exchange_declare with rabbitmq-c >= 0.6 */
     ed_ret = amqp_exchange_declare(conf->connection,
                /* channel     = */ CAMQP_CHANNEL,
                /* exchange    = */ amqp_cstring_bytes(conf->exchange),
@@ -245,10 +250,10 @@ static int camqp_create_exchange(camqp_config_t *conf)
                /* passive     = */ 0,
                /* durable     = */ 0,
 #if defined(AMQP_VERSION) && AMQP_VERSION >= 0x00060000
-               /* auto delete = */ 0,
+               /* auto delete = */ 1,
                /* internal    = */ 0,
 #endif
-               /* arguments   = */ argument_table);
+               /* arguments   = */ AMQP_EMPTY_TABLE);
     if ((ed_ret == NULL) && camqp_is_error(conf)) {
         char errbuf[1024];
         PLUGIN_ERROR("amqp_exchange_declare failed: %s",
@@ -265,8 +270,6 @@ static int camqp_create_exchange(camqp_config_t *conf)
 
 static int camqp_connect(camqp_config_t *conf)
 {
-    static time_t last_connect_time;
-
     amqp_rpc_reply_t reply;
     int status;
 #ifdef HAVE_AMQP_TCP_SOCKET
@@ -279,13 +282,13 @@ static int camqp_connect(camqp_config_t *conf)
         return 0;
 
     time_t now = time(NULL);
-    if (now < (last_connect_time + conf->connection_retry_delay)) {
+    if (now < (conf->last_connect_time + conf->connection_retry_delay)) {
         PLUGIN_DEBUG("skipping connection retry, ConnectionRetryDelay: %d",
                      conf->connection_retry_delay);
         return 1;
     } else {
         PLUGIN_DEBUG("retrying connection");
-        last_connect_time = now;
+        conf->last_connect_time = now;
     }
 
     conf->connection = amqp_new_connection();
@@ -344,13 +347,27 @@ static int camqp_connect(camqp_config_t *conf)
         }
     }
 
-    status = amqp_socket_open(socket, host, conf->port);
+    struct timeval tv = CDTIME_T_TO_TIMEVAL(conf->timeout);
+    status = amqp_socket_open_noblock(socket, host, conf->port,
+                                      conf->timeout > 0 ? &tv : NULL);
     if (status < 0) {
         PLUGIN_ERROR("amqp_socket_open failed: %s", amqp_error_string2(status));
         amqp_destroy_connection(conf->connection);
         conf->connection = NULL;
         return status;
     }
+
+#if defined(AMQP_VERSION) && AMQP_VERSION >= 0x00090000
+    if (conf->timeout > 0) {
+        status = amqp_set_rpc_timeout(conf->connection, &tv);
+        if (status != AMQP_STATUS_OK) {
+            PLUGIN_ERROR("amqp_set_rpc_timeout failed: %s", amqp_error_string2(status));
+            amqp_destroy_connection(conf->connection);
+            conf->connection = NULL;
+            return status;
+        }
+    }
+#endif
 #else /* HAVE_AMQP_TCP_SOCKET */
 #define CLOSE_SOCKET() close(sockfd)
     /* this interface is deprecated as of rabbitmq-c 0.4 */
@@ -380,11 +397,11 @@ static int camqp_connect(camqp_config_t *conf)
         return 1;
     }
 
-    amqp_channel_open(conf->connection, /* channel = */ 1);
-    /* FIXME: Is checking "reply.reply_type" really correct here? How does
-     * it get set? --octo */
-    if (reply.reply_type != AMQP_RESPONSE_NORMAL) {
-        PLUGIN_ERROR("amqp_channel_open failed.");
+    amqp_channel_open_ok_t *co_ret = amqp_channel_open(conf->connection, CAMQP_CHANNEL);
+    if ((co_ret == NULL) || camqp_is_error(conf)) {
+        char errbuf[1024];
+        PLUGIN_ERROR("amqp_channel_open failed: %s",
+                     camqp_strerror(conf, errbuf, sizeof(errbuf)));
         amqp_connection_close(conf->connection, AMQP_REPLY_SUCCESS);
         amqp_destroy_connection(conf->connection);
         CLOSE_SOCKET();
@@ -402,7 +419,7 @@ static int camqp_connect(camqp_config_t *conf)
 }
 
 /* XXX: You must hold "conf->lock" when calling this function! */
-static int camqp_write_locked(camqp_config_t *conf, const char *buffer,
+static int camqp_write_locked(camqp_config_t *conf, strbuf_t *buf,
                               const char *content_type)
 {
     int status;
@@ -420,16 +437,22 @@ static int camqp_write_locked(camqp_config_t *conf, const char *buffer,
 
     props.content_type = amqp_cstring_bytes(content_type);
 
+    /* The body may be binary (e.g. protobuf), do not use amqp_cstring_bytes. */
+    amqp_bytes_t body = {.len = strbuf_len(buf), .bytes = buf->ptr};
+
     status = amqp_basic_publish(conf->connection,
               /* channel   = */ 1,
                                 amqp_cstring_bytes(conf->exchange),
                                 (conf->routing_key != NULL) ? amqp_cstring_bytes(conf->routing_key)
                                                             : AMQP_EMPTY_BYTES,
               /* mandatory = */ 0,
-              /* immediate = */ 0, &props, amqp_cstring_bytes(buffer));
+              /* immediate = */ 0, &props, body);
     if (status != 0) {
         PLUGIN_ERROR("amqp_basic_publish failed with status %i.", status);
         camqp_close_connection(conf);
+    } else {
+        /* Release the memory of any frame received during the publish. */
+        amqp_maybe_release_buffers(conf->connection);
     }
 
     return status;
@@ -453,16 +476,13 @@ static int camqp_notify(notification_t const *n, user_data_t *user_data)
 
     const char *content_type = format_notification_content_type(conf->format_notification);
     pthread_mutex_lock(&conf->lock);
-    status = camqp_write_locked(conf, buf.ptr, content_type);
+    status = camqp_write_locked(conf, &buf, content_type);
     pthread_mutex_unlock(&conf->lock);
-
-    if (status != 0) {
-        // FIXME ERROR
-    }
 
     strbuf_destroy(&buf);
 
-    return 0;
+    /* Report the failure so it is accounted in the writer statistics. */
+    return status != 0 ? -1 : 0;
 }
 
 static int camqp_write(metric_family_t const *fam, user_data_t *user_data)
@@ -483,16 +503,13 @@ static int camqp_write(metric_family_t const *fam, user_data_t *user_data)
 
     const char *content_type = format_stream_metric_content_type(conf->format_metric);
     pthread_mutex_lock(&conf->lock);
-    status = camqp_write_locked(conf, buf.ptr, content_type);
+    status = camqp_write_locked(conf, &buf, content_type);
     pthread_mutex_unlock(&conf->lock);
-
-    if (status != 0) {
-        // FIXME ERROR
-    }
 
     strbuf_destroy(&buf);
 
-    return 0;
+    /* Report the failure so it is accounted in the writer statistics. */
+    return status != 0 ? -1 : 0;
 }
 
 static int camqp_config_instance(config_item_t *ci)
@@ -503,9 +520,11 @@ static int camqp_config_instance(config_item_t *ci)
         return ENOMEM;
     }
 
+    pthread_mutex_init(&conf->lock, NULL);
+
     int status = cf_util_get_string(ci, &conf->name);
     if (status != 0) {
-        free(conf);
+        camqp_config_free(conf);
         return status;
     }
 
@@ -550,13 +569,11 @@ static int camqp_config_instance(config_item_t *ci)
 
     conf->routing_key = NULL;
     conf->connection_retry_delay = 0;
+    conf->timeout = TIME_T_TO_CDTIME_T(10);
 
     conf->delivery_mode = CAMQP_DM_VOLATILE;
-    conf->store_rates = false;
 
     conf->connection = NULL;
-
-    pthread_mutex_init(&conf->lock, NULL);
 
     cf_send_t send = SEND_METRICS;
 
@@ -588,7 +605,7 @@ static int camqp_config_instance(config_item_t *ci)
             status = cf_util_get_string_env(child, &conf->user);
         } else if (strcasecmp("password", child->key) == 0) {
             status = cf_util_get_string(child, &conf->password);
-        } else if (strcasecmp("password_env", child->key) == 0) {
+        } else if (strcasecmp("password-env", child->key) == 0) {
             status = cf_util_get_string_env(child, &conf->password);
         } else if (strcasecmp("tls-enabled", child->key) == 0) {
             status = cf_util_get_boolean(child, &conf->tls_enabled);
@@ -615,11 +632,6 @@ static int camqp_config_instance(config_item_t *ci)
                 conf->delivery_mode = CAMQP_DM_PERSISTENT;
             else
                 conf->delivery_mode = CAMQP_DM_VOLATILE;
-#if 0
-        } else if (strcasecmp("StoreRates", child->key) == 0) {
-            status = cf_util_get_boolean(child, &conf->store_rates);
-            (void)cf_util_get_flag(child, &conf->graphite_flags, GRAPHITE_STORE_RATES);
-#endif
         } else if (strcasecmp("write", child->key) == 0) {
             status = cf_uti_get_send(child, &send);
         } else if (strcasecmp("format-metric", child->key) == 0) {
@@ -629,6 +641,12 @@ static int camqp_config_instance(config_item_t *ci)
 
         } else if (strcasecmp("connection-retry-delay", child->key) == 0) {
             status = cf_util_get_int(child, &conf->connection_retry_delay);
+            if ((status == 0) && (conf->connection_retry_delay < 0)) {
+                PLUGIN_ERROR("'connection-retry-delay' must be a positive number.");
+                status = -1;
+            }
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &conf->timeout);
         } else {
             PLUGIN_ERROR("Ignoring unknown configuration option \"%s\".", child->key);
             status = -1;

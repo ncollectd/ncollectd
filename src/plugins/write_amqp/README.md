@@ -27,6 +27,7 @@ NCOLLECTD-WRITE\_AMQP(5) - File Formats Manual
 	        routing-key key
 	        persistent true|false
 	        connection-retry-delay seconds
+        timeout seconds
 	        format-metric influxdb|graphite|json|kairosdb|opentsdb|openmetrics|opentelemetry|remote
 	        format-notification text|json|protob
 	        write metrics|notifications
@@ -117,6 +118,9 @@ The following options are accepted within each **instance** block:
 
 > If given, the plugin will try to create the configured *exchange*
 > with this *type* after connecting.
+> The exchange is declared as non-durable and auto-delete.
+> The *exchange* option must be set to an exchange name of your own,
+> the "amq." prefix is reserved by the broker.
 
 **routing-key** *key*
 
@@ -137,6 +141,14 @@ The following options are accepted within each **instance** block:
 > wait before attempting to reconnect.
 > Defaults to 0, which implies ncollectd will attempt to reconnect at each time
 > metric is submitted.
+
+**timeout** *seconds*
+
+> Timeout for establishing the connection to the AMQP broker and, with
+> rabbitmq-c >= 0.9, for each RPC call to the broker (login, channel open,
+> exchange declare, close).
+> If set to 0 the calls will block until the broker answers.
+> Defaults to 10 seconds.
 
 **format-metric** *influxdb|graphite|json|kairosdb|opentsdb|openmetrics|remote*
 
