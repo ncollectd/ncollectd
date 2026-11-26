@@ -14,7 +14,10 @@
 
 typedef struct {
     tail_t tail;
-    bool whole;
+    bool reopen;
+    unsigned int max_lines;
+    bool skip_line;
+    complain_t complaint;
     label_set_t labels;
     plugin_filter_t *filter;
     plugin_match_t *matches;
@@ -24,20 +27,50 @@ static int ctail_read(user_data_t *ud)
 {
     ctail_t *ctail = ud->data;
 
+    if (tail_reopen(&ctail->tail) != 0)
+        return -1;
+
+    unsigned int lines = 0;
+    unsigned int match_failed = 0;
+
     while (true) {
+        /* Continue reading in the next interval. */
+        if (!ctail->tail.force_rewind && (ctail->max_lines > 0) && (lines >= ctail->max_lines))
+            break;
+
         char buf[8192];
         int status = tail_readline(&ctail->tail, buf, sizeof(buf));
         if (status != 0) {
-            PLUGIN_ERROR("File '%s': tail_readline failed with status %i.",
-                         ctail->tail.file, status);
+            PLUGIN_COMPLAIN_ERROR(&ctail->complaint,
+                                  "File '%s': tail_readline failed with status %i.",
+                                  ctail->tail.file, status);
             return -1;
         }
+
+        PLUGIN_RELEASE_INFO(&ctail->complaint,
+                            "tail plugin: File '%s': reading the file again.", ctail->tail.file);
 
         /* check for EOF */
         if (buf[0] == 0)
           break;
 
         size_t len = strlen(buf);
+
+        bool has_newline = (len > 0) && (buf[len - 1] == '\n');
+
+        if (ctail->skip_line) {
+            /* Discard the rest of a line that was too long. */
+            if (has_newline)
+                ctail->skip_line = false;
+            continue;
+        }
+
+        if (!has_newline && (len == (sizeof(buf) - 1))) {
+            PLUGIN_WARNING("File '%s': line longer than %zu bytes, truncating it.",
+                           ctail->tail.file, sizeof(buf) - 1);
+            ctail->skip_line = true;
+        }
+
         while (len > 0) {
             if (buf[len - 1] != '\n')
                 break;
@@ -45,16 +78,26 @@ static int ctail_read(user_data_t *ud)
             len--;
         }
 
+        lines++;
+
         if (len == 0)
             continue;
 
         status = plugin_match(ctail->matches, buf);
-        if (status != 0)
+        if (status != 0) {
             PLUGIN_WARNING("plugin_match failed.");
+            match_failed++;
+        }
     }
 
-    if (ctail->whole)
+    if (match_failed > 0)
+        PLUGIN_WARNING("File '%s': plugin_match failed for %u lines.",
+                       ctail->tail.file, match_failed);
+
+    if (ctail->reopen) {
         tail_close(&ctail->tail);
+        ctail->skip_line = false;
+    }
 
     plugin_match_dispatch(ctail->matches, ctail->filter, &ctail->labels, true);
 
@@ -90,10 +133,14 @@ static int ctail_config_file(config_item_t *ci)
         return status;
 
     ctail_t *ctail  = calloc(1, sizeof(*ctail));
-    if (ctail == NULL)
+    if (ctail == NULL) {
+        PLUGIN_ERROR("calloc failed.");
+        free(file);
         return -1;
+    }
+
     ctail->tail.file = file;
-    ctail->whole = false;
+    bool whole = false;
 
     for (int i = 0; i < ci->children_num; ++i) {
         config_item_t *child = ci->children + i;
@@ -101,7 +148,11 @@ static int ctail_config_file(config_item_t *ci)
         if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
         } else if (strcasecmp("whole", child->key) == 0) {
-            status = cf_util_get_boolean(child, &ctail->whole);
+            status = cf_util_get_boolean(child, &whole);
+        } else if (strcasecmp("reopen", child->key) == 0) {
+            status = cf_util_get_boolean(child, &ctail->reopen);
+        } else if (strcasecmp("max-lines", child->key) == 0) {
+            status = cf_util_get_unsigned_int(child, &ctail->max_lines);
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &ctail->labels);
         } else if (strcasecmp("match", child->key) == 0) {
@@ -130,7 +181,14 @@ static int ctail_config_file(config_item_t *ci)
         return -1;
     }
 
-    label_set_add(&ctail->labels, true, "instance", ctail->tail.file);
+    ctail->tail.force_rewind = whole;
+
+    status = label_set_add(&ctail->labels, true, "instance", ctail->tail.file);
+    if (status != 0) {
+        PLUGIN_ERROR("Failed to add instance label.");
+        ctail_free(ctail);
+        return -1;
+    }
 
     return plugin_register_complex_read("tail", ctail->tail.file, ctail_read, interval,
                                         &(user_data_t){.data=ctail, .free_func=ctail_free});

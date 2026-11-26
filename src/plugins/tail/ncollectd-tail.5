@@ -11,6 +11,8 @@
 \fBplugin\fP tail {
     \fBfile\fP \fIfilename\fP {
         \fBwhole\fP \fItrue|false\fP
+        \fBreopen\fP \fItrue|false\fP
+        \fBmax-lines\fP \fIlines\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
         \fBmatch\fP \fImatch\fP {
@@ -31,6 +33,13 @@ The \fBfile\fP block has the following options:
 .Bl -tag -width Ds
 .It \fBwhole\fP \fItrue|false\fP
 Read the whole file in each interval.
+.It \fBreopen\fP \fItrue|false\fP
+Reopen the file on each interval.
+.It \fBmax-lines\fP \fIlines\fP
+Maximum number of lines to read from the file in each interval, the
+remaining lines are read in the next intervals.
+It is ignored if \fBwhole\fP is \fItrue\fP.
+Defaults to 0, which means no limit.
 .It \fBlabel\fP \fIkey\fP \fIvalue\fP
 Append the label \fIkey\fP=\fIvalue\fP to the submitting metrics.
 .It \fBinterval\fP \fIseconds\fP
