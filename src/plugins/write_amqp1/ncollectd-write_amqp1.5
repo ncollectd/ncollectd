@@ -17,6 +17,10 @@
         \fBpassword\fP \fIpassword\fP
         \fBpassword-env\fP \fIenv-name\fP
         \fBaddress\fP \fIaddress\fP
+        \fBtls-enabled\fP \fItrue|false\fP
+        \fBtls-verify-peer\fP \fItrue|false\fP
+        \fBtls-ca-cert\fP \fI/path/to/ca\fP
+        \fBallow-insecure-mechs\fP \fItrue|false\fP
         \fBretry-delay\fP \fIretry-delay\fP
         \fBformat\fP \fIFORMAT\fP
         \fBpre-settle\fP \fItrue|false\fP
@@ -51,6 +55,21 @@ Get the credentials used to authenticate to the AMQP 1.0 intermediary from
 the environment variable \fIenv-name\fP.
 .It \fBaddress\fP \fIaddress\fP
 This option specifies the prefix for the send-to value in the message.
+.It \fBtls-enabled\fP \fItrue|false\fP
+If set to \fItrue\fP then connect to the intermediary using a TLS connection.
+Defaults to \fIfalse\fP.
+.It \fBtls-verify-peer\fP \fItrue|false\fP
+If set to \fItrue\fP (the default) the certificate of the intermediary is
+verified and its name must match the configured \fIhost\fP.
+.It \fBtls-ca-cert\fP \fIpath\fP
+Path to the file with the trusted CA certificates used to verify the
+certificate of the intermediary.
+.It \fBallow-insecure-mechs\fP \fItrue|false\fP
+By default the PLAIN SASL mechanism is not allowed without TLS
+encryption.
+If set to \fItrue\fP insecure mechanisms are allowed even without TLS,
+the credentials will be sent in clear text.
+Defaults to \fIfalse\fP.
 .It \fBretry-delay\fP \fIretry-delay\fP
 When the AMQP1 connection is lost, defines the time in seconds to wait
 before attempting to reconnect.

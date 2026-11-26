@@ -16,6 +16,10 @@ NCOLLECTD-WRITE\_AMQP1(5) - File Formats Manual
 	        password password
 	        password-env env-name
 	        address address
+	        tls-enabled true|false
+	        tls-verify-peer true|false
+	        tls-ca-cert /path/to/ca
+	        allow-insecure-mechs true|false
 	        retry-delay retry-delay
 	        format FORMAT
 	        pre-settle true|false
@@ -62,6 +66,29 @@ The following options are accepted within each **instance** block:
 **address** *address*
 
 > This option specifies the prefix for the send-to value in the message.
+
+**tls-enabled** *true|false*
+
+> If set to *true* then connect to the intermediary using a TLS connection.
+> Defaults to *false*.
+
+**tls-verify-peer** *true|false*
+
+> If set to *true* (the default) the certificate of the intermediary is
+> verified and its name must match the configured *host*.
+
+**tls-ca-cert** *path*
+
+> Path to the file with the trusted CA certificates used to verify the
+> certificate of the intermediary.
+
+**allow-insecure-mechs** *true|false*
+
+> By default the PLAIN SASL mechanism is not allowed without TLS
+> encryption.
+> If set to *true* insecure mechanisms are allowed even without TLS,
+> the credentials will be sent in clear text.
+> Defaults to *false*.
 
 **retry-delay** *retry-delay*
 
