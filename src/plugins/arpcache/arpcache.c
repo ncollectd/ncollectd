@@ -309,6 +309,7 @@ static int arp_cache_shutdown(void)
 {
     free(path_proc_ndisc_cache);
     free(path_proc_arp_cache);
+    plugin_filter_free(filter);
     return 0;
 }
 
