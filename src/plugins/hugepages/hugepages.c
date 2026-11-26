@@ -139,7 +139,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      NULL);
 
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024.0;
                 metric_family_append(&fams[FAM_HUGEPAGES_NR_BYTES], VALUE_GAUGE(value), NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
@@ -150,7 +150,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      &LABEL_PAIR_CONST("node", node), NULL);
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024.0;
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_NR_BYTES], VALUE_GAUGE(value), NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      &LABEL_PAIR_CONST("node", node), NULL);
@@ -166,7 +166,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024.0;
                 metric_family_append(&fams[FAM_HUGEPAGES_FREE_BYTES], VALUE_GAUGE(value), NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
@@ -177,7 +177,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      &LABEL_PAIR_CONST("node", node), NULL);
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024.0;
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_FREE_BYTES], VALUE_GAUGE(value), NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      &LABEL_PAIR_CONST("node", node), NULL);
@@ -193,7 +193,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024.0;
                 metric_family_append(&fams[FAM_HUGEPAGES_SURPLUS_BYTES], VALUE_GAUGE(value), NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
@@ -204,7 +204,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      &LABEL_PAIR_CONST("node", node), NULL);
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024.0;
                 metric_family_append(&fams[FAM_HUGEPAGES_NODE_SURPLUS_BYTES], VALUE_GAUGE(value),
                                      NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
@@ -221,7 +221,7 @@ static int hp_read_hugepages(__attribute__((unused)) int dirfd, const char *path
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
             if (values_bytes) {
-                value *= hpage_size * 1024;
+                value *= (double)hpage_size * 1024;
                 metric_family_append(&fams[FAM_HUGEPAGES_RESERVED_BYTES], VALUE_GAUGE(value), NULL,
                                      &LABEL_PAIR_CONST("page_size", hpage),
                                      NULL);
