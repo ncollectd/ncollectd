@@ -15,6 +15,9 @@
     \fBuser-id\fP [\fIincl|include|excl|exclude\fP]  \fIuid\fP
     \fBuser-name\fP [\fIincl|include|excl|exclude\fP] \fIusername\fP
     \fBreport-by-user-name\fP \fItrue|false\fP
+    \fBreport-by-device\fP \fItrue|false\fP
+    \fBreport-zero\fP \fItrue|false\fP
+    \fBreload-users-interval\fP \fIseconds\fP
 }
 .Ed
 .Sh DESCRIPTION
@@ -43,6 +46,21 @@ Select users quotas based on the username.
 See \fBINCLUDE AND EXCLUDE LISTS\fP in
 .Xr ncollectd.conf 5 .
 .It \fBreport-by-user-name\fP \fItrue|false\fP
+If true, the users are selected with the \fBuser-name\fP option, otherwise
+with the \fBuser-id\fP option.
+Defaults to true.
+.It \fBreport-by-device\fP \fItrue|false\fP
+If true, the label \fIdisk\fP is the device name (without the leading "/dev/"),
+otherwise the mount point.
+Defaults to false.
+.It \fBreport-zero\fP \fItrue|false\fP
+If true, report the quotas of the users even if they do not use any inode
+or disk space.
+Defaults to false.
+.It \fBreload-users-interval\fP \fIseconds\fP
+Interval in seconds to reload the list of users.
+If 0 the list is reloaded when /etc/passwd is modified.
+Defaults to 0.
 .El
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
