@@ -9,474 +9,643 @@
 .Bd -literal -compact
 \fBload-plugin\fP perl
 \fBplugin\fP perl {
-    \fBinclude-dir\fI \fI/path/to/perl/plugins\fP
-    \fBbase-name\fI \fIname\fP
-    \fBenable-debugger\fP [\fIpackage\fP]
-    \fBload-plugin\fP \fIplugin-name\fP
-    \fBplugin\fP \fIplugin-name\fP {
+    \fBinclude-dir\fP \fI/path/to/perl/modules\fP
+    \fBbase-name\fP \fIname\fP
+    \fBenable-debugger\fP \fIpackage\fP
+    \fBload-plugin\fP \fIModule::Name\fP
+    \fBplugin\fP \fIname\fP {
         ...
     }
 }
 .Ed
 .Sh DESCRIPTION
-The \fBperl\fP plugin embeds a Perl-interpreter into collectd and provides an
+The \fBperl\fP plugin embeds a Perl interpreter into ncollectd and provides an
 interface to ncollectd's plugin system.
-This makes it possible to write plugins for collectd in Perl.
+This makes it possible to write plugins for ncollectd in Perl.
+.Pp
+The interface is the \fBNCollectd\fP module, which has the same object model as
+the \fBncollectd\fP module of the python plugin, see
+.Xr ncollectd-python 5 .
+The module is built into the plugin: it is implemented in C and it does not
+need any Perl module, there is no \f(CWNCollectd.pm\fP file.
+.Pp
+Available configuration options:
 .Bl -tag -width Ds
-.It \fBinclude-dir\fI \fI/path/to/perl/plugins\fP
-Adds \fI/path/to/perl/plugins\fP to the \fB@INC\fP array.
-This is the same as using the \f(CW-IDir\fP command line option
-or \f(CWuse lib Dir\fP in the source code.
-Please note that it only has effect on plugins loaded after this option.
-.It \fBbase-name\fI \fIname\fP
-Prepends \fIname\fP\fB::\fP to all plugin names loaded after this option.
-This is provided for convenience to keep plugin names short.
-All Perl-based plugins provided with the \fBncollectd\fP distributions
-reside in the \f(CWNCollectd::Plugins\fP namespace.
-.It \fBenable-debugger\fP [\fIpackage\fP]
-Run collectd under the control of the Perl source debugger.
+.It \fBinclude-dir\fP \fI/path/to/perl/modules\fP
+Prepends \fI/path/to/perl/modules\fP to the \f(CW@INC\fP array.
+This is the same as using the \f(CW-I\fP command line option
+or \f(CWuse lib\fP in the source code.
+Please note that it only has effect on modules loaded after this option.
+You can use multiple \fBinclude-dir\fP lines to add more than one directory.
+.It \fBbase-name\fP \fIname\fP
+Prepends \fIname\fP\fB::\fP to all the module names loaded after this option.
+This is provided for convenience to keep module names short.
+.It \fBenable-debugger\fP \fIpackage\fP
+Run ncollectd under the control of the Perl source debugger.
 If \fIpackage\fP is not the empty string, control is passed to the debugging,
 profiling, or tracing module installed as Devel::\fIpackage\fP.
 A comma-separated list of options may be specified after the "=" character.
 Please note that you may not leave out the \fIpackage\fP option even if you
 specify \fB""\fP.
 This is the same as using the \f(CW-d:Package\fP command line option.
+It has no effect if it is used after \fBload-plugin\fP.
 .Pp
 See \fBperldebug\fP for detailed documentation about debugging Perl.
 .Pp
-This option does not prevent collectd from daemonizing, so you should start
+This option does not prevent ncollectd from daemonizing, so you should start
 ncollectd with the \f(CW-f\fP command line option.
 Else you will not be able to use the command line driven interface of the
 debugger.
-.It \fBload-plugin\fP \fIplugin-name\fP
-Loads the Perl plugin \fIplugin-name\fP.
-This does basically the same as \f(CWuse\fP would do in a Perl program.
+.It \fBload-plugin\fP \fIModule::Name\fP
+Loads the Perl module \fIModule::Name\fP, this does the same as \f(CWrequire\fP
+would do in a Perl program.
+If your module is not found, be sure its directory is in \f(CW@INC\fP,
+you can prepend directories to \f(CW@INC\fP using the \fBinclude-dir\fP
+configuration option.
 As a side effect, the first occurrence of this option causes the
-Perl-interpreter to be initialized.
-.It \fBplugin\fP \fIplugin-name\fP
-This block may be used to pass on configuration settings to a Perl plugin.
-The configuration is converted into a config-item data type which is passed
-to the registered configuration callback.
-See below for details about the config-item data type and how to register
-callbacks.
+Perl interpreter to be initialized.
+.It \fBplugin\fP \fIname\fP
+This block may be used to pass on configuration settings to a Perl module.
+The configuration is converted into an instance of the \fBNCollectd::Config\fP
+class which is passed to the registered configuration callback.
+See below for details about the \fBNCollectd::Config\fP class and how to
+register callbacks.
 .Pp
-The \fIplugin-name\fP identifies the callback.
+The \fIname\fP identifies the callback.
 It is used literally and independent of the \fBbase-name\fP setting.
 .El
+.Sh STRINGS
+The strings are passed between Perl and ncollectd as bytes, and ncollectd uses
+UTF-8.
+The strings received from ncollectd are byte strings, use \f(CWutf8::decode\fP
+if you need character strings.
+The character strings passed to ncollectd must be encoded with
+\f(CWutf8::encode\fP if they are not already UTF-8 encoded byte strings,
+for example when they are decoded from a file or they are literals of a source
+file with \f(CWuse utf8\fP.
+These strings must not contain a NUL character.
 .Sh WRITING YOUR OWN PLUGINS
-Writing your own plugins is quite simple.
-Ncollectd manages plugins by means of dispatch functions which call
-the appropriate \fBcallback functions\fP registered by the plugins.
-Any plugin basically consists of the implementation of these callback
-functions and initializing code which registers the functions with
-collectd.
-See the section "EXAMPLES" below for a really basic example.
+Writing your own plugins is quite simple. ncollectd manages plugins by means of
+\fBdispatch functions\fP which call the appropriate \fBcallback functions\fP
+registered by the plugins.
+Any plugin basically consists of the implementation of these callback functions
+and initializing code which registers the functions with ncollectd.
+See the section \fBEXAMPLES\fP below for a really basic example.
 The following types of \fBcallback functions\fP are known to ncollectd
 (all of them are optional):
 .Bl -tag -width Ds
 .It \fBconfiguration functions\fP
-This type of functions is called during configuration if an appropriate
+These are called during configuration if an appropriate
 \fBplugin\fP block has been encountered.
 It is called once for each \fBplugin\fP block which matches the name of
-the callback as provided with the \fBplugin_register\fP method - see below.
+the callback as provided with the \f(CWregister_config\fP function - see below.
 .It \fBinit functions\fP
-This type of functions is called once after loading the module and before any
+These are called once after loading the module and before any
 calls to the read and write functions.
 It should be used to initialize the internal state of the plugin
 (e. g. open sockets, ...).
-If the return value evaluates to \fBfalse\fP, the plugin will be disabled.
 .It \fBread functions\fP
-This type of function is used to collect the actual data.
-It is called once per interval (see the \fBinterval\fP configuration option
-of collectd).
-Usually it will call \fBplugin_dispatch_values\fP to dispatch the values to
-collectd which will pass them on to all registered \fBwrite functions\fP.
-If the return value evaluates to \fBfalse\fP the plugin will be skipped for
-an increasing amount of time until it returns \fBtrue\fP again.
+These are used to collect the actual data.
+It is called once per interval (see the \fBinterval\fP configuration
+option of ncollectd).
+Usually it will call the \f(CWdispatch\fP method of a
+\fBNCollectd::MetricFamily\fP object to dispatch the metrics to ncollectd
+which will pass them on to all registered \fBwrite functions\fP.
+If this function dies the plugin will be skipped for an increasing amount of
+time until it returns normally again.
 .It \fBwrite functions\fP
-This type of function is used to write the dispatched values.
-It is called once for each call to \fBplugin_dispatch_values\fP.
+These are used to write the dispatched values.
+It is called once for every metric family that was dispatched by any plugin.
 .It \fBlog functions\fP
-This type of function is used to pass messages of plugins or the daemon itself
-to the user.
+These are used to pass messages of plugins or the daemon itself to the user.
 .It \fBnotification function\fP
-This type of function is used to act upon notifications.
-In general, a notification is a status message that may be associated with a
-data instance.
-Usually, a notification is generated by the daemon or any plugin.
+These are used to act upon notifications.
+In general, a notification is a status message that may be associated with
+a data instance.
 .It \fBshutdown functions\fP
-This type of function is called once before the daemon shuts down.
+These are called once before the daemon shuts down.
 It should be used to clean up the plugin (e.g. close sockets, ...).
 .El
 .Pp
-Any function (except log functions) may set the \f(CW$@\fP variable to describe
-errors in more detail.
-The message will be passed on to the user using ncollectd's logging mechanism.
+The values returned by the callback functions are ignored.
+Any function (except log functions) may die in case of errors,
+the error will be passed on to the user using ncollectd's logging mechanism.
+If a log callback dies the error will be printed to standard error instead.
 .Pp
-See the documentation of the \fBplugin_register\fP method in the section
-\fBMETHODS\fP below for the number and types of arguments passed to each
+See the documentation of the various \fBregister_\fP functions in the section
+\fBFUNCTIONS\fP below for the number and types of arguments passed to each
 \fBcallback function\fP.
-This section also explains how to register \fBcallback functions\fP with
-ncollectd.
+This section also explains how to register \fBcallback functions\fP
+with ncollectd.
 .Pp
-To enable a plugin, copy it to a place where Perl can find it (i. e. a
-directory listed in the \f(CW@INC\fP array) just as any other Perl plugin
-and add an appropriate \fBload-plugin\fP option to the configuration file.
-After restarting collectd you're done.
-.Sh DATA TYPES
-The following complex types are used to pass values between the Perl plugin
-and ncollectd:
+To enable a module, copy it to a place where Perl can find it (i. e. a
+directory listed in \f(CW@INC\fP) just as any other Perl module and add
+an appropriate \fBload-plugin\fP option to the configuration file.
+After restarting ncollectd you're done.
+.Sh CLASSES
+The following classes are used to pass values between the Perl plugin
+and ncollectd.
+.Pp
+The objects are blessed hash references, and every member of a class has an
+accessor method with the same name: \f(CW$object->member\fP returns the member
+and \f(CW$object->member($value)\fP checks and sets it.
+The members can also be accessed directly, i.e. \f(CW$object->{member}\fP,
+but then the values are only checked when they are dispatched.
+The members that are hash or array references can be modified in place,
+i.e. \f(CW$metric->labels->{name} = 'value'\fP.
+.Pp
+The objects are created with the \f(CWnew\fP class method, its arguments are
+the members of the class in the documented order, as in the python plugin.
+An undefined optional argument is the same as an omitted one.
+.Pp
+The conversion of an object to a string shows its class and members, which is
+useful for debugging.
+The classes can be derived in Perl with \f(CW@ISA\fP.
 .Bl -tag -width Ds
-.It \fBConfig-Item\fP
-A config-item is one structure which keeps the information provided in the
+.It \fBNCollectd::Error\fP
+This is an exception.
+If any Perl callback dies with an object of this class it will still be
+treated like an error by ncollectd, but it will be logged as a warning instead
+of an error.
+.Bd -literal
+    die NCollectd::Error->new("message");
+.Ed
+.Bl -tag -width Ds
+.It \fBmessage\fP
+The message of the error, it is also the conversion of the object to a string.
+.El
+.It \fBNCollectd::Config\fP
+The Config class is an object which keeps the information provided in the
 configuration file.
 The array of children keeps one entry for each configuration option.
-Each such entry is another config-item structure, which may nest further
-if nested blocks are used.
+Each such entry is another Config instance, which may nest further if
+nested blocks are used.
 .Bd -literal
-    {
-        key      => key,
-        values   => [ val1, val2, ... ],
-        children => [ { ... }, { ... }, ... ]
-    }
+    NCollectd::Config->new(key[, parent][, values][, children])
 .Ed
-.It \fBMetric Family\fP
-A data-set is a list of one or more data-sources.
-Each data-source defines a name, type, min- and max-value and the data-set
-wraps them up into one structure.
-The general layout looks like this:
-.Bd -literal
-  [{
-    name => 'data_source_name',
-    type => DS_TYPE_COUNTER || DS_TYPE_GAUGE || DS_TYPE_DERIVE,
-    min  => value || undef,
-    max  => value || undef
-  }, ...]
-.Ed
-.It \fBValue-List\fP
-A value-list is one structure which features an array of values and fields to
-identify the values, i. e. time and host, plugin name and plugin-instance as
-well as a type and type-instance.
-Since the "type" is not included in the value-list but is passed as an extra
-argument, the general layout looks like this:
-.Bd -literal
-  {
-    values => [123, 0.5],
-    time   => time (),
-    interval => plugin_get_interval (),
-    host   => $hostname_g,
-    plugin => 'myplugin',
-    type   => 'myplugin',
-    plugin_instance => '',
-    type_instance   => ''
-  }
-.Ed
-.It \fBNotification\fP
-A notification is one structure defining the severity, time and message of the
-status message as well as an identification of a data instance.
-Also, it includes an optional list of user-defined meta information
-represented as (name, value) pairs:
-.Bd -literal
-  {
-      severity => NOTIF_FAILURE || NOTIF_WARNING || NOTIF_OKAY,
-      time     => time (),
-      name     => 'notification_name',
-      labels      => [ { name => <name>, value => <value> }, ... ]
-      annotations => [ { name => <name>, value => <value> }, ... ]
-  }
-.Ed
-.El
-.Sh METHODS
-The following functions provide the C-interface to Perl-modules.
-They are exported by the ":plugin" export tag (see the section "EXPORTS" below).
+.Pp
+This represents a piece of ncollectd's config file.
+It is passed to modules with config callbacks (see \f(CWregister_config\fP)
+and is of little use if created somewhere else.
 .Bl -tag -width Ds
-.It \fBplugin_register\fP (\fItype\fP, \fIname\fP, \fIdata\fP)
-Registers a callback-function or data-set.
+.It \fBkey\fP
+This is the keyword of this item, i.e. the first word of any given line in the
+config file.
+It will always be a string.
+.It \fBparent\fP
+This is the parent of this item, it is undefined for the root of the
+configuration tree.
+It is a weak reference: it is undefined if the parent is freed.
+.It \fBvalues\fP
+This is a reference to an array (which might be empty) of all values, i.e.
+words following the keyword in any given line in the config file.
 .Pp
-\fIType\fP can be one of:
-.Bl -bullet
-.It
-\fBTYPE_CONFIG\fP
-.It
-\fBTYPE_INIT\fP
-.It
-\fBTYPE_READ\fP
-.It
-\fBTYPE_WRITE\fP
-.It
-\fBTYPE_LOG\fP
-.It
-\fBTYPE_NOTIF\fP
-.It
-\fBTYPE_SHUTDOWN\fP
+Every item in this array will be either a string, a number or a boolean,
+depending on the contents of the configuration file.
+.It \fBchildren\fP
+This is a reference to an array of child nodes.
+For most nodes this will be empty.
+If this node represents a block instead of a single line of the config file
+it will contain all nodes in this block.
+.El
+.It \fBNCollectd::Metric\fP
+This is the base class of all the metrics.
+.Bd -literal
+    NCollectd::Metric->new([labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBlabels\fP
+It has to be a hash reference of numbers, strings or booleans.
+The undefined values are ignored.
+.It \fBtime\fP
+This is the Unix timestamp of the time this metric was read.
+For dispatching metrics this can be set to zero which means "now".
+.It \fBinterval\fP
+The interval is the timespan in seconds between two submits for the same
+metric.
+If this member is set to zero, the default value as specified in the config
+file will be used (default: 10).
+.El
+.It \fBNCollectd::MetricUnknownDouble\fP
+.Bd -literal
+    NCollectd::MetricUnknownDouble->new(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+A floating point number.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricUnknownLong\fP
+.Bd -literal
+    NCollectd::MetricUnknownLong->new(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+A signed 64 bit integer.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricGaugeDouble\fP
+.Bd -literal
+    NCollectd::MetricGaugeDouble->new(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+A floating point number.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricGaugeLong\fP
+.Bd -literal
+    NCollectd::MetricGaugeLong->new(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+A signed 64 bit integer.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricCounterDouble\fP
+.Bd -literal
+    NCollectd::MetricCounterDouble->new(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+A positive floating point number.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricCounterULong\fP
+.Bd -literal
+    NCollectd::MetricCounterULong->new(value[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBvalue\fP
+An unsigned 64 bit integer.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricInfo\fP
+.Bd -literal
+    NCollectd::MetricInfo->new(info[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBinfo\fP
+A hash reference of numbers, strings or booleans, like the labels.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricStateSet\fP
+.Bd -literal
+    NCollectd::MetricStateSet->new(set[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBset\fP
+A hash reference with the name of every state and if it is enabled,
+i.e. \f(CW{ starting => 0, running => 1 }\fP.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricSummary\fP
+.Bd -literal
+    NCollectd::MetricSummary->new(sum, count, quantiles[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBsum\fP
+The sum of all the values.
+.It \fBcount\fP
+The number of values.
+.It \fBquantiles\fP
+An array reference of \f(CW[quantile, value]\fP pairs.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricHistogram\fP
+.Bd -literal
+    NCollectd::MetricHistogram->new(sum, buckets[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBsum\fP
+The sum of all the values.
+.It \fBbuckets\fP
+An array reference of \f(CW[counter, maximum]\fP pairs, from the bucket with
+the highest maximum (\f(CW"inf"\fP) to the lowest one.
+Each bucket counts the values less than or equal to its maximum.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricGaugeHistogram\fP
+.Bd -literal
+    NCollectd::MetricGaugeHistogram->new(sum, buckets[, labels][, time][, interval])
+.Ed
+.Bl -tag -width Ds
+.It \fBsum\fP
+The sum of all the values.
+.It \fBbuckets\fP
+See \fBNCollectd::MetricHistogram\fP.
+.It \fBlabels\fP
+See \fBNCollectd::Metric\fP.
+.It \fBtime\fP
+See \fBNCollectd::Metric\fP.
+.It \fBinterval\fP
+See \fBNCollectd::Metric\fP.
+.El
+.It \fBNCollectd::MetricFamily\fP
+.Bd -literal
+    NCollectd::MetricFamily->new(name, type[, help][, unit][, metrics])
+.Ed
+.Pp
+Methods defined here:
+.Bl -tag -width Ds
+.It \fBappend\fP(\fImetric\fP | [\fImetric\fP, ...], ...)
+Appends the metrics to the family, the metrics can be given in a list or in
+array references.
+The class of the metrics must match the type of the family.
+.It \fBdispatch\fP([\fItime\fP])
+Dispatches the metrics of the family to the ncollectd process, then the
+metrics of the family are removed.
 .El
 .Pp
-\fIname\fP is the name of the callback-function or the type of the data-set,
-depending on the value of \fItype\fP.
-(Please note that the type of the data-set is the value passed as \fIname\fP
-here and has nothing to do with the \fItype\fP argument which simply tells
-\fBplugin_register\fP what is being registered.)
-.Pp
-The last argument, \fIdata\fP, is either a function name or an array-reference.
-If \fItype\fP is \fBTYPE_DATASET\fP, then the \fIdata\fP argument must be an
-array-reference which points to an array of hashes.
-Each hash describes one data-set.
-For the exact layout see \fBData-Set\fP above.
-Please note that there is a large number of predefined data-sets available
-in the \fBtypes.db\fP file which are automatically registered with ncollectd
-- see types.db(5) for a description of the format of this file.
-.Pp
-\fBNote\fP: Using \fBplugin_register\fP to register a data-set is deprecated.
-Add the new type to a custom types.db(5) file instead.
-This functionality might be removed in a future version of ncollectd.
-.Pp
-If the \fItype\fP argument is any of the other types (\fBTYPE_INIT\fP,
-\fBTYPE_READ\fP, ...) then \fIdata\fP is expected to be a function name.
-If the name is not prefixed with the plugin's package name collectd will add
-it automatically.
-The interface slightly differs from the C interface (which expects a function
-pointer instead) because Perl does not support to share references to
-subroutines between threads.
-.Pp
-These functions are called in the various stages of the daemon (see the
-section "WRITING YOUR OWN PLUGINS" above) and are passed the following
-arguments:
+Members:
 .Bl -tag -width Ds
-.It \fBTYPE_CONFIG\fP
-The only argument passed is \fIconfig-item\fP.
+.It \fBname\fP
+The name of this metric family.
+.It \fBtype\fP
+The type of this metric family, it can not be modified.
+Compare to \fBMETRIC_UNKNOWN\fP, \fBMETRIC_GAUGE\fP,
+\fBMETRIC_COUNTER\fP, \fBMETRIC_STATE_SET\fP,
+\fBMETRIC_INFO\fP, \fBMETRIC_SUMMARY\fP, \fBMETRIC_HISTOGRAM\fP
+or \fBMETRIC_GAUGE_HISTOGRAM\fP.
+.It \fBhelp\fP
+A brief description of the metric family.
+.It \fBunit\fP
+The unit of the metrics.
+.It \fBmetrics\fP
+An array reference of the metrics.
+.El
+.It \fBNCollectd::Notification\fP
+A notification is an object defining the severity and message of the status
+message as well as an identification of a data instance.
+.Bd -literal
+    NCollectd::Notification->new(name[, severity][, time][, labels][, annotations])
+.Ed
+.Pp
+The Notification class is a wrapper around the ncollectd notification.
+It can be used to notify other plugins about bad stuff happening.
+Notifications can be dispatched at any time and can be received with
+\f(CWregister_notification\fP.
+.Pp
+Methods defined here:
+.Bl -tag -width Ds
+.It \fBdispatch\fP()
+Dispatches the notification to the ncollectd process.
+.El
+.Pp
+Members:
+.Bl -tag -width Ds
+.It \fBname\fP
+Name of the notification.
+.It \fBseverity\fP
+The severity of this notification, the default is \fBNOTIF_FAILURE\fP.
+Assign or compare to \fBNOTIF_FAILURE\fP, \fBNOTIF_WARNING\fP or
+\fBNOTIF_OKAY\fP.
+.It \fBtime\fP
+The Unix timestamp of the notification, zero means "now".
+.It \fBlabels\fP
+A hash reference like the labels of the metrics.
+.It \fBannotations\fP
+A hash reference like the labels of the metrics.
+.El
+.El
+.Sh FUNCTIONS
+The following functions of the \fBNCollectd\fP package provide the interface
+to ncollectd.
+.Bl -tag -width Ds
+.It \fBregister_*\fP(\fIcallback\fP[, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+There are seven different register functions to get callback for seven
+different events.
+With one exception all of them are called as shown above.
+.Bl -tag -width Ds
+.It \fIcallback\fP
+Is a code reference, or the name of a subroutine, that will be called every
+time the event is triggered.
+If the name is not fully qualified the subroutine is looked up in the package
+of the caller.
+.It \fIdata\fP
+Is an optional value that will be passed back to the callback function, as its
+last argument, every time it is called.
+If you omit this parameter, or it is undefined, no value is passed back to
+your callback, not even undef.
+.It \fIname\fP
+Is an optional identifier for this callback.
+The default name is the name of the package where the callback was defined.
+Every callback needs a unique identifier, so if you want to register the same
+callback multiple times in the same module you need to
+specify a name here.
+Otherwise it's safe to ignore this parameter.
+.It \fIidentifier\fP
+Is the full identifier assigned to this callback: \fBperl/\fP\fIname\fP.
+.El
+.Pp
+These functions are called in the various stages of the daemon (see the section
+\fBWRITING YOUR OWN PLUGINS\fP above) and are passed the following arguments:
+.Bl -tag -width Ds
+.It \fBregister_config\fP
+The only argument passed is a \fBNCollectd::Config\fP object.
 See above for the layout of this data type.
-.It \fBTYPE_INIT\fP
-.It \fBTYPE_READ\fP
-.It \fBTYPE_SHUTDOWN\fP
-No arguments are passed.
-.It \fBTYPE_WRITE\fP
-The arguments passed are \fItype\fP, \fIdata-set\fP, and \fIvalue-list\fP.
-\fItype\fP is a string.
-For the layout of \fIdata-set\fP and \fIvalue-list\fP see above.
-.It \fBTYPE_FLUSH\fP
-The arguments passed are \fItimeout\fP and \fIidentifier\fP.
-\fItimeout\fP indicates that only data older than \fItimeout\fP seconds is
-to be flushed.
-\fIidentifier\fP specifies which values are to be flushed.
-.It \fBTYPE_LOG\fP
-The arguments are \fIlog-level\fP and \fImessage\fP.
-The log level is small for important messages and high for less important
-messages.
-The least important level is \fBLOG_DEBUG\fP, the most important level is
-\fBLOG_ERR\fP.
+Note that you cannot receive the whole config files this way, only
+\fBplugin\fP blocks inside the perl configuration block.
+Additionally you will only receive blocks where the name of your callback
+matches the name of the block.
+.It \fBregister_init\fP
+The callback will be called without arguments.
+.It \fBregister_read\fP(\fIcallback\fP[, \fIinterval\fP][, \fIdata\fP][, \fIname\fP]) -> \fIidentifier\fP
+This function takes an additional parameter: \fIinterval\fP.
+It specifies the time in seconds between calls to the callback function.
+.Pp
+The callback will be called without arguments.
+.It \fBregister_shutdown\fP
+The callback will be called without arguments.
+.It \fBregister_write\fP
+The callback function will be called with one argument passed, which will be a
+\fBNCollectd::MetricFamily\fP object.
+For the layout of \fBNCollectd::MetricFamily\fP see above.
+.It \fBregister_log\fP
+The arguments are \fIseverity\fP and \fImessage\fP.
+The severity is an integer and small for important messages and high for less
+important messages.
+The least important level is \fBLOG_DEBUG\fP, the most important level
+is \fBLOG_ERROR\fP.
 In between there are (from least to most important): \fBLOG_INFO\fP,
 \fBLOG_NOTICE\fP, and \fBLOG_WARNING\fP.
 \fImessage\fP is simply a string \fBwithout\fP a newline at the end.
-.It \fBTYPE_NOTIF\fP
-The only argument passed is \fInotification\fP.
+.Pp
+The messages logged by a log callback are not passed to the log callbacks.
+If the message is logged while the Perl interpreter is used by another thread,
+it is passed to the log callbacks when the interpreter is released.
+.Pp
+If this callback dies the error will \fBnot\fP be logged.
+It will just be printed to the standard error, which usually means
+silently ignored.
+.It \fBregister_notification\fP
+The only argument passed is a \fBNCollectd::Notification\fP object.
 See above for the layout of this data type.
 .El
-.It \fBplugin_unregister\fP (\fItype\fP, \fIplugin\fP)
-Removes a callback or data-set from collectd's internal list of functions.
-.It \fBplugin_dispatch_values\fP (\fImetric-family\fP)
-Submits a \fIvalue-list\fP to the daemon.
-If the data-set identified by \fIvalue-list\fP->{\fItype\fP}
-is found (and the number of values matches the number of data-sources) then the
-type, data-set and value-list is passed to all write-callbacks that are
-registered with the daemon.
-.It \fBplugin_dispatch_notification\fP (\fInotification\fP)
-Submits a \fInotification\fP to the daemon which will then pass it to all
-notification-callbacks that are registered.
-.It \fBplugin_log (\fIlog-level\fP, \fImessage\fP)
-Submits a \fImessage\fP of level \fIlog-level\fP to ncollectd's
-logging mechanism.
-The message is passed to all log-callbacks that are registered with ncollectd.
-.It \fBERROR\fP, \fBWARNING\fP, \fBNOTICE\fP, \fBINFO\fP, \fBDEBUG\fP (\fImessage\fP)
-Wrappers around \fBplugin_log\fP, using \fBLOG_ERR\fP, \fBLOG_WARNING\fP,
-\fBLOG_NOTICE\fP, \fBLOG_INFO\fP and \fBLOG_DEBUG\fP respectively as
-\fIlog-level\fP.
-.It \fBplugin_get_interval\fP ()
-Returns the interval of the current plugin as a floating point number in
-seconds.
-This value depends on the interval configured within the
-\f(CWload-plugin perl\fP block or the global interval (see
-.Xr ncollectd.conf 5
-for details).
+.It \fBunregister_*\fP(\fIidentifier\fP)
+Removes a callback from ncollectd's internal list of callback functions.
+Every \fBregister_*\fP function has an \fBunregister_*\fP function.
+\fIidentifier\fP is either the string that was returned by the register function
+or a code reference.
+The identifier will be constructed in the same way as for the register
+functions.
+.It \fBerror\fP, \fBwarning\fP, \fBnotice\fP, \fBinfo\fP, \fBdebug\fP(\fImessage\fP, ...)
+Log a message with the specified severity.
+The arguments are concatenated.
 .El
-.Sh GLOBAL VARIABLES
+.Sh CONSTANTS
+The following constants are defined in the \fBNCollectd\fP package:
 .Bl -tag -width Ds
-.It \fB$hostname_g\fP
-As the name suggests this variable keeps the hostname of the system collectd
-is running on.
-The value might be influenced by the \fBhostname\fP or \fBfqdn-lookup\fP
-configuration options (see
-.Xr ncollectd.conf 5
-for details).
-.It \fB$interval_g\fP
-This variable keeps the interval in seconds in which the read functions are
-queried (see the \fBinterval\fP configuration option).
-.Pp
-\fBNote:\fP This variable should no longer be used in favor of
-\f(CWplugin_get_interval()\fP (see above).
-This function takes any plugin-specific interval settings into account
-(see the \fBinterval\fP option of \fBload-plugin\fP
-.Xr ncollectd.conf 5
-for details).
+.It \fBLOG_ERROR\fP, \fBLOG_WARNING\fP, \fBLOG_NOTICE\fP, \fBLOG_INFO\fP, \fBLOG_DEBUG\fP
+The severities of the log messages.
+.It \fBNOTIF_FAILURE\fP, \fBNOTIF_WARNING\fP, \fBNOTIF_OKAY\fP
+The severities of the notifications.
+.It \fBMETRIC_UNKNOWN\fP, \fBMETRIC_GAUGE\fP, \fBMETRIC_COUNTER\fP, \fBMETRIC_STATE_SET\fP, \fBMETRIC_INFO\fP, \fBMETRIC_SUMMARY\fP, \fBMETRIC_HISTOGRAM\fP, \fBMETRIC_GAUGE_HISTOGRAM\fP
+The types of the metric families.
 .El
-.Pp
-Any changes to these variables will be globally visible in ncollectd.
 .Sh EXPORTS
-By default no symbols are exported.
-However, the following export tags are available
-(\fB:all\fP will export all of them):
-.Bl -bullet
-.It
-\fB:plugin\fP
-.Bl -bullet
-.It
-\fBplugin_register\fP ()
-.It
-\fBplugin_unregister\fP ()
-.It
-\fBplugin_dispatch_values\fP ()
-.It
-\fBplugin_flush\fP ()
-.It
-\fBplugin_flush_one\fP ()
-.It
-\fBplugin_flush_all\fP ()
-.It
-\fBplugin_dispatch_notification\fP ()
-.It
-\fBplugin_log\fP ()
-.El
-.It
-\fB:types\fP
-.Bl -bullet
-.It
-\fBTYPE_CONFIG\fP
-.It
-\fBTYPE_INIT\fP
-.It
-\fBTYPE_READ\fP
-.It
-\fBTYPE_WRITE\fP
-.It
-\fBTYPE_FLUSH\fP
-.It
-\fBTYPE_SHUTDOWN\fP
-.It
-\fBTYPE_LOG\fP
-.El
-.It
-\fB:log\fP
-.Bl -bullet
-.It
-\fBERROR\fP ()
-.It
-\fBWARNING\fP ()
-.It
-\fBNOTICE\fP ()
-.It
-\fBINFO\fP ()
-.It
-\fBDEBUG\fP ()
-.It
-\fBLOG_ERR\fP
-.It
-\fBLOG_WARNING\fP
-.It
-\fBLOG_NOTICE\fP
-.It
-\fBLOG_INFO\fP
-.It
-\fBLOG_DEBUG\fP
-.El
-.It
-\fB:notif\fP
-.Bl -bullet
-.It
-\fBNOTIF_FAILURE\fP
-.It
-\fBNOTIF_WARNING\fP
-.It
-\fBNOTIF_OKAY\fP
-.El
-.It
-\fB:globals\fP
-.Bl -bullet
-.It
-\fB$hostname_g\fP
-.It
-\fB$interval_g\fP
-.El
+By default no symbols are exported, the functions and constants can be used
+with their fully qualified names, i.e. \f(CWNCollectd::register_read\fP and
+\f(CWNCollectd::METRIC_GAUGE\fP.
+The \f(CWuse NCollectd\fP statement can import any function or constant by its
+name, or the following groups of them:
+.Bl -tag -width Ds
+.It \fB:all\fP
+All the functions and constants.
+.It \fB:register\fP
+The \fBregister_*\fP and \fBunregister_*\fP functions.
+.It \fB:log\fP
+The log functions and the \fBLOG_*\fP constants.
+.It \fB:metric\fP
+The \fBMETRIC_*\fP constants.
+.It \fB:notif\fP
+The \fBNOTIF_*\fP constants.
 .El
 .Sh EXAMPLES
-Any Perl plugin will start similar to:
+Any Perl module will start similar to:
 .Bd -literal
-    package NCollectd::Plugins::FooBar;
+    package Load;
 
     use strict;
     use warnings;
 
-    use NCollectd qw( :all );
+    use NCollectd qw(:all);
 .Ed
 .Pp
 A very simple read function might look like:
 .Bd -literal
-    sub foobar_read
+    sub load_read
     {
-      my $vl = { plugin => 'foobar', type => 'gauge' };
-      $vl->{'values'} = [ rand(42) ];
-      plugin_dispatch_values ($vl);
-      return 1;
+        open(my $fh, "<", "/proc/loadavg") or die "Cannot open file: $!";
+        my @load = split(/\es+/, <$fh>);
+        close($fh);
+
+        my $fam = NCollectd::MetricFamily->new("system_load", METRIC_GAUGE,
+                                               "System load averages");
+        $fam->append(NCollectd::MetricGaugeDouble->new($load[0], {duration => "1m"}));
+        $fam->append(NCollectd::MetricGaugeDouble->new($load[1], {duration => "5m"}));
+        $fam->append(NCollectd::MetricGaugeDouble->new($load[2], {duration => "15m"}));
+        $fam->dispatch();
     }
 .Ed
 .Pp
 A very simple write function might look like:
 .Bd -literal
-    sub foobar_write
+    sub gauge_write
     {
-      my ($type, $ds, $vl) = @_;
-      for (my $i = 0; $i < scalar (@$ds); ++$i) {
-        print "$vl->{'plugin'} ($vl->{'type'}): $vl->{'values'}->[$i]\n";
-      }
-      return 1;
+        my ($fam) = @_;
+
+        return if $fam->type != METRIC_GAUGE;
+
+        print "# TYPE ", $fam->name, " gauge\en";
+        print "# HELP ", $fam->name, " ", $fam->help, "\en" if defined $fam->help;
+        for my $metric (@{$fam->metrics}) {
+            my $labels = $metric->labels;
+            my $set = join(",", map { "$_=\e"$labels->{$_}\e"" } sort keys %$labels);
+            printf("%s{%s} %.15g %d\en", $fam->name, $set, $metric->value,
+                   $metric->time * 1000);
+        }
     }
 .Ed
 .Pp
-To register those functions with collectd:
+To register those functions with ncollectd:
 .Bd -literal
-    plugin_register (TYPE_READ, "foobar", "foobar_read");
-    plugin_register (TYPE_WRITE, "foobar", "foobar_write");
+    register_read(\e&load_read);
+    register_write(\e&gauge_write);
+
+    1;
 .Ed
 .Pp
-See the section "DATA TYPES" above for a complete documentation of the data
-types used by the read, write and match functions.
+See the section \fBCLASSES\fP above for a complete documentation of the data
+types used by the read and write functions.
 .Sh CAVEATS
-ncollectd is heavily multi-threaded.
-Each collectd thread accessing the perl plugin will be mapped to a Perl
-interpreter thread (see
-.Xr threads (3perl)
-).
-Any such thread will be created and destroyed transparently and on-the-fly.
+ncollectd is heavily multi-threaded, but there is only one Perl interpreter:
+like the Python interpreter, it can only run the callbacks of one thread at a
+time, and a callback that takes a long time delays the callbacks of the other
+threads.
+The data is shared between all the callbacks, there is no need to use the
+\f(CWthreads::shared\fP module, and the \f(CWthreads\fP module must not be used.
 .Pp
-Hence, any plugin has to be thread-safe if it provides several entry points
-from collectd (i. e. if it registers more than one callback or if a
-registered callback may be called more than once in parallel).
-Please note that no data is shared between threads by default.
-You have to use the \fBthreads::shared\fP module to do so.
+Do not call \f(CWexit\fP from a callback, it ends the ncollectd process.
+Use \f(CWdie\fP to report errors.
 .Pp
-Each function name registered with collectd has to be available before the
-first thread has been created (i. e. basically at compile time).
-This basically means that hacks (yes, I really consider this to be a hack)
-like \f(CW*foo = \&bar; plugin_register (TYPE_READ, "plugin", "foo");\fP
-most likely will not work.
-This is due to the fact that the symbol table is not shared across
-different threads.
-.Pp
-Each plugin is usually only loaded once and kept in memory for performance
+Each module is usually only loaded once and kept in memory for performance
 reasons.
-Therefore, END blocks are only executed once when collectd shuts down.
+Therefore, END blocks are only executed once when ncollectd shuts down.
 You should not rely on END blocks anyway - use \fBshutdown functions\fP
 instead.
 .Pp
-The perl plugin exports the internal API of collectd which is considered
+The perl plugin exports the internal API of ncollectd which is considered
 unstable and subject to change at any time.
 We try hard to not break backwards compatibility in the Perl API during
 the life cycle of one major release.
@@ -485,4 +654,5 @@ Watch out for warnings dispatched by the perl plugin after upgrades.
 .Sh "SEE ALSO"
 .Xr ncollectd 1 ,
 .Xr perl 1 ,
+.Xr ncollectd-python 5 ,
 .Xr ncollectd.conf 5
