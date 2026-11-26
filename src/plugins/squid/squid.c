@@ -7,6 +7,9 @@
 
 #include <curl/curl.h>
 
+/* Maximum size of a response body. */
+#define SQUID_MAX_RESPONSE_SIZE (1024 * 1024)
+
 enum {
     FAM_SQUID_UP,
     FAM_SQUID_CLIENT_HTTP_REQUESTS,
@@ -69,7 +72,7 @@ static metric_family_t fams_squid[FAM_SQUID_MAX] = {
     [FAM_SQUID_UP] = {
         .name = "squid_up",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Could the apache server be reached.",
+        .help = "Could the squid server be reached.",
     },
     [FAM_SQUID_CLIENT_HTTP_REQUESTS] = {
         .name = "squid_client_http_requests",
@@ -232,12 +235,12 @@ static metric_family_t fams_squid[FAM_SQUID_MAX] = {
         .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SQUID_CD_MEMORY] = {
-        .name = "squid_cd_memory",
-        .type = METRIC_TYPE_COUNTER,
+        .name = "squid_cd_memory_bytes",
+        .type = METRIC_TYPE_GAUGE,
     },
     [FAM_SQUID_CD_LOCAL_MEMORY] = {
-        .name = "squid_cd_local_memory",
-        .type = METRIC_TYPE_COUNTER,
+        .name = "squid_cd_local_memory_bytes",
+        .type = METRIC_TYPE_GAUGE,
     },
     [FAM_SQUID_CD_SENT_BYTES] = {
         .name = "squid_cd_sent_bytes",
@@ -260,11 +263,11 @@ static metric_family_t fams_squid[FAM_SQUID_MAX] = {
         .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SQUID_CPU_SECONDS] = {
-        .name = "squid_cpu_time",
+        .name = "squid_cpu_time_seconds",
         .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SQUID_WALL_SECONDS] = {
-        .name = "squid_wall_time",
+        .name = "squid_wall_time_seconds",
         .type = METRIC_TYPE_COUNTER,
     },
     [FAM_SQUID_SWAP_OUTS] = {
@@ -301,6 +304,7 @@ typedef struct {
     bool verify_host;
     char *cacert;
     struct curl_slist *headers;
+    cdtime_t timeout;
     CURL *curl;
     char curl_errbuf[CURL_ERROR_SIZE];
     strbuf_t buffer;
@@ -316,6 +320,11 @@ static size_t squid_curl_callback(void *buf, size_t size, size_t nmemb, void *us
     squid_t *sq = user_data;
     if (unlikely(sq == NULL))
         return 0;
+
+    if (len > (SQUID_MAX_RESPONSE_SIZE - strbuf_len(&sq->buffer))) {
+        PLUGIN_ERROR("Response size exceeds the limit of %d bytes.", SQUID_MAX_RESPONSE_SIZE);
+        return 0;
+    }
 
     int status = strbuf_putstrn(&sq->buffer, buf, len);
     if (status != 0) {
@@ -420,14 +429,14 @@ static int squid_curl_init(squid_t *sq)
 
     rcode = curl_easy_setopt(sq->curl, CURLOPT_FOLLOWLOCATION, 1L);
     if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_FOLLOWLOCATION failed: %s",
                      curl_easy_strerror(rcode));
         return -1;
     }
 
     rcode = curl_easy_setopt(sq->curl, CURLOPT_MAXREDIRS, 50L);
     if (rcode != CURLE_OK) {
-        PLUGIN_ERROR("curl_easy_setopt CURLOPT_ERRORBUFFER failed: %s",
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXREDIRS failed: %s",
                      curl_easy_strerror(rcode));
         return -1;
     }
@@ -459,6 +468,7 @@ static int squid_curl_init(squid_t *sq)
         credentials_size = strlen(sq->user) + 2; if (sq->pass != NULL)
         credentials_size += strlen(sq->pass);
 
+        free(sq->credentials);
         sq->credentials = malloc(credentials_size);
         if (sq->credentials == NULL) {
             PLUGIN_ERROR("malloc failed.");
@@ -516,14 +526,21 @@ static int squid_curl_init(squid_t *sq)
     }
 
 #ifdef HAVE_CURLOPT_TIMEOUT_MS
-    rcode = curl_easy_setopt(sq->curl, CURLOPT_TIMEOUT_MS,
-                                       (long)CDTIME_T_TO_MS(plugin_get_interval()));
+    rcode = curl_easy_setopt(sq->curl, CURLOPT_TIMEOUT_MS, (long)CDTIME_T_TO_MS(sq->timeout));
     if (rcode != CURLE_OK) {
         PLUGIN_ERROR("curl_easy_setopt CURLOPT_TIMEOUT_MS failed: %s",
                      curl_easy_strerror(rcode));
         return -1;
     }
 #endif
+
+    rcode = curl_easy_setopt(sq->curl, CURLOPT_MAXFILESIZE_LARGE,
+                             (curl_off_t)SQUID_MAX_RESPONSE_SIZE);
+    if (rcode != CURLE_OK) {
+        PLUGIN_ERROR("curl_easy_setopt CURLOPT_MAXFILESIZE_LARGE failed: %s",
+                     curl_easy_strerror(rcode));
+        return -1;
+    }
 
     rcode = curl_easy_setopt(sq->curl, CURLOPT_URL, sq->furl);
     if (rcode != CURLE_OK) {
@@ -563,12 +580,12 @@ static int squid_curl_perform(squid_t *sq)
     }
 
     if (unlikely(rcode != 200)) {
-        PLUGIN_ERROR("response code for %s was %ld", sq->furl, rcode);
+        PLUGIN_ERROR("Response code for instance '%s' was %ld", sq->instance, rcode);
         return -1;
     }
 
     if (unlikely(strbuf_len(&sq->buffer) == 0)) {
-        PLUGIN_ERROR("empty response for %s", sq->furl);
+        PLUGIN_ERROR("Empty response for instance '%s'", sq->instance);
         return -1;
     }
 
@@ -613,6 +630,8 @@ static int squid_read(user_data_t *ud)
         *val = '\0';
         val++;
         while (*val == ' ') val++;
+        /* Remove trailing units, e.g. "cpu_time = 3.140000 seconds". */
+        val[strcspn(val, " \t\r")] = '\0';
 
         size_t key_len = strlen(key);
         while ((key_len > 0) && key[key_len - 1] == ' ') {
@@ -722,6 +741,8 @@ static int squid_config_instance(config_item_t *ci)
             status = squid_config_append_string(child, "Header", &sq->headers);
         } else if (strcasecmp("interval", child->key) == 0) {
             status = cf_util_get_cdtime(child, &interval);
+        } else if (strcasecmp("timeout", child->key) == 0) {
+            status = cf_util_get_cdtime(child, &sq->timeout);
         } else if (strcasecmp("filter", child->key) == 0) {
             status = plugin_filter_configure(child, &sq->filter);
         } else {
@@ -734,18 +755,20 @@ static int squid_config_instance(config_item_t *ci)
     }
 
     if (status == 0) {
-        if (sq->url == NULL) {
+        if ((sq->url == NULL) || (sq->url[0] == '\0')) {
             PLUGIN_WARNING("'url' missing in 'instance' block.");
             status = -1;
         } else {
-            char url[1024];
+            static const char *path = "squid-internal-mgr/counters";
             size_t url_len = strlen(sq->url);
-            ssnprintf(url, sizeof(url), "%s%ssquid-internal-mgr/counters",
-                            sq->url, sq->url[url_len-1] == '/' ? "" : "/");
-            sq->furl = strdup(url);
+            const char *sep = sq->url[url_len-1] == '/' ? "" : "/";
+            size_t furl_size = url_len + strlen(sep) + strlen(path) + 1;
+            sq->furl = malloc(furl_size);
             if (sq->furl == NULL) {
-                PLUGIN_ERROR("strdup failed.");
+                PLUGIN_ERROR("malloc failed.");
                 status = -1;
+            } else {
+                ssnprintf(sq->furl, furl_size, "%s%s%s", sq->url, sep, path);
             }
         }
     }
@@ -754,6 +777,9 @@ static int squid_config_instance(config_item_t *ci)
         squid_free(sq);
         return status;
     }
+
+    if (sq->timeout == 0)
+        sq->timeout = (interval != 0) ? interval : plugin_get_interval();
 
     label_set_add(&sq->labels, true, "instance", sq->instance);
 

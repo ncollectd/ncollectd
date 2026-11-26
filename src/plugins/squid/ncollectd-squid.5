@@ -22,6 +22,7 @@
         \fBheader\fP \fIheader\fP
         \fBlabel\fP \fIkey\fP \fIvalue\fP
         \fBinterval\fP \fIseconds\fP
+        \fBtimeout\fP \fIseconds\fP
         \fBfilter\fP {
             ...
         }
@@ -29,7 +30,7 @@
 }
 .Ed
 .Sh DESCRIPTION
-The \fBsquid\fP plugin read Squid metrics over http orfrom an unix socket.
+The \fBsquid\fP plugin reads Squid metrics over http from the cache manager counters.
 .Pp
 In the \fBplugin\fP block, there may be one or more \fBinstance\fP blocks.
 The following options are valid within \fBinstance\fP blocks:
@@ -77,6 +78,10 @@ Can appear multiple time in the \fBinstance\fP block.
 Sets the interval (in seconds) in which the values will be collected from this
 URL.
 By default the global \fBinterval\fP setting will be used.
+.It \fBtimeout\fP \fIseconds\fP
+The \fBtimeout\fP option sets the overall timeout for HTTP requests
+to \fBurl\fP, in seconds.
+By default, the configured \fBinterval\fP is used to set the timeout.
 .It \fBfilter\fP
 Configure a filter to modify or drop the metrics.
 See \fBFILTER CONFIGURATION\fP in
