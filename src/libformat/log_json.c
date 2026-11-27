@@ -17,7 +17,7 @@ int log_json(strbuf_t *buf, size_t flags, const log_msg_t *msg)
 
     if (flags & LOG_PRINT_TIMESTAMP) {
         status |= xson_render_key_string(&r, "timestamp");
-        status |= xson_render_integer(&r, CDTIME_T_TO_DOUBLE(msg->time));
+        status |= xson_render_double(&r, CDTIME_T_TO_DOUBLE(msg->time));
     }
 
     if ((msg->plugin != NULL) && (flags & LOG_PRINT_PLUGIN)) {

@@ -25,7 +25,7 @@ DEF_TEST(opentsdb_json_unknow)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
     EXPECT_EQ_STR("[{\"metric\":\"metric_unknow\",\"timestamp\":1592748157125,\"ttl\":3600,\"value\":42}]",
                   buf.ptr);
 
@@ -51,7 +51,7 @@ DEF_TEST(opentsdb_json_gauge)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
     EXPECT_EQ_STR("[{\"metric\":\"metric_gauge\",\"timestamp\":1592748157125,\"ttl\":3600,\"value\":42}]",
                   buf.ptr);
 
@@ -81,7 +81,7 @@ DEF_TEST(opentsdb_json_counter_with_label)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
     EXPECT_EQ_STR("[{\"metric\":\"metric_counter_with_label_total\",\"tags\":{\"alpha\":\"first\",\"beta\":\"second\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0}]",
                   buf.ptr);
 
@@ -111,7 +111,7 @@ DEF_TEST(opentsdb_json_escaped_label_value)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
     EXPECT_EQ_STR("[{\"metric\":\"escaped_label_value_total\",\"tags\":{\"alpha\":\"first/value\",\"beta\":\"second value\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":42}]",
                   buf.ptr);
 
@@ -144,7 +144,7 @@ DEF_TEST(opentsdb_json_system_uname)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
     EXPECT_EQ_STR("[{\"metric\":\"system_uname_info\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"machine\":\"riscv128\",\"nodename\":\"arrakis.canopus\",\"release\":\"998\",\"sysname\":\"Linux\",\"version\":\"#1 SMP PREEMPT_DYNAMIC 10191\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":1}]",
                   buf.ptr);
 
@@ -181,7 +181,7 @@ DEF_TEST(opentsdb_json_stateset)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
     EXPECT_EQ_STR("[{\"metric\":\"stateset\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"stateset\":\"a\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0},{\"metric\":\"stateset\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"stateset\":\"bb\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":1},{\"metric\":\"stateset\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"stateset\":\"ccc\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0}]",
                   buf.ptr);
 
@@ -219,8 +219,8 @@ DEF_TEST(opentsdb_json_summary)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
-    EXPECT_EQ_STR("[{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"1\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":34.283829292},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.99\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":2.829188272},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.95\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":1.528948804},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.9\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0.821139321},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0.232227334},{\"metric\":\"summary_count\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27892},{\"metric\":\"summary_sum\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8953}]",
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
+    EXPECT_EQ_STR("[{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"1\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":34.283829292},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.99\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":2.829188272},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.95\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":1.528948804},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.9\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0.821139321},{\"metric\":\"summary\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"quantile\":\"0.5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0.232227334},{\"metric\":\"summary_count\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27892},{\"metric\":\"summary_sum\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8953.332}]",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -264,8 +264,8 @@ DEF_TEST(opentsdb_json_histogram)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
-    EXPECT_EQ_STR("[{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.01\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.025\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.05\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":1672},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.1\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8954},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.25\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":14251},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":24101},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"1\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":26351},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"2.5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27534},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27814},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"10\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27881},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"25\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27890},{\"metric\":\"histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"inf\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27892},{\"metric\":\"histogram_count\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27892},{\"metric\":\"histogram_sum\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8953.332}]",
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
+    EXPECT_EQ_STR("[{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.01\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":0},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.025\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.05\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":1672},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.1\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8954},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.25\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":14251},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"0.5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":24101},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"1\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":26351},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"2.5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27534},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"5\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27814},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"10\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27881},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"25\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27890},{\"metric\":\"histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"inf\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27892},{\"metric\":\"histogram_count\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":27892},{\"metric\":\"histogram_sum\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":8953.332}]",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -309,8 +309,8 @@ DEF_TEST(opentsdb_json_guage_histogram)
 
     strbuf_t buf = STRBUF_CREATE;
 
-    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600));
-    EXPECT_EQ_STR("[{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"1024\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":4},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"4096\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":10},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"8192\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":22},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"16384\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":26},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"32768\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":42},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"65536\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":61},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"131072\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":85},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"262144\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":96},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"524288\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":98},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"786432\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":107},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"1048576\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":115},{\"metric\":\"gauge_histogram\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"inf\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":120},{\"metric\":\"gauge_histogram_gcount\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":120},{\"metric\":\"gauge_histogram_gsum\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":120}]",
+    EXPECT_EQ_INT(0, opentsdb_json_metric_family(&buf, &fam, 3600, false));
+    EXPECT_EQ_STR("[{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"1024\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":4},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"4096\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":10},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"8192\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":22},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"16384\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":26},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"32768\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":42},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"65536\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":61},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"131072\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":85},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"262144\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":96},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"524288\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":98},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"786432\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":107},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"1048576\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":115},{\"metric\":\"gauge_histogram_bucket\",\"tags\":{\"hostname\":\"arrakis.canopus\",\"le\":\"inf\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":120},{\"metric\":\"gauge_histogram_gcount\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":120},{\"metric\":\"gauge_histogram_gsum\",\"tags\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"ttl\":3600,\"value\":120}]",
                   buf.ptr);
 
     strbuf_destroy(&buf);

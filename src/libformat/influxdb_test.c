@@ -110,7 +110,7 @@ DEF_TEST(influxdb_escaped_label_value)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, influxdb_metric_family(&buf, &fam, FMT_INFLUXDB_MSEC));
-    EXPECT_EQ_STR("escaped_label_value,alpha=first/value,beta=second value value=18446744073709551615u 1592748157125000000\n",
+    EXPECT_EQ_STR("escaped_label_value,alpha=first/value,beta=second\\ value value=18446744073709551615u 1592748157125000000\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -143,7 +143,7 @@ DEF_TEST(influxdb_system_uname)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, influxdb_metric_family(&buf, &fam, FMT_INFLUXDB_MSEC));
-    EXPECT_EQ_STR("system_uname_info,hostname=arrakis.canopus,machine=riscv128,nodename=arrakis.canopus,release=998,sysname=Linux,version=#1 SMP PREEMPT_DYNAMIC 10191 value=1i 1592748157125000000\n",
+    EXPECT_EQ_STR("system_uname_info,hostname=arrakis.canopus,machine=riscv128,nodename=arrakis.canopus,release=998,sysname=Linux,version=#1\\ SMP\\ PREEMPT_DYNAMIC\\ 10191 value=1i 1592748157125000000\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);

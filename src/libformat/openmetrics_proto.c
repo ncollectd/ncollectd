@@ -51,7 +51,7 @@ static int openmetrics_label(buf_t *buf, int field, label_set_t labels)
 static size_t openmetrics_timestamp_size(int field, cdtime_t time)
 {
     struct timespec ts = CDTIME_T_TO_TIMESPEC(time);
-    size_t msg_size = buf_pb_size_int64(1, ts.tv_sec) + buf_pb_size_int32(2, ts.tv_nsec);
+    size_t msg_size = buf_pb_size_int64(1, ts.tv_sec) + buf_pb_size_uint32(2, ts.tv_nsec);
     return buf_pb_size_type(field, PB_WIRE_TYPE_LENDELIM) + buf_pb_size_varint(msg_size) + msg_size;
 }
 
@@ -60,12 +60,12 @@ static int openmetrics_timestamp(buf_t *buf, int field, cdtime_t time)
     struct timespec ts = CDTIME_T_TO_TIMESPEC(time);
 
     size_t size = buf_pb_size_int64(1, ts.tv_sec) +
-                  buf_pb_size_int32(2, ts.tv_nsec);
+                  buf_pb_size_uint32(2, ts.tv_nsec);
 
     int status = buf_pb_enc_type(buf, field, PB_WIRE_TYPE_LENDELIM);
     status |= buf_pb_enc_varint(buf, size);
     status |= buf_pb_enc_int64(buf, 1, ts.tv_sec);
-    status |= buf_pb_enc_int32(buf, 2, ts.tv_nsec);
+    status |= buf_pb_enc_uint32(buf, 2, ts.tv_nsec);
     return status;
 }
 
@@ -249,18 +249,18 @@ static int openmetrics_metricpoint_state_set(__attribute__((unused)) buf_t *buf,
  */
 static size_t openmetrics_metricpoint_info_size(int field, metric_t const *m)
 {
-    size_t msg_size = openmetrics_label_size(field, m->value.info);
+    size_t msg_size = openmetrics_label_size(1, m->value.info);
     return buf_pb_size_type(field, PB_WIRE_TYPE_LENDELIM) +
            buf_pb_size_varint(msg_size) + msg_size;
 }
 
 static int openmetrics_metricpoint_info(buf_t *buf, int field, metric_t const *m)
 {
-    size_t size = openmetrics_label_size(field, m->value.info);
+    size_t size = openmetrics_label_size(1, m->value.info);
 
     int status = buf_pb_enc_type(buf, field, PB_WIRE_TYPE_LENDELIM);
     status |= buf_pb_enc_varint(buf, size);
-    status |= openmetrics_label(buf, field, m->value.info);
+    status |= openmetrics_label(buf, 1, m->value.info);
     return status;
 }
 
@@ -512,7 +512,7 @@ int openmetrics_proto_metric_family(buf_t *buf, metric_family_t const *fam)
     if (fam->help != NULL)
         status |= buf_pb_enc_str(buf, 4, fam->help);
     for (size_t i = 0; i < fam->metric.num; i++) {
-        size += openmetrics_metric(buf, 5, fam, &fam->metric.ptr[i]);
+        status |= openmetrics_metric(buf, 5, fam, &fam->metric.ptr[i]);
     }
 
     return status;

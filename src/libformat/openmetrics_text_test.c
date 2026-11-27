@@ -27,7 +27,7 @@ DEF_TEST(openmetrics_text_unknow)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE metric_unknow unknown\n"
-                  "metric_unknow 42 1592748157125\n",
+                  "metric_unknow 42 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -54,7 +54,7 @@ DEF_TEST(openmetrics_text_gauge)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE metric_gauge gauge\n"
-                  "metric_gauge 42 1592748157125\n",
+                  "metric_gauge 42 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -85,7 +85,7 @@ DEF_TEST(openmetrics_text_counter_with_label)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE metric_counter_with_label counter\n"
-                  "metric_counter_with_label_total{alpha=\"first\",beta=\"second\"} 0 1592748157125\n",
+                  "metric_counter_with_label_total{alpha=\"first\",beta=\"second\"} 0 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -116,7 +116,7 @@ DEF_TEST(openmetrics_text_escaped_label_value)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE escaped_label_value counter\n"
-                  "escaped_label_value_total{alpha=\"first \\\"value\\\"\",beta=\"second value\"} 18446744073709551615 1592748157125\n",
+                  "escaped_label_value_total{alpha=\"first \\\"value\\\"\",beta=\"second value\"} 18446744073709551615 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -150,7 +150,7 @@ DEF_TEST(openmetrics_text_system_uname)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE system_uname info\n"
-                  "system_uname_info{hostname=\"arrakis.canopus\",machine=\"riscv128\",nodename=\"arrakis.canopus\",release=\"998\",sysname=\"Linux\",version=\"#1 SMP PREEMPT_DYNAMIC 10191\"} 1 1592748157125\n",
+                  "system_uname_info{hostname=\"arrakis.canopus\",machine=\"riscv128\",nodename=\"arrakis.canopus\",release=\"998\",sysname=\"Linux\",version=\"#1 SMP PREEMPT_DYNAMIC 10191\"} 1 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -188,9 +188,9 @@ DEF_TEST(openmetrics_text_stateset)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE stateset stateset\n"
-                  "stateset{hostname=\"arrakis.canopus\",stateset=\"a\"} 0 1592748157125\n"
-                  "stateset{hostname=\"arrakis.canopus\",stateset=\"bb\"} 1 1592748157125\n"
-                  "stateset{hostname=\"arrakis.canopus\",stateset=\"ccc\"} 0 1592748157125\n",
+                  "stateset{hostname=\"arrakis.canopus\",stateset=\"a\"} 0 1592748157.125\n"
+                  "stateset{hostname=\"arrakis.canopus\",stateset=\"bb\"} 1 1592748157.125\n"
+                  "stateset{hostname=\"arrakis.canopus\",stateset=\"ccc\"} 0 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -229,13 +229,13 @@ DEF_TEST(openmetrics_text_summary)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE summary summary\n"
-                  "summary{hostname=\"arrakis.canopus\",quantile=\"1\"} 34.283829292 1592748157125\n"
-                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.99\"} 2.829188272 1592748157125\n"
-                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.95\"} 1.528948804 1592748157125\n"
-                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.9\"} 0.821139321 1592748157125\n"
-                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.5\"} 0.232227334 1592748157125\n"
-                  "summary_count{hostname=\"arrakis.canopus\"} 27892 1592748157125\n"
-                  "summary_sum{hostname=\"arrakis.canopus\"} 8953 1592748157125\n",
+                  "summary{hostname=\"arrakis.canopus\",quantile=\"1\"} 34.283829292 1592748157.125\n"
+                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.99\"} 2.829188272 1592748157.125\n"
+                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.95\"} 1.528948804 1592748157.125\n"
+                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.9\"} 0.821139321 1592748157.125\n"
+                  "summary{hostname=\"arrakis.canopus\",quantile=\"0.5\"} 0.232227334 1592748157.125\n"
+                  "summary_count{hostname=\"arrakis.canopus\"} 27892 1592748157.125\n"
+                  "summary_sum{hostname=\"arrakis.canopus\"} 8953.332 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -281,20 +281,20 @@ DEF_TEST(openmetrics_text_histogram)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE histogram histogram\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.01\"} 0 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.025\"} 8 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.05\"} 1672 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.1\"} 8954 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.25\"} 14251 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.5\"} 24101 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"1\"} 26351 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"2.5\"} 27534 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"5\"} 27814 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"10\"} 27881 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"25\"} 27890 1592748157125\n"
-                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"inf\"} 27892 1592748157125\n"
-                  "histogram_count{hostname=\"arrakis.canopus\"} 27892 1592748157125\n"
-                  "histogram_sum{hostname=\"arrakis.canopus\"} 8953.332 1592748157125\n",
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.01\"} 0 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.025\"} 8 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.05\"} 1672 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.1\"} 8954 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.25\"} 14251 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"0.5\"} 24101 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"1\"} 26351 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"2.5\"} 27534 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"5\"} 27814 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"10\"} 27881 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"25\"} 27890 1592748157.125\n"
+                  "histogram_bucket{hostname=\"arrakis.canopus\",le=\"+Inf\"} 27892 1592748157.125\n"
+                  "histogram_count{hostname=\"arrakis.canopus\"} 27892 1592748157.125\n"
+                  "histogram_sum{hostname=\"arrakis.canopus\"} 8953.332 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -340,20 +340,20 @@ DEF_TEST(openmetrics_text_guage_histogram)
 
     EXPECT_EQ_INT(0, openmetrics_text_metric_family(&buf, &fam));
     EXPECT_EQ_STR("# TYPE gauge_histogram gaugehistogram\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"1024\"} 4 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"4096\"} 10 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"8192\"} 22 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"16384\"} 26 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"32768\"} 42 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"65536\"} 61 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"131072\"} 85 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"262144\"} 96 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"524288\"} 98 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"786432\"} 107 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"1048576\"} 115 1592748157125\n"
-                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"inf\"} 120 1592748157125\n"
-                  "gauge_histogram_gcount{hostname=\"arrakis.canopus\"} 120 1592748157125\n"
-                  "gauge_histogram_gsum{hostname=\"arrakis.canopus\"} 120 1592748157125\n",
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"1024\"} 4 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"4096\"} 10 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"8192\"} 22 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"16384\"} 26 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"32768\"} 42 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"65536\"} 61 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"131072\"} 85 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"262144\"} 96 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"524288\"} 98 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"786432\"} 107 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"1048576\"} 115 1592748157.125\n"
+                  "gauge_histogram_bucket{hostname=\"arrakis.canopus\",le=\"+Inf\"} 120 1592748157.125\n"
+                  "gauge_histogram_gcount{hostname=\"arrakis.canopus\"} 120 1592748157.125\n"
+                  "gauge_histogram_gsum{hostname=\"arrakis.canopus\"} 120 1592748157.125\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);

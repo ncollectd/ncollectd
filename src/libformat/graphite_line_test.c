@@ -110,7 +110,7 @@ DEF_TEST(graphite_line_escaped_label_value)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, graphite_line_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("escaped_label_value_total;alpha=first/value;beta=second value 18446744073709551615 1592748157\n",
+    EXPECT_EQ_STR("escaped_label_value_total;alpha=first/value;beta=second_value 18446744073709551615 1592748157\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -143,7 +143,7 @@ DEF_TEST(graphite_line_system_uname)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, graphite_line_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("system_uname_info;hostname=arrakis.canopus;machine=riscv128;nodename=arrakis.canopus;release=998;sysname=Linux;version=#1 SMP PREEMPT_DYNAMIC 10191 1 1592748157\n",
+    EXPECT_EQ_STR("system_uname_info;hostname=arrakis.canopus;machine=riscv128;nodename=arrakis.canopus;release=998;sysname=Linux;version=#1_SMP_PREEMPT_DYNAMIC_10191 1 1592748157\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -342,7 +342,7 @@ DEF_TEST(graphite_line_guage_histogram)
                   "gauge_histogram_bucket;hostname=arrakis.canopus;le=1048576 115 1592748157\n"
                   "gauge_histogram_bucket;hostname=arrakis.canopus;le=inf 120 1592748157\n"
                   "gauge_histogram_gcount;hostname=arrakis.canopus 120 1592748157\n"
-                  "gauge_histogram_gcount;hostname=arrakis.canopus 120 1592748157\n",
+                  "gauge_histogram_gsum;hostname=arrakis.canopus 120 1592748157\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);

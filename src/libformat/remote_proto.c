@@ -16,74 +16,82 @@
  *  }
  */
 
-static size_t remote_labels_size(int field, char *metric, char *metric_suffix,
-                                 const label_set_t *labels1, const label_set_t *labels2)
+/* Encode one label, or if buf is NULL return its encoded size. */
+static size_t remote_label_pair(buf_t *buf, int field, char *name, char *value,
+                                char *value_suffix, int *status)
+{
+    size_t size = buf_pb_size_str(1, name) + buf_pb_size_str_str(2, value, value_suffix);
+
+    if (buf == NULL)
+        return buf_pb_size_type(field, PB_WIRE_TYPE_LENDELIM) + buf_pb_size_varint(size) + size;
+
+    *status |= buf_pb_enc_type(buf, field, PB_WIRE_TYPE_LENDELIM);
+    *status |= buf_pb_enc_varint(buf, size);
+    *status |= buf_pb_enc_str(buf, 1, name);
+    *status |= buf_pb_enc_str_str(buf, 2, value, value_suffix);
+    return 0;
+}
+
+/* Remote write requires the labels sorted by name and without duplicates:
+ * merge __name__, labels1 and labels2 (labels2 overrides labels1).
+ * If buf is NULL only the encoded size is computed. */
+static size_t remote_labels_merge(buf_t *buf, int field, char *metric, char *metric_suffix,
+                                  const label_set_t *labels1, const label_set_t *labels2,
+                                  int *status)
 {
     size_t len = 0;
+    size_t size1 = labels1 == NULL ? 0 : labels1->num;
+    size_t n1 = 0;
+    size_t size2 = labels2 == NULL ? 0 : labels2->num;
+    size_t n2 = 0;
+    bool name_done = false;
 
-    size_t msg_size = buf_pb_size_str(1, "__name__") +
-                      buf_pb_size_str_str(2, metric, metric_suffix);
-    len += buf_pb_size_type(field, PB_WIRE_TYPE_LENDELIM);
-    len += buf_pb_size_varint(msg_size);
-    len += msg_size;
+    while (!name_done || (n1 < size1) || (n2 < size2)) {
+        label_pair_t *pair1 = n1 < size1 ? &labels1->ptr[n1] : NULL;
+        label_pair_t *pair2 = n2 < size2 ? &labels2->ptr[n2] : NULL;
+        label_pair_t *pair = NULL;
 
-    if (labels1 != NULL) {
-        for (size_t i = 0; i < labels1->num; i++) {
-            msg_size = buf_pb_size_str(1, labels1->ptr[i].name) +
-                       buf_pb_size_str(2, labels1->ptr[i].value);
-            len += buf_pb_size_type(field, PB_WIRE_TYPE_LENDELIM);
-            len += buf_pb_size_varint(msg_size);
-            len += msg_size;
+        if ((pair1 != NULL) && (pair2 != NULL)) {
+            int cmp = strcmp(pair1->name, pair2->name);
+            if (cmp == 0) {
+                n1++;
+                continue;
+            }
+            pair = cmp < 0 ? pair1 : pair2;
+        } else {
+            pair = pair1 != NULL ? pair1 : pair2;
         }
-    }
 
-    if (labels2 != NULL) {
-        for (size_t i = 0; i < labels2->num; i++) {
-            msg_size = buf_pb_size_str(1, labels2->ptr[i].name) +
-                       buf_pb_size_str(2, labels2->ptr[i].value);
-            len += buf_pb_size_type(field, PB_WIRE_TYPE_LENDELIM);
-            len += buf_pb_size_varint(msg_size);
-            len += msg_size;
+        if (!name_done && ((pair == NULL) || (strcmp("__name__", pair->name) <= 0))) {
+            len += remote_label_pair(buf, field, "__name__", metric, metric_suffix, status);
+            name_done = true;
+            if ((pair == NULL) || (strcmp("__name__", pair->name) != 0))
+                continue;
+        } else {
+            len += remote_label_pair(buf, field, pair->name, pair->value, NULL, status);
         }
+
+        if (pair == pair1)
+            n1++;
+        else
+            n2++;
     }
 
     return len;
+}
+
+static size_t remote_labels_size(int field, char *metric, char *metric_suffix,
+                                 const label_set_t *labels1, const label_set_t *labels2)
+{
+    int status = 0;
+    return remote_labels_merge(NULL, field, metric, metric_suffix, labels1, labels2, &status);
 }
 
 static int remote_labels(buf_t *buf, int field, char *metric, char *metric_suffix,
                          const label_set_t *labels1, const label_set_t *labels2)
 {
     int status = 0;
-
-    size_t size = buf_pb_size_str(1, "__name__") +
-                  buf_pb_size_str_str(2, metric, metric_suffix);
-    status |= buf_pb_enc_type(buf, field, PB_WIRE_TYPE_LENDELIM);
-    status |= buf_pb_enc_varint(buf, size);
-    status |= buf_pb_enc_str(buf, 1, "__name__");
-    status |= buf_pb_enc_str_str(buf, 2, metric, metric_suffix);
-
-    if (labels1 != NULL) {
-        for (size_t i = 0; i < labels1->num; i++) {
-            size = buf_pb_size_str(1, labels1->ptr[i].name) +
-                   buf_pb_size_str(2, labels1->ptr[i].value);
-            status |= buf_pb_enc_type(buf, field, PB_WIRE_TYPE_LENDELIM);
-            status |= buf_pb_enc_varint(buf, size);
-            status |= buf_pb_enc_str(buf, 1, labels1->ptr[i].name);
-            status |= buf_pb_enc_str(buf, 2, labels1->ptr[i].value);
-        }
-    }
-
-    if (labels2 != NULL) {
-        for (size_t i = 0; i < labels2->num; i++) {
-            size = buf_pb_size_str(1, labels2->ptr[i].name) +
-                   buf_pb_size_str(2, labels2->ptr[i].value);
-            status |= buf_pb_enc_type(buf, field, PB_WIRE_TYPE_LENDELIM);
-            status |= buf_pb_enc_varint(buf, size);
-            status |= buf_pb_enc_str(buf, 1, labels2->ptr[i].name);
-            status |= buf_pb_enc_str(buf, 2, labels2->ptr[i].value);
-        }
-    }
-
+    remote_labels_merge(buf, field, metric, metric_suffix, labels1, labels2, &status);
     return status;
 }
 

@@ -27,6 +27,16 @@
    }
 */
 
+/* JSON has no representation for non finite numbers, render them as strings. */
+static int json_render_double(xson_render_t *r, double value)
+{
+    if (isnan(value))
+        return xson_render_string(r, "NaN");
+    if (isinf(value))
+        return xson_render_string(r, value > 0 ? "+Inf" : "-Inf");
+    return xson_render_double(r, value);
+}
+
 static inline int json_labels(xson_render_t *r, label_set_t const *labels, cdtime_t time,
                                                 cdtime_t interval)
 {
@@ -54,7 +64,7 @@ static int json_unknown(xson_render_t *r, metric_t const *m)
     int status = json_labels(r, &m->label, m->time, m->interval);
     status |= xson_render_key_string(r, "value");
     if (m->value.unknown.type == UNKNOWN_FLOAT64)
-        return status | xson_render_double(r, m->value.unknown.float64);
+        return status | json_render_double(r, m->value.unknown.float64);
     return status | xson_render_integer(r, m->value.unknown.int64);
 }
 
@@ -63,7 +73,7 @@ static int json_gauge(xson_render_t *r, metric_t const *m)
     int status = json_labels(r, &m->label, m->time, m->interval);
     status |= xson_render_key_string(r, "value");
     if (m->value.gauge.type == GAUGE_FLOAT64)
-        return status | xson_render_double(r, m->value.gauge.float64);
+        return status | json_render_double(r, m->value.gauge.float64);
     return status | xson_render_integer(r, m->value.gauge.int64);
 }
 
@@ -72,8 +82,8 @@ static int json_counter(xson_render_t *r, metric_t const *m)
     int status = json_labels(r, &m->label, m->time, m->interval);
     status |= xson_render_key_string(r, "value");
     if (m->value.counter.type == COUNTER_UINT64)
-        return status | xson_render_integer(r, m->value.counter.uint64);
-    return status | xson_render_double(r, m->value.counter.float64);
+        return status | xson_render_uinteger(r, m->value.counter.uint64);
+    return status | json_render_double(r, m->value.counter.float64);
 }
 
 static int json_info(xson_render_t *r, metric_t const *m)
@@ -105,20 +115,20 @@ static int json_summary(xson_render_t *r, metric_t const *m)
     int status = json_labels(r, &m->label, m->time, m->interval);
 
     status |= xson_render_key_string(r, "quantiles");
-    xson_render_array_open(r);
+    status |= xson_render_array_open(r);
     for (int i = m->value.summary->num - 1; i >= 0; i--) {
-        xson_render_array_open(r);
-        status |= xson_render_double(r, m->value.summary->quantiles[i].quantile);
-        status |= xson_render_double(r, m->value.summary->quantiles[i].value);
-        xson_render_array_close(r);
+        status |= xson_render_array_open(r);
+        status |= json_render_double(r, m->value.summary->quantiles[i].quantile);
+        status |= json_render_double(r, m->value.summary->quantiles[i].value);
+        status |= xson_render_array_close(r);
     }
-    xson_render_array_close(r);
+    status |= xson_render_array_close(r);
 
     status |= xson_render_key_string(r, "count");
-    status |= xson_render_integer(r, m->value.summary->count);
+    status |= xson_render_uinteger(r, m->value.summary->count);
 
     status |= xson_render_key_string(r, "sum");
-    status |= xson_render_integer(r, m->value.summary->sum);
+    status |= xson_render_double(r, m->value.summary->sum);
     return status;
 }
 
@@ -127,20 +137,20 @@ static int json_histogram(xson_render_t *r, metric_t const *m)
     int status = json_labels(r, &m->label, m->time, m->interval);
 
     status |= xson_render_key_string(r, "buckets");
-    xson_render_array_open(r);
+    status |= xson_render_array_open(r);
     for (int i = m->value.histogram->num - 1; i >= 0; i--) {
-        xson_render_array_open(r);
-        status |= xson_render_double(r, m->value.histogram->buckets[i].maximum);
-        status |= xson_render_integer(r, m->value.histogram->buckets[i].counter);
-        xson_render_array_close(r);
+        status |= xson_render_array_open(r);
+        status |= json_render_double(r, m->value.histogram->buckets[i].maximum);
+        status |= xson_render_uinteger(r, m->value.histogram->buckets[i].counter);
+        status |= xson_render_array_close(r);
     }
-    xson_render_array_close(r);
+    status |= xson_render_array_close(r);
 
     status |= xson_render_key_string(r, "count");
-    status |= xson_render_integer(r, histogram_counter(m->value.histogram));
+    status |= xson_render_uinteger(r, histogram_counter(m->value.histogram));
 
     status |= xson_render_key_string(r, "sum");
-    status |= xson_render_double(r, histogram_counter(m->value.histogram));
+    status |= json_render_double(r, histogram_sum(m->value.histogram));
     return status;
 }
 
@@ -149,20 +159,20 @@ static int json_gauge_histogram(xson_render_t *r, metric_t const *m)
     int status = json_labels(r, &m->label, m->time, m->interval);
 
     status |= xson_render_key_string(r, "buckets");
-    xson_render_array_open(r);
+    status |= xson_render_array_open(r);
     for (int i = m->value.histogram->num - 1; i >= 0; i--) {
-        xson_render_array_open(r);
-        status |= xson_render_double(r, m->value.histogram->buckets[i].maximum);
-        status |= xson_render_integer(r, m->value.histogram->buckets[i].counter);
-        xson_render_array_close(r);
+        status |= xson_render_array_open(r);
+        status |= json_render_double(r, m->value.histogram->buckets[i].maximum);
+        status |= xson_render_uinteger(r, m->value.histogram->buckets[i].counter);
+        status |= xson_render_array_close(r);
     }
-    xson_render_array_close(r);
+    status |= xson_render_array_close(r);
 
     status |= xson_render_key_string(r, "gcount");
-    status |= xson_render_integer(r, histogram_counter(m->value.histogram));
+    status |= xson_render_uinteger(r, histogram_counter(m->value.histogram));
 
     status |= xson_render_key_string(r, "gsum");
-    status |= xson_render_double(r, histogram_counter(m->value.histogram));
+    status |= json_render_double(r, histogram_sum(m->value.histogram));
 
     return status;
 }

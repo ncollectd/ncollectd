@@ -13,6 +13,26 @@
 #include "libutils/strbuf.h"
 #include "libformat/opentsdb_telnet.h"
 
+// Only [A-Za-z0-9-_./] and non ASCII (Unicode) characters are allowed.
+static char opentsdb_replace[256] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
 typedef union {
     double   float64;
     uint64_t uint64;
@@ -38,7 +58,7 @@ static int opentsdb_render_metric(strbuf_t *buf,
     else
         status = strbuf_putstrn(buf, "putm ", strlen("putm "));
 
-    status |= strbuf_putstr(buf, metric);
+    status |= strbuf_putreplace_set(buf, metric, opentsdb_replace, '_');
     if (metric_suffix != NULL)
         status |= strbuf_putstr(buf, metric_suffix);
 
@@ -85,9 +105,9 @@ static int opentsdb_render_metric(strbuf_t *buf,
 
         if (pair != NULL) {
             status |= strbuf_putchar(buf, ' ');
-            status |= strbuf_putstr(buf, pair->name);
+            status |= strbuf_putreplace_set(buf, pair->name, opentsdb_replace, '_');
             status |= strbuf_putchar(buf, '=');
-            status |= strbuf_print_escaped(buf, pair->value, "\\\"\n\r\t", '\\');
+            status |= strbuf_putreplace_set(buf, pair->value, opentsdb_replace, '_');
         }
     }
 
@@ -180,7 +200,7 @@ int opentsdb_telnet_metric(strbuf_t *buf, metric_family_t const *fam, metric_t c
                                               DATA_UINT64, (data_t){.uint64 = s->count});
         status |= opentsdb_render_metric(buf, fam->name, "_sum", &m->label, NULL,
                                               resolution, m->time, ttl,
-                                              DATA_UINT64, (data_t){.uint64 = s->sum});
+                                              DATA_FLOAT64, (data_t){.float64 = s->sum});
     }   break;
     case METRIC_TYPE_HISTOGRAM:
     case METRIC_TYPE_GAUGE_HISTOGRAM: {

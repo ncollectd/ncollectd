@@ -7,16 +7,16 @@
 #include "libutils/dtoa.h"
 #include "libutils/strbuf.h"
 
-// "!$^&*()`'\"[]{};<>?\\|=\t\n\r"
+// " !$^&*()`'\"[]{};<>?\\|=~\t\n\r"
 static char graphite_replace[256] = {
     1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -44,7 +44,7 @@ static int graphite_render_metric(strbuf_t *buf,
                                   const label_set_t *labels1, const label_set_t *labels2,
                                   cdtime_t time, data_type_t type, data_t value)
 {
-    int status = strbuf_putstr(buf, metric);
+    int status = strbuf_putreplace_set(buf, metric, graphite_replace, '_');
     if (metric_suffix)
         status |= strbuf_putstr(buf, metric_suffix);
 
@@ -69,7 +69,7 @@ static int graphite_render_metric(strbuf_t *buf,
 
         if (pair != NULL) {
             status |= strbuf_putchar(buf, ';');
-            status |= strbuf_putstr(buf, pair->name);
+            status |= strbuf_putreplace_set(buf, pair->name, graphite_replace, '_');
             status |= strbuf_putchar(buf, '=');
             status |= strbuf_putreplace_set(buf, pair->value, graphite_replace, '_');
         }
@@ -195,7 +195,7 @@ int graphite_line_metric(strbuf_t *buf, metric_family_t const *fam, metric_t con
                                          &m->label, NULL, m->time,
                                          DATA_UINT64, (data_t){.uint64 = histogram_counter(h)});
         status |= graphite_render_metric(buf, fam->name,
-                                         fam->type == METRIC_TYPE_HISTOGRAM ?  "_sum" : "_gcount",
+                                         fam->type == METRIC_TYPE_HISTOGRAM ?  "_sum" : "_gsum",
                                          &m->label, NULL, m->time,
                                          DATA_FLOAT64, (data_t){.float64 = histogram_sum(h)});
     }   break;
