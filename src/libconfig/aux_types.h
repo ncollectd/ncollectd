@@ -25,5 +25,11 @@ typedef struct {
     int openbrac;
     int closebrac;
     int eof;
+    config_file_t *file;
+    /* multiline string buffer */
+    char *ml_buffer;
+    size_t ml_pos;
+    size_t ml_len;
 } config_yy_extra_t;
 
+void config_free_all(config_item_t *ci);
