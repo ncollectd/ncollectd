@@ -3,9 +3,11 @@
 // SPDX-FileContributor: Manuel Sanmartín <manuel.luis at gmail.com>
 
 #include "ncollectd.h"
+#include "libutils/buf.h"
 #include "libmetric/notification.h"
+#include "libformat/notification_proto.h"
 
-int notification_proto(strbuf_t *buf, notification_t const *n)
+int notification_proto(buf_t *buf, notification_t const *n)
 {
     if ((buf == NULL) || (n == NULL))
         return EINVAL;

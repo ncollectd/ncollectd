@@ -92,18 +92,43 @@ static bool handle_string (void *ctx, const char *str, size_t str_len)
     return false;
 }
 
+/* Parse a timestamp in seconds without depending on the LC_NUMERIC locale. */
+static bool parse_timestamp(const char *str, cdtime_t *ret)
+{
+    char *endptr = NULL;
+    errno = 0;
+    long long sec = strtoll(str, &endptr, 10);
+    if ((endptr == str) || (errno != 0) || (sec < 0))
+        return false;
+
+    double frac = 0.0;
+    if (*endptr == '.') {
+        double scale = 0.1;
+        for (endptr++; (*endptr >= '0') && (*endptr <= '9'); endptr++) {
+            frac += (*endptr - '0') * scale;
+            scale /= 10.0;
+        }
+    }
+
+    if (*endptr != '\0')
+        return false;
+
+    *ret = TIME_T_TO_CDTIME_T(sec) + DOUBLE_TO_CDTIME_T(frac);
+    return true;
+}
+
 static bool handle_number(void * ctx, const char *num, size_t num_len)
 {
     json_ctx_t *jctx = ctx;
 
     if (jctx->state == JSON_NOTIF_KEY_TIMESTAMP) {
-        size_t len = sizeof(jctx->value)-1;
-        if (num_len < len)
-            len = num_len;
+        if (num_len >= sizeof(jctx->value))
+            return false;
         memcpy(jctx->value, (const char *)num, num_len);
-        jctx->value[len] = '\0';
+        jctx->value[num_len] = '\0';
 
-        jctx->n->time = DOUBLE_TO_CDTIME_T(atof(jctx->value));
+        if (!parse_timestamp(jctx->value, &jctx->n->time))
+            return false;
         jctx->state = JSON_NOTIF_IN_MAP;
         return true;
     }
@@ -262,6 +287,12 @@ notification_t *notification_json_parse(const char *data, size_t len)
 
     json_parser_free(&handle);
 
+    if ((n->name == NULL) || (n->severity == 0)) {
+        ERROR("Notification without '%s'.", n->name == NULL ? "name" : "severity");
+        notification_free(n);
+        return NULL;
+    }
+
     return jctx.n;
 }
 
@@ -273,7 +304,7 @@ int notification_json(strbuf_t *buf, notification_t const *n)
     int status = xson_render_map_open(&r);
 
     status |= xson_render_key_string(&r, "name");
-    status |= xson_render_string(&r, n->name);
+    status |= xson_render_string(&r, n->name != NULL ? n->name : "");
 
     status |= xson_render_key_string(&r, "labels");
     status |= xson_render_map_open(&r);
@@ -308,7 +339,7 @@ int notification_json(strbuf_t *buf, notification_t const *n)
     }
 
     status |= xson_render_key_string(&r, "timestamp");
-    status |= xson_render_integer(&r, CDTIME_T_TO_DOUBLE(n->time));
+    status |= xson_render_double(&r, CDTIME_T_TO_DOUBLE(n->time));
 
     status |= xson_render_map_close(&r);
 

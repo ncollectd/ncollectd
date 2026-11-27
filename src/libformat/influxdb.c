@@ -21,13 +21,46 @@ typedef enum {
     DATA_INT64
 } data_type_t;
 
+/* Escape a measurement name (',' and ' ') or a tag key or value (',', '=' and ' ')
+ * as required by the line protocol. Newlines can not be represented and are
+ * replaced by an escaped space. */
+static int influxdb_putescape(strbuf_t *buf, char const *str, bool measurement)
+{
+    int status = 0;
+
+    for (char const *c = str; *c != '\0'; c++) {
+        switch (*c) {
+        case '=':
+            if (measurement) {
+                status |= strbuf_putchar(buf, *c);
+                break;
+            }
+            /* fall through */
+        case ',':
+        case ' ':
+            status |= strbuf_putchar(buf, '\\');
+            status |= strbuf_putchar(buf, *c);
+            break;
+        case '\n':
+        case '\r':
+            status |= strbuf_putstrn(buf, "\\ ", 2);
+            break;
+        default:
+            status |= strbuf_putchar(buf, *c);
+            break;
+        }
+    }
+
+    return status;
+}
+
 static int influxdb_render_metric(strbuf_t *buf,
                                   char *metric, char *metric_suffix,
                                   const label_set_t *labels1, const label_set_t *labels2,
                                   fmt_influxdb_t resolution, cdtime_t time,
                                   data_type_t type, data_t value)
 {
-    int status = strbuf_putstr(buf, metric);
+    int status = influxdb_putescape(buf, metric, true);
     if (metric_suffix != NULL)
         status |= strbuf_putstr(buf, metric_suffix);
 
@@ -52,9 +85,9 @@ static int influxdb_render_metric(strbuf_t *buf,
 
         if (pair != NULL) {
             status |= strbuf_putchar(buf, ',');
-            status |= strbuf_putstr(buf, pair->name);
+            status |= influxdb_putescape(buf, pair->name, false);
             status |= strbuf_putchar(buf, '=');
-            status |= strbuf_print_escaped(buf, pair->value, "\\\"\n\r\t", '\\'); // FIXME
+            status |= influxdb_putescape(buf, pair->value, false);
         }
     }
 
@@ -79,7 +112,7 @@ static int influxdb_render_metric(strbuf_t *buf,
 
     switch (resolution) {
     case FMT_INFLUXDB_SEC:
-        tm = CDTIME_T_TO_TIME_T(time)*1000000000;
+        tm = (uint64_t)CDTIME_T_TO_TIME_T(time) * 1000000000ULL;
         break;
     case FMT_INFLUXDB_MSEC:
         tm = CDTIME_T_TO_MS(time)*1000000;

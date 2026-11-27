@@ -26,7 +26,7 @@ DEF_TEST(opentelemetry_json_unknow)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"metric_unknow\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42,\"timeUnixNano\":1592748157125000000}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"metric_unknow\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42,\"timeUnixNano\":1592748157125000000}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -52,7 +52,7 @@ DEF_TEST(opentelemetry_json_gauge)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"metric_gauge\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42,\"timeUnixNano\":1592748157125000000}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"metric_gauge\",\"gauge\":{\"dataPoints\":[{\"asDouble\":42,\"timeUnixNano\":1592748157125000000}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -82,7 +82,7 @@ DEF_TEST(opentelemetry_json_counter_with_label)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"metric_counter_with_label\",\"sum\":{\"aggregationTemporality\":2,\"dataPoints\":[{\"isMonotonic\":true,\"asInt\":0,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"alpha\",\"value\":{\"stringValue\":\"first\"}},{\"key\":\"beta\",\"value\":{\"stringValue\":\"second\"}}]}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"metric_counter_with_label\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":true,\"dataPoints\":[{\"asInt\":0,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"alpha\",\"value\":{\"stringValue\":\"first\"}},{\"key\":\"beta\",\"value\":{\"stringValue\":\"second\"}}]}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -112,7 +112,7 @@ DEF_TEST(opentelemetry_json_escaped_label_value)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"escaped_label_value\",\"sum\":{\"aggregationTemporality\":2,\"dataPoints\":[{\"isMonotonic\":true,\"asInt\":42,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"alpha\",\"value\":{\"stringValue\":\"first/value\"}},{\"key\":\"beta\",\"value\":{\"stringValue\":\"second value\"}}]}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"escaped_label_value\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":true,\"dataPoints\":[{\"asInt\":42,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"alpha\",\"value\":{\"stringValue\":\"first/value\"}},{\"key\":\"beta\",\"value\":{\"stringValue\":\"second value\"}}]}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -145,7 +145,7 @@ DEF_TEST(opentelemetry_json_system_uname)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"system_uname\",\"gauge\":{\"dataPoints\":[{\"asInt\":1,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"machine\",\"value\":{\"stringValue\":\"riscv128\"}},{\"key\":\"nodename\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"release\",\"value\":{\"stringValue\":\"998\"}},{\"key\":\"sysname\",\"value\":{\"stringValue\":\"Linux\"}},{\"key\":\"version\",\"value\":{\"stringValue\":\"#1 SMP PREEMPT_DYNAMIC 10191\"}}]}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"system_uname\",\"gauge\":{\"dataPoints\":[{\"asInt\":1,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"machine\",\"value\":{\"stringValue\":\"riscv128\"}},{\"key\":\"nodename\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"release\",\"value\":{\"stringValue\":\"998\"}},{\"key\":\"sysname\",\"value\":{\"stringValue\":\"Linux\"}},{\"key\":\"version\",\"value\":{\"stringValue\":\"#1 SMP PREEMPT_DYNAMIC 10191\"}}]}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -182,7 +182,7 @@ DEF_TEST(opentelemetry_json_stateset)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"stateset\",\"sum\":{\"dataPoints\":[{\"isMonotonic\":false,\"asInt\":0,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"stateset\",\"value\":{\"stringValue\":\"a\"}}]},{\"isMonotonic\":false,\"asInt\":1,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"stateset\",\"value\":{\"stringValue\":\"bb\"}}]},{\"isMonotonic\":false,\"asInt\":0,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"stateset\",\"value\":{\"stringValue\":\"ccc\"}}]}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"stateset\",\"sum\":{\"aggregationTemporality\":2,\"isMonotonic\":false,\"dataPoints\":[{\"asInt\":0,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"stateset\",\"value\":{\"stringValue\":\"a\"}}]},{\"asInt\":1,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"stateset\",\"value\":{\"stringValue\":\"bb\"}}]},{\"asInt\":0,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}},{\"key\":\"stateset\",\"value\":{\"stringValue\":\"ccc\"}}]}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -220,7 +220,7 @@ DEF_TEST(opentelemetry_json_summary)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"summary\",\"summary\":{\"dataPoints\":[{\"ValueAtQuantile\":{\"quantile\":1,\"value\":34.283829292,\"quantile\":0.99,\"value\":2.829188272,\"quantile\":0.95,\"value\":1.528948804,\"quantile\":0.9,\"value\":0.821139321,\"quantile\":0.5,\"value\":0.232227334},\"count\":27892,\"sum\":8953,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}}]}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"summary\",\"summary\":{\"dataPoints\":[{\"quantileValues\":[{\"quantile\":1,\"value\":34.283829292},{\"quantile\":0.99,\"value\":2.829188272},{\"quantile\":0.95,\"value\":1.528948804},{\"quantile\":0.9,\"value\":0.821139321},{\"quantile\":0.5,\"value\":0.232227334}],\"count\":27892,\"sum\":8953.332,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}}]}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -265,7 +265,7 @@ DEF_TEST(opentelemetry_json_histogram)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentelemetry_json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"histogram\",\"histogram\":{\"aggregationTemporality\":2,\"dataPoints\":[{\"bucketCounts\":[0,8,1672,8954,14251,24101,26351,27534,27814,27881,27890,27892],\"explicitBounds\":[0.01,0.025,0.05,0.1,0.25,0.5,1,2.5,5,10,25],\"count\":27892,\"sum\":8953.332,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}}]}]}}]}}]}",
+    EXPECT_EQ_STR("{\"resourceMetrics\":[{\"scopeMetrics\":[{\"scope\":{\"name\":\""PACKAGE_NAME"\",\"version\":\""PACKAGE_VERSION"\"},\"metrics\":[{\"name\":\"histogram\",\"histogram\":{\"aggregationTemporality\":2,\"dataPoints\":[{\"bucketCounts\":[0,8,1664,7282,5297,9850,2250,1183,280,67,9,2],\"explicitBounds\":[0.01,0.025,0.05,0.1,0.25,0.5,1,2.5,5,10,25],\"count\":27892,\"sum\":8953.332,\"timeUnixNano\":1592748157125000000,\"attributes\":[{\"key\":\"hostname\",\"value\":{\"stringValue\":\"arrakis.canopus\"}}]}]}}]}]}]}",
                   buf.ptr);
 
     strbuf_destroy(&buf);

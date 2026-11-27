@@ -4,6 +4,7 @@
 
 #include "ncollectd.h"
 #include "libmetric/metric.h"
+#include "libutils/common.h"
 #include "libutils/dtoa.h"
 #include "libutils/strbuf.h"
 
@@ -18,6 +19,24 @@ typedef enum {
     DATA_UINT64,
     DATA_INT64
 } data_type_t;
+
+/* Like dtoa() but using the OpenMetrics tokens for non finite values. */
+static void openmetrics_dtoa(double value, char *buf, size_t size)
+{
+    if (isnan(value))
+        sstrncpy(buf, "NaN", size);
+    else if (isinf(value))
+        sstrncpy(buf, value > 0 ? "+Inf" : "-Inf", size);
+    else
+        dtoa(value, buf, size);
+}
+
+/* OpenMetrics escaped-string: only backslash, double quote and newline are escaped. */
+static char openmetrics_escape[256] = {
+    ['\\'] = '\\',
+    ['"'] = '"',
+    ['\n'] = 'n',
+};
 
 static int openmetrics_metric(strbuf_t *buf, char *metric, char *metric_suffix,
                               const label_set_t *labels1, const label_set_t *labels2,
@@ -67,7 +86,13 @@ static int openmetrics_metric(strbuf_t *buf, char *metric, char *metric_suffix,
 
     switch(type) {
     case DATA_FLOAT64:
-        status |= strbuf_putdouble(buf, value.float64);
+        if (isfinite(value.float64)) {
+            status |= strbuf_putdouble(buf, value.float64);
+        } else {
+            char number[DTOA_MAX];
+            openmetrics_dtoa(value.float64, number, sizeof(number));
+            status |= strbuf_putstr(buf, number);
+        }
         break;
     case DATA_UINT64:
         status |= strbuf_putuint(buf, value.uint64);
@@ -77,8 +102,10 @@ static int openmetrics_metric(strbuf_t *buf, char *metric, char *metric_suffix,
         break;
     }
 
+    /* OpenMetrics timestamps are in seconds. */
+    uint64_t ms = CDTIME_T_TO_MS(time);
     status |= strbuf_putchar(buf, ' ');
-    status |= strbuf_putuint(buf, CDTIME_T_TO_MS(time));
+    status |= strbuf_putdouble(buf, (double)ms / 1000.0);
     status |= strbuf_putchar(buf, '\n');
 
     return status;
@@ -129,7 +156,7 @@ int openmetrics_text_metric_family(strbuf_t *buf, metric_family_t const *fam)
         status |= strbuf_putstrn(buf, "# HELP ", strlen("# HELP "));
         status |= strbuf_putstr(buf, fam->name);
         status |= strbuf_putchar(buf, ' ');
-        status |= strbuf_putescape_label(buf, fam->help);
+        status |= strbuf_putescape_set(buf, fam->help, openmetrics_escape, '\\');
         status |= strbuf_putchar(buf, '\n');
     }
 
@@ -137,7 +164,7 @@ int openmetrics_text_metric_family(strbuf_t *buf, metric_family_t const *fam)
         status |= strbuf_putstrn(buf, "# UNIT ", strlen("# UNIT "));
         status |= strbuf_putstr(buf, fam->name);
         status |= strbuf_putchar(buf, ' ');
-        status |= strbuf_putstr(buf, fam->unit);
+        status |= strbuf_putescape_set(buf, fam->unit, openmetrics_escape, '\\');
         status |= strbuf_putchar(buf, '\n');
     }
 
@@ -208,7 +235,7 @@ int openmetrics_text_metric_family(strbuf_t *buf, metric_family_t const *fam)
             for (int j = s->num - 1; j >= 0; j--) {
                 char quantile[DTOA_MAX];
 
-                dtoa(s->quantiles[j].quantile, quantile, sizeof(quantile));
+                openmetrics_dtoa(s->quantiles[j].quantile, quantile, sizeof(quantile));
 
                 label_pair_t label_pair = {.name = "quantile", .value = quantile};
                 label_set_t label_set = {.num = 1, .ptr = &label_pair};
@@ -219,7 +246,7 @@ int openmetrics_text_metric_family(strbuf_t *buf, metric_family_t const *fam)
             status |= openmetrics_metric(buf, fam->name, "_count", &m->label, NULL, m->time,
                                               DATA_UINT64, (data_t){.uint64 = s->count});
             status |= openmetrics_metric(buf, fam->name, "_sum", &m->label, NULL, m->time,
-                                              DATA_UINT64, (data_t){.uint64 = s->sum});
+                                              DATA_FLOAT64, (data_t){.float64 = s->sum});
         }   break;
         case METRIC_TYPE_HISTOGRAM:
         case METRIC_TYPE_GAUGE_HISTOGRAM: {
@@ -227,7 +254,7 @@ int openmetrics_text_metric_family(strbuf_t *buf, metric_family_t const *fam)
 
             for (int j = h->num - 1; j >= 0; j--) {
                 char le[DTOA_MAX];
-                dtoa(h->buckets[j].maximum, le, sizeof(le));
+                openmetrics_dtoa(h->buckets[j].maximum, le, sizeof(le));
 
                 label_pair_t label_pair = {.name = "le", .value = le};
                 label_set_t label_set = {.num = 1, .ptr = &label_pair};

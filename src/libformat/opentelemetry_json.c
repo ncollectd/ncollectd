@@ -8,6 +8,16 @@
 #include "libutils/dtoa.h"
 #include "libxson/render.h"
 
+/* Non finite doubles are rendered as strings as defined by the protobuf JSON mapping. */
+static int opentelemetry_render_double(xson_render_t *r, double value)
+{
+    if (isnan(value))
+        return xson_render_string(r, "NaN");
+    if (isinf(value))
+        return xson_render_string(r, value > 0 ? "Infinity" : "-Infinity");
+    return xson_render_double(r, value);
+}
+
 static inline int opentelemetry_label_pair(xson_render_t *r, label_pair_t label)
 {
     int status = 0;
@@ -54,7 +64,7 @@ static int opentelemetry_unknown(xson_render_t *r, metric_t const *m)
     int status = xson_render_map_open(r);
     if (m->value.unknown.type == UNKNOWN_FLOAT64) {
         status |= xson_render_key_string(r, "asDouble");
-        status |= xson_render_double(r, m->value.unknown.float64);
+        status |= opentelemetry_render_double(r, m->value.unknown.float64);
     } else {
         status |= xson_render_key_string(r, "asInt");
         status |= xson_render_integer(r, m->value.unknown.int64);
@@ -70,7 +80,7 @@ static int opentelemetry_gauge(xson_render_t *r, metric_t const *m)
     int status = xson_render_map_open(r);
     if (m->value.gauge.type == GAUGE_FLOAT64) {
         status |= xson_render_key_string(r, "asDouble");
-        status |= xson_render_double(r, m->value.gauge.float64);
+        status |= opentelemetry_render_double(r, m->value.gauge.float64);
     } else {
         status |= xson_render_key_string(r, "asInt");
         status |= xson_render_integer(r, m->value.gauge.int64);
@@ -84,14 +94,12 @@ static int opentelemetry_gauge(xson_render_t *r, metric_t const *m)
 static int opentelemetry_counter(xson_render_t *r, metric_t const *m)
 {
     int status = xson_render_map_open(r);
-    status |= xson_render_key_string(r, "isMonotonic");
-    status |= xson_render_bool(r, true);
     if (m->value.counter.type == COUNTER_UINT64) {
         status |= xson_render_key_string(r, "asInt");
         status |= xson_render_integer(r, m->value.counter.uint64);
     } else {
         status |= xson_render_key_string(r, "asDouble");
-        status |= xson_render_double(r, m->value.counter.float64);
+        status |= opentelemetry_render_double(r, m->value.counter.float64);
     }
     status |= xson_render_key_string(r, "timeUnixNano");
     status |= xson_render_integer(r, CDTIME_T_TO_NS(m->time));
@@ -105,8 +113,6 @@ static int opentelemetry_state_set(xson_render_t *r, char *name, metric_t const 
 
     for (size_t i = 0; i < m->value.state_set.num; i++) {
         status |= xson_render_map_open(r);
-        status |= xson_render_key_string(r, "isMonotonic");
-        status |= xson_render_bool(r, false);
         status |= xson_render_key_string(r, "asInt");
         status |= xson_render_integer(r, m->value.state_set.ptr[i].enabled ? 1 : 0);
         status |= xson_render_key_string(r, "timeUnixNano");
@@ -135,20 +141,22 @@ static int opentelemetry_summary(xson_render_t *r, metric_t const *m)
 {
     int status = xson_render_map_open(r);
 
-    status |= xson_render_key_string(r, "ValueAtQuantile");
-    status |= xson_render_map_open(r);
+    status |= xson_render_key_string(r, "quantileValues");
+    status |= xson_render_array_open(r);
     for (int i = m->value.summary->num - 1; i >= 0; i--) {
+        status |= xson_render_map_open(r);
         status |= xson_render_key_string(r, "quantile");
         status |= xson_render_double(r, m->value.summary->quantiles[i].quantile);
         status |= xson_render_key_string(r, "value");
         status |= xson_render_double(r, m->value.summary->quantiles[i].value);
+        status |= xson_render_map_close(r);
     }
-    status |= xson_render_map_close(r);
+    status |= xson_render_array_close(r);
 
     status |= xson_render_key_string(r, "count");
-    status |= xson_render_integer(r,  m->value.summary->count);
+    status |= xson_render_uinteger(r,  m->value.summary->count);
     status |= xson_render_key_string(r, "sum");
-    status |= xson_render_integer(r, m->value.summary->sum);
+    status |= xson_render_double(r, m->value.summary->sum);
     status |= xson_render_key_string(r, "timeUnixNano");
     status |= xson_render_integer(r, CDTIME_T_TO_NS(m->time));
     status |= opentelemetry_attributes(r, &m->label, NULL);
@@ -162,22 +170,26 @@ static int opentelemetry_histogram(xson_render_t *r, metric_t const *m)
 
     status |= xson_render_key_string(r, "bucketCounts");
     status |= xson_render_array_open(r);
+    uint64_t prev = 0;
     for (int i = m->value.histogram->num - 1; i >= 0; i--) {
-        status |= xson_render_integer(r, m->value.histogram->buckets[i].counter);
+        uint64_t counter = m->value.histogram->buckets[i].counter;
+        status |= xson_render_uinteger(r, counter > prev ? counter - prev : 0);
+        if (counter > prev)
+            prev = counter;
     }
     status |= xson_render_array_close(r);
 
     status |= xson_render_key_string(r, "explicitBounds");
     status |= xson_render_array_open(r);
     for (int i = m->value.histogram->num - 1; i > 0; i--) {
-        status |= xson_render_double(r, m->value.histogram->buckets[i].maximum);
+        status |= opentelemetry_render_double(r, m->value.histogram->buckets[i].maximum);
     }
     status |= xson_render_array_close(r);
 
     status |= xson_render_key_string(r, "count");
-    status |= xson_render_integer(r, histogram_counter(m->value.histogram));
+    status |= xson_render_uinteger(r, histogram_counter(m->value.histogram));
     status |= xson_render_key_string(r, "sum");
-    status |= xson_render_double(r, histogram_sum(m->value.histogram));
+    status |= opentelemetry_render_double(r, histogram_sum(m->value.histogram));
     status |= xson_render_key_string(r, "timeUnixNano");
     status |= xson_render_integer(r, CDTIME_T_TO_NS(m->time));
     status |= opentelemetry_attributes(r, &m->label, NULL);
@@ -230,6 +242,8 @@ int opentelemetry_json_metric(xson_render_t *r, metric_family_t const *fam)
         status |= xson_render_map_open(r);
         status |= xson_render_key_string(r, "aggregationTemporality");
         status |= xson_render_integer(r, 2); /* AGGREGATION_TEMPORALITY_CUMULATIVE */
+        status |= xson_render_key_string(r, "isMonotonic");
+        status |= xson_render_bool(r, true);
         status |= xson_render_key_string(r, "dataPoints");
         status |= xson_render_array_open(r);
         for (size_t i=0; i < fam->metric.num ; i++) {
@@ -241,6 +255,10 @@ int opentelemetry_json_metric(xson_render_t *r, metric_family_t const *fam)
     case METRIC_TYPE_STATE_SET:
         status |= xson_render_key_string(r, "sum");
         status |= xson_render_map_open(r);
+        status |= xson_render_key_string(r, "aggregationTemporality");
+        status |= xson_render_integer(r, 2); /* AGGREGATION_TEMPORALITY_CUMULATIVE */
+        status |= xson_render_key_string(r, "isMonotonic");
+        status |= xson_render_bool(r, false);
         status |= xson_render_key_string(r, "dataPoints");
         status |= xson_render_array_open(r);
         for (size_t i=0; i < fam->metric.num ; i++) {
@@ -312,6 +330,7 @@ int opentelemetry_json_metric_family(strbuf_t *buf, metric_family_t const *fam)
     status |= xson_render_key_string(&r, "resource");
 #endif
     status |= xson_render_key_string(&r, "scopeMetrics");
+    status |= xson_render_array_open(&r);
     status |= xson_render_map_open(&r);
 
     status |= xson_render_key_string(&r, "scope");
@@ -328,6 +347,7 @@ int opentelemetry_json_metric_family(strbuf_t *buf, metric_family_t const *fam)
     status |= xson_render_array_close(&r);
 
     status |= xson_render_map_close(&r);
+    status |= xson_render_array_close(&r);
 
     status |= xson_render_map_close(&r);
 

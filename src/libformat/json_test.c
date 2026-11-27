@@ -214,7 +214,7 @@ DEF_TEST(json_summary)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"metric\":\"summary\",\"type\":\"summary\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"quantiles\":[[1,34.283829292],[0.99,2.829188272],[0.95,1.528948804],[0.9,0.821139321],[0.5,0.232227334]],\"count\":27892,\"sum\":8953}]}", buf.ptr);
+    EXPECT_EQ_STR("{\"metric\":\"summary\",\"type\":\"summary\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"quantiles\":[[1,34.283829292],[0.99,2.829188272],[0.95,1.528948804],[0.9,0.821139321],[0.5,0.232227334]],\"count\":27892,\"sum\":8953.332}]}", buf.ptr);
 
     strbuf_destroy(&buf);
     label_set_reset(&m.label);
@@ -258,7 +258,7 @@ DEF_TEST(json_histogram)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"metric\":\"histogram\",\"type\":\"histogram\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"buckets\":[[0.01,0],[0.025,8],[0.05,1672],[0.1,8954],[0.25,14251],[0.5,24101],[1,26351],[2.5,27534],[5,27814],[10,27881],[25,27890],[inf,27892]],\"count\":27892,\"sum\":27892}]}", buf.ptr);
+    EXPECT_EQ_STR("{\"metric\":\"histogram\",\"type\":\"histogram\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"buckets\":[[0.01,0],[0.025,8],[0.05,1672],[0.1,8954],[0.25,14251],[0.5,24101],[1,26351],[2.5,27534],[5,27814],[10,27881],[25,27890],[\"+Inf\",27892]],\"count\":27892,\"sum\":8953.332}]}", buf.ptr);
 
     strbuf_destroy(&buf);
     histogram_destroy(histogram);
@@ -302,7 +302,7 @@ DEF_TEST(json_guage_histogram)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, json_metric_family(&buf, &fam));
-    EXPECT_EQ_STR("{\"metric\":\"gauge_histogram\",\"type\":\"gaugehistogram\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"buckets\":[[1024,4],[4096,10],[8192,22],[16384,26],[32768,42],[65536,61],[131072,85],[262144,96],[524288,98],[786432,107],[1048576,115],[inf,120]],\"gcount\":120,\"gsum\":120}]}", buf.ptr);
+    EXPECT_EQ_STR("{\"metric\":\"gauge_histogram\",\"type\":\"gaugehistogram\",\"metrics\":[{\"labels\":{\"hostname\":\"arrakis.canopus\"},\"timestamp\":1592748157125,\"interval\":0,\"buckets\":[[1024,4],[4096,10],[8192,22],[16384,26],[32768,42],[65536,61],[131072,85],[262144,96],[524288,98],[786432,107],[1048576,115],[\"+Inf\",120]],\"gcount\":120,\"gsum\":120}]}", buf.ptr);
 
     strbuf_destroy(&buf);
     histogram_destroy(histogram);

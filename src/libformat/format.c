@@ -41,8 +41,8 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
         }
 
         if ((ci->values_num != 2) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
-            PLUGIN_WARNING("The '%s'influxdb config option needs "
-                           "at least one string argument.", ci->key);
+            PLUGIN_WARNING("The '%s' influxdb config option needs "
+                           "exactly one string argument.", ci->key);
             return -1;
         }
 
@@ -60,6 +60,8 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
             *format = FORMAT_STREAM_METRIC_INFLUXDB_NSEC;
             return 0;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
     } else if (strcasecmp(fmt, "graphite") == 0) {
@@ -74,9 +76,9 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
             return 0;
         }
 
-        if (ci->values[1].type != CONFIG_TYPE_STRING) {
+        if ((ci->values_num > 3) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
             PLUGIN_WARNING("The '%s' kairosdb config option needs "
-                           "at least one string argument.", ci->key);
+                           "one or two string arguments.", ci->key);
             return -1;
         }
         char *opt = ci->values[1].value.string;
@@ -87,8 +89,8 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
                 return 0;
             }
             if (ci->values[2].type != CONFIG_TYPE_STRING) {
-                PLUGIN_WARNING("The '%s' kairosdb config option needs "
-                               "at least one string argument.", ci->key);
+                PLUGIN_WARNING("The '%s' kairosdb telnet config option needs "
+                               "a string argument.", ci->key);
                 return -1;
             }
             opt = ci->values[2].value.string;
@@ -100,12 +102,21 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
                 *format = FORMAT_STREAM_METRIC_KAIROSDB_TELNET_MSEC;
                 return 0;
             } else {
+                PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                             ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
                 return -1;
             }
         } else if (strcasecmp(opt, "json") == 0) {
+            if (ci->values_num != 2) {
+                PLUGIN_WARNING("The '%s' kairosdb json config option takes no more arguments.",
+                               ci->key);
+                return -1;
+            }
             *format = FORMAT_STREAM_METRIC_KAIROSDB_JSON;
             return 0;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
     } else if (strcasecmp(fmt, "opentsdb") == 0) {
@@ -116,7 +127,7 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
 
         if ((ci->values_num != 2) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
             PLUGIN_WARNING("The '%s' opentsdb config option needs "
-                           "at least one string argument.", ci->key);
+                           "exactly one string argument.", ci->key);
             return -1;
         }
 
@@ -128,6 +139,8 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
             *format = FORMAT_STREAM_METRIC_OPENTSDB_TELNET;
             return 0;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
     } else if (strcasecmp(fmt, "openmetrics") == 0) {
@@ -138,7 +151,7 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
 
         if ((ci->values_num != 2) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
             PLUGIN_WARNING("The `%s' openmetrics config option needs "
-                           "at least one string argument.", ci->key);
+                           "exactly one string argument.", ci->key);
             return -1;
         }
 
@@ -147,12 +160,13 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
             *format = FORMAT_STREAM_METRIC_OPENMETRICS_TEXT;
             return 0;
         } else if (strcasecmp(opt, "protob") == 0) {
-            *format = FORMAT_STREAM_METRIC_OPENMETRICS_PROTOB;
-            return 0;
+            PLUGIN_ERROR("The '%s' openmetrics protob format is not implemented.", ci->key);
+            return -1;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
-        return 0;
     } else if (strcasecmp(fmt, "opentelemetry") == 0) {
         *format = FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON;
         return 0;
@@ -164,7 +178,7 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
 
         if ((ci->values_num != 2) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
             PLUGIN_WARNING("The '%s' remote config option needs "
-                           "at least one string argument.", ci->key);
+                           "exactly one string argument.", ci->key);
             return -1;
         }
 
@@ -173,9 +187,10 @@ int config_format_stream_metric(config_item_t *ci, format_stream_metric_t *forma
             *format = FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA;
             return 0;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
-        return 0;
     }
 
     PLUGIN_ERROR("Invalid format string: %s", fmt);
@@ -247,14 +262,17 @@ int format_stream_metric_family(format_stream_metric_ctx_t *ctx, metric_family_t
         return opentsdb_telnet_metric_family(ctx->buf, fam, 0, FMT_OPENTSDB_MSEC);
         break;
     case FORMAT_STREAM_METRIC_KAIROSDB_JSON:
+        return opentsdb_json_metric_family(ctx->buf, fam, 0, true);
+        break;
     case FORMAT_STREAM_METRIC_OPENTSDB_JSON:
-        return opentsdb_json_metric_family(ctx->buf, fam, 0);
+        return opentsdb_json_metric_family(ctx->buf, fam, 0, false);
         break;
     case FORMAT_STREAM_METRIC_OPENMETRICS_TEXT:
         return openmetrics_text_metric_family(ctx->buf, fam);
         break;
     case FORMAT_STREAM_METRIC_OPENMETRICS_PROTOB:
 //        return openmetrics_proto_metric_family(buf_t *buf, fam);
+        return ENOTSUP;
         break;
     case FORMAT_STREAM_METRIC_OPENTELEMETRY_JSON:
         return opentelemetry_json_metric_family(ctx->buf, fam);
@@ -265,6 +283,11 @@ int format_stream_metric_family(format_stream_metric_ctx_t *ctx, metric_family_t
         strbuf2buf(&buf, ctx->buf);
         bool meta = ctx->format == FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA ? true : false;
         int status = remote_proto_metric_family(&buf, fam, meta);
+        /* buf_t does not reserve room for the nul terminator that strbuf_t expects. */
+        if ((buf_avail(&buf) < 1) && (buf_resize(&buf, 1) != 0))
+            status |= ENOMEM;
+        if (buf_avail(&buf) >= 1)
+            buf.ptr[buf.pos] = '\0';
         buf2strbuf(ctx->buf, &buf);
         return status;
     }   break;
@@ -311,8 +334,7 @@ char *format_stream_metric_content_type(format_stream_metric_t format)
         break;
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_METADATA:
     case FORMAT_STREAM_METRIC_REMOTE_WRITE_NOMETADATA:
-        // application/x-protobuf // FIXME
-        return "protobuf/remote";
+        return "application/x-protobuf";
         break;
     }
     return NULL;
@@ -368,8 +390,8 @@ int config_format_dgram_metric(config_item_t *ci, format_dgram_metric_t *format)
         }
 
         if ((ci->values_num != 2) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
-            PLUGIN_WARNING("The `%s'influxdb config option needs "
-                           "at least one string argument.", ci->key);
+            PLUGIN_WARNING("The `%s' influxdb config option needs "
+                           "exactly one string argument.", ci->key);
             return -1;
         }
 
@@ -387,6 +409,8 @@ int config_format_dgram_metric(config_item_t *ci, format_dgram_metric_t *format)
             *format = FORMAT_DGRAM_METRIC_INFLUXDB_NSEC;
             return 0;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
     } else if (strcasecmp(fmt, "graphite") == 0) {
@@ -400,7 +424,7 @@ int config_format_dgram_metric(config_item_t *ci, format_dgram_metric_t *format)
 
         if ((ci->values_num != 2) || (ci->values[1].type != CONFIG_TYPE_STRING)) {
             PLUGIN_WARNING("The `%s' kairosdb config option needs "
-                           "at least one string argument.", ci->key);
+                           "exactly one string argument.", ci->key);
             return -1;
         }
 
@@ -412,6 +436,8 @@ int config_format_dgram_metric(config_item_t *ci, format_dgram_metric_t *format)
             *format = FORMAT_DGRAM_METRIC_KAIROSDB_TELNET_MSEC;
             return 0;
         } else {
+            PLUGIN_ERROR("Invalid %s option '%s' for the '%s' format in %s:%d.",
+                         ci->key, opt, fmt, cf_get_file(ci), cf_get_lineno(ci));
             return -1;
         }
     } else if (strcasecmp(fmt, "opentsdb") == 0) {
@@ -449,6 +475,7 @@ int format_dgram_metric(format_dgram_metric_t format, strbuf_t *buf,
         return opentsdb_telnet_metric(buf, fam, m, 0, FMT_OPENTSDB_MSEC);
         break;
     case FORMAT_DGRAM_METRIC_OPENTSDB_TELNET:
+        return opentsdb_telnet_metric(buf, fam, m, 0, FMT_OPENTSDB_SEC);
         break;
     }
     return 0;
@@ -469,8 +496,8 @@ int config_format_notification(config_item_t *ci, format_notification_t *format)
         *format = FORMAT_NOTIFICATION_JSON;
         return 0;
     } else if (strcasecmp(fmt, "protob") == 0) {
-        *format = FORMAT_NOTIFICATION_PROTOB;
-        return 0;
+        PLUGIN_ERROR("The '%s' protob format is not implemented.", ci->key);
+        return -1;
     }
 
     PLUGIN_ERROR("Invalid format string: %s", fmt);
@@ -487,6 +514,7 @@ int format_notification(format_notification_t format, strbuf_t *buf, notificatio
         return notification_json(buf, n);
         break;
     case FORMAT_NOTIFICATION_PROTOB:
+        return ENOTSUP;
         break;
     }
 

@@ -110,7 +110,7 @@ DEF_TEST(opentsdb_telnet_escaped_label_value)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentsdb_telnet_metric_family(&buf, &fam, 3600, FMT_OPENTSDB_MSEC));
-    EXPECT_EQ_STR("putm escaped_label_value_total 1592748157125 18446744073709551615 alpha=first/value beta=second value kairos_opt.ttl=3600\n",
+    EXPECT_EQ_STR("putm escaped_label_value_total 1592748157125 18446744073709551615 alpha=first/value beta=second_value kairos_opt.ttl=3600\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -143,7 +143,7 @@ DEF_TEST(opentsdb_telnet_system_uname)
     strbuf_t buf = STRBUF_CREATE;
 
     EXPECT_EQ_INT(0, opentsdb_telnet_metric_family(&buf, &fam, 3600, FMT_OPENTSDB_MSEC));
-    EXPECT_EQ_STR("putm system_uname_info 1592748157125 1 hostname=arrakis.canopus machine=riscv128 nodename=arrakis.canopus release=998 sysname=Linux version=#1 SMP PREEMPT_DYNAMIC 10191 kairos_opt.ttl=3600\n",
+    EXPECT_EQ_STR("putm system_uname_info 1592748157125 1 hostname=arrakis.canopus machine=riscv128 nodename=arrakis.canopus release=998 sysname=Linux version=_1_SMP_PREEMPT_DYNAMIC_10191 kairos_opt.ttl=3600\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);
@@ -226,7 +226,7 @@ DEF_TEST(opentsdb_telnet_summary)
                   "putm summary 1592748157125 0.821139321 hostname=arrakis.canopus quantile=0.9 kairos_opt.ttl=3600\n"
                   "putm summary 1592748157125 0.232227334 hostname=arrakis.canopus quantile=0.5 kairos_opt.ttl=3600\n"
                   "putm summary_count 1592748157125 27892 hostname=arrakis.canopus kairos_opt.ttl=3600\n"
-                  "putm summary_sum 1592748157125 8953 hostname=arrakis.canopus kairos_opt.ttl=3600\n",
+                  "putm summary_sum 1592748157125 8953.332 hostname=arrakis.canopus kairos_opt.ttl=3600\n",
                   buf.ptr);
 
     strbuf_destroy(&buf);

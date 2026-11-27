@@ -4,4 +4,4 @@
 
 #pragma once
 
-int opentsdb_json_metric_family(strbuf_t *buf, metric_family_t const *fam, int ttl);
+int opentsdb_json_metric_family(strbuf_t *buf, metric_family_t const *fam, int ttl, bool kairosdb);
