@@ -49,22 +49,18 @@ static metric_family_t fams[FAM_MQ_MAX] = {
     [FAM_MQ_QUEUE_DEPTH] = {
         .name = "mq_queue_depth",
         .type = METRIC_TYPE_GAUGE,
-        .help = "Number of messages on queue.",
-    },
-    [FAM_MQ_QUEUE_MAX_DEPTH] = {
-        .name = "mq_queue_max_depth",
-        .type = METRIC_TYPE_GAUGE,
-        .help = "Maximum number of messages allowed on queue.",
+        .help = "The current number of messages on queue.",
     },
     [FAM_MQ_QUEUE_OPEN_INPUT] = {
         .name = "mq_queue_open_input",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "Number of MQOPEN calls that have the queue open for input.",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of handles that are currently open for input for the queue. "
+                "Does not include handles that are open for browse."
     },
     [FAM_MQ_QUEUE_OPEN_OUTPUT] = {
         .name = "mq_queue_open_output",
-        .type = METRIC_TYPE_COUNTER,
-        .help = "Number of MQOPEN calls that have the queue open for output.",
+        .type = METRIC_TYPE_GAUGE,
+        .help = "The number of handles that are currently open for output for the queue."
     },
     [FAM_MQ_QUEUE_DEQUEUE] = {
         .name = "mq_queue_dequeue",
@@ -86,7 +82,7 @@ static metric_family_t fams[FAM_MQ_MAX] = {
         .name = "mq_queue_latest_get_seconds",
         .type = METRIC_TYPE_GAUGE,
         .help = "The time, in seconds, at which the last message was successfully "
-                "read from the queue.",
+                "destructively read from the queue.",
     },
     [FAM_MQ_QUEUE_LATEST_PUT_SECONDS] = {
         .name = "mq_queue_latest_put_seconds",
@@ -95,6 +91,17 @@ static metric_family_t fams[FAM_MQ_MAX] = {
                 "put to the queue",
     },
 };
+
+#if 0
+MQIACF_CUR_MAX_FILE_SIZE
+    Current maximum queue file size
+MQIACF_CUR_Q_FILE_SIZE
+    Current queue file size
+MQIACF_Q_TIME_INDICATOR
+    Indicator of the time that messages remain on the queue.
+MQIACF_UNCOMMITTED_MSGS
+    The number of uncommitted messages on the queue.
+#endif
 
 // In WebSphere MQ, names can have a maximum of 48 characters, with the
 // exception of channels which have a maximum of 20 characters.
@@ -107,11 +114,31 @@ typedef struct {
     char *connection;
     char *qmanager;
     char *cchannel;
+    char *ssl_cipher_spec;
+    char *ssl_key_repository;
+    char *ssl_peer_name;
     label_set_t labels;
     plugin_filter_t *filter;
     metric_family_t fams[FAM_MQ_MAX];
     MQHCONN hdl;
 } cmq_instance_t;
+
+
+static inline char *cmq_strncpy(char *dest, const char *src, size_t n)
+{
+    memset(dest, ' ', n);
+
+    if (src == NULL)
+        return dest;
+
+    size_t len = strlen(src);
+    if (len > n - 1)
+        len = n - 1;
+
+    memcpy(dest, src, len);
+
+    return dest;
+}
 
 static const char *cmq_mqccstr(MQLONG mqcc)
 {
@@ -177,6 +204,10 @@ static void cmq_instance_free(void *arg)
     free(mq->connection);
     free(mq->qmanager);
     free(mq->cchannel);
+    free(mq->ssl_cipher_spec);
+    free(mq->ssl_key_repository);
+    free(mq->ssl_peer_name);
+
     label_set_reset(&mq->labels);
     plugin_filter_free(mq->filter);
 
@@ -190,35 +221,26 @@ static int cmq_connect(cmq_instance_t *mq)
     if (mq == NULL)
         return -1;
 
-    MQCHAR qmgr[MQ_Q_MGR_NAME_LENGTH];
-    if (mq->qmanager != NULL) {
-        strncpy(qmgr, mq->qmanager, MQ_Q_MGR_NAME_LENGTH);
-        qmgr[MQ_Q_MGR_NAME_LENGTH - 1] = '\0';
-    } else {
-        qmgr[0] = '\0'; /* default */
-    }
+    MQCHAR qmgr[MQ_CONN_NAME_LENGTH+1];
+    cmq_strncpy(qmgr, mq->qmanager, sizeof(qmgr));
 
     MQCNO mqco = {MQCNO_DEFAULT};
     MQCD mqcd = {MQCD_CLIENT_CONN_DEFAULT};
     MQCSP mqcsp = {MQCSP_DEFAULT};
 
     if (mq->connection != NULL) {
-        strncpy(mqcd.ConnectionName, mq->connection, MQ_CONN_NAME_LENGTH);
-        mqcd.ConnectionName[MQ_Q_MGR_NAME_LENGTH - 1] = '\0';
+        cmq_strncpy(mqcd.ConnectionName, mq->qmanager, sizeof(mqcd.ConnectionName));
 
         char *cchannel = mq->cchannel;
-        if (cchannel == NULL) {
+        if (cchannel == NULL)
             cchannel = "SYSTEM.DEF.SVRCONN";
-        }
-
-        strncpy(mqcd.ChannelName, cchannel, MQ_CHANNEL_NAME_LENGTH);
-        mqcd.ChannelName[MQ_CHANNEL_NAME_LENGTH - 1] = '\0';
+        cmq_strncpy(mqcd.ChannelName, cchannel, sizeof(mqcd.ChannelName));
 
         mqco.ClientConnPtr = &mqcd;
         mqco.Version = MQCNO_VERSION_2;
     }
 
-    mqco.Options = MQCNO_RECONNECT;
+    mqco.Options = MQCNO_RECONNECT | MQCNO_HANDLE_SHARE_BLOCK;
 
     if (mq->username != NULL) {
         mqco.SecurityParmsPtr = &mqcsp;
@@ -228,7 +250,25 @@ static int cmq_connect(cmq_instance_t *mq)
         mqcsp.CSPUserIdLength = strlen(mq->username);
         mqcsp.CSPPasswordPtr = mq->password;
         mqcsp.CSPPasswordLength = strlen(mq->password);
+
     }
+
+#if MQCNO_CURRENT_VERSION >= 7
+    if (mq->ssl_cipher_spec != NULL) {
+        mqco.Version = MQCNO_VERSION_7;
+        cmq_strncpy(mqcd.SSLCipherSpec, mq->ssl_cipher_spec, sizeof(mqcd.SSLCipherSpec));
+    }
+
+    if (mq->ssl_peer_name != NULL) {
+        mqco.Version = MQCNO_VERSION_7;
+        mqco.SSLPeerNamePtr = ssl_peer_name;
+        mqco.SSLPeerNameLength = stlren(ssl_peer_name);
+    }
+
+    if (mq->ssl_key_repository != NULL) {
+        // FIXME
+    }
+#endif
 
     MQCONNX(qmgr, &mqco, &(mq->hdl), &mqcc, &mqrc);
     if (mqcc != MQCC_OK) {
@@ -260,7 +300,8 @@ static time_t cmq_queue_time(MQHBAG bag, MQLONG mq_date, MQLONG mq_time)
             strbuf_putstr(&buf, qtime);
 
             struct tm tm = {0};
-            char *ret = strptime("%Y-%m-%d %H.%M.%S", buf.ptr, &tm);
+            char *ret = strptime(buf.ptr, "%Y-%m-%d %H.%M.%S", &tm);
+            tm.tm_isdst = -1;
             if (ret != NULL)
                 return mktime(&tm);
        }
@@ -285,7 +326,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
 
     mqTrim(MQ_Q_NAME_LENGTH, qname, qname, &mqcc, &mqrc);
 
-    if (strstr(qname, "SYSTEM") || strstr(qname, "MQAI"))
+    if ((strncmp(qname, "SYSTEM", strlen("SYSTEM")) == 0) || strstr(qname, "MQAI"))
         return 0;
 
     MQLONG qtype;
@@ -296,8 +337,13 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     }
 
     /* only local queues */
-    if (qtype != 1)
+    if (qtype != MQQT_LOCAL)
         return 0;
+
+
+
+
+
 
     MQLONG depth = 0;
     mqInquireInteger(bag, MQIA_CURRENT_Q_DEPTH, MQIND_NONE, &depth, &mqcc, &mqrc);
@@ -309,21 +355,11 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
         // cmq_reason("MQIA_CURRENT_Q_DEPTH", mqcc, mqrc);
     }
 
-    MQLONG maxdepth = 0;
-    mqInquireInteger(bag, MQIA_MAX_Q_DEPTH, MQIND_NONE, &maxdepth, &mqcc, &mqrc);
-    if (mqcc == MQCC_OK) {
-        metric_family_append(&mq->fams[FAM_MQ_QUEUE_MAX_DEPTH],
-                             VALUE_GAUGE(maxdepth), &mq->labels,
-                             &LABEL_PAIR_CONST("queue", qname), NULL);
-    } else {
-        // cmq_reason("MQIA_MAX_Q_DEPTH", mqcc, mqrc);
-    }
-
     MQLONG openinput = 0;
     mqInquireInteger(bag, MQIA_OPEN_INPUT_COUNT, MQIND_NONE, &openinput, &mqcc, &mqrc);
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_OPEN_INPUT],
-                             VALUE_COUNTER(openinput), &mq->labels,
+                             VALUE_GAUGE(openinput), &mq->labels,
                              &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_OPEN_INPUT_COUNT", mqcc, mqrc);
@@ -333,12 +369,13 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     mqInquireInteger(bag, MQIA_OPEN_OUTPUT_COUNT, MQIND_NONE, &openoutput, &mqcc, &mqrc);
     if (mqcc == MQCC_OK) {
         metric_family_append(&mq->fams[FAM_MQ_QUEUE_OPEN_OUTPUT],
-                             VALUE_COUNTER(openoutput), &mq->labels,
+                             VALUE_GAUGE(openoutput), &mq->labels,
                              &LABEL_PAIR_CONST("queue", qname), NULL);
     } else {
         // cmq_reason("MQIA_OPEN_OUTPUT_COUNT", mqcc, mqrc);
     }
 
+#if 0
     MQLONG dequeue = 0;
     mqInquireInteger(bag, MQIA_MSG_DEQ_COUNT, MQIND_NONE, &dequeue, &mqcc, &mqrc);
     if (mqcc == MQCC_OK) {
@@ -358,6 +395,7 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     } else {
         // cmq_reason("MQIA_MSG_ENQ_COUNT", mqcc, mqrc);
     }
+#endif
 
     time_t lastget = cmq_queue_time(bag, MQCACF_LAST_GET_DATE, MQCACF_LAST_GET_TIME);
     metric_family_append(&mq->fams[FAM_MQ_QUEUE_LATEST_GET_SECONDS],
@@ -378,6 +416,18 @@ static int cmq_queue_stats(cmq_instance_t *mq, MQHBAG bag)
     } else {
         // cmq_reason("MQIACF_OLDEST_MSG_AGE", mqcc, mqrc);
     }
+#if 0
+MQIACF_CUR_MAX_FILE_SIZE
+    Current maximum queue file size
+MQIACF_CUR_Q_FILE_SIZE
+    Current queue file size
+MQIACF_OLDEST_MSG_AGE
+    Age of oldest message on the queue.
+MQIACF_Q_TIME_INDICATOR
+    Indicator of the time that messages remain on the queue.
+MQIACF_UNCOMMITTED_MSGS
+    The number of uncommitted messages on the queue.
+#endif
 
     return 0;
 }
@@ -413,11 +463,12 @@ static int cmq_queue_list(cmq_instance_t *mq)
         cmq_reason("mqAddInteger MQIA_Q_TYPE", mqcc, mqrc);
         goto error;
     }
+
     // MQCMD_INQUIRE_Q_STATUS
-    mqExecute(mq->hdl, MQCMD_INQUIRE_Q, MQHB_NONE, reqbag, respbag, MQHO_NONE,
+    mqExecute(mq->hdl, MQCMD_INQUIRE_Q_STATUS, MQHB_NONE, reqbag, respbag, MQHO_NONE,
                        MQHO_NONE, &mqcc, &mqrc);
-    if (mqrc == MQRC_CMD_SERVER_NOT_AVAILABLE) {
-        PLUGIN_ERROR("server %s not available", mq->name);
+    if (mqcc == MQCC_FAILED) {
+        PLUGIN_ERROR("mqExecute failed in server %s.", mq->name);
         cmq_disconnect(mq);
         goto error;
     }
@@ -467,6 +518,7 @@ static int cmq_queue_list(cmq_instance_t *mq)
                          cmq_mqccstr(mqexeccc), mqexecrc, MQRC_STR(mqexecrc));
         } else {
             cmq_reason("mqExecute", mqcc, mqrc);
+            goto error;
         }
     }
 
@@ -560,6 +612,14 @@ static int cmq_config_instance(config_item_t *ci)
             status = cf_util_get_string(child, &mq->qmanager);
         } else if (strcasecmp("connection-channel", child->key) == 0) {
             status = cf_util_get_string(child, &mq->cchannel);
+
+        } else if (strcasecmp("ssl-cipher-spec", child->key) == 0) {
+            status = cf_util_get_string(child, &mq->ssl_cipher_spec);
+        } else if (strcasecmp("ssl-key-repository", child->key) == 0) {
+            status = cf_util_get_string(child, &mq->ssl_key_repository);
+        } else if (strcasecmp("ssl-peer-name", child->key) == 0) {
+            status = cf_util_get_string(child, &mq->ssl_peer_name);
+
         } else if (strcasecmp("label", child->key) == 0) {
             status = cf_util_get_label(child, &mq->labels);
         } else if (strcasecmp("interval", child->key) == 0) {
@@ -581,10 +641,16 @@ static int cmq_config_instance(config_item_t *ci)
         return -1;
     }
 
+    if ((mq->username != NULL) && (mq->password == NULL)) {
+        PLUGIN_ERROR("Missing password for user.");
+        cmq_instance_free(mq);
+        return -1;
+    }
+
     if (mq->host != NULL) {
         mq->connection = calloc(1, MQ_Q_MGR_NAME_LENGTH);
         if (mq->connection == NULL) {
-            PLUGIN_ERROR("calloc failed");
+            PLUGIN_ERROR("calloc failed.");
             cmq_instance_free(mq);
             return -1;
         }
