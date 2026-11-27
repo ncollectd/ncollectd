@@ -46,6 +46,14 @@ int db_query_prepare_result(db_query_t const *q, db_query_preparation_area_t *pr
                                                  const char *db_name, char **column_names,
                                                  size_t column_num);
 
+/*
+ * db_query_handle_result
+ *
+ * `column_values' must have the `column_num' entries given to
+ * db_query_prepare_result. An entry may be NULL (SQL NULL): rows with a NULL
+ * type, metric or value column are skipped, NULL help or label columns are
+ * omitted.
+ */
 int db_query_handle_result(db_query_t const *q, db_query_preparation_area_t *prep_area,
                                                 char **column_values, plugin_filter_t *filter);
 void db_query_finish_result(db_query_t const *q, db_query_preparation_area_t *prep_area);
