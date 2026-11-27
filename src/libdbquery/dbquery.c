@@ -7,6 +7,7 @@
 #include "libutils/common.h"
 #include "libutils/config.h"
 #include "libutils/strbuf.h"
+#include "libmetric/metric_chars.h"
 
 #include "libdbquery/dbquery.h"
 
@@ -52,6 +53,7 @@ struct db_result_preparation_area_s
     char **labels_buffer;
     size_t value_pos;
     char *value_str;
+    size_t parse_errors;
 
     struct db_result_preparation_area_s *next;
 };
@@ -100,6 +102,28 @@ static bool isinteger(const char *str)
     return true;
 }
 
+/* Quiet versions of parse_double/parse_uinteger: errors are counted and
+ * reported once per query in db_result_finish_result. */
+static int db_parse_double(const char *str, double *ret_value)
+{
+    char *endptr = NULL;
+    double value = strtod(str, &endptr);
+    if (endptr == str)
+        return -1;
+    *ret_value = value;
+    return 0;
+}
+
+static int db_parse_uinteger(const char *str, uint64_t *ret_value)
+{
+    char *endptr = NULL;
+    uint64_t value = (uint64_t)strtoull(str, &endptr, 0);
+    if (endptr == str)
+        return -1;
+    *ret_value = value;
+    return 0;
+}
+
 static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area,
                             db_query_t const *q, db_query_preparation_area_t *q_area,
                             plugin_filter_t *filter)
@@ -136,6 +160,14 @@ static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area
         strbuf_putstr(&buf, r->metric);
     }
 
+    if ((buf.ptr == NULL) || (buf.ptr[0] == '\0') ||
+        (metric_valid_len(buf.ptr) != strlen(buf.ptr))) {
+        PLUGIN_ERROR("Query '%s': invalid metric name '%s'.", q->name,
+                     buf.ptr != NULL ? buf.ptr : "");
+        strbuf_destroy(&buf);
+        return -1;
+    }
+
     fam.name = buf.ptr;
 
     if (r->help_from != NULL) {
@@ -166,26 +198,23 @@ static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area
     char *value_str = r_area->value_str;
     if (fam.type == METRIC_TYPE_GAUGE) {
         double value = 0;
-        if (parse_double(value_str, &value) != 0) {
-            PLUGIN_ERROR("Parsing '%s' as gauge failed.", value_str);
-            errno = EINVAL;
+        if (db_parse_double(value_str, &value) != 0) {
+            r_area->parse_errors++;
             ret = -1;
         }
         m.value = VALUE_GAUGE(value);
     } else if (fam.type == METRIC_TYPE_COUNTER) {
         if (isinteger(value_str)) {
             uint64_t value = 0;
-            if (parse_uinteger(value_str, &value) != 0) {
-                PLUGIN_ERROR("Parsing '%s' as integer counter failed.", value_str);
-                errno = EINVAL;
+            if (db_parse_uinteger(value_str, &value) != 0) {
+                r_area->parse_errors++;
                 ret = -1;
             }
             m.value = VALUE_COUNTER_UINT64(value);
         } else {
             double value = 0;
-            if (parse_double(value_str, &value) != 0) {
-                PLUGIN_ERROR("Parsing '%s' as gauge failed.", value_str);
-                errno = EINVAL;
+            if (db_parse_double(value_str, &value) != 0) {
+                r_area->parse_errors++;
                 ret = -1;
             }
             m.value = VALUE_COUNTER_FLOAT64(value);
@@ -198,6 +227,10 @@ static int db_result_submit(db_result_t *r, db_result_preparation_area_t *r_area
     }
 
     metric_reset(&m, fam.type);
+    /* plugin_dispatch_metric_family_filtered() moves the metric list out of
+     * 'fam' and leaves it empty, so this reset is normally a no-op. It is kept
+     * to avoid a leak if the dispatch ever returns without taking the list
+     * (or when it was not called); this relies on dispatch moving, not copying. */
     metric_family_metric_reset(&fam);
     strbuf_destroy(&buf);
     return ret;
@@ -209,10 +242,24 @@ static void db_result_finish_result(db_result_t const *r,
     if ((r == NULL) || (prep_area == NULL))
         return;
 
+    if (prep_area->parse_errors > 0) {
+        PLUGIN_WARNING("Failed to parse %" PRIsz " value(s) of column '%s' as a number.",
+                       prep_area->parse_errors, r->value_from);
+        prep_area->parse_errors = 0;
+    }
+
+    prep_area->type_pos = 0;
+    prep_area->type_str = NULL;
+    prep_area->metric_pos = 0;
+    prep_area->metric_str = NULL;
+    prep_area->help_pos = 0;
+    prep_area->help_str = NULL;
     free(prep_area->labels_pos);
     prep_area->labels_pos = NULL;
     free(prep_area->labels_buffer);
     prep_area->labels_buffer = NULL;
+    prep_area->value_pos = 0;
+    prep_area->value_str = NULL;
 }
 
 static int db_result_handle_result(db_result_t *r,
@@ -232,10 +279,20 @@ static int db_result_handle_result(db_result_t *r,
     if (r->help_from != NULL)
         r_area->help_str = column_values[r_area->help_pos];
 
+    /* A NULL label value (SQL NULL) just omits the label. */
     for (size_t i = 0; i < r->labels_from.num; i++)
         r_area->labels_buffer[i] = column_values[r_area->labels_pos[i]];
 
     r_area->value_str = column_values[r_area->value_pos];
+
+    /* Skip rows where a required column is NULL (SQL NULL). */
+    if (((r->type_from != NULL) && (r_area->type_str == NULL)) ||
+        ((r->metric_from != NULL) && (r_area->metric_str == NULL)) ||
+        (r_area->value_str == NULL)) {
+        PLUGIN_DEBUG("Query '%s': skipping row with NULL type, metric or value column.",
+                     q->name);
+        return -1;
+    }
 
     return db_result_submit(r, r_area, q, q_area, filter);
 }
@@ -571,6 +628,11 @@ int db_query_create(db_query_t ***ret_query_list, size_t *ret_query_list_len, co
             PLUGIN_WARNING("Query '%s': No (valid) 'Result' block given.", q->name);
             status = -1;
         }
+        if (q->min_version > q->max_version) {
+            PLUGIN_WARNING("Query '%s': 'min-version' (%u) is greater than 'max-version' (%u).",
+                           q->name, q->min_version, q->max_version);
+            status = -1;
+        }
     }
 
     /* If all went well, add this query to the list of queries within the
@@ -626,9 +688,20 @@ int db_query_pick_from_list_by_name(const char *name, db_query_t **src_list, siz
     }
 
     int num_added = 0;
+    size_t first_added = *dst_list_len;
     for (size_t i = 0; i < src_list_len; i++) {
         if (strcasecmp(name, src_list[i]->name) != 0)
             continue;
+
+        for (size_t j = first_added; j < *dst_list_len; j++) {
+            db_query_t *prev = (*dst_list)[j];
+            if ((src_list[i]->min_version <= prev->max_version) &&
+                (prev->min_version <= src_list[i]->max_version)) {
+                PLUGIN_WARNING("Query '%s' is defined multiple times with overlapping "
+                               "version ranges; it may be executed more than once.", name);
+                break;
+            }
+        }
 
         size_t tmp_list_len = *dst_list_len;
         db_query_t **tmp_list = realloc(*dst_list, (tmp_list_len + 1) * sizeof(db_query_t *));
@@ -727,6 +800,7 @@ void db_query_finish_result(db_query_t const *q, db_query_preparation_area_t *pr
     prep_area->metric_prefix = NULL;
     free(prep_area->db_name);
     prep_area->db_name = NULL;
+    label_set_reset(&prep_area->labels);
 
     db_result_t *r;
     db_result_preparation_area_t *r_area;
@@ -783,10 +857,8 @@ int db_query_prepare_result(db_query_t const *q, db_query_preparation_area_t *pr
     if ((q == NULL) || (prep_area == NULL))
         return -EINVAL;
 
-#ifdef NCOLLECTD_DEBUG
-    assert(prep_area->column_num == 0);
-    assert(prep_area->db_name == NULL);
-#endif
+    /* Release anything left over from a previous prepare without finish. */
+    db_query_finish_result(q, prep_area);
 
     prep_area->column_num = column_num;
     if (labels != NULL)
