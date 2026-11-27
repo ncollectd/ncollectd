@@ -102,21 +102,19 @@ static int nfacct_read_cb(const struct nlmsghdr *nlh, __attribute__((unused)) vo
         uint32_t flags = be32toh(mnl_attr_get_u32(tb[NFACCT_FLAGS]));
         uint64_t quota = be64toh(mnl_attr_get_u64(tb[NFACCT_QUOTA]));
 
-        if (flags) {
-            if (flags & NFACCT_F_QUOTA_BYTES) {
-                metric_family_append(&fams[FAM_NFACCT_QUOTA_BYTES], VALUE_GAUGE(quota), NULL,
-                                     &LABEL_PAIR_CONST("name", name), NULL);
-            } else if (flags & NFACCT_F_QUOTA_PKTS) {
-                metric_family_append(&fams[FAM_NFACCT_QUOTA_PACKETS], VALUE_GAUGE(quota), NULL,
-                                     &LABEL_PAIR_CONST("name", name), NULL);
-            }
-
-
-            metric_family_append(&fams[FAM_NFACCT_OVER_QUOTA],
-                                 VALUE_GAUGE(flags & NFACCT_F_OVERQUOTA ? 1 : 0),
-                                 NULL, &LABEL_PAIR_CONST("name", name), NULL);
-
+        if (flags & NFACCT_F_QUOTA_BYTES) {
+            metric_family_append(&fams[FAM_NFACCT_QUOTA_BYTES], VALUE_GAUGE(quota), NULL,
+                                 &LABEL_PAIR_CONST("name", name), NULL);
+        } else if (flags & NFACCT_F_QUOTA_PKTS) {
+            metric_family_append(&fams[FAM_NFACCT_QUOTA_PACKETS], VALUE_GAUGE(quota), NULL,
+                                 &LABEL_PAIR_CONST("name", name), NULL);
         }
+
+
+        metric_family_append(&fams[FAM_NFACCT_OVER_QUOTA],
+                             VALUE_GAUGE(flags & NFACCT_F_OVERQUOTA ? 1 : 0),
+                             NULL, &LABEL_PAIR_CONST("name", name), NULL);
+
     }
 
     return MNL_CB_OK;
@@ -138,10 +136,12 @@ static int nfacct_read(void)
     nfh->version = NFNETLINK_V0;
     nfh->res_id = 0;
 
+#if 0
     struct nlattr *nest = mnl_attr_nest_start(nlh, NFACCT_FILTER);
     mnl_attr_put_u32(nlh, NFACCT_FILTER_MASK, htonl(NFACCT_F_QUOTA_BYTES | NFACCT_F_QUOTA_PKTS));
     mnl_attr_put_u32(nlh, NFACCT_FILTER_VALUE, htonl(0));
     mnl_attr_nest_end(nlh, nest);
+#endif
 
     struct mnl_socket *nl = mnl_socket_open(NETLINK_NETFILTER);
     if (nl == NULL) {
