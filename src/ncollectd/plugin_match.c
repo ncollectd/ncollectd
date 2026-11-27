@@ -321,12 +321,14 @@ static int match_metric_value_set(match_metric_t *mm, match_metric_type_t type, 
                 mm->value.gauge.float64 = value;
             else if (mm->value.gauge.float64 > value)
                 mm->value.gauge.float64 = value;
+            mm->values_num++;
             break;
         case MATCH_METRIC_TYPE_GAUGE_MAX:
             if (mm->values_num == 0)
                 mm->value.gauge.float64 = value;
             else if (mm->value.gauge.float64 < value)
                 mm->value.gauge.float64 = value;
+            mm->values_num++;
             break;
         case MATCH_METRIC_TYPE_GAUGE_LAST:
             mm->value.gauge.float64 = value;
@@ -342,6 +344,7 @@ static int match_metric_value_set(match_metric_t *mm, match_metric_type_t type, 
                 mm->value.gauge.float64 = value;
             else
                 mm->value.gauge.float64 += value;
+            mm->values_num++;
             break;
         case MATCH_METRIC_TYPE_GAUGE_PERSIST:
             mm->value.gauge.float64 = value;
