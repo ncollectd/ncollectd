@@ -72,21 +72,31 @@ histogram_t *histogram_new_exp(size_t num_buckets, double base, double factor)
     return h;
 }
 
-histogram_t *histogram_new_custom(size_t array_size, double *custom_buckets_boundaries)
+bool histogram_check_custom(size_t array_size, double *custom_buckets_boundaries)
 {
+    if (array_size == 0)
+        return false;
+
     for (size_t i = 0; i < array_size; i++) {
         double previous_boundary = 0;
         if (i > 0)
             previous_boundary = custom_buckets_boundaries[i - 1];
-        if (custom_buckets_boundaries[i] <= previous_boundary) {
-            errno = EINVAL;
-            return NULL;
-        }
+        if (custom_buckets_boundaries[i] <= previous_boundary)
+            return false;
     }
 
-    if (array_size > 0 && custom_buckets_boundaries[array_size - 1] == INFINITY) {
+    if (custom_buckets_boundaries[array_size - 1] == INFINITY)
+        return false;
+
+    return true;
+}
+
+histogram_t *histogram_new_custom(size_t array_size, double *custom_buckets_boundaries)
+{
+    if (!histogram_check_custom(array_size, custom_buckets_boundaries)) {
         errno = EINVAL;
         return NULL;
+
     }
 
     size_t num_buckets = array_size + 1;

@@ -24,6 +24,8 @@ histogram_t *histogram_new_linear(size_t num_buckets, double size);
 
 histogram_t *histogram_new_exp(size_t num_buckets, double base, double factor);
 
+bool histogram_check_custom(size_t array_size, double *custom_buckets_boundaries);
+
 histogram_t *histogram_new_custom(size_t array_size, double *custom_buckets_boundaries);
 
 histogram_t *histogram_clone(histogram_t *h);
