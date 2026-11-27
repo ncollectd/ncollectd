@@ -16,8 +16,7 @@
 #include "libconfig/scanner.h"
 #include "libutils/strbuf.h"
 
-config_item_t *ci_root;
-config_file_t *c_file;
+void config_scanner_ml_free(yyscan_t yyscanner);
 
 static config_file_t *config_get_file_ref(config_file_t *file)
 {
@@ -27,7 +26,7 @@ static config_file_t *config_get_file_ref(config_file_t *file)
     return file;
 }
 
-static config_item_t *config_parse_fh(FILE *fh)
+static config_item_t *config_parse_fh(FILE *fh, config_file_t *file)
 {
     if (fh == NULL)
         return NULL;
@@ -35,6 +34,8 @@ static config_item_t *config_parse_fh(FILE *fh)
     yyscan_t scanner;
     config_yy_extra_t extra = {0};
     config_status_t ostatus = {0};
+
+    extra.file = file;
 
     config_yylex_init_extra(&extra, &scanner);
 //  config_yyset_debug(1, scanner);
@@ -45,11 +46,12 @@ static config_item_t *config_parse_fh(FILE *fh)
     int status = config_yyparse(scanner, &ostatus);
     if (status != 0) {
         fprintf(stderr, "yyparse failed %i: %s\n", status, ostatus.error);
+        config_scanner_ml_free(scanner);
+        config_yylex_destroy(scanner);
         return NULL;
     }
 
-    config_item_t *ret = ci_root;
-    ci_root = NULL;
+    config_item_t *ret = ostatus.root;
     config_yyset_in((FILE *)0, scanner);
 
     config_yylex_destroy(scanner);
@@ -60,29 +62,29 @@ static config_item_t *config_parse_fh(FILE *fh)
 config_item_t *config_parse_file(const char *file)
 {
     size_t file_len = strlen(file);
-    c_file = malloc(sizeof(config_file_t) + file_len + 1);
+    config_file_t *c_file = malloc(sizeof(config_file_t) + file_len + 1);
     if (c_file == NULL) {
         fprintf(stderr, "'%s' malloc failed: %s\n", file, strerror(errno));
         return NULL;
     }
-    c_file->refcnt = 0;
+    /* Hold a reference while parsing, so freeing partial items on a parse
+     * error does not release the file. */
+    c_file->refcnt = 1;
     memcpy(c_file->name, file, file_len + 1);
 
     FILE *fh = fopen(file, "r");
     if (fh == NULL) {
         fprintf(stderr, "fopen (%s) failed: %s\n", file, strerror(errno));
         free(c_file);
-        c_file = NULL;
         return NULL;
     }
 
-    config_item_t *ret = config_parse_fh(fh);
+    config_item_t *ret = config_parse_fh(fh, c_file);
     fclose(fh);
 
-    if (c_file->refcnt == 0)
+    c_file->refcnt--;
+    if (c_file->refcnt <= 0)
         free(c_file);
-
-    c_file = NULL;
 
     return ret;
 }
@@ -91,29 +93,29 @@ config_item_t *config_parse_buffer(char *buffer, size_t size)
 {
     const char *file = "buffer";
     size_t file_len = strlen(file);
-    c_file = malloc(sizeof(config_file_t) + file_len + 1);
+    config_file_t *c_file = malloc(sizeof(config_file_t) + file_len + 1);
     if (c_file == NULL) {
         fprintf(stderr, "'%s' malloc failed: %s\n", file, strerror(errno));
         return NULL;
     }
-    c_file->refcnt = 0;
+    /* Hold a reference while parsing, so freeing partial items on a parse
+     * error does not release the file. */
+    c_file->refcnt = 1;
     memcpy(c_file->name, file, file_len + 1);
 
     FILE *fh = fmemopen(buffer, size, "r");
     if (fh == NULL) {
         fprintf(stderr, "fopen (%s) failed: %s\n", file, strerror(errno));
         free(c_file);
-        c_file = NULL;
         return NULL;
     }
 
-    config_item_t *ret = config_parse_fh(fh);
+    config_item_t *ret = config_parse_fh(fh, c_file);
     fclose(fh);
 
-    if (c_file->refcnt == 0)
+    c_file->refcnt--;
+    if (c_file->refcnt <= 0)
         free(c_file);
-
-    c_file = NULL;
 
     return ret;
 }
@@ -189,6 +191,10 @@ config_item_t *config_clone(const config_item_t *ci_orig) /* FIXME */
             child->parent = ci_copy;
             ci_copy->children[i] = *child;
             free(child);
+            /* the grandchildren pointed to the temporary child just freed */
+            for (int j = 0; j < ci_copy->children[i].children_num; j++) {
+                ci_copy->children[i].children[j].parent = &ci_copy->children[i];
+            }
         }
     }
 
@@ -235,6 +241,7 @@ static void config_dump_config_item(strbuf_t *buf, int level, config_item_t *ci)
                 } else {
                     strbuf_putchar(buf, *c);
                 }
+                c++;
             }
             strbuf_putchar(buf, '/');
         }   break;
@@ -273,7 +280,7 @@ void config_dump(FILE *fh, config_item_t *ci)
     strbuf_destroy(&buf);
 }
 
-static void config_free_all(config_item_t *ci)
+void config_free_all(config_item_t *ci)
 {
     if (ci == NULL)
         return;

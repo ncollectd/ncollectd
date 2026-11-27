@@ -15,13 +15,6 @@
 #include "libconfig/aux_types.h"
 #include "libconfig/parser.h"
 
-/* multiline string buffer */
-static char *ml_buffer;
-static size_t ml_pos;
-static size_t ml_len;
-
-#define ml_free (ml_len - ml_pos)
-
 static void ml_append (yyscan_t yyscanner, char *string);
 
 #define YYSTYPE    CONFIG_YYSTYPE
@@ -31,7 +24,8 @@ static void ml_append (yyscan_t yyscanner, char *string);
 # undef yyterminate
 #endif
 #define yyterminate() \
-    do { free (ml_buffer); ml_buffer = NULL; ml_pos = 0; ml_len = 0; \
+    do { free (yyextra->ml_buffer); yyextra->ml_buffer = NULL; \
+         yyextra->ml_pos = 0; yyextra->ml_len = 0; \
         return YY_NULL; } while (0)
 
 #define YY_USER_ACTION yylloc->first_line = yylloc->last_line = yylineno;
@@ -63,8 +57,8 @@ UNQUOTED_STRING [A-Za-z][0-9A-Za-z_-]*
 HEX_NUMBER 0[xX][0-9a-fA-F]+
 OCT_NUMBER 0[0-7]+
 DEC_NUMBER [\+\-]?[0-9]+
-FLOAT_NUMBER [\+\-]?[0-9]*\.[0-9]+([eE][\+\-][0-9]+)?
-NUMBER ({FLOAT_NUMBER}|{HEX_NUMBER}|{OCT_NUMBER}|{DEC_NUMBER})
+FLOAT_NUMBER [\+\-]?([0-9]*\.[0-9]+([eE][\+\-]?[0-9]+)?|[0-9]+[eE][\+\-]?[0-9]+)
+NUMBER ({FLOAT_NUMBER}|{HEX_NUMBER}|{DEC_NUMBER})
 BOOL_TRUE (true|yes|on)
 BOOL_FALSE (false|no|off)
 COMMENT #.*
@@ -131,6 +125,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 {IPV4_ADDR}         { yylval->string = yytext; return (UNQUOTED_STRING); }
 {IPV6_ADDR}         { yylval->string = yytext; return (UNQUOTED_STRING); }
 
+{OCT_NUMBER}        { yylval->number = (double)strtoll (yytext, NULL, 8); return (NUMBER); }
 {NUMBER}            { yylval->number = strtod (yytext, NULL); return (NUMBER); }
 
 "/"{REGEX}"/"       { yylval->string = yytext; return (REGEX); }
@@ -141,7 +136,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 \"{DQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
 
-    ml_pos = 0;
+    yyextra->ml_pos = 0;
 
     /* remove "\\<EOL>" */
     if (yytext[len - 2] == '\r')
@@ -171,7 +166,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 
 <DQUOTED_ML>{NON_WHITE_SPACE}{DQUOTED_STRING}\" {
     ml_append(yyscanner, yytext);
-    yylval->string = ml_buffer;
+    yylval->string = yyextra->ml_buffer;
 
     BEGIN (INITIAL);
     return (DQUOTED_STRING);
@@ -185,7 +180,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 "'"{SQUOTED_STRING}\\{EOL} {
     size_t len = strlen (yytext);
 
-    ml_pos = 0;
+    yyextra->ml_pos = 0;
 
     /* remove "\\<EOL>" */
     if (yytext[len - 2] == '\r')
@@ -215,7 +210,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 
 <SQUOTED_ML>{NON_WHITE_SPACE}{SQUOTED_STRING}"'" {
     ml_append(yyscanner, yytext);
-    yylval->string = ml_buffer;
+    yylval->string = yyextra->ml_buffer;
 
     BEGIN (INITIAL);
     return (SQUOTED_STRING);
@@ -227,7 +222,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 }
 
 "'''"{HEREDOC_STRING}{EOL} {
-    ml_pos = 0;
+    yyextra->ml_pos = 0;
     ml_append (yyscanner, yytext);
     BEGIN (HEREDOC_ML);
 }
@@ -238,7 +233,7 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 
 <HEREDOC_ML>{HEREDOC_STRING}"'''" {
     ml_append(yyscanner, yytext);
-    yylval->string = ml_buffer;
+    yylval->string = yyextra->ml_buffer;
 
     BEGIN (INITIAL);
     return (HEREDOC_STRING);
@@ -248,19 +243,31 @@ IPV6_ADDR ({IPV6_BASE})|(\[{IPV6_BASE}\](:{PORT})?)
 %%
 static void ml_append (yyscan_t yyscanner, char *string)
 {
+    config_yy_extra_t *extra = config_yyget_extra(yyscanner);
     size_t len = strlen (string);
+    size_t ml_free = extra->ml_len - extra->ml_pos;
 
     if (ml_free <= len) {
-        ml_len += len - ml_free + 1;
-        ml_buffer = realloc (ml_buffer, ml_len);
-        if (ml_buffer == NULL)
+        extra->ml_len += len - ml_free + 1;
+        extra->ml_buffer = realloc (extra->ml_buffer, extra->ml_len);
+        if (extra->ml_buffer == NULL)
             YY_FATAL_ERROR ("out of dynamic memory in ml_append");
+        ml_free = extra->ml_len - extra->ml_pos;
     }
 
-    int s = snprintf(ml_buffer + ml_pos, ml_free, "%s", string);
+    int s = snprintf(extra->ml_buffer + extra->ml_pos, ml_free, "%s", string);
     if (s < 0 || (size_t)s >= ml_free)
         YY_FATAL_ERROR ("failed to write to multiline buffer");
 
-    ml_pos += s;
+    extra->ml_pos += s;
     return;
+}
+
+void config_scanner_ml_free(yyscan_t yyscanner)
+{
+    config_yy_extra_t *extra = config_yyget_extra(yyscanner);
+    free(extra->ml_buffer);
+    extra->ml_buffer = NULL;
+    extra->ml_pos = 0;
+    extra->ml_len = 0;
 }

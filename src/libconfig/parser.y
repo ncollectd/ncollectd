@@ -19,10 +19,7 @@ static char *unrquote (const char *orig);
 static char *unhquote (const char *orig);
 
 static void yyerror(CONFIG_YYLTYPE *yylloc, void *scanner, config_status_t *status, const char *msg);
-static config_file_t *get_file_ref(void);
-
-extern config_item_t *ci_root;
-extern config_file_t *c_file;
+static config_file_t *get_file_ref(void *scanner);
 %}
 
 %define api.pure full
@@ -65,6 +62,27 @@ extern config_file_t *c_file;
 %type <ci> statement
 %type <sl> statement_list
 %type <ci> entire_file
+
+%destructor { free($$); } string regex identifier
+%destructor {
+    if (($$.type == CONFIG_TYPE_STRING) || ($$.type == CONFIG_TYPE_REGEX))
+        free($$.value.string);
+} argument
+%destructor {
+    for (int i = 0; i < $$.argument_num; i++) {
+        if (($$.argument[i].type == CONFIG_TYPE_STRING) ||
+            ($$.argument[i].type == CONFIG_TYPE_REGEX))
+            free($$.argument[i].value.string);
+    }
+    free($$.argument);
+} argument_list
+%destructor { config_free_all(&$$); } option block_begin block statement
+%destructor {
+    for (int i = 0; i < $$.statement_num; i++) {
+        config_free_all(&$$.statement[i]);
+    }
+    free($$.statement);
+} statement_list
 
 %%
 string:
@@ -120,15 +138,15 @@ option:
     {
         memset(&$$, 0, sizeof($$));
         $$.key = $1;
-        $$.lineno = yylloc.first_line;
-        $$.file = get_file_ref();
+        $$.lineno = @1.first_line;
+        $$.file = get_file_ref(scanner);
     }
     | identifier argument_list EOL
     {
         memset(&$$, 0, sizeof($$));
         $$.key = $1;
-        $$.lineno = yylloc.first_line;
-        $$.file = get_file_ref();
+        $$.lineno = @1.first_line;
+        $$.file = get_file_ref(scanner);
         $$.values = $2.argument;
         $$.values_num = $2.argument_num;
     }
@@ -144,15 +162,15 @@ block_begin:
     {
         memset(&$$, 0, sizeof($$));
         $$.key = $1;
-        $$.lineno = yylloc.first_line;
-        $$.file = get_file_ref();
+        $$.lineno = @1.first_line;
+        $$.file = get_file_ref(scanner);
     }
     | identifier argument_list block_begin_eol
     {
         memset(&$$, 0, sizeof($$));
         $$.key = $1;
-        $$.lineno = yylloc.first_line;
-        $$.file = get_file_ref();
+        $$.lineno = @1.first_line;
+        $$.file = get_file_ref(scanner);
         $$.values = $2.argument;
         $$.values_num = $2.argument_num;
     }
@@ -214,18 +232,18 @@ statement_list:
 entire_file:
     statement_list
     {
-        ci_root = calloc(1, sizeof(*ci_root));
-        if (ci_root == NULL) {
+        status->root = calloc(1, sizeof(*status->root));
+        if (status->root == NULL) {
             yyerror(&yylloc, scanner, status, "calloc failed");
             YYERROR;
         }
-        ci_root->children = $1.statement;
-        ci_root->children_num = $1.statement_num;
+        status->root->children = $1.statement;
+        status->root->children_num = $1.statement_num;
     }
     | /* epsilon */
     {
-        ci_root = calloc(1, sizeof(*ci_root));
-        if (ci_root == NULL) {
+        status->root = calloc(1, sizeof(*status->root));
+        if (status->root == NULL) {
             yyerror(&yylloc, scanner, status, "calloc failed");
             YYERROR;
         }
@@ -233,16 +251,19 @@ entire_file:
     ;
 
 %%
-static void yyerror(CONFIG_YYLTYPE *yylloc, __attribute__((unused)) void *scanner,
+static void yyerror(CONFIG_YYLTYPE *yylloc, void *scanner,
                     config_status_t *status, const char *msg)
 {
+    config_file_t *file = config_yyget_extra(scanner)->file;
+    const char *name = (file != NULL) ? file->name : "(unknown)";
+
     if (status != NULL) {
         snprintf(status->error, sizeof(status->error), "Parse error in file '%s', line %i: %s",
-                 c_file->name, yylloc->first_line, msg);
+                 name, yylloc->first_line, msg);
 
     } else {
         fprintf(stderr, "Parse error in file '%s', line %i: %s\n",
-                        c_file->name, yylloc->first_line, msg);
+                        name, yylloc->first_line, msg);
     }
 }
 
@@ -337,7 +358,7 @@ static char *undquote (const char *orig)
                         octal += orig[i] - '0';
                     }
                 }
-                if ((octal > 0) && (octal < 255))
+                if ((octal > 0) && (octal <= 255))
                     ret[n++] = octal;
             }   break;
             case 'x': {
@@ -347,11 +368,10 @@ static char *undquote (const char *orig)
                     hex = hex2int(orig[i]);
                     if (((i+1) < len) && is_hex(orig[i+1])) {
                         i++;
-                        hex <<= 4;
-                        hex = hex2int(orig[i]);
+                        hex = (hex << 4) | hex2int(orig[i]);
                     }
                 }
-                if ((hex > 0) && (hex < 255))
+                if ((hex > 0) && (hex <= 255))
                     ret[n++] = hex;
             }   break;
             default:
@@ -439,10 +459,11 @@ static char *unhquote (const char *orig)
     return ret;
 }
 
-static config_file_t *get_file_ref(void)
+static config_file_t *get_file_ref(void *scanner)
 {
-    if (c_file == NULL)
+    config_file_t *file = config_yyget_extra(scanner)->file;
+    if (file == NULL)
         return NULL;
-    c_file->refcnt++;
-    return c_file;
+    file->refcnt++;
+    return file;
 }
